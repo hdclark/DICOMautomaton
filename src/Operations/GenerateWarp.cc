@@ -95,7 +95,7 @@ OperationDoc OpArgDocGenerateWarp(){
     return out;
 }
 
-Drover GenerateWarp(Drover DICOM_data,
+bool GenerateWarp(Drover &DICOM_data,
                     const OperationArgPkg& OptArgs,
                     const std::map<std::string, std::string>& /*InvocationMetadata*/,
                     const std::string& /*FilenameLex*/){
@@ -263,5 +263,5 @@ Drover GenerateWarp(Drover DICOM_data,
         DICOM_data.trans_data.back()->metadata[kvp.first] = kvp.second;
     }
 
-    return DICOM_data;
+    return true;
 }

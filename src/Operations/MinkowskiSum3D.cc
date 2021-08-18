@@ -133,7 +133,7 @@ OperationDoc OpArgDocMinkowskiSum3D(){
     return out;
 }
 
-Drover MinkowskiSum3D(Drover DICOM_data,
+bool MinkowskiSum3D(Drover &DICOM_data,
                       const OperationArgPkg& OptArgs,
                       const std::map<std::string, std::string>&,
                       const std::string&){
@@ -271,5 +271,5 @@ Drover MinkowskiSum3D(Drover DICOM_data,
         }
     }
 
-    return DICOM_data;
+    return true;
 }

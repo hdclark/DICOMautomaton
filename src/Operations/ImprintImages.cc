@@ -71,7 +71,7 @@ OperationDoc OpArgDocImprintImages(){
 
 
 
-Drover ImprintImages(Drover DICOM_data,
+bool ImprintImages(Drover &DICOM_data,
                      const OperationArgPkg& OptArgs,
                      const std::map<std::string, std::string>&
                      /*InvocationMetadata*/,
@@ -144,5 +144,5 @@ Drover ImprintImages(Drover DICOM_data,
         }
     }
 
-    return DICOM_data;
+    return true;
 }

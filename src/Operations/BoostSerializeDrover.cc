@@ -53,7 +53,7 @@ OperationDoc OpArgDocBoost_Serialize_Drover(){
     return out;
 }
 
-Drover Boost_Serialize_Drover(const Drover& DICOM_data,
+bool Boost_Serialize_Drover(Drover &DICOM_data,
                               const OperationArgPkg& OptArgs,
                               const std::map<std::string, std::string>& /*InvocationMetadata*/,
                               const std::string& /*FilenameLex*/){
@@ -106,5 +106,5 @@ Drover Boost_Serialize_Drover(const Drover& DICOM_data,
         throw std::runtime_error("Unable dump serialization to file " + apath.string());
     }
 
-    return DICOM_data;
+    return true;
 }

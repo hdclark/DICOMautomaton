@@ -37,7 +37,7 @@ OperationDoc OpArgDocUBC3TMRI_DCE_Experimental(){
     return out;
 }
 
-Drover UBC3TMRI_DCE_Experimental(Drover DICOM_data,
+bool UBC3TMRI_DCE_Experimental(Drover &DICOM_data,
                                  const OperationArgPkg& /*OptArgs*/,
                                  const std::map<std::string, std::string>& InvocationMetadata,
                                  const std::string& /*FilenameLex*/){
@@ -233,5 +233,5 @@ Drover UBC3TMRI_DCE_Experimental(Drover DICOM_data,
         }
     }
 
-    return DICOM_data;
+    return true;
 }

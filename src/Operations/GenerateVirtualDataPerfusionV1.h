@@ -10,7 +10,7 @@
 
 OperationDoc OpArgDocGenerateVirtualDataPerfusionV1();
 
-Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data,
+bool GenerateVirtualDataPerfusionV1(Drover &DICOM_data,
                                       const OperationArgPkg& /*OptArgs*/,
                                       const std::map<std::string, std::string>& /*InvocationMetadata*/,
                                       const std::string& /*FilenameLex*/);

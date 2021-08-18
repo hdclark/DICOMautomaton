@@ -25,7 +25,7 @@ OperationDoc OpArgDocDumpAllOrderedImageMetadataToFile(){
     return out;
 }
 
-Drover DumpAllOrderedImageMetadataToFile(Drover DICOM_data,
+bool DumpAllOrderedImageMetadataToFile(Drover &DICOM_data,
                                          const OperationArgPkg& /*OptArgs*/,
                                          const std::map<std::string, std::string>& /*InvocationMetadata*/,
                                          const std::string& /*FilenameLex*/){
@@ -55,5 +55,5 @@ Drover DumpAllOrderedImageMetadataToFile(Drover DICOM_data,
 
     Dump_All_Ordered_Image_Metadata_To_File(DICOM_data.image_data.front()->imagecoll.images, "/tmp/ordered_image_metadata.tsv");
 
-    return DICOM_data;
+    return true;
 }

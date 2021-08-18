@@ -46,7 +46,7 @@ OperationDoc OpArgDocSpatialSharpen(){
     return out;
 }
 
-Drover SpatialSharpen(Drover DICOM_data,
+bool SpatialSharpen(Drover &DICOM_data,
                       const OperationArgPkg& OptArgs,
                       const std::map<std::string, std::string>&,
                       const std::string&){
@@ -79,5 +79,5 @@ Drover SpatialSharpen(Drover DICOM_data,
         }
     }
 
-    return DICOM_data;
+    return true;
 }

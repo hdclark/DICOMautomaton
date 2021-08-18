@@ -349,7 +349,7 @@ OperationDoc OpArgDocPlotLineSamples(){
     return out;
 }
 
-Drover PlotLineSamples(Drover DICOM_data,
+bool PlotLineSamples(Drover &DICOM_data,
                        const OperationArgPkg& OptArgs,
                        const std::map<std::string, std::string>&
                        /*InvocationMetadata*/,
@@ -397,5 +397,5 @@ Drover PlotLineSamples(Drover DICOM_data,
         FUNCWARN("Unable to plot line sample: " << e.what());
     }
 
-    return DICOM_data;
+    return true;
 }

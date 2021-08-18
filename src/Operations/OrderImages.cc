@@ -62,7 +62,7 @@ OperationDoc OpArgDocOrderImages(){
 }
 
 
-Drover OrderImages(Drover DICOM_data,
+bool OrderImages(Drover &DICOM_data,
                    const OperationArgPkg& OptArgs,
                    const std::map<std::string, std::string>& /*InvocationMetadata*/,
                    const std::string& /*FilenameLex*/){
@@ -168,5 +168,5 @@ Drover OrderImages(Drover DICOM_data,
         (*iap_it)->imagecoll.images.sort( ordering );
     }
 
-    return DICOM_data;
+    return true;
 }

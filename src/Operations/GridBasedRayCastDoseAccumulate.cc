@@ -167,7 +167,7 @@ OperationDoc OpArgDocGridBasedRayCastDoseAccumulate(){
 
 
 
-Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data,
+bool GridBasedRayCastDoseAccumulate(Drover &DICOM_data,
                                       const OperationArgPkg& OptArgs,
                                       const std::map<std::string, std::string>& /*InvocationMetadata*/,
                                       const std::string& FilenameLex){
@@ -537,5 +537,5 @@ Drover GridBasedRayCastDoseAccumulate(Drover DICOM_data,
     DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>() );
     DICOM_data.image_data.back()->imagecoll = sd_image_collection;
 
-    return DICOM_data;
+    return true;
 }

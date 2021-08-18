@@ -51,13 +51,13 @@ OperationDoc OpArgDocWhile() {
         "Each repeat is performed sequentially, and all side-effects are carried forward for each iteration."
         " In particular, all selectors in child operations are evaluated lazily, at the moment when the child"
         " operation is invoked. If any non-conditional child operation does not complete successfully, it is"
-        " treated as a 'break' statement."
+        " treated as a 'break' statement and a true truthiness is returned."
     );
 
     out.args.emplace_back();
     out.args.back().name        = "N";
     out.args.back().desc        = "The maximum number of times to loop. If the loop reaches this number of iterations,"
-                                  " then this operation returns true truthiness. If 'N' is negative or not provided,"
+                                  " then this operation returns false truthiness. If 'N' is negative or not provided,"
                                   " then looping will continue indefinitely.";
     out.args.back().default_val = "100";
     out.args.back().expected    = false;
@@ -67,7 +67,7 @@ OperationDoc OpArgDocWhile() {
     return out;
 }
 
-Drover While(Drover DICOM_data,
+bool While(Drover &DICOM_data,
               const OperationArgPkg& OptArgs,
               const std::map<std::string, std::string>& InvocationMetadata,
               const std::string& FilenameLex){
@@ -90,7 +90,7 @@ Drover While(Drover DICOM_data,
     bool condition = false;
     long int i = 0;
     while(true){
-        if( (0 <= N) && (N <= i++) ) break;
+        if( (0 <= N) && (N <= i++) ) return false;
 
         try{
             condition = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, child_condition);
@@ -98,11 +98,11 @@ Drover While(Drover DICOM_data,
         if(!condition) break;
 
         if(!Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, child_body)){
-            // Treat false truthiness in the body operations as a break statement.
-            return DICOM_data;
+            // Treat false truthiness in the body operations as a break statement, to continue execution.
+            return true;
         }
     }
 
-    return DICOM_data;
+    return true;
 }
 

@@ -54,7 +54,7 @@ OperationDoc OpArgDocNot() {
     return out;
 }
 
-Drover Not(Drover DICOM_data,
+bool Not(Drover &DICOM_data,
            const OperationArgPkg& OptArgs,
            const std::map<std::string, std::string>& InvocationMetadata,
            const std::string& FilenameLex){
@@ -76,6 +76,6 @@ Drover Not(Drover DICOM_data,
         }
     }
 
-    return DICOM_data;
+    return true;
 }
 

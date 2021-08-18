@@ -30,7 +30,7 @@ OperationDoc OpArgDocConvertDoseToImage(){
     return out;
 }
 
-Drover ConvertDoseToImage(Drover DICOM_data,
+bool ConvertDoseToImage(Drover &DICOM_data,
                           const OperationArgPkg& OptArgs,
                           const std::map<std::string, std::string>&,
                           const std::string&){
@@ -47,5 +47,5 @@ Drover ConvertDoseToImage(Drover DICOM_data,
         }
     }
 
-    return DICOM_data;
+    return true;
 }

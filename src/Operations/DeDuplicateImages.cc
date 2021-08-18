@@ -38,7 +38,7 @@ OperationDoc OpArgDocDeDuplicateImages(){
     return out;
 }
 
-Drover DeDuplicateImages(Drover DICOM_data,
+bool DeDuplicateImages(Drover &DICOM_data,
                          const OperationArgPkg& OptArgs,
                          const std::map<std::string, std::string>&,
                          const std::string&){
@@ -116,5 +116,5 @@ FUNCINFO("About to compare image arrays: "
         DICOM_data.image_data.erase( img_dup_it );
     }
 
-    return DICOM_data;
+    return true;
 }

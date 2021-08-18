@@ -10,7 +10,7 @@
 
 OperationDoc OpArgDocAnd();
 
-Drover And(Drover DICOM_data,
+bool And(Drover &DICOM_data,
            const OperationArgPkg& /*OptArgs*/,
            const std::map<std::string, std::string>& /*InvocationMetadata*/,
            const std::string& /*FilenameLex*/);

@@ -74,7 +74,7 @@ OperationDoc OpArgDocRemeshSurfaceMeshes(){
 
 
 
-Drover RemeshSurfaceMeshes(Drover DICOM_data,
+bool RemeshSurfaceMeshes(Drover &DICOM_data,
                            const OperationArgPkg& OptArgs,
                            const std::map<std::string, std::string>&
                            /*InvocationMetadata*/,
@@ -128,5 +128,5 @@ Drover RemeshSurfaceMeshes(Drover DICOM_data,
               << " --> " << static_cast<int>(1000.0*(completed)/sm_count)/10.0 << "% done");
     }
 
-    return DICOM_data;
+    return true;
 }

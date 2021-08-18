@@ -137,7 +137,7 @@ OperationDoc OpArgDocDecayDoseOverTimeJones2014(){
 
 
 
-Drover DecayDoseOverTimeJones2014(Drover DICOM_data,
+bool DecayDoseOverTimeJones2014(Drover &DICOM_data,
                                   const OperationArgPkg& OptArgs,
                                   const std::map<std::string, std::string>& /*InvocationMetadata*/,
                                   const std::string& FilenameLex){
@@ -224,5 +224,5 @@ Drover DecayDoseOverTimeJones2014(Drover DICOM_data,
         throw std::runtime_error("Unable to decay dose (Jones and Grant 2014 model).");
     }
 
-    return DICOM_data;
+    return true;
 }

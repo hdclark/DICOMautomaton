@@ -142,7 +142,7 @@ OperationDoc OpArgDocExtractAlphaBeta(){
 
 
 
-Drover ExtractAlphaBeta(Drover DICOM_data,
+bool ExtractAlphaBeta(Drover &DICOM_data,
                         const OperationArgPkg& OptArgs,
                         const std::map<std::string, std::string>& /*InvocationMetadata*/,
                         const std::string& /*FilenameLex*/){
@@ -227,5 +227,5 @@ Drover ExtractAlphaBeta(Drover DICOM_data,
         }
     }
 
-    return DICOM_data;
+    return true;
 }

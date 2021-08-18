@@ -67,7 +67,7 @@ OperationDoc OpArgDocExportFITSImages(){
 }
 
 
-Drover ExportFITSImages(Drover DICOM_data,
+bool ExportFITSImages(Drover &DICOM_data,
                         const OperationArgPkg& OptArgs,
                         const std::map<std::string, std::string>&
                         /*InvocationMetadata*/,
@@ -94,5 +94,5 @@ Drover ExportFITSImages(Drover DICOM_data,
         }
     }
 
-    return DICOM_data;
+    return true;
 }

@@ -184,7 +184,7 @@ lCompile_Regex(const std::string& input){
                              std::regex::optimize |
                              std::regex::extended);
 }
-Drover AnalyzeHistograms(Drover DICOM_data,
+bool AnalyzeHistograms(Drover &DICOM_data,
                          const OperationArgPkg& OptArgs,
                          const std::map<std::string, std::string>&
                          /*InvocationMetadata*/,
@@ -574,5 +574,5 @@ Drover AnalyzeHistograms(Drover DICOM_data,
         }
     }
 
-    return DICOM_data;
+    return true;
 }

@@ -270,7 +270,7 @@ OperationDoc OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_5Param(){
 
 
 
-Drover CT_Liver_Perfusion_Pharmaco_1C2I_5Param(Drover DICOM_data,
+bool CT_Liver_Perfusion_Pharmaco_1C2I_5Param(Drover &DICOM_data,
                                                const OperationArgPkg& OptArgs,
                                                const std::map<std::string, std::string>& InvocationMetadata,
                                                const std::string& /*FilenameLex*/){
@@ -829,5 +829,5 @@ Drover CT_Liver_Perfusion_Pharmaco_1C2I_5Param(Drover DICOM_data,
         }
     }
     
-    return DICOM_data;
+    return true;
 }

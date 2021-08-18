@@ -10,7 +10,7 @@
 
 OperationDoc OpArgDocConvertImageToDose();
 
-Drover ConvertImageToDose(Drover DICOM_data,
+bool ConvertImageToDose(Drover &DICOM_data,
                           const OperationArgPkg& /*OptArgs*/,
                           const std::map<std::string, std::string>&
                           /*InvocationMetadata*/,

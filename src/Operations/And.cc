@@ -55,7 +55,7 @@ OperationDoc OpArgDocAnd() {
     return out;
 }
 
-Drover And(Drover DICOM_data,
+bool And(Drover &DICOM_data,
            const OperationArgPkg& OptArgs,
            const std::map<std::string, std::string>& InvocationMetadata,
            const std::string& FilenameLex){
@@ -66,6 +66,6 @@ Drover And(Drover DICOM_data,
         throw std::runtime_error("Child operation failed");
     }
 
-    return DICOM_data;
+    return true;
 }
 

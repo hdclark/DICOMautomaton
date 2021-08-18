@@ -90,7 +90,7 @@ OperationDoc OpArgDocSDL_Viewer(){
     return out;
 }
 
-Drover SDL_Viewer(Drover DICOM_data,
+bool SDL_Viewer(Drover &DICOM_data,
                   const OperationArgPkg& /*OptArgs*/,
                   const std::map<std::string, std::string>& InvocationMetadata,
                   const std::string& FilenameLex){
@@ -3459,5 +3459,5 @@ script_files.back().content.emplace_back('\0');
     SDL_DestroyWindow(window);
     SDL_Quit();
 
-    return DICOM_data;
+    return true;
 }

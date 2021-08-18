@@ -34,7 +34,7 @@ OperationDoc OpArgDocGenerateVirtualDataPerfusionV1(){
     return out;
 }
 
-Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data,
+bool GenerateVirtualDataPerfusionV1(Drover &DICOM_data,
                                       const OperationArgPkg&,
                                       const std::map<std::string, std::string>&,
                                       const std::string& FilenameLex){
@@ -304,5 +304,5 @@ Drover GenerateVirtualDataPerfusionV1(Drover DICOM_data,
         DICOM_data.contour_data = std::move(output);
     }
 
-    return DICOM_data;
+    return true;
 }

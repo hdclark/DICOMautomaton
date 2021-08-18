@@ -10,7 +10,7 @@
 
 OperationDoc OpArgDocIfElse();
 
-Drover IfElse(Drover DICOM_data,
+bool IfElse(Drover &DICOM_data,
               const OperationArgPkg& /*OptArgs*/,
               const std::map<std::string, std::string>& /*InvocationMetadata*/,
               const std::string& /*FilenameLex*/);

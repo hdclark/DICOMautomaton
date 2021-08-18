@@ -75,12 +75,12 @@ OperationDoc OpArgDocSeamContours(){
 
 
 
-Drover SeamContours(Drover DICOM_data,
+bool SeamContours(Drover &DICOM_data,
                     const OperationArgPkg&,
                     const std::map<std::string, std::string>&,
                     const std::string&){
 
-    if(DICOM_data.contour_data == nullptr) return DICOM_data;
+    if(!DICOM_data.Has_Contour_Data()) return false;
 
     //For identifying duplicate vertices later.
     const auto verts_equal_F = [](const vec3<double> &vA, const vec3<double> &vB) -> bool {
@@ -164,5 +164,5 @@ Drover SeamContours(Drover DICOM_data,
     }
 
     DICOM_data.contour_data = std::move(cd);
-    return DICOM_data;
+    return true;
 }

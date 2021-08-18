@@ -44,7 +44,7 @@ OperationDoc OpArgDocCT_Liver_Perfusion(){
     return out;
 }
 
-Drover CT_Liver_Perfusion(Drover DICOM_data,
+bool CT_Liver_Perfusion(Drover &DICOM_data,
                           const OperationArgPkg& /*OptArgs*/,
                           const std::map<std::string, std::string>& InvocationMetadata,
                           const std::string& /*FilenameLex*/){
@@ -355,5 +355,5 @@ for(auto & img_arr : C_enhancement_img_arrays){
  
 
 
-    return DICOM_data;
+    return true;
 }

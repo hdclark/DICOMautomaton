@@ -29,7 +29,7 @@ OperationDoc OpArgDocCopyImages(){
     return out;
 }
 
-Drover CopyImages(Drover DICOM_data,
+bool CopyImages(Drover &DICOM_data,
                   const OperationArgPkg& OptArgs,
                   const std::map<std::string, std::string>&,
                   const std::string&){
@@ -53,5 +53,5 @@ Drover CopyImages(Drover DICOM_data,
         DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
     }
 
-    return DICOM_data;
+    return true;
 }

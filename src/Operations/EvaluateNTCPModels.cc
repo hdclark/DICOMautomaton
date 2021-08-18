@@ -194,7 +194,7 @@ OperationDoc OpArgDocEvaluateNTCPModels(){
 
 
 
-Drover EvaluateNTCPModels(Drover DICOM_data,
+bool EvaluateNTCPModels(Drover &DICOM_data,
                           const OperationArgPkg& OptArgs,
                           const std::map<std::string, std::string>&
                           /*InvocationMetadata*/,
@@ -405,5 +405,5 @@ Drover EvaluateNTCPModels(Drover DICOM_data,
         FUNCERR("Unable to write to output NTCP file: '" << e.what() << "'");
     }
 
-    return DICOM_data;
+    return true;
 }

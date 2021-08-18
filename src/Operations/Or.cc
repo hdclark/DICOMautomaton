@@ -57,7 +57,7 @@ OperationDoc OpArgDocOr() {
     return out;
 }
 
-Drover Or(Drover DICOM_data,
+bool Or(Drover &DICOM_data,
           const OperationArgPkg& OptArgs,
           const std::map<std::string, std::string>& InvocationMetadata,
           const std::string& FilenameLex){
@@ -79,6 +79,6 @@ Drover Or(Drover DICOM_data,
 
     if(!condition) throw std::runtime_error("No child evaluated to 'true'");
 
-    return DICOM_data;
+    return true;
 }
 

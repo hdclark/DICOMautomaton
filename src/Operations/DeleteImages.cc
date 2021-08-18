@@ -33,7 +33,7 @@ OperationDoc OpArgDocDeleteImages(){
 
 
 
-Drover DeleteImages(Drover DICOM_data,
+bool DeleteImages(Drover &DICOM_data,
                     const OperationArgPkg& OptArgs,
                     const std::map<std::string, std::string>&,
                     const std::string&){
@@ -48,5 +48,5 @@ Drover DeleteImages(Drover DICOM_data,
         DICOM_data.image_data.erase( iap_it );
     }
 
-    return DICOM_data;
+    return true;
 }

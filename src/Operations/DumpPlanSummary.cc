@@ -69,7 +69,7 @@ OperationDoc OpArgDocDumpPlanSummary(){
 
 
 
-Drover DumpPlanSummary(Drover DICOM_data,
+bool DumpPlanSummary(Drover &DICOM_data,
                        const OperationArgPkg& OptArgs,
                        const std::map<std::string, std::string>&
                        /*InvocationMetadata*/,
@@ -232,5 +232,5 @@ Drover DumpPlanSummary(Drover DICOM_data,
         FUNCERR("Unable to write to log files: '" << e.what() << "'");
     }
 
-    return DICOM_data;
+    return true;
 }

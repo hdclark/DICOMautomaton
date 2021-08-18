@@ -481,10 +481,12 @@ bool Operation_Dispatcher( Drover &DICOM_data,
                     }
 
                     FUNCINFO("Performing operation '" << op_func.first << "' now..");
-                    DICOM_data = op_func.second.second(DICOM_data,
-                                                       optargs,
-                                                       InvocationMetadata,
-                                                       FilenameLex);
+                    const bool res = op_func.second.second(DICOM_data,
+                                                           optargs,
+                                                           InvocationMetadata,
+                                                           FilenameLex);
+                    if(!res) throw std::runtime_error("Truthiness is false");
+
                     break;
                 }
             }

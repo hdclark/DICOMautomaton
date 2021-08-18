@@ -28,7 +28,7 @@ OperationDoc OpArgDocDumpPixelValuesOverTimeForAnEncompassedPoint(){
     return out;
 }
 
-Drover DumpPixelValuesOverTimeForAnEncompassedPoint(Drover DICOM_data,
+bool DumpPixelValuesOverTimeForAnEncompassedPoint(Drover &DICOM_data,
                                                     const OperationArgPkg& /*OptArgs*/,
                                                     const std::map<std::string, std::string>& /*InvocationMetadata*/,
                                                     const std::string& /*FilenameLex*/){
@@ -50,5 +50,5 @@ Drover DumpPixelValuesOverTimeForAnEncompassedPoint(Drover DICOM_data,
         std::cout << (img_it->rows * img_it->columns * img_it->pxl_dx * img_it->pxl_dy * img_it->pxl_dz) << std::endl;
     }
 
-    return DICOM_data;
+    return true;
 }

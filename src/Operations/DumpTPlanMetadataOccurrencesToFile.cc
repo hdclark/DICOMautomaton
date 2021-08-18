@@ -59,7 +59,7 @@ OperationDoc OpArgDocDumpTPlanMetadataOccurrencesToFile(){
     return out;
 }
 
-Drover DumpTPlanMetadataOccurrencesToFile(Drover DICOM_data,
+bool DumpTPlanMetadataOccurrencesToFile(Drover &DICOM_data,
                                           const OperationArgPkg& OptArgs,
                                           const std::map<std::string, std::string>& /*InvocationMetadata*/,
                                           const std::string& /*FilenameLex*/){
@@ -140,5 +140,5 @@ Drover DumpTPlanMetadataOccurrencesToFile(Drover DICOM_data,
         FUNCERR("Unable to write to output file: '" << e.what() << "'");
     }
 
-    return DICOM_data;
+    return true;
 }

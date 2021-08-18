@@ -68,7 +68,7 @@ OperationDoc OpArgDocExportPointClouds(){
 
 
 
-Drover ExportPointClouds(Drover DICOM_data,
+bool ExportPointClouds(Drover &DICOM_data,
                          const OperationArgPkg& OptArgs,
                          const std::map<std::string, std::string>&
                          /*InvocationMetadata*/,
@@ -95,5 +95,5 @@ Drover ExportPointClouds(Drover DICOM_data,
         FUNCINFO("Point cloud written to '" << FN << "'");
     }
 
-    return DICOM_data;
+    return true;
 }

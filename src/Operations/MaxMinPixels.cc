@@ -24,7 +24,7 @@ OperationDoc OpArgDocMaxMinPixels(){
     return out;
 }
 
-Drover MaxMinPixels(Drover DICOM_data,
+bool MaxMinPixels(Drover &DICOM_data,
                     const OperationArgPkg& /*OptArgs*/,
                     const std::map<std::string, std::string>&
                     /*InvocationMetadata*/,
@@ -37,5 +37,5 @@ Drover MaxMinPixels(Drover DICOM_data,
         FUNCERR("Unable to max-min pixel values");
     }
 
-    return DICOM_data;
+    return true;
 }

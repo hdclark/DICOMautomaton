@@ -78,7 +78,7 @@ OperationDoc OpArgDocExportSurfaceMeshesOFF(){
 
 
 
-Drover ExportSurfaceMeshesOFF(Drover DICOM_data,
+bool ExportSurfaceMeshesOFF(Drover &DICOM_data,
                               const OperationArgPkg& OptArgs,
                               const std::map<std::string, std::string>& /*InvocationMetadata*/,
                               const std::string& /*FilenameLex*/){
@@ -116,5 +116,5 @@ Drover ExportSurfaceMeshesOFF(Drover DICOM_data,
         FUNCINFO("Surface mesh written to '" << FN << "'");
     }
 
-    return DICOM_data;
+    return true;
 }

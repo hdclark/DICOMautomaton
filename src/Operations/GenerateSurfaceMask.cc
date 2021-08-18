@@ -63,7 +63,7 @@ OperationDoc OpArgDocGenerateSurfaceMask(){
 
 
 
-Drover GenerateSurfaceMask(Drover DICOM_data,
+bool GenerateSurfaceMask(Drover &DICOM_data,
                            const OperationArgPkg& OptArgs,
                            const std::map<std::string, std::string>& /*InvocationMetadata*/,
                            const std::string& /*FilenameLex*/){
@@ -104,5 +104,5 @@ Drover GenerateSurfaceMask(Drover DICOM_data,
         throw std::runtime_error("Unable to generate a surface mask.");
     }
 
-    return DICOM_data;
+    return true;
 }

@@ -41,7 +41,7 @@ OperationDoc OpArgDocSelectSlicesIntersectingROI(){
 
 
 
-Drover SelectSlicesIntersectingROI(Drover DICOM_data,
+bool SelectSlicesIntersectingROI(Drover &DICOM_data,
                                    const OperationArgPkg& OptArgs,
                                    const std::map<std::string, std::string>& /*InvocationMetadata*/,
                                    const std::string& /*FilenameLex*/){
@@ -74,5 +74,5 @@ Drover SelectSlicesIntersectingROI(Drover DICOM_data,
         img_arr->imagecoll.Retain_Images_Satisfying( retain_encompassing_imgs );
     }
 
-    return DICOM_data;
+    return true;
 }

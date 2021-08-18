@@ -188,7 +188,7 @@ OperationDoc OpArgDocGenerateSyntheticImages(){
     return out;
 }
 
-Drover GenerateSyntheticImages(Drover DICOM_data,
+bool GenerateSyntheticImages(Drover &DICOM_data,
                                const OperationArgPkg& OptArgs,
                                const std::map<std::string, std::string>&,
                                const std::string& FilenameLex){
@@ -397,5 +397,5 @@ Drover GenerateSyntheticImages(Drover DICOM_data,
     //Create an empty contour set iff one does not exist.
     DICOM_data.Ensure_Contour_Data_Allocated();
 
-    return DICOM_data;
+    return true;
 }

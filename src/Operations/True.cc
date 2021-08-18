@@ -46,11 +46,11 @@ OperationDoc OpArgDocTrue() {
     return out;
 }
 
-Drover True(Drover DICOM_data,
+bool True(Drover &DICOM_data,
             const OperationArgPkg& /*OptArgs*/,
             const std::map<std::string, std::string>& /*InvocationMetadata*/,
             const std::string& /*FilenameLex*/){
 
-    return DICOM_data;
+    return true;
 }
 

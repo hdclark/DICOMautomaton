@@ -50,7 +50,7 @@ OperationDoc OpArgDocAverage(){
 }
 
 
-Drover Average(Drover DICOM_data,
+bool Average(Drover &DICOM_data,
                const OperationArgPkg& OptArgs,
                const std::map<std::string, std::string>&
                /*InvocationMetadata*/,
@@ -90,5 +90,5 @@ Drover Average(Drover DICOM_data,
         throw std::invalid_argument("Invalid averaging method specified. Cannot continue");
     }
 
-    return DICOM_data;
+    return true;
 }

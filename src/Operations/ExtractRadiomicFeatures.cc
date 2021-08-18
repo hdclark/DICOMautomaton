@@ -104,7 +104,7 @@ OperationDoc OpArgDocExtractRadiomicFeatures(){
     return out;
 }
 
-Drover ExtractRadiomicFeatures(Drover DICOM_data,
+bool ExtractRadiomicFeatures(Drover &DICOM_data,
                                const OperationArgPkg& OptArgs,
                                const std::map<std::string, std::string>& /*InvocationMetadata*/,
                                const std::string& FilenameLex){
@@ -547,5 +547,5 @@ Drover ExtractRadiomicFeatures(Drover DICOM_data,
         FUNCERR("Unable to write to output file: '" << e.what() << "'");
     }
 
-    return DICOM_data;
+    return true;
 }

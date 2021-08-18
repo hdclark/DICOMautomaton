@@ -60,7 +60,7 @@ OperationDoc OpArgDocDecayDoseOverTimeHalve(){
 
 
 
-Drover DecayDoseOverTimeHalve(Drover DICOM_data,
+bool DecayDoseOverTimeHalve(Drover &DICOM_data,
                               const OperationArgPkg& OptArgs,
                               const std::map<std::string, std::string>& /*InvocationMetadata*/,
                               const std::string& FilenameLex){
@@ -106,5 +106,5 @@ Drover DecayDoseOverTimeHalve(Drover DICOM_data,
         throw std::runtime_error("Unable to decay dose (via halving).");
     }
 
-    return DICOM_data;
+    return true;
 }

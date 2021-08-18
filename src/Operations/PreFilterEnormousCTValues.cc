@@ -25,7 +25,7 @@ OperationDoc OpArgDocPreFilterEnormousCTValues(){
     return out;
 }
 
-Drover PreFilterEnormousCTValues(Drover DICOM_data,
+bool PreFilterEnormousCTValues(Drover &DICOM_data,
                                  const OperationArgPkg& /*OptArgs*/,
                                  const std::map<std::string, std::string>& /*InvocationMetadata*/,
                                  const std::string& /*FilenameLex*/){
@@ -38,5 +38,5 @@ Drover PreFilterEnormousCTValues(Drover DICOM_data,
         }
     }
 
-    return DICOM_data;
+    return true;
 }
