@@ -133,6 +133,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         none,
         max,
     } plot_norm = plot_norm_t::none;
+    bool show_plot_legend = true;
 
     // Image viewer state.
     long int img_array_num = -1; // The image array currently displayed.
@@ -2849,7 +2850,8 @@ script_files.back().content.emplace_back('\0');
                                     &DICOM_data,
 
                                     &lsamps_visible,
-                                    &plot_norm ]() -> void {
+                                    &plot_norm,
+                                    &show_plot_legend ]() -> void {
 
             std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
             if(!drover_lock) return;
@@ -2866,6 +2868,8 @@ script_files.back().content.emplace_back('\0');
                 ImVec2 window_extent = ImGui::GetContentRegionAvail();
                 ImGui::Text("Settings");
                 ImGui::Checkbox("Show metadata on hover", &view_toggles.view_plots_metadata);
+                ImGui::Checkbox("Show legend", &show_plot_legend);
+
                 ImGui::Text("Normalization: ");
                 ImGui::SameLine();
                 if(ImGui::Button("None", ImVec2(window_extent.x/3, 0))){ 
@@ -2907,12 +2911,10 @@ script_files.back().content.emplace_back('\0');
                 // Display metadata when hovering.
                 if( ImGui::IsItemHovered() 
                 &&  view_toggles.view_plots_metadata ){
+                    ImGui::SetNextWindowSize(ImVec2(600, -1));
                     ImGui::BeginTooltip();
-
-                    ImGui::Columns(2);
-                    ImGui::PushItemWidth(150.0f);
-                    ImGui::Text("Linesample"); ImGui::NextColumn();
-                    ImGui::Text("Metadata"); ImGui::NextColumn();
+                    ImGui::Text("Linesample Metadata");
+                    ImGui::Columns(2, "Plot Metadata", true);
                     ImGui::Separator();
                     ImGui::Text("Key"); ImGui::NextColumn();
                     ImGui::Text("Value"); ImGui::NextColumn();
@@ -2921,10 +2923,6 @@ script_files.back().content.emplace_back('\0');
                         ImGui::Text("%s",  apair.first.c_str()); ImGui::NextColumn();
                         ImGui::Text("%s",  apair.second.c_str()); ImGui::NextColumn();
                     }
-                    ImGui::PopItemWidth();
-                    ImGui::Columns(1);
-                    ImGui::Separator();
-
                     ImGui::EndTooltip();
                 }
 
@@ -2943,13 +2941,17 @@ script_files.back().content.emplace_back('\0');
                 ImGui::Begin("Plots", &view_toggles.view_plots_enabled);
                 ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
+                auto flags = ImPlotFlags_AntiAliased | ImPlotFlags_NoLegend;
+                if(show_plot_legend) flags = ImPlotFlags_AntiAliased;
+
                 if(ImPlot::BeginPlot("Plots",
                                      nullptr,
                                      nullptr,
                                      window_extent,
-                                     ImPlotFlags_AntiAliased,
+                                     flags,
                                      ImPlotAxisFlags_AutoFit,
                                      ImPlotAxisFlags_AutoFit )) {
+
                     for(int i = 0; i < N_lsamps; ++i){
                         if(!lsamps_visible[i]) continue;
                         auto lsamp_ptr_it = std::next(DICOM_data.lsamp_data.begin(), i);
