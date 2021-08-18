@@ -2881,12 +2881,13 @@ script_files.back().content.emplace_back('\0');
                 const auto histtype = (*lsamp_ptr_it)->line.GetMetadataValueAs<std::string>("HistogramType").value_or("unknown"_s);
                 const auto title = std::to_string(i) + " " + name;
 
-                const auto is_visible = lsamps_visible[i];
+                ImGui::Checkbox(title.c_str(), &lsamps_visible[i]); 
                 ImGui::SameLine(150);
                 ImGui::Text("%s", modality.c_str());
                 ImGui::SameLine(300);
                 ImGui::Text("%s", histtype.c_str());
 
+                const auto is_visible = lsamps_visible[i];
                 if(is_visible) any_selected = true;
             }
             ImGui::End();
