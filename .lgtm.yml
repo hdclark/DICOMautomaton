@@ -79,5 +79,5 @@ extraction:
       #  - built in-repo so analysis tooling picks up the source files.
       #  - have to remove .git to permit in-repo builds.
       #  - installed to exercise the install script, but only install to user-accessible location.
-      build_command: "rm -rf .git && CXXFLAGS=-I$LGTM_WORKSPACE/placeholder_root/include LDFLAGS=-L$LGTM_WORKSPACE/placeholder_root/lib ./compile_and_install.sh -u -i $LGTM_WORKSPACE/placeholder_root -b $LGTM_SRC"
+      build_command: "rm -rf .git && CXXFLAGS=-I$LGTM_WORKSPACE/placeholder_root/include LDFLAGS=-L$LGTM_WORKSPACE/placeholder_root/lib ./compile_and_install.sh -n -u -i $LGTM_WORKSPACE/placeholder_root -b $LGTM_SRC"
 
