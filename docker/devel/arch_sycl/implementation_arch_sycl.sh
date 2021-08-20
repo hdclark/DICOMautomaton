@@ -96,9 +96,16 @@ fi
 
 
 # Download a SYCL toolchain.
-su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm hipsycl-cpu"
+# hipSYCL (experiemental toolchain).
+#su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm hipsycl-cpu"
+# computecpp (proprietary toolchain).
 #su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm computecpp"
+# triSYCL (Khronos prototype toolchain).
+su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm trisycl-git"
+ln -s "$(which g++)" /usr/bin/syclcc # Provide a hipSYCL-like wrapper for triSYCL.
 rm -f /var/cache/pacman/pkg/*
+
+
 
 # Install Ygor.
 #
