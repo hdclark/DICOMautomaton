@@ -1,12 +1,11 @@
 
 # This config file facilitates automated static analysis on lgtm.com.
-#path_classifiers:
-#  test:
-#    - exclude: /
-#    # Note: the following require a preceeding `shopt -s dotglob`.
-#    - "src/**/*.cc"
-#    - "src/**/*.h"
-#    - exclude: /src/imebra20121219
+
+path_classifiers:
+  library:
+    - exclude: src/imebra*
+    - exclude: src/imgui*
+    - exclude: src/implot*
 
 extraction:
   cpp:
@@ -78,6 +77,6 @@ extraction:
       # Notes: 
       #  - built in-repo so analysis tooling picks up the source files.
       #  - have to remove .git to permit in-repo builds.
-      #  - installed to exercise the install script, but only install to user-accessible location.
+      #  - not actually installed, since /etc/ is not accessible in lgtm environment.
       build_command: "rm -rf .git && CXXFLAGS=-I$LGTM_WORKSPACE/placeholder_root/include LDFLAGS=-L$LGTM_WORKSPACE/placeholder_root/lib ./compile_and_install.sh -n -u -i $LGTM_WORKSPACE/placeholder_root -b $LGTM_SRC"
 
