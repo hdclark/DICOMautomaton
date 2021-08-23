@@ -399,6 +399,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     contouring_imgs.Ensure_Contour_Data_Allocated();
     contouring_imgs.image_data.push_back(std::make_unique<Image_Array>());
     contouring_imgs.image_data.back()->imagecoll.images.emplace_back();
+    std::string new_contour_name(500, '\0');
 
 
     // Resets the contouring image to match the display image characteristics.
@@ -906,6 +907,67 @@ bool SDL_Viewer(Drover &DICOM_data,
         return;
     };
     
+    //Save the current contour collection.
+    const auto save_contour_buffer = [ &DICOM_data,
+                                       &drover_mutex,
+
+                                       &contouring_imgs,
+                                       &recompute_image_iters,
+                                       &X,
+                                       &reset_contouring_state,
+                                       &launch_contour_preprocessor ](const std::string &roi_name) -> bool {
+            //std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
+            //auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_cimage_iters();
+            auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+            try{
+                if( !img_valid ) throw std::runtime_error("Contouring image not valid.");
+
+                for(auto &cc : contouring_imgs.contour_data->ccs){
+                    contouring_imgs.Ensure_Contour_Data_Allocated();
+
+                    if(roi_name.empty()) throw std::runtime_error("Cannot save with an empty ROI name.");
+
+                    //Trim empty contours from the shuttle.
+                    cc.Purge_Contours_Below_Point_Count_Threshold(3);
+                    if(cc.contours.empty()) throw std::runtime_error("Given empty contour collection. Contours need >3 points each.");
+
+                    auto FrameOfReferenceUID = disp_img_it->GetMetadataValueAs<std::string>("FrameOfReferenceUID");
+                    if(FrameOfReferenceUID){
+                        cc.Insert_Metadata("FrameOfReferenceUID", FrameOfReferenceUID.value());
+                    }else{
+                        throw std::runtime_error("Missing 'FrameOfReferenceUID' metadata element. Cannot continue.");
+                    }
+
+                    auto StudyInstanceUID = disp_img_it->GetMetadataValueAs<std::string>("StudyInstanceUID");
+                    if(StudyInstanceUID){
+                        cc.Insert_Metadata("StudyInstanceUID", StudyInstanceUID.value());
+                    }else{
+                        throw std::runtime_error("Missing 'StudyInstanceUID' metadata element. Cannot continue.");
+                    }
+
+                    const double MinimumSeparation = disp_img_it->pxl_dz; // TODO: use more robust method here.
+                    cc.Insert_Metadata("ROIName", roi_name);
+                    cc.Insert_Metadata("NormalizedROIName", X(roi_name));
+                    cc.Insert_Metadata("ROINumber", "10000"); // TODO: find highest existing and ++ it.
+                    cc.Insert_Metadata("MinimumSeparation", std::to_string(MinimumSeparation));
+                }
+
+                //Insert the contours into the Drover object.
+                DICOM_data.Ensure_Contour_Data_Allocated();
+                DICOM_data.contour_data->ccs.splice(std::end(DICOM_data.contour_data->ccs),contouring_imgs.contour_data->ccs);
+                contouring_imgs.contour_data->ccs.clear();
+                FUNCINFO("Drover class imbued with new contour collection");
+
+                reset_contouring_state(img_array_ptr_it);
+                launch_contour_preprocessor();
+
+            }catch(const std::exception &e){
+                FUNCWARN("Unable to save contour collection: '" << e.what() << "'");
+                return false;
+            }
+            return true;
+    };
+
 
     // Advance to the specified Image_Array. Also resets necessary display image iterators.
     const auto advance_to_image_array = [ &DICOM_data,
@@ -1819,6 +1881,8 @@ script_files.back().content.emplace_back('\0');
                                            &contouring_brush,
                                            &contouring_margin,
                                            &contouring_img_row_col_count,
+                                           &new_contour_name,
+                                           &save_contour_buffer,
 
                                            &recompute_cimage_iters,
                                            &contouring_imgs,
@@ -2124,12 +2188,35 @@ script_files.back().content.emplace_back('\0');
 
                     ImGui::Text("Note: this functionality is still under active development.");
                     if(ImGui::Button("Save")){ 
-                        ImGui::OpenPopup("Contour Save");
+                        ImGui::OpenPopup("Save Contours");
                     }
                     ImGui::SameLine();
-                    if(ImGui::BeginPopupModal("Contour Save", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+                    if(ImGui::BeginPopupModal("Save Contours", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
                         const std::string str((frame_count / 15) % 4, '.'); // Simplistic animation.
                         ImGui::Text("Saving contours%s", str.c_str());
+
+                        ImGui::InputText("ROI Name", new_contour_name.data(), new_contour_name.size());
+                        std::string entered_text;
+                        for(size_t i = 0; i < new_contour_name.size(); ++i){
+                            if( (new_contour_name[i] == '\0')
+                            ||  !std::isprint( static_cast<unsigned char>(new_contour_name[i]) )) break;
+                            entered_text.push_back(new_contour_name[i]);
+                        }
+                        const auto ok_to_save = !entered_text.empty();
+                        //if(!ok_to_save){
+                        //    ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+                        //    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+                        //}
+                        const bool clicked_save = ImGui::Button("Save");
+                        //if(!ok_to_save){
+                        //    ImGui::PopItemFlag();
+                        //    ImGui::PopStyleVar();
+                        //}
+                        if( clicked_save
+                        &&  ok_to_save
+                        &&  save_contour_buffer(entered_text) ){
+                            ImGui::CloseCurrentPopup();
+                        }
 
                         if(ImGui::Button("Close")){
                             ImGui::CloseCurrentPopup();
