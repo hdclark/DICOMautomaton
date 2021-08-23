@@ -3,9 +3,9 @@
 
 path_classifiers:
   library:
-    - exclude: src/imebra*
-    - exclude: src/imgui*
-    - exclude: src/implot*
+    - "src/imebra*"
+    - "src/imgui*"
+    - "src/implot*"
 
 extraction:
   cpp:
