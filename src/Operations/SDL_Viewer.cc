@@ -120,6 +120,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_contours_enabled = true;
         bool view_contouring_enabled = false;
         bool view_row_column_profiles = false;
+        bool view_time_profiles = false;
         bool view_script_editor_enabled = false;
         bool view_script_feedback = true;
         bool show_image_hover_tooltips = true;
@@ -245,6 +246,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     samples_1D<double> row_profile;
     samples_1D<double> col_profile;
+    samples_1D<double> time_profile;
 
     // --------------------------------------------- Setup ------------------------------------------------
 #ifndef CHECK_FOR_GL_ERRORS
@@ -1208,7 +1210,8 @@ if(false){
 
                                             &lsamps_visible,
                                             &row_profile,
-                                            &col_profile ](void) -> bool {
+                                            &col_profile,
+                                            &time_profile ](void) -> bool {
             if(ImGui::BeginMainMenuBar()){
                 if(ImGui::BeginMenu("File")){
                     if(ImGui::MenuItem("Open", "ctrl+o", &view_toggles.open_files_enabled)){
@@ -1246,6 +1249,9 @@ if(false){
                     if(ImGui::MenuItem("Row and Column Profiles", nullptr, &view_toggles.view_row_column_profiles)){
                         row_profile.samples.clear();
                         col_profile.samples.clear();
+                    };
+                    if(ImGui::MenuItem("Time Profiles", nullptr, &view_toggles.view_time_profiles)){
+                        time_profile.samples.clear();
                     };
                     ImGui::MenuItem("Script Editor", nullptr, &view_toggles.view_script_editor_enabled);
                     ImGui::MenuItem("Script Feedback", nullptr, &view_toggles.view_script_feedback);
@@ -1900,6 +1906,7 @@ script_files.back().content.emplace_back('\0');
 
                                            &row_profile,
                                            &col_profile,
+                                           &time_profile,
 
                                            &frame_count ]() -> void {
 
@@ -2442,7 +2449,7 @@ script_files.back().content.emplace_back('\0');
 
             // Extract data for row and column profiles.
             if( image_mouse_pos.mouse_hovering_image
-            && view_toggles.view_row_column_profiles ){
+            &&  view_toggles.view_row_column_profiles ){
                 row_profile.samples.clear();
                 col_profile.samples.clear();
                 for(auto i = 0; i < disp_img_it->columns; ++i){
@@ -2454,6 +2461,38 @@ script_files.back().content.emplace_back('\0');
                     const auto val_raw = disp_img_it->value(i,image_mouse_pos.c,0);
                     const auto row_num = static_cast<double>(i);
                     if(std::isfinite(val_raw)) col_profile.push_back({ row_num, 0.0, val_raw, 0.0 });
+                }
+            }
+
+            // Extract data for time profiles.
+            if( image_mouse_pos.mouse_hovering_image
+            &&  view_toggles.view_time_profiles ){
+                time_profile.samples.clear();
+
+                //Get a list of images which spatially overlap this point. Order should be maintained.
+                const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
+                const std::list<vec3<double>> points = { image_mouse_pos.dicom_pos,
+                                                         image_mouse_pos.dicom_pos + ortho * disp_img_it->pxl_dz * 0.25,
+                                                         image_mouse_pos.dicom_pos - ortho * disp_img_it->pxl_dz * 0.25 };
+                auto encompassing_images = (*img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
+
+                //Cycle over the images, dumping the ordinate (pixel values) vs abscissa (time) derived from metadata.
+                const bool sort_on_append = false;
+
+                //const std::string quantity("dt"); //As it appears in the metadata. Must convert to a double!
+                const std::string quantity("somethingelse"); //As it appears in the metadata. Must convert to a double!
+                double n_img = 0.0;
+                for(const auto &enc_img_it : encompassing_images){
+                    const auto abscissa = enc_img_it->GetMetadataValueAs<double>(quantity).value_or(n_img);
+                    try{
+                        const auto val_raw = enc_img_it->value(image_mouse_pos.dicom_pos, 0);
+                        if(std::isfinite(val_raw)){
+                            time_profile.push_back( abscissa, 0.0, 
+                                                    static_cast<double>(val_raw), 0.0,
+                                                    sort_on_append );
+                        }
+                    }catch(const std::exception &){ }
+                    n_img += 1.0;
                 }
             }
 
@@ -3119,6 +3158,40 @@ script_files.back().content.emplace_back('\0');
             return;
         };
         display_row_column_profiles();
+
+
+        // Display time profile.
+        const auto display_time_profiles = [&view_toggles,
+                                            &time_profile ]() -> void {
+            if( view_toggles.view_time_profiles 
+            &&  !time_profile.empty() ){
+                ImGui::SetNextWindowSize(ImVec2(600, 350), ImGuiCond_FirstUseEver);
+                ImGui::Begin("Time Profile", &view_toggles.view_time_profiles);
+                ImVec2 window_extent = ImGui::GetContentRegionAvail();
+
+                const int offset = 0;
+                const int stride = sizeof( decltype( time_profile.samples[0] ) );
+
+                if(ImPlot::BeginPlot("Time Profiles",
+                                     nullptr,
+                                     nullptr,
+                                     window_extent,
+                                     ImPlotFlags_AntiAliased,
+                                     ImPlotAxisFlags_AutoFit,
+                                     ImPlotAxisFlags_AutoFit )) {
+                    ImPlot::PlotLine<double>("Time Profile",
+                                             &time_profile.samples[0][0], 
+                                             &time_profile.samples[0][2],
+                                             time_profile.size(),
+                                             offset, stride );
+                    ImPlot::EndPlot();
+                }
+
+                ImGui::End();
+            }
+            return;
+        };
+        display_time_profiles();
 
 
         // Display the image navigation dialog.
