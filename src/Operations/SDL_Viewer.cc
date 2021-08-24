@@ -1764,7 +1764,7 @@ script_files.back().content.emplace_back('\0');
                     const auto orig_screen_pos = ImGui::GetCursorScreenPos();
                     //const auto text_vert_spacing = ImGui::GetTextLineHeightWithSpacing();
                     const auto text_vert_spacing = ImGui::GetTextLineHeight();
-                    const auto vert_spacing = ImGui::GetStyle().ItemSpacing.y * 0.5; // Is this correct??? Seems OK, but is arbitrary.
+                    const auto vert_spacing = ImGui::GetStyle().ItemSpacing.y * 0.5f; // Is this correct??? Seems OK, but is arbitrary.
                     const auto horiz_spacing = ImGui::GetStyle().ItemSpacing.x;
                     const float line_no_width = ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, "12345", nullptr, nullptr).x;
                     ImGui::SetCursorPosX( orig_cursor_pos + line_no_width + horiz_spacing );

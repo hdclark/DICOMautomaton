@@ -395,6 +395,7 @@ bool ModelIVIM(Drover &DICOM_data,
 std::vector<double> GetHessianAndGradient(const std::vector<float> &bvalues, const std::vector<float> &vals, float f, double pseudoD, const double D){
     //This function returns the hessian as the first 4 elements in the vector (4 matrix elements, goes across columns and then rows) and the last two elements are the gradient (derivative_f, derivative_pseudoD)
 
+    const auto F = static_cast<double>(f);
     double derivative_f = 0.0;
     double derivative_ff = 0.0;
     double derivative_pseudoD = 0.0;
@@ -410,14 +411,14 @@ std::vector<double> GetHessianAndGradient(const std::vector<float> &bvalues, con
         float signal = vals.at(i);
         
 
-        derivative_f += 2.0 * (signal - f*expon - (1.0-f)*c) * (-expon + c);
-        derivative_pseudoD += 2.0 * ( signal - f*expon - (1.0-f)*c ) * (b*f*expon);
+        derivative_f += 2.0 * (signal - F*expon - (1.0-F)*c) * (-expon + c);
+        derivative_pseudoD += 2.0 * ( signal - F*expon - (1.0-F)*c ) * (b*F*expon);
 
         derivative_ff += 2.0 * std::pow((c - expon), 2.0);
-        derivative_pseudoD_pseudoD += 2.0 * (b*f*expon) - 2.0 * (signal - f*expon-(1.0-f)*c)*(b*b*f*expon);
+        derivative_pseudoD_pseudoD += 2.0 * (b*F*expon) - 2.0 * (signal - F*expon-(1.0-F)*c)*(b*b*F*expon);
 
-        derivative_fpseudoD += (2.0 * (c - expon)*b*f*expon) + (2.0 * (signal - f*expon - (1.0-f)*c) * b*expon );
-        derivative_pseudoDf += (2.0 * (b*f*expon)*(-expon + c)) + (2.0*(signal - f*expon - (1.0-f)*c)*(b*expon));
+        derivative_fpseudoD += (2.0 * (c - expon)*b*F*expon) + (2.0 * (signal - F*expon - (1.0-F)*c) * b*expon );
+        derivative_pseudoDf += (2.0 * (b*F*expon)*(-expon + c)) + (2.0*(signal - F*expon - (1.0-F)*c)*(b*expon));
 
     }   
     std::vector<double> H;
