@@ -1262,10 +1262,13 @@ if(false){
                     if(ImGui::BeginMenu("Append Operation")){
                         auto known_ops = Known_Operations();
                         for(auto &anop : known_ops){
+                            std::stringstream nss;
                             const auto op_name = anop.first;
-                            std::stringstream ss;
+                            nss << op_name;
 
+                            std::stringstream ss;
                             auto op_docs = (anop.second.first)();
+                            for(const auto &a : op_docs.aliases) nss << ", " << a;
                             ss << op_docs.desc << "\n\n";
                             if(!op_docs.notes.empty()){
                                 ss << "Notes:" << std::endl;
@@ -1274,7 +1277,7 @@ if(false){
                                 }
                             }
 
-                            if(ImGui::MenuItem(op_name.c_str())){
+                            if(ImGui::MenuItem(nss.str().c_str())){
                                 std::unique_lock<std::shared_mutex> script_lock(script_mutex);
 
                                 auto N_sfs = static_cast<long int>(script_files.size());
