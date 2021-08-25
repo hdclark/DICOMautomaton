@@ -2480,7 +2480,7 @@ script_files.back().content.emplace_back('\0');
                 const bool sort_on_append = false;
 
                 //const std::string quantity("dt"); //As it appears in the metadata. Must convert to a double!
-                const std::string quantity("somethingelse"); //As it appears in the metadata. Must convert to a double!
+                const std::string quantity("dt"); //As it appears in the metadata. Must convert to a double!
                 double n_img = 0.0;
                 for(const auto &enc_img_it : encompassing_images){
                     const auto abscissa = enc_img_it->GetMetadataValueAs<double>(quantity).value_or(n_img);
