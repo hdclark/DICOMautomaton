@@ -72,7 +72,7 @@ OperationDoc OpArgDocDumpROIContours(){
 
 
 
-Drover DumpROIContours(const Drover& DICOM_data,
+bool DumpROIContours(Drover &DICOM_data,
                        const OperationArgPkg& OptArgs,
                        const std::map<std::string, std::string>&,
                        const std::string&){
@@ -224,5 +224,5 @@ Drover DumpROIContours(const Drover& DICOM_data,
         FO.flush();
     }
 
-    return DICOM_data;
+    return true;
 }

@@ -68,7 +68,7 @@ OperationDoc OpArgDocDICOMExportImagesAsCT(){
     return out;
 }
 
-Drover DICOMExportImagesAsCT(Drover DICOM_data,
+bool DICOMExportImagesAsCT(Drover &DICOM_data,
                              const OperationArgPkg& OptArgs,
                              const std::map<std::string, std::string>& /*InvocationMetadata*/,
                              const std::string& /*FilenameLex*/){
@@ -149,5 +149,5 @@ Drover DICOMExportImagesAsCT(Drover DICOM_data,
         // TAR file finalization, stream flush, and file handle close all done automatically here.
     }
 
-    return DICOM_data;
+    return true;
 }

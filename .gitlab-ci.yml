@@ -14,12 +14,12 @@ stages:
 # These stages test the Docker implementation scripts for installing and building all needed dependencies, building
 # DICOMautomaton, testing the built binaries (within the compilation environment), and then building an AppImage.
 
-# CI build on Debian stable.
+# CI build on Debian oldstable.
 # Notes: reduced (or missing) optimization, some components may be missing.
-build_ci_debian_stable:
+build_ci_debian_oldstable:
   stage: build
   needs: []
-  image: "debian:stable"
+  image: "debian:oldstable"
   before_script:
     - "cp -R ./docker/builders/ci /scratch"
     - "cp -R . /dcma"
@@ -27,7 +27,7 @@ build_ci_debian_stable:
   script:
     - |
       ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
-      ./docker/builders/ci/implementation_ci_debian_stable.sh
+      ./docker/builders/ci/implementation_ci_debian_oldstable.sh
       ./integration_tests/Run.sh -v
       ./scripts/extract_system_appimage.sh
   artifacts:
@@ -103,10 +103,10 @@ cross_compile_mxe:
 # AppImage distribution.
 
 # Same-system testing.
-test_ci_debian_stable_on_debian_stable:
+test_ci_debian_oldstable_on_debian_oldstable:
   stage: test
-  needs: ["build_ci_debian_stable"]
-  image: "debian:stable"
+  needs: ["build_ci_debian_oldstable"]
+  image: "debian:oldstable"
   script:
     # Provide minimal system libraries.
     - "./scripts/install_AppImage_runtime_dependencies.sh"
@@ -142,9 +142,9 @@ test_ci_arch_on_arch:
     expire_in: 1 week
 
 # Cross-system testing.
-test_ci_debian_stable_on_arch:
+test_ci_debian_oldstable_on_arch:
   stage: test
-  needs: ["build_ci_debian_stable"]
+  needs: ["build_ci_debian_oldstable"]
   image: "archlinux:latest"
   script:
     # Provide minimal system libraries.
@@ -161,9 +161,9 @@ test_ci_debian_stable_on_arch:
       - "dcma_integration_testing"
     expire_in: 1 week
 
-test_ci_debian_stable_on_ubuntu_latest:
+test_ci_debian_oldstable_on_ubuntu_latest:
   stage: test
-  needs: ["build_ci_debian_stable"]
+  needs: ["build_ci_debian_oldstable"]
   image: "ubuntu:latest"
   script:
     # Provide minimal system libraries.
@@ -183,9 +183,9 @@ test_ci_debian_stable_on_ubuntu_latest:
       - "dcma_integration_testing"
     expire_in: 1 week
 
-test_ci_debian_stable_on_fedora_latest:
+test_ci_debian_oldstable_on_fedora_latest:
   stage: test
-  needs: ["build_ci_debian_stable"]
+  needs: ["build_ci_debian_oldstable"]
   image: "fedora:latest"
   script:
     # Provide minimal system libraries.
@@ -211,10 +211,10 @@ test_ci_debian_stable_on_fedora_latest:
     expire_in: 1 week
 
 # Cross-compilation testing.
-test_cross_compile_mxe_on_debian_stable:
+test_cross_compile_mxe_on_debian_oldstable:
   stage: test
   needs: ["cross_compile_mxe"]
-  image: "debian:stable"
+  image: "debian:oldstable"
   script:
     # Provide minimal system libraries.
     - "export DEBIAN_FRONTEND='noninteractive'"
@@ -246,8 +246,8 @@ test_cross_compile_mxe_on_debian_stable:
 ### Deployment stages.
 #######################################################################################################################
 
-deploy_ci_debian_stable:
+deploy_ci_debian_oldstable:
   stage: deploy
-  needs: ["test_ci_debian_stable_on_debian_stable"]
+  needs: ["test_ci_debian_oldstable_on_debian_oldstable"]
   script:
     - "echo 'Deployment placeholder successful'"

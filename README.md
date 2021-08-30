@@ -5,7 +5,6 @@
 [![LOC](https://tokei.rs/b1/gitlab/hdeanclark/DICOMautomaton)](https://gitlab.com/hdeanclark/DICOMautomaton)
 
 [![Language Grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/hdclark/DICOMautomaton.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/hdclark/DICOMautomaton/context:cpp)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/1ac93861be524c7f9f18324b64960f28)](https://www.codacy.com/app/hdclark/DICOMautomaton?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=hdclark/DICOMautomaton&amp;utm_campaign=Badge_Grade)
 [![GitLab CI Pipeline Status](https://gitlab.com/hdeanclark/DICOMautomaton/badges/master/pipeline.svg)](https://gitlab.com/hdeanclark/DICOMautomaton/-/commits/master)
 
 [![Latest Release DOI](https://zenodo.org/badge/89630691.svg)](https://zenodo.org/badge/latestdoi/89630691)
@@ -280,7 +279,7 @@ standard location for convenience (e.g., `/usr/bin/`).
   - This is **not** an official release. It may be lacking functionality, and is
     almost certainly *not* optimized.
 
-  - The CI build environment is currently based on `Debian` stable. Attempting to
+  - The CI build environment is currently based on `Debian` oldstable. Attempting to
     run on systems with older `glibc`s will likely fail.
 
   - `AppImage`s require `FUSE` support, so running in Docker will not work.
@@ -367,7 +366,7 @@ successfully-built base images are available from `Docker Hub`:
 
   - [![Arch Linux](https://img.shields.io/badge/Latest_Docker_Build_Base-Arch_Linux-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_arch)
 
-  - [![Debian Stable](https://img.shields.io/badge/Latest_Docker_Build_Base-Debian_stable-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_debian_stable)
+  - [![Debian OldStable](https://img.shields.io/badge/Latest_Docker_Build_Base-Debian_oldstable-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_debian_oldstable)
 
   - [![Void Linux](https://img.shields.io/badge/Latest_Docker_Build_Base-Void_Linux-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_void)
 
@@ -384,7 +383,7 @@ Additional build environments and `AppImage` portability are tested with
 Direct links for the latest build artifacts:
 
   - [`Arch Linux`](https://gitlab.com/hdeanclark/DICOMautomaton/builds/artifacts/master/download?job=build_ci_arch)
-  - [`Debian Stable`](https://gitlab.com/hdeanclark/DICOMautomaton/builds/artifacts/master/download?job=build_ci_debian_stable)
+  - [`Debian OldStable`](https://gitlab.com/hdeanclark/DICOMautomaton/builds/artifacts/master/download?job=build_ci_debian_oldstable)
   - [`MXE` (i.e., `Windows` executables)](https://gitlab.com/hdeanclark/DICOMautomaton/builds/artifacts/master/download?job=cross_compile_mxe)
 
 **Note that all CI artifacts are not optimized and core functionality may be missing.**
@@ -435,11 +434,11 @@ custom builds in some situations.
 A portable `AppImage` can be generated using an existing `Docker` image. This
 method supports graphical operations, but suffers from the same general `glibc`
 incompatibility issues described above. However, it works well if your system
-`glibc` is newer than (or equivalent to) that provided by `Debian` stable.
+`glibc` is newer than (or equivalent to) that provided by `Debian` oldstable.
 External, runtime support programs (e.g., `Zenity`, `Gnuplot`) may be
 incompatible or missing altogether. At the moment no canonical `AppImage`s are
 provided, though continuous integration artifacts *are* available (see above).
-Refer to `docker/scripts/debian_stable/` for instructions showing how to
+Refer to `docker/scripts/debian_oldstable/` for instructions showing how to
 generate your own `AppImage`.
 
 A dedicated `Linux` system can be bootstrapped using an up-to-date `Arch Linux`

@@ -72,7 +72,7 @@ OperationDoc OpArgDocNormalizeLineSamples(){
     return out;
 }
 
-Drover NormalizeLineSamples(Drover DICOM_data,
+bool NormalizeLineSamples(Drover &DICOM_data,
                             const OperationArgPkg& OptArgs,
                             const std::map<std::string, std::string>&
                             /*InvocationMetadata*/,
@@ -120,5 +120,5 @@ Drover NormalizeLineSamples(Drover DICOM_data,
         ls.metadata["OrdinateScaling"] = "Normalized";
     }
 
-    return DICOM_data;
+    return true;
 }

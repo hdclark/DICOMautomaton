@@ -164,7 +164,7 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
             //If we want to add any additional image metadata, or replace the default Imebra_Shim.cc populated metadata
             // with, say, the non-null PostgreSQL metadata, it should be done here.
             loaded_imgs_storage.back().back()->imagecoll.images.back().metadata["Filename"] = Filename;
-            loaded_imgs_storage.back().back()->imagecoll.images.back().metadata["dt"] = "0.0";
+            //loaded_imgs_storage.back().back()->imagecoll.images.back().metadata["dt"] = "0.0";
             // ... more metadata operations ...
 
         }else{
@@ -240,7 +240,7 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
         for(auto & img_arr_ptr : DICOM_data.image_data){
             img_arr_ptr->imagecoll.Stable_Sort_on_Metadata_Keys_Value_Numeric<long int>("InstanceNumber");
             img_arr_ptr->imagecoll.Stable_Sort_on_Metadata_Keys_Value_Numeric<double>("SliceLocation");
-            img_arr_ptr->imagecoll.Stable_Sort_on_Metadata_Keys_Value_Numeric<double>("dt");
+            //img_arr_ptr->imagecoll.Stable_Sort_on_Metadata_Keys_Value_Numeric<double>("dt");
 
             img_arr_ptr->imagecoll.Stable_Sort_on_Metadata_Keys_Value_Lexicographic("Modality");
             img_arr_ptr->imagecoll.Stable_Sort_on_Metadata_Keys_Value_Lexicographic("PatientID");

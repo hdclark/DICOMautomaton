@@ -90,7 +90,7 @@ OperationDoc OpArgDocSDL_Viewer(){
     return out;
 }
 
-Drover SDL_Viewer(Drover DICOM_data,
+bool SDL_Viewer(Drover &DICOM_data,
                   const OperationArgPkg& /*OptArgs*/,
                   const std::map<std::string, std::string>& InvocationMetadata,
                   const std::string& FilenameLex){
@@ -116,9 +116,11 @@ Drover SDL_Viewer(Drover DICOM_data,
         bool view_image_metadata_enabled = false;
         bool view_meshes_enabled = true;
         bool view_plots_enabled = true;
+        bool view_plots_metadata = true;
         bool view_contours_enabled = true;
         bool view_contouring_enabled = false;
         bool view_row_column_profiles = false;
+        bool view_time_profiles = false;
         bool view_script_editor_enabled = false;
         bool view_script_feedback = true;
         bool show_image_hover_tooltips = true;
@@ -128,6 +130,11 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     // Plot viewer state.
     std::map<long int, bool> lsamps_visible;
+    enum class plot_norm_t {
+        none,
+        max,
+    } plot_norm = plot_norm_t::none;
+    bool show_plot_legend = true;
 
     // Image viewer state.
     long int img_array_num = -1; // The image array currently displayed.
@@ -239,6 +246,7 @@ Drover SDL_Viewer(Drover DICOM_data,
 
     samples_1D<double> row_profile;
     samples_1D<double> col_profile;
+    samples_1D<double> time_profile;
 
     // --------------------------------------------- Setup ------------------------------------------------
 #ifndef CHECK_FOR_GL_ERRORS
@@ -393,6 +401,7 @@ Drover SDL_Viewer(Drover DICOM_data,
     contouring_imgs.Ensure_Contour_Data_Allocated();
     contouring_imgs.image_data.push_back(std::make_unique<Image_Array>());
     contouring_imgs.image_data.back()->imagecoll.images.emplace_back();
+    std::string new_contour_name(500, '\0');
 
 
     // Resets the contouring image to match the display image characteristics.
@@ -900,6 +909,67 @@ Drover SDL_Viewer(Drover DICOM_data,
         return;
     };
     
+    //Save the current contour collection.
+    const auto save_contour_buffer = [ &DICOM_data,
+                                       &drover_mutex,
+
+                                       &contouring_imgs,
+                                       &recompute_image_iters,
+                                       &X,
+                                       &reset_contouring_state,
+                                       &launch_contour_preprocessor ](const std::string &roi_name) -> bool {
+            //std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
+            //auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_cimage_iters();
+            auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+            try{
+                if( !img_valid ) throw std::runtime_error("Contouring image not valid.");
+
+                for(auto &cc : contouring_imgs.contour_data->ccs){
+                    contouring_imgs.Ensure_Contour_Data_Allocated();
+
+                    if(roi_name.empty()) throw std::runtime_error("Cannot save with an empty ROI name.");
+
+                    //Trim empty contours from the shuttle.
+                    cc.Purge_Contours_Below_Point_Count_Threshold(3);
+                    if(cc.contours.empty()) throw std::runtime_error("Given empty contour collection. Contours need >3 points each.");
+
+                    auto FrameOfReferenceUID = disp_img_it->GetMetadataValueAs<std::string>("FrameOfReferenceUID");
+                    if(FrameOfReferenceUID){
+                        cc.Insert_Metadata("FrameOfReferenceUID", FrameOfReferenceUID.value());
+                    }else{
+                        throw std::runtime_error("Missing 'FrameOfReferenceUID' metadata element. Cannot continue.");
+                    }
+
+                    auto StudyInstanceUID = disp_img_it->GetMetadataValueAs<std::string>("StudyInstanceUID");
+                    if(StudyInstanceUID){
+                        cc.Insert_Metadata("StudyInstanceUID", StudyInstanceUID.value());
+                    }else{
+                        throw std::runtime_error("Missing 'StudyInstanceUID' metadata element. Cannot continue.");
+                    }
+
+                    const double MinimumSeparation = disp_img_it->pxl_dz; // TODO: use more robust method here.
+                    cc.Insert_Metadata("ROIName", roi_name);
+                    cc.Insert_Metadata("NormalizedROIName", X(roi_name));
+                    cc.Insert_Metadata("ROINumber", "10000"); // TODO: find highest existing and ++ it.
+                    cc.Insert_Metadata("MinimumSeparation", std::to_string(MinimumSeparation));
+                }
+
+                //Insert the contours into the Drover object.
+                DICOM_data.Ensure_Contour_Data_Allocated();
+                DICOM_data.contour_data->ccs.splice(std::end(DICOM_data.contour_data->ccs),contouring_imgs.contour_data->ccs);
+                contouring_imgs.contour_data->ccs.clear();
+                FUNCINFO("Drover class imbued with new contour collection");
+
+                reset_contouring_state(img_array_ptr_it);
+                launch_contour_preprocessor();
+
+            }catch(const std::exception &e){
+                FUNCWARN("Unable to save contour collection: '" << e.what() << "'");
+                return false;
+            }
+            return true;
+    };
+
 
     // Advance to the specified Image_Array. Also resets necessary display image iterators.
     const auto advance_to_image_array = [ &DICOM_data,
@@ -1140,7 +1210,8 @@ if(false){
 
                                             &lsamps_visible,
                                             &row_profile,
-                                            &col_profile ](void) -> bool {
+                                            &col_profile,
+                                            &time_profile ](void) -> bool {
             if(ImGui::BeginMainMenuBar()){
                 if(ImGui::BeginMenu("File")){
                     if(ImGui::MenuItem("Open", "ctrl+o", &view_toggles.open_files_enabled)){
@@ -1174,9 +1245,13 @@ if(false){
                     if(ImGui::MenuItem("Plots", nullptr, &view_toggles.view_plots_enabled)){
                         lsamps_visible.clear();
                     }
+                    ImGui::MenuItem("Plot Hover Metadata", nullptr, &view_toggles.view_plots_metadata);
                     if(ImGui::MenuItem("Row and Column Profiles", nullptr, &view_toggles.view_row_column_profiles)){
                         row_profile.samples.clear();
                         col_profile.samples.clear();
+                    };
+                    if(ImGui::MenuItem("Time Profiles", nullptr, &view_toggles.view_time_profiles)){
+                        time_profile.samples.clear();
                     };
                     ImGui::MenuItem("Script Editor", nullptr, &view_toggles.view_script_editor_enabled);
                     ImGui::MenuItem("Script Feedback", nullptr, &view_toggles.view_script_feedback);
@@ -1193,10 +1268,13 @@ if(false){
                     if(ImGui::BeginMenu("Append Operation")){
                         auto known_ops = Known_Operations();
                         for(auto &anop : known_ops){
+                            std::stringstream nss;
                             const auto op_name = anop.first;
-                            std::stringstream ss;
+                            nss << op_name;
 
+                            std::stringstream ss;
                             auto op_docs = (anop.second.first)();
+                            for(const auto &a : op_docs.aliases) nss << ", " << a;
                             ss << op_docs.desc << "\n\n";
                             if(!op_docs.notes.empty()){
                                 ss << "Notes:" << std::endl;
@@ -1205,7 +1283,7 @@ if(false){
                                 }
                             }
 
-                            if(ImGui::MenuItem(op_name.c_str())){
+                            if(ImGui::MenuItem(nss.str().c_str())){
                                 std::unique_lock<std::shared_mutex> script_lock(script_mutex);
 
                                 auto N_sfs = static_cast<long int>(script_files.size());
@@ -1372,7 +1450,7 @@ if(false){
 ////////////////
 ////////////////
 ////////////////
-const std::string testing_content = R"***(
+const std::string testing_content = R"***(#!/usr/bin/env -S dicomautomaton_dispatcher -v
 
 variable = "something";
 variable = "something else";
@@ -1448,7 +1526,7 @@ script_files.back().content.emplace_back('\0');
                     script_files.emplace_back();
                     script_files.back().altered = true;
                     script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
-                    active_script_file = (script_files.size() - 1);
+                    active_script_file = N_sfs;
                     ++N_sfs;
                 }
                 ImGui::SameLine();
@@ -1695,7 +1773,7 @@ script_files.back().content.emplace_back('\0');
                     const auto orig_screen_pos = ImGui::GetCursorScreenPos();
                     //const auto text_vert_spacing = ImGui::GetTextLineHeightWithSpacing();
                     const auto text_vert_spacing = ImGui::GetTextLineHeight();
-                    const auto vert_spacing = ImGui::GetStyle().ItemSpacing.y * 0.5; // Is this correct??? Seems OK, but is arbitrary.
+                    const auto vert_spacing = ImGui::GetStyle().ItemSpacing.y * 0.5f; // Is this correct??? Seems OK, but is arbitrary.
                     const auto horiz_spacing = ImGui::GetStyle().ItemSpacing.x;
                     const float line_no_width = ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, "12345", nullptr, nullptr).x;
                     ImGui::SetCursorPosX( orig_cursor_pos + line_no_width + horiz_spacing );
@@ -1812,6 +1890,8 @@ script_files.back().content.emplace_back('\0');
                                            &contouring_brush,
                                            &contouring_margin,
                                            &contouring_img_row_col_count,
+                                           &new_contour_name,
+                                           &save_contour_buffer,
 
                                            &recompute_cimage_iters,
                                            &contouring_imgs,
@@ -1826,6 +1906,7 @@ script_files.back().content.emplace_back('\0');
 
                                            &row_profile,
                                            &col_profile,
+                                           &time_profile,
 
                                            &frame_count ]() -> void {
 
@@ -2117,12 +2198,35 @@ script_files.back().content.emplace_back('\0');
 
                     ImGui::Text("Note: this functionality is still under active development.");
                     if(ImGui::Button("Save")){ 
-                        ImGui::OpenPopup("Contour Save");
+                        ImGui::OpenPopup("Save Contours");
                     }
                     ImGui::SameLine();
-                    if(ImGui::BeginPopupModal("Contour Save", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+                    if(ImGui::BeginPopupModal("Save Contours", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
                         const std::string str((frame_count / 15) % 4, '.'); // Simplistic animation.
                         ImGui::Text("Saving contours%s", str.c_str());
+
+                        ImGui::InputText("ROI Name", new_contour_name.data(), new_contour_name.size());
+                        std::string entered_text;
+                        for(size_t i = 0; i < new_contour_name.size(); ++i){
+                            if( (new_contour_name[i] == '\0')
+                            ||  !std::isprint( static_cast<unsigned char>(new_contour_name[i]) )) break;
+                            entered_text.push_back(new_contour_name[i]);
+                        }
+                        const auto ok_to_save = !entered_text.empty();
+                        //if(!ok_to_save){
+                        //    ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+                        //    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+                        //}
+                        const bool clicked_save = ImGui::Button("Save");
+                        //if(!ok_to_save){
+                        //    ImGui::PopItemFlag();
+                        //    ImGui::PopStyleVar();
+                        //}
+                        if( clicked_save
+                        &&  ok_to_save
+                        &&  save_contour_buffer(entered_text) ){
+                            ImGui::CloseCurrentPopup();
+                        }
 
                         if(ImGui::Button("Close")){
                             ImGui::CloseCurrentPopup();
@@ -2345,7 +2449,7 @@ script_files.back().content.emplace_back('\0');
 
             // Extract data for row and column profiles.
             if( image_mouse_pos.mouse_hovering_image
-            && view_toggles.view_row_column_profiles ){
+            &&  view_toggles.view_row_column_profiles ){
                 row_profile.samples.clear();
                 col_profile.samples.clear();
                 for(auto i = 0; i < disp_img_it->columns; ++i){
@@ -2357,6 +2461,38 @@ script_files.back().content.emplace_back('\0');
                     const auto val_raw = disp_img_it->value(i,image_mouse_pos.c,0);
                     const auto row_num = static_cast<double>(i);
                     if(std::isfinite(val_raw)) col_profile.push_back({ row_num, 0.0, val_raw, 0.0 });
+                }
+            }
+
+            // Extract data for time profiles.
+            if( image_mouse_pos.mouse_hovering_image
+            &&  view_toggles.view_time_profiles ){
+                time_profile.samples.clear();
+
+                //Get a list of images which spatially overlap this point. Order should be maintained.
+                const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
+                const std::list<vec3<double>> points = { image_mouse_pos.dicom_pos,
+                                                         image_mouse_pos.dicom_pos + ortho * disp_img_it->pxl_dz * 0.25,
+                                                         image_mouse_pos.dicom_pos - ortho * disp_img_it->pxl_dz * 0.25 };
+                auto encompassing_images = (*img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
+
+                //Cycle over the images, dumping the ordinate (pixel values) vs abscissa (time) derived from metadata.
+                const bool sort_on_append = false;
+
+                //const std::string quantity("dt"); //As it appears in the metadata. Must convert to a double!
+                const std::string quantity("dt"); //As it appears in the metadata. Must convert to a double!
+                double n_img = 0.0;
+                for(const auto &enc_img_it : encompassing_images){
+                    const auto abscissa = enc_img_it->GetMetadataValueAs<double>(quantity).value_or(n_img);
+                    try{
+                        const auto val_raw = enc_img_it->value(image_mouse_pos.dicom_pos, 0);
+                        if(std::isfinite(val_raw)){
+                            time_profile.push_back( abscissa, 0.0, 
+                                                    static_cast<double>(val_raw), 0.0,
+                                                    sort_on_append );
+                        }
+                    }catch(const std::exception &){ }
+                    n_img += 1.0;
                 }
             }
 
@@ -2527,7 +2663,12 @@ script_files.back().content.emplace_back('\0');
                                                                paths]() -> loaded_files_res {
                     loaded_files_res lfs;
                     auto paths_l = paths;
-                    lfs.res = Load_Files(lfs.DICOM_data, InvocationMetadata, FilenameLex, paths_l);
+                    std::list<OperationArgPkg> Operations;
+                    lfs.res = Load_Files(lfs.DICOM_data, InvocationMetadata, FilenameLex, Operations, paths_l);
+                    if(!Operations.empty()){
+                         lfs.res = false;
+                         FUNCWARN("Loaded file contains a script. Currently unable to handle script files here");
+                    }
                     return lfs;
                 });
 
@@ -2837,7 +2978,9 @@ script_files.back().content.emplace_back('\0');
                                     &mutex_dt,
                                     &DICOM_data,
 
-                                    &lsamps_visible ]() -> void {
+                                    &lsamps_visible,
+                                    &plot_norm,
+                                    &show_plot_legend ]() -> void {
 
             std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
             if(!drover_lock) return;
@@ -2846,25 +2989,42 @@ script_files.back().content.emplace_back('\0');
             ||  !DICOM_data.Has_LSamp_Data() ) return;
 
             // Display a selection and navigation window.
-            ImGui::SetNextWindowSize(ImVec2(350, 400), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(450, 400), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_FirstUseEver);
-            ImGui::Begin("Plot Selection", &view_toggles.view_plots_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs);
+            ImGui::Begin("Plot Selection", &view_toggles.view_plots_enabled);
 
+            {
+                ImVec2 window_extent = ImGui::GetContentRegionAvail();
+                ImGui::Text("Settings");
+                ImGui::Checkbox("Show metadata on hover", &view_toggles.view_plots_metadata);
+                ImGui::Checkbox("Show legend", &show_plot_legend);
+
+                ImGui::Text("Normalization: ");
+                ImGui::SameLine();
+                if(ImGui::Button("None", ImVec2(window_extent.x/3, 0))){ 
+                    plot_norm = plot_norm_t::none;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Max", ImVec2(window_extent.x/3, 0))){ 
+                    plot_norm = plot_norm_t::max;
+                }
+            }
+            
             const int N_lsamps = static_cast<int>(DICOM_data.lsamp_data.size());
 
             {
                 ImVec2 window_extent = ImGui::GetContentRegionAvail();
                 ImGui::Text("Display");
-                if(ImGui::Button("All", ImVec2(window_extent.x/3, 0))){ 
-                    for(int i = 0; i < N_lsamps; ++i) lsamps_visible[i] = true;
+                if(ImGui::Button("All##plots_display", ImVec2(window_extent.x/3, 0))){ 
+                    for(auto &p : lsamps_visible) p.second = true;
                 }
                 ImGui::SameLine();
-                if(ImGui::Button("None", ImVec2(window_extent.x/3, 0))){ 
-                    for(int i = 0; i < N_lsamps; ++i) lsamps_visible[i] = false;
+                if(ImGui::Button("None##plots_display", ImVec2(window_extent.x/3, 0))){ 
+                    for(auto &p : lsamps_visible) p.second = false;
                 }
                 ImGui::SameLine();
-                if(ImGui::Button("Invert", ImVec2(window_extent.x/3, 0))){ 
-                    for(int i = 0; i < N_lsamps; ++i) lsamps_visible[i] = !(lsamps_visible[i]);
+                if(ImGui::Button("Invert##plots_display", ImVec2(window_extent.x/3, 0))){ 
+                    for(auto &p : lsamps_visible) p.second = !p.second;
                 }
             }
 
@@ -2876,12 +3036,31 @@ script_files.back().content.emplace_back('\0');
                 const auto histtype = (*lsamp_ptr_it)->line.GetMetadataValueAs<std::string>("HistogramType").value_or("unknown"_s);
                 const auto title = std::to_string(i) + " " + name;
 
-                const auto is_visible = lsamps_visible[i];
-                ImGui::SameLine(150);
+                ImGui::Checkbox(title.c_str(), &lsamps_visible[i]); 
+                // Display metadata when hovering.
+                if( ImGui::IsItemHovered() 
+                &&  view_toggles.view_plots_metadata ){
+                    ImGui::SetNextWindowSize(ImVec2(600, -1));
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Linesample Metadata");
+                    ImGui::Columns(2, "Plot Metadata", true);
+                    ImGui::Separator();
+                    ImGui::Text("Key"); ImGui::NextColumn();
+                    ImGui::Text("Value"); ImGui::NextColumn();
+                    ImGui::Separator();
+                    for(const auto &apair : (*lsamp_ptr_it)->line.metadata){
+                        ImGui::Text("%s",  apair.first.c_str()); ImGui::NextColumn();
+                        ImGui::Text("%s",  apair.second.c_str()); ImGui::NextColumn();
+                    }
+                    ImGui::EndTooltip();
+                }
+
+                ImGui::SameLine(200);
                 ImGui::Text("%s", modality.c_str());
                 ImGui::SameLine(300);
                 ImGui::Text("%s", histtype.c_str());
 
+                const auto is_visible = lsamps_visible[i];
                 if(is_visible) any_selected = true;
             }
             ImGui::End();
@@ -2891,26 +3070,42 @@ script_files.back().content.emplace_back('\0');
                 ImGui::Begin("Plots", &view_toggles.view_plots_enabled);
                 ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
+                auto flags = ImPlotFlags_AntiAliased | ImPlotFlags_NoLegend;
+                if(show_plot_legend) flags = ImPlotFlags_AntiAliased;
+
                 if(ImPlot::BeginPlot("Plots",
                                      nullptr,
                                      nullptr,
                                      window_extent,
-                                     ImPlotFlags_AntiAliased,
+                                     flags,
                                      ImPlotAxisFlags_AutoFit,
                                      ImPlotAxisFlags_AutoFit )) {
+
                     for(int i = 0; i < N_lsamps; ++i){
                         if(!lsamps_visible[i]) continue;
-
                         auto lsamp_ptr_it = std::next(DICOM_data.lsamp_data.begin(), i);
+                        if((*lsamp_ptr_it)->line.empty()) continue;
+
+                        decltype((*lsamp_ptr_it)->line) shtl;
+                        decltype((*lsamp_ptr_it)->line) *s_ptr;
+                        if(plot_norm == plot_norm_t::none){
+                            s_ptr = &((*lsamp_ptr_it)->line);
+                        }else if(plot_norm == plot_norm_t::max){
+                            const auto max_f = (*lsamp_ptr_it)->line.Get_Extreme_Datum_y().second[2];
+                            shtl = (*lsamp_ptr_it)->line.Multiply_With( 1.0 / max_f );
+                            s_ptr = &shtl;
+                        }else{
+                            throw std::logic_error("Unanticipated plot normalization encountered.");
+                        }
                         const int offset = 0;
-                        const int stride = sizeof( decltype( (*lsamp_ptr_it)->line.samples[0] ) );
-                        const auto name = (*lsamp_ptr_it)->line.GetMetadataValueAs<std::string>("LineName").value_or("unknown"_s);
+                        const int stride = sizeof( decltype( s_ptr->samples[0] ) );
+                        const auto name = s_ptr->GetMetadataValueAs<std::string>("LineName").value_or("unknown"_s);
                         const auto title = std::to_string(i) + " " + name;
 
                         ImPlot::PlotLine<double>(title.c_str(),
-                                                 &(*lsamp_ptr_it)->line.samples[0][0], 
-                                                 &(*lsamp_ptr_it)->line.samples[0][2],
-                                                 (*lsamp_ptr_it)->line.samples.size(),
+                                                 &s_ptr->samples[0][0], 
+                                                 &s_ptr->samples[0][2],
+                                                 s_ptr->samples.size(),
                                                  offset, stride );
                     }
                     ImPlot::EndPlot();
@@ -2963,6 +3158,40 @@ script_files.back().content.emplace_back('\0');
             return;
         };
         display_row_column_profiles();
+
+
+        // Display time profile.
+        const auto display_time_profiles = [&view_toggles,
+                                            &time_profile ]() -> void {
+            if( view_toggles.view_time_profiles 
+            &&  !time_profile.empty() ){
+                ImGui::SetNextWindowSize(ImVec2(600, 350), ImGuiCond_FirstUseEver);
+                ImGui::Begin("Time Profile", &view_toggles.view_time_profiles);
+                ImVec2 window_extent = ImGui::GetContentRegionAvail();
+
+                const int offset = 0;
+                const int stride = sizeof( decltype( time_profile.samples[0] ) );
+
+                if(ImPlot::BeginPlot("Time Profiles",
+                                     nullptr,
+                                     nullptr,
+                                     window_extent,
+                                     ImPlotFlags_AntiAliased,
+                                     ImPlotAxisFlags_AutoFit,
+                                     ImPlotAxisFlags_AutoFit )) {
+                    ImPlot::PlotLine<double>("Time Profile",
+                                             &time_profile.samples[0][0], 
+                                             &time_profile.samples[0][2],
+                                             time_profile.size(),
+                                             offset, stride );
+                    ImPlot::EndPlot();
+                }
+
+                ImGui::End();
+            }
+            return;
+        };
+        display_time_profiles();
 
 
         // Display the image navigation dialog.
@@ -3454,5 +3683,5 @@ script_files.back().content.emplace_back('\0');
     SDL_DestroyWindow(window);
     SDL_Quit();
 
-    return DICOM_data;
+    return true;
 }

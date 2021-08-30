@@ -10,7 +10,7 @@
 
 OperationDoc OpArgDocExtractPointsWarp();
 
-Drover ExtractPointsWarp(Drover DICOM_data,
+bool ExtractPointsWarp(Drover &DICOM_data,
                          const OperationArgPkg& /*OptArgs*/,
                          const std::map<std::string, std::string>& /*InvocationMetadata*/,
                          const std::string& /*FilenameLex*/);

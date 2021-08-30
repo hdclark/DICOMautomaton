@@ -48,11 +48,11 @@ OperationDoc OpArgDocGrowContours(){
 
 
 
-Drover GrowContours(const Drover& DICOM_data,
+bool GrowContours(Drover &DICOM_data,
                     const OperationArgPkg& OptArgs,
                     const std::map<std::string, std::string>&,
                     const std::string&){
-    if(DICOM_data.contour_data == nullptr) return DICOM_data;
+    if(!DICOM_data.Has_Contour_Data()) return false;
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
@@ -128,5 +128,5 @@ Drover GrowContours(const Drover& DICOM_data,
         }
     }
 
-    return DICOM_data;
+    return true;
 }

@@ -37,7 +37,7 @@ OperationDoc OpArgDocUBC3TMRI_DCE_Differences(){
     return out;
 }
 
-Drover UBC3TMRI_DCE_Differences(Drover DICOM_data,
+bool UBC3TMRI_DCE_Differences(Drover &DICOM_data,
                                 const OperationArgPkg& /*OptArgs*/,
                                 const std::map<std::string, std::string>& /*InvocationMetadata*/,
                                 const std::string& /*FilenameLex*/){
@@ -132,5 +132,5 @@ Drover UBC3TMRI_DCE_Differences(Drover DICOM_data,
 
     DICOM_data.image_data.emplace_back(difference);
     
-    return DICOM_data;
+    return true;
 }

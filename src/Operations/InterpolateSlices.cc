@@ -71,7 +71,7 @@ OperationDoc OpArgDocInterpolateSlices(){
 
 
 
-Drover InterpolateSlices(Drover DICOM_data,
+bool InterpolateSlices(Drover &DICOM_data,
                          const OperationArgPkg& OptArgs,
                          const std::map<std::string, std::string>& /*InvocationMetadata*/,
                          const std::string& /*FilenameLex*/){
@@ -117,5 +117,5 @@ Drover InterpolateSlices(Drover DICOM_data,
             edit_imagecoll.images );
     }
 
-    return DICOM_data;
+    return true;
 }

@@ -3,9 +3,9 @@
 # This script packages DCMA into an AppImage sourcing the pieces from the CI
 # installation. It then gathers all dependencies using linuxdeploy and creates
 # an AppImage. Note that the end-user's glibc version must be equivalent or
-# newer than the Docker image glibc. At the moment, Debian:oldstable is not new
+# newer than the Docker image glibc. At the moment, Debian:oldoldstable is not new
 # enough to compile C++17, so we are probably stuck with the glibc in
-# Debian:stable. But this script should work for both Arch Linux and Debian.
+# Debian:oldstable. But this script should work for both Arch Linux and Debian.
 
 set -eu
 

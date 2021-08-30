@@ -131,22 +131,21 @@ OperationDoc OpArgDocFVPicketFence(){
 }
 
 
-Drover FVPicketFence(Drover DICOM_data,
+bool FVPicketFence(Drover &DICOM_data,
                      const OperationArgPkg& OptArgs,
                      const std::map<std::string, std::string>& InvocationMetadata,
                      const std::string& FilenameLex){
 
-    DICOM_data = ContourWholeImages(DICOM_data, OptArgs, InvocationMetadata, FilenameLex);
-    DICOM_data = IsolatedVoxelFilter(DICOM_data, OptArgs, InvocationMetadata, FilenameLex);
+    return ContourWholeImages(DICOM_data, OptArgs, InvocationMetadata, FilenameLex)
+        && IsolatedVoxelFilter(DICOM_data, OptArgs, InvocationMetadata, FilenameLex)
 
-    DICOM_data = AutoCropImages(DICOM_data, OptArgs, InvocationMetadata, FilenameLex);
-    DICOM_data = CropImages(DICOM_data, OptArgs, InvocationMetadata, FilenameLex);
+        && AutoCropImages(DICOM_data, OptArgs, InvocationMetadata, FilenameLex)
+        && CropImages(DICOM_data, OptArgs, InvocationMetadata, FilenameLex)
 
-    DICOM_data = AnalyzePicketFence(DICOM_data, OptArgs, InvocationMetadata, FilenameLex);
+        && AnalyzePicketFence(DICOM_data, OptArgs, InvocationMetadata, FilenameLex)
 
 #ifdef DCMA_USE_SFML    
-    DICOM_data = PresentationImage(DICOM_data, OptArgs, InvocationMetadata, FilenameLex);
+        && PresentationImage(DICOM_data, OptArgs, InvocationMetadata, FilenameLex)
 #endif
-
-    return DICOM_data;
+        ;
 }

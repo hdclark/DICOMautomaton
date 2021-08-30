@@ -35,7 +35,7 @@ OperationDoc OpArgDocLogScale(){
     return out;
 }
 
-Drover LogScale(Drover DICOM_data,
+bool LogScale(Drover &DICOM_data,
                 const OperationArgPkg& OptArgs,
                 const std::map<std::string, std::string>&,
                 const std::string&){
@@ -55,5 +55,5 @@ Drover LogScale(Drover DICOM_data,
         }
     }
 
-    return DICOM_data;
+    return true;
 }

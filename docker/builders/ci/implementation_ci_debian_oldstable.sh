@@ -57,11 +57,7 @@ apt-get install --yes --no-install-recommends \
 #  x11-apps
 rm -rf /var/lib/apt/lists/*
 
-<<<<<<< HEAD
-cp /scratch/xpra-xorg.conf /etc/X11/xorg.conf || true
-=======
 cp /scratch/xpra-xorg.conf /etc/X11/xorg.conf
->>>>>>> 820db06975b5b9572dc2986f9219ab398305e6a2
 
 
 ## Install Wt from source to get around outdated and buggy Debian package.

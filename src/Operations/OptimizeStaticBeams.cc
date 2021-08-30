@@ -208,7 +208,7 @@ OperationDoc OpArgDocOptimizeStaticBeams(){
     return out;
 }
 
-Drover OptimizeStaticBeams(Drover DICOM_data,
+bool OptimizeStaticBeams(Drover &DICOM_data,
                            const OperationArgPkg& OptArgs,
                            const std::map<std::string, std::string>&
                            /*InvocationMetadata*/,
@@ -520,5 +520,5 @@ Drover OptimizeStaticBeams(Drover DICOM_data,
         FUNCERR("Unable to write to output file: '" << e.what() << "'");
     }
 
-    return DICOM_data;
+    return true;
 }

@@ -66,7 +66,7 @@ OperationDoc OpArgDocDICOMExportContours(){
     return out;
 }
 
-Drover DICOMExportContours(const Drover& DICOM_data,
+bool DICOMExportContours(Drover &DICOM_data,
                            const OperationArgPkg& OptArgs,
                            const std::map<std::string, std::string>& /*InvocationMetadata*/,
                            const std::string& /*FilenameLex*/){
@@ -124,6 +124,6 @@ Drover DICOMExportContours(const Drover& DICOM_data,
         FUNCWARN("Unable to export contours as DICOM RTSTRUCT file: '" << e.what() << "'");
     }
 
-    return DICOM_data;
+    return true;
 }
 

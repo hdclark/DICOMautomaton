@@ -66,7 +66,7 @@ OperationDoc OpArgDocSubdivideSurfaceMeshes(){
 
 
 
-Drover SubdivideSurfaceMeshes(Drover DICOM_data,
+bool SubdivideSurfaceMeshes(Drover &DICOM_data,
                               const OperationArgPkg& OptArgs,
                               const std::map<std::string, std::string>& /*InvocationMetadata*/,
                               const std::string& /*FilenameLex*/){
@@ -123,5 +123,5 @@ Drover SubdivideSurfaceMeshes(Drover DICOM_data,
               << " --> " << static_cast<int>(1000.0*(completed)/sm_count)/10.0 << "% done");
     }
 
-    return DICOM_data;
+    return true;
 }

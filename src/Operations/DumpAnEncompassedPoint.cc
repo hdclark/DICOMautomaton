@@ -24,7 +24,7 @@ OperationDoc OpArgDocDumpAnEncompassedPoint(){
     return out;
 }
 
-Drover DumpAnEncompassedPoint(Drover DICOM_data,
+bool DumpAnEncompassedPoint(Drover &DICOM_data,
                               const OperationArgPkg& /*OptArgs*/,
                               const std::map<std::string, std::string>& /*InvocationMetadata*/,
                               const std::string& /*FilenameLex*/){
@@ -33,5 +33,5 @@ Drover DumpAnEncompassedPoint(Drover DICOM_data,
 
     FUNCINFO("Found " << encompassing_images.size() << " images which encompass the point " << apoint);
 
-    return DICOM_data;
+    return true;
 }

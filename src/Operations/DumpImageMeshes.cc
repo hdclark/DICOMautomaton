@@ -99,7 +99,7 @@ OperationDoc OpArgDocDumpImageMeshes(){
 
 
 
-Drover DumpImageMeshes(Drover DICOM_data,
+bool DumpImageMeshes(Drover &DICOM_data,
                        const OperationArgPkg& OptArgs,
                        const std::map<std::string, std::string>&,
                        const std::string&){
@@ -326,5 +326,5 @@ Drover DumpImageMeshes(Drover DICOM_data,
         } // Loop over images.
     } // Loop over IAs.
 
-    return DICOM_data;
+    return true;
 }

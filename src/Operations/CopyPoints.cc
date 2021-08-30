@@ -29,7 +29,7 @@ OperationDoc OpArgDocCopyPoints(){
     return out;
 }
 
-Drover CopyPoints(Drover DICOM_data,
+bool CopyPoints(Drover &DICOM_data,
                   const OperationArgPkg& OptArgs,
                   const std::map<std::string, std::string>&,
                   const std::string&){
@@ -53,5 +53,5 @@ Drover CopyPoints(Drover DICOM_data,
         DICOM_data.point_data.emplace_back( std::make_shared<Point_Cloud>( *pcp ) );
     }
 
-    return DICOM_data;
+    return true;
 }

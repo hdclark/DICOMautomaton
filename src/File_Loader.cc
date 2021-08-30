@@ -33,6 +33,7 @@
 #include "Line_Sample_File_Loader.h"
 #include "TAR_File_Loader.h"
 #include "DVH_File_Loader.h"
+#include "Script_Loader.h"
 
 using loader_func_t = std::function<bool(std::list<std::filesystem::path>&)>;
 struct file_loader_t {
@@ -47,6 +48,7 @@ bool
 Load_Files( Drover &DICOM_data,
             const std::map<std::string,std::string> &InvocationMetadata,
             const std::string &FilenameLex,
+            std::list<OperationArgPkg> &Operations,
             std::list<std::filesystem::path> &Paths ){
 
     // Generate a priority list of file loaders.
@@ -58,7 +60,7 @@ Load_Files( Drover &DICOM_data,
         //Standalone file loading: TAR files.
         loaders.emplace_back(file_loader_t{{".tar", ".gz", ".tar.gz", ".tgz"}, 1.0, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
-            && !Load_From_TAR_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
+            && !Load_From_TAR_Files( DICOM_data, InvocationMetadata, FilenameLex, Operations, p )){
                 FUNCWARN("Failed to load TAR file");
                 return false;
             }
@@ -127,8 +129,18 @@ Load_Files( Drover &DICOM_data,
             return true;
         }});
 
+        //Standalone file loading: script files.
+        loaders.emplace_back(file_loader_t{{".dcma", ".dsc", ".dscr", ".scr", ".txt"}, 8.0, [&](std::list<std::filesystem::path> &p) -> bool {
+            if(!p.empty()
+            && !Load_From_Script_Files( Operations, p )){
+                FUNCWARN("Failed to load script file");
+                return false;
+            }
+            return true;
+        }});
+
         //Standalone file loading: FITS files.
-        loaders.emplace_back(file_loader_t{{".fit", ".fits"}, 8.0, [&](std::list<std::filesystem::path> &p) -> bool {
+        loaders.emplace_back(file_loader_t{{".fit", ".fits"}, 9.0, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_FITS_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
                 FUNCWARN("Failed to load FITS file");
@@ -138,7 +150,7 @@ Load_Files( Drover &DICOM_data,
         }});
 
         //Standalone file loading: DOSXYZnrc 3ddose files.
-        loaders.emplace_back(file_loader_t{{".3ddose"}, 9.0, [&](std::list<std::filesystem::path> &p) -> bool {
+        loaders.emplace_back(file_loader_t{{".3ddose"}, 10.0, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_3ddose_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
                 FUNCWARN("Failed to load 3ddose file");
@@ -150,7 +162,7 @@ Load_Files( Drover &DICOM_data,
         //Standalone file loading: OFF point cloud files.
         //
         // Note: should preceed the OFF mesh loader.
-        loaders.emplace_back(file_loader_t{{".off"}, 10.0, [&](std::list<std::filesystem::path> &p) -> bool {
+        loaders.emplace_back(file_loader_t{{".off"}, 11.0, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_Points_From_OFF_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
                 FUNCWARN("Failed to load OFF point cloud file");
@@ -160,7 +172,7 @@ Load_Files( Drover &DICOM_data,
         }});
 
         //Standalone file loading: OFF mesh files.
-        loaders.emplace_back(file_loader_t{{".off"}, 11.0, [&](std::list<std::filesystem::path> &p) -> bool {
+        loaders.emplace_back(file_loader_t{{".off"}, 12.0, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_Mesh_From_OFF_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
                 FUNCWARN("Failed to load OFF mesh file");
@@ -172,7 +184,7 @@ Load_Files( Drover &DICOM_data,
         //Standalone file loading: OBJ point cloud files.
         //
         // Note: should preceed the OBJ mesh loader.
-        loaders.emplace_back(file_loader_t{{".obj"}, 12.0, [&](std::list<std::filesystem::path> &p) -> bool {
+        loaders.emplace_back(file_loader_t{{".obj"}, 13.0, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_Points_From_OBJ_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
                 FUNCWARN("Failed to load OBJ point cloud file");
@@ -182,7 +194,7 @@ Load_Files( Drover &DICOM_data,
         }});
 
         //Standalone file loading: OBJ mesh files.
-        loaders.emplace_back(file_loader_t{{".obj"}, 13.0, [&](std::list<std::filesystem::path> &p) -> bool {
+        loaders.emplace_back(file_loader_t{{".obj"}, 14.0, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_Mesh_From_OBJ_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
                 FUNCWARN("Failed to load OBJ mesh file");
@@ -194,7 +206,7 @@ Load_Files( Drover &DICOM_data,
         //Standalone file loading: XYZ point cloud files.
         //
         // Note: XYZ can be confused with many other formats, so it should be near the end.
-        loaders.emplace_back(file_loader_t{{".xyz", ".txt"}, 14.0, [&](std::list<std::filesystem::path> &p) -> bool {
+        loaders.emplace_back(file_loader_t{{".xyz", ".txt"}, 15.0, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_XYZ_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
                 FUNCWARN("Failed to load XYZ file");
@@ -206,7 +218,7 @@ Load_Files( Drover &DICOM_data,
         //Standalone file loading: line sample files.
         //
         // Note: this file can be confused with many other formats, so it should be near the end.
-        loaders.emplace_back(file_loader_t{{".lsamp", ".lsamps", ".txt"}, 15.0, [&](std::list<std::filesystem::path> &p) -> bool {
+        loaders.emplace_back(file_loader_t{{".lsamp", ".lsamps", ".txt"}, 16.0, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_Line_Sample_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
                 FUNCWARN("Failed to load line sample file");
@@ -271,8 +283,6 @@ Load_Files( Drover &DICOM_data,
         Paths = l_Paths;
     }
 
-FUNCINFO("Paths.size() = " << Paths.size());
-
     // Partition the paths by file extension.
     icase_map_t<std::list<std::filesystem::path>> extensions(icase_str_lt);
     for(auto &p : Paths){
@@ -316,6 +326,8 @@ FUNCINFO("Paths.size() = " << Paths.size());
              || icase_str_eq(ext, ".off")
              || icase_str_eq(ext, ".ply")
              || icase_str_eq(ext, ".xyz")
+             || icase_str_eq(ext, ".scr")
+             || icase_str_eq(ext, ".dscr")
              || icase_str_eq(ext, ".lsamps") ) ){
             loaders.remove_if( [ext](const file_loader_t &l){
                                     return std::none_of( std::begin(l.exts),
@@ -342,6 +354,10 @@ FUNCINFO("Paths.size() = " << Paths.size());
 
         // Return any remaining files to the user's container.
         Paths.splice( std::end(Paths), l_Paths );
+    }
+
+    if(!Paths.empty()){
+        for(const auto &p : Paths) FUNCWARN("Unloaded file: '" << p.c_str() << "'");
     }
 
     return (Paths.empty() && !contained_unresolvable);

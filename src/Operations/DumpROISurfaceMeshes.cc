@@ -215,7 +215,7 @@ OperationDoc OpArgDocDumpROISurfaceMeshes(){
     return out;
 }
 
-Drover DumpROISurfaceMeshes(const Drover& DICOM_data,
+bool DumpROISurfaceMeshes(Drover &DICOM_data,
                             const OperationArgPkg& OptArgs,
                             const std::map<std::string, std::string>&,
                             const std::string&){
@@ -324,5 +324,5 @@ Drover DumpROISurfaceMeshes(const Drover& DICOM_data,
 
     }while(false);
 
-    return DICOM_data;
+    return true;
 }

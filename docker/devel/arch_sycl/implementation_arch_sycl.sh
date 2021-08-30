@@ -35,16 +35,6 @@ pacman -Syu --noconfirm --needed \
 rm -f /var/cache/pacman/pkg/*
 
 
-# Create an unprivileged user for building packages.
-# 
-# Note: The 'archlinux' Docker container currently contains user 'aurbuild' and has yay installed already.
-#       It won't hurt to add a new build user in case it is missing.
-useradd -r -d /var/empty builduser
-mkdir -p /var/empty/.config/yay
-chown -R builduser:builduser /var/empty
-printf '\n''builduser ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
-
-
 # Install known official dependencies.
 pacman -S --noconfirm --needed  \
   gcc-libs \
@@ -53,6 +43,8 @@ pacman -S --noconfirm --needed  \
   boost-libs \
   gnu-free-fonts \
   sfml \
+  sdl2 \
+  glew \
   jansson \
   libpqxx \
   postgresql \
@@ -76,12 +68,24 @@ rm -f /var/cache/pacman/pkg/*
 cp /scratch_base/xpra-xorg.conf /etc/X11/xorg.conf
 
 
+# Create an unprivileged user for building packages.
+# 
+# Note: The 'archlinux' Docker container currently contains user 'aurbuild' and has yay installed already.
+#       It won't hurt to add a new build user in case it is missing.
+useradd -r -d /var/empty builduser
+mkdir -p /var/empty/.config/yay
+chown -R builduser:builduser /var/empty
+printf '\n''builduser ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
+
+
 # Download an AUR helper in case it is needed later.
 #
 # Note: `su - builduser -c "yay -S --noconfirm packageA packageB ..."`
 if ! command -v yay &>/dev/null ; then
     cd /tmp
-    wget 'https://github.com/Jguer/yay/releases/download/v10.0.2/yay_10.0.2_x86_64.tar.gz'
+    yay_version='10.3.1'
+    yay_arch="$(uname -m)"
+    wget "https://github.com/Jguer/yay/releases/download/v${yay_version}/yay_${yay_version}_${yay_arch}.tar.gz"
     tar -axf yay_*tar.gz
     mv yay_*/yay /tmp/
     rm -rf yay_*
@@ -90,9 +94,18 @@ if ! command -v yay &>/dev/null ; then
     rm -rf /tmp/yay
 fi
 
+
 # Download a SYCL toolchain.
-su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm hipsycl-cpu"
+# hipSYCL (experiemental toolchain).
+#su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm hipsycl-cpu"
+# computecpp (proprietary toolchain).
 #su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm computecpp"
+# triSYCL (Khronos prototype toolchain).
+su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm trisycl-git"
+ln -s "$(which g++)" /usr/bin/syclcc # Provide a hipSYCL-like wrapper for triSYCL.
+rm -f /var/cache/pacman/pkg/*
+
+
 
 # Install Ygor.
 #

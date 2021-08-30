@@ -67,7 +67,7 @@ OperationDoc OpArgDocExportLineSamples(){
 
 
 
-Drover ExportLineSamples(Drover DICOM_data,
+bool ExportLineSamples(Drover &DICOM_data,
                          const OperationArgPkg& OptArgs,
                          const std::map<std::string, std::string>&
                          /*InvocationMetadata*/,
@@ -95,5 +95,5 @@ Drover ExportLineSamples(Drover DICOM_data,
         FUNCINFO("Line sample written to '" << FN << "'");
     }
 
-    return DICOM_data;
+    return true;
 }

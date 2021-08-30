@@ -85,7 +85,7 @@ OperationDoc OpArgDocForEachDistinct() {
     return out;
 }
 
-Drover ForEachDistinct(Drover DICOM_data,
+bool ForEachDistinct(Drover &DICOM_data,
               const OperationArgPkg& OptArgs,
               const std::map<std::string, std::string>& InvocationMetadata,
               const std::string& FilenameLex){
@@ -115,6 +115,6 @@ Drover ForEachDistinct(Drover DICOM_data,
         DICOM_data = Combine_Partitioned_Drover( pd );
     }
 
-    return DICOM_data;
+    return true;
 }
 

@@ -33,7 +33,7 @@ OperationDoc OpArgDocDeleteMeshes(){
 
 
 
-Drover DeleteMeshes(Drover DICOM_data,
+bool DeleteMeshes(Drover &DICOM_data,
                     const OperationArgPkg& OptArgs,
                     const std::map<std::string, std::string>&,
                     const std::string&){
@@ -48,5 +48,5 @@ Drover DeleteMeshes(Drover DICOM_data,
         DICOM_data.smesh_data.erase( smp_it );
     }
 
-    return DICOM_data;
+    return true;
 }

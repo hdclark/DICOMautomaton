@@ -24,7 +24,7 @@ OperationDoc OpArgDocConvertNaNsToAir(){
     return out;
 }
 
-Drover ConvertNaNsToAir(Drover DICOM_data,
+bool ConvertNaNsToAir(Drover &DICOM_data,
                         const OperationArgPkg& /*OptArgs*/,
                         const std::map<std::string, std::string>&
                         /*InvocationMetadata*/,
@@ -38,5 +38,5 @@ Drover ConvertNaNsToAir(Drover DICOM_data,
         }
     }
 
-    return DICOM_data;
+    return true;
 }

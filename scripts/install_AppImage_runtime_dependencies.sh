@@ -23,7 +23,7 @@ while getopts "d:uh" opt; do
         printf " -h       : Display usage information and terminate.\n"
         printf "\n"
         printf " -d <arg> : The Linux distribution/environment to assume.\n"
-        printf "          : Options are 'auto' (i.e., automatic detection), 'debian' (stable),\n"
+        printf "          : Options are 'auto' (i.e., automatic detection), 'debian' (oldstable),\n"
         printf "          : 'ubuntu' (latest), 'arch', and 'fedora' (latest).\n"
         printf "          : Default: '%s'\n" "${DISTRIBUTION}"
         printf "\n"

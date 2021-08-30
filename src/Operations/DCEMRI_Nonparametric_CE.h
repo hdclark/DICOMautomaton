@@ -10,7 +10,7 @@
 
 OperationDoc OpArgDocDCEMRI_Nonparametric_CE();
 
-Drover DCEMRI_Nonparametric_CE(Drover DICOM_data,
+bool DCEMRI_Nonparametric_CE(Drover &DICOM_data,
                                const OperationArgPkg& /*OptArgs*/,
                                const std::map<std::string, std::string>&
                                /*InvocationMetadata*/,

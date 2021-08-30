@@ -37,6 +37,7 @@
 bool Load_From_TAR_Files( Drover &DICOM_data,
                           const std::map<std::string,std::string> &InvocationMetadata,
                           const std::string &FilenameLex,
+                          std::list<OperationArgPkg> &Operations,
                           std::list<std::filesystem::path> &Filenames ){
 
     // This routine will attempt to load TAR-format files. Files that are not successfully loaded
@@ -90,7 +91,7 @@ bool Load_From_TAR_Files( Drover &DICOM_data,
             // Attempt to load the file.
             std::list<std::filesystem::path> path_tmp;
             path_tmp.emplace_back(fname_tmp);
-            if(Load_Files(DICOM_data, InvocationMetadata, FilenameLex, path_tmp )){
+            if(Load_Files(DICOM_data, InvocationMetadata, FilenameLex, Operations, path_tmp )){
                 // Iff successful, indicate the success.
                 ++N_successfully_loaded;
             }

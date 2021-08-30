@@ -153,7 +153,7 @@ OperationDoc OpArgDocVoxelRANSAC(){
     return out;
 }
 
-Drover VoxelRANSAC(Drover DICOM_data,
+bool VoxelRANSAC(Drover &DICOM_data,
                    const OperationArgPkg& OptArgs,
                    const std::map<std::string, std::string>&
                    /*InvocationMetadata*/,
@@ -571,5 +571,5 @@ std::array<SpatialType, SpatialDimensionCount> Coordinates;
 
     }
 
-    return DICOM_data;
+    return true;
 }

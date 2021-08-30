@@ -10,7 +10,7 @@
 
 OperationDoc OpArgDocDICOMExportImagesAsCT();
 
-Drover DICOMExportImagesAsCT(Drover DICOM_data,
+bool DICOMExportImagesAsCT(Drover &DICOM_data,
                              const OperationArgPkg& /*OptArgs*/,
                              const std::map<std::string, std::string>& /*InvocationMetadata*/,
                              const std::string& /*FilenameLex*/);

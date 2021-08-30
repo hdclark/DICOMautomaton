@@ -83,7 +83,9 @@ printf '\n''builduser ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
 # Note: `su - builduser -c "yay -S --noconfirm packageA packageB ..."`
 if ! command -v yay &>/dev/null ; then
     cd /tmp
-    wget 'https://github.com/Jguer/yay/releases/download/v10.0.2/yay_10.0.2_x86_64.tar.gz'
+    yay_version='10.3.1'
+    yay_arch="$(uname -m)"
+    wget "https://github.com/Jguer/yay/releases/download/v${yay_version}/yay_${yay_version}_${yay_arch}.tar.gz"
     tar -axf yay_*tar.gz
     mv yay_*/yay /tmp/
     rm -rf yay_*

@@ -1,4 +1,4 @@
-//LoadFiles.cc - A part of DICOMautomaton 2019. Written by hal clark.
+//LoadFiles.cc - A part of DICOMautomaton 2019, 2021. Written by hal clark.
 
 #include <asio.hpp>
 #include <algorithm>
@@ -31,6 +31,7 @@
 #include "../Thread_Pool.h"
 #include "../Write_File.h"
 #include "../File_Loader.h"
+#include "../Operation_Dispatcher.h"
 
 #include "LoadFiles.h"
 
@@ -47,13 +48,6 @@ OperationDoc OpArgDocLoadFiles(){
         " Inaccessible files are not silently ignored and will cause this operation to fail."
     );
         
-/*
-    out.args.emplace_back();
-    out.args.back() = IAWhitelistOpArgDoc();
-    out.args.back().name = "ImageSelection";
-    out.args.back().default_val = "last";
-*/
-
     out.args.emplace_back();
     out.args.back().name = "FileName";
     out.args.back().desc = "This file will be parsed and loaded."
@@ -67,27 +61,16 @@ OperationDoc OpArgDocLoadFiles(){
     return out;
 }
 
-Drover LoadFiles(Drover DICOM_data,
+bool LoadFiles(Drover &DICOM_data,
                  const OperationArgPkg& OptArgs,
-                 const std::map<std::string, std::string>&
-                 /*InvocationMetadata*/,
+                 const std::map<std::string, std::string>& InvocationMetadata,
                  const std::string& FilenameLex){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-//    const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
     const auto FileNameStr = OptArgs.getValueStr("FileName").value();
 
     //-----------------------------------------------------------------------------------------------------------------
 
-/*
-    auto IAs_all = All_IAs( DICOM_data );
-    auto IAs = Whitelist( IAs_all, ImageSelectionStr );
-    for(auto & iap_it : IAs){
-        if((*iap_it)->imagecoll.images.empty()) continue;
-
-        }
-    }
-*/
     std::list<std::string> FileNames = { { FileNameStr } };
     std::list<std::filesystem::path> Paths;
 
@@ -109,10 +92,11 @@ Drover LoadFiles(Drover DICOM_data,
         }
     }
     
-    // Load the files to a dummy Drover class.
+    // Load the files to a placeholder Drover class.
     Drover DD_work;
     std::map<std::string, std::string> dummy;
-    const auto res = Load_Files(DD_work, dummy, FilenameLex, Paths);
+    std::list<OperationArgPkg> Operations;
+    const auto res = Load_Files(DD_work, dummy, FilenameLex, Operations, Paths);
     if(!res){
         throw std::runtime_error("Unable to load one or more files. Refusing to continue.");
     }
@@ -120,6 +104,13 @@ Drover LoadFiles(Drover DICOM_data,
     // Merge the loaded files into the current Drover class.
     DICOM_data.Consume(DD_work);
 
-    return DICOM_data;
+    // Because we can't inject the loaded operations directly into the global operation list, we instead treat them as
+    // children and execute them locally.
+    if(!Operations.empty()
+    && !Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, Operations)){
+        throw std::runtime_error("Loaded operation failed");
+    }
+
+    return true;
 }
 

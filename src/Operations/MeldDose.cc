@@ -23,12 +23,12 @@ OperationDoc OpArgDocMeldDose(){
 
 
 
-Drover MeldDose(Drover DICOM_data,
+bool MeldDose(Drover &DICOM_data,
                 const OperationArgPkg& /*OptArgs*/,
                 const std::map<std::string, std::string>& /*InvocationMetadata*/,
                 const std::string& /*FilenameLex*/){
 
     DICOM_data = Meld_Only_Dose_Data(DICOM_data);
 
-    return DICOM_data;
+    return true;
 }

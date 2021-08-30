@@ -179,7 +179,7 @@ OperationDoc OpArgDocSimulateRadiograph(){
 
 
 
-Drover SimulateRadiograph(Drover DICOM_data,
+bool SimulateRadiograph(Drover &DICOM_data,
                           const OperationArgPkg& OptArgs,
                           const std::map<std::string, std::string>& /*InvocationMetadata*/,
                           const std::string& /*FilenameLex*/){
@@ -621,6 +621,6 @@ Drover SimulateRadiograph(Drover DICOM_data,
     DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>() );
     DICOM_data.image_data.back()->imagecoll = sd_image_collection;
 
-    return DICOM_data;
+    return true;
 }
 

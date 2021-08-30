@@ -20,11 +20,11 @@ OperationDoc OpArgDocNoOp(){
     return out;
 }
 
-Drover NoOp(const Drover &DICOM_data,
+bool NoOp(Drover &DICOM_data,
             const OperationArgPkg&,
             const std::map<std::string, std::string>&,
             const std::string& ){
 
-    return DICOM_data;
+    return true;
 }
 

@@ -29,7 +29,7 @@ OperationDoc OpArgDocDumpVoxelDoseInfo(){
     return out;
 }
 
-Drover DumpVoxelDoseInfo(const Drover& DICOM_data,
+bool DumpVoxelDoseInfo(Drover &DICOM_data,
                          const OperationArgPkg&,
                          const std::map<std::string, std::string>&,
                          const std::string&){
@@ -73,5 +73,5 @@ Drover DumpVoxelDoseInfo(const Drover& DICOM_data,
     std::cout << "Min dose: " << themin << " Gy" << std::endl;
     std::cout << "Max dose: " << themax << " Gy" << std::endl;
 
-    return DICOM_data;
+    return true;
 }

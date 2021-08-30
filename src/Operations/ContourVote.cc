@@ -126,7 +126,7 @@ OperationDoc OpArgDocContourVote(){
 
 
 
-Drover ContourVote(const Drover& DICOM_data,
+bool ContourVote(Drover &DICOM_data,
                    const OperationArgPkg& OptArgs,
                    const std::map<std::string, std::string>&
                    /*InvocationMetadata*/,
@@ -234,5 +234,5 @@ Drover ContourVote(const Drover& DICOM_data,
         DICOM_data.contour_data->ccs.emplace_back(cc_new);
     }
 
-    return DICOM_data;
+    return true;
 }

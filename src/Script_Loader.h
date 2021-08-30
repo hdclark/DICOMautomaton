@@ -3,7 +3,9 @@
 #pragma once
 
 #include <istream>
+#include <ostream>
 #include <list>
+#include <filesystem>
 
 #include "Structs.h"
 
@@ -22,7 +24,16 @@ struct script_feedback_t {
     std::string message;
 };
 
+// Load a single script.
 bool Load_DCMA_Script(std::istream &is,
                       std::list<script_feedback_t> &feedback,
                       std::list<OperationArgPkg> &op_list);
+
+// Attempt to identify and load scripts from a collection of files.
+bool Load_From_Script_Files( std::list<OperationArgPkg> &Operations,
+                             std::list<std::filesystem::path> &Filenames );
+
+
+void Print_Feedback(std::ostream &os,
+                    const std::list<script_feedback_t> &feedback);
 

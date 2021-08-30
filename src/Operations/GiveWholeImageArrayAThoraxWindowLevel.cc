@@ -26,7 +26,7 @@ OperationDoc OpArgDocGiveWholeImageArrayAThoraxWindowLevel(){
     return out;
 }
 
-Drover GiveWholeImageArrayAThoraxWindowLevel(Drover DICOM_data,
+bool GiveWholeImageArrayAThoraxWindowLevel(Drover &DICOM_data,
                                              const OperationArgPkg& /*OptArgs*/,
                                              const std::map<std::string, std::string>& /*InvocationMetadata*/,
                                              const std::string& /*FilenameLex*/){
@@ -38,5 +38,5 @@ Drover GiveWholeImageArrayAThoraxWindowLevel(Drover DICOM_data,
         }
     }
 
-    return DICOM_data;
+    return true;
 }

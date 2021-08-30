@@ -14,7 +14,7 @@ file is not valid) then the program should ignore them and possibly exit normall
 
 A base system can be prepared via:
 
-    $>  sudo docker run -it --rm --memory 8G --memory-swap 8G --cpus=4 debian:stable
+    $>  sudo docker run -it --rm --memory 8G --memory-swap 8G --cpus=4 debian:oldstable
 
 Build dependencies can be prepared via:
 
@@ -111,7 +111,7 @@ Specific inputs that produce crashes will be available in `findings_dir/`.
 # Fuzzing `DICOMautomaton`
 
 A `Dockerfile` is provided to simplify fuzz testing core `DICOMautomaton` routines. At the time of writing this the
-`Debian` stable `afl` package failed to link `dicomautomaton_dispatcher` with the message
+`Debian` oldstable `afl` package failed to link `dicomautomaton_dispatcher` with the message
 
     TLS transition from R_X86_64_TLSGD to R_X86_64_GOTTPOFF
 

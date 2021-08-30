@@ -172,7 +172,7 @@ OperationDoc OpArgDocAnalyzePicketFence(){
     return out;
 }
 
-Drover AnalyzePicketFence(Drover DICOM_data,
+bool AnalyzePicketFence(Drover &DICOM_data,
                           const OperationArgPkg& OptArgs,
                           const std::map<std::string, std::string>&
                           /*InvocationMetadata*/,
@@ -1229,5 +1229,5 @@ Drover AnalyzePicketFence(Drover DICOM_data,
         DICOM_data.contour_data->ccs.splice( DICOM_data.contour_data->ccs.end(), PFC.junction_contours );
     }
 
-    return DICOM_data;
+    return true;
 }

@@ -43,6 +43,11 @@ OperationDoc OpArgDocGroupImages(){
     );
 
     out.notes.emplace_back(
+        "This operation can be used to 'ungroup' images by selecting a shared common key (e.g.,"
+        " FrameOfReferenceUID or Modality)."
+    );
+
+    out.notes.emplace_back(
         "Image order within a group is retained (i.e., stable grouping), but groups are appended to the back"
         " of the Image_Array list according to the default sort for the group's key-value value."
     );
@@ -120,7 +125,7 @@ OperationDoc OpArgDocGroupImages(){
 
 
 
-Drover GroupImages(Drover DICOM_data,
+bool GroupImages(Drover &DICOM_data,
                    const OperationArgPkg& OptArgs,
                    const std::map<std::string, std::string>& /*InvocationMetadata*/,
                    const std::string& /*FilenameLex*/){
@@ -405,5 +410,5 @@ Drover GroupImages(Drover DICOM_data,
         });
     }
 
-    return DICOM_data;
+    return true;
 }

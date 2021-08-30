@@ -4,6 +4,7 @@
 //
 
 #include <istream>
+#include <ostream>
 #include <sstream>
 #include <list>
 
@@ -15,7 +16,8 @@
 #include <map>
 #include <memory>
 #include <stdexcept>
-#include <string>    
+#include <string>
+#include <filesystem>
 
 #include <cstdlib>            //Needed for exit() calls.
 
@@ -793,5 +795,116 @@ bool Load_DCMA_Script(std::istream &is,
     
     op_list.splice( std::end(op_list), out);
     return true;
+}
+
+// Attempt to identify and load scripts from a collection of files.
+bool Load_From_Script_Files( std::list<OperationArgPkg> &Operations,
+                             std::list<std::filesystem::path> &Filenames ){
+
+    // This routine will attempt to identify and load DCMA script files, parsing them directly into an operation list.
+    //
+    // Note: This routine returns false only iff a file is suspected of being suited for this loader, but could not be
+    //       loaded (e.g., the file seems appropriate, but a parsing failure was encountered).
+    //
+    if(Filenames.empty()) return true;
+
+    // Attempt to read as a binary file.
+    {
+        size_t i = 0;
+        const size_t N = Filenames.size();
+
+        auto bfit = Filenames.begin();
+        while(bfit != Filenames.end()){
+            FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
+            ++i;
+            const auto Filename = bfit->string();
+            bool found_shebang = false;
+            std::list<script_feedback_t> feedback;
+            std::list<OperationArgPkg> ops;
+
+
+
+
+            try{
+                //////////////////////////////////////////////////////////////
+                // Attempt to load the file.
+                std::ifstream is(Filename, std::ios::in);
+                if(is){
+
+                    // Check if there is a shebang-like statement at the top. If so, we can be sure this is a DCMA script.
+                    {
+                        const auto pos = is.tellg();
+                        std::string shtl;
+                        std::getline(is, shtl);
+                        is.seekg(pos, std::ios_base::beg);
+
+                        const auto pos_hash = shtl.find("#");
+                        const auto pos_dcma = shtl.find("dicomautomaton");
+                        found_shebang =  (pos_hash != std::string::npos)
+                                      && (pos_dcma != std::string::npos)
+                                      && (pos_hash == 0);
+                    }
+
+                    // Load the full script.
+                    if(!Load_DCMA_Script( is, feedback, ops )){
+                        throw std::runtime_error("Unable to read script from file.");
+                    }
+                }
+                is.close();
+                //////////////////////////////////////////////////////////////
+
+                FUNCINFO("Loaded script with " << ops.size() << " operations");
+                Print_Feedback(std::cout, feedback); // Emit feedback.
+                Operations.splice(std::end(Operations), ops);
+
+                bfit = Filenames.erase( bfit ); 
+                continue;
+            }catch(const std::exception &e){
+                if(found_shebang){
+                    FUNCWARN("Script loading failed");
+                    Print_Feedback(std::cout, feedback); // Emit feedback.
+                    return false;
+
+                }else{
+                    FUNCINFO("Unable to load as script file");
+                }
+            };
+
+            //Skip the file. It might be destined for some other loader.
+            ++bfit;
+        }
+    }
+
+    return true;
+}
+
+
+void Print_Feedback(std::ostream &os,
+                    const std::list<script_feedback_t> &feedback){
+    for(const auto &f : feedback){
+        if(false){
+        }else if(f.severity == script_feedback_severity_t::debug){
+            os << "Debug:   ";
+        }else if(f.severity == script_feedback_severity_t::info){
+            os << "Info:    ";
+        }else if(f.severity == script_feedback_severity_t::warn){
+            os << "Warning: ";
+        }else if(f.severity == script_feedback_severity_t::err){
+            os << "Error:   ";
+        }else{
+            throw std::logic_error("Unrecognized severity level");
+        }
+
+        if( (0 <= f.line)
+        &&  (0 <= f.line_offset) ){
+            os << "line " << f.line 
+               << ", char " << f.line_offset
+               << ": ";
+        }
+        os << f.message
+           << std::endl
+           << std::endl;
+    }
+    return;
 }
 

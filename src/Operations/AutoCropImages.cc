@@ -59,7 +59,7 @@ OperationDoc OpArgDocAutoCropImages(){
 
 
 
-Drover AutoCropImages(Drover DICOM_data,
+bool AutoCropImages(Drover &DICOM_data,
                       const OperationArgPkg& OptArgs,
                       const std::map<std::string, std::string>&
                       /*InvocationMetadata*/,
@@ -204,5 +204,5 @@ Drover AutoCropImages(Drover DICOM_data,
                                             cropped_imagecoll.images );
     }
 
-    return DICOM_data;
+    return true;
 }

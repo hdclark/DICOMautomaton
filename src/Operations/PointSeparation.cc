@@ -81,7 +81,7 @@ OperationDoc OpArgDocPointSeparation(){
     return out;
 }
 
-Drover PointSeparation(Drover DICOM_data,
+bool PointSeparation(Drover &DICOM_data,
                        const OperationArgPkg& OptArgs,
                        const std::map<std::string, std::string>&
                        /*InvocationMetadata*/,
@@ -214,5 +214,5 @@ Drover PointSeparation(Drover DICOM_data,
         FO.close();
     }
 
-    return DICOM_data;
+    return true;
 }
