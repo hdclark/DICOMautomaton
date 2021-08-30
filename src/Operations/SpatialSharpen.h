@@ -10,7 +10,7 @@
 
 OperationDoc OpArgDocSpatialSharpen();
 
-Drover SpatialSharpen(Drover DICOM_data,
+bool SpatialSharpen(Drover &DICOM_data,
                       const OperationArgPkg& /*OptArgs*/,
                       const std::map<std::string, std::string>&
                       /*InvocationMetadata*/,

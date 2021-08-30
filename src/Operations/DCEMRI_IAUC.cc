@@ -31,7 +31,7 @@ OperationDoc OpArgDocDCEMRI_IAUC(){
     return out;
 }
 
-Drover DCEMRI_IAUC(Drover DICOM_data,
+bool DCEMRI_IAUC(Drover &DICOM_data,
                    const OperationArgPkg&,
                    const std::map<std::string, std::string>&,
                    const std::string&){
@@ -53,5 +53,5 @@ Drover DCEMRI_IAUC(Drover DICOM_data,
         }
     }
     
-    return DICOM_data;
+    return true;
 }

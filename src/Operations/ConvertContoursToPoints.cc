@@ -88,7 +88,7 @@ OperationDoc OpArgDocConvertContoursToPoints(){
 
 
 
-Drover ConvertContoursToPoints(Drover DICOM_data,
+bool ConvertContoursToPoints(Drover &DICOM_data,
                                const OperationArgPkg& OptArgs,
                                const std::map<std::string, std::string>& /*InvocationMetadata*/,
                                const std::string& FilenameLex){
@@ -158,5 +158,5 @@ Drover ConvertContoursToPoints(Drover DICOM_data,
     DICOM_data.point_data.back()->pset.metadata["Label"] = LabelStr;
     DICOM_data.point_data.back()->pset.metadata["Description"] = "Point cloud derived from planar contours.";
 
-    return DICOM_data;
+    return true;
 }

@@ -44,7 +44,7 @@ OperationDoc OpArgDocCopyContours(){
     return out;
 }
 
-Drover CopyContours(Drover DICOM_data,
+bool CopyContours(Drover &DICOM_data,
                     const OperationArgPkg& OptArgs,
                     const std::map<std::string, std::string>&,
                     const std::string& FilenameLex){
@@ -80,5 +80,5 @@ Drover CopyContours(Drover DICOM_data,
     }
     DICOM_data.Consume(contour_storage);
 
-    return DICOM_data;
+    return true;
 }

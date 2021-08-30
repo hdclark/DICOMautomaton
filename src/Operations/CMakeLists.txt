@@ -6,6 +6,7 @@ add_library(Operations_objs OBJECT
     AnalyzeLightRadFieldCoincidence.cc
     AnalyzePicketFence.cc
     AnalyzeTPlan.cc
+    And.cc
     ApplyCalibrationCurve.cc
     AutoCropImages.cc
     Average.cc
@@ -82,6 +83,7 @@ add_library(Operations_objs OBJECT
     ExtractImageHistograms.cc
     ExtractAlphaBeta.cc
     ExtractPointsWarp.cc
+    False.cc
     ForEachDistinct.cc
     FVPicketFence.cc
     GenerateCalibrationCurve.cc
@@ -101,6 +103,7 @@ add_library(Operations_objs OBJECT
     GroupImages.cc
     GrowContours.cc
     HighlightROIs.cc
+    IfElse.cc
     ImageRoutineTests.cc
     ImprintImages.cc
     InterpolateSlices.cc
@@ -116,7 +119,9 @@ add_library(Operations_objs OBJECT
     NoOp.cc
     NormalizeLineSamples.cc
     NormalizePixels.cc
+    Not.cc
     OptimizeStaticBeams.cc
+    Or.cc
     OrderImages.cc
     PartitionContours.cc
     PlotLineSamples.cc
@@ -142,6 +147,7 @@ add_library(Operations_objs OBJECT
     ThresholdImages.cc
     ThresholdOtsu.cc
     TrimROIDose.cc
+    True.cc
     UBC3TMRI_DCE.cc
     UBC3TMRI_DCE_Differences.cc
     UBC3TMRI_DCE_Experimental.cc
@@ -153,6 +159,7 @@ add_library(Operations_objs OBJECT
     WarpMeshes.cc
     WarpImages.cc
     WarpPoints.cc
+    While.cc
 
     $<$<BOOL:${WITH_SFML}>:PresentationImage.cc>
     $<$<BOOL:${WITH_SFML}>:SFML_Viewer.cc>

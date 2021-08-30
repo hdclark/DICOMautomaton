@@ -1162,7 +1162,7 @@ OperationDoc OpArgDocDetectGrid3D(){
     return out;
 }
 
-Drover DetectGrid3D(Drover DICOM_data,
+bool DetectGrid3D(Drover &DICOM_data,
                     const OperationArgPkg& OptArgs,
                     const std::map<std::string, std::string>&
                     /*InvocationMetadata*/,
@@ -1640,5 +1640,5 @@ for(const auto &apair : partitioned){
 
     } // Point_Cloud loop.
 
-    return DICOM_data;
+    return true;
 }

@@ -106,7 +106,7 @@ OperationDoc OpArgDocEvaluateDoseVolumeStats(){
 
 
 
-Drover EvaluateDoseVolumeStats(Drover DICOM_data,
+bool EvaluateDoseVolumeStats(Drover &DICOM_data,
                                const OperationArgPkg& OptArgs,
                                const std::map<std::string, std::string>& /*InvocationMetadata*/,
                                const std::string& FilenameLex){
@@ -319,5 +319,5 @@ Drover EvaluateDoseVolumeStats(Drover DICOM_data,
         FUNCERR("Unable to write to output dose-volume stats file: '" << e.what() << "'");
     }
 
-    return DICOM_data;
+    return true;
 }

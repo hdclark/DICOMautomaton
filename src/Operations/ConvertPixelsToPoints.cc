@@ -94,7 +94,7 @@ OperationDoc OpArgDocConvertPixelsToPoints(){
 
 
 
-Drover ConvertPixelsToPoints(Drover DICOM_data,
+bool ConvertPixelsToPoints(Drover &DICOM_data,
                              const OperationArgPkg& OptArgs,
                              const std::map<std::string, std::string>&
                              /*InvocationMetadata*/,
@@ -221,5 +221,5 @@ Drover ConvertPixelsToPoints(Drover DICOM_data,
     DICOM_data.point_data.back()->pset.metadata["Label"] = LabelStr;
     DICOM_data.point_data.back()->pset.metadata["Description"] = "Point cloud derived from volumetric images.";
 
-    return DICOM_data;
+    return true;
 }

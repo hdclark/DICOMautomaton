@@ -122,7 +122,7 @@ OperationDoc OpArgDocPresentationImage(){
     return out;
 }
 
-Drover PresentationImage(Drover DICOM_data,
+bool PresentationImage(Drover &DICOM_data,
                          const OperationArgPkg& OptArgs,
                          const std::map<std::string, std::string>& /*InvocationMetadata*/,
                          const std::string& /*FilenameLex*/){
@@ -509,5 +509,5 @@ Drover PresentationImage(Drover DICOM_data,
     window.display(); // Required, even though nothing is displayed on the screen.
     window.getTexture().copyToImage().saveToFile(fname);
 
-    return DICOM_data;
+    return true;
 }

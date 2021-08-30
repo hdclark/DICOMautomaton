@@ -410,7 +410,7 @@ OperationDoc OpArgDocSurfaceBasedRayCastDoseAccumulate(){
 
 
 
-Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data,
+bool SurfaceBasedRayCastDoseAccumulate(Drover &DICOM_data,
                                          const OperationArgPkg& OptArgs,
                                          const std::map<std::string, std::string>& /*InvocationMetadata*/,
                                          const std::string& FilenameLex){
@@ -602,7 +602,7 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data,
         out << ref_polyhedron;
     }
 
-    if(OnlyGenerateSurface) return DICOM_data;
+    if(OnlyGenerateSurface) return true;
 
 
     // ================================ Construct AABB Trees for Spatial Lookups ===================================
@@ -897,5 +897,5 @@ Drover SurfaceBasedRayCastDoseAccumulate(Drover DICOM_data,
     DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>() );
     DICOM_data.image_data.back()->imagecoll = sd_image_collection;
 
-    return DICOM_data;
+    return true;
 }

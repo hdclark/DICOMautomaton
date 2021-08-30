@@ -4,7 +4,7 @@
 FROM debian:oldstable
 
 LABEL maintainer="http://www.halclark.ca" \
-      description="DICOMautomaton Debian (oldstable) build base."
+      description="DICOMautomaton Debian build base."
 
 WORKDIR /scratch_base
 COPY docker/build_bases/debian_oldstable /scratch_base

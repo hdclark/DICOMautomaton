@@ -10,7 +10,7 @@
 
 OperationDoc OpArgDocContourViaGeometry();
 
-Drover ContourViaGeometry(Drover DICOM_data,
+bool ContourViaGeometry(Drover &DICOM_data,
                           const OperationArgPkg& /*OptArgs*/,
                           const std::map<std::string, std::string>& /*InvocationMetadata*/,
                           const std::string& /*FilenameLex*/);

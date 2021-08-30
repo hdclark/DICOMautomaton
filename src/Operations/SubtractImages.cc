@@ -47,7 +47,7 @@ OperationDoc OpArgDocSubtractImages(){
     return out;
 }
 
-Drover SubtractImages(Drover DICOM_data,
+bool SubtractImages(Drover &DICOM_data,
                       const OperationArgPkg& OptArgs,
                       const std::map<std::string, std::string>&,
                       const std::string&){
@@ -77,5 +77,5 @@ Drover SubtractImages(Drover DICOM_data,
         }
     }
 
-    return DICOM_data;
+    return true;
 }

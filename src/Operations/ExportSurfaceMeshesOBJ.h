@@ -10,7 +10,7 @@
 
 OperationDoc OpArgDocExportSurfaceMeshesOBJ();
 
-Drover ExportSurfaceMeshesOBJ(Drover DICOM_data,
+bool ExportSurfaceMeshesOBJ(Drover &DICOM_data,
                               const OperationArgPkg& /*OptArgs*/,
                               const std::map<std::string, std::string>& /*InvocationMetadata*/,
                               const std::string& /*FilenameLex*/);

@@ -10,7 +10,7 @@
 
 OperationDoc OpArgDocNegatePixels();
 
-Drover NegatePixels(Drover DICOM_data,
+bool NegatePixels(Drover &DICOM_data,
                     const OperationArgPkg& /*OptArgs*/,
                     const std::map<std::string, std::string>&
                     /*InvocationMetadata*/,

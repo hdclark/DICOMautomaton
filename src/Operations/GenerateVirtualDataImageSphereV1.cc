@@ -28,7 +28,7 @@ OperationDoc OpArgDocGenerateVirtualDataImageSphereV1(){
     return out;
 }
 
-Drover GenerateVirtualDataImageSphereV1(Drover DICOM_data,
+bool GenerateVirtualDataImageSphereV1(Drover &DICOM_data,
                                         const OperationArgPkg&,
                                         const std::map<std::string, std::string>&,
                                         const std::string& FilenameLex){
@@ -157,5 +157,5 @@ Drover GenerateVirtualDataImageSphereV1(Drover DICOM_data,
     //Create an empty contour set.
     DICOM_data.Ensure_Contour_Data_Allocated();
 
-    return DICOM_data;
+    return true;
 }

@@ -29,7 +29,7 @@ OperationDoc OpArgDocCopyMeshes(){
     return out;
 }
 
-Drover CopyMeshes(Drover DICOM_data,
+bool CopyMeshes(Drover &DICOM_data,
                   const OperationArgPkg& OptArgs,
                   const std::map<std::string, std::string>&,
                   const std::string&){
@@ -53,5 +53,5 @@ Drover CopyMeshes(Drover DICOM_data,
         DICOM_data.smesh_data.emplace_back( std::make_shared<Surface_Mesh>( *smp ) );
     }
 
-    return DICOM_data;
+    return true;
 }

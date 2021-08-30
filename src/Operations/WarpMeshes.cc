@@ -68,7 +68,7 @@ OperationDoc OpArgDocWarpMeshes(){
     return out;
 }
 
-Drover WarpMeshes(Drover DICOM_data,
+bool WarpMeshes(Drover &DICOM_data,
                   const OperationArgPkg& OptArgs,
                   const std::map<std::string, std::string>& /*InvocationMetadata*/,
                   const std::string& /*FilenameLex*/){
@@ -125,6 +125,6 @@ Drover WarpMeshes(Drover DICOM_data,
         }
     }
 
-    return DICOM_data;
+    return true;
 }
 

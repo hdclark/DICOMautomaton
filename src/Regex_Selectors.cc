@@ -4,6 +4,7 @@
 
 #include <string>
 #include <list>
+#include <numeric>
 #include <initializer_list>
 #include <functional>
 #include <regex>
@@ -98,23 +99,27 @@ Whitelist_Core( L lops,
     // Single-word positional specifiers, i.e. "all", "none", "first", "last", or zero-based 
     // numerical specifiers, e.g., "#0" (front), "#1" (second), "#-0" (last), and "#-1" (second-from-last).
     do{
-        const auto regex_none  = Compile_Regex("^no?n?e?$");
+        const auto regex_none  = Compile_Regex("^non?e?$");
         const auto regex_all   = Compile_Regex("^al?l?$");
-        const auto regex_1st   = Compile_Regex("^fi?r?s?t?$");
+        const auto regex_1st   = Compile_Regex("^fir?s?t?$");
         const auto regex_2nd   = Compile_Regex("^se?c?o?n?d?$");
         const auto regex_3rd   = Compile_Regex("^th?i?r?d?$");
         const auto regex_last  = Compile_Regex("^la?s?t?$");
         const auto regex_pnum  = Compile_Regex("^[#][0-9].*$");
         const auto regex_nnum  = Compile_Regex("^[#]-[0-9].*$");
+        const auto regex_numer = Compile_Regex("^num?e?r?o?u?s?.*$");
+        const auto regex_few   = Compile_Regex("^few?e?s?t?.*$");
 
-        const auto regex_i_none  = Compile_Regex("^[!]no?n?e?$"); // Inverted variants of the above.
+        const auto regex_i_none  = Compile_Regex("^[!]non?e?$"); // Inverted variants of the above.
         const auto regex_i_all   = Compile_Regex("^[!]al?l?$");
-        const auto regex_i_1st   = Compile_Regex("^[!]fi?r?s?t?$");
+        const auto regex_i_1st   = Compile_Regex("^[!]fir?s?t?$");
         const auto regex_i_2nd   = Compile_Regex("^[!]se?c?o?n?d?$");
         const auto regex_i_3rd   = Compile_Regex("^[!]th?i?r?d?$");
         const auto regex_i_last  = Compile_Regex("^[!]la?s?t?$");
         const auto regex_i_pnum  = Compile_Regex("^[!][#][0-9].*$");
         const auto regex_i_nnum  = Compile_Regex("^[!][#]-[0-9].*$");
+        const auto regex_i_numer = Compile_Regex("^[!]num?e?r?o?u?s?.*$");
+        const auto regex_i_few   = Compile_Regex("^[!]few?e?s?t?.*$");
         
         if(std::regex_match(Specifier, regex_i_none)){
             return lops;
@@ -233,6 +238,71 @@ Whitelist_Core( L lops,
             return out;
         }
 
+        // 'Numerous' and 'fewest' selectors.
+        {
+            const bool numerous_pos = std::regex_match(Specifier, regex_numer);
+            const bool numerous_neg = std::regex_match(Specifier, regex_i_numer);
+
+            const bool fewest_pos = std::regex_match(Specifier, regex_few);
+            const bool fewest_neg = std::regex_match(Specifier, regex_i_few);
+
+            if( numerous_pos || numerous_neg || fewest_pos || fewest_neg ){
+
+                if(lops.empty()) return lops;
+
+                auto m = std::max_element( std::begin(lops), std::end(lops),
+                                           [=]( const typename decltype(lops)::value_type &l,
+                                                const typename decltype(lops)::value_type &r ) -> bool {
+                    if( ( (*l) == nullptr )
+                    ||  ( (*r) == nullptr ) ){
+                        throw std::runtime_error("Encountered invalid pointer encountered");
+                    }
+
+                    const auto sort_order = [&](size_t l, size_t r) -> bool {
+                        return (numerous_pos || numerous_neg) ? (l < r) : (r < l);
+                    };
+
+                    if constexpr (std::is_same< decltype(lops),
+                                                std::list<std::list<std::shared_ptr<Image_Array>>::iterator> >::value){
+                        return sort_order( (*l)->imagecoll.images.size(), (*r)->imagecoll.images.size() );
+
+                    }else if constexpr (std::is_same< decltype(lops),
+                                                      std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> >::value){
+                        return sort_order( (*l)->pset.points.size(), (*r)->pset.points.size() );
+
+                    }else if constexpr (std::is_same< decltype(lops),
+                                                      std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> >::value){
+                        // Not exactly sure what to do here, so let's go for (approximately) the number of bytes needed for storage.
+                        const auto N_l = (*l)->meshes.vertices.size() + (*l)->meshes.faces.size();
+                        const auto N_r = (*r)->meshes.vertices.size() + (*r)->meshes.faces.size();
+                        return sort_order( N_l, N_r );
+
+                    }else if constexpr (std::is_same< decltype(lops),
+                                                      std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> >::value){
+                        const auto count_static_keyframes = [](const TPlan_Config &t) -> size_t {
+                                                                size_t c = 0;
+                                                                for(const auto &ds : t.dynamic_states) c += ds.static_states.size();
+                                                                return c;
+                                                            };
+                        return sort_order( count_static_keyframes(*(*l)), count_static_keyframes(*(*r)) );
+
+                    }else if constexpr (std::is_same< decltype(lops),
+                                                      std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> >::value){
+                        return sort_order( (*l)->line.samples.size(), (*r)->line.samples.size() );
+
+                    }else{
+                        throw std::invalid_argument("The 'numerous' selector is not implemented for this data type");
+                    }
+                    return true;
+                } );
+
+                decltype(lops) largest;
+                largest.splice( std::end(largest), lops, m );
+
+                return (numerous_pos || fewest_pos) ? largest : lops;
+            }
+        }
+
     }while(false);
 
     throw std::invalid_argument("Selection is not valid. Cannot continue.");
@@ -270,18 +340,28 @@ Compile_Regex(const std::string& input){
 static
 std::string
 GenericSelectionInfo(const std::string &name_of_unit){
-    return  " Selection specifiers can be of two types: positional or metadata-based key@value regex."_s
-         +  " Positional specifiers can be 'first', 'last', 'none', or 'all' literals."_s
+    return  " Selection specifiers can be of three types: positional, metadata-based key@value regex, and intrinsic."_s
+         +  "\n\n"_s 
+         +  "Positional specifiers can be 'first', 'last', 'none', or 'all' literals."_s
          +  " Additionally '#N' for some positive integer N selects the Nth "_s + name_of_unit 
          +  " (with zero-based indexing)."_s
          +  " Likewise, '#-N' selects the Nth-from-last "_s + name_of_unit + "."_s
          +  " Positional specifiers can be inverted by prefixing with a '!'."_s
-         +  " Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex."_s
+         +  "\n\n"_s 
+         +  "Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex."_s
          +  " In order to invert metadata-based selectors, the regex logic must be inverted"_s
          +  " (i.e., you can *not* prefix metadata-based selectors with a '!')."_s
-         +  " Multiple criteria can be specified by separating them with a ';' and are applied in the order specified."_s
-         +  " Both positional and metadata-based criteria can be mixed together."_s
-         +  " Note regexes are case insensitive and should use extended POSIX syntax."_s;
+         +  " Note regexes are case insensitive and should use extended POSIX syntax."_s
+         +  "\n\n"_s 
+         +  "Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals,"_s
+         +  " which selects the "_s + name_of_unit 
+         +  " composed of the greatest and fewest number of sub-objects."_s
+         +  " Intrinsic specifiers can be inverted by prefixing with a '!'."_s
+         +  " Note that '!numerous' means all "_s + name_of_unit + " that do not have the greatest number of sub-objects,"_s
+         +  " not the least-numerous "_s + name_of_unit + " (i.e., 'fewest')."_s
+         +  "\n\n"_s 
+         +  "All criteria (positional, metadata, and intrinsic) can be mixed together."_s
+         +  " Multiple criteria can be specified by separating them with a ';' and are applied in the order specified."_s;
 }
 
 // ---------------------------------- Contours / ROIs ----------------------------------
@@ -374,13 +454,15 @@ OperationArgDoc RCWhitelistOpArgDoc(){
 
     out.name = "ROILabelRegex";
     out.desc = "A regular expression (regex) matching *raw* ROI contour labels/names to consider."
-               " Selection is performed on a whole-ROI basis; individual contours cannot be selected."
+               "\n\n"
+               "Selection is performed on a whole-ROI basis; individual contours cannot be selected."
                " Be aware that input spaces are trimmed to a single space."
                " If your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them."
                " All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed."
                " The regular expression engine is extended POSIX and is case insensitive."
                " '.*' will match all available ROIs."
-               " Note that this parameter will match 'raw' contour labels.";
+               "\n\n"
+               "Note that this parameter will match 'raw' contour labels.";
     out.examples = { ".*", ".*body.*", "body", "^body$", "Liver",
                      R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
                      R"***(left_parotid|right_parotid)***" };
@@ -395,13 +477,15 @@ OperationArgDoc NCWhitelistOpArgDoc(){
 
     out.name = "NormalizedROILabelRegex";
     out.desc = "A regular expression (regex) matching *normalized* ROI contour labels/names to consider."
-               " Selection is performed on a whole-ROI basis; individual contours cannot be selected."
+               "\n\n"
+               "Selection is performed on a whole-ROI basis; individual contours cannot be selected."
                " Be aware that input spaces are trimmed to a single space."
                " If your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them."
                " All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed."
                " The regular expression engine is extended POSIX and is case insensitive."
                " '.*' will match all available ROIs."
-               " Note that this parameter will match contour labels that have been"
+               "\n\n"
+               "Note that this parameter will match contour labels that have been"
                " *normalized* (i.e., mapped, translated) using the user-provided provided lexicon."
                " This is useful for handling data with heterogeneous naming conventions where fuzzy matching is required."
                " Refer to the lexicon for available labels.";
@@ -522,7 +606,8 @@ OperationArgDoc IAWhitelistOpArgDoc(){
     out.examples = { "last", "first", "all", "none", 
                      "#0", "#-0",
                      "!last", "!#-3",
-                     "key@.*value.*", "key1@.*value1.*;key2@^value2$;first" };
+                     "key@.*value.*", "key1@.*value1.*;key2@^value2$;first",
+                     "numerous" };
 
     return out;
 }
@@ -621,7 +706,8 @@ OperationArgDoc PCWhitelistOpArgDoc(){
     out.examples = { "last", "first", "all", "none", 
                      "#0", "#-0",
                      "!last", "!#-3",
-                     "key@.*value.*", "key1@.*value1.*;key2@^value2$;first" };
+                     "key@.*value.*", "key1@.*value1.*;key2@^value2$;first",
+                     "numerous" };
 
     return out;
 }
@@ -726,7 +812,8 @@ OperationArgDoc SMWhitelistOpArgDoc(){
     out.examples = { "last", "first", "all", "none", 
                      "#0", "#-0",
                      "!last", "!#-3",
-                     "key@.*value.*", "key1@.*value1.*;key2@^value2$;first" };
+                     "key@.*value.*", "key1@.*value1.*;key2@^value2$;first",
+                     "numerous" };
 
     return out;
 }
@@ -831,7 +918,8 @@ OperationArgDoc TPWhitelistOpArgDoc(){
     out.examples = { "last", "first", "all", "none", 
                      "#0", "#-0",
                      "!last", "!#-3",
-                     "key@.*value.*", "key1@.*value1.*;key2@^value2$;first" };
+                     "key@.*value.*", "key1@.*value1.*;key2@^value2$;first",
+                     "numerous" };
 
     return out;
 }
@@ -930,7 +1018,8 @@ OperationArgDoc LSWhitelistOpArgDoc(){
     out.examples = { "last", "first", "all", "none", 
                      "#0", "#-0",
                      "!last", "!#-3",
-                     "key@.*value.*", "key1@.*value1.*;key2@^value2$;first" };
+                     "key@.*value.*", "key1@.*value1.*;key2@^value2$;first",
+                     "numerous" };
 
     return out;
 }

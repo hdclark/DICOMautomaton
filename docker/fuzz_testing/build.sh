@@ -2,7 +2,7 @@
 
 set -e 
 
-base_name="dcma_fuzz_testing_debian_stable"
+base_name="dcma_fuzz_testing_debian_oldstable"
 
 commit_id=$(git rev-parse HEAD)
 

@@ -109,7 +109,7 @@ OperationDoc OpArgDocConvertMeshesToPoints(){
 
 
 
-Drover ConvertMeshesToPoints(Drover DICOM_data,
+bool ConvertMeshesToPoints(Drover &DICOM_data,
                                const OperationArgPkg& OptArgs,
                                const std::map<std::string, std::string>& /*InvocationMetadata*/,
                                const std::string& FilenameLex){
@@ -172,6 +172,6 @@ Drover ConvertMeshesToPoints(Drover DICOM_data,
     DICOM_data.point_data.back()->pset.metadata["NormalizedLabel"] = X(LabelStr);
     DICOM_data.point_data.back()->pset.metadata["Description"] = "Point cloud derived from surface meshes.";
 
-    return DICOM_data;
+    return true;
 }
 

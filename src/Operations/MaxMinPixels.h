@@ -10,7 +10,7 @@
 
 OperationDoc OpArgDocMaxMinPixels();
 
-Drover MaxMinPixels(Drover DICOM_data,
+bool MaxMinPixels(Drover &DICOM_data,
                     const OperationArgPkg& /*OptArgs*/,
                     const std::map<std::string, std::string>& /*InvocationMetadata*/,
                     const std::string& /*FilenameLex*/);

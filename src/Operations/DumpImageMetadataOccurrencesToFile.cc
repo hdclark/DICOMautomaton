@@ -59,7 +59,7 @@ OperationDoc OpArgDocDumpImageMetadataOccurrencesToFile(){
     return out;
 }
 
-Drover DumpImageMetadataOccurrencesToFile(Drover DICOM_data,
+bool DumpImageMetadataOccurrencesToFile(Drover &DICOM_data,
                                           const OperationArgPkg& OptArgs,
                                           const std::map<std::string, std::string>& /*InvocationMetadata*/,
                                           const std::string& /*FilenameLex*/){
@@ -134,5 +134,5 @@ Drover DumpImageMetadataOccurrencesToFile(Drover DICOM_data,
         FUNCERR("Unable to write to output file: '" << e.what() << "'");
     }
 
-    return DICOM_data;
+    return true;
 }

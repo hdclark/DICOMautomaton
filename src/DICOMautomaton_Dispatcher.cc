@@ -348,23 +348,6 @@ int main(int argc, char* argv[]){
         FUNCINFO("Using file '" << FilenameLex << "' as lexicon");
     }
 
-    // Default to an interactive viewer that is known to handle missing data.
-    if(Operations.empty()){
-        FUNCWARN("No operations specified: defaulting to operation 'SDL_Viewer'");
-        Operations.emplace_back("SDL_Viewer");
-
-    // Otherwise, if there are operations but no files, then require the user to specify they are generating virtual
-    // data. We likewise require at least one SQL file for PACS db loading and at least one file/directory name for
-    // standalone file loading.
-    }else if( GroupedFilterQueryFiles.empty()    
-          &&  StandaloneFilesDirsReachable.empty()
-          &&  !GeneratingVirtualData ){
-
-// TODO: Special case: Launch RPC server to wait for data if no files or SQL files provided?
-        FUNCERR("No query files provided. Cannot proceed");
-    }
-
-
     //================================================= Data Loading =================================================
 
 #ifdef DCMA_USE_POSTGRES
@@ -378,7 +361,7 @@ int main(int argc, char* argv[]){
 #endif // DCMA_USE_POSTGRES
 
     //Standalone file loading.
-    if(!Load_Files(DICOM_data, InvocationMetadata, FilenameLex, StandaloneFilesDirsReachable)){
+    if(!Load_Files(DICOM_data, InvocationMetadata, FilenameLex, Operations, StandaloneFilesDirsReachable)){
 #ifdef DCMA_FUZZ_TESTING
         // If file loading failed, then the loader successfully rejected bad data. Terminate to indicate this success.
         return 0;
@@ -389,6 +372,26 @@ int main(int argc, char* argv[]){
     }
 
     //============================================= Dispatch to Analyses =============================================
+
+    // Default to an interactive viewer that is known to handle missing data.
+    if( Operations.empty() ){
+        FUNCWARN("No operations specified: defaulting to operation 'SDL_Viewer'");
+        Operations.emplace_back("SDL_Viewer");
+
+    // Otherwise, if there are operations but no files, then require the user to specify they are generating virtual
+    // data. We likewise require at least one SQL file for PACS db loading and at least one file/directory name for
+    // standalone file loading.
+    }else if( !GeneratingVirtualData
+          &&  !(    DICOM_data.Has_Contour_Data()
+                 || DICOM_data.Has_Image_Data()
+                 || DICOM_data.Has_Point_Data()
+                 || DICOM_data.Has_Mesh_Data()
+                 || DICOM_data.Has_TPlan_Data()
+                 || DICOM_data.Has_LSamp_Data() ) ){
+
+// TODO: Special case: Launch RPC server to wait for data if no files or SQL files provided?
+        FUNCERR("No data was loaded, and virtual data switch was not provided. Refusing to proceed");
+    }
 
     if(!Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, Operations)){
         FUNCERR("Analysis failed. Cannot continue");

@@ -33,7 +33,7 @@ OperationDoc OpArgDocDeletePoints(){
 
 
 
-Drover DeletePoints(Drover DICOM_data,
+bool DeletePoints(Drover &DICOM_data,
                     const OperationArgPkg& OptArgs,
                     const std::map<std::string, std::string>&,
                     const std::string&){
@@ -48,5 +48,5 @@ Drover DeletePoints(Drover DICOM_data,
         DICOM_data.point_data.erase( pcp_it );
     }
 
-    return DICOM_data;
+    return true;
 }

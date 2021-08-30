@@ -66,7 +66,7 @@ OperationDoc OpArgDocExportWarps(){
 
 
 
-Drover ExportWarps(Drover DICOM_data,
+bool ExportWarps(Drover &DICOM_data,
                    const OperationArgPkg& OptArgs,
                    const std::map<std::string, std::string>&
                    /*InvocationMetadata*/,
@@ -121,5 +121,5 @@ Drover ExportWarps(Drover DICOM_data,
         }, (*t3p_it)->transform);
     }
  
-    return DICOM_data;
+    return true;
 }

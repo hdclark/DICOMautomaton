@@ -27,7 +27,7 @@ OperationDoc OpArgDocGenerateVirtualDataContourViaThresholdTestV1(){
     return out;
 }
 
-Drover GenerateVirtualDataContourViaThresholdTestV1(Drover DICOM_data,
+bool GenerateVirtualDataContourViaThresholdTestV1(Drover &DICOM_data,
                                                     const OperationArgPkg&,
                                                     const std::map<std::string, std::string>&,
                                                     const std::string&){
@@ -191,5 +191,5 @@ Drover GenerateVirtualDataContourViaThresholdTestV1(Drover DICOM_data,
         DICOM_data.image_data.emplace_back(std::move(collated_imgs));
     }
 
-    return DICOM_data;
+    return true;
 }

@@ -68,7 +68,7 @@ OperationDoc OpArgDocRepeat() {
     return out;
 }
 
-Drover Repeat(Drover DICOM_data,
+bool Repeat(Drover &DICOM_data,
               const OperationArgPkg& OptArgs,
               const std::map<std::string, std::string>& InvocationMetadata,
               const std::string& FilenameLex){
@@ -82,10 +82,10 @@ Drover Repeat(Drover DICOM_data,
 
     for(long int i = 0; i < N; ++i){
         if(!Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, OptArgs.getChildren())){
-            FUNCERR("Analysis failed. Cannot continue");
+            throw std::runtime_error("Child operation failed");
         }
     }
 
-    return DICOM_data;
+    return true;
 }
 

@@ -131,7 +131,7 @@ OperationDoc OpArgDocPurgeContours(){
 
 
 
-Drover PurgeContours(const Drover& DICOM_data,
+bool PurgeContours(Drover &DICOM_data,
                      const OperationArgPkg& OptArgs,
                      const std::map<std::string, std::string>&,
                      const std::string&){
@@ -240,6 +240,6 @@ Drover PurgeContours(const Drover& DICOM_data,
     // Purge any empty contour collections.
     DICOM_data.contour_data->ccs.remove_if( [](const contour_collection<double> &cc){ return cc.contours.empty(); } );
 
-    return DICOM_data;
+    return true;
 }
 

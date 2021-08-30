@@ -30,7 +30,7 @@ void reflow_and_emit_paragraph(std::ostream &os,
     const long int reflow_width = (width - prefix_first_line.size());
 
     if(!first_line.empty()){
-        auto lines = Reflow_Line_to_Fit_Width_Left_Just(first_line, reflow_width - 2); // Leave room for line break.
+        auto lines = Reflow_Text_to_Fit_Width_Left_Just(first_line, reflow_width - 2); // Leave room for line break.
 
         long int N_lines = lines.size();
         long int N_line = 0;
@@ -47,7 +47,7 @@ void reflow_and_emit_paragraph(std::ostream &os,
         }
     }
 
-    for(auto & aline : Reflow_Line_to_Fit_Width_Left_Just(text, reflow_width)){
+    for(auto & aline : Reflow_Text_to_Fit_Width_Left_Just(text, reflow_width)){
         os << pref << aline << std::endl;
         pref = prefix_remaining_lines;
     }

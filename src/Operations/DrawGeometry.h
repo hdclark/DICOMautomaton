@@ -10,7 +10,7 @@
 
 OperationDoc OpArgDocDrawGeometry();
 
-Drover DrawGeometry(Drover DICOM_data,
+bool DrawGeometry(Drover &DICOM_data,
                     const OperationArgPkg& /*OptArgs*/,
                     const std::map<std::string, std::string>& /*InvocationMetadata*/,
                     const std::string& /*FilenameLex*/);

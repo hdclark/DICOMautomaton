@@ -44,7 +44,7 @@ OperationDoc OpArgDocDeleteContours(){
     return out;
 }
 
-Drover DeleteContours(Drover DICOM_data,
+bool DeleteContours(Drover &DICOM_data,
                       const OperationArgPkg& OptArgs,
                       const std::map<std::string, std::string>&,
                       const std::string& ){
@@ -79,5 +79,5 @@ Drover DeleteContours(Drover DICOM_data,
     cc_all.clear();
     cc_ROIs.clear();
 
-    return DICOM_data;
+    return true;
 }

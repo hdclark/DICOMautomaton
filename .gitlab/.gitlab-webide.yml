@@ -2,7 +2,7 @@
 # This script is used to enable and configure the GitLab web IDE.
 
 terminal:
-  image: "hdclark/dcma_build_base_debian_stable"
+  image: "hdclark/dcma_build_base_debian_oldstable"
   script:
     # Note: script must run long enough for web IDE to connect. The following is recommended.
     - "sleep 60"

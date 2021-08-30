@@ -167,7 +167,7 @@ OperationDoc OpArgDocContourViaThreshold(){
     return out;
 }
 
-Drover ContourViaThreshold(Drover DICOM_data,
+bool ContourViaThreshold(Drover &DICOM_data,
                            const OperationArgPkg& OptArgs,
                            const std::map<std::string, std::string>& /*InvocationMetadata*/,
                            const std::string& FilenameLex){
@@ -497,6 +497,9 @@ Drover ContourViaThreshold(Drover DICOM_data,
 
                         node() : tail_vert_pos(0), head_vert_pos(0), tail(vec3<double>(0.0, 0.0, 0.0)), head(vec3<double>(0.0, 0.0, 0.0)) {};
                         node(uint8_t t_v_p, uint8_t h_v_p, const vec3<double> &t, const vec3<double> &h) : tail_vert_pos(t_v_p), head_vert_pos(h_v_p), tail(t), head(h) {};
+                        node(const node &n){
+                            (*this) = n;
+                        };
                         node& operator=(const node& rhs){
                             if(this == &rhs) return *this;
                             this->tail_vert_pos = rhs.tail_vert_pos;
@@ -504,7 +507,7 @@ Drover ContourViaThreshold(Drover DICOM_data,
                             this->tail = rhs.tail;
                             this->head = rhs.head;
                             return *this;
-                        }
+                        };
                     };
                     const node empty_node(0,0,zero3,zero3);
 
@@ -946,5 +949,5 @@ Drover ContourViaThreshold(Drover DICOM_data,
         }
     }
 
-    return DICOM_data;
+    return true;
 }

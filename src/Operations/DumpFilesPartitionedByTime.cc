@@ -25,7 +25,7 @@ OperationDoc OpArgDocDumpFilesPartitionedByTime(){
     return out;
 }
 
-Drover DumpFilesPartitionedByTime(Drover DICOM_data,
+bool DumpFilesPartitionedByTime(Drover &DICOM_data,
                                   const OperationArgPkg& /*OptArgs*/,
                                   const std::map<std::string, std::string>& /*InvocationMetadata*/,
                                   const std::string& /*FilenameLex*/){
@@ -45,5 +45,5 @@ Drover DumpFilesPartitionedByTime(Drover DICOM_data,
         std::cout << apair.first << " " << apair.second << std::endl;
     } 
 
-    return DICOM_data;
+    return true;
 }

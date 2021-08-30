@@ -10,7 +10,7 @@
 
 OperationDoc OpArgDocDumpROIData();
 
-Drover DumpROIData(const Drover& DICOM_data,
+bool DumpROIData(Drover &DICOM_data,
                    const OperationArgPkg& /*OptArgs*/,
                    const std::map<std::string, std::string>&
                    /*InvocationMetadata*/,

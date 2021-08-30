@@ -105,7 +105,7 @@ OperationDoc OpArgDocContourBasedRayCastDoseAccumulate(){
 
 
 
-Drover ContourBasedRayCastDoseAccumulate(Drover DICOM_data,
+bool ContourBasedRayCastDoseAccumulate(Drover &DICOM_data,
                                          const OperationArgPkg& OptArgs,
                                          const std::map<std::string, std::string>& /*InvocationMetadata*/,
                                          const std::string& FilenameLex){
@@ -450,5 +450,5 @@ Drover ContourBasedRayCastDoseAccumulate(Drover DICOM_data,
         throw std::runtime_error("Unable to write FITS file for dose-length map.");
     }
 
-    return DICOM_data;
+    return true;
 }

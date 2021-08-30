@@ -203,7 +203,7 @@ OperationDoc OpArgDocExtractImageHistograms(){
 
 
 
-Drover ExtractImageHistograms(Drover DICOM_data,
+bool ExtractImageHistograms(Drover &DICOM_data,
                               const OperationArgPkg& OptArgs,
                               const std::map<std::string, std::string>& /*InvocationMetadata*/,
                               const std::string& FilenameLex){
@@ -354,5 +354,5 @@ Drover ExtractImageHistograms(Drover DICOM_data,
         }
     }
 
-    return DICOM_data;
+    return true;
 }

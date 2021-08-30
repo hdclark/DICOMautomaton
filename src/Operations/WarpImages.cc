@@ -73,7 +73,7 @@ OperationDoc OpArgDocWarpImages(){
 }
 
 
-Drover WarpImages(Drover DICOM_data,
+bool WarpImages(Drover &DICOM_data,
                        const OperationArgPkg& OptArgs,
                        const std::map<std::string, std::string>& /*InvocationMetadata*/,
                        const std::string& /*FilenameLex*/){
@@ -176,5 +176,5 @@ Drover WarpImages(Drover DICOM_data,
         //       It should re-compute afresh all metadata using the current planar_image data members.
     }
 
-    return DICOM_data;
+    return true;
 }

@@ -13,7 +13,7 @@ PORTABLE_BIN_DIR="/tmp/dcma_portable_build/" # Portable binaries are dumped here
 L_PORTABLE_BIN_DIR="${HOME}/portable_dcma/" # Portable binaries are dumped here locally.
 
 # System to build on. See below for options.
-BUILDER="debian_stable"  # 'arch', 'debian_stable', 'mxe', or 'native'.
+BUILDER="debian_oldstable"  # 'arch', 'debian_oldstable', 'mxe', or 'native'.
 
 # Argument parsing:
 OPTIND=1 # Reset in case getopts has been used previously in the shell.
@@ -58,7 +58,7 @@ while getopts "d:p:l:b:h" opt; do
         printf "\n"
         printf " -b <arg> : Specify which Docker build image or chroot to use, if any.\n"
         printf "          : This option controls how the build is performed, packaged, and installed.\n"
-        printf "          : Options are 'arch', 'debian_stable', 'mxe', and 'native'.\n"
+        printf "          : Options are 'arch', 'debian_oldstable', 'mxe', and 'native'.\n"
         printf "          : Default: '%s'\n" "${BUILDER}"
         printf "\n"
         exit 0
@@ -118,8 +118,8 @@ if [[ "${BUILDER}" =~ .*native.* ]] ; then
       ./scripts/dump_portable_dcma_bundle.sh '${PORTABLE_BIN_DIR}'
       '
 
-elif [[ "${BUILDER}" =~ .*debian.*_stable.* ]] && [[ "$(uname -m)" =~ .*aarch64.* ]] ; then
-    printf 'Building debian stable for aarch64 architecture.\n'
+elif [[ "${BUILDER}" =~ .*debian.*_oldstable.* ]] && [[ "$(uname -m)" =~ .*aarch64.* ]] ; then
+    printf 'Building debian oldstable for aarch64 architecture.\n'
     HOST_CHROOT_DIR='/var/tmp/dcma_aarch64_chroot'
 
     ssh -t "${USER_AT_REMOTE}" -- "
@@ -130,14 +130,14 @@ elif [[ "${BUILDER}" =~ .*debian.*_stable.* ]] && [[ "$(uname -m)" =~ .*aarch64.
 #!/usr/bin/env bash
         set -eux
         #sudo mount -o remount,exec,dev '${BUILD_DIR}'
-        /chroot/dcma/docker/build_bases/debian_stable/create_foreign_chroot.sh \
+        /chroot/dcma/docker/build_bases/debian_oldstable/create_foreign_chroot.sh \
             -d /chroot/ \
             -s /chroot/run_in_chroot.sh \
             -a arm64
 
         mkdir -p '${PORTABLE_BIN_DIR}'
-        cp -R /chroot/dcma/docker/build_bases/debian_stable /chroot/scratch_base
-        /chroot/run_in_chroot.sh 'cd /dcma && ./docker/build_bases/debian_stable/implementation_debian_stable.sh'
+        cp -R /chroot/dcma/docker/build_bases/debian_oldstable /chroot/scratch_base
+        /chroot/run_in_chroot.sh 'cd /dcma && ./docker/build_bases/debian_oldstable/implementation_debian_oldstable.sh'
         /chroot/run_in_chroot.sh 'cd /dcma && ./compile_and_install.sh -b build' # Will auto-detect the Debian build process.
 
         /chroot/run_in_chroot.sh 'cd /dcma && ./scripts/extract_system_appimage.sh'
@@ -158,12 +158,12 @@ EOF
           -v '${BUILD_DIR}':/chroot/dcma/:rw \
           -v '${PORTABLE_BIN_DIR}':/pbin/:rw \
           -w / \
-          dicomautomaton_webserver_debian_stable:latest \
+          dicomautomaton_webserver_debian_oldstable:latest \
           /chroot/dcma/docker_run.sh
       "
 
-elif [[ "${BUILDER}" =~ .*debian.*_stable.* ]] ; then
-    printf 'Building debian stable for the remote machine architecture.\n'
+elif [[ "${BUILDER}" =~ .*debian.*_oldstable.* ]] ; then
+    printf 'Building debian oldstable for the remote machine architecture.\n'
 
     ssh -t "${USER_AT_REMOTE}" -- "
         set -eu
@@ -188,7 +188,7 @@ EOF
           -v '${BUILD_DIR}':/start/:rw \
           -v '${PORTABLE_BIN_DIR}':/pbin/:rw \
           -w /start/ \
-          dicomautomaton_webserver_debian_stable:latest \
+          dicomautomaton_webserver_debian_oldstable:latest \
           /start/docker_run.sh
       "
 

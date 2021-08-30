@@ -101,7 +101,7 @@ OperationDoc OpArgDocConvertContoursToMeshes(){
 
 
 
-Drover ConvertContoursToMeshes(Drover DICOM_data,
+bool ConvertContoursToMeshes(Drover &DICOM_data,
                                const OperationArgPkg& OptArgs,
                                const std::map<std::string, std::string>&,
                                const std::string& FilenameLex){
@@ -497,5 +497,5 @@ if(!WriteFVSMeshToOBJ(amesh, os)){
     DICOM_data.smesh_data.back()->meshes.metadata["NormalizedMeshLabel"] = NormalizedMeshLabel;
     DICOM_data.smesh_data.back()->meshes.metadata["Description"] = "Extracted surface mesh";
 
-    return DICOM_data;
+    return true;
 }

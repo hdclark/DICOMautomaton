@@ -10,7 +10,7 @@
 
 OperationDoc OpArgDocPresentationImage();
 
-Drover PresentationImage(Drover DICOM_data,
+bool PresentationImage(Drover &DICOM_data,
                          const OperationArgPkg& /*OptArgs*/,
                          const std::map<std::string, std::string>&
                          /*InvocationMetadata*/,

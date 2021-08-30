@@ -73,7 +73,7 @@ OperationDoc OpArgDocMakeMeshesManifold(){
 
 
 
-Drover MakeMeshesManifold(Drover DICOM_data,
+bool MakeMeshesManifold(Drover &DICOM_data,
                           const OperationArgPkg& OptArgs,
                           const std::map<std::string, std::string>&
                           /*InvocationMetadata*/,
@@ -134,5 +134,5 @@ Drover MakeMeshesManifold(Drover DICOM_data,
               << " --> " << static_cast<int>(1000.0*(completed)/sm_count)/10.0 << "% done");
     }
 
-    return DICOM_data;
+    return true;
 }

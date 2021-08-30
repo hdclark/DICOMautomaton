@@ -62,7 +62,7 @@ OperationDoc OpArgDocContourWholeImages(){
 
 
 
-Drover ContourWholeImages(Drover DICOM_data,
+bool ContourWholeImages(Drover &DICOM_data,
                           const OperationArgPkg& OptArgs,
                           const std::map<std::string, std::string>&
                           /*InvocationMetadata*/,
@@ -113,5 +113,5 @@ Drover ContourWholeImages(Drover DICOM_data,
              cc.contours);
     }
 
-    return DICOM_data;
+    return true;
 }

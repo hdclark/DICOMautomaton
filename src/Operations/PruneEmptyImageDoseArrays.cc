@@ -19,7 +19,7 @@ OperationDoc OpArgDocPruneEmptyImageDoseArrays(){
     return out;
 }
 
-Drover PruneEmptyImageDoseArrays(Drover DICOM_data,
+bool PruneEmptyImageDoseArrays(Drover &DICOM_data,
                                  const OperationArgPkg&,
                                  const std::map<std::string, std::string>&,
                                  const std::string&){
@@ -35,5 +35,5 @@ Drover PruneEmptyImageDoseArrays(Drover DICOM_data,
 
     FUNCINFO("Post-prune: " << DICOM_data.image_data.size() << " image_arrays remain");
 
-    return DICOM_data;
+    return true;
 }

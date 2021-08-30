@@ -101,7 +101,7 @@ OperationDoc OpArgDocScalePixels(){
     return out;
 }
 
-Drover ScalePixels(Drover DICOM_data,
+bool ScalePixels(Drover &DICOM_data,
                    const OperationArgPkg& OptArgs,
                    const std::map<std::string, std::string>&
                    /*InvocationMetadata*/,
@@ -185,5 +185,5 @@ Drover ScalePixels(Drover DICOM_data,
         }
     }
 
-    return DICOM_data;
+    return true;
 }

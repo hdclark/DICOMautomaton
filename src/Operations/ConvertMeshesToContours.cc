@@ -81,7 +81,7 @@ OperationDoc OpArgDocConvertMeshesToContours(){
 
 
 
-Drover ConvertMeshesToContours(Drover DICOM_data,
+bool ConvertMeshesToContours(Drover &DICOM_data,
                                const OperationArgPkg& OptArgs,
                                const std::map<std::string, std::string>& /*InvocationMetadata*/,
                                const std::string& FilenameLex){
@@ -164,5 +164,5 @@ Drover ConvertMeshesToContours(Drover DICOM_data,
     }
     FUNCINFO("Sliced " << N_new_contours << " new contours");
 
-    return DICOM_data;
+    return true;
 }
