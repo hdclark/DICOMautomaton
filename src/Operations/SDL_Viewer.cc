@@ -81,6 +81,28 @@
 
 //extern const std::string DCMA_VERSION_STR;
 
+static
+void
+array_to_string(std::string &s, const std::array<char, 1024> &a){
+    s.clear();
+    for(const auto &c : a){
+        if(c == '\0') break;
+        s.push_back(c);
+    }
+    return;
+}
+
+static
+void
+string_to_array(std::array<char, 1024> &a, const std::string &s){
+    for(size_t i = 0; (i < s.size()) && ((i+1) < a.size()); ++i){
+        a[i] = s[i];
+        a[i+1] = '\0';
+    }
+    return;
+}
+
+
 OperationDoc OpArgDocSDL_Viewer(){
     OperationDoc out;
     out.name = "SDL_Viewer";
@@ -247,6 +269,14 @@ bool SDL_Viewer(Drover &DICOM_data,
     samples_1D<double> row_profile;
     samples_1D<double> col_profile;
     samples_1D<double> time_profile;
+
+    enum class time_course_image_inclusivity_t {
+        current,  // Spatially overlapping pixels from within only the current image array.
+        all,      // Spatially overlapping pixels from within any image array.
+    } time_course_image_inclusivity = time_course_image_inclusivity_t::current;
+    std::array<char, 1024> time_course_abscissa_key;
+    string_to_array(time_course_abscissa_key, "ContentTime");
+
 
     // --------------------------------------------- Setup ------------------------------------------------
 #ifndef CHECK_FOR_GL_ERRORS
@@ -1536,11 +1566,7 @@ script_files.back().content.emplace_back('\0');
                         if( script_files.at(active_script_file).path.empty() ){
                             try{
                                 const auto open_file_root_str = std::filesystem::absolute(open_file_root / "script.txt").string();
-                                for(size_t i = 0; (i < open_file_root_str.size()) && ((i+1) < root_entry_text.size()); ++i){
-                                    root_entry_text[i] = open_file_root_str[i];
-                                    root_entry_text[i+1] = '\0';
-                                }
-
+                                string_to_array(root_entry_text, open_file_root_str);
                                 ImGui::OpenPopup("Save Script Filename Picker");
                             }catch(const std::exception &e){ };
                         }
@@ -1907,6 +1933,8 @@ script_files.back().content.emplace_back('\0');
                                            &row_profile,
                                            &col_profile,
                                            &time_profile,
+                                           &time_course_abscissa_key,
+                                           &time_course_image_inclusivity,
 
                                            &frame_count ]() -> void {
 
@@ -2469,21 +2497,36 @@ script_files.back().content.emplace_back('\0');
             &&  view_toggles.view_time_profiles ){
                 time_profile.samples.clear();
 
-                //Get a list of images which spatially overlap this point. Order should be maintained.
+                std::string abscissa_key; //As it appears in the metadata. Must convert to a double!
+                array_to_string(abscissa_key, time_course_abscissa_key);
+                double n_img = 0.0;
+                const bool sort_on_append = false;
+
                 const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
                 const std::list<vec3<double>> points = { image_mouse_pos.dicom_pos,
                                                          image_mouse_pos.dicom_pos + ortho * disp_img_it->pxl_dz * 0.25,
                                                          image_mouse_pos.dicom_pos - ortho * disp_img_it->pxl_dz * 0.25 };
-                auto encompassing_images = (*img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
+
+                decltype((*img_array_ptr_it)->imagecoll.get_all_images()) selected_imgs;
+                if(time_course_image_inclusivity == time_course_image_inclusivity_t::current){
+                    auto encompassing_images = (*img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
+                    selected_imgs.splice( std::end(selected_imgs), encompassing_images);
+
+                }else if(time_course_image_inclusivity == time_course_image_inclusivity_t::all){
+                    for(const auto &img_arr_ptr : DICOM_data.image_data){
+                        auto encompassing_images = img_arr_ptr->imagecoll.get_images_which_encompass_all_points(points);
+                        selected_imgs.splice( std::end(selected_imgs), encompassing_images);
+                    }
+
+                }else{
+                    throw std::invalid_argument("Unrecognized abscissa inclusisivity");
+                }
 
                 //Cycle over the images, dumping the ordinate (pixel values) vs abscissa (time) derived from metadata.
-                const bool sort_on_append = false;
-
-                //const std::string quantity("dt"); //As it appears in the metadata. Must convert to a double!
-                const std::string quantity("dt"); //As it appears in the metadata. Must convert to a double!
-                double n_img = 0.0;
-                for(const auto &enc_img_it : encompassing_images){
-                    const auto abscissa = enc_img_it->GetMetadataValueAs<double>(quantity).value_or(n_img);
+                for(const auto &enc_img_it : selected_imgs){
+                    const auto meta_key = enc_img_it->GetMetadataValueAs<double>(abscissa_key);
+                    time_profile.metadata["Abscissa"] = (meta_key) ? abscissa_key : "Image";
+                    const auto abscissa = meta_key.value_or(n_img);
                     try{
                         const auto val_raw = enc_img_it->value(image_mouse_pos.dicom_pos, 0);
                         if(std::isfinite(val_raw)){
@@ -3162,31 +3205,50 @@ script_files.back().content.emplace_back('\0');
 
         // Display time profile.
         const auto display_time_profiles = [&view_toggles,
-                                            &time_profile ]() -> void {
-            if( view_toggles.view_time_profiles 
-            &&  !time_profile.empty() ){
+                                            &time_profile,
+                                            &time_course_abscissa_key,
+                                            &time_course_image_inclusivity ]() -> void {
+            if( view_toggles.view_time_profiles ){
                 ImGui::SetNextWindowSize(ImVec2(600, 350), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Time Profile", &view_toggles.view_time_profiles);
-                ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
-                const int offset = 0;
-                const int stride = sizeof( decltype( time_profile.samples[0] ) );
-
-                if(ImPlot::BeginPlot("Time Profiles",
-                                     nullptr,
-                                     nullptr,
-                                     window_extent,
-                                     ImPlotFlags_AntiAliased,
-                                     ImPlotAxisFlags_AutoFit,
-                                     ImPlotAxisFlags_AutoFit )) {
-                    ImPlot::PlotLine<double>("Time Profile",
-                                             &time_profile.samples[0][0], 
-                                             &time_profile.samples[0][2],
-                                             time_profile.size(),
-                                             offset, stride );
-                    ImPlot::EndPlot();
+                ImGui::Text("Image selection");
+                if(ImGui::Button("Current array only")){
+                    time_course_image_inclusivity = time_course_image_inclusivity_t::current;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("All arrays")){
+                    time_course_image_inclusivity = time_course_image_inclusivity_t::all;
                 }
 
+                ImGui::InputText("Abscissa metadata key", time_course_abscissa_key.data(), time_course_abscissa_key.size());
+                const auto abscissa = time_profile.metadata["Abscissa"];
+
+                if( time_profile.empty() ){
+                    ImGui::Text("No data available for cursor position");
+
+                }else{
+                    ImVec2 window_extent = ImGui::GetContentRegionAvail();
+
+                    const int offset = 0;
+                    const int stride = sizeof( decltype( time_profile.samples[0] ) );
+
+                    if(ImPlot::BeginPlot("Time Profiles",
+                                         abscissa.c_str(),
+                                         nullptr,
+                                         window_extent,
+                                         ImPlotFlags_AntiAliased,
+                                         ImPlotAxisFlags_AutoFit,
+                                         ImPlotAxisFlags_AutoFit )) {
+                        ImPlot::PlotLine<double>("Time Profile",
+                                                 &time_profile.samples[0][0], 
+                                                 &time_profile.samples[0][2],
+                                                 time_profile.size(),
+                                                 offset, stride );
+                        ImPlot::EndPlot();
+                    }
+
+                }
                 ImGui::End();
             }
             return;
