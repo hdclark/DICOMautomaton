@@ -35,6 +35,9 @@ set_target_properties(  Insert_Contours_obj PROPERTIES POSITION_INDEPENDENT_CODE
 add_library(            Regex_Selectors_obj OBJECT Regex_Selectors.cc )
 set_target_properties(  Regex_Selectors_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            Metadata_obj OBJECT Metadata.cc )
+set_target_properties(  Metadata_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Common_Boost_Serialization_obj OBJECT Common_Boost_Serialization.cc )
 set_target_properties(  Common_Boost_Serialization_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -271,6 +274,7 @@ add_executable (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Surface_Meshes_obj>>
     $<TARGET_OBJECTS:Simple_Meshing_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
+    $<TARGET_OBJECTS:Metadata_obj>
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
     $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
     $<TARGET_OBJECTS:File_Loader_obj>
@@ -347,6 +351,7 @@ if(WITH_WT)
         $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Surface_Meshes_obj>>
         $<TARGET_OBJECTS:Simple_Meshing_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
+        $<TARGET_OBJECTS:Metadata_obj>
         $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
         $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
         $<TARGET_OBJECTS:File_Loader_obj>
@@ -413,6 +418,7 @@ add_executable(dicomautomaton_bsarchive_convert
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
+    $<TARGET_OBJECTS:Metadata_obj>
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
 )
 target_link_libraries(dicomautomaton_bsarchive_convert
@@ -436,6 +442,7 @@ if(WITH_POSTGRES)
         $<TARGET_OBJECTS:Structs_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
+        $<TARGET_OBJECTS:Metadata_obj>
     )
     target_link_libraries(pacs_ingress
         imebrashim
@@ -453,6 +460,7 @@ if(WITH_POSTGRES)
         $<TARGET_OBJECTS:Structs_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
+        $<TARGET_OBJECTS:Metadata_obj>
     )
     target_link_libraries(pacs_duplicate_cleaner
         imebrashim
@@ -470,6 +478,7 @@ if(WITH_POSTGRES)
         $<TARGET_OBJECTS:Structs_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
+        $<TARGET_OBJECTS:Metadata_obj>
     )
     target_link_libraries(pacs_refresh
         imebrashim
@@ -489,6 +498,7 @@ add_executable(dicomautomaton_dump
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
+    $<TARGET_OBJECTS:Metadata_obj>
 )
 target_link_libraries(dicomautomaton_dump
     imebrashim

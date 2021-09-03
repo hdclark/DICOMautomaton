@@ -65,6 +65,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../Metadata.h"
 #include "../YgorImages_Functors/Compute/AccumulatePixelDistributions.h"
 
 #include "../Font_DCMA_Minimal.h"
@@ -143,6 +144,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_contouring_enabled = false;
         bool view_row_column_profiles = false;
         bool view_time_profiles = false;
+        bool save_time_profiles = false;
         bool view_script_editor_enabled = false;
         bool view_script_feedback = true;
         bool show_image_hover_tooltips = true;
@@ -274,8 +276,11 @@ bool SDL_Viewer(Drover &DICOM_data,
         current,  // Spatially overlapping pixels from within only the current image array.
         all,      // Spatially overlapping pixels from within any image array.
     } time_course_image_inclusivity = time_course_image_inclusivity_t::current;
+    bool time_course_abscissa_relative = false;
     std::array<char, 1024> time_course_abscissa_key;
     string_to_array(time_course_abscissa_key, "ContentTime");
+    std::array<char, 1024> time_course_text_entry;
+    string_to_array(time_course_text_entry, "");
 
 
     // --------------------------------------------- Setup ------------------------------------------------
@@ -1935,6 +1940,7 @@ script_files.back().content.emplace_back('\0');
                                            &time_profile,
                                            &time_course_abscissa_key,
                                            &time_course_image_inclusivity,
+                                           &time_course_abscissa_relative,
 
                                            &frame_count ]() -> void {
 
@@ -2496,9 +2502,12 @@ script_files.back().content.emplace_back('\0');
             if( image_mouse_pos.mouse_hovering_image
             &&  view_toggles.view_time_profiles ){
                 time_profile.samples.clear();
+                time_profile.metadata.clear();
 
                 std::string abscissa_key; //As it appears in the metadata. Must convert to a double!
                 array_to_string(abscissa_key, time_course_abscissa_key);
+                const auto meta_key = disp_img_it->GetMetadataValueAs<double>(abscissa_key);
+
                 double n_img = 0.0;
                 const bool sort_on_append = false;
 
@@ -2521,12 +2530,17 @@ script_files.back().content.emplace_back('\0');
                 }else{
                     throw std::invalid_argument("Unrecognized abscissa inclusisivity");
                 }
+                auto common_metadata = planar_image_collection<float,double>().get_common_metadata(selected_imgs);
+                common_metadata = default_metadata_lsamp(common_metadata);
 
                 //Cycle over the images, dumping the ordinate (pixel values) vs abscissa (time) derived from metadata.
+                long int n_current_img = 0;
                 for(const auto &enc_img_it : selected_imgs){
-                    const auto meta_key = enc_img_it->GetMetadataValueAs<double>(abscissa_key);
-                    time_profile.metadata["Abscissa"] = (meta_key) ? abscissa_key : "Image";
-                    const auto abscissa = meta_key.value_or(n_img);
+                    const auto l_meta_key = enc_img_it->GetMetadataValueAs<double>(abscissa_key);
+                    if(l_meta_key.has_value() != meta_key.has_value()) continue;
+                    const auto abscissa = l_meta_key.value_or(n_img);
+
+                    if(std::addressof(*disp_img_it) == std::addressof(*enc_img_it)) n_current_img = n_img;
                     try{
                         const auto val_raw = enc_img_it->value(image_mouse_pos.dicom_pos, 0);
                         if(std::isfinite(val_raw)){
@@ -2536,6 +2550,18 @@ script_files.back().content.emplace_back('\0');
                         }
                     }catch(const std::exception &){ }
                     n_img += 1.0;
+                }
+                time_profile.stable_sort();
+                time_profile.metadata = common_metadata;
+                time_profile.metadata["Abscissa"] = (meta_key) ? abscissa_key : "Image Number";
+                time_profile.metadata["CurrentAbscissa"] = (meta_key) ? std::to_string(meta_key.value()) : std::to_string(n_current_img);
+
+                if( time_course_abscissa_relative
+                &&  !time_profile.samples.empty() ){
+                    const auto first_a = time_profile.Get_Extreme_Datum_x().first[0];
+                    time_profile = time_profile.Sum_x_With(-first_a);
+                    apply_as<double>(time_profile.metadata, "CurrentAbscissa",
+                                     [first_a](double x){ return x - first_a; });
                 }
             }
 
@@ -3207,7 +3233,8 @@ script_files.back().content.emplace_back('\0');
         const auto display_time_profiles = [&view_toggles,
                                             &time_profile,
                                             &time_course_abscissa_key,
-                                            &time_course_image_inclusivity ]() -> void {
+                                            &time_course_image_inclusivity,
+                                            &time_course_abscissa_relative ]() -> void {
             if( view_toggles.view_time_profiles ){
                 ImGui::SetNextWindowSize(ImVec2(600, 350), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Time Profile", &view_toggles.view_time_profiles);
@@ -3221,17 +3248,16 @@ script_files.back().content.emplace_back('\0');
                     time_course_image_inclusivity = time_course_image_inclusivity_t::all;
                 }
 
-                ImGui::InputText("Abscissa metadata key", time_course_abscissa_key.data(), time_course_abscissa_key.size());
-                const auto abscissa = time_profile.metadata["Abscissa"];
+                ImGui::Text("Abscissa");
+                ImGui::InputText("Metadata key", time_course_abscissa_key.data(), time_course_abscissa_key.size());
+                ImGui::Checkbox("Relative", &time_course_abscissa_relative); 
 
-                if( time_profile.empty() ){
+                if( time_profile.samples.empty() ){
                     ImGui::Text("No data available for cursor position");
 
                 }else{
+                    const auto abscissa = time_profile.metadata["Abscissa"];
                     ImVec2 window_extent = ImGui::GetContentRegionAvail();
-
-                    const int offset = 0;
-                    const int stride = sizeof( decltype( time_profile.samples[0] ) );
 
                     if(ImPlot::BeginPlot("Time Profiles",
                                          abscissa.c_str(),
@@ -3240,14 +3266,34 @@ script_files.back().content.emplace_back('\0');
                                          ImPlotFlags_AntiAliased,
                                          ImPlotAxisFlags_AutoFit,
                                          ImPlotAxisFlags_AutoFit )) {
-                        ImPlot::PlotLine<double>("Time Profile",
-                                                 &time_profile.samples[0][0], 
-                                                 &time_profile.samples[0][2],
-                                                 time_profile.size(),
-                                                 offset, stride );
+                        long int i = 0;
+                        for(auto &tp : { time_profile }){
+                            const int offset = 0;
+                            const int stride = sizeof( decltype( tp.samples[0] ) );
+                            ImPlot::PlotLine<double>(std::string("##time_profile_"_s + std::to_string(i)).c_str(),
+                                                     &tp.samples[0][0], 
+                                                     &tp.samples[0][2],
+                                                     tp.size(),
+                                                     offset, stride );
+
+                            if(auto ca = get_as<double>(tp.metadata,"CurrentAbscissa");
+                               ca && (2 < tp.samples.size()) ){
+                                try{
+                                    const auto s = tp.Interpolate_Linearly(ca.value());
+                                    ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.15f);
+                                    ImPlot::PlotScatter<double>(std::string("##current_abscissa_scatter_"_s + std::to_string(i)).c_str(),
+                                                                &s[0], 
+                                                                &s[2],
+                                                                1,
+                                                                offset, stride );
+                                    ImPlot::PopStyleVar();
+                                    ImPlot::PlotVLines(std::string("##current_abscissa_line_"_s + std::to_string(i)).c_str(),&s[0],1);
+                                }catch(const std::exception &){}
+                            }
+                            ++i;
+                        }
                         ImPlot::EndPlot();
                     }
-
                 }
                 ImGui::End();
             }
@@ -3504,13 +3550,20 @@ script_files.back().content.emplace_back('\0');
                             last_mouse_button_pos = image_mouse_pos.dicom_pos;
                         }
 
+                    // Left-button mouse click on an image.
                     }else if( image_mouse_pos.mouse_hovering_image
                           &&  (0 < IM_ARRAYSIZE(io.MouseDown))
                           &&  (0.0f == io.MouseDownDuration[0]) ){ // Debounced!
-                          if(!tagged_pos){
-                              tagged_pos = image_mouse_pos.dicom_pos;
+
+                          if(view_toggles.view_time_profiles){
+                              view_toggles.save_time_profiles = true;
+
                           }else{
-                              tagged_pos = {};
+                              if(!tagged_pos){
+                                  tagged_pos = image_mouse_pos.dicom_pos;
+                              }else{
+                                  tagged_pos = {};
+                              }
                           }
 
                     }else if(0 < io.MouseWheel){
@@ -3565,6 +3618,39 @@ script_files.back().content.emplace_back('\0');
         };
         display_image_navigation();
 
+
+        // Saving time courses as line samples.
+        if(view_toggles.save_time_profiles){
+            view_toggles.save_time_profiles = false;
+            string_to_array(time_course_text_entry, "unspecified");
+            ImGui::OpenPopup("Save Time Profile");
+        }
+        if(ImGui::BeginPopupModal("Save Time Profile", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+            do{
+                if(ImGui::InputText("Name", time_course_text_entry.data(), time_course_text_entry.size() - 1)){
+                    std::string text;
+                    array_to_string(text, time_course_text_entry);
+                    time_profile.metadata["LineName"] = text;
+                }
+
+                ImGui::Separator();
+                if(ImGui::Button("Save")){
+                    std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+                    if(!drover_lock) break;
+
+                    // Save a copy of the current time profile.
+                    DICOM_data.lsamp_data.emplace_back( std::make_shared<Line_Sample>() );
+                    DICOM_data.lsamp_data.back()->line = time_profile;
+
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Cancel")){
+                    ImGui::CloseCurrentPopup();
+                }
+            }while(false);
+            ImGui::EndPopup();
+        }
 
         // Clear the current OpenGL frame.
         CHECK_FOR_GL_ERRORS();
