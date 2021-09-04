@@ -36,26 +36,9 @@ OperationDoc OpArgDocModifyImageMetadata(){
     out.args.back().default_val = "last";
 
     out.args.emplace_back();
+    out.args.back() = MetadataInjectionOpArgDoc();
     out.args.back().name = "KeyValues";
-    out.args.back().desc = "Key-value pairs in the form of 'key1@value1;key2@value2' that will be injected into the"
-                           " selected images. Existing metadata will be overwritten. Both keys and values are"
-                           " case-sensitive. Note that a semi-colon separates key-value pairs, not a colon."
-                           " Values can use macros that refer to other metadata keys using the '$' character."
-                           " If macros refer to non-existent metadata elements, then the replacement is literal."
-                           " Date and timestamps can be converted to seconds (since the Unix epoch) using the"
-                           " 'to_seconds()' function."
-                           " Note that quotation marks are not stripped internally, but may have to be"
-                           " provided for the shell to properly interpret the argument."
-                           " Also note that updating spatial metadata will not result in the image characteristics"
-                           " being altered -- use the specific parameters provided to update spatial characteristics.";
     out.args.back().default_val = "";
-    out.args.back().expected = false;
-    out.args.back().examples = { "Description@'some description'",
-                                 "'Description@some description'", 
-                                 "'Description@Research scan performed on $ContentDate'", 
-                                 "'ContentTimeInSeconds@to_seconds($ContentDate-$ContentDate)'", 
-                                 "MinimumSeparation@1.23", 
-                                 "'Description@some description;MinimumSeparation@1.23'" };
 
     out.args.emplace_back();
     out.args.back().name = "SliceThickness";
@@ -192,18 +175,7 @@ bool ModifyImageMetadata(Drover &DICOM_data,
     };
 
     // Parse user-provided metadata, if any has been provided.
-    std::map<std::string,std::string> key_values;
-    if(KeyValuesOpt){
-        for(const auto& a : SplitStringToVector(KeyValuesOpt.value(), ';', 'd')){
-            auto b = SplitStringToVector(a, '@', 'd');
-            if(b.size() != 2) throw std::runtime_error("Cannot parse subexpression: "_s + a);
-
-            key_values[b.front()] = b.back();
-        }
-    }
-
-    time_mark t_ref;
-    t_ref.Set_unix_epoch();
+    const auto key_values = parse_key_values(KeyValuesOpt.value_or(""));
 
     // Implement changes for selected images.
     auto IAs_all = All_IAs( DICOM_data );
@@ -260,14 +232,7 @@ bool ModifyImageMetadata(Drover &DICOM_data,
             // Insert a copy of the user-provided key-values, but pre-process to replace macros and evaluate known
             // functions.
             auto l_key_values = key_values;
-            recursively_expand_macros(l_key_values, animg.metadata);
-            evaluate_time_functions(l_key_values, t_ref);
-
-            // Update or insert all metadata.
-            for(const auto &kv_pair : l_key_values){
-                animg.metadata[ kv_pair.first ] = kv_pair.second;
-            }
-
+            inject_metadata( animg.metadata, std::move(l_key_values) );
         }
     }
 

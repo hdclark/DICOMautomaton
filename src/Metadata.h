@@ -19,6 +19,7 @@
 
 using metadata_map_t = std::map<std::string,std::string>;
 
+// -------------------------------- Generic helpers ---------------------------------------
 //Generic helper functions.
 std::string Generate_Random_UID(long int len);
 
@@ -44,6 +45,7 @@ apply_as(metadata_map_t &map,
          const std::function<T(T)> &f);
 
 
+// --------------------------------- Operation helpers --------------------------------------
 // Hash both keys and values of a metadata map.
 size_t hash_std_map(const metadata_map_t &m);
 
@@ -55,6 +57,17 @@ void recursively_expand_macros(metadata_map_t &working,
 void evaluate_time_functions(metadata_map_t &working,
                              std::optional<time_mark> t_ref);
 
+// Utility function to help parse key-value strings to a metadata list.
+metadata_map_t parse_key_values(const std::string &s);
+
+// Insert a copy of the user-provided key-values, but pre-process to replace macros and evaluate known functions.
+void inject_metadata( metadata_map_t &target,
+                      metadata_map_t &&to_inject );
+
+// Utility function documenting the metadata mutation operation.
+OperationArgDoc MetadataInjectionOpArgDoc();
+
+// ----------------------------- Object creation helpers ------------------------------------
 // Sets of DICOM metadata key-value elements that provide reasonable defaults or which draw from the provided reference
 // map, if available.
 //

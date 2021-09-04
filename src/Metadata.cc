@@ -207,6 +207,65 @@ void evaluate_time_functions(metadata_map_t &working,
     return;
 }
 
+metadata_map_t parse_key_values(const std::string &s){
+    // Parse user-provided metadata, if any has been provided.
+    std::map<std::string,std::string> key_values;
+    if(s.empty()) return key_values;
+
+    for(const auto& a : SplitStringToVector(s, ';', 'd')){
+        auto b = SplitStringToVector(a, '@', 'd');
+        if(b.size() != 2) throw std::runtime_error("Cannot parse subexpression: "_s + a);
+
+        key_values[b.front()] = b.back();
+    }
+    return key_values;
+}
+
+// Insert a copy of the user-provided key-values, but pre-process to replace macros and evaluate known functions.
+void inject_metadata( metadata_map_t &target,
+                      metadata_map_t &&to_inject ){
+
+    recursively_expand_macros(to_inject, target);
+    evaluate_time_functions(to_inject, std::nullopt);
+
+    // Update or insert all metadata.
+    to_inject.merge(target);
+    target = to_inject;
+    //for(const auto &kv_pair : to_inject){
+    //    target[ kv_pair.first ] = kv_pair.second;
+    //}
+    return;
+}
+
+OperationArgDoc MetadataInjectionOpArgDoc(){
+    OperationArgDoc out;
+
+    out.name = "KeyValues";
+    out.desc = "Key-value pairs in the form of 'key1@value1;key2@value2' that will be injected into the"
+               " selected objects."
+               "Values can use macros that refer to other metadata keys using the '$' character."
+               " If macros refer to non-existent metadata elements, then the replacement is literal."
+               "Dates, times, and datetimes can be converted to seconds (since the Unix epoch) using the"
+               " 'to_seconds()' function."
+               "\n\n"
+               "Existing conflicting metadata will be overwritten."
+               " Both keys and values are case-sensitive."
+               " Note that a semi-colon separates key-value pairs, not a colon."
+               " Note that quotation marks are not stripped internally, but may have to be"
+               " provided on the command line for shells to properly interpret the argument."
+               " Also note that updating spatial metadata will not result in the object characteristics"
+               " being altered -- use the specific parameters provided to update spatial characteristics.";
+    out.default_val = "all";
+    out.expected = false;
+    out.examples = { "Description@'some description'",
+                     "'Description@some description'", 
+                     "'Description@Research scan performed on $ContentDate'", 
+                     "'ContentTimeInSeconds@to_seconds($ContentDate-$ContentDate)'", 
+                     "MinimumSeparation@1.23", 
+                     "'Description@some description;MinimumSeparation@1.23'" };
+    return out;
+}
+
 metadata_map_t coalesce_metadata_sop_common(const metadata_map_t &ref){
     metadata_map_t out;
     const auto SOPInstanceUID = Generate_Random_UID(60);
