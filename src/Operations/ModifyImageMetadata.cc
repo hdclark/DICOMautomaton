@@ -14,11 +14,13 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
-#include "ModifyImageMetadata.h"
+#include "../Metadata.h"
+
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorTime.h"
 
+#include "ModifyImageMetadata.h"
 
 
 OperationDoc OpArgDocModifyImageMetadata(){
@@ -166,8 +168,6 @@ bool ModifyImageMetadata(Drover &DICOM_data,
     const auto ImageOrientationRowOpt = OptArgs.getValueStr("ImageOrientationRow");
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto to_seconds_regex = std::regex(R"***((.*)to_seconds[(]([^)]*)[)](.*))***", std::regex::icase | std::regex::optimize );
-
     if(!!(ImageOrientationColumnOpt) != !!(ImageOrientationRowOpt)){
         throw std::invalid_argument("Either both or neither of image orientation vectors must be provided.");
     }
@@ -202,15 +202,6 @@ bool ModifyImageMetadata(Drover &DICOM_data,
         }
     }
 
-    // This is not provided in the std library. Not sure why?
-    const auto hash_std_map = [](const std::map<std::string,std::string> &m) -> size_t {
-        size_t h = 0;
-        for(const auto &p : m){
-            h ^= std::hash<std::string>{}(p.first);
-            h ^= std::hash<std::string>{}(p.second);
-        }
-        return h;
-    };
     time_mark t_ref;
     t_ref.Set_unix_epoch();
 
@@ -269,41 +260,8 @@ bool ModifyImageMetadata(Drover &DICOM_data,
             // Insert a copy of the user-provided key-values, but pre-process to replace macros and evaluate known
             // functions.
             auto l_key_values = key_values;
-
-            // Continually attempt replacements until no changes occur. This will cover recursive changes (up to a
-            // point) which adds some extra capabilities.
-            auto prev_hash = hash_std_map(l_key_values);
-            long int i = 0;
-            while(true){
-                // Parse time extraction functions, if present.
-                for(auto &kv : l_key_values){
-                    // See if the time function is present.
-                    if(const auto tokens = GetAllRegex2(kv.second, to_seconds_regex); (tokens.size() == 3) ){
-                        double fractional_seconds = 0.0;
-                        if(time_mark t; t.Read_from_string(tokens.at(1), &fractional_seconds) ){
-                            const auto seconds = std::to_string(static_cast<double>(t_ref.Diff_in_Seconds(t)) + fractional_seconds);
-                            kv.second = tokens.at(0) + seconds + tokens.at(2);
-                        }
-                    }
-                }
-
-                // Expand macros against the image's metadata, if any are present.
-                for(auto &kv : l_key_values){
-                    kv.second = ExpandMacros(kv.second, animg.metadata);
-                }
-
-                // Expand macros against the new metadata, if any are present.
-                for(auto &kv : l_key_values){
-                    kv.second = ExpandMacros(kv.second, l_key_values);
-                }
-
-                const auto new_hash = hash_std_map(l_key_values);
-                if(prev_hash == new_hash) break;
-                prev_hash = new_hash;
-                if(500 < ++i){
-                    throw std::invalid_argument("Excessive number of recursive macro replacements detected.");
-                }
-            }
+            recursively_expand_macros(l_key_values, animg.metadata);
+            evaluate_time_functions(l_key_values, t_ref);
 
             // Update or insert all metadata.
             for(const auto &kv_pair : l_key_values){

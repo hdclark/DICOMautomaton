@@ -137,6 +137,76 @@ template std::optional<double     > apply_as(metadata_map_t &, const std::string
 template std::optional<std::string> apply_as(metadata_map_t &, const std::string &, const std::function<std::string(std::string)> &);
 
 
+// This is not provided in the std library. Not sure why?
+size_t hash_std_map(const metadata_map_t &m){
+    size_t h = 0;
+    for(const auto &p : m){
+        h ^= std::hash<std::string>{}(p.first);
+        h ^= std::hash<std::string>{}(p.second);
+    }
+    return h;
+}
+
+
+void recursively_expand_macros(metadata_map_t &working,
+                               const metadata_map_t &ref ){
+    // Continually attempt replacements until no changes occur. This will cover recursive changes (up to a
+    // point) which adds some extra capabilities.
+    auto prev_hash = hash_std_map(working);
+    long int i = 0;
+    while(true){
+        // Expand macros against the reference metadata, if any are present.
+        for(auto &kv : working){
+            kv.second = ExpandMacros(kv.second, ref);
+        }
+
+        // Expand macros against the working metadata, if any are present.
+        for(auto &kv : working){
+            kv.second = ExpandMacros(kv.second, working);
+        }
+
+        const auto new_hash = hash_std_map(working);
+        if(prev_hash == new_hash) break;
+        prev_hash = new_hash;
+        if(500 < ++i){
+            throw std::invalid_argument("Excessive number of recursive macro replacements detected.");
+        }
+    }
+    return;
+}
+
+void evaluate_time_functions(metadata_map_t &working,
+                             std::optional<time_mark> t_ref){
+    if(!t_ref){
+        t_ref = time_mark();
+        t_ref.value().Set_unix_epoch();
+    }
+
+    for(auto &kv : working){
+        // See if the 'to_seconds()' function is present.
+        {
+            //const auto to_seconds_regex = std::regex(R"***((.*)to_seconds[(]([^)]*)[)](.*))***", std::regex::icase | std::regex::optimize );
+            //if(const auto tokens = GetAllRegex2(kv.second, to_seconds_regex); (tokens.size() == 3) ){
+            const auto p1 = kv.second.find("to_seconds(");
+            const auto p2 = kv.second.find(")");
+            if( (p1 != std::string::npos)
+            &&  (p2 != std::string::npos)
+            &&  (p1 < p2) ){
+                const auto token_0 = kv.second.substr(0,p1);
+                const auto token_1 = kv.second.substr(p1,(p2+1-p1));
+                const auto token_2 = kv.second.substr(p2+1);
+
+                double fractional_seconds = 0.0;
+                if(time_mark t; t.Read_from_string(token_1, &fractional_seconds) ){
+                    const auto seconds = std::to_string(static_cast<double>(t_ref.value().Diff_in_Seconds(t)) + fractional_seconds);
+                    kv.second = token_0 + seconds + token_2;
+                }
+            }
+        }
+    }
+    return;
+}
+
 metadata_map_t coalesce_metadata_sop_common(const metadata_map_t &ref){
     metadata_map_t out;
     const auto SOPInstanceUID = Generate_Random_UID(60);

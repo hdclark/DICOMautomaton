@@ -12,6 +12,7 @@
 
 #include "YgorString.h"
 #include "YgorMath.h"
+#include "YgorTime.h"
 
 #include "Structs.h"
 
@@ -42,6 +43,17 @@ apply_as(metadata_map_t &map,
          const std::string &key,
          const std::function<T(T)> &f);
 
+
+// Hash both keys and values of a metadata map.
+size_t hash_std_map(const metadata_map_t &m);
+
+// Recursively expand the values of the working metadata set. Macros can refer to either working or reference maps.
+void recursively_expand_macros(metadata_map_t &working,
+                               const metadata_map_t &ref );
+
+// Expand time helper functions in metadata values.
+void evaluate_time_functions(metadata_map_t &working,
+                             std::optional<time_mark> t_ref);
 
 // Sets of DICOM metadata key-value elements that provide reasonable defaults or which draw from the provided reference
 // map, if available.
