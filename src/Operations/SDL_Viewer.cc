@@ -2531,7 +2531,7 @@ script_files.back().content.emplace_back('\0');
                     throw std::invalid_argument("Unrecognized abscissa inclusisivity");
                 }
                 auto common_metadata = planar_image_collection<float,double>().get_common_metadata(selected_imgs);
-                common_metadata = default_metadata_lsamp(common_metadata);
+                common_metadata = coalesce_metadata_for_lsamp(common_metadata);
 
                 //Cycle over the images, dumping the ordinate (pixel values) vs abscissa (time) derived from metadata.
                 long int n_current_img = 0;
