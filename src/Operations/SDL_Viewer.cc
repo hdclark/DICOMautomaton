@@ -133,6 +133,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     struct View_Toggles {
         bool set_about_popup = false;
+        bool view_imgui_demo = false;
+        bool view_implot_demo = false;
         bool view_metrics_window = false;
         bool open_files_enabled = false;
         bool view_images_enabled = true;
@@ -1183,6 +1185,13 @@ bool SDL_Viewer(Drover &DICOM_data,
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
+
+        if(view_toggles.view_imgui_demo){
+            ImGui::ShowDemoWindow(&view_toggles.view_imgui_demo);
+        }
+        if(view_toggles.view_implot_demo){
+            ImPlot::ShowDemoWindow(&view_toggles.view_implot_demo);
+        }
 
         // Reload the image texture. Needs to be done by the main thread.
         const auto reload_image_texture = [&drover_mutex,
@@ -3804,6 +3813,16 @@ script_files.back().content.emplace_back('\0');
             const std::string version = "DICOMautomaton SDL_Viewer version "_s + DCMA_VERSION_STR;
             ImGui::Text("%s", version.c_str());
 
+            if(ImGui::Button("Imgui demo")){
+                view_toggles.view_imgui_demo = true;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Implot demo")){
+                view_toggles.view_implot_demo = true;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
             if(ImGui::Button("Close")){
                 ImGui::CloseCurrentPopup();
             }

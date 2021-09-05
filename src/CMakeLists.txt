@@ -139,8 +139,10 @@ if(WITH_SDL)
                                    imgui20210904/imgui_draw.cpp
                                    imgui20210904/imgui_widgets.cpp 
                                    imgui20210904/imgui_tables.cpp
+                                   imgui20210904/imgui_demo.cpp
                                    implot20210904/implot.cpp 
-                                   implot20210904/implot_items.cpp )
+                                   implot20210904/implot_items.cpp
+                                   implot20210904/implot_demo.cpp )
     set_target_properties( IMGui_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 endif()
 
@@ -326,7 +328,7 @@ target_link_libraries (dicomautomaton_dispatcher
     Boost::thread
     Boost::system
     z
-    "${CMAKE_DL_LIBS}"
+    "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
     mpfr
     gmp
     m
@@ -406,7 +408,7 @@ if(WITH_WT)
         Boost::thread
         Boost::system
         z
-        "${CMAKE_DL_LIBS}"
+        "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
         mpfr
         gmp
         m
