@@ -188,18 +188,18 @@ void evaluate_time_functions(metadata_map_t &working,
             //const auto to_seconds_regex = std::regex(R"***((.*)to_seconds[(]([^)]*)[)](.*))***", std::regex::icase | std::regex::optimize );
             //if(const auto tokens = GetAllRegex2(kv.second, to_seconds_regex); (tokens.size() == 3) ){
             const auto p1 = kv.second.find("to_seconds(");
-            const auto p2 = kv.second.find(")");
+            const auto p2 = kv.second.find(")", p1);
             if( (p1 != std::string::npos)
             &&  (p2 != std::string::npos)
             &&  (p1 < p2) ){
-                const auto token_0 = kv.second.substr(0,p1);
-                const auto token_1 = kv.second.substr(p1,(p2+1-p1));
-                const auto token_2 = kv.second.substr(p2+1);
+                const auto token_0 = kv.second.substr(0,p1+11);
+                const auto token_1 = kv.second.substr(p1+11,(p2-p1-11));
+                const auto token_2 = kv.second.substr(p2);
 
                 double fractional_seconds = 0.0;
                 if(time_mark t; t.Read_from_string(token_1, &fractional_seconds) ){
                     const auto seconds = std::to_string(static_cast<double>(t_ref.value().Diff_in_Seconds(t)) + fractional_seconds);
-                    kv.second = token_0 + seconds + token_2;
+                    kv.second = kv.second.substr(0,p1) + seconds + kv.second.substr(p2+1);
                 }
             }
         }
