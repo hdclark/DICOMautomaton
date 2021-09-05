@@ -37,10 +37,10 @@
 
 #include <filesystem>
 
-#include "../imgui20201021/imgui.h"
-#include "../imgui20201021/imgui_impl_sdl.h"
-#include "../imgui20201021/imgui_impl_opengl3.h"
-#include "../implot20210525/implot.h"
+#include "../imgui20210904/imgui.h"
+#include "../imgui20210904/imgui_impl_sdl.h"
+#include "../imgui20210904/imgui_impl_opengl3.h"
+#include "../implot20210904/implot.h"
 
 #include <SDL.h>
 #include <GL/glew.h>            // Initialize with glewInit()
@@ -1181,7 +1181,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         // Build a frame using ImGui.
         ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplSDL2_NewFrame(window);
+        ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
 
         // Reload the image texture. Needs to be done by the main thread.
