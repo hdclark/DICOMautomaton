@@ -284,6 +284,8 @@ bool SDL_Viewer(Drover &DICOM_data,
     std::array<char, 1024> time_course_text_entry;
     string_to_array(time_course_text_entry, "");
 
+    std::array<char, 1024> metadata_text_entry;
+    string_to_array(metadata_text_entry, "");
 
     // --------------------------------------------- Setup ------------------------------------------------
 #ifndef CHECK_FOR_GL_ERRORS
@@ -1951,6 +1953,8 @@ script_files.back().content.emplace_back('\0');
                                            &time_course_image_inclusivity,
                                            &time_course_abscissa_relative,
 
+                                           &metadata_text_entry,
+
                                            &frame_count ]() -> void {
 
 // Lock the image details mutex in shared mode.
@@ -2579,20 +2583,63 @@ script_files.back().content.emplace_back('\0');
                 ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Image Metadata", &view_toggles.view_image_metadata_enabled);
 
-                ImGui::Text("Image Metadata");
-                ImGui::Columns(2);
-                ImGui::Separator();
-                ImGui::Text("Key"); ImGui::NextColumn();
-                ImGui::Text("Value"); ImGui::NextColumn();
-                ImGui::Separator();
 
-                for(const auto &apair : disp_img_it->metadata){
-                    ImGui::Text("%s",  apair.first.c_str());  ImGui::NextColumn();
-                    ImGui::Text("%s",  apair.second.c_str()); ImGui::NextColumn();
+                ImVec2 cell_padding(0.0f, 0.0f);
+                ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, cell_padding);
+                if(ImGui::BeginTable("Image Metadata", 2,   ImGuiTableFlags_Borders
+                                                          | ImGuiTableFlags_RowBg
+                                                          | ImGuiTableFlags_BordersV
+                                                          | ImGuiTableFlags_BordersInner
+                                                          | ImGuiTableFlags_Resizable )){
+
+                    ImGui::TableSetupColumn("Key");
+                    ImGui::TableSetupColumn("Value");
+                    ImGui::TableHeadersRow();
+
+                    int i = 0;
+                    const auto l_metadata = disp_img_it->metadata;
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
+                    for(const auto &apair : l_metadata){
+                        auto key = apair.first;
+                        auto val = apair.second;
+
+                        ImGui::TableNextColumn();
+                        ImGui::SetNextItemWidth(-FLT_MIN);
+                        string_to_array(metadata_text_entry, key);
+                        ImGui::PushID(++i);
+                        const bool key_changed = ImGui::InputText("##key", metadata_text_entry.data(), metadata_text_entry.size());
+                        ImGui::PopID();
+                        // Since key_changed is true whenever any changes have occured, even if the mouse is idling
+                        // after a change, then the following causes havoc by continuously editing the key and messing
+                        // with the ID system. A better system would only implement the change when the focus is lost
+                        // and/or enter is pressed. I'm not sure if there is a simple way to do this at the moment, so
+                        // I'll leave key editing disabled until I figure out a reasonable fix.
+                        //if(key_changed){
+                        //    std::string new_key;
+                        //    array_to_string(new_key, metadata_text_entry);
+                        //    if(new_key != key){
+                        //        disp_img_it->metadata.erase(key);
+                        //        disp_img_it->metadata[new_key] = val;
+                        //        key = new_key;
+                        //    }
+                        //}
+
+                        ImGui::TableNextColumn();
+                        ImGui::SetNextItemWidth(-FLT_MIN);
+                        string_to_array(metadata_text_entry, val);
+                        ImGui::PushID(++i);
+                        const bool val_changed = ImGui::InputText("##val", metadata_text_entry.data(), metadata_text_entry.size());
+                        ImGui::PopID();
+                        if(val_changed){
+                            // Replace key's value with updated value in place.
+                            array_to_string(val, metadata_text_entry);
+                            disp_img_it->metadata[key] = val;
+                        }
+                    }
+                    ImGui::PopStyleColor();
+                    ImGui::EndTable();
                 }
-
-                ImGui::Columns(1);
-                ImGui::Separator();
+                ImGui::PopStyleVar();
 
                 ImGui::End();
             }
