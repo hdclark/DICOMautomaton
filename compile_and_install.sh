@@ -166,6 +166,13 @@ if [[ "${DISTRIBUTION}" =~ .*mxe.* ]] ; then
 elif [[ "${DISTRIBUTION}" =~ .*debian.* ]] ; then
     printf 'Compiling for Debian...\n'
 
+    # Check whether Ygor is up-to-date or not.
+    #(
+    #    git clone --depth 1 'https://github.com/hdclark/Ygor.git' /tmp/ygor
+    #    cd /tmp/ygor
+    #    ./compile_and_install.sh
+    #)
+
     mkdir -p build
     cd build
 
