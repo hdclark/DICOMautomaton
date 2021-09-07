@@ -25,6 +25,9 @@ rsync -avp --files-from=<(dpkg-query -L ygor ygorclustering explicator dicomauto
 #pacman -Ql ygor ygorclustering explicator dicomautomaton | cut -d" " -f 2- | while read a ; do [ -f "$a" ] && echo "${a#/}" ; done
 rsync -avp --files-from=<(pacman -Ql ygor ygorclustering explicator dicomautomaton | cut -d" " -f 2- | while read a ; do [ -f "$a" ] && echo "${a#/}" ; done) / ./AppDir/
 
+# Sometimes the AppImage script fails to modify the rpath of some binaries. Attempt to do this ourselves.
+patchelf --set-rpath '$ORIGIN/../lib' ./AppDir/usr/bin/*
+
 printf \
 "[Desktop Entry]
 Type=Application
