@@ -330,6 +330,19 @@ int main(int argc, char* argv[]){
         }
     }
 
+    // Ensure the current path is set to *something*, otherwise std::filesystem::current_path() throws. :(
+    try{
+        std::filesystem::current_path();
+    }catch(const std::exception &){
+        if(const char *pwd = std::getenv("PWD"); nullptr != pwd){
+            FUNCWARN("Current working directory not set. Resetting via PWD environment variable");
+            std::filesystem::current_path( std::filesystem::path( std::string(pwd) ) );
+        }else{
+            FUNCWARN("Current working directory not set. Resetting to temporary path");
+            std::filesystem::current_path( std::filesystem::temp_directory_path() );
+        }
+    }
+
     // Transform filenme arguments to paths.
     for(const auto &auri : StandaloneFilesDirs){
         StandaloneFilesDirsReachable.emplace_back(auri);
