@@ -21,6 +21,7 @@
 #include <map>
 #include <set>
 #include <memory>
+#include <numeric>
 #include <regex>
 #include <stdexcept>
 #include <string>    
@@ -451,6 +452,48 @@ bool SDL_Viewer(Drover &DICOM_data,
             // Reset the contouring images.
             contouring_imgs.image_data.back()->imagecoll.images.clear();
             for(const auto& dimg : (*dimg_array_ptr_it)->imagecoll.images){
+                if((dimg.rows < 1) || (dimg.columns < 1)) continue;
+
+                // Only add this slice if it fails to overlap spatially with any existing images.
+                //const auto ortho_offset = dimg.row_unit.Cross( dimg.col_unit ).unit() * dimg.pxl_dz * 0.25;
+                //const auto centre = dimg.center();
+                //const std::list<vec3<double>> points = { centre,
+                //                                         centre + ortho_offset,
+                //                                         centre - ortho_offset,
+                //                                         dimg.position(0,0),
+                //                                         dimg.position(0,0) + ortho_offset,
+                //                                         dimg.position(0,0) - ortho_offset,
+                //                                         dimg.position(dimg.rows-1,0),
+                //                                         dimg.position(dimg.rows-1,0) + ortho_offset,
+                //                                         dimg.position(dimg.rows-1,0) - ortho_offset,
+                //                                         dimg.position(dimg.rows-1,dimg.columns-1),
+                //                                         dimg.position(dimg.rows-1,dimg.columns-1) + ortho_offset,
+                //                                         dimg.position(dimg.rows-1,dimg.columns-1) - ortho_offset,
+                //                                         dimg.position(0,dimg.columns-1),
+                //                                         dimg.position(0,dimg.columns-1) + ortho_offset,
+                //                                         dimg.position(0,dimg.columns-1) - ortho_offset };
+                //const auto encompassing_images = contouring_imgs.image_data.back()->imagecoll.get_images_which_encompass_all_points(points);
+                //if(!encompassing_images.empty()) continue;
+
+                const auto centre = dimg.center();
+                const auto A_corners = dimg.corners2D();
+                auto encompassing_images = contouring_imgs.image_data.back()->imagecoll.get_images_which_sandwich_point_within_top_bottom_planes( centre );
+                encompassing_images.remove_if([&](const decltype(contouring_imgs.image_data.back()->imagecoll.get_all_images().front()) &img_it){
+                    const auto B_corners = img_it->corners2D();
+
+                    //Fixed corner-to-corner distance.
+                    double dist = 0.0;
+                    for(auto A_it = std::begin(A_corners), B_it = std::begin(B_corners);
+                        (A_it != std::end(A_corners)) && (B_it != std::end(B_corners)); ){
+                        dist += A_it->sq_dist(*B_it);
+                        ++A_it;
+                        ++B_it;
+                    }
+                    return (std::min(dimg.pxl_dx, dimg.pxl_dy) < dist);
+                });
+                if(!encompassing_images.empty()) continue;
+
+                // Add this image to the list of spatially-distinct images.
                 contouring_imgs.image_data.back()->imagecoll.images.emplace_back();
                 const auto cimg_ptr = &(contouring_imgs.image_data.back()->imagecoll.images.back());
 
@@ -471,6 +514,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             // Reset any existing contours.
             contouring_imgs.Ensure_Contour_Data_Allocated();
             contouring_imgs.contour_data->ccs.clear();
+            FUNCINFO("Reset contouring state with " << contouring_imgs.image_data.back()->imagecoll.images.size() << " images");
 
             return;
     };
@@ -704,30 +748,68 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // Recompute image array and image iterators for the current contouring image.
     const auto recompute_cimage_iters = [ &contouring_imgs,
-                                          &img_num ](){
+                                          &recompute_image_iters ](){
         std::tuple<bool, img_array_ptr_it_t, disp_img_it_t > out;
         std::get<bool>( out ) = false;
-        const long int img_array_num = 0;
+        const long int cimg_array_num = 0; // (Currently only support one image array, but would be useful to support multiple...)
 
         // Set the current image array and image iters and load the texture.
-        const auto has_images = contouring_imgs.Has_Image_Data();
+        const auto has_cimages = contouring_imgs.Has_Image_Data();
+        auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
         do{ 
-            if( !has_images ) break;
-            if( !isininc(1, img_array_num+1, contouring_imgs.image_data.size()) ) break;
-            auto img_array_ptr_it = std::next(contouring_imgs.image_data.begin(), img_array_num);
-            if( img_array_ptr_it == std::end(contouring_imgs.image_data) ) break;
-
-            if( !isininc(1, img_num+1, (*img_array_ptr_it)->imagecoll.images.size()) ) break;
-            auto disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
-            if( disp_img_it == std::end((*img_array_ptr_it)->imagecoll.images) ) break;
+            if( !has_cimages ) break;
+            if( !img_valid ) break;
+            if(  contouring_imgs.image_data.size() != 1 ) throw std::logic_error("Multiple contouring image arrays not supported");
+            if( !isininc(1, cimg_array_num+1, contouring_imgs.image_data.size()) ) break;
+            auto cimg_array_ptr_it = std::next(contouring_imgs.image_data.begin(), cimg_array_num);
+            if( cimg_array_ptr_it == std::end(contouring_imgs.image_data) ) break;
 
             if( (disp_img_it->channels <= 0)
             ||  (disp_img_it->rows <= 0)
             ||  (disp_img_it->columns <= 0) ) break;
 
+            // Find the spatially-overlapping image.
+            //const auto ortho_offset = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit() * disp_img_it->pxl_dz * 0.25;
+            //const std::list<vec3<double>> points = { centre,
+            //                                         centre + ortho_offset,
+            //                                         centre - ortho_offset,
+            //                                         disp_img_it->position(0,0),
+            //                                         disp_img_it->position(0,0) + ortho_offset,
+            //                                         disp_img_it->position(0,0) - ortho_offset,
+            //                                         disp_img_it->position(disp_img_it->rows-1,0),
+            //                                         disp_img_it->position(disp_img_it->rows-1,0) + ortho_offset,
+            //                                         disp_img_it->position(disp_img_it->rows-1,0) - ortho_offset,
+            //                                         disp_img_it->position(disp_img_it->rows-1,disp_img_it->columns-1),
+            //                                         disp_img_it->position(disp_img_it->rows-1,disp_img_it->columns-1) + ortho_offset,
+            //                                         disp_img_it->position(disp_img_it->rows-1,disp_img_it->columns-1) - ortho_offset,
+            //                                         disp_img_it->position(0,disp_img_it->columns-1),
+            //                                         disp_img_it->position(0,disp_img_it->columns-1) + ortho_offset,
+            //                                         disp_img_it->position(0,disp_img_it->columns-1) - ortho_offset };
+            //auto encompassing_images = (*cimg_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
+
+            //auto encompassing_images = (*cimg_array_ptr_it)->imagecoll.get_images_which_encompass_point( disp_img_it->center() );
+
+            const auto centre = disp_img_it->center();
+            const auto A_corners = disp_img_it->corners2D();
+            auto encompassing_images = (*cimg_array_ptr_it)->imagecoll.get_images_which_sandwich_point_within_top_bottom_planes( centre );
+            encompassing_images.remove_if([&](const decltype((*cimg_array_ptr_it)->imagecoll.get_all_images().front()) &img_it){
+                const auto B_corners = img_it->corners2D();
+
+                //Fixed corner-to-corner distance.
+                double dist = 0.0;
+                for(auto A_it = std::begin(A_corners), B_it = std::begin(B_corners);
+                    (A_it != std::end(A_corners)) && (B_it != std::end(B_corners)); ){
+                    dist += A_it->sq_dist(*B_it);
+                    ++A_it;
+                    ++B_it;
+                }
+                return (std::min(disp_img_it->pxl_dx, disp_img_it->pxl_dy) < dist);
+            });
+            if(encompassing_images.size() != 1) break;
+
             std::get<bool>( out ) = true;
-            std::get<img_array_ptr_it_t>( out ) = img_array_ptr_it;
-            std::get<disp_img_it_t>( out ) = disp_img_it;
+            std::get<img_array_ptr_it_t>( out ) = cimg_array_ptr_it;
+            std::get<disp_img_it_t>( out ) = encompassing_images.front();
         }while(false);
         return out;
     };
@@ -788,9 +870,9 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     const auto recompute_scale_bar_image_state = [ &scale_bar_img,
                                                    &scale_bar_texture,
-                                                   &recompute_cimage_iters,
+                                                   &recompute_image_iters,
                                                    &Load_OpenGL_Texture ](){
-        auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_cimage_iters();
+        auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
         if( img_valid ){ 
             scale_bar_texture = Load_OpenGL_Texture( scale_bar_img, {}, {} );
         }
@@ -2246,6 +2328,19 @@ script_files.back().content.emplace_back('\0');
                     ImGui::Text("Note: this functionality is still under active development.");
                     if(ImGui::Button("Save")){ 
                         ImGui::OpenPopup("Save Contours");
+
+                        // Fully extract contours from the mask images.
+                        contouring_imgs.Ensure_Contour_Data_Allocated();
+                        contouring_imgs.contour_data->ccs.clear();
+
+                        std::list<OperationArgPkg> Operations;
+                        Operations.emplace_back("ContourViaThreshold");
+                        Operations.back().insert("Method="_s + contouring_method);
+                        Operations.back().insert("Lower=0.5");
+                        Operations.back().insert("SimplifyMergeAdjacent=true");
+                        if(!Operation_Dispatcher(contouring_imgs, InvocationMetadata, FilenameLex, Operations)){
+                            FUNCWARN("ContourViaThreshold failed");
+                        }
                     }
                     ImGui::SameLine();
                     if(ImGui::BeginPopupModal("Save Contours", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
