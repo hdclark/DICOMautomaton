@@ -37,3 +37,11 @@ bool Load_From_Script_Files( std::list<OperationArgPkg> &Operations,
 void Print_Feedback(std::ostream &os,
                     const std::list<script_feedback_t> &feedback);
 
+
+// Some 'standard' scripts.
+struct standard_script_t {
+    std::string name;
+    std::string text;
+};
+std::list<standard_script_t> Standard_Scripts();
+

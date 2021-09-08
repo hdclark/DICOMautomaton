@@ -1481,6 +1481,30 @@ if(false){
                         }
                         ImGui::EndMenu();
                     }
+                    if(ImGui::BeginMenu("Load Script")){
+                        for(const auto &sscript : Standard_Scripts()){
+                            if(ImGui::MenuItem(sscript.name.c_str())){
+                                std::unique_lock<std::shared_mutex> script_lock(script_mutex);
+                                auto N_sfs = static_cast<long int>(script_files.size());
+                                script_files.emplace_back();
+                                script_files.back().altered = false;
+                                script_files.back().path = sscript.name;
+                                script_files.back().content.clear();
+                                append_to_script(script_files.back().content, sscript.text);
+                                script_files.back().content.emplace_back('\0');
+                                active_script_file = N_sfs;
+                                ++N_sfs;
+                                view_toggles.view_script_editor_enabled = true;
+                            }
+                            if(ImGui::IsItemHovered()){
+                                ImGui::SetNextWindowSizeConstraints(ImVec2(600.0, -1), ImVec2(500.0, -1));
+                                ImGui::BeginTooltip();
+                                ImGui::TextWrapped("%s", sscript.text.c_str());
+                                ImGui::EndTooltip();
+                            }
+                        }
+                        ImGui::EndMenu();
+                    }
                     ImGui::EndMenu();
                 }
 
