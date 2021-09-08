@@ -1222,6 +1222,88 @@ bool SDL_Viewer(Drover &DICOM_data,
         return;
     };
 
+    const auto execute_script = [ &launch_contour_preprocessor,
+                                  &preprocessed_contour_mutex,
+                                  &terminate_contour_preprocessors,
+                                  &clear_preprocessed_contours,
+                                  &tagged_pos,
+
+                                  &drover_mutex,
+                                  &DICOM_data,
+                                  &InvocationMetadata,
+                                  &FilenameLex,
+
+                                  &recompute_image_state,
+                                  &recompute_image_iters,
+                                  &reset_contouring_state,
+
+                                  &wq,
+                                  &script_mutex,
+                                  &script_files,
+                                  &script_epoch ]( const std::string &s,
+                                                   std::list<script_feedback_t> &f ) -> bool {
+
+        std::stringstream ss( s );
+        f.clear();
+        std::list<OperationArgPkg> op_list;
+        const auto res = Load_DCMA_Script( ss, f, op_list );
+        if(!res){
+            //script_files.at(active_script_file).feedback.emplace_back();
+            f.back().message = "Compilation failed";
+
+        }else{
+            const auto l_script_epoch = script_epoch.fetch_add(1) + 1;
+
+            // Submit the work to the worker thread.
+            const auto worker = [&,l_script_epoch,op_list](){
+                // Check if this task should be abandoned.
+                if(script_epoch.load() != l_script_epoch){
+                    FUNCINFO("Abandoning run due to potentially conflicting user activity");
+                    return;
+                }
+
+                std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
+
+                // Preemptively destroy any preprocessed contours to avoid dangling references.
+                std::unique_lock<std::shared_mutex> ppc_lock(preprocessed_contour_mutex);
+                terminate_contour_preprocessors();
+                clear_preprocessed_contours();
+
+                // Only perform a single operation at a time, which results in slightly less mutex contention.
+                bool success = true;
+                for(const auto &op : op_list){
+                    if(!Operation_Dispatcher(DICOM_data,
+                                             InvocationMetadata,
+                                             FilenameLex,
+                                             {op})){
+                        success = false;
+                        break;
+                    }
+                }
+                if(!success){
+                    // Report the failure to the user.
+                    //
+                    // TODO: provide graphical feedback!
+                    FUNCWARN("Script execution failed");
+                }
+
+                // Regenerate all Drover state that may have changed.
+                {
+                    recompute_image_state();
+                    auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+                    if( img_valid ){
+                        launch_contour_preprocessor();
+                        reset_contouring_state(img_array_ptr_it);
+                    }
+                    tagged_pos = {};
+                }
+                return;
+            };
+            wq.submit_task( worker ); // Offload to waiting worker thread.
+        }
+        return res;
+    };
+
     // Contour and image display state.
     std::map<std::string, bool> contour_enabled;
     std::map<std::string, bool> contour_hovered;
@@ -1335,6 +1417,7 @@ if(false){
                                             &active_script_file,
                                             &script_epoch,
                                             &append_to_script,
+                                            &execute_script,
 
                                             &lsamps_visible,
                                             &row_profile,
@@ -1508,6 +1591,26 @@ if(false){
                     ImGui::EndMenu();
                 }
 
+                if(ImGui::BeginMenu("Actions")){
+                    for(const auto &sscript : Standard_Scripts()){
+                        if(ImGui::MenuItem(sscript.name.c_str())){
+                            std::list<script_feedback_t> feedback;
+                            if(!execute_script(sscript.text, feedback)){
+                                FUNCWARN("Script execution failed");
+                                // TODO: provide feedback to user here...
+                            }
+                        }
+                        if(ImGui::IsItemHovered()){
+                            ImGui::SetNextWindowSizeConstraints(ImVec2(600.0, -1), ImVec2(500.0, -1));
+                            ImGui::BeginTooltip();
+                            ImGui::TextWrapped("%s", sscript.text.c_str());
+                            ImGui::EndTooltip();
+                        }
+
+                    }
+                    ImGui::EndMenu();
+                }
+
                 ImGui::Separator();
                 if(ImGui::BeginMenu("Help", "ctrl+h")){
                     if(ImGui::MenuItem("About")){
@@ -1566,6 +1669,7 @@ if(false){
                                             &active_script_file,
                                             &script_epoch,
                                             &append_to_script,
+                                            &execute_script,
 
                                             &drover_mutex,
                                             &DICOM_data,
@@ -1719,65 +1823,11 @@ script_files.back().content.emplace_back('\0');
                 if(ImGui::Button("Run", ImVec2(window_extent.x/4, 0))){ 
                     if( (N_sfs != 0) 
                     &&  isininc(0, active_script_file, N_sfs-1)){
-                        std::stringstream ss( std::string( std::begin(script_files.at(active_script_file).content),
-                                                           std::end(script_files.at(active_script_file).content) ) );
                         script_files.at(active_script_file).feedback.clear();
-                        std::list<OperationArgPkg> op_list;
-                        const auto res = Load_DCMA_Script( ss, script_files.at(active_script_file).feedback, op_list );
-                        if(!res){
-                            //script_files.at(active_script_file).feedback.emplace_back();
-                            script_files.at(active_script_file).feedback.back().message = "Compilation failed";
-                            view_toggles.view_script_feedback = true;
-
-                        }else{
-                            // Submit the work to the worker thread.
-                            const auto l_script_epoch = script_epoch.fetch_add(1) + 1;
-                            const auto worker = [&,l_script_epoch,op_list](){
-                                // Check if this task should be abandoned.
-                                if(script_epoch.load() != l_script_epoch){
-                                    FUNCINFO("Abandoning run due to user activity");
-                                    return;
-                                }
-
-                                std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
-
-                                // Preemptively destroy any preprocessed contours to avoid dangling references.
-                                std::unique_lock<std::shared_mutex> ppc_lock(preprocessed_contour_mutex);
-                                terminate_contour_preprocessors();
-                                clear_preprocessed_contours();
-
-                                // Only perform a single operation at a time, which results in slightly less mutex contention.
-                                bool success = true;
-                                for(const auto &op : op_list){
-                                    if(!Operation_Dispatcher(DICOM_data,
-                                                             InvocationMetadata,
-                                                             FilenameLex,
-                                                             {op})){
-                                        success = false;
-                                        break;
-                                    }
-                                }
-                                if(!success){
-                                    // Report the failure to the user.
-                                    //
-                                    // TODO: provide graphical feedback!
-                                    FUNCWARN("Script execution failed");
-                                }
-
-                                // Regenerate all Drover state that may have changed.
-                                {
-                                    recompute_image_state();
-                                    auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
-                                    if( img_valid ){
-                                        launch_contour_preprocessor();
-                                        reset_contouring_state(img_array_ptr_it);
-                                    }
-                                    tagged_pos = {};
-                                }
-                                return;
-                            };
-                            wq.submit_task( worker ); // Offload to waiting worker thread.
-                        }
+                        const bool res = execute_script( std::string( std::begin(script_files.at(active_script_file).content),
+                                                                      std::end(script_files.at(active_script_file).content) ),
+                                                    script_files.at(active_script_file).feedback );
+                        if(!res) view_toggles.view_script_feedback = true;
                     }
                 }
 
