@@ -1,0 +1,7 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+ModifyImageMetadata(
+    ImageSelection = 'all',
+    KeyValues = 't@to_seconds($ContentDate $ContentTime)'
+){};
+

@@ -35,6 +35,9 @@
 
 #include "Operation_Dispatcher.h"
 
+#ifndef DCMA_SCRIPT_INLINES
+#define DCMA_SCRIPT_INLINES
+#endif //DCMA_SCRIPT_INLINES
 
 // A parsed character from a stream that is imbued with additional metadata from the stream.
 struct char_with_context_t {
@@ -909,38 +912,12 @@ void Print_Feedback(std::ostream &os,
 }
 
 std::list<standard_script_t> Standard_Scripts(){
-    return {
-{ "DICOM image partition",
-R"***(#!/usr/bin/env -S dicomautomaton_dispatcher -v
+    std::list<standard_script_t> out {
+        // Autopopulated during build.
+        DCMA_SCRIPT_INLINES
+    };
 
-GroupImages(
-    ImageSelection = 'all',
-    KeysCommon = 'PatientID;FrameOfReferenceUID;StudyInstanceUID;SeriesInstanceUID;SeriesNumber;SeriesDescription',
-    AutoSelectKeysCommon = 'false',
-    Enforce = '' ){};)***" },
-
-
-{ "assign time in seconds",
-R"***(#!/usr/bin/env -S dicomautomaton_dispatcher -v
-
-ModifyImageMetadata(
-    ImageSelection = 'all',
-    KeyValues = 't@to_seconds($ContentDate $ContentTime)' ){};)***" },
-
-
-{ "reorder images via instance number",
-R"***(#!/usr/bin/env -S dicomautomaton_dispatcher -v
-
-OrderImages(
-    ImageSelection = 'all', 
-    Key = 'InstanceNumber' ){};)***" },
-
-
-{ "isolate most numerous image array",
-R"***(#!/usr/bin/env -S dicomautomaton_dispatcher -v
-
-DeleteImages( ImageSelection = '!numerous' ){};)***" },
-
-};
+    out.remove_if([](const standard_script_t &s){ return (s.name.empty() || s.text.empty()); });
+    return out;
 }
 

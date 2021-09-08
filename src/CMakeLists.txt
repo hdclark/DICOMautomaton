@@ -1,4 +1,36 @@
 
+
+# CMake-only function for embedded the contents of DCMA scripts into C++ source via a -D definition.
+set(script_inlines "")
+function(embed_script
+         filename)
+    # Read the file contents.
+    file(READ "${filename}" script_contents HEX)
+    #message(AUTHOR_WARNING "${script_contents}")
+
+    # Derive a name for the script from the filename.
+    set(script_filename "${filename}")
+    string(REGEX REPLACE ".*/(.*)" "\\1" script_filename "${script_filename}")
+    string(REGEX REPLACE "_" " " script_filename "${script_filename}")
+    string(REGEX REPLACE "[.]dscr$" "" script_filename "${script_filename}")
+
+    # Convert the file contents to a C++ string with hex escapes.
+    string(REGEX REPLACE "([0-9a-f][0-9a-f])" "\\\\x\\1" script_contents "${script_contents}")
+    #message(AUTHOR_WARNING "${script_contents}")
+    set(entry "{\"${script_filename}\",\"${script_contents}\"},")
+
+    # Append the string to a variable for later access.
+    set(script_inlines "${script_inlines}" PARENT_SCOPE)
+    set(script_inlines "${script_inlines}${entry}" PARENT_SCOPE)
+endfunction()
+
+file(GLOB script_files "../artifacts/dcma_scripts/*.dscr")
+foreach(script_file ${script_files})
+    embed_script("${script_file}")
+endforeach()
+#message(AUTHOR_WARNING "${script_inlines}")
+
+
 add_subdirectory(Operations)
 
 add_library(            DCMA_Version_obj OBJECT DCMA_Version.cc)
@@ -102,6 +134,7 @@ set_target_properties(  Boost_Serialization_File_Loader_obj PROPERTIES POSITION_
 
 add_library(            Script_Loader_obj OBJECT Script_Loader.cc )
 set_target_properties(  Script_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+target_compile_definitions( Script_Loader_obj PUBLIC -DDCMA_SCRIPT_INLINES=${script_inlines} )
 
 if(WITH_CGAL)
     add_library(            Surface_Meshes_obj OBJECT Surface_Meshes.cc )
@@ -145,7 +178,6 @@ if(WITH_SDL)
                                    implot20210904/implot_demo.cpp )
     set_target_properties( IMGui_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 endif()
-
 
 
 # Imebra library (built separately to maximally compartmentalize the long build process).
