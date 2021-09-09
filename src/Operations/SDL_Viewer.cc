@@ -105,6 +105,107 @@ string_to_array(std::array<char, 1024> &a, const std::string &s){
 }
 
 
+enum class brush_t {
+    // 2D brushes.
+    rigid_circle,
+    rigid_square,
+    gaussian,
+
+    // 3D brushes.
+    rigid_sphere,
+};
+
+void draw_with_brush( const decltype(planar_image_collection<float,double>().get_all_images()) &img_its,
+                      const std::vector<line_segment<double>> &lss,
+                      brush_t brush,
+                      float radius,
+                      float dval_factor = 1.0f,
+                      long int channel = 0){
+                      
+    for(auto &cit : img_its){
+
+        // Filter out irrelevant images.
+        const auto is_relevant = [&]() -> bool {
+            for(const auto& l : lss){
+                const auto plane_dist_R0 = cit->image_plane().Get_Signed_Distance_To_Point(l.Get_R0());
+                const auto plane_dist_R1 = cit->image_plane().Get_Signed_Distance_To_Point(l.Get_R1());
+
+                if( std::signbit(plane_dist_R0) != std::signbit(plane_dist_R1) ){
+                    // Line segment crosses the image plane, so is automatically relevant.
+                    return true;
+                }
+
+                // 2D brushes.
+                if( (brush == brush_t::rigid_circle)
+                ||  (brush == brush_t::rigid_square)
+                ||  (brush == brush_t::gaussian) ){
+                    if( (std::abs(plane_dist_R0) <= cit->pxl_dz * 0.5)
+                    ||  (std::abs(plane_dist_R1) <= cit->pxl_dz * 0.5) ){
+                        return true;
+                    }
+
+                // 3D brushes.
+                }else if(brush == brush_t::rigid_sphere){
+                    if( (std::abs(plane_dist_R0) <= radius)
+                    ||  (std::abs(plane_dist_R1) <= radius) ){
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+        if(!is_relevant()) continue;
+
+
+        // Process relevant images.
+        for(long int r = 0; r < cit->rows; ++r){
+            for(long int c = 0; c < cit->columns; ++c){
+                const auto pos = cit->position(r,c);
+                vec3<double> closest;
+                {
+                    double closest_dist = 1E99;
+                    for(const auto &l : lss){
+                        const auto closest_l = l.Closest_Point_To(pos);
+                        const auto dist = closest_l.distance(pos);
+                        if(dist < closest_dist){
+                            closest = closest_l;
+                            closest_dist = dist;
+                        }
+                    }
+                }
+
+                const auto dR = closest.distance(pos);
+                if( radius * 5.0 < dR ) continue;
+
+                float dval = 0.0;
+                if( (brush == brush_t::rigid_circle)
+                ||  (brush == brush_t::rigid_sphere) ){
+                    dval = (dR <= radius) ? 2.0 : 0.0;
+
+                }else if(brush == brush_t::rigid_square){
+                    if( (std::abs((closest - pos).Dot(cit->row_unit)) < radius)
+                    &&  (std::abs((closest - pos).Dot(cit->col_unit)) < radius) ){
+                        dval = 2.0;
+                    }
+                }else if(brush == brush_t::gaussian){
+                    // Note: arbitrary scaling constant used here. Should give ~ same as rigid when
+                    // dragged across the image at a typical pace.
+                    dval = 2.0 * std::exp( -std::pow(dR / (0.5 * radius), 2.0f) );
+                }
+
+                // Apply scaling factor (~brush strength).
+                // TODO: provide better control over the brush magnitude and scaling.
+                dval *= dval_factor;
+
+                float val = cit->value(r, c, channel);
+                val = std::clamp(val + dval, -1.0f, 2.0f);
+                cit->reference( r, c, channel ) = val;
+            }
+        }
+    }
+    return;
+}
+
 OperationDoc OpArgDocSDL_Viewer(){
     OperationDoc out;
     out.name = "SDL_Viewer";
@@ -423,16 +524,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     float contouring_reach = 10.0;
     float contouring_margin = 1.0;
     std::string contouring_method = "marching-squares";
-    enum class brushes {
-        // 2D brushes.
-        rigid_circle,
-        rigid_square,
-        gaussian,
-
-        // 3D brushes.
-        rigid_sphere,
-    };
-    brushes contouring_brush = brushes::rigid_circle;
+    brush_t contouring_brush = brush_t::rigid_circle;
     float last_mouse_button_0_down = 1E30;
     float last_mouse_button_1_down = 1E30;
     std::optional<vec3<double>> last_mouse_button_pos;
@@ -2380,12 +2472,12 @@ script_files.back().content.emplace_back('\0');
                         const auto pixel_radius = static_cast<float>(contouring_reach) * image_mouse_pos.pixel_scale;
                         const auto c = ImColor(0.0f, 1.0f, 0.8f, 1.0f);
 
-                        if( (contouring_brush == brushes::rigid_circle)
-                        ||  (contouring_brush == brushes::rigid_sphere)
-                        ||  (contouring_brush == brushes::gaussian) ){
+                        if( (contouring_brush == brush_t::rigid_circle)
+                        ||  (contouring_brush == brush_t::rigid_sphere)
+                        ||  (contouring_brush == brush_t::gaussian) ){
                             drawList->AddCircle(io.MousePos, pixel_radius, c);
 
-                        }else if(contouring_brush == brushes::rigid_square){
+                        }else if(contouring_brush == brush_t::rigid_square){
                             ImVec2 ul( io.MousePos.x - pixel_radius,
                                        io.MousePos.y - pixel_radius );
                             ImVec2 lr( io.MousePos.x + pixel_radius,
@@ -2480,19 +2572,19 @@ script_files.back().content.emplace_back('\0');
                     ImGui::Text("Brush");
                     ImGui::DragFloat("Radius (mm)", &contouring_reach, 0.1f, 0.5f, 50.0f);
                     if(ImGui::Button("Rigid Circle")){
-                        contouring_brush = brushes::rigid_circle;
+                        contouring_brush = brush_t::rigid_circle;
                     }
                     ImGui::SameLine();
                     if(ImGui::Button("Rigid Square")){
-                        contouring_brush = brushes::rigid_square;
+                        contouring_brush = brush_t::rigid_square;
                     }
                     ImGui::SameLine();
                     if(ImGui::Button("Soft")){
-                        contouring_brush = brushes::gaussian;
+                        contouring_brush = brush_t::gaussian;
                     }
 
                     if(ImGui::Button("Rigid Sphere")){
-                        contouring_brush = brushes::rigid_sphere;
+                        contouring_brush = brush_t::rigid_sphere;
                     }
 
                     ImGui::Separator();
@@ -3653,7 +3745,6 @@ script_files.back().content.emplace_back('\0');
                           &&  ((0.0f <= io.MouseDownDuration[0]) || (0.0f <= io.MouseDownDuration[1]))
                           &&  image_mouse_pos.mouse_hovering_image ){
                         contouring_img_altered = true;
-                        long int channel = 0;
 
                         // The mapping between contouring image and display image (which uses physical dimensions) is
                         // based on the relative position along row and column axes.
@@ -3692,78 +3783,17 @@ script_files.back().content.emplace_back('\0');
                             lss.emplace_back(pA,pB);
                         }
 
-                        std::vector<disp_img_it_t> cimg_its;
-                        if( (contouring_brush == brushes::rigid_circle)
-                        ||  (contouring_brush == brushes::rigid_square)
-                        ||  (contouring_brush == brushes::gaussian) ){
-                            // Filter out irrelevant images.
+                        decltype(planar_image_collection<float,double>().get_all_images()) cimg_its;
+                        if( (contouring_brush == brush_t::rigid_circle)
+                        ||  (contouring_brush == brush_t::rigid_square)
+                        ||  (contouring_brush == brush_t::gaussian) ){
                             cimg_its.emplace_back( cimg_it );
-                        }else if(contouring_brush == brushes::rigid_sphere){
-                            for(auto cit = std::begin((*cimg_array_ptr_it)->imagecoll.images);
-                                     cit != std::end((*cimg_array_ptr_it)->imagecoll.images); ++cit){
-                                // Pre-filter images that are not within range.
-                                for(const auto& l : lss){
-                                    // This is a dilated line_segment-plane intersection test.
-                                    const auto plane_dist_R0 = cit->image_plane().Get_Signed_Distance_To_Point(l.Get_R0());
-                                    const auto plane_dist_R1 = cit->image_plane().Get_Signed_Distance_To_Point(l.Get_R1());
-                                    if( (std::signbit(plane_dist_R0) != std::signbit(plane_dist_R1))
-                                    ||  (std::abs(plane_dist_R0) <= radius)
-                                    ||  (std::abs(plane_dist_R1) <= radius) ){
-                                        cimg_its.emplace_back( cit );
-                                        break;
-                                    }
-                                }
-                            }
+                        }else if(contouring_brush == brush_t::rigid_sphere){
+                            cimg_its = (*cimg_array_ptr_it)->imagecoll.get_all_images();
                         }
-
-                        for(auto &cit : cimg_its){
-                            for(long int r = 0; r < cit->rows; ++r){
-                                for(long int c = 0; c < cit->columns; ++c){
-                                    const auto pos = cit->position(r,c);
-                                    vec3<double> closest;
-                                    {
-                                        double closest_dist = 1E99;
-                                        for(const auto &l : lss){
-                                            const auto closest_l = l.Closest_Point_To(pos);
-                                            const auto dist = closest_l.distance(pos);
-                                            if(dist < closest_dist){
-                                                closest = closest_l;
-                                                closest_dist = dist;
-                                            }
-                                        }
-                                    }
-
-                                    const auto dR = closest.distance(pos);
-                                    if( radius * 5.0 < dR ) continue;
-
-                                    float dval = 0.0;
-                                    if( (contouring_brush == brushes::rigid_circle)
-                                    ||  (contouring_brush == brushes::rigid_sphere) ){
-                                        dval = (dR <= radius) ? 2.0 : 0.0;
-
-                                    }else if(contouring_brush == brushes::rigid_square){
-                                        if( (std::abs((closest - pos).Dot(cit->row_unit)) < radius)
-                                        &&  (std::abs((closest - pos).Dot(cit->col_unit)) < radius) ){
-                                            dval = 2.0;
-                                        }
-                                    }else if(contouring_brush == brushes::gaussian){
-                                        // Note: arbitrary scaling constant used here. Should give ~ same as rigid when
-                                        // dragged across the image at a typical pace.
-                                        dval = 2.0 * std::exp( -std::pow(dR / (0.5 * radius), 2.0f) );
-                                    }
-
-                                    if(mouse_button_0){
-                                        // Do nothing.
-                                    }else if(mouse_button_1){
-                                        dval *= -1.0;
-                                    }
-
-                                    float val = cit->value(r, c, channel);
-                                    val = std::clamp(val + dval, -1.0f, 2.0f);
-                                    cit->reference( r, c, channel ) = val;
-                                }
-                            }
-                        }
+                        float dval_factor = (mouse_button_0) ? 1.0f : -1.0f; // Additive or subtractive.
+                        const long int channel = 0;
+                        draw_with_brush( cimg_its, lss, contouring_brush, radius, dval_factor, channel);
 
                         // Update mouse position for next time, if applicable.
                         if( mouse_button_0 ){
