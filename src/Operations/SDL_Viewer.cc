@@ -104,12 +104,49 @@ string_to_array(std::array<char, 1024> &a, const std::string &s){
     return;
 }
 
+// Compute an axis-aligned bounding box in pixel coordinates.
+std::tuple<long int, long int, long int, long int>
+get_pixelspace_axis_aligned_bounding_box(const planar_image<float, double> &img,
+                                         const std::vector<vec3<double>> &points,
+                                         double extra_space){
+
+    const auto corner = img.position(0,0) - img.row_unit * img.pxl_dx * 0.5
+                                          - img.col_unit * img.pxl_dy * 0.5;
+    const auto axis1 = img.row_unit.unit();
+    const auto axis2 = img.col_unit.unit();
+    //const auto axis3 = img.row_unit.Cross( img.col_unit ).unit();
+
+    const auto inf = std::numeric_limits<double>::infinity();
+    vec3<double> bbox_min(inf, inf, inf);
+    vec3<double> bbox_max(-inf, -inf, -inf);
+    for(const auto& p : points){
+        const auto proj1 = (p - corner).Dot(axis1);
+        const auto proj2 = (p - corner).Dot(axis2);
+        //const auto proj3 = (p - corner).Dot(axis3);
+        if(proj1 - extra_space < bbox_min.x) bbox_min.x = proj1 - extra_space;
+        if(proj2 - extra_space < bbox_min.y) bbox_min.y = proj2 - extra_space;
+        //if(proj3 - extra_space < bbox_min.z) bbox_min.z = proj3 - extra_space;
+        if(bbox_max.x + extra_space < proj1) bbox_max.x = proj1 + extra_space;
+        if(bbox_max.y + extra_space < proj2) bbox_max.y = proj2 + extra_space;
+        //if(bbox_max.z + extra_space < proj3) bbox_max.z = proj3 + extra_space;
+    }
+
+    auto row_min = std::clamp(static_cast<long int>(std::floor(bbox_min.x/img.pxl_dx)), 0L, img.rows-1);
+    auto row_max = std::clamp(static_cast<long int>(std::ceil(bbox_max.x/img.pxl_dx)), 0L, img.rows-1);
+    auto col_min = std::clamp(static_cast<long int>(std::floor(bbox_min.y/img.pxl_dy)), 0L, img.columns-1);
+    auto col_max = std::clamp(static_cast<long int>(std::ceil(bbox_max.y/img.pxl_dy)), 0L, img.columns-1);
+    if(row_max < row_min) std::swap(row_min, row_max);
+    if(col_max < col_min) std::swap(col_min, col_max);
+    return std::make_tuple( row_min, row_max, col_min, col_max );
+}
 
 enum class brush_t {
     // 2D brushes.
     rigid_circle,
     rigid_square,
     gaussian,
+    median_circle,
+    median_square,
 
     // 3D brushes.
     rigid_sphere,
@@ -119,13 +156,23 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                       const std::vector<line_segment<double>> &lss,
                       brush_t brush,
                       float radius,
-                      float dval_factor = 1.0f,
-                      long int channel = 0){
-                      
+                      float intensity,
+                      long int channel,
+                      float intensity_min = std::numeric_limits<float>::infinity() * -1.0,
+                      float intensity_max = std::numeric_limits<float>::infinity() ){
+
+    // Pre-extract the line segment vertices for bounding-box calculation.
+    std::vector<vec3<double>> verts;
+    for(const auto& l : lss){
+        for(const auto& p : { l.Get_R0(), l.Get_R1() }){
+            verts.emplace_back(p);
+        }
+    }
+
     for(auto &cit : img_its){
 
         // Filter out irrelevant images.
-        const auto is_relevant = [&]() -> bool {
+        const auto img_is_relevant = [&]() -> bool {
             if( (cit->rows <= 0)
             ||  (cit->columns <= 0)
             ||  (cit->channels <= 0) ) return false;
@@ -142,14 +189,16 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                 // 2D brushes.
                 if( (brush == brush_t::rigid_circle)
                 ||  (brush == brush_t::rigid_square)
-                ||  (brush == brush_t::gaussian) ){
+                ||  (brush == brush_t::gaussian)
+                ||  (brush == brush_t::median_circle)
+                ||  (brush == brush_t::median_square) ){
                     if( (std::abs(plane_dist_R0) <= cit->pxl_dz * 0.5)
                     ||  (std::abs(plane_dist_R1) <= cit->pxl_dz * 0.5) ){
                         return true;
                     }
 
                 // 3D brushes.
-                }else if(brush == brush_t::rigid_sphere){
+                }else if( (brush == brush_t::rigid_sphere) ){
                     if( (std::abs(plane_dist_R0) <= radius)
                     ||  (std::abs(plane_dist_R1) <= radius) ){
                         return true;
@@ -158,106 +207,85 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
             }
             return false;
         };
-        if(!is_relevant()) continue;
+        if(!img_is_relevant()) continue;
 
-        // Compute a bounding box in pixel coordinates.
-        const auto corner = cit->position(0,0) - cit->row_unit * cit->pxl_dx * 0.5
-                                               - cit->col_unit * cit->pxl_dy * 0.5;
-        const auto axis1 = cit->row_unit.unit();
-        const auto axis2 = cit->col_unit.unit();
-        const auto axis3 = cit->row_unit.Cross( cit->col_unit ).unit();
-        const auto buffer = radius * 3.0;
+        // Compute pixel-space axis-aligned bounding box to reduce overall computation.
+        double buffer_space = radius;
+        if( (brush == brush_t::rigid_circle)
+        ||  (brush == brush_t::rigid_sphere)
+        ||  (brush == brush_t::median_circle) ){
+            buffer_space = radius;
 
-        const auto inf = std::numeric_limits<double>::infinity();
-        vec3<double> bbox_min(inf, inf, inf);
-        vec3<double> bbox_max(-inf, -inf, -inf);
-        for(const auto& l : lss){
-            for(const auto& p : { l.Get_R0(), l.Get_R1() }){
-                const auto proj1 = (p - corner).Dot(axis1);
-                const auto proj2 = (p - corner).Dot(axis2);
-                const auto proj3 = (p - corner).Dot(axis3);
-                if(proj1 - buffer < bbox_min.x) bbox_min.x = proj1 - buffer;
-                if(proj2 - buffer < bbox_min.y) bbox_min.y = proj2 - buffer;
-                if(proj3 - buffer < bbox_min.z) bbox_min.z = proj3 - buffer;
-                if(bbox_max.x + buffer < proj1) bbox_max.x = proj1 + buffer;
-                if(bbox_max.y + buffer < proj2) bbox_max.y = proj2 + buffer;
-                if(bbox_max.z + buffer < proj3) bbox_max.z = proj3 + buffer;
-            }
+        }else if( (brush == brush_t::rigid_square)
+              ||  (brush == brush_t::median_square) ){
+            buffer_space = radius; // * std::sqrt(2.0);
+
+        }else if(brush == brush_t::gaussian){
+            buffer_space = radius * 5.0;
         }
-
-        FUNCINFO("Bounding volume for brush: " << bbox_min << " --> " << bbox_max);
-
-        auto row_min = std::clamp(static_cast<long int>(std::floor(bbox_min.x/cit->pxl_dx)), 0L, cit->rows-1);
-        auto row_max = std::clamp(static_cast<long int>(std::ceil(bbox_max.x/cit->pxl_dx)), 0L, cit->rows-1);
-        auto col_min = std::clamp(static_cast<long int>(std::floor(bbox_min.y/cit->pxl_dy)), 0L, cit->columns-1);
-        auto col_max = std::clamp(static_cast<long int>(std::ceil(bbox_max.y/cit->pxl_dy)), 0L, cit->columns-1);
-        if(row_max < row_min) std::swap(row_min, row_max);
-        if(col_max < col_min) std::swap(col_min, col_max);
-                
-        FUNCINFO("Bounding volume in pixel coordinates (row): " << row_min << " - " << row_max << "  (col): " << col_min << " - " << col_max);
-        FUNCINFO("    Reduction from " << cit->rows * cit->columns << " pixels to check to " << (row_max - row_min) * (col_max - col_min));
-        
+        const auto [row_min, row_max, col_min, col_max] = get_pixelspace_axis_aligned_bounding_box(*cit, verts, buffer_space);
 
         // Process relevant images.
-        // TODO: speed this up!
-        //       Ideas: - create bounding box for line segment paths, and then refine rows and cols.
-        //              - offload to another thread
-        //              - use gpu to modify image?
-        //              - swap loop order to permit faster rejection?
-        for(long int r = row_min; r <= row_max; ++r){
-            for(long int c = col_min; c <= col_max; ++c){
-                const auto pos = cit->position(r,c);
-                vec3<double> closest;
-                {
-                    double closest_dist = 1E99;
-                    for(const auto &l : lss){
-                        const auto closest_l = l.Closest_Point_To(pos);
-                        const auto dist = closest_l.distance(pos);
-                        if(dist < closest_dist){
-                            closest = closest_l;
-                            closest_dist = dist;
+        const auto apply_to_inner_pixels = [&](const std::function<float(const vec3<double> &, double, float)> &f){
+            for(long int r = row_min; r <= row_max; ++r){
+                for(long int c = col_min; c <= col_max; ++c){
+                    const auto pos = cit->position(r,c);
+                    vec3<double> closest;
+                    {
+                        double closest_dist = 1E99;
+                        for(const auto &l : lss){
+                            const auto closest_l = l.Closest_Point_To(pos);
+                            const auto dist = closest_l.distance(pos);
+                            if(dist < closest_dist){
+                                closest = closest_l;
+                                closest_dist = dist;
+                            }
                         }
                     }
-                }
 
-                const auto dR = closest.distance(pos);
-                if( (brush == brush_t::rigid_circle)
-                ||  (brush == brush_t::rigid_sphere) ){
-                    if(radius < dR ) continue;
+                    const auto dR = closest.distance(pos);
+                    if( (brush == brush_t::rigid_circle)
+                    ||  (brush == brush_t::rigid_sphere)
+                    ||  (brush == brush_t::median_circle) ){
+                        if(radius < dR ) continue;
 
-                }else if(brush == brush_t::rigid_square){
-                    if( (radius < std::abs((closest - pos).Dot(cit->row_unit)))
-                    ||  (radius < std::abs((closest - pos).Dot(cit->col_unit))) ) continue;
+                    }else if(brush == brush_t::rigid_square){
+                        if( (radius < std::abs((closest - pos).Dot(cit->row_unit)))
+                        ||  (radius < std::abs((closest - pos).Dot(cit->col_unit))) ) continue;
 
-                }else if(brush == brush_t::gaussian){
-                    if(radius * 5.0 < dR ) continue;
-                }
-
-
-                float dval = 0.0;
-                if( (brush == brush_t::rigid_circle)
-                ||  (brush == brush_t::rigid_sphere) ){
-                    dval = (dR <= radius) ? 2.0 : 0.0;
-
-                }else if(brush == brush_t::rigid_square){
-                    if( (std::abs((closest - pos).Dot(cit->row_unit)) < radius)
-                    &&  (std::abs((closest - pos).Dot(cit->col_unit)) < radius) ){
-                        dval = 2.0;
+                    }else if(brush == brush_t::gaussian){
+                        if(radius * 5.0 < dR ) continue;
                     }
-                }else if(brush == brush_t::gaussian){
-                    // Note: arbitrary scaling constant used here. Should give ~ same as rigid when
-                    // dragged across the image at a typical pace.
-                    dval = 2.0 * std::exp( -std::pow(dR / (0.5 * radius), 2.0f) );
+
+                    cit->reference( r, c, channel ) = std::clamp(f(pos, dR, cit->value(r, c, channel)), intensity_min, intensity_max);
                 }
-
-                // Apply scaling factor (~brush strength).
-                // TODO: provide better control over the brush magnitude and scaling.
-                dval *= dval_factor;
-
-                float val = cit->value(r, c, channel);
-                val = std::clamp(val + dval, -1.0f, 2.0f);
-                cit->reference( r, c, channel ) = val;
             }
+        };
+
+
+        if( (brush == brush_t::rigid_circle)
+        ||  (brush == brush_t::rigid_sphere)
+        ||  (brush == brush_t::rigid_square) ){
+            apply_to_inner_pixels([intensity](const vec3<double> &, double, float v) -> float {
+                return intensity;
+            });
+
+        }else if(brush == brush_t::gaussian){
+            apply_to_inner_pixels([radius,intensity](const vec3<double> &, double dR, float v) -> float {
+                return v + intensity * std::exp( -std::pow(dR / (0.5 * radius), 2.0f) );
+            });
+
+        }else if( (brush == brush_t::median_circle)
+              ||  (brush == brush_t::median_square) ){
+            std::vector<float> vals;
+            apply_to_inner_pixels([&vals](const vec3<double> &, double, float v) -> float {
+                vals.emplace_back(v);
+                return v;
+            });
+            const auto median = Stats::Median(vals);
+            apply_to_inner_pixels([median](const vec3<double> &, double, float v) -> float {
+                return median;
+            });
         }
     }
     return;
@@ -303,6 +331,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_plots_metadata = true;
         bool view_contours_enabled = true;
         bool view_contouring_enabled = false;
+        bool view_contouring_debug = false;
         bool view_drawing_enabled = false;
         bool view_row_column_profiles = false;
         bool view_time_profiles = false;
@@ -581,6 +610,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     bool contouring_img_altered = false;
     float contouring_reach = 10.0;
     float contouring_margin = 1.0;
+    float contouring_intensity = 1.0;
     std::string contouring_method = "marching-squares";
     brush_t contouring_brush = brush_t::rigid_circle;
     float last_mouse_button_0_down = 1E30;
@@ -1538,19 +1568,20 @@ bool SDL_Viewer(Drover &DICOM_data,
             reload_image_texture();
         }
 
-// Contouring -- mask debugging / visualization.
-if(false){
+        // Contouring -- mask debugging / visualization.
+        if(view_toggles.view_contouring_debug){
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
             auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
             if(cimg_valid){
                 ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
                 ImGui::SetNextWindowPos(ImVec2(700, 40), ImGuiCond_FirstUseEver);
-                ImGui::Begin("Images2", &view_toggles.view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
+                ImGui::Begin("Contour Mask Debugging", &view_toggles.view_contouring_debug, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
                 auto contouring_texture = Load_OpenGL_Texture( *cimg_it, {}, {} );
                 auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(contouring_texture.texture_number));
                 ImGui::Image(gl_tex_ptr, ImVec2(600,600), uv_min, uv_max);
                 ImGui::End();
             }
-}
+        }
 
         // Display the main menu bar, which should always be visible.
         const auto display_main_menu_bar = [&view_toggles,
@@ -1601,7 +1632,7 @@ if(false){
                         contouring_img_altered = true;
                         tagged_pos = {};
                     }
-                    if(ImGui::MenuItem("Image Drawing", nullptr, &view_toggles.view_drawing_enabled)){
+                    if(ImGui::MenuItem("Drawing", nullptr, &view_toggles.view_drawing_enabled)){
                         view_toggles.view_contouring_enabled = false;
                         tagged_pos = {};
                     }
@@ -2242,6 +2273,7 @@ script_files.back().content.emplace_back('\0');
                                            &contouring_reach,
                                            &contouring_brush,
                                            &contouring_margin,
+                                           &contouring_intensity,
                                            &contouring_img_row_col_count,
                                            &new_contour_name,
                                            &save_contour_buffer,
@@ -2310,8 +2342,22 @@ script_files.back().content.emplace_back('\0');
             if( !view_toggles.view_images_enabled
             ||  !img_valid ) return;
 
+            //We have three distinct coordinate systems: DICOM, pixel coordinates and screen pixel coordinates,
+            // and SFML 'world' coordinates. We need to map from the DICOM coordinates to screen pixel coords.
+            //
+            //Get a DICOM-coordinate bounding box for the image.
+            const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->rows;
+            const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->columns; 
+            const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
+                                    - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
+                                    - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
+            //const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
+            //const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
+            const auto img_plane = disp_img_it->image_plane();
+
             // Continue now that we have an exclusive lock.
             ImGui::Begin("Images", &view_toggles.view_images_enabled);
+            ImDrawList *imgs_window_draw_list = ImGui::GetWindowDrawList();
 
             // Calculate mouse positions if the mouse is hovering the image.
             if( image_mouse_pos.mouse_hovering_image ){
@@ -2348,15 +2394,13 @@ script_files.back().content.emplace_back('\0');
 
             // Display a visual cue of the tagged position.
             if( tagged_pos ){
-                ImDrawList *drawList = ImGui::GetWindowDrawList();
-
                 const auto box_radius = 3.0f;
                 const auto c = ImColor(1.0f, 0.2f, 0.2f, 1.0f);
 
                 ImVec2 p1 = image_mouse_pos.DICOM_to_pixels(tagged_pos.value());
                 ImVec2 ul1( p1.x - box_radius, p1.y - box_radius );
                 ImVec2 lr1( p1.x + box_radius, p1.y + box_radius );
-                drawList->AddRect(ul1, lr1, c);
+                imgs_window_draw_list->AddRect(ul1, lr1, c);
 
                 if( image_mouse_pos.mouse_hovering_image ){
                     ImVec2 p2 = io.MousePos;
@@ -2373,12 +2417,12 @@ script_files.back().content.emplace_back('\0');
                     }
                     ImVec2 ul2( p2.x - box_radius, p2.y - box_radius );
                     ImVec2 lr2( p2.x + box_radius, p2.y + box_radius );
-                    drawList->AddRect(ul2, lr2, c);
+                    imgs_window_draw_list->AddRect(ul2, lr2, c);
 
                     // Connect the boxes with a line if both are contained within the same image volume.
                     if( disp_img_it->sandwiches_point_within_top_bottom_planes(tagged_pos.value())
                     &&  disp_img_it->sandwiches_point_within_top_bottom_planes(image_mouse_pos.dicom_pos) ){
-                        drawList->AddLine(p1, p2, c);
+                        imgs_window_draw_list->AddLine(p1, p2, c);
                     }
                 }
             }
@@ -2386,7 +2430,7 @@ script_files.back().content.emplace_back('\0');
             // Display a contour legend.
             if( view_toggles.view_contours_enabled
             &&  (DICOM_data.contour_data != nullptr) ){
-                ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowSize(ImVec2(510, 500), ImGuiCond_FirstUseEver);
                 ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_FirstUseEver);
                 ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
                 ImGui::Begin("Contours", &view_toggles.view_contours_enabled);
@@ -2477,20 +2521,6 @@ script_files.back().content.emplace_back('\0');
             //Draw any contours that lie in the plane of the current image.
             if( view_toggles.view_contours_enabled
             &&  (DICOM_data.contour_data != nullptr) ){
-                ImDrawList *drawList = ImGui::GetWindowDrawList();
-
-                //We have three distinct coordinate systems: DICOM, pixel coordinates and screen pixel coordinates,
-                // and SFML 'world' coordinates. We need to map from the DICOM coordinates to screen pixel coords.
-
-                //Get a DICOM-coordinate bounding box for the image.
-                const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->rows;
-                const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->columns; 
-                const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
-                                        - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
-                                        - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
-                //const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
-                //const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
-                const auto img_plane = disp_img_it->image_plane();
 
                 for(auto &p : contour_hovered) p.second = false;
 
@@ -2500,7 +2530,7 @@ script_files.back().content.emplace_back('\0');
                     if( pc.epoch != current_epoch ) continue;
                     if( !contour_enabled[pc.ROIName] ) continue;
 
-                    drawList->PathClear();
+                    imgs_window_draw_list->PathClear();
                     for(auto & p : pc.contour.points){
                         //Clamp the point to the bounding box, using the top left as zero.
                         const auto dR = p - img_top_left;
@@ -2514,7 +2544,7 @@ script_files.back().content.emplace_back('\0');
                         ImVec2 v;
                         v.x = world_x;
                         v.y = world_y;
-                        drawList->PathLineTo( v );
+                        imgs_window_draw_list->PathLineTo( v );
                     }
 
                     // Check if the mouse if within the contour.
@@ -2525,280 +2555,301 @@ script_files.back().content.emplace_back('\0');
                         if(within_poly) contour_hovered[pc.ROIName] = true;
                     }
                     const bool closed = true;
-                    drawList->PathStroke(pc.colour, closed, thickness);
+                    imgs_window_draw_list->PathStroke(pc.colour, closed, thickness);
                     //AddPolyline(const ImVec2* points, int num_points, ImU32 col, bool closed, float thickness);
                 }
+            }
 
-                // Contouring and drawing interface.
-                if( view_toggles.view_contouring_enabled
-                ||  view_toggles.view_drawing_enabled ){
-                    // Provide a visual cue for the contouring brush.
-                    {
-                        const auto pixel_radius = static_cast<float>(contouring_reach) * image_mouse_pos.pixel_scale;
-                        const auto c = ImColor(0.0f, 1.0f, 0.8f, 1.0f);
+            // Contouring and drawing interface.
+            if( view_toggles.view_contouring_enabled
+            ||  view_toggles.view_drawing_enabled ){
+                // Provide a visual cue for the contouring brush.
+                {
+                    const auto pixel_radius = static_cast<float>(contouring_reach) * image_mouse_pos.pixel_scale;
+                    const auto c = ImColor(0.0f, 1.0f, 0.8f, 1.0f);
 
-                        if( (contouring_brush == brush_t::rigid_circle)
-                        ||  (contouring_brush == brush_t::rigid_sphere)
-                        ||  (contouring_brush == brush_t::gaussian) ){
-                            drawList->AddCircle(io.MousePos, pixel_radius, c);
+                    if( (contouring_brush == brush_t::rigid_circle)
+                    ||  (contouring_brush == brush_t::rigid_sphere)
+                    ||  (contouring_brush == brush_t::gaussian)
+                    ||  (contouring_brush == brush_t::median_circle) ){
+                        imgs_window_draw_list->AddCircle(io.MousePos, pixel_radius, c);
 
-                        }else if(contouring_brush == brush_t::rigid_square){
-                            ImVec2 ul( io.MousePos.x - pixel_radius,
-                                       io.MousePos.y - pixel_radius );
-                            ImVec2 lr( io.MousePos.x + pixel_radius,
-                                       io.MousePos.y + pixel_radius );
-                            drawList->AddRect(ul, lr, c);
+                    }else if( (contouring_brush == brush_t::rigid_square)
+                          ||  (contouring_brush == brush_t::median_square) ){
+                        ImVec2 ul( io.MousePos.x - pixel_radius,
+                                   io.MousePos.y - pixel_radius );
+                        ImVec2 lr( io.MousePos.x + pixel_radius,
+                                   io.MousePos.y + pixel_radius );
+                        imgs_window_draw_list->AddRect(ul, lr, c);
+                    }
+                }
+
+                ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(ImVec2(680, 400), ImGuiCond_FirstUseEver);
+                //ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
+                if(view_toggles.view_drawing_enabled){
+                    ImGui::Begin("Drawing", &view_toggles.view_drawing_enabled, ImGuiWindowFlags_AlwaysAutoResize);
+                    ImGui::Text("Note: this functionality is still under active development.");
+
+                }else if(view_toggles.view_contouring_enabled){
+                    ImGui::Begin("Contouring", &view_toggles.view_contouring_enabled, ImGuiWindowFlags_AlwaysAutoResize);
+                    ImGui::Text("Note: this functionality is still under active development.");
+                    if(ImGui::Button("Save")){ 
+                        ImGui::OpenPopup("Save Contours");
+
+                        // Fully extract contours from the mask images.
+                        contouring_imgs.Ensure_Contour_Data_Allocated();
+                        contouring_imgs.contour_data->ccs.clear();
+
+                        std::list<OperationArgPkg> Operations;
+                        Operations.emplace_back("ContourViaThreshold");
+                        Operations.back().insert("Method="_s + contouring_method);
+                        Operations.back().insert("Lower=0.5");
+                        Operations.back().insert("SimplifyMergeAdjacent=true");
+                        if(!Operation_Dispatcher(contouring_imgs, InvocationMetadata, FilenameLex, Operations)){
+                            FUNCWARN("ContourViaThreshold failed");
                         }
                     }
+                    ImGui::SameLine();
+                    if(ImGui::BeginPopupModal("Save Contours", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+                        const std::string str((frame_count / 15) % 4, '.'); // Simplistic animation.
+                        ImGui::Text("Saving contours%s", str.c_str());
 
-                    ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_FirstUseEver);
-                    ImGui::SetNextWindowPos(ImVec2(680, 200), ImGuiCond_FirstUseEver);
-                    ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
-                    if(view_toggles.view_drawing_enabled){
-                        ImGui::Begin("Image Drawing", &view_toggles.view_drawing_enabled);
+                        ImGui::InputText("ROI Name", new_contour_name.data(), new_contour_name.size());
+                        std::string entered_text;
+                        for(size_t i = 0; i < new_contour_name.size(); ++i){
+                            if( (new_contour_name[i] == '\0')
+                            ||  !std::isprint( static_cast<unsigned char>(new_contour_name[i]) )) break;
+                            entered_text.push_back(new_contour_name[i]);
+                        }
+                        const auto ok_to_save = !entered_text.empty();
+                        //if(!ok_to_save){
+                        //    ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
+                        //    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
+                        //}
+                        const bool clicked_save = ImGui::Button("Save");
+                        //if(!ok_to_save){
+                        //    ImGui::PopItemFlag();
+                        //    ImGui::PopStyleVar();
+                        //}
+                        if( clicked_save
+                        &&  ok_to_save
+                        &&  save_contour_buffer(entered_text) ){
+                            ImGui::CloseCurrentPopup();
+                        }
 
-                    }else if(view_toggles.view_contouring_enabled){
-                        ImGui::Begin("Contouring", &view_toggles.view_contouring_enabled);
-                        ImGui::Text("Note: this functionality is still under active development.");
-                        if(ImGui::Button("Save")){ 
-                            ImGui::OpenPopup("Save Contours");
-
-                            // Fully extract contours from the mask images.
+                        if(ImGui::Button("Close")){
+                            ImGui::CloseCurrentPopup();
+                        }
+                        ImGui::EndPopup();
+                    }
+                    if(ImGui::Button("Clear")){ 
+                        ImGui::OpenPopup("Contour Clear");
+                    }
+                    if(ImGui::BeginPopupModal("Contour Clear", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+                        ImGui::Text("Clear contour?");
+                        if(ImGui::Button("Clear")){
+                            ImGui::CloseCurrentPopup();
+                            auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
+                            if(cimg_valid){
+                                for(auto& cimg : (*cimg_array_ptr_it)->imagecoll.images){
+                                    cimg.fill_pixels(0.0f);
+                                }
+                            }
                             contouring_imgs.Ensure_Contour_Data_Allocated();
                             contouring_imgs.contour_data->ccs.clear();
-
-                            std::list<OperationArgPkg> Operations;
-                            Operations.emplace_back("ContourViaThreshold");
-                            Operations.back().insert("Method="_s + contouring_method);
-                            Operations.back().insert("Lower=0.5");
-                            Operations.back().insert("SimplifyMergeAdjacent=true");
-                            if(!Operation_Dispatcher(contouring_imgs, InvocationMetadata, FilenameLex, Operations)){
-                                FUNCWARN("ContourViaThreshold failed");
-                            }
+                            contouring_img_altered = true;
+                            last_mouse_button_0_down = 1E30;
+                            last_mouse_button_1_down = 1E30;
+                            last_mouse_button_pos = {};
                         }
                         ImGui::SameLine();
-                        if(ImGui::BeginPopupModal("Save Contours", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
-                            const std::string str((frame_count / 15) % 4, '.'); // Simplistic animation.
-                            ImGui::Text("Saving contours%s", str.c_str());
-
-                            ImGui::InputText("ROI Name", new_contour_name.data(), new_contour_name.size());
-                            std::string entered_text;
-                            for(size_t i = 0; i < new_contour_name.size(); ++i){
-                                if( (new_contour_name[i] == '\0')
-                                ||  !std::isprint( static_cast<unsigned char>(new_contour_name[i]) )) break;
-                                entered_text.push_back(new_contour_name[i]);
-                            }
-                            const auto ok_to_save = !entered_text.empty();
-                            //if(!ok_to_save){
-                            //    ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-                            //    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
-                            //}
-                            const bool clicked_save = ImGui::Button("Save");
-                            //if(!ok_to_save){
-                            //    ImGui::PopItemFlag();
-                            //    ImGui::PopStyleVar();
-                            //}
-                            if( clicked_save
-                            &&  ok_to_save
-                            &&  save_contour_buffer(entered_text) ){
-                                ImGui::CloseCurrentPopup();
-                            }
-
-                            if(ImGui::Button("Close")){
-                                ImGui::CloseCurrentPopup();
-                            }
-                            ImGui::EndPopup();
+                        if(ImGui::Button("Cancel")){
+                            ImGui::CloseCurrentPopup();
                         }
-                        if(ImGui::Button("Clear")){ 
-                            ImGui::OpenPopup("Contour Clear");
-                        }
-                        if(ImGui::BeginPopupModal("Contour Clear", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
-                            ImGui::Text("Clear contour?");
-                            if(ImGui::Button("Clear")){
-                                ImGui::CloseCurrentPopup();
-                                auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
-                                if(cimg_valid){
-                                    for(auto& cimg : (*cimg_array_ptr_it)->imagecoll.images){
-                                        cimg.fill_pixels(-1.0f);
-                                    }
-                                }
-                                contouring_imgs.Ensure_Contour_Data_Allocated();
-                                contouring_imgs.contour_data->ccs.clear();
-                                contouring_img_altered = true;
-                                last_mouse_button_0_down = 1E30;
-                                last_mouse_button_1_down = 1E30;
-                                last_mouse_button_pos = {};
-                            }
-                            ImGui::SameLine();
-                            if(ImGui::Button("Cancel")){
-                                ImGui::CloseCurrentPopup();
-                            }
-                            ImGui::EndPopup();
-                        }
+                        ImGui::EndPopup();
                     }
+                }
 
-                    ImGui::Separator();
-                    ImGui::Text("Brush");
-                    ImGui::DragFloat("Radius (mm)", &contouring_reach, 0.1f, 0.5f, 50.0f);
-                    if(ImGui::Button("Rigid Circle")){
-                        contouring_brush = brush_t::rigid_circle;
-                    }
-                    ImGui::SameLine();
-                    if(ImGui::Button("Rigid Square")){
-                        contouring_brush = brush_t::rigid_square;
-                    }
-                    ImGui::SameLine();
-                    if(ImGui::Button("Soft")){
-                        contouring_brush = brush_t::gaussian;
-                    }
+                ImGui::Separator();
+                ImGui::Text("Brush");
+                ImGui::DragFloat("Radius (mm)", &contouring_reach, 0.1f, 0.5f, 50.0f);
+                if(view_toggles.view_drawing_enabled){
+                    ImGui::DragFloat("Intensity", &contouring_intensity, 0.1f, -1000.0f, 1000.0f);
+                }else if(view_toggles.view_contouring_enabled){
+                    contouring_intensity = 1.0f;
+                }
+                if(ImGui::Button("Rigid Circle")){
+                    contouring_brush = brush_t::rigid_circle;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Rigid Square")){
+                    contouring_brush = brush_t::rigid_square;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Soft")){
+                    contouring_brush = brush_t::gaussian;
+                }
 
-                    if(ImGui::Button("Rigid Sphere")){
-                        contouring_brush = brush_t::rigid_sphere;
-                    }
+                if(ImGui::Button("Median Circle")){
+                    contouring_brush = brush_t::median_circle;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Median Square")){
+                    contouring_brush = brush_t::median_square;
+                }
 
-                    ImGui::Separator();
-                    ImGui::Text("Dilation and Erosion");
-                    ImGui::DragFloat("Margin (mm)", &contouring_margin, 0.1f, -10.0f, 10.0f);
-                    if(ImGui::Button("Apply Margin")){
-                        std::list<OperationArgPkg> Operations;
-                        Operations.emplace_back("ContourWholeImages");
-                        Operations.back().insert("ROILabel=___whole_image");
+                if(ImGui::Button("Rigid Sphere")){
+                    contouring_brush = brush_t::rigid_sphere;
+                }
 
-                        Operations.emplace_back("ReduceNeighbourhood");
-                        Operations.back().insert("ImageSelection=last");
-                        Operations.back().insert("ROILabelRegex=___whole_image");
-                        Operations.back().insert("Neighbourhood=spherical");
-                        
-                        const std::string reduction = (0.0 <= contouring_margin) ? "dilate" : "erode";
-                        const std::string distance = std::to_string( std::abs( contouring_margin ) );
-                        Operations.back().insert("Reduction="_s + reduction);
-                        Operations.back().insert("MaxDistance="_s + distance);
+                ImGui::Separator();
+                ImGui::Text("Dilation and Erosion");
+                ImGui::DragFloat("Margin (mm)", &contouring_margin, 0.1f, -10.0f, 10.0f);
+                if(ImGui::Button("Apply Margin")){
+                    std::list<OperationArgPkg> Operations;
+                    Operations.emplace_back("ContourWholeImages");
+                    Operations.back().insert("ROILabel=___whole_image");
 
-                        Operations.emplace_back("DeleteContours");
-                        Operations.back().insert("ROILabelRegex=___whole_image");
+                    Operations.emplace_back("ReduceNeighbourhood");
+                    Operations.back().insert("ImageSelection=last");
+                    Operations.back().insert("ROILabelRegex=___whole_image");
+                    Operations.back().insert("Neighbourhood=spherical");
+                    
+                    const std::string reduction = (0.0 <= contouring_margin) ? "dilate" : "erode";
+                    const std::string distance = std::to_string( std::abs( contouring_margin ) );
+                    Operations.back().insert("Reduction="_s + reduction);
+                    Operations.back().insert("MaxDistance="_s + distance);
 
-                        Drover *d = (view_toggles.view_contouring_enabled) ? &contouring_imgs : &DICOM_data;
-                        if(!Operation_Dispatcher(*d, InvocationMetadata, FilenameLex, Operations)){
-                            FUNCWARN("Dilation/Erosion failed");
-                        }
+                    Operations.emplace_back("DeleteContours");
+                    Operations.back().insert("ROILabelRegex=___whole_image");
 
-                        if(view_toggles.view_contouring_enabled){
-                            contouring_img_altered = true;
-                        }else if(view_toggles.view_drawing_enabled){
-                            need_to_reload_opengl_texture.store(true);
-                        }
+                    Drover *d = (view_toggles.view_contouring_enabled) ? &contouring_imgs : &DICOM_data;
+                    if(!Operation_Dispatcher(*d, InvocationMetadata, FilenameLex, Operations)){
+                        FUNCWARN("Dilation/Erosion failed");
                     }
 
                     if(view_toggles.view_contouring_enabled){
-                        ImGui::Separator();
-                        ImGui::Text("Contour Extraction");
-                        if(ImGui::DragInt("Resolution", &contouring_img_row_col_count, 0.1f, 5, 1024)){
-                            reset_contouring_state(img_array_ptr_it);
+                        contouring_img_altered = true;
+                    }else if(view_toggles.view_drawing_enabled){
+                        need_to_reload_opengl_texture.store(true);
+                    }
+                }
+
+                if(view_toggles.view_contouring_enabled){
+                    ImGui::Separator();
+                    ImGui::Text("Contour Extraction");
+                    if(ImGui::DragInt("Resolution", &contouring_img_row_col_count, 0.1f, 5, 1024)){
+                        reset_contouring_state(img_array_ptr_it);
+                    }
+                    if( ImGui::IsItemHovered() ){
+                        ImGui::BeginTooltip();
+                        ImGui::Text("Note: any existing contours will be reset.");
+                        ImGui::EndTooltip();
+                    }
+                    if(ImGui::Button("Marching squares")){
+                        contouring_method = "marching-squares";
+                        contouring_img_altered = true;
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Binary")){
+                        contouring_method = "binary";
+                        contouring_img_altered = true;
+                    }
+
+                    // Regenerate contours from the mask.
+                    contouring_imgs.Ensure_Contour_Data_Allocated();
+                    auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
+                    if( cimg_valid
+                    &&  contouring_img_altered
+                    &&  (frame_count % 5 == 0) ){ // Terrible stop-gap until I can parallelize contour extraction. TODO
+
+                        // Only bother extracting contours for the current image.
+                        Drover shtl;
+                        shtl.Ensure_Contour_Data_Allocated();
+                        shtl.image_data.push_back(std::make_unique<Image_Array>());
+                        shtl.image_data.back()->imagecoll.images.emplace_back();
+                        shtl.image_data.back()->imagecoll.images.back() = *cimg_it;
+
+                        std::list<OperationArgPkg> Operations;
+                        Operations.emplace_back("ContourViaThreshold");
+                        Operations.back().insert("Method="_s + contouring_method);
+                        Operations.back().insert("Lower=0.5");
+                        Operations.back().insert("SimplifyMergeAdjacent=true");
+                        if(!Operation_Dispatcher(shtl, InvocationMetadata, FilenameLex, Operations)){
+                            FUNCWARN("ContourViaThreshold failed");
                         }
-                        if( ImGui::IsItemHovered() ){
-                            ImGui::BeginTooltip();
-                            ImGui::Text("Note: any existing contours will be reset.");
-                            ImGui::EndTooltip();
-                        }
-                        if(ImGui::Button("Marching squares")){
-                            contouring_method = "marching-squares";
-                            contouring_img_altered = true;
-                        }
-                        ImGui::SameLine();
-                        if(ImGui::Button("Binary")){
-                            contouring_method = "binary";
-                            contouring_img_altered = true;
-                        }
 
-                        // Regenerate contours from the mask.
-                        contouring_imgs.Ensure_Contour_Data_Allocated();
-                        auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
-                        if( cimg_valid
-                        &&  contouring_img_altered
-                        &&  (frame_count % 5 == 0) ){ // Terrible stop-gap until I can parallelize contour extraction. TODO
+                        contouring_imgs.contour_data->ccs.clear();
+                        contouring_imgs.Consume( shtl.contour_data );
+//FUNCINFO("Contouring image generated " << contouring_imgs.contour_data->ccs.size() << " contour collections");
+//if(!contouring_imgs.contour_data->ccs.empty()){
+//    FUNCINFO("    First collection contains " << contouring_imgs.contour_data->ccs.front().contours.size() << " contours");
+//}
 
-                            // Only bother extracting contours for the current image.
-                            Drover shtl;
-                            shtl.Ensure_Contour_Data_Allocated();
-                            shtl.image_data.push_back(std::make_unique<Image_Array>());
-                            shtl.image_data.back()->imagecoll.images.emplace_back();
-                            shtl.image_data.back()->imagecoll.images.back() = *cimg_it;
 
-                            std::list<OperationArgPkg> Operations;
-                            Operations.emplace_back("ContourViaThreshold");
-                            Operations.back().insert("Method="_s + contouring_method);
-                            Operations.back().insert("Lower=0.5");
-                            Operations.back().insert("SimplifyMergeAdjacent=true");
-                            if(!Operation_Dispatcher(shtl, InvocationMetadata, FilenameLex, Operations)){
-                                FUNCWARN("ContourViaThreshold failed");
-                            }
+                        contouring_img_altered = false;
+                    }
 
-                            contouring_imgs.contour_data->ccs.clear();
-                            contouring_imgs.Consume( shtl.contour_data );
+                    // Draw the WIP contours.
+                    if( cimg_valid
+                    &&  (contouring_imgs.Has_Contour_Data()) ){
+                        const auto cimg_dicom_width = cimg_it->pxl_dx * cimg_it->rows;
+                        const auto cimg_dicom_height = cimg_it->pxl_dy * cimg_it->columns; 
+                        //const auto cimg_top_left = cimg_it->anchor + cimg_it->offset
+                        //                         - cimg_it->row_unit * cimg_it->pxl_dx * 0.5f
+                        //                         - cimg_it->col_unit * cimg_it->pxl_dy * 0.5f;
+                        //const auto cimg_top_right = cimg_top_left + cimg_it->row_unit * cimg_dicom_width;
+                        //const auto cimg_bottom_left = cimg_top_left + cimg_it->col_unit * cimg_dicom_height;
+                        //const auto cimg_plane = cimg_it->image_plane();
 
-                            contouring_img_altered = false;
-                        }
+                        for(auto &cc : contouring_imgs.contour_data->ccs){
+                            for(auto &cop : cc.contours){
+                                if( cop.points.empty() ) continue;
+                                if( !cimg_it->sandwiches_point_within_top_bottom_planes( cop.points.front() ) ) continue;
 
-                        // Draw the WIP contours.
-                        if( cimg_valid
-                        &&  (contouring_imgs.Has_Contour_Data()) ){
-                            const auto cimg_dicom_width = cimg_it->pxl_dx * cimg_it->rows;
-                            const auto cimg_dicom_height = cimg_it->pxl_dy * cimg_it->columns; 
-                            //const auto cimg_top_left = cimg_it->anchor + cimg_it->offset
-                            //                         - cimg_it->row_unit * cimg_it->pxl_dx * 0.5f
-                            //                         - cimg_it->col_unit * cimg_it->pxl_dy * 0.5f;
-                            //const auto cimg_top_right = cimg_top_left + cimg_it->row_unit * cimg_dicom_width;
-                            //const auto cimg_bottom_left = cimg_top_left + cimg_it->col_unit * cimg_dicom_height;
-                            //const auto cimg_plane = cimg_it->image_plane();
+                                imgs_window_draw_list->PathClear();
+                                for(auto & p : cop.points){
 
-                            for(auto &cc : contouring_imgs.contour_data->ccs){
-                                for(auto &cop : cc.contours){
-                                    if( cop.points.empty() ) continue;
-                                    if( !cimg_it->sandwiches_point_within_top_bottom_planes( cop.points.front() ) ) continue;
+                                    //Clamp the point to the bounding box, using the top left as zero.
+                                    const auto dR = p - img_top_left;
+                                    const auto clamped_col = dR.Dot( cimg_it->col_unit ) / cimg_dicom_height;
+                                    const auto clamped_row = dR.Dot( cimg_it->row_unit ) / cimg_dicom_width;
 
-                                    drawList->PathClear();
-                                    for(auto & p : cop.points){
+                                    //Convert to ImGui coordinates using the top-left position of the display image.
+                                    const auto world_x = real_pos.x + real_extent.x * clamped_col;
+                                    const auto world_y = real_pos.y + real_extent.y * clamped_row;
 
-                                        //Clamp the point to the bounding box, using the top left as zero.
-                                        const auto dR = p - img_top_left;
-                                        const auto clamped_col = dR.Dot( cimg_it->col_unit ) / cimg_dicom_height;
-                                        const auto clamped_row = dR.Dot( cimg_it->row_unit ) / cimg_dicom_width;
-
-                                        //Convert to ImGui coordinates using the top-left position of the display image.
-                                        const auto world_x = real_pos.x + real_extent.x * clamped_col;
-                                        const auto world_y = real_pos.y + real_extent.y * clamped_row;
-
-                                        ImVec2 v;
-                                        v.x = world_x;
-                                        v.y = world_y;
-                                        drawList->PathLineTo( v );
-                                    }
-
-                                    float thickness = contour_line_thickness;
-
-                                    ImU32 colour = ImGui::GetColorU32(editing_contour_colour);
-                                    if(contour_colour_from_orientation){
-                                        const auto arb_pos_unit = disp_img_it->row_unit.Cross(disp_img_it->col_unit).unit();
-                                        vec3<double> c_orient;
-                                        try{ // Protect against degenerate contours. (Should we instead ignore them altogether?)
-                                            c_orient = cop.Estimate_Planar_Normal();
-                                        }catch(const std::exception &){
-                                            c_orient = arb_pos_unit;
-                                        }
-                                        const auto c_orient_pos = (c_orient.Dot(arb_pos_unit) > 0);
-                                        colour = ( c_orient_pos ? ImGui::GetColorU32(pos_contour_colour)
-                                                                : ImGui::GetColorU32(neg_contour_colour) );
-                                    }
-
-                                    const bool closed = true;
-                                    drawList->PathStroke( colour, closed, thickness);
-                                    //AddPolyline(const ImVec2* points, int num_points, ImU32 col, bool closed, float thickness);
+                                    ImVec2 v;
+                                    v.x = world_x;
+                                    v.y = world_y;
+                                    imgs_window_draw_list->PathLineTo( v );
                                 }
+
+                                float thickness = contour_line_thickness;
+
+                                ImU32 colour = ImGui::GetColorU32(editing_contour_colour);
+                                if(contour_colour_from_orientation){
+                                    const auto arb_pos_unit = disp_img_it->row_unit.Cross(disp_img_it->col_unit).unit();
+                                    vec3<double> c_orient;
+                                    try{ // Protect against degenerate contours. (Should we instead ignore them altogether?)
+                                        c_orient = cop.Estimate_Planar_Normal();
+                                    }catch(const std::exception &){
+                                        c_orient = arb_pos_unit;
+                                    }
+                                    const auto c_orient_pos = (c_orient.Dot(arb_pos_unit) > 0);
+                                    colour = ( c_orient_pos ? ImGui::GetColorU32(pos_contour_colour)
+                                                            : ImGui::GetColorU32(neg_contour_colour) );
+                                }
+
+                                const bool closed = true;
+                                imgs_window_draw_list->PathStroke( colour, closed, thickness);
+                                //AddPolyline(const ImVec2* points, int num_points, ImU32 col, bool closed, float thickness);
                             }
                         }
                     }
-                    ImGui::End();
                 }
+                ImGui::End();
             }
 
             // Draw a tooltip with position and voxel intensity information.
@@ -3716,6 +3767,7 @@ script_files.back().content.emplace_back('\0');
                                                &recompute_cimage_iters,
                                                &contouring_img_altered,
                                                &contouring_reach,
+                                               &contouring_intensity,
                                                &last_mouse_button_0_down,
                                                &last_mouse_button_1_down,
                                                &last_mouse_button_pos,
@@ -3867,7 +3919,9 @@ script_files.back().content.emplace_back('\0');
                         decltype(planar_image_collection<float,double>().get_all_images()) cimg_its;
                         if( (contouring_brush == brush_t::rigid_circle)
                         ||  (contouring_brush == brush_t::rigid_square)
-                        ||  (contouring_brush == brush_t::gaussian) ){
+                        ||  (contouring_brush == brush_t::gaussian) 
+                        ||  (contouring_brush == brush_t::median_circle)
+                        ||  (contouring_brush == brush_t::median_square) ){
                             // TODO: if shift or ctrl are being pressed, include all images that intersect the line
                             // segment path. This will aply the 2D brush in 3D to all images along the path, which would
                             // be useful!
@@ -3876,9 +3930,12 @@ script_files.back().content.emplace_back('\0');
                         }else if(contouring_brush == brush_t::rigid_sphere){
                             cimg_its = (*l_img_array_ptr_it)->imagecoll.get_all_images();
                         }
-                        float dval_factor = (mouse_button_0) ? 1.0f : -1.0f; // Additive or subtractive.
+                        const float inf = std::numeric_limits<float>::infinity();
+                        const float intensity = contouring_intensity * ((mouse_button_0) ? 1.0f : -1.0f);
+                        const float intensity_min = (view_toggles.view_contouring_enabled) ?  0.0f : -inf;
+                        const float intensity_max = (view_toggles.view_contouring_enabled) ?  1.0f :  inf;
                         const long int channel = 0;
-                        draw_with_brush( cimg_its, lss, contouring_brush, radius, dval_factor, channel);
+                        draw_with_brush( cimg_its, lss, contouring_brush, radius, intensity, channel, intensity_min, intensity_max );
 
                         // Update mouse position for next time, if applicable.
                         if( mouse_button_0 ){
@@ -4143,7 +4200,13 @@ script_files.back().content.emplace_back('\0');
         if(ImGui::BeginPopupModal("AboutPopup")){
             const std::string version = "DICOMautomaton SDL_Viewer version "_s + DCMA_VERSION_STR;
             ImGui::Text("%s", version.c_str());
+            ImGui::Separator();
 
+            if(ImGui::Button("View contouring debug window")){
+                view_toggles.view_contouring_debug = true;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
             if(ImGui::Button("Imgui demo")){
                 view_toggles.view_imgui_demo = true;
                 ImGui::CloseCurrentPopup();
