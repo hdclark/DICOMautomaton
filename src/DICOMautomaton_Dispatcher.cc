@@ -374,14 +374,22 @@ int main(int argc, char* argv[]){
 #endif // DCMA_USE_POSTGRES
 
     //Standalone file loading.
-    if(!Load_Files(DICOM_data, InvocationMetadata, FilenameLex, Operations, StandaloneFilesDirsReachable)){
+    {
+        std::list<OperationArgPkg> l_Operations;
+        if(!Load_Files(DICOM_data, InvocationMetadata, FilenameLex, l_Operations, StandaloneFilesDirsReachable)){
 #ifdef DCMA_FUZZ_TESTING
-        // If file loading failed, then the loader successfully rejected bad data. Terminate to indicate this success.
-        return 0;
+            // If file loading failed, then the loader successfully rejected bad data. Terminate to indicate this success.
+            return 0;
 #else
-        //FUNCERR("Unable to load file " << StandaloneFilesDirsReachable.front() << ". Refusing to continue");
-        FUNCERR("File loading unsuccessful. Refusing to continue"); // TODO: provide better diagnostic here.
+            //FUNCERR("Unable to load file " << StandaloneFilesDirsReachable.front() << ". Refusing to continue");
+            FUNCERR("File loading unsuccessful. Refusing to continue"); // TODO: provide better diagnostic here.
 #endif // DCMA_FUZZ_TESTING
+        }
+
+        // Make all loaded scripts run prior to user-specified scripts.
+        // If scripts need to be run afterward, they can be loaded in the file loader operation.
+        // Could the order of each operation on the command line be imbued / sidecar'd to sort out precendence?? TODO
+        Operations.splice(std::begin(Operations), l_Operations);
     }
 
     //============================================= Dispatch to Analyses =============================================
