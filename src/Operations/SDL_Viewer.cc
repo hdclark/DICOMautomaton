@@ -126,6 +126,10 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
 
         // Filter out irrelevant images.
         const auto is_relevant = [&]() -> bool {
+            if( (cit->rows <= 0)
+            ||  (cit->columns <= 0)
+            ||  (cit->channels <= 0) ) return false;
+
             for(const auto& l : lss){
                 const auto plane_dist_R0 = cit->image_plane().Get_Signed_Distance_To_Point(l.Get_R0());
                 const auto plane_dist_R1 = cit->image_plane().Get_Signed_Distance_To_Point(l.Get_R1());
@@ -156,6 +160,43 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
         };
         if(!is_relevant()) continue;
 
+        // Compute a bounding box in pixel coordinates.
+        const auto corner = cit->position(0,0) - cit->row_unit * cit->pxl_dx * 0.5
+                                               - cit->col_unit * cit->pxl_dy * 0.5;
+        const auto axis1 = cit->row_unit.unit();
+        const auto axis2 = cit->col_unit.unit();
+        const auto axis3 = cit->row_unit.Cross( cit->col_unit ).unit();
+        const auto buffer = radius * 3.0;
+
+        const auto inf = std::numeric_limits<double>::infinity();
+        vec3<double> bbox_min(inf, inf, inf);
+        vec3<double> bbox_max(-inf, -inf, -inf);
+        for(const auto& l : lss){
+            for(const auto& p : { l.Get_R0(), l.Get_R1() }){
+                const auto proj1 = (p - corner).Dot(axis1);
+                const auto proj2 = (p - corner).Dot(axis2);
+                const auto proj3 = (p - corner).Dot(axis3);
+                if(proj1 - buffer < bbox_min.x) bbox_min.x = proj1 - buffer;
+                if(proj2 - buffer < bbox_min.y) bbox_min.y = proj2 - buffer;
+                if(proj3 - buffer < bbox_min.z) bbox_min.z = proj3 - buffer;
+                if(bbox_max.x + buffer < proj1) bbox_max.x = proj1 + buffer;
+                if(bbox_max.y + buffer < proj2) bbox_max.y = proj2 + buffer;
+                if(bbox_max.z + buffer < proj3) bbox_max.z = proj3 + buffer;
+            }
+        }
+
+        FUNCINFO("Bounding volume for brush: " << bbox_min << " --> " << bbox_max);
+
+        auto row_min = std::clamp(static_cast<long int>(std::floor(bbox_min.x/cit->pxl_dx)), 0L, cit->rows-1);
+        auto row_max = std::clamp(static_cast<long int>(std::ceil(bbox_max.x/cit->pxl_dx)), 0L, cit->rows-1);
+        auto col_min = std::clamp(static_cast<long int>(std::floor(bbox_min.y/cit->pxl_dy)), 0L, cit->columns-1);
+        auto col_max = std::clamp(static_cast<long int>(std::ceil(bbox_max.y/cit->pxl_dy)), 0L, cit->columns-1);
+        if(row_max < row_min) std::swap(row_min, row_max);
+        if(col_max < col_min) std::swap(col_min, col_max);
+                
+        FUNCINFO("Bounding volume in pixel coordinates (row): " << row_min << " - " << row_max << "  (col): " << col_min << " - " << col_max);
+        FUNCINFO("    Reduction from " << cit->rows * cit->columns << " pixels to check to " << (row_max - row_min) * (col_max - col_min));
+        
 
         // Process relevant images.
         // TODO: speed this up!
@@ -163,8 +204,8 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
         //              - offload to another thread
         //              - use gpu to modify image?
         //              - swap loop order to permit faster rejection?
-        for(long int r = 0; r < cit->rows; ++r){
-            for(long int c = 0; c < cit->columns; ++c){
+        for(long int r = row_min; r <= row_max; ++r){
+            for(long int c = col_min; c <= col_max; ++c){
                 const auto pos = cit->position(r,c);
                 vec3<double> closest;
                 {
