@@ -147,9 +147,13 @@ enum class brush_t {
     gaussian,
     median_circle,
     median_square,
+    mean_circle,
+    mean_square,
 
     // 3D brushes.
     rigid_sphere,
+    median_sphere,
+    median_cube,
 };
 
 void draw_with_brush( const decltype(planar_image_collection<float,double>().get_all_images()) &img_its,
@@ -168,65 +172,74 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
             verts.emplace_back(p);
         }
     }
+    double buffer_space = radius;
+    if( (brush == brush_t::rigid_circle)
+    ||  (brush == brush_t::rigid_sphere)
+    ||  (brush == brush_t::median_circle)
+    ||  (brush == brush_t::mean_circle)
+    ||  (brush == brush_t::median_sphere)
+    ||  (brush == brush_t::median_cube) ){
+        buffer_space = radius;
 
-    for(auto &cit : img_its){
+    }else if( (brush == brush_t::rigid_square)
+          ||  (brush == brush_t::median_square)
+          ||  (brush == brush_t::mean_square) ){
+        buffer_space = radius;
 
-        // Filter out irrelevant images.
-        const auto img_is_relevant = [&]() -> bool {
-            if( (cit->rows <= 0)
-            ||  (cit->columns <= 0)
-            ||  (cit->channels <= 0) ) return false;
+    }else if(brush == brush_t::gaussian){
+        buffer_space = radius * 5.0;
+    }
 
-            for(const auto& l : lss){
-                const auto plane_dist_R0 = cit->image_plane().Get_Signed_Distance_To_Point(l.Get_R0());
-                const auto plane_dist_R1 = cit->image_plane().Get_Signed_Distance_To_Point(l.Get_R1());
+    const auto apply_to_inner_pixels = [&](const decltype(planar_image_collection<float,double>().get_all_images()) &l_img_its,
+                                           const std::function<float(const vec3<double> &, double, float)> &f){
+        for(auto &cit : l_img_its){
 
-                if( std::signbit(plane_dist_R0) != std::signbit(plane_dist_R1) ){
-                    // Line segment crosses the image plane, so is automatically relevant.
-                    return true;
-                }
+            // Filter out irrelevant images.
+            const auto img_is_relevant = [&]() -> bool {
+                if( (cit->rows <= 0)
+                ||  (cit->columns <= 0)
+                ||  (cit->channels <= 0) ) return false;
 
-                // 2D brushes.
-                if( (brush == brush_t::rigid_circle)
-                ||  (brush == brush_t::rigid_square)
-                ||  (brush == brush_t::gaussian)
-                ||  (brush == brush_t::median_circle)
-                ||  (brush == brush_t::median_square) ){
-                    if( (std::abs(plane_dist_R0) <= cit->pxl_dz * 0.5)
-                    ||  (std::abs(plane_dist_R1) <= cit->pxl_dz * 0.5) ){
+                for(const auto& l : lss){
+                    const auto plane_dist_R0 = cit->image_plane().Get_Signed_Distance_To_Point(l.Get_R0());
+                    const auto plane_dist_R1 = cit->image_plane().Get_Signed_Distance_To_Point(l.Get_R1());
+
+                    if( std::signbit(plane_dist_R0) != std::signbit(plane_dist_R1) ){
+                        // Line segment crosses the image plane, so is automatically relevant.
                         return true;
                     }
 
-                // 3D brushes.
-                }else if( (brush == brush_t::rigid_sphere) ){
-                    if( (std::abs(plane_dist_R0) <= radius)
-                    ||  (std::abs(plane_dist_R1) <= radius) ){
-                        return true;
+                    // 2D brushes.
+                    if( (brush == brush_t::rigid_circle)
+                    ||  (brush == brush_t::rigid_square)
+                    ||  (brush == brush_t::gaussian)
+                    ||  (brush == brush_t::median_circle)
+                    ||  (brush == brush_t::median_square)
+                    ||  (brush == brush_t::mean_circle)
+                    ||  (brush == brush_t::mean_square) ){
+                        if( (std::abs(plane_dist_R0) <= cit->pxl_dz * 0.5)
+                        ||  (std::abs(plane_dist_R1) <= cit->pxl_dz * 0.5) ){
+                            return true;
+                        }
+
+                    // 3D brushes.
+                    }else if( (brush == brush_t::rigid_sphere)
+                          ||  (brush == brush_t::median_sphere) 
+                          ||  (brush == brush_t::median_cube) ){
+                        if( (std::abs(plane_dist_R0) <= radius)
+                        ||  (std::abs(plane_dist_R1) <= radius) ){
+                            return true;
+                        }
                     }
                 }
-            }
-            return false;
-        };
-        if(!img_is_relevant()) continue;
+                return false;
+            };
+            if(!img_is_relevant()) continue;
 
-        // Compute pixel-space axis-aligned bounding box to reduce overall computation.
-        double buffer_space = radius;
-        if( (brush == brush_t::rigid_circle)
-        ||  (brush == brush_t::rigid_sphere)
-        ||  (brush == brush_t::median_circle) ){
-            buffer_space = radius;
-
-        }else if( (brush == brush_t::rigid_square)
-              ||  (brush == brush_t::median_square) ){
-            buffer_space = radius; // * std::sqrt(2.0);
-
-        }else if(brush == brush_t::gaussian){
-            buffer_space = radius * 5.0;
-        }
-        const auto [row_min, row_max, col_min, col_max] = get_pixelspace_axis_aligned_bounding_box(*cit, verts, buffer_space);
-
-        // Process relevant images.
-        const auto apply_to_inner_pixels = [&](const std::function<float(const vec3<double> &, double, float)> &f){
+            // Compute pixel-space axis-aligned bounding box to reduce overall computation.
+            //
+            // Process relevant images.
+            const auto [row_min, row_max, col_min, col_max] = get_pixelspace_axis_aligned_bounding_box(*cit, verts, buffer_space);
             for(long int r = row_min; r <= row_max; ++r){
                 for(long int c = col_min; c <= col_max; ++c){
                     const auto pos = cit->position(r,c);
@@ -246,12 +259,21 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                     const auto dR = closest.distance(pos);
                     if( (brush == brush_t::rigid_circle)
                     ||  (brush == brush_t::rigid_sphere)
-                    ||  (brush == brush_t::median_circle) ){
+                    ||  (brush == brush_t::median_circle)
+                    ||  (brush == brush_t::mean_circle)
+                    ||  (brush == brush_t::median_sphere) ){
                         if(radius < dR ) continue;
 
-                    }else if(brush == brush_t::rigid_square){
+                    }else if( (brush == brush_t::rigid_square)
+                          ||  (brush == brush_t::median_square)
+                          ||  (brush == brush_t::mean_square) ){
                         if( (radius < std::abs((closest - pos).Dot(cit->row_unit)))
                         ||  (radius < std::abs((closest - pos).Dot(cit->col_unit))) ) continue;
+
+                    }else if( (brush == brush_t::median_cube) ){
+                        if( (radius < std::abs((closest - pos).Dot(cit->row_unit)))
+                        ||  (radius < std::abs((closest - pos).Dot(cit->col_unit)))
+                        ||  (radius < std::abs((closest - pos).Dot(cit->row_unit.Cross(cit->col_unit)))) ) continue;
 
                     }else if(brush == brush_t::gaussian){
                         if(radius * 5.0 < dR ) continue;
@@ -260,34 +282,74 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                     cit->reference( r, c, channel ) = std::clamp(f(pos, dR, cit->value(r, c, channel)), intensity_min, intensity_max);
                 }
             }
-        };
+        }
+    };
 
 
-        if( (brush == brush_t::rigid_circle)
-        ||  (brush == brush_t::rigid_sphere)
-        ||  (brush == brush_t::rigid_square) ){
-            apply_to_inner_pixels([intensity](const vec3<double> &, double, float v) -> float {
+    if( (brush == brush_t::rigid_circle)
+    ||  (brush == brush_t::rigid_square) ){
+        for(const auto &img_it : img_its){
+            apply_to_inner_pixels({img_it}, [intensity](const vec3<double> &, double, float) -> float {
                 return intensity;
             });
+        }
 
-        }else if(brush == brush_t::gaussian){
-            apply_to_inner_pixels([radius,intensity](const vec3<double> &, double dR, float v) -> float {
+    }else if(brush == brush_t::gaussian){
+        for(const auto &img_it : img_its){
+            apply_to_inner_pixels({img_it}, [radius,intensity](const vec3<double> &, double dR, float v) -> float {
                 return v + intensity * std::exp( -std::pow(dR / (0.5 * radius), 2.0f) );
             });
+        }
 
-        }else if( (brush == brush_t::median_circle)
-              ||  (brush == brush_t::median_square) ){
+    }else if( (brush == brush_t::median_circle)
+          ||  (brush == brush_t::median_square) ){
+        for(const auto &img_it : img_its){
             std::vector<float> vals;
-            apply_to_inner_pixels([&vals](const vec3<double> &, double, float v) -> float {
+            apply_to_inner_pixels({img_it}, [&vals](const vec3<double> &, double, float v) -> float {
                 vals.emplace_back(v);
                 return v;
             });
             const auto median = Stats::Median(vals);
-            apply_to_inner_pixels([median](const vec3<double> &, double, float v) -> float {
+            apply_to_inner_pixels({img_it}, [median](const vec3<double> &, double, float) -> float {
                 return median;
             });
         }
+
+    }else if( (brush == brush_t::mean_circle)
+          ||  (brush == brush_t::mean_square) ){
+        for(const auto &img_it : img_its){
+            std::vector<float> vals;
+            apply_to_inner_pixels({img_it}, [&vals](const vec3<double> &, double, float v) -> float {
+                vals.emplace_back(v);
+                return v;
+            });
+            const auto mean = Stats::Mean(vals);
+            apply_to_inner_pixels({img_it}, [mean](const vec3<double> &, double, float) -> float {
+                return mean;
+            });
+        }
+
+    // 3D brushes.
+    }else if(brush == brush_t::rigid_sphere){
+        apply_to_inner_pixels(img_its, [intensity](const vec3<double> &, double, float) -> float {
+            return intensity;
+        });
+
+    }else if( (brush == brush_t::median_sphere)
+          ||  (brush == brush_t::median_cube) ){
+        std::vector<float> vals;
+        for(const auto &img_it : img_its){
+            apply_to_inner_pixels({img_it}, [&vals](const vec3<double> &, double, float v) -> float {
+                vals.emplace_back(v);
+                return v;
+            });
+        }
+        const auto median = Stats::Median(vals);
+        apply_to_inner_pixels(img_its, [median](const vec3<double> &, double, float) -> float {
+            return median;
+        });
     }
+
     return;
 }
 
@@ -2571,11 +2633,15 @@ script_files.back().content.emplace_back('\0');
                     if( (contouring_brush == brush_t::rigid_circle)
                     ||  (contouring_brush == brush_t::rigid_sphere)
                     ||  (contouring_brush == brush_t::gaussian)
-                    ||  (contouring_brush == brush_t::median_circle) ){
+                    ||  (contouring_brush == brush_t::median_circle)
+                    ||  (contouring_brush == brush_t::mean_circle)
+                    ||  (contouring_brush == brush_t::median_sphere) ){
                         imgs_window_draw_list->AddCircle(io.MousePos, pixel_radius, c);
 
                     }else if( (contouring_brush == brush_t::rigid_square)
-                          ||  (contouring_brush == brush_t::median_square) ){
+                          ||  (contouring_brush == brush_t::median_square)
+                          ||  (contouring_brush == brush_t::mean_square)
+                          ||  (contouring_brush == brush_t::median_cube) ){
                         ImVec2 ul( io.MousePos.x - pixel_radius,
                                    io.MousePos.y - pixel_radius );
                         ImVec2 lr( io.MousePos.x + pixel_radius,
@@ -2698,9 +2764,25 @@ script_files.back().content.emplace_back('\0');
                 if(ImGui::Button("Median Square")){
                     contouring_brush = brush_t::median_square;
                 }
+                ImGui::SameLine();
+                if(ImGui::Button("Mean Circle")){
+                    contouring_brush = brush_t::mean_circle;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Mean Square")){
+                    contouring_brush = brush_t::mean_square;
+                }
 
                 if(ImGui::Button("Rigid Sphere")){
                     contouring_brush = brush_t::rigid_sphere;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Median Sphere")){
+                    contouring_brush = brush_t::median_sphere;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Median Cube")){
+                    contouring_brush = brush_t::median_cube;
                 }
 
                 ImGui::Separator();
@@ -3921,13 +4003,17 @@ script_files.back().content.emplace_back('\0');
                         ||  (contouring_brush == brush_t::rigid_square)
                         ||  (contouring_brush == brush_t::gaussian) 
                         ||  (contouring_brush == brush_t::median_circle)
-                        ||  (contouring_brush == brush_t::median_square) ){
+                        ||  (contouring_brush == brush_t::median_square)
+                        ||  (contouring_brush == brush_t::mean_circle)
+                        ||  (contouring_brush == brush_t::mean_square) ){
                             // TODO: if shift or ctrl are being pressed, include all images that intersect the line
                             // segment path. This will aply the 2D brush in 3D to all images along the path, which would
                             // be useful!
                             cimg_its.emplace_back( l_img_it );
 
-                        }else if(contouring_brush == brush_t::rigid_sphere){
+                        }else if( (contouring_brush == brush_t::rigid_sphere)
+                              ||  (contouring_brush == brush_t::median_sphere)
+                              ||  (contouring_brush == brush_t::median_cube) ){
                             cimg_its = (*l_img_array_ptr_it)->imagecoll.get_all_images();
                         }
                         const float inf = std::numeric_limits<float>::infinity();
