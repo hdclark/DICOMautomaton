@@ -152,8 +152,11 @@ enum class brush_t {
 
     // 3D brushes.
     rigid_sphere,
+    rigid_cube,
     median_sphere,
     median_cube,
+    mean_sphere,
+    mean_cube,
 };
 
 void draw_with_brush( const decltype(planar_image_collection<float,double>().get_all_images()) &img_its,
@@ -174,16 +177,17 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
     }
     double buffer_space = radius;
     if( (brush == brush_t::rigid_circle)
-    ||  (brush == brush_t::rigid_sphere)
+    ||  (brush == brush_t::rigid_square)
     ||  (brush == brush_t::median_circle)
+    ||  (brush == brush_t::median_square)
     ||  (brush == brush_t::mean_circle)
+    ||  (brush == brush_t::mean_square)
+    ||  (brush == brush_t::rigid_sphere)
+    ||  (brush == brush_t::rigid_cube)
     ||  (brush == brush_t::median_sphere)
-    ||  (brush == brush_t::median_cube) ){
-        buffer_space = radius;
-
-    }else if( (brush == brush_t::rigid_square)
-          ||  (brush == brush_t::median_square)
-          ||  (brush == brush_t::mean_square) ){
+    ||  (brush == brush_t::median_cube)
+    ||  (brush == brush_t::mean_sphere)
+    ||  (brush == brush_t::mean_cube) ){
         buffer_space = radius;
 
     }else if(brush == brush_t::gaussian){
@@ -224,8 +228,11 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
 
                     // 3D brushes.
                     }else if( (brush == brush_t::rigid_sphere)
+                          ||  (brush == brush_t::rigid_cube) 
                           ||  (brush == brush_t::median_sphere) 
-                          ||  (brush == brush_t::median_cube) ){
+                          ||  (brush == brush_t::median_cube)
+                          ||  (brush == brush_t::mean_sphere) 
+                          ||  (brush == brush_t::mean_cube) ){
                         if( (std::abs(plane_dist_R0) <= radius)
                         ||  (std::abs(plane_dist_R1) <= radius) ){
                             return true;
@@ -261,7 +268,8 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                     ||  (brush == brush_t::rigid_sphere)
                     ||  (brush == brush_t::median_circle)
                     ||  (brush == brush_t::mean_circle)
-                    ||  (brush == brush_t::median_sphere) ){
+                    ||  (brush == brush_t::median_sphere)
+                    ||  (brush == brush_t::mean_sphere) ){
                         if(radius < dR ) continue;
 
                     }else if( (brush == brush_t::rigid_square)
@@ -270,7 +278,9 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                         if( (radius < std::abs((closest - pos).Dot(cit->row_unit)))
                         ||  (radius < std::abs((closest - pos).Dot(cit->col_unit))) ) continue;
 
-                    }else if( (brush == brush_t::median_cube) ){
+                    }else if( (brush == brush_t::median_cube)
+                          ||  (brush == brush_t::rigid_cube)
+                          ||  (brush == brush_t::mean_cube) ){
                         if( (radius < std::abs((closest - pos).Dot(cit->row_unit)))
                         ||  (radius < std::abs((closest - pos).Dot(cit->col_unit)))
                         ||  (radius < std::abs((closest - pos).Dot(cit->row_unit.Cross(cit->col_unit)))) ) continue;
@@ -330,7 +340,8 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
         }
 
     // 3D brushes.
-    }else if(brush == brush_t::rigid_sphere){
+    }else if( (brush == brush_t::rigid_sphere)
+          ||  (brush == brush_t::rigid_cube) ){
         apply_to_inner_pixels(img_its, [intensity](const vec3<double> &, double, float) -> float {
             return intensity;
         });
@@ -347,6 +358,20 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
         const auto median = Stats::Median(vals);
         apply_to_inner_pixels(img_its, [median](const vec3<double> &, double, float) -> float {
             return median;
+        });
+
+    }else if( (brush == brush_t::mean_sphere)
+          ||  (brush == brush_t::mean_cube) ){
+        std::vector<float> vals;
+        for(const auto &img_it : img_its){
+            apply_to_inner_pixels({img_it}, [&vals](const vec3<double> &, double, float v) -> float {
+                vals.emplace_back(v);
+                return v;
+            });
+        }
+        const auto mean = Stats::Mean(vals);
+        apply_to_inner_pixels(img_its, [mean](const vec3<double> &, double, float) -> float {
+            return mean;
         });
     }
 
@@ -2635,13 +2660,16 @@ script_files.back().content.emplace_back('\0');
                     ||  (contouring_brush == brush_t::gaussian)
                     ||  (contouring_brush == brush_t::median_circle)
                     ||  (contouring_brush == brush_t::mean_circle)
-                    ||  (contouring_brush == brush_t::median_sphere) ){
+                    ||  (contouring_brush == brush_t::median_sphere)
+                    ||  (contouring_brush == brush_t::mean_sphere) ){
                         imgs_window_draw_list->AddCircle(io.MousePos, pixel_radius, c);
 
                     }else if( (contouring_brush == brush_t::rigid_square)
                           ||  (contouring_brush == brush_t::median_square)
                           ||  (contouring_brush == brush_t::mean_square)
-                          ||  (contouring_brush == brush_t::median_cube) ){
+                          ||  (contouring_brush == brush_t::rigid_cube)
+                          ||  (contouring_brush == brush_t::median_cube)
+                          ||  (contouring_brush == brush_t::mean_cube) ){
                         ImVec2 ul( io.MousePos.x - pixel_radius,
                                    io.MousePos.y - pixel_radius );
                         ImVec2 lr( io.MousePos.x + pixel_radius,
@@ -2745,40 +2773,55 @@ script_files.back().content.emplace_back('\0');
                 }else if(view_toggles.view_contouring_enabled){
                     contouring_intensity = 1.0f;
                 }
+
+                ImGui::Text("2D shapes");
                 if(ImGui::Button("Rigid Circle")){
                     contouring_brush = brush_t::rigid_circle;
-                }
-                ImGui::SameLine();
-                if(ImGui::Button("Rigid Square")){
-                    contouring_brush = brush_t::rigid_square;
-                }
-                ImGui::SameLine();
-                if(ImGui::Button("Soft")){
-                    contouring_brush = brush_t::gaussian;
-                }
-
-                if(ImGui::Button("Median Circle")){
-                    contouring_brush = brush_t::median_circle;
-                }
-                ImGui::SameLine();
-                if(ImGui::Button("Median Square")){
-                    contouring_brush = brush_t::median_square;
                 }
                 ImGui::SameLine();
                 if(ImGui::Button("Mean Circle")){
                     contouring_brush = brush_t::mean_circle;
                 }
                 ImGui::SameLine();
+                if(ImGui::Button("Median Circle")){
+                    contouring_brush = brush_t::median_circle;
+                }
+
+                if(ImGui::Button("Rigid Square")){
+                    contouring_brush = brush_t::rigid_square;
+                }
+                ImGui::SameLine();
                 if(ImGui::Button("Mean Square")){
                     contouring_brush = brush_t::mean_square;
                 }
+                ImGui::SameLine();
+                if(ImGui::Button("Median Square")){
+                    contouring_brush = brush_t::median_square;
+                }
 
+                if(ImGui::Button("Gaussian")){
+                    contouring_brush = brush_t::gaussian;
+                }
+
+                ImGui::Text("3D shapes");
                 if(ImGui::Button("Rigid Sphere")){
                     contouring_brush = brush_t::rigid_sphere;
                 }
                 ImGui::SameLine();
+                if(ImGui::Button("Mean Sphere")){
+                    contouring_brush = brush_t::mean_sphere;
+                }
+                ImGui::SameLine();
                 if(ImGui::Button("Median Sphere")){
                     contouring_brush = brush_t::median_sphere;
+                }
+
+                if(ImGui::Button("Rigid Cube")){
+                    contouring_brush = brush_t::rigid_cube;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Mean Cube")){
+                    contouring_brush = brush_t::mean_cube;
                 }
                 ImGui::SameLine();
                 if(ImGui::Button("Median Cube")){
@@ -4012,7 +4055,10 @@ script_files.back().content.emplace_back('\0');
                             cimg_its.emplace_back( l_img_it );
 
                         }else if( (contouring_brush == brush_t::rigid_sphere)
+                              ||  (contouring_brush == brush_t::mean_sphere)
                               ||  (contouring_brush == brush_t::median_sphere)
+                              ||  (contouring_brush == brush_t::rigid_cube)
+                              ||  (contouring_brush == brush_t::mean_cube)
                               ||  (contouring_brush == brush_t::median_cube) ){
                             cimg_its = (*l_img_array_ptr_it)->imagecoll.get_all_images();
                         }
