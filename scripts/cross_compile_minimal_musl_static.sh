@@ -13,12 +13,47 @@
 
 set -eux
 
+
+export CMAKE_BUILD_TYPE="Release"
+export BUILD_SHARED_LIBS="OFF"
+
+####################### Musl-cross-make targets ######################
 # See https://github.com/richfelker/musl-cross-make README (musl cross-compiler).
 #export TRIPLET='arm-linux-musleabi'
+
+##################### Zig cross-compiler targets #####################
 # See `zig target` (libc section) for other supported triplets using zig toolchain.
+
+# Ensure CMake build type is Release because gcrt0 (i.e., compiler '-g' option) not available for musl.
 #export TRIPLET='x86_64-linux-musl'
-#export TRIPLET='x86_64-linux-gnu.2.28' # Debian oldstable as of 20210914.
-export TRIPLET='x86_64-linux-gnu.2.18' # Ancient glibc... Seems to have __cxa_thread_atexit_impl@GLIBC_2.18 whereas 2.17 does not have __cxa_thread_atexit_impl
+#export CMAKE_BUILD_TYPE="Release"
+
+# Debian oldstable as of 20210914.
+#export TRIPLET='x86_64-linux-gnu.2.28'
+
+# Ancient glibc... Seems to have __cxa_thread_atexit_impl@GLIBC_2.18 whereas 2.17 does not have __cxa_thread_atexit_impl
+export TRIPLET='x86_64-linux-gnu.2.18'
+
+# zlib: "Failed to find a pointer-size integer type."
+#export TRIPLET='arm-linux-android'
+
+# Threads not supported, which boost.thread dislikes. Workaround by disabling boost.thread. Ygor OK without threads
+# (surprisingly!) Stuck on wasm.ld rejecting non-relocatable libraries. According to
+# 'https://emscripten.org/docs/compiling/WebAssembly.html?highlight=wasm' this might be due to gnu-strip removing the
+# indices. (Not sure how to inhibit -- change to Debug releases?)
+# But might possibly work with additional effort?
+#export TRIPLET='wasm32-wasi-musl'
+#export CMAKE_BUILD_TYPE="Debug"
+
+# zlib: "Failed to find a pointer-size integer type."
+# Ygor: fstream, array, dirent.h, iostream, stdlib.h, ... not found (because freestanding).
+# Seems unlikely to work without significant porting effort...
+#export TRIPLET='wasm32-freestanding-musl'
+
+# Have to remove Threads from all CMakeLists.txt. Does not provide utf-8 wrappers.
+#export TRIPLET='x86_64-windows-gnu'
+
+######################################################################
 
 apt-get update -y
 apt-get upgrade -y
@@ -33,11 +68,11 @@ cd /zig*/
 unset CC CXX CFLAGS CXXFLAGS LDFLAGS
 export CC="$(pwd)/zig cc --verbose --target=${TRIPLET}"
 export CXX="$(pwd)/zig c++ --verbose --target=${TRIPLET}"
-export CFLAGS='-I/pot/include/ -I/pot/usr/include/ -L/pot/lib/ -L/pot/usr/lib/ -static'
-export CXXFLAGS='-I/pot/include/ -I/pot/usr/include/ -L/pot/lib/ -L/pot/usr/lib/ -static -fno-use-cxa-atexit'
+export CFLAGS='-I/pot/include/ -I/pot/usr/include/ -L/pot/lib/ -L/pot/usr/lib/' # -static'
+export CXXFLAGS='-I/pot/include/ -I/pot/usr/include/ -L/pot/lib/ -L/pot/usr/lib/ -fno-use-cxa-atexit' # -static'
 export LDFLAGS=""
+export BUILD_SHARED_LIBS="ON"
 cd /
-
 
 ## Musl (linux-only) cross-compiler.
 #git clone 'https://github.com/richfelker/musl-cross-make' /mcm
@@ -55,9 +90,25 @@ cd /
 #unset CC CXX CFLAGS CXXFLAGS LDFLAGS
 #export CC="/musl/bin/${TRIPLET}-gcc"
 #export CXX="/musl/bin/${TRIPLET}-g++"
-#export CXXFLAGS="-I/pot/include/ -I/pot/usr/include/ -L/pot/lib/ -L/pot/usr/lib/ -static -fno-use-cxa-atexit"
-#export CFLAGS="-I/pot/include/ -I/pot/usr/include/ -L/pot/lib/ -L/pot/usr/lib/ -static"
+#export CXXFLAGS="-I/pot/include/ -I/pot/usr/include/ -L/pot/lib/ -L/pot/usr/lib/ -fno-use-cxa-atexit"
+#export CFLAGS="-I/pot/include/ -I/pot/usr/include/ -L/pot/lib/ -L/pot/usr/lib/"
 #export LDFLAGS=""
+
+## Webassembly extras (needed??)
+#export CXXFLAGS="${CXXFLAGS} -Wl,--relocatable -Wl,--export-all -Wl,--allow-undefined" # -sUSE_PTHREADS=0" # Doesn't seem to help...
+#export CFLAGS="${CXXFLAGS} -Wl,--relocatable -Wl,--export-all -Wl,--allow-undefined" # -sUSE_PTHREADS=0" # Doesn't seem to help...
+
+# Make static binaries.
+if [ "${BUILD_SHARED_LIBS}" != "ON" ] ; then
+    export CXXFLAGS="${CXXFLAGS} -static"
+    export CFLAGS="${CXXFLAGS} -static"
+fi
+
+# Destination for all build artifacts.
+#
+# Everything goes in the pot and out comes binaries -- we're doing alchemy here! :)
+mkdir -pv /pot/{lib,include,usr/include,usr/lib}/
+
 
 
 # zlib.
@@ -152,8 +203,7 @@ cd /
 #    #/usr/local/bin/meson setup . output
 #    /usr/local/bin/meson setup --cross-file /dev/null . output
 #
-#
-#
+#    ... TODO ...
 #
 #    cd / && rm -rf /mesa
 #)
@@ -209,12 +259,12 @@ cd /
     cd /ygorclustering/
     cmake -B build \
         -DCMAKE_INSTALL_PREFIX='/pot' \
-        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
+        -DBUILD_SHARED_LIBS="${BUILD_SHARED_LIBS}" \
         -DWITH_LINUX_SYS=OFF \
         -DWITH_EIGEN=OFF \
         -DWITH_GNU_GSL=OFF \
         -DWITH_BOOST=ON \
-        -DBUILD_SHARED_LIBS=OFF \
         .
     cd build/
     time make -j8 VERBOSE=1 install
@@ -229,12 +279,12 @@ cd /
     cd /explicator/
     cmake -B build \
         -DCMAKE_INSTALL_PREFIX='/pot' \
-        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
+        -DBUILD_SHARED_LIBS="${BUILD_SHARED_LIBS}" \
         -DWITH_LINUX_SYS=OFF \
         -DWITH_EIGEN=OFF \
         -DWITH_GNU_GSL=OFF \
         -DWITH_BOOST=ON \
-        -DBUILD_SHARED_LIBS=OFF \
         .
     cd build/
     time make -j8 VERBOSE=1 install
@@ -248,14 +298,37 @@ cd /
     cd / && rm -rf /ygor
     git clone --depth 1 https://github.com/hdclark/Ygor.git /ygor
     cd /ygor
+
+    # Changes (currently) necessary to compile with wasm (note: linking fails after changing).
+    if false ; then
+        printf '\n%s\n' '
+            int pclose(const void *);
+            int pclose(const void *, const void *);
+            FILE* popen(const void *);
+            FILE* popen(const void *, const void *);
+            int mknod(const void *, const int, const void *); ' >> src/YgorMisc.h
+        
+        printf '\n%s\n' '
+            int pclose(const void *){}
+            int pclose(const void *, const void *){}
+            FILE* popen(const void *){}
+            FILE* popen(const void *, const void *){}
+            int mknod(const void *, const int, const void *){} ' >> src/YgorMath.cc
+        
+        printf '#if 0\n%s\n#endif\n' "$(cat src/YgorNetworking.cc)" > src/YgorNetworking.cc
+        printf '#if 0\n%s\n#endif\n' "$(cat src/YgorNetworking.h )" > src/YgorNetworking.h
+    
+        # If freestanding, also have to remove threads support.
+    fi
+
     cmake -B build \
         -DCMAKE_INSTALL_PREFIX='/pot' \
-        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
+        -DBUILD_SHARED_LIBS="${BUILD_SHARED_LIBS}" \
         -DWITH_LINUX_SYS=OFF \
         -DWITH_EIGEN=OFF \
         -DWITH_GNU_GSL=OFF \
         -DWITH_BOOST=ON \
-        -DBUILD_SHARED_LIBS=OFF \
         -DBOOST_INCLUDEDIR=/pot/usr/include/ \
         .
     cd build
@@ -281,8 +354,8 @@ cd /
 
     cmake -B build \
         -DCMAKE_INSTALL_PREFIX='/pot' \
-        -DCMAKE_BUILD_TYPE=Release \
-        -DBUILD_SHARED_LIBS=OFF \
+        -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
+        -DBUILD_SHARED_LIBS="${BUILD_SHARED_LIBS}" \
         -DDCMA_VERSION=dcma_manual_test_version \
         -DCMAKE_INSTALL_SYSCONFDIR=/pot/etc \
         -DMEMORY_CONSTRAINED_BUILD=OFF \
@@ -311,7 +384,7 @@ cd /
     strings /pot/bin/dicomautomaton_dispatcher | grep GLIBC | sort --version-sort | uniq || true
 )
 
-# ldd for pot ...
+# Note: ldd-equivalent for musl libc:
 #apt-get install -y musl-dev
 #/lib/ld-musl-x86_64.so.1 --list /pot/bin/dicomautomaton_dispatcher
 
