@@ -25,6 +25,17 @@ export BUILD_SHARED_LIBS="OFF"
 # See `zig target` (libc section) or 'https://ziglang.org/documentation/master/#Targets' 
 # for other supported triplets using the zig toolchain.
 
+#### Working ####
+
+# Debian oldstable as of 20210914.
+#export TRIPLET='x86_64-linux-gnu.2.28'
+
+# Ancient glibc... Seems to have __cxa_thread_atexit_impl@GLIBC_2.18 whereas 2.17 does not have __cxa_thread_atexit_impl
+#export TRIPLET='x86_64-linux-gnu.2.18'
+
+#### Not working ####
+
+# ld.lld: error: undefined symbol: __cxa_thread_atexit_impl (see workaround below, but not a great workaround)
 # Ensure CMake build type is Release because gcrt0 (i.e., compiler '-g' option) not available for musl.
 #export TRIPLET='x86_64-linux-musl'
 #export CMAKE_BUILD_TYPE="Release"
@@ -37,13 +48,8 @@ export BUILD_SHARED_LIBS="OFF"
 #export TRIPLET='arm-linux-musleabi'
 #export CMAKE_BUILD_TYPE="Release"
 
-# Debian oldstable as of 20210914.
-#export TRIPLET='x86_64-linux-gnu.2.28'
-
-# Ancient glibc... Seems to have __cxa_thread_atexit_impl@GLIBC_2.18 whereas 2.17 does not have __cxa_thread_atexit_impl
-export TRIPLET='x86_64-linux-gnu.2.18'
-
 # zlib: "Failed to find a pointer-size integer type."
+# (Need to confirm that this target is supported locally, because this seems like a toolchain issue...)
 #export TRIPLET='arm-linux-android'
 
 # Threads not supported, which boost.thread dislikes. Workaround by disabling boost.thread. Ygor OK without threads
