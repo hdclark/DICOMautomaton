@@ -11,12 +11,15 @@
 #include "../Imebra_Shim.h"
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../Metadata.h"
+
 #include "Explicator.h"       //Needed for Explicator class.
-#include "GenerateSyntheticImages.h"
+
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
+#include "GenerateSyntheticImages.h"
 
 OperationDoc OpArgDocGenerateSyntheticImages(){
     OperationDoc out;
@@ -295,15 +298,15 @@ bool GenerateSyntheticImages(Drover &DICOM_data,
     //const double RescaleIntercept = 0.0;
     const std::string OriginFilename = "/dev/null";
     const std::string PatientID = "SyntheticImage";
-    const std::string StudyInstanceUID = PatientID + "_Study1";
-    const std::string SeriesInstanceUID = StudyInstanceUID + "_Series1";
-    const std::string& FrameOfReferenceUID = PatientID;
+    const std::string StudyInstanceUID = Generate_Random_UID(60);
+    const std::string SeriesInstanceUID = Generate_Random_UID(60);
+    const std::string FrameOfReferenceUID = Generate_Random_UID(60);
     const std::string Modality = "CT";
 
     // --- The virtual 'signal' image series ---
     loaded_imgs_storage.emplace_back();
     for(long int img_index = 0; img_index < NumberOfImages; ++img_index){
-        const std::string SOPInstanceUID = Generate_Random_String_of_Length(6);
+        const auto SOPInstanceUID = Generate_Random_UID(60);
 
         auto out = std::make_unique<Image_Array>();
         out->imagecoll.images.emplace_back();
