@@ -17,7 +17,6 @@
 #include <limits>
 #include <cmath>
 
-#include <getopt.h>           //Needed for 'getopts' argument parsing.
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
 #include <algorithm>

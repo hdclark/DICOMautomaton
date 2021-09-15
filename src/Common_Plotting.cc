@@ -1,7 +1,7 @@
 //Common_Plotting.cc - A part of DICOMautomaton 2016. Written by hal clark.
 
 #include <unistd.h>           //fork().
-#include <cstdlib>            //quick_exit(), EXIT_SUCCESS.
+#include <cstdlib>            //exit(), EXIT_SUCCESS.
 #include <exception>
 #include <fstream>
 #include <map>
@@ -80,7 +80,7 @@ PlotTimeCourses(const std::string& title,
         }
 
 #if !defined(_WIN32) && !defined(_WIN64)
-        std::quick_exit(EXIT_SUCCESS);
+        std::exit(EXIT_SUCCESS);
     }
 #endif
     return;
