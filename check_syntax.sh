@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 # This script can be used to verify the syntax of all files without actually compiling anything.
+set -eux
 
 #locale="en_US.UTF-8"
 locale="C"
@@ -37,6 +38,7 @@ check_sh_syntax () {
     local f="$*"
     if [ -f "$f" ] && type "shellcheck" &> /dev/null ; then
         shellcheck \
+          -S error \
           -e SC1117,SC2059 \
           "$f"
     else
