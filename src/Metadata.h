@@ -4,6 +4,7 @@
 
 #include <string>
 #include <map>
+#include <set>
 #include <optional>
 #include <list>
 #include <initializer_list>
@@ -18,6 +19,7 @@
 
 
 using metadata_map_t = std::map<std::string,std::string>;
+using metadata_multimap_t = std::map<std::string,std::set<std::string>>;
 
 // -------------------------------- Generic helpers ---------------------------------------
 //Generic helper functions.
@@ -44,6 +46,16 @@ apply_as(metadata_map_t &map,
          const std::string &key,
          const std::function<T(T)> &f);
 
+
+// Combine metadata maps together. Only distinct values are retained.
+void
+combine_distinct(metadata_multimap_t &combined,
+                 const metadata_map_t &input);
+
+
+// Extract the subset of keys that have a single distinct value.
+metadata_map_t
+singular_keys(const metadata_multimap_t &multi);
 
 // --------------------------------- Operation helpers --------------------------------------
 // Hash both keys and values of a metadata map.

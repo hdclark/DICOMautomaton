@@ -137,6 +137,26 @@ template std::optional<double     > apply_as(metadata_map_t &, const std::string
 template std::optional<std::string> apply_as(metadata_map_t &, const std::string &, const std::function<std::string(std::string)> &);
 
 
+// Combine metadata maps together. Only distinct values are retained.
+void
+combine_distinct(metadata_multimap_t &combined,
+                 const metadata_map_t &input){
+    for(const auto& [key, val] : input) combined[key].insert(val);
+    return;
+}
+
+// Extract the subset of keys that have a single distinct value.
+metadata_map_t
+singular_keys(const metadata_multimap_t &multi){
+    metadata_map_t out;
+    for(const auto& [key, vals] : multi){
+        if(vals.size() == 1){
+            out[key] = *std::begin(vals);
+        }
+    }
+    return out;
+}
+
 // This is not provided in the std library. Not sure why?
 size_t hash_std_map(const metadata_map_t &m){
     size_t h = 0;

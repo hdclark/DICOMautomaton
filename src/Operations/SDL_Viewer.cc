@@ -2508,6 +2508,38 @@ script_files.back().content.emplace_back('\0');
                     }else{
                         ImGui::Text("%s", ROIName.c_str());
                     }
+                    // Display (read-only) metadata when hovering.
+                    if( ImGui::IsItemHovered() 
+                    &&  view_toggles.view_plots_metadata ){
+                        ImGui::SetNextWindowSize(ImVec2(600, -1));
+                        ImGui::BeginTooltip();
+                        ImGui::Text("Shared Contour Metadata");
+                        ImGui::Columns(2, "Plot Metadata", true);
+                        ImGui::Separator();
+                        ImGui::Text("Key"); ImGui::NextColumn();
+                        ImGui::Text("Value"); ImGui::NextColumn();
+                        ImGui::Separator();
+
+                        // Extract common metadata for all like-named contours.
+                        const auto regex_escaped_ROIName = [&](){
+                            std::string out;
+                            for(const auto &c : ROIName) out += "["_s + c + "]";
+                            return out;
+                        }();
+                        auto cc_all = All_CCs( DICOM_data );
+                        auto cc_ROIs = Whitelist( cc_all, { { "ROIName", regex_escaped_ROIName } });
+                        metadata_multimap_t shared_metadata;
+                        for(auto &cc_refw : cc_ROIs){
+                            for(auto &c : cc_refw.get().contours){
+                                combine_distinct(shared_metadata, c.metadata);
+                            }
+                        }
+                        for(const auto& [key, val] : singular_keys(shared_metadata)){
+                            ImGui::Text("%s", key.c_str()); ImGui::NextColumn();
+                            ImGui::Text("%s", val.c_str()); ImGui::NextColumn();
+                        }
+                        ImGui::EndTooltip();
+                    }
                 }
 
                 if(altered){
