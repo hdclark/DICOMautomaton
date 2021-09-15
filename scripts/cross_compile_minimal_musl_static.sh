@@ -22,10 +22,19 @@ export BUILD_SHARED_LIBS="OFF"
 #export TRIPLET='arm-linux-musleabi'
 
 ##################### Zig cross-compiler targets #####################
-# See `zig target` (libc section) for other supported triplets using zig toolchain.
+# See `zig target` (libc section) or 'https://ziglang.org/documentation/master/#Targets' 
+# for other supported triplets using the zig toolchain.
 
 # Ensure CMake build type is Release because gcrt0 (i.e., compiler '-g' option) not available for musl.
 #export TRIPLET='x86_64-linux-musl'
+#export CMAKE_BUILD_TYPE="Release"
+
+# Boost iostreams compilation error:
+# In file included from libs/serialization/src/xml_wgrammar.cpp:19:
+# ...
+# /zig*/lib/libcxx/include/atomic:2796:16: error: use of undeclared identifier '__libcpp_signed_lock_free'
+# This is a bug. See https://github.com/ziglang/zig/issues/6573 for discussion.
+#export TRIPLET='arm-linux-musleabi'
 #export CMAKE_BUILD_TYPE="Release"
 
 # Debian oldstable as of 20210914.
@@ -53,6 +62,15 @@ export TRIPLET='x86_64-linux-gnu.2.18'
 # Have to remove Threads from all CMakeLists.txt. Does not provide utf-8 wrappers.
 #export TRIPLET='x86_64-windows-gnu'
 
+# DCMA linking issues. Linker can't seem to resolve any symbols from Structs.o or Imebra_Shim.o when building
+# libimebrashim.so (dynamic libs).
+# 
+# Static linking:
+#   make[1]: *** [CMakeFiles/Makefile2:211: examples/CMakeFiles/explicator_cross_verify.dir/all] Error 2
+#   error: InvalidCharacter
+# not sure exactly what this means. Maybe it refers to in-source literals??
+#export TRIPLET='x86_64-macos-gnu'
+
 ######################################################################
 
 apt-get update -y
@@ -71,7 +89,6 @@ export CXX="$(pwd)/zig c++ --verbose --target=${TRIPLET}"
 export CFLAGS='-I/pot/include/ -I/pot/usr/include/ -L/pot/lib/ -L/pot/usr/lib/' # -static'
 export CXXFLAGS='-I/pot/include/ -I/pot/usr/include/ -L/pot/lib/ -L/pot/usr/lib/ -fno-use-cxa-atexit' # -static'
 export LDFLAGS=""
-export BUILD_SHARED_LIBS="ON"
 cd /
 
 ## Musl (linux-only) cross-compiler.
