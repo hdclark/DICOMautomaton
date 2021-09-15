@@ -328,6 +328,14 @@ int main(int argc, char* argv[]){
             FUNCWARN("Detected AppImageKit packaging. Resetting current working directory via OWD environment variable");
             std::filesystem::current_path( std::filesystem::path( std::string(owd) ) );
         }
+
+#if defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)
+        if(nullptr == std::getenv("LIBGL_ALWAYS_SOFTWARE")){
+            if(0 == setenv("LIBGL_ALWAYS_SOFTWARE", "1", 1)){
+                FUNCWARN("Forcing OpenGL software emulation to improve portability. To disable this, set the environment variable LIBGL_ALWAYS_SOFTWARE=0");
+            }
+        }
+#endif // defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)
     }
 
     // Ensure the current path is set to *something*, otherwise std::filesystem::current_path() throws. :(
