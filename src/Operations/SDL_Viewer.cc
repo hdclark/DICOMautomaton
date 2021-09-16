@@ -21,6 +21,7 @@
 #include <map>
 #include <set>
 #include <memory>
+#include <numeric>
 #include <regex>
 #include <stdexcept>
 #include <string>    
@@ -37,10 +38,10 @@
 
 #include <filesystem>
 
-#include "../imgui20201021/imgui.h"
-#include "../imgui20201021/imgui_impl_sdl.h"
-#include "../imgui20201021/imgui_impl_opengl3.h"
-#include "../implot20210525/implot.h"
+#include "../imgui20210904/imgui.h"
+#include "../imgui20210904/imgui_impl_sdl.h"
+#include "../imgui20210904/imgui_impl_opengl3.h"
+#include "../implot20210904/implot.h"
 
 #include <SDL.h>
 #include <GL/glew.h>            // Initialize with glewInit()
@@ -65,6 +66,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../Metadata.h"
 #include "../YgorImages_Functors/Compute/AccumulatePixelDistributions.h"
 
 #include "../Font_DCMA_Minimal.h"
@@ -80,6 +82,301 @@
 #include "SDL_Viewer.h"
 
 //extern const std::string DCMA_VERSION_STR;
+
+static
+void
+array_to_string(std::string &s, const std::array<char, 1024> &a){
+    s.clear();
+    for(const auto &c : a){
+        if(c == '\0') break;
+        s.push_back(c);
+    }
+    return;
+}
+
+static
+void
+string_to_array(std::array<char, 1024> &a, const std::string &s){
+    for(size_t i = 0; (i < s.size()) && ((i+1) < a.size()); ++i){
+        a[i] = s[i];
+        a[i+1] = '\0';
+    }
+    return;
+}
+
+// Compute an axis-aligned bounding box in pixel coordinates.
+std::tuple<long int, long int, long int, long int>
+get_pixelspace_axis_aligned_bounding_box(const planar_image<float, double> &img,
+                                         const std::vector<vec3<double>> &points,
+                                         double extra_space){
+
+    const auto corner = img.position(0,0) - img.row_unit * img.pxl_dx * 0.5
+                                          - img.col_unit * img.pxl_dy * 0.5;
+    const auto axis1 = img.row_unit.unit();
+    const auto axis2 = img.col_unit.unit();
+    //const auto axis3 = img.row_unit.Cross( img.col_unit ).unit();
+
+    const auto inf = std::numeric_limits<double>::infinity();
+    vec3<double> bbox_min(inf, inf, inf);
+    vec3<double> bbox_max(-inf, -inf, -inf);
+    for(const auto& p : points){
+        const auto proj1 = (p - corner).Dot(axis1);
+        const auto proj2 = (p - corner).Dot(axis2);
+        //const auto proj3 = (p - corner).Dot(axis3);
+        if(proj1 - extra_space < bbox_min.x) bbox_min.x = proj1 - extra_space;
+        if(proj2 - extra_space < bbox_min.y) bbox_min.y = proj2 - extra_space;
+        //if(proj3 - extra_space < bbox_min.z) bbox_min.z = proj3 - extra_space;
+        if(bbox_max.x + extra_space < proj1) bbox_max.x = proj1 + extra_space;
+        if(bbox_max.y + extra_space < proj2) bbox_max.y = proj2 + extra_space;
+        //if(bbox_max.z + extra_space < proj3) bbox_max.z = proj3 + extra_space;
+    }
+
+    auto row_min = std::clamp(static_cast<long int>(std::floor(bbox_min.x/img.pxl_dx)), 0L, img.rows-1);
+    auto row_max = std::clamp(static_cast<long int>(std::ceil(bbox_max.x/img.pxl_dx)), 0L, img.rows-1);
+    auto col_min = std::clamp(static_cast<long int>(std::floor(bbox_min.y/img.pxl_dy)), 0L, img.columns-1);
+    auto col_max = std::clamp(static_cast<long int>(std::ceil(bbox_max.y/img.pxl_dy)), 0L, img.columns-1);
+    if(row_max < row_min) std::swap(row_min, row_max);
+    if(col_max < col_min) std::swap(col_min, col_max);
+    return std::make_tuple( row_min, row_max, col_min, col_max );
+}
+
+enum class brush_t {
+    // 2D brushes.
+    rigid_circle,
+    rigid_square,
+    gaussian,
+    median_circle,
+    median_square,
+    mean_circle,
+    mean_square,
+
+    // 3D brushes.
+    rigid_sphere,
+    rigid_cube,
+    median_sphere,
+    median_cube,
+    mean_sphere,
+    mean_cube,
+};
+
+void draw_with_brush( const decltype(planar_image_collection<float,double>().get_all_images()) &img_its,
+                      const std::vector<line_segment<double>> &lss,
+                      brush_t brush,
+                      float radius,
+                      float intensity,
+                      long int channel,
+                      float intensity_min = std::numeric_limits<float>::infinity() * -1.0,
+                      float intensity_max = std::numeric_limits<float>::infinity() ){
+
+    // Pre-extract the line segment vertices for bounding-box calculation.
+    std::vector<vec3<double>> verts;
+    for(const auto& l : lss){
+        for(const auto& p : { l.Get_R0(), l.Get_R1() }){
+            verts.emplace_back(p);
+        }
+    }
+    double buffer_space = radius;
+    if( (brush == brush_t::rigid_circle)
+    ||  (brush == brush_t::rigid_square)
+    ||  (brush == brush_t::median_circle)
+    ||  (brush == brush_t::median_square)
+    ||  (brush == brush_t::mean_circle)
+    ||  (brush == brush_t::mean_square)
+    ||  (brush == brush_t::rigid_sphere)
+    ||  (brush == brush_t::rigid_cube)
+    ||  (brush == brush_t::median_sphere)
+    ||  (brush == brush_t::median_cube)
+    ||  (brush == brush_t::mean_sphere)
+    ||  (brush == brush_t::mean_cube) ){
+        buffer_space = radius;
+
+    }else if(brush == brush_t::gaussian){
+        buffer_space = radius * 5.0;
+    }
+
+    const auto apply_to_inner_pixels = [&](const decltype(planar_image_collection<float,double>().get_all_images()) &l_img_its,
+                                           const std::function<float(const vec3<double> &, double, float)> &f){
+        for(auto &cit : l_img_its){
+
+            // Filter out irrelevant images.
+            const auto img_is_relevant = [&]() -> bool {
+                if( (cit->rows <= 0)
+                ||  (cit->columns <= 0)
+                ||  (cit->channels <= 0) ) return false;
+
+                for(const auto& l : lss){
+                    const auto plane_dist_R0 = cit->image_plane().Get_Signed_Distance_To_Point(l.Get_R0());
+                    const auto plane_dist_R1 = cit->image_plane().Get_Signed_Distance_To_Point(l.Get_R1());
+
+                    if( std::signbit(plane_dist_R0) != std::signbit(plane_dist_R1) ){
+                        // Line segment crosses the image plane, so is automatically relevant.
+                        return true;
+                    }
+
+                    // 2D brushes.
+                    if( (brush == brush_t::rigid_circle)
+                    ||  (brush == brush_t::rigid_square)
+                    ||  (brush == brush_t::gaussian)
+                    ||  (brush == brush_t::median_circle)
+                    ||  (brush == brush_t::median_square)
+                    ||  (brush == brush_t::mean_circle)
+                    ||  (brush == brush_t::mean_square) ){
+                        if( (std::abs(plane_dist_R0) <= cit->pxl_dz * 0.5)
+                        ||  (std::abs(plane_dist_R1) <= cit->pxl_dz * 0.5) ){
+                            return true;
+                        }
+
+                    // 3D brushes.
+                    }else if( (brush == brush_t::rigid_sphere)
+                          ||  (brush == brush_t::rigid_cube) 
+                          ||  (brush == brush_t::median_sphere) 
+                          ||  (brush == brush_t::median_cube)
+                          ||  (brush == brush_t::mean_sphere) 
+                          ||  (brush == brush_t::mean_cube) ){
+                        if( (std::abs(plane_dist_R0) <= radius)
+                        ||  (std::abs(plane_dist_R1) <= radius) ){
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            };
+            if(!img_is_relevant()) continue;
+
+            // Compute pixel-space axis-aligned bounding box to reduce overall computation.
+            //
+            // Process relevant images.
+            const auto [row_min, row_max, col_min, col_max] = get_pixelspace_axis_aligned_bounding_box(*cit, verts, buffer_space);
+            for(long int r = row_min; r <= row_max; ++r){
+                for(long int c = col_min; c <= col_max; ++c){
+                    const auto pos = cit->position(r,c);
+                    vec3<double> closest;
+                    {
+                        double closest_dist = 1E99;
+                        for(const auto &l : lss){
+                            const auto closest_l = l.Closest_Point_To(pos);
+                            const auto dist = closest_l.distance(pos);
+                            if(dist < closest_dist){
+                                closest = closest_l;
+                                closest_dist = dist;
+                            }
+                        }
+                    }
+
+                    const auto dR = closest.distance(pos);
+                    if( (brush == brush_t::rigid_circle)
+                    ||  (brush == brush_t::rigid_sphere)
+                    ||  (brush == brush_t::median_circle)
+                    ||  (brush == brush_t::mean_circle)
+                    ||  (brush == brush_t::median_sphere)
+                    ||  (brush == brush_t::mean_sphere) ){
+                        if(radius < dR ) continue;
+
+                    }else if( (brush == brush_t::rigid_square)
+                          ||  (brush == brush_t::median_square)
+                          ||  (brush == brush_t::mean_square) ){
+                        if( (radius < std::abs((closest - pos).Dot(cit->row_unit)))
+                        ||  (radius < std::abs((closest - pos).Dot(cit->col_unit))) ) continue;
+
+                    }else if( (brush == brush_t::median_cube)
+                          ||  (brush == brush_t::rigid_cube)
+                          ||  (brush == brush_t::mean_cube) ){
+                        if( (radius < std::abs((closest - pos).Dot(cit->row_unit)))
+                        ||  (radius < std::abs((closest - pos).Dot(cit->col_unit)))
+                        ||  (radius < std::abs((closest - pos).Dot(cit->row_unit.Cross(cit->col_unit)))) ) continue;
+
+                    }else if(brush == brush_t::gaussian){
+                        if(radius * 5.0 < dR ) continue;
+                    }
+
+                    cit->reference( r, c, channel ) = std::clamp(f(pos, dR, cit->value(r, c, channel)), intensity_min, intensity_max);
+                }
+            }
+        }
+    };
+
+
+    if( (brush == brush_t::rigid_circle)
+    ||  (brush == brush_t::rigid_square) ){
+        for(const auto &img_it : img_its){
+            apply_to_inner_pixels({img_it}, [intensity](const vec3<double> &, double, float) -> float {
+                return intensity;
+            });
+        }
+
+    }else if(brush == brush_t::gaussian){
+        for(const auto &img_it : img_its){
+            apply_to_inner_pixels({img_it}, [radius,intensity](const vec3<double> &, double dR, float v) -> float {
+                return v + intensity * std::exp( -std::pow(dR / (0.5 * radius), 2.0f) );
+            });
+        }
+
+    }else if( (brush == brush_t::median_circle)
+          ||  (brush == brush_t::median_square) ){
+        for(const auto &img_it : img_its){
+            std::vector<float> vals;
+            apply_to_inner_pixels({img_it}, [&vals](const vec3<double> &, double, float v) -> float {
+                vals.emplace_back(v);
+                return v;
+            });
+            const auto median = Stats::Median(vals);
+            apply_to_inner_pixels({img_it}, [median](const vec3<double> &, double, float) -> float {
+                return median;
+            });
+        }
+
+    }else if( (brush == brush_t::mean_circle)
+          ||  (brush == brush_t::mean_square) ){
+        for(const auto &img_it : img_its){
+            std::vector<float> vals;
+            apply_to_inner_pixels({img_it}, [&vals](const vec3<double> &, double, float v) -> float {
+                vals.emplace_back(v);
+                return v;
+            });
+            const auto mean = Stats::Mean(vals);
+            apply_to_inner_pixels({img_it}, [mean](const vec3<double> &, double, float) -> float {
+                return mean;
+            });
+        }
+
+    // 3D brushes.
+    }else if( (brush == brush_t::rigid_sphere)
+          ||  (brush == brush_t::rigid_cube) ){
+        apply_to_inner_pixels(img_its, [intensity](const vec3<double> &, double, float) -> float {
+            return intensity;
+        });
+
+    }else if( (brush == brush_t::median_sphere)
+          ||  (brush == brush_t::median_cube) ){
+        std::vector<float> vals;
+        for(const auto &img_it : img_its){
+            apply_to_inner_pixels({img_it}, [&vals](const vec3<double> &, double, float v) -> float {
+                vals.emplace_back(v);
+                return v;
+            });
+        }
+        const auto median = Stats::Median(vals);
+        apply_to_inner_pixels(img_its, [median](const vec3<double> &, double, float) -> float {
+            return median;
+        });
+
+    }else if( (brush == brush_t::mean_sphere)
+          ||  (brush == brush_t::mean_cube) ){
+        std::vector<float> vals;
+        for(const auto &img_it : img_its){
+            apply_to_inner_pixels({img_it}, [&vals](const vec3<double> &, double, float v) -> float {
+                vals.emplace_back(v);
+                return v;
+            });
+        }
+        const auto mean = Stats::Mean(vals);
+        apply_to_inner_pixels(img_its, [mean](const vec3<double> &, double, float) -> float {
+            return mean;
+        });
+    }
+
+    return;
+}
 
 OperationDoc OpArgDocSDL_Viewer(){
     OperationDoc out;
@@ -110,6 +407,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     struct View_Toggles {
         bool set_about_popup = false;
+        bool view_imgui_demo = false;
+        bool view_implot_demo = false;
         bool view_metrics_window = false;
         bool open_files_enabled = false;
         bool view_images_enabled = true;
@@ -119,8 +418,11 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_plots_metadata = true;
         bool view_contours_enabled = true;
         bool view_contouring_enabled = false;
+        bool view_contouring_debug = false;
+        bool view_drawing_enabled = false;
         bool view_row_column_profiles = false;
         bool view_time_profiles = false;
+        bool save_time_profiles = false;
         bool view_script_editor_enabled = false;
         bool view_script_feedback = true;
         bool show_image_hover_tooltips = true;
@@ -247,6 +549,19 @@ bool SDL_Viewer(Drover &DICOM_data,
     samples_1D<double> row_profile;
     samples_1D<double> col_profile;
     samples_1D<double> time_profile;
+
+    enum class time_course_image_inclusivity_t {
+        current,  // Spatially overlapping pixels from within only the current image array.
+        all,      // Spatially overlapping pixels from within any image array.
+    } time_course_image_inclusivity = time_course_image_inclusivity_t::current;
+    bool time_course_abscissa_relative = false;
+    std::array<char, 1024> time_course_abscissa_key;
+    string_to_array(time_course_abscissa_key, "ContentTime");
+    std::array<char, 1024> time_course_text_entry;
+    string_to_array(time_course_text_entry, "");
+
+    std::array<char, 1024> metadata_text_entry;
+    string_to_array(metadata_text_entry, "");
 
     // --------------------------------------------- Setup ------------------------------------------------
 #ifndef CHECK_FOR_GL_ERRORS
@@ -382,17 +697,9 @@ bool SDL_Viewer(Drover &DICOM_data,
     bool contouring_img_altered = false;
     float contouring_reach = 10.0;
     float contouring_margin = 1.0;
+    float contouring_intensity = 1.0;
     std::string contouring_method = "marching-squares";
-    enum class brushes {
-        // 2D brushes.
-        rigid_circle,
-        rigid_square,
-        gaussian,
-
-        // 3D brushes.
-        rigid_sphere,
-    };
-    brushes contouring_brush = brushes::rigid_circle;
+    brush_t contouring_brush = brush_t::rigid_circle;
     float last_mouse_button_0_down = 1E30;
     float last_mouse_button_1_down = 1E30;
     std::optional<vec3<double>> last_mouse_button_pos;
@@ -412,6 +719,48 @@ bool SDL_Viewer(Drover &DICOM_data,
             // Reset the contouring images.
             contouring_imgs.image_data.back()->imagecoll.images.clear();
             for(const auto& dimg : (*dimg_array_ptr_it)->imagecoll.images){
+                if((dimg.rows < 1) || (dimg.columns < 1)) continue;
+
+                // Only add this slice if it fails to overlap spatially with any existing images.
+                //const auto ortho_offset = dimg.row_unit.Cross( dimg.col_unit ).unit() * dimg.pxl_dz * 0.25;
+                //const auto centre = dimg.center();
+                //const std::list<vec3<double>> points = { centre,
+                //                                         centre + ortho_offset,
+                //                                         centre - ortho_offset,
+                //                                         dimg.position(0,0),
+                //                                         dimg.position(0,0) + ortho_offset,
+                //                                         dimg.position(0,0) - ortho_offset,
+                //                                         dimg.position(dimg.rows-1,0),
+                //                                         dimg.position(dimg.rows-1,0) + ortho_offset,
+                //                                         dimg.position(dimg.rows-1,0) - ortho_offset,
+                //                                         dimg.position(dimg.rows-1,dimg.columns-1),
+                //                                         dimg.position(dimg.rows-1,dimg.columns-1) + ortho_offset,
+                //                                         dimg.position(dimg.rows-1,dimg.columns-1) - ortho_offset,
+                //                                         dimg.position(0,dimg.columns-1),
+                //                                         dimg.position(0,dimg.columns-1) + ortho_offset,
+                //                                         dimg.position(0,dimg.columns-1) - ortho_offset };
+                //const auto encompassing_images = contouring_imgs.image_data.back()->imagecoll.get_images_which_encompass_all_points(points);
+                //if(!encompassing_images.empty()) continue;
+
+                const auto centre = dimg.center();
+                const auto A_corners = dimg.corners2D();
+                auto encompassing_images = contouring_imgs.image_data.back()->imagecoll.get_images_which_sandwich_point_within_top_bottom_planes( centre );
+                encompassing_images.remove_if([&](const decltype(contouring_imgs.image_data.back()->imagecoll.get_all_images().front()) &img_it){
+                    const auto B_corners = img_it->corners2D();
+
+                    //Fixed corner-to-corner distance.
+                    double dist = 0.0;
+                    for(auto A_it = std::begin(A_corners), B_it = std::begin(B_corners);
+                        (A_it != std::end(A_corners)) && (B_it != std::end(B_corners)); ){
+                        dist += A_it->sq_dist(*B_it);
+                        ++A_it;
+                        ++B_it;
+                    }
+                    return (std::min(dimg.pxl_dx, dimg.pxl_dy) < dist);
+                });
+                if(!encompassing_images.empty()) continue;
+
+                // Add this image to the list of spatially-distinct images.
                 contouring_imgs.image_data.back()->imagecoll.images.emplace_back();
                 const auto cimg_ptr = &(contouring_imgs.image_data.back()->imagecoll.images.back());
 
@@ -432,6 +781,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             // Reset any existing contours.
             contouring_imgs.Ensure_Contour_Data_Allocated();
             contouring_imgs.contour_data->ccs.clear();
+            FUNCINFO("Reset contouring state with " << contouring_imgs.image_data.back()->imagecoll.images.size() << " images");
 
             return;
     };
@@ -665,30 +1015,68 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // Recompute image array and image iterators for the current contouring image.
     const auto recompute_cimage_iters = [ &contouring_imgs,
-                                          &img_num ](){
+                                          &recompute_image_iters ](){
         std::tuple<bool, img_array_ptr_it_t, disp_img_it_t > out;
         std::get<bool>( out ) = false;
-        const long int img_array_num = 0;
+        const long int cimg_array_num = 0; // (Currently only support one image array, but would be useful to support multiple...)
 
         // Set the current image array and image iters and load the texture.
-        const auto has_images = contouring_imgs.Has_Image_Data();
+        const auto has_cimages = contouring_imgs.Has_Image_Data();
+        auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
         do{ 
-            if( !has_images ) break;
-            if( !isininc(1, img_array_num+1, contouring_imgs.image_data.size()) ) break;
-            auto img_array_ptr_it = std::next(contouring_imgs.image_data.begin(), img_array_num);
-            if( img_array_ptr_it == std::end(contouring_imgs.image_data) ) break;
-
-            if( !isininc(1, img_num+1, (*img_array_ptr_it)->imagecoll.images.size()) ) break;
-            auto disp_img_it = std::next((*img_array_ptr_it)->imagecoll.images.begin(), img_num);
-            if( disp_img_it == std::end((*img_array_ptr_it)->imagecoll.images) ) break;
+            if( !has_cimages ) break;
+            if( !img_valid ) break;
+            if(  contouring_imgs.image_data.size() != 1 ) throw std::logic_error("Multiple contouring image arrays not supported");
+            if( !isininc(1, cimg_array_num+1, contouring_imgs.image_data.size()) ) break;
+            auto cimg_array_ptr_it = std::next(contouring_imgs.image_data.begin(), cimg_array_num);
+            if( cimg_array_ptr_it == std::end(contouring_imgs.image_data) ) break;
 
             if( (disp_img_it->channels <= 0)
             ||  (disp_img_it->rows <= 0)
             ||  (disp_img_it->columns <= 0) ) break;
 
+            // Find the spatially-overlapping image.
+            //const auto ortho_offset = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit() * disp_img_it->pxl_dz * 0.25;
+            //const std::list<vec3<double>> points = { centre,
+            //                                         centre + ortho_offset,
+            //                                         centre - ortho_offset,
+            //                                         disp_img_it->position(0,0),
+            //                                         disp_img_it->position(0,0) + ortho_offset,
+            //                                         disp_img_it->position(0,0) - ortho_offset,
+            //                                         disp_img_it->position(disp_img_it->rows-1,0),
+            //                                         disp_img_it->position(disp_img_it->rows-1,0) + ortho_offset,
+            //                                         disp_img_it->position(disp_img_it->rows-1,0) - ortho_offset,
+            //                                         disp_img_it->position(disp_img_it->rows-1,disp_img_it->columns-1),
+            //                                         disp_img_it->position(disp_img_it->rows-1,disp_img_it->columns-1) + ortho_offset,
+            //                                         disp_img_it->position(disp_img_it->rows-1,disp_img_it->columns-1) - ortho_offset,
+            //                                         disp_img_it->position(0,disp_img_it->columns-1),
+            //                                         disp_img_it->position(0,disp_img_it->columns-1) + ortho_offset,
+            //                                         disp_img_it->position(0,disp_img_it->columns-1) - ortho_offset };
+            //auto encompassing_images = (*cimg_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
+
+            //auto encompassing_images = (*cimg_array_ptr_it)->imagecoll.get_images_which_encompass_point( disp_img_it->center() );
+
+            const auto centre = disp_img_it->center();
+            const auto A_corners = disp_img_it->corners2D();
+            auto encompassing_images = (*cimg_array_ptr_it)->imagecoll.get_images_which_sandwich_point_within_top_bottom_planes( centre );
+            encompassing_images.remove_if([&](const decltype((*cimg_array_ptr_it)->imagecoll.get_all_images().front()) &img_it){
+                const auto B_corners = img_it->corners2D();
+
+                //Fixed corner-to-corner distance.
+                double dist = 0.0;
+                for(auto A_it = std::begin(A_corners), B_it = std::begin(B_corners);
+                    (A_it != std::end(A_corners)) && (B_it != std::end(B_corners)); ){
+                    dist += A_it->sq_dist(*B_it);
+                    ++A_it;
+                    ++B_it;
+                }
+                return (std::min(disp_img_it->pxl_dx, disp_img_it->pxl_dy) < dist);
+            });
+            if(encompassing_images.size() != 1) break;
+
             std::get<bool>( out ) = true;
-            std::get<img_array_ptr_it_t>( out ) = img_array_ptr_it;
-            std::get<disp_img_it_t>( out ) = disp_img_it;
+            std::get<img_array_ptr_it_t>( out ) = cimg_array_ptr_it;
+            std::get<disp_img_it_t>( out ) = encompassing_images.front();
         }while(false);
         return out;
     };
@@ -749,9 +1137,9 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     const auto recompute_scale_bar_image_state = [ &scale_bar_img,
                                                    &scale_bar_texture,
-                                                   &recompute_cimage_iters,
+                                                   &recompute_image_iters,
                                                    &Load_OpenGL_Texture ](){
-        auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_cimage_iters();
+        auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
         if( img_valid ){ 
             scale_bar_texture = Load_OpenGL_Texture( scale_bar_img, {}, {} );
         }
@@ -1101,6 +1489,88 @@ bool SDL_Viewer(Drover &DICOM_data,
         return;
     };
 
+    const auto execute_script = [ &launch_contour_preprocessor,
+                                  &preprocessed_contour_mutex,
+                                  &terminate_contour_preprocessors,
+                                  &clear_preprocessed_contours,
+                                  &tagged_pos,
+
+                                  &drover_mutex,
+                                  &DICOM_data,
+                                  &InvocationMetadata,
+                                  &FilenameLex,
+
+                                  &recompute_image_state,
+                                  &recompute_image_iters,
+                                  &reset_contouring_state,
+
+                                  &wq,
+                                  &script_mutex,
+                                  &script_files,
+                                  &script_epoch ]( const std::string &s,
+                                                   std::list<script_feedback_t> &f ) -> bool {
+
+        std::stringstream ss( s );
+        f.clear();
+        std::list<OperationArgPkg> op_list;
+        const auto res = Load_DCMA_Script( ss, f, op_list );
+        if(!res){
+            //script_files.at(active_script_file).feedback.emplace_back();
+            f.back().message = "Compilation failed";
+
+        }else{
+            const auto l_script_epoch = script_epoch.fetch_add(1) + 1;
+
+            // Submit the work to the worker thread.
+            const auto worker = [&,l_script_epoch,op_list](){
+                // Check if this task should be abandoned.
+                if(script_epoch.load() != l_script_epoch){
+                    FUNCINFO("Abandoning run due to potentially conflicting user activity");
+                    return;
+                }
+
+                std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
+
+                // Preemptively destroy any preprocessed contours to avoid dangling references.
+                std::unique_lock<std::shared_mutex> ppc_lock(preprocessed_contour_mutex);
+                terminate_contour_preprocessors();
+                clear_preprocessed_contours();
+
+                // Only perform a single operation at a time, which results in slightly less mutex contention.
+                bool success = true;
+                for(const auto &op : op_list){
+                    if(!Operation_Dispatcher(DICOM_data,
+                                             InvocationMetadata,
+                                             FilenameLex,
+                                             {op})){
+                        success = false;
+                        break;
+                    }
+                }
+                if(!success){
+                    // Report the failure to the user.
+                    //
+                    // TODO: provide graphical feedback!
+                    FUNCWARN("Script execution failed");
+                }
+
+                // Regenerate all Drover state that may have changed.
+                {
+                    recompute_image_state();
+                    auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+                    if( img_valid ){
+                        launch_contour_preprocessor();
+                        reset_contouring_state(img_array_ptr_it);
+                    }
+                    tagged_pos = {};
+                }
+                return;
+            };
+            wq.submit_task( worker ); // Offload to waiting worker thread.
+        }
+        return res;
+    };
+
     // Contour and image display state.
     std::map<std::string, bool> contour_enabled;
     std::map<std::string, bool> contour_hovered;
@@ -1146,8 +1616,15 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         // Build a frame using ImGui.
         ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplSDL2_NewFrame(window);
+        ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
+
+        if(view_toggles.view_imgui_demo){
+            ImGui::ShowDemoWindow(&view_toggles.view_imgui_demo);
+        }
+        if(view_toggles.view_implot_demo){
+            ImPlot::ShowDemoWindow(&view_toggles.view_implot_demo);
+        }
 
         // Reload the image texture. Needs to be done by the main thread.
         const auto reload_image_texture = [&drover_mutex,
@@ -1178,19 +1655,20 @@ bool SDL_Viewer(Drover &DICOM_data,
             reload_image_texture();
         }
 
-// Contouring -- mask debugging / visualization.
-if(false){
+        // Contouring -- mask debugging / visualization.
+        if(view_toggles.view_contouring_debug){
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
             auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
             if(cimg_valid){
                 ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
                 ImGui::SetNextWindowPos(ImVec2(700, 40), ImGuiCond_FirstUseEver);
-                ImGui::Begin("Images2", &view_toggles.view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
+                ImGui::Begin("Contour Mask Debugging", &view_toggles.view_contouring_debug, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
                 auto contouring_texture = Load_OpenGL_Texture( *cimg_it, {}, {} );
                 auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(contouring_texture.texture_number));
                 ImGui::Image(gl_tex_ptr, ImVec2(600,600), uv_min, uv_max);
                 ImGui::End();
             }
-}
+        }
 
         // Display the main menu bar, which should always be visible.
         const auto display_main_menu_bar = [&view_toggles,
@@ -1207,6 +1685,7 @@ if(false){
                                             &active_script_file,
                                             &script_epoch,
                                             &append_to_script,
+                                            &execute_script,
 
                                             &lsamps_visible,
                                             &row_profile,
@@ -1236,7 +1715,12 @@ if(false){
                         if(view_toggles.view_contours_enabled) launch_contour_preprocessor();
                     }
                     if(ImGui::MenuItem("Contouring", nullptr, &view_toggles.view_contouring_enabled)){
+                        view_toggles.view_drawing_enabled = false;
                         contouring_img_altered = true;
+                        tagged_pos = {};
+                    }
+                    if(ImGui::MenuItem("Drawing", nullptr, &view_toggles.view_drawing_enabled)){
+                        view_toggles.view_contouring_enabled = false;
                         tagged_pos = {};
                     }
                     ImGui::MenuItem("Image Metadata", nullptr, &view_toggles.view_image_metadata_enabled);
@@ -1353,6 +1837,50 @@ if(false){
                         }
                         ImGui::EndMenu();
                     }
+                    if(ImGui::BeginMenu("Load Script")){
+                        for(const auto &sscript : Standard_Scripts()){
+                            if(ImGui::MenuItem(sscript.name.c_str())){
+                                std::unique_lock<std::shared_mutex> script_lock(script_mutex);
+                                auto N_sfs = static_cast<long int>(script_files.size());
+                                script_files.emplace_back();
+                                script_files.back().altered = false;
+                                script_files.back().path = sscript.name;
+                                script_files.back().content.clear();
+                                append_to_script(script_files.back().content, sscript.text);
+                                script_files.back().content.emplace_back('\0');
+                                active_script_file = N_sfs;
+                                ++N_sfs;
+                                view_toggles.view_script_editor_enabled = true;
+                            }
+                            if(ImGui::IsItemHovered()){
+                                ImGui::SetNextWindowSizeConstraints(ImVec2(600.0, -1), ImVec2(500.0, -1));
+                                ImGui::BeginTooltip();
+                                ImGui::TextWrapped("%s", sscript.text.c_str());
+                                ImGui::EndTooltip();
+                            }
+                        }
+                        ImGui::EndMenu();
+                    }
+                    ImGui::EndMenu();
+                }
+
+                if(ImGui::BeginMenu("Actions")){
+                    for(const auto &sscript : Standard_Scripts()){
+                        if(ImGui::MenuItem(sscript.name.c_str())){
+                            std::list<script_feedback_t> feedback;
+                            if(!execute_script(sscript.text, feedback)){
+                                FUNCWARN("Script execution failed");
+                                // TODO: provide feedback to user here...
+                            }
+                        }
+                        if(ImGui::IsItemHovered()){
+                            ImGui::SetNextWindowSizeConstraints(ImVec2(600.0, -1), ImVec2(500.0, -1));
+                            ImGui::BeginTooltip();
+                            ImGui::TextWrapped("%s", sscript.text.c_str());
+                            ImGui::EndTooltip();
+                        }
+
+                    }
                     ImGui::EndMenu();
                 }
 
@@ -1414,6 +1942,7 @@ if(false){
                                             &active_script_file,
                                             &script_epoch,
                                             &append_to_script,
+                                            &execute_script,
 
                                             &drover_mutex,
                                             &DICOM_data,
@@ -1536,11 +2065,7 @@ script_files.back().content.emplace_back('\0');
                         if( script_files.at(active_script_file).path.empty() ){
                             try{
                                 const auto open_file_root_str = std::filesystem::absolute(open_file_root / "script.txt").string();
-                                for(size_t i = 0; (i < open_file_root_str.size()) && ((i+1) < root_entry_text.size()); ++i){
-                                    root_entry_text[i] = open_file_root_str[i];
-                                    root_entry_text[i+1] = '\0';
-                                }
-
+                                string_to_array(root_entry_text, open_file_root_str);
                                 ImGui::OpenPopup("Save Script Filename Picker");
                             }catch(const std::exception &e){ };
                         }
@@ -1571,65 +2096,11 @@ script_files.back().content.emplace_back('\0');
                 if(ImGui::Button("Run", ImVec2(window_extent.x/4, 0))){ 
                     if( (N_sfs != 0) 
                     &&  isininc(0, active_script_file, N_sfs-1)){
-                        std::stringstream ss( std::string( std::begin(script_files.at(active_script_file).content),
-                                                           std::end(script_files.at(active_script_file).content) ) );
                         script_files.at(active_script_file).feedback.clear();
-                        std::list<OperationArgPkg> op_list;
-                        const auto res = Load_DCMA_Script( ss, script_files.at(active_script_file).feedback, op_list );
-                        if(!res){
-                            //script_files.at(active_script_file).feedback.emplace_back();
-                            script_files.at(active_script_file).feedback.back().message = "Compilation failed";
-                            view_toggles.view_script_feedback = true;
-
-                        }else{
-                            // Submit the work to the worker thread.
-                            const auto l_script_epoch = script_epoch.fetch_add(1) + 1;
-                            const auto worker = [&,l_script_epoch,op_list](){
-                                // Check if this task should be abandoned.
-                                if(script_epoch.load() != l_script_epoch){
-                                    FUNCINFO("Abandoning run due to user activity");
-                                    return;
-                                }
-
-                                std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
-
-                                // Preemptively destroy any preprocessed contours to avoid dangling references.
-                                std::unique_lock<std::shared_mutex> ppc_lock(preprocessed_contour_mutex);
-                                terminate_contour_preprocessors();
-                                clear_preprocessed_contours();
-
-                                // Only perform a single operation at a time, which results in slightly less mutex contention.
-                                bool success = true;
-                                for(const auto &op : op_list){
-                                    if(!Operation_Dispatcher(DICOM_data,
-                                                             InvocationMetadata,
-                                                             FilenameLex,
-                                                             {op})){
-                                        success = false;
-                                        break;
-                                    }
-                                }
-                                if(!success){
-                                    // Report the failure to the user.
-                                    //
-                                    // TODO: provide graphical feedback!
-                                    FUNCWARN("Script execution failed");
-                                }
-
-                                // Regenerate all Drover state that may have changed.
-                                {
-                                    recompute_image_state();
-                                    auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
-                                    if( img_valid ){
-                                        launch_contour_preprocessor();
-                                        reset_contouring_state(img_array_ptr_it);
-                                    }
-                                    tagged_pos = {};
-                                }
-                                return;
-                            };
-                            wq.submit_task( worker ); // Offload to waiting worker thread.
-                        }
+                        const bool res = execute_script( std::string( std::begin(script_files.at(active_script_file).content),
+                                                                      std::end(script_files.at(active_script_file).content) ),
+                                                    script_files.at(active_script_file).feedback );
+                        if(!res) view_toggles.view_script_feedback = true;
                     }
                 }
 
@@ -1889,6 +2360,7 @@ script_files.back().content.emplace_back('\0');
                                            &contouring_reach,
                                            &contouring_brush,
                                            &contouring_margin,
+                                           &contouring_intensity,
                                            &contouring_img_row_col_count,
                                            &new_contour_name,
                                            &save_contour_buffer,
@@ -1900,6 +2372,7 @@ script_files.back().content.emplace_back('\0');
                                            &last_mouse_button_1_down,
                                            &last_mouse_button_pos,
                                            &reset_contouring_state,
+                                           &need_to_reload_opengl_texture,
                                            &editing_contour_colour,
                                            &pos_contour_colour,
                                            &neg_contour_colour,
@@ -1907,6 +2380,11 @@ script_files.back().content.emplace_back('\0');
                                            &row_profile,
                                            &col_profile,
                                            &time_profile,
+                                           &time_course_abscissa_key,
+                                           &time_course_image_inclusivity,
+                                           &time_course_abscissa_relative,
+
+                                           &metadata_text_entry,
 
                                            &frame_count ]() -> void {
 
@@ -1951,8 +2429,22 @@ script_files.back().content.emplace_back('\0');
             if( !view_toggles.view_images_enabled
             ||  !img_valid ) return;
 
+            //We have three distinct coordinate systems: DICOM, pixel coordinates and screen pixel coordinates,
+            // and SFML 'world' coordinates. We need to map from the DICOM coordinates to screen pixel coords.
+            //
+            //Get a DICOM-coordinate bounding box for the image.
+            const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->rows;
+            const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->columns; 
+            const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
+                                    - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
+                                    - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
+            //const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
+            //const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
+            const auto img_plane = disp_img_it->image_plane();
+
             // Continue now that we have an exclusive lock.
             ImGui::Begin("Images", &view_toggles.view_images_enabled);
+            ImDrawList *imgs_window_draw_list = ImGui::GetWindowDrawList();
 
             // Calculate mouse positions if the mouse is hovering the image.
             if( image_mouse_pos.mouse_hovering_image ){
@@ -1989,15 +2481,13 @@ script_files.back().content.emplace_back('\0');
 
             // Display a visual cue of the tagged position.
             if( tagged_pos ){
-                ImDrawList *drawList = ImGui::GetWindowDrawList();
-
                 const auto box_radius = 3.0f;
                 const auto c = ImColor(1.0f, 0.2f, 0.2f, 1.0f);
 
                 ImVec2 p1 = image_mouse_pos.DICOM_to_pixels(tagged_pos.value());
                 ImVec2 ul1( p1.x - box_radius, p1.y - box_radius );
                 ImVec2 lr1( p1.x + box_radius, p1.y + box_radius );
-                drawList->AddRect(ul1, lr1, c);
+                imgs_window_draw_list->AddRect(ul1, lr1, c);
 
                 if( image_mouse_pos.mouse_hovering_image ){
                     ImVec2 p2 = io.MousePos;
@@ -2014,12 +2504,12 @@ script_files.back().content.emplace_back('\0');
                     }
                     ImVec2 ul2( p2.x - box_radius, p2.y - box_radius );
                     ImVec2 lr2( p2.x + box_radius, p2.y + box_radius );
-                    drawList->AddRect(ul2, lr2, c);
+                    imgs_window_draw_list->AddRect(ul2, lr2, c);
 
                     // Connect the boxes with a line if both are contained within the same image volume.
                     if( disp_img_it->sandwiches_point_within_top_bottom_planes(tagged_pos.value())
                     &&  disp_img_it->sandwiches_point_within_top_bottom_planes(image_mouse_pos.dicom_pos) ){
-                        drawList->AddLine(p1, p2, c);
+                        imgs_window_draw_list->AddLine(p1, p2, c);
                     }
                 }
             }
@@ -2027,7 +2517,7 @@ script_files.back().content.emplace_back('\0');
             // Display a contour legend.
             if( view_toggles.view_contours_enabled
             &&  (DICOM_data.contour_data != nullptr) ){
-                ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowSize(ImVec2(510, 500), ImGuiCond_FirstUseEver);
                 ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_FirstUseEver);
                 ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
                 ImGui::Begin("Contours", &view_toggles.view_contours_enabled);
@@ -2105,6 +2595,38 @@ script_files.back().content.emplace_back('\0');
                     }else{
                         ImGui::Text("%s", ROIName.c_str());
                     }
+                    // Display (read-only) metadata when hovering.
+                    if( ImGui::IsItemHovered() 
+                    &&  view_toggles.view_plots_metadata ){
+                        ImGui::SetNextWindowSize(ImVec2(600, -1));
+                        ImGui::BeginTooltip();
+                        ImGui::Text("Shared Contour Metadata");
+                        ImGui::Columns(2, "Plot Metadata", true);
+                        ImGui::Separator();
+                        ImGui::Text("Key"); ImGui::NextColumn();
+                        ImGui::Text("Value"); ImGui::NextColumn();
+                        ImGui::Separator();
+
+                        // Extract common metadata for all like-named contours.
+                        const auto regex_escaped_ROIName = [&](){
+                            std::string out;
+                            for(const auto &c : ROIName) out += "["_s + c + "]";
+                            return out;
+                        }();
+                        auto cc_all = All_CCs( DICOM_data );
+                        auto cc_ROIs = Whitelist( cc_all, { { "ROIName", regex_escaped_ROIName } });
+                        metadata_multimap_t shared_metadata;
+                        for(auto &cc_refw : cc_ROIs){
+                            for(auto &c : cc_refw.get().contours){
+                                combine_distinct(shared_metadata, c.metadata);
+                            }
+                        }
+                        for(const auto& [key, val] : singular_keys(shared_metadata)){
+                            ImGui::Text("%s", key.c_str()); ImGui::NextColumn();
+                            ImGui::Text("%s", val.c_str()); ImGui::NextColumn();
+                        }
+                        ImGui::EndTooltip();
+                    }
                 }
 
                 if(altered){
@@ -2118,20 +2640,6 @@ script_files.back().content.emplace_back('\0');
             //Draw any contours that lie in the plane of the current image.
             if( view_toggles.view_contours_enabled
             &&  (DICOM_data.contour_data != nullptr) ){
-                ImDrawList *drawList = ImGui::GetWindowDrawList();
-
-                //We have three distinct coordinate systems: DICOM, pixel coordinates and screen pixel coordinates,
-                // and SFML 'world' coordinates. We need to map from the DICOM coordinates to screen pixel coords.
-
-                //Get a DICOM-coordinate bounding box for the image.
-                const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->rows;
-                const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->columns; 
-                const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
-                                        - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
-                                        - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
-                //const auto img_top_right = img_top_left + disp_img_it->row_unit * img_dicom_width;
-                //const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
-                const auto img_plane = disp_img_it->image_plane();
 
                 for(auto &p : contour_hovered) p.second = false;
 
@@ -2141,7 +2649,7 @@ script_files.back().content.emplace_back('\0');
                     if( pc.epoch != current_epoch ) continue;
                     if( !contour_enabled[pc.ROIName] ) continue;
 
-                    drawList->PathClear();
+                    imgs_window_draw_list->PathClear();
                     for(auto & p : pc.contour.points){
                         //Clamp the point to the bounding box, using the top left as zero.
                         const auto dR = p - img_top_left;
@@ -2155,7 +2663,7 @@ script_files.back().content.emplace_back('\0');
                         ImVec2 v;
                         v.x = world_x;
                         v.y = world_y;
-                        drawList->PathLineTo( v );
+                        imgs_window_draw_list->PathLineTo( v );
                     }
 
                     // Check if the mouse if within the contour.
@@ -2166,39 +2674,67 @@ script_files.back().content.emplace_back('\0');
                         if(within_poly) contour_hovered[pc.ROIName] = true;
                     }
                     const bool closed = true;
-                    drawList->PathStroke(pc.colour, closed, thickness);
+                    imgs_window_draw_list->PathStroke(pc.colour, closed, thickness);
                     //AddPolyline(const ImVec2* points, int num_points, ImU32 col, bool closed, float thickness);
                 }
+            }
 
-                // Contouring interface.
-                if( view_toggles.view_contouring_enabled ){
-                    // Provide a visual cue for the contouring brush.
-                    {
-                        const auto pixel_radius = static_cast<float>(contouring_reach) * image_mouse_pos.pixel_scale;
-                        const auto c = ImColor(0.0f, 1.0f, 0.8f, 1.0f);
+            // Contouring and drawing interface.
+            if( view_toggles.view_contouring_enabled
+            ||  view_toggles.view_drawing_enabled ){
+                // Provide a visual cue for the contouring brush.
+                {
+                    const auto pixel_radius = static_cast<float>(contouring_reach) * image_mouse_pos.pixel_scale;
+                    const auto c = ImColor(0.0f, 1.0f, 0.8f, 1.0f);
 
-                        if( (contouring_brush == brushes::rigid_circle)
-                        ||  (contouring_brush == brushes::rigid_sphere)
-                        ||  (contouring_brush == brushes::gaussian) ){
-                            drawList->AddCircle(io.MousePos, pixel_radius, c);
+                    if( (contouring_brush == brush_t::rigid_circle)
+                    ||  (contouring_brush == brush_t::rigid_sphere)
+                    ||  (contouring_brush == brush_t::gaussian)
+                    ||  (contouring_brush == brush_t::median_circle)
+                    ||  (contouring_brush == brush_t::mean_circle)
+                    ||  (contouring_brush == brush_t::median_sphere)
+                    ||  (contouring_brush == brush_t::mean_sphere) ){
+                        imgs_window_draw_list->AddCircle(io.MousePos, pixel_radius, c);
 
-                        }else if(contouring_brush == brushes::rigid_square){
-                            ImVec2 ul( io.MousePos.x - pixel_radius,
-                                       io.MousePos.y - pixel_radius );
-                            ImVec2 lr( io.MousePos.x + pixel_radius,
-                                       io.MousePos.y + pixel_radius );
-                            drawList->AddRect(ul, lr, c);
-                        }
+                    }else if( (contouring_brush == brush_t::rigid_square)
+                          ||  (contouring_brush == brush_t::median_square)
+                          ||  (contouring_brush == brush_t::mean_square)
+                          ||  (contouring_brush == brush_t::rigid_cube)
+                          ||  (contouring_brush == brush_t::median_cube)
+                          ||  (contouring_brush == brush_t::mean_cube) ){
+                        ImVec2 ul( io.MousePos.x - pixel_radius,
+                                   io.MousePos.y - pixel_radius );
+                        ImVec2 lr( io.MousePos.x + pixel_radius,
+                                   io.MousePos.y + pixel_radius );
+                        imgs_window_draw_list->AddRect(ul, lr, c);
                     }
+                }
 
-                    ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_FirstUseEver);
-                    ImGui::SetNextWindowPos(ImVec2(680, 200), ImGuiCond_FirstUseEver);
-                    ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
-                    ImGui::Begin("Contouring", &view_toggles.view_contouring_enabled);
+                ImGui::SetNextWindowSize(ImVec2(510, 650), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(ImVec2(680, 400), ImGuiCond_FirstUseEver);
+                //ImGui::SetNextWindowCollapsed(true, ImGuiCond_FirstUseEver);
+                if(view_toggles.view_drawing_enabled){
+                    ImGui::Begin("Drawing", &view_toggles.view_drawing_enabled, ImGuiWindowFlags_AlwaysAutoResize);
+                    ImGui::Text("Note: this functionality is still under active development.");
 
+                }else if(view_toggles.view_contouring_enabled){
+                    ImGui::Begin("Contouring", &view_toggles.view_contouring_enabled, ImGuiWindowFlags_AlwaysAutoResize);
                     ImGui::Text("Note: this functionality is still under active development.");
                     if(ImGui::Button("Save")){ 
                         ImGui::OpenPopup("Save Contours");
+
+                        // Fully extract contours from the mask images.
+                        contouring_imgs.Ensure_Contour_Data_Allocated();
+                        contouring_imgs.contour_data->ccs.clear();
+
+                        std::list<OperationArgPkg> Operations;
+                        Operations.emplace_back("ContourViaThreshold");
+                        Operations.back().insert("Method="_s + contouring_method);
+                        Operations.back().insert("Lower=0.5");
+                        Operations.back().insert("SimplifyMergeAdjacent=true");
+                        if(!Operation_Dispatcher(contouring_imgs, InvocationMetadata, FilenameLex, Operations)){
+                            FUNCWARN("ContourViaThreshold failed");
+                        }
                     }
                     ImGui::SameLine();
                     if(ImGui::BeginPopupModal("Save Contours", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
@@ -2243,7 +2779,7 @@ script_files.back().content.emplace_back('\0');
                             auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
                             if(cimg_valid){
                                 for(auto& cimg : (*cimg_array_ptr_it)->imagecoll.images){
-                                    cimg.fill_pixels(-1.0f);
+                                    cimg.fill_pixels(0.0f);
                                 }
                             }
                             contouring_imgs.Ensure_Contour_Data_Allocated();
@@ -2259,53 +2795,105 @@ script_files.back().content.emplace_back('\0');
                         }
                         ImGui::EndPopup();
                     }
+                }
 
-                    ImGui::Separator();
-                    ImGui::Text("Brush");
-                    ImGui::DragFloat("Radius (mm)", &contouring_reach, 0.1f, 0.5f, 50.0f);
-                    if(ImGui::Button("Rigid Circle")){
-                        contouring_brush = brushes::rigid_circle;
+                ImGui::Separator();
+                ImGui::Text("Brush");
+                ImGui::DragFloat("Radius (mm)", &contouring_reach, 0.1f, 0.5f, 50.0f);
+                if(view_toggles.view_drawing_enabled){
+                    ImGui::DragFloat("Intensity", &contouring_intensity, 0.1f, -1000.0f, 1000.0f);
+                }else if(view_toggles.view_contouring_enabled){
+                    contouring_intensity = 1.0f;
+                }
+
+                ImGui::Text("2D shapes");
+                if(ImGui::Button("Rigid Circle")){
+                    contouring_brush = brush_t::rigid_circle;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Mean Circle")){
+                    contouring_brush = brush_t::mean_circle;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Median Circle")){
+                    contouring_brush = brush_t::median_circle;
+                }
+
+                if(ImGui::Button("Rigid Square")){
+                    contouring_brush = brush_t::rigid_square;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Mean Square")){
+                    contouring_brush = brush_t::mean_square;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Median Square")){
+                    contouring_brush = brush_t::median_square;
+                }
+
+                if(ImGui::Button("Gaussian")){
+                    contouring_brush = brush_t::gaussian;
+                }
+
+                ImGui::Text("3D shapes");
+                if(ImGui::Button("Rigid Sphere")){
+                    contouring_brush = brush_t::rigid_sphere;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Mean Sphere")){
+                    contouring_brush = brush_t::mean_sphere;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Median Sphere")){
+                    contouring_brush = brush_t::median_sphere;
+                }
+
+                if(ImGui::Button("Rigid Cube")){
+                    contouring_brush = brush_t::rigid_cube;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Mean Cube")){
+                    contouring_brush = brush_t::mean_cube;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Median Cube")){
+                    contouring_brush = brush_t::median_cube;
+                }
+
+                ImGui::Separator();
+                ImGui::Text("Dilation and Erosion");
+                ImGui::DragFloat("Margin (mm)", &contouring_margin, 0.1f, -10.0f, 10.0f);
+                if(ImGui::Button("Apply Margin")){
+                    std::list<OperationArgPkg> Operations;
+                    Operations.emplace_back("ContourWholeImages");
+                    Operations.back().insert("ROILabel=___whole_image");
+
+                    Operations.emplace_back("ReduceNeighbourhood");
+                    Operations.back().insert("ImageSelection=last");
+                    Operations.back().insert("ROILabelRegex=___whole_image");
+                    Operations.back().insert("Neighbourhood=spherical");
+                    
+                    const std::string reduction = (0.0 <= contouring_margin) ? "dilate" : "erode";
+                    const std::string distance = std::to_string( std::abs( contouring_margin ) );
+                    Operations.back().insert("Reduction="_s + reduction);
+                    Operations.back().insert("MaxDistance="_s + distance);
+
+                    Operations.emplace_back("DeleteContours");
+                    Operations.back().insert("ROILabelRegex=___whole_image");
+
+                    Drover *d = (view_toggles.view_contouring_enabled) ? &contouring_imgs : &DICOM_data;
+                    if(!Operation_Dispatcher(*d, InvocationMetadata, FilenameLex, Operations)){
+                        FUNCWARN("Dilation/Erosion failed");
                     }
-                    ImGui::SameLine();
-                    if(ImGui::Button("Rigid Square")){
-                        contouring_brush = brushes::rigid_square;
-                    }
-                    ImGui::SameLine();
-                    if(ImGui::Button("Soft")){
-                        contouring_brush = brushes::gaussian;
-                    }
 
-                    if(ImGui::Button("Rigid Sphere")){
-                        contouring_brush = brushes::rigid_sphere;
-                    }
-
-                    ImGui::Separator();
-                    ImGui::Text("Dilation and Erosion");
-                    ImGui::DragFloat("Margin (mm)", &contouring_margin, 0.1f, -10.0f, 10.0f);
-                    if(ImGui::Button("Apply Margin")){
-                        std::list<OperationArgPkg> Operations;
-                        Operations.emplace_back("ContourWholeImages");
-                        Operations.back().insert("ROILabel=___whole_image");
-
-                        Operations.emplace_back("ReduceNeighbourhood");
-                        Operations.back().insert("ImageSelection=last");
-                        Operations.back().insert("ROILabelRegex=___whole_image");
-                        Operations.back().insert("Neighbourhood=spherical");
-                        
-                        const std::string reduction = (0.0 <= contouring_margin) ? "dilate" : "erode";
-                        const std::string distance = std::to_string( std::abs( contouring_margin ) );
-                        Operations.back().insert("Reduction="_s + reduction);
-                        Operations.back().insert("MaxDistance="_s + distance);
-
-                        Operations.emplace_back("DeleteContours");
-                        Operations.back().insert("ROILabelRegex=___whole_image");
-                        if(!Operation_Dispatcher(contouring_imgs, InvocationMetadata, FilenameLex, Operations)){
-                            FUNCWARN("Dilation/Erosion failed");
-                        }
-
+                    if(view_toggles.view_contouring_enabled){
                         contouring_img_altered = true;
+                    }else if(view_toggles.view_drawing_enabled){
+                        need_to_reload_opengl_texture.store(true);
                     }
+                }
 
+                if(view_toggles.view_contouring_enabled){
                     ImGui::Separator();
                     ImGui::Text("Contour Extraction");
                     if(ImGui::DragInt("Resolution", &contouring_img_row_col_count, 0.1f, 5, 1024)){
@@ -2325,7 +2913,6 @@ script_files.back().content.emplace_back('\0');
                         contouring_method = "binary";
                         contouring_img_altered = true;
                     }
-
 
                     // Regenerate contours from the mask.
                     contouring_imgs.Ensure_Contour_Data_Allocated();
@@ -2352,6 +2939,11 @@ script_files.back().content.emplace_back('\0');
 
                         contouring_imgs.contour_data->ccs.clear();
                         contouring_imgs.Consume( shtl.contour_data );
+//FUNCINFO("Contouring image generated " << contouring_imgs.contour_data->ccs.size() << " contour collections");
+//if(!contouring_imgs.contour_data->ccs.empty()){
+//    FUNCINFO("    First collection contains " << contouring_imgs.contour_data->ccs.front().contours.size() << " contours");
+//}
+
 
                         contouring_img_altered = false;
                     }
@@ -2373,7 +2965,7 @@ script_files.back().content.emplace_back('\0');
                                 if( cop.points.empty() ) continue;
                                 if( !cimg_it->sandwiches_point_within_top_bottom_planes( cop.points.front() ) ) continue;
 
-                                drawList->PathClear();
+                                imgs_window_draw_list->PathClear();
                                 for(auto & p : cop.points){
 
                                     //Clamp the point to the bounding box, using the top left as zero.
@@ -2388,7 +2980,7 @@ script_files.back().content.emplace_back('\0');
                                     ImVec2 v;
                                     v.x = world_x;
                                     v.y = world_y;
-                                    drawList->PathLineTo( v );
+                                    imgs_window_draw_list->PathLineTo( v );
                                 }
 
                                 float thickness = contour_line_thickness;
@@ -2408,13 +3000,13 @@ script_files.back().content.emplace_back('\0');
                                 }
 
                                 const bool closed = true;
-                                drawList->PathStroke( colour, closed, thickness);
+                                imgs_window_draw_list->PathStroke( colour, closed, thickness);
                                 //AddPolyline(const ImVec2* points, int num_points, ImU32 col, bool closed, float thickness);
                             }
                         }
                     }
-                    ImGui::End();
                 }
+                ImGui::End();
             }
 
             // Draw a tooltip with position and voxel intensity information.
@@ -2468,22 +3060,45 @@ script_files.back().content.emplace_back('\0');
             if( image_mouse_pos.mouse_hovering_image
             &&  view_toggles.view_time_profiles ){
                 time_profile.samples.clear();
+                time_profile.metadata.clear();
 
-                //Get a list of images which spatially overlap this point. Order should be maintained.
+                std::string abscissa_key; //As it appears in the metadata. Must convert to a double!
+                array_to_string(abscissa_key, time_course_abscissa_key);
+                const auto meta_key = disp_img_it->GetMetadataValueAs<double>(abscissa_key);
+
+                double n_img = 0.0;
+                const bool sort_on_append = false;
+
                 const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
                 const std::list<vec3<double>> points = { image_mouse_pos.dicom_pos,
                                                          image_mouse_pos.dicom_pos + ortho * disp_img_it->pxl_dz * 0.25,
                                                          image_mouse_pos.dicom_pos - ortho * disp_img_it->pxl_dz * 0.25 };
-                auto encompassing_images = (*img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
+
+                decltype((*img_array_ptr_it)->imagecoll.get_all_images()) selected_imgs;
+                if(time_course_image_inclusivity == time_course_image_inclusivity_t::current){
+                    auto encompassing_images = (*img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
+                    selected_imgs.splice( std::end(selected_imgs), encompassing_images);
+
+                }else if(time_course_image_inclusivity == time_course_image_inclusivity_t::all){
+                    for(const auto &img_arr_ptr : DICOM_data.image_data){
+                        auto encompassing_images = img_arr_ptr->imagecoll.get_images_which_encompass_all_points(points);
+                        selected_imgs.splice( std::end(selected_imgs), encompassing_images);
+                    }
+
+                }else{
+                    throw std::invalid_argument("Unrecognized abscissa inclusisivity");
+                }
+                auto common_metadata = planar_image_collection<float,double>().get_common_metadata(selected_imgs);
+                common_metadata = coalesce_metadata_for_lsamp(common_metadata);
 
                 //Cycle over the images, dumping the ordinate (pixel values) vs abscissa (time) derived from metadata.
-                const bool sort_on_append = false;
+                long int n_current_img = 0;
+                for(const auto &enc_img_it : selected_imgs){
+                    const auto l_meta_key = enc_img_it->GetMetadataValueAs<double>(abscissa_key);
+                    if(l_meta_key.has_value() != meta_key.has_value()) continue;
+                    const auto abscissa = l_meta_key.value_or(n_img);
 
-                //const std::string quantity("dt"); //As it appears in the metadata. Must convert to a double!
-                const std::string quantity("dt"); //As it appears in the metadata. Must convert to a double!
-                double n_img = 0.0;
-                for(const auto &enc_img_it : encompassing_images){
-                    const auto abscissa = enc_img_it->GetMetadataValueAs<double>(quantity).value_or(n_img);
+                    if(std::addressof(*disp_img_it) == std::addressof(*enc_img_it)) n_current_img = n_img;
                     try{
                         const auto val_raw = enc_img_it->value(image_mouse_pos.dicom_pos, 0);
                         if(std::isfinite(val_raw)){
@@ -2494,6 +3109,18 @@ script_files.back().content.emplace_back('\0');
                     }catch(const std::exception &){ }
                     n_img += 1.0;
                 }
+                time_profile.stable_sort();
+                time_profile.metadata = common_metadata;
+                time_profile.metadata["Abscissa"] = (meta_key) ? abscissa_key : "Image Number";
+                time_profile.metadata["CurrentAbscissa"] = (meta_key) ? std::to_string(meta_key.value()) : std::to_string(n_current_img);
+
+                if( time_course_abscissa_relative
+                &&  !time_profile.samples.empty() ){
+                    const auto first_a = time_profile.Get_Extreme_Datum_x().first[0];
+                    time_profile = time_profile.Sum_x_With(-first_a);
+                    apply_as<double>(time_profile.metadata, "CurrentAbscissa",
+                                     [first_a](double x){ return x - first_a; });
+                }
             }
 
             // Metadata window.
@@ -2501,20 +3128,63 @@ script_files.back().content.emplace_back('\0');
                 ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Image Metadata", &view_toggles.view_image_metadata_enabled);
 
-                ImGui::Text("Image Metadata");
-                ImGui::Columns(2);
-                ImGui::Separator();
-                ImGui::Text("Key"); ImGui::NextColumn();
-                ImGui::Text("Value"); ImGui::NextColumn();
-                ImGui::Separator();
 
-                for(const auto &apair : disp_img_it->metadata){
-                    ImGui::Text("%s",  apair.first.c_str());  ImGui::NextColumn();
-                    ImGui::Text("%s",  apair.second.c_str()); ImGui::NextColumn();
+                ImVec2 cell_padding(0.0f, 0.0f);
+                ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, cell_padding);
+                if(ImGui::BeginTable("Image Metadata", 2,   ImGuiTableFlags_Borders
+                                                          | ImGuiTableFlags_RowBg
+                                                          | ImGuiTableFlags_BordersV
+                                                          | ImGuiTableFlags_BordersInner
+                                                          | ImGuiTableFlags_Resizable )){
+
+                    ImGui::TableSetupColumn("Key");
+                    ImGui::TableSetupColumn("Value");
+                    ImGui::TableHeadersRow();
+
+                    int i = 0;
+                    const auto l_metadata = disp_img_it->metadata;
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
+                    for(const auto &apair : l_metadata){
+                        auto key = apair.first;
+                        auto val = apair.second;
+
+                        ImGui::TableNextColumn();
+                        ImGui::SetNextItemWidth(-FLT_MIN);
+                        string_to_array(metadata_text_entry, key);
+                        ImGui::PushID(++i);
+                        const bool key_changed = ImGui::InputText("##key", metadata_text_entry.data(), metadata_text_entry.size());
+                        ImGui::PopID();
+                        // Since key_changed is true whenever any changes have occured, even if the mouse is idling
+                        // after a change, then the following causes havoc by continuously editing the key and messing
+                        // with the ID system. A better system would only implement the change when the focus is lost
+                        // and/or enter is pressed. I'm not sure if there is a simple way to do this at the moment, so
+                        // I'll leave key editing disabled until I figure out a reasonable fix.
+                        //if(key_changed){
+                        //    std::string new_key;
+                        //    array_to_string(new_key, metadata_text_entry);
+                        //    if(new_key != key){
+                        //        disp_img_it->metadata.erase(key);
+                        //        disp_img_it->metadata[new_key] = val;
+                        //        key = new_key;
+                        //    }
+                        //}
+
+                        ImGui::TableNextColumn();
+                        ImGui::SetNextItemWidth(-FLT_MIN);
+                        string_to_array(metadata_text_entry, val);
+                        ImGui::PushID(++i);
+                        const bool val_changed = ImGui::InputText("##val", metadata_text_entry.data(), metadata_text_entry.size());
+                        ImGui::PopID();
+                        if(val_changed){
+                            // Replace key's value with updated value in place.
+                            array_to_string(val, metadata_text_entry);
+                            disp_img_it->metadata[key] = val;
+                        }
+                    }
+                    ImGui::PopStyleColor();
+                    ImGui::EndTable();
                 }
-
-                ImGui::Columns(1);
-                ImGui::Separator();
+                ImGui::PopStyleVar();
 
                 ImGui::End();
             }
@@ -3162,31 +3832,70 @@ script_files.back().content.emplace_back('\0');
 
         // Display time profile.
         const auto display_time_profiles = [&view_toggles,
-                                            &time_profile ]() -> void {
-            if( view_toggles.view_time_profiles 
-            &&  !time_profile.empty() ){
+                                            &time_profile,
+                                            &time_course_abscissa_key,
+                                            &time_course_image_inclusivity,
+                                            &time_course_abscissa_relative ]() -> void {
+            if( view_toggles.view_time_profiles ){
                 ImGui::SetNextWindowSize(ImVec2(600, 350), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Time Profile", &view_toggles.view_time_profiles);
-                ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
-                const int offset = 0;
-                const int stride = sizeof( decltype( time_profile.samples[0] ) );
-
-                if(ImPlot::BeginPlot("Time Profiles",
-                                     nullptr,
-                                     nullptr,
-                                     window_extent,
-                                     ImPlotFlags_AntiAliased,
-                                     ImPlotAxisFlags_AutoFit,
-                                     ImPlotAxisFlags_AutoFit )) {
-                    ImPlot::PlotLine<double>("Time Profile",
-                                             &time_profile.samples[0][0], 
-                                             &time_profile.samples[0][2],
-                                             time_profile.size(),
-                                             offset, stride );
-                    ImPlot::EndPlot();
+                ImGui::Text("Image selection");
+                if(ImGui::Button("Current array only")){
+                    time_course_image_inclusivity = time_course_image_inclusivity_t::current;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("All arrays")){
+                    time_course_image_inclusivity = time_course_image_inclusivity_t::all;
                 }
 
+                ImGui::Text("Abscissa");
+                ImGui::InputText("Metadata key", time_course_abscissa_key.data(), time_course_abscissa_key.size());
+                ImGui::Checkbox("Relative", &time_course_abscissa_relative); 
+
+                if( time_profile.samples.empty() ){
+                    ImGui::Text("No data available for cursor position");
+
+                }else{
+                    const auto abscissa = time_profile.metadata["Abscissa"];
+                    ImVec2 window_extent = ImGui::GetContentRegionAvail();
+
+                    if(ImPlot::BeginPlot("Time Profiles",
+                                         abscissa.c_str(),
+                                         nullptr,
+                                         window_extent,
+                                         ImPlotFlags_AntiAliased,
+                                         ImPlotAxisFlags_AutoFit,
+                                         ImPlotAxisFlags_AutoFit )) {
+                        long int i = 0;
+                        for(auto &tp : { time_profile }){
+                            const int offset = 0;
+                            const int stride = sizeof( decltype( tp.samples[0] ) );
+                            ImPlot::PlotLine<double>(std::string("##time_profile_"_s + std::to_string(i)).c_str(),
+                                                     &tp.samples[0][0], 
+                                                     &tp.samples[0][2],
+                                                     tp.size(),
+                                                     offset, stride );
+
+                            if(auto ca = get_as<double>(tp.metadata,"CurrentAbscissa");
+                               ca && (2 < tp.samples.size()) ){
+                                try{
+                                    const auto s = tp.Interpolate_Linearly(ca.value());
+                                    ImPlot::PushStyleVar(ImPlotStyleVar_FillAlpha, 0.15f);
+                                    ImPlot::PlotScatter<double>(std::string("##current_abscissa_scatter_"_s + std::to_string(i)).c_str(),
+                                                                &s[0], 
+                                                                &s[2],
+                                                                1,
+                                                                offset, stride );
+                                    ImPlot::PopStyleVar();
+                                    ImPlot::PlotVLines(std::string("##current_abscissa_line_"_s + std::to_string(i)).c_str(),&s[0],1);
+                                }catch(const std::exception &){}
+                            }
+                            ++i;
+                        }
+                        ImPlot::EndPlot();
+                    }
+                }
                 ImGui::End();
             }
             return;
@@ -3215,6 +3924,7 @@ script_files.back().content.emplace_back('\0');
                                                &recompute_cimage_iters,
                                                &contouring_img_altered,
                                                &contouring_reach,
+                                               &contouring_intensity,
                                                &last_mouse_button_0_down,
                                                &last_mouse_button_1_down,
                                                &last_mouse_button_pos,
@@ -3225,6 +3935,7 @@ script_files.back().content.emplace_back('\0');
 
                                                &advance_to_image_array,
                                                &recompute_image_state,
+                                               &need_to_reload_opengl_texture,
                                                &launch_contour_preprocessor,
                                                &reset_contouring_state,
                                                &advance_to_image,
@@ -3313,14 +4024,17 @@ script_files.back().content.emplace_back('\0');
                     }else if(io.KeyShift && (io.MouseWheel < 0)){
                         scroll_arrays = std::clamp((scroll_arrays + N_arrays + d_l) % N_arrays, 0, N_arrays - 1);
 
-                    }else if( view_toggles.view_contouring_enabled
-                          &&  cimg_valid
+                    }else if( (   (view_toggles.view_contouring_enabled && cimg_valid)
+                               || (view_toggles.view_drawing_enabled && img_valid) )
                           &&  (0 < IM_ARRAYSIZE(io.MouseDown))
                           &&  (1 < IM_ARRAYSIZE(io.MouseDown))
                           &&  ((0.0f <= io.MouseDownDuration[0]) || (0.0f <= io.MouseDownDuration[1]))
                           &&  image_mouse_pos.mouse_hovering_image ){
                         contouring_img_altered = true;
-                        long int channel = 0;
+                        need_to_reload_opengl_texture.store(true);
+
+                        decltype(disp_img_it) l_img_it = (view_toggles.view_contouring_enabled) ? cimg_it : disp_img_it;
+                        decltype(img_array_ptr_it) l_img_array_ptr_it = (view_toggles.view_contouring_enabled) ? cimg_array_ptr_it : img_array_ptr_it;
 
                         // The mapping between contouring image and display image (which uses physical dimensions) is
                         // based on the relative position along row and column axes.
@@ -3342,7 +4056,7 @@ script_files.back().content.emplace_back('\0');
                             const auto pA = image_mouse_pos.dicom_pos; // Current position.
                             const auto pB = last_mouse_button_pos.value(); // Previous position.
                             // Project along image axes to create a taxi-cab metric corner vertex.
-                            const auto corner = largest_projection(pA, pB, {cimg_it->row_unit, cimg_it->col_unit});
+                            const auto corner = largest_projection(pA, pB, {l_img_it->row_unit, l_img_it->col_unit});
                             lss.emplace_back(pA,corner);
                             lss.emplace_back(corner,pB);
 
@@ -3355,82 +4069,37 @@ script_files.back().content.emplace_back('\0');
                         }else{
                             auto pA = image_mouse_pos.dicom_pos; // Current position.
                             auto pB = pA;
-                            pB.z += cimg_it->pxl_dz * 0.01; // Default offset to avoid degenerate line segment.
+                            pB.z += l_img_it->pxl_dz * 0.01; // Default offset to avoid degenerate line segment.
                             lss.emplace_back(pA,pB);
                         }
 
-                        std::vector<disp_img_it_t> cimg_its;
-                        if( (contouring_brush == brushes::rigid_circle)
-                        ||  (contouring_brush == brushes::rigid_square)
-                        ||  (contouring_brush == brushes::gaussian) ){
-                            // Filter out irrelevant images.
-                            cimg_its.emplace_back( cimg_it );
-                        }else if(contouring_brush == brushes::rigid_sphere){
-                            for(auto cit = std::begin((*cimg_array_ptr_it)->imagecoll.images);
-                                     cit != std::end((*cimg_array_ptr_it)->imagecoll.images); ++cit){
-                                // Pre-filter images that are not within range.
-                                for(const auto& l : lss){
-                                    // This is a dilated line_segment-plane intersection test.
-                                    const auto plane_dist_R0 = cit->image_plane().Get_Signed_Distance_To_Point(l.Get_R0());
-                                    const auto plane_dist_R1 = cit->image_plane().Get_Signed_Distance_To_Point(l.Get_R1());
-                                    if( (std::signbit(plane_dist_R0) != std::signbit(plane_dist_R1))
-                                    ||  (std::abs(plane_dist_R0) <= radius)
-                                    ||  (std::abs(plane_dist_R1) <= radius) ){
-                                        cimg_its.emplace_back( cit );
-                                        break;
-                                    }
-                                }
-                            }
+                        decltype(planar_image_collection<float,double>().get_all_images()) cimg_its;
+                        if( (contouring_brush == brush_t::rigid_circle)
+                        ||  (contouring_brush == brush_t::rigid_square)
+                        ||  (contouring_brush == brush_t::gaussian) 
+                        ||  (contouring_brush == brush_t::median_circle)
+                        ||  (contouring_brush == brush_t::median_square)
+                        ||  (contouring_brush == brush_t::mean_circle)
+                        ||  (contouring_brush == brush_t::mean_square) ){
+                            // TODO: if shift or ctrl are being pressed, include all images that intersect the line
+                            // segment path. This will aply the 2D brush in 3D to all images along the path, which would
+                            // be useful!
+                            cimg_its.emplace_back( l_img_it );
+
+                        }else if( (contouring_brush == brush_t::rigid_sphere)
+                              ||  (contouring_brush == brush_t::mean_sphere)
+                              ||  (contouring_brush == brush_t::median_sphere)
+                              ||  (contouring_brush == brush_t::rigid_cube)
+                              ||  (contouring_brush == brush_t::mean_cube)
+                              ||  (contouring_brush == brush_t::median_cube) ){
+                            cimg_its = (*l_img_array_ptr_it)->imagecoll.get_all_images();
                         }
-
-                        for(auto &cit : cimg_its){
-                            for(long int r = 0; r < cit->rows; ++r){
-                                for(long int c = 0; c < cit->columns; ++c){
-                                    const auto pos = cit->position(r,c);
-                                    vec3<double> closest;
-                                    {
-                                        double closest_dist = 1E99;
-                                        for(const auto &l : lss){
-                                            const auto closest_l = l.Closest_Point_To(pos);
-                                            const auto dist = closest_l.distance(pos);
-                                            if(dist < closest_dist){
-                                                closest = closest_l;
-                                                closest_dist = dist;
-                                            }
-                                        }
-                                    }
-
-                                    const auto dR = closest.distance(pos);
-                                    if( radius * 5.0 < dR ) continue;
-
-                                    float dval = 0.0;
-                                    if( (contouring_brush == brushes::rigid_circle)
-                                    ||  (contouring_brush == brushes::rigid_sphere) ){
-                                        dval = (dR <= radius) ? 2.0 : 0.0;
-
-                                    }else if(contouring_brush == brushes::rigid_square){
-                                        if( (std::abs((closest - pos).Dot(cit->row_unit)) < radius)
-                                        &&  (std::abs((closest - pos).Dot(cit->col_unit)) < radius) ){
-                                            dval = 2.0;
-                                        }
-                                    }else if(contouring_brush == brushes::gaussian){
-                                        // Note: arbitrary scaling constant used here. Should give ~ same as rigid when
-                                        // dragged across the image at a typical pace.
-                                        dval = 2.0 * std::exp( -std::pow(dR / (0.5 * radius), 2.0f) );
-                                    }
-
-                                    if(mouse_button_0){
-                                        // Do nothing.
-                                    }else if(mouse_button_1){
-                                        dval *= -1.0;
-                                    }
-
-                                    float val = cit->value(r, c, channel);
-                                    val = std::clamp(val + dval, -1.0f, 2.0f);
-                                    cit->reference( r, c, channel ) = val;
-                                }
-                            }
-                        }
+                        const float inf = std::numeric_limits<float>::infinity();
+                        const float intensity = contouring_intensity * ((mouse_button_0) ? 1.0f : -1.0f);
+                        const float intensity_min = (view_toggles.view_contouring_enabled) ?  0.0f : -inf;
+                        const float intensity_max = (view_toggles.view_contouring_enabled) ?  1.0f :  inf;
+                        const long int channel = 0;
+                        draw_with_brush( cimg_its, lss, contouring_brush, radius, intensity, channel, intensity_min, intensity_max );
 
                         // Update mouse position for next time, if applicable.
                         if( mouse_button_0 ){
@@ -3442,13 +4111,20 @@ script_files.back().content.emplace_back('\0');
                             last_mouse_button_pos = image_mouse_pos.dicom_pos;
                         }
 
+                    // Left-button mouse click on an image.
                     }else if( image_mouse_pos.mouse_hovering_image
                           &&  (0 < IM_ARRAYSIZE(io.MouseDown))
                           &&  (0.0f == io.MouseDownDuration[0]) ){ // Debounced!
-                          if(!tagged_pos){
-                              tagged_pos = image_mouse_pos.dicom_pos;
+
+                          if(view_toggles.view_time_profiles){
+                              view_toggles.save_time_profiles = true;
+
                           }else{
-                              tagged_pos = {};
+                              if(!tagged_pos){
+                                  tagged_pos = image_mouse_pos.dicom_pos;
+                              }else{
+                                  tagged_pos = {};
+                              }
                           }
 
                     }else if(0 < io.MouseWheel){
@@ -3503,6 +4179,39 @@ script_files.back().content.emplace_back('\0');
         };
         display_image_navigation();
 
+
+        // Saving time courses as line samples.
+        if(view_toggles.save_time_profiles){
+            view_toggles.save_time_profiles = false;
+            string_to_array(time_course_text_entry, "unspecified");
+            ImGui::OpenPopup("Save Time Profile");
+        }
+        if(ImGui::BeginPopupModal("Save Time Profile", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+            do{
+                if(ImGui::InputText("Name", time_course_text_entry.data(), time_course_text_entry.size() - 1)){
+                    std::string text;
+                    array_to_string(text, time_course_text_entry);
+                    time_profile.metadata["LineName"] = text;
+                }
+
+                ImGui::Separator();
+                if(ImGui::Button("Save")){
+                    std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+                    if(!drover_lock) break;
+
+                    // Save a copy of the current time profile.
+                    DICOM_data.lsamp_data.emplace_back( std::make_shared<Line_Sample>() );
+                    DICOM_data.lsamp_data.back()->line = time_profile;
+
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Cancel")){
+                    ImGui::CloseCurrentPopup();
+                }
+            }while(false);
+            ImGui::EndPopup();
+        }
 
         // Clear the current OpenGL frame.
         CHECK_FOR_GL_ERRORS();
@@ -3655,7 +4364,23 @@ script_files.back().content.emplace_back('\0');
         if(ImGui::BeginPopupModal("AboutPopup")){
             const std::string version = "DICOMautomaton SDL_Viewer version "_s + DCMA_VERSION_STR;
             ImGui::Text("%s", version.c_str());
+            ImGui::Separator();
 
+            if(ImGui::Button("View contouring debug window")){
+                view_toggles.view_contouring_debug = true;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Imgui demo")){
+                view_toggles.view_imgui_demo = true;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Implot demo")){
+                view_toggles.view_implot_demo = true;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
             if(ImGui::Button("Close")){
                 ImGui::CloseCurrentPopup();
             }

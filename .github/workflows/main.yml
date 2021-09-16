@@ -50,7 +50,7 @@ jobs:
         run: |
              echo "${{secrets.HALCLARKCA_DEPLOY_KEY}}" > deploy_key
              chmod 600 deploy_key
-             rsync -avP -e 'ssh -i deploy_key -o StrictHostKeyChecking=no' ci_artifacts/ root@halclark.ca:/var/www/html/ci/
+             for i in `seq 1 20` ; do sleep 1 ; rsync -avP -e 'ssh -v -i deploy_key -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no' ci_artifacts/ root@halclark.ca:/var/www/html/ci/ && break ; done
 
   build_debian_oldstable_aarch64:
     runs-on: ubuntu-latest
@@ -97,7 +97,7 @@ jobs:
         run: |
              echo "${{secrets.HALCLARKCA_DEPLOY_KEY}}" > deploy_key
              chmod 600 deploy_key
-             rsync -avP -e 'ssh -i deploy_key -o StrictHostKeyChecking=no' ci_artifacts/ root@halclark.ca:/var/www/html/ci/
+             for i in `seq 1 20` ; do sleep 1 ; rsync -avP -e 'ssh -v -i deploy_key -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no' ci_artifacts/ root@halclark.ca:/var/www/html/ci/ && break ; done
 
 
   build_debian_oldstable_armhf:
@@ -145,4 +145,4 @@ jobs:
         run: |
              echo "${{secrets.HALCLARKCA_DEPLOY_KEY}}" > deploy_key
              chmod 600 deploy_key
-             rsync -avP -e 'ssh -i deploy_key -o StrictHostKeyChecking=no' ci_artifacts/ root@halclark.ca:/var/www/html/ci/
+             for i in `seq 1 20` ; do sleep 1 ; rsync -avP -e 'ssh -v -i deploy_key -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no' ci_artifacts/ root@halclark.ca:/var/www/html/ci/ && break ; done

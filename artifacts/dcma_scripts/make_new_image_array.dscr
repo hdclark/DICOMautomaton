@@ -1,0 +1,22 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+GenerateSyntheticImages(
+    NumberOfImages = '100',
+    NumberOfRows = '512',
+    NumberOfColumns = '512',
+    NumberOfChannels = '1',
+    SliceThickness = '1.0',
+    SpacingBetweenSlices = '1.0',
+    VoxelWidth = '0.5',
+    VoxelHeight = '0.5',
+    ImageAnchor = '0.0, 0.0, 0.0',
+    ImagePosition = '0.0, 0.0, 0.0',
+    ImageOrientationColumn = '1.0, 0.0, 0.0',
+    ImageOrientationRow = '0.0, 1.0, 0.0',
+    InstanceNumber = '1',
+    AcquisitionNumber = '1',
+    VoxelValue = '0.0',
+    StipleValue = 'nan'
+    # Metadata = '',
+){};
+

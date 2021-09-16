@@ -1,0 +1,9 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+GroupImages(
+    ImageSelection = 'all',
+    KeysCommon = 'PatientID;FrameOfReferenceUID;StudyInstanceUID;SeriesInstanceUID;SeriesNumber;SeriesDescription',
+    AutoSelectKeysCommon = 'false',
+    Enforce = ''
+){};
+

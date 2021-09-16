@@ -1,4 +1,36 @@
 
+
+# CMake-only function for embedded the contents of DCMA scripts into C++ source via a -D definition.
+set(script_inlines "")
+function(embed_script
+         filename)
+    # Read the file contents.
+    file(READ "${filename}" script_contents HEX)
+    #message(AUTHOR_WARNING "${script_contents}")
+
+    # Derive a name for the script from the filename.
+    set(script_filename "${filename}")
+    string(REGEX REPLACE ".*/(.*)" "\\1" script_filename "${script_filename}")
+    string(REGEX REPLACE "_" " " script_filename "${script_filename}")
+    string(REGEX REPLACE "[.]dscr$" "" script_filename "${script_filename}")
+
+    # Convert the file contents to a C++ string with hex escapes.
+    string(REGEX REPLACE "([0-9a-f][0-9a-f])" "\\\\x\\1" script_contents "${script_contents}")
+    #message(AUTHOR_WARNING "${script_contents}")
+    set(entry "{\"${script_filename}\",\"${script_contents}\"},")
+
+    # Append the string to a variable for later access.
+    set(script_inlines "${script_inlines}" PARENT_SCOPE)
+    set(script_inlines "${script_inlines}${entry}" PARENT_SCOPE)
+endfunction()
+
+file(GLOB script_files "../artifacts/dcma_scripts/*.dscr")
+foreach(script_file ${script_files})
+    embed_script("${script_file}")
+endforeach()
+#message(AUTHOR_WARNING "${script_inlines}")
+
+
 add_subdirectory(Operations)
 
 add_library(            DCMA_Version_obj OBJECT DCMA_Version.cc)
@@ -34,6 +66,9 @@ set_target_properties(  Insert_Contours_obj PROPERTIES POSITION_INDEPENDENT_CODE
 
 add_library(            Regex_Selectors_obj OBJECT Regex_Selectors.cc )
 set_target_properties(  Regex_Selectors_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+add_library(            Metadata_obj OBJECT Metadata.cc )
+set_target_properties(  Metadata_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
 add_library(            Common_Boost_Serialization_obj OBJECT Common_Boost_Serialization.cc )
 set_target_properties(  Common_Boost_Serialization_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -99,6 +134,7 @@ set_target_properties(  Boost_Serialization_File_Loader_obj PROPERTIES POSITION_
 
 add_library(            Script_Loader_obj OBJECT Script_Loader.cc )
 set_target_properties(  Script_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+target_compile_definitions( Script_Loader_obj PUBLIC -DDCMA_SCRIPT_INLINES=${script_inlines} )
 
 if(WITH_CGAL)
     add_library(            Surface_Meshes_obj OBJECT Surface_Meshes.cc )
@@ -130,16 +166,18 @@ add_library( YgorImaging_Helper_objs OBJECT ${ygorimaging_helpers} )
 set_target_properties( YgorImaging_Helper_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
 if(WITH_SDL)
-    add_library( IMGui_objs OBJECT imgui20201021/imgui_impl_opengl3.cpp
-                                   imgui20201021/imgui_impl_sdl.cpp
-                                   imgui20201021/imgui.cpp
-                                   imgui20201021/imgui_draw.cpp
-                                   imgui20201021/imgui_widgets.cpp 
-                                   implot20210525/implot.cpp 
-                                   implot20210525/implot_items.cpp )
+    add_library( IMGui_objs OBJECT imgui20210904/imgui_impl_opengl3.cpp
+                                   imgui20210904/imgui_impl_sdl.cpp
+                                   imgui20210904/imgui.cpp
+                                   imgui20210904/imgui_draw.cpp
+                                   imgui20210904/imgui_widgets.cpp 
+                                   imgui20210904/imgui_tables.cpp
+                                   imgui20210904/imgui_demo.cpp
+                                   implot20210904/implot.cpp 
+                                   implot20210904/implot_items.cpp
+                                   implot20210904/implot_demo.cpp )
     set_target_properties( IMGui_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 endif()
-
 
 
 # Imebra library (built separately to maximally compartmentalize the long build process).
@@ -271,6 +309,7 @@ add_executable (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Surface_Meshes_obj>>
     $<TARGET_OBJECTS:Simple_Meshing_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
+    $<TARGET_OBJECTS:Metadata_obj>
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
     $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
     $<TARGET_OBJECTS:File_Loader_obj>
@@ -321,6 +360,7 @@ target_link_libraries (dicomautomaton_dispatcher
     Boost::thread
     Boost::system
     z
+    "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
     mpfr
     gmp
     m
@@ -347,6 +387,7 @@ if(WITH_WT)
         $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Surface_Meshes_obj>>
         $<TARGET_OBJECTS:Simple_Meshing_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
+        $<TARGET_OBJECTS:Metadata_obj>
         $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
         $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
         $<TARGET_OBJECTS:File_Loader_obj>
@@ -399,6 +440,7 @@ if(WITH_WT)
         Boost::thread
         Boost::system
         z
+        "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
         mpfr
         gmp
         m
@@ -413,6 +455,7 @@ add_executable(dicomautomaton_bsarchive_convert
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
+    $<TARGET_OBJECTS:Metadata_obj>
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
 )
 target_link_libraries(dicomautomaton_bsarchive_convert
@@ -436,6 +479,7 @@ if(WITH_POSTGRES)
         $<TARGET_OBJECTS:Structs_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
+        $<TARGET_OBJECTS:Metadata_obj>
     )
     target_link_libraries(pacs_ingress
         imebrashim
@@ -453,6 +497,7 @@ if(WITH_POSTGRES)
         $<TARGET_OBJECTS:Structs_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
+        $<TARGET_OBJECTS:Metadata_obj>
     )
     target_link_libraries(pacs_duplicate_cleaner
         imebrashim
@@ -470,6 +515,7 @@ if(WITH_POSTGRES)
         $<TARGET_OBJECTS:Structs_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
+        $<TARGET_OBJECTS:Metadata_obj>
     )
     target_link_libraries(pacs_refresh
         imebrashim
@@ -489,6 +535,7 @@ add_executable(dicomautomaton_dump
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
+    $<TARGET_OBJECTS:Metadata_obj>
 )
 target_link_libraries(dicomautomaton_dump
     imebrashim

@@ -35,6 +35,9 @@
 
 #include "Operation_Dispatcher.h"
 
+#ifndef DCMA_SCRIPT_INLINES
+#define DCMA_SCRIPT_INLINES
+#endif //DCMA_SCRIPT_INLINES
 
 // A parsed character from a stream that is imbued with additional metadata from the stream.
 struct char_with_context_t {
@@ -906,5 +909,15 @@ void Print_Feedback(std::ostream &os,
            << std::endl;
     }
     return;
+}
+
+std::list<standard_script_t> Standard_Scripts(){
+    std::list<standard_script_t> out {
+        // Autopopulated during build.
+        DCMA_SCRIPT_INLINES
+    };
+
+    out.remove_if([](const standard_script_t &s){ return (s.name.empty() || s.text.empty()); });
+    return out;
 }
 

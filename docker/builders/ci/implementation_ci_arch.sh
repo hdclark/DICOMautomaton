@@ -26,7 +26,8 @@ pacman -Syu --noconfirm --needed \
   sudo \
   pyalpm \
   wget \
-  rsync
+  rsync \
+  patchelf
 rm -f /var/cache/pacman/pkg/*
 
 

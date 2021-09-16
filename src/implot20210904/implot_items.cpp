@@ -20,7 +20,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-// ImPlot v0.10 WIP
+// ImPlot v0.11 WIP
 
 #include "implot.h"
 #include "implot_internal.h"
@@ -42,7 +42,7 @@
         }                                                                                          \
     }
 
-// Support for pre-1.82 version. Users on 1.82+ can use 0 (default) flags to mean "all corners" but in order to support older versions we are more explicit.
+// Support for pre-1.82 versions. Users on 1.82+ can use 0 (default) flags to mean "all corners" but in order to support older versions we are more explicit.
 #if (IMGUI_VERSION_NUM < 18102) && !defined(ImDrawFlags_RoundCornersAll)
 #define ImDrawFlags_RoundCornersAll ImDrawCornerFlags_All
 #endif
@@ -55,32 +55,30 @@ namespace ImPlot {
 
 ImPlotItem* RegisterOrGetItem(const char* label_id, bool* just_created) {
     ImPlotContext& gp = *GImPlot;
-    ImGuiID id = ImGui::GetID(label_id);
+    ImPlotItemGroup& Items = *gp.CurrentItems;
+    ImGuiID id = Items.GetItemID(label_id);
     if (just_created != NULL)
-        *just_created = gp.CurrentPlot->Items.GetByKey(id) == NULL;
-    ImPlotItem* item = gp.CurrentPlot->Items.GetOrAddByKey(id);
+        *just_created = Items.GetItem(id) == NULL;
+    ImPlotItem* item = Items.GetOrAddItem(id);
     if (item->SeenThisFrame)
         return item;
     item->SeenThisFrame = true;
-    int idx = gp.CurrentPlot->Items.GetIndex(item);
+    int idx = Items.GetItemIndex(item);
     item->ID = id;
     if (ImGui::FindRenderedTextEnd(label_id, NULL) != label_id) {
-        gp.CurrentPlot->LegendData.Indices.push_back(idx);
-        item->NameOffset = gp.CurrentPlot->LegendData.Labels.size();
-        gp.CurrentPlot->LegendData.Labels.append(label_id, label_id + strlen(label_id) + 1);
+        Items.Legend.Indices.push_back(idx);
+        item->NameOffset = Items.Legend.Labels.size();
+        Items.Legend.Labels.append(label_id, label_id + strlen(label_id) + 1);
     }
     else {
         item->Show = true;
     }
-    if (item->Show)
-        gp.VisibleItemCount++;
     return item;
 }
 
 ImPlotItem* GetItem(const char* label_id) {
     ImPlotContext& gp = *GImPlot;
-    ImGuiID id = ImGui::GetID(label_id);
-    return gp.CurrentPlot->Items.GetByKey(id);
+    return gp.CurrentItems->GetItem(label_id);
 }
 
 ImPlotItem* GetCurrentItem() {
@@ -132,11 +130,13 @@ void HideNextItem(bool hidden, ImGuiCond cond) {
 
 void BustItemCache() {
     ImPlotContext& gp = *GImPlot;
-    for (int p = 0; p < gp.Plots.GetSize(); ++p) {
+    for (int p = 0; p < gp.Plots.GetBufSize(); ++p) {
         ImPlotPlot& plot = *gp.Plots.GetByIndex(p);
-        plot.ColormapIdx = 0;
-        plot.Items.Clear();
-        plot.LegendData.Reset();
+        plot.Items.Reset();
+    }
+    for (int p = 0; p < gp.Subplots.GetBufSize(); ++p) {
+        ImPlotSubplot& subplot = *gp.Subplots.GetByIndex(p);
+        subplot.Items.Reset();
     }
 }
 
@@ -146,12 +146,15 @@ void BustColorCache(const char* plot_title_id) {
         BustItemCache();
     }
     else {
-        ImPlotPlot* plot = gp.Plots.GetByKey(ImGui::GetCurrentWindow()->GetID(plot_title_id));
-        if (plot == NULL)
-            return;
-        plot->ColormapIdx = 0;
-        plot->Items.Clear();
-        plot->LegendData.Reset();
+        ImGuiID id = ImGui::GetCurrentWindow()->GetID(plot_title_id);
+        ImPlotPlot* plot = gp.Plots.GetByKey(id);
+        if (plot != NULL)
+            plot->Items.Reset();
+        else {
+            ImPlotSubplot* subplot = gp.Subplots.GetByKey(id);
+            if (subplot != NULL)
+                subplot->Items.Reset();
+        }
     }
 }
 
@@ -429,8 +432,9 @@ struct TransformerLogLin {
     TransformerLogLin() : YAxis(GetCurrentYAxis()) {}
     inline ImVec2 operator()(const ImPlotPoint& plt) const {
         ImPlotContext& gp = *GImPlot;
-        double t = ImLog10(plt.x / gp.CurrentPlot->XAxis.Range.Min) / gp.LogDenX;
-        double x = ImLerp(gp.CurrentPlot->XAxis.Range.Min, gp.CurrentPlot->XAxis.Range.Max, (float)t);
+        double x = plt.x <= 0.0 ? IMPLOT_LOG_ZERO : plt.x;
+        double t = ImLog10(x / gp.CurrentPlot->XAxis.Range.Min) / gp.LogDenX;
+               x = ImLerp(gp.CurrentPlot->XAxis.Range.Min, gp.CurrentPlot->XAxis.Range.Max, (float)t);
         return ImVec2( (float)(gp.PixelRange[YAxis].Min.x + gp.Mx * (x - gp.CurrentPlot->XAxis.Range.Min)),
                        (float)(gp.PixelRange[YAxis].Min.y + gp.My[YAxis] * (plt.y - gp.CurrentPlot->YAxis[YAxis].Range.Min)) );
     }
@@ -442,8 +446,9 @@ struct TransformerLinLog {
     TransformerLinLog() : YAxis(GetCurrentYAxis()) {}
     inline ImVec2 operator()(const ImPlotPoint& plt) const {
         ImPlotContext& gp = *GImPlot;
-        double t = ImLog10(plt.y / gp.CurrentPlot->YAxis[YAxis].Range.Min) / gp.LogDenY[YAxis];
-        double y = ImLerp(gp.CurrentPlot->YAxis[YAxis].Range.Min, gp.CurrentPlot->YAxis[YAxis].Range.Max, (float)t);
+        double y = plt.y <= 0.0 ? IMPLOT_LOG_ZERO : plt.y;
+        double t = ImLog10(y / gp.CurrentPlot->YAxis[YAxis].Range.Min) / gp.LogDenY[YAxis];
+               y = ImLerp(gp.CurrentPlot->YAxis[YAxis].Range.Min, gp.CurrentPlot->YAxis[YAxis].Range.Max, (float)t);
         return ImVec2( (float)(gp.PixelRange[YAxis].Min.x + gp.Mx * (plt.x - gp.CurrentPlot->XAxis.Range.Min)),
                        (float)(gp.PixelRange[YAxis].Min.y + gp.My[YAxis] * (y - gp.CurrentPlot->YAxis[YAxis].Range.Min)) );
     }
@@ -455,10 +460,12 @@ struct TransformerLogLog {
     TransformerLogLog() : YAxis(GetCurrentYAxis()) {}
     inline ImVec2 operator()(const ImPlotPoint& plt) const {
         ImPlotContext& gp = *GImPlot;
-        double t = ImLog10(plt.x / gp.CurrentPlot->XAxis.Range.Min) / gp.LogDenX;
-        double x = ImLerp(gp.CurrentPlot->XAxis.Range.Min, gp.CurrentPlot->XAxis.Range.Max, (float)t);
-               t = ImLog10(plt.y / gp.CurrentPlot->YAxis[YAxis].Range.Min) / gp.LogDenY[YAxis];
-        double y = ImLerp(gp.CurrentPlot->YAxis[YAxis].Range.Min, gp.CurrentPlot->YAxis[YAxis].Range.Max, (float)t);
+        double x = plt.x <= 0.0 ? IMPLOT_LOG_ZERO : plt.x;
+        double y = plt.y <= 0.0 ? IMPLOT_LOG_ZERO : plt.y;
+        double t = ImLog10(x / gp.CurrentPlot->XAxis.Range.Min) / gp.LogDenX;
+               x = ImLerp(gp.CurrentPlot->XAxis.Range.Min, gp.CurrentPlot->XAxis.Range.Max, (float)t);
+               t = ImLog10(y / gp.CurrentPlot->YAxis[YAxis].Range.Min) / gp.LogDenY[YAxis];
+               y = ImLerp(gp.CurrentPlot->YAxis[YAxis].Range.Min, gp.CurrentPlot->YAxis[YAxis].Range.Max, (float)t);
         return ImVec2( (float)(gp.PixelRange[YAxis].Min.x + gp.Mx * (x - gp.CurrentPlot->XAxis.Range.Min)),
                        (float)(gp.PixelRange[YAxis].Min.y + gp.My[YAxis] * (y - gp.CurrentPlot->YAxis[YAxis].Range.Min)) );
     }
@@ -885,9 +892,10 @@ inline void RenderMarkers(Getter getter, Transformer transformer, ImDrawList& Dr
         RenderMarkerAsterisk
     };
     ImPlotContext& gp = *GImPlot;
+    const ImRect& rect = gp.CurrentPlot->PlotRect;
     for (int i = 0; i < getter.Count; ++i) {
         ImVec2 c = transformer(getter(i));
-        if (gp.CurrentPlot->PlotRect.Contains(c))
+        if (c.x >= rect.Min.x && c.y >= rect.Min.y && c.x <= rect.Max.x && c.y <= rect.Max.y)
             marker_table[marker](DrawList, c, size, rend_mk_line, col_mk_line, rend_mk_fill, col_mk_fill, weight);
     }
 }
@@ -1719,6 +1727,10 @@ void PlotPieChart(const char* const label_ids[], const T* values, int count, dou
         double percent = normalize ? (double)values[i] / sum : (double)values[i];
         a1 = a0 + 2 * IM_PI * percent;
         if (BeginItem(label_ids[i])) {
+            if (FitThisFrame()) {
+                FitPoint(ImPlotPoint(x-radius,y-radius));
+                FitPoint(ImPlotPoint(x+radius,y+radius));
+            }
             ImU32 col = GetCurrentItem()->Color;
             if (percent < 0.5) {
                 RenderPieSlice(DrawList, center, radius, a0, a1, col);
