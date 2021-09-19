@@ -144,6 +144,7 @@ add_library(Operations_objs OBJECT
     Subsegment_ComputeDose_VanLuijk.cc
     SubtractImages.cc
     SupersampleImageGrid.cc
+    Terminal_Viewer.cc
     ThresholdImages.cc
     ThresholdOtsu.cc
     TrimROIDose.cc
