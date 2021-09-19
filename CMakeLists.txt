@@ -248,6 +248,7 @@ if(ARCH_IS_ARM OR ARCH_IS_ARM64)
 endif()
 
 
+
 ####################################################################################
 #                                    Definitions
 ####################################################################################
@@ -346,6 +347,28 @@ else()
     message(STATUS "Assuming the GNU GSL is not available.")
     add_definitions(-UDCMA_USE_GNU_GSL)
 endif()
+
+# Detect whether specific functions/variable/macros are available.
+# Note: this method does not support structs. Best to find a function that accepts the struct instead.
+check_cxx_symbol_exists(select    "sys/select.h" DCMA_HAS_SYS_SELECT)        # Function (nominally).
+
+check_cxx_symbol_exists(isatty    "unistd.h"     DCMA_HAS_UNISTD_ISATTY)     # Function (nominally).
+
+check_cxx_symbol_exists(fileno    "cstdio"       DCMA_HAS_CSTDIO_FILENO)     # Function (nominally).
+
+check_cxx_symbol_exists(ICANON    "termios.h"    DCMA_HAS_TERMIOS_ICANON)    # Macro.
+check_cxx_symbol_exists(ECHO      "termios.h"    DCMA_HAS_TERMIOS_ECHO)      # Macro.
+check_cxx_symbol_exists(VMIN      "termios.h"    DCMA_HAS_TERMIOS_VMIN)      # Macro.
+check_cxx_symbol_exists(VTIME     "termios.h"    DCMA_HAS_TERMIOS_VTIME)     # Macro.
+check_cxx_symbol_exists(TCSANOW   "termios.h"    DCMA_HAS_TERMIOS_TCSANOW)   # Macro.
+check_cxx_symbol_exists(tcgetattr "termios.h"    DCMA_HAS_TERMIOS_TCGETADDR) # Function.
+
+check_cxx_symbol_exists(fcntl      "fcntl.h"     DCMA_HAS_FCNTL_FCNTL)       # Function (nominally).
+check_cxx_symbol_exists(F_GETFL    "fcntl.h"     DCMA_HAS_FCNTL_F_GETFL)     # Macro.
+check_cxx_symbol_exists(O_NONBLOCK "fcntl.h"     DCMA_HAS_FCNTL_O_NONBLOCK)  # Macro.
+
+configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/src/DCMA_Definitions.h.in
+                ${CMAKE_CURRENT_BINARY_DIR}/src/DCMA_Definitions.h )
 
 # ASIO: target Windows 7 features.
 add_definitions(-D_WIN32_WINNT=0x0601)
