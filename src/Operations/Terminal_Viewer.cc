@@ -548,7 +548,7 @@ bool Terminal_Viewer(Drover &DICOM_data,
         terminal_colour_mode = terminal_colour_mode_t::bit24;
     }else if( std::regex_match(ColourMethodStr, regex_6bit) ){
         terminal_colour_mode = terminal_colour_mode_t::bit6;
-    }else if( std::regex_match(ColourMethodStr, regex_24bit) ){
+    }else if( std::regex_match(ColourMethodStr, regex_24step) ){
         terminal_colour_mode = terminal_colour_mode_t::step24;
     }else{
         throw std::invalid_argument("Colour method argument '"_s + ColourMethodStr + "' is not valid");
