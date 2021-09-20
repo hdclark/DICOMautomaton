@@ -350,9 +350,9 @@ enum class terminal_colour_mode_t {
 
 void draw_image( std::ostream &os,
                  const planar_image<float, double> &img, 
-                 const auto term_draw_pow_row,
-                 const auto term_draw_pos_col,
-                 const auto max_square_size,
+                 const long int term_draw_pow_row,
+                 const long int term_draw_pos_col,
+                 const long int max_square_size,
                  const std::function<ClampedColourRGB(double)> &colour_map,
                  terminal_colour_mode_t colour_mode ){
 
@@ -484,6 +484,29 @@ OperationDoc OpArgDocTerminal_Viewer(){
     out.desc = 
         "Launch an interactive viewer inside a terminal/console.";
 
+    out.args.emplace_back();
+    out.args.back().name = "MaxImageLength";
+    out.args.back().desc = "The maximum size images will be rendered."
+                           " Note that aspect ratio scaling (which is approximate at best) may result in images"
+                           " being displayed with smaller vertical and horizontal lengths."
+                           " The optimal value depends on your screen resolution, font size, required visual"
+                           " resolution, and, potentially, bandwidth.";
+    out.args.back().default_val = "120";
+    out.args.back().expected = true;
+    out.args.back().examples = { "50", "78", "80", "120", "200" };
+
+    out.args.emplace_back();
+    out.args.back().name = "ColourMethod";
+    out.args.back().desc = "Controls how images are displayed. The default, 'auto', will provide the highest"
+                           " number of dolour depth possible. However, automatic detection is hard so overrides"
+                           " may be needed."
+                           "\n\n24-bit provides the greatest colour depth, but is not supported by all terminals."
+                           "\n\n6-bit provides a reasonable amount of colour depth, and is more widely supported."
+                           "\n\n24-steps provides low-quality colour depth, but is almost universally available.";
+    out.args.back().default_val = "auto";
+    out.args.back().expected = true;
+    out.args.back().examples = { "auto", "24-bit", "6-bit", "24-steps" };
+
     //out.args.emplace_back();
     //out.args.back() = IAWhitelistOpArgDoc();
     //out.args.back().name = "ImageSelection";
@@ -493,26 +516,42 @@ OperationDoc OpArgDocTerminal_Viewer(){
 }
 
 bool Terminal_Viewer(Drover &DICOM_data,
-                     const OperationArgPkg& /*OptArgs*/,
+                     const OperationArgPkg& OptArgs,
                      const std::map<std::string, std::string>& InvocationMetadata,
                      const std::string& FilenameLex){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     //const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
+    const auto MaxImageLength = std::stol(OptArgs.getValueStr("MaxImageLength").value());
+    const auto ColourMethodStr = OptArgs.getValueStr("ColourMethod").value();
     //-----------------------------------------------------------------------------------------------------------------
+    const auto regex_auto   = Compile_Regex("^a?u?t?o?m?a?t?i?c?$");
+    const auto regex_24bit  = Compile_Regex("^24[-_]?bi?t?$");
+    const auto regex_6bit   = Compile_Regex("^6[-_]?bi?t?$");
+    const auto regex_24step = Compile_Regex("^24[-_]?st?e?p?s?$");
 
     const auto term_draw_pow_row = 5UL;
     const auto term_draw_pos_col = 5UL;
-    const auto max_square_size = 120UL;
+    const auto max_square_size = MaxImageLength;
 
-    // Automatically determine terminal colour capabilities.
     terminal_colour_mode_t terminal_colour_mode = terminal_colour_mode_t::step24;
-    if(terminal_supports_24bit_colour()){
-        // Opt for 24-bit colour if available.
+    if( std::regex_match(ColourMethodStr, regex_auto) ){
+        if(terminal_supports_24bit_colour()){
+            // Opt for 24-bit colour if available.
+            terminal_colour_mode = terminal_colour_mode_t::bit24;
+        }else{
+            // Assume 6-bit colour is always available.
+            terminal_colour_mode = terminal_colour_mode_t::bit6;
+        }
+
+    }else if( std::regex_match(ColourMethodStr, regex_24bit) ){
         terminal_colour_mode = terminal_colour_mode_t::bit24;
-    }else{
-        // Assume 6-bit colour is always available.
+    }else if( std::regex_match(ColourMethodStr, regex_6bit) ){
         terminal_colour_mode = terminal_colour_mode_t::bit6;
+    }else if( std::regex_match(ColourMethodStr, regex_24bit) ){
+        terminal_colour_mode = terminal_colour_mode_t::step24;
+    }else{
+        throw std::invalid_argument("Colour method argument '"_s + ColourMethodStr + "' is not valid");
     }
 
 /*
