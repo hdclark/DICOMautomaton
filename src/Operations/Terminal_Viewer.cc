@@ -357,6 +357,9 @@ void draw_image( std::ostream &os,
                  const std::function<ClampedColourRGB(double)> &colour_map,
                  terminal_colour_mode_t colour_mode ){
 
+    const bool supports_ansi =   (colour_mode == terminal_colour_mode_t::bit24)
+                              || (colour_mode == terminal_colour_mode_t::bit6)
+                              || (colour_mode == terminal_colour_mode_t::step24);
 
     // Rescale to help mitigate edge-cases and account (partially) for aspect ratio correction.
     const auto nearest_even_number = [](long int i){
@@ -471,16 +474,26 @@ void draw_image( std::ostream &os,
     };
     
     // Clear the screen.
-    os << "\x1B[2J";
+    if(supports_ansi){
+        os << "\x1B[2J";
+    }else{
+        os << std::string(5, '\n');
+    }
 
     // Display the image.
     //
     // Note: consult https://en.wikipedia.org/wiki/ANSI_escape_code for more info.
 
-    move_cursor_to(os, term_draw_pow_row, term_draw_pos_col); // Move to reference position.
+    if(supports_ansi){
+        move_cursor_to(os, term_draw_pow_row, term_draw_pos_col); // Move to reference position.
+    }
 
     for(long int r = 0; r < scaled_img.rows; r += 2){
-        move_cursor_to(os, term_draw_pow_row + r/2, term_draw_pos_col);
+        if(supports_ansi){
+            move_cursor_to(os, term_draw_pow_row + r/2, term_draw_pos_col);
+        }else{
+            os << std::string(term_draw_pos_col, ' ');
+        }
         for(long int c = 0; c < scaled_img.columns; c++){
             const auto upper_val = scaled_img.value(r, c, channel);
             const auto upper_intensity = (min < max) ? (upper_val - min) / (max - min) : 1.0;
@@ -493,15 +506,23 @@ void draw_image( std::ostream &os,
 
         // Also print a colour bar, since the colour ramp might not be smooth (depending on colours used).
         {
-            move_cursor_to(os, term_draw_pow_row + r/2, term_draw_pos_col + scaled_img.columns + 1);
-            const auto upper_intensity = static_cast<double>(r  )/static_cast<double>(scaled_img.rows-1);
-            const auto lower_intensity = static_cast<double>(r+1)/static_cast<double>(scaled_img.rows-1);
+            if(supports_ansi){
+                move_cursor_to(os, term_draw_pow_row + r/2, term_draw_pos_col + scaled_img.columns + 1);
+            }else{
+                os << " ";
+            }
+            const auto upper_intensity = 1.0 - static_cast<double>(r  )/static_cast<double>(scaled_img.rows-1);
+            const auto lower_intensity = 1.0 - static_cast<double>(r+1)/static_cast<double>(scaled_img.rows-1);
             emit_vert_split_colours(os, upper_intensity, lower_intensity);
         }
 
-        os << "\x1B[0m"; // Reset terminal colours at current position.
-        os.flush();
-        move_cursor_to(os, term_draw_pow_row + scaled_img.rows/2, 0); // Move cursor to bottom.
+        if(supports_ansi){
+            os << "\x1B[0m"; // Reset terminal colours at current position.
+            os.flush();
+            move_cursor_to(os, term_draw_pow_row + scaled_img.rows/2, 0); // Move cursor to bottom.
+        }else{
+            os << std::endl;
+        }
     }
     os.flush();
     return;
