@@ -33,10 +33,10 @@
 OperationDoc OpArgDocPerturbPixels(){
     OperationDoc out;
     out.name = "PerturbPixels";
-    out.aliases.emplace_back("ConvertContoursToImages");
 
     out.desc = 
-        "This operation applys random noise to voxel intensities.";
+        "This operation applies random noise to voxel intensities."
+        " It can be used to help fuzz testing or benchmark statistical analysis.";
 
     out.args.emplace_back();
     out.args.back().name = "Channel";
