@@ -67,6 +67,9 @@ set_target_properties(  Insert_Contours_obj PROPERTIES POSITION_INDEPENDENT_CODE
 add_library(            Regex_Selectors_obj OBJECT Regex_Selectors.cc )
 set_target_properties(  Regex_Selectors_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            String_Parsing_obj OBJECT String_Parsing.cc )
+set_target_properties(  String_Parsing_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Metadata_obj OBJECT Metadata.cc )
 set_target_properties(  Metadata_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -309,6 +312,7 @@ add_executable (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Surface_Meshes_obj>>
     $<TARGET_OBJECTS:Simple_Meshing_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
+    $<TARGET_OBJECTS:String_Parsing_obj>
     $<TARGET_OBJECTS:Metadata_obj>
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
     $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
@@ -387,6 +391,7 @@ if(WITH_WT)
         $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Surface_Meshes_obj>>
         $<TARGET_OBJECTS:Simple_Meshing_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
+        $<TARGET_OBJECTS:String_Parsing_obj>
         $<TARGET_OBJECTS:Metadata_obj>
         $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
         $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
@@ -455,6 +460,7 @@ add_executable(dicomautomaton_bsarchive_convert
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
+    $<TARGET_OBJECTS:String_Parsing_obj>
     $<TARGET_OBJECTS:Metadata_obj>
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
 )
@@ -479,6 +485,7 @@ if(WITH_POSTGRES)
         $<TARGET_OBJECTS:Structs_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
+        $<TARGET_OBJECTS:String_Parsing_obj>
         $<TARGET_OBJECTS:Metadata_obj>
     )
     target_link_libraries(pacs_ingress
@@ -497,6 +504,7 @@ if(WITH_POSTGRES)
         $<TARGET_OBJECTS:Structs_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
+        $<TARGET_OBJECTS:String_Parsing_obj>
         $<TARGET_OBJECTS:Metadata_obj>
     )
     target_link_libraries(pacs_duplicate_cleaner
@@ -515,6 +523,7 @@ if(WITH_POSTGRES)
         $<TARGET_OBJECTS:Structs_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
+        $<TARGET_OBJECTS:String_Parsing_obj>
         $<TARGET_OBJECTS:Metadata_obj>
     )
     target_link_libraries(pacs_refresh
@@ -535,6 +544,7 @@ add_executable(dicomautomaton_dump
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
+    $<TARGET_OBJECTS:String_Parsing_obj>
     $<TARGET_OBJECTS:Metadata_obj>
 )
 target_link_libraries(dicomautomaton_dump

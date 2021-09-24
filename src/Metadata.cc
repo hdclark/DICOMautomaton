@@ -1,7 +1,5 @@
 //Metadata.cc - A part of DICOMautomaton 2021. Written by hal clark.
 
-#include "Metadata.h"
-
 #include <string>
 #include <list>
 #include <numeric>

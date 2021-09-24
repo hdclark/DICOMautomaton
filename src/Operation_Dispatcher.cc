@@ -144,6 +144,7 @@
 #include "Operations/Or.h"
 #include "Operations/OrderImages.h"
 #include "Operations/PartitionContours.h"
+#include "Operations/PerturbPixels.h"
 #include "Operations/PlotPerROITimeCourses.h"
 #include "Operations/PlotLineSamples.h"
 #include "Operations/PointSeparation.h"
@@ -350,6 +351,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["OrderImages"] = std::make_pair(OpArgDocOrderImages, OrderImages);
     out["Or"] = std::make_pair(OpArgDocOr, Or);
     out["PartitionContours"] = std::make_pair(OpArgDocPartitionContours, PartitionContours);
+    out["PerturbPixels"] = std::make_pair(OpArgDocPerturbPixels, PerturbPixels);
     out["PlotLineSamples"] = std::make_pair(OpArgDocPlotLineSamples, PlotLineSamples);
     out["PlotPerROITimeCourses"] = std::make_pair(OpArgDocPlotPerROITimeCourses, PlotPerROITimeCourses);
     out["PointSeparation"] = std::make_pair(OpArgDocPointSeparation, PointSeparation);
