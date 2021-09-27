@@ -160,6 +160,11 @@ jobs:
              sudo apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf qemu binfmt-support qemu-user-static
              sudo ./docker/build_bases/alpine/setup_host.sh
              sudo ./scripts/enable_swapfile.sh
+      - name: authenticate_with_dockerhub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: build
         run: |
              ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
