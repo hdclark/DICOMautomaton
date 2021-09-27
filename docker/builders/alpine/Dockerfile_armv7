@@ -1,0 +1,20 @@
+
+# NOTE: This Dockerfile should be interepretted relative to the DICOMautomaton repo root.
+
+# NOTE: The following can be overridden using `docker build --build-arg BASE_CONTAINER_NAME=xyz`.
+ARG BASE_CONTAINER_NAME="dcma_build_base_alpine_armv7"
+FROM --platform=linux/arm/v7 "$BASE_CONTAINER_NAME"
+
+LABEL maintainer="http://www.halclark.ca" \
+      description="DICOMautomaton built from Alpine (armv7)."
+
+WORKDIR /scratch
+COPY ./docker/build_bases/alpine /build_base
+COPY ./docker/builders/alpine /scratch
+COPY . /dcma
+
+RUN /scratch/implementation_alpine.sh
+
+WORKDIR /scratch
+CMD ["/bin/bash", "dicomautomaton_dispatcher"]
+

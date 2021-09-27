@@ -1046,7 +1046,9 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     insert_as_string_if_nonempty(0x0008, 0x1070, "OperatorsName");
 
     //Patient Study Module.
-    insert_as_string_if_nonempty(0x0010, 0x1030, "PatientsMass");
+    insert_as_string_if_nonempty(0x0010, 0x1010, "PatientsAge");
+    insert_as_string_if_nonempty(0x0010, 0x1020, "PatientsSize"); // in m, so actually patient height. :(
+    insert_as_string_if_nonempty(0x0010, 0x1030, "PatientsWeight"); // in kg, so actually patient mass. :(
 
     //Frame of Reference Module.
     insert_as_string_if_nonempty(0x0020, 0x0052, "FrameOfReferenceUID");
@@ -1277,6 +1279,32 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
     insert_as_string_if_nonempty(0x0019, 0x100e, "DiffusionGradientVector");
     insert_as_string_if_nonempty(0x0019, 0x1027, "DiffusionBMatrix");  // multiplicity = 3.
     insert_as_string_if_nonempty(0x0019, 0x0103, "PixelRepresentation"); // multiplicity = 6.
+
+    // PET Image Module.
+    insert_as_string_if_nonempty(0x0054, 0x1001, "Units");
+
+    // PET Isotope Module.
+    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                              { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
+                                                { 0x0054, 0x0300, "RadionuclideCodeSequence" } }) );
+    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                              { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
+                                                { 0x0018, 0x1070, "RadiopharmaceuticalRoute" } }) );
+    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                              { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
+                                                { 0x0018, 0x1071, "RadiopharmaceuticalVolume" } }) );
+    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                              { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
+                                                { 0x0018, 0x1074, "RadionuclideTotalDose" } }) ); // initially administered, in Bq
+    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                              { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
+                                                { 0x0018, 0x1075, "RadionuclideHalfLife" } }) );
+    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                              { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
+                                                { 0x0018, 0x1077, "RadiopharmaceuticalSpecificActivity" } }) );
+    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                              { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
+                                                { 0x0018, 0x0031, "Radiopharmaceutical" } }) );
 
     //Unclassified others...
     insert_as_string_if_nonempty(0x0029, 0x0010, "SiemensCSAHeaderVersion");
@@ -1697,6 +1725,9 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
         // From what I can tell, this conversion is necessary to transform the raw data from a possibly
         // manufacturer-specific, proprietary format into something physically meaningful for us. 
         //
+        // Note that the modality conversion will use the rescale slope and rescale intercept tags for linear
+        // transformations. If nonlinear, the Modality LUT Sequence describe the transformation.
+        //
         // I have not experimented with disabling this conversion. Leaving it intact causes the datum from
         // a Philips "Interra" machine's PAR/REC format to coincide with the exported DICOM data.
         ptr<imebra::transforms::transform> modVOILUT(new imebra::transforms::modalityVOILUT(TopDataSet));
@@ -1708,7 +1739,8 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
     
         //Convert the 'convertedImage' into an image suitable for the viewing on screen. The VOILUT transform 
         // applies the contrast suggested by the dataSet to the image. Apply the first one we find. Relevant
-        // DICOM tags reside around (0x0028,0x3010) and (0x0028,0x1050).
+        // DICOM tags reside around (0x0028,0x3010) and (0x0028,0x1050). This lookup generally applies window
+        // and level factors, but can also apply non-linear VOI LUT Sequence transformations.
         //
         // This conversion uses the first suggested transformation found in the DICOM file, and will vary
         // from file to file. Generally, the transformation scales the pixel values to cover the range of the
@@ -2627,7 +2659,7 @@ void Write_Dose_Array(const std::shared_ptr<Image_Array>& IA, const std::string 
             cm["OperatorsName"] = "";
 
             //Patient Study Module.
-            cm["PatientsMass"] = "";
+            cm["PatientsWeight"] = "";
 
             //Frame of Reference Module.
             cm["PositionReferenceIndicator"] = "";
@@ -2721,7 +2753,7 @@ void Write_Dose_Array(const std::shared_ptr<Image_Array>& IA, const std::string 
         ds_insert(tds, {0x0008, 0x1070}, fne({ cm["OperatorsName"], "UNSPECIFIED" }));
 
         //Patient Study Module.
-        ds_insert(tds, {0x0010, 0x1030}, foe({ cm["PatientsMass"] }));
+        ds_insert(tds, {0x0010, 0x1030}, foe({ cm["PatientsWeight"] }));
 
         //Frame of Reference Module.
         ds_insert(tds, {0x0020, 0x0052}, fne({ cm["FrameOfReferenceUID"], Generate_Random_UID(32) }));
@@ -2948,7 +2980,7 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
             cm["OperatorsName"] = "";                          // Appropriate?
 
             //Patient Study Module.
-            cm["PatientsMass"] = "";                          // Appropriate?
+            cm["PatientsWeight"] = "";                          // Appropriate?
 
             //Frame of Reference Module.
             cm["PositionReferenceIndicator"] = "";              // Appropriate?
@@ -3221,7 +3253,7 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
             cm["OperatorsName"] = "";                          // Appropriate?
 
             //Patient Study Module.
-            cm["PatientsMass"] = "";                          // Appropriate?
+            cm["PatientsWeight"] = "";                          // Appropriate?
 
             //Frame of Reference Module.
             cm["PositionReferenceIndicator"] = "";              // Appropriate?

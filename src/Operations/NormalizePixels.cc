@@ -17,6 +17,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../Metadata.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
@@ -104,20 +105,28 @@ OperationDoc OpArgDocNormalizePixels(){
     out.args.emplace_back();
     out.args.back().name = "Method";
     out.args.back().desc = "Controls the specific type of normalization that will be applied."
-                           " 'Stretch01' will rescale the voxel values so the minima are 0"
+                           "\n\n"
+                           "'Stretch01' will rescale the voxel values so the minima are 0"
                            " and the maxima are 1. Likewise, 'stretch11' will rescale such"
-                           " that the minima are -1 and the maxima are 1. Clamp will ensure"
-                           " all voxel intensities are within [0:1] by setting those lower than"
-                           " 0 to 0 and those higher than 1 to 1. (Voxels already within [0:1]"
-                           " will not be altered.)"
-                           " 'Sum-to-zero' will shift all voxels so that the sum of all voxel"
-                           " intensities is zero. (This is useful for convolution kernels.)";
+                           " that the minima are -1 and the maxima are 1."
+                           "\n\n"
+                           "Clamp will ensure all voxel intensities are within [0:1] by setting those lower than"
+                           " 0 to 0 and those higher than 1 to 1."
+                           " (Voxels already within [0:1] will not be altered.)"
+                           "\n\n"
+                           "'Sum-to-zero' will shift all voxels so that the sum of all voxel"
+                           " intensities is zero. (This is useful for convolution kernels.)"
+                           "\n\n"
+                           "'SUVbw' scales PET images in 'Bq/ml' to body-weight SUV."
+                           " Note that this method will likely fail if images do not have a PET modality."
+                           " See <https://doi.org/10.2967/jnmt.119.233353> for additional details.";
     out.args.back().default_val = "stretch11";
     out.args.back().expected = true;
     out.args.back().examples = { "clamp",
                                  "stretch01",
                                  "stretch11",
-                                 "sum-to-zero" };
+                                 "sum-to-zero",
+                                 "suv-bw" };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
     return out;
@@ -153,12 +162,14 @@ bool NormalizePixels(Drover &DICOM_data,
     const auto regex_clmp = Compile_Regex("^cl?a?m?p?$");
     const auto regex_st01 = Compile_Regex("^st?r?e?t?c?h?01$");
     const auto regex_st11 = Compile_Regex("^st?r?e?t?c?h?-11$");
-    const auto regex_smtz = Compile_Regex("^su?m?.*t?o?.*z?e?r?o?$");
+    const auto regex_smtz = Compile_Regex("^sum.*t?o?.*z?e?r?o?$");
+    const auto regex_suvb = Compile_Regex("^suv[-_]?b?w?$");
 
     const bool op_is_clmp = std::regex_match(MethodStr, regex_clmp);
     const bool op_is_st01 = std::regex_match(MethodStr, regex_st01);
     const bool op_is_st11 = std::regex_match(MethodStr, regex_st11);
     const bool op_is_smtz = std::regex_match(MethodStr, regex_smtz);
+    const bool op_is_suvb = std::regex_match(MethodStr, regex_suvb);
 
     //-----------------------------------------------------------------------------------------------------------------
 
@@ -170,7 +181,6 @@ bool NormalizePixels(Drover &DICOM_data,
         throw std::invalid_argument("No contours selected. Cannot continue.");
     }
 
-    // Perform the convolution once for every kernel.
     const auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
@@ -288,16 +298,50 @@ bool NormalizePixels(Drover &DICOM_data,
                 return;
             };
 
+        }else if(op_is_suvb){
+
+            // Extract the metadata keys needed for radiopharmaceutical normalization.
+            //
+            // Note: there is no particular reason we process array-at-a-time here, except that each image array
+            // *should* correspond to a single injection, and the require info should be the same for all images.
+            metadata_multimap_t combined;
+            for(const auto& img : (*iap_it)->imagecoll.images){
+                combine_distinct(combined, img.metadata);
+            }
+            const auto singular = singular_keys(combined);
+            const auto units = get_as<std::string>(singular, "Units");
+            const auto mass = get_as<double>(singular, "PatientsWeight"); // in kg.
+            const auto rnd = get_as<double>(singular, "RadiopharmaceuticalInformationSequence/RadionuclideTotalDose");
+            if( !units
+            ||  !mass
+            ||  !rnd ){
+                throw std::runtime_error("Missing image metadata needed for normalization");
+            }
+            if( units.value() != "BQML" ){
+                throw std::runtime_error("Expected units 'BQML' but encountered '"_s + units.value() + "'");
+            }
+
+            ud.f_bounded = [Channel,units,mass,rnd](long int, long int, long int chan,
+                                                   std::reference_wrapper<planar_image<float,double>>,
+                                                   std::reference_wrapper<planar_image<float,double>>,
+                                                   float &val) {
+                if( (Channel < 0) || (Channel == chan) ){
+                    const auto mass_in_grams = mass.value() * 1000.0;
+                    val = val * mass_in_grams / rnd.value();
+                }
+                return;
+            };
+
         }else{
             throw std::logic_error("Requested method is not understood. Cannot continue.");
         }
 
-        // Apply the adjustment closure.
         if(!(*iap_it)->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                           PartitionedImageVoxelVisitorMutator,
                                                           {}, cc_ROIs, &ud )){
             throw std::runtime_error("Unable to normalize images.");
         }
+
     }
 
     return true;

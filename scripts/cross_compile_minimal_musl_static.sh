@@ -13,9 +13,9 @@
 
 set -eux
 
-
 export CMAKE_BUILD_TYPE="Release"
 export BUILD_SHARED_LIBS="OFF"
+export CUSTOM_FLAGS=""
 
 ####################### Musl-cross-make targets ######################
 # See https://github.com/richfelker/musl-cross-make README (musl cross-compiler).
@@ -31,7 +31,7 @@ export BUILD_SHARED_LIBS="OFF"
 #export TRIPLET='x86_64-linux-gnu.2.28'
 
 # Ancient glibc... Seems to have __cxa_thread_atexit_impl@GLIBC_2.18 whereas 2.17 does not have __cxa_thread_atexit_impl
-#export TRIPLET='x86_64-linux-gnu.2.18'
+export TRIPLET='x86_64-linux-gnu.2.18'
 
 #### Not working ####
 
@@ -39,6 +39,15 @@ export BUILD_SHARED_LIBS="OFF"
 # Ensure CMake build type is Release because gcrt0 (i.e., compiler '-g' option) not available for musl.
 #export TRIPLET='x86_64-linux-musl'
 #export CMAKE_BUILD_TYPE="Release"
+#export TRIPLET='aarch64-linux-musl'
+#export TRIPLET="arm-linux-musleabi -mcpu=arm710t -D__libcpp_signed_lock_free=__cxx_contention_t -D__libcpp_unsigned_lock_free=__cxx_contention_t"
+
+#export TRIPLET="arm-linux-musleabihf"
+#export CUSTOM_FLAGS="-mcpu=cortex-a53" # -DATOMIC_CHAR_LOCK_FREE=2 -m32" # _LIBCPP_ATOMIC=1
+
+# Foesn't actually static link libc. (Why?)
+#export TRIPLET='aarch64-linux-musl.1.1.24'
+#export CUSTOM_FLAGS="-mcpu=cortex_a53 -fno-use-cxa-atexit" # -D__cxa_thread_atexit_impl=int8_t"
 
 # Boost iostreams compilation error:
 # In file included from libs/serialization/src/xml_wgrammar.cpp:19:
@@ -59,6 +68,9 @@ export BUILD_SHARED_LIBS="OFF"
 # But might possibly work with additional effort?
 #export TRIPLET='wasm32-wasi-musl'
 #export CMAKE_BUILD_TYPE="Debug"
+## Webassembly extras (needed??)
+#export CUSTOM_FLAGS="${CUSTOM_FLAGS} -Wl,--relocatable -Wl,--export-all -Wl,--allow-undefined" # -sUSE_PTHREADS=0" # Doesn't seem to help...
+#export CFLAGS="${CUSTOM_FLAGS} -Wl,--relocatable -Wl,--export-all -Wl,--allow-undefined" # -sUSE_PTHREADS=0" # Doesn't seem to help...
 
 # zlib: "Failed to find a pointer-size integer type."
 # Ygor: fstream, array, dirent.h, iostream, stdlib.h, ... not found (because freestanding).
@@ -79,28 +91,38 @@ export BUILD_SHARED_LIBS="OFF"
 
 ######################################################################
 
-apt-get update -y
-apt-get upgrade -y
-apt-get install -y clang wget xz-utils cmake git file vim rsync openssh-client \
-                   python3 unzip #python3-pip pkg-config autoconf
+# Make static binaries.
+if [ "${BUILD_SHARED_LIBS}" != "ON" ] ; then
+    export CUSTOM_FLAGS="${CUSTOM_FLAGS} -static" # -Wl,--whole-archive -Wl,--no-as-needed"
+fi
+
+: | apt-get update -y
+: | apt-get upgrade -y 
+: | apt-get install -y clang wget xz-utils cmake git file vim rsync openssh-client \
+                       python3 unzip #python3-pip pkg-config autoconf
 
 # Zig-based toolchain.
 cd / && rm -rf /zig*
-wget 'https://ziglang.org/builds/zig-linux-x86_64-0.9.0-dev.952+0c091feb5.tar.xz'
-tar -axf zig-linux-x86_64-0.9.0-dev.952+0c091feb5.tar.xz 
+#wget 'https://ziglang.org/builds/zig-linux-x86_64-0.9.0-dev.952+0c091feb5.tar.xz'
+wget 'https://ziglang.org/builds/zig-linux-x86_64-0.9.0-dev.1083+9fa723ee5.tar.xz'
+tar -axf zig*.tar.xz 
 cd /zig*/
-unset CC CXX CFLAGS CXXFLAGS LDFLAGS
+unset CC CXX AR RANLIB CFLAGS CXXFLAGS LDFLAGS
 export CC="$(pwd)/zig cc --verbose --target=${TRIPLET}"
 export CXX="$(pwd)/zig c++ --verbose --target=${TRIPLET}"
-export CFLAGS='-I/pot/include/ -I/pot/usr/include/ -L/pot/lib/ -L/pot/usr/lib/' # -static'
-export CXXFLAGS='-I/pot/include/ -I/pot/usr/include/ -L/pot/lib/ -L/pot/usr/lib/ -fno-use-cxa-atexit' # -static'
+export AR="$(pwd)/zig ar"
+export RANLIB="$(pwd)/zig ranlib"
+export CFLAGS="-I/pot/include/ -I/pot/usr/include/ -L/pot/lib/ -L/pot/usr/lib/ -fno-use-cxa-atexit ${CUSTOM_FLAGS}"
+export CXXFLAGS="-I/pot/include/ -I/pot/usr/include/ -L/pot/lib/ -L/pot/usr/lib/ -fno-use-cxa-atexit ${CUSTOM_FLAGS}"
 export LDFLAGS=""
 cd /
+/zig*/zig targets
 
 ## Musl (linux-only) cross-compiler.
+#cd / && rm -rf /musl* /mcm
 #git clone 'https://github.com/richfelker/musl-cross-make' /mcm
 #cd /mcm
-#unset CC CXX CFLAGS CXXFLAGS LDFLAGS
+#unset CC CXX AR RANLIB CFLAGS CXXFLAGS LDFLAGS
 #export CC="clang"
 #export CXX="clang++"
 #export CFLAGS=""
@@ -113,25 +135,47 @@ cd /
 #unset CC CXX CFLAGS CXXFLAGS LDFLAGS
 #export CC="/musl/bin/${TRIPLET}-gcc"
 #export CXX="/musl/bin/${TRIPLET}-g++"
-#export CXXFLAGS="-I/pot/include/ -I/pot/usr/include/ -L/pot/lib/ -L/pot/usr/lib/ -fno-use-cxa-atexit"
-#export CFLAGS="-I/pot/include/ -I/pot/usr/include/ -L/pot/lib/ -L/pot/usr/lib/"
+#export CFLAGS="-I/pot/include/ -I/pot/usr/include/ -L/pot/lib/ -L/pot/usr/lib/ ${CUSTOM_FLAGS}"
+#export CXXFLAGS="-I/pot/include/ -I/pot/usr/include/ -L/pot/lib/ -L/pot/usr/lib/ ${CUSTOM_FLAGS}"
 #export LDFLAGS=""
-
-## Webassembly extras (needed??)
-#export CXXFLAGS="${CXXFLAGS} -Wl,--relocatable -Wl,--export-all -Wl,--allow-undefined" # -sUSE_PTHREADS=0" # Doesn't seem to help...
-#export CFLAGS="${CXXFLAGS} -Wl,--relocatable -Wl,--export-all -Wl,--allow-undefined" # -sUSE_PTHREADS=0" # Doesn't seem to help...
-
-# Make static binaries.
-if [ "${BUILD_SHARED_LIBS}" != "ON" ] ; then
-    export CXXFLAGS="${CXXFLAGS} -static"
-    export CFLAGS="${CXXFLAGS} -static"
-fi
 
 # Destination for all build artifacts.
 #
 # Everything goes in the pot and out comes binaries -- we're doing alchemy here! :)
 mkdir -pv /pot/{lib,include,usr/include,usr/lib}/
 
+
+## musl time64 compatibility for 32-bit systems.
+#(
+#    cd / && rm -rf /musl*
+#    wget 'http://musl.libc.org/releases/musl-1.2.2.tar.gz'
+#    tar -axf 'musl-1.2.2.tar.gz'
+#    rm 'musl-1.2.2.tar.gz'
+#    cd /musl-1.2.2/compat/time32/
+#    for f in ./*.c ; do
+#        # Note: see 'https://github.com/richfelker/libcompat_time32'
+#        $CC $CFLAGS -fPIC -D'weak_alias(a,b)=' -c $f
+#        #$CC $CFLAGS -fPIC -c $f
+#    done
+#    $AR rc libcompat_time32.a ./*.o
+#    $RANLIB libcompat_time32.a
+#    mv libcompat_time32.a /pot/lib/
+#    file /pot/lib/libcompat_time32.a
+#
+#
+#    #cd / && rm -rf /libcompat*
+#    #git clone --depth=1 'https://github.com/richfelker/libcompat_time32'
+#    #cd /libcompat*/
+#    #make -j8 VERBOSE=1 CCsrcdir=/musl-1.2.2
+#    #mv libcompat_time32.a /pot/lib/
+#
+#    cd / && rm -rf /musl*
+#    #cd / && rm -rf /libcompat*
+#)
+#export CC="${CC} -Wl,--whole-archive -lcompat_time32 -Wl,--no-whole-archive"
+#export CXX="${CXX} -Wl,--whole-archive -lcompat_time32 -Wl,--no-whole-archive"
+#export CXXFLAGS="${CXXFLAGS} -Wl,--whole-archive -lcompat_time32 -Wl,--no-whole-archive"
+#export LDFLAGS="${LDFLAGS} -Wl,--whole-archive -lcompat_time32 -Wl,--no-whole-archive"
 
 
 # zlib.
@@ -149,11 +193,11 @@ mkdir -pv /pot/{lib,include,usr/include,usr/lib}/
 # boost.
 (
     cd / && rm -rf /boost*
-    wget 'https://boostorg.jfrog.io/artifactory/main/release/1.76.0/source/boost_1_76_0.tar.gz' 
-    tar -axf 'boost_1_76_0.tar.gz' 
-    rm 'boost_1_76_0.tar.gz' 
-    cd /boost_1_76_0/tools/build/src/engine/
-    printf '%s\n' "using gcc : : ${CXX} : <cxxflags>${CXXFLAGS} <linkflags>${LDFLAGS} ;" > /root/user-config.jam
+    wget 'https://boostorg.jfrog.io/artifactory/main/release/1.77.0/source/boost_1_77_0.tar.gz' 
+    tar -axf 'boost_1_77_0.tar.gz' 
+    rm 'boost_1_77_0.tar.gz' 
+    cd /boost_1_77_0/tools/build/src/engine/
+    printf '%s\n' "using gcc : : ${CXX} ${CXXFLAGS} : <link>static <runtime-link>static <cflags>${CFLAGS} <cxxflags>${CXXFLAGS} <linkflags>${LDFLAGS} ;" > /root/user-config.jam
     printf '%s\n' "using zlib : 1.2.11 : <search>/pot/lib <name>zlib <include>/pot/include ;" >> /root/user-config.jam
     ./build.sh --cxx="clang++"
     cd ../../
@@ -274,12 +318,45 @@ mkdir -pv /pot/{lib,include,usr/include,usr/lib}/
 #    cd / && rm -rf /sdl
 #)
 
+## Un-hide 64-bit time functions for musl.
+## Note: musl uses
+##   #define __REDIR(x,y) __typeof__(x) x __asm__(#y)
+#(
+#    cd / && rm -rf /wrap64
+#    mkdir -pv /wrap64 && cd /wrap64
+#    wget 'https://musl.libc.org/releases/musl-1.2.2.tar.gz'
+#    tar -axf musl-1.2.2.tar.gz
+#
+#rm -rf wrap64*
+#    f=0
+#    while read l ; do
+#        printf '%s\n' "$l" |
+#        sed -e 's/.*include[/]\([^:]*\):__REDIR[(]\([^,]*\),\([^)]*\)[)];/#if defined(__has_include)\n#if __has_include(<\1>)\n#include <\1>\n inline decltype(\2)\* \3 = \&\2;\n#endif\n#endif\n/g' \
+#          > "wrap64_${f}.cc"
+#        f=$((1+f))
+#    done < <( find ./musl-*/ -type f -exec grep '^__REDIR' '{}' \+ | sort -u )
+#
+#    for f in wrap64_*.cc ; do
+#        $CXX --std=c++17 "$f" -fPIC -c -o "${f}.o" -pthread || true
+#    done
+#    $AR rc libwrap64.a wrap64_*.o
+#    $RANLIB libwrap64.a
+#    cp libwrap64.a /pot/lib/
+#
+#    cd / && rm -rf /wrap64
+#)
+#export CC="${CC} -Wl,--whole-archive -lwrap64 -Wl,--no-whole-archive"
+#export CXX="${CXX} -Wl,--whole-archive -lwrap64 -Wl,--no-whole-archive"
+#export CXXFLAGS="${CXXFLAGS} -Wl,--whole-archive -lwrap64 -Wl,--no-whole-archive"
+#export LDFLAGS="${LDFLAGS} -Wl,--whole-archive -lwrap64 -Wl,--no-whole-archive"
 
 # Ygor Clustering.
 (
-    cd /
+    cd / && rm -rf /ygorclustering
     git clone --depth 1 https://github.com/hdclark/YgorClustering.git /ygorclustering
     cd /ygorclustering/
+#        -DCMAKE_EXE_LINKER_FLAGS="-static" \
+#        -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
     cmake -B build \
         -DCMAKE_INSTALL_PREFIX='/pot' \
         -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
@@ -300,6 +377,9 @@ mkdir -pv /pot/{lib,include,usr/include,usr/lib}/
     cd / && rm -rf /explicator
     git clone --depth 1 https://github.com/hdclark/Explicator.git /explicator
     cd /explicator/
+
+        #-DCMAKE_EXE_LINKER_FLAGS="-static" \
+        #-DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
     cmake -B build \
         -DCMAKE_INSTALL_PREFIX='/pot' \
         -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
@@ -344,6 +424,8 @@ mkdir -pv /pot/{lib,include,usr/include,usr/lib}/
         # If freestanding, also have to remove threads support.
     fi
 
+        #-DCMAKE_EXE_LINKER_FLAGS="-static" \
+        #-DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
     cmake -B build \
         -DCMAKE_INSTALL_PREFIX='/pot' \
         -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
@@ -369,11 +451,44 @@ mkdir -pv /pot/{lib,include,usr/include,usr/lib}/
 
     # Drop mpfr and gmp (not needed for musl toolchains, seemingly not needed for static compilation either).
     sed -i -e 's/.*mpfr.*//g' -e 's/.*gmp.*//g' src/CMakeLists.txt 
-
-    # Implement a bogus thread dtor routine, just to make compilation succeed (runtime be damned!)
-    #
-    # Note: not recommended, unless absolutely required, for obvious reasons.
-    #printf '\n\n%s\n\n' 'extern "C" int __cxa_thread_atexit_impl(void (*)(), void *, void *){ return 0; }' >> src/DICOMautomaton_Dispatcher.cc
+#
+#    # arm (32bit) workarounds. Not exactly sure these are needed.
+#    # Note: not recommended, unless absolutely required, for obvious reasons.
+#
+#printf '%s\n' '
+##include <time.h>
+##include <pthread.h>
+#
+#extern "C" {
+#
+#time_t __mktime64(struct tm *time){ return mktime(time); }
+#struct tm *__localtime64_r( const time_t *timer, struct tm *buf ){ return localtime_r(timer, buf); }
+#time_t __time64( time_t *arg ){ return time(arg); }
+#int __clock_gettime64(clockid_t clock_id, struct timespec *tp){ return clock_gettime(clock_id, tp); }
+#int __pthread_cond_timedwait_time64(pthread_cond_t * cond,
+#                                    pthread_mutex_t * mutex,
+#                                    const struct timespec * abstime){
+#    return pthread_cond_timedwait(cond, mutex, abstime);
+#};
+#int __nanosleep_time64(const struct timespec *req, struct timespec *rem){ return nanosleep(req, rem); }
+#
+##include <sys/types.h>
+##include <sys/stat.h>
+##include <unistd.h>
+#int __stat_time64(const char *path, struct stat *buf){ return stat(path, buf); }
+#int __fstat_time64(int fd, struct stat *buf){ return fstat(fd, buf); }
+#int __lstat_time64(const char *path, struct stat *buf){ return lstat(path, buf); }
+#
+##include <fcntl.h>
+##include <sys/stat.h>
+#int __utimensat_time64(int dirfd, const char *pathname,
+#                       const struct timespec times[2], int flags){ return utimensat(dirfd, pathname, times, flags); }
+#
+#
+#int __cxa_thread_atexit_impl(void (*)(), void *, void *){ return 0; }
+#
+#}
+#' >> src/Structs.cc
 
     cmake -B build \
         -DCMAKE_INSTALL_PREFIX='/pot' \
@@ -399,6 +514,8 @@ mkdir -pv /pot/{lib,include,usr/include,usr/lib}/
         -DBOOST_INCLUDEDIR=/pot/usr/include/ \
         -DBOOST_LIBRARYDIR=/pot/usr/lib/ \
         -DBOOST_ROOT=/pot/ \
+        -DCMAKE_EXE_LINKER_FLAGS="-static" \
+        -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
         .
     cd build
     time make -j8 VERBOSE=1 install

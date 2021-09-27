@@ -64,3 +64,14 @@ for repo_dir in /ygor /ygorclustering /explicator /dcma ; do
     rsync -avP /out/usr/ "/mxe/usr/${TOOLCHAIN}/"
 done
 
+# Note: imbuing the executables with icons:
+#    cd /out/usr/bin/
+#    cp /dcma/artifacts/logos/DCMA_cycle_opti.svg ./
+#    apt-get -y install imagemagick
+#    convert DCMA_cycle_opti.svg -scale 256x256 dcma.ico
+#    printf 'id ICON dcma.ico\n' > win_res.rc
+#    "${TOOLCHAIN}-windres" win_res.rc -O coff -o win_res.o
+#    "${TOOLCHAIN}-g++" -o dicomautomaton_dispatcher.exe ... win_res.o ...
+#
+# However, this needs to be added to CMake so the object file can be linked into binaries.
+

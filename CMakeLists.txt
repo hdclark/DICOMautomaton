@@ -241,12 +241,15 @@ check_cxx_symbol_exists(__arm__     "cstdio" ARCH_IS_ARM)
 check_cxx_symbol_exists(__aarch64__ "cstdio" ARCH_IS_ARM64)
 if(ARCH_IS_ARM OR ARCH_IS_ARM64)
     message(STATUS "Detected ARM architecture.")
-
-    # Enable to fix linking errors for toolchains that do not auto-detect atomic intrinsics (e.g., some ARM systems).
-    # Note: Binaries built this way should not be distributed.
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+    if(CMAKE_CXX_FLAGS MATCHES "-march=|-mcpu=|-mtune=")
+        message(STATUS "Architecture set by user.")
+    else()
+        message(STATUS "No architecture set, adding march=native flag")
+        # Enable to fix linking errors for toolchains that do not auto-detect atomic intrinsics (e.g., some ARM systems).
+        # Note: Binaries built this way should not be distributed.
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+    endif()
 endif()
-
 
 
 ####################################################################################

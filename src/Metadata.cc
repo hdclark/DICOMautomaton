@@ -1,7 +1,5 @@
 //Metadata.cc - A part of DICOMautomaton 2021. Written by hal clark.
 
-#include "Metadata.h"
-
 #include <string>
 #include <list>
 #include <numeric>
@@ -357,7 +355,7 @@ metadata_map_t coalesce_metadata_patient_study(const metadata_map_t &ref){
     metadata_map_t out;
 
     //Patient Study Module.
-    insert_or_default(out, ref, "PatientsMass", "");
+    insert_or_default(out, ref, "PatientsWeight", "");
     return out;
 }
 

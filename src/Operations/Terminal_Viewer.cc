@@ -345,17 +345,28 @@ enum class terminal_colour_mode_t {
     bit24,
     bit6,
     step24,
+
+    step5,
+    numbers,
+    punctuation,
 };
+
+static bool terminal_supports_ansi(terminal_colour_mode_t colour_mode){
+    return   (colour_mode == terminal_colour_mode_t::bit24)
+          || (colour_mode == terminal_colour_mode_t::bit6)
+          || (colour_mode == terminal_colour_mode_t::step24);
+}
 
 
 void draw_image( std::ostream &os,
                  const planar_image<float, double> &img, 
-                 const auto term_draw_pow_row,
-                 const auto term_draw_pos_col,
-                 const auto max_square_size,
+                 const long int term_draw_pow_row,
+                 const long int term_draw_pos_col,
+                 const long int max_square_size,
                  const std::function<ClampedColourRGB(double)> &colour_map,
                  terminal_colour_mode_t colour_mode ){
 
+    const bool supports_ansi = terminal_supports_ansi(colour_mode);
 
     // Rescale to help mitigate edge-cases and account (partially) for aspect ratio correction.
     const auto nearest_even_number = [](long int i){
@@ -367,10 +378,10 @@ void draw_image( std::ostream &os,
     planar_image<float, double> scaled_img;
     const auto aspect = (img.pxl_dx * img.rows) / (img.pxl_dy * img.columns);
     auto new_cols = nearest_even_number(max_square_size);
-    auto new_rows = static_cast<long int>( std::clamp( 2.0 * std::round( aspect * new_cols * 0.5), 1.0, 5.0 * new_cols) );
+    auto new_rows = static_cast<long int>( std::clamp( 2.0 * std::floor( aspect * new_cols * 0.5), 1.0, 5.0 * new_cols) );
     if(new_cols < new_rows){
         new_rows = max_square_size;
-        new_cols = static_cast<long int>( std::clamp( 2.0 * std::round( (1.0 / aspect) * new_rows * 0.5), 1.0, 5.0 * new_rows) );
+        new_cols = static_cast<long int>( std::clamp( 2.0 * std::floor( (1.0 / aspect) * new_rows * 0.5), 1.0, 5.0 * new_rows) );
     }
     if( (max_square_size < new_rows)
     ||  (max_square_size < new_cols) ){
@@ -408,7 +419,38 @@ void draw_image( std::ostream &os,
         const auto g = std::clamp(static_cast<int>( std::round(232.0 + (255.0 - 232.0) * intensity) ), 232, 255);
         return g;
     };
+    const auto linear_glpyh_map = [](float intensity, const std::vector<std::string> &glyphs){
+        // Given an ordered list of glpyhs and a number [0:1], figure out which glyph the number maps to.
+        // This is essentially a histogram binning routine.
+        const auto width = 1.0 / static_cast<double>(glyphs.size());
+        for(size_t i = 0; i < glyphs.size(); ++i){
+            const auto upper_threshold = static_cast<double>(i+1) * width;
+            if(intensity < upper_threshold) return glyphs[i];
+        }
+        return glyphs.back();
+    };
+    const auto map_to_shade_glyph = [&linear_glpyh_map](float intensity){
+        // Assume the terminal does not support colour, but is able to display unicode correctly.
+        return linear_glpyh_map(intensity, { " ",    // Empty space.
+                                             "░",    // Unicode U+2591 Light Shade.
+                                             "▒",    // Unicode U+2592 Medium Shade.
+                                             "▓",    // Unicode U+2593 Dark Shade.
+                                             "█" }); // Unicode U+2588 Full Block.
+    };
+    const auto map_to_ascii_number_glyph = [&linear_glpyh_map](float intensity){
+        // Assume the terminal does not support colour or unicode, or the font only supports basic ASCII characters.
+        return linear_glpyh_map(intensity, { "0", "1", "2", "3", "4", "5", "6", "7", "8", "9" });
+    };
+    const auto map_to_ascii_punctuation_glyph = [&linear_glpyh_map](float intensity){
+        // Assume the terminal does not support colour or unicode, or the font only supports basic ASCII characters.
+        return linear_glpyh_map(intensity,
+                // Subjectively sorted into order of apparent brightness on machine at time of writing.
+                { " ",".","-","~","+","c","o","x","=","/","?","$","%","&","#","@","A","X","M"});
+    };
 
+    // Note: we split a terminal character into an upper and lower rectangular block. This is done because common
+    // terminal fonts proportions are (roughly) twice as tall as they are wide. Splitting this way helps normalize the
+    // aspect ratio presented to the user.
     const auto emit_vert_split_colours = [&](std::ostream &os, double upper_intensity, double lower_intensity){
         //const auto cm = ColourMap_Linear(intensity);
         //const auto cm = ColourMap_Magma(intensity);
@@ -421,36 +463,64 @@ void draw_image( std::ostream &os,
             const auto [lower_r, lower_g, lower_b] = map_to_24bit_colour(lower_cm);
             os << "\x1B[38;2;" << upper_r << ";" << upper_g << ";" << upper_b << "m"; // Foreground colour.
             os << "\x1B[48;2;" << lower_r << ";" << lower_g << ";" << lower_b << "m"; // Background colour.
+            os << R"***(▀)***";
+            os << "\x1B[0m"; // Reset terminal colours at current position.
 
         // 6-bit colour embedded within 8-bit ANSI codes (i.e., should be supported by 8-bit terminals).
         }else if(colour_mode == terminal_colour_mode_t::bit6){
             os << "\x1B[38;5;" << map_to_6bit_colour_code(upper_cm) << "m"; // Foreground colour.
             os << "\x1B[48;5;" << map_to_6bit_colour_code(lower_cm) << "m"; // Background colour.
+            os << R"***(▀)***";
+            os << "\x1B[0m"; // Reset terminal colours at current position.
 
         // 24-step grayscale embedded within 8-bit ANSI codes (i.e., should be supported by 8-bit terminals).
         }else if(colour_mode == terminal_colour_mode_t::step24){
             os << "\x1B[38;5;" << map_to_24step_colour_code(upper_intensity) << "m"; // Foreground colour.
             os << "\x1B[48;5;" << map_to_24step_colour_code(lower_intensity) << "m"; // Background colour.
+            os << R"***(▀)***";
+            os << "\x1B[0m"; // Reset terminal colours at current position.
+
+        // No colour or terminal support, but able to display unicode 'shade' glyphs.
+        }else if(colour_mode == terminal_colour_mode_t::step5){
+            const auto avg_intensity = (lower_intensity + upper_intensity) * 0.5;
+            os << map_to_shade_glyph(avg_intensity);
+
+        // No colour or terminal support and not able to display unicode glyphs. Truly a basic, minimal experience.
+        }else if(colour_mode == terminal_colour_mode_t::numbers){
+            const auto avg_intensity = (lower_intensity + upper_intensity) * 0.5;
+            os << map_to_ascii_number_glyph(avg_intensity);
+
+        }else if(colour_mode == terminal_colour_mode_t::punctuation){
+            const auto avg_intensity = (lower_intensity + upper_intensity) * 0.5;
+            os << map_to_ascii_punctuation_glyph(avg_intensity);
 
         }else{
             throw std::logic_error("Unrecognized colour mode");
         }
-        os << R"***(▀)***";
-        os << "\x1B[0m"; // Reset terminal colours at current position.
         return;
     };
     
     // Clear the screen.
-    os << "\x1B[2J";
+    if(supports_ansi){
+        os << "\x1B[2J";
+    }else{
+        os << std::string(5, '\n');
+    }
 
     // Display the image.
     //
     // Note: consult https://en.wikipedia.org/wiki/ANSI_escape_code for more info.
 
-    move_cursor_to(os, term_draw_pow_row, term_draw_pos_col); // Move to reference position.
+    if(supports_ansi){
+        move_cursor_to(os, term_draw_pow_row, term_draw_pos_col); // Move to reference position.
+    }
 
     for(long int r = 0; r < scaled_img.rows; r += 2){
-        move_cursor_to(os, term_draw_pow_row + r/2, term_draw_pos_col);
+        if(supports_ansi){
+            move_cursor_to(os, term_draw_pow_row + r/2, term_draw_pos_col);
+        }else{
+            os << std::string(term_draw_pos_col, ' ');
+        }
         for(long int c = 0; c < scaled_img.columns; c++){
             const auto upper_val = scaled_img.value(r, c, channel);
             const auto upper_intensity = (min < max) ? (upper_val - min) / (max - min) : 1.0;
@@ -463,15 +533,23 @@ void draw_image( std::ostream &os,
 
         // Also print a colour bar, since the colour ramp might not be smooth (depending on colours used).
         {
-            move_cursor_to(os, term_draw_pow_row + r/2, term_draw_pos_col + scaled_img.columns + 1);
-            const auto upper_intensity = static_cast<double>(r  )/static_cast<double>(scaled_img.rows-1);
-            const auto lower_intensity = static_cast<double>(r+1)/static_cast<double>(scaled_img.rows-1);
+            if(supports_ansi){
+                move_cursor_to(os, term_draw_pow_row + r/2, term_draw_pos_col + scaled_img.columns + 1);
+            }else{
+                os << " ";
+            }
+            const auto upper_intensity = 1.0 - static_cast<double>(r  )/static_cast<double>(scaled_img.rows-1);
+            const auto lower_intensity = 1.0 - static_cast<double>(r+1)/static_cast<double>(scaled_img.rows-1);
             emit_vert_split_colours(os, upper_intensity, lower_intensity);
         }
 
-        os << "\x1B[0m"; // Reset terminal colours at current position.
-        os.flush();
-        move_cursor_to(os, term_draw_pow_row + scaled_img.rows/2, 0); // Move cursor to bottom.
+        if(supports_ansi){
+            os << "\x1B[0m"; // Reset terminal colours at current position.
+            os.flush();
+            move_cursor_to(os, term_draw_pow_row + scaled_img.rows/2, 0); // Move cursor to bottom.
+        }else{
+            os << std::endl;
+        }
     }
     os.flush();
     return;
@@ -484,6 +562,32 @@ OperationDoc OpArgDocTerminal_Viewer(){
     out.desc = 
         "Launch an interactive viewer inside a terminal/console.";
 
+    out.args.emplace_back();
+    out.args.back().name = "MaxImageLength";
+    out.args.back().desc = "The maximum size images will be rendered."
+                           " Note that aspect ratio scaling (which is approximate at best) may result in images"
+                           " being displayed with smaller vertical and horizontal lengths."
+                           " The optimal value depends on your screen resolution, font size, required visual"
+                           " resolution, and, potentially, bandwidth.";
+    out.args.back().default_val = "120";
+    out.args.back().expected = true;
+    out.args.back().examples = { "50", "78", "80", "120", "200" };
+
+    out.args.emplace_back();
+    out.args.back().name = "ColourMethod";
+    out.args.back().desc = "Controls how images are displayed. The default, 'auto', will provide the highest"
+                           " number of colour depth possible. However, automatic detection is hard so overrides"
+                           " may be needed."
+                           "\n\n'24-bit' provides the greatest colour depth, but is not supported by all terminals."
+                           "\n\n'6-bit' provides a reasonable amount of colour depth, and is more widely supported."
+                           "\n\n'24-steps' provides low-quality colour depth, but is almost universally available."
+                           "\n\n'5-steps' displays intensity using unicode 'shade' blocks."
+                           "\n\n'numbers' uses ASCII monochrome numbers (0-9) to display intensity."
+                           "\n\n'punctuation' uses ASCII monochrome punctuation marks to display intensity.";
+    out.args.back().default_val = "auto";
+    out.args.back().expected = true;
+    out.args.back().examples = { "auto", "24-bit", "6-bit", "24-steps", "5-steps", "numbers", "punctuation" };
+
     //out.args.emplace_back();
     //out.args.back() = IAWhitelistOpArgDoc();
     //out.args.back().name = "ImageSelection";
@@ -493,27 +597,53 @@ OperationDoc OpArgDocTerminal_Viewer(){
 }
 
 bool Terminal_Viewer(Drover &DICOM_data,
-                     const OperationArgPkg& /*OptArgs*/,
+                     const OperationArgPkg& OptArgs,
                      const std::map<std::string, std::string>& InvocationMetadata,
                      const std::string& FilenameLex){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     //const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
+    const auto MaxImageLength = std::stol(OptArgs.getValueStr("MaxImageLength").value());
+    const auto ColourMethodStr = OptArgs.getValueStr("ColourMethod").value();
     //-----------------------------------------------------------------------------------------------------------------
+    const auto regex_auto    = Compile_Regex("^a?u?t?o?m?a?t?i?c?$");
+    const auto regex_24bit   = Compile_Regex("^24[-_]?bi?t?$");
+    const auto regex_6bit    = Compile_Regex("^6[-_]?bi?t?$");
+    const auto regex_24step  = Compile_Regex("^24[-_]?st?e?p?s?$");
+    const auto regex_5step   = Compile_Regex("^5[-_]?st?e?p?s?$");
+    const auto regex_numbers = Compile_Regex("^nu?m?b?e?r?s?$");
+    const auto regex_punct   = Compile_Regex("^pu?n?c?t?u?a?t?i?o?n?$");
 
     const auto term_draw_pow_row = 5UL;
     const auto term_draw_pos_col = 5UL;
-    const auto max_square_size = 120UL;
+    const auto max_square_size = MaxImageLength;
 
-    // Automatically determine terminal colour capabilities.
     terminal_colour_mode_t terminal_colour_mode = terminal_colour_mode_t::step24;
-    if(terminal_supports_24bit_colour()){
-        // Opt for 24-bit colour if available.
+    if( std::regex_match(ColourMethodStr, regex_auto) ){
+        if(terminal_supports_24bit_colour()){
+            // Opt for 24-bit colour if available.
+            terminal_colour_mode = terminal_colour_mode_t::bit24;
+        }else{
+            // Assume 6-bit colour is always available.
+            terminal_colour_mode = terminal_colour_mode_t::bit6;
+        }
+
+    }else if( std::regex_match(ColourMethodStr, regex_24bit) ){
         terminal_colour_mode = terminal_colour_mode_t::bit24;
-    }else{
-        // Assume 6-bit colour is always available.
+    }else if( std::regex_match(ColourMethodStr, regex_6bit) ){
         terminal_colour_mode = terminal_colour_mode_t::bit6;
+    }else if( std::regex_match(ColourMethodStr, regex_24step) ){
+        terminal_colour_mode = terminal_colour_mode_t::step24;
+    }else if( std::regex_match(ColourMethodStr, regex_5step) ){
+        terminal_colour_mode = terminal_colour_mode_t::step5;
+    }else if( std::regex_match(ColourMethodStr, regex_numbers) ){
+        terminal_colour_mode = terminal_colour_mode_t::numbers;
+    }else if( std::regex_match(ColourMethodStr, regex_punct) ){
+        terminal_colour_mode = terminal_colour_mode_t::punctuation;
+    }else{
+        throw std::invalid_argument("Colour method argument '"_s + ColourMethodStr + "' is not valid");
     }
+    const bool supports_ansi = terminal_supports_ansi(terminal_colour_mode);
 
 /*
     // Make a test image.
@@ -656,7 +786,17 @@ bool Terminal_Viewer(Drover &DICOM_data,
         std::cout << ss.rdbuf();
         std::cout.flush();
 
-        char k = read_unbuffered_raw_char();
+        std::cout << "Action: ";
+        std::cout.flush();
+        char k = '\0';
+        if(supports_ansi){
+            k = read_unbuffered_raw_char();
+        }else{
+            if(!std::cin.get(k)){
+                k = '\x1B';
+            }
+        }
+        std::cout << std::endl;
         if( (k == 'Q') || (k == 'q') || (k == '\x1B') ){ // Exit.
             break;
         }else if( img_valid && (k == 'N') ){

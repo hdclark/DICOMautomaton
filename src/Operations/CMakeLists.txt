@@ -124,6 +124,7 @@ add_library(Operations_objs OBJECT
     Or.cc
     OrderImages.cc
     PartitionContours.cc
+    PerturbPixels.cc
     PlotLineSamples.cc
     PlotPerROITimeCourses.cc
     PointSeparation.cc
