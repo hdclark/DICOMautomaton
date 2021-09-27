@@ -1,7 +1,7 @@
 # NOTE: This Dockerfile should be interepretted relative to the DICOMautomaton repo root.
 
 #FROM --platform=linux/arm64 alpine:latest
-FROM arm64v8/alpine
+FROM --platform=linux/arm64 arm64v8/alpine
 
 LABEL maintainer="http://www.halclark.ca" \
       description="DICOMautomaton Alpine Linux build base (aarch64)."

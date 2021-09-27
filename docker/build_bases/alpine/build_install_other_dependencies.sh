@@ -10,7 +10,7 @@ set -eux
 #        -DCMAKE_EXE_LINKER_FLAGS="-static" \
 #        -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
 #        -DCMAKE_INSTALL_PREFIX='/pot' \
-    cmake -B build \
+    cmake -B /build_ygorclustering \
         -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
         -DBUILD_SHARED_LIBS="${BUILD_SHARED_LIBS}" \
         -DWITH_LINUX_SYS=OFF \
@@ -19,12 +19,12 @@ set -eux
         -DWITH_BOOST=ON \
         -DBoost_USE_STATIC_LIBS=ON \
         .
-    cd build/
+    cd /build_ygorclustering
     time make -j "$JOBS"  VERBOSE=1 install
-    cd ..
-    git reset --hard
-    git clean -fxd 
-    #rm -rf /ygorclustering
+    #cd ..
+    #git reset --hard
+    #git clean -fxd 
+    rm -rf /ygorclustering
 )
 
 # Explicator.
@@ -32,11 +32,10 @@ set -eux
     cd / && rm -rf /explicator
     git clone --depth 1 https://github.com/hdclark/Explicator.git /explicator
     cd /explicator/
-
         #-DCMAKE_EXE_LINKER_FLAGS="-static" \
         #-DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
         #-DCMAKE_INSTALL_PREFIX='/pot' \
-    cmake -B build \
+    cmake -B /build_explicator \
         -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
         -DBUILD_SHARED_LIBS="${BUILD_SHARED_LIBS}" \
         -DWITH_LINUX_SYS=OFF \
@@ -45,12 +44,12 @@ set -eux
         -DWITH_BOOST=ON \
         -DBoost_USE_STATIC_LIBS=ON \
         .
-    cd build/
+    cd /build_explicator
     time make -j8 VERBOSE=1 install
-    cd ..
-    git reset --hard
-    git clean -fxd 
-    #cd / && rm -rf /explicator
+    #cd ..
+    #git reset --hard
+    #git clean -fxd 
+    cd / && rm -rf /explicator
     file /usr/local/bin/explicator_cross_verify
 )
 
@@ -59,12 +58,11 @@ set -eux
     cd / && rm -rf /ygor
     git clone --depth 1 https://github.com/hdclark/Ygor.git /ygor
     cd /ygor
-
         #-DCMAKE_EXE_LINKER_FLAGS="-static" \
         #-DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
         #-DCMAKE_INSTALL_PREFIX='/pot' \
         #-DBOOST_INCLUDEDIR=/pot/usr/include/ \
-    cmake -B build \
+    cmake -B /build_ygor \
         -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
         -DBUILD_SHARED_LIBS="${BUILD_SHARED_LIBS}" \
         -DWITH_LINUX_SYS=OFF \
@@ -73,12 +71,12 @@ set -eux
         -DWITH_BOOST=ON \
         -DBoost_USE_STATIC_LIBS=ON \
         .
-    cd build
+    cd /build_ygor
     time make -j8 VERBOSE=1 install
-    cd ..
-    git reset --hard
-    git clean -fxd  
-    #cd / && rm -rf /ygor
+    #cd ..
+    #git reset --hard
+    #git clean -fxd  
+    cd / && rm -rf /ygor
     file /usr/local/bin/regex_tester
 )
 

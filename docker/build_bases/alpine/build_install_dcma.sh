@@ -18,7 +18,8 @@ set -eux
         #-DBOOST_INCLUDEDIR=/pot/usr/include/ \
         #-DBOOST_LIBRARYDIR=/pot/usr/lib/ \
         #-DBOOST_ROOT=/pot/ \
-    cmake -B build \
+    # If we put the build directory outside of the repo root then we can more easily cache build results.
+    cmake -B /dcma_build \
         -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
         -DBUILD_SHARED_LIBS="${BUILD_SHARED_LIBS}" \
         -DCMAKE_INSTALL_SYSCONFDIR=/etc \
@@ -41,12 +42,12 @@ set -eux
         -DBoost_USE_STATIC_LIBS=ON \
         -DBoost_USE_STATIC_RUNTIME=ON \
         .
-    cd build
+    cd /dcma_build
     time make -j8 VERBOSE=1 install
-    cd ..
-    git reset --hard
-    git clean -fxd
-    #cd / && rm -rf /dcma
+    #cd /dcma
+    #git reset --hard
+    #git clean -fxd
+    cd / && rm -rf /dcma
     file /usr/local/bin/dicomautomaton_dispatcher
     strings /usr/local/bin/dicomautomaton_dispatcher | grep GLIBC | sort | uniq || true
 )

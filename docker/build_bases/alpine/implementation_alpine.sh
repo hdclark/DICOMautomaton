@@ -55,10 +55,10 @@ apk add --no-cache \
 #    asio-dev \
 # Note: these libraries seem to be either shared, or have a shared runtime, which CMake dislikes when compiling static DCMA.
 
-
 /scratch_base/build_install_customized_system_dependencies.sh
 
+# Building the following are not necessary, since a later stage will re-build everything anyway. However, it's useful to
+# do some computation up-front and possibly cache the results.
 /scratch_base/build_install_other_dependencies.sh
-
 /scratch_base/build_install_dcma.sh
 
