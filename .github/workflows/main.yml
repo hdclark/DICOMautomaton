@@ -178,7 +178,7 @@ jobs:
                  -v ~/binaries:/usr/local:rw \
                  -v ~/dcma/docker/build_bases/alpine:/build_base:rw \
                  -v ~/dcma/docker/builders/alpine:/scratch:rw \
-                 'hdclark/dcma_build_base_alpine_armv7' \
+                 'hdclark/dicomautomaton_alpine_armv7' \
                  '/dcma/docker/builders/alpine/implementation_alpine.sh'
       - name: test
         run: |
