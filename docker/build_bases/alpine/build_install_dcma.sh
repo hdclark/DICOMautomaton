@@ -4,8 +4,10 @@ set -eux
 
 # DICOMautomaton.
 (
-    cd / && rm -rf /dcma
-    git clone --depth 1 https://github.com/hdclark/DICOMautomaton.git /dcma
+    if [ ! -d /dcma ] ; then
+        printf 'Source not provided at /dcma, pulling public repository.\n'
+        git clone --depth 1 'https://github.com/hdclark/DICOMautomaton' /dcma
+    fi
     cd /dcma
 
     # Drop mpfr and gmp (not needed for musl toolchains, seemingly not needed for static compilation either).
