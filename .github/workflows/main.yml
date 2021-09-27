@@ -154,7 +154,7 @@ jobs:
       - uses: actions/checkout@v1
       - name: prep
         run: |
-             cp -R . /dcma
+             cp -R . ~/dcma
              export DEBIAN_FRONTEND="noninteractive"
              apt-get update --yes
              apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf qemu binfmt-support qemu-user-static
@@ -164,22 +164,22 @@ jobs:
         run: |
              ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
              mkdir -pv ~/binaries
-             cd /dcma/
+             cd ~/dcma/
              docker run \
                  -it --rm \
                  --privileged \
                  --network=host \
                  --platform=linux/arm/v7 \
-                 -v /dcma:/dcma:rw \
+                 -v ~/dcma:/dcma:rw \
                  -v ~/binaries:/usr/local:rw \
-                 -v /dcma/docker/build_bases/alpine:/build_base:rw \
-                 -v /dcma/docker/builders/alpine:/scratch:rw \
+                 -v ~/dcma/docker/build_bases/alpine:/build_base:rw \
+                 -v ~/dcma/docker/builders/alpine:/scratch:rw \
                  'hdclark/dcma_build_base_alpine_armv7' \
                  '/dcma/docker/builders/alpine/implementation_alpine.sh'
       - name: test
         run: |
              export PATH="/$USER/binaries:$PATH"
-             cd /dcma && ./integration_tests/Run.sh -v
+             cd ~/dcma && ./integration_tests/Run.sh -v
       - name: gather_files
         run: |
              mkdir -pv ~/ci_artifacts/
