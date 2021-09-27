@@ -166,7 +166,6 @@ jobs:
              mkdir -pv ~/binaries
              cd ~/dcma/
              sudo docker run \
-                 -it --rm \
                  --privileged \
                  --network=host \
                  --platform=linux/arm/v7 \
