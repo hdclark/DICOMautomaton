@@ -156,16 +156,16 @@ jobs:
         run: |
              cp -R . ~/dcma
              export DEBIAN_FRONTEND="noninteractive"
-             apt-get update --yes
-             apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf qemu binfmt-support qemu-user-static
-             ./docker/build_bases/alpine/setup_host.sh
-             ./scripts/enable_swapfile.sh
+             sudo apt-get update --yes
+             sudo apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf qemu binfmt-support qemu-user-static
+             sudo ./docker/build_bases/alpine/setup_host.sh
+             sudo ./scripts/enable_swapfile.sh
       - name: build
         run: |
              ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
              mkdir -pv ~/binaries
              cd ~/dcma/
-             docker run \
+             sudo docker run \
                  -it --rm \
                  --privileged \
                  --network=host \
