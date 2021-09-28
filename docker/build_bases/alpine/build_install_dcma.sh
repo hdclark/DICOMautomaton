@@ -30,14 +30,14 @@ set -eux
         -DWITH_ASAN=OFF \
         -DWITH_TSAN=OFF \
         -DWITH_MSAN=OFF \
-        -DWITH_EIGEN=OFF \
+        -DWITH_EIGEN=ON \
         -DWITH_CGAL=OFF \
         -DWITH_NLOPT=OFF \
         -DWITH_SFML=OFF \
         -DWITH_WT=OFF \
         -DWITH_BOOST=ON \
         -DWITH_SDL=OFF \
-        -DWITH_GNU_GSL=OFF \
+        -DWITH_GNU_GSL=ON \
         -DWITH_POSTGRES=OFF \
         -DWITH_JANSSON=OFF \
         -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \

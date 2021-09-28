@@ -14,8 +14,8 @@ set -eux
         -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
         -DBUILD_SHARED_LIBS="${BUILD_SHARED_LIBS}" \
         -DWITH_LINUX_SYS=OFF \
-        -DWITH_EIGEN=OFF \
-        -DWITH_GNU_GSL=OFF \
+        -DWITH_EIGEN=ON \
+        -DWITH_GNU_GSL=ON \
         -DWITH_BOOST=ON \
         -DBoost_USE_STATIC_LIBS=ON \
         .
@@ -39,8 +39,8 @@ set -eux
         -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
         -DBUILD_SHARED_LIBS="${BUILD_SHARED_LIBS}" \
         -DWITH_LINUX_SYS=OFF \
-        -DWITH_EIGEN=OFF \
-        -DWITH_GNU_GSL=OFF \
+        -DWITH_EIGEN=ON \
+        -DWITH_GNU_GSL=ON \
         -DWITH_BOOST=ON \
         -DBoost_USE_STATIC_LIBS=ON \
         .
@@ -66,8 +66,8 @@ set -eux
         -DCMAKE_BUILD_TYPE="${CMAKE_BUILD_TYPE}" \
         -DBUILD_SHARED_LIBS="${BUILD_SHARED_LIBS}" \
         -DWITH_LINUX_SYS=OFF \
-        -DWITH_EIGEN=OFF \
-        -DWITH_GNU_GSL=OFF \
+        -DWITH_EIGEN=ON \
+        -DWITH_GNU_GSL=ON \
         -DWITH_BOOST=ON \
         -DBoost_USE_STATIC_LIBS=ON \
         .
