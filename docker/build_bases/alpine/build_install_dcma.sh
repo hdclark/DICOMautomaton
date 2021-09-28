@@ -36,7 +36,7 @@ set -eux
         -DWITH_SFML=OFF \
         -DWITH_WT=OFF \
         -DWITH_BOOST=ON \
-        -DWITH_SDL=ON \
+        -DWITH_SDL=OFF \
         -DWITH_GNU_GSL=ON \
         -DWITH_POSTGRES=OFF \
         -DWITH_JANSSON=OFF \
