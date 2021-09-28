@@ -182,7 +182,7 @@ jobs:
                  '/dcma/docker/builders/alpine/implementation_alpine.sh'
       - name: test
         run: |
-             export PATH="/$USER/binaries:$PATH"
+             export PATH="/$USER/binaries/bin:$PATH"
              cd ~/dcma && ./integration_tests/Run.sh -v
       - name: gather_files
         run: |
