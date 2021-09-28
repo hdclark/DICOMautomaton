@@ -34,8 +34,10 @@ apk add --no-cache \
     jansson-dev \
     patchelf \
     ` # Additional dependencies for headless OpenGL rendering with SFML ` \
+    libx11-dev libx11-static \
+    glu-dev glu \
+    mesa mesa-dev \
     xorg-server-dev \
-    glu-dev \
     xf86-video-dummy
 
 # Omitted (for now):
