@@ -62,5 +62,5 @@ apk add --no-cache \
 # Building the following are not necessary, since a later stage will re-build everything anyway. However, it's useful to
 # do some computation up-front and possibly cache the results.
 /scratch_base/build_install_other_dependencies.sh
-/scratch_base/build_install_dcma.sh
+#/scratch_base/build_install_dcma.sh
 

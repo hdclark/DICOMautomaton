@@ -46,10 +46,10 @@ set -eux
         .
     cd /dcma_build
     time make -j8 VERBOSE=1 install
-    #cd /dcma
-    #git reset --hard
-    #git clean -fxd
-    cd / && rm -rf /dcma || true
+    cd /dcma
+    git reset --hard || true
+    git clean -fxd :/ || true
+    #cd / && rm -rf /dcma || true
     file /usr/local/bin/dicomautomaton_dispatcher
     strings /usr/local/bin/dicomautomaton_dispatcher | grep GLIBC | sort | uniq || true
 )
