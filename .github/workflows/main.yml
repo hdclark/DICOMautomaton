@@ -168,7 +168,7 @@ jobs:
       - name: build
         run: |
              ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
-             mkdir -pv ~/binaries
+             mkdir -pv ~/binaries/{bin,include,lib,share}
              cd ~/dcma/
              sudo docker run \
                  --privileged \
@@ -180,9 +180,11 @@ jobs:
                  -v ~/dcma/docker/builders/alpine:/scratch:rw \
                  'hdclark/dicomautomaton_alpine_armv7' \
                  '/dcma/docker/builders/alpine/implementation_alpine.sh'
+             sudo chown --recursive $USER:$USER ~/binaries
       - name: test
         run: |
              export PATH="/$USER/binaries/bin:$PATH"
+             sudo cp ~/binaries/bin/dicomautomaton_dispatcher /usr/bin/
              cd ~/dcma && ./integration_tests/Run.sh -v
       - name: gather_files
         run: |
