@@ -36,7 +36,7 @@ set -eux
         -DWITH_SFML=OFF \
         -DWITH_WT=OFF \
         -DWITH_BOOST=ON \
-        -DWITH_SDL=OFF \
+        -DWITH_SDL=ON \
         -DWITH_GNU_GSL=ON \
         -DWITH_POSTGRES=OFF \
         -DWITH_JANSSON=OFF \
@@ -49,7 +49,7 @@ set -eux
     #cd /dcma
     #git reset --hard
     #git clean -fxd
-    cd / && rm -rf /dcma
+    cd / && rm -rf /dcma || true
     file /usr/local/bin/dicomautomaton_dispatcher
     strings /usr/local/bin/dicomautomaton_dispatcher | grep GLIBC | sort | uniq || true
 )

@@ -31,7 +31,7 @@ apk del --no-cache bzip2 xz icu
 
 # boost.
 (
-    cd / && rm -rf /boost*
+    cd / && rm -rf /boost* || true
     wget 'https://boostorg.jfrog.io/artifactory/main/release/1.77.0/source/boost_1_77_0.tar.gz' 
     tar -axf 'boost_1_77_0.tar.gz' 
     rm 'boost_1_77_0.tar.gz' 
@@ -69,20 +69,20 @@ apk del --no-cache bzip2 xz icu
         -sZLIB_LIBRARY_PATH=/usr/lib/ \
         install
     ls -lash /usr/lib
-    cd / && rm -rf /boost*
+    cd / && rm -rf /boost* || true
 )
 
 apk add --no-cache bzip2 xz unzip
 
 # Asio.
 (
-    cd / && rm -rf /asio
+    cd / && rm -rf /asio || true
     mkdir -pv /asio
     cd /asio
     wget 'https://sourceforge.net/projects/asio/files/latest/download' -O asio.tgz
     tar -axf asio.tgz || unzip asio.tgz
     cd asio-*/
     cp -v -R include/asio/ include/asio.hpp /usr/include/
-    cd / && rm -rf /asio
+    cd / && rm -rf /asio || true
 )
 
