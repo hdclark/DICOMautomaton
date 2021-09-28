@@ -187,7 +187,7 @@ jobs:
       - name: gather_files
         run: |
              mkdir -pv ~/ci_artifacts/
-             cp ~/binaries/bin/dicomautomaton_dispatcher ci_artifacts/DICOMautomaton-${GITHUB_SHA::6}-armv7.static
+             cp ~/binaries/bin/dicomautomaton_dispatcher ci_artifacts/DICOMautomaton-${GITHUB_SHA::8}-armv7.static
              cp ~/binaries/bin/dicomautomaton_dispatcher ci_artifacts/DICOMautomaton-latest-armv7.static
              find ~/ci_artifacts/ -type f -iname '*static' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
       - name: deploy_to_github
