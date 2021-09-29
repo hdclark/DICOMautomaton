@@ -730,14 +730,24 @@ FUNCINFO("    This node is a leaf node. Creating a leaf tag");
 //
 //NOTE: On error, the output will be an empty string.
 std::string get_tag_as_string(const std::string &filename, size_t U, size_t L){
+FUNCINFO("Probing for modality..");
     using namespace puntoexe;
     ptr<puntoexe::stream> readStream(new puntoexe::stream);
     readStream->openFile(filename.c_str(), std::ios::in);
+#if defined(__arm__) || defined(__aarch64__)
+FUNCINFO("    !!readStream = " << !!(readStream == nullptr));
+#endif
     if(readStream == nullptr) return std::string("");
 
     ptr<puntoexe::streamReader> reader(new puntoexe::streamReader(readStream));
     ptr<imebra::dataSet> TopDataSet = imebra::codecs::codecFactory::getCodecFactory()->load(reader);
+#if defined(__arm__) || defined(__aarch64__)
+FUNCINFO("    !!TopDataSet = " << !!(TopDataSet == nullptr));
+#endif
     if(TopDataSet == nullptr) return std::string("");
+#if defined(__arm__) || defined(__aarch64__)
+FUNCINFO("    Found modality = " << TopDataSet->getString(U, 0, L, 0));
+#endif
     return TopDataSet->getString(U, 0, L, 0);
 }
 
