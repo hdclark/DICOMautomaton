@@ -71,7 +71,8 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
         std::string Modality;
         try{
             Modality = get_modality(Filename);
-        }catch(const std::exception &){
+        }catch(const std::exception &e){
+            FUNCWARN("Unable to extract modality ('" << e.what() << "')");
             Modality = "";
         };
 
