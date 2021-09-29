@@ -10,7 +10,7 @@
 
 #include <asio.hpp>
 #include <boost/thread.hpp> // For class thread_group.
-#include <boost/bind.hpp>
+#include <boost/bind/bind.hpp>
 
 //#include <boost/asio/io_service.hpp>
 //#include <boost/thread/thread.hpp>
