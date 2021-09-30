@@ -71,7 +71,7 @@ double GetObjective_NR(const Eigen::MatrixXf & xPoints,
 
 Eigen::MatrixXf GetW(const Eigen::MatrixXf & yPoints,
             const Eigen::MatrixXf & gramMatrix,
-            const Eigen::MatrixXf & postProbOne,
+            const Eigen::MatrixXf & postProbInvDiag,
             const Eigen::MatrixXf & postProbX,
             double sigmaSquared,
             double lambda);
@@ -133,10 +133,10 @@ CPD_MatrixVector_Products ComputeCPDProductsNaive(const Eigen::MatrixXf & xPoint
                                                     double w);
 
 double UpdateNaiveConvergenceL(const Eigen::MatrixXf & postProbTransOne,
+                            const Eigen::MatrixXf & xPoints,
+                            const Eigen::MatrixXf & yPoints,
                             double sigmaSquared,
                             double w,
-                            int N_xPoints,
-                            int M_yPoints,
                             int dim);
 
 double UpdateConvergenceL(const Eigen::MatrixXf & gramMatrix,

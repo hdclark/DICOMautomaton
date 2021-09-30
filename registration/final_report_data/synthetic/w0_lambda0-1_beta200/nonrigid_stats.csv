@@ -1,0 +1,5 @@
+iteration,time,similarity,outfile,error
+0,0,0.189413,final_report_data/synthetic/w0_lambda0-1_beta200/nonrigid_iter0.xyz,0.5233933555982522
+1,12.404,0.161202,final_report_data/synthetic/w0_lambda0-1_beta200/nonrigid_iter1_sim0.161202.xyz,0.36665805981768657
+2,24.2868,0.143086,final_report_data/synthetic/w0_lambda0-1_beta200/nonrigid_iter2_sim0.143086.xyz,0.29100912458344635
+3,36.1298,0.120497,final_report_data/synthetic/w0_lambda0-1_beta200/nonrigid_iter3_sim0.120497.xyz,0.22042432410773144

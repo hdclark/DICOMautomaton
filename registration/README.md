@@ -25,7 +25,9 @@ arguments:
   -b Defines the model of the smoothness regularizer - width of smoothing Gaussian filter. b>0 (Optional, default b=2)
   -i Maximum number of iterations for algorithm. (Optional, default i=100)
   -r Similarity threshold to terminate iteratiosn at. (Optional, default r=1)
-  -f Use fast gauss tranform for Nonrigid CPD, will have no effect for other algorithms.(Optional, default False)
+  -f Use fast gauss tranform for Nonrigid CPD with given value of epsilon.(Optional, default not used)
+  -a Portion of eigenvalues to use for low rank matrix approximation for Nonrigid CPD. (Optional, default not used)
+ 
 ```
 ## Unit Tests
 To run unit tests:
