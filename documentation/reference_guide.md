@@ -42,7 +42,7 @@ All materials herein which may be copywrited, where applicable, are. Copyright 2
 2017, 2018, 2019, 2020 hal clark. See the ```LICENSE``` file for details about the license. Informally, DICOMautomaton
 is available under a GPLv3+ license. The Imebra library is bundled for convenience and was not written by hal clark;
 consult its license file in ```src/imebra20121219/license.txt```. The ImGui toolkit is bundled for convenience and was
-not written by hal clark; consult its license file in ```src/imgui20201021/license.txt```.
+not written by hal clark; consult its license file in ```src/imgui20210904/license.txt```.
 
 All liability is herefore disclaimed. The person(s) who use this source and/or software do so strictly under their own
 volition. They assume all associated liability for use and misuse, including but not limited to damages, harm, injury,
@@ -319,12 +319,14 @@ will work.
 - AnalyzeLightRadFieldCoincidence
 - AnalyzePicketFence
 - AnalyzeTPlan
+- And
 - ApplyCalibrationCurve
 - AutoCropImages
 - Average
 - BCCAExtractRadiomicFeatures
 - BEDConvert
 - BoostSerializeDrover
+- Break (alias for False)
 - BuildLexiconInteractively
 - CT_Liver_Perfusion
 - CT_Liver_Perfusion_First_Run
@@ -333,6 +335,7 @@ will work.
 - CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param
 - CellularAutomata
 - ClusterDBSCAN
+- Coalesce (alias for Or)
 - ComparePixels
 - ContourBasedRayCastDoseAccumulate
 - ContourBooleanOperations
@@ -394,6 +397,7 @@ will work.
 - DumpROISurfaceMeshes
 - DumpTPlanMetadataOccurrencesToFile
 - DumpVoxelDoseInfo
+- ElseIf (alias for IfElse)
 - EvaluateDoseVolumeStats
 - EvaluateNTCPModels
 - EvaluateTCPModels
@@ -411,6 +415,7 @@ will work.
 - ExtractPointsWarp
 - ExtractRadiomicFeatures
 - FVPicketFence
+- False
 - ForEachDistinct
 - GenerateCalibrationCurve
 - GenerateSurfaceMask
@@ -426,9 +431,13 @@ will work.
 - GiveWholeImageArrayAnAbdominalWindowLevel
 - GiveWholeImageArrayAnAlphaBetaWindowLevel
 - GridBasedRayCastDoseAccumulate
+- Group (alias for And)
 - GroupImages
 - GrowContours
 - HighlightROIs
+- If (alias for IfElse)
+- IfElse
+- IfThenElse (alias for IfElse)
 - ImageRoutineTests
 - ImprintImages
 - InterpolateSlices
@@ -446,10 +455,13 @@ will work.
 - NoOp
 - NormalizeLineSamples
 - NormalizePixels
+- Not
 - OptimizeStaticBeams
+- Or
 - OrderImages
 - PartitionContours
 - PartitionImages (alias for GroupImages)
+- PerturbPixels
 - PlotLineSamples
 - PlotPerROITimeCourses
 - PointSeparation
@@ -478,9 +490,12 @@ will work.
 - SubtractImages
 - SupersampleImageGrid
 - SurfaceBasedRayCastDoseAccumulate
+- Terminal_Viewer
 - ThresholdImages
 - ThresholdOtsu
+- Throw (alias for False)
 - TrimROIDose
+- True
 - UBC3TMRI_DCE
 - UBC3TMRI_DCE_Differences
 - UBC3TMRI_DCE_Experimental
@@ -493,6 +508,7 @@ will work.
 - WarpImages
 - WarpMeshes
 - WarpPoints
+- While
 
 # Operations Reference
 
@@ -1317,6 +1333,25 @@ will remain unexpanded (i.e., with a preceeding '$').
 - ```"1 Arc"```
 - ```"IMRT"```
 
+
+----------------------------------------------------
+
+## And
+
+### Description
+
+This operation is a control flow meta-operation that requires all children to complete successfully.
+
+### Notes
+
+- If this operation has no children, this operation will evaluate to a no-op.
+
+- Each child is performed sequentially in the order specified, and all side-effects are carried forward. In particular,
+  all selectors in child operations are evaluated lazily, at the moment when the child operation is invoked.
+
+### Parameters
+
+No registered options.
 
 ----------------------------------------------------
 
@@ -13851,6 +13886,18 @@ window overrides.
 
 ----------------------------------------------------
 
+## False
+
+### Description
+
+This operation is a control flow meta-operation that does not complete successfully. It has no side effects.
+
+### Parameters
+
+No registered options.
+
+----------------------------------------------------
+
 ## ForEachDistinct
 
 ### Description
@@ -14670,21 +14717,28 @@ with spatial extent.
 ##### Description
 
 This parameter is used to specify one or more transformations. Current primitives include translation, scaling,
-mirroring, and rotation. • Translations have three configurable scalar parameters denoting the translation along x, y,
-and z in the DICOM coordinate system. Translating $x=1.0$, $y=-2.0$, and $z=0.3$ can be specified as 'translate(1.0,
--2.0, 0.3)'. • The scale (actually 'homothetic') transformation has four configurable scalar parameters denoting the
-scale centre 3-vector and the magnification factor. Note that the magnification factor can be negative, which will cause
-the mesh to be inverted along x, y, and z axes and magnified. Take note that face orientations will also become
-inverted. Magnifying by 2.7x about $(1.23, -2.34, 3.45)$ can be specified as 'scale(1.23, -2.34, 3.45, 2.7)'. A standard
-scale transformation can be achieved by taking the centre to be the origin. • The mirror transformation has six
-configurable scalar parameters denoting an oriented plane about which a mirror is performed. Mirroring in the plane that
-intersects $(1,2,3)$ and has a normal toward $(1,0,0)$ can be specified as 'mirror(1,2,3, 1,0,0)'. • Rotations around
-an arbitrary axis line can be accomplished. The rotation transformation has seven configurable scalar parameters
-denoting the rotation centre 3-vector, the rotation axis 3-vector, and the rotation angle in radians. A rotation of pi
-radians around the axis line parallel to vector $(1.0, 0.0, 0.0)$ that intersects the point $(4.0, 5.0, 6.0)$ can be
-specified as 'rotate(4.0, 5.0, 6.0, 1.0, 0.0, 0.0, 3.141592653)'. • A transformation can be composed of one or more
-primitive transformations applied sequentially. Primitives can be separated by a ';' and are evaluated from left to
-right.
+mirroring, and rotation.
+
+Translations have three configurable scalar parameters denoting the translation along x, y, and z in the DICOM
+coordinate system. Translating $x=1.0$, $y=-2.0$, and $z=0.3$ can be specified as 'translate(1.0, -2.0, 0.3)'.
+
+The scale (actually 'homothetic') transformation has four configurable scalar parameters denoting the scale centre
+3-vector and the magnification factor. Note that the magnification factor can be negative, which will cause the mesh to
+be inverted along x, y, and z axes and magnified. Take note that face orientations will also become inverted. Magnifying
+by 2.7x about $(1.23, -2.34, 3.45)$ can be specified as 'scale(1.23, -2.34, 3.45, 2.7)'. A standard scale transformation
+can be achieved by taking the centre to be the origin.
+
+The mirror transformation has six configurable scalar parameters denoting an oriented plane about which a mirror is
+performed. Mirroring in the plane that intersects $(1,2,3)$ and has a normal toward $(1,0,0)$ can be specified as
+'mirror(1,2,3, 1,0,0)'.
+
+Rotations around an arbitrary axis line can be accomplished. The rotation transformation has seven configurable scalar
+parameters denoting the rotation centre 3-vector, the rotation axis 3-vector, and the rotation angle in radians. A
+rotation of pi radians around the axis line parallel to vector $(1.0, 0.0, 0.0)$ that intersects the point $(4.0, 5.0,
+6.0)$ can be specified as 'rotate(4.0, 5.0, 6.0, 1.0, 0.0, 0.0, 3.141592653)'.
+
+A transformation can be composed of one or more primitive transformations applied sequentially. Primitives can be
+separated by a ';' and are evaluated from left to right.
 
 ##### Default
 
@@ -15111,6 +15165,9 @@ specified StationName.
 ### Notes
 
 - Images are moved, not copied.
+
+- This operation can be used to 'ungroup' images by selecting a shared common key (e.g., FrameOfReferenceUID or
+  Modality).
 
 - Image order within a group is retained (i.e., stable grouping), but groups are appended to the back of the Image_Array
   list according to the default sort for the group's key-value value.
@@ -15616,6 +15673,33 @@ Note that this parameter will match 'raw' contour labels.
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
 
+
+----------------------------------------------------
+
+## IfElse
+
+### Description
+
+This operation is a control flow meta-operation that performs an 'if-then' or 'if-then-else' by evaluating child
+operations. If the first child operation (the conditional) completes without throwing an exception, then the second
+operation is performed. Otherwise the third operation ('else statement'), if present, is performed. Side effects from
+all evaluated operations are possible.
+
+### Notes
+
+- Child operations are performed in order, and all side-effects are carried forward. In particular, all selectors in
+  child operations are evaluated lazily, at the moment when the child operation is invoked.
+
+- A single operation is required for each of the condition, 'then' path, and 'else' path. Multiple operations can be
+  wrapped (i.e., combined together) to make a single child operation.
+
+- Some operations may succeed without directly signalling failure. For example, an operation that loops over all
+  selected images may not throw if zero images are selected. This operation works best with other control flow
+  meta-operations.
+
+### Parameters
+
+No registered options.
 
 ----------------------------------------------------
 
@@ -16896,11 +16980,16 @@ separating them with a ';' and are applied in the order specified.
 
 ##### Description
 
-Key-value pairs in the form of 'key1@value1;key2@value2' that will be injected into the selected images. Existing
-metadata will be overwritten. Both keys and values are case-sensitive. Note that a semi-colon separates key-value pairs,
-not a colon. Note that quotation marks are not stripped internally, but may have to be provided for the shell to
-properly interpret the argument. Also note that updating spatial metadata will not result in the image characteristics
-being altered -- use the specific parameters provided to update spatial characteristics.
+Key-value pairs in the form of 'key1@value1;key2@value2' that will be injected into the selected objects.Values can use
+macros that refer to other metadata keys using the '$' character. If macros refer to non-existent metadata elements,
+then the replacement is literal.Dates, times, and datetimes can be converted to seconds (since the Unix epoch) using the
+'to_seconds()' function.
+
+Existing conflicting metadata will be overwritten. Both keys and values are case-sensitive. Note that a semi-colon
+separates key-value pairs, not a colon. Note that quotation marks are not stripped internally, but may have to be
+provided on the command line for shells to properly interpret the argument. Also note that updating spatial metadata
+will not result in the object characteristics being altered -- use the specific parameters provided to update spatial
+characteristics.
 
 ##### Default
 
@@ -16910,6 +16999,8 @@ being altered -- use the specific parameters provided to update spatial characte
 
 - ```"Description@'some description'"```
 - ```"'Description@some description'"```
+- ```"'Description@Research scan performed on $ContentDate'"```
+- ```"'ContentTimeInSeconds@to_seconds($ContentDate-$ContentDate)'"```
 - ```"MinimumSeparation@1.23"```
 - ```"'Description@some description;MinimumSeparation@1.23'"```
 
@@ -17378,11 +17469,19 @@ The channel to operate on (zero-based). Negative values will cause all channels 
 
 ##### Description
 
-Controls the specific type of normalization that will be applied. 'Stretch01' will rescale the voxel values so the
-minima are 0 and the maxima are 1. Likewise, 'stretch11' will rescale such that the minima are -1 and the maxima are 1.
+Controls the specific type of normalization that will be applied.
+
+'Stretch01' will rescale the voxel values so the minima are 0 and the maxima are 1. Likewise, 'stretch11' will rescale
+such that the minima are -1 and the maxima are 1.
+
 Clamp will ensure all voxel intensities are within [0:1] by setting those lower than 0 to 0 and those higher than 1 to
-1. (Voxels already within [0:1] will not be altered.) 'Sum-to-zero' will shift all voxels so that the sum of all voxel
-intensities is zero. (This is useful for convolution kernels.)
+1. (Voxels already within [0:1] will not be altered.)
+
+'Sum-to-zero' will shift all voxels so that the sum of all voxel intensities is zero. (This is useful for convolution
+kernels.)
+
+'SUVbw' scales PET images in 'Bq/ml' to body-weight SUV. Note that this method will likely fail if images do not have a
+PET modality. See <https://doi.org/10.2967/jnmt.119.233353> for additional details.
 
 ##### Default
 
@@ -17394,7 +17493,27 @@ intensities is zero. (This is useful for convolution kernels.)
 - ```"stretch01"```
 - ```"stretch11"```
 - ```"sum-to-zero"```
+- ```"suv-bw"```
 
+
+----------------------------------------------------
+
+## Not
+
+### Description
+
+This operation is a control flow meta-operation that requires no child operation to complete successfully.
+
+### Notes
+
+- If this operation has no children, this operation will evaluate to a no-op.
+
+- Each child is performed sequentially in the order specified, and all side-effects are carried forward. In particular,
+  all selectors in child operations are evaluated lazily, at the moment when the child operation is invoked.
+
+### Parameters
+
+No registered options.
 
 ----------------------------------------------------
 
@@ -17644,6 +17763,26 @@ The dose prescribed to the ROI that will be optimized. The units depend on the D
 - ```"70.0"```
 - ```"100.0"```
 
+
+----------------------------------------------------
+
+## Or
+
+### Description
+
+This operation is a control flow meta-operation that evaluates all children operations until one completes successfully.
+
+### Notes
+
+- If this operation has no children, or no children complete successfully, then this operation signals false truthiness.
+
+- Each child is performed sequentially and lazily in the order specified, with all side-effects carried forward. In
+  particular, all selectors in child operations are evaluated lazily, at the moment when the child operation is invoked.
+  After the first child completes successfully, no other children will be evaluated.
+
+### Parameters
+
+No registered options.
 
 ----------------------------------------------------
 
@@ -18028,6 +18167,250 @@ the fractional tolerance to be excessively small.
 - ```"10"```
 - ```"20"```
 - ```"30"```
+
+
+----------------------------------------------------
+
+## PerturbPixels
+
+### Description
+
+This operation applies random noise to voxel intensities. It can be used to help fuzz testing or benchmark statistical
+analysis.
+
+### Parameters
+
+- Channel
+- ImageSelection
+- ContourOverlap
+- Inclusivity
+- NormalizedROILabelRegex
+- ROILabelRegex
+- Model
+- Method
+- Seed
+
+#### Channel
+
+##### Description
+
+The image channel to use. Zero-based. Use '-1' to operate on all available channels.
+
+##### Default
+
+- ```"-1"```
+
+##### Examples
+
+- ```"-1"```
+- ```"0"```
+- ```"1"```
+- ```"2"```
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
+composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
+Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
+image array (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+
+#### ContourOverlap
+
+##### Description
+
+Controls overlapping contours are treated. The default 'ignore' treats overlapping contours as a single contour,
+regardless of contour orientation. This will effectively honour only the outermost contour regardless of orientation,
+but provides the most predictable and consistent results. The option 'honour_opposite_orientations' makes overlapping
+contours with opposite orientation cancel. Otherwise, orientation is ignored. This is useful for Boolean structures
+where contour orientation is significant for interior contours (holes). If contours do not have consistent overlap
+(e.g., if contours intersect) the results can be unpredictable and hard to interpret. The option
+'overlapping_contours_cancel' ignores orientation and alternately cancerls all overlapping contours. Again, if the
+contours do not have consistent overlap (e.g., if contours intersect) the results can be unpredictable and hard to
+interpret.
+
+##### Default
+
+- ```"ignore"```
+
+##### Supported Options
+
+- ```"ignore"```
+- ```"honour_opposite_orientations"```
+- ```"overlapping_contours_cancel"```
+- ```"honour_opps"```
+- ```"overlap_cancel"```
+
+#### Inclusivity
+
+##### Description
+
+Controls how voxels are deemed to be 'within' the interior of the selected ROI(s). The default 'center' considers only
+the central-most point of each voxel. There are two corner options that correspond to a 2D projection of the voxel onto
+the image plane. The first, 'planar_corner_inclusive', considers a voxel interior if ANY corner is interior. The second,
+'planar_corner_exclusive', considers a voxel interior if ALL (four) corners are interior.
+
+##### Default
+
+- ```"center"```
+
+##### Supported Options
+
+- ```"center"```
+- ```"centre"```
+- ```"planar_corner_inclusive"```
+- ```"planar_inc"```
+- ```"planar_corner_exclusive"```
+- ```"planar_exc"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
+regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+
+Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
+user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
+matching is required. Refer to the lexicon for available labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *raw* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
+regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+
+Note that this parameter will match 'raw' contour labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"^body$"```
+- ```"Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+
+#### Model
+
+##### Description
+
+Controls which type of noise is applied.
+
+'gaussian(centre, std_dev)' applies a Gaussian model centered on 'centre' with the given standard deviation.
+
+'uniform(lower, upper)' applies a uniform noise model where noise values are selected with equal probability inside the
+range [lower, upper].
+
+Note that if any parameters have a '%' or 'x' suffix, they are treated as percentages or fractions relative to the
+pre-perturbed voxel intensity.
+
+##### Default
+
+- ```"gaussian(0.0, 1.0)"```
+
+##### Examples
+
+- ```"gaussian(0.0, 1.0)"```
+- ```"gaussian(0.0, 0.5x)"```
+- ```"gaussian(0.0, 50%)"```
+- ```"gaussian(2.5, 50%)"```
+- ```"gaussian(0.2x, 0.1)"```
+- ```"uniform(-1.0, 1.0)"```
+- ```"uniform(-1.0x, 1.0x)"```
+
+#### Method
+
+##### Description
+
+Controls how the noise is applied to the voxel intensity.
+
+##### Default
+
+- ```"additive"```
+
+##### Examples
+
+- ```"additive"```
+- ```"multiplicative"```
+
+#### Seed
+
+##### Description
+
+The seed value to use for random number generation.
+
+##### Default
+
+- ```"1337"```
+
+##### Examples
+
+- ```"1"```
+- ```"1337"```
+- ```"1500450271"```
 
 
 ----------------------------------------------------
@@ -21613,6 +21996,73 @@ visualization.
 
 ----------------------------------------------------
 
+## Terminal_Viewer
+
+### Description
+
+Launch an interactive viewer inside a terminal/console.
+
+### Parameters
+
+- MaxImageLength
+- ColourMethod
+
+#### MaxImageLength
+
+##### Description
+
+The maximum size images will be rendered. Note that aspect ratio scaling (which is approximate at best) may result in
+images being displayed with smaller vertical and horizontal lengths. The optimal value depends on your screen
+resolution, font size, required visual resolution, and, potentially, bandwidth.
+
+##### Default
+
+- ```"120"```
+
+##### Examples
+
+- ```"50"```
+- ```"78"```
+- ```"80"```
+- ```"120"```
+- ```"200"```
+
+#### ColourMethod
+
+##### Description
+
+Controls how images are displayed. The default, 'auto', will provide the highest number of colour depth possible.
+However, automatic detection is hard so overrides may be needed.
+
+'24-bit' provides the greatest colour depth, but is not supported by all terminals.
+
+'6-bit' provides a reasonable amount of colour depth, and is more widely supported.
+
+'24-steps' provides low-quality colour depth, but is almost universally available.
+
+'5-steps' displays intensity using unicode 'shade' blocks.
+
+'numbers' uses ASCII monochrome numbers (0-9) to display intensity.
+
+'punctuation' uses ASCII monochrome punctuation marks to display intensity.
+
+##### Default
+
+- ```"auto"```
+
+##### Examples
+
+- ```"auto"```
+- ```"24-bit"```
+- ```"6-bit"```
+- ```"24-steps"```
+- ```"5-steps"```
+- ```"numbers"```
+- ```"punctuation"```
+
+
+----------------------------------------------------
+
 ## ThresholdImages
 
 ### Description
@@ -22404,6 +22854,19 @@ you don't. Use the high setting if your TPS goes overboard linking data sets by 
 - ```"medium"```
 - ```"high"```
 
+
+----------------------------------------------------
+
+## True
+
+### Description
+
+This operation is a control flow meta-operation that completes successfully. It has not side effects and evaluates to a
+no-op.
+
+### Parameters
+
+No registered options.
 
 ----------------------------------------------------
 
@@ -23641,6 +24104,49 @@ separating them with a ';' and are applied in the order specified.
 - ```"!#-3"```
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
+
+
+----------------------------------------------------
+
+## While
+
+### Description
+
+This operation is a control flow meta-operation that repeatedly and sequentially invokes child operations (2-n) until
+the first child operation completes successfully.
+
+### Notes
+
+- This operation evaluates the first child (the conditional) before evaluating any other children. So this operation
+  represents a while-loop and not a do-while-loop.
+
+- Each repeat is performed sequentially, and all side-effects are carried forward for each iteration. In particular, all
+  selectors in child operations are evaluated lazily, at the moment when the child operation is invoked. If any
+  non-conditional child operation does not complete successfully, it is treated as a 'break' statement and a true
+  truthiness is returned.
+
+### Parameters
+
+- N
+
+#### N
+
+##### Description
+
+The maximum number of times to loop. If the loop reaches this number of iterations, then this operation returns false
+truthiness. If 'N' is negative or not provided, then looping will continue indefinitely.
+
+##### Default
+
+- ```"100"```
+
+##### Examples
+
+- ```"-1"```
+- ```"0"```
+- ```"5"```
+- ```"10"```
+- ```"1000"```
 
 
 # Known Issues and Limitations
