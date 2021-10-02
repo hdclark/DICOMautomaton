@@ -206,3 +206,121 @@ jobs:
              chmod 600 deploy_key
              for i in `seq 1 20` ; do sleep 5 ; rsync -avP -e 'ssh -v -i deploy_key -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no' ~/ci_artifacts/ root@halclark.ca:/var/www/html/ci/ && break ; done
 
+  build_static_alpine_x86_64:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v1
+      - name: prep
+        run: |
+             cp -R . ~/dcma
+             export DEBIAN_FRONTEND="noninteractive"
+             sudo apt-get update --yes
+             sudo apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf qemu binfmt-support qemu-user-static
+             sudo ./docker/build_bases/alpine/setup_host.sh
+             sudo ./scripts/enable_swapfile.sh
+      - name: authenticate_with_dockerhub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: build
+        run: |
+             ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
+             mkdir -pv ~/binaries/{bin,include,lib,share}
+             cd ~/dcma/
+             sudo docker run \
+                 --privileged \
+                 --network=host \
+                 --platform=linux/amd64 \
+                 -v ~/dcma:/dcma:rw \
+                 -v ~/binaries:/usr/local:rw \
+                 -v ~/dcma/docker/build_bases/alpine:/build_base:rw \
+                 -v ~/dcma/docker/builders/alpine:/scratch:rw \
+                 'hdclark/dicomautomaton_alpine_x86_64' \
+                 '/dcma/docker/builders/alpine/implementation_alpine.sh'
+             sudo chown --recursive $USER:$USER ~/binaries
+#      - name: test
+#        run: |
+#             export PATH="/$USER/binaries/bin:$PATH"
+#             sudo cp ~/binaries/bin/dicomautomaton_dispatcher /usr/bin/
+#             cd ~/dcma && ./integration_tests/Run.sh -v
+      - name: gather_files
+        run: |
+             mkdir -pv ~/ci_artifacts/
+             cp ~/binaries/bin/dicomautomaton_dispatcher ~/ci_artifacts/DICOMautomaton-${GITHUB_SHA::8}-x86_64.static
+             cp ~/binaries/bin/dicomautomaton_dispatcher ~/ci_artifacts/DICOMautomaton-latest-x86_64.static
+             find ~/ci_artifacts/ -type f -iname '*static' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
+      - name: deploy_to_github
+        uses: actions/upload-artifact@v2
+        with:
+          name: "DICOMautomaton-static"
+          if-no-files-found: error
+          path: |
+                ~/ci_artifacts/DICOMautomaton-latest-x86_64.static
+                ~/ci_artifacts/DICOMautomaton-latest-x86_64.static.sha256sum
+      - name: deploy_to_halclark_ca
+        run: |
+             echo "${{secrets.HALCLARKCA_DEPLOY_KEY}}" > deploy_key
+             chmod 600 deploy_key
+             for i in `seq 1 20` ; do sleep 5 ; rsync -avP -e 'ssh -v -i deploy_key -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no' ~/ci_artifacts/ root@halclark.ca:/var/www/html/ci/ && break ; done
+
+  build_static_alpine_aarch64:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v1
+      - name: prep
+        run: |
+             cp -R . ~/dcma
+             export DEBIAN_FRONTEND="noninteractive"
+             sudo apt-get update --yes
+             sudo apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf qemu binfmt-support qemu-user-static
+             sudo ./docker/build_bases/alpine/setup_host.sh
+             sudo ./scripts/enable_swapfile.sh
+      - name: authenticate_with_dockerhub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: build
+        run: |
+             ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
+             mkdir -pv ~/binaries/{bin,include,lib,share}
+             cd ~/dcma/
+             sudo docker run \
+                 --privileged \
+                 --network=host \
+                 --platform=linux/arm64 \
+                 -v ~/dcma:/dcma:rw \
+                 -v ~/binaries:/usr/local:rw \
+                 -v ~/dcma/docker/build_bases/alpine:/build_base:rw \
+                 -v ~/dcma/docker/builders/alpine:/scratch:rw \
+                 'hdclark/dicomautomaton_alpine_aarch64' \
+                 '/dcma/docker/builders/alpine/implementation_alpine.sh'
+             sudo chown --recursive $USER:$USER ~/binaries
+#      - name: test
+#        run: |
+#             export PATH="/$USER/binaries/bin:$PATH"
+#             sudo cp ~/binaries/bin/dicomautomaton_dispatcher /usr/bin/
+#             cd ~/dcma && ./integration_tests/Run.sh -v
+      - name: gather_files
+        run: |
+             mkdir -pv ~/ci_artifacts/
+             cp ~/binaries/bin/dicomautomaton_dispatcher ~/ci_artifacts/DICOMautomaton-${GITHUB_SHA::8}-aarch64.static
+             cp ~/binaries/bin/dicomautomaton_dispatcher ~/ci_artifacts/DICOMautomaton-latest-aarch64.static
+             find ~/ci_artifacts/ -type f -iname '*static' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
+      - name: deploy_to_github
+        uses: actions/upload-artifact@v2
+        with:
+          name: "DICOMautomaton-static"
+          if-no-files-found: error
+          path: |
+                ~/ci_artifacts/DICOMautomaton-latest-aarch64.static
+                ~/ci_artifacts/DICOMautomaton-latest-aarch64.static.sha256sum
+      - name: deploy_to_halclark_ca
+        run: |
+             echo "${{secrets.HALCLARKCA_DEPLOY_KEY}}" > deploy_key
+             chmod 600 deploy_key
+             for i in `seq 1 20` ; do sleep 5 ; rsync -avP -e 'ssh -v -i deploy_key -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no' ~/ci_artifacts/ root@halclark.ca:/var/www/html/ci/ && break ; done
+
