@@ -181,15 +181,14 @@ jobs:
                  'hdclark/dicomautomaton_alpine_armv7' \
                  '/dcma/docker/builders/alpine/implementation_alpine.sh'
              sudo chown --recursive $USER:$USER ~/binaries
-#      - name: test
-#        run: |
-#             export PATH="/$USER/binaries/bin:$PATH"
-#             sudo cp ~/binaries/bin/dicomautomaton_dispatcher /usr/bin/
-#             cd ~/dcma && ./integration_tests/Run.sh -v
+      - name: test
+        run: |
+             find ~/binaries/ -type f -execdir chmod 777 '{}' \;
+             sudo cp ~/binaries/bin/dicomautomaton_dispatcher /usr/bin/
+             cd ~/dcma && ./integration_tests/Run.sh -v
       - name: gather_files
         run: |
              mkdir -pv ~/ci_artifacts/
-             find ~/binaries/ -type f -execdir chmod 777 '{}' \;
              cp ~/binaries/bin/dicomautomaton_dispatcher ~/ci_artifacts/DICOMautomaton-${GITHUB_SHA::8}-armv7.static
              cp ~/binaries/bin/dicomautomaton_dispatcher ~/ci_artifacts/DICOMautomaton-latest-armv7.static
              find ~/ci_artifacts/ -type f -iname '*static' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
@@ -241,15 +240,14 @@ jobs:
                  'hdclark/dicomautomaton_alpine_x86_64' \
                  '/dcma/docker/builders/alpine/implementation_alpine.sh'
              sudo chown --recursive $USER:$USER ~/binaries
-#      - name: test
-#        run: |
-#             export PATH="/$USER/binaries/bin:$PATH"
-#             sudo cp ~/binaries/bin/dicomautomaton_dispatcher /usr/bin/
-#             cd ~/dcma && ./integration_tests/Run.sh -v
+      - name: test
+        run: |
+             find ~/binaries/ -type f -execdir chmod 777 '{}' \;
+             sudo cp ~/binaries/bin/dicomautomaton_dispatcher /usr/bin/
+             cd ~/dcma && ./integration_tests/Run.sh -v
       - name: gather_files
         run: |
              mkdir -pv ~/ci_artifacts/
-             find ~/binaries/ -type f -execdir chmod 777 '{}' \;
              cp ~/binaries/bin/dicomautomaton_dispatcher ~/ci_artifacts/DICOMautomaton-${GITHUB_SHA::8}-x86_64.static
              cp ~/binaries/bin/dicomautomaton_dispatcher ~/ci_artifacts/DICOMautomaton-latest-x86_64.static
              find ~/ci_artifacts/ -type f -iname '*static' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
@@ -301,15 +299,14 @@ jobs:
                  'hdclark/dicomautomaton_alpine_aarch64' \
                  '/dcma/docker/builders/alpine/implementation_alpine.sh'
              sudo chown --recursive $USER:$USER ~/binaries
-#      - name: test
-#        run: |
-#             export PATH="/$USER/binaries/bin:$PATH"
-#             sudo cp ~/binaries/bin/dicomautomaton_dispatcher /usr/bin/
-#             cd ~/dcma && ./integration_tests/Run.sh -v
+      - name: test
+        run: |
+             find ~/binaries/ -type f -execdir chmod 777 '{}' \;
+             sudo cp ~/binaries/bin/dicomautomaton_dispatcher /usr/bin/
+             cd ~/dcma && ./integration_tests/Run.sh -v
       - name: gather_files
         run: |
              mkdir -pv ~/ci_artifacts/
-             find ~/binaries/ -type f -execdir chmod 777 '{}' \;
              cp ~/binaries/bin/dicomautomaton_dispatcher ~/ci_artifacts/DICOMautomaton-${GITHUB_SHA::8}-aarch64.static
              cp ~/binaries/bin/dicomautomaton_dispatcher ~/ci_artifacts/DICOMautomaton-latest-aarch64.static
              find ~/ci_artifacts/ -type f -iname '*static' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
