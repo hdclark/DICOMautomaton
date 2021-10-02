@@ -178,12 +178,25 @@ void charsetConversion::initialize(const std::string& tableName)
 	default:
 		PUNTOEXE_THROW(charsetConversionExceptionUtfSizeNotSupported, "The system utf size is not supported");
 	}
-
 	m_iconvToUnicode = iconv_open(utfCode, m_charsetTable[requestedTable].m_iconvName);
 	m_iconvFromUnicode = iconv_open(toCodeIgnore.c_str(), utfCode);
-	if(m_iconvToUnicode == (iconv_t)-1 || m_iconvFromUnicode == (iconv_t)-1)
+
+	// Fallback on an identity transform if not available.
+    // This is a common occurence for musl's iconv because it only provides limited functionality compared with glibc.
+    // See https://wiki.musl-libc.org/functional-differences-from-glibc.html (circa 2021 October 1st).
+	if(m_iconvToUnicode == (iconv_t)(-1) || m_iconvFromUnicode == (iconv_t)(-1)){
+		m_iconvToUnicode = iconv_open("utf8", "utf8");
+		m_iconvFromUnicode = iconv_open("utf8", "utf8");
+	}
+
+	if(m_iconvToUnicode == (iconv_t)(-1) || m_iconvFromUnicode == (iconv_t)(-1))
 	{
-		PUNTOEXE_THROW(charsetConversionExceptionNoSupportedTable, "The requested ISO table is not supported by the system");
+		PUNTOEXE_THROW(charsetConversionExceptionNoSupportedTable,
+			std::string( std::string("The requested ISO table is not supported by the system (from: '")
+				   + utfCode
+				   + "' to: '"
+				   + m_charsetTable[requestedTable].m_iconvName
+				   + "')" ).c_str() );
 	}
 #else
 	m_codePage = m_charsetTable[requestedTable].m_codePage;

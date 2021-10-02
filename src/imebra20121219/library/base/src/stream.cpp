@@ -92,14 +92,70 @@ void stream::openFile(const std::string& fileName, const int mode)
 {
 	PUNTOEXE_FUNCTION_START(L"stream::openFile (ansi)");
 
-	std::wstring wFileName;
-	size_t fileNameSize(fileName.size());
-	wFileName.resize(fileNameSize);
-	for(size_t copyChars = 0; copyChars != fileNameSize; ++copyChars)
+	if(m_openFile)
 	{
-		wFileName[copyChars] = (wchar_t)fileName[copyChars];
+		if(::fclose(m_openFile)!=0)
+		{
+			PUNTOEXE_THROW(streamExceptionClose, "Error while closing the file");
+		}
+		m_openFile = nullptr;
 	}
-	openFile(wFileName, mode);
+
+	std::string strMode;
+
+	int tempMode = mode & (~std::ios::binary);
+
+	if(tempMode == (int)(std::ios::in | std::ios::out))
+	{
+		strMode = "r+";
+	}
+
+	if(tempMode == (int)(std::ios::in | std::ios::out | std::ios::app))
+	{
+		strMode = "a+";
+	}
+	
+	if(tempMode == (int)(std::ios::in | std::ios::out | std::ios::trunc))
+	{
+		strMode = "w+";
+	}
+	
+	if(tempMode == (int)(std::ios::out) || tempMode == (int)(std::ios::out | std::ios::trunc))
+	{
+		strMode = "w";
+	}
+	
+	if(tempMode == (int)(std::ios::out | std::ios::app))
+	{
+		strMode = "a";
+	}
+	
+	if(tempMode == (int)(std::ios::in))
+	{
+		strMode = "r";
+	}
+
+	strMode += "b";
+
+#if defined(PUNTOEXE_WINDOWS)
+        PUNTOEXE_THROW(streamExceptionOpen, "std::string file opens on Windows are not currently implemented");
+#else
+	m_openFile = ::fopen(fileName.c_str(), strMode.c_str());
+#endif
+	if(m_openFile == nullptr)
+	{
+		PUNTOEXE_THROW(streamExceptionOpen, "stream::openFile failure");
+	}
+
+// Original code:
+//	std::wstring wFileName;
+//	size_t fileNameSize(fileName.size());
+//	wFileName.resize(fileNameSize);
+//	for(size_t copyChars = 0; copyChars != fileNameSize; ++copyChars)
+//	{
+//		wFileName[copyChars] = (wchar_t)fileName[copyChars];
+//	}
+//	openFile(wFileName, mode);
 
 	PUNTOEXE_FUNCTION_END();
 }
