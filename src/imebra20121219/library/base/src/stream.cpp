@@ -92,6 +92,21 @@ void stream::openFile(const std::string& fileName, const int mode)
 {
 	PUNTOEXE_FUNCTION_START(L"stream::openFile (ansi)");
 
+#if defined(PUNTOEXE_WINDOWS)
+    // Original code:
+    std::wstring wFileName;
+    size_t fileNameSize(fileName.size());
+    wFileName.resize(fileNameSize);
+    for(size_t copyChars = 0; copyChars != fileNameSize; ++copyChars)
+    {
+    	wFileName[copyChars] = (wchar_t)fileName[copyChars];
+    }
+    openFile(wFileName, mode);
+#else
+    // Modified section to avoid needless conversion on unix systems.
+    //
+    // Note: This essentially duplicates the wstring openFile() below, but avoids the conversion.
+    //       We can get away with this by using mingw64 instead of attempting to compile natively.
 	if(m_openFile)
 	{
 		if(::fclose(m_openFile)!=0)
@@ -134,28 +149,14 @@ void stream::openFile(const std::string& fileName, const int mode)
 	{
 		strMode = "r";
 	}
-
 	strMode += "b";
 
-#if defined(PUNTOEXE_WINDOWS)
-        PUNTOEXE_THROW(streamExceptionOpen, "std::string file opens on Windows are not currently implemented");
-#else
 	m_openFile = ::fopen(fileName.c_str(), strMode.c_str());
-#endif
 	if(m_openFile == nullptr)
 	{
 		PUNTOEXE_THROW(streamExceptionOpen, "stream::openFile failure");
 	}
-
-// Original code:
-//	std::wstring wFileName;
-//	size_t fileNameSize(fileName.size());
-//	wFileName.resize(fileNameSize);
-//	for(size_t copyChars = 0; copyChars != fileNameSize; ++copyChars)
-//	{
-//		wFileName[copyChars] = (wchar_t)fileName[copyChars];
-//	}
-//	openFile(wFileName, mode);
+#endif
 
 	PUNTOEXE_FUNCTION_END();
 }
