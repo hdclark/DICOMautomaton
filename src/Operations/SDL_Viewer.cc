@@ -83,6 +83,22 @@
 
 //extern const std::string DCMA_VERSION_STR;
 
+#ifndef CHECK_FOR_GL_ERRORS
+    #define CHECK_FOR_GL_ERRORS() { \
+        while(true){ \
+            GLenum err = glGetError(); \
+            if(err == GL_NO_ERROR) break; \
+            std::cout << "--(W) In function: " << __PRETTY_FUNCTION__; \
+            std::cout << " (line " << __LINE__ << ")"; \
+            std::cout << " : " << glewGetErrorString(err); \
+            std::cout << "(" << std::to_string(err) << ")." << std::endl; \
+            std::cout.flush(); \
+            throw std::runtime_error("OpenGL error detected. Refusing to continue"); \
+        } \
+    }
+#endif
+
+
 static
 void
 array_to_string(std::string &s, const std::array<char, 1024> &a){
@@ -139,6 +155,168 @@ get_pixelspace_axis_aligned_bounding_box(const planar_image<float, double> &img,
     if(col_max < col_min) std::swap(col_min, col_max);
     return std::make_tuple( row_min, row_max, col_min, col_max );
 }
+
+// Represents a buffer stored in GPU memory that is accessible by OpenGL.
+struct opengl_mesh {
+    GLuint vao = 0;
+    GLuint vbo = 0;
+    GLuint ebo = 0;
+
+    GLsizei N_indices = 0;
+    GLsizei N_vertices = 0;
+    GLsizei N_triangles = 0;
+
+    // Constructor. Allocates space in GPU memory.
+    opengl_mesh( const fv_surface_mesh<double, uint64_t> &meshes){
+
+        this->N_vertices = static_cast<GLsizei>(meshes.vertices.size());
+        this->N_triangles = 0;
+        for(const auto& f : meshes.faces){
+            long int l_N_indices = f.size();
+            if(l_N_indices < 3) continue; // Ignore faces that cannot be broken into triangles.
+            this->N_triangles += static_cast<GLsizei>(l_N_indices - 2);
+        }
+
+        // Find an axis-aligned bounding box.
+        const auto inf = std::numeric_limits<double>::infinity();
+        auto x_min = inf;
+        auto y_min = inf;
+        auto z_min = inf;
+        auto x_max = -inf;
+        auto y_max = -inf;
+        auto z_max = -inf;
+        for(const auto &v : meshes.vertices){
+            if(v.x < x_min) x_min = v.x;
+            if(v.y < y_min) y_min = v.y;
+            if(v.z < z_min) z_min = v.z;
+            if(x_max < v.x) x_max = v.x;
+            if(y_max < v.y) y_max = v.y;
+            if(z_max < v.z) z_max = v.z;
+        }
+
+
+        // Marshall the vertex and index information in CPU-accessible buffers where they can be freely
+        // preprocessed.
+        std::vector<float> vertices;
+        vertices.reserve(3 * this->N_vertices);
+        for(const auto &v : meshes.vertices){
+            // Scale each of x, y, and z to [-1,+1], but shrink to [-1/sqrt(3),+1/sqrt(3)] to account for rotation.
+            // Scaling down will ensure the corners are not clipped when the cube is rotated.
+            vec3<double> w( 0.577 * (2.0 * (v.x - x_min) / (x_max - x_min) - 1.0),
+                            0.577 * (2.0 * (v.y - y_min) / (y_max - y_min) - 1.0),
+                            0.577 * (2.0 * (v.z - z_min) / (z_max - z_min) - 1.0) );
+
+            //w = w.rotate_around_z(3.14159265 * static_cast<double>(frame_count / 59900.0));
+            //w = w.rotate_around_y(3.14159265 * static_cast<double>(frame_count / 11000.0));
+            //w = w.rotate_around_x(3.14159265 * static_cast<double>(frame_count / 26000.0));
+            vertices.push_back(static_cast<float>(w.x));
+            vertices.push_back(static_cast<float>(w.y));
+            vertices.push_back(static_cast<float>(w.z));
+        }
+        
+        std::vector<unsigned int> indices;
+        indices.reserve(3 * this->N_triangles);
+        for(const auto& f : meshes.faces){
+            long int l_N_indices = f.size();
+            if(l_N_indices < 3) continue; // Ignore faces that cannot be broken into triangles.
+
+            const auto it_1 = std::cbegin(f);
+            const auto it_2 = std::next(it_1);
+            const auto end = std::end(f);
+            for(auto it_3 = std::next(it_2); it_3 != end; ++it_3){
+                indices.push_back(static_cast<unsigned int>(*it_1));
+                indices.push_back(static_cast<unsigned int>(*it_2));
+                indices.push_back(static_cast<unsigned int>(*it_3));
+            }
+        }
+        this->N_indices = static_cast<GLsizei>(indices.size());
+
+        // Push the data into OpenGL buffers.
+        CHECK_FOR_GL_ERRORS();
+
+        // Vertex data.
+        glGenBuffers(1, &this->vbo); // Create a VBO inside the OpenGL context.
+        if(this->vbo == 0) throw std::runtime_error("Unable to generate vertex buffer object");
+        CHECK_FOR_GL_ERRORS();
+        glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
+        CHECK_FOR_GL_ERRORS();
+        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), static_cast<void*>(vertices.data()), GL_STATIC_DRAW); // Copy vertex data.
+        CHECK_FOR_GL_ERRORS();
+
+        // Element data.
+        glGenBuffers(1, &this->ebo); // Create a EBO inside the OpenGL context.
+        if(this->ebo == 0) throw std::runtime_error("Unable to generate element buffer object");
+        CHECK_FOR_GL_ERRORS();
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ebo);
+        CHECK_FOR_GL_ERRORS();
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), static_cast<void*>(indices.data()), GL_STATIC_DRAW); // Copy index data.
+        CHECK_FOR_GL_ERRORS();
+
+        // Vertex array object.
+        glGenVertexArrays(1, &this->vao); // Create a VAO inside the OpenGL context.
+        if(this->vao == 0) throw std::runtime_error("Unable to generate vertex array object");
+        CHECK_FOR_GL_ERRORS();
+        glBindVertexArray(this->vao);
+        CHECK_FOR_GL_ERRORS();
+
+        glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
+        CHECK_FOR_GL_ERRORS();
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0); // Vertex positions, 3 floats per vertex, attrib index 0.
+        CHECK_FOR_GL_ERRORS();
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ebo);
+        CHECK_FOR_GL_ERRORS();
+        glVertexAttribPointer(1, 3, GL_UNSIGNED_INT, GL_FALSE, 0, 0); // Indices, 3 coordinates per face (triangles only), attrib index 1.
+        CHECK_FOR_GL_ERRORS();
+
+
+        glEnableVertexAttribArray(0);
+        CHECK_FOR_GL_ERRORS();
+        glEnableVertexAttribArray(1);
+        CHECK_FOR_GL_ERRORS();
+
+        FUNCINFO("Registered new OpenGL mesh");
+    };
+
+    // Draw the mesh in the current OpenGL context.
+    void draw(){
+        CHECK_FOR_GL_ERRORS();
+        glBindVertexArray(this->vao);
+        CHECK_FOR_GL_ERRORS();
+
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Enable wireframe mode.
+        CHECK_FOR_GL_ERRORS();
+        glDrawElements(GL_TRIANGLES, this->N_indices, GL_UNSIGNED_INT, 0); // Draw using the current shader setup.
+        CHECK_FOR_GL_ERRORS();
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Disable wireframe mode.
+        CHECK_FOR_GL_ERRORS();
+
+        glBindVertexArray(0);
+        CHECK_FOR_GL_ERRORS();
+    };
+
+    ~opengl_mesh() noexcept(false) {
+        // Bind the vertex array object so we can unlink the attribute buffers.
+        if( (0 < this->vao)
+        &&  (0 < this->vbo)
+        &&  (0 < this->ebo) ){
+            glBindVertexArray(this->vao);
+            glDisableVertexAttribArray(0); // Free OpenGL resources.
+            glDisableVertexAttribArray(1);
+            glBindVertexArray(0);
+
+            // Delete the attribute buffers and then finally the vertex array object.
+            glDeleteBuffers(1, &this->ebo);
+            glDeleteBuffers(1, &this->vbo);
+            glDeleteVertexArrays(1, &this->vao);
+            CHECK_FOR_GL_ERRORS();
+        }
+
+        // Reset accessible class state for good measure.
+        this->ebo = this->vbo = this->vao = 0;
+        this->N_triangles = this->N_indices = this->N_vertices = 0;
+    };
+};
 
 enum class brush_t {
     // 2D brushes.
@@ -524,6 +702,9 @@ bool SDL_Viewer(Drover &DICOM_data,
         return ImVec4(colour.x, colour.y, colour.z, 1.0f);
     };
 
+    // Meshes.
+    std::unique_ptr<opengl_mesh> oglm_ptr;
+
     // ------------------------------------------ Viewer State --------------------------------------------
     auto background_colour = ImVec4(0.025f, 0.087f, 0.118f, 1.00f);
 
@@ -564,21 +745,6 @@ bool SDL_Viewer(Drover &DICOM_data,
     string_to_array(metadata_text_entry, "");
 
     // --------------------------------------------- Setup ------------------------------------------------
-#ifndef CHECK_FOR_GL_ERRORS
-    #define CHECK_FOR_GL_ERRORS() { \
-        while(true){ \
-            GLenum err = glGetError(); \
-            if(err == GL_NO_ERROR) break; \
-            std::cout << "--(W) In function: " << __PRETTY_FUNCTION__; \
-            std::cout << " (line " << __LINE__ << ")"; \
-            std::cout << " : " << glewGetErrorString(err); \
-            std::cout << "(" << std::to_string(err) << ")." << std::endl; \
-            std::cout.flush(); \
-            throw std::runtime_error("OpenGL error detected. Refusing to continue"); \
-        } \
-    }
-#endif
-
     if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0){
         throw std::runtime_error("Unable to initialize SDL: "_s + SDL_GetError());
     }
@@ -4213,6 +4379,7 @@ script_files.back().content.emplace_back('\0');
             ImGui::EndPopup();
         }
 
+
         // Clear the current OpenGL frame.
         CHECK_FOR_GL_ERRORS();
         glViewport(0, 0, static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y));
@@ -4229,128 +4396,34 @@ script_files.back().content.emplace_back('\0');
                                           &drover_mutex,
                                           &mutex_dt,
                                           &DICOM_data,
+                                          &oglm_ptr,
                                           &frame_count ]() -> void {
 
             std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
             if(!drover_lock) return;
             if( !view_toggles.view_meshes_enabled
             ||  !DICOM_data.Has_Mesh_Data() ) return;
+            const auto smesh_ptr = DICOM_data.smesh_data.front();
 
-            auto smesh_ptr = DICOM_data.smesh_data.front();
-
-            const auto N_verts = smesh_ptr->meshes.vertices.size();
-
-            long int N_triangles = 0;
-            for(const auto& f : smesh_ptr->meshes.faces){
-                long int l_N_indices = f.size();
-                if(l_N_indices < 3) continue; // Ignore faces that cannot be broken into triangles.
-                N_triangles += (l_N_indices - 2);
+            if(!oglm_ptr){
+                oglm_ptr = std::make_unique<opengl_mesh>( smesh_ptr->meshes );
             }
-
-            const auto inf = std::numeric_limits<double>::infinity();
-            auto x_min = inf;
-            auto y_min = inf;
-            auto z_min = inf;
-            auto x_max = -inf;
-            auto y_max = -inf;
-            auto z_max = -inf;
-            for(const auto& v : smesh_ptr->meshes.vertices){
-                if(v.x < x_min) x_min = v.x;
-                if(v.y < y_min) y_min = v.y;
-                if(v.z < z_min) z_min = v.z;
-                if(x_max < v.x) x_max = v.x;
-                if(y_max < v.y) y_max = v.y;
-                if(z_max < v.z) z_max = v.z;
-            }
-
-            {
+            if(oglm_ptr){
+                //ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+                //ImGui::SetNextWindowPos(ImVec2(40, 40), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Meshes");
-                std::string msg = "Drawing "_s + std::to_string(N_verts) + " verts and "_s + std::to_string(N_triangles) + " triangles.";
+                std::string msg = "Drawing "_s
+                                + std::to_string(oglm_ptr->N_vertices) + " vertices, "
+                                + std::to_string(oglm_ptr->N_indices) + " indices, and "
+                                + std::to_string(oglm_ptr->N_triangles) + " triangles.";
                 ImGui::Text("%s", msg.c_str());
+
+//                auto drawList = ImGui::GetWindowDrawList();
+                oglm_ptr->draw();
+
                 ImGui::End();
             }
 
-            std::vector<float> vertices;
-            vertices.reserve(3 * N_verts);
-            for(const auto& v : smesh_ptr->meshes.vertices){
-                // Scale each of x, y, and z to [-1,+1], but shrink to [-1/sqrt(3),+1/sqrt(3)] to account for rotation.
-                // Scaling down will ensure the corners are not clipped when the cube is rotated.
-                vec3<double> w( 0.577 * (2.0 * (v.x - x_min) / (x_max - x_min) - 1.0),
-                                0.577 * (2.0 * (v.y - y_min) / (y_max - y_min) - 1.0),
-                                0.577 * (2.0 * (v.z - z_min) / (z_max - z_min) - 1.0) );
-
-                w = w.rotate_around_z(3.14159265 * static_cast<double>(frame_count / 59900.0));
-                w = w.rotate_around_y(3.14159265 * static_cast<double>(frame_count / 11000.0));
-                w = w.rotate_around_x(3.14159265 * static_cast<double>(frame_count / 26000.0));
-                vertices.push_back(static_cast<float>(w.x));
-                vertices.push_back(static_cast<float>(w.y));
-                vertices.push_back(static_cast<float>(w.z));
-            }
-            
-            std::vector<unsigned int> indices;
-            indices.reserve(3 * N_triangles);
-            for(const auto& f : smesh_ptr->meshes.faces){
-                long int l_N_indices = f.size();
-                if(l_N_indices < 3) continue; // Ignore faces that cannot be broken into triangles.
-
-                const auto it_1 = std::cbegin(f);
-                const auto it_2 = std::next(it_1);
-                const auto end = std::end(f);
-                for(auto it_3 = std::next(it_2); it_3 != end; ++it_3){
-                    indices.push_back(static_cast<unsigned int>(*it_1));
-                    indices.push_back(static_cast<unsigned int>(*it_2));
-                    indices.push_back(static_cast<unsigned int>(*it_3));
-                }
-            }
-
-            GLuint vao = 0;
-            GLuint vbo = 0;
-            GLuint ebo = 0;
-
-            CHECK_FOR_GL_ERRORS();
-
-            glGenVertexArrays(1, &vao); // Create a VAO inside the OpenGL context.
-            glGenBuffers(1, &vbo); // Create a VBO inside the OpenGL context.
-            glGenBuffers(1, &ebo); // Create a EBO inside the OpenGL context.
-
-            glBindVertexArray(vao); // Bind = make it the currently-used object.
-            glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-            CHECK_FOR_GL_ERRORS();
-
-            glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), static_cast<void*>(vertices.data()), GL_STATIC_DRAW); // Copy vertex data.
-
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), static_cast<void*>(indices.data()), GL_STATIC_DRAW); // Copy index data.
-
-            CHECK_FOR_GL_ERRORS();
-
-            glEnableVertexAttribArray(0); // enable attribute with index 0.
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0); // Vertex positions, 3 floats per vertex, attrib index 0.
-
-            glBindVertexArray(0);
-            CHECK_FOR_GL_ERRORS();
-
-
-            // Draw the mesh.
-            CHECK_FOR_GL_ERRORS();
-            glBindVertexArray(vao); // Bind = make it the currently-used object.
-
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Enable wireframe mode.
-            CHECK_FOR_GL_ERRORS();
-            glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, 0); // Draw using the current shader setup.
-            CHECK_FOR_GL_ERRORS();
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Disable wireframe mode.
-
-            glBindVertexArray(0);
-            CHECK_FOR_GL_ERRORS();
-
-            glDisableVertexAttribArray(0); // Free OpenGL resources.
-            glDisableVertexAttribArray(1);
-            glDeleteBuffers(1, &ebo);
-            glDeleteBuffers(1, &vbo);
-            glDeleteVertexArrays(1, &vao);
-            CHECK_FOR_GL_ERRORS();
             return;
         };
         draw_surface_meshes();
