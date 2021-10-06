@@ -211,15 +211,12 @@ struct opengl_mesh {
         std::vector<float> vertices;
         vertices.reserve(3 * this->N_vertices);
         for(const auto &v : meshes.vertices){
-            // Scale each of x, y, and z to [-1,+1], but shrink to [-1/sqrt(3),+1/sqrt(3)] to account for rotation.
-            // Scaling down will ensure the corners are not clipped when the cube is rotated.
+            // Scale each of x, y, and z to [-1,+1], respecting the aspect ratio, but shrink down further to
+            // [-1/sqrt(3),+1/sqrt(3)] to account for rotation. Scaling down will ensure the corners are not clipped
+            // when the cube is rotated.
             vec3<double> w( (2.0 * (v.x - x_min) / (x_max - x_min) - 1.0) / std::sqrt(3.0),
                             (2.0 * (v.y - y_min) / (y_max - y_min) - 1.0) / std::sqrt(3.0),
                             (2.0 * (v.z - z_min) / (z_max - z_min) - 1.0) / std::sqrt(3.0) );
-
-            //w = w.rotate_around_z(3.14159265 * static_cast<double>(frame_count / 59900.0));
-            //w = w.rotate_around_y(3.14159265 * static_cast<double>(frame_count / 11000.0));
-            //w = w.rotate_around_x(3.14159265 * static_cast<double>(frame_count / 26000.0));
             vertices.push_back(static_cast<float>(w.x));
             vertices.push_back(static_cast<float>(w.y));
             vertices.push_back(static_cast<float>(w.z));
@@ -718,13 +715,15 @@ bool SDL_Viewer(Drover &DICOM_data,
     long int mesh_num = -1;
 
     struct mesh_display_transform_t {
-        bool precess = false;
+        bool precess = true;
         bool render_wireframe = true;
 
         double precess_rate = 1.0;
         double rot_x = 0.0;
         double rot_y = 0.0;
         double rot_z = 0.0;
+
+        std::array<float, 4> colours = { 1.0, 1.0, 1.0, 0.8 };
     } mesh_display_transform;
 
     // ------------------------------------------ Viewer State --------------------------------------------
@@ -4446,7 +4445,10 @@ script_files.back().content.emplace_back('\0');
                         oglm_ptr = std::make_unique<opengl_mesh>( smesh_ptr->meshes );
                     }
 
+                    ImGui::ColorEdit4("Colour", mesh_display_transform.colours.data());
+
                     ImGui::Checkbox("Precess", &mesh_display_transform.precess);
+                    ImGui::Checkbox("Wireframe", &mesh_display_transform.render_wireframe);
                     float drag_speed = 0.05f;
                     double clamp_l = -10.0;
                     double clamp_h =  10.0;
@@ -4458,11 +4460,17 @@ script_files.back().content.emplace_back('\0');
                     ImGui::DragScalar("Y rotation", ImGuiDataType_Double, &mesh_display_transform.rot_y, drag_speed, &clamp_l, &clamp_h, "%.1f");
                     ImGui::DragScalar("Z rotation", ImGuiDataType_Double, &mesh_display_transform.rot_z, drag_speed, &clamp_l, &clamp_h, "%.1f");
                     if(ImGui::Button("Reset")){
+                        mesh_display_transform = mesh_display_transform_t();
+/*
                         mesh_display_transform.rot_x = 0.0;
                         mesh_display_transform.rot_y = 0.0;
                         mesh_display_transform.rot_z = 0.0;
+                        mesh_display_transform.colours[0] = 1.0;
+                        mesh_display_transform.colours[1] = 1.0;
+                        mesh_display_transform.colours[2] = 1.0;
+                        mesh_display_transform.colours[3] = 0.8;
+*/
                     }
-                    ImGui::Checkbox("Wireframe", &mesh_display_transform.render_wireframe);
                 }
                 ImGui::End();
             }
@@ -4493,10 +4501,14 @@ script_files.back().content.emplace_back('\0');
             glRotated(mesh_display_transform.rot_y,  0.0f, 1.0f, 0.0f);
             glRotated(mesh_display_transform.rot_z,  0.0f, 0.0f, 1.0f);
             if(mesh_display_transform.precess){
-                mesh_display_transform.rot_x = std::fmod(mesh_display_transform.rot_x + 0.0028 * mesh_display_transform.precess_rate, 360.0);
-                mesh_display_transform.rot_y = std::fmod(mesh_display_transform.rot_y - 0.0104 * mesh_display_transform.precess_rate, 360.0);
-                mesh_display_transform.rot_z = std::fmod(mesh_display_transform.rot_z + 0.0012 * mesh_display_transform.precess_rate, 360.0);
+                mesh_display_transform.rot_x += 0.0028 * mesh_display_transform.precess_rate;
+                mesh_display_transform.rot_y -= 0.0104 * mesh_display_transform.precess_rate;
+                mesh_display_transform.rot_z += 0.0012 * mesh_display_transform.precess_rate;
             }
+            mesh_display_transform.rot_x = std::fmod(mesh_display_transform.rot_x, 360.0);
+            mesh_display_transform.rot_y = std::fmod(mesh_display_transform.rot_y, 360.0);
+            mesh_display_transform.rot_z = std::fmod(mesh_display_transform.rot_z, 360.0);
+
 
             // Account for viewport aspect ratio to make the render square.
             const auto w = static_cast<int>(io.DisplaySize.x);
@@ -4506,6 +4518,12 @@ script_files.back().content.emplace_back('\0');
             glViewport((w - l_w)/2, (h - l_h)/2, l_w, l_h);
             CHECK_FOR_GL_ERRORS();
 
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glColor4f( mesh_display_transform.colours[0],
+                       mesh_display_transform.colours[1],
+                       mesh_display_transform.colours[2],
+                       mesh_display_transform.colours[3] );
             draw_surface_meshes();
 
             glPopMatrix();
