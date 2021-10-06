@@ -194,6 +194,17 @@ struct opengl_mesh {
             if(z_max < v.z) z_max = v.z;
         }
 
+        // Adjust individual axes to respect the aspect ratio.
+        const auto x_range = x_max - x_min;
+        const auto y_range = y_max - y_min;
+        const auto z_range = z_max - z_min;
+        const auto max_range = std::max({x_range, y_range, z_range});
+        x_min = (x_max + x_min) * 0.5 - max_range * 0.5;
+        x_max = (x_max + x_min) * 0.5 + max_range * 0.5;
+        y_min = (y_max + y_min) * 0.5 - max_range * 0.5;
+        y_max = (y_max + y_min) * 0.5 + max_range * 0.5;
+        z_min = (z_max + z_min) * 0.5 - max_range * 0.5;
+        z_max = (z_max + z_min) * 0.5 + max_range * 0.5;
 
         // Marshall the vertex and index information in CPU-accessible buffers where they can be freely
         // preprocessed.
@@ -202,9 +213,9 @@ struct opengl_mesh {
         for(const auto &v : meshes.vertices){
             // Scale each of x, y, and z to [-1,+1], but shrink to [-1/sqrt(3),+1/sqrt(3)] to account for rotation.
             // Scaling down will ensure the corners are not clipped when the cube is rotated.
-            vec3<double> w( 0.577 * (2.0 * (v.x - x_min) / (x_max - x_min) - 1.0),
-                            0.577 * (2.0 * (v.y - y_min) / (y_max - y_min) - 1.0),
-                            0.577 * (2.0 * (v.z - z_min) / (z_max - z_min) - 1.0) );
+            vec3<double> w( (2.0 * (v.x - x_min) / (x_max - x_min) - 1.0) / std::sqrt(3.0),
+                            (2.0 * (v.y - y_min) / (y_max - y_min) - 1.0) / std::sqrt(3.0),
+                            (2.0 * (v.z - z_min) / (z_max - z_min) - 1.0) / std::sqrt(3.0) );
 
             //w = w.rotate_around_z(3.14159265 * static_cast<double>(frame_count / 59900.0));
             //w = w.rotate_around_y(3.14159265 * static_cast<double>(frame_count / 11000.0));
