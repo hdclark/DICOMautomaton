@@ -2134,14 +2134,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                 view_toggles.view_script_editor_enabled ){
                 ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
                 ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
-                ImGui::Begin("Script Editor", &view_toggles.view_script_editor_enabled );
-                ImVec2 window_extent = ImGui::GetContentRegionAvail();
+                if(ImGui::Begin("Script Editor", &view_toggles.view_script_editor_enabled )){
+                    ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
-                auto N_sfs = static_cast<long int>(script_files.size());
-                if(ImGui::Button("New", ImVec2(window_extent.x/4, 0))){ 
-                    script_files.emplace_back();
-                    script_files.back().altered = true;
-                    script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
+                    auto N_sfs = static_cast<long int>(script_files.size());
+                    if(ImGui::Button("New", ImVec2(window_extent.x/4, 0))){ 
+                        script_files.emplace_back();
+                        script_files.back().altered = true;
+                        script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
 ////////////////
 ////////////////
 ////////////////
@@ -2208,269 +2208,270 @@ script_files.back().content.emplace_back('\0');
 ////////////////
 ////////////////
 
-                    active_script_file = N_sfs;
-                    ++N_sfs;
-                }
-                ImGui::SameLine();
-                if(ImGui::Button("Open", ImVec2(window_extent.x/4, 0))){ 
-                    // TODO
-
-                    // Note: ensure there is at least a null character. TODO.
-
-                    // Mimic the 'new' button for testing.
-                    script_files.emplace_back();
-                    script_files.back().altered = true;
-                    script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
-                    active_script_file = N_sfs;
-                    ++N_sfs;
-                }
-                ImGui::SameLine();
-                if(ImGui::Button("Save", ImVec2(window_extent.x/4, 0))){ 
-                    if( (N_sfs != 0) 
-                    &&  isininc(0, active_script_file, N_sfs-1)){
-                        if( script_files.at(active_script_file).path.empty() ){
-                            try{
-                                const auto open_file_root_str = std::filesystem::absolute(open_file_root / "script.txt").string();
-                                string_to_array(root_entry_text, open_file_root_str);
-                                ImGui::OpenPopup("Save Script Filename Picker");
-                            }catch(const std::exception &e){ };
-                        }
-                    }
-                }
-                ImGui::SameLine();
-                if(ImGui::Button("Close", ImVec2(window_extent.x/4, 0))){ 
-                    if( (N_sfs != 0) 
-                    &&  isininc(0, active_script_file, N_sfs-1)){
-                        script_files.erase( std::next( std::begin( script_files ), active_script_file ) );
-                        --active_script_file; // Default to script on left.
-                        --N_sfs;
-                    }
-                }
-
-                if(ImGui::Button("Validate", ImVec2(window_extent.x/4, 0))){ 
-                    if( (N_sfs != 0) 
-                    &&  isininc(0, active_script_file, N_sfs-1)){
-                        std::stringstream ss( std::string( std::begin(script_files.at(active_script_file).content),
-                                                           std::end(script_files.at(active_script_file).content) ) );
-                        script_files.at(active_script_file).feedback.clear();
-                        std::list<OperationArgPkg> op_list;
-                        Load_DCMA_Script( ss, script_files.at(active_script_file).feedback, op_list );
-                        view_toggles.view_script_feedback = true;
-                    }
-                }
-                ImGui::SameLine();
-                if(ImGui::Button("Run", ImVec2(window_extent.x/4, 0))){ 
-                    if( (N_sfs != 0) 
-                    &&  isininc(0, active_script_file, N_sfs-1)){
-                        script_files.at(active_script_file).feedback.clear();
-                        const bool res = execute_script( std::string( std::begin(script_files.at(active_script_file).content),
-                                                                      std::end(script_files.at(active_script_file).content) ),
-                                                    script_files.at(active_script_file).feedback );
-                        if(!res) view_toggles.view_script_feedback = true;
-                    }
-                }
-
-                if( (N_sfs != 0) 
-                &&  isininc(0, active_script_file, N_sfs-1)
-                &&  !(script_files.at(active_script_file).feedback.empty())
-                &&  view_toggles.view_script_feedback ){
-                    ImGui::SetNextWindowSize(ImVec2(650, 250), ImGuiCond_FirstUseEver);
-                    ImGui::SetNextWindowPos(ImVec2(650, 500), ImGuiCond_FirstUseEver);
-                    ImGui::Begin("Script Feedback", &view_toggles.view_script_feedback );
-
-                    for(const auto &f : script_files.at(active_script_file).feedback){
-                        if(false){
-                        }else if(f.severity == script_feedback_severity_t::debug){
-                            std::stringstream ss;
-                            ss << "Debug:   ";
-                            ImGui::TextColored(line_numbers_debug_colour, "%s", const_cast<char *>(ss.str().c_str()));
-                        }else if(f.severity == script_feedback_severity_t::info){
-                            std::stringstream ss;
-                            ss << "Info:    ";
-                            ImGui::TextColored(line_numbers_info_colour, "%s", const_cast<char *>(ss.str().c_str()));
-                        }else if(f.severity == script_feedback_severity_t::warn){
-                            std::stringstream ss;
-                            ss << "Warning: ";
-                            ImGui::TextColored(line_numbers_warn_colour, "%s", const_cast<char *>(ss.str().c_str()));
-                        }else if(f.severity == script_feedback_severity_t::err){
-                            std::stringstream ss;
-                            ss << "Error:   ";
-                            ImGui::TextColored(line_numbers_error_colour, "%s", const_cast<char *>(ss.str().c_str()));
-                        }else{
-                            throw std::logic_error("Unrecognized severity level");
-                        }
-                        ImGui::SameLine();
-
-                        std::stringstream ss;
-                        if( (0 <= f.line)
-                        &&  (0 <= f.line_offset) ){
-                            ss << "line " << f.line 
-                               << ", char " << f.line_offset
-                               << ": ";
-                        }
-                        ss << f.message
-                           << std::endl
-                           << std::endl;
-                        ImGui::Text("%s", const_cast<char *>(ss.str().c_str()));
-                    }
-
-                    ImGui::End();
-                }
-
-                // Pop-up to query the user for a filename.
-                if(ImGui::BeginPopupModal("Save Script Filename Picker", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
-                    // TODO: add a proper 'Save As' file selector here.
-
-                    ImGui::Text("Save file as...");
-                    ImGui::SetNextItemWidth(650.0f);
-                    ImGui::InputText("##save_script_as_text_entry", root_entry_text.data(), root_entry_text.size() - 1);
-
-                    if(ImGui::Button("Save")){
-                        script_files.at(active_script_file).path.assign(
-                            std::begin(root_entry_text),
-                            std::find( std::begin(root_entry_text), std::end(root_entry_text), '\0') );
-                        script_files.at(active_script_file).path.replace_extension(".txt");
-
-                        // Write the file contents to the given path.
-                        std::ofstream FO(script_files.at(active_script_file).path.string());
-                        FO.write( script_files.at(active_script_file).content.data(),
-                                  (script_files.at(active_script_file).content.size() - 1) ); // Disregard trailing null.
-                        FO << std::endl;
-                        FO.flush();
-                        if(FO){
-                            script_files.at(active_script_file).altered = false;
-                        }else{
-                            script_files.at(active_script_file).path.clear();
-                        }
-                        ImGui::CloseCurrentPopup();
+                        active_script_file = N_sfs;
+                        ++N_sfs;
                     }
                     ImGui::SameLine();
-                    if(ImGui::Button("Cancel")){
-                        ImGui::CloseCurrentPopup();
-                    }
-                    ImGui::EndPopup();
-                }
+                    if(ImGui::Button("Open", ImVec2(window_extent.x/4, 0))){ 
+                        // TODO
 
-                // 'Tabs' for file selection.
-                auto &style = ImGui::GetStyle();
-                for(long int i = 0; i < N_sfs; ++i){
-                    auto fname = script_files.at(i).path.filename().string();
-                    if(fname.empty()) fname = "(unnamed)";
-                    if(script_files.at(i).altered) fname += "**";
+                        // Note: ensure there is at least a null character. TODO.
 
-                    fname += "##script_file_"_s + std::to_string(i); // Unique identifier for ImGui internals.
-                    if(i == active_script_file){
-                        ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_ButtonActive]);
-                    }else{
-                        ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_Button]);
+                        // Mimic the 'new' button for testing.
+                        script_files.emplace_back();
+                        script_files.back().altered = true;
+                        script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
+                        active_script_file = N_sfs;
+                        ++N_sfs;
                     }
-                    if(ImGui::Button(fname.c_str())){
-                        active_script_file = i;
+                    ImGui::SameLine();
+                    if(ImGui::Button("Save", ImVec2(window_extent.x/4, 0))){ 
+                        if( (N_sfs != 0) 
+                        &&  isininc(0, active_script_file, N_sfs-1)){
+                            if( script_files.at(active_script_file).path.empty() ){
+                                try{
+                                    const auto open_file_root_str = std::filesystem::absolute(open_file_root / "script.txt").string();
+                                    string_to_array(root_entry_text, open_file_root_str);
+                                    ImGui::OpenPopup("Save Script Filename Picker");
+                                }catch(const std::exception &e){ };
+                            }
+                        }
                     }
-                    ImGui::PopStyleColor(1);
-                    if( (i+1) <  N_sfs ){
-                        ImGui::SameLine();
+                    ImGui::SameLine();
+                    if(ImGui::Button("Close", ImVec2(window_extent.x/4, 0))){ 
+                        if( (N_sfs != 0) 
+                        &&  isininc(0, active_script_file, N_sfs-1)){
+                            script_files.erase( std::next( std::begin( script_files ), active_script_file ) );
+                            --active_script_file; // Default to script on left.
+                            --N_sfs;
+                        }
                     }
-                }
 
-                if( (N_sfs != 0) 
-                &&  isininc(0, active_script_file, N_sfs-1) ){
+                    if(ImGui::Button("Validate", ImVec2(window_extent.x/4, 0))){ 
+                        if( (N_sfs != 0) 
+                        &&  isininc(0, active_script_file, N_sfs-1)){
+                            std::stringstream ss( std::string( std::begin(script_files.at(active_script_file).content),
+                                                               std::end(script_files.at(active_script_file).content) ) );
+                            script_files.at(active_script_file).feedback.clear();
+                            std::list<OperationArgPkg> op_list;
+                            Load_DCMA_Script( ss, script_files.at(active_script_file).feedback, op_list );
+                            view_toggles.view_script_feedback = true;
+                        }
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Run", ImVec2(window_extent.x/4, 0))){ 
+                        if( (N_sfs != 0) 
+                        &&  isininc(0, active_script_file, N_sfs-1)){
+                            script_files.at(active_script_file).feedback.clear();
+                            const bool res = execute_script( std::string( std::begin(script_files.at(active_script_file).content),
+                                                                          std::end(script_files.at(active_script_file).content) ),
+                                                        script_files.at(active_script_file).feedback );
+                            if(!res) view_toggles.view_script_feedback = true;
+                        }
+                    }
 
-                    // Implement a callback to handle resize events.
-                    const auto text_entry_callback = [](ImGuiInputTextCallbackData *data) -> int {
-                        auto sf_ptr = reinterpret_cast<script_file*>(data->UserData);
-                        if(sf_ptr == nullptr) throw std::logic_error("Invalid script file ptr found in callback");
-                        
-                        // Resize the underlying storage.
-                        if(data->EventFlag == ImGuiInputTextFlags_CallbackResize){
-                            sf_ptr->content.resize(data->BufTextLen, '\0'); // Ensure the file character is a null.
-                            data->Buf = sf_ptr->content.data();
+                    if( (N_sfs != 0) 
+                    &&  isininc(0, active_script_file, N_sfs-1)
+                    &&  !(script_files.at(active_script_file).feedback.empty())
+                    &&  view_toggles.view_script_feedback ){
+                        ImGui::SetNextWindowSize(ImVec2(650, 250), ImGuiCond_FirstUseEver);
+                        ImGui::SetNextWindowPos(ImVec2(650, 500), ImGuiCond_FirstUseEver);
+                        ImGui::Begin("Script Feedback", &view_toggles.view_script_feedback );
+
+                        for(const auto &f : script_files.at(active_script_file).feedback){
+                            if(false){
+                            }else if(f.severity == script_feedback_severity_t::debug){
+                                std::stringstream ss;
+                                ss << "Debug:   ";
+                                ImGui::TextColored(line_numbers_debug_colour, "%s", const_cast<char *>(ss.str().c_str()));
+                            }else if(f.severity == script_feedback_severity_t::info){
+                                std::stringstream ss;
+                                ss << "Info:    ";
+                                ImGui::TextColored(line_numbers_info_colour, "%s", const_cast<char *>(ss.str().c_str()));
+                            }else if(f.severity == script_feedback_severity_t::warn){
+                                std::stringstream ss;
+                                ss << "Warning: ";
+                                ImGui::TextColored(line_numbers_warn_colour, "%s", const_cast<char *>(ss.str().c_str()));
+                            }else if(f.severity == script_feedback_severity_t::err){
+                                std::stringstream ss;
+                                ss << "Error:   ";
+                                ImGui::TextColored(line_numbers_error_colour, "%s", const_cast<char *>(ss.str().c_str()));
+                            }else{
+                                throw std::logic_error("Unrecognized severity level");
+                            }
+                            ImGui::SameLine();
+
+                            std::stringstream ss;
+                            if( (0 <= f.line)
+                            &&  (0 <= f.line_offset) ){
+                                ss << "line " << f.line 
+                                   << ", char " << f.line_offset
+                                   << ": ";
+                            }
+                            ss << f.message
+                               << std::endl
+                               << std::endl;
+                            ImGui::Text("%s", const_cast<char *>(ss.str().c_str()));
                         }
 
-                        // Mark the file as altered.
-                        if(data->EventFlag == ImGuiInputTextFlags_CallbackEdit){
+                        ImGui::End();
+                    }
+
+                    // Pop-up to query the user for a filename.
+                    if(ImGui::BeginPopupModal("Save Script Filename Picker", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+                        // TODO: add a proper 'Save As' file selector here.
+
+                        ImGui::Text("Save file as...");
+                        ImGui::SetNextItemWidth(650.0f);
+                        ImGui::InputText("##save_script_as_text_entry", root_entry_text.data(), root_entry_text.size() - 1);
+
+                        if(ImGui::Button("Save")){
+                            script_files.at(active_script_file).path.assign(
+                                std::begin(root_entry_text),
+                                std::find( std::begin(root_entry_text), std::end(root_entry_text), '\0') );
+                            script_files.at(active_script_file).path.replace_extension(".txt");
+
+                            // Write the file contents to the given path.
+                            std::ofstream FO(script_files.at(active_script_file).path.string());
+                            FO.write( script_files.at(active_script_file).content.data(),
+                                      (script_files.at(active_script_file).content.size() - 1) ); // Disregard trailing null.
+                            FO << std::endl;
+                            FO.flush();
+                            if(FO){
+                                script_files.at(active_script_file).altered = false;
+                            }else{
+                                script_files.at(active_script_file).path.clear();
+                            }
+                            ImGui::CloseCurrentPopup();
+                        }
+                        ImGui::SameLine();
+                        if(ImGui::Button("Cancel")){
+                            ImGui::CloseCurrentPopup();
+                        }
+                        ImGui::EndPopup();
+                    }
+
+                    // 'Tabs' for file selection.
+                    auto &style = ImGui::GetStyle();
+                    for(long int i = 0; i < N_sfs; ++i){
+                        auto fname = script_files.at(i).path.filename().string();
+                        if(fname.empty()) fname = "(unnamed)";
+                        if(script_files.at(i).altered) fname += "**";
+
+                        fname += "##script_file_"_s + std::to_string(i); // Unique identifier for ImGui internals.
+                        if(i == active_script_file){
+                            ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_ButtonActive]);
+                        }else{
+                            ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_Button]);
+                        }
+                        if(ImGui::Button(fname.c_str())){
+                            active_script_file = i;
+                        }
+                        ImGui::PopStyleColor(1);
+                        if( (i+1) <  N_sfs ){
+                            ImGui::SameLine();
+                        }
+                    }
+
+                    if( (N_sfs != 0) 
+                    &&  isininc(0, active_script_file, N_sfs-1) ){
+
+                        // Implement a callback to handle resize events.
+                        const auto text_entry_callback = [](ImGuiInputTextCallbackData *data) -> int {
+                            auto sf_ptr = reinterpret_cast<script_file*>(data->UserData);
+                            if(sf_ptr == nullptr) throw std::logic_error("Invalid script file ptr found in callback");
+                            
+                            // Resize the underlying storage.
+                            if(data->EventFlag == ImGuiInputTextFlags_CallbackResize){
+                                sf_ptr->content.resize(data->BufTextLen, '\0'); // Ensure the file character is a null.
+                                data->Buf = sf_ptr->content.data();
+                            }
+
+                            // Mark the file as altered.
+                            if(data->EventFlag == ImGuiInputTextFlags_CallbackEdit){
+                                sf_ptr->altered = true;
+                            }
+
+                            return 0;
+                        };
+
+                        auto sf_ptr = &(script_files.at(active_script_file));
+                        if(sf_ptr == nullptr) throw std::logic_error("Invalid script file ptr");
+
+                        // Ensure there is a trailing null character to avoid issues with c-style string interpretation.
+                        if( sf_ptr->content.empty()
+                        ||  (sf_ptr->content.back() != '\0') ){
+                            sf_ptr->content.emplace_back('\0');
                             sf_ptr->altered = true;
                         }
 
-                        return 0;
-                    };
+                        // Leave room for line numbers.
+                        const auto orig_cursor_pos = ImGui::GetCursorPosX();
+                        const auto orig_screen_pos = ImGui::GetCursorScreenPos();
+                        //const auto text_vert_spacing = ImGui::GetTextLineHeightWithSpacing();
+                        const auto text_vert_spacing = ImGui::GetTextLineHeight();
+                        const auto vert_spacing = ImGui::GetStyle().ItemSpacing.y * 0.5f; // Is this correct??? Seems OK, but is arbitrary.
+                        const auto horiz_spacing = ImGui::GetStyle().ItemSpacing.x;
+                        const float line_no_width = ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, "12345", nullptr, nullptr).x;
+                        ImGui::SetCursorPosX( orig_cursor_pos + line_no_width + horiz_spacing );
 
-                    auto sf_ptr = &(script_files.at(active_script_file));
-                    if(sf_ptr == nullptr) throw std::logic_error("Invalid script file ptr");
+                        // Draw text entry box.
+                        ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput
+                                                  | ImGuiInputTextFlags_CallbackResize
+                                                  | ImGuiInputTextFlags_CallbackEdit;
+                        ImVec2 edit_box_extent = ImGui::GetContentRegionAvail();
+                        const auto altered = ImGui::InputTextMultiline("#script_editor_active_content",
+                                                                       sf_ptr->content.data(),
+                                                                       sf_ptr->content.capacity(),
+                                                                       edit_box_extent,
+                                                                       flags,
+                                                                       text_entry_callback,
+                                                                       reinterpret_cast<void*>(sf_ptr));
+                        if(altered == true) script_files.at(active_script_file).altered = true;
 
-                    // Ensure there is a trailing null character to avoid issues with c-style string interpretation.
-                    if( sf_ptr->content.empty()
-                    ||  (sf_ptr->content.back() != '\0') ){
-                        sf_ptr->content.emplace_back('\0');
-                        sf_ptr->altered = true;
-                    }
+                        //const auto text_entry_ID = ImGui::GetCurrentContext()->LastActiveId; // ActiveIdPreviousFrame;
+                        //const auto text_entry_ID = ImGui::GetID("#script_editor_active_content");
+                        ImGui::Begin("Script Editor/#script_editor_active_content_9CF9E0D1"); // Terrible hacky workaround. FIXME. TODO.
+                        const auto vert_scroll = ImGui::GetScrollY();
+                        ImGui::EndChild();
 
-                    // Leave room for line numbers.
-                    const auto orig_cursor_pos = ImGui::GetCursorPosX();
-                    const auto orig_screen_pos = ImGui::GetCursorScreenPos();
-                    //const auto text_vert_spacing = ImGui::GetTextLineHeightWithSpacing();
-                    const auto text_vert_spacing = ImGui::GetTextLineHeight();
-                    const auto vert_spacing = ImGui::GetStyle().ItemSpacing.y * 0.5f; // Is this correct??? Seems OK, but is arbitrary.
-                    const auto horiz_spacing = ImGui::GetStyle().ItemSpacing.x;
-                    const float line_no_width = ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, "12345", nullptr, nullptr).x;
-                    ImGui::SetCursorPosX( orig_cursor_pos + line_no_width + horiz_spacing );
+                        // Draw line numbers, including compilation feedback if applicable.
+                        {
+                            auto drawList = ImGui::GetWindowDrawList();
 
-                    // Draw text entry box.
-                    ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput
-                                              | ImGuiInputTextFlags_CallbackResize
-                                              | ImGuiInputTextFlags_CallbackEdit;
-                    ImVec2 edit_box_extent = ImGui::GetContentRegionAvail();
-                    const auto altered = ImGui::InputTextMultiline("#script_editor_active_content",
-                                                                   sf_ptr->content.data(),
-                                                                   sf_ptr->content.capacity(),
-                                                                   edit_box_extent,
-                                                                   flags,
-                                                                   text_entry_callback,
-                                                                   reinterpret_cast<void*>(sf_ptr));
-                    if(altered == true) script_files.at(active_script_file).altered = true;
+                            const auto text_ln = static_cast<int>(std::floor(vert_scroll / text_vert_spacing));
+                            const auto text_ln_max = std::max(0, text_ln + static_cast<int>(std::floor((vert_scroll + edit_box_extent.y) / text_vert_spacing)));
+                            const auto line_vert_shift = (vert_scroll / text_vert_spacing) - static_cast<float>(text_ln);
 
-                    //const auto text_entry_ID = ImGui::GetCurrentContext()->LastActiveId; // ActiveIdPreviousFrame;
-                    //const auto text_entry_ID = ImGui::GetID("#script_editor_active_content");
-                    ImGui::Begin("Script Editor/#script_editor_active_content_9CF9E0D1"); // Terrible hacky workaround. FIXME. TODO.
-                    const auto vert_scroll = ImGui::GetScrollY();
-                    ImGui::EndChild();
-
-                    // Draw line numbers, including compilation feedback if applicable.
-                    {
-                        auto drawList = ImGui::GetWindowDrawList();
-
-                        const auto text_ln = static_cast<int>(std::floor(vert_scroll / text_vert_spacing));
-                        const auto text_ln_max = std::max(0, text_ln + static_cast<int>(std::floor((vert_scroll + edit_box_extent.y) / text_vert_spacing)));
-                        const auto line_vert_shift = (vert_scroll / text_vert_spacing) - static_cast<float>(text_ln);
-
-                        for(int l = text_ln; l < text_ln_max; ++l){ 
-                            ImU32 colour = ImGui::GetColorU32(line_numbers_normal_colour);
-                            if(view_toggles.view_script_feedback){
-                                for(const auto &f : script_files.at(active_script_file).feedback){
-                                    if(l != f.line) continue;
-                                    if(false){
-                                    }else if(f.severity == script_feedback_severity_t::debug){
-                                        colour = ImGui::GetColorU32(line_numbers_debug_colour);
-                                    }else if(f.severity == script_feedback_severity_t::info){
-                                        colour = ImGui::GetColorU32(line_numbers_info_colour);
-                                    }else if(f.severity == script_feedback_severity_t::warn){
-                                        colour = ImGui::GetColorU32(line_numbers_warn_colour);
-                                    }else if(f.severity == script_feedback_severity_t::err){
-                                        colour = ImGui::GetColorU32(line_numbers_error_colour);
-                                    }else{
-                                        throw std::logic_error("Unrecognized severity level");
+                            for(int l = text_ln; l < text_ln_max; ++l){ 
+                                ImU32 colour = ImGui::GetColorU32(line_numbers_normal_colour);
+                                if(view_toggles.view_script_feedback){
+                                    for(const auto &f : script_files.at(active_script_file).feedback){
+                                        if(l != f.line) continue;
+                                        if(false){
+                                        }else if(f.severity == script_feedback_severity_t::debug){
+                                            colour = ImGui::GetColorU32(line_numbers_debug_colour);
+                                        }else if(f.severity == script_feedback_severity_t::info){
+                                            colour = ImGui::GetColorU32(line_numbers_info_colour);
+                                        }else if(f.severity == script_feedback_severity_t::warn){
+                                            colour = ImGui::GetColorU32(line_numbers_warn_colour);
+                                        }else if(f.severity == script_feedback_severity_t::err){
+                                            colour = ImGui::GetColorU32(line_numbers_error_colour);
+                                        }else{
+                                            throw std::logic_error("Unrecognized severity level");
+                                        }
                                     }
                                 }
-                            }
 
-                            std::stringstream ss;
-                            ss << std::setw(5) << l;
-                            drawList->AddText(
-                                ImVec2(orig_screen_pos.x,
-                                       orig_screen_pos.y + vert_spacing
-                                                         + text_vert_spacing * static_cast<float>(l - text_ln)
-                                                         - text_vert_spacing * line_vert_shift),
-                                colour, const_cast<char *>(ss.str().c_str()) );
+                                std::stringstream ss;
+                                ss << std::setw(5) << l;
+                                drawList->AddText(
+                                    ImVec2(orig_screen_pos.x,
+                                           orig_screen_pos.y + vert_spacing
+                                                             + text_vert_spacing * static_cast<float>(l - text_ln)
+                                                             - text_vert_spacing * line_vert_shift),
+                                    colour, const_cast<char *>(ss.str().c_str()) );
+                            }
                         }
                     }
                 }
