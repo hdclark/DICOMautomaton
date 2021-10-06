@@ -233,6 +233,26 @@ struct opengl_mesh {
 
         // Push the data into OpenGL buffers.
         CHECK_FOR_GL_ERRORS();
+//        glEnableClientState(GL_VERTEX_ARRAY);
+//        CHECK_FOR_GL_ERRORS();
+//        glEnableClientState(GL_COLOR_ARRAY);
+//        CHECK_FOR_GL_ERRORS();
+
+//  glEnableClientState(GL_VERTEX_ARRAY);
+//  glEnableClientState(GL_COLOR_ARRAY);
+        CHECK_FOR_GL_ERRORS();
+
+        // Vertex array object.
+        GLint current_vao = 0;
+        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &current_vao); // Save current vertex array object so we can return to it later.
+        CHECK_FOR_GL_ERRORS();
+        glGenVertexArrays(1, &this->vao); // Create a VAO inside the OpenGL context.
+        if(this->vao == 0) throw std::runtime_error("Unable to generate vertex array object");
+        CHECK_FOR_GL_ERRORS();
+
+        CHECK_FOR_GL_ERRORS();
+        glBindVertexArray(this->vao);
+        CHECK_FOR_GL_ERRORS();
 
         // Vertex data.
         glGenBuffers(1, &this->vbo); // Create a VBO inside the OpenGL context.
@@ -243,6 +263,16 @@ struct opengl_mesh {
         glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), static_cast<void*>(vertices.data()), GL_STATIC_DRAW); // Copy vertex data.
         CHECK_FOR_GL_ERRORS();
 
+        glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
+        CHECK_FOR_GL_ERRORS();
+// NOTE: check if there are any existing vertex attrib arrays and bump these numbers accordingly.
+        glEnableVertexAttribArray(0);
+        CHECK_FOR_GL_ERRORS();
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0); // Vertex positions, 3 floats per vertex, attrib index 0.
+        CHECK_FOR_GL_ERRORS();
+
+// NOTE: is there a problem due to different vertex array being used???
+
         // Element data.
         glGenBuffers(1, &this->ebo); // Create a EBO inside the OpenGL context.
         if(this->ebo == 0) throw std::runtime_error("Unable to generate element buffer object");
@@ -252,27 +282,17 @@ struct opengl_mesh {
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), static_cast<void*>(indices.data()), GL_STATIC_DRAW); // Copy index data.
         CHECK_FOR_GL_ERRORS();
 
-        // Vertex array object.
-        glGenVertexArrays(1, &this->vao); // Create a VAO inside the OpenGL context.
-        if(this->vao == 0) throw std::runtime_error("Unable to generate vertex array object");
-        CHECK_FOR_GL_ERRORS();
-        glBindVertexArray(this->vao);
-        CHECK_FOR_GL_ERRORS();
-
-        glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
-        CHECK_FOR_GL_ERRORS();
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0); // Vertex positions, 3 floats per vertex, attrib index 0.
-        CHECK_FOR_GL_ERRORS();
-
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ebo);
+        CHECK_FOR_GL_ERRORS();
+        glEnableVertexAttribArray(1);
         CHECK_FOR_GL_ERRORS();
         glVertexAttribPointer(1, 3, GL_UNSIGNED_INT, GL_FALSE, 0, 0); // Indices, 3 coordinates per face (triangles only), attrib index 1.
         CHECK_FOR_GL_ERRORS();
 
 
-        glEnableVertexAttribArray(0);
-        CHECK_FOR_GL_ERRORS();
-        glEnableVertexAttribArray(1);
+        //glBindBuffer(GL_ARRAY_BUFFER, 0);
+        //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        glBindVertexArray(static_cast<GLuint>(current_vao)); // Reset to prior vertex array.
         CHECK_FOR_GL_ERRORS();
 
         FUNCINFO("Registered new OpenGL mesh");
@@ -280,18 +300,32 @@ struct opengl_mesh {
 
     // Draw the mesh in the current OpenGL context.
     void draw(){
+// Note -- try including a color array attribute. It will eventually be needed anyway.
+  glClear(GL_DEPTH_BUFFER_BIT|GL_COLOR_BUFFER_BIT);
+
+glColor4d( 1.0,
+           0.5,
+           0.3,
+           0.9 );
+
         CHECK_FOR_GL_ERRORS();
+        GLint current_vao = 0;
+        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &current_vao); // Save current vertex array object so we can return to it later.
+
         glBindVertexArray(this->vao);
+
         CHECK_FOR_GL_ERRORS();
+  
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Enable wireframe mode.
         CHECK_FOR_GL_ERRORS();
-        glDrawElements(GL_TRIANGLES, this->N_indices, GL_UNSIGNED_INT, 0); // Draw using the current shader setup.
+        glDrawElements(GL_TRIANGLES, this->N_indices, GL_UNSIGNED_INT, nullptr); // Draw using the current shader setup.
+        //glDrawArrays(GL_TRIANGLES, 0, this->N_indices); // Draw using the current shader setup.
         CHECK_FOR_GL_ERRORS();
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Disable wireframe mode.
         CHECK_FOR_GL_ERRORS();
 
-        glBindVertexArray(0);
+        glBindVertexArray(static_cast<GLuint>(current_vao)); // Reset to prior vertex array.
         CHECK_FOR_GL_ERRORS();
     };
 
@@ -305,6 +339,9 @@ struct opengl_mesh {
             glDisableVertexAttribArray(1);
             glBindVertexArray(0);
 
+//  glDisableClientState(GL_VERTEX_ARRAY);
+//  glDisableClientState(GL_COLOR_ARRAY);
+
             // Delete the attribute buffers and then finally the vertex array object.
             glDeleteBuffers(1, &this->ebo);
             glDeleteBuffers(1, &this->vbo);
@@ -317,6 +354,30 @@ struct opengl_mesh {
         this->N_triangles = this->N_indices = this->N_vertices = 0;
     };
 };
+
+struct opengl_mesh_render_user_data {
+    long int frame_count;
+    opengl_mesh *oglm;
+};
+
+void
+render_callback(const ImDrawList* parent_list,
+                const ImDrawCmd* cmd ){
+
+    //if(cmd->UserCallback != nullptr){
+    //    cmd->UserCallback(parent_list, cmd);
+    //}else
+    if(cmd->UserCallbackData == nullptr){
+        throw std::logic_error("Invalid render user data struct");
+    }else if(auto* ud = reinterpret_cast<opengl_mesh_render_user_data*>(cmd->UserCallbackData)){
+        FUNCINFO("Called on frame " << ud->frame_count);
+        if(ud->oglm == nullptr) throw std::logic_error("Invalid opengl mesh");
+        //WriteStringToFile(debug_get_opengl_state(), "opengl_state_2_"_s + std::to_string(ud->frame_count), true);
+        ud->oglm->draw();
+    }
+    return;
+}
+
 
 enum class brush_t {
     // 2D brushes.
@@ -4410,17 +4471,41 @@ script_files.back().content.emplace_back('\0');
                 oglm_ptr = std::make_unique<opengl_mesh>( smesh_ptr->meshes );
             }
             if(oglm_ptr){
-                //ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
-                //ImGui::SetNextWindowPos(ImVec2(40, 40), ImGuiCond_FirstUseEver);
-                ImGui::Begin("Meshes");
-                std::string msg = "Drawing "_s
-                                + std::to_string(oglm_ptr->N_vertices) + " vertices, "
-                                + std::to_string(oglm_ptr->N_indices) + " indices, and "
-                                + std::to_string(oglm_ptr->N_triangles) + " triangles.";
-                ImGui::Text("%s", msg.c_str());
+                ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(ImVec2(40, 40), ImGuiCond_FirstUseEver);
 
-//                auto drawList = ImGui::GetWindowDrawList();
-                oglm_ptr->draw();
+/*
+                if(ImGui::Begin("Meshes", &view_toggles.view_meshes_enabled, ImGuiWindowFlags_NoBackground)){
+                    std::string msg = "Drawing "_s
+                                    + std::to_string(oglm_ptr->N_vertices) + " vertices, "
+                                    + std::to_string(oglm_ptr->N_indices) + " indices, and "
+                                    + std::to_string(oglm_ptr->N_triangles) + " triangles.";
+                    ImGui::Text("%s", msg.c_str());
+
+//                    auto drawList = ImGui::GetWindowDrawList();
+                    oglm_ptr->draw();
+                }
+*/
+
+
+                if(ImGui::Begin("Meshes", &view_toggles.view_meshes_enabled, ImGuiWindowFlags_NoBackground)){
+                    std::string msg = "Drawing "_s
+                                    + std::to_string(oglm_ptr->N_vertices) + " vertices, "
+                                    + std::to_string(oglm_ptr->N_indices) + " indices, and "
+                                    + std::to_string(oglm_ptr->N_triangles) + " triangles.";
+                    ImGui::Text("%s", msg.c_str());
+
+                    opengl_mesh_render_user_data ud;
+                    ud.frame_count = frame_count;
+                    ud.oglm = oglm_ptr.get();
+
+                    auto drawList = ImGui::GetWindowDrawList();
+                    //drawList->AddCallback(ImDrawCallback_ResetRenderState, nullptr);
+                    drawList->AddCallback(render_callback, reinterpret_cast<void*>(&ud));
+                    //drawList->AddCallback(ImDrawCallback_ResetRenderState, nullptr);
+                    //oglm_ptr->draw();
+//oglm_ptr->draw();
+                }
 
                 ImGui::End();
             }
