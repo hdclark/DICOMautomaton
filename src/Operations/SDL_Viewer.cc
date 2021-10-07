@@ -729,7 +729,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         double rot_y = 0.0;
         double rot_z = 0.0;
 
-        std::array<float, 4> colours = { 1.0, 1.0, 1.0, 0.8 };
+        std::array<float, 4> colours = { 1.000, 0.588, 0.005, 0.8 };
     } mesh_display_transform;
 
     // ------------------------------------------ Viewer State --------------------------------------------
@@ -4442,7 +4442,7 @@ script_files.back().content.emplace_back('\0');
                 oglm_ptr->draw( mesh_display_transform.render_wireframe );
 
                 //ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
-                //ImGui::SetNextWindowPos(ImVec2(40, 40), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(ImVec2(10, 20), ImGuiCond_FirstUseEver);
                 if(ImGui::Begin("Meshes", &view_toggles.view_meshes_enabled)){
                     std::string msg = "Drawing "_s
                                     + std::to_string(oglm_ptr->N_vertices) + " vertices, "
@@ -4499,7 +4499,7 @@ script_files.back().content.emplace_back('\0');
                          background_colour.y,
                          background_colour.z,
                          background_colour.w);
-            glClear(GL_COLOR_BUFFER_BIT);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             CHECK_FOR_GL_ERRORS();
 
             glPushMatrix();
@@ -4613,6 +4613,8 @@ script_files.back().content.emplace_back('\0');
     std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Hope that this is enough time for preprocessing threads to terminate.
                                                                  // TODO: use a work queue with condition variable to
                                                                  // signal termination!
+
+    oglm_ptr = nullptr;  // Release OpenGL resources while context is valid.
 
     // OpenGL and SDL cleanup.
     ImGui_ImplOpenGL3_Shutdown();
