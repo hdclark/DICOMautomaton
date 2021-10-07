@@ -21,7 +21,7 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorMath.h"         //Needed for various geometry classes (e.g., vec3).
 #include "YgorImages.h"       //Needed for planar_image_collection and planar_image classes.
-#include "YgorImagesIOFITS.h" //Needed for reading and writing images in FITS format, which preserves embedded metadata.
+#include "YgorImagesIO.h"     //Needed for reading and writing images in FITS format, which preserves embedded metadata and supports 32bit-per-channel intensity.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 using namespace std::chrono;
@@ -44,9 +44,10 @@ int main(int argc, char* argv[]){
     // See below for description of these parameters.
     std::string type = "rigid";
     long int iters = 1;
+    double tune = 0.0;
 
     // This structure is described in Alignment_ABC.h.
-    CPDParams params;
+    //Params params;
     
     //================================================ Argument Parsing ==============================================
 
@@ -71,20 +72,14 @@ int main(int argc, char* argv[]){
     arger.push_back( ygor_arg_handlr_t(1, 'm', "moving", true, "moving.fits",
       "Load a moving image array from the given file.",
       [&](const std::string &optarg) -> void {
-        if(!moving.images.emplace_back(optarg)){
-          FUNCERR("Unable to parse moving image array file: '" << optarg << "'");
-          exit(1);
-        }
+        moving.images.emplace_back(ReadFromFITS<float,double>(optarg));
         return;
       })
     );
     arger.push_back( ygor_arg_handlr_t(1, 's', "stationary", true, "stationary.fits",
       "Load a stationary image array from the given file.",
       [&](const std::string &optarg) -> void {
-        if(!stationary.images.emplace_back(optarg)){
-          FUNCERR("Unable to parse stationary image array file: '" << optarg << "'");
-          exit(1);
-        }
+        stationary.images.emplace_back(ReadFromFITS<float,double>(optarg));
         return;
       })
     );
@@ -128,7 +123,11 @@ int main(int argc, char* argv[]){
         // Perform your registration algorithm here.
         // The result is a transform that can be saved, applied to the moving images, or applied to other kinds of
         // objects (e.g., surfac meshes).
-        RigidCPDTransform transform = AlignViaRigidCPD(params, moving, stationary, iter_interval, video, xyz_outfile);
+        //RigidTransform transform = AlignViaRigidCPD(params, 
+        //                                            moving,
+        //                                            stationary,
+        //                                            iters,
+        //                                            tune);
 
         // If needed (for testing, debugging, ...) try to apply the transform.
         //transform.apply_to(moving);
