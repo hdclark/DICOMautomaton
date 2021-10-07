@@ -2,7 +2,7 @@
 ## Deformable Registration Development
 
 This directory contains a mock-up example of a deformable registration algorithm. It can be used as a starting point to
-implement a point cloud deformable registration algorithm of your choosing.
+implement a deformable registration algorithm of your choosing for image registration.
 
 A `Docker` image is available that provides a development toolchain complete with everything needed to build
 `DICOMautomaton`. Re-using the same dependencies as `DICOMautomaton` will simplify later integration of the registration
@@ -27,7 +27,7 @@ The easiest workflow will be to:
 2. Install `Docker`.
 3. Launch the `hdclark/dcma_build_base_arch` container in `Docker` on your computer.
 4. `git clone` your forked `DICOMautomaton` repository.
-5. Make changes to your implementation (in the `registration/` directory) and commit them. (See below.)
+5. Make changes to your implementation (in the `img_registration/` directory) and commit them. (See below.)
 6. `git push` your commits to your `GitHub` fork.
 7. When your code seems to work, and you want to share with others, create a pull request with the main `DICOMautomaton`
    repository.
@@ -55,26 +55,15 @@ They may not be necessary though!
 since they can limit portability. If new files are added, you
 will have to add them to `src/CMakeLists.txt`.
 
-You can compile your code using `registration/compile_and_install.sh` and run the executable `run_def_reg`, which is
+You can compile your code using `img_registration/compile_and_install.sh` and run the executable `run_def_reg`, which is
 installed as a system-wide program.
 
-    cd registration/
+    cd img_registration/
     ./compile_and_install.sh
     run_model -h
 
 In order to test your code, you will need point clouds in `XYZ` format. I can provide these -- please let me know when
 you're ready.
-
-### Web Development
-
-A set of scripts were written to support using <https://repl.it> as a web-based development tool. Supplying the `GitHub`
-address <https://github.com.hdclark/DICOMautomaton> will load a bare-bones development environment. The 'Run' button
-will compile the sources in `registration/`.
-
-Please note that there are several caveats. The setup script takes around 10 minutes(!!) to complete, the installation
-sometimes disconnects and needs to be re-generated, and the allocated resources are probably insufficient to load
-anything but tiny point clouds. Using <https://repl.it> is, at best, only expected to be useful for discussion or
-light development work.
 
 ### Questions?
 
