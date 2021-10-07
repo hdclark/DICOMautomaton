@@ -24,6 +24,8 @@
 #include "YgorImagesIO.h"     //Needed for reading and writing images in FITS format, which preserves embedded metadata and supports 32bit-per-channel intensity.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
+#include "Alignment_ABC.h"    // Put header file for implementation 'ABC' here.
+
 using namespace std::chrono;
 
 int main(int argc, char* argv[]){
@@ -41,13 +43,15 @@ int main(int argc, char* argv[]){
     // the stationary set.
     planar_image_collection<float, double> stationary;
 
-    // See below for description of these parameters.
-    std::string type = "rigid";
+    // This structure is described in Alignment_ABC.h.
+    AlignViaABCParams params;
+
+    // See below for description of these parameters. You can also put them in the AlignViaABCParams structure to more
+    // easily pass them into your algorithm.
+    std::string type = "ABC";
     long int iters = 1;
     double tune = 0.0;
 
-    // This structure is described in Alignment_ABC.h.
-    //Params params;
     
     //================================================ Argument Parsing ==============================================
 
@@ -84,8 +88,8 @@ int main(int argc, char* argv[]){
       })
     );
 
-    arger.push_back( ygor_arg_handlr_t(1, 't', "type", true, "rigid",
-      "Which algorithm to use. Options: rigid, ...",
+    arger.push_back( ygor_arg_handlr_t(1, 't', "type", true, "ABC",
+      "Which algorithm to use. Options: ABC, ...",
       [&](const std::string &optarg) -> void {
         type = optarg;
         return;
@@ -118,24 +122,25 @@ int main(int argc, char* argv[]){
     //============================================ Perform Registration  =============================================
 
     high_resolution_clock::time_point start = high_resolution_clock::now();
-    if(type == "rigid") {
+    if(type == "ABC") {
         
         // Perform your registration algorithm here.
         // The result is a transform that can be saved, applied to the moving images, or applied to other kinds of
-        // objects (e.g., surfac meshes).
-        //RigidTransform transform = AlignViaRigidCPD(params, 
-        //                                            moving,
-        //                                            stationary,
-        //                                            iters,
-        //                                            tune);
+        // objects (e.g., surface meshes).
+        std::optional<AlignViaABCTransform> transform_opt = AlignViaABC(params, moving, stationary );
+
+        if(transform_opt){
+            FUNCERR("ABC algorithm failed");
+        }
 
         // If needed (for testing, debugging, ...) try to apply the transform.
-        //transform.apply_to(moving);
+        //transform_opt.value().apply_to(moving);
 
         // If needed, try save the transform by writing it to file.
-        //transform.write_to("transform.txt");
+        //transform_opt.value().write_to("transform.txt");
+
     } else {
-        FUNCERR("Specified algorithm specified was invalid. Options are rigid, ...");
+        FUNCERR("Specified algorithm specified was invalid. Options are ABC, ...");
         return 1;
     }
 
