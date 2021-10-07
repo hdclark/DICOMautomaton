@@ -167,7 +167,8 @@ struct opengl_mesh {
     GLsizei N_triangles = 0;
 
     // Constructor. Allocates space in GPU memory.
-    opengl_mesh( const fv_surface_mesh<double, uint64_t> &meshes){
+    opengl_mesh( const fv_surface_mesh<double, uint64_t> &meshes,
+                 bool reverse_normals = false ){
 
         this->N_vertices = static_cast<GLsizei>(meshes.vertices.size());
         this->N_triangles = 0;
@@ -236,6 +237,9 @@ struct opengl_mesh {
                 indices.push_back(static_cast<unsigned int>(*it_2));
                 indices.push_back(static_cast<unsigned int>(*it_3));
             }
+        }
+        if(reverse_normals){
+            std::reverse(std::begin(indices), std::end(indices));
         }
         this->N_indices = static_cast<GLsizei>(indices.size());
 
@@ -717,6 +721,8 @@ bool SDL_Viewer(Drover &DICOM_data,
     struct mesh_display_transform_t {
         bool precess = true;
         bool render_wireframe = true;
+        bool reverse_normals = false;
+        bool use_lighting = false;
 
         double precess_rate = 1.0;
         double rot_x = 0.0;
@@ -4417,11 +4423,18 @@ script_files.back().content.emplace_back('\0');
             if( !view_toggles.view_meshes_enabled
             ||  !DICOM_data.Has_Mesh_Data() ) return;
 
+            const auto load_mesh = [&](){
+                if(!DICOM_data.Has_Mesh_Data()) return;
+                const auto N_meshes = static_cast<long int>(DICOM_data.smesh_data.size());
+                mesh_num = std::clamp(mesh_num, 0L, N_meshes - 1L);
+                const auto smesh_ptr = *(std::next( std::begin(DICOM_data.smesh_data), mesh_num));
+                oglm_ptr = std::make_unique<opengl_mesh>( smesh_ptr->meshes, mesh_display_transform.reverse_normals );
+            };
+
             const auto N_meshes = DICOM_data.smesh_data.size();
             if(!oglm_ptr){
                 mesh_num = 0;
-                const auto smesh_ptr = DICOM_data.smesh_data.front();
-                oglm_ptr = std::make_unique<opengl_mesh>( smesh_ptr->meshes );
+                load_mesh();
             }
 
             if(oglm_ptr){
@@ -4441,14 +4454,17 @@ script_files.back().content.emplace_back('\0');
                     ImGui::SliderInt("Mesh", &scroll_meshes, 0, N_meshes - 1);
                     if(static_cast<long int>(scroll_meshes) != mesh_num){
                         mesh_num = static_cast<long int>(scroll_meshes);
-                        const auto smesh_ptr = *(std::next( std::begin(DICOM_data.smesh_data), mesh_num));
-                        oglm_ptr = std::make_unique<opengl_mesh>( smesh_ptr->meshes );
+                        load_mesh();
                     }
 
                     ImGui::ColorEdit4("Colour", mesh_display_transform.colours.data());
 
                     ImGui::Checkbox("Precess", &mesh_display_transform.precess);
                     ImGui::Checkbox("Wireframe", &mesh_display_transform.render_wireframe);
+                    if(ImGui::Checkbox("Reverse normals", &mesh_display_transform.reverse_normals)){
+                        load_mesh();
+                    }
+                    ImGui::Checkbox("Use lighting", &mesh_display_transform.use_lighting);
                     float drag_speed = 0.05f;
                     double clamp_l = -10.0;
                     double clamp_h =  10.0;
@@ -4461,15 +4477,6 @@ script_files.back().content.emplace_back('\0');
                     ImGui::DragScalar("Z rotation", ImGuiDataType_Double, &mesh_display_transform.rot_z, drag_speed, &clamp_l, &clamp_h, "%.1f");
                     if(ImGui::Button("Reset")){
                         mesh_display_transform = mesh_display_transform_t();
-/*
-                        mesh_display_transform.rot_x = 0.0;
-                        mesh_display_transform.rot_y = 0.0;
-                        mesh_display_transform.rot_z = 0.0;
-                        mesh_display_transform.colours[0] = 1.0;
-                        mesh_display_transform.colours[1] = 1.0;
-                        mesh_display_transform.colours[2] = 1.0;
-                        mesh_display_transform.colours[3] = 0.8;
-*/
                     }
                 }
                 ImGui::End();
@@ -4524,7 +4531,39 @@ script_files.back().content.emplace_back('\0');
                        mesh_display_transform.colours[1],
                        mesh_display_transform.colours[2],
                        mesh_display_transform.colours[3] );
+
+            if(mesh_display_transform.use_lighting){
+                glShadeModel(GL_FLAT);
+                GLint use_double_sided_lighting = 1;
+                glLightModeliv(GL_LIGHT_MODEL_TWO_SIDE, &use_double_sided_lighting);
+                std::array<float, 4> light_diff { 1.0, 1.0, 1.0, 1.0 };
+                std::array<float, 4> light_spec { 1.0, 1.0, 1.0, 1.0 };
+                std::array<float, 4> light_pos { 1.5 * std::sin(1.0 * frame_count / 53.0),
+                                                 1.5 * std::sin(1.0 * frame_count / 75.0),
+                                                 1.5,  1.0 };
+
+                CHECK_FOR_GL_ERRORS();
+                glEnable(GL_LIGHTING);
+                CHECK_FOR_GL_ERRORS();
+                glEnable(GL_LIGHT0);
+                CHECK_FOR_GL_ERRORS();
+                glLightModelfv(GL_LIGHT_MODEL_AMBIENT, mesh_display_transform.colours.data());
+                glLightfv(GL_LIGHT0, GL_AMBIENT,       mesh_display_transform.colours.data());
+                glLightfv(GL_LIGHT0, GL_DIFFUSE,  light_diff.data());
+                glLightfv(GL_LIGHT0, GL_SPECULAR, light_spec.data());
+                glLightfv(GL_LIGHT0, GL_POSITION, light_pos.data());
+                CHECK_FOR_GL_ERRORS();
+            }
+
             draw_surface_meshes();
+
+            if(mesh_display_transform.use_lighting){
+                CHECK_FOR_GL_ERRORS();
+                glDisable(GL_LIGHT0);
+                CHECK_FOR_GL_ERRORS();
+                glDisable(GL_LIGHTING);
+                CHECK_FOR_GL_ERRORS();
+            }
 
             glPopMatrix();
             glViewport(0, 0, static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y));
