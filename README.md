@@ -9,6 +9,11 @@
 
 [![Latest Release DOI](https://zenodo.org/badge/89630691.svg)](https://zenodo.org/badge/latestdoi/89630691)
 
+
+![SDL_Viewer_01](https://user-images.githubusercontent.com/934858/136631960-585c14dc-75df-4d76-b037-1b09005008ed.png)
+
+[More screenshots here.](https://github.com/hdclark/DICOMautomaton/issues/15)
+
 ## About
 
 `DICOMautomaton` is a multipurpose tool for analyzing *medical physics* data
