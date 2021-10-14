@@ -60,6 +60,7 @@
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorImages.h"
 
+#include "Thread_Pool.h"
 #include "Structs.h"
 
 #include "YgorImages_Functors/Grouping/Misc_Functors.h"
@@ -872,21 +873,45 @@ Marching_Cubes_Implementation(
         {0, 4}, {1, 5}, {2, 6}, {3, 7}   // Side faces.
     } };
 
-    // Storage used for the final mesh triangle vertices and faces.
-    std::vector<Kernel::Point_3> mesh_triangle_verts;
-    std::vector< std::array<size_t, 3> > mesh_triangle_faces;
+    // Storage for partially-connected meshes within the plane of a single image.
+    // Data is processed one image at a time and we only merge meshes and de-duplicate out-of-plane vertices afterward.
+    struct per_img_fv_mesh_t {
+        long int global_img_num = -1;
+        std::vector<vec3<double>> verts;
+        std::vector<std::vector<uint64_t>> faces;
+
+        std::vector<std::vector<uint64_t>> fsrel; // which img num vert num is relative to.
+        std::vector<uint64_t> vscor; // lower bound index of the local verts that correspond to a given voxel.
+    };
+    std::map<long int, per_img_fv_mesh_t> per_img_fv_mesh;
+
+    // Prime the map.
+    const auto [img_num_min, img_num_max] = img_adj.get_min_max_indices();
+    for(long int i = img_num_min; i <= img_num_max; ++i){
+        per_img_fv_mesh[i - img_num_min].global_img_num = (i - img_num_min);
+        per_img_fv_mesh[i - img_num_min].vscor.emplace_back(0);
+    }
+    const auto vscor_index = [](long int N_rows, long int N_cols, 
+                                long int row, long int col) -> long int {
+
+        long int index = N_cols * row + col;
+        if( (row < 0) 
+        ||  (col < 0)
+        ||  (N_rows <= row)
+        ||  (N_cols <= col) ) index = -1;
+        return index;
+    };
 
     std::mutex saver_printer; // Thread synchro lock for saving shared data, logging, and counter iterating.
     long int completed = 0;
     const long int img_count = grid_imgs.size();
+    auto final_merge_tol = std::numeric_limits<double>::infinity();
 
     // Iterate over all voxels, traversing the images in order of adjacency for consistency.
     //
     // NOTE: The order of traversal must reflect image adjacency. This requirement could be relaxed if candidate
     //       vertices (below) were indexed, but even this would involve extra memory usage for little gain.
-    for(const auto &img_ptr : img_adj.int_to_img){
-        const auto img_refw = std::ref( *img_ptr );
-
+    const auto work = [&](planar_image_adjacency<float,double>::img_refw_t img_refw) -> void {
         const auto pxl_dx = img_refw.get().pxl_dx;
         const auto pxl_dy = img_refw.get().pxl_dy;
         const auto pxl_dz = img_refw.get().pxl_dz;
@@ -907,6 +932,7 @@ Marching_Cubes_Implementation(
         const auto dvec3_tol = std::max(
                                    std::min( { pxl_dx, pxl_dy, pxl_dz } ) * 1E-4,
                                    std::sqrt(machine_eps) * 100.0 ); // Guard against pxl_dz = 0.
+        final_merge_tol = std::min(final_merge_tol, dvec3_tol);
 
         // List of Marching Cube voxel corner positions relative to image voxel centre.
         //
@@ -945,11 +971,12 @@ Marching_Cubes_Implementation(
             img_unit * pxl_dz
         } };
 
-
         const auto img_num = img_adj.image_to_index( img_refw );
         const auto img_num_p1 = img_num + 1;
         const auto img_is_adj = img_adj.index_present(img_num_p1);
         const auto img_p1 = (img_is_adj) ? img_adj.index_to_image(img_num_p1) : img_refw;
+
+        auto* l_mini_mesh_ptr = &(per_img_fv_mesh[img_num - img_num_min]);
 
         const auto N_rows = img_refw.get().rows;
         const auto N_cols = img_refw.get().columns;
@@ -997,7 +1024,10 @@ Marching_Cubes_Implementation(
                 const int32_t iEdgeFlags = aiCubeEdgeFlags[iFlagIndex];
 
                 // If the cube is entirely inside or outside of the surface, then there will be no intersections.
-                if(iEdgeFlags == 0) continue;
+                if(iEdgeFlags == 0){
+                    l_mini_mesh_ptr->vscor.emplace_back(l_mini_mesh_ptr->verts.size());
+                    continue;
+                }
 
                 // Find the point of intersection of the surface with each edge.
                 std::array<vec3<double>, 12> asEdgeVertex;
@@ -1022,6 +1052,62 @@ Marching_Cubes_Implementation(
                     }
                 }
 
+                // Generate a generic list of vertex indices to check for vertex deduplication.
+                //
+// TODO: express as a difference from current (row,col) so we don't have to regenerate over and over
+// again!
+                std::set<long int> vscor_to_check;
+                {
+                    vscor_to_check.insert(vscor_index(N_rows, N_cols, row - 1, col - 1));
+                    vscor_to_check.insert(vscor_index(N_rows, N_cols, row - 1, col    ));
+                    vscor_to_check.insert(vscor_index(N_rows, N_cols, row - 1, col + 1));
+                    vscor_to_check.insert(vscor_index(N_rows, N_cols, row    , col - 1));
+                    vscor_to_check.insert(vscor_index(N_rows, N_cols, row    , col    ));
+                    vscor_to_check.insert(vscor_index(N_rows, N_cols, row    , col + 1));
+                    vscor_to_check.insert(vscor_index(N_rows, N_cols, row + 1, col - 1));
+                    vscor_to_check.insert(vscor_index(N_rows, N_cols, row + 1, col    ));
+                    vscor_to_check.insert(vscor_index(N_rows, N_cols, row + 1, col + 1));
+
+//if(!vscor_to_check.empty()){
+//std::lock_guard<std::mutex> lock(saver_printer);
+//std::cout << "r,c = " << row << ", " << col << " and vscor_to_check is: ";
+//for(const auto &x : vscor_to_check) std::cout << x << " ";
+//std::cout << std::endl;
+//}
+                }
+
+                // Tailor the generic list of indices to check to the current position, discarding irrelevant items.
+                std::set<size_t> verts_to_check;
+                {
+                    // Now for each i in vscor_to_check, insert l_mini_mesh_ptr->vscor[i] ... l_mini_mesh_ptr->vscor[i+1] into verts_to_check (iff it currently exists!)
+                    const auto N_vscor = l_mini_mesh_ptr->vscor.size();
+                    for(const auto &i : vscor_to_check){
+                        if(i < 0) continue;
+                        if( (i < N_vscor) && ((i+1) < N_vscor) ){
+                            const auto j_min = l_mini_mesh_ptr->vscor.at(i);
+                            const auto j_max = l_mini_mesh_ptr->vscor.at(i+1);
+//std::lock_guard<std::mutex> lock(saver_printer);
+//FUNCINFO("    min, max = " << j_min << ", " << j_max);
+
+                            for(auto j = j_min; j < j_max; ++j){
+                                verts_to_check.insert(j);
+                            }
+                        }
+                    }
+
+//if(!verts_to_check.empty()){
+//std::lock_guard<std::mutex> lock(saver_printer);
+//std::cout << "r,c = " << row << ", " << col << " and verts_to_check is: ";
+//for(const auto &x : verts_to_check) std::cout << x << " ";
+//std::cout << std::endl;
+//}
+                }
+
+//if(img_num == 51){
+//std::lock_guard<std::mutex> lock(saver_printer);
+//FUNCERR("Exiting early for debugging");
+//}
+
                 // Process the triangles that were identified.
                 for(int32_t tri = 0; tri < 5; tri++){
 
@@ -1035,57 +1121,109 @@ Marching_Cubes_Implementation(
     
                     }
 
-                    // Determine which vertices should be used; if there are existing vertices sufficiently nearby, use
-                    // them rather than adding a new (disconnected) vertex.
-                    //
-                    // Note: Existing vertices created for adjacent voxels are more likely to be placed near the back of
-                    //       the vector. Using reverse iterators for searching rather than forward iterators more than
-                    //       halves the time this entire routine takes. 
-                    //
-                    // TODO: Below we use a generic lookup that considers the last N vertices added where N is selected
-                    //       so that it will include all possibly-adjacent voxels (in the worst case). While this works
-                    //       to limit needless complexity when there are many voxels, it is wasteful and could be
-                    //       improved. For example, spatial indexing of some kind could be used to speed up dupe vertex
-                    //       searching, or this could be fully eliminated by exploiting the grid nature or keeping an
-                    //       explicit list of vertices still reachable.
-                    //
-                    //       Note that the last-N-only lookup below implicitly assumes images are ordered AND traversed
-                    //       in adjacent order. 
-                    const auto min_consider = static_cast<long int>( ( N_rows * N_cols + 1 + std::max(N_rows, N_cols) + 1 ) * 5 * 3 );
+                    // If all three vertices are distinct from one another, remove the face. It is perfectly degenerate
+                    // and should not create holes.
+                    if( (tri_verts[0].sq_dist(tri_verts[1]) < (dvec3_tol*dvec3_tol))
+                    &&  (tri_verts[0].sq_dist(tri_verts[2]) < (dvec3_tol*dvec3_tol))
+                    &&  (tri_verts[1].sq_dist(tri_verts[2]) < (dvec3_tol*dvec3_tol)) ){
+                        std::lock_guard<std::mutex> lock(saver_printer);
+                        FUNCWARN("Encountered a three-way degenerate (zero-area) triangle face. Ignoring it");
 
-                    std::array<size_t, 3> vert_indices;
-                    std::vector<Kernel::Point_3> new_verts;
-                    for(int32_t tri_corner = 0; tri_corner < 3; ++tri_corner){
-                        const auto N_verts = static_cast<long int>( mesh_triangle_verts.size() );
-                        const auto consider = std::min( min_consider, N_verts );
-                        const auto rend = std::next(std::rbegin(mesh_triangle_verts), consider);
-                        auto v_it = std::find_if( //std::execution::par_unseq,
-                                                  std::rbegin(mesh_triangle_verts),
-                                                  rend,
-                                                  [=]( const Kernel::Point_3 &cv ) -> bool {
-                                                      const vec3<double> v( cv[0], cv[1], cv[2] );
-                                                      return (tri_verts[tri_corner].sq_dist(v) < (dvec3_tol*dvec3_tol));
-                                                  } );
-                        
-                        if(v_it != std::rend(mesh_triangle_verts)){
-                            vert_indices[tri_corner] = mesh_triangle_verts.size() - std::distance(std::rbegin(mesh_triangle_verts), v_it) - 1;
-                        }else{
-                            new_verts.emplace_back( Kernel::Point_3( 
-                                    tri_verts[tri_corner].x, tri_verts[tri_corner].y, tri_verts[tri_corner].z ) );
-                            vert_indices[tri_corner] = (mesh_triangle_verts.size() + new_verts.size() - 1);
-                        }
-                    }
-                    if( (vert_indices[0] != vert_indices[1]) // IFF all three vertices are distinct from one another.
-                    &&  (vert_indices[0] != vert_indices[2])
-                    &&  (vert_indices[1] != vert_indices[2]) ){
-                        mesh_triangle_faces.emplace_back(vert_indices);
-                        mesh_triangle_verts.insert( std::end(mesh_triangle_verts), 
-                                                    std::begin(new_verts), std::end(new_verts) );
+
+                    // Otherwise, add vertices and faces to the mesh.
+                    //
+                    // Most vertices will be duplicated FOUR times. Unfortunately, I can't think of a reasonable way to
+                    // de-duplicate inline, even though the connectivity info is all available, because it's faster to
+                    // extract everything in parallel and then de-duplicate afterward.
                     }else{
-                        FUNCWARN("Encountered a zero-area triangle face. Ignoring it");
-                    }
-                }
+                        std::vector<vec3<double>> new_verts;
+                        std::vector<uint64_t> new_indices;
+                        std::vector<uint64_t> new_fsrel;
 
+                        for(int32_t tri_corner = 0; tri_corner < 3; ++tri_corner){
+/*
+                            // Option 1: *always* create new vertices.
+                            //
+                            // This is extremely fast, but consumes lots of extra memory and makes it hard to do
+                            // anything with the resulting mesh. (The mesh is in a form called 'polygon soup.')
+                            new_verts.emplace_back( tri_verts[tri_corner] );
+                            new_indices.emplace_back(l_mini_mesh_ptr->verts.size() + new_verts.size() - 1);
+                            new_fsrel.emplace_back(img_num);
+*/
+
+                            // Option 2: deduplicate vertices as soon as we can.
+                            //
+                            // This is slower, and much harder to parallelize. We use a hybrid approach here we
+                            // de-duplicate in-plane meshes as soon as possible, but  but defer joining out-of-plane meshes
+                            // later. This is somewhat slow, but lets us make good use of parallelism and avoids
+                            // total polygon soup anarchy later.
+
+                            // Look at previous vertices, but in the plane we only need to look back one col + two.
+/*
+                            const auto N_verts = static_cast<long int>( l_mini_mesh_ptr->verts.size() );
+                            //const auto min_consider = static_cast<long int>( ( N_rows * N_cols + 1 + std::max(N_rows, N_cols) + 1 ) * 5 * 3 );
+                            const auto min_consider = static_cast<long int>( (N_rows + 2) * 5 * 3 );
+                            const auto consider = std::min( min_consider, N_verts );
+                            const auto rend = std::next(std::rbegin(l_mini_mesh_ptr->verts), consider);
+                            auto v_it = std::find_if( //std::execution::par_unseq,
+                                                      std::rbegin(l_mini_mesh_ptr->verts),
+                                                      rend,
+                                                      [=]( const vec3<double> &v ) -> bool {
+                                                          return (tri_verts[tri_corner].sq_dist(v) < (dvec3_tol*dvec3_tol));
+                                                      } );
+                            
+                            // If a matching vertex was found, re-use it.
+                            if(v_it != rend){
+                                new_indices.emplace_back(l_mini_mesh_ptr->verts.size() - std::distance(std::rbegin(l_mini_mesh_ptr->verts), v_it) - 1);
+                                new_fsrel.emplace_back(img_num);
+                                continue;
+                            }
+*/
+                            
+                            bool located = false;
+                            for(const auto &v_i : verts_to_check){
+                                const bool duplicate = tri_verts[tri_corner].sq_dist( l_mini_mesh_ptr->verts.at(v_i) ) < (dvec3_tol*dvec3_tol);
+
+                                // If a matching vertex was found, re-use it.
+                                if(duplicate){
+                                    new_indices.emplace_back(v_i);
+                                    new_fsrel.emplace_back(img_num);
+                                    located = true;
+                                    break;
+                                }
+                            }
+
+                            // Otherwise, if there are images above or below use, search them too.
+                            //
+                            // If we find matching verts, we have to figure out a good way to encode in the indices.
+// (Maybe another structure saying which image each index is relative to???)
+                            if(!located){
+
+                                // ...
+                                // ...
+                                // ...
+                                // ...
+
+                                //located = true;
+                            }
+
+                            // Otherwise create a new vertex.
+                            if(!located){
+                                const auto N_verts_prev = l_mini_mesh_ptr->verts.size();
+
+                                verts_to_check.insert(N_verts_prev);
+                                new_indices.emplace_back(N_verts_prev);
+                                l_mini_mesh_ptr->verts.emplace_back( tri_verts[tri_corner] );
+                                new_fsrel.emplace_back(img_num);
+                            }
+                        }
+
+                        l_mini_mesh_ptr->fsrel.emplace_back(new_fsrel);
+                        l_mini_mesh_ptr->faces.emplace_back(new_indices);
+                    }
+                } // Loop over triangles.
+
+                l_mini_mesh_ptr->vscor.emplace_back(l_mini_mesh_ptr->verts.size());
             } // Loop over columns.
         } // Loop over rows.
 
@@ -1096,8 +1234,64 @@ Marching_Cubes_Implementation(
             FUNCINFO("Completed " << completed << " of " << img_count
                   << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "% done");
         }
-    } // Loop over images.
+        return;
+    };
 
+    FUNCINFO("Extracting odd-numbered image meshes");
+    {
+        asio_thread_pool tp;
+        for(long int i = img_num_min; i <= img_num_max; ++i){
+            if( i % 2 == 0 ) continue;
+            tp.submit_task( std::bind(work, img_adj.index_to_image(i)) );
+        }
+    }
+
+    FUNCINFO("Extracting even-numbered image meshes");
+    {
+        asio_thread_pool tp;
+        for(long int i = img_num_min; i <= img_num_max; ++i){
+            if( i % 2 == 1 ) continue;
+            tp.submit_task( std::bind(work, img_adj.index_to_image(i)) );
+        }
+    }
+
+    FUNCINFO("Joining mesh partitions..");
+    // Count the (non-self-inclusive) running total number of vertices contained within each sub-mesh.
+    std::vector<long int> verts_offset;
+    verts_offset.push_back( 0 );
+    for(const auto& [img_num, l_mini_mesh] : per_img_fv_mesh){
+        const auto l_N_verts = l_mini_mesh.verts.size();
+        const auto prev_total = (verts_offset.empty()) ? static_cast<size_t>(0) : verts_offset.back();
+        verts_offset.push_back( prev_total + l_N_verts );
+    }
+
+    // Adjust indices to account for vertices being merged together sequentially.
+// NOTE: this loop can be parallelized too!
+    for(auto& [img_num, l_mini_mesh] : per_img_fv_mesh){
+        const auto l_N_faces = l_mini_mesh.faces.size();
+        for(size_t i = 0; i < l_N_faces; ++i){
+            const auto l_N_vert_indices = l_mini_mesh.faces[i].size();
+            for(size_t j = 0; j < l_N_vert_indices; ++j){
+                const auto l_img_num = l_mini_mesh.fsrel[i][j];
+                l_mini_mesh.faces[i][j] += verts_offset[ l_img_num ];
+            }
+        }
+    }
+
+    // Insert the vertices and adjusted indices.
+    fv_surface_mesh<double, uint64_t> fv_mesh;
+    for(auto& [img_num, l_mini_mesh] : per_img_fv_mesh){
+        fv_mesh.vertices.insert( std::end(fv_mesh.vertices),
+                                 std::begin(l_mini_mesh.verts), std::end(l_mini_mesh.verts) );
+
+        fv_mesh.faces.insert( std::end(fv_mesh.faces),
+                              std::begin(l_mini_mesh.faces), std::end(l_mini_mesh.faces) );
+    }
+
+    FUNCINFO("Deduplicating vertices..");
+//    fv_mesh.merge_duplicate_vertices(final_merge_tol);
+
+/*
     FUNCINFO("Orienting face normals..");
     CGAL::Polygon_mesh_processing::orient_polygon_soup(mesh_triangle_verts, mesh_triangle_faces);
 
@@ -1109,17 +1303,21 @@ Marching_Cubes_Implementation(
     FUNCINFO("Extracting the polyhedral surface..");
     Polyhedron output_mesh;
     CGAL::Polygon_mesh_processing::polygon_soup_to_polygon_mesh(mesh_triangle_verts, mesh_triangle_faces, output_mesh);
+*/
 
+    FUNCINFO("Extracting the polyhedral surface..");
+    Polyhedron output_mesh( dcma_surface_meshes::FVSMeshToPolyhedron(fv_mesh) );
 //    if(!CGAL::is_closed(output_mesh)){
 //        std::ofstream openmesh("/tmp/open_mesh.off");
 //        openmesh << output_mesh;
 //        throw std::runtime_error("Mesh not closed but should be. Verify vector equality is not too loose. Dumped to /tmp/open_mesh.off.");
 //    }
+/*
     if(!CGAL::Polygon_mesh_processing::is_outward_oriented(output_mesh)){
         FUNCINFO("Reorienting face orientation so faces face outward..");
         CGAL::Polygon_mesh_processing::reverse_face_orientations(output_mesh);
     }
-
+*/
     FUNCINFO("The triangulated surface has " << output_mesh.size_of_vertices() << " vertices"
              " and " << output_mesh.size_of_facets() << " faces");
   
