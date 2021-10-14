@@ -876,7 +876,6 @@ Marching_Cubes_Implementation(
     // Storage for partially-connected meshes within the plane of a single image.
     // Data is processed one image at a time and we only merge meshes and de-duplicate out-of-plane vertices afterward.
     struct per_img_fv_mesh_t {
-        long int global_img_num = -1;
         std::vector<vec3<double>> verts;
         std::vector<std::vector<uint64_t>> faces;
 
@@ -888,18 +887,11 @@ Marching_Cubes_Implementation(
     // Prime the map.
     const auto [img_num_min, img_num_max] = img_adj.get_min_max_indices();
     for(long int i = img_num_min; i <= img_num_max; ++i){
-        per_img_fv_mesh[i - img_num_min].global_img_num = (i - img_num_min);
         per_img_fv_mesh[i - img_num_min].vscor.emplace_back(0);
     }
     const auto vscor_index = [](long int N_rows, long int N_cols, 
-                                long int row, long int col) -> long int {
-
-        long int index = N_cols * row + col;
-        if( (row < 0) 
-        ||  (col < 0)
-        ||  (N_rows <= row)
-        ||  (N_cols <= col) ) index = -1;
-        return index;
+                                long int drow, long int dcol) -> long int {
+        return N_cols * drow + dcol; // 2D index.
     };
 
     std::mutex saver_printer; // Thread synchro lock for saving shared data, logging, and counter iterating.
@@ -976,10 +968,67 @@ Marching_Cubes_Implementation(
         const auto img_is_adj = img_adj.index_present(img_num_p1);
         const auto img_p1 = (img_is_adj) ? img_adj.index_to_image(img_num_p1) : img_refw;
 
-        auto* l_mini_mesh_ptr = &(per_img_fv_mesh[img_num - img_num_min]);
+        const auto shifted_img_num = static_cast<long int>(img_num - img_num_min); // Used for per-img mesh lookups.
+
+        per_img_fv_mesh_t* m_mini_mesh_ptr = &(per_img_fv_mesh[shifted_img_num]); // 'Middle' (current) image plane.
+        per_img_fv_mesh_t* l_mini_mesh_ptr = nullptr; // 'Lower' adjacent image plane.
+        per_img_fv_mesh_t* u_mini_mesh_ptr = nullptr; // 'Upper' adjacent image plane.
+        if(per_img_fv_mesh.count(shifted_img_num - 1L) != 0){
+            l_mini_mesh_ptr = &(per_img_fv_mesh[shifted_img_num - 1L]);
+        }
+        if(per_img_fv_mesh.count(shifted_img_num + 1L) != 0){
+            u_mini_mesh_ptr = &(per_img_fv_mesh[shifted_img_num + 1L]);
+        }
 
         const auto N_rows = img_refw.get().rows;
         const auto N_cols = img_refw.get().columns;
+
+        // I think planar adjacency enforces this already, but I'd like to be explicit about it.
+        // This implementation is complicated enough already.
+        if( (N_rows != img_p1.get().rows)
+        ||  (N_cols != img_p1.get().columns) ){
+            throw std::invalid_argument("Regular grids are required for this algorithm -- images must all have the same number of rows and columns");
+        }
+
+        // Generate a generic list of vertex index offsets to check for vertex deduplication.
+        // This list will be offset by the current voxel coordinates and unreachable neighbours will be pruned.
+        std::set<long int> vscor_to_check;
+        {
+            vscor_to_check.insert(vscor_index(N_rows, N_cols, -1, -1));
+            vscor_to_check.insert(vscor_index(N_rows, N_cols, -1,  0));
+            vscor_to_check.insert(vscor_index(N_rows, N_cols, -1,  1));
+            vscor_to_check.insert(vscor_index(N_rows, N_cols,  0, -1));
+            vscor_to_check.insert(vscor_index(N_rows, N_cols,  0,  0));
+            vscor_to_check.insert(vscor_index(N_rows, N_cols,  0,  1));
+            vscor_to_check.insert(vscor_index(N_rows, N_cols,  1, -1));
+            vscor_to_check.insert(vscor_index(N_rows, N_cols,  1,  0));
+            vscor_to_check.insert(vscor_index(N_rows, N_cols,  1,  1));
+        }
+
+        // Tailor the generic list of vertex index offset to check to the current position, discarding irrelevant items.
+        const auto customize_vscor_to_check = [&vscor_index]( long int row, long int col,
+                                                  long int N_rows, long int N_cols,
+                                                  const std::set<long int> &vscor_to_check,
+                                                  const per_img_fv_mesh_t* per_img_fv_mesh_ptr ){
+            std::set<size_t> verts_to_check;
+            if(per_img_fv_mesh_ptr != nullptr){
+                // Now for each i in vscor_to_check, insert per_img_fv_mesh_ptr->vscor[i] ... per_img_fv_mesh_ptr->vscor[i+1] into verts_to_check (iff it currently exists!)
+                const auto N_vscor = static_cast<long int>(per_img_fv_mesh_ptr->vscor.size());
+                for(const auto &i : vscor_to_check){
+                    const auto i_offset = vscor_index(N_rows, N_cols, row, col);
+                    const auto i_total = i_offset + i;
+                    if( (-1L < i_total) && ((i_total + 1L) < N_vscor) ){
+                        const auto j_min = per_img_fv_mesh_ptr->vscor[i_total];
+                        const auto j_max = per_img_fv_mesh_ptr->vscor[i_total + 1L];
+                        for(auto j = j_min; j < j_max; ++j){
+                            verts_to_check.insert(j);
+                        }
+                    }
+                }
+            }
+            return verts_to_check;
+        };
+
         for(long int row = 0; row < N_rows; ++row){
             for(long int col = 0; col < N_cols; ++col){
                 const auto pos = img_refw.get().position(row, col);
@@ -1025,7 +1074,7 @@ Marching_Cubes_Implementation(
 
                 // If the cube is entirely inside or outside of the surface, then there will be no intersections.
                 if(iEdgeFlags == 0){
-                    l_mini_mesh_ptr->vscor.emplace_back(l_mini_mesh_ptr->verts.size());
+                    m_mini_mesh_ptr->vscor.emplace_back(m_mini_mesh_ptr->verts.size());
                     continue;
                 }
 
@@ -1052,61 +1101,10 @@ Marching_Cubes_Implementation(
                     }
                 }
 
-                // Generate a generic list of vertex indices to check for vertex deduplication.
-                //
-// TODO: express as a difference from current (row,col) so we don't have to regenerate over and over
-// again!
-                std::set<long int> vscor_to_check;
-                {
-                    vscor_to_check.insert(vscor_index(N_rows, N_cols, row - 1, col - 1));
-                    vscor_to_check.insert(vscor_index(N_rows, N_cols, row - 1, col    ));
-                    vscor_to_check.insert(vscor_index(N_rows, N_cols, row - 1, col + 1));
-                    vscor_to_check.insert(vscor_index(N_rows, N_cols, row    , col - 1));
-                    vscor_to_check.insert(vscor_index(N_rows, N_cols, row    , col    ));
-                    vscor_to_check.insert(vscor_index(N_rows, N_cols, row    , col + 1));
-                    vscor_to_check.insert(vscor_index(N_rows, N_cols, row + 1, col - 1));
-                    vscor_to_check.insert(vscor_index(N_rows, N_cols, row + 1, col    ));
-                    vscor_to_check.insert(vscor_index(N_rows, N_cols, row + 1, col + 1));
-
-//if(!vscor_to_check.empty()){
-//std::lock_guard<std::mutex> lock(saver_printer);
-//std::cout << "r,c = " << row << ", " << col << " and vscor_to_check is: ";
-//for(const auto &x : vscor_to_check) std::cout << x << " ";
-//std::cout << std::endl;
-//}
-                }
-
                 // Tailor the generic list of indices to check to the current position, discarding irrelevant items.
-                std::set<size_t> verts_to_check;
-                {
-                    // Now for each i in vscor_to_check, insert l_mini_mesh_ptr->vscor[i] ... l_mini_mesh_ptr->vscor[i+1] into verts_to_check (iff it currently exists!)
-                    const auto N_vscor = l_mini_mesh_ptr->vscor.size();
-                    for(const auto &i : vscor_to_check){
-                        if(i < 0) continue;
-                        if( (i < N_vscor) && ((i+1) < N_vscor) ){
-                            const auto j_min = l_mini_mesh_ptr->vscor.at(i);
-                            const auto j_max = l_mini_mesh_ptr->vscor.at(i+1);
-//std::lock_guard<std::mutex> lock(saver_printer);
-//FUNCINFO("    min, max = " << j_min << ", " << j_max);
-
-                            for(auto j = j_min; j < j_max; ++j){
-                                verts_to_check.insert(j);
-                            }
-                        }
-                    }
-
-//if(!verts_to_check.empty()){
-//std::lock_guard<std::mutex> lock(saver_printer);
-//std::cout << "r,c = " << row << ", " << col << " and verts_to_check is: ";
-//for(const auto &x : verts_to_check) std::cout << x << " ";
-//std::cout << std::endl;
-//}
-                }
-
-//if(img_num == 51){
-//std::lock_guard<std::mutex> lock(saver_printer);
-//FUNCERR("Exiting early for debugging");
-//}
+                const auto l_verts_to_check = customize_vscor_to_check(row, col, N_rows, N_cols, vscor_to_check, l_mini_mesh_ptr);
+                auto m_verts_to_check = customize_vscor_to_check(row, col, N_rows, N_cols, vscor_to_check, m_mini_mesh_ptr);
+                const auto u_verts_to_check = customize_vscor_to_check(row, col, N_rows, N_cols, vscor_to_check, u_mini_mesh_ptr);
 
                 // Process the triangles that were identified.
                 for(int32_t tri = 0; tri < 5; tri++){
@@ -1141,89 +1139,86 @@ Marching_Cubes_Implementation(
                         std::vector<uint64_t> new_fsrel;
 
                         for(int32_t tri_corner = 0; tri_corner < 3; ++tri_corner){
-/*
                             // Option 1: *always* create new vertices.
                             //
                             // This is extremely fast, but consumes lots of extra memory and makes it hard to do
                             // anything with the resulting mesh. (The mesh is in a form called 'polygon soup.')
-                            new_verts.emplace_back( tri_verts[tri_corner] );
-                            new_indices.emplace_back(l_mini_mesh_ptr->verts.size() + new_verts.size() - 1);
-                            new_fsrel.emplace_back(img_num);
-*/
+                            if(false){
+                                new_verts.emplace_back( tri_verts[tri_corner] );
+                                new_indices.emplace_back(m_mini_mesh_ptr->verts.size() + new_verts.size() - 1);
+                                new_fsrel.emplace_back(shifted_img_num);
+                            }
+
 
                             // Option 2: deduplicate vertices as soon as we can.
                             //
-                            // This is slower, and much harder to parallelize. We use a hybrid approach here we
-                            // de-duplicate in-plane meshes as soon as possible, but  but defer joining out-of-plane meshes
-                            // later. This is somewhat slow, but lets us make good use of parallelism and avoids
-                            // total polygon soup anarchy later.
+                            // This is slower, and much harder to parallelize, but avoids 'polygon soup' headaches
+                            // later.
+                            //
+                            // In-plane vertices require deduplication checks for every new vertex, since there are many
+                            // marching cube configurations with shared in-plane vertices.
+                            //
+                            // Out-of-plane vertices are more complicated. By controlling the order of image processing,
+                            // we can guarantee that adjacent image planes are never processed at the same time.
+                            // Therefore, we can assume that either (1) the adjacent image has not yet been processed,
+                            // or (2) it has already been processed. In case (1), we can freely create vertices without
+                            // fear that they will be duplicates. In case (2), we have to check for duplicates before
+                            // creating any new vertices.
 
-                            // Look at previous vertices, but in the plane we only need to look back one col + two.
-/*
-                            const auto N_verts = static_cast<long int>( l_mini_mesh_ptr->verts.size() );
-                            //const auto min_consider = static_cast<long int>( ( N_rows * N_cols + 1 + std::max(N_rows, N_cols) + 1 ) * 5 * 3 );
-                            const auto min_consider = static_cast<long int>( (N_rows + 2) * 5 * 3 );
-                            const auto consider = std::min( min_consider, N_verts );
-                            const auto rend = std::next(std::rbegin(l_mini_mesh_ptr->verts), consider);
-                            auto v_it = std::find_if( //std::execution::par_unseq,
-                                                      std::rbegin(l_mini_mesh_ptr->verts),
-                                                      rend,
-                                                      [=]( const vec3<double> &v ) -> bool {
-                                                          return (tri_verts[tri_corner].sq_dist(v) < (dvec3_tol*dvec3_tol));
-                                                      } );
-                            
-                            // If a matching vertex was found, re-use it.
-                            if(v_it != rend){
-                                new_indices.emplace_back(l_mini_mesh_ptr->verts.size() - std::distance(std::rbegin(l_mini_mesh_ptr->verts), v_it) - 1);
-                                new_fsrel.emplace_back(img_num);
-                                continue;
-                            }
-*/
-                            
                             bool located = false;
-                            for(const auto &v_i : verts_to_check){
-                                const bool duplicate = tri_verts[tri_corner].sq_dist( l_mini_mesh_ptr->verts.at(v_i) ) < (dvec3_tol*dvec3_tol);
 
-                                // If a matching vertex was found, re-use it.
+                            // In-plane checks.
+                            for(const auto &v_i : m_verts_to_check){
+                                const bool duplicate = tri_verts[tri_corner].sq_dist( m_mini_mesh_ptr->verts.at(v_i) ) < (dvec3_tol*dvec3_tol);
                                 if(duplicate){
                                     new_indices.emplace_back(v_i);
-                                    new_fsrel.emplace_back(img_num);
+                                    new_fsrel.emplace_back(shifted_img_num);
                                     located = true;
                                     break;
                                 }
                             }
 
-                            // Otherwise, if there are images above or below use, search them too.
-                            //
-                            // If we find matching verts, we have to figure out a good way to encode in the indices.
-// (Maybe another structure saying which image each index is relative to???)
-                            if(!located){
-
-                                // ...
-                                // ...
-                                // ...
-                                // ...
-
-                                //located = true;
+                            // Out-of-plane checks.
+                            if(!located && (l_mini_mesh_ptr != nullptr)){
+                                for(const auto &v_i : l_verts_to_check){
+                                    const bool duplicate = tri_verts[tri_corner].sq_dist( l_mini_mesh_ptr->verts.at(v_i) ) < (dvec3_tol*dvec3_tol);
+                                    if(duplicate){
+                                        new_indices.emplace_back(v_i);
+                                        new_fsrel.emplace_back(shifted_img_num - 1);
+                                        located = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if(!located && (u_mini_mesh_ptr != nullptr)){
+                                for(const auto &v_i : u_verts_to_check){
+                                    const bool duplicate = tri_verts[tri_corner].sq_dist( u_mini_mesh_ptr->verts.at(v_i) ) < (dvec3_tol*dvec3_tol);
+                                    if(duplicate){
+                                        new_indices.emplace_back(v_i);
+                                        new_fsrel.emplace_back(shifted_img_num + 1);
+                                        located = true;
+                                        break;
+                                    }
+                                }
                             }
 
                             // Otherwise create a new vertex.
                             if(!located){
-                                const auto N_verts_prev = l_mini_mesh_ptr->verts.size();
+                                const auto N_verts_prev = m_mini_mesh_ptr->verts.size();
 
-                                verts_to_check.insert(N_verts_prev);
+                                m_verts_to_check.insert(N_verts_prev);
                                 new_indices.emplace_back(N_verts_prev);
-                                l_mini_mesh_ptr->verts.emplace_back( tri_verts[tri_corner] );
-                                new_fsrel.emplace_back(img_num);
+                                m_mini_mesh_ptr->verts.emplace_back( tri_verts[tri_corner] );
+                                new_fsrel.emplace_back(shifted_img_num);
                             }
                         }
 
-                        l_mini_mesh_ptr->fsrel.emplace_back(new_fsrel);
-                        l_mini_mesh_ptr->faces.emplace_back(new_indices);
+                        m_mini_mesh_ptr->fsrel.emplace_back(new_fsrel);
+                        m_mini_mesh_ptr->faces.emplace_back(new_indices);
                     }
                 } // Loop over triangles.
 
-                l_mini_mesh_ptr->vscor.emplace_back(l_mini_mesh_ptr->verts.size());
+                m_mini_mesh_ptr->vscor.emplace_back(m_mini_mesh_ptr->verts.size());
             } // Loop over columns.
         } // Loop over rows.
 
@@ -1237,6 +1232,8 @@ Marching_Cubes_Implementation(
         return;
     };
 
+    // NOTE: if lower memory use is needed, we can further break down the traversal order and eagerly purge sidecar
+    // information (e.g., vscor for completely deduplicated submeshes).
     FUNCINFO("Extracting odd-numbered image meshes");
     {
         asio_thread_pool tp;
