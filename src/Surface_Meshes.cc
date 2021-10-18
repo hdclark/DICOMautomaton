@@ -1285,8 +1285,167 @@ Marching_Cubes_Implementation(
                               std::begin(l_mini_mesh.faces), std::end(l_mini_mesh.faces) );
     }
 
-    FUNCINFO("Deduplicating vertices..");
+//    FUNCINFO("Deduplicating vertices..");
 //    fv_mesh.merge_duplicate_vertices(final_merge_tol);
+
+    FUNCINFO("Orienting face normals..");
+    // Note that consistent reorientation can legitimately fail for non-orientable objects (e.g., Klein bottles).
+    // Note that non-manifold meshes are difficult to orient consistently since adjacency information can be
+    // incomplete.
+    const auto reorient_faces = [](fv_surface_mesh<double, uint64_t> &fv_mesh) -> bool {
+        if(!fv_mesh.faces.empty()){
+            long int connected_components = 0;
+
+            // Make all faces triangles.
+            fv_mesh.convert_to_triangles();
+
+            // Regenerate involved faces index.
+            fv_mesh.recreate_involved_face_index();
+
+            // Create state to track which faces have been re-oriented.
+            enum class orientation_t : uint8_t {
+                unknown,
+                reoriented,
+            };
+            std::vector<orientation_t> reoriented_faces( fv_mesh.faces.size(), orientation_t::unknown );
+            const auto rf_beg = std::begin(reoriented_faces);
+            const auto rf_end = std::end(reoriented_faces);
+
+            // Prime the search and begin processing faces.
+            //
+            // Each individual mesh will be processed one-at-a-time, since we won't be able to traverse disconnected
+            // meshes by moving along face adjacencies.
+            auto p_it = std::find(rf_beg, rf_end, orientation_t::unknown );
+            while(p_it != rf_end){
+                const auto starting_face = static_cast<uint64_t>( std::distance( rf_beg, p_it ) );
+                reoriented_faces[starting_face] = orientation_t::reoriented;
+
+                // Create a set of half-edges that we expect adjacent faces to contain.
+                std::set<std::pair<uint64_t,uint64_t>> expected_half_edges;
+
+                // Prime it with the half-edges from the starting face.
+                uint64_t A = fv_mesh.faces[starting_face][0];
+                uint64_t B = fv_mesh.faces[starting_face][1];
+                uint64_t C = fv_mesh.faces[starting_face][2];
+                expected_half_edges.insert({ B, A });
+                expected_half_edges.insert({ C, B });
+                expected_half_edges.insert({ A, C });
+
+                // Create a face queue, which contains all the adjacent faces we need to visit.
+                std::set<uint64_t> adj_faces;
+
+                // Prime the list with all nearby faces we still need to visit.
+    {
+        const uint64_t i = starting_face;
+        std::map<uint64_t, uint16_t> l_adj_faces;
+        for(const auto &j : fv_mesh.faces.at(i)){ // j refers to a vertex.
+            for(const auto &k : fv_mesh.involved_faces.at(j)){ // lookup the involved faces for vert j.
+                if(k != i) l_adj_faces[k] += 1U;
+            }
+        }
+        //std::set<uint64_t> result;
+        for(const auto &p : l_adj_faces){
+            const auto j = p.first;
+            if( (1U < p.second)
+            &&  (reoriented_faces.at(j) == orientation_t::unknown) ){
+                //result.insert(j);
+                adj_faces.insert(j);
+            }
+        }
+    }
+
+                // While there are half-edges still in the queue.
+                while(!adj_faces.empty()){
+                    const auto i = *std::begin(adj_faces);
+                    A = fv_mesh.faces[i][0];
+                    B = fv_mesh.faces[i][1];
+                    C = fv_mesh.faces[i][2];
+
+                    // Check if at least one half-edge is expected.
+                    // If any are found, this face already has the correct orientation.
+                    // If none are found, reorient the face.
+                    // Note that there might be clashes due to non-orientability, but we ignore them for now (TODO).
+                    auto AB_found = (expected_half_edges.count({ A, B }) != 0);
+                    auto BC_found = (expected_half_edges.count({ B, C }) != 0);
+                    auto CA_found = (expected_half_edges.count({ C, A }) != 0);
+
+                    if( !AB_found
+                    &&  !BC_found
+                    &&  !CA_found ){
+                        std::swap( fv_mesh.faces[i][0], fv_mesh.faces[i][1] );
+                        A = fv_mesh.faces[i][0];
+                        B = fv_mesh.faces[i][1];
+                        C = fv_mesh.faces[i][2];
+                        AB_found = (expected_half_edges.count({ A, B }) != 0);
+                        BC_found = (expected_half_edges.count({ B, C }) != 0);
+                        CA_found = (expected_half_edges.count({ C, A }) != 0);
+                    }
+
+                    // If we *still* don't have a match, then there is a problem...
+                    if( !AB_found
+                    &&  !BC_found
+                    &&  !CA_found ){
+                        throw std::logic_error("Found an isolated face");
+                    }
+
+                    // The face is now considered to be consistently oriented.
+                    reoriented_faces[i] = orientation_t::reoriented;
+
+                    // Add neighbouring faces, but only those that share at least one edge.
+                    // Faces of interest will appear at least twice when enumerating the adjacent faces for all vertices.
+                    {
+                        std::map<uint64_t, uint16_t> l_adj_faces;
+                        for(const auto &j : fv_mesh.faces.at(i)){ // j refers to a vertex.
+                            for(const auto &k : fv_mesh.involved_faces.at(j)){ // lookup the involved faces for vert j.
+                                if(k != i) l_adj_faces[k] += 1U;
+                            }
+                        }
+                        //std::set<uint64_t> result;
+                        for(const auto &p : l_adj_faces){
+                            const auto j = p.first;
+                            if( (1U < p.second)
+                            &&  (reoriented_faces.at(j) == orientation_t::unknown) ){
+                                //result.insert(j);
+                                adj_faces.insert(j);
+                            }
+                        }
+                    }
+
+                    // Remove this face from the queue.
+                    adj_faces.erase(i);
+
+                    // Add half-edges relevant for adjacent faces.
+                    if(!AB_found) expected_half_edges.insert({ B, A });
+                    if(!BC_found) expected_half_edges.insert({ C, B });
+                    if(!CA_found) expected_half_edges.insert({ A, C });
+
+                    // Remove the half-edges that we matched.
+                    // We assume no other faces will match (assuming manifold mesh).
+                    if(AB_found) expected_half_edges.erase({ A, B });
+                    if(BC_found) expected_half_edges.erase({ B, C });
+                    if(CA_found) expected_half_edges.erase({ C, A });
+                }
+
+                // If the queue is empty, but there are still faces that need to be re-oriented, then there are multiple
+                // disconnected meshes. Start again using one of the faces as a new prototype.
+                ++connected_components;
+                FUNCINFO("Finished re-orienting connected component " << connected_components);
+
+                // Search for the next unknown face.
+                p_it = std::find(p_it, rf_end, orientation_t::unknown );
+            }
+        }
+        return true;
+    };
+    if(!reorient_faces(fv_mesh)){
+        FUNCWARN("Unable to consistently re-orient mesh. This should never happen after marching cubes");
+    }
+
+
+    FUNCINFO("Removing disconnected vertices..");
+    fv_mesh.recreate_involved_face_index();
+    fv_mesh.remove_disconnected_vertices();
+
 
 /*
     FUNCINFO("Orienting face normals..");
