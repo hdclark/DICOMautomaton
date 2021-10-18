@@ -1119,13 +1119,16 @@ Marching_Cubes_Implementation(
     
                     }
 
-                    // If all three vertices are distinct from one another, remove the face. It is perfectly degenerate
+                    // If any two vertices are indistinct from one another, remove the face. It is degenerate
                     // and should not create holes.
+                    //
+                    // Note that this can potentially cause issues if vertex spacing is on the order of the tolerance
+                    // distance.
                     if( (tri_verts[0].sq_dist(tri_verts[1]) < (dvec3_tol*dvec3_tol))
-                    &&  (tri_verts[0].sq_dist(tri_verts[2]) < (dvec3_tol*dvec3_tol))
-                    &&  (tri_verts[1].sq_dist(tri_verts[2]) < (dvec3_tol*dvec3_tol)) ){
-                        std::lock_guard<std::mutex> lock(saver_printer);
-                        FUNCWARN("Encountered a three-way degenerate (zero-area) triangle face. Ignoring it");
+                    ||  (tri_verts[0].sq_dist(tri_verts[2]) < (dvec3_tol*dvec3_tol))
+                    ||  (tri_verts[1].sq_dist(tri_verts[2]) < (dvec3_tol*dvec3_tol)) ){
+//                        std::lock_guard<std::mutex> lock(saver_printer);
+//                        FUNCWARN("Encountered a degenerate (zero-area) triangle face. Ignoring it");
 
 
                     // Otherwise, add vertices and faces to the mesh.
@@ -1381,15 +1384,24 @@ Marching_Cubes_Implementation(
                         CA_found = (expected_half_edges.count({ C, A }) != 0);
                     }
 
-                    // If we *still* don't have a match, then there is a problem...
+                    // The face is now considered to be consistently oriented.
+                    // (This is done, even if there are topological issues, to ensure we don't get stuck on a face.)
+                    reoriented_faces[i] = orientation_t::reoriented;
+
+                    // Note that it's possible the face will not be able to find relevant half-edges.
+                    // This can happen during marching cubes if an isolated voxel in the corner of an image volume is
+                    // high and surrounded by all low voxels -- the face won't have any neighbours at all, so no
+                    // matching half-edges will be found.
+                    //
+                    // Since a solitary face cannot be oriented, put it back the way it was an move one.
                     if( !AB_found
                     &&  !BC_found
                     &&  !CA_found ){
-                        throw std::logic_error("Found an isolated face");
+                        std::swap( fv_mesh.faces[i][0], fv_mesh.faces[i][1] );
+                        adj_faces.erase(i);
+                        continue;
                     }
 
-                    // The face is now considered to be consistently oriented.
-                    reoriented_faces[i] = orientation_t::reoriented;
 
                     // Add neighbouring faces, but only those that share at least one edge.
                     // Faces of interest will appear at least twice when enumerating the adjacent faces for all vertices.
@@ -1429,18 +1441,17 @@ Marching_Cubes_Implementation(
                 // If the queue is empty, but there are still faces that need to be re-oriented, then there are multiple
                 // disconnected meshes. Start again using one of the faces as a new prototype.
                 ++connected_components;
-                FUNCINFO("Finished re-orienting connected component " << connected_components);
 
                 // Search for the next unknown face.
                 p_it = std::find(p_it, rf_end, orientation_t::unknown );
             }
         }
+        FUNCINFO("Finished re-orienting mesh with " << connected_components << " connected components");
         return true;
     };
     if(!reorient_faces(fv_mesh)){
         FUNCWARN("Unable to consistently re-orient mesh. This should never happen after marching cubes");
     }
-
 
     FUNCINFO("Removing disconnected vertices..");
     fv_mesh.recreate_involved_face_index();
