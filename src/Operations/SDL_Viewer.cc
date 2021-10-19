@@ -333,6 +333,7 @@ enum class brush_t {
     rigid_circle,
     rigid_square,
     gaussian_2D,
+    tanh_2D,
     median_circle,
     median_square,
     mean_circle,
@@ -342,6 +343,7 @@ enum class brush_t {
     rigid_sphere,
     rigid_cube,
     gaussian_3D,
+    tanh_3D,
     median_sphere,
     median_cube,
     mean_sphere,
@@ -380,7 +382,9 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
         buffer_space = radius;
 
     }else if( (brush == brush_t::gaussian_2D)
-    ||        (brush == brush_t::gaussian_3D) ){
+    ||        (brush == brush_t::tanh_2D)
+    ||        (brush == brush_t::gaussian_3D) 
+    ||        (brush == brush_t::tanh_3D) ){
         buffer_space = radius * 3.0;
     }
 
@@ -406,6 +410,7 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                     // 2D brushes.
                     if( (brush == brush_t::rigid_circle)
                     ||  (brush == brush_t::rigid_square)
+                    ||  (brush == brush_t::tanh_2D)
                     ||  (brush == brush_t::gaussian_2D)
                     ||  (brush == brush_t::median_circle)
                     ||  (brush == brush_t::median_square)
@@ -420,6 +425,7 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                     }else if( (brush == brush_t::rigid_sphere)
                           ||  (brush == brush_t::rigid_cube) 
                           ||  (brush == brush_t::gaussian_3D)
+                          ||  (brush == brush_t::tanh_3D)
                           ||  (brush == brush_t::median_sphere) 
                           ||  (brush == brush_t::median_cube)
                           ||  (brush == brush_t::mean_sphere) 
@@ -462,8 +468,10 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                     ||  (brush == brush_t::mean_circle)
                     ||  (brush == brush_t::median_sphere)
                     ||  (brush == brush_t::mean_sphere)
+                    ||  (brush == brush_t::tanh_2D)
                     ||  (brush == brush_t::gaussian_2D)
-                    ||  (brush == brush_t::gaussian_3D) ){
+                    ||  (brush == brush_t::gaussian_3D) 
+                    ||  (brush == brush_t::tanh_3D) ){
                         if(buffer_space < dR) continue;
 
                     }else if( (brush == brush_t::rigid_square)
@@ -502,7 +510,21 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
           ||  (brush == brush_t::gaussian_3D) ){
         for(const auto &img_it : img_its){
             apply_to_inner_pixels({img_it}, [radius,intensity](const vec3<double> &, double dR, float v) -> float {
-                return v + intensity * std::exp( -std::pow(dR / (0.5 * radius), 2.0f) );
+                const float scale = 0.5;
+                const auto l_exp = std::exp( -std::pow(dR / (0.5 * radius), 2.0f) );
+                return (intensity - v) * l_exp + v;
+                //return v + intensity * std::exp( -std::pow(dR / (0.5 * radius), 2.0f) );
+            });
+        }
+
+    }else if( (brush == brush_t::tanh_2D)
+          ||  (brush == brush_t::tanh_3D) ){
+        for(const auto &img_it : img_its){
+            apply_to_inner_pixels({img_it}, [radius,intensity](const vec3<double> &, double dR, float v) -> float {
+                const float steepness = 0.75;
+                const auto l_tanh = 0.5 * (1.0 + std::tanh( steepness * (radius - dR)));
+                return (intensity - v) * l_tanh + v;
+                //return v + intensity * 0.5 * (1.0 + std::tanh( steepness * (radius - dR)));
             });
         }
 
@@ -540,12 +562,6 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
             return intensity;
         });
 
-    }else if( brush == brush_t::gaussian_3D ){
-        for(const auto &img_it : img_its){
-            apply_to_inner_pixels({img_it}, [radius,intensity](const vec3<double> &, double dR, float v) -> float {
-                return v + intensity * std::exp( -std::pow(dR / (0.5 * radius), 2.0f) );
-            });
-        }
     }else if( (brush == brush_t::median_sphere)
           ||  (brush == brush_t::median_cube) ){
         std::vector<float> vals;
@@ -2897,7 +2913,9 @@ script_files.back().content.emplace_back('\0');
                     if( (contouring_brush == brush_t::rigid_circle)
                     ||  (contouring_brush == brush_t::rigid_sphere)
                     ||  (contouring_brush == brush_t::gaussian_2D)
+                    ||  (contouring_brush == brush_t::tanh_2D)
                     ||  (contouring_brush == brush_t::gaussian_3D)
+                    ||  (contouring_brush == brush_t::tanh_3D)
                     ||  (contouring_brush == brush_t::median_circle)
                     ||  (contouring_brush == brush_t::mean_circle)
                     ||  (contouring_brush == brush_t::median_sphere)
@@ -3042,6 +3060,10 @@ script_files.back().content.emplace_back('\0');
                 if(ImGui::Button("2D Gaussian")){
                     contouring_brush = brush_t::gaussian_2D;
                 }
+                ImGui::SameLine();
+                if(ImGui::Button("2D Tanh")){
+                    contouring_brush = brush_t::tanh_2D;
+                }
 
                 ImGui::Text("3D shapes");
                 if(ImGui::Button("Rigid Sphere")){
@@ -3070,6 +3092,10 @@ script_files.back().content.emplace_back('\0');
 
                 if(ImGui::Button("3D Gaussian")){
                     contouring_brush = brush_t::gaussian_3D;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("3D Tanh")){
+                    contouring_brush = brush_t::tanh_3D;
                 }
 
                 ImGui::Separator();
@@ -4307,6 +4333,7 @@ script_files.back().content.emplace_back('\0');
                         if( (contouring_brush == brush_t::rigid_circle)
                         ||  (contouring_brush == brush_t::rigid_square)
                         ||  (contouring_brush == brush_t::gaussian_2D) 
+                        ||  (contouring_brush == brush_t::tanh_2D) 
                         ||  (contouring_brush == brush_t::median_circle)
                         ||  (contouring_brush == brush_t::median_square)
                         ||  (contouring_brush == brush_t::mean_circle)
@@ -4320,6 +4347,7 @@ script_files.back().content.emplace_back('\0');
                               ||  (contouring_brush == brush_t::mean_sphere)
                               ||  (contouring_brush == brush_t::median_sphere)
                               ||  (contouring_brush == brush_t::gaussian_3D) 
+                              ||  (contouring_brush == brush_t::tanh_3D) 
                               ||  (contouring_brush == brush_t::rigid_cube)
                               ||  (contouring_brush == brush_t::mean_cube)
                               ||  (contouring_brush == brush_t::median_cube) ){
