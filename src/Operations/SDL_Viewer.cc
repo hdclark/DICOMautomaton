@@ -139,20 +139,18 @@ get_pixelspace_axis_aligned_bounding_box(const planar_image<float, double> &img,
         const auto proj1 = (p - corner).Dot(axis1);
         const auto proj2 = (p - corner).Dot(axis2);
         //const auto proj3 = (p - corner).Dot(axis3);
-        if(proj1 - extra_space < bbox_min.x) bbox_min.x = proj1 - extra_space;
-        if(proj2 - extra_space < bbox_min.y) bbox_min.y = proj2 - extra_space;
-        //if(proj3 - extra_space < bbox_min.z) bbox_min.z = proj3 - extra_space;
-        if(bbox_max.x + extra_space < proj1) bbox_max.x = proj1 + extra_space;
-        if(bbox_max.y + extra_space < proj2) bbox_max.y = proj2 + extra_space;
-        //if(bbox_max.z + extra_space < proj3) bbox_max.z = proj3 + extra_space;
+        if((proj1 - extra_space) < bbox_min.x) bbox_min.x = (proj1 - extra_space);
+        if((proj2 - extra_space) < bbox_min.y) bbox_min.y = (proj2 - extra_space);
+        //if((proj3 - extra_space) < bbox_min.z) bbox_min.z = (proj3 - extra_space);
+        if(bbox_max.x < (proj1 + extra_space)) bbox_max.x = (proj1 + extra_space);
+        if(bbox_max.y < (proj2 + extra_space)) bbox_max.y = (proj2 + extra_space);
+        //if(bbox_max.z < (proj3 + extra_space)) bbox_max.z = (proj3 + extra_space);
     }
 
     auto row_min = std::clamp(static_cast<long int>(std::floor(bbox_min.x/img.pxl_dx)), 0L, img.rows-1);
     auto row_max = std::clamp(static_cast<long int>(std::ceil(bbox_max.x/img.pxl_dx)), 0L, img.rows-1);
     auto col_min = std::clamp(static_cast<long int>(std::floor(bbox_min.y/img.pxl_dy)), 0L, img.columns-1);
     auto col_max = std::clamp(static_cast<long int>(std::ceil(bbox_max.y/img.pxl_dy)), 0L, img.columns-1);
-    if(row_max < row_min) std::swap(row_min, row_max);
-    if(col_max < col_min) std::swap(col_min, col_max);
     return std::make_tuple( row_min, row_max, col_min, col_max );
 }
 
