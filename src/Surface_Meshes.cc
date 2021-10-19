@@ -833,7 +833,7 @@ Marching_Cubes_Implementation(
     // Note that non-manifold meshes are difficult to orient consistently since adjacency information can be
     // incomplete.
     const auto reorient_faces = [](fv_surface_mesh<double, uint64_t> &fv_mesh) -> bool {
-        long int connected_components = 0;
+        uint64_t connected_component = 0;
         if(!fv_mesh.faces.empty()){
 
             // Make all faces triangles.
@@ -841,13 +841,20 @@ Marching_Cubes_Implementation(
 
             // Regenerate involved faces index.
             fv_mesh.recreate_involved_face_index();
+            const auto N_faces = fv_mesh.faces.size();
+
+            // Vector to track which faces belong to which connected components.
+            std::vector<uint64_t> face_component(N_faces, 0UL);
+
+            // Vector used to keep track of each connected component's signed volume.
+            std::vector<Stats::Running_Sum<double>> component_signed_volume;
 
             // Create state to track which faces have been re-oriented.
             enum class orientation_t : uint8_t {
                 unknown,
                 reoriented,
             };
-            std::vector<orientation_t> reoriented_faces( fv_mesh.faces.size(), orientation_t::unknown );
+            std::vector<orientation_t> reoriented_faces( N_faces, orientation_t::unknown );
             const auto rf_beg = std::begin(reoriented_faces);
             const auto rf_end = std::end(reoriented_faces);
 
@@ -857,6 +864,9 @@ Marching_Cubes_Implementation(
             // meshes by moving along face adjacencies.
             auto p_it = std::find(rf_beg, rf_end, orientation_t::unknown );
             while(p_it != rf_end){
+                component_signed_volume.emplace_back(); // Prime the signed volume for this component.
+                component_signed_volume.back().Digest(0.0);
+
                 const auto starting_face = static_cast<uint64_t>( std::distance( rf_beg, p_it ) );
                 reoriented_faces[starting_face] = orientation_t::reoriented;
 
@@ -924,13 +934,27 @@ Marching_Cubes_Implementation(
                     // The face is now considered to be consistently oriented.
                     // (This is done, even if there are topological issues, to ensure we don't get stuck on a face.)
                     reoriented_faces[i] = orientation_t::reoriented;
+                    face_component[i] = connected_component;
+
+                    // Add the current face's contribution to the signed volume.
+                    //
+                    // Note: using suggestion to only use a single linear dimension from
+                    // https://math.stackexchange.com/questions/689418/how-to-compute-surface-normal-pointing-out-of-the-object
+                    // I'm not certain if this is valid for meshes with holes...
+                    try{
+                        const vec3<double> pos = (fv_mesh.vertices[A] + fv_mesh.vertices[B] + fv_mesh.vertices[C]) / 3.0;
+                        const vec3<double> cross = (fv_mesh.vertices[B] - fv_mesh.vertices[A]).Cross(fv_mesh.vertices[C] - fv_mesh.vertices[A]);
+                        const vec3<double> norm = cross.unit();
+                        const double area = cross.length() * 0.5;
+                        component_signed_volume.back().Digest(norm.x * pos.x * area);
+                    }catch(const std::exception &){}; // In case the face is denegerate.
 
                     // Note that it's possible the face will not be able to find relevant half-edges.
                     // This can happen during marching cubes if an isolated voxel in the corner of an image volume is
                     // high and surrounded by all low voxels -- the face won't have any neighbours at all, so no
                     // matching half-edges will be found.
                     //
-                    // Since a solitary face cannot be oriented, put it back the way it was an move one.
+                    // Since a solitary face cannot be oriented, put it back the way it was and move on.
                     if( !AB_found
                     &&  !BC_found
                     &&  !CA_found ){
@@ -977,13 +1001,20 @@ Marching_Cubes_Implementation(
 
                 // If the queue is empty, but there are still faces that need to be re-oriented, then there are multiple
                 // disconnected meshes. Start again using one of the faces as a new prototype.
-                ++connected_components;
+                ++connected_component;
 
                 // Search for the next unknown face.
                 p_it = std::find(p_it, rf_end, orientation_t::unknown );
             }
+
+            // Normals should (barring non-orientability) be consistent. But we still need to decide if they correctly
+            // point outward. We can use signed volume to evaluate this.
+            for(size_t i = 0; i < N_faces; ++i){
+                const auto pos_orien = (0.0 <= component_signed_volume[face_component[i]].Current_Sum());
+                if(!pos_orien) std::swap( fv_mesh.faces[i][0], fv_mesh.faces[i][1] );
+            }
         }
-        FUNCINFO("Finished re-orienting mesh with " << connected_components << " connected components");
+        FUNCINFO("Finished re-orienting mesh with " << connected_component << " connected components");
         return true;
     };
     if(!reorient_faces(fv_mesh)){
