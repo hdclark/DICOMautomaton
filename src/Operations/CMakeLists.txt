@@ -26,6 +26,7 @@ add_library(Operations_objs OBJECT
     ConvertContoursToPoints.cc
     ConvertDoseToImage.cc
     ConvertImageToDose.cc
+    ConvertImageToMeshes.cc
     ConvertMeshesToPoints.cc
     ConvertNaNsToAir.cc
     ConvertNaNsToZeros.cc
@@ -179,7 +180,6 @@ add_library(Operations_objs OBJECT
 
     $<$<BOOL:${WITH_CGAL}>:BCCAExtractRadiomicFeatures.cc>
     $<$<BOOL:${WITH_CGAL}>:ContourBooleanOperations.cc>
-    $<$<BOOL:${WITH_CGAL}>:ConvertImageToMeshes.cc>
     $<$<BOOL:${WITH_CGAL}>:ConvertMeshesToContours.cc>
     $<$<BOOL:${WITH_CGAL}>:DumpROISurfaceMeshes.cc>
     $<$<BOOL:${WITH_CGAL}>:ExtractRadiomicFeatures.cc>
