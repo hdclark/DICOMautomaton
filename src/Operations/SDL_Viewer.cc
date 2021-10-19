@@ -634,6 +634,9 @@ bool SDL_Viewer(Drover &DICOM_data,
     long int img_channel = -1; // Which channel to display.
     using img_array_ptr_it_t = decltype(DICOM_data.image_data.begin());
     using disp_img_it_t = decltype(DICOM_data.image_data.front()->imagecoll.images.begin());
+    bool img_precess = false;
+    float img_precess_period = 0.1f; // in seconds.
+    std::chrono::time_point<std::chrono::steady_clock> img_precess_last = std::chrono::steady_clock::now();
 
     //Real-time modifiable sticky window and level.
     std::optional<double> custom_width;
@@ -4106,6 +4109,9 @@ script_files.back().content.emplace_back('\0');
 
                                                &img_array_num,
                                                &img_num,
+                                               &img_precess,
+                                               &img_precess_period,
+                                               &img_precess_last,
                                                &img_channel,
 
                                                &zoom,
@@ -4169,6 +4175,22 @@ script_files.back().content.emplace_back('\0');
                     ImGui::BeginTooltip();
                     ImGui::Text("Shortcut: mouse wheel or page-up/page-down");
                     ImGui::EndTooltip();
+                }
+
+                {
+                    if(ImGui::Checkbox("Auto-advance", &img_precess)){
+                        // Reset the previous time point.
+                        img_precess_last = std::chrono::steady_clock::now();
+                    }
+                    ImGui::DragFloat("Advance period (s)", &img_precess_period, 0.01f, 0.0f, 10.0f, "%.01f");
+                    if(img_precess){
+                        const auto t_now = std::chrono::steady_clock::now();
+                        const auto dt_since_last = 0.001f * static_cast<float>(std::chrono::duration_cast<std::chrono::milliseconds>(t_now - img_precess_last).count());
+                        if(img_precess_period <= dt_since_last){
+                            scroll_images = (scroll_images + N_images + 1) % N_images;
+                            img_precess_last = t_now; // Note: should we try correct for missing time here?
+                        }
+                    }
                 }
 
                 ImGui::Separator();
