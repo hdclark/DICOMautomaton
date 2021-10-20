@@ -382,10 +382,12 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
         buffer_space = radius;
 
     }else if( (brush == brush_t::gaussian_2D)
-    ||        (brush == brush_t::tanh_2D)
-    ||        (brush == brush_t::gaussian_3D) 
-    ||        (brush == brush_t::tanh_3D) ){
+    ||        (brush == brush_t::gaussian_3D) ){
         buffer_space = radius * 3.0;
+
+    }else if( (brush == brush_t::tanh_2D)
+    ||        (brush == brush_t::tanh_3D) ){
+        buffer_space = radius * 1.5;
     }
 
     const auto apply_to_inner_pixels = [&](const decltype(planar_image_collection<float,double>().get_all_images()) &l_img_its,
