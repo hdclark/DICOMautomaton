@@ -900,6 +900,18 @@ bool SDL_Viewer(Drover &DICOM_data,
         long int row_count = 0L;
         float aspect_ratio = 1.0; // In image pixel space.
         bool texture_exists = false;
+
+/*
+        ~opengl_texture_handle_t(){
+            // Release the previous texture, iff needed.
+            if(this->texture_number != 0){
+                CHECK_FOR_GL_ERRORS();
+                glBindTexture(GL_TEXTURE_2D, 0);
+                glDeleteTextures(1, &this->texture_number);
+                CHECK_FOR_GL_ERRORS();
+            }
+        }
+*/
     };
     opengl_texture_handle_t current_texture;
 
@@ -915,6 +927,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     opengl_texture_handle_t scale_bar_texture;
 
     // Contouring mode state.
+    opengl_texture_handle_t contouring_texture;
     int contouring_img_row_col_count = 256;
     bool contouring_img_altered = false;
     float contouring_reach = 10.0;
@@ -1006,6 +1019,20 @@ bool SDL_Viewer(Drover &DICOM_data,
             FUNCINFO("Reset contouring state with " << contouring_imgs.image_data.back()->imagecoll.images.size() << " images");
 
             return;
+    };
+
+    const auto Free_OpenGL_Texture = [](opengl_texture_handle_t &tex){
+        // Release the previous texture, iff needed.
+        if(tex.texture_number != 0){
+            CHECK_FOR_GL_ERRORS();
+            glBindTexture(GL_TEXTURE_2D, 0);
+            glDeleteTextures(1, &tex.texture_number);
+            CHECK_FOR_GL_ERRORS();
+        }
+
+        // Reset all other state.
+        tex = opengl_texture_handle_t();
+        return;
     };
 
     std::atomic<bool> need_to_reload_opengl_texture = true;
@@ -1171,7 +1198,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
             }
         
-
             opengl_texture_handle_t out;
             out.col_count = img_cols;
             out.row_count = img_rows;
@@ -1360,9 +1386,11 @@ bool SDL_Viewer(Drover &DICOM_data,
     const auto recompute_scale_bar_image_state = [ &scale_bar_img,
                                                    &scale_bar_texture,
                                                    &recompute_image_iters,
+                                                   &Free_OpenGL_Texture,
                                                    &Load_OpenGL_Texture ](){
         auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
         if( img_valid ){ 
+            Free_OpenGL_Texture(scale_bar_texture);
             scale_bar_texture = Load_OpenGL_Texture( scale_bar_img, {}, {} );
         }
         return;
@@ -1858,12 +1886,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                                            &img_num,
                                            &img_array_num,
                                            &img_channel,
+                                           &Free_OpenGL_Texture,
                                            &Load_OpenGL_Texture ]() -> void {
             std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
             auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
             if( view_toggles.view_images_enabled
             &&  img_valid ){
                 img_channel = std::clamp<long int>(img_channel, 0, disp_img_it->channels-1);
+                Free_OpenGL_Texture(current_texture);
                 current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
             }else{
                 img_channel = -1;
@@ -1885,7 +1915,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
                 ImGui::SetNextWindowPos(ImVec2(700, 40), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Contour Mask Debugging", &view_toggles.view_contouring_debug, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
-                auto contouring_texture = Load_OpenGL_Texture( *cimg_it, {}, {} );
+                Free_OpenGL_Texture(contouring_texture);
+                contouring_texture = Load_OpenGL_Texture( *cimg_it, {}, {} );
                 auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(contouring_texture.texture_number));
                 ImGui::Image(gl_tex_ptr, ImVec2(600,600), uv_min, uv_max);
                 ImGui::End();
@@ -4680,6 +4711,9 @@ script_files.back().content.emplace_back('\0');
                                                                  // signal termination!
 
     oglm_ptr = nullptr;  // Release OpenGL resources while context is valid.
+    Free_OpenGL_Texture(current_texture);
+    Free_OpenGL_Texture(contouring_texture);
+    Free_OpenGL_Texture(scale_bar_texture);
 
     // OpenGL and SDL cleanup.
     ImGui_ImplOpenGL3_Shutdown();
