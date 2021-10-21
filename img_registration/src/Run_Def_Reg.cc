@@ -10,8 +10,8 @@
 #include <memory>
 #include <string>    
 #include <vector>
+#include <filesystem>
 
-#include <boost/filesystem.hpp>
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
 #include <chrono>
@@ -74,17 +74,33 @@ int main(int argc, char* argv[]){
       return; 
     };
     arger.push_back( ygor_arg_handlr_t(1, 'm', "moving", true, "moving.fits",
-      "Load a moving image array from the given file.",
+      "Load a moving image array from the given file, or directory of images.",
       [&](const std::string &optarg) -> void {
-        moving.images.emplace_back(ReadFromFITS<float,double>(optarg));
-        return;
+          const auto p = std::filesystem::path(optarg);
+          if(std::filesystem::is_directory(p)){
+              for(const auto &f_it : std::filesystem::directory_iterator{p}){
+                  moving.images.emplace_back(ReadFromFITS<float,double>(f_it.path().string()));
+              }
+          }else{
+              // Assume it's a file.
+              moving.images.emplace_back(ReadFromFITS<float,double>(optarg));
+          }
+          return;
       })
     );
     arger.push_back( ygor_arg_handlr_t(1, 's', "stationary", true, "stationary.fits",
-      "Load a stationary image array from the given file.",
+      "Load a stationary image array from the given file, or directory of images.",
       [&](const std::string &optarg) -> void {
-        stationary.images.emplace_back(ReadFromFITS<float,double>(optarg));
-        return;
+          const auto p = std::filesystem::path(optarg);
+          if(std::filesystem::is_directory(p)){
+              for(const auto &f_it : std::filesystem::directory_iterator{p}){
+                  stationary.images.emplace_back(ReadFromFITS<float,double>(f_it.path().string()));
+              }
+          }else{
+              // Assume it's a file.
+              stationary.images.emplace_back(ReadFromFITS<float,double>(optarg));
+          }
+          return;
       })
     );
 
