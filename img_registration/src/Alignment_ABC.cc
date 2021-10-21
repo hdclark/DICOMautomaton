@@ -44,7 +44,45 @@ AlignViaABC(AlignViaABCParams & params,
     // https://github.com/hdclark/Ygor/blob/master/src/YgorImages.h#L286
     // but it is effectively a simple wrapper around a 2D std::vector of floats with one float per pixel (voxel).
     // Images also have a position in 3D space (vec3).
-    // vec3's are just three numbers: x, y, and z coordinates.
+    // vec3's are just three numbers: x, y, and z coordinates, which are all 'double'-sized floats.
+
+    // The following is an example of iterating over images in the volume, iterating over the voxels (pixels) in an
+    // image, computing each voxel's 3D position, reading the voxel intensity, and writing a new voxel intensity.
+    {
+        // Make a copy of the moving image set that is NOT const.
+        // const == read-only, so this will allow us to modify the images and voxels.
+        planar_image_collection<float, double> copy_of_moving(moving);
+        for(auto &img : copy_of_moving.images){
+            const long int N_rows  = img.rows;
+            const long int N_cols  = img.columns;
+            const long int N_chnls = img.channels; // Each voxel can have multiple channels (e.g., r, g, b), but most medical images have a single channel.
+            if(N_chnls) FUNCWARN("Multiple channels detected. Ignoring all but the first channel");
+            const long int channel = 0;
+
+            for(long int row = 0; row < N_rows; ++row){
+                for(long int col = 0; col < N_cols; ++col){
+
+                    // Position of the voxel.
+                    //
+                    // Access x, y, and z components like 'pos.x' if needed.
+                    // Can write to a stream directly like 'std::cout << pos << std::endl;' .
+                    const vec3<double> pos = img.position(row, col);
+
+                    // Read the voxel intensity / strength / value.
+                    const float val = img.value(row, col, channel);
+
+                    // Write a new voxel intensity / strength / value, in this case adding 1.23 to the previous value.
+                    img.reference(row, col, channel) = val + 1.23;
+
+                    // Write a new voxel intensity / strength / value if we're close to some arbitrary point in space.
+                    // This will draw a sphere in the image.
+                    if(pos.distance( img.position(0,0) ) < 10.0){
+                        img.reference(row, col, channel) = 456.789;
+                    }
+                }
+            }
+        }
+    }
 
     // The following is an example of using Eigen for matrices, in case it is needed.
     {
