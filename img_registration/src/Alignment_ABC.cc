@@ -29,7 +29,46 @@
 #include "Alignment_ABC.h"
 
 
+// Member functions of the AlignViaABCTransform class.
+//
+// Note: See Alignment_ABC.h to learn about the AlignViaABCTransform class.
+vec3<double>
+AlignViaABCTransform::transform(const vec3<double> &v) const {
+    // TODO
+    return v;
+}
+
+void
+AlignViaABCTransform::apply_to(vec3<double> &v) const {
+    // TODO.
+    //v += ...
+    return;
+}
+
+void
+AlignViaABCTransform::apply_to(planar_image_collection<float, double> &img_array) const {
+    // TODO.
+    return;
+}
+
+bool
+AlignViaABCTransform::write_to( std::ostream &os ) const {
+    // TODO.
+    os << this->xyz << std::endl;
+    return true; // true == write was successful.
+}
+
+bool
+AlignViaABCTransform::read_from( std::istream &is ){
+    // TODO.
+    is >> this->xyz;
+    return true; // true == read was successful and data is logical.
+}
+
+
 // This function is where the deformable registration algorithm should be implemented.
+//
+// Note: See Alignment_ABC.h to learn about the AlignViaABCTransform class.
 std::optional<AlignViaABCTransform>
 AlignViaABC(AlignViaABCParams & params,
             const planar_image_collection<float, double> & moving,
@@ -115,14 +154,13 @@ AlignViaABC(AlignViaABCParams & params,
 
     // ...
     // ...
-    // ...
-    //    Note: if the algorithm fails at some point, emit a warning using FUNCWARN() (see above) and return std::nullopt .
-    // ...
+    // TODO.
     // ...
     // ...
+
+    // Note: if the algorithm fails at some point, emit a warning using FUNCWARN() (see above) and return std::nullopt .
 
     // -----------------------------------------------
-
 
     // This structure is described in Alignment_ABC.h. Finding this transform is the ultimate goal of this algorithm.
     // For now, we'll leave it undefined. But a valid AlignViaABCTransform should be created and returned if the algorithm

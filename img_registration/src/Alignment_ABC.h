@@ -39,8 +39,23 @@ struct AlignViaABCParams {
 struct AlignViaABCTransform {
 
     // A placeholder parameter.
+    //
+    // Any required state needed for the algorithm should be stored here.
+    // For a demons algorithm we'll need (at least) a deformation field, possibly stored as a 3-channel image.
+    // For a polynomial or basis function algorithm, we'll probably need a large matrix here.
     double xyz = 1.0;
 
+    // The following are methods that will help us use the transformation after we find it.
+    //
+    // These apply the transformation to objects.
+    vec3<double> transform(const vec3<double> &v) const;
+    void apply_to(vec3<double> &v) const;
+    void apply_to(planar_image_collection<float, double> &img_array) const;
+    //
+    // These serialize and deserialize to a human- and machine-readable format.
+    // They let us save and re-use transformations later.
+    bool write_to( std::ostream &os ) const;
+    bool read_from( std::istream &is );
 };
 
 // This is the function the performs the registration algorithm. If there is no transformation, or the algorithm fails,
