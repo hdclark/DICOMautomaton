@@ -9,22 +9,26 @@ function(embed_script
     #message(AUTHOR_WARNING "${script_contents}")
 
     # Derive a name for the script from the filename.
-    set(script_filename "${filename}")
-    string(REGEX REPLACE ".*/(.*)" "\\1" script_filename "${script_filename}")
+    set(script_path "${filename}")
+    string(REGEX REPLACE ".*/(.*)/[^/]*" "\\1" script_category "${script_path}")
+    string(REGEX REPLACE "_" " " script_category "${script_category}")
+
+    string(REGEX REPLACE ".*/(.*)" "\\1" script_filename "${script_path}")
     string(REGEX REPLACE "_" " " script_filename "${script_filename}")
     string(REGEX REPLACE "[.]dscr$" "" script_filename "${script_filename}")
 
     # Convert the file contents to a C++ string with hex escapes.
     string(REGEX REPLACE "([0-9a-f][0-9a-f])" "\\\\x\\1" script_contents "${script_contents}")
     #message(AUTHOR_WARNING "${script_contents}")
-    set(entry "{\"${script_filename}\",\"${script_contents}\"},")
+
+    set(entry "{\"${script_category}\",\"${script_filename}\",\"${script_contents}\"},")
 
     # Append the string to a variable for later access.
     set(script_inlines "${script_inlines}" PARENT_SCOPE)
     set(script_inlines "${script_inlines}${entry}" PARENT_SCOPE)
 endfunction()
 
-file(GLOB script_files "../artifacts/dcma_scripts/*.dscr")
+file(GLOB script_files "../artifacts/dcma_scripts/*/*.dscr")
 foreach(script_file ${script_files})
     embed_script("${script_file}")
 endforeach()
