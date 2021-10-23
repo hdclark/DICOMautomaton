@@ -2241,71 +2241,12 @@ bool SDL_Viewer(Drover &DICOM_data,
                         script_files.emplace_back();
                         script_files.back().altered = true;
                         script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
-////////////////
-////////////////
-////////////////
-const std::string testing_content = R"***(#!/usr/bin/env -S dicomautomaton_dispatcher -v
 
-variable = "something";
-variable = "something else";
-
-variable_op = "operation2";
-
-operation1(a = 123,
-          b = "234",
-          c = 3\45,
-          d = "45\6",
-          e = '56\7',
-          f = variable );
-
-# This is a comment. It should be ignored, including syntax errors like ;'"(]'\"".
-# This is another comment.
-variable_op(x = "123",
-          # This is another comment.
-          y = 456){
-
-    # This is a nested statement. Recursive statements are supported.
-    operation3(z = 789){
-        variable = "something new";
-        operation4(w = variable);
-    };
-
-};
-
-DeleteImages(
-    ImageSelection = 'all'
-);
-DeleteContours(
-    ROILabelRegex = '.*'
-);
-
-roiall = "everything";
-roisphere = 'sphere';
-
-Repeat( N = 2 ){
-    Repeat( N = 1 ){
-        GenerateVirtualDataImageSphereV1();
-    };
-};
-DeleteImages( ImageSelection = 'last' );
-
-ContourWholeImages(
-    ROILabel = roiname
-);
-
-ContourViaThreshold(
-    ROILabel = roisphere,
-    Method = "marching-squares",
-    Lower = 0.5,
-    SimplifyMergeAdjacent = true
-);
-
-)***";
-script_files.back().content.clear();
-append_to_script(script_files.back().content, testing_content);
-script_files.back().content.emplace_back('\0');
-////////////////
-////////////////
+                        // Content of the default script.
+                        const std::string testing_content = "#!/usr/bin/env -S dicomautomaton_dispatcher -v\n\n\n";
+                        script_files.back().content.clear();
+                        append_to_script(script_files.back().content, testing_content);
+                        script_files.back().content.emplace_back('\0');
 
                         active_script_file = N_sfs;
                         ++N_sfs;

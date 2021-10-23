@@ -1,0 +1,68 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# This is a comment. It should be ignored, including syntax errors like ;'"(]'\"".
+
+# The following are variables, which behave like macros.
+variable = "something";
+variable2 = "something else";
+
+# Variables, being macros, can also parameterize operations.
+# Note that functions represent DICOMautomaton operations.
+variable_op = "operation2";
+
+# This is an example of a function called 'True'.
+# It takes no parameters and always succeeds.
+True();
+
+# 'Noop' is another function. It resolves to 'no-op' or 'no operation'.
+Noop();
+
+# Operations (functions) support parameter passthrough, which makes it easier
+# to compose them. If parameters are not recognized they will be ignored.
+# The following shows how to quote and escape arguments.
+Noop(a = 123,
+     b = "234",
+     c = 3\45,
+     d = "45\6",
+     e = '56\7',
+     f = variable );
+
+# Comments can occur anywhere as long as the '#' is the first non-whitespace
+# character on the line.
+Noop( x = "123",
+      # This is another comment.
+      y = 456
+){
+    # This is a nested statement. Note that not all operations support
+    # child statements. Many will simply ignore them.
+    True(z = 789){
+        # The content of 'variable' will now be overridden.
+        #
+        # Remember, variables are macros, so they are resolved at compile time,
+        # not during runtime.
+        variable = "something new";
+
+        True(w = variable){};
+    };
+};
+
+# Here is a loop operation. It performs child operations the specified number
+# of times.
+Repeat( N = 2 ){
+
+    # Create 3 image arrays.
+    Repeat( N = 3 ){
+        GenerateVirtualDataImageSphereV1();
+    };
+
+    # Delete 3 image arrays.
+    Repeat( N = 3 ){
+        DeleteImages( ImageSelection = 'last' );
+    };
+};
+
+# In order to run DICOMautomaton scripts, they need to be compiled.
+# Press the 'validate' button to compile without running.
+# - This is useful for debugging.
+# Press the 'run' button to compile and run the script.
+
