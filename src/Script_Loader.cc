@@ -668,6 +668,7 @@ Generate_Operation_List( const std::vector<script_statement_t> &statements,
 
         // Find or estimate the canonical name for arguments.
         std::map<std::string, std::string> Argument_Lexicon;
+        std::map<std::string, std::list<std::string>> Exhaustive_Arguments;
         for(const auto &op_func : op_name_mapping){
             if(boost::iequals(op_func.first, canonical_op_name)){
 
@@ -675,7 +676,12 @@ Generate_Operation_List( const std::vector<script_statement_t> &statements,
                 auto OpDocs = op_func.second.first();
                 for(const auto &r : OpDocs.args){
                     Argument_Lexicon[r.name] = r.name;
+
+                    if(r.samples == OpArgSamples::Exhaustive){
+                        Exhaustive_Arguments[r.name] = r.examples;
+                    }
                 }
+                break;
             }
         }
 
@@ -689,7 +695,7 @@ Generate_Operation_List( const std::vector<script_statement_t> &statements,
         }else{
             {
                 std::stringstream ss;
-                ss << "Available arguments: ";
+                ss << "Available parameters: ";
                 for(const auto &p : Argument_Lexicon) ss << p.first << " ";
                 report(feedback, script_feedback_severity_t::debug, s.get_valid_cwct(), ss.str());
             }
@@ -702,18 +708,26 @@ Generate_Operation_List( const std::vector<script_statement_t> &statements,
 
                 if( arg_name_X.last_best_score < 0.6 ){
                     report(feedback, script_feedback_severity_t::err, a.first.front(),
-                           "Argument '"_s + user_arg_name + "' not understood.");
+                           "Parameter '"_s + user_arg_name + "' not understood.");
                     compilation_successful = false;
 
                 }else if( arg_name_X.last_best_score < 1.0 ){
                     report(feedback, script_feedback_severity_t::warn, a.first.front(),
-                           "Selecting argument '"_s + canonical_arg_name + "' because '"_s + user_arg_name + "' not understood.");
+                           "Selecting parameter '"_s + canonical_arg_name + "' because '"_s + user_arg_name + "' not understood.");
+                }
+
+                // List exhaustive examples.
+                if(Exhaustive_Arguments.count(canonical_arg_name) != 0){
+                    std::stringstream ss;
+                    ss << "Accepted options: ";
+                    for(const auto &p : Exhaustive_Arguments[canonical_arg_name]) ss << p << " ";
+                    report(feedback, script_feedback_severity_t::debug, a.first.front(), ss.str());
                 }
 
                 // Insert the argument.
                 if(!out.back().insert(canonical_arg_name, to_str(a.second))){
                     report(feedback, script_feedback_severity_t::err, a.first.front(),
-                           "Argument not accepted.");
+                           "Parameter not accepted.");
                     compilation_successful = false;
                 }
             }
