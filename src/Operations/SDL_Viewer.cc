@@ -1997,7 +1997,17 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::EndMenu();
                 }
                 if(ImGui::BeginMenu("Adjust")){
-                    ImGui::MenuItem("Window and Level", nullptr, &view_toggles.adjust_window_level_enabled);
+                    if(ImGui::BeginMenu("Toggle Style")){
+                        if(ImGui::MenuItem("Dark Mode", nullptr, nullptr)){
+                            ImGui::StyleColorsDark();
+                        }
+                        if(ImGui::MenuItem("Light Mode", nullptr, nullptr)){
+                            ImGui::StyleColorsLight();
+                        }
+                        ImGui::EndMenu();
+                    }
+                    ImGui::Separator();
+                    ImGui::MenuItem("Image Window and Level", nullptr, &view_toggles.adjust_window_level_enabled);
                     ImGui::MenuItem("Image Colour Map", nullptr, &view_toggles.adjust_colour_map_enabled);
                     ImGui::EndMenu();
                 }
