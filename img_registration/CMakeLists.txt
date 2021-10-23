@@ -1,11 +1,6 @@
 
 cmake_minimum_required(VERSION 3.12.0 FATAL_ERROR)
 
-# Override the environmental CC and CXX flags with the SYCL toolchain wrapper (e.g., from hipSYCL).
-#
-# NOTE: This MUST preceed project().
-#set(CMAKE_C_COMPILER   "syclcc")
-#set(CMAKE_CXX_COMPILER "syclcc")
 
 project(DICOMautomaton_Registration LANGUAGES CXX)
 #set(DICOMautomaton_VERSION_MAJOR 0)

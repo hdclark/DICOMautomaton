@@ -83,6 +83,22 @@
 
 //extern const std::string DCMA_VERSION_STR;
 
+#ifndef CHECK_FOR_GL_ERRORS
+    #define CHECK_FOR_GL_ERRORS() { \
+        while(true){ \
+            GLenum err = glGetError(); \
+            if(err == GL_NO_ERROR) break; \
+            std::cout << "--(W) In function: " << __PRETTY_FUNCTION__; \
+            std::cout << " (line " << __LINE__ << ")"; \
+            std::cout << " : " << glewGetErrorString(err); \
+            std::cout << "(" << std::to_string(err) << ")." << std::endl; \
+            std::cout.flush(); \
+            throw std::runtime_error("OpenGL error detected. Refusing to continue"); \
+        } \
+    }
+#endif
+
+
 static
 void
 array_to_string(std::string &s, const std::array<char, 1024> &a){
@@ -123,28 +139,201 @@ get_pixelspace_axis_aligned_bounding_box(const planar_image<float, double> &img,
         const auto proj1 = (p - corner).Dot(axis1);
         const auto proj2 = (p - corner).Dot(axis2);
         //const auto proj3 = (p - corner).Dot(axis3);
-        if(proj1 - extra_space < bbox_min.x) bbox_min.x = proj1 - extra_space;
-        if(proj2 - extra_space < bbox_min.y) bbox_min.y = proj2 - extra_space;
-        //if(proj3 - extra_space < bbox_min.z) bbox_min.z = proj3 - extra_space;
-        if(bbox_max.x + extra_space < proj1) bbox_max.x = proj1 + extra_space;
-        if(bbox_max.y + extra_space < proj2) bbox_max.y = proj2 + extra_space;
-        //if(bbox_max.z + extra_space < proj3) bbox_max.z = proj3 + extra_space;
+        if((proj1 - extra_space) < bbox_min.x) bbox_min.x = (proj1 - extra_space);
+        if((proj2 - extra_space) < bbox_min.y) bbox_min.y = (proj2 - extra_space);
+        //if((proj3 - extra_space) < bbox_min.z) bbox_min.z = (proj3 - extra_space);
+        if(bbox_max.x < (proj1 + extra_space)) bbox_max.x = (proj1 + extra_space);
+        if(bbox_max.y < (proj2 + extra_space)) bbox_max.y = (proj2 + extra_space);
+        //if(bbox_max.z < (proj3 + extra_space)) bbox_max.z = (proj3 + extra_space);
     }
 
     auto row_min = std::clamp(static_cast<long int>(std::floor(bbox_min.x/img.pxl_dx)), 0L, img.rows-1);
     auto row_max = std::clamp(static_cast<long int>(std::ceil(bbox_max.x/img.pxl_dx)), 0L, img.rows-1);
     auto col_min = std::clamp(static_cast<long int>(std::floor(bbox_min.y/img.pxl_dy)), 0L, img.columns-1);
     auto col_max = std::clamp(static_cast<long int>(std::ceil(bbox_max.y/img.pxl_dy)), 0L, img.columns-1);
-    if(row_max < row_min) std::swap(row_min, row_max);
-    if(col_max < col_min) std::swap(col_min, col_max);
     return std::make_tuple( row_min, row_max, col_min, col_max );
 }
+
+// Represents a buffer stored in GPU memory that is accessible by OpenGL.
+struct opengl_mesh {
+    GLuint vao = 0;
+    GLuint vbo = 0;
+    GLuint ebo = 0;
+
+    GLsizei N_indices = 0;
+    GLsizei N_vertices = 0;
+    GLsizei N_triangles = 0;
+
+    // Constructor. Allocates space in GPU memory.
+    opengl_mesh( const fv_surface_mesh<double, uint64_t> &meshes,
+                 bool reverse_normals = false ){
+
+        this->N_vertices = static_cast<GLsizei>(meshes.vertices.size());
+        this->N_triangles = 0;
+        for(const auto& f : meshes.faces){
+            long int l_N_indices = f.size();
+            if(l_N_indices < 3) continue; // Ignore faces that cannot be broken into triangles.
+            this->N_triangles += static_cast<GLsizei>(l_N_indices - 2);
+        }
+
+        // Find an axis-aligned bounding box.
+        const auto inf = std::numeric_limits<double>::infinity();
+        auto x_min = inf;
+        auto y_min = inf;
+        auto z_min = inf;
+        auto x_max = -inf;
+        auto y_max = -inf;
+        auto z_max = -inf;
+        for(const auto &v : meshes.vertices){
+            if(v.x < x_min) x_min = v.x;
+            if(v.y < y_min) y_min = v.y;
+            if(v.z < z_min) z_min = v.z;
+            if(x_max < v.x) x_max = v.x;
+            if(y_max < v.y) y_max = v.y;
+            if(z_max < v.z) z_max = v.z;
+        }
+
+        // Adjust individual axes to respect the aspect ratio.
+        const auto x_range = x_max - x_min;
+        const auto y_range = y_max - y_min;
+        const auto z_range = z_max - z_min;
+        const auto max_range = std::max({x_range, y_range, z_range});
+        x_min = (x_max + x_min) * 0.5 - max_range * 0.5;
+        x_max = (x_max + x_min) * 0.5 + max_range * 0.5;
+        y_min = (y_max + y_min) * 0.5 - max_range * 0.5;
+        y_max = (y_max + y_min) * 0.5 + max_range * 0.5;
+        z_min = (z_max + z_min) * 0.5 - max_range * 0.5;
+        z_max = (z_max + z_min) * 0.5 + max_range * 0.5;
+
+        // Marshall the vertex and index information in CPU-accessible buffers where they can be freely
+        // preprocessed.
+        std::vector<float> vertices;
+        vertices.reserve(3 * this->N_vertices);
+        for(const auto &v : meshes.vertices){
+            // Scale each of x, y, and z to [-1,+1], respecting the aspect ratio, but shrink down further to
+            // [-1/sqrt(3),+1/sqrt(3)] to account for rotation. Scaling down will ensure the corners are not clipped
+            // when the cube is rotated.
+            vec3<double> w( (2.0 * (v.x - x_min) / (x_max - x_min) - 1.0) / std::sqrt(3.0),
+                            (2.0 * (v.y - y_min) / (y_max - y_min) - 1.0) / std::sqrt(3.0),
+                            (2.0 * (v.z - z_min) / (z_max - z_min) - 1.0) / std::sqrt(3.0) );
+            vertices.push_back(static_cast<float>(w.x));
+            vertices.push_back(static_cast<float>(w.y));
+            vertices.push_back(static_cast<float>(w.z));
+        }
+        
+        std::vector<unsigned int> indices;
+        indices.reserve(3 * this->N_triangles);
+        for(const auto& f : meshes.faces){
+            long int l_N_indices = f.size();
+            if(l_N_indices < 3) continue; // Ignore faces that cannot be broken into triangles.
+
+            const auto it_1 = std::cbegin(f);
+            const auto it_2 = std::next(it_1);
+            const auto end = std::end(f);
+            for(auto it_3 = std::next(it_2); it_3 != end; ++it_3){
+                indices.push_back(static_cast<unsigned int>(*it_1));
+                indices.push_back(static_cast<unsigned int>(*it_2));
+                indices.push_back(static_cast<unsigned int>(*it_3));
+            }
+        }
+        if(reverse_normals){
+            std::reverse(std::begin(indices), std::end(indices));
+        }
+        this->N_indices = static_cast<GLsizei>(indices.size());
+
+        // Push the data into OpenGL buffers.
+        CHECK_FOR_GL_ERRORS();
+
+        // Vertex data.
+        glGenBuffers(1, &this->vbo); // Create a VBO inside the OpenGL context.
+        if(this->vbo == 0) throw std::runtime_error("Unable to generate vertex buffer object");
+        CHECK_FOR_GL_ERRORS();
+        glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
+        CHECK_FOR_GL_ERRORS();
+        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), static_cast<void*>(vertices.data()), GL_STATIC_DRAW); // Copy vertex data.
+        CHECK_FOR_GL_ERRORS();
+
+        // Element data.
+        glGenBuffers(1, &this->ebo); // Create a EBO inside the OpenGL context.
+        if(this->ebo == 0) throw std::runtime_error("Unable to generate element buffer object");
+        CHECK_FOR_GL_ERRORS();
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ebo);
+        CHECK_FOR_GL_ERRORS();
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), static_cast<void*>(indices.data()), GL_STATIC_DRAW); // Copy index data.
+        CHECK_FOR_GL_ERRORS();
+
+        // Vertex array object.
+        glGenVertexArrays(1, &this->vao); // Create a VAO inside the OpenGL context.
+        if(this->vao == 0) throw std::runtime_error("Unable to generate vertex array object");
+        CHECK_FOR_GL_ERRORS();
+        glBindVertexArray(this->vao);
+        CHECK_FOR_GL_ERRORS();
+
+        glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
+        CHECK_FOR_GL_ERRORS();
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0); // Vertex positions, 3 floats per vertex, attrib index 0.
+        CHECK_FOR_GL_ERRORS();
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ebo);
+        CHECK_FOR_GL_ERRORS();
+        glVertexAttribPointer(1, 3, GL_UNSIGNED_INT, GL_FALSE, 0, 0); // Indices, 3 coordinates per face (triangles only), attrib index 1.
+        CHECK_FOR_GL_ERRORS();
+
+
+        glEnableVertexAttribArray(0);
+        CHECK_FOR_GL_ERRORS();
+        glEnableVertexAttribArray(1);
+        CHECK_FOR_GL_ERRORS();
+
+        FUNCINFO("Registered new OpenGL mesh");
+    };
+
+    // Draw the mesh in the current OpenGL context.
+    void draw(bool render_wireframe = false){
+        CHECK_FOR_GL_ERRORS();
+        glBindVertexArray(this->vao);
+        CHECK_FOR_GL_ERRORS();
+
+        if(render_wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Enable wireframe mode.
+        CHECK_FOR_GL_ERRORS();
+        glDrawElements(GL_TRIANGLES, this->N_indices, GL_UNSIGNED_INT, 0); // Draw using the current shader setup.
+        CHECK_FOR_GL_ERRORS();
+        if(render_wireframe) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Disable wireframe mode.
+        CHECK_FOR_GL_ERRORS();
+
+        glBindVertexArray(0);
+        CHECK_FOR_GL_ERRORS();
+    };
+
+    ~opengl_mesh() noexcept(false) {
+        // Bind the vertex array object so we can unlink the attribute buffers.
+        if( (0 < this->vao)
+        &&  (0 < this->vbo)
+        &&  (0 < this->ebo) ){
+            glBindVertexArray(this->vao);
+            glDisableVertexAttribArray(0); // Free OpenGL resources.
+            glDisableVertexAttribArray(1);
+            glBindVertexArray(0);
+
+            // Delete the attribute buffers and then finally the vertex array object.
+            glDeleteBuffers(1, &this->ebo);
+            glDeleteBuffers(1, &this->vbo);
+            glDeleteVertexArrays(1, &this->vao);
+            CHECK_FOR_GL_ERRORS();
+        }
+
+        // Reset accessible class state for good measure.
+        this->ebo = this->vbo = this->vao = 0;
+        this->N_triangles = this->N_indices = this->N_vertices = 0;
+    };
+};
 
 enum class brush_t {
     // 2D brushes.
     rigid_circle,
     rigid_square,
-    gaussian,
+    gaussian_2D,
+    tanh_2D,
     median_circle,
     median_square,
     mean_circle,
@@ -153,6 +342,8 @@ enum class brush_t {
     // 3D brushes.
     rigid_sphere,
     rigid_cube,
+    gaussian_3D,
+    tanh_3D,
     median_sphere,
     median_cube,
     mean_sphere,
@@ -171,7 +362,7 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
     // Pre-extract the line segment vertices for bounding-box calculation.
     std::vector<vec3<double>> verts;
     for(const auto& l : lss){
-        for(const auto& p : { l.Get_R0(), l.Get_R1() }){
+        for(const auto p : { l.Get_R0(), l.Get_R1() }){
             verts.emplace_back(p);
         }
     }
@@ -190,8 +381,13 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
     ||  (brush == brush_t::mean_cube) ){
         buffer_space = radius;
 
-    }else if(brush == brush_t::gaussian){
-        buffer_space = radius * 5.0;
+    }else if( (brush == brush_t::gaussian_2D)
+    ||        (brush == brush_t::gaussian_3D) ){
+        buffer_space = radius * 3.0;
+
+    }else if( (brush == brush_t::tanh_2D)
+    ||        (brush == brush_t::tanh_3D) ){
+        buffer_space = radius * 1.5;
     }
 
     const auto apply_to_inner_pixels = [&](const decltype(planar_image_collection<float,double>().get_all_images()) &l_img_its,
@@ -216,7 +412,8 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                     // 2D brushes.
                     if( (brush == brush_t::rigid_circle)
                     ||  (brush == brush_t::rigid_square)
-                    ||  (brush == brush_t::gaussian)
+                    ||  (brush == brush_t::tanh_2D)
+                    ||  (brush == brush_t::gaussian_2D)
                     ||  (brush == brush_t::median_circle)
                     ||  (brush == brush_t::median_square)
                     ||  (brush == brush_t::mean_circle)
@@ -229,12 +426,14 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                     // 3D brushes.
                     }else if( (brush == brush_t::rigid_sphere)
                           ||  (brush == brush_t::rigid_cube) 
+                          ||  (brush == brush_t::gaussian_3D)
+                          ||  (brush == brush_t::tanh_3D)
                           ||  (brush == brush_t::median_sphere) 
                           ||  (brush == brush_t::median_cube)
                           ||  (brush == brush_t::mean_sphere) 
                           ||  (brush == brush_t::mean_cube) ){
-                        if( (std::abs(plane_dist_R0) <= radius)
-                        ||  (std::abs(plane_dist_R1) <= radius) ){
+                        if( (std::abs(plane_dist_R0) <= buffer_space)
+                        ||  (std::abs(plane_dist_R1) <= buffer_space) ){
                             return true;
                         }
                     }
@@ -254,7 +453,8 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                     {
                         double closest_dist = 1E99;
                         for(const auto &l : lss){
-                            const auto closest_l = l.Closest_Point_To(pos);
+                            const bool degenerate = ( (l.Get_R0()).sq_dist(l.Get_R1()) < 0.01 );
+                            const auto closest_l = (degenerate) ? l.Get_R0() : l.Closest_Point_To(pos);
                             const auto dist = closest_l.distance(pos);
                             if(dist < closest_dist){
                                 closest = closest_l;
@@ -269,24 +469,27 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                     ||  (brush == brush_t::median_circle)
                     ||  (brush == brush_t::mean_circle)
                     ||  (brush == brush_t::median_sphere)
-                    ||  (brush == brush_t::mean_sphere) ){
-                        if(radius < dR ) continue;
+                    ||  (brush == brush_t::mean_sphere)
+                    ||  (brush == brush_t::tanh_2D)
+                    ||  (brush == brush_t::gaussian_2D)
+                    ||  (brush == brush_t::gaussian_3D) 
+                    ||  (brush == brush_t::tanh_3D) ){
+                        if(buffer_space < dR) continue;
 
                     }else if( (brush == brush_t::rigid_square)
                           ||  (brush == brush_t::median_square)
                           ||  (brush == brush_t::mean_square) ){
-                        if( (radius < std::abs((closest - pos).Dot(cit->row_unit)))
-                        ||  (radius < std::abs((closest - pos).Dot(cit->col_unit))) ) continue;
+                        if( (buffer_space < std::abs((closest - pos).Dot(cit->row_unit)))
+                        ||  (buffer_space < std::abs((closest - pos).Dot(cit->col_unit))) ) continue;
 
                     }else if( (brush == brush_t::median_cube)
                           ||  (brush == brush_t::rigid_cube)
                           ||  (brush == brush_t::mean_cube) ){
-                        if( (radius < std::abs((closest - pos).Dot(cit->row_unit)))
-                        ||  (radius < std::abs((closest - pos).Dot(cit->col_unit)))
-                        ||  (radius < std::abs((closest - pos).Dot(cit->row_unit.Cross(cit->col_unit)))) ) continue;
+                        if( (buffer_space < std::abs((closest - pos).Dot(cit->row_unit)))
+                        ||  (buffer_space < std::abs((closest - pos).Dot(cit->col_unit)))
+                        ||  (buffer_space < std::abs((closest - pos).Dot(cit->row_unit.Cross(cit->col_unit)))) ) continue;
 
-                    }else if(brush == brush_t::gaussian){
-                        if(radius * 5.0 < dR ) continue;
+                        if(buffer_space < dR) continue;
                     }
 
                     cit->reference( r, c, channel ) = std::clamp(f(pos, dR, cit->value(r, c, channel)), intensity_min, intensity_max);
@@ -296,6 +499,7 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
     };
 
 
+    // Implement brushes.
     if( (brush == brush_t::rigid_circle)
     ||  (brush == brush_t::rigid_square) ){
         for(const auto &img_it : img_its){
@@ -304,10 +508,25 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
             });
         }
 
-    }else if(brush == brush_t::gaussian){
+    }else if( (brush == brush_t::gaussian_2D)
+          ||  (brush == brush_t::gaussian_3D) ){
         for(const auto &img_it : img_its){
             apply_to_inner_pixels({img_it}, [radius,intensity](const vec3<double> &, double dR, float v) -> float {
-                return v + intensity * std::exp( -std::pow(dR / (0.5 * radius), 2.0f) );
+                const float scale = 0.5;
+                const auto l_exp = std::exp( -std::pow(dR / (0.5 * radius), 2.0f) );
+                return (intensity - v) * l_exp + v;
+                //return v + intensity * std::exp( -std::pow(dR / (0.5 * radius), 2.0f) );
+            });
+        }
+
+    }else if( (brush == brush_t::tanh_2D)
+          ||  (brush == brush_t::tanh_3D) ){
+        for(const auto &img_it : img_its){
+            apply_to_inner_pixels({img_it}, [radius,intensity](const vec3<double> &, double dR, float v) -> float {
+                const float steepness = 0.75;
+                const auto l_tanh = 0.5 * (1.0 + std::tanh( steepness * (radius - dR)));
+                return (intensity - v) * l_tanh + v;
+                //return v + intensity * 0.5 * (1.0 + std::tanh( steepness * (radius - dR)));
             });
         }
 
@@ -339,7 +558,6 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
             });
         }
 
-    // 3D brushes.
     }else if( (brush == brush_t::rigid_sphere)
           ||  (brush == brush_t::rigid_cube) ){
         apply_to_inner_pixels(img_its, [intensity](const vec3<double> &, double, float) -> float {
@@ -444,6 +662,9 @@ bool SDL_Viewer(Drover &DICOM_data,
     long int img_channel = -1; // Which channel to display.
     using img_array_ptr_it_t = decltype(DICOM_data.image_data.begin());
     using disp_img_it_t = decltype(DICOM_data.image_data.front()->imagecoll.images.begin());
+    bool img_precess = false;
+    float img_precess_period = 0.1f; // in seconds.
+    std::chrono::time_point<std::chrono::steady_clock> img_precess_last = std::chrono::steady_clock::now();
 
     //Real-time modifiable sticky window and level.
     std::optional<double> custom_width;
@@ -524,6 +745,24 @@ bool SDL_Viewer(Drover &DICOM_data,
         return ImVec4(colour.x, colour.y, colour.z, 1.0f);
     };
 
+    // Meshes.
+    std::unique_ptr<opengl_mesh> oglm_ptr;
+    long int mesh_num = -1;
+
+    struct mesh_display_transform_t {
+        bool precess = true;
+        bool render_wireframe = true;
+        bool reverse_normals = false;
+        bool use_lighting = false;
+
+        double precess_rate = 1.0;
+        double rot_x = 0.0;
+        double rot_y = 0.0;
+        double rot_z = 0.0;
+
+        std::array<float, 4> colours = { 1.000, 0.588, 0.005, 0.8 };
+    } mesh_display_transform;
+
     // ------------------------------------------ Viewer State --------------------------------------------
     auto background_colour = ImVec4(0.025f, 0.087f, 0.118f, 1.00f);
 
@@ -564,21 +803,6 @@ bool SDL_Viewer(Drover &DICOM_data,
     string_to_array(metadata_text_entry, "");
 
     // --------------------------------------------- Setup ------------------------------------------------
-#ifndef CHECK_FOR_GL_ERRORS
-    #define CHECK_FOR_GL_ERRORS() { \
-        while(true){ \
-            GLenum err = glGetError(); \
-            if(err == GL_NO_ERROR) break; \
-            std::cout << "--(W) In function: " << __PRETTY_FUNCTION__; \
-            std::cout << " (line " << __LINE__ << ")"; \
-            std::cout << " : " << glewGetErrorString(err); \
-            std::cout << "(" << std::to_string(err) << ")." << std::endl; \
-            std::cout.flush(); \
-            throw std::runtime_error("OpenGL error detected. Refusing to continue"); \
-        } \
-    }
-#endif
-
     if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0){
         throw std::runtime_error("Unable to initialize SDL: "_s + SDL_GetError());
     }
@@ -678,6 +902,18 @@ bool SDL_Viewer(Drover &DICOM_data,
         long int row_count = 0L;
         float aspect_ratio = 1.0; // In image pixel space.
         bool texture_exists = false;
+
+/*
+        ~opengl_texture_handle_t(){
+            // Release the previous texture, iff needed.
+            if(this->texture_number != 0){
+                CHECK_FOR_GL_ERRORS();
+                glBindTexture(GL_TEXTURE_2D, 0);
+                glDeleteTextures(1, &this->texture_number);
+                CHECK_FOR_GL_ERRORS();
+            }
+        }
+*/
     };
     opengl_texture_handle_t current_texture;
 
@@ -693,6 +929,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     opengl_texture_handle_t scale_bar_texture;
 
     // Contouring mode state.
+    opengl_texture_handle_t contouring_texture;
     int contouring_img_row_col_count = 256;
     bool contouring_img_altered = false;
     float contouring_reach = 10.0;
@@ -784,6 +1021,20 @@ bool SDL_Viewer(Drover &DICOM_data,
             FUNCINFO("Reset contouring state with " << contouring_imgs.image_data.back()->imagecoll.images.size() << " images");
 
             return;
+    };
+
+    const auto Free_OpenGL_Texture = [](opengl_texture_handle_t &tex){
+        // Release the previous texture, iff needed.
+        if(tex.texture_number != 0){
+            CHECK_FOR_GL_ERRORS();
+            glBindTexture(GL_TEXTURE_2D, 0);
+            glDeleteTextures(1, &tex.texture_number);
+            CHECK_FOR_GL_ERRORS();
+        }
+
+        // Reset all other state.
+        tex = opengl_texture_handle_t();
+        return;
     };
 
     std::atomic<bool> need_to_reload_opengl_texture = true;
@@ -949,7 +1200,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
             }
         
-
             opengl_texture_handle_t out;
             out.col_count = img_cols;
             out.row_count = img_rows;
@@ -1138,9 +1388,11 @@ bool SDL_Viewer(Drover &DICOM_data,
     const auto recompute_scale_bar_image_state = [ &scale_bar_img,
                                                    &scale_bar_texture,
                                                    &recompute_image_iters,
+                                                   &Free_OpenGL_Texture,
                                                    &Load_OpenGL_Texture ](){
         auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
         if( img_valid ){ 
+            Free_OpenGL_Texture(scale_bar_texture);
             scale_bar_texture = Load_OpenGL_Texture( scale_bar_img, {}, {} );
         }
         return;
@@ -1636,12 +1888,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                                            &img_num,
                                            &img_array_num,
                                            &img_channel,
+                                           &Free_OpenGL_Texture,
                                            &Load_OpenGL_Texture ]() -> void {
             std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
             auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
             if( view_toggles.view_images_enabled
             &&  img_valid ){
                 img_channel = std::clamp<long int>(img_channel, 0, disp_img_it->channels-1);
+                Free_OpenGL_Texture(current_texture);
                 current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
             }else{
                 img_channel = -1;
@@ -1663,7 +1917,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
                 ImGui::SetNextWindowPos(ImVec2(700, 40), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Contour Mask Debugging", &view_toggles.view_contouring_debug, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
-                auto contouring_texture = Load_OpenGL_Texture( *cimg_it, {}, {} );
+                Free_OpenGL_Texture(contouring_texture);
+                contouring_texture = Load_OpenGL_Texture( *cimg_it, {}, {} );
                 auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(contouring_texture.texture_number));
                 ImGui::Image(gl_tex_ptr, ImVec2(600,600), uv_min, uv_max);
                 ImGui::End();
@@ -1968,14 +2223,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                 view_toggles.view_script_editor_enabled ){
                 ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
                 ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
-                ImGui::Begin("Script Editor", &view_toggles.view_script_editor_enabled );
-                ImVec2 window_extent = ImGui::GetContentRegionAvail();
+                if(ImGui::Begin("Script Editor", &view_toggles.view_script_editor_enabled )){
+                    ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
-                auto N_sfs = static_cast<long int>(script_files.size());
-                if(ImGui::Button("New", ImVec2(window_extent.x/4, 0))){ 
-                    script_files.emplace_back();
-                    script_files.back().altered = true;
-                    script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
+                    auto N_sfs = static_cast<long int>(script_files.size());
+                    if(ImGui::Button("New", ImVec2(window_extent.x/4, 0))){ 
+                        script_files.emplace_back();
+                        script_files.back().altered = true;
+                        script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
 ////////////////
 ////////////////
 ////////////////
@@ -2042,269 +2297,270 @@ script_files.back().content.emplace_back('\0');
 ////////////////
 ////////////////
 
-                    active_script_file = N_sfs;
-                    ++N_sfs;
-                }
-                ImGui::SameLine();
-                if(ImGui::Button("Open", ImVec2(window_extent.x/4, 0))){ 
-                    // TODO
-
-                    // Note: ensure there is at least a null character. TODO.
-
-                    // Mimic the 'new' button for testing.
-                    script_files.emplace_back();
-                    script_files.back().altered = true;
-                    script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
-                    active_script_file = N_sfs;
-                    ++N_sfs;
-                }
-                ImGui::SameLine();
-                if(ImGui::Button("Save", ImVec2(window_extent.x/4, 0))){ 
-                    if( (N_sfs != 0) 
-                    &&  isininc(0, active_script_file, N_sfs-1)){
-                        if( script_files.at(active_script_file).path.empty() ){
-                            try{
-                                const auto open_file_root_str = std::filesystem::absolute(open_file_root / "script.txt").string();
-                                string_to_array(root_entry_text, open_file_root_str);
-                                ImGui::OpenPopup("Save Script Filename Picker");
-                            }catch(const std::exception &e){ };
-                        }
-                    }
-                }
-                ImGui::SameLine();
-                if(ImGui::Button("Close", ImVec2(window_extent.x/4, 0))){ 
-                    if( (N_sfs != 0) 
-                    &&  isininc(0, active_script_file, N_sfs-1)){
-                        script_files.erase( std::next( std::begin( script_files ), active_script_file ) );
-                        --active_script_file; // Default to script on left.
-                        --N_sfs;
-                    }
-                }
-
-                if(ImGui::Button("Validate", ImVec2(window_extent.x/4, 0))){ 
-                    if( (N_sfs != 0) 
-                    &&  isininc(0, active_script_file, N_sfs-1)){
-                        std::stringstream ss( std::string( std::begin(script_files.at(active_script_file).content),
-                                                           std::end(script_files.at(active_script_file).content) ) );
-                        script_files.at(active_script_file).feedback.clear();
-                        std::list<OperationArgPkg> op_list;
-                        Load_DCMA_Script( ss, script_files.at(active_script_file).feedback, op_list );
-                        view_toggles.view_script_feedback = true;
-                    }
-                }
-                ImGui::SameLine();
-                if(ImGui::Button("Run", ImVec2(window_extent.x/4, 0))){ 
-                    if( (N_sfs != 0) 
-                    &&  isininc(0, active_script_file, N_sfs-1)){
-                        script_files.at(active_script_file).feedback.clear();
-                        const bool res = execute_script( std::string( std::begin(script_files.at(active_script_file).content),
-                                                                      std::end(script_files.at(active_script_file).content) ),
-                                                    script_files.at(active_script_file).feedback );
-                        if(!res) view_toggles.view_script_feedback = true;
-                    }
-                }
-
-                if( (N_sfs != 0) 
-                &&  isininc(0, active_script_file, N_sfs-1)
-                &&  !(script_files.at(active_script_file).feedback.empty())
-                &&  view_toggles.view_script_feedback ){
-                    ImGui::SetNextWindowSize(ImVec2(650, 250), ImGuiCond_FirstUseEver);
-                    ImGui::SetNextWindowPos(ImVec2(650, 500), ImGuiCond_FirstUseEver);
-                    ImGui::Begin("Script Feedback", &view_toggles.view_script_feedback );
-
-                    for(const auto &f : script_files.at(active_script_file).feedback){
-                        if(false){
-                        }else if(f.severity == script_feedback_severity_t::debug){
-                            std::stringstream ss;
-                            ss << "Debug:   ";
-                            ImGui::TextColored(line_numbers_debug_colour, "%s", const_cast<char *>(ss.str().c_str()));
-                        }else if(f.severity == script_feedback_severity_t::info){
-                            std::stringstream ss;
-                            ss << "Info:    ";
-                            ImGui::TextColored(line_numbers_info_colour, "%s", const_cast<char *>(ss.str().c_str()));
-                        }else if(f.severity == script_feedback_severity_t::warn){
-                            std::stringstream ss;
-                            ss << "Warning: ";
-                            ImGui::TextColored(line_numbers_warn_colour, "%s", const_cast<char *>(ss.str().c_str()));
-                        }else if(f.severity == script_feedback_severity_t::err){
-                            std::stringstream ss;
-                            ss << "Error:   ";
-                            ImGui::TextColored(line_numbers_error_colour, "%s", const_cast<char *>(ss.str().c_str()));
-                        }else{
-                            throw std::logic_error("Unrecognized severity level");
-                        }
-                        ImGui::SameLine();
-
-                        std::stringstream ss;
-                        if( (0 <= f.line)
-                        &&  (0 <= f.line_offset) ){
-                            ss << "line " << f.line 
-                               << ", char " << f.line_offset
-                               << ": ";
-                        }
-                        ss << f.message
-                           << std::endl
-                           << std::endl;
-                        ImGui::Text("%s", const_cast<char *>(ss.str().c_str()));
-                    }
-
-                    ImGui::End();
-                }
-
-                // Pop-up to query the user for a filename.
-                if(ImGui::BeginPopupModal("Save Script Filename Picker", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
-                    // TODO: add a proper 'Save As' file selector here.
-
-                    ImGui::Text("Save file as...");
-                    ImGui::SetNextItemWidth(650.0f);
-                    ImGui::InputText("##save_script_as_text_entry", root_entry_text.data(), root_entry_text.size() - 1);
-
-                    if(ImGui::Button("Save")){
-                        script_files.at(active_script_file).path.assign(
-                            std::begin(root_entry_text),
-                            std::find( std::begin(root_entry_text), std::end(root_entry_text), '\0') );
-                        script_files.at(active_script_file).path.replace_extension(".txt");
-
-                        // Write the file contents to the given path.
-                        std::ofstream FO(script_files.at(active_script_file).path.string());
-                        FO.write( script_files.at(active_script_file).content.data(),
-                                  (script_files.at(active_script_file).content.size() - 1) ); // Disregard trailing null.
-                        FO << std::endl;
-                        FO.flush();
-                        if(FO){
-                            script_files.at(active_script_file).altered = false;
-                        }else{
-                            script_files.at(active_script_file).path.clear();
-                        }
-                        ImGui::CloseCurrentPopup();
+                        active_script_file = N_sfs;
+                        ++N_sfs;
                     }
                     ImGui::SameLine();
-                    if(ImGui::Button("Cancel")){
-                        ImGui::CloseCurrentPopup();
-                    }
-                    ImGui::EndPopup();
-                }
+                    if(ImGui::Button("Open", ImVec2(window_extent.x/4, 0))){ 
+                        // TODO
 
-                // 'Tabs' for file selection.
-                auto &style = ImGui::GetStyle();
-                for(long int i = 0; i < N_sfs; ++i){
-                    auto fname = script_files.at(i).path.filename().string();
-                    if(fname.empty()) fname = "(unnamed)";
-                    if(script_files.at(i).altered) fname += "**";
+                        // Note: ensure there is at least a null character. TODO.
 
-                    fname += "##script_file_"_s + std::to_string(i); // Unique identifier for ImGui internals.
-                    if(i == active_script_file){
-                        ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_ButtonActive]);
-                    }else{
-                        ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_Button]);
+                        // Mimic the 'new' button for testing.
+                        script_files.emplace_back();
+                        script_files.back().altered = true;
+                        script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
+                        active_script_file = N_sfs;
+                        ++N_sfs;
                     }
-                    if(ImGui::Button(fname.c_str())){
-                        active_script_file = i;
+                    ImGui::SameLine();
+                    if(ImGui::Button("Save", ImVec2(window_extent.x/4, 0))){ 
+                        if( (N_sfs != 0) 
+                        &&  isininc(0, active_script_file, N_sfs-1)){
+                            if( script_files.at(active_script_file).path.empty() ){
+                                try{
+                                    const auto open_file_root_str = std::filesystem::absolute(open_file_root / "script.txt").string();
+                                    string_to_array(root_entry_text, open_file_root_str);
+                                    ImGui::OpenPopup("Save Script Filename Picker");
+                                }catch(const std::exception &e){ };
+                            }
+                        }
                     }
-                    ImGui::PopStyleColor(1);
-                    if( (i+1) <  N_sfs ){
-                        ImGui::SameLine();
+                    ImGui::SameLine();
+                    if(ImGui::Button("Close", ImVec2(window_extent.x/4, 0))){ 
+                        if( (N_sfs != 0) 
+                        &&  isininc(0, active_script_file, N_sfs-1)){
+                            script_files.erase( std::next( std::begin( script_files ), active_script_file ) );
+                            --active_script_file; // Default to script on left.
+                            --N_sfs;
+                        }
                     }
-                }
 
-                if( (N_sfs != 0) 
-                &&  isininc(0, active_script_file, N_sfs-1) ){
+                    if(ImGui::Button("Validate", ImVec2(window_extent.x/4, 0))){ 
+                        if( (N_sfs != 0) 
+                        &&  isininc(0, active_script_file, N_sfs-1)){
+                            std::stringstream ss( std::string( std::begin(script_files.at(active_script_file).content),
+                                                               std::end(script_files.at(active_script_file).content) ) );
+                            script_files.at(active_script_file).feedback.clear();
+                            std::list<OperationArgPkg> op_list;
+                            Load_DCMA_Script( ss, script_files.at(active_script_file).feedback, op_list );
+                            view_toggles.view_script_feedback = true;
+                        }
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Run", ImVec2(window_extent.x/4, 0))){ 
+                        if( (N_sfs != 0) 
+                        &&  isininc(0, active_script_file, N_sfs-1)){
+                            script_files.at(active_script_file).feedback.clear();
+                            const bool res = execute_script( std::string( std::begin(script_files.at(active_script_file).content),
+                                                                          std::end(script_files.at(active_script_file).content) ),
+                                                        script_files.at(active_script_file).feedback );
+                            if(!res) view_toggles.view_script_feedback = true;
+                        }
+                    }
 
-                    // Implement a callback to handle resize events.
-                    const auto text_entry_callback = [](ImGuiInputTextCallbackData *data) -> int {
-                        auto sf_ptr = reinterpret_cast<script_file*>(data->UserData);
-                        if(sf_ptr == nullptr) throw std::logic_error("Invalid script file ptr found in callback");
-                        
-                        // Resize the underlying storage.
-                        if(data->EventFlag == ImGuiInputTextFlags_CallbackResize){
-                            sf_ptr->content.resize(data->BufTextLen, '\0'); // Ensure the file character is a null.
-                            data->Buf = sf_ptr->content.data();
+                    if( (N_sfs != 0) 
+                    &&  isininc(0, active_script_file, N_sfs-1)
+                    &&  !(script_files.at(active_script_file).feedback.empty())
+                    &&  view_toggles.view_script_feedback ){
+                        ImGui::SetNextWindowSize(ImVec2(650, 250), ImGuiCond_FirstUseEver);
+                        ImGui::SetNextWindowPos(ImVec2(650, 500), ImGuiCond_FirstUseEver);
+                        ImGui::Begin("Script Feedback", &view_toggles.view_script_feedback );
+
+                        for(const auto &f : script_files.at(active_script_file).feedback){
+                            if(false){
+                            }else if(f.severity == script_feedback_severity_t::debug){
+                                std::stringstream ss;
+                                ss << "Debug:   ";
+                                ImGui::TextColored(line_numbers_debug_colour, "%s", const_cast<char *>(ss.str().c_str()));
+                            }else if(f.severity == script_feedback_severity_t::info){
+                                std::stringstream ss;
+                                ss << "Info:    ";
+                                ImGui::TextColored(line_numbers_info_colour, "%s", const_cast<char *>(ss.str().c_str()));
+                            }else if(f.severity == script_feedback_severity_t::warn){
+                                std::stringstream ss;
+                                ss << "Warning: ";
+                                ImGui::TextColored(line_numbers_warn_colour, "%s", const_cast<char *>(ss.str().c_str()));
+                            }else if(f.severity == script_feedback_severity_t::err){
+                                std::stringstream ss;
+                                ss << "Error:   ";
+                                ImGui::TextColored(line_numbers_error_colour, "%s", const_cast<char *>(ss.str().c_str()));
+                            }else{
+                                throw std::logic_error("Unrecognized severity level");
+                            }
+                            ImGui::SameLine();
+
+                            std::stringstream ss;
+                            if( (0 <= f.line)
+                            &&  (0 <= f.line_offset) ){
+                                ss << "line " << f.line 
+                                   << ", char " << f.line_offset
+                                   << ": ";
+                            }
+                            ss << f.message
+                               << std::endl
+                               << std::endl;
+                            ImGui::Text("%s", const_cast<char *>(ss.str().c_str()));
                         }
 
-                        // Mark the file as altered.
-                        if(data->EventFlag == ImGuiInputTextFlags_CallbackEdit){
+                        ImGui::End();
+                    }
+
+                    // Pop-up to query the user for a filename.
+                    if(ImGui::BeginPopupModal("Save Script Filename Picker", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+                        // TODO: add a proper 'Save As' file selector here.
+
+                        ImGui::Text("Save file as...");
+                        ImGui::SetNextItemWidth(650.0f);
+                        ImGui::InputText("##save_script_as_text_entry", root_entry_text.data(), root_entry_text.size() - 1);
+
+                        if(ImGui::Button("Save")){
+                            script_files.at(active_script_file).path.assign(
+                                std::begin(root_entry_text),
+                                std::find( std::begin(root_entry_text), std::end(root_entry_text), '\0') );
+                            script_files.at(active_script_file).path.replace_extension(".txt");
+
+                            // Write the file contents to the given path.
+                            std::ofstream FO(script_files.at(active_script_file).path.string());
+                            FO.write( script_files.at(active_script_file).content.data(),
+                                      (script_files.at(active_script_file).content.size() - 1) ); // Disregard trailing null.
+                            FO << std::endl;
+                            FO.flush();
+                            if(FO){
+                                script_files.at(active_script_file).altered = false;
+                            }else{
+                                script_files.at(active_script_file).path.clear();
+                            }
+                            ImGui::CloseCurrentPopup();
+                        }
+                        ImGui::SameLine();
+                        if(ImGui::Button("Cancel")){
+                            ImGui::CloseCurrentPopup();
+                        }
+                        ImGui::EndPopup();
+                    }
+
+                    // 'Tabs' for file selection.
+                    auto &style = ImGui::GetStyle();
+                    for(long int i = 0; i < N_sfs; ++i){
+                        auto fname = script_files.at(i).path.filename().string();
+                        if(fname.empty()) fname = "(unnamed)";
+                        if(script_files.at(i).altered) fname += "**";
+
+                        fname += "##script_file_"_s + std::to_string(i); // Unique identifier for ImGui internals.
+                        if(i == active_script_file){
+                            ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_ButtonActive]);
+                        }else{
+                            ImGui::PushStyleColor(ImGuiCol_Button, style.Colors[ImGuiCol_Button]);
+                        }
+                        if(ImGui::Button(fname.c_str())){
+                            active_script_file = i;
+                        }
+                        ImGui::PopStyleColor(1);
+                        if( (i+1) <  N_sfs ){
+                            ImGui::SameLine();
+                        }
+                    }
+
+                    if( (N_sfs != 0) 
+                    &&  isininc(0, active_script_file, N_sfs-1) ){
+
+                        // Implement a callback to handle resize events.
+                        const auto text_entry_callback = [](ImGuiInputTextCallbackData *data) -> int {
+                            auto sf_ptr = reinterpret_cast<script_file*>(data->UserData);
+                            if(sf_ptr == nullptr) throw std::logic_error("Invalid script file ptr found in callback");
+                            
+                            // Resize the underlying storage.
+                            if(data->EventFlag == ImGuiInputTextFlags_CallbackResize){
+                                sf_ptr->content.resize(data->BufTextLen, '\0'); // Ensure the file character is a null.
+                                data->Buf = sf_ptr->content.data();
+                            }
+
+                            // Mark the file as altered.
+                            if(data->EventFlag == ImGuiInputTextFlags_CallbackEdit){
+                                sf_ptr->altered = true;
+                            }
+
+                            return 0;
+                        };
+
+                        auto sf_ptr = &(script_files.at(active_script_file));
+                        if(sf_ptr == nullptr) throw std::logic_error("Invalid script file ptr");
+
+                        // Ensure there is a trailing null character to avoid issues with c-style string interpretation.
+                        if( sf_ptr->content.empty()
+                        ||  (sf_ptr->content.back() != '\0') ){
+                            sf_ptr->content.emplace_back('\0');
                             sf_ptr->altered = true;
                         }
 
-                        return 0;
-                    };
+                        // Leave room for line numbers.
+                        const auto orig_cursor_pos = ImGui::GetCursorPosX();
+                        const auto orig_screen_pos = ImGui::GetCursorScreenPos();
+                        //const auto text_vert_spacing = ImGui::GetTextLineHeightWithSpacing();
+                        const auto text_vert_spacing = ImGui::GetTextLineHeight();
+                        const auto vert_spacing = ImGui::GetStyle().ItemSpacing.y * 0.5f; // Is this correct??? Seems OK, but is arbitrary.
+                        const auto horiz_spacing = ImGui::GetStyle().ItemSpacing.x;
+                        const float line_no_width = ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, "12345", nullptr, nullptr).x;
+                        ImGui::SetCursorPosX( orig_cursor_pos + line_no_width + horiz_spacing );
 
-                    auto sf_ptr = &(script_files.at(active_script_file));
-                    if(sf_ptr == nullptr) throw std::logic_error("Invalid script file ptr");
+                        // Draw text entry box.
+                        ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput
+                                                  | ImGuiInputTextFlags_CallbackResize
+                                                  | ImGuiInputTextFlags_CallbackEdit;
+                        ImVec2 edit_box_extent = ImGui::GetContentRegionAvail();
+                        const auto altered = ImGui::InputTextMultiline("#script_editor_active_content",
+                                                                       sf_ptr->content.data(),
+                                                                       sf_ptr->content.capacity(),
+                                                                       edit_box_extent,
+                                                                       flags,
+                                                                       text_entry_callback,
+                                                                       reinterpret_cast<void*>(sf_ptr));
+                        if(altered == true) script_files.at(active_script_file).altered = true;
 
-                    // Ensure there is a trailing null character to avoid issues with c-style string interpretation.
-                    if( sf_ptr->content.empty()
-                    ||  (sf_ptr->content.back() != '\0') ){
-                        sf_ptr->content.emplace_back('\0');
-                        sf_ptr->altered = true;
-                    }
+                        //const auto text_entry_ID = ImGui::GetCurrentContext()->LastActiveId; // ActiveIdPreviousFrame;
+                        //const auto text_entry_ID = ImGui::GetID("#script_editor_active_content");
+                        ImGui::Begin("Script Editor/#script_editor_active_content_9CF9E0D1"); // Terrible hacky workaround. FIXME. TODO.
+                        const auto vert_scroll = ImGui::GetScrollY();
+                        ImGui::EndChild();
 
-                    // Leave room for line numbers.
-                    const auto orig_cursor_pos = ImGui::GetCursorPosX();
-                    const auto orig_screen_pos = ImGui::GetCursorScreenPos();
-                    //const auto text_vert_spacing = ImGui::GetTextLineHeightWithSpacing();
-                    const auto text_vert_spacing = ImGui::GetTextLineHeight();
-                    const auto vert_spacing = ImGui::GetStyle().ItemSpacing.y * 0.5f; // Is this correct??? Seems OK, but is arbitrary.
-                    const auto horiz_spacing = ImGui::GetStyle().ItemSpacing.x;
-                    const float line_no_width = ImGui::GetFont()->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, -1.0f, "12345", nullptr, nullptr).x;
-                    ImGui::SetCursorPosX( orig_cursor_pos + line_no_width + horiz_spacing );
+                        // Draw line numbers, including compilation feedback if applicable.
+                        {
+                            auto drawList = ImGui::GetWindowDrawList();
 
-                    // Draw text entry box.
-                    ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput
-                                              | ImGuiInputTextFlags_CallbackResize
-                                              | ImGuiInputTextFlags_CallbackEdit;
-                    ImVec2 edit_box_extent = ImGui::GetContentRegionAvail();
-                    const auto altered = ImGui::InputTextMultiline("#script_editor_active_content",
-                                                                   sf_ptr->content.data(),
-                                                                   sf_ptr->content.capacity(),
-                                                                   edit_box_extent,
-                                                                   flags,
-                                                                   text_entry_callback,
-                                                                   reinterpret_cast<void*>(sf_ptr));
-                    if(altered == true) script_files.at(active_script_file).altered = true;
+                            const auto text_ln = static_cast<int>(std::floor(vert_scroll / text_vert_spacing));
+                            const auto text_ln_max = std::max(0, text_ln + static_cast<int>(std::floor((vert_scroll + edit_box_extent.y) / text_vert_spacing)));
+                            const auto line_vert_shift = (vert_scroll / text_vert_spacing) - static_cast<float>(text_ln);
 
-                    //const auto text_entry_ID = ImGui::GetCurrentContext()->LastActiveId; // ActiveIdPreviousFrame;
-                    //const auto text_entry_ID = ImGui::GetID("#script_editor_active_content");
-                    ImGui::Begin("Script Editor/#script_editor_active_content_9CF9E0D1"); // Terrible hacky workaround. FIXME. TODO.
-                    const auto vert_scroll = ImGui::GetScrollY();
-                    ImGui::EndChild();
-
-                    // Draw line numbers, including compilation feedback if applicable.
-                    {
-                        auto drawList = ImGui::GetWindowDrawList();
-
-                        const auto text_ln = static_cast<int>(std::floor(vert_scroll / text_vert_spacing));
-                        const auto text_ln_max = std::max(0, text_ln + static_cast<int>(std::floor((vert_scroll + edit_box_extent.y) / text_vert_spacing)));
-                        const auto line_vert_shift = (vert_scroll / text_vert_spacing) - static_cast<float>(text_ln);
-
-                        for(int l = text_ln; l < text_ln_max; ++l){ 
-                            ImU32 colour = ImGui::GetColorU32(line_numbers_normal_colour);
-                            if(view_toggles.view_script_feedback){
-                                for(const auto &f : script_files.at(active_script_file).feedback){
-                                    if(l != f.line) continue;
-                                    if(false){
-                                    }else if(f.severity == script_feedback_severity_t::debug){
-                                        colour = ImGui::GetColorU32(line_numbers_debug_colour);
-                                    }else if(f.severity == script_feedback_severity_t::info){
-                                        colour = ImGui::GetColorU32(line_numbers_info_colour);
-                                    }else if(f.severity == script_feedback_severity_t::warn){
-                                        colour = ImGui::GetColorU32(line_numbers_warn_colour);
-                                    }else if(f.severity == script_feedback_severity_t::err){
-                                        colour = ImGui::GetColorU32(line_numbers_error_colour);
-                                    }else{
-                                        throw std::logic_error("Unrecognized severity level");
+                            for(int l = text_ln; l < text_ln_max; ++l){ 
+                                ImU32 colour = ImGui::GetColorU32(line_numbers_normal_colour);
+                                if(view_toggles.view_script_feedback){
+                                    for(const auto &f : script_files.at(active_script_file).feedback){
+                                        if(l != f.line) continue;
+                                        if(false){
+                                        }else if(f.severity == script_feedback_severity_t::debug){
+                                            colour = ImGui::GetColorU32(line_numbers_debug_colour);
+                                        }else if(f.severity == script_feedback_severity_t::info){
+                                            colour = ImGui::GetColorU32(line_numbers_info_colour);
+                                        }else if(f.severity == script_feedback_severity_t::warn){
+                                            colour = ImGui::GetColorU32(line_numbers_warn_colour);
+                                        }else if(f.severity == script_feedback_severity_t::err){
+                                            colour = ImGui::GetColorU32(line_numbers_error_colour);
+                                        }else{
+                                            throw std::logic_error("Unrecognized severity level");
+                                        }
                                     }
                                 }
-                            }
 
-                            std::stringstream ss;
-                            ss << std::setw(5) << l;
-                            drawList->AddText(
-                                ImVec2(orig_screen_pos.x,
-                                       orig_screen_pos.y + vert_spacing
-                                                         + text_vert_spacing * static_cast<float>(l - text_ln)
-                                                         - text_vert_spacing * line_vert_shift),
-                                colour, const_cast<char *>(ss.str().c_str()) );
+                                std::stringstream ss;
+                                ss << std::setw(5) << l;
+                                drawList->AddText(
+                                    ImVec2(orig_screen_pos.x,
+                                           orig_screen_pos.y + vert_spacing
+                                                             + text_vert_spacing * static_cast<float>(l - text_ln)
+                                                             - text_vert_spacing * line_vert_shift),
+                                    colour, const_cast<char *>(ss.str().c_str()) );
+                            }
                         }
                     }
                 }
@@ -2689,7 +2945,10 @@ script_files.back().content.emplace_back('\0');
 
                     if( (contouring_brush == brush_t::rigid_circle)
                     ||  (contouring_brush == brush_t::rigid_sphere)
-                    ||  (contouring_brush == brush_t::gaussian)
+                    ||  (contouring_brush == brush_t::gaussian_2D)
+                    ||  (contouring_brush == brush_t::tanh_2D)
+                    ||  (contouring_brush == brush_t::gaussian_3D)
+                    ||  (contouring_brush == brush_t::tanh_3D)
                     ||  (contouring_brush == brush_t::median_circle)
                     ||  (contouring_brush == brush_t::mean_circle)
                     ||  (contouring_brush == brush_t::median_sphere)
@@ -2831,8 +3090,12 @@ script_files.back().content.emplace_back('\0');
                     contouring_brush = brush_t::median_square;
                 }
 
-                if(ImGui::Button("Gaussian")){
-                    contouring_brush = brush_t::gaussian;
+                if(ImGui::Button("2D Gaussian")){
+                    contouring_brush = brush_t::gaussian_2D;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("2D Tanh")){
+                    contouring_brush = brush_t::tanh_2D;
                 }
 
                 ImGui::Text("3D shapes");
@@ -2858,6 +3121,14 @@ script_files.back().content.emplace_back('\0');
                 ImGui::SameLine();
                 if(ImGui::Button("Median Cube")){
                     contouring_brush = brush_t::median_cube;
+                }
+
+                if(ImGui::Button("3D Gaussian")){
+                    contouring_brush = brush_t::gaussian_3D;
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("3D Tanh")){
+                    contouring_brush = brush_t::tanh_3D;
                 }
 
                 ImGui::Separator();
@@ -3912,6 +4183,9 @@ script_files.back().content.emplace_back('\0');
 
                                                &img_array_num,
                                                &img_num,
+                                               &img_precess,
+                                               &img_precess_period,
+                                               &img_precess_last,
                                                &img_channel,
 
                                                &zoom,
@@ -3975,6 +4249,22 @@ script_files.back().content.emplace_back('\0');
                     ImGui::BeginTooltip();
                     ImGui::Text("Shortcut: mouse wheel or page-up/page-down");
                     ImGui::EndTooltip();
+                }
+
+                {
+                    if(ImGui::Checkbox("Auto-advance", &img_precess)){
+                        // Reset the previous time point.
+                        img_precess_last = std::chrono::steady_clock::now();
+                    }
+                    ImGui::DragFloat("Advance period (s)", &img_precess_period, 0.01f, 0.0f, 10.0f, "%.01f");
+                    if(img_precess){
+                        const auto t_now = std::chrono::steady_clock::now();
+                        const auto dt_since_last = 0.001f * static_cast<float>(std::chrono::duration_cast<std::chrono::milliseconds>(t_now - img_precess_last).count());
+                        if(img_precess_period <= dt_since_last){
+                            scroll_images = (scroll_images + N_images + 1) % N_images;
+                            img_precess_last = t_now; // Note: should we try correct for missing time here?
+                        }
+                    }
                 }
 
                 ImGui::Separator();
@@ -4067,16 +4357,16 @@ script_files.back().content.emplace_back('\0');
                             lss.emplace_back(pA,pB);
 
                         }else{
+                            // Slightly offset the line segment endpoints to avoid degeneracy.
                             auto pA = image_mouse_pos.dicom_pos; // Current position.
-                            auto pB = pA;
-                            pB.z += l_img_it->pxl_dz * 0.01; // Default offset to avoid degenerate line segment.
-                            lss.emplace_back(pA,pB);
+                            lss.emplace_back(pA,pA);
                         }
 
                         decltype(planar_image_collection<float,double>().get_all_images()) cimg_its;
                         if( (contouring_brush == brush_t::rigid_circle)
                         ||  (contouring_brush == brush_t::rigid_square)
-                        ||  (contouring_brush == brush_t::gaussian) 
+                        ||  (contouring_brush == brush_t::gaussian_2D) 
+                        ||  (contouring_brush == brush_t::tanh_2D) 
                         ||  (contouring_brush == brush_t::median_circle)
                         ||  (contouring_brush == brush_t::median_square)
                         ||  (contouring_brush == brush_t::mean_circle)
@@ -4089,6 +4379,8 @@ script_files.back().content.emplace_back('\0');
                         }else if( (contouring_brush == brush_t::rigid_sphere)
                               ||  (contouring_brush == brush_t::mean_sphere)
                               ||  (contouring_brush == brush_t::median_sphere)
+                              ||  (contouring_brush == brush_t::gaussian_3D) 
+                              ||  (contouring_brush == brush_t::tanh_3D) 
                               ||  (contouring_brush == brush_t::rigid_cube)
                               ||  (contouring_brush == brush_t::mean_cube)
                               ||  (contouring_brush == brush_t::median_cube) ){
@@ -4213,22 +4505,15 @@ script_files.back().content.emplace_back('\0');
             ImGui::EndPopup();
         }
 
-        // Clear the current OpenGL frame.
-        CHECK_FOR_GL_ERRORS();
-        glViewport(0, 0, static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y));
-        glClearColor(background_colour.x,
-                     background_colour.y,
-                     background_colour.z,
-                     background_colour.w);
-        glClear(GL_COLOR_BUFFER_BIT);
-        CHECK_FOR_GL_ERRORS();
 
-
-        // Tinkering with rendering surface meshes.
+        // Render surface meshes.
         const auto draw_surface_meshes = [&view_toggles,
                                           &drover_mutex,
                                           &mutex_dt,
                                           &DICOM_data,
+                                          &oglm_ptr,
+                                          &mesh_num,
+                                          &mesh_display_transform,
                                           &frame_count ]() -> void {
 
             std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
@@ -4236,124 +4521,152 @@ script_files.back().content.emplace_back('\0');
             if( !view_toggles.view_meshes_enabled
             ||  !DICOM_data.Has_Mesh_Data() ) return;
 
-            auto smesh_ptr = DICOM_data.smesh_data.front();
+            const auto load_mesh = [&](){
+                if(!DICOM_data.Has_Mesh_Data()) return;
+                const auto N_meshes = static_cast<long int>(DICOM_data.smesh_data.size());
+                mesh_num = std::clamp(mesh_num, 0L, N_meshes - 1L);
+                const auto smesh_ptr = *(std::next( std::begin(DICOM_data.smesh_data), mesh_num));
+                oglm_ptr = std::make_unique<opengl_mesh>( smesh_ptr->meshes, mesh_display_transform.reverse_normals );
+            };
 
-            const auto N_verts = smesh_ptr->meshes.vertices.size();
-
-            long int N_triangles = 0;
-            for(const auto& f : smesh_ptr->meshes.faces){
-                long int l_N_indices = f.size();
-                if(l_N_indices < 3) continue; // Ignore faces that cannot be broken into triangles.
-                N_triangles += (l_N_indices - 2);
+            const auto N_meshes = DICOM_data.smesh_data.size();
+            if(!oglm_ptr){
+                mesh_num = 0;
+                load_mesh();
             }
 
-            const auto inf = std::numeric_limits<double>::infinity();
-            auto x_min = inf;
-            auto y_min = inf;
-            auto z_min = inf;
-            auto x_max = -inf;
-            auto y_max = -inf;
-            auto z_max = -inf;
-            for(const auto& v : smesh_ptr->meshes.vertices){
-                if(v.x < x_min) x_min = v.x;
-                if(v.y < y_min) y_min = v.y;
-                if(v.z < z_min) z_min = v.z;
-                if(x_max < v.x) x_max = v.x;
-                if(y_max < v.y) y_max = v.y;
-                if(z_max < v.z) z_max = v.z;
-            }
+            if(oglm_ptr){
+                // Draw the currently-loaded mesh.
+                oglm_ptr->draw( mesh_display_transform.render_wireframe );
 
-            {
-                ImGui::Begin("Meshes");
-                std::string msg = "Drawing "_s + std::to_string(N_verts) + " verts and "_s + std::to_string(N_triangles) + " triangles.";
-                ImGui::Text("%s", msg.c_str());
+                //ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(ImVec2(10, 20), ImGuiCond_FirstUseEver);
+                if(ImGui::Begin("Meshes", &view_toggles.view_meshes_enabled)){
+                    std::string msg = "Drawing "_s
+                                    + std::to_string(oglm_ptr->N_vertices) + " vertices, "
+                                    + std::to_string(oglm_ptr->N_indices) + " indices, and "
+                                    + std::to_string(oglm_ptr->N_triangles) + " triangles.";
+                    ImGui::Text("%s", msg.c_str());
+                    
+                    auto scroll_meshes = static_cast<int>(mesh_num);
+                    ImGui::SliderInt("Mesh", &scroll_meshes, 0, N_meshes - 1);
+                    if(static_cast<long int>(scroll_meshes) != mesh_num){
+                        mesh_num = static_cast<long int>(scroll_meshes);
+                        load_mesh();
+                    }
+
+                    ImGui::ColorEdit4("Colour", mesh_display_transform.colours.data());
+
+                    ImGui::Checkbox("Precess", &mesh_display_transform.precess);
+                    ImGui::Checkbox("Wireframe", &mesh_display_transform.render_wireframe);
+                    if(ImGui::Checkbox("Reverse normals", &mesh_display_transform.reverse_normals)){
+                        load_mesh();
+                    }
+                    ImGui::Checkbox("Use lighting", &mesh_display_transform.use_lighting);
+                    float drag_speed = 0.05f;
+                    double clamp_l = -10.0;
+                    double clamp_h =  10.0;
+                    ImGui::DragScalar("Precession rate", ImGuiDataType_Double, &mesh_display_transform.precess_rate, drag_speed, &clamp_l, &clamp_h, "%.1f");
+                    drag_speed = 0.3f;
+                    clamp_l = -360.0 * 10.0;
+                    clamp_h =  360.0 * 10.0;
+                    ImGui::DragScalar("X rotation", ImGuiDataType_Double, &mesh_display_transform.rot_x, drag_speed, &clamp_l, &clamp_h, "%.1f");
+                    ImGui::DragScalar("Y rotation", ImGuiDataType_Double, &mesh_display_transform.rot_y, drag_speed, &clamp_l, &clamp_h, "%.1f");
+                    ImGui::DragScalar("Z rotation", ImGuiDataType_Double, &mesh_display_transform.rot_z, drag_speed, &clamp_l, &clamp_h, "%.1f");
+                    if(ImGui::Button("Reset")){
+                        mesh_display_transform = mesh_display_transform_t();
+                    }
+                }
                 ImGui::End();
             }
 
-            std::vector<float> vertices;
-            vertices.reserve(3 * N_verts);
-            for(const auto& v : smesh_ptr->meshes.vertices){
-                // Scale each of x, y, and z to [-1,+1], but shrink to [-1/sqrt(3),+1/sqrt(3)] to account for rotation.
-                // Scaling down will ensure the corners are not clipped when the cube is rotated.
-                vec3<double> w( 0.577 * (2.0 * (v.x - x_min) / (x_max - x_min) - 1.0),
-                                0.577 * (2.0 * (v.y - y_min) / (y_max - y_min) - 1.0),
-                                0.577 * (2.0 * (v.z - z_min) / (z_max - z_min) - 1.0) );
-
-                w = w.rotate_around_z(3.14159265 * static_cast<double>(frame_count / 59900.0));
-                w = w.rotate_around_y(3.14159265 * static_cast<double>(frame_count / 11000.0));
-                w = w.rotate_around_x(3.14159265 * static_cast<double>(frame_count / 26000.0));
-                vertices.push_back(static_cast<float>(w.x));
-                vertices.push_back(static_cast<float>(w.y));
-                vertices.push_back(static_cast<float>(w.z));
+            // Release the GPU memory when mesh viewing is disabled. Otherwise, it will just needlessly consume
+            // resources.
+            if(!view_toggles.view_meshes_enabled){
+                mesh_num = -1;
+                oglm_ptr = nullptr;
             }
-            
-            std::vector<unsigned int> indices;
-            indices.reserve(3 * N_triangles);
-            for(const auto& f : smesh_ptr->meshes.faces){
-                long int l_N_indices = f.size();
-                if(l_N_indices < 3) continue; // Ignore faces that cannot be broken into triangles.
-
-                const auto it_1 = std::cbegin(f);
-                const auto it_2 = std::next(it_1);
-                const auto end = std::end(f);
-                for(auto it_3 = std::next(it_2); it_3 != end; ++it_3){
-                    indices.push_back(static_cast<unsigned int>(*it_1));
-                    indices.push_back(static_cast<unsigned int>(*it_2));
-                    indices.push_back(static_cast<unsigned int>(*it_3));
-                }
-            }
-
-            GLuint vao = 0;
-            GLuint vbo = 0;
-            GLuint ebo = 0;
-
-            CHECK_FOR_GL_ERRORS();
-
-            glGenVertexArrays(1, &vao); // Create a VAO inside the OpenGL context.
-            glGenBuffers(1, &vbo); // Create a VBO inside the OpenGL context.
-            glGenBuffers(1, &ebo); // Create a EBO inside the OpenGL context.
-
-            glBindVertexArray(vao); // Bind = make it the currently-used object.
-            glBindBuffer(GL_ARRAY_BUFFER, vbo);
-
-            CHECK_FOR_GL_ERRORS();
-
-            glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), static_cast<void*>(vertices.data()), GL_STATIC_DRAW); // Copy vertex data.
-
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int), static_cast<void*>(indices.data()), GL_STATIC_DRAW); // Copy index data.
-
-            CHECK_FOR_GL_ERRORS();
-
-            glEnableVertexAttribArray(0); // enable attribute with index 0.
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0); // Vertex positions, 3 floats per vertex, attrib index 0.
-
-            glBindVertexArray(0);
-            CHECK_FOR_GL_ERRORS();
-
-
-            // Draw the mesh.
-            CHECK_FOR_GL_ERRORS();
-            glBindVertexArray(vao); // Bind = make it the currently-used object.
-
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Enable wireframe mode.
-            CHECK_FOR_GL_ERRORS();
-            glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(indices.size()), GL_UNSIGNED_INT, 0); // Draw using the current shader setup.
-            CHECK_FOR_GL_ERRORS();
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Disable wireframe mode.
-
-            glBindVertexArray(0);
-            CHECK_FOR_GL_ERRORS();
-
-            glDisableVertexAttribArray(0); // Free OpenGL resources.
-            glDisableVertexAttribArray(1);
-            glDeleteBuffers(1, &ebo);
-            glDeleteBuffers(1, &vbo);
-            glDeleteVertexArrays(1, &vao);
-            CHECK_FOR_GL_ERRORS();
             return;
         };
-        draw_surface_meshes();
+
+        // Handle direct OpenGL rendering.
+        {
+            CHECK_FOR_GL_ERRORS();
+            glViewport(0, 0, static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y));
+            glClearColor(background_colour.x,
+                         background_colour.y,
+                         background_colour.z,
+                         background_colour.w);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            CHECK_FOR_GL_ERRORS();
+
+            glPushMatrix();
+            glLoadIdentity();
+            glRotated(mesh_display_transform.rot_x,  1.0f, 0.0f, 0.0f);
+            glRotated(mesh_display_transform.rot_y,  0.0f, 1.0f, 0.0f);
+            glRotated(mesh_display_transform.rot_z,  0.0f, 0.0f, 1.0f);
+            if(mesh_display_transform.precess){
+                mesh_display_transform.rot_x += 0.0028 * mesh_display_transform.precess_rate;
+                mesh_display_transform.rot_y -= 0.0104 * mesh_display_transform.precess_rate;
+                mesh_display_transform.rot_z += 0.0012 * mesh_display_transform.precess_rate;
+            }
+            mesh_display_transform.rot_x = std::fmod(mesh_display_transform.rot_x, 360.0);
+            mesh_display_transform.rot_y = std::fmod(mesh_display_transform.rot_y, 360.0);
+            mesh_display_transform.rot_z = std::fmod(mesh_display_transform.rot_z, 360.0);
+
+
+            // Account for viewport aspect ratio to make the render square.
+            const auto w = static_cast<int>(io.DisplaySize.x);
+            const auto h = static_cast<int>(io.DisplaySize.y);
+            const auto l_w = std::min(w, h);
+            const auto l_h = std::min(h, w);
+            glViewport((w - l_w)/2, (h - l_h)/2, l_w, l_h);
+            CHECK_FOR_GL_ERRORS();
+
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            glColor4f( mesh_display_transform.colours[0],
+                       mesh_display_transform.colours[1],
+                       mesh_display_transform.colours[2],
+                       mesh_display_transform.colours[3] );
+
+            if(mesh_display_transform.use_lighting){
+                glShadeModel(GL_FLAT);
+                GLint use_double_sided_lighting = 1;
+                glLightModeliv(GL_LIGHT_MODEL_TWO_SIDE, &use_double_sided_lighting);
+                std::array<float, 4> light_diff { 1.0, 1.0, 1.0, 1.0 };
+                std::array<float, 4> light_spec { 1.0, 1.0, 1.0, 1.0 };
+                std::array<float, 4> light_pos { 1.5 * std::sin(1.0 * frame_count / 53.0),
+                                                 1.5 * std::sin(1.0 * frame_count / 75.0),
+                                                 1.5,  1.0 };
+
+                CHECK_FOR_GL_ERRORS();
+                glEnable(GL_LIGHTING);
+                CHECK_FOR_GL_ERRORS();
+                glEnable(GL_LIGHT0);
+                CHECK_FOR_GL_ERRORS();
+                glLightModelfv(GL_LIGHT_MODEL_AMBIENT, mesh_display_transform.colours.data());
+                glLightfv(GL_LIGHT0, GL_AMBIENT,       mesh_display_transform.colours.data());
+                glLightfv(GL_LIGHT0, GL_DIFFUSE,  light_diff.data());
+                glLightfv(GL_LIGHT0, GL_SPECULAR, light_spec.data());
+                glLightfv(GL_LIGHT0, GL_POSITION, light_pos.data());
+                CHECK_FOR_GL_ERRORS();
+            }
+
+            draw_surface_meshes();
+
+            if(mesh_display_transform.use_lighting){
+                CHECK_FOR_GL_ERRORS();
+                glDisable(GL_LIGHT0);
+                CHECK_FOR_GL_ERRORS();
+                glDisable(GL_LIGHTING);
+                CHECK_FOR_GL_ERRORS();
+            }
+
+            glPopMatrix();
+            glViewport(0, 0, static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y));
+            CHECK_FOR_GL_ERRORS();
+        }
 
 
         // Show a pop-up with information about DICOMautomaton.
@@ -4398,6 +4711,11 @@ script_files.back().content.emplace_back('\0');
     std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Hope that this is enough time for preprocessing threads to terminate.
                                                                  // TODO: use a work queue with condition variable to
                                                                  // signal termination!
+
+    oglm_ptr = nullptr;  // Release OpenGL resources while context is valid.
+    Free_OpenGL_Texture(current_texture);
+    Free_OpenGL_Texture(contouring_texture);
+    Free_OpenGL_Texture(scale_bar_texture);
 
     // OpenGL and SDL cleanup.
     ImGui_ImplOpenGL3_Shutdown();

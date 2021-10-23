@@ -139,10 +139,8 @@ add_library(            Script_Loader_obj OBJECT Script_Loader.cc )
 set_target_properties(  Script_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 target_compile_definitions( Script_Loader_obj PUBLIC -DDCMA_SCRIPT_INLINES=${script_inlines} )
 
-if(WITH_CGAL)
-    add_library(            Surface_Meshes_obj OBJECT Surface_Meshes.cc )
-    set_target_properties(  Surface_Meshes_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
-endif()
+add_library(            Surface_Meshes_obj OBJECT Surface_Meshes.cc )
+set_target_properties(  Surface_Meshes_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
 add_library(            Simple_Meshing_obj OBJECT Simple_Meshing.cc )
 set_target_properties(  Simple_Meshing_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -309,7 +307,7 @@ add_executable (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Contour_Boolean_Operations_obj>>
     $<TARGET_OBJECTS:Contour_Collection_Estimates_obj>
     $<TARGET_OBJECTS:Insert_Contours_obj>
-    $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Surface_Meshes_obj>>
+    $<TARGET_OBJECTS:Surface_Meshes_obj>
     $<TARGET_OBJECTS:Simple_Meshing_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
     $<TARGET_OBJECTS:String_Parsing_obj>
@@ -388,7 +386,7 @@ if(WITH_WT)
         $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Contour_Boolean_Operations_obj>>
         $<TARGET_OBJECTS:Contour_Collection_Estimates_obj>
         $<TARGET_OBJECTS:Insert_Contours_obj>
-        $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Surface_Meshes_obj>>
+        $<TARGET_OBJECTS:Surface_Meshes_obj>
         $<TARGET_OBJECTS:Simple_Meshing_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
         $<TARGET_OBJECTS:String_Parsing_obj>

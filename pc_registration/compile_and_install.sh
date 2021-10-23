@@ -22,7 +22,7 @@ fi
 cd "${REPOROOT}"
 
 # Move to the registration directory.
-cd registration/
+cd pc_registration/
 
 # Determine how we will escalate privileges.
 SUDO="sudo"

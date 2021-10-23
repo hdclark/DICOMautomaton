@@ -145,7 +145,7 @@ void Emit_Documentation(std::ostream &os){
         " ```src/imebra20121219/license.txt```."
         " The ImGui toolkit is bundled for convenience and was not written"
         " by hal clark; consult its license file in"
-        " ```src/imgui210904/license.txt```."
+        " ```src/imgui20210904/license.txt```."
     );
     reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
         "All liability is herefore disclaimed. The person(s) who use this source"

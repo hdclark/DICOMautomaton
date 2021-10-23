@@ -292,8 +292,8 @@ bool DumpROISurfaceMeshes(Drover &DICOM_data,
         }
 
         //auto output_mesh = dcma_surface_meshes::Estimate_Surface_Mesh( cc_ROIs, meshing_params );
-        auto output_mesh = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_ROIs, meshing_params );
-
+        auto surface_mesh = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_ROIs, meshing_params );
+        auto output_mesh = dcma_surface_meshes::FVSMeshToPolyhedron( surface_mesh );
 
         {
             const auto FN = Get_Unique_Sequential_Filename(OutBase + "_original_mesh_", 6, ".off");

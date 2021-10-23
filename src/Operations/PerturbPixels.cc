@@ -106,14 +106,14 @@ OperationDoc OpArgDocPerturbPixels(){
                            "'uniform(lower, upper)' applies a uniform noise model where noise values are selected"
                            " with equal probability inside the range [lower, upper]."
                            "\n\n"
-                           "Note that if any parameters have a '\%' or 'x' suffix, they are treated as percentages or"
+                           "Note that if any parameters have a '%' or 'x' suffix, they are treated as percentages or"
                            " fractions relative to the pre-perturbed voxel intensity.";
     out.args.back().default_val = "gaussian(0.0, 1.0)";
     out.args.back().expected = true;
     out.args.back().examples = { "gaussian(0.0, 1.0)",
                                  "gaussian(0.0, 0.5x)",
-                                 "gaussian(0.0, 50\%)",
-                                 "gaussian(2.5, 50\%)",
+                                 "gaussian(0.0, 50%)",
+                                 "gaussian(2.5, 50%)",
                                  "gaussian(0.2x, 0.1)",
                                  "uniform(-1.0, 1.0)",
                                  "uniform(-1.0x, 1.0x)" };

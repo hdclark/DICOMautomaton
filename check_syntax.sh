@@ -31,13 +31,14 @@ check_cpp_syntax () {
 
     local f="$*"
     [ -f "$f" ] && {
-      g++ --std=c++17 -fsyntax-only \
-        -I'src/imebra20121219/library/imebra/include/' \
-        -I"${temp_dir}/" \
-        -I"${temp_dir}/src/" \
-        $(pkg-config --cflags --libs sdl2 glew sfml-window sfml-graphics sfml-system libpqxx libpq nlopt gsl) \
-        -lygor -lboost_serialization -lboost_iostreams -lboost_thread -lboost_system \
-        "$f"
+        set -eux
+        g++ --std=c++17 -fsyntax-only \
+          -I'src/imebra20121219/library/imebra/include/' \
+          -I"${temp_dir}/" \
+          -I"${temp_dir}/src/" \
+          $(pkg-config --cflags --libs sdl2 glew sfml-window sfml-graphics sfml-system libpqxx libpq nlopt gsl) \
+          -lygor -lboost_serialization -lboost_iostreams -lboost_thread -lboost_system \
+          "$f"
     }
     rm "${temp_dir}/"*h "${temp_dir}"/src/*h
     rmdir "${temp_dir}/src"
@@ -48,6 +49,7 @@ export -f check_cpp_syntax
 check_sh_syntax () {
     local f="$*"
     if [ -f "$f" ] && type "shellcheck" &> /dev/null ; then
+        set -eux
         shellcheck \
           -S error \
           -e SC1117,SC2059 \
@@ -61,6 +63,7 @@ export -f check_sh_syntax
 check_yml_syntax () {
     local f="$*"
     if [ -f "$f" ] && type "yamllint" &> /dev/null ; then
+        set -eux
         yamllint \
           -d "{extends: relaxed, rules: {line-length: {max: 200}}}" \
           "$f"

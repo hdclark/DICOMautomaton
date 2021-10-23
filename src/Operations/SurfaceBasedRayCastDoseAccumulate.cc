@@ -542,7 +542,8 @@ bool SurfaceBasedRayCastDoseAccumulate(Drover &DICOM_data,
     meshing_params.MutateOpts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
     meshing_params.MutateOpts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
     FUNCWARN("Ignoring contour orientations; assuming ROI polyhderon is simple");
-    auto polyhedron = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_ROIs, meshing_params );
+    auto surface_mesh = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_ROIs, meshing_params );
+    auto polyhedron = dcma_surface_meshes::FVSMeshToPolyhedron( surface_mesh );
 
     FUNCINFO("The polyhedron surface has " << polyhedron.size_of_vertices() << " vertices"
              " and " << polyhedron.size_of_facets() << " faces");
@@ -577,7 +578,8 @@ bool SurfaceBasedRayCastDoseAccumulate(Drover &DICOM_data,
     meshing_params.MutateOpts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
     meshing_params.MutateOpts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
     FUNCWARN("Ignoring contour orientations; assuming ROI polyhderon is simple");
-    auto ref_polyhedron = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_Refs, meshing_params );
+    auto ref_surface_mesh = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_Refs, meshing_params );
+    auto ref_polyhedron = dcma_surface_meshes::FVSMeshToPolyhedron( ref_surface_mesh );
 
     FUNCINFO("The reference polyhedron surface has " << ref_polyhedron.size_of_vertices() << " vertices"
              " and " << ref_polyhedron.size_of_facets() << " faces");

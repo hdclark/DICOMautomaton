@@ -22,14 +22,14 @@ if [ ! -f doctest/doctest.h ] ; then
     wget -q 'https://raw.githubusercontent.com/onqtam/doctest/master/doctest/doctest.h' -O doctest/doctest.h
 fi
 
-g++ -std=c++17 -Wall -I"/usr/include/eigen3" -I. -I"${REPOROOT}/registration/src" \
+g++ -std=c++17 -Wall -I"/usr/include/eigen3" -I. -I"${REPOROOT}/pc_registration/src" \
   Main.cc \
-  {,"${REPOROOT}/registration/src/CPD_Affine.cc"} \
-  {,"${REPOROOT}/registration/src/CPD_Rigid.cc"} \
-  {,"${REPOROOT}/registration/src/CPD_Nonrigid.cc"} \
-  {,"${REPOROOT}/registration/src/CPD_Shared.cc"} \
-  {,"${REPOROOT}/registration/src/IFGT.cc"} \
-  {,"${REPOROOT}/registration/unit_tests/"}CPD_Tests.cc \
+  {,"${REPOROOT}/pc_registration/src/CPD_Affine.cc"} \
+  {,"${REPOROOT}/pc_registration/src/CPD_Rigid.cc"} \
+  {,"${REPOROOT}/pc_registration/src/CPD_Nonrigid.cc"} \
+  {,"${REPOROOT}/pc_registration/src/CPD_Shared.cc"} \
+  {,"${REPOROOT}/pc_registration/src/IFGT.cc"} \
+  {,"${REPOROOT}/pc_registration/unit_tests/"}CPD_Tests.cc \
   -o run_tests \
   -pthread \
   -lboost_system \

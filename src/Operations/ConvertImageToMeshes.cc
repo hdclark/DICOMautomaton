@@ -28,13 +28,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorMathIOOFF.h"
 
-#ifdef DCMA_USE_CGAL
-#else
-    #error "Attempted to compile without CGAL support, which is required."
-#endif
-
 #include "../Surface_Meshes.h"
-
 
 OperationDoc OpArgDocConvertImageToMeshes(){
     OperationDoc out;
@@ -292,22 +286,12 @@ bool ConvertImageToMeshes(Drover &DICOM_data,
                                                         below_is_interior,
                                                         meshing_params );
 
-        // Emit the meshes.
-        {
-            std::stringstream ss;
-            if(!(ss << output_mesh)){
-                throw std::runtime_error("Unable to emit mesh OFF format. Cannot continue.");
-            }
-            DICOM_data.smesh_data.emplace_back( std::make_unique<Surface_Mesh>() );
-            if(!ReadFVSMeshFromOFF( DICOM_data.smesh_data.back()->meshes, ss )){
-                throw std::runtime_error("Unable to parse mesh OFF format. Cannot continue.");
-            }
-
-            DICOM_data.smesh_data.back()->meshes.metadata = ia_metadata;
-            DICOM_data.smesh_data.back()->meshes.metadata["MeshLabel"] = MeshLabel;
-            DICOM_data.smesh_data.back()->meshes.metadata["NormalizedMeshLabel"] = NormalizedMeshLabel;
-            DICOM_data.smesh_data.back()->meshes.metadata["Description"] = "Extracted surface mesh";
-        }
+        DICOM_data.smesh_data.emplace_back( std::make_unique<Surface_Mesh>() );
+        DICOM_data.smesh_data.back()->meshes = output_mesh;
+        DICOM_data.smesh_data.back()->meshes.metadata = ia_metadata;
+        DICOM_data.smesh_data.back()->meshes.metadata["MeshLabel"] = MeshLabel;
+        DICOM_data.smesh_data.back()->meshes.metadata["NormalizedMeshLabel"] = NormalizedMeshLabel;
+        DICOM_data.smesh_data.back()->meshes.metadata["Description"] = "Extracted surface mesh";
     }
 
     return true;

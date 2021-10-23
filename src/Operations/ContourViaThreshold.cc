@@ -892,9 +892,10 @@ bool ContourViaThreshold(Drover &DICOM_data,
                                                                     inclusion_threshold, 
                                                                     below_is_interior,
                                                                     meshing_params );
+                    auto polyhedron = dcma_surface_meshes::FVSMeshToPolyhedron( surface_mesh );
 
                     // Slice the mesh along the image plane.
-                    auto lcc = polyhedron_processing::Slice_Polyhedron( surface_mesh, 
+                    auto lcc = polyhedron_processing::Slice_Polyhedron( polyhedron,
                                                                         {{ mask.image_plane() }} );
 
                     // Tag the contours with metadata.

@@ -45,6 +45,7 @@
 #include "Operations/ConvertContoursToPoints.h"
 #include "Operations/ConvertDoseToImage.h"
 #include "Operations/ConvertImageToDose.h"
+#include "Operations/ConvertImageToMeshes.h"
 #include "Operations/ConvertMeshesToPoints.h"
 #include "Operations/ConvertNaNsToAir.h"
 #include "Operations/ConvertNaNsToZeros.h"
@@ -209,7 +210,6 @@
 #ifdef DCMA_USE_CGAL
     #include "Operations/BCCAExtractRadiomicFeatures.h"
     #include "Operations/ContourBooleanOperations.h"
-    #include "Operations/ConvertImageToMeshes.h"
     #include "Operations/ConvertMeshesToContours.h"
     #include "Operations/DumpROISurfaceMeshes.h"
     #include "Operations/ExtractRadiomicFeatures.h"
@@ -254,6 +254,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ConvertContoursToPoints"] = std::make_pair(OpArgDocConvertContoursToPoints, ConvertContoursToPoints);
     out["ConvertDoseToImage"] = std::make_pair(OpArgDocConvertDoseToImage, ConvertDoseToImage);
     out["ConvertImageToDose"] = std::make_pair(OpArgDocConvertImageToDose, ConvertImageToDose);
+    out["ConvertImageToMeshes"] = std::make_pair(OpArgDocConvertImageToMeshes, ConvertImageToMeshes);
     out["ConvertMeshesToPoints"] = std::make_pair(OpArgDocConvertMeshesToPoints, ConvertMeshesToPoints);
     out["ConvertNaNsToAir"] = std::make_pair(OpArgDocConvertNaNsToAir, ConvertNaNsToAir);
     out["ConvertNaNsToZeros"] = std::make_pair(OpArgDocConvertNaNsToZeros, ConvertNaNsToZeros);
@@ -416,7 +417,6 @@ std::map<std::string, op_packet_t> Known_Operations(){
 #ifdef DCMA_USE_CGAL
     out["BCCAExtractRadiomicFeatures"] = std::make_pair(OpArgDocBCCAExtractRadiomicFeatures, BCCAExtractRadiomicFeatures);
     out["ContourBooleanOperations"] = std::make_pair(OpArgDocContourBooleanOperations, ContourBooleanOperations);
-    out["ConvertImageToMeshes"] = std::make_pair(OpArgDocConvertImageToMeshes, ConvertImageToMeshes);
     out["ConvertMeshesToContours"] = std::make_pair(OpArgDocConvertMeshesToContours, ConvertMeshesToContours);
     out["DumpROISurfaceMeshes"] = std::make_pair(OpArgDocDumpROISurfaceMeshes, DumpROISurfaceMeshes);
     out["ExtractRadiomicFeatures"] = std::make_pair(OpArgDocExtractRadiomicFeatures, ExtractRadiomicFeatures);
