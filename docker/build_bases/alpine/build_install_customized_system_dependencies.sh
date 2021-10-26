@@ -149,7 +149,7 @@ apk add --no-cache bzip2 xz unzip
 #    #GLES2/gl2ext.h
 #    wget 'https://raw.githubusercontent.com/rswinkle/PortableGL/master/portablegl.h' -O /usr/include/portablegl.h
 #    ##sed -i -e 's/[#]include <GLES3\/gl3[.]h>/#define MANGLE_TYPES\n#define PORTABLEGL_IMPLEMENTATION\n#include <portablegl.h>/g' src/imgui20210904/imgui_impl_opengl3.cpp
-#    sed -i -e 's/[#]include <GLES3\/gl3[.]h>/#define MANGLE_TYPES\n#include <portablegl.h>/g' src/imgui20210904/imgui_impl_opengl3.cpp
+#    sed -i -e 's/[#]include <GLES3\/gl3[.]h>/#define MANGLE_TYPES\n#include <portablegl.h>/g' /dcma/src/imgui20210904/imgui_impl_opengl3.cpp
 #
 #    # Remove inclusion of glew.h and use of glew... functions from SDL_Viewer.cc
 #    # ...
@@ -165,15 +165,14 @@ apk add --no-cache bzip2 xz unzip
 #      #define PORTABLEGL_IMPLEMENTATION
 #      #include <portablegl.h>
 #
-#rm /usr/lib/libGL.so
-#rm /usr/lib/libGLU.so
-#touch /usr/lib/libGL.a
-#touch /usr/lib/libGLU.a
-## Not sure why CMake insists on .so files here?
-## CMake emits '-- Proceeding with OPENGL_LIBRARIES = /usr/lib/libGL.so;/usr/lib/libGLU.so'
-## The following seems to fix the immediate linking issue though.
-#touch /usr/lib/libGL.so
-#touch /usr/lib/libGLU.so
+#
+## Avoid confusing SDL's pkg-config/CMakeLists and create empty placeholder libraries.
+# rm /usr/lib/libGL.so
+# rm /usr/lib/libGLU.so
+# rm /usr/lib/libX11.so
+# touch /usr/lib/libX11.{a,so}
+# touch /usr/lib/libGL.{a.so}
+# touch /usr/lib/libGLU.{a,so}
 #
 #    # Here is the current diff that compiles:
 #
