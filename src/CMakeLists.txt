@@ -192,6 +192,9 @@ endif()
 add_library (imebrashim 
     Imebra_Shim.cc 
     $<TARGET_OBJECTS:Structs_obj>
+    $<TARGET_OBJECTS:Alignment_Rigid_obj>
+    $<TARGET_OBJECTS:Alignment_Field_obj>
+    $<TARGET_OBJECTS:Alignment_TPSRPM_obj>
     $<TARGET_OBJECTS:DCMA_DICOM_obj>
     imebra20121219/library/imebra/src/dataHandlerStringUT.cpp
     imebra20121219/library/imebra/src/data.cpp

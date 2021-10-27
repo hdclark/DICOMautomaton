@@ -117,7 +117,7 @@ bool ExportWarps(Drover &DICOM_data,
                 }
 
             // Vector deformation fields.
-            }else if constexpr (std::is_same_v<V, thin_plate_spline>){
+            }else if constexpr (std::is_same_v<V, deformation_field>){
                 FUNCINFO("Exporting vector deformation field now");
                 if(!(t.write_to(FO))){
                     std::runtime_error("Unable to write to file. Cannot continue.");

@@ -20,7 +20,9 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 
+#include "Alignment_Rigid.h"
 #include "Alignment_TPSRPM.h"
+#include "Alignment_Field.h"
 
 
 //This is a wrapper around the YgorMath.h class "contour_of_points." It holds an instance of a contour_of_points, but also provides some meta information
@@ -298,7 +300,8 @@ class Transform3 {
 
         std::variant< std::monostate,
                       affine_transform<double>,
-                      thin_plate_spline > transform;
+                      thin_plate_spline,
+                      deformation_field > transform;
 
         std::map< std::string, std::string > metadata; //User-defined metadata.
 

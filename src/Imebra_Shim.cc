@@ -2507,6 +2507,204 @@ Load_TPlan_Config(const std::string &FilenameIn){
     return std::move(out);
 }
 
+//----------------- Registrations -------------------
+//This routine loads a spatial registration.
+//
+// See DICOM standard, Spatial Registration Module (C.20.2).
+std::unique_ptr<Transform3>
+Load_Transform(const std::string &FilenameIn){
+    std::unique_ptr<Transform3> out(new Transform3());
+
+    using namespace puntoexe;
+    ptr<puntoexe::stream> readStream(new puntoexe::stream);
+    readStream->openFile(FilenameIn.c_str(), std::ios::in);
+
+    ptr<puntoexe::streamReader> reader(new puntoexe::streamReader(readStream));
+    ptr<imebra::dataSet> base_node_ptr = imebra::codecs::codecFactory::getCodecFactory()->load(reader);
+
+
+    const auto convert_first_to_string = [](const std::vector<std::string> &in) -> std::optional<std::string> {
+        if(!in.empty()){
+            return std::optional<std::string>(in.front());
+        }
+        return std::optional<std::string>();
+    };
+
+    const auto convert_first_to_long_int = [](const std::vector<std::string> &in) -> std::optional<long int> {
+        if(!in.empty()){
+            try{
+                const auto res = std::stol(in.front());
+                return std::optional<long int>(res);
+            }catch(const std::exception &){}
+        }
+        return std::optional<long int>();
+    };
+
+    const auto convert_first_to_double = [](const std::vector<std::string> &in) -> std::optional<double> {
+        if(!in.empty()){
+            try{
+                const auto res = std::stod(in.front());
+                return std::optional<double>(res);
+            }catch(const std::exception &){}
+        }
+        return std::optional<double>();
+    };
+
+    const auto convert_to_vec3_double = [](const std::vector<std::string> &in) -> std::optional<vec3<double>> {
+        if(in.size() == 3){
+            try{
+                const auto x = std::stod(in.at(0));
+                const auto y = std::stod(in.at(1));
+                const auto z = std::stod(in.at(2));
+                return std::optional<vec3<double>>( vec3<double>(x,y,z) );
+            }catch(const std::exception &){}
+        }
+        return std::optional<vec3<double>>();
+    };
+
+    const auto convert_to_vector_double = [](const std::vector<std::string> &in) -> std::vector<double> {
+        std::vector<double> out;
+        for(const auto &x : in){
+            try{
+                const auto y = std::stod(x);
+                out.emplace_back(y);
+            }catch(const std::exception &){}
+        }
+        return out;
+    };
+
+    const auto insert_as_string_if_nonempty = []( std::map<std::string, std::string> &metadata,
+                                                  puntoexe::ptr<puntoexe::imebra::dataSet> base_node_ptr,
+                                                  path_node dicom_path,
+                                                  const std::string name) -> void {
+
+        auto res_str_vec = extract_tag_as_string(base_node_ptr, dicom_path);
+
+        const auto ctrim = CANONICALIZE::TRIM_ENDS;
+        bool add_sep = (metadata.count(name) != 0); // Controls whether a separator will be added.
+        for(const auto &s : res_str_vec){
+            const auto trimmed = Canonicalize_String2(s, ctrim);
+            if(trimmed.empty()) continue;
+            metadata[name] += (add_sep ? R"***(\)***"_s : ""_s) + trimmed;
+            add_sep = true;
+        }
+        return;
+    };
+
+    const auto extract_affine_transform = [](const std::vector<double> &v) -> affine_transform<double> {
+        affine_transform<double> t;
+        if(v.size() != 16){
+            throw std::runtime_error("Unanticipated matrix transformation dimensions");
+        }
+        for(size_t col = 0; col < 3; ++col){
+            for(size_t row = 0; row < 4; ++row){
+                const size_t indx = row + col * 4;
+                t.coeff(row,col) = v[indx];
+            }
+        }
+        if(  (v[12] != 0.0)
+        ||   (v[13] != 0.0)
+        ||   (v[14] != 0.0)
+        ||   (v[15] != 1.0) ){
+            throw std::runtime_error("Transformation cannot be represented using an Affine matrix");
+        }
+        return t;
+    };
+
+    // ------------------------------------------- General --------------------------------------------------
+    out->metadata = get_metadata_top_level_tags(FilenameIn);
+    out->metadata["Modality"] = "REG";
+
+    // --------------------------------------- Rigid / Affine -----------------------------------------------
+    // RegistrationSequence
+    for(uint32_t i = 0; i < 100000; ++i){
+        ptr<imebra::dataSet> seq_item_ptr = base_node_ptr->getSequenceItem(0x0070, 0, 0x0308, i);
+        if(seq_item_ptr == nullptr) break;
+        const std::string prfx = R"***(RegistrationSequence)***"_s + std::to_string(i) + R"***(/)***"_s;
+
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x0020, 0x0052}, prfx + "FrameOfReferenceUID");
+
+        // MatrixRegistrationSequence
+        for(uint32_t j = 0; j < 100000; ++j){
+            ptr<imebra::dataSet> sseq_item_ptr = seq_item_ptr->getSequenceItem(0x0070, 0, 0x0309, j);
+            if(sseq_item_ptr == nullptr) break;
+            const std::string pprfx = prfx + R"***(MatrixRegistrationSequence)***"_s + std::to_string(j) + R"***(/)***"_s;
+
+            // MatrixSequence
+            for(uint32_t k = 0; k < 100000; ++k){
+                ptr<imebra::dataSet> ssseq_item_ptr = sseq_item_ptr->getSequenceItem(0x0070, 0, 0x030a, k);
+                if(ssseq_item_ptr == nullptr) break;
+                const std::string ppprfx = pprfx + R"***(MatrixSequence)***"_s + std::to_string(k) + R"***(/)***"_s;
+
+                insert_as_string_if_nonempty(out->metadata, ssseq_item_ptr, {0x0070, 0x030c}, ppprfx + "FrameOfReferenceTransformationMatrixType");
+
+                const auto FrameOfReferenceTransformationMatrix = convert_to_vector_double( extract_tag_as_string(ssseq_item_ptr, {0x3006, 0x00c6}) );
+                auto t = extract_affine_transform(FrameOfReferenceTransformationMatrix);
+                out->transform = t;
+
+            } // MatrixSequence.
+        } // MatrixRegistrationSequence.
+    } // RegistrationSequence.
+
+    // ------------------------------------------- Deformable -----------------------------------------------
+    // DeformableRegistrationSequence
+    for(uint32_t i = 0; i < 100000; ++i){
+        ptr<imebra::dataSet> seq_item_ptr = base_node_ptr->getSequenceItem(0x0064, 0, 0x0002, i);
+        if(seq_item_ptr == nullptr) break;
+        const std::string prfx = R"***(DeformableRegistrationSequence)***"_s + std::to_string(i) + R"***(/)***"_s;
+
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x0064, 0x0003}, prfx + "SourceFrameOfReferenceUID");
+
+        // DeformableRegistrationGridSequence
+        for(uint32_t j = 0; j < 100000; ++j){
+            ptr<imebra::dataSet> sseq_item_ptr = seq_item_ptr->getSequenceItem(0x0064, 0, 0x0005, j);
+            if(sseq_item_ptr == nullptr) break;
+            const std::string pprfx = prfx + R"***(DeformableRegistrationGridSequence)***"_s + std::to_string(j) + R"***(/)***"_s;
+
+            insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x0020, 0x0032}, pprfx + "ImagePositionPatient");
+            insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x0020, 0x0037}, pprfx + "ImageOrientationPatient");
+            insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x0064, 0x0007}, pprfx + "GridDimensions");
+            insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x0064, 0x0008}, pprfx + "GridResolution");
+
+            //insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x0064, 0x0009}, pprfx + "VectorGridData");
+            // ...
+            // TODO: convert the VectorGridData to a deformation_field.
+            // ...
+            //out->transform = t;
+
+
+            // PreDeformationMatrixRegistrationSequence
+            for(uint32_t k = 0; k < 100000; ++k){
+                ptr<imebra::dataSet> ssseq_item_ptr = sseq_item_ptr->getSequenceItem(0x0064, 0, 0x000f, k);
+                if(ssseq_item_ptr == nullptr) break;
+                const std::string ppprfx = pprfx + R"***(PreDeformationMatrixRegistrationSequence)***"_s + std::to_string(k) + R"***(/)***"_s;
+
+                insert_as_string_if_nonempty(out->metadata, ssseq_item_ptr, {0x0070, 0x030c}, ppprfx + "FrameOfReferenceTransformationMatrixType");
+
+                const auto FrameOfReferenceTransformationMatrix = convert_to_vector_double( extract_tag_as_string(ssseq_item_ptr, {0x3006, 0x00c6}) );
+                auto t = extract_affine_transform(FrameOfReferenceTransformationMatrix);
+                //out->pre_transform = t;
+            } // PreDeformationMatrixRegistrationSequence.
+
+            // PostDeformationMatrixRegistrationSequence
+            for(uint32_t k = 0; k < 100000; ++k){
+                ptr<imebra::dataSet> ssseq_item_ptr = sseq_item_ptr->getSequenceItem(0x0064, 0, 0x0010, k);
+                if(ssseq_item_ptr == nullptr) break;
+                const std::string ppprfx = pprfx + R"***(PostDeformationMatrixRegistrationSequence)***"_s + std::to_string(k) + R"***(/)***"_s;
+
+                insert_as_string_if_nonempty(out->metadata, ssseq_item_ptr, {0x0070, 0x030c}, ppprfx + "FrameOfReferenceTransformationMatrixType");
+
+                const auto FrameOfReferenceTransformationMatrix = convert_to_vector_double( extract_tag_as_string(ssseq_item_ptr, {0x3006, 0x00c6}) );
+                auto t = extract_affine_transform(FrameOfReferenceTransformationMatrix);
+                //out->post_transform = t;
+            } // PostDeformationMatrixRegistrationSequence.
+
+        } // DeformableRegistrationGridSequence.
+    } // DeformableRegistrationSequence.
+
+    return std::move(out);
+}
+
 
 //This routine writes contiguous images to a single DICOM dose file.
 //

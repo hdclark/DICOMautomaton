@@ -84,9 +84,24 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
             bfit = Filenames.erase( bfit );  // Consume the file; we know what it is, but cannot make use of it.
 
         }else if(boost::iequals(Modality,"REG")){
-            FUNCWARN("REG file encountered. "
-                     "DICOMautomaton currently is not equipped to read REG-modality DICOM files. "
-                     "Disregarding it");
+            FUNCWARN("REG file support is experimental");
+
+            try{
+                auto t = Load_Transform(Filename);
+                if( (t == nullptr)
+                ||  (std::get_if<std::monostate>(&(t->transform)) != nullptr) ){
+                    throw std::runtime_error("unable to extract transformation");
+                }
+
+                DICOM_data.trans_data.emplace_back( std::move(t) );
+
+            }catch(const std::exception &e){
+                FUNCWARN("Difficulty encountered during registration transform loading: '" << e.what() << "'. Refusing to continue");
+
+                return false;
+                //bfit = Filenames.erase( bfit ); 
+                //continue;
+            }
 
             bfit = Filenames.erase( bfit );  // Consume the file; we know what it is, but cannot make use of it.
 
