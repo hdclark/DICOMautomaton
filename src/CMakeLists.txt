@@ -275,6 +275,8 @@ target_link_libraries(imebrashim
     Boost::iostreams
     Boost::thread
     Boost::system
+    "$<$<BOOL:${MINGW}>:ws2_32>"
+    "$<$<BOOL:${MINGW}>:wsock32>"
     z
     "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
     mpfr
@@ -385,6 +387,8 @@ target_link_libraries (dicomautomaton_dispatcher
     Boost::iostreams
     Boost::thread
     Boost::system
+    "$<$<BOOL:${MINGW}>:ws2_32>"
+    "$<$<BOOL:${MINGW}>:wsock32>"
     z
     "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
     mpfr
@@ -467,6 +471,8 @@ if(WITH_WT)
         Boost::iostreams
         Boost::thread
         Boost::system
+        "$<$<BOOL:${MINGW}>:ws2_32>"
+        "$<$<BOOL:${MINGW}>:wsock32>"
         z
         "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
         mpfr
@@ -496,6 +502,8 @@ target_link_libraries(dicomautomaton_bsarchive_convert
     Boost::iostreams
     Boost::thread
     Boost::system
+    "$<$<BOOL:${MINGW}>:ws2_32>"
+    "$<$<BOOL:${MINGW}>:wsock32>"
     z
     m
     Threads::Threads
