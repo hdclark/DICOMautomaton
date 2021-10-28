@@ -1,4 +1,4 @@
-//Imebra_Shim.cc - DICOMautomaton 2012-2013, 2017-2019. Written by hal clark.
+//Imebra_Shim.cc - DICOMautomaton 2012-2021. Written by hal clark.
 //
 // This file is supposed to 'shim' or wrap the Imebra library. It is used to abstract the Imebra library so that it can
 // eventually be replaced with an alternative library, and also reduce the number of template instantiations generated
@@ -28,6 +28,13 @@
 #include <utility>        //Needed for std::pair.
 #include <vector>
 
+#include "YgorContainers.h" //Needed for 'bimap' class.
+#include "YgorMath.h"       //Needed for 'vec3' class.
+#include "YgorMisc.h"       //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorString.h"     //Needed for Canonicalize_String2().
+#include "YgorImages.h"
+#include "YgorTAR.h"
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #pragma GCC diagnostic ignored "-Wunused-but-set-parameter"
@@ -36,15 +43,11 @@
 #pragma GCC diagnostic pop
 
 #include "Imebra_Shim.h"
+
 #include "DCMA_DICOM.h"
 #include "Structs.h"
-#include "YgorContainers.h" //Needed for 'bimap' class.
-#include "YgorMath.h"       //Needed for 'vec3' class.
-#include "YgorMisc.h"       //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-#include "YgorString.h"     //Needed for Canonicalize_String2().
-#include "YgorImages.h"
-#include "YgorTAR.h"
-
+#include "Alignment_Rigid.h"
+#include "Alignment_Field.h"
 
 //----------------- Accessors ---------------------
 

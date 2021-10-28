@@ -1,6 +1,5 @@
 //Alignment_Field.cc - A part of DICOMautomaton 2021. Written by hal clark.
 
-#include <asio.hpp>
 #include <algorithm>
 #include <optional>
 #include <fstream>
@@ -16,15 +15,15 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 
-#include "Structs.h"
-#include "Regex_Selectors.h"
-#include "Thread_Pool.h"
-
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+
+#include "Structs.h"
+#include "Regex_Selectors.h"
+#include "Thread_Pool.h"
 
 #include "Alignment_Rigid.h"
 #include "Alignment_Field.h"
