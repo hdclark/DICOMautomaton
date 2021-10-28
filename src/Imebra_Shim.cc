@@ -2562,16 +2562,16 @@ Load_Transform(const std::string &FilenameIn){
         return std::optional<vec3<double>>();
     };
 
-    const auto convert_to_vec3_long_int = [](const std::vector<std::string> &in) -> std::optional<vec3<long int>> {
+    const auto convert_to_vec3_int64 = [](const std::vector<std::string> &in) -> std::optional<vec3<int64_t>> {
         if(in.size() == 3){
             try{
                 const auto x = std::stol(in.at(0));
                 const auto y = std::stol(in.at(1));
                 const auto z = std::stol(in.at(2));
-                return std::optional<vec3<long int>>( vec3<long int>(x,y,z) );
+                return std::optional<vec3<int64_t>>( vec3<int64_t>(x,y,z) );
             }catch(const std::exception &){}
         }
-        return std::optional<vec3<long int>>();
+        return std::optional<vec3<int64_t>>();
     };
 
     const auto convert_to_vector_double = [](const std::vector<std::string> &in) -> std::vector<double> {
@@ -2681,12 +2681,12 @@ Load_Transform(const std::string &FilenameIn){
             //insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x0064, 0x0008}, pprfx + "GridResolution");
             const auto ImagePositionPatient    = convert_to_vec3_double( extract_tag_as_string(sseq_item_ptr, {0x0020, 0x0032}) );
             const auto ImageOrientationPatient = convert_to_vector_double( extract_tag_as_string(sseq_item_ptr, {0x0020, 0x0037}) );
-            const auto GridDimensions = convert_to_vec3_long_int( extract_tag_as_string(sseq_item_ptr, {0x0064, 0x0007}) );
+            const auto GridDimensions = convert_to_vec3_int64( extract_tag_as_string(sseq_item_ptr, {0x0064, 0x0007}) );
             const auto GridResolution = convert_to_vec3_double( extract_tag_as_string(sseq_item_ptr, {0x0064, 0x0008}) );
 
             // Prepare data in format similar to image loading.
-            const vec3<double> zero(0.0, 0.0, 0.0);
-            const vec3<long int> zeroL(0, 0, 0);
+            const auto zero = vec3<double>(0.0, 0.0, 0.0);
+            const auto zeroL = vec3<int64_t>(0, 0, 0);
             const auto image_pos = ImagePositionPatient.value();
 
             if(ImageOrientationPatient.size() != 6){
@@ -2702,7 +2702,7 @@ Load_Transform(const std::string &FilenameIn){
 
             const auto image_rows = GridDimensions.value_or(zeroL).x;
             const auto image_cols = GridDimensions.value_or(zeroL).y;
-            const auto image_chns = 3L;
+            const auto image_chns = static_cast<int64_t>(3);
             const auto image_imgs = GridDimensions.value_or(zeroL).z;
 
             const auto image_buffer_length = image_rows * image_cols * image_chns * image_imgs;
@@ -2727,22 +2727,22 @@ Load_Transform(const std::string &FilenameIn){
             // ...
             //out->transform = t;
             const auto VectorGridData = convert_to_vector_double( extract_tag_as_string(sseq_item_ptr, {0x0064, 0x0009}) );
-            if(static_cast<long int>(VectorGridData.size()) != image_buffer_length){
+            if(static_cast<int64_t>(VectorGridData.size()) != image_buffer_length){
                 throw std::runtime_error("Encountered incomplete VectorGridData tag");
             }
 
             auto v_it = std::begin(VectorGridData);
             planar_image_collection<double,double> pic;
-            for(long int n = 0; n < image_imgs; ++n){
+            for(int64_t n = 0; n < image_imgs; ++n){
                 pic.images.emplace_back();
                 pic.images.back().init_orientation(image_orien_r, image_orien_c);
                 pic.images.back().init_buffer(image_rows, image_cols, image_chns);
                 const auto image_offset = image_pos + image_ortho * n;
                 pic.images.back().init_spatial(image_pxldx, image_pxldy, image_pxldz, image_anchor, image_offset);
 
-                for(long int col = 0; col < image_cols; ++col){
-                    for(long int row = 0; row < image_rows; ++row){
-                        for(long int chn = 0; chn < image_chns; ++chn, ++v_it){
+                for(int64_t col = 0; col < image_cols; ++col){
+                    for(int64_t row = 0; row < image_rows; ++row){
+                        for(int64_t chn = 0; chn < image_chns; ++chn, ++v_it){
                             pic.images.back().reference(row, col, chn) = *v_it;
                         }
                     }
