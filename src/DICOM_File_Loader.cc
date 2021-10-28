@@ -88,6 +88,8 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
 
             try{
                 auto t = Load_Transform(Filename);
+if(t == nullptr) FUNCWARN("(t == nullptr)");
+if(std::get_if<std::monostate>(&(t->transform)) != nullptr) FUNCWARN("(std::get_if<std::monostate>(&(t->transform)) != nullptr)");
                 if( (t == nullptr)
                 ||  (std::get_if<std::monostate>(&(t->transform)) != nullptr) ){
                     throw std::runtime_error("unable to extract transformation");

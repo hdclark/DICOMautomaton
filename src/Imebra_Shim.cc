@@ -2562,6 +2562,18 @@ Load_Transform(const std::string &FilenameIn){
         return std::optional<vec3<double>>();
     };
 
+    const auto convert_to_vec3_long_int = [](const std::vector<std::string> &in) -> std::optional<vec3<long int>> {
+        if(in.size() == 3){
+            try{
+                const auto x = std::stol(in.at(0));
+                const auto y = std::stol(in.at(1));
+                const auto z = std::stol(in.at(2));
+                return std::optional<vec3<long int>>( vec3<long int>(x,y,z) );
+            }catch(const std::exception &){}
+        }
+        return std::optional<vec3<long int>>();
+    };
+
     const auto convert_to_vector_double = [](const std::vector<std::string> &in) -> std::vector<double> {
         std::vector<double> out;
         for(const auto &x : in){
@@ -2596,9 +2608,9 @@ Load_Transform(const std::string &FilenameIn){
         if(v.size() != 16){
             throw std::runtime_error("Unanticipated matrix transformation dimensions");
         }
-        for(size_t col = 0; col < 3; ++col){
-            for(size_t row = 0; row < 4; ++row){
-                const size_t indx = row + col * 4;
+        for(size_t row = 0; row < 3; ++row){
+            for(size_t col = 0; col < 4; ++col){
+                const size_t indx = col + row * 4;
                 t.coeff(row,col) = v[indx];
             }
         }
@@ -2639,6 +2651,8 @@ Load_Transform(const std::string &FilenameIn){
                 insert_as_string_if_nonempty(out->metadata, ssseq_item_ptr, {0x0070, 0x030c}, ppprfx + "FrameOfReferenceTransformationMatrixType");
 
                 const auto FrameOfReferenceTransformationMatrix = convert_to_vector_double( extract_tag_as_string(ssseq_item_ptr, {0x3006, 0x00c6}) );
+                if(FrameOfReferenceTransformationMatrix.size() != 16) continue;
+
                 auto t = extract_affine_transform(FrameOfReferenceTransformationMatrix);
                 out->transform = t;
 
@@ -2661,17 +2675,82 @@ Load_Transform(const std::string &FilenameIn){
             if(sseq_item_ptr == nullptr) break;
             const std::string pprfx = prfx + R"***(DeformableRegistrationGridSequence)***"_s + std::to_string(j) + R"***(/)***"_s;
 
-            insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x0020, 0x0032}, pprfx + "ImagePositionPatient");
-            insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x0020, 0x0037}, pprfx + "ImageOrientationPatient");
-            insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x0064, 0x0007}, pprfx + "GridDimensions");
-            insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x0064, 0x0008}, pprfx + "GridResolution");
+            //insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x0020, 0x0032}, pprfx + "ImagePositionPatient");
+            //insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x0020, 0x0037}, pprfx + "ImageOrientationPatient");
+            //insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x0064, 0x0007}, pprfx + "GridDimensions");
+            //insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x0064, 0x0008}, pprfx + "GridResolution");
+            const auto ImagePositionPatient    = convert_to_vec3_double( extract_tag_as_string(sseq_item_ptr, {0x0020, 0x0032}) );
+            const auto ImageOrientationPatient = convert_to_vector_double( extract_tag_as_string(sseq_item_ptr, {0x0020, 0x0037}) );
+            const auto GridDimensions = convert_to_vec3_long_int( extract_tag_as_string(sseq_item_ptr, {0x0064, 0x0007}) );
+            const auto GridResolution = convert_to_vec3_double( extract_tag_as_string(sseq_item_ptr, {0x0064, 0x0008}) );
+
+            // Prepare data in format similar to image loading.
+            const vec3<double> zero(0.0, 0.0, 0.0);
+            const vec3<long int> zeroL(0, 0, 0);
+            const auto image_pos = ImagePositionPatient.value();
+
+            if(ImageOrientationPatient.size() != 6){
+                throw std::runtime_error("Invalid ImageOrientationPatient tag");
+            }
+            const auto image_orien_c = vec3<double>(ImageOrientationPatient[0],
+                                                    ImageOrientationPatient[1],
+                                                    ImageOrientationPatient[2]).unit();
+            const auto image_orien_r = vec3<double>(ImageOrientationPatient[3],
+                                                    ImageOrientationPatient[4],
+                                                    ImageOrientationPatient[5]).unit();
+            const auto image_ortho = image_orien_c.Cross(image_orien_r).unit();
+
+            const auto image_rows = GridDimensions.value_or(zeroL).x;
+            const auto image_cols = GridDimensions.value_or(zeroL).y;
+            const auto image_chns = 3L;
+            const auto image_imgs = GridDimensions.value_or(zeroL).z;
+
+            const auto image_buffer_length = image_rows * image_cols * image_chns * image_imgs;
+            if(image_buffer_length <= 0){
+                throw std::runtime_error("Invalid image buffer dimensions");
+            }
+
+            const auto image_pxldy = GridResolution.value_or(zero).x;
+            const auto image_pxldx = GridResolution.value_or(zero).y;
+            const auto image_pxldz = GridResolution.value_or(zero).z;
+
+            const auto voxel_volume = image_pxldy * image_pxldx * image_pxldz;
+            if(voxel_volume <= 0.0){
+                throw std::runtime_error("Invalid grid voxel dimensions");
+            }
+
+            const vec3<double> image_anchor = vec3<double>(0.0,0.0,0.0);
 
             //insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x0064, 0x0009}, pprfx + "VectorGridData");
             // ...
             // TODO: convert the VectorGridData to a deformation_field.
             // ...
             //out->transform = t;
+            const auto VectorGridData = convert_to_vector_double( extract_tag_as_string(sseq_item_ptr, {0x0064, 0x0009}) );
+            if(static_cast<long int>(VectorGridData.size()) != image_buffer_length){
+                throw std::runtime_error("Encountered incomplete VectorGridData tag");
+            }
 
+            auto v_it = std::begin(VectorGridData);
+            planar_image_collection<double,double> pic;
+            for(long int n = 0; n < image_imgs; ++n){
+                pic.images.emplace_back();
+                pic.images.back().init_orientation(image_orien_r, image_orien_c);
+                pic.images.back().init_buffer(image_rows, image_cols, image_chns);
+                const auto image_offset = image_pos + image_ortho * n;
+                pic.images.back().init_spatial(image_pxldx, image_pxldy, image_pxldz, image_anchor, image_offset);
+
+                for(long int col = 0; col < image_cols; ++col){
+                    for(long int row = 0; row < image_rows; ++row){
+                        for(long int chn = 0; chn < image_chns; ++chn, ++v_it){
+                            pic.images.back().reference(row, col, chn) = *v_it;
+                        }
+                    }
+                }
+            }
+            FUNCINFO("Loaded deformation field with dimensions " << image_rows << " x " << image_cols << " x " << image_imgs);
+            deformation_field t(pic);
+            out->transform = t;
 
             // PreDeformationMatrixRegistrationSequence
             for(uint32_t k = 0; k < 100000; ++k){
@@ -2682,6 +2761,7 @@ Load_Transform(const std::string &FilenameIn){
                 insert_as_string_if_nonempty(out->metadata, ssseq_item_ptr, {0x0070, 0x030c}, ppprfx + "FrameOfReferenceTransformationMatrixType");
 
                 const auto FrameOfReferenceTransformationMatrix = convert_to_vector_double( extract_tag_as_string(ssseq_item_ptr, {0x3006, 0x00c6}) );
+                if(FrameOfReferenceTransformationMatrix.size() != 16) continue;
                 auto t = extract_affine_transform(FrameOfReferenceTransformationMatrix);
                 //out->pre_transform = t;
             } // PreDeformationMatrixRegistrationSequence.
@@ -2695,6 +2775,7 @@ Load_Transform(const std::string &FilenameIn){
                 insert_as_string_if_nonempty(out->metadata, ssseq_item_ptr, {0x0070, 0x030c}, ppprfx + "FrameOfReferenceTransformationMatrixType");
 
                 const auto FrameOfReferenceTransformationMatrix = convert_to_vector_double( extract_tag_as_string(ssseq_item_ptr, {0x3006, 0x00c6}) );
+                if(FrameOfReferenceTransformationMatrix.size() != 16) continue;
                 auto t = extract_affine_transform(FrameOfReferenceTransformationMatrix);
                 //out->post_transform = t;
             } // PostDeformationMatrixRegistrationSequence.
