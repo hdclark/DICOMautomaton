@@ -268,6 +268,20 @@ target_include_directories(imebrashim SYSTEM PUBLIC
 )
 target_compile_options(imebrashim PUBLIC -w) # Inhibit imebra-related warnings.
 
+target_link_libraries(imebrashim
+    explicator 
+    ygor 
+    Boost::serialization
+    Boost::iostreams
+    Boost::thread
+    Boost::system
+    z
+    "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
+    mpfr
+    gmp
+    m
+    Threads::Threads
+)
 
 # Pharmacokinetic modeling libraries (built separately for easier reuse).
 
