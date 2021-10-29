@@ -2703,8 +2703,8 @@ Load_Transform(const std::string &FilenameIn){
                                                     ImageOrientationPatient[5]).unit();
             const auto image_ortho = image_orien_c.Cross(image_orien_r).unit();
 
-            const auto image_rows = GridDimensions.value_or(zeroL).x;
-            const auto image_cols = GridDimensions.value_or(zeroL).y;
+            const auto image_rows = GridDimensions.value_or(zeroL).y;
+            const auto image_cols = GridDimensions.value_or(zeroL).x;
             const auto image_chns = static_cast<int64_t>(3);
             const auto image_imgs = GridDimensions.value_or(zeroL).z;
 
@@ -2743,8 +2743,8 @@ Load_Transform(const std::string &FilenameIn){
                 const auto image_offset = image_pos + image_ortho * n;
                 pic.images.back().init_spatial(image_pxldx, image_pxldy, image_pxldz, image_anchor, image_offset);
 
-                for(int64_t col = 0; col < image_cols; ++col){
-                    for(int64_t row = 0; row < image_rows; ++row){
+                for(int64_t row = 0; row < image_rows; ++row){
+                    for(int64_t col = 0; col < image_cols; ++col){
                         for(int64_t chn = 0; chn < image_chns; ++chn, ++v_it){
                             pic.images.back().reference(row, col, chn) = *v_it;
                         }
