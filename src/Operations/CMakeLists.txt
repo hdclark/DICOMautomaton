@@ -32,6 +32,7 @@ add_library(Operations_objs OBJECT
     ConvertNaNsToZeros.cc
     ConvertPixelsToPoints.cc
     ConvertWarpToImage.cc
+    ConvertWarpToMeshes.cc
     ConvolveImages.cc
     CellularAutomata.cc
     CopyContours.cc
