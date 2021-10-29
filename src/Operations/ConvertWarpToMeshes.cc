@@ -5,8 +5,11 @@
 #include <memory>
 #include <string>    
 
+#include "YgorStats.h"
+
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+
 #include "../Alignment_Rigid.h"
 #include "../Alignment_TPSRPM.h"
 #include "../Alignment_Field.h"
@@ -39,6 +42,18 @@ OperationDoc OpArgDocConvertWarpToMeshes(){
     out.args.back().expected = true;
     out.args.back().examples = { "0", "7", "71", "197", "313", "971", "1663", "3739" };
 
+    out.args.emplace_back();
+    out.args.back().name = "RemoveRigid";
+    out.args.back().desc = "If enabled, this option subtracts off any rigid component of a deformation field."
+                           " The rigid component is estimated by averaging all vectors and can misrepresent the"
+                           " true rigid component if the perhiphery are inconsistent with the transformation"
+                           " in a sub-volume. Nevertheless, this option can help remove large translations that"
+                           " otherwise would make visualization challenging.";
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
+
     return out;
 }
 
@@ -51,7 +66,11 @@ bool ConvertWarpToMeshes(Drover &DICOM_data,
     const auto TFormSelectionStr = OptArgs.getValueStr("TransformSelection").value();
 
     const auto VoxelCadence = std::stol(OptArgs.getValueStr("VoxelCadence").value() );
+
+    const auto RemoveRigidStr = OptArgs.getValueStr("RemoveRigidStr").value();
     //-----------------------------------------------------------------------------------------------------------------
+    const auto regex_true  = Compile_Regex("^tr?u?e?$");
+    const auto RemoveRigid = std::regex_match(RemoveRigidStr, regex_true);
 
     auto T3s_all = All_T3s( DICOM_data );
     auto T3s = Whitelist( T3s_all, TFormSelectionStr );
@@ -77,27 +96,48 @@ bool ConvertWarpToMeshes(Drover &DICOM_data,
             }else if constexpr (std::is_same_v<V, deformation_field>){
                 FUNCINFO("Exporting vector deformation field now");
 
+                // Determine the average transformation vector.
+                vec3<double> avg(0.0, 0.0, 0.0);
+                if(RemoveRigid){
+                    double N_voxels = 0.0;
+                    Stats::Running_Sum<double> sum_x;
+                    Stats::Running_Sum<double> sum_y;
+                    Stats::Running_Sum<double> sum_z;
+                    for(const auto &img : t.field.images){
+                        const auto N_chns = img.channels;
+                        if(N_chns != 3L) throw std::runtime_error("Vector deformation grid does not have three channels");
+                        for(long int row = 0; row < img.rows; ++row){
+                            for(long int col = 0; col < img.columns; ++col){
+                                sum_x.Digest(img.value(row, col, 0));
+                                sum_y.Digest(img.value(row, col, 1));
+                                sum_z.Digest(img.value(row, col, 2));
+                                N_voxels += 1.0;
+                            }
+                        }
+                    }
+                    avg = vec3<double>( sum_x.Current_Sum() / N_voxels,
+                                        sum_y.Current_Sum() / N_voxels,
+                                        sum_z.Current_Sum() / N_voxels );
+                }
+
                 auto out = std::make_unique<Surface_Mesh>();
                 long int voxel = 0;
                 for(const auto &img : t.field.images){
-                    const auto N_rows = img.rows;
-                    const auto N_cols = img.columns;
-
                     const auto N_chns = img.channels;
                     if(N_chns != 3L) throw std::runtime_error("Vector deformation grid does not have three channels");
 
                     const auto pxl_l = std::max( 0.15 * std::min({ img.pxl_dx, img.pxl_dy, img.pxl_dz }), 1.0E-3 );
                     const auto ortho_unit = img.col_unit.Cross(img.row_unit).unit();
 
-                    for(long int row = 0; row < N_rows; ++row){
-                        for(long int col = 0; col < N_cols; ++col){
+                    for(long int row = 0; row < img.rows; ++row){
+                        for(long int col = 0; col < img.columns; ++col){
                             if( (0 < VoxelCadence)
                             &&  ((voxel++ % VoxelCadence) != 0) ) continue;
 
                             const auto R = img.position(row, col);
-                            const vec3<double> dR( img.value(row, col, 0),
-                                                   img.value(row, col, 1),
-                                                   img.value(row, col, 2) );
+                            const auto dR = vec3<double>( img.value(row, col, 0),
+                                                          img.value(row, col, 1),
+                                                          img.value(row, col, 2) ) - avg;
                             const auto arrow_length = dR.length();
                             if(arrow_length <= 0.0) continue;
 
