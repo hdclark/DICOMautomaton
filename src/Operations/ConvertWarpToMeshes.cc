@@ -67,7 +67,7 @@ bool ConvertWarpToMeshes(Drover &DICOM_data,
 
     const auto VoxelCadence = std::stol(OptArgs.getValueStr("VoxelCadence").value() );
 
-    const auto RemoveRigidStr = OptArgs.getValueStr("RemoveRigidStr").value();
+    const auto RemoveRigidStr = OptArgs.getValueStr("RemoveRigid").value();
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_true  = Compile_Regex("^tr?u?e?$");
     const auto RemoveRigid = std::regex_match(RemoveRigidStr, regex_true);
