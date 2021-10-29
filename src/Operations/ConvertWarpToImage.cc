@@ -7,6 +7,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../Metadata.h"
 #include "../Alignment_Rigid.h"
 #include "../Alignment_TPSRPM.h"
 #include "../Alignment_Field.h"
@@ -67,6 +68,7 @@ bool ConvertWarpToImage(Drover &DICOM_data,
                 FUNCINFO("Exporting vector deformation field now");
 
                 auto out = std::make_unique<Image_Array>();
+                auto l_meta = coalesce_metadata_for_basic_mr_image({});
                 for(const auto &img : t.field.images){
                     // Duplicate the image, but convert to float voxel type.
                     planar_image<float,double> img_f;
@@ -78,8 +80,9 @@ bool ConvertWarpToImage(Drover &DICOM_data,
                     for(size_t i = 0; i < N_voxels; ++i){
                         img_f.data[i] = static_cast<float>(img.data[i]);
                     }
-                    img_f.metadata["Modality"] == "MR";
                     out->imagecoll.images.emplace_back( img_f );
+                    l_meta = coalesce_metadata_for_basic_mr_image(l_meta, meta_evolve::iterate);
+                    out->imagecoll.images.back().metadata = l_meta;
                 }
                 DICOM_data.image_data.push_back( std::move( out ) );
 

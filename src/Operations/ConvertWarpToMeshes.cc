@@ -9,6 +9,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../Metadata.h"
 
 #include "../Alignment_Rigid.h"
 #include "../Alignment_TPSRPM.h"
@@ -182,7 +183,7 @@ bool ConvertWarpToMeshes(Drover &DICOM_data,
                         }
                     }
                 }
-                //out->meshes.metadata["..."] = "...";
+                out->meshes.metadata = coalesce_metadata_for_basic_mesh({});
                 DICOM_data.smesh_data.push_back( std::move( out ) );
 
             }else{

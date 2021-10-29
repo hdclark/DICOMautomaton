@@ -109,6 +109,16 @@ metadata_map_t coalesce_metadata_misc(const metadata_map_t &ref);
 
 
 // Modality-specific wrappers.
-metadata_map_t coalesce_metadata_for_lsamp(const metadata_map_t &ref);
-metadata_map_t coalesce_metadata_for_rtdose(const metadata_map_t &ref);
+//
+// "iterate" will re-assign per-item UIDs, and may iterate metadata numbers that should be changed for each item, but
+// will leave all other information as-is. Iteration is useful when building synthetic image arrays, for example.
+enum class meta_evolve {
+   none,
+   iterate,
+};
+metadata_map_t coalesce_metadata_for_lsamp(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
+metadata_map_t coalesce_metadata_for_rtdose(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
+metadata_map_t coalesce_metadata_for_basic_mr_image(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
+metadata_map_t coalesce_metadata_for_basic_ct_image(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
+metadata_map_t coalesce_metadata_for_basic_mesh(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
 
