@@ -30,8 +30,6 @@ OperationDoc OpArgDocConvertWarpToMeshes(){
     out.args.back() = T3WhitelistOpArgDoc();
     out.args.back().name = "TransformSelection";
     out.args.back().default_val = "last";
-    out.args.back().desc = "The transformation that will be exported. "_s
-                         + out.args.back().desc;
 
     out.args.emplace_back();
     out.args.back().name = "VoxelCadence";

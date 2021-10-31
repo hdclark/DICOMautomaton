@@ -816,3 +816,30 @@ metadata_map_t coalesce_metadata_for_basic_mesh(const metadata_map_t &ref, meta_
     return out;
 }
 
+metadata_map_t coalesce_metadata_for_basic_def_reg(const metadata_map_t &ref, meta_evolve e){
+    metadata_map_t out;
+    out["Modality"] = "REG";
+    out["MediaStorageSOPClassUID"] = "1.2.840.10008.5.1.4.1.1.66.3"; // Deformable Spatial Registration Storage
+    out["SOPClassUID"] = "1.2.840.10008.5.1.4.1.1.66.3";
+
+    out.merge( coalesce_metadata_sop_common(ref) );
+    out.merge( coalesce_metadata_patient(ref) );
+    out.merge( coalesce_metadata_general_study(ref) );
+    out.merge( coalesce_metadata_general_series(ref) );
+    out.merge( coalesce_metadata_patient_study(ref) );
+    out.merge( coalesce_metadata_frame_of_reference(ref) );
+    out.merge( coalesce_metadata_general_equipment(ref) );
+    //out.merge( coalesce_metadata_enhanced_general_equipment(ref) );
+    //out.merge( coalesce_metadata_spatial_registration(ref) );
+    //out.merge( coalesce_metadata_deformable_spatial_registration(ref) );
+    out.merge( coalesce_metadata_misc(ref) );
+
+    if(e == meta_evolve::iterate){
+        // Assign a new SOP Instance UID.
+        auto new_sop = coalesce_metadata_sop_common({});
+        insert(out, "SOPInstanceUID", new_sop["SOPInstanceUID"]);
+        insert(out, "MediaStorageSOPInstanceUID", new_sop["MediaStorageSOPInstanceUID"]);
+    }
+    return out;
+}
+

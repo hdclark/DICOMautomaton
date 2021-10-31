@@ -27,6 +27,7 @@ add_library(Operations_objs OBJECT
     ConvertDoseToImage.cc
     ConvertImageToDose.cc
     ConvertImageToMeshes.cc
+    ConvertImageToWarp.cc
     ConvertMeshesToPoints.cc
     ConvertNaNsToAir.cc
     ConvertNaNsToZeros.cc
