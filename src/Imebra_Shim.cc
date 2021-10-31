@@ -2752,7 +2752,7 @@ Load_Transform(const std::string &FilenameIn){
                 }
             }
             FUNCINFO("Loaded deformation field with dimensions " << image_rows << " x " << image_cols << " x " << image_imgs);
-            deformation_field t(pic);
+            deformation_field t(std::move(pic));
             out->transform = t;
 
             // PreDeformationMatrixRegistrationSequence

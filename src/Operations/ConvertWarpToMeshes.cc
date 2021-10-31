@@ -104,7 +104,7 @@ bool ConvertWarpToMeshes(Drover &DICOM_data,
                     Stats::Running_Sum<double> sum_x;
                     Stats::Running_Sum<double> sum_y;
                     Stats::Running_Sum<double> sum_z;
-                    for(const auto &img : t.field.images){
+                    for(const auto &img : t.get_imagecoll_crefw().get().images){
                         const auto N_chns = img.channels;
                         if(N_chns != 3L) throw std::runtime_error("Vector deformation grid does not have three channels");
                         for(long int row = 0; row < img.rows; ++row){
@@ -123,7 +123,7 @@ bool ConvertWarpToMeshes(Drover &DICOM_data,
 
                 auto out = std::make_unique<Surface_Mesh>();
                 long int voxel = 0;
-                for(const auto &img : t.field.images){
+                for(const auto &img : t.get_imagecoll_crefw().get().images){
                     const auto N_chns = img.channels;
                     if(N_chns != 3L) throw std::runtime_error("Vector deformation grid does not have three channels");
 

@@ -14,6 +14,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <functional>
 
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -29,9 +30,46 @@
 #include "Alignment_Field.h"
 
 
-deformation_field::deformation_field(const planar_image_collection<double,double> &in){
-    this->field = in;
+deformation_field::deformation_field(planar_image_collection<double,double> &&in){
+    this->swap_and_rebuild(in);
 }
+
+void
+deformation_field::swap_and_rebuild(planar_image_collection<double,double> &in){
+
+    // Imbib the images to avoid invalid references making their way into the index.
+    this->field.Swap(in);
+    try{
+        // Ensure the image array is regular. (This will allow us to use a faster postion-to-image lookup.)
+        // Also ensure images are present, and every image has three channels.
+        std::list<std::reference_wrapper<planar_image<double,double>>> selected_imgs;
+        for(auto &img : this->field.images){
+            if(img.channels != 3) throw std::invalid_argument("Encountered image without three channels");
+            selected_imgs.push_back( std::ref(img) );
+        }
+        if( selected_imgs.empty() ) throw std::invalid_argument("No images provided");
+        if(!Images_Form_Regular_Grid(selected_imgs)){
+            throw std::invalid_argument("Images do not form a rectilinear grid. Cannot continue");
+        }
+
+        const auto row_unit = this->field.images.front().row_unit.unit();
+        const auto col_unit = this->field.images.front().col_unit.unit();
+        const auto img_unit = col_unit.Cross(row_unit).unit();
+
+        planar_image_adjacency<double,double> img_adj( {}, { { std::ref(this->field) } }, img_unit );
+        this->adj = img_adj;
+        
+    }catch(const std::exception &){
+        this->field.Swap(in);
+        throw;
+    }
+    return;
+}
+
+std::reference_wrapper<const planar_image_collection<double,double>>
+deformation_field::get_imagecoll_crefw() const {
+    return std::cref(this->field);
+};
 
 vec3<double> 
 deformation_field::transform(const vec3<double> &v) const {

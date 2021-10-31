@@ -69,7 +69,7 @@ bool ConvertWarpToImage(Drover &DICOM_data,
 
                 auto out = std::make_unique<Image_Array>();
                 auto l_meta = coalesce_metadata_for_basic_mr_image({});
-                for(const auto &img : t.field.images){
+                for(const auto &img : t.get_imagecoll_crefw().get().images){
                     // Duplicate the image, but convert to float voxel type.
                     planar_image<float,double> img_f;
                     img_f.init_buffer( img.rows, img.columns, img.channels );
