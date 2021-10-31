@@ -73,8 +73,11 @@ deformation_field::get_imagecoll_crefw() const {
 
 vec3<double> 
 deformation_field::transform(const vec3<double> &v) const {
-    throw std::logic_error("Not yet implemented");
-    return v;
+    const double oob = 0.0;
+    const auto dx = this->adj.value().trilinearly_interpolate(v, 0, 0.0);
+    const auto dy = this->adj.value().trilinearly_interpolate(v, 1, 0.0);
+    const auto dz = this->adj.value().trilinearly_interpolate(v, 2, 0.0);
+    return v + vec3<double>(dx, dy, dz);
 }
 
 void
@@ -117,6 +120,7 @@ deformation_field::write_to( std::ostream &os ) const {
 bool
 deformation_field::read_from( std::istream &is ){
     throw std::logic_error("Not yet implemented");
+
     return (!is.fail());
 }
 
