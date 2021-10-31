@@ -267,9 +267,9 @@ OperationArgDoc MetadataInjectionOpArgDoc(){
     out.name = "KeyValues";
     out.desc = "Key-value pairs in the form of 'key1@value1;key2@value2' that will be injected into the"
                " selected objects."
-               "Values can use macros that refer to other metadata keys using the '$' character."
+               " Values can use macros that refer to other metadata keys using the '$' character."
                " If macros refer to non-existent metadata elements, then the replacement is literal."
-               "Dates, times, and datetimes can be converted to seconds (since the Unix epoch) using the"
+               " Dates, times, and datetimes can be converted to seconds (since the Unix epoch) using the"
                " 'to_seconds()' function."
                "\n\n"
                "Existing conflicting metadata will be overwritten."

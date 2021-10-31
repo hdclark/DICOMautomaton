@@ -55,6 +55,11 @@ OperationDoc OpArgDocConvertWarpToMeshes(){
     out.args.back().examples = { "true", "false" };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
+    out.args.emplace_back();
+    out.args.back() = MetadataInjectionOpArgDoc();
+    out.args.back().name = "KeyValues";
+    out.args.back().default_val = "";
+
     return out;
 }
 
@@ -69,9 +74,14 @@ bool ConvertWarpToMeshes(Drover &DICOM_data,
     const auto VoxelCadence = std::stol(OptArgs.getValueStr("VoxelCadence").value() );
 
     const auto RemoveRigidStr = OptArgs.getValueStr("RemoveRigid").value();
+
+    const auto KeyValuesOpt = OptArgs.getValueStr("KeyValues");
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_true  = Compile_Regex("^tr?u?e?$");
     const auto RemoveRigid = std::regex_match(RemoveRigidStr, regex_true);
+
+    // Parse user-provided metadata, if any has been provided.
+    const auto key_values = parse_key_values(KeyValuesOpt.value_or(""));
 
     auto T3s_all = All_T3s( DICOM_data );
     auto T3s = Whitelist( T3s_all, TFormSelectionStr );
@@ -183,7 +193,14 @@ bool ConvertWarpToMeshes(Drover &DICOM_data,
                         }
                     }
                 }
-                out->meshes.metadata = coalesce_metadata_for_basic_mesh({});
+
+                // Insert a copy of the user-provided key-values, but pre-process to replace macros and evaluate known
+                // functions. User-provided values should override the generic values.
+                auto l_meta = coalesce_metadata_for_basic_mr_image({}, meta_evolve::iterate);
+                auto l_key_values = key_values;
+                l_key_values.merge( l_meta );
+                inject_metadata( out->meshes.metadata, std::move(l_key_values) );
+
                 DICOM_data.smesh_data.push_back( std::move( out ) );
 
             }else{

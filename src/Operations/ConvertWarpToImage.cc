@@ -30,6 +30,11 @@ OperationDoc OpArgDocConvertWarpToImage(){
     out.args.back().desc = "The transformation that will be exported. "_s
                          + out.args.back().desc;
 
+    out.args.emplace_back();
+    out.args.back() = MetadataInjectionOpArgDoc();
+    out.args.back().name = "KeyValues";
+    out.args.back().default_val = "";
+
     return out;
 }
 
@@ -41,7 +46,10 @@ bool ConvertWarpToImage(Drover &DICOM_data,
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto TFormSelectionStr = OptArgs.getValueStr("TransformSelection").value();
 
+    const auto KeyValuesOpt = OptArgs.getValueStr("KeyValues");
     //-----------------------------------------------------------------------------------------------------------------
+    // Parse user-provided metadata, if any has been provided.
+    const auto key_values = parse_key_values(KeyValuesOpt.value_or(""));
 
     auto T3s_all = All_T3s( DICOM_data );
     auto T3s = Whitelist( T3s_all, TFormSelectionStr );
@@ -81,8 +89,14 @@ bool ConvertWarpToImage(Drover &DICOM_data,
                         img_f.data[i] = static_cast<float>(img.data[i]);
                     }
                     out->imagecoll.images.emplace_back( img_f );
+
+                    // Insert a copy of the user-provided key-values, but pre-process to replace macros and evaluate known
+                    // functions. User-provided values should override the generic values.
                     l_meta = coalesce_metadata_for_basic_mr_image(l_meta, meta_evolve::iterate);
-                    out->imagecoll.images.back().metadata = l_meta;
+                    auto l_l_meta = l_meta;
+                    auto l_key_values = key_values;
+                    l_key_values.merge(l_l_meta);
+                    inject_metadata( out->imagecoll.images.back().metadata, std::move(l_key_values) );
                 }
                 DICOM_data.image_data.push_back( std::move( out ) );
 
