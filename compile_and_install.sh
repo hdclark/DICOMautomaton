@@ -168,9 +168,10 @@ elif [[ "${DISTRIBUTION}" =~ .*debian.* ]] ; then
 
     # Check whether Ygor is up-to-date or not.
     (
+        rm -rf /tmp/ygor &>/dev/null || true
         git clone --depth 1 'https://github.com/hdclark/Ygor.git' /tmp/ygor
         cd /tmp/ygor
-        ./compile_and_install.sh
+        ./compile_and_install.sh && rm -rf /tmp/ygor &>/dev/null || true
     )
 
     mkdir -p build
