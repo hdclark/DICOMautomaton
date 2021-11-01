@@ -28,6 +28,11 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
+
+#include "../Alignment_Rigid.h"
+#include "../Alignment_TPSRPM.h"
+#include "../Alignment_Field.h"
+
 #include "WarpImages.h"
 
 OperationDoc OpArgDocWarpImages(){
@@ -160,8 +165,15 @@ bool WarpImages(Drover &DICOM_data,
                 }else if constexpr (std::is_same_v<V, thin_plate_spline>){
                     FUNCINFO("Applying thin-plate spline transformation now");
 
-                    throw std::invalid_argument("Local transformations are not yet supported for images. Unable to continue.");
+                    throw std::invalid_argument("TPS transformations are not yet supported for images. Unable to continue.");
                     // This will require voxels to be resampled, and may even require inverting the transform. TODO.
+                    // Note: can probably convert TPS to deformation grid and re-use the deformation field machinery.
+
+                // Deformation field transformations.
+                }else if constexpr (std::is_same_v<V, deformation_field>){
+                    FUNCINFO("Applying deformation field transformation now");
+
+                    throw std::invalid_argument("Not yet supported. Unable to continue.");
 
                 }else{
                     static_assert(std::is_same_v<V,void>, "Transformation not understood.");

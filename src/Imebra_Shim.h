@@ -10,9 +10,12 @@
 #include <string>
 #include <vector>
 
-#include "Structs.h"
 #include "YgorContainers.h"  //Needed for bimap class.
+
+#include "Structs.h"
 #include "Metadata.h"
+#include "Alignment_Rigid.h"
+#include "Alignment_Field.h"
 
 class Contour_Data;
 class Image_Array;
@@ -57,6 +60,9 @@ std::list<std::shared_ptr<Image_Array>>  Load_Dose_Arrays(const std::list<std::s
 
 //-------------------- Plans ------------------------
 std::unique_ptr<TPlan_Config> Load_TPlan_Config(const std::string &filename);
+
+//---------------- Registrations --------------------
+std::unique_ptr<Transform3> Load_Transform(const std::string &filename);
 
 //-------------------- Export -----------------------
 //Writes an Image_Array as if it were a dose matrix.

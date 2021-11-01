@@ -1091,6 +1091,14 @@ dicomDictionary::dicomDictionary()
 	registerTag(0x00603008, L"Histogram Bin Width","US");
 	registerTag(0x00603010, L"Histogram Explanation","LO");
 	registerTag(0x00603020, L"Histogram Data","UL");
+	registerTag(0x00640002, L"Deformable Registration Sequence","SQ"); /* Added by HC on 20211027 */
+	registerTag(0x00640003, L"Source Frame of Reference UID","UI"); /* Added by HC on 20211027 */
+	registerTag(0x00640005, L"Deformable Registration Grid Sequence","SQ"); /* Added by HC on 20211027 */
+	registerTag(0x00640007, L"Grid Dimensions","UL"); /* Added by HC on 20211027 */
+	registerTag(0x00640008, L"Grid Resolution","FD"); /* Added by HC on 20211027 */
+	registerTag(0x00640009, L"Vector Grid Data","FL"); /* Note, actually "OF" but doesn't work well with it set here. Added by HC on 20211027 */
+	registerTag(0x0064000F, L"Pre Deformation Matrix Registration Sequence","SQ"); /* Added by HC on 20211027 */
+	registerTag(0x00640010, L"Post Deformation Matrix Registration Sequence","SQ"); /* Added by HC on 20211027 */
 	registerTag(0x00700000, L"Graphic annotation","UL");
 	registerTag(0x00700001, L"Graphic Annotation Sequence","SQ");
 	registerTag(0x00700002, L"Graphic Layer","CS");
@@ -1129,6 +1137,10 @@ dicomDictionary::dicomDictionary()
 	registerTag(0x00700101, L"Presentation Pixel Spacing","DS");
 	registerTag(0x00700102, L"Presentation Pixel Aspect Ratio","IS");
 	registerTag(0x00700103, L"Presentation Pixel Magnification Ratio","FL");
+	registerTag(0x00700308, L"Registration Sequence","SQ"); /* Added by HC on 20211027 */
+	registerTag(0x00700309, L"Matrix Registration Sequence","SQ"); /* Added by HC on 20211027 */
+	registerTag(0x0070030A, L"Matrix Sequence","SQ"); /* Added by HC on 20211027 */
+	registerTag(0x0070030C, L"Frame of Reference Transformation Matrix Type","CS"); /* Added by HC on 20211027 */
 	registerTag(0x00880000, L"Topic","UL");
 	registerTag(0x00880130, L"Storage Media File-set ID","SH");
 	registerTag(0x00880140, L"Storage Media File-set UID","UI");

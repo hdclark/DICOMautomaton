@@ -13,7 +13,9 @@
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 
 #include "../Structs.h"
+#include "../Alignment_Rigid.h"
 #include "../Alignment_TPSRPM.h"
+#include "../Alignment_Field.h"
 #include "../Regex_Selectors.h"
 
 #include "DroverDebug.h"
@@ -267,6 +269,8 @@ bool DroverDebug(Drover &DICOM_data,
                         return "an affine transformation";
                     }else if constexpr (std::is_same_v<V, thin_plate_spline>){
                         return "a thin-plate spline transformation";
+                    }else if constexpr (std::is_same_v<V, deformation_field>){
+                        return "a vector deformation field";
                     }else{
                         static_assert(std::is_same_v<V,void>, "Transformation not understood.");
                     }

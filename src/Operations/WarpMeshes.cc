@@ -28,6 +28,11 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
+
+#include "../Alignment_Rigid.h"
+#include "../Alignment_TPSRPM.h"
+#include "../Alignment_Field.h"
+
 #include "WarpMeshes.h"
 
 OperationDoc OpArgDocWarpMeshes(){
@@ -113,6 +118,13 @@ bool WarpMeshes(Drover &DICOM_data,
                 // Thin-plate spline transformations.
                 }else if constexpr (std::is_same_v<V, thin_plate_spline>){
                     FUNCINFO("Applying thin-plate spline transformation now");
+                    for(auto &v : (*smp_it)->meshes.vertices){
+                        t.apply_to(v);
+                    }
+
+                // Deformation field transformations.
+                }else if constexpr (std::is_same_v<V, deformation_field>){
+                    FUNCINFO("Applying deformation field transformation now");
                     for(auto &v : (*smp_it)->meshes.vertices){
                         t.apply_to(v);
                     }

@@ -25,7 +25,9 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 #include "../Structs.h"
+#include "../Alignment_Rigid.h"
 #include "../Alignment_TPSRPM.h"
+#include "../Alignment_Field.h"
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
 
@@ -119,6 +121,12 @@ bool WarpPoints(Drover &DICOM_data,
                     FUNCINFO("Applying thin plate spline transformation now");
                     t.apply_to((*pcp_it)->pset);
                     (*pcp_it)->pset.metadata["Description"] = "Warped via thin-plate spline transform";
+
+                // Vector deformation field transformations.
+                }else if constexpr (std::is_same_v<V, deformation_field>){
+                    FUNCINFO("Applying vector deformation field transformation now");
+                    t.apply_to((*pcp_it)->pset);
+                    (*pcp_it)->pset.metadata["Description"] = "Warped via vector deformation field transform";
 
                 }else{
                     static_assert(std::is_same_v<V,void>, "Transformation not understood.");

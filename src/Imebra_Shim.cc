@@ -1,4 +1,4 @@
-//Imebra_Shim.cc - DICOMautomaton 2012-2013, 2017-2019. Written by hal clark.
+//Imebra_Shim.cc - DICOMautomaton 2012-2021. Written by hal clark.
 //
 // This file is supposed to 'shim' or wrap the Imebra library. It is used to abstract the Imebra library so that it can
 // eventually be replaced with an alternative library, and also reduce the number of template instantiations generated
@@ -28,6 +28,13 @@
 #include <utility>        //Needed for std::pair.
 #include <vector>
 
+#include "YgorContainers.h" //Needed for 'bimap' class.
+#include "YgorMath.h"       //Needed for 'vec3' class.
+#include "YgorMisc.h"       //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorString.h"     //Needed for Canonicalize_String2().
+#include "YgorImages.h"
+#include "YgorTAR.h"
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-but-set-variable"
 #pragma GCC diagnostic ignored "-Wunused-but-set-parameter"
@@ -36,15 +43,11 @@
 #pragma GCC diagnostic pop
 
 #include "Imebra_Shim.h"
+
 #include "DCMA_DICOM.h"
 #include "Structs.h"
-#include "YgorContainers.h" //Needed for 'bimap' class.
-#include "YgorMath.h"       //Needed for 'vec3' class.
-#include "YgorMisc.h"       //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-#include "YgorString.h"     //Needed for Canonicalize_String2().
-#include "YgorImages.h"
-#include "YgorTAR.h"
-
+#include "Alignment_Rigid.h"
+#include "Alignment_Field.h"
 
 //----------------- Accessors ---------------------
 
@@ -2503,6 +2506,285 @@ Load_TPlan_Config(const std::string &FilenameIn){
     }
 
     // TODO: verify all states are finite (except for missing components, e.g., MLC positions on a machine not equipped with MLCs.
+
+    return std::move(out);
+}
+
+//----------------- Registrations -------------------
+//This routine loads a spatial registration.
+//
+// See DICOM standard, Spatial Registration Module (C.20.2).
+std::unique_ptr<Transform3>
+Load_Transform(const std::string &FilenameIn){
+    std::unique_ptr<Transform3> out(new Transform3());
+
+    using namespace puntoexe;
+    ptr<puntoexe::stream> readStream(new puntoexe::stream);
+    readStream->openFile(FilenameIn.c_str(), std::ios::in);
+
+    ptr<puntoexe::streamReader> reader(new puntoexe::streamReader(readStream));
+    ptr<imebra::dataSet> base_node_ptr = imebra::codecs::codecFactory::getCodecFactory()->load(reader);
+
+
+    const auto convert_first_to_string = [](const std::vector<std::string> &in) -> std::optional<std::string> {
+        if(!in.empty()){
+            return std::optional<std::string>(in.front());
+        }
+        return std::optional<std::string>();
+    };
+
+    const auto convert_first_to_long_int = [](const std::vector<std::string> &in) -> std::optional<long int> {
+        if(!in.empty()){
+            try{
+                const auto res = std::stol(in.front());
+                return std::optional<long int>(res);
+            }catch(const std::exception &){}
+        }
+        return std::optional<long int>();
+    };
+
+    const auto convert_first_to_double = [](const std::vector<std::string> &in) -> std::optional<double> {
+        if(!in.empty()){
+            try{
+                const auto res = std::stod(in.front());
+                return std::optional<double>(res);
+            }catch(const std::exception &){}
+        }
+        return std::optional<double>();
+    };
+
+    const auto convert_to_vec3_double = [](const std::vector<std::string> &in) -> std::optional<vec3<double>> {
+        if(in.size() == 3){
+            try{
+                const auto x = std::stod(in.at(0));
+                const auto y = std::stod(in.at(1));
+                const auto z = std::stod(in.at(2));
+                return std::optional<vec3<double>>( vec3<double>(x,y,z) );
+            }catch(const std::exception &){}
+        }
+        return std::optional<vec3<double>>();
+    };
+
+    const auto convert_to_vec3_int64 = [](const std::vector<std::string> &in) -> std::optional<vec3<int64_t>> {
+        if(in.size() == 3){
+            try{
+                const auto x = std::stol(in.at(0));
+                const auto y = std::stol(in.at(1));
+                const auto z = std::stol(in.at(2));
+                return std::optional<vec3<int64_t>>( vec3<int64_t>(x,y,z) );
+            }catch(const std::exception &){}
+        }
+        return std::optional<vec3<int64_t>>();
+    };
+
+    const auto convert_to_vector_double = [](const std::vector<std::string> &in) -> std::vector<double> {
+        std::vector<double> out;
+        for(const auto &x : in){
+            try{
+                const auto y = std::stod(x);
+                out.emplace_back(y);
+            }catch(const std::exception &){}
+        }
+        return out;
+    };
+
+    const auto insert_as_string_if_nonempty = []( std::map<std::string, std::string> &metadata,
+                                                  puntoexe::ptr<puntoexe::imebra::dataSet> base_node_ptr,
+                                                  path_node dicom_path,
+                                                  const std::string name) -> void {
+
+        auto res_str_vec = extract_tag_as_string(base_node_ptr, dicom_path);
+
+        const auto ctrim = CANONICALIZE::TRIM_ENDS;
+        bool add_sep = (metadata.count(name) != 0); // Controls whether a separator will be added.
+        for(const auto &s : res_str_vec){
+            const auto trimmed = Canonicalize_String2(s, ctrim);
+            if(trimmed.empty()) continue;
+            metadata[name] += (add_sep ? R"***(\)***"_s : ""_s) + trimmed;
+            add_sep = true;
+        }
+        return;
+    };
+
+    const auto extract_affine_transform = [](const std::vector<double> &v) -> affine_transform<double> {
+        affine_transform<double> t;
+        if(v.size() != 16){
+            throw std::runtime_error("Unanticipated matrix transformation dimensions");
+        }
+        for(size_t row = 0; row < 3; ++row){
+            for(size_t col = 0; col < 4; ++col){
+                const size_t indx = col + row * 4;
+                t.coeff(row,col) = v[indx];
+            }
+        }
+        if(  (v[12] != 0.0)
+        ||   (v[13] != 0.0)
+        ||   (v[14] != 0.0)
+        ||   (v[15] != 1.0) ){
+            throw std::runtime_error("Transformation cannot be represented using an Affine matrix");
+        }
+        return t;
+    };
+
+    // ------------------------------------------- General --------------------------------------------------
+    out->metadata = get_metadata_top_level_tags(FilenameIn);
+    out->metadata["Modality"] = "REG";
+
+    // --------------------------------------- Rigid / Affine -----------------------------------------------
+    // RegistrationSequence
+    for(uint32_t i = 0; i < 100000; ++i){
+        ptr<imebra::dataSet> seq_item_ptr = base_node_ptr->getSequenceItem(0x0070, 0, 0x0308, i);
+        if(seq_item_ptr == nullptr) break;
+        const std::string prfx = R"***(RegistrationSequence)***"_s + std::to_string(i) + R"***(/)***"_s;
+
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x0020, 0x0052}, prfx + "FrameOfReferenceUID");
+
+        // MatrixRegistrationSequence
+        for(uint32_t j = 0; j < 100000; ++j){
+            ptr<imebra::dataSet> sseq_item_ptr = seq_item_ptr->getSequenceItem(0x0070, 0, 0x0309, j);
+            if(sseq_item_ptr == nullptr) break;
+            const std::string pprfx = prfx + R"***(MatrixRegistrationSequence)***"_s + std::to_string(j) + R"***(/)***"_s;
+
+            // MatrixSequence
+            for(uint32_t k = 0; k < 100000; ++k){
+                ptr<imebra::dataSet> ssseq_item_ptr = sseq_item_ptr->getSequenceItem(0x0070, 0, 0x030a, k);
+                if(ssseq_item_ptr == nullptr) break;
+                const std::string ppprfx = pprfx + R"***(MatrixSequence)***"_s + std::to_string(k) + R"***(/)***"_s;
+
+                insert_as_string_if_nonempty(out->metadata, ssseq_item_ptr, {0x0070, 0x030c}, ppprfx + "FrameOfReferenceTransformationMatrixType");
+
+                const auto FrameOfReferenceTransformationMatrix = convert_to_vector_double( extract_tag_as_string(ssseq_item_ptr, {0x3006, 0x00c6}) );
+                if(FrameOfReferenceTransformationMatrix.size() != 16) continue;
+
+                auto t = extract_affine_transform(FrameOfReferenceTransformationMatrix);
+                out->transform = t;
+
+            } // MatrixSequence.
+        } // MatrixRegistrationSequence.
+    } // RegistrationSequence.
+
+    // ------------------------------------------- Deformable -----------------------------------------------
+    // DeformableRegistrationSequence
+    for(uint32_t i = 0; i < 100000; ++i){
+        ptr<imebra::dataSet> seq_item_ptr = base_node_ptr->getSequenceItem(0x0064, 0, 0x0002, i);
+        if(seq_item_ptr == nullptr) break;
+        const std::string prfx = R"***(DeformableRegistrationSequence)***"_s + std::to_string(i) + R"***(/)***"_s;
+
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x0064, 0x0003}, prfx + "SourceFrameOfReferenceUID");
+
+        // DeformableRegistrationGridSequence
+        for(uint32_t j = 0; j < 100000; ++j){
+            ptr<imebra::dataSet> sseq_item_ptr = seq_item_ptr->getSequenceItem(0x0064, 0, 0x0005, j);
+            if(sseq_item_ptr == nullptr) break;
+            const std::string pprfx = prfx + R"***(DeformableRegistrationGridSequence)***"_s + std::to_string(j) + R"***(/)***"_s;
+
+            //insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x0020, 0x0032}, pprfx + "ImagePositionPatient");
+            //insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x0020, 0x0037}, pprfx + "ImageOrientationPatient");
+            //insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x0064, 0x0007}, pprfx + "GridDimensions");
+            //insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x0064, 0x0008}, pprfx + "GridResolution");
+            const auto ImagePositionPatient    = convert_to_vec3_double( extract_tag_as_string(sseq_item_ptr, {0x0020, 0x0032}) );
+            const auto ImageOrientationPatient = convert_to_vector_double( extract_tag_as_string(sseq_item_ptr, {0x0020, 0x0037}) );
+            const auto GridDimensions = convert_to_vec3_int64( extract_tag_as_string(sseq_item_ptr, {0x0064, 0x0007}) );
+            const auto GridResolution = convert_to_vec3_double( extract_tag_as_string(sseq_item_ptr, {0x0064, 0x0008}) );
+
+            // Prepare data in format similar to image loading.
+            const auto zero = vec3<double>(0.0, 0.0, 0.0);
+            const auto zeroL = vec3<int64_t>(0, 0, 0);
+            const auto image_pos = ImagePositionPatient.value();
+
+            if(ImageOrientationPatient.size() != 6){
+                throw std::runtime_error("Invalid ImageOrientationPatient tag");
+            }
+            const auto image_orien_c = vec3<double>(ImageOrientationPatient[0],
+                                                    ImageOrientationPatient[1],
+                                                    ImageOrientationPatient[2]).unit();
+            const auto image_orien_r = vec3<double>(ImageOrientationPatient[3],
+                                                    ImageOrientationPatient[4],
+                                                    ImageOrientationPatient[5]).unit();
+            const auto image_ortho = image_orien_c.Cross(image_orien_r).unit();
+
+            const auto image_rows = GridDimensions.value_or(zeroL).y;
+            const auto image_cols = GridDimensions.value_or(zeroL).x;
+            const auto image_chns = static_cast<int64_t>(3);
+            const auto image_imgs = GridDimensions.value_or(zeroL).z;
+
+            const auto image_buffer_length = image_rows * image_cols * image_chns * image_imgs;
+            if(image_buffer_length <= 0){
+                throw std::runtime_error("Invalid image buffer dimensions");
+            }
+
+            const auto image_pxldy = GridResolution.value_or(zero).x;
+            const auto image_pxldx = GridResolution.value_or(zero).y;
+            const auto image_pxldz = GridResolution.value_or(zero).z;
+
+            const auto voxel_volume = image_pxldy * image_pxldx * image_pxldz;
+            if(voxel_volume <= 0.0){
+                throw std::runtime_error("Invalid grid voxel dimensions");
+            }
+
+            const vec3<double> image_anchor = vec3<double>(0.0,0.0,0.0);
+
+            //insert_as_string_if_nonempty(out->metadata, sseq_item_ptr, {0x0064, 0x0009}, pprfx + "VectorGridData");
+            // ...
+            // TODO: convert the VectorGridData to a deformation_field.
+            // ...
+            //out->transform = t;
+            const auto VectorGridData = convert_to_vector_double( extract_tag_as_string(sseq_item_ptr, {0x0064, 0x0009}) );
+            if(static_cast<int64_t>(VectorGridData.size()) != image_buffer_length){
+                throw std::runtime_error("Encountered incomplete VectorGridData tag");
+            }
+
+            auto v_it = std::begin(VectorGridData);
+            planar_image_collection<double,double> pic;
+            for(int64_t n = 0; n < image_imgs; ++n){
+                pic.images.emplace_back();
+                pic.images.back().init_orientation(image_orien_r, image_orien_c);
+                pic.images.back().init_buffer(image_rows, image_cols, image_chns);
+                const auto image_offset = image_pos + image_ortho * n;
+                pic.images.back().init_spatial(image_pxldx, image_pxldy, image_pxldz, image_anchor, image_offset);
+
+                for(int64_t row = 0; row < image_rows; ++row){
+                    for(int64_t col = 0; col < image_cols; ++col){
+                        for(int64_t chn = 0; chn < image_chns; ++chn, ++v_it){
+                            pic.images.back().reference(row, col, chn) = *v_it;
+                        }
+                    }
+                }
+            }
+            FUNCINFO("Loaded deformation field with dimensions " << image_rows << " x " << image_cols << " x " << image_imgs);
+            deformation_field t(std::move(pic));
+            out->transform = t;
+
+            // PreDeformationMatrixRegistrationSequence
+            for(uint32_t k = 0; k < 100000; ++k){
+                ptr<imebra::dataSet> ssseq_item_ptr = sseq_item_ptr->getSequenceItem(0x0064, 0, 0x000f, k);
+                if(ssseq_item_ptr == nullptr) break;
+                const std::string ppprfx = pprfx + R"***(PreDeformationMatrixRegistrationSequence)***"_s + std::to_string(k) + R"***(/)***"_s;
+
+                insert_as_string_if_nonempty(out->metadata, ssseq_item_ptr, {0x0070, 0x030c}, ppprfx + "FrameOfReferenceTransformationMatrixType");
+
+                const auto FrameOfReferenceTransformationMatrix = convert_to_vector_double( extract_tag_as_string(ssseq_item_ptr, {0x3006, 0x00c6}) );
+                if(FrameOfReferenceTransformationMatrix.size() != 16) continue;
+                auto t = extract_affine_transform(FrameOfReferenceTransformationMatrix);
+                //out->pre_transform = t;
+            } // PreDeformationMatrixRegistrationSequence.
+
+            // PostDeformationMatrixRegistrationSequence
+            for(uint32_t k = 0; k < 100000; ++k){
+                ptr<imebra::dataSet> ssseq_item_ptr = sseq_item_ptr->getSequenceItem(0x0064, 0, 0x0010, k);
+                if(ssseq_item_ptr == nullptr) break;
+                const std::string ppprfx = pprfx + R"***(PostDeformationMatrixRegistrationSequence)***"_s + std::to_string(k) + R"***(/)***"_s;
+
+                insert_as_string_if_nonempty(out->metadata, ssseq_item_ptr, {0x0070, 0x030c}, ppprfx + "FrameOfReferenceTransformationMatrixType");
+
+                const auto FrameOfReferenceTransformationMatrix = convert_to_vector_double( extract_tag_as_string(ssseq_item_ptr, {0x3006, 0x00c6}) );
+                if(FrameOfReferenceTransformationMatrix.size() != 16) continue;
+                auto t = extract_affine_transform(FrameOfReferenceTransformationMatrix);
+                //out->post_transform = t;
+            } // PostDeformationMatrixRegistrationSequence.
+
+        } // DeformableRegistrationGridSequence.
+    } // DeformableRegistrationSequence.
 
     return std::move(out);
 }

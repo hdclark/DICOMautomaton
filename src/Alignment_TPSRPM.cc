@@ -24,15 +24,15 @@
     #include <eigen3/Eigen/Cholesky>
 #endif
 
-#include "Structs.h"
-#include "Regex_Selectors.h"
-#include "Thread_Pool.h"
-
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+
+#include "Structs.h"
+#include "Regex_Selectors.h"
+#include "Thread_Pool.h"
 
 #include "Alignment_Rigid.h"
 #include "Alignment_TPSRPM.h"

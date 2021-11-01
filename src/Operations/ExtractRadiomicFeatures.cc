@@ -190,16 +190,14 @@ bool ExtractRadiomicFeatures(Drover &DICOM_data,
     std::stringstream smesh_header;
     std::stringstream smesh_report;
     {
-        dcma_surface_meshes::Parameters meshing_params;
-        meshing_params.RQ = dcma_surface_meshes::ReproductionQuality::Medium;
-        meshing_params.GridRows = 1024;
-        meshing_params.GridColumns = 1024;
-        auto smesh = dcma_surface_meshes::Estimate_Surface_Mesh( cc_ROIs, meshing_params );
+        auto meshing_params = dcma_surface_meshes::Parameters();
+        auto fv_mesh = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( 
+                                                        cc_ROIs, meshing_params );
+        auto smesh = dcma_surface_meshes::FVSMeshToPolyhedron(fv_mesh);
 
         //if(!polyhedron_processing::SaveAsOFF(smesh, "/tmp/test.off")){
         //    FUNCERR("Unable to write mesh as OFF file");
         //}
-
 
         //polyhedron_processing::Subdivide(smesh, MeshSubdivisions);
         //polyhedron_processing::Simplify(smesh, MeshSimplificationEdgeCountLimit);

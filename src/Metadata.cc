@@ -18,6 +18,12 @@
 #include "Metadata.h"
 
 static
+void insert(metadata_map_t &out, const std::string &key, const std::string &val){
+    out[key] = val;
+    return;
+}
+
+static
 void insert_or_default(metadata_map_t &out, const metadata_map_t &ref, const std::string &key, const std::string &default_val){
     out[key] = get_as<std::string>(ref, key).value_or(default_val);
     return;
@@ -261,9 +267,9 @@ OperationArgDoc MetadataInjectionOpArgDoc(){
     out.name = "KeyValues";
     out.desc = "Key-value pairs in the form of 'key1@value1;key2@value2' that will be injected into the"
                " selected objects."
-               "Values can use macros that refer to other metadata keys using the '$' character."
+               " Values can use macros that refer to other metadata keys using the '$' character."
                " If macros refer to non-existent metadata elements, then the replacement is literal."
-               "Dates, times, and datetimes can be converted to seconds (since the Unix epoch) using the"
+               " Dates, times, and datetimes can be converted to seconds (since the Unix epoch) using the"
                " 'to_seconds()' function."
                "\n\n"
                "Existing conflicting metadata will be overwritten."
@@ -667,7 +673,7 @@ metadata_map_t coalesce_metadata_misc(const metadata_map_t &ref){
 }
 
 
-metadata_map_t coalesce_metadata_for_lsamp(const metadata_map_t &ref){
+metadata_map_t coalesce_metadata_for_lsamp(const metadata_map_t &ref, meta_evolve e){
     metadata_map_t out;
     out["Modality"] = "LINESAMPLE";
     out["MediaStorageSOPClassUID"] = "";
@@ -685,10 +691,17 @@ metadata_map_t coalesce_metadata_for_lsamp(const metadata_map_t &ref){
     out.merge( coalesce_metadata_frame_of_reference(ref) );
     out.merge( coalesce_metadata_general_equipment(ref) );
     out.merge( coalesce_metadata_misc(ref) );
+
+    if(e == meta_evolve::iterate){
+        // Assign a new SOP Instance UID.
+        auto new_sop = coalesce_metadata_sop_common({});
+        insert(out, "SOPInstanceUID", new_sop["SOPInstanceUID"]);
+        insert(out, "MediaStorageSOPInstanceUID", new_sop["MediaStorageSOPInstanceUID"]);
+    }
     return out;
 }
 
-metadata_map_t coalesce_metadata_for_rtdose(const metadata_map_t &ref){
+metadata_map_t coalesce_metadata_for_rtdose(const metadata_map_t &ref, meta_evolve e){
     metadata_map_t out;
     out["Modality"] = "RTDOSE";
     out["MediaStorageSOPClassUID"] = "1.2.840.10008.5.1.4.1.1.481.2"; //Radiation Therapy Dose Storage
@@ -708,6 +721,125 @@ metadata_map_t coalesce_metadata_for_rtdose(const metadata_map_t &ref){
     out.merge( coalesce_metadata_voi_lut(ref) );
     out.merge( coalesce_metadata_rt_dose(ref) );
     out.merge( coalesce_metadata_misc(ref) );
+
+    if(e == meta_evolve::iterate){
+        // Assign a new SOP Instance UID.
+        auto new_sop = coalesce_metadata_sop_common({});
+        insert(out, "SOPInstanceUID", new_sop["SOPInstanceUID"]);
+        insert(out, "MediaStorageSOPInstanceUID", new_sop["MediaStorageSOPInstanceUID"]);
+    }
+    return out;
+}
+
+metadata_map_t coalesce_metadata_for_basic_mr_image(const metadata_map_t &ref, meta_evolve e){
+    metadata_map_t out;
+    out["Modality"] = "MR";
+    out["MediaStorageSOPClassUID"] = "1.2.840.10008.5.1.4.1.1.4"; // (non-enhanced) MR
+    out["SOPClassUID"] = "1.2.840.10008.5.1.4.1.1.4";
+
+    out.merge( coalesce_metadata_sop_common(ref) );
+    out.merge( coalesce_metadata_patient(ref) );
+    out.merge( coalesce_metadata_general_study(ref) );
+    out.merge( coalesce_metadata_general_series(ref) );
+    out.merge( coalesce_metadata_patient_study(ref) );
+    out.merge( coalesce_metadata_frame_of_reference(ref) );
+    out.merge( coalesce_metadata_general_equipment(ref) );
+    out.merge( coalesce_metadata_general_image(ref) );
+    out.merge( coalesce_metadata_image_plane(ref) );
+    out.merge( coalesce_metadata_image_pixel(ref) );
+    out.merge( coalesce_metadata_voi_lut(ref) );
+    out.merge( coalesce_metadata_mr_image(ref) );
+    out.merge( coalesce_metadata_misc(ref) );
+
+    if(e == meta_evolve::iterate){
+        // Assign a new SOP Instance UID.
+        auto new_sop = coalesce_metadata_sop_common({});
+        insert(out, "SOPInstanceUID", new_sop["SOPInstanceUID"]);
+        insert(out, "MediaStorageSOPInstanceUID", new_sop["MediaStorageSOPInstanceUID"]);
+    }
+    return out;
+}
+
+metadata_map_t coalesce_metadata_for_basic_ct_image(const metadata_map_t &ref, meta_evolve e){
+    metadata_map_t out;
+    out["Modality"] = "CT";
+    out["MediaStorageSOPClassUID"] = "1.2.840.10008.5.1.4.1.1.2"; // (non-enhanced) CT
+    out["SOPClassUID"] = "1.2.840.10008.5.1.4.1.1.2";
+
+    out.merge( coalesce_metadata_sop_common(ref) );
+    out.merge( coalesce_metadata_patient(ref) );
+    out.merge( coalesce_metadata_general_study(ref) );
+    out.merge( coalesce_metadata_general_series(ref) );
+    out.merge( coalesce_metadata_patient_study(ref) );
+    out.merge( coalesce_metadata_frame_of_reference(ref) );
+    out.merge( coalesce_metadata_general_equipment(ref) );
+    out.merge( coalesce_metadata_general_image(ref) );
+    out.merge( coalesce_metadata_image_plane(ref) );
+    out.merge( coalesce_metadata_image_pixel(ref) );
+    out.merge( coalesce_metadata_voi_lut(ref) );
+    out.merge( coalesce_metadata_ct_image(ref) );
+    out.merge( coalesce_metadata_misc(ref) );
+
+    if(e == meta_evolve::iterate){
+        // Assign a new SOP Instance UID.
+        auto new_sop = coalesce_metadata_sop_common({});
+        insert(out, "SOPInstanceUID", new_sop["SOPInstanceUID"]);
+        insert(out, "MediaStorageSOPInstanceUID", new_sop["MediaStorageSOPInstanceUID"]);
+    }
+    return out;
+}
+
+metadata_map_t coalesce_metadata_for_basic_mesh(const metadata_map_t &ref, meta_evolve e){
+    metadata_map_t out;
+    out["Modality"] = "SEG";
+    out["MediaStorageSOPClassUID"] = "1.2.840.10008.5.1.4.1.1.66.5"; // Surface Segmentation Storage
+    out["SOPClassUID"] = "1.2.840.10008.5.1.4.1.1.66.5";
+
+    out.merge( coalesce_metadata_sop_common(ref) );
+    out.merge( coalesce_metadata_patient(ref) );
+    out.merge( coalesce_metadata_general_study(ref) );
+    out.merge( coalesce_metadata_general_series(ref) );
+    out.merge( coalesce_metadata_patient_study(ref) );
+    out.merge( coalesce_metadata_frame_of_reference(ref) );
+    out.merge( coalesce_metadata_general_equipment(ref) );
+    //out.merge( coalesce_metadata_enhanced_general_equipment(ref) );
+    //out.merge( coalesce_metadata_surface_segmentation(ref) );
+    //out.merge( coalesce_metadata_surface_mesh(ref) );
+    out.merge( coalesce_metadata_misc(ref) );
+
+    if(e == meta_evolve::iterate){
+        // Assign a new SOP Instance UID.
+        auto new_sop = coalesce_metadata_sop_common({});
+        insert(out, "SOPInstanceUID", new_sop["SOPInstanceUID"]);
+        insert(out, "MediaStorageSOPInstanceUID", new_sop["MediaStorageSOPInstanceUID"]);
+    }
+    return out;
+}
+
+metadata_map_t coalesce_metadata_for_basic_def_reg(const metadata_map_t &ref, meta_evolve e){
+    metadata_map_t out;
+    out["Modality"] = "REG";
+    out["MediaStorageSOPClassUID"] = "1.2.840.10008.5.1.4.1.1.66.3"; // Deformable Spatial Registration Storage
+    out["SOPClassUID"] = "1.2.840.10008.5.1.4.1.1.66.3";
+
+    out.merge( coalesce_metadata_sop_common(ref) );
+    out.merge( coalesce_metadata_patient(ref) );
+    out.merge( coalesce_metadata_general_study(ref) );
+    out.merge( coalesce_metadata_general_series(ref) );
+    out.merge( coalesce_metadata_patient_study(ref) );
+    out.merge( coalesce_metadata_frame_of_reference(ref) );
+    out.merge( coalesce_metadata_general_equipment(ref) );
+    //out.merge( coalesce_metadata_enhanced_general_equipment(ref) );
+    //out.merge( coalesce_metadata_spatial_registration(ref) );
+    //out.merge( coalesce_metadata_deformable_spatial_registration(ref) );
+    out.merge( coalesce_metadata_misc(ref) );
+
+    if(e == meta_evolve::iterate){
+        // Assign a new SOP Instance UID.
+        auto new_sop = coalesce_metadata_sop_common({});
+        insert(out, "SOPInstanceUID", new_sop["SOPInstanceUID"]);
+        insert(out, "MediaStorageSOPInstanceUID", new_sop["MediaStorageSOPInstanceUID"]);
+    }
     return out;
 }
 

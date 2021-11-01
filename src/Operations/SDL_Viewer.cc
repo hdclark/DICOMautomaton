@@ -362,7 +362,7 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
     // Pre-extract the line segment vertices for bounding-box calculation.
     std::vector<vec3<double>> verts;
     for(const auto& l : lss){
-        for(const auto p : { l.Get_R0(), l.Get_R1() }){
+        for(const auto &p : { l.Get_R0(), l.Get_R1() }){
             verts.emplace_back(p);
         }
     }
@@ -1736,6 +1736,8 @@ bool SDL_Viewer(Drover &DICOM_data,
     long int active_script_file = -1;
     std::shared_mutex script_mutex;
     std::atomic<long int> script_epoch = 0L;
+    const std::string new_script_content = "#!/usr/bin/env -S dicomautomaton_dispatcher -v\n\n";
+
     const auto append_to_script = [](std::vector<char> &content, const std::string &s) -> void {
         for(const auto &c : s) content.emplace_back(c);
         return;
@@ -1939,6 +1941,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                             &script_files,
                                             &active_script_file,
                                             &script_epoch,
+                                            &new_script_content,
                                             &append_to_script,
                                             &execute_script,
 
@@ -1997,7 +2000,17 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::EndMenu();
                 }
                 if(ImGui::BeginMenu("Adjust")){
-                    ImGui::MenuItem("Window and Level", nullptr, &view_toggles.adjust_window_level_enabled);
+                    if(ImGui::BeginMenu("Toggle Style")){
+                        if(ImGui::MenuItem("Dark Mode", nullptr, nullptr)){
+                            ImGui::StyleColorsDark();
+                        }
+                        if(ImGui::MenuItem("Light Mode", nullptr, nullptr)){
+                            ImGui::StyleColorsLight();
+                        }
+                        ImGui::EndMenu();
+                    }
+                    ImGui::Separator();
+                    ImGui::MenuItem("Image Window and Level", nullptr, &view_toggles.adjust_window_level_enabled);
                     ImGui::MenuItem("Image Colour Map", nullptr, &view_toggles.adjust_colour_map_enabled);
                     ImGui::EndMenu();
                 }
@@ -2030,7 +2043,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     FUNCINFO("No script to append to. Creating new script.");
                                     script_files.emplace_back();
                                     script_files.back().altered = true;
-                                    script_files.back().content.emplace_back('\0');
+                                    append_to_script(script_files.back().content, new_script_content);
+                                    script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
                                     active_script_file = N_sfs;
                                     N_sfs = static_cast<long int>(script_files.size());
                                 }
@@ -2092,26 +2106,32 @@ bool SDL_Viewer(Drover &DICOM_data,
                         }
                         ImGui::EndMenu();
                     }
-                    if(ImGui::BeginMenu("Load Script")){
-                        for(const auto &sscript : Standard_Scripts()){
-                            if(ImGui::MenuItem(sscript.name.c_str())){
-                                std::unique_lock<std::shared_mutex> script_lock(script_mutex);
-                                auto N_sfs = static_cast<long int>(script_files.size());
-                                script_files.emplace_back();
-                                script_files.back().altered = false;
-                                script_files.back().path = sscript.name;
-                                script_files.back().content.clear();
-                                append_to_script(script_files.back().content, sscript.text);
-                                script_files.back().content.emplace_back('\0');
-                                active_script_file = N_sfs;
-                                ++N_sfs;
-                                view_toggles.view_script_editor_enabled = true;
-                            }
-                            if(ImGui::IsItemHovered()){
-                                ImGui::SetNextWindowSizeConstraints(ImVec2(600.0, -1), ImVec2(500.0, -1));
-                                ImGui::BeginTooltip();
-                                ImGui::TextWrapped("%s", sscript.text.c_str());
-                                ImGui::EndTooltip();
+                    if(ImGui::BeginMenu("Edit Action Script")){
+                        const auto categories = standard_script_categories();
+                        for(const auto &cat : categories){
+                            if(ImGui::BeginMenu(cat.c_str())){
+                                for(const auto &sscript : standard_scripts_with_category(cat)){
+                                    if(ImGui::MenuItem(sscript.name.c_str())){
+                                        std::unique_lock<std::shared_mutex> script_lock(script_mutex);
+                                        auto N_sfs = static_cast<long int>(script_files.size());
+                                        script_files.emplace_back();
+                                        script_files.back().altered = false;
+                                        script_files.back().path = sscript.name;
+                                        script_files.back().content.clear();
+                                        append_to_script(script_files.back().content, sscript.text);
+                                        script_files.back().content.emplace_back('\0');
+                                        active_script_file = N_sfs;
+                                        ++N_sfs;
+                                        view_toggles.view_script_editor_enabled = true;
+                                    }
+                                    if(ImGui::IsItemHovered()){
+                                        ImGui::SetNextWindowSizeConstraints(ImVec2(600.0, -1), ImVec2(500.0, -1));
+                                        ImGui::BeginTooltip();
+                                        ImGui::TextWrapped("%s", sscript.text.c_str());
+                                        ImGui::EndTooltip();
+                                    }
+                                }
+                                ImGui::EndMenu();
                             }
                         }
                         ImGui::EndMenu();
@@ -2120,21 +2140,26 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
 
                 if(ImGui::BeginMenu("Actions")){
-                    for(const auto &sscript : Standard_Scripts()){
-                        if(ImGui::MenuItem(sscript.name.c_str())){
-                            std::list<script_feedback_t> feedback;
-                            if(!execute_script(sscript.text, feedback)){
-                                FUNCWARN("Script execution failed");
-                                // TODO: provide feedback to user here...
+                    const auto categories = standard_script_categories();
+                    for(const auto &cat : categories){
+                        if(ImGui::BeginMenu(cat.c_str())){
+                            for(const auto &sscript : standard_scripts_with_category(cat)){
+                                if(ImGui::MenuItem(sscript.name.c_str())){
+                                    std::list<script_feedback_t> feedback;
+                                    if(!execute_script(sscript.text, feedback)){
+                                        FUNCWARN("Script execution failed");
+                                        // TODO: provide feedback to user here...
+                                    }
+                                }
+                                if(ImGui::IsItemHovered()){
+                                    ImGui::SetNextWindowSizeConstraints(ImVec2(600.0, -1), ImVec2(500.0, -1));
+                                    ImGui::BeginTooltip();
+                                    ImGui::TextWrapped("%s", sscript.text.c_str());
+                                    ImGui::EndTooltip();
+                                }
                             }
+                            ImGui::EndMenu();
                         }
-                        if(ImGui::IsItemHovered()){
-                            ImGui::SetNextWindowSizeConstraints(ImVec2(600.0, -1), ImVec2(500.0, -1));
-                            ImGui::BeginTooltip();
-                            ImGui::TextWrapped("%s", sscript.text.c_str());
-                            ImGui::EndTooltip();
-                        }
-
                     }
                     ImGui::EndMenu();
                 }
@@ -2196,6 +2221,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                             &script_files,
                                             &active_script_file,
                                             &script_epoch,
+                                            &new_script_content,
                                             &append_to_script,
                                             &execute_script,
 
@@ -2230,75 +2256,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if(ImGui::Button("New", ImVec2(window_extent.x/4, 0))){ 
                         script_files.emplace_back();
                         script_files.back().altered = true;
+                        append_to_script(script_files.back().content, new_script_content);
                         script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
-////////////////
-////////////////
-////////////////
-const std::string testing_content = R"***(#!/usr/bin/env -S dicomautomaton_dispatcher -v
-
-variable = "something";
-variable = "something else";
-
-variable_op = "operation2";
-
-operation1(a = 123,
-          b = "234",
-          c = 3\45,
-          d = "45\6",
-          e = '56\7',
-          f = variable );
-
-# This is a comment. It should be ignored, including syntax errors like ;'"(]'\"".
-# This is another comment.
-variable_op(x = "123",
-          # This is another comment.
-          y = 456){
-
-    # This is a nested statement. Recursive statements are supported.
-    operation3(z = 789){
-        variable = "something new";
-        operation4(w = variable);
-    };
-
-};
-
-DeleteImages(
-    ImageSelection = 'all'
-);
-DeleteContours(
-    ROILabelRegex = '.*'
-);
-
-roiall = "everything";
-roisphere = 'sphere';
-
-Repeat( N = 2 ){
-    Repeat( N = 1 ){
-        GenerateVirtualDataImageSphereV1();
-    };
-};
-DeleteImages( ImageSelection = 'last' );
-
-ContourWholeImages(
-    ROILabel = roiname
-);
-
-ContourViaThreshold(
-    ROILabel = roisphere,
-    Method = "marching-squares",
-    Lower = 0.5,
-    SimplifyMergeAdjacent = true
-);
-
-)***";
-script_files.back().content.clear();
-append_to_script(script_files.back().content, testing_content);
-script_files.back().content.emplace_back('\0');
-////////////////
-////////////////
-
                         active_script_file = N_sfs;
-                        ++N_sfs;
+                        N_sfs = static_cast<long int>(script_files.size());
                     }
                     ImGui::SameLine();
                     if(ImGui::Button("Open", ImVec2(window_extent.x/4, 0))){ 

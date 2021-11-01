@@ -46,10 +46,13 @@
 #include "Operations/ConvertDoseToImage.h"
 #include "Operations/ConvertImageToDose.h"
 #include "Operations/ConvertImageToMeshes.h"
+#include "Operations/ConvertImageToWarp.h"
 #include "Operations/ConvertMeshesToPoints.h"
 #include "Operations/ConvertNaNsToAir.h"
 #include "Operations/ConvertNaNsToZeros.h"
 #include "Operations/ConvertPixelsToPoints.h"
+#include "Operations/ConvertWarpToImage.h"
+#include "Operations/ConvertWarpToMeshes.h"
 #include "Operations/ConvolveImages.h"
 #include "Operations/CellularAutomata.h"
 #include "Operations/CopyContours.h"
@@ -255,10 +258,13 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ConvertDoseToImage"] = std::make_pair(OpArgDocConvertDoseToImage, ConvertDoseToImage);
     out["ConvertImageToDose"] = std::make_pair(OpArgDocConvertImageToDose, ConvertImageToDose);
     out["ConvertImageToMeshes"] = std::make_pair(OpArgDocConvertImageToMeshes, ConvertImageToMeshes);
+    out["ConvertImageToWarp"] = std::make_pair(OpArgDocConvertImageToWarp, ConvertImageToWarp);
     out["ConvertMeshesToPoints"] = std::make_pair(OpArgDocConvertMeshesToPoints, ConvertMeshesToPoints);
     out["ConvertNaNsToAir"] = std::make_pair(OpArgDocConvertNaNsToAir, ConvertNaNsToAir);
     out["ConvertNaNsToZeros"] = std::make_pair(OpArgDocConvertNaNsToZeros, ConvertNaNsToZeros);
     out["ConvertPixelsToPoints"] = std::make_pair(OpArgDocConvertPixelsToPoints, ConvertPixelsToPoints);
+    out["ConvertWarpToImage"] = std::make_pair(OpArgDocConvertWarpToImage, ConvertWarpToImage);
+    out["ConvertWarpToMeshes"] = std::make_pair(OpArgDocConvertWarpToMeshes, ConvertWarpToMeshes);
     out["ConvolveImages"] = std::make_pair(OpArgDocConvolveImages, ConvolveImages);
     out["CopyContours"] = std::make_pair(OpArgDocCopyContours, CopyContours);
     out["CopyImages"] = std::make_pair(OpArgDocCopyImages, CopyImages);

@@ -155,6 +155,7 @@ OperationDoc OpArgDocHighlightROIs(){
     out.args.back().default_val = "true";
     out.args.back().expected = true;
     out.args.back().examples = { "true", "false" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
     out.args.back().name = "InteriorOverwrite";
@@ -162,6 +163,7 @@ OperationDoc OpArgDocHighlightROIs(){
     out.args.back().default_val = "true";
     out.args.back().expected = true;
     out.args.back().examples = { "true", "false" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
     out.args.back() = NCWhitelistOpArgDoc();

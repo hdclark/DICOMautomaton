@@ -28,6 +28,11 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
+
+#include "../Alignment_Rigid.h"
+#include "../Alignment_TPSRPM.h"
+#include "../Alignment_Field.h"
+
 #include "WarpContours.h"
 
 OperationDoc OpArgDocWarpContours(){
@@ -126,6 +131,15 @@ bool WarpContours(Drover &DICOM_data,
                 // Thin-plate spline transformations.
                 }else if constexpr (std::is_same_v<V, thin_plate_spline>){
                     FUNCINFO("Applying thin-plate spline transformation now");
+                    for(auto &c : cc_refw.get().contours){
+                        for(auto &v : c.points){
+                            t.apply_to(v);
+                        }
+                    }
+
+                // Deformation field transformations.
+                }else if constexpr (std::is_same_v<V, deformation_field>){
+                    FUNCINFO("Applying deformation field transformation now");
                     for(auto &c : cc_refw.get().contours){
                         for(auto &v : c.points){
                             t.apply_to(v);

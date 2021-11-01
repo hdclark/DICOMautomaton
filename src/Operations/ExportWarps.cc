@@ -27,7 +27,9 @@
 #include "YgorFilesDirs.h"
 
 #include "../Structs.h"
+#include "../Alignment_Rigid.h"
 #include "../Alignment_TPSRPM.h"
+#include "../Alignment_Field.h"
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
 
@@ -68,8 +70,7 @@ OperationDoc OpArgDocExportWarps(){
 
 bool ExportWarps(Drover &DICOM_data,
                    const OperationArgPkg& OptArgs,
-                   const std::map<std::string, std::string>&
-                   /*InvocationMetadata*/,
+                   const std::map<std::string, std::string>& /*InvocationMetadata*/,
                    const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
@@ -110,6 +111,13 @@ bool ExportWarps(Drover &DICOM_data,
             // Thin-plate spline transformations.
             }else if constexpr (std::is_same_v<V, thin_plate_spline>){
                 FUNCINFO("Exporting thin-plate spline transformation now");
+                if(!(t.write_to(FO))){
+                    std::runtime_error("Unable to write to file. Cannot continue.");
+                }
+
+            // Vector deformation fields.
+            }else if constexpr (std::is_same_v<V, deformation_field>){
+                FUNCINFO("Exporting vector deformation field now");
                 if(!(t.write_to(FO))){
                     std::runtime_error("Unable to write to file. Cannot continue.");
                 }
