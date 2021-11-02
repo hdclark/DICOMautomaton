@@ -614,7 +614,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                   const std::string& FilenameLex){
 
     pfd::settings::verbose(true);
-    const auto native_file_dialogs_available = pfd::settings::available();
+    const auto native_file_dialogs_available = false; //pfd::settings::available();
     if(!native_file_dialogs_available){
         FUNCWARN("File dialogs not available on this system")
     }
