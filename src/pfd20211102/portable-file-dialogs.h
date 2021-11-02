@@ -19,7 +19,7 @@
 #include <windows.h>
 #include <commdlg.h>
 #include <shlobj.h>
-#include <shpbjIdl.h> // IFileDialog
+#include <shpbjidl.h> // IFileDialog
 #include <shellapi.h>
 #include <strsafe.h>
 #include <future>     // std::async
