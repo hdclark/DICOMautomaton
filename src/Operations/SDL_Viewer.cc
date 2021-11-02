@@ -42,7 +42,6 @@
 #include "../imgui20210904/imgui_impl_sdl.h"
 #include "../imgui20210904/imgui_impl_opengl3.h"
 #include "../implot20210904/implot.h"
-#include "../pfd20211102/portable-file-dialogs.h"
 
 #include <SDL.h>
 #include <GL/glew.h>            // Initialize with glewInit()
@@ -81,6 +80,9 @@
 #endif // DCMA_USE_CGAL
 
 #include "SDL_Viewer.h"
+
+// This header interacts negatively with other headers (SDL and ASIO), so only include at the end.
+#include "../pfd20211102/portable-file-dialogs.h"
 
 //extern const std::string DCMA_VERSION_STR;
 
