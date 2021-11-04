@@ -267,7 +267,6 @@ target_include_directories(imebrashim SYSTEM PUBLIC
     ./imebra20121219/library/imebra/include/ 
 )
 target_compile_options(imebrashim PUBLIC -w) # Inhibit imebra-related warnings.
-
 target_link_libraries(imebrashim
     explicator 
     ygor 
@@ -284,6 +283,23 @@ target_link_libraries(imebrashim
     m
     Threads::Threads
 )
+
+# Dialog library (built separately to minimize header/macro clashes).
+add_library (dialogshim
+    Dialogs.cc 
+)
+target_link_libraries(dialogshim
+    "$<$<BOOL:${MINGW}>:ws2_32>"
+    "$<$<BOOL:${MINGW}>:wsock32>"
+    "$<$<BOOL:${MINGW}>:comctl32>"
+    "$<$<BOOL:${MINGW}>:uuid>"
+    "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
+    mpfr
+    gmp
+    m
+    Threads::Threads
+)
+
 
 # Pharmacokinetic modeling libraries (built separately for easier reuse).
 
@@ -368,6 +384,7 @@ add_executable (dicomautomaton_dispatcher
 )
 target_link_libraries (dicomautomaton_dispatcher
     imebrashim
+    "$<$<BOOL:${WITH_SDL}>:dialogshim>"
     $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt>
     $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt>
     $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization>
@@ -450,6 +467,7 @@ if(WITH_WT)
     )
     target_link_libraries(dicomautomaton_webserver
         imebrashim
+        "$<$<BOOL:${WITH_SDL}>:dialogshim>"
         $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt>
         $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt>
         $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization>
@@ -590,6 +608,7 @@ install(TARGETS dicomautomaton_dispatcher
                 dicomautomaton_bsarchive_convert
                 dicomautomaton_dump
                 imebrashim
+                dialogshim
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

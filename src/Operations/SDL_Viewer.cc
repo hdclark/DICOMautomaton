@@ -74,15 +74,13 @@
 #include "../File_Loader.h"
 #include "../Script_Loader.h"
 #include "../Thread_Pool.h"
+#include "../Dialogs.h"
 
 #ifdef DCMA_USE_CGAL
     #include "../Surface_Meshes.h"
 #endif // DCMA_USE_CGAL
 
 #include "SDL_Viewer.h"
-
-// This header interacts negatively with other headers (SDL and ASIO), so only include at the end.
-#include "../pfd20211102/portable-file-dialogs.h"
 
 //extern const std::string DCMA_VERSION_STR;
 
@@ -612,12 +610,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                   const OperationArgPkg& /*OptArgs*/,
                   const std::map<std::string, std::string>& InvocationMetadata,
                   const std::string& FilenameLex){
-
-    pfd::settings::verbose(true);
-    const auto native_file_dialogs_available = false; //pfd::settings::available();
-    if(!native_file_dialogs_available){
-        FUNCWARN("File dialogs not available on this system")
-    }
 
     // --------------------------------------- Operational State ------------------------------------------
     std::shared_timed_mutex drover_mutex;
@@ -1744,42 +1736,42 @@ bool SDL_Viewer(Drover &DICOM_data,
     };
     std::future<loaded_files_res> loaded_files;
 
-    std::optional<pfd::open_file> pfd_open_file_opt;
+    std::optional<select_files> select_files_opt;
 
     const auto launch_file_open_dialog = [&view_toggles,
-                                          &pfd_open_file_opt,
+                                          &select_files_opt,
                                           &query_files,
-                                          &open_file_root,
-                                          &native_file_dialogs_available ]() -> void {
+                                          &open_file_root ]() -> void {
         view_toggles.open_files_enabled = true;
         if(!std::filesystem::is_directory(open_file_root)){
             open_file_root = std::filesystem::current_path();
         }
-        if(native_file_dialogs_available){
-            if(!pfd_open_file_opt){
-                pfd_open_file_opt = std::make_optional<pfd::open_file>("Select file(s) to open"_s,
-                           open_file_root.string(),
-                           std::vector<std::string>{{ "DICOM Files"_s, "*.dcm *.DCM"_s,
-                                                      "All Files"_s, "*"_s }},
-                           pfd::opt::multiselect);
+        bool dialogs_supported = true;
+        try{
+            if(!select_files_opt){
+                select_files_opt.emplace("Select file(s) to open"_s,
+                                         open_file_root.string(),
+                                         std::vector<std::string>{ "DICOM Files"_s, "*.dcm *.DCM"_s,
+                                                                   "All Files"_s, "*"_s } );
             }
-        }else{
+        }catch(const std::exception &e){
+            FUNCWARN("Dialog not supported: '" << e.what() << "'. Using fallback file selector");
+            dialogs_supported = false;
+        }
+        if(!dialogs_supported){
             query_files(open_file_root);
         }
         return;
     };
 
     const auto close_file_open_dialog = [&view_toggles,
-                                         &pfd_open_file_opt,
+                                         &select_files_opt,
                                          &open_file_root,
-                                         &open_files_selection,
-                                         &native_file_dialogs_available ]() -> void {
+                                         &open_files_selection ]() -> void {
+        select_files_opt.reset();
         view_toggles.open_files_enabled = false;
         open_files_selection.clear();
         //open_file_root = std::filesystem::current_path();
-        if(native_file_dialogs_available){
-            pfd_open_file_opt = {};
-        }
         return;
     };
 
@@ -3517,8 +3509,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                         &loaded_files,
                                         &query_files,
 
-                                        &native_file_dialogs_available,
-                                        &pfd_open_file_opt,
+                                        &select_files_opt,
                                         &close_file_open_dialog ]() -> void {
 
             std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
@@ -3544,14 +3535,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                 return;
             };
 
-            if(native_file_dialogs_available){
-                if(pfd_open_file_opt && pfd_open_file_opt.value().ready(10)){
+            if(select_files_opt){
+                if(select_files_opt.value().is_ready()){
                     std::list<std::filesystem::path> paths;
-                    for(const auto &f : pfd_open_file_opt.value().result()){
+                    for(const auto &f : select_files_opt.value().get_selection()){
                         paths.push_back( f );
                     }
-                    launch_async_file_load(paths);
                     close_file_open_dialog();
+                    launch_async_file_load(paths);
                 }
 
             }else{
@@ -3674,7 +3665,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     close_file_open_dialog();
                 }
                 ImGui::End();
-            } // native_file_dialogs_available
+            }
             return;
         };
         try{
