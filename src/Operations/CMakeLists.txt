@@ -113,6 +113,7 @@ add_library(Operations_objs OBJECT
     InterpolateSlices.cc
     IsolatedVoxelFilter.cc
     LoadFiles.cc
+    LoadFilesInteractively.cc
     LogScale.cc
     MaxMinPixels.cc
     MeldDose.cc

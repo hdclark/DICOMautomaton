@@ -384,7 +384,7 @@ add_executable (dicomautomaton_dispatcher
 )
 target_link_libraries (dicomautomaton_dispatcher
     imebrashim
-    "$<$<BOOL:${WITH_SDL}>:dialogshim>"
+    dialogshim
     $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt>
     $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt>
     $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization>
@@ -467,7 +467,7 @@ if(WITH_WT)
     )
     target_link_libraries(dicomautomaton_webserver
         imebrashim
-        "$<$<BOOL:${WITH_SDL}>:dialogshim>"
+        dialogshim
         $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt>
         $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt>
         $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization>

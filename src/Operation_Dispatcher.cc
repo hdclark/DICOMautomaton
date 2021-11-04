@@ -133,6 +133,7 @@
 #include "Operations/InterpolateSlices.h"
 #include "Operations/IsolatedVoxelFilter.h"
 #include "Operations/LoadFiles.h"
+#include "Operations/LoadFilesInteractively.h"
 #include "Operations/LogScale.h"
 #include "Operations/MaxMinPixels.h"
 #include "Operations/MeldDose.h"
@@ -343,6 +344,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["InterpolateSlices"] = std::make_pair(OpArgDocInterpolateSlices, InterpolateSlices);
     out["IsolatedVoxelFilter"] = std::make_pair(OpArgDocIsolatedVoxelFilter, IsolatedVoxelFilter);
     out["LoadFiles"] = std::make_pair(OpArgDocLoadFiles, LoadFiles);
+    out["LoadFilesInteractively"] = std::make_pair(OpArgDocLoadFilesInteractively, LoadFilesInteractively);
     out["LogScale"] = std::make_pair(OpArgDocLogScale, LogScale);
     out["MaxMinPixels"] = std::make_pair(OpArgDocMaxMinPixels, MaxMinPixels);
     out["MeldDose"] = std::make_pair(OpArgDocMeldDose, MeldDose);
