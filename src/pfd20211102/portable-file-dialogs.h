@@ -12,7 +12,16 @@
 
 #pragma once
 
-#if _WIN32
+#ifndef USING_WINDOWS
+    #if defined(_WIN32) || defined(_WIN64) || defined(__MINW32__) || defined(__MINGW64__) || defined(__CYGWIN__)
+        #define USING_WINDOWS 1
+        #ifdef _WIN32_WINNT
+            #undef _WIN32_WINNT
+        #endif
+    #endif
+#endif
+
+#if USING_WINDOWS
 #ifndef WIN32_LEAN_AND_MEAN
 #   define WIN32_LEAN_AND_MEAN 1
 #endif
@@ -60,6 +69,7 @@
 #       if __GXX_ABI_VERSION <= 1013
 #           undef PFD_HAS_IFILEDIALOG
 #           define PFD_HAS_IFILEDIALOG 0
+#           pragma message "Warning - IFileDialog is not supported by this toolchain"
 #       endif
 #   endif
 #endif
@@ -171,7 +181,7 @@ public:
     // High level function to abort
     bool kill();
 
-#if _WIN32
+#if USING_WINDOWS
     void start_func(std::function<std::string(int *)> const &fun);
     static BOOL CALLBACK enum_windows_callback(HWND hwnd, LPARAM lParam);
 #elif __EMSCRIPTEN__
@@ -190,7 +200,7 @@ private:
     bool m_running = false;
     std::string m_stdout;
     int m_exit_code = -1;
-#if _WIN32
+#if USING_WINDOWS
     std::future<std::string> m_future;
     std::set<HWND> m_windows;
     std::condition_variable m_cond;
@@ -207,7 +217,7 @@ private:
 class platform
 {
 protected:
-#if _WIN32
+#if USING_WINDOWS
     // Helper class around LoadLibraryA() and GetProcAddress() with some safety
     class dll
     {
@@ -300,7 +310,7 @@ protected:
     std::string string_result();
     std::vector<std::string> vector_result();
 
-#if _WIN32
+#if USING_WINDOWS
     static int CALLBACK bffcallback(HWND hwnd, UINT uMsg, LPARAM, LPARAM pData);
 #if PFD_HAS_IFILEDIALOG
     std::string select_folder_vista(IFileDialog *ifd, bool force_path);
@@ -417,7 +427,7 @@ public:
 namespace internal
 {
 
-#if _WIN32
+#if USING_WINDOWS
 static inline std::wstring str2wstr(std::string const &str)
 {
     int len = MultiByteToWideChar(CP_UTF8, 0, str.c_str(), (int)str.size(), nullptr, 0);
@@ -445,8 +455,8 @@ static inline bool is_vista()
                     VER_MINORVERSION, VER_GREATER_EQUAL),
             VER_SERVICEPACKMAJOR, VER_GREATER_EQUAL);
     osvi.dwOSVersionInfoSize = sizeof(osvi);
-    osvi.dwMajorVersion = HIBYTE(_WIN32_WINNT_VISTA);
-    osvi.dwMinorVersion = LOBYTE(_WIN32_WINNT_VISTA);
+    osvi.dwMajorVersion = HIBYTE(USING_WINDOWS_WINNT_VISTA);
+    osvi.dwMinorVersion = LOBYTE(USING_WINDOWS_WINNT_VISTA);
     osvi.wServicePackMajor = 0;
 
     return VerifyVersionInfoW(&osvi, VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR, mask) != FALSE;
@@ -478,7 +488,7 @@ inline settings::settings(bool resync)
     if (flags(flag::is_scanned))
         return;
 
-#if _WIN32
+#if USING_WINDOWS
     flags(flag::is_vista) = internal::is_vista();
 #elif !__APPLE__
     flags(flag::has_zenity) = check_program("zenity");
@@ -502,7 +512,7 @@ inline settings::settings(bool resync)
 
 inline bool settings::available()
 {
-#if _WIN32
+#if USING_WINDOWS
     return true;
 #elif __APPLE__
     return true;
@@ -528,7 +538,7 @@ inline void settings::rescan()
 // Check whether a program is present using “which”.
 inline bool settings::check_program(std::string const &program)
 {
-#if _WIN32
+#if USING_WINDOWS
     (void)program;
     return false;
 #elif __EMSCRIPTEN__
@@ -587,7 +597,7 @@ inline std::string internal::executor::result(int *exit_code /* = nullptr */)
 
 inline bool internal::executor::kill()
 {
-#if _WIN32
+#if USING_WINDOWS
     if (m_future.valid())
     {
         // Close all windows that weren’t open when we started the future
@@ -608,7 +618,7 @@ inline bool internal::executor::kill()
     return true;
 }
 
-#if _WIN32
+#if USING_WINDOWS
 inline BOOL CALLBACK internal::executor::enum_windows_callback(HWND hwnd, LPARAM lParam)
 {
     auto that = (executor *)lParam;
@@ -621,7 +631,7 @@ inline BOOL CALLBACK internal::executor::enum_windows_callback(HWND hwnd, LPARAM
 }
 #endif
 
-#if _WIN32
+#if USING_WINDOWS
 inline void internal::executor::start_func(std::function<std::string(int *)> const &fun)
 {
     stop();
@@ -703,7 +713,7 @@ inline bool internal::executor::ready(int timeout /* = default_wait_timeout */)
     if (!m_running)
         return true;
 
-#if _WIN32
+#if USING_WINDOWS
     if (m_future.valid())
     {
         auto status = m_future.wait_for(std::chrono::milliseconds(timeout));
@@ -765,7 +775,7 @@ inline void internal::executor::stop()
 
 // dll implementation
 
-#if _WIN32
+#if USING_WINDOWS
 inline internal::platform::dll::dll(std::string const &name)
   : handle(::LoadLibraryA(name.c_str()))
 {}
@@ -775,11 +785,11 @@ inline internal::platform::dll::~dll()
     if (handle)
         ::FreeLibrary(handle);
 }
-#endif // _WIN32
+#endif // USING_WINDOWS
 
 // ole32_dll implementation
 
-#if _WIN32
+#if USING_WINDOWS
 inline internal::platform::ole32_dll::ole32_dll()
     : dll("ole32.dll")
 {
@@ -803,7 +813,7 @@ inline bool internal::platform::ole32_dll::is_initialized()
 
 // new_style_context implementation
 
-#if _WIN32
+#if USING_WINDOWS
 inline internal::platform::new_style_context::new_style_context()
 {
     // Only create one activation context for the whole app lifetime.
@@ -845,7 +855,7 @@ inline HANDLE internal::platform::new_style_context::create()
 
     return ::CreateActCtxA(&act_ctx);
 }
-#endif // _WIN32
+#endif // USING_WINDOWS
 
 // dialog implementation
 
@@ -899,7 +909,7 @@ inline std::string internal::dialog::get_icon_name(icon _icon)
         case icon::question: return "question";
         // Zenity wants "information" but WinForms wants "info"
         /* case icon::info: */ default:
-#if _WIN32
+#if USING_WINDOWS
             return "info";
 #else
             return "information";
@@ -948,7 +958,7 @@ inline internal::file_dialog::file_dialog(type in_type,
             std::vector<std::string> const &filters /* = {} */,
             opt options /* = opt::none */)
 {
-#if _WIN32
+#if USING_WINDOWS
     std::string filter_list;
     std::regex whitespace("  *");
     for (size_t i = 0; i + 1 < filters.size(); i += 2)
@@ -1214,7 +1224,7 @@ inline internal::file_dialog::file_dialog(type in_type,
 
 inline std::string internal::file_dialog::string_result()
 {
-#if _WIN32
+#if USING_WINDOWS
     return m_async->result();
 #else
     auto ret = m_async->result();
@@ -1228,7 +1238,7 @@ inline std::string internal::file_dialog::string_result()
 
 inline std::vector<std::string> internal::file_dialog::vector_result()
 {
-#if _WIN32
+#if USING_WINDOWS
     m_async->result();
     return m_vector_result;
 #else
@@ -1247,7 +1257,7 @@ inline std::vector<std::string> internal::file_dialog::vector_result()
 #endif
 }
 
-#if _WIN32
+#if USING_WINDOWS
 // Use a static function to pass as BFFCALLBACK for legacy folder select
 inline int CALLBACK internal::file_dialog::bffcallback(HWND hwnd, UINT uMsg,
                                                        LPARAM, LPARAM pData)
@@ -1335,7 +1345,7 @@ inline notify::notify(std::string const &title,
     if (_icon == icon::question) // Not supported by notifications
         _icon = icon::info;
 
-#if _WIN32
+#if USING_WINDOWS
     // Use a static shared pointer for notify_icon so that we can delete
     // it whenever we need to display a new one, and we can also wait
     // until the program has finished running.
@@ -1438,7 +1448,7 @@ inline message::message(std::string const &title,
                         choice _choice /* = choice::ok_cancel */,
                         icon _icon /* = icon::info */)
 {
-#if _WIN32
+#if USING_WINDOWS
     // Use MB_SYSTEMMODAL rather than MB_TOPMOST to ensure the message window is brought
     // to front. See https://github.com/samhocevar/portable-file-dialogs/issues/52
     UINT style = MB_SYSTEMMODAL;
