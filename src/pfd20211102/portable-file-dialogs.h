@@ -446,20 +446,21 @@ static inline std::string wstr2str(std::wstring const &str)
 
 static inline bool is_vista()
 {
-    OSVERSIONINFOEXW osvi;
-    memset(&osvi, 0, sizeof(osvi));
-    DWORDLONG const mask = VerSetConditionMask(
-            VerSetConditionMask(
-                    VerSetConditionMask(
-                            0, VER_MAJORVERSION, VER_GREATER_EQUAL),
-                    VER_MINORVERSION, VER_GREATER_EQUAL),
-            VER_SERVICEPACKMAJOR, VER_GREATER_EQUAL);
-    osvi.dwOSVersionInfoSize = sizeof(osvi);
-    osvi.dwMajorVersion = HIBYTE(USING_WINDOWS_WINNT_VISTA);
-    osvi.dwMinorVersion = LOBYTE(USING_WINDOWS_WINNT_VISTA);
-    osvi.wServicePackMajor = 0;
+    //OSVERSIONINFOEXW osvi;
+    //memset(&osvi, 0, sizeof(osvi));
+    //DWORDLONG const mask = VerSetConditionMask(
+    //        VerSetConditionMask(
+    //                VerSetConditionMask(
+    //                        0, VER_MAJORVERSION, VER_GREATER_EQUAL),
+    //                VER_MINORVERSION, VER_GREATER_EQUAL),
+    //        VER_SERVICEPACKMAJOR, VER_GREATER_EQUAL);
+    //osvi.dwOSVersionInfoSize = sizeof(osvi);
+    //osvi.dwMajorVersion = HIBYTE(_WIN32_WINNT_VISTA);
+    //osvi.dwMinorVersion = LOBYTE(_WIN32_WINNT_VISTA);
+    //osvi.wServicePackMajor = 0;
 
-    return VerifyVersionInfoW(&osvi, VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR, mask) != FALSE;
+    //return VerifyVersionInfoW(&osvi, VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR, mask) != FALSE;
+    return true;
 }
 #endif
 
