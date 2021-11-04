@@ -20,7 +20,7 @@ class select_files {
 
     public:
         select_files( const std::string &title,
-                      const std::string &root,
+                      const std::string &root = "",
                       const std::vector<std::string> &filters
                           = std::vector<std::string>{ std::string("All Files"), std::string("*") } );
 

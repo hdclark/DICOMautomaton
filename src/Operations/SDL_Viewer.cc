@@ -1749,10 +1749,10 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool dialogs_supported = true;
         try{
             if(!select_files_opt){
-                select_files_opt.emplace("Select file(s) to open"_s,
-                                         open_file_root.string(),
-                                         std::vector<std::string>{ "DICOM Files"_s, "*.dcm *.DCM"_s,
-                                                                   "All Files"_s, "*"_s } );
+                select_files_opt.emplace("Select file(s) to open"_s);
+//                                         open_file_root.string(),
+//                                         std::vector<std::string>{ "DICOM Files"_s, "*.dcm *.DCM"_s,
+//                                                                   "All Files"_s, "*"_s } );
             }
         }catch(const std::exception &e){
             FUNCWARN("Dialog not supported: '" << e.what() << "'. Using fallback file selector");
