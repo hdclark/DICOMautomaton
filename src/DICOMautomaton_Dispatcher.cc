@@ -429,7 +429,7 @@ FUNCINFO("Transformed path '" << auri << "' to '" << StandaloneFilesDirsReachabl
     // Add a delay on Windows so we can inspect debug info.
     // Note: this will be replaced when logging is improved.
     FUNCWARN(e.what());
-    std::this_thread::sleep_for(std::chrono::seconds(2));
+    std::this_thread::sleep_for(std::chrono::seconds(10));
 #endif
     FUNCERR(e.what());
 }
