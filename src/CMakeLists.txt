@@ -332,6 +332,15 @@ if(WITH_GNU_GSL)
 
 endif()
 
+# Windows icon bundling.
+#    "${TOOLCHAIN}-windres" win_res.rc -O coff -o win_res.o
+#    "${TOOLCHAIN}-g++" -o dicomautomaton_dispatcher.exe ... win_res.o ...
+if(MINGW)
+    add_library(               WindowsIcon_obj OBJECT WindowsIcon.rc )
+    #set_target_properties(     WindowsIcon_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+    target_include_directories(WindowsIcon_obj PRIVATE "${CMAKE_CURRENT_LIST_DIR}/../artifacts/logos/")
+endif()
+
 # Executable.
 add_executable (dicomautomaton_dispatcher
     DICOMautomaton_Dispatcher.cc
@@ -381,6 +390,7 @@ add_executable (dicomautomaton_dispatcher
 
     $<TARGET_OBJECTS:Operations_objs>
     $<TARGET_OBJECTS:DCMA_Version_obj>
+    $<$<BOOL:${MINGW}>:$<TARGET_OBJECTS:WindowsIcon_obj>>
 )
 target_link_libraries (dicomautomaton_dispatcher
     imebrashim
