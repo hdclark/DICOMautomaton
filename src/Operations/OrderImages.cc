@@ -52,11 +52,22 @@ OperationDoc OpArgDocOrderImages(){
                            " compares sub-strings of numbers and characters separately."
                            " Note this ordering is expected to be stable, but may not always be on some systems.";
     out.args.back().default_val = "";
-    out.args.back().expected = true;
+    out.args.back().expected = false;
     out.args.back().examples = { "AcquisitionTime",
                                  "ContentTime",
                                  "SeriesNumber", 
                                  "SeriesDescription" };
+
+    out.args.emplace_back();
+    out.args.back().name = "Unit";
+    out.args.back().desc = "Unit vector use for spatial ordering."
+                           " Images will be sorted according to the position of the corner nearest the (0,0) voxel"
+                           " along the given unit vector.";
+    out.args.back().default_val = "";
+    out.args.back().expected = false;
+    out.args.back().examples = { "(0.0, 0.0, 1.0)",
+                                 "(0.0, -1.0, 0.0)",
+                                 "(0.1, -0.2, 0.3)" };
 
     return out;
 }
@@ -70,16 +81,16 @@ bool OrderImages(Drover &DICOM_data,
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
 
-    const auto KeyStr = OptArgs.getValueStr("Key").value();
+    const auto KeyStrOpt = OptArgs.getValueStr("Key");
+    const auto UnitStrOpt = OptArgs.getValueStr("Unit");
 
     //-----------------------------------------------------------------------------------------------------------------
     using img_t = planar_image<float,double>;
 
-    // --------
     // Define an ordering that will work for words/characters and numbers mixed together.
-    const auto ordering = [KeyStr]( const img_t &A, const img_t &B ) -> bool {
-        const auto A_opt = A.GetMetadataValueAs<std::string>(KeyStr);
-        const auto B_opt = B.GetMetadataValueAs<std::string>(KeyStr);
+    const auto key_ordering = [KeyStrOpt]( const img_t &A, const img_t &B ) -> bool {
+        const auto A_opt = A.GetMetadataValueAs<std::string>(KeyStrOpt.value());
+        const auto B_opt = B.GetMetadataValueAs<std::string>(KeyStrOpt.value());
 
         if(  A_opt && !B_opt ){
             return true;
@@ -160,12 +171,27 @@ bool OrderImages(Drover &DICOM_data,
         throw std::logic_error("Should never get here (3/3). Refusing to continue.");
         return true;
     };
-    // --------
+
+    // Spatial ordering.
+    const auto unit_ordering = [UnitStrOpt]( const img_t &A, const img_t &B ) -> bool {
+        const auto A_pos = A.anchor + A.offset;
+        const auto B_pos = B.anchor + B.offset;
+
+        const auto unit = vec3<double>().from_string( UnitStrOpt.value() ).unit();
+
+        const auto A_proj = A_pos.Dot(unit);
+        const auto B_proj = B_pos.Dot(unit);
+        return (A_proj < B_proj);
+    };
 
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
-        (*iap_it)->imagecoll.images.sort( ordering );
+        if(KeyStrOpt){
+            (*iap_it)->imagecoll.images.sort( key_ordering );
+        }else if(UnitStrOpt){
+            (*iap_it)->imagecoll.images.sort( unit_ordering );
+        }
     }
 
     return true;
