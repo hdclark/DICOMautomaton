@@ -349,9 +349,10 @@ FUNCINFO("Invocation: '" << InvocationMetadata["Invocation"] << "'");
     }
 
     // Transform filename arguments to paths.
+    //
+    // Note: reachability/existence and path transformation is handled in the file loader.
     for(const auto &auri : StandaloneFilesDirs){
         StandaloneFilesDirsReachable.emplace_back(auri);
-FUNCINFO("Transformed path '" << auri << "' to '" << StandaloneFilesDirsReachable.back().string() << "'");
     }
 
     //Try find a lexicon file if none were provided.

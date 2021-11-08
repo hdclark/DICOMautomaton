@@ -16,6 +16,7 @@
 #include <memory>
 #include <set> 
 #include <string>    
+#include <filesystem>
 //#include <cfenv>              //Needed for std::feclearexcept(FE_ALL_EXCEPT).
 
 #include <algorithm>

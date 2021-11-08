@@ -732,7 +732,7 @@ FUNCINFO("    This node is a leaf node. Creating a leaf tag");
 // use it to grab specific things. Each invocation involves disk access and file parsing.
 //
 //NOTE: On error, the output will be an empty string.
-std::string get_tag_as_string(const std::string &filename, size_t U, size_t L){
+std::string get_tag_as_string(const std::filesystem::path &filename, size_t U, size_t L){
     using namespace puntoexe;
     ptr<puntoexe::stream> readStream(new puntoexe::stream);
     readStream->openFile(filename.c_str(), std::ios::in);
@@ -744,12 +744,12 @@ std::string get_tag_as_string(const std::string &filename, size_t U, size_t L){
     return TopDataSet->getString(U, 0, L, 0);
 }
 
-std::string get_modality(const std::string &filename){
+std::string get_modality(const std::filesystem::path &filename){
     //Should exist in each DICOM file.
     return get_tag_as_string(filename,0x0008,0x0060);
 }
 
-std::string get_patient_ID(const std::string &filename){
+std::string get_patient_ID(const std::filesystem::path &filename){
     //Should exist in each DICOM file.
     return get_tag_as_string(filename,0x0010,0x0020);
 }
@@ -757,7 +757,7 @@ std::string get_patient_ID(const std::string &filename){
 //Mass top-level tag enumeration, for ingress into database.
 //
 //NOTE: May not be complete. Add additional tags as needed!
-std::map<std::string,std::string> get_metadata_top_level_tags(const std::string &filename){
+std::map<std::string,std::string> get_metadata_top_level_tags(const std::filesystem::path &filename){
     std::map<std::string,std::string> out;
     const auto ctrim = CANONICALIZE::TRIM_ENDS;
 
@@ -1007,7 +1007,7 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
                                                               tds, "");
     
     //Misc.
-    out["Filename"] = filename;
+    out["Filename"] = filename.string();
 
     //SOP Common Module.
     insert_as_string_if_nonempty(0x0008, 0x0016, "SOPClassUID");
@@ -1370,7 +1370,7 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::string 
 
 //Returns a bimap with the (raw) ROI tags and their corresponding ROI numbers. The ROI numbers are
 // arbitrary identifiers used within the DICOM file to identify contours more conveniently.
-bimap<std::string,long int> get_ROI_tags_and_numbers(const std::string &FilenameIn){
+bimap<std::string,long int> get_ROI_tags_and_numbers(const std::filesystem::path &FilenameIn){
     using namespace puntoexe;
     ptr<puntoexe::stream> readStream(new puntoexe::stream);
     readStream->openFile(FilenameIn.c_str(), std::ios::in);
@@ -1410,7 +1410,7 @@ bimap<std::string,long int> get_ROI_tags_and_numbers(const std::string &Filename
 
 
 //Returns contour data from a DICOM RTSTRUCT file sorted into ROI-specific collections.
-std::unique_ptr<Contour_Data> get_Contour_Data(const std::string &filename){
+std::unique_ptr<Contour_Data> get_Contour_Data(const std::filesystem::path &filename){
     auto output = std::make_unique<Contour_Data>();
     bimap<std::string,long int> tags_names_and_numbers = get_ROI_tags_and_numbers(filename);
 
@@ -1505,7 +1505,7 @@ std::unique_ptr<Contour_Data> get_Contour_Data(const std::string &filename){
 //       PT and US have not been tested. RTDOSE files should use the Load_Dose_Array code, which 
 //       handles multi-frame images (and thus might be adaptable for other non-RTDOSE multi-frame 
 //       images).
-std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
+std::unique_ptr<Image_Array> Load_Image_Array(const std::filesystem::path &FilenameIn){
     auto out = std::make_unique<Image_Array>();
 
     using namespace puntoexe;
@@ -1884,7 +1884,7 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::string &FilenameIn){
 }
 
 //These 'shared' pointers will actually be unique. This routine just converts from unique to shared for you.
-std::list<std::shared_ptr<Image_Array>>  Load_Image_Arrays(const std::list<std::string> &filenames){
+std::list<std::shared_ptr<Image_Array>>  Load_Image_Arrays(const std::list<std::filesystem::path> &filenames){
     std::list<std::shared_ptr<Image_Array>> out;
     for(const auto & filename : filenames){
         out.push_back(Load_Image_Array(filename));
@@ -1924,7 +1924,7 @@ std::unique_ptr<Image_Array> Collate_Image_Arrays(std::list<std::shared_ptr<Imag
 
 //--------------------- Dose -----------------------
 //This routine reads a single DICOM dose file.
-std::unique_ptr<Image_Array>  Load_Dose_Array(const std::string &FilenameIn){
+std::unique_ptr<Image_Array>  Load_Dose_Array(const std::filesystem::path &FilenameIn){
     auto metadata = get_metadata_top_level_tags(FilenameIn);
     metadata["Modality"] = "RTDOSE";
 
@@ -1960,7 +1960,7 @@ std::unique_ptr<Image_Array>  Load_Dose_Array(const std::string &FilenameIn){
     //Determine how many frames there are in the pixel data. A CT scan may just be a 2d jpeg or something, 
     // but dose pixel data is 3d data composed of 'frames' of stacked 2d data.
     const auto frame_count = static_cast<unsigned long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0008, 0));
-    if(frame_count == 0) throw std::domain_error("No frames were found in file '"_s + FilenameIn + "'. Is it a valid dose file?");
+    if(frame_count == 0) throw std::domain_error("No frames were found in file '"_s + FilenameIn.string() + "'. Is it a valid dose file?");
 
     //This is a redirection to another tag. I've never seen it be anything but (0x3004,0x000c).
     const auto frame_inc_pntrU  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0009, 0));
@@ -2087,7 +2087,7 @@ std::unique_ptr<Image_Array>  Load_Dose_Array(const std::string &FilenameIn){
 }
 
 //These 'shared' pointers will actually be unique. This routine just converts from unique to shared for you.
-std::list<std::shared_ptr<Image_Array>>  Load_Dose_Arrays(const std::list<std::string> &filenames){
+std::list<std::shared_ptr<Image_Array>>  Load_Dose_Arrays(const std::list<std::filesystem::path> &filenames){
     std::list<std::shared_ptr<Image_Array>> out;
     for(const auto & filename : filenames){
         out.push_back(Load_Dose_Array(filename));
@@ -2101,7 +2101,7 @@ std::list<std::shared_ptr<Image_Array>>  Load_Dose_Arrays(const std::list<std::s
 // See DICOM standard, RT Beams module (C.8.8.14).
 
 std::unique_ptr<TPlan_Config> 
-Load_TPlan_Config(const std::string &FilenameIn){
+Load_TPlan_Config(const std::filesystem::path &FilenameIn){
     std::unique_ptr<TPlan_Config> out(new TPlan_Config());
 
     using namespace puntoexe;
@@ -2515,7 +2515,7 @@ Load_TPlan_Config(const std::string &FilenameIn){
 //
 // See DICOM standard, Spatial Registration Module (C.20.2).
 std::unique_ptr<Transform3>
-Load_Transform(const std::string &FilenameIn){
+Load_Transform(const std::filesystem::path &FilenameIn){
     std::unique_ptr<Transform3> out(new Transform3());
 
     using namespace puntoexe;
@@ -2811,7 +2811,7 @@ Load_Transform(const std::string &FilenameIn){
 //       intensities which are scaled by a floating-point number to get the final dose. There are facilities for
 //       exchanging floating-point-valued images in DICOM, but portability would be suspect.
 //
-void Write_Dose_Array(const std::shared_ptr<Image_Array>& IA, const std::string &FilenameOut, ParanoiaLevel Paranoia){
+void Write_Dose_Array(const std::shared_ptr<Image_Array>& IA, const std::filesystem::path &FilenameOut, ParanoiaLevel Paranoia){
     if( (IA == nullptr) 
     ||  IA->imagecoll.images.empty()){
         throw std::runtime_error("No images provided for export. Cannot continue.");

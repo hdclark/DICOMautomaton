@@ -46,14 +46,14 @@ bool Load_Points_From_OFF_Files( Drover &DICOM_data,
     while(bfit != Filenames.end()){
         FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
-        const auto Filename = bfit->string();
+        const auto Filename = *bfit;
 
         DICOM_data.point_data.emplace_back( std::make_shared<Point_Cloud>() );
 
         try{
             //////////////////////////////////////////////////////////////
             // Attempt to load the file.
-            std::ifstream FI(Filename.c_str(), std::ios::in);
+            std::ifstream FI(Filename, std::ios::in);
             if(!ReadPointSetFromOFF(DICOM_data.point_data.back()->pset, FI)){
                 throw std::runtime_error("Unable to read mesh from file.");
             }
@@ -69,7 +69,7 @@ bool Load_Points_From_OFF_Files( Drover &DICOM_data,
             // Supply generic minimal metadata iff it is needed.
             std::map<std::string, std::string> generic_metadata;
 
-            generic_metadata["Filename"] = Filename; 
+            generic_metadata["Filename"] = Filename.string(); 
 
             generic_metadata["PatientID"] = "unspecified";
             generic_metadata["StudyInstanceUID"] = Generate_Random_UID(60);
@@ -122,14 +122,14 @@ bool Load_Mesh_From_OFF_Files( Drover &DICOM_data,
     while(bfit != Filenames.end()){
         FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
-        const auto Filename = bfit->string();
+        const auto Filename = *bfit;
 
         DICOM_data.smesh_data.emplace_back( std::make_shared<Surface_Mesh>() );
 
         try{
             //////////////////////////////////////////////////////////////
             // Attempt to load the file.
-            std::ifstream FI(Filename.c_str(), std::ios::in);
+            std::ifstream FI(Filename, std::ios::in);
             if(!ReadFVSMeshFromOFF(DICOM_data.smesh_data.back()->meshes, FI)){
                 throw std::runtime_error("Unable to read mesh from file.");
             }
@@ -147,7 +147,7 @@ bool Load_Mesh_From_OFF_Files( Drover &DICOM_data,
             // Supply generic minimal metadata iff it is needed.
             std::map<std::string, std::string> generic_metadata;
 
-            generic_metadata["Filename"] = Filename; 
+            generic_metadata["Filename"] = Filename.string(); 
 
             generic_metadata["PatientID"] = "unspecified";
             generic_metadata["StudyInstanceUID"] = Generate_Random_UID(60);

@@ -47,11 +47,11 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
     while(bfit != Filenames.end()){
         FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
-        const auto Filename = bfit->string();
+        const auto Filename = *bfit;
 
         //First, try planar_images that have been exported in the expected format.
         try{
-            auto animg = ReadFromFITS<float,double>(Filename);
+            auto animg = ReadFromFITS<float,double>(Filename.string());
 
             //Set some default parameters if none were included in the file metadata.
             if(!std::isfinite(animg.pxl_dx) 
@@ -76,6 +76,8 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
                 throw std::runtime_error("FITS file missing key image parameters. Cannot continue.");
             }
 
+            animg.metadata["Filename"] = Filename.string();
+
             FUNCINFO("Loaded FITS file with dimensions " 
                      << animg.rows << " x " << animg.columns
                      << " and " << animg.channels << " channels");
@@ -89,7 +91,7 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
 
         //Then try the most likely format as exported by other programs.
         try{
-            auto animg = ReadFromFITS<uint8_t,double>(Filename);
+            auto animg = ReadFromFITS<uint8_t,double>(Filename.string());
 
             //Set some default parameters if none were included in the file metadata.
             if(!std::isfinite(animg.pxl_dx) 
@@ -116,6 +118,7 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
 
             planar_image<float,double> animg2;
             animg2.cast_from(animg);
+            animg2.metadata["Filename"] = Filename.string();
 
             FUNCINFO("Loaded FITS file with dimensions " 
                      << animg2.rows << " x " << animg2.columns

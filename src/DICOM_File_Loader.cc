@@ -67,7 +67,7 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
         FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "% \t" << *bfit);
         ++i;
 
-        const auto Filename = bfit->string();
+        const auto Filename = *bfit;
         std::string Modality;
         try{
             Modality = get_modality(Filename);
@@ -181,7 +181,7 @@ if(std::get_if<std::monostate>(&(t->transform)) != nullptr) FUNCWARN("(std::get_
 
             //If we want to add any additional image metadata, or replace the default Imebra_Shim.cc populated metadata
             // with, say, the non-null PostgreSQL metadata, it should be done here.
-            loaded_imgs_storage.back().back()->imagecoll.images.back().metadata["Filename"] = Filename;
+            loaded_imgs_storage.back().back()->imagecoll.images.back().metadata["Filename"] = Filename.string();
             //loaded_imgs_storage.back().back()->imagecoll.images.back().metadata["dt"] = "0.0";
             // ... more metadata operations ...
 

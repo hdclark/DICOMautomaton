@@ -258,27 +258,33 @@ Load_Files( Drover &DICOM_data,
             }
 
             try{
-                p = std::filesystem::absolute(p);
-                if( std::filesystem::exists(p) ){
-                    if( std::filesystem::is_directory(p) ){
-                        for(const auto &rp : std::filesystem::directory_iterator(p)){
-                            recursed_Paths.push_back(rp);
-                        }
-                    }else{
-                        // Only include files with recognized file extensions.
-                        if( is_orig 
-                        ||  has_recognized_extension(p)){
-                            l_Paths.push_back(p);
-                        }else{
-                            FUNCWARN("Ignoring file '" << p.string() << "' because extension is not recognized. Specify explicitly to attempt loading");
-                        }
-                    }
+                // Resolve the file to an absolute path if possible. This is useful for resolving symbolic links.
+                // Note that this won't be possible for Windows UNC paths like '\\server\share_name\path\to\a\file.dcm',
+                // so we have to confirm whether the absolute path can still be accessed.
+                const auto l_p = std::filesystem::absolute(p);
+                if( std::filesystem::exists(l_p) ) p = l_p;
 
-                }else{
-                    FUNCWARN("Unable to resolve file or directory '" << p.string() << "'");
-                    contained_unresolvable = true;
+                if(! std::filesystem::exists(p) ){
+                    throw std::runtime_error("Unable to resolve file or directory "_s + p.string() + "'");
                 }
-            }catch(const std::filesystem::filesystem_error &){ }
+
+                if( std::filesystem::is_directory(p) ){
+                    for(const auto &rp : std::filesystem::directory_iterator(p)){
+                        recursed_Paths.push_back(rp);
+                    }
+                }else{
+                    // Only include files with recognized file extensions.
+                    if( is_orig 
+                    ||  has_recognized_extension(p)){
+                        l_Paths.push_back(p);
+                    }else{
+                        FUNCWARN("Ignoring file '" << p.string() << "' because extension is not recognized. Specify explicitly to attempt loading");
+                    }
+                }
+            }catch(const std::filesystem::filesystem_error &e){
+                FUNCWARN(e.what());
+                contained_unresolvable = true;
+            }
         }
         Paths = l_Paths;
     }
@@ -357,7 +363,7 @@ Load_Files( Drover &DICOM_data,
     }
 
     if(!Paths.empty()){
-        for(const auto &p : Paths) FUNCWARN("Unloaded file: '" << p.c_str() << "'");
+        for(const auto &p : Paths) FUNCWARN("Unloaded file: '" << p.string() << "'");
     }
 
     return (Paths.empty() && !contained_unresolvable);

@@ -835,7 +835,7 @@ bool Load_From_Script_Files( std::list<OperationArgPkg> &Operations,
         while(bfit != Filenames.end()){
             FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
             ++i;
-            const auto Filename = bfit->string();
+            const auto Filename = *bfit;
             bool found_shebang = false;
             std::list<script_feedback_t> feedback;
             std::list<OperationArgPkg> ops;
