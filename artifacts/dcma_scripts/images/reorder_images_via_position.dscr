@@ -1,0 +1,8 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+OrderImages(
+    ImageSelection = 'all',
+    # Key = '',
+    Unit = '(1,1,1)',
+){};
+
