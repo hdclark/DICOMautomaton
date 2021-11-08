@@ -2116,7 +2116,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     std::stringstream sc; // required arguments.
                                     std::stringstream oc; // optional arguments.
                                     sc << std::endl << op_name << "(";
-                                    bool first = true;
                                     std::set<std::string> args;
                                     for(const auto & a : op_docs.args){
                                         // Avoid duplicate arguments (from composite operations).
@@ -2132,17 +2131,17 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                                    [](char c) -> bool { return (c == '\''); }),
                                                    std::end(val) );
                                         if(a.expected){
-                                            if(!first) sc << ", ";
-                                            sc << std::endl << "    " << name << " = '" << val << "'";
-                                            first = false;
+                                            // Note the trailing comma. This is valid syntax and makes it easier to
+                                            // enable/disable optional arguments.
+                                            sc << std::endl << "    " << name << " = '" << val << "',";
                                         }else{
-                                            oc << "    # " <<  name << " = '" << val << "',";
+                                            oc << std::endl << "    " << name << " = '" << val << "',";
                                         }
                                     }
                                     if(!oc.str().empty()){
-                                        sc << std::endl << oc.str() << std::endl;
+                                        sc << oc.str() << std::endl;
                                     }
-                                    sc << " ){};" << std::endl;
+                                    sc << "){};" << std::endl;
 
                                     append_to_script(script_files.at(active_script_file).content, sc.str());
                                     script_files.back().content.emplace_back('\0');
