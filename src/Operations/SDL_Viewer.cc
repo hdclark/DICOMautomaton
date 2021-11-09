@@ -2125,23 +2125,32 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                                         // Escape any quotes in the default value, which will generally be parsed
                                         // fuzzily via regex and should be OK.
-                                        std::string val = a.default_val;
-                                        val.erase( std::remove_if( std::begin(val),
-                                                                   std::end(val),
-                                                                   [](char c) -> bool { return (c == '\''); }),
-                                                   std::end(val) );
+                                        std::string escaped_val;
+                                        {
+                                            bool prev_was_escape = false;
+                                            for(const auto &c : a.default_val){
+                                                if(!prev_was_escape && (c == '\'')) escaped_val += '\\';
+                                                escaped_val += c;
+                                                prev_was_escape = (c == '\\');
+                                            }
+                                        }
+
+                                        // Emit the parameter and default value.
                                         if(a.expected){
                                             // Note the trailing comma. This is valid syntax and makes it easier to
                                             // enable/disable optional arguments.
-                                            sc << std::endl << "    " << name << " = '" << val << "',";
+                                            sc << std::endl << "    " << name << " = '" << escaped_val << "',";
                                         }else{
-                                            oc << std::endl << "    # " << name << " = '" << val << "',";
+                                            oc << std::endl << "    # " << name << " = '" << escaped_val << "',";
                                         }
                                     }
-                                    if(!oc.str().empty()){
-                                        sc << oc.str();
-                                    }
-                                    sc << std::endl << "){};" << std::endl;
+
+                                    // Print optional arguments at the end.
+                                    if(!oc.str().empty()) sc << oc.str();
+
+                                    // Avoid all newlines for parameter-less operations (e.g., 'True(){};').
+                                    if(sc.str().empty()) sc << std::endl;
+                                    sc << "){};" << std::endl;
 
                                     append_to_script(script_files.at(active_script_file).content, sc.str());
                                     script_files.back().content.emplace_back('\0');

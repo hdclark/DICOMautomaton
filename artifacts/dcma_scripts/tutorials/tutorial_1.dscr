@@ -25,7 +25,9 @@ Noop(a = 123,
      c = 3\45,
      d = "45\6",
      e = '56\7',
-     f = variable );
+     f = 'text',
+     g = '\'quoted text\'',
+     h = variable );
 
 # Comments can occur anywhere as long as the '#' is the first non-whitespace
 # character on the line.

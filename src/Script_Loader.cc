@@ -419,7 +419,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
             // Escapes.
             }else if( !prev_escape
                   &&  !inside_comment
-                  &&  quote_stack.empty()
+                  &&  !quote_stack.empty()
                   &&  (c == '\\') ){
                 prev_escape = true;
                 this_caused_escape = true;
