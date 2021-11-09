@@ -2135,13 +2135,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                                             // enable/disable optional arguments.
                                             sc << std::endl << "    " << name << " = '" << val << "',";
                                         }else{
-                                            oc << std::endl << "    " << name << " = '" << val << "',";
+                                            oc << std::endl << "    # " << name << " = '" << val << "',";
                                         }
                                     }
                                     if(!oc.str().empty()){
-                                        sc << oc.str() << std::endl;
+                                        sc << oc.str();
                                     }
-                                    sc << "){};" << std::endl;
+                                    sc << std::endl << "){};" << std::endl;
 
                                     append_to_script(script_files.at(active_script_file).content, sc.str());
                                     script_files.back().content.emplace_back('\0');
