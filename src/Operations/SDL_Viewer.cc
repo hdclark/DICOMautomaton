@@ -1817,10 +1817,10 @@ bool SDL_Viewer(Drover &DICOM_data,
         // Create a dialog box.
         std::optional<select_files> selector_opt;
         if(!selector_opt){
-            selector_opt.emplace("Select script(s) to open"_s);
-//                                         open_file_root.string(),
-//                                         std::vector<std::string>{ "DICOM Files"_s, "*.dcm *.DCM"_s,
-//                                                                   "All Files"_s, "*"_s } );
+            selector_opt.emplace("Select script(s) to open"_s,
+                    std::filesystem::path(),
+                    std::vector<std::string>{ "DCMA Script Files"_s, "*.txt *.TXT *.scr *.SCR *.dscr *.DSCR"_s,
+                                              "All Files"_s, "*"_s } );
         }
 
         // Wait for the user to provide input.
