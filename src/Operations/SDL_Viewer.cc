@@ -1688,6 +1688,10 @@ bool SDL_Viewer(Drover &DICOM_data,
     // Open file dialog state.
     std::filesystem::path open_file_root = std::filesystem::current_path();
     std::array<char,1024> root_entry_text;
+    enum class file_selection_intent {
+        files,    // Treat files as files that should be loaded using Load_Files() and eagerly converted into operations.
+        scripts,  // Treat files as scripts that should be read as text files and the contents not interpretted.
+    };
     struct file_selection {
         std::filesystem::path path;
         bool is_dir;
@@ -1695,8 +1699,10 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool selected;
     };
     std::vector<file_selection> open_files_selection;
-    const auto query_files = [&]( std::filesystem::path root ){
-        open_files_selection.clear();
+    std::vector<file_selection> open_scripts_selection;
+
+    const auto query_files = []( std::filesystem::path root ){
+        std::vector<file_selection> files;
         try{
             if( !root.empty()
             &&  std::filesystem::exists(root)
@@ -1704,22 +1710,22 @@ bool SDL_Viewer(Drover &DICOM_data,
                 for(const auto &d : std::filesystem::directory_iterator( root )){
                     const auto p = d.path();
                     const std::uintmax_t file_size = ( !std::filesystem::is_directory(p) && std::filesystem::exists(p) )
-                                                   ? std::filesystem::file_size(p) : 0;
-                    open_files_selection.push_back( { p,
-                                                      std::filesystem::is_directory(p),
-                                                      file_size,
-                                                      false } );
+                                                     ? std::filesystem::file_size(p) : 0;
+                    files.push_back( { p,
+                                       std::filesystem::is_directory(p),
+                                       file_size,
+                                       false } );
                 }
-                std::sort( std::begin(open_files_selection), std::end(open_files_selection), 
+                std::sort( std::begin(files), std::end(files), 
                            [](const file_selection &L, const file_selection &R){
                                 return L.path < R.path;
                            } );
             }
         }catch(const std::exception &e){
             FUNCINFO("Unable to query files: '" << e.what() << "'");
-            open_files_selection.clear();
+            files.clear();
         }
-        return;
+        return files;
     };
 
     recompute_image_state();
@@ -1736,43 +1742,46 @@ bool SDL_Viewer(Drover &DICOM_data,
     };
     std::future<loaded_files_res> loaded_files;
 
-    std::optional<select_files> select_files_opt;
-
-    const auto launch_file_open_dialog = [&view_toggles,
-                                          &select_files_opt,
-                                          &query_files,
-                                          &open_file_root ]() -> void {
-        view_toggles.open_files_enabled = true;
+    // This is meant to be run asynchronously.
+    const auto launch_file_open_dialog = [InvocationMetadata,
+                                          FilenameLex,
+                                          &view_toggles,
+                                          &query_files ](std::filesystem::path open_file_root) -> loaded_files_res {
         if(!std::filesystem::is_directory(open_file_root)){
             open_file_root = std::filesystem::current_path();
         }
-        bool dialogs_supported = true;
-        try{
-            if(!select_files_opt){
-                select_files_opt.emplace("Select file(s) to open"_s);
+
+        // Create a dialog box.
+        std::optional<select_files> selector_opt;
+        if(!selector_opt){
+            selector_opt.emplace("Select file(s) to open"_s);
 //                                         open_file_root.string(),
 //                                         std::vector<std::string>{ "DICOM Files"_s, "*.dcm *.DCM"_s,
 //                                                                   "All Files"_s, "*"_s } );
-            }
-        }catch(const std::exception &e){
-            FUNCWARN("Dialog not supported: '" << e.what() << "'. Using fallback file selector");
-            dialogs_supported = false;
         }
-        if(!dialogs_supported){
-            query_files(open_file_root);
-        }
-        return;
-    };
 
-    const auto close_file_open_dialog = [&view_toggles,
-                                         &select_files_opt,
-                                         &open_file_root,
-                                         &open_files_selection ]() -> void {
-        select_files_opt.reset();
-        view_toggles.open_files_enabled = false;
-        open_files_selection.clear();
-        //open_file_root = std::filesystem::current_path();
-        return;
+        // Wait for the user to provide input.
+        //
+        // Note: the following blocks by continuous polling.
+        const auto selection = selector_opt.value().get_selection();
+        selector_opt.reset();
+
+        std::list<std::filesystem::path> paths;
+        for(const auto &f : selection){
+            paths.push_back( f );
+        }
+
+        // Load the files.
+        loaded_files_res lfs;
+        std::list<OperationArgPkg> Operations;
+        lfs.res = Load_Files(lfs.DICOM_data, InvocationMetadata, FilenameLex, Operations, paths);
+        if(!Operations.empty()){
+             lfs.res = false;
+             FUNCWARN("Loaded file contains a script. Currently unable to handle script files here");
+        }
+
+        // Notify that the files can be inserted into the 
+        return lfs;
     };
 
     // Script files.
@@ -1791,6 +1800,68 @@ bool SDL_Viewer(Drover &DICOM_data,
     const auto append_to_script = [](std::vector<char> &content, const std::string &s) -> void {
         for(const auto &c : s) content.emplace_back(c);
         return;
+    };
+
+    struct loaded_scripts_res {
+        bool res;
+        std::vector<script_file> script_files;
+    };
+    std::future<loaded_scripts_res> loaded_scripts;
+
+    // This is meant to be run asynchronously.
+    const auto launch_script_open_dialog = [](std::filesystem::path open_file_root) -> loaded_scripts_res {
+        if(!std::filesystem::is_directory(open_file_root)){
+            open_file_root = std::filesystem::current_path();
+        }
+
+        // Create a dialog box.
+        std::optional<select_files> selector_opt;
+        if(!selector_opt){
+            selector_opt.emplace("Select script(s) to open"_s);
+//                                         open_file_root.string(),
+//                                         std::vector<std::string>{ "DICOM Files"_s, "*.dcm *.DCM"_s,
+//                                                                   "All Files"_s, "*"_s } );
+        }
+
+        // Wait for the user to provide input.
+        //
+        // Note: the following blocks by continuous polling.
+        const auto selection = selector_opt.value().get_selection();
+        selector_opt.reset();
+
+        std::list<std::filesystem::path> paths;
+        for(const auto &f : selection){
+            paths.push_back( f );
+        }
+
+        // Load the files.
+        loaded_scripts_res lss;
+        lss.res = true;
+
+        for(const auto &p : paths){
+            std::ifstream is(p, std::ios::in);
+            if(!is){
+                lss.res = false;
+                FUNCWARN("Unable to access script file '" << p.string() << "'");
+                break;
+            }
+            lss.script_files.emplace_back();
+            lss.script_files.back().path = p;
+
+            lss.script_files.back().altered = false;
+            const auto end_it = std::istreambuf_iterator<char>();
+            for(auto c_it = std::istreambuf_iterator<char>(is); c_it != end_it; ++c_it){
+                lss.script_files.back().content.emplace_back(*c_it);
+            }
+            lss.script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
+        }
+
+        if(!lss.res){
+            lss.script_files.clear();
+        }
+
+        // Notify that the files can be inserted into the 
+        return lss;
     };
 
     const auto execute_script = [ &launch_contour_preprocessor,
@@ -1980,8 +2051,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         // Display the main menu bar, which should always be visible.
         const auto display_main_menu_bar = [&view_toggles,
-                                            &query_files,
                                             &open_file_root,
+                                            &loaded_files,
                                             &launch_file_open_dialog,
                                             &contour_enabled,
                                             &contour_hovered,
@@ -2004,7 +2075,9 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(ImGui::BeginMainMenuBar()){
                 if(ImGui::BeginMenu("File")){
                     if(ImGui::MenuItem("Open", "ctrl+o", &view_toggles.open_files_enabled)){
-                        launch_file_open_dialog();
+                        if(!loaded_files.valid()){
+                            loaded_files = std::async(std::launch::async, launch_file_open_dialog, open_file_root);
+                        }
                     }
                     //if(ImGui::MenuItem("Open", "ctrl+o")){
                     //    ImGui::OpenPopup("OpenFileSelector");
@@ -2149,7 +2222,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     if(!oc.str().empty()) sc << oc.str();
 
                                     // Avoid all newlines for parameter-less operations (e.g., 'True(){};').
-                                    if(sc.str().empty()) sc << std::endl;
+                                    if(!op_docs.args.empty()) sc << std::endl;
                                     sc << "){};" << std::endl;
 
                                     append_to_script(script_files.at(active_script_file).content, sc.str());
@@ -2281,6 +2354,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                             &custom_width,
                                             &open_file_root,
                                             &root_entry_text,
+                                            &launch_script_open_dialog,
+                                            &loaded_scripts,
 
                                             &script_mutex,
                                             &script_files,
@@ -2328,27 +2403,31 @@ bool SDL_Viewer(Drover &DICOM_data,
                     }
                     ImGui::SameLine();
                     if(ImGui::Button("Open", ImVec2(window_extent.x/4, 0))){ 
-                        // TODO
-
-                        // Note: ensure there is at least a null character. TODO.
-
-                        // Mimic the 'new' button for testing.
-                        script_files.emplace_back();
-                        script_files.back().altered = true;
-                        script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
-                        active_script_file = N_sfs;
-                        ++N_sfs;
+                        if(!loaded_scripts.valid()){
+                            loaded_scripts = std::async(std::launch::async, launch_script_open_dialog, open_file_root);
+                        }
                     }
                     ImGui::SameLine();
-                    if(ImGui::Button("Save", ImVec2(window_extent.x/4, 0))){ 
+                    if(ImGui::Button("Save As", ImVec2(window_extent.x/4, 0))){ 
                         if( (N_sfs != 0) 
                         &&  isininc(0, active_script_file, N_sfs-1)){
-                            if( script_files.at(active_script_file).path.empty() ){
-                                try{
-                                    const auto open_file_root_str = std::filesystem::absolute(open_file_root / "script.txt").string();
+                            try{
+                                if( script_files.at(active_script_file).path.empty() ){
+                                    // Attempt to determine the absolute path.
+                                    auto l_root = open_file_root;
+                                    const auto l_root_abs = std::filesystem::absolute(open_file_root);
+                                    l_root = (std::filesystem::exists(l_root_abs)) ? l_root_abs : l_root;
+
+                                    const auto open_file_root_str = (l_root / "script.dscr").string();
                                     string_to_array(root_entry_text, open_file_root_str);
-                                    ImGui::OpenPopup("Save Script Filename Picker");
-                                }catch(const std::exception &e){ };
+                                }else{
+                                    // Re-use the existing path.
+                                    const auto path_str = script_files.at(active_script_file).path.string();
+                                    string_to_array(root_entry_text, path_str);
+                                }
+                                ImGui::OpenPopup("Save Script Filename Picker");
+                            }catch(const std::exception &e){
+                                FUNCWARN("Unable to access current filesystem path");
                             }
                         }
                     }
@@ -2444,10 +2523,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                             script_files.at(active_script_file).path.assign(
                                 std::begin(root_entry_text),
                                 std::find( std::begin(root_entry_text), std::end(root_entry_text), '\0') );
-                            script_files.at(active_script_file).path.replace_extension(".txt");
+                            script_files.at(active_script_file).path.replace_extension(".dscr");
 
                             // Write the file contents to the given path.
-                            std::ofstream FO(script_files.at(active_script_file).path.string());
+                            std::ofstream FO(script_files.at(active_script_file).path);
                             FO.write( script_files.at(active_script_file).content.data(),
                                       (script_files.at(active_script_file).content.size() - 1) ); // Disregard trailing null.
                             FO << std::endl;
@@ -3503,187 +3582,6 @@ bool SDL_Viewer(Drover &DICOM_data,
         }
 
 
-        // Open files dialog.
-        const auto open_files_viewer = [&view_toggles,
-                                        
-                                        &drover_mutex,
-                                        &mutex_dt,
-                                        &InvocationMetadata,
-                                        &FilenameLex,
-
-                                        &open_file_root,
-                                        &root_entry_text,
-                                        &open_files_selection,
-                                        &loaded_files,
-                                        &query_files,
-
-                                        &select_files_opt,
-                                        &close_file_open_dialog ]() -> void {
-
-            std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
-            if(!drover_lock) return;
-
-            if( !view_toggles.open_files_enabled
-            ||  loaded_files.valid()) return;
-
-            const auto launch_async_file_load = [&](const std::list<std::filesystem::path> &paths){
-                loaded_files = std::async(std::launch::async, [InvocationMetadata,
-                                                               FilenameLex,
-                                                               paths]() -> loaded_files_res {
-                    loaded_files_res lfs;
-                    auto paths_l = paths;
-                    std::list<OperationArgPkg> Operations;
-                    lfs.res = Load_Files(lfs.DICOM_data, InvocationMetadata, FilenameLex, Operations, paths_l);
-                    if(!Operations.empty()){
-                         lfs.res = false;
-                         FUNCWARN("Loaded file contains a script. Currently unable to handle script files here");
-                    }
-                    return lfs;
-                });
-                return;
-            };
-
-            if(select_files_opt){
-                if(select_files_opt.value().is_ready()){
-                    std::list<std::filesystem::path> paths;
-                    for(const auto &f : select_files_opt.value().get_selection()){
-                        paths.push_back( f );
-                    }
-                    close_file_open_dialog();
-                    launch_async_file_load(paths);
-                }
-
-            }else{
-                // Fallback by providing an SDL-based file loader window.
-
-                ImGui::SetNextWindowSize(ImVec2(600, 650), ImGuiCond_FirstUseEver);
-                ImGui::Begin("Open File", &view_toggles.open_files_enabled);
-
-                ImGui::Text("%s", "Select one or more files to load.");
-                ImGui::Separator();
-                std::string open_file_root_str;
-                try{
-                    open_file_root_str = std::filesystem::absolute(open_file_root).string();
-                }catch(const std::exception &){ };
-                for(size_t i = 0; (i < open_file_root_str.size()) && ((i+1) < root_entry_text.size()); ++i){
-                    root_entry_text[i] = open_file_root_str[i];
-                    root_entry_text[i+1] = '\0';
-                }
-
-                ImGui::Text("Current directory:");
-                ImGui::SameLine();
-                ImGui::InputText("", root_entry_text.data(), root_entry_text.size());
-                std::string entered_text;
-                for(size_t i = 0; i < root_entry_text.size(); ++i){
-                    if(root_entry_text[i] == '\0') break;
-                    if(!std::isprint( static_cast<unsigned char>(root_entry_text[i]) )) break;
-                    entered_text.push_back(root_entry_text[i]);
-                }
-                if(entered_text != open_file_root_str){
-                    open_files_selection.clear();
-                    open_file_root = entered_text;
-                    if( !entered_text.empty() 
-                    &&  std::filesystem::exists(open_file_root)
-                    &&  std::filesystem::is_directory(open_file_root) ){
-                        query_files(open_file_root);
-                    }
-                }
-                ImGui::Separator();
-
-
-                if(ImGui::Button("Parent directory", ImVec2(120, 0))){ 
-                    if(!open_file_root.empty()){
-                        open_file_root = open_file_root.parent_path();
-                        query_files(open_file_root);
-                    }
-                }
-                ImGui::SameLine();
-                if(ImGui::Button("Select all", ImVec2(120, 0))){ 
-                    for(auto &ofs : open_files_selection){
-                        if(!ofs.is_dir){
-                            ofs.selected = true;
-                        }
-                    }
-                }
-                ImGui::SameLine();
-                if(ImGui::Button("Select none", ImVec2(120, 0))){ 
-                    for(auto &ofs : open_files_selection){
-                        ofs.selected = false;
-                    }
-                }
-                ImGui::SameLine();
-                if(ImGui::Button("Invert selection", ImVec2(120, 0))){ 
-                    for(auto &ofs : open_files_selection){
-                        if(ofs.is_dir){
-                            ofs.selected = false;
-                        }else{
-                            ofs.selected = !ofs.selected;
-                        }
-                    }
-                }
-                ImGui::Separator();
-
-                for(auto &ofs : open_files_selection){
-                    const auto is_selected = ImGui::Selectable(ofs.path.lexically_relative(open_file_root).string().c_str(), &(ofs.selected), ImGuiSelectableFlags_AllowDoubleClick);
-                    const auto is_doubleclicked = is_selected && ImGui::IsMouseDoubleClicked(0);
-                    ImGui::SameLine(500);
-                    if(ofs.is_dir){
-                        ImGui::Text("(dir)");
-                    }else if(ofs.file_size != 0){
-                        const float file_size_kB = ofs.file_size / 1000.0;
-                        if(file_size_kB < 500.0){
-                            ImGui::Text("%.1f kB", file_size_kB );
-                        }else{
-                            ImGui::Text("%.2f MB", file_size_kB / 1000.0 );
-                        }
-                    }
-
-                    if(is_doubleclicked){
-                        if(ofs.is_dir){
-                            open_file_root = ofs.path;
-                            query_files(open_file_root);
-                            break;
-                        }
-                    }
-                }
-
-                ImGui::Separator();
-                ImGui::SetItemDefaultFocus();
-                if(ImGui::Button("Load selection", ImVec2(120, 0))){ 
-                    // Extract all files from the selection.
-                    std::list<std::filesystem::path> paths;
-                    for(auto &ofs : open_files_selection){
-                        if(ofs.selected){
-                            // Resolve all files within a directory.
-                            if(ofs.is_dir){
-                                for(const auto &d : std::filesystem::directory_iterator( ofs.path )){
-                                    paths.push_back( d.path().string() );
-                                }
-
-                            // Add a single file to the collection.
-                            }else{
-                                paths.push_back( ofs.path.string() );
-                            }
-                        }
-                    }
-                    launch_async_file_load(paths);
-                }
-                ImGui::SameLine();
-                if(ImGui::Button("Cancel", ImVec2(120, 0))){ 
-                    close_file_open_dialog();
-                }
-                ImGui::End();
-            }
-            return;
-        };
-        try{
-            open_files_viewer();
-        }catch(const std::exception &e){
-            FUNCWARN("Exception in open_files_viewer(): '" << e.what() << "'");
-            throw;
-        }
-
-
         // Handle insertion for the file loading future.
         const auto handle_file_loading = [&view_toggles,
 
@@ -3699,7 +3597,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                                           &reset_contouring_state,
 
                                           &loaded_files,
-                                          &open_files_selection,
 
                                           &frame_count]() -> void {
             if( loaded_files.valid() ){
@@ -3719,14 +3616,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                     auto f = loaded_files.get();
 
                     if(f.res){
-                        view_toggles.open_files_enabled = false;
-                        open_files_selection.clear();
                         DICOM_data.Consume(f.DICOM_data);
                     }else{
                         FUNCWARN("Unable to load files");
                         // TODO ... warn about the issue.
                     }
 
+                    view_toggles.open_files_enabled = false;
                     recompute_image_state();
                     need_to_reload_opengl_texture.store(true);
                     loaded_files = decltype(loaded_files)();
@@ -3744,6 +3640,52 @@ bool SDL_Viewer(Drover &DICOM_data,
             handle_file_loading();
         }catch(const std::exception &e){
             FUNCWARN("Exception in handle_file_loading(): '" << e.what() << "'");
+            throw;
+        }
+
+        // Handle insertion for the script loading future.
+        const auto handle_script_loading = [&view_toggles,
+
+                                            &script_mutex,
+                                            &loaded_scripts,
+                                            &script_files,
+                                            &active_script_file,
+
+                                            &frame_count]() -> void {
+            if( loaded_scripts.valid() ){
+                ImGui::OpenPopup("Loading");
+                if(ImGui::BeginPopupModal("Loading", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+                    const std::string str((frame_count / 15) % 4, '.'); // Simplistic animation.
+                    ImGui::Text("Loading files%s", str.c_str());
+
+                    if(ImGui::Button("Close")){
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::EndPopup();
+                }
+
+                if(std::future_status::ready == loaded_scripts.wait_for(std::chrono::microseconds(1))){
+                    std::unique_lock<std::shared_mutex> script_lock(script_mutex);
+                    auto f = loaded_scripts.get();
+
+                    if(f.res){
+                        script_files.insert( std::end(script_files), std::begin(f.script_files),
+                                                                     std::end(f.script_files) );
+                        active_script_file = static_cast<long int>(script_files.size()) - 1;
+                    }else{
+                        FUNCWARN("Unable to load scripts");
+                        // TODO ... warn about the issue.
+                    }
+                    view_toggles.open_files_enabled = false;
+
+                    loaded_scripts = decltype(loaded_scripts)();
+                }
+            }
+        };
+        try{
+            handle_script_loading();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in handle_script_loading(): '" << e.what() << "'");
             throw;
         }
 

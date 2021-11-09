@@ -6,6 +6,7 @@
 #include <functional>
 #include <chrono>
 #include <thread>
+#include <filesystem>
 
 #include "Dialogs.h"
 
@@ -29,13 +30,13 @@
 //    }
 
 select_files::select_files( const std::string &title,
-                            const std::string &root,
+                            const std::filesystem::path &root,
                             const std::vector<std::string> &filters ){
     if(!pfd::settings::available()){
         throw std::runtime_error("No dialog options available");
     }
 
-    this->dialog = std::make_unique<pfd::open_file>(title, root, filters, pfd::opt::multiselect);
+    this->dialog = std::make_unique<pfd::open_file>(title, root.string(), filters, pfd::opt::multiselect);
 
     // Shouldn't be needed, but ensure a minimal amount of time elapses before the dialog can be queried.
     this->t_launched = std::chrono::steady_clock::now();
@@ -43,6 +44,16 @@ select_files::select_files( const std::string &title,
 
 select_files::~select_files(){
     this->terminate();
+}
+
+void
+select_files::set_user_data(const std::any &ud){
+    this->user_data = ud;
+}
+
+std::any
+select_files::get_user_data() const {
+    return this->user_data;
 }
 
 void
