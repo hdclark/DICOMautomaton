@@ -1,0 +1,91 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# This script is used to reverse a EQD2 transform, which will give a spatial map
+# of the alpha/beta that was used for each voxel.
+#
+# Note that there are many caveats. This is experimental-quality software.
+#
+# Parameters:
+
+orig_Rx_n = -1;  # Number of fractions actually delivered.
+
+nominal_dose_per_fraction = 2.0;  # The '2' in 'EQD2'.
+
+################################################################
+
+LoadFilesInteractively(
+    Instruction = 'Please select the EQD2 RTDOSE file.',
+){};
+LoadFilesInteractively(
+    Instruction = 'Please select the original (i.e., non-EQD2) RTDOSE file.',
+){};
+LoadFilesInteractively(
+    Instruction = 'Please select the RTSTRUCT file to use for per-ROI dose reporting.',
+){};
+
+#ContourWholeImages(){};
+
+CopyImages(
+    ImageSelection = '#-1',
+){};
+
+ExtractAlphaBeta(
+     TransformedImageSelection = '#-0',
+     ReferenceImageSelection = '#-1',
+     NumberOfFractions = orig_Rx_n,
+     # Note: for EQD2 the following should be 2.
+     NominalDosePerFraction = nominal_dose_per_fraction,
+     Model = 'eqdx-lq-simple',
+     ROILabelRegex='.*body.*',
+){};
+
+CropImageDoseToROIs(
+     ImageSelection = 'first',
+     ROILabelRegex = '.*body.*',
+){};
+
+ExtractImageHistograms(
+     ImageSelection = 'first',
+     dDose = '0.005',
+     Lower = -1.0,
+     Upper = 12.0,
+     ROILabelRegex = '.*',
+     #ROILabelRegex = '.*body.*|.*cord.*|.*canal.*|.*stem.*',
+     #ROILabelRegex = '.*cord.*|.*canal.*',
+){};
+
+# Note: alpha/beta has units of 'Gy', so for simplicity we treat alpha/beta
+# as an actual dose here.
+AnalyzeHistograms(
+     LineSelection = 'all',
+     Constraints = 'D(hottest 25%) lte 3.0 Gy ;
+                    D(coldest 25%) gte 2.0 Gy ;
+                    Dmean lte 3.0 Gy ;
+                    Dmean gte 2.0 Gy ',
+     SummaryFilename = 'dcma_alpha_beta_assessment.csv',
+){};
+
+GiveWholeImageArrayAnAlphaBetaWindowLevel(
+     ImageSelection = 'first',
+){};
+
+# Note: the following is only needed when *not* invoking from an interactive
+# viewer.
+#
+#NormalizeLineSamples(
+#     LineSelection = 'HistogramType@Cumulative',
+#     Method = 'peak',
+#){};
+#NormalizeLineSamples(
+#     LineSelection='HistogramType@Differential',
+#     Method='area',
+#){};
+#
+#PlotLineSamples(
+#     LineSelection = 'HistogramType@Cumulative;OrdinateScaling@Normalized',
+#     Title = 'Alpha/Beta for various ROIs.',
+#     AbscissaLabel = 'alpha/beta (Gy)',
+#     OrdinateLabel = 'Fractional Volume',
+#){};
+
+
