@@ -30,7 +30,7 @@ CopyImages(
 ){};
 
 ExtractAlphaBeta(
-     TransformedImageSelection = '#-0',
+     TransformedImageSelection = '#-2',
      ReferenceImageSelection = '#-1',
      NumberOfFractions = orig_Rx_n,
      # Note: for EQD2 the following should be 2.
@@ -40,12 +40,12 @@ ExtractAlphaBeta(
 ){};
 
 CropImageDoseToROIs(
-     ImageSelection = 'first',
+     ImageSelection = '#-2',
      ROILabelRegex = '.*body.*',
 ){};
 
 ExtractImageHistograms(
-     ImageSelection = 'first',
+     ImageSelection = '#-2',
      dDose = '0.005',
      Lower = -1.0,
      Upper = 12.0,
@@ -66,7 +66,7 @@ AnalyzeHistograms(
 ){};
 
 GiveWholeImageArrayAnAlphaBetaWindowLevel(
-     ImageSelection = 'first',
+     ImageSelection = '#-2',
 ){};
 
 # Note: the following is only needed when *not* invoking from an interactive
