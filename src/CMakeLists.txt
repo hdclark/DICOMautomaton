@@ -1,39 +1,13 @@
 
 
-# CMake-only function for embedded the contents of DCMA scripts into C++ source via a -D definition.
-set(script_inlines "")
-function(embed_script
-         filename)
-    # Read the file contents.
-    file(READ "${filename}" script_contents HEX)
-    #message(AUTHOR_WARNING "${script_contents}")
-
-    # Derive a name for the script from the filename.
-    set(script_path "${filename}")
-    string(REGEX REPLACE ".*/(.*)/[^/]*" "\\1" script_category "${script_path}")
-    string(REGEX REPLACE "_" " " script_category "${script_category}")
-
-    string(REGEX REPLACE ".*/(.*)" "\\1" script_filename "${script_path}")
-    string(REGEX REPLACE "_" " " script_filename "${script_filename}")
-    string(REGEX REPLACE "[.]dscr$" "" script_filename "${script_filename}")
-
-    # Convert the file contents to a C++ string with hex escapes.
-    string(REGEX REPLACE "([0-9a-f][0-9a-f])" "\\\\x\\1" script_contents "${script_contents}")
-    #message(AUTHOR_WARNING "${script_contents}")
-
-    set(entry "{\"${script_category}\",\"${script_filename}\",\"${script_contents}\"},")
-
-    # Append the string to a variable for later access.
-    set(script_inlines "${script_inlines}" PARENT_SCOPE)
-    set(script_inlines "${script_inlines}${entry}" PARENT_SCOPE)
-endfunction()
-
-file(GLOB script_files "../artifacts/dcma_scripts/*/*.dscr")
-foreach(script_file ${script_files})
-    embed_script("${script_file}")
-endforeach()
-#message(AUTHOR_WARNING "${script_inlines}")
-
+add_custom_command(
+    OUTPUT  "${CMAKE_CURRENT_BINARY_DIR}/Standard_Scripts.cc" # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/generate_standard_scripts.sh"
+                "${CMAKE_CURRENT_SOURCE_DIR}/Standard_Scripts.cc.in"
+                "${CMAKE_CURRENT_BINARY_DIR}/Standard_Scripts.cc"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Standard_Scripts.cc.in"   # Treated as relative to CMAKE_CURRENT_SOURCE_DIR
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../"
+)
 
 add_subdirectory(Operations)
 
@@ -144,7 +118,9 @@ set_target_properties(  Boost_Serialization_File_Loader_obj PROPERTIES POSITION_
 
 add_library(            Script_Loader_obj OBJECT Script_Loader.cc )
 set_target_properties(  Script_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
-target_compile_definitions( Script_Loader_obj PUBLIC -DDCMA_SCRIPT_INLINES=${script_inlines} )
+
+add_library(            Standard_Scripts_obj OBJECT Standard_Scripts.cc )
+set_target_properties(  Standard_Scripts_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
 add_library(            Surface_Meshes_obj OBJECT Surface_Meshes.cc )
 set_target_properties(  Surface_Meshes_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -380,6 +356,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:PLY_File_Loader_obj>
     $<TARGET_OBJECTS:Line_Sample_File_Loader_obj>
     $<TARGET_OBJECTS:Script_Loader_obj>
+    $<TARGET_OBJECTS:Standard_Scripts_obj>
     $<TARGET_OBJECTS:Write_File_obj>
     $<TARGET_OBJECTS:Operation_Dispatcher_obj>
     $<TARGET_OBJECTS:Documentation_obj>
@@ -464,6 +441,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:PLY_File_Loader_obj>
         $<TARGET_OBJECTS:Line_Sample_File_Loader_obj>
         $<TARGET_OBJECTS:Script_Loader_obj>
+        $<TARGET_OBJECTS:Standard_Scripts_obj>
         $<TARGET_OBJECTS:Write_File_obj>
         $<TARGET_OBJECTS:Operation_Dispatcher_obj>
         $<TARGET_OBJECTS:Documentation_obj>

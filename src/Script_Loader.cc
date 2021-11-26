@@ -926,28 +926,3 @@ void Print_Feedback(std::ostream &os,
     return;
 }
 
-std::list<standard_script_t> standard_scripts(){
-    std::list<standard_script_t> out {
-        // Autopopulated during build.
-        DCMA_SCRIPT_INLINES
-    };
-
-    out.remove_if([](const standard_script_t &s){ return (s.category.empty() || s.name.empty() || s.text.empty()); });
-    out.sort([](const standard_script_t &L, const standard_script_t &R){
-        return std::make_tuple(L.category, L.name) < std::make_tuple(R.category, R.name);
-    });
-    return out;
-}
-
-std::list<standard_script_t> standard_scripts_with_category(const std::string &category){
-    auto out = standard_scripts();
-    out.remove_if([&](const standard_script_t &s){ return (s.category != category); });
-    return out;
-}
-
-std::set<std::string> standard_script_categories(){
-    std::set<std::string> out;
-    for(const auto &s : standard_scripts()) out.insert(s.category);
-    return out;
-}
-

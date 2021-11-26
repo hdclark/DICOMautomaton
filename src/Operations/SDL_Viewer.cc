@@ -73,6 +73,7 @@
 #include "../DCMA_Version.h"
 #include "../File_Loader.h"
 #include "../Script_Loader.h"
+#include "../Standard_Scripts.h"
 #include "../Thread_Pool.h"
 #include "../Dialogs.h"
 
