@@ -3,7 +3,7 @@
 # This script bundles the standard DCMA scripts into a C++ file so they are always available when distributing DCMA.
 # This script should be called from the root directory.
 
-set -eux
+set -eu
 
 # Handle spaces in the input and output file paths.
 in_file="$1"
