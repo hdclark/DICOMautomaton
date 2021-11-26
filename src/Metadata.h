@@ -118,6 +118,7 @@ enum class meta_evolve {
 };
 metadata_map_t coalesce_metadata_for_lsamp(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
 metadata_map_t coalesce_metadata_for_rtdose(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
+metadata_map_t coalesce_metadata_for_basic_image(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
 metadata_map_t coalesce_metadata_for_basic_mr_image(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
 metadata_map_t coalesce_metadata_for_basic_ct_image(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
 metadata_map_t coalesce_metadata_for_basic_mesh(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);

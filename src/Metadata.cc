@@ -731,6 +731,30 @@ metadata_map_t coalesce_metadata_for_rtdose(const metadata_map_t &ref, meta_evol
     return out;
 }
 
+metadata_map_t coalesce_metadata_for_basic_image(const metadata_map_t &ref, meta_evolve e){
+    metadata_map_t out;
+
+    out.merge( coalesce_metadata_sop_common(ref) );
+    out.merge( coalesce_metadata_patient(ref) );
+    out.merge( coalesce_metadata_general_study(ref) );
+    out.merge( coalesce_metadata_general_series(ref) );
+    out.merge( coalesce_metadata_patient_study(ref) );
+    out.merge( coalesce_metadata_frame_of_reference(ref) );
+    out.merge( coalesce_metadata_general_equipment(ref) );
+    out.merge( coalesce_metadata_general_image(ref) );
+    out.merge( coalesce_metadata_image_plane(ref) );
+    out.merge( coalesce_metadata_image_pixel(ref) );
+    out.merge( coalesce_metadata_misc(ref) );
+
+    if(e == meta_evolve::iterate){
+        // Assign a new SOP Instance UID.
+        auto new_sop = coalesce_metadata_sop_common({});
+        insert(out, "SOPInstanceUID", new_sop["SOPInstanceUID"]);
+        insert(out, "MediaStorageSOPInstanceUID", new_sop["MediaStorageSOPInstanceUID"]);
+    }
+    return out;
+}
+
 metadata_map_t coalesce_metadata_for_basic_mr_image(const metadata_map_t &ref, meta_evolve e){
     metadata_map_t out;
     out["Modality"] = "MR";
