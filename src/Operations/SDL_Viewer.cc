@@ -115,9 +115,10 @@ array_to_string(std::string &s, const std::array<char, 1024> &a){
 static
 void
 string_to_array(std::array<char, 1024> &a, const std::string &s){
+    a.fill('\0');
     for(size_t i = 0; (i < s.size()) && ((i+1) < a.size()); ++i){
         a[i] = s[i];
-        a[i+1] = '\0';
+        //a[i+1] = '\0';
     }
     return;
 }
@@ -3528,6 +3529,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     int i = 0;
                     const auto l_metadata = disp_img_it->metadata;
                     ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
+                    ImGui::PushID(&l_metadata);
                     for(const auto &apair : l_metadata){
                         auto key = apair.first;
                         auto val = apair.second;
@@ -3536,7 +3538,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         ImGui::SetNextItemWidth(-FLT_MIN);
                         string_to_array(metadata_text_entry, key);
                         ImGui::PushID(++i);
-                        const bool key_changed = ImGui::InputText("##key", metadata_text_entry.data(), metadata_text_entry.size());
+                        const bool key_changed = ImGui::InputText("key", metadata_text_entry.data(), metadata_text_entry.size());
                         ImGui::PopID();
                         // Since key_changed is true whenever any changes have occured, even if the mouse is idling
                         // after a change, then the following causes havoc by continuously editing the key and messing
@@ -3557,7 +3559,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         ImGui::SetNextItemWidth(-FLT_MIN);
                         string_to_array(metadata_text_entry, val);
                         ImGui::PushID(++i);
-                        const bool val_changed = ImGui::InputText("##val", metadata_text_entry.data(), metadata_text_entry.size());
+                        const bool val_changed = ImGui::InputText("val", metadata_text_entry.data(), metadata_text_entry.size());
                         ImGui::PopID();
                         if(val_changed){
                             // Replace key's value with updated value in place.
@@ -3565,6 +3567,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                             disp_img_it->metadata[key] = val;
                         }
                     }
+                    ImGui::PopID();
                     ImGui::PopStyleColor();
                     ImGui::EndTable();
                 }
