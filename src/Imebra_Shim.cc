@@ -1634,7 +1634,7 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::filesystem::path &Filen
         // This is useful for RTIMAGES.
         const auto RTImageSID = retrieve_coalesce_as_double({ {0x3002, 0x0026, 0} }).value_or(1000.0);
         const auto RadMchnSAD = retrieve_coalesce_as_double({ {0x3002, 0x0022, 0} }).value_or(1000.0);
-        image_pos_z = (RTImageSID - RadMchnSAD);
+        image_pos_z = (RadMchnSAD - RTImageSID); // For consistency with XRayImageReceptorTranslation z-coord.
     }
     const vec3<double> image_pos(image_pos_x,image_pos_y,image_pos_z); //Only for first image!
 
