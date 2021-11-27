@@ -163,6 +163,9 @@ formats:
     - FITS (read and write)
     - DICOM RTDOSE (read and write)
     - 3ddose (read)
+    - XIM (read)
+    - PNG (write)
+    - JPG (write)
   - contours
     - DICOM RTSTRUCT (read and write)
   - surface meshes
