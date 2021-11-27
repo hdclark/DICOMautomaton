@@ -297,8 +297,8 @@ planar_image<float,double> read_xim_file( std::istream &is ){
         //const auto time_only = datetime.substr(12);
         img.metadata["AcquisitionDate"] = date_only;
     }
-    const auto is_MV = (get_as<long int>(img.metadata, "MVBeamOn").value_or(0) != 0);
-    const auto is_kV = (get_as<long int>(img.metadata, "KVBeamOn").value_or(0) != 0);
+    const auto is_MV = (get_as<int64_t>(img.metadata, "MVBeamOn").value_or(0) != 0);
+    const auto is_kV = (get_as<int64_t>(img.metadata, "KVBeamOn").value_or(0) != 0);
     if( is_MV == is_kV ){
         throw std::logic_error("This implementation assumes either (exclusive) MV or kV imaging only");
     }
