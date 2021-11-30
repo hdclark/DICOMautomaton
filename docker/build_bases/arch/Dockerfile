@@ -15,7 +15,7 @@ RUN /scratch_base/implementation_arch.sh
 # CLion remote docker environment (How to build docker container, run and stop it)
 #
 # Build and run (from repo root):
-#   docker build -t hdclark/dcma_build_base_arch:latest -f docker/arch/Dockerfile .
+#   docker build -t hdclark/dcma_build_base_arch:latest -f docker/build_bases/arch/Dockerfile .
 #   docker run -d --cap-add sys_ptrace -p 127.0.0.1:2222:22 --name capstone_env hdclark/dcma_build_base_arch:latest
 #
 # stop:
