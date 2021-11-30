@@ -47,7 +47,7 @@ struct file_loader_t {
 // If a file cannot be read, all others are tried before returning false.
 bool
 Load_Files( Drover &DICOM_data,
-            const std::map<std::string,std::string> &InvocationMetadata,
+            std::map<std::string,std::string> &InvocationMetadata,
             const std::string &FilenameLex,
             std::list<OperationArgPkg> &Operations,
             std::list<std::filesystem::path> &Paths ){

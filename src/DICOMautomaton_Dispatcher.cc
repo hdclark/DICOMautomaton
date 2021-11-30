@@ -101,8 +101,6 @@ try{
 
     for(auto i = 0; i < argc; ++i) InvocationMetadata["Invocation"] += std::string(argv[i]) + " ";
 
-FUNCINFO("Invocation: '" << InvocationMetadata["Invocation"] << "'");
-
     class ArgumentHandler arger;
     const std::string progname(argv[0]);
     arger.examples = { { "--help", 

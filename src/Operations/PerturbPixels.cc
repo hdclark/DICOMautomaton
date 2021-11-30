@@ -139,7 +139,7 @@ OperationDoc OpArgDocPerturbPixels(){
 
 bool PerturbPixels(Drover &DICOM_data,
                    const OperationArgPkg& OptArgs,
-                   const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                   std::map<std::string, std::string>& /*InvocationMetadata*/,
                    const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
@@ -180,7 +180,11 @@ bool PerturbPixels(Drover &DICOM_data,
     const bool model_is_gaussian  = std::regex_match(ModelStr, regex_gaussian);
     const bool model_is_uniform   = std::regex_match(ModelStr, regex_uniform);
 
-    auto pf = retain_only_numeric_parameters(parse_function(ModelStr));
+    auto pfs = retain_only_numeric_parameters(parse_functions(ModelStr));
+    if(pfs.size() != 1){
+        throw std::invalid_argument("Model accepts a single function only");
+    }
+    auto pf = pfs.front();
 
     if( !method_is_add
     &&  !method_is_mult ){

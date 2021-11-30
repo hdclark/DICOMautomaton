@@ -23,7 +23,7 @@ OperationDoc OpArgDocConvertImageToDose(){
 
 bool ConvertImageToDose(Drover &DICOM_data,
                           const OperationArgPkg&,
-                          const std::map<std::string, std::string>&,
+                          std::map<std::string, std::string>& /*InvocationMetadata*/,
                           const std::string&){
 
     for(auto &ia_ptr : DICOM_data.image_data){

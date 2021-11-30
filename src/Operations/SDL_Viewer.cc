@@ -610,7 +610,7 @@ OperationDoc OpArgDocSDL_Viewer(){
 
 bool SDL_Viewer(Drover &DICOM_data,
                   const OperationArgPkg& /*OptArgs*/,
-                  const std::map<std::string, std::string>& InvocationMetadata,
+                  std::map<std::string, std::string>& InvocationMetadata,
                   const std::string& FilenameLex){
 
     // --------------------------------------- Operational State ------------------------------------------
@@ -643,6 +643,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_drawing_enabled = false;
         bool view_row_column_profiles = false;
         bool view_time_profiles = false;
+        bool view_parameter_table = false;
         bool save_time_profiles = false;
         bool view_script_editor_enabled = false;
         bool view_script_feedback = true;
@@ -802,9 +803,6 @@ bool SDL_Viewer(Drover &DICOM_data,
     string_to_array(time_course_abscissa_key, "ContentTime");
     std::array<char, 1024> time_course_text_entry;
     string_to_array(time_course_text_entry, "");
-
-    std::array<char, 1024> metadata_text_entry;
-    string_to_array(metadata_text_entry, "");
 
     // --------------------------------------------- Setup ------------------------------------------------
     if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0){
@@ -1684,6 +1682,75 @@ bool SDL_Viewer(Drover &DICOM_data,
             return best;
     };
 
+    // Draw an editable metadata table.
+    const auto display_metadata_table = []( metadata_map_t &m ){
+            ImVec2 cell_padding(0.0f, 0.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, cell_padding);
+            ImGui::PushID(&m);
+            if(ImGui::BeginTable("Metadata Table", 2,   ImGuiTableFlags_Borders
+                                                      | ImGuiTableFlags_RowBg
+                                                      | ImGuiTableFlags_BordersV
+                                                      | ImGuiTableFlags_BordersInner
+                                                      | ImGuiTableFlags_Resizable )){
+
+                ImGui::TableSetupColumn("Key");
+                ImGui::TableSetupColumn("Value");
+                ImGui::TableHeadersRow();
+
+                std::array<char, 1024> metadata_text_entry;
+                string_to_array(metadata_text_entry, "");
+
+                int i = 0;
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
+                for(const auto &apair : m){
+                    auto key = apair.first;
+                    auto val = apair.second;
+
+                    ImGui::TableNextColumn();
+                    ImGui::SetNextItemWidth(-FLT_MIN);
+                    string_to_array(metadata_text_entry, key);
+                    ImGui::PushID(++i);
+                    const bool key_changed = ImGui::InputText("key", metadata_text_entry.data(), metadata_text_entry.size());
+                    ImGui::PopID();
+
+                    // Since key_changed is true whenever any changes have occured, even if the mouse is idling
+                    // after a change, then the following causes havoc by continuously editing the key and messing
+                    // with the ID system. A better system would only implement the change when the focus is lost
+                    // and/or enter is pressed. I'm not sure if there is a simple way to do this at the moment, so
+                    // I'll leave key editing disabled until I figure out a reasonable fix.
+                    //
+                    // TODO.
+                    //
+                    //if(key_changed){
+                    //    std::string new_key;
+                    //    array_to_string(new_key, metadata_text_entry);
+                    //    if(new_key != key){
+                    //        disp_img_it->metadata.erase(key);
+                    //        disp_img_it->metadata[new_key] = val;
+                    //        key = new_key;
+                    //    }
+                    //}
+
+                    ImGui::TableNextColumn();
+                    ImGui::SetNextItemWidth(-FLT_MIN);
+                    string_to_array(metadata_text_entry, val);
+                    ImGui::PushID(++i);
+                    const bool val_changed = ImGui::InputText("val", metadata_text_entry.data(), metadata_text_entry.size());
+                    ImGui::PopID();
+                    if(val_changed){
+                        // Replace key's value with updated value in place.
+                        array_to_string(val, metadata_text_entry);
+                        m[key] = val;
+                    }
+                }
+                ImGui::PopStyleColor();
+                ImGui::EndTable();
+            }
+            ImGui::PopID();
+            ImGui::PopStyleVar();
+            return;
+    };
+
     // ------------------------------------------- Main loop ----------------------------------------------
 
 
@@ -1741,6 +1808,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     struct loaded_files_res {
         bool res;
         Drover DICOM_data;
+        std::map<std::string,std::string> InvocationMetadata;
     };
     std::future<loaded_files_res> loaded_files;
 
@@ -1775,8 +1843,9 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         // Load the files.
         loaded_files_res lfs;
+        lfs.InvocationMetadata = InvocationMetadata;
         std::list<OperationArgPkg> Operations;
-        lfs.res = Load_Files(lfs.DICOM_data, InvocationMetadata, FilenameLex, Operations, paths);
+        lfs.res = Load_Files(lfs.DICOM_data, lfs.InvocationMetadata, FilenameLex, Operations, paths);
         if(!Operations.empty()){
              lfs.res = false;
              FUNCWARN("Loaded file contains a script. Currently unable to handle script files here");
@@ -1916,6 +1985,19 @@ bool SDL_Viewer(Drover &DICOM_data,
                 // Only perform a single operation at a time, which results in slightly less mutex contention.
                 bool success = true;
                 for(const auto &op : op_list){
+// ...
+// TODO: intercept the QueryUserInteractively operation here???
+//       - would have to block here, place a packaged task globally for the main thread to access,
+//         the task would emit imgui calls (being run from the main thread), and then clean itself
+//         up and notify this thread.
+//       - sounds quite messy. Is there a better way?? (Maybe using InvocationMetadata to replace
+//         parameter arguments?? -- then it's still a pain to intercept the script run mechanism
+//         waiting for feedback...)
+//         - Reasonable stop-gap: maybe make the invocation metadata globally editable with a new window.
+//           Then you just have to grab a copy of it when you run a script. Upside: this also works for
+//           dispatcher/non-interactively.
+// ...
+
                     if(!Operation_Dispatcher(DICOM_data,
                                              InvocationMetadata,
                                              FilenameLex,
@@ -2003,6 +2085,34 @@ bool SDL_Viewer(Drover &DICOM_data,
         if(view_toggles.view_implot_demo){
             ImPlot::ShowDemoWindow(&view_toggles.view_implot_demo);
         }
+
+
+        const auto display_parameter_table = [&drover_mutex,
+                                              &mutex_dt,
+                                              &InvocationMetadata,
+                                              &display_metadata_table,
+                                              &view_toggles ]() -> void {
+            if( !view_toggles.view_parameter_table ) return;
+
+            // Attempt to acquire an exclusive lock.
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            if(!drover_lock) return;
+
+            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Parameter Table", &view_toggles.view_parameter_table);
+
+            display_metadata_table( InvocationMetadata );
+
+            ImGui::End();
+            return;
+        };
+        try{
+            display_parameter_table();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in display_parameter_table(): '" << e.what() << "'");
+            throw;
+        }
+
 
         // Reload the image texture. Needs to be done by the main thread.
         const auto reload_image_texture = [&drover_mutex,
@@ -2122,6 +2232,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if(ImGui::MenuItem("Time Profiles", nullptr, &view_toggles.view_time_profiles)){
                         time_profile.samples.clear();
                     };
+                    ImGui::MenuItem("Parameter Table", nullptr, &view_toggles.view_parameter_table);
                     ImGui::MenuItem("Script Editor", nullptr, &view_toggles.view_script_editor_enabled);
                     ImGui::MenuItem("Script Feedback", nullptr, &view_toggles.view_script_feedback);
                     ImGui::EndMenu();
@@ -2752,7 +2863,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                            &time_course_image_inclusivity,
                                            &time_course_abscissa_relative,
 
-                                           &metadata_text_entry,
+                                           &display_metadata_table,
 
                                            &frame_count ]() -> void {
 
@@ -3508,70 +3619,12 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
             }
 
-            // Metadata window.
+            // Image metadata window.
             if( view_toggles.view_image_metadata_enabled ){
                 ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Image Metadata", &view_toggles.view_image_metadata_enabled);
 
-
-                ImVec2 cell_padding(0.0f, 0.0f);
-                ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, cell_padding);
-                if(ImGui::BeginTable("Image Metadata", 2,   ImGuiTableFlags_Borders
-                                                          | ImGuiTableFlags_RowBg
-                                                          | ImGuiTableFlags_BordersV
-                                                          | ImGuiTableFlags_BordersInner
-                                                          | ImGuiTableFlags_Resizable )){
-
-                    ImGui::TableSetupColumn("Key");
-                    ImGui::TableSetupColumn("Value");
-                    ImGui::TableHeadersRow();
-
-                    int i = 0;
-                    const auto l_metadata = disp_img_it->metadata;
-                    ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
-                    ImGui::PushID(&l_metadata);
-                    for(const auto &apair : l_metadata){
-                        auto key = apair.first;
-                        auto val = apair.second;
-
-                        ImGui::TableNextColumn();
-                        ImGui::SetNextItemWidth(-FLT_MIN);
-                        string_to_array(metadata_text_entry, key);
-                        ImGui::PushID(++i);
-                        const bool key_changed = ImGui::InputText("key", metadata_text_entry.data(), metadata_text_entry.size());
-                        ImGui::PopID();
-                        // Since key_changed is true whenever any changes have occured, even if the mouse is idling
-                        // after a change, then the following causes havoc by continuously editing the key and messing
-                        // with the ID system. A better system would only implement the change when the focus is lost
-                        // and/or enter is pressed. I'm not sure if there is a simple way to do this at the moment, so
-                        // I'll leave key editing disabled until I figure out a reasonable fix.
-                        //if(key_changed){
-                        //    std::string new_key;
-                        //    array_to_string(new_key, metadata_text_entry);
-                        //    if(new_key != key){
-                        //        disp_img_it->metadata.erase(key);
-                        //        disp_img_it->metadata[new_key] = val;
-                        //        key = new_key;
-                        //    }
-                        //}
-
-                        ImGui::TableNextColumn();
-                        ImGui::SetNextItemWidth(-FLT_MIN);
-                        string_to_array(metadata_text_entry, val);
-                        ImGui::PushID(++i);
-                        const bool val_changed = ImGui::InputText("val", metadata_text_entry.data(), metadata_text_entry.size());
-                        ImGui::PopID();
-                        if(val_changed){
-                            // Replace key's value with updated value in place.
-                            array_to_string(val, metadata_text_entry);
-                            disp_img_it->metadata[key] = val;
-                        }
-                    }
-                    ImGui::PopID();
-                    ImGui::PopStyleColor();
-                    ImGui::EndTable();
-                }
-                ImGui::PopStyleVar();
+                display_metadata_table( disp_img_it->metadata );
 
                 ImGui::End();
             }
@@ -3591,6 +3644,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                                           &drover_mutex,
                                           &DICOM_data,
+                                          &InvocationMetadata,
                                           &recompute_image_state,
                                           &reload_image_texture,
                                           &recompute_image_iters,
@@ -3621,6 +3675,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                     if(f.res){
                         DICOM_data.Consume(f.DICOM_data);
+                        f.InvocationMetadata.merge(InvocationMetadata);
+                        InvocationMetadata = f.InvocationMetadata;
                     }else{
                         FUNCWARN("Unable to load files");
                         // TODO ... warn about the issue.

@@ -1,17 +1,12 @@
 #!/usr/bin/env -S dicomautomaton_dispatcher -v
 
-# This script is used to reverse a EQD2 transform, which will give a spatial map
-# of the alpha/beta that was used for each voxel.
+###############################################################################
+# This script is used to reverse a EQD2 transform, which will give a spatial
+# map of the alpha/beta that was used for each voxel.
 #
 # Note that there are many caveats. This is experimental-quality software.
 #
-# Parameters:
-
-orig_Rx_n = -1;  # Number of fractions actually delivered.
-
-nominal_dose_per_fraction = 2.0;  # The '2' in 'EQD2'.
-
-################################################################
+###############################################################################
 
 LoadFilesInteractively(
     Instruction = 'Please select the EQD2 RTDOSE file.',
@@ -23,6 +18,13 @@ LoadFilesInteractively(
     Instruction = 'Please select the RTSTRUCT file to use for per-ROI dose reporting.',
 ){};
 
+QueryUserInteractively(
+    Queries = 'real("orig_Rx_n", "How many fractions were previously delivered?", -1.0)',
+){};
+QueryUserInteractively(
+    Queries = 'real("nominal_dose_per_fraction", "What dose per fraction is required (e.g., the \"2\" in \"EQD2\")?", 2.0)',
+){};
+
 #ContourWholeImages(){};
 
 CopyImages(
@@ -32,9 +34,9 @@ CopyImages(
 ExtractAlphaBeta(
      TransformedImageSelection = '#-2',
      ReferenceImageSelection = '#-1',
-     NumberOfFractions = orig_Rx_n,
+     NumberOfFractions = $orig_Rx_n,
      # Note: for EQD2 the following should be 2.
-     NominalDosePerFraction = nominal_dose_per_fraction,
+     NominalDosePerFraction = $nominal_dose_per_fraction,
      Model = 'eqdx-lq-simple',
      ROILabelRegex='.*body.*',
 ){};

@@ -319,7 +319,7 @@ samples_1D<double> Read_Histogram(std::istream &is,
 
 
 bool Load_From_DVH_Files( Drover &DICOM_data,
-                          const std::map<std::string,std::string> & /* InvocationMetadata */,
+                          std::map<std::string,std::string> & /* InvocationMetadata */,
                           const std::string &FilenameLex,
                           std::list<std::filesystem::path> &Filenames ){
 

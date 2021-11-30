@@ -1982,6 +1982,15 @@ OperationArgPkg::insert(const std::string& keyval){
     return true;
 }
 
+void
+OperationArgPkg::visit_opts( const std::function<void(const std::string &key, std::string &val)> &f){
+    for(auto &o : this->opts){
+        const auto key = o.first; // Distruct user due to const-cast, which would be problematic.
+        if(f) f(key, o.second);
+    }
+    return;
+}
+
 // Children.
 void
 OperationArgPkg::makeChild(std::string unparsed, const std::string& sepr, const std::string& eqls){

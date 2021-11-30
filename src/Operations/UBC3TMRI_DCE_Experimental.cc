@@ -39,7 +39,7 @@ OperationDoc OpArgDocUBC3TMRI_DCE_Experimental(){
 
 bool UBC3TMRI_DCE_Experimental(Drover &DICOM_data,
                                  const OperationArgPkg& /*OptArgs*/,
-                                 const std::map<std::string, std::string>& InvocationMetadata,
+                                 std::map<std::string, std::string>& InvocationMetadata,
                                  const std::string& /*FilenameLex*/){
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through

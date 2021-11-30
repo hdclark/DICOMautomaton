@@ -31,7 +31,7 @@ OperationDoc OpArgDocDumpVoxelDoseInfo(){
 
 bool DumpVoxelDoseInfo(Drover &DICOM_data,
                          const OperationArgPkg&,
-                         const std::map<std::string, std::string>&,
+                         std::map<std::string, std::string>& /*InvocationMetadata*/,
                          const std::string&){
 
     double themin = std::numeric_limits<double>::infinity();

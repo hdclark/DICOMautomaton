@@ -33,7 +33,7 @@ OperationDoc OpArgDocDCEMRI_IAUC(){
 
 bool DCEMRI_IAUC(Drover &DICOM_data,
                    const OperationArgPkg&,
-                   const std::map<std::string, std::string>&,
+                   std::map<std::string, std::string>& /*InvocationMetadata*/,
                    const std::string&){
 
     std::vector<std::shared_ptr<Image_Array>> orig_img_arrays;

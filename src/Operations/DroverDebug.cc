@@ -23,7 +23,7 @@
 
 static void dump_metadata(std::ostream &os,
                           const std::string& indent,
-                          const std::map<std::string, std::string> m){
+                          const std::map<std::string, std::string>& m){
     for(const auto &p : m){
         os << indent << "'" << p.first << "' : '" << p.second << "'" << std::endl;
     }
@@ -52,9 +52,9 @@ OperationDoc OpArgDocDroverDebug(){
 
 
 bool DroverDebug(Drover &DICOM_data,
-                   const OperationArgPkg& OptArgs,
-                   const std::map<std::string, std::string>& /*InvocationMetadata*/,
-                   const std::string& /*FilenameLex*/){
+                 const OperationArgPkg& OptArgs,
+                 std::map<std::string, std::string>& InvocationMetadata,
+                 const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto IncludeMetadataStr = OptArgs.getValueStr("IncludeMetadata").value();
@@ -288,6 +288,12 @@ bool DroverDebug(Drover &DICOM_data,
             }
             ++t_cnt;
         }
+    }
+
+    //InvocationMetadata.
+    {
+        FUNCINFO("There are " << InvocationMetadata.size() << " metadata parameters defined");
+        dump_metadata(std::cout, "  ", InvocationMetadata);
     }
 
     return true;

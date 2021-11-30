@@ -17,6 +17,7 @@
 #include <Explicator.h>
 
 #include <YgorMisc.h>
+#include <YgorString.h>
 
 #include "Structs.h"
 
@@ -190,6 +191,7 @@
 
 #ifdef DCMA_USE_SDL
     #include "Operations/SDL_Viewer.h"
+    #include "Operations/QueryUserInteractively.h"
 #endif // DCMA_USE_SDL
 
 #ifdef DCMA_USE_SFML
@@ -401,6 +403,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
 
 #ifdef DCMA_USE_SDL
     out["SDL_Viewer"] = std::make_pair(OpArgDocSDL_Viewer, SDL_Viewer);
+    out["QueryUserInteractively"] = std::make_pair(OpArgDocQueryUserInteractively, QueryUserInteractively);
 #endif // DCMA_USE_SDL
 
 #ifdef DCMA_USE_SFML
@@ -463,7 +466,7 @@ std::map<std::string, std::string> Operation_Lexicon(){
 }
 
 bool Operation_Dispatcher( Drover &DICOM_data,
-                           const std::map<std::string,std::string> &InvocationMetadata,
+                           std::map<std::string,std::string> &InvocationMetadata,
                            const std::string &FilenameLex,
                            const std::list<OperationArgPkg> &Operations ){
 
@@ -486,11 +489,19 @@ bool Operation_Dispatcher( Drover &DICOM_data,
                 if(boost::iequals(op_func.first, canonical_op_name)){
                     WasFound = true;
 
-                    //Attempt to insert all expected, documented parameters with the default value.
+                    // Attempt to insert all expected, documented parameters with the default value.
+                    //
+                    // Note that existing keys will not be replaced.
                     auto OpDocs = op_func.second.first();
                     for(const auto &r : OpDocs.args){
                         if(r.expected) optargs.insert( r.name, r.default_val );
                     }
+
+                    // Perform macro replacement using the parameter table.
+                    optargs.visit_opts([&InvocationMetadata](const std::string &key, std::string &val){
+                        val = ExpandMacros(val, InvocationMetadata, "$");
+                        return;
+                    });
 
                     FUNCINFO("Performing operation '" << op_func.first << "' now..");
                     const bool res = op_func.second.second(DICOM_data,

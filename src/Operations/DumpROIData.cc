@@ -30,7 +30,7 @@ OperationDoc OpArgDocDumpROIData(){
 
 bool DumpROIData(Drover &DICOM_data,
                    const OperationArgPkg& /*OptArgs*/,
-                   const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                   std::map<std::string, std::string>& /*InvocationMetadata*/,
                    const std::string& FilenameLex){
 
     typedef std::tuple<std::string,std::string,std::string> key_t; //PatientID, ROIName, NormalizedROIName.

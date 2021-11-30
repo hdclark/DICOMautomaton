@@ -25,7 +25,7 @@
 #include "Imebra_Shim.h"
 
 bool Load_From_XYZ_Files( Drover &DICOM_data,
-                          const std::map<std::string,std::string> & /* InvocationMetadata */,
+                          std::map<std::string,std::string> & /* InvocationMetadata */,
                           const std::string &,
                           std::list<std::filesystem::path> &Filenames ){
 

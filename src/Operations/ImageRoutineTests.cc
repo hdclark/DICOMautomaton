@@ -29,8 +29,7 @@ OperationDoc OpArgDocImageRoutineTests(){
 
 bool ImageRoutineTests(Drover &DICOM_data,
                          const OperationArgPkg& /*OptArgs*/,
-                         const std::map<std::string, std::string>&
-                         /*InvocationMetadata*/,
+                         std::map<std::string, std::string>& /*InvocationMetadata*/,
                          const std::string& /*FilenameLex*/){
 
     //Get handles for each of the original image arrays so we can easily refer to them later.

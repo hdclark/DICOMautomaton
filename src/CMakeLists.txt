@@ -266,6 +266,7 @@ target_link_libraries(imebrashim
 # Dialog library (built separately to minimize header/macro clashes).
 add_library (dialogshim
     Dialogs.cc 
+    Dialogs/Text_Query.cc
 )
 target_link_libraries(dialogshim
     "$<$<BOOL:${MINGW}>:ws2_32>"

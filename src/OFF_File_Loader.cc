@@ -25,7 +25,7 @@
 #include "Imebra_Shim.h"
 
 bool Load_Points_From_OFF_Files( Drover &DICOM_data,
-                                 const std::map<std::string,std::string> & /* InvocationMetadata */,
+                                 std::map<std::string,std::string> & /* InvocationMetadata */,
                                  const std::string &,
                                  std::list<std::filesystem::path> &Filenames ){
 
@@ -101,7 +101,7 @@ bool Load_Points_From_OFF_Files( Drover &DICOM_data,
 }
 
 bool Load_Mesh_From_OFF_Files( Drover &DICOM_data,
-                               const std::map<std::string,std::string> & /* InvocationMetadata */,
+                               std::map<std::string,std::string> & /* InvocationMetadata */,
                                const std::string &,
                                std::list<std::filesystem::path> &Filenames ){
 

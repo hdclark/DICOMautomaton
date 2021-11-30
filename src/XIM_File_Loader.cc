@@ -363,7 +363,7 @@ planar_image<float,double> read_xim_file( std::istream &is ){
 }
 
 bool Load_From_XIM_Files( Drover &DICOM_data,
-                          const std::map<std::string,std::string> & /* InvocationMetadata */,
+                          std::map<std::string,std::string> & /* InvocationMetadata */,
                           const std::string &,
                           std::list<std::filesystem::path> &Filenames ){
 

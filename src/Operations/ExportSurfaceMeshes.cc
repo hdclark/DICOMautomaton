@@ -39,7 +39,7 @@ OperationDoc OpArgDocExportSurfaceMeshes(){
 
 bool ExportSurfaceMeshes(Drover &DICOM_data,
                            const OperationArgPkg& OptArgs,
-                           const std::map<std::string, std::string>& InvocationMetadata,
+                           std::map<std::string, std::string>& InvocationMetadata,
                            const std::string& FilenameLex){
     return ExportSurfaceMeshesPLY(DICOM_data, OptArgs, InvocationMetadata, FilenameLex);
 }

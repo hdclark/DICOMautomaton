@@ -50,7 +50,7 @@ OperationDoc OpArgDocFalse() {
 
 bool False(Drover &DICOM_data,
              const OperationArgPkg& /*OptArgs*/,
-             const std::map<std::string, std::string>& /*InvocationMetadata*/,
+             std::map<std::string, std::string>& /*InvocationMetadata*/,
              const std::string& /*FilenameLex*/){
 
     throw std::runtime_error("This is a false truthiness signal."

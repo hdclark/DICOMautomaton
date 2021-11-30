@@ -44,7 +44,7 @@ Concatenate_Contour_Data(std::unique_ptr<Contour_Data> A,
 
 
 bool Load_From_PACS_DB( Drover &DICOM_data,
-                        const std::map<std::string,std::string> & /* InvocationMetadata */,
+                        std::map<std::string,std::string> & /* InvocationMetadata */,
                         const std::string &FilenameLex,
                         std::string &db_connection_params,
                         std::list<std::list<std::string>> &GroupedFilterQueryFiles ){

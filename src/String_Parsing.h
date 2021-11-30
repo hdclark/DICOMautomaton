@@ -9,11 +9,12 @@
 #include "YgorString.h"
 #include "YgorMath.h"
 
-// Used to parse functions like 'func(1.0, 2.0,3.0, -1.23, 1.0x, 123%, ...)'.
+// Parser for functions like 'func(1.0, 2.0,3.0, -1.23, 1.0x, 123%, "some text", ...)'.
 //
 // Note: Supports optional suffixes that denote how the parameter should be interpretted.
 //       Currently supported: '1.23x' for fractional and '12.3%' for percentage.
 //       What exactly these are relative to is domain-specific and must be handled by the caller.
+
 struct function_parameter {
     std::string raw;
     std::optional<double> number;
@@ -26,7 +27,11 @@ struct parsed_function {
     std::vector<function_parameter> parameters;
 };
 
-parsed_function parse_function(const std::string &in);
+std::vector<parsed_function>
+parse_functions(const std::string &,
+                char escape_char = '\\',
+                char func_sep_char = ';' );
 
-parsed_function retain_only_numeric_parameters(parsed_function pf);
+std::vector<parsed_function>
+retain_only_numeric_parameters(std::vector<parsed_function>);
 

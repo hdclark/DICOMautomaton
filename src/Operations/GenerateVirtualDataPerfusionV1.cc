@@ -36,7 +36,7 @@ OperationDoc OpArgDocGenerateVirtualDataPerfusionV1(){
 
 bool GenerateVirtualDataPerfusionV1(Drover &DICOM_data,
                                       const OperationArgPkg&,
-                                      const std::map<std::string, std::string>&,
+                                      std::map<std::string, std::string>& /*InvocationMetadata*/,
                                       const std::string& FilenameLex){
 
     Explicator X(FilenameLex);
