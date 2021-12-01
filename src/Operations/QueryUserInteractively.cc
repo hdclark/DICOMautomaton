@@ -43,7 +43,8 @@ OperationDoc OpArgDocQueryUserInteractively(){
     out.name = "QueryUserInteractively";
 
     out.desc = 
-        "This operation queries the user interactively.";
+        "This operation queries the user interactively, and then injects parameters into the global"
+        " parameter table.";
 
     out.args.emplace_back();
     out.args.back().name = "Queries";

@@ -141,6 +141,7 @@
 #include "Operations/ModelIVIM.h"
 #include "Operations/ModifyContourMetadata.h"
 #include "Operations/ModifyImageMetadata.h"
+#include "Operations/ModifyParameters.h"
 #include "Operations/NegatePixels.h"
 #include "Operations/NoOp.h"
 #include "Operations/NormalizeLineSamples.h"
@@ -353,6 +354,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ModelIVIM"] = std::make_pair(OpArgDocModelIVIM, ModelIVIM);
     out["ModifyContourMetadata"] = std::make_pair(OpArgDocModifyContourMetadata, ModifyContourMetadata);
     out["ModifyImageMetadata"] = std::make_pair(OpArgDocModifyImageMetadata, ModifyImageMetadata);
+    out["ModifyParameters"] = std::make_pair(OpArgDocModifyParameters, ModifyParameters);
     out["NegatePixels"] = std::make_pair(OpArgDocNegatePixels, NegatePixels);
     out["NoOp"] = std::make_pair(OpArgDocNoOp, NoOp);
     out["NormalizeLineSamples"] = std::make_pair(OpArgDocNormalizeLineSamples, NormalizeLineSamples);

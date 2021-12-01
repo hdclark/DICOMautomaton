@@ -120,6 +120,7 @@ add_library(Operations_objs OBJECT
     ModelIVIM.cc
     ModifyContourMetadata.cc
     ModifyImageMetadata.cc
+    ModifyParameters.cc
     NegatePixels.cc
     NoOp.cc
     NormalizeLineSamples.cc
