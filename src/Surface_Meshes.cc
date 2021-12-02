@@ -75,10 +75,13 @@ namespace dcma_surface_meshes {
 //       version to support rectangular cubes, avoid 3D interpolation, and explicitly constructs a polyhedron mesh.
 //       Thanks Cory! Thanks Paul!
 //
+using sdf_t = std::function<double(const vec3<double> &)>;
+
 static
 fv_surface_mesh<double, uint64_t>
 Marching_Cubes_Implementation(
         std::list<std::reference_wrapper<planar_image<float,double>>> grid_imgs,
+        sdf_t signed_dist_func,
         double inclusion_threshold, // The voxel value threshold demarcating surface 'interior' and 'exterior.'
         bool below_is_interior,  // Controls how the inclusion_threshold is interpretted.
                                  // If true, anything <= is considered to be interior to the surface.
@@ -101,6 +104,30 @@ Marching_Cubes_Implementation(
                               static_cast<double>(0) );
 
     planar_image_adjacency<float,double> img_adj( grid_imgs, {}, GridZ );
+
+/*
+    // Example of a simplistic SDF.
+    const auto signed_dist_func = [](const vec3<double> &r) -> double {
+        const sphere<double> sphere_A( vec3<double>(125.0, 125.0, 60.0), 25.0);
+        const sphere<double> sphere_B( vec3<double>(80.0, 120.0, 50.0), 30.0);
+        const sphere<double> sphere_C( vec3<double>(110.0, 130.0, 30.0), 15.0);
+
+        const auto dist_A = sphere_A.Distance_To_Point(r);
+        const auto dist_B = sphere_B.Distance_To_Point(r);
+        const auto dist_C = sphere_C.Distance_To_Point(r);
+
+        const auto signed_A = dist_A - sphere_A.r_0;
+        const auto signed_B = dist_B - sphere_B.r_0;
+        const auto signed_C = dist_C - sphere_C.r_0;
+
+        // Boolean AND.
+        //return std::min({signed_A, signed_B, signed_C});
+
+        // Boolean SUBTRACT.
+        return std::max({std::min({signed_A, signed_B}), -signed_C});
+    };
+*/
+    const bool has_signed_dist_func = !!signed_dist_func;
 
     // ============================================== Marching Cubes ================================================
 
@@ -574,14 +601,19 @@ Marching_Cubes_Implementation(
 
                 // Sample voxel corner values.
                 std::array<double, 8> afCubeValue;
-                //
-                // Option A: Interpolate. This way is slow but extremely flexible.
-                //for(int32_t corner = 0; corner < 8; ++corner){
-                //    afCubeValue[corner] = surface_oracle(pos + a2fVertexOffset[corner]);
-                //}
-                //
-                // Option B: Align Marching Cube voxel corners with image voxel centres. This way is fast.
-                {
+                
+                // Use the voxel intensity as a level-set or 'oracle' function to define the mesh boundary.
+                if(!has_signed_dist_func){
+                    //// Option A: Interpolate in 3D using trilinear interpolation.
+                    ////
+                    //// This approach is slow but extremely flexible, e.g, does not require image rectilinearity.
+                    //for(int32_t corner = 0; corner < 8; ++corner){
+                    //    afCubeValue[corner] = interpolate_3D(pos + a2fVertexOffset[corner]);
+                    //}
+                    
+                    // Option B: Align Marching Cube voxel corners with image voxel centres.
+                    //
+                    // This approach is fast, but requires image rectilinearity.
                     const auto row_p1 = (row+1);
                     const auto row_is_adj = (row_p1 < N_rows);
 
@@ -596,8 +628,16 @@ Marching_Cubes_Implementation(
                     afCubeValue[5] = (row_is_adj && img_is_adj)               ? img_p1.get().value(row_p1, col, 0)      : ExteriorVal;
                     afCubeValue[6] = (row_is_adj && col_is_adj && img_is_adj) ? img_p1.get().value(row_p1, col_p1, 0)   : ExteriorVal;
                     afCubeValue[7] = (col_is_adj && img_is_adj)               ? img_p1.get().value(row, col_p1, 0)      : ExteriorVal;
-                }
 
+                // Use the provided signed distance function to 'override' the image voxel intensities.
+                //
+                // This approach is slow but extremely flexible for meshing complicated shapes (e.g., Booleans).
+                }else{
+                    for(int32_t corner = 0; corner < 8; ++corner){
+                        afCubeValue[corner] = signed_dist_func(pos + a2fVertexOffset[corner]);
+                    }
+                }
+                
                 // Convert vertex inclusion to a bitmask.
                 int32_t iFlagIndex = 0;
                 for(int32_t corner = 0; corner < 8; ++corner){
@@ -1218,6 +1258,7 @@ Estimate_Surface_Mesh_Marching_Cubes(
 
     // Offload the actual Marching Cubes computation.
     return Marching_Cubes_Implementation( grid_imgs,
+                                          sdf_t(),
                                           inclusion_threshold,
                                           below_is_interior,
                                           params );
@@ -1245,6 +1286,7 @@ Estimate_Surface_Mesh_Marching_Cubes(
 
     // Offload the actual Marching Cubes computation.
     return Marching_Cubes_Implementation( grid_imgs,
+                                          sdf_t(),
                                           inclusion_threshold,
                                           below_is_interior,
                                           params );

@@ -1985,19 +1985,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                 // Only perform a single operation at a time, which results in slightly less mutex contention.
                 bool success = true;
                 for(const auto &op : op_list){
-// ...
-// TODO: intercept the QueryUserInteractively operation here???
-//       - would have to block here, place a packaged task globally for the main thread to access,
-//         the task would emit imgui calls (being run from the main thread), and then clean itself
-//         up and notify this thread.
-//       - sounds quite messy. Is there a better way?? (Maybe using InvocationMetadata to replace
-//         parameter arguments?? -- then it's still a pain to intercept the script run mechanism
-//         waiting for feedback...)
-//         - Reasonable stop-gap: maybe make the invocation metadata globally editable with a new window.
-//           Then you just have to grab a copy of it when you run a script. Upside: this also works for
-//           dispatcher/non-interactively.
-// ...
-
                     if(!Operation_Dispatcher(DICOM_data,
                                              InvocationMetadata,
                                              FilenameLex,
