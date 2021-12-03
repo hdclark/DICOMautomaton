@@ -58,6 +58,7 @@
 
 #include "Thread_Pool.h"
 #include "Structs.h"
+#include "CSG_SDF.h"
 
 #include "YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
@@ -106,27 +107,58 @@ Marching_Cubes_Implementation(
     planar_image_adjacency<float,double> img_adj( grid_imgs, {}, GridZ );
 
 /*
-    // Example of a simplistic SDF.
-    const auto signed_dist_func = [](const vec3<double> &r) -> double {
-        const sphere<double> sphere_A( vec3<double>(125.0, 125.0, 60.0), 25.0);
-        const sphere<double> sphere_B( vec3<double>(80.0, 120.0, 50.0), 30.0);
-        const sphere<double> sphere_C( vec3<double>(110.0, 130.0, 30.0), 15.0);
+// Example of a non-trivial SDF.
 
-        const auto dist_A = sphere_A.Distance_To_Point(r);
-        const auto dist_B = sphere_B.Distance_To_Point(r);
-        const auto dist_C = sphere_C.Distance_To_Point(r);
+std::shared_ptr<csg::sdf::node> root = std::make_shared<csg::sdf::op::join>();
 
-        const auto signed_A = dist_A - sphere_A.r_0;
-        const auto signed_B = dist_B - sphere_B.r_0;
-        const auto signed_C = dist_C - sphere_C.r_0;
+long int flip = 0;
+for(double x = 0.0; x <= 100.0; x += 50.0){
+    for(double y = 0.0; y <= 100.0; y += 50.0){
+        for(double z = 0.0; z <= 100.0; z += 50.0){
+            if(flip == 0){
+                auto sphere = std::make_shared<csg::sdf::shape::sphere>(15.0);
+                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x, y, z));
 
-        // Boolean AND.
-        //return std::min({signed_A, signed_B, signed_C});
+                trans->children.emplace_back(std::move(sphere));
+                root->children.emplace_back(std::move(trans));
 
-        // Boolean SUBTRACT.
-        return std::max({std::min({signed_A, signed_B}), -signed_C});
-    };
+             }else if(flip == 1){
+                auto box = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(5.0,10.0,15.0));
+                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x,y,z));
+
+                trans->children.emplace_back(std::move(box));
+                root->children.emplace_back(std::move(trans));
+
+             }else if(flip == 2){
+                auto box = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(5.0,10.0,15.0));
+                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x,y,z));
+                auto dilate = std::make_shared<csg::sdf::op::dilate>(3.0);
+
+                trans->children.emplace_back(std::move(box));
+                dilate->children.emplace_back(std::move(trans));
+                root->children.emplace_back(std::move(dilate));
+
+             }else if(flip == 3){
+                auto box = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(10.0,15.0,20.0));
+                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x,y,z));
+                auto erode = std::make_shared<csg::sdf::op::erode>(3.0);
+
+                trans->children.emplace_back(std::move(box));
+                erode->children.emplace_back(std::move(trans));
+                root->children.emplace_back(std::move(erode));
+
+             }
+             flip = ((flip + 1) % 4);
+        }
+    }
+}
+
+signed_dist_func = [root](const vec3<double> &r) -> double {
+    return root->evaluate_sdf(r);
+};
+
 */
+
     const bool has_signed_dist_func = !!signed_dist_func;
 
     // ============================================== Marching Cubes ================================================

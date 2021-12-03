@@ -54,6 +54,9 @@ set_target_properties(  String_Parsing_obj PROPERTIES POSITION_INDEPENDENT_CODE 
 add_library(            Metadata_obj OBJECT Metadata.cc )
 set_target_properties(  Metadata_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            CSG_SDF_obj OBJECT CSG_SDF.cc )
+set_target_properties(  CSG_SDF_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Common_Boost_Serialization_obj OBJECT Common_Boost_Serialization.cc )
 set_target_properties(  Common_Boost_Serialization_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -343,6 +346,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Regex_Selectors_obj>
     $<TARGET_OBJECTS:String_Parsing_obj>
     $<TARGET_OBJECTS:Metadata_obj>
+    $<TARGET_OBJECTS:CSG_SDF_obj>
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
     $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
     $<TARGET_OBJECTS:File_Loader_obj>
@@ -429,6 +433,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Regex_Selectors_obj>
         $<TARGET_OBJECTS:String_Parsing_obj>
         $<TARGET_OBJECTS:Metadata_obj>
+        $<TARGET_OBJECTS:CSG_SDF_obj>
         $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
         $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
         $<TARGET_OBJECTS:File_Loader_obj>
