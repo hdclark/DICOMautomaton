@@ -64,9 +64,29 @@ struct translate : public node {
     double evaluate_sdf(const vec3<double>& pos) const override;
 };
 
-// Boolean 'AND' or 'union' or 'join.'
+// Rotate.
+struct rotate : public node {
+    affine_transform<double> rot;
+
+    rotate(const vec3<double>& axis, double angle_rad);
+    double evaluate_sdf(const vec3<double>& pos) const override;
+};
+
+// Boolean 'AND' or 'add' or 'union' or 'join.'
 struct join : public node {
     join();
+    double evaluate_sdf(const vec3<double>& pos) const override;
+};
+
+// Boolean 'difference' or 'subtract.'
+struct subtract : public node {
+    subtract();
+    double evaluate_sdf(const vec3<double>& pos) const override;
+};
+
+// Boolean 'OR' or 'intersect.'
+struct intersect : public node {
+    intersect();
     double evaluate_sdf(const vec3<double>& pos) const override;
 };
 

@@ -107,6 +107,7 @@ Marching_Cubes_Implementation(
     planar_image_adjacency<float,double> img_adj( grid_imgs, {}, GridZ );
 
 /*
+
 // Example of a non-trivial SDF.
 
 std::shared_ptr<csg::sdf::node> root = std::make_shared<csg::sdf::op::join>();
@@ -147,8 +148,49 @@ for(double x = 0.0; x <= 100.0; x += 50.0){
                 erode->children.emplace_back(std::move(trans));
                 root->children.emplace_back(std::move(erode));
 
+             }else if(flip == 4){
+                auto box = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(5.0,10.0,15.0));
+                auto rot = std::make_shared<csg::sdf::op::rotate>(vec3<double>(1.5,1.0,0.5).unit(),(0.1+x)*(1.0+y)*(2.0+z)/(1'500));
+                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x,y,z));
+
+                rot->children.emplace_back(std::move(box));
+                trans->children.emplace_back(std::move(rot));
+                root->children.emplace_back(std::move(trans));
+
+             }else if(flip == 5){
+                auto box = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(20.0,20.0,5.0));
+                auto sphere = std::make_shared<csg::sdf::shape::sphere>(15.0);
+                auto join = std::make_shared<csg::sdf::op::join>();
+                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x,y,z));
+
+                join->children.emplace_back(std::move(box));
+                join->children.emplace_back(std::move(sphere));
+                trans->children.emplace_back(std::move(join));
+                root->children.emplace_back(std::move(trans));
+
+             }else if(flip == 6){
+                auto box = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(20.0,20.0,5.0));
+                auto sphere = std::make_shared<csg::sdf::shape::sphere>(15.0);
+                auto subtract = std::make_shared<csg::sdf::op::subtract>();
+                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x,y,z));
+
+                subtract->children.emplace_back(std::move(box));
+                subtract->children.emplace_back(std::move(sphere));
+                trans->children.emplace_back(std::move(subtract));
+                root->children.emplace_back(std::move(trans));
+
+             }else if(flip == 7){
+                auto box = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(20.0,20.0,5.0));
+                auto sphere = std::make_shared<csg::sdf::shape::sphere>(15.0);
+                auto intersect = std::make_shared<csg::sdf::op::intersect>();
+                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x,y,z));
+
+                intersect->children.emplace_back(std::move(box));
+                intersect->children.emplace_back(std::move(sphere));
+                trans->children.emplace_back(std::move(intersect));
+                root->children.emplace_back(std::move(trans));
              }
-             flip = ((flip + 1) % 4);
+             flip = ((flip + 1) % 8);
         }
     }
 }
@@ -156,7 +198,6 @@ for(double x = 0.0; x <= 100.0; x += 50.0){
 signed_dist_func = [root](const vec3<double> &r) -> double {
     return root->evaluate_sdf(r);
 };
-
 */
 
     const bool has_signed_dist_func = !!signed_dist_func;
