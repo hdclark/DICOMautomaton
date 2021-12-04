@@ -12,7 +12,23 @@
 
 ![SDL_Viewer_01](https://user-images.githubusercontent.com/934858/136631960-585c14dc-75df-4d76-b037-1b09005008ed.png)
 
-[More screenshots here.](https://github.com/hdclark/DICOMautomaton/issues/15)
+[More screenshots here.](../../wiki/Visual-examples)
+
+## Quick Start
+
+- [Quick start guides, as well as complete building and installation instructions, are here](../../wiki/Installation)
+
+- Recent pre-built continuous integration artifacts:
+  - [`Arch Linux`](https://gitlab.com/hdeanclark/DICOMautomaton/builds/artifacts/master/download?job=build_ci_arch)
+  - [`Debian OldStable`](https://gitlab.com/hdeanclark/DICOMautomaton/builds/artifacts/master/download?job=build_ci_debian_oldstable)
+  - [`MXE` (i.e., `Windows` executables)](https://gitlab.com/hdeanclark/DICOMautomaton/builds/artifacts/master/download?job=cross_compile_mxe)
+
+- Recent pre-built `Docker` containers:
+  - [![Arch Linux](https://img.shields.io/badge/Latest_Docker_Build_Base-Arch_Linux-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_arch)
+  - [![Debian OldStable](https://img.shields.io/badge/Latest_Docker_Build_Base-Debian_oldstable-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_debian_oldstable)
+  - [![Void Linux](https://img.shields.io/badge/Latest_Docker_Build_Base-Void_Linux-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_void)
+  - [![MXE](https://img.shields.io/badge/Latest_Docker_Build_Base-MXE-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_mxe)
+
 
 ## About
 
@@ -27,7 +43,7 @@ with a focus on automation. It has first-class support for:
   - radiotherapy plans, and
   - line samples (i.e., discretized scalar-valued functions over $`\mathbb{R}^1`$).
 
-There are four ways of operating `DICOMautomaton`:
+There are five ways of operating `DICOMautomaton`:
 
   - command-line interface
     - most flexible, best for automation
@@ -44,6 +60,9 @@ There are four ways of operating `DICOMautomaton`:
       supported)
     - server-client model for off-site/remote installation, can provide
       cross-platform and low-powered client access
+  - a scripting interface
+    - interactive and integrated editor
+    - can be loaded interactively or processed non-interactively
 
 `DICOMautomaton` provides a diverse array of functionality, including
 implementations of the following well-known algorithms and analytical
@@ -64,6 +83,10 @@ techniques:
     - mesh simplification
     - 3D boolean operations, erosion, and dilation/margins (exact for small
       vertex counts, and via image representation for large vertex counts)
+  - constructive solid geometry
+    - signed distance functions for isosurface extraction
+    - 3D boolean operations
+    - morphological operations (erosion, dilation)
   - point cloud registration
     - Iterative Closest Point (ICP)
     - Procrustes algorithm
@@ -164,6 +187,7 @@ formats:
     - DICOM RTDOSE (read and write)
     - 3ddose (read)
     - XIM (read)
+    - CSA DICOM headers (read)
     - PNG (write)
     - JPG (write)
   - contours
@@ -216,6 +240,15 @@ and for general information invoke:
 
 Alternatively, see [documentation/](documentation/) for documentation snapshots.
 
+## Documentation
+
+Every build of `DICOMautomaton` can generate its own manual, which is provided
+in `Markdown` format. Simply issue:
+
+    $>  dicomautomaton_dispatcher -u | more
+
+[See the wiki for tutorials and more information.](../../wiki/Home).
+
 ## Clinical Use
 
 `DICOMautomaton` should **NOT** be used for clinical purposes. It is suitable
@@ -246,223 +279,6 @@ liability for use and misuse, including but not limited to damages, harm,
 injury, and death which may result, including but not limited to that arising
 from unforeseen or unanticipated implementation defects.
 
-## Dependencies
-
-Dependencies are listed in [PKGBUILD](PKGBUILD) using Arch Linux package naming
-conventions, and in [CMakeLists.txt](CMakeLists.txt) using Debian package naming
-conventions.
-
-Notably, `DICOMautomaton` depends on the author's `Ygor`, `Explicator`, and
-`YgorClustering` projects which are hosted at:
-
-  - `Ygor`: <https://gitlab.com/hdeanclark/Ygor> and
-    <https://github.com/hdclark/Ygor>.
-
-  - `Explicator`: <https://gitlab.com/hdeanclark/Explicator> and
-    <https://github.com/hdclark/Explicator>.
-
-  - `YgorClustering` (needed only for compilation):
-    <https://gitlab.com/hdeanclark/YgorClustering> and
-    <https://github.com/hdclark/YgorClustering>.
-
-## Installation
-
-### Quick start (Linux)
-
-**[Download the latest AppImage artifact from the continuous integration server
-here](http://halclark.ca/ci/DICOMautomaton-latest-x86_64.AppImage)** or via:
-
-     $>  curl http://halclark.ca/ci/DICOMautomaton-latest-x86_64.AppImage > dicomautomaton_dispatcher
-     $>  chmod 777 dicomautomaton_dispatcher
-     $>  ./dicomautomaton_dispatcher -h
-
-This artifact corresponds to the latest successful build on
-<http://halclark.ca/ci/>. Please confirm the
-[checksum](http://halclark.ca/ci/DICOMautomaton-latest-x86_64.AppImage.sha256sum).
-Installation is not necessary, but the file can be renamed and installed in a
-standard location for convenience (e.g., `/usr/bin/`).
-
-#### Notes and caveats:
-
-  - This is **not** an official release. It may be lacking functionality, and is
-    almost certainly *not* optimized.
-
-  - The CI build environment is currently based on `Debian` oldstable. Attempting to
-    run on systems with older `glibc`s will likely fail.
-
-  - `AppImage`s require `FUSE` support, so running in Docker will not work.
-    However, `AppImages` can be extracted and run *without* `FUSE` via:
-
-        $> ./DICOMautomaton-x86_64.AppImage --appimage-extract
-        $> ./squashfs-root/usr/bin/dicomautomaton_dispatcher -h
-
-  - The CI `AppImage` currently expects graphical components to be available on
-    the host system. It will fail if `libGL`, `freetype`, or `libstdc++` libraries
-    are either incompatible or missing.
-
-  - See <https://gitlab.com/hdeanclark/DICOMautomaton> or
-    <https://github.com/hdclark/DICOMautomaton> for sources and build scripts.
-
-### Compiling
-
-Compile from source to get all functionality and ensure compatibility with your
-system.
-
-This project uses `CMake`. Use the usual commands to compile on `Linux`:
-
-     $>  git clone https://gitlab.com/hdeanclark/DICOMautomaton/ && cd DICOMautomaton/ # or
-     $>  git clone https://github.com/hdclark/DICOMautomaton/ && cd DICOMautomaton/
-     $>  cd /path/to/source/directory
-     $>  mkdir build && cd build/
-
-Then, if building for `Debian`:
-
-     $>  cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
-     $>  make && make package
-     $>  sudo apt install -f ./*.deb
-
-Or, if building for `Arch Linux`:
-
-     $>  rsync -aC --exclude build ../ ./
-     $>  makepkg --syncdeps --noconfirm # Optionally also [--install].
-
-Otherwise, if installing directly (i.e., by-passing your package manager):
-
-     $>  cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
-     $>  make && sudo make install
-
-Direct installation on non-`Linux` systems is not officially supported. However,
-`Docker` images can be built that are portable across non-`Linux` systems (see
-below). 
-
-## Containerization
-
-`DICOMautomaton` can be built as a `Docker` image. This method automatically
-handles installation of all dependencies. The resulting image can be run
-interactively or accessed through a web server.
-
-In order to build the `Docker` image, you will need `git`, `Docker`, and a
-`bash` shell. On `Windows` systems the `git` shell should be used. To build the
-image:
-
-     $>  git clone https://gitlab.com/hdeanclark/DICOMautomaton/ && cd DICOMautomaton/ # or
-     $>  git clone https://github.com/hdclark/DICOMautomaton/ && cd DICOMautomaton/ # or
-     $>  cd /path/to/source/directory
-     $>  ./docker/build_bases/arch/build.sh
-     $>  ./docker/builder/arch/build.sh
-
-After building, the default web server can be launched using the convenience
-script:
-
-     $>  ./docker/scripts/arch/Run_Container.sh
-
-and a container can be run interactively with the convenience script:
-
-     $>  ./docker/scripts/arch/Run_Container_Interactively.sh
-
-### Pre-Built `Docker` Images
-
-`Docker` containers are available in three variants: using `Arch Linux`, `Debian`,
-or `Void Linux` base images. `Arch Linux` and `Void Linux` provide the latest
-upstream packages, whereas `Debian` provides greater portability since an older
-`glibc` is used. `Arch Linux` builds use `glibc` whereas `Void Linux` builds use
-`musl`.
-
-Build base images contain all dependencies and requirements necessary to compile
-`DICOMautomaton`, but may not themselves contain `DICOMautomaton`. The latest
-successfully-built base images are available from `Docker Hub`:
-
-  - [![Arch Linux](https://img.shields.io/badge/Latest_Docker_Build_Base-Arch_Linux-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_arch)
-
-  - [![Debian OldStable](https://img.shields.io/badge/Latest_Docker_Build_Base-Debian_oldstable-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_debian_oldstable)
-
-  - [![Void Linux](https://img.shields.io/badge/Latest_Docker_Build_Base-Void_Linux-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_void)
-
-  - [![MXE](https://img.shields.io/badge/Latest_Docker_Build_Base-MXE-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_mxe)
-
-### Continuous Integration
-
-Continuous integration is used to build `Docker` images, `AppImage`s,
-cross-compile and perform tests for all commits. `Docker` build
-artifacts may be available [here](http://halclark.ca/ci/).
-Additional build environments and `AppImage` portability are tested with
-`GitHub` and `GitLab` CI pipelines; build artifacts are available
-[here](https://gitlab.com/hdeanclark/DICOMautomaton/-/pipelines).
-Direct links for the latest build artifacts:
-
-  - [`Arch Linux`](https://gitlab.com/hdeanclark/DICOMautomaton/builds/artifacts/master/download?job=build_ci_arch)
-  - [`Debian OldStable`](https://gitlab.com/hdeanclark/DICOMautomaton/builds/artifacts/master/download?job=build_ci_debian_oldstable)
-  - [`MXE` (i.e., `Windows` executables)](https://gitlab.com/hdeanclark/DICOMautomaton/builds/artifacts/master/download?job=cross_compile_mxe)
-
-**Note that all CI artifacts are not optimized and core functionality may be missing.**
-
-## Building Portable Binaries
-
-The well-known `LD_PRELOAD` trick can be used to provide somewhat portable
-`DICOMautomaton` binaries for `Linux` systems. Binaries from the
-system-installed or locally-built `DICOMautomaton` will be automatically
-gathered by building and then invoking:
-
-     $>  ./scripts/dump_portable_dcma_bundle.sh /tmp/portable_dcma/
-
-If successful, the portable outputs will be dumped to `/tmp/portable_dcma/`. A
-convenience script that performs the preload trick and forwards all user
-arguments is `portable_dcma`.
-
-Note that this trick works *only* on `Linux` systems, and a similar `Linux`
-system must be used to generate the binaries. The interactive `Debian` `Docker`
-container will likely suffice. Additionally this technique only provides the
-`dicomautomaton_dispatcher` binary. All shared libraries needed to run it are
-bundled, including `glibc` and some other intrinsic libraries in case the host
-and target `glibc` differ. If the `patchelf` program is available, the binary
-can be patched to use the bundled `ld-linux.so` interpreter and `glibc` using
-the included `adjusting_dcma` script, otherwise the system interpreter will be
-used. If `patchelf` is not available it is best to remove `ld-linux`, `libm`,
-and `libc` from the bundle and rely fully on the target `glibc`. Mixing and
-matching bits of different `glibc` installations will almost certainly result in
-segmentation faults or silent failures so it is not recommended in any
-circumstances. Also note that compilation arguments and architecture-specific
-tunings will likely ruin portability.
-
-Alternatively, a third wrapper script (`emulate_dcma`) uses `qemu-x86_64` to
-emulate a 64 bit x86 system and preload bundled libraries. This script may work
-when the native `LD_PRELOAD` trick fails, but emulation may be slow. The cpu can
-be emulated, so it may be possible to support architecture-specific tunings this
-way.
-
-Portability, validity of the program, and full functionality are *NOT*
-guaranteed using either script! They should all be considered experimental. The
-preload trick is best run in a controlled environment, and targetting the same
-controlled environment and architecture. This method of distributing
-`DICOMautomaton` is not officially supported, but can simplify distributing
-custom builds in some situations.
-
-## Other Build Options
-
-A portable `AppImage` can be generated using an existing `Docker` image. This
-method supports graphical operations, but suffers from the same general `glibc`
-incompatibility issues described above. However, it works well if your system
-`glibc` is newer than (or equivalent to) that provided by `Debian` oldstable.
-External, runtime support programs (e.g., `Zenity`, `Gnuplot`) may be
-incompatible or missing altogether. At the moment no canonical `AppImage`s are
-provided, though continuous integration artifacts *are* available (see above).
-Refer to `docker/scripts/debian_oldstable/` for instructions showing how to
-generate your own `AppImage`.
-
-A dedicated `Linux` system can be bootstrapped using an up-to-date `Arch Linux`
-system that will package the system-installed `DICOMautomaton` in a truly
-portable virtual machine that can be emulated using `qemu`, including a
-graphical display. External, runtime support programs *can* be bundled this way,
-so this method provides the most reliable means of archiving a specific version.
-See `linux/`. Note that this method is experimental.
-
-
-`DICOMautomaton` can also be built using the `Nix` package manager. See `nix/`.
-Note that this method is experimental.
-
-`DICOMautomaton` can be installed on `Android` inside a `Termux` environment
-(refer to guide in [documentation/](documentation/)).
-
 ## Citing
 
 If you use `DICOMautomaton` in an academic work, we ask that you please cite the
@@ -478,7 +294,7 @@ or by clicking [here](https://zenodo.org/badge/latestdoi/89630691).
 Finally, several publications describe core functionality of `DICOMautomaton`
 and may be more appropriate to cite.
 
-## Known Issues
+## Well-Known Issues
 
   - The `SFML_Viewer` operation hangs on some systems after viewing a plot with
     `Gnuplot`. This stems from a known issue in `Ygor`.
