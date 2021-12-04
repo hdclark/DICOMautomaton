@@ -12,11 +12,11 @@
 
 ![SDL_Viewer_01](https://user-images.githubusercontent.com/934858/136631960-585c14dc-75df-4d76-b037-1b09005008ed.png)
 
-[More screenshots here.](../../wiki/Visual-examples)
+[More screenshots here.](https://github.com/hdclark/DICOMautomaton/wiki/Visual-examples)
 
 ## Quick Start
 
-- [Quick start guides, as well as complete building and installation instructions, are here](../../wiki/Installation)
+- [Quick start guides, as well as complete building and installation instructions, are here](https://github.com/hdclark/DICOMautomaton/wiki/Installation)
 
 - Recent pre-built continuous integration artifacts:
   - [`Arch Linux`](https://gitlab.com/hdeanclark/DICOMautomaton/builds/artifacts/master/download?job=build_ci_arch)
@@ -243,11 +243,11 @@ Alternatively, see [documentation/](documentation/) for documentation snapshots.
 ## Documentation
 
 Every build of `DICOMautomaton` can generate its own manual, which is provided
-in `Markdown` format. Simply issue:
+in `Markdown` format. After installing, simply issue:
 
     $>  dicomautomaton_dispatcher -u | more
 
-[See the wiki for tutorials and more information.](../../wiki/Home).
+[See the wiki for tutorials and more information](https://github.com/hdclark/DICOMautomaton/wiki/).
 
 ## Clinical Use
 
@@ -257,9 +257,9 @@ can be easily validated.
 
 While efforts have been made to verify integrity and validity of the code, no
 independent audit or review has been performed. The breadth of functionality
-would make it difficult to test all operations combinations. We therefore rely
-on static analysis, code quality metrics, and a limited amount of integration
-testing for specific workflows.
+would make it difficult to test all combinations of operations. We therefore
+rely on static analysis, code quality metrics, and a limited amount of
+integration testing for specific workflows.
 
 ## License and Copying
 
@@ -271,7 +271,7 @@ See [LICENSE.txt](LICENSE.txt) for details about the license. Informally,
 `DICOMautomaton` is available under a GPLv3+ license. The Imebra library is
 bundled for convenience and was not written by the author; consult the Imebra
 [license file](src/imebra20121219/license.txt) which is informally a simplified
-BSD-like license.
+BSD-like license. ImGui and ImPlot are also bundled for convenience.
 
 All liability is herefore disclaimed. The person(s) who use this source and/or
 software do so strictly under their own volition. They assume all associated
@@ -316,5 +316,5 @@ and may be more appropriate to cite.
 ## Project Home
 
 The `DICOMautomaton` homepage can be found at <http://www.halclark.ca/>. Source
-code is available at <https://gitlab.com/hdeanclark/DICOMautomaton/> and
-<https://github.com/hdclark/DICOMautomaton/>.
+code is available at <https://github.com/hdclark/DICOMautomaton/> and mirrored
+at <https://gitlab.com/hdeanclark/DICOMautomaton/>.
