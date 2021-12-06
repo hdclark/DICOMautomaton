@@ -106,10 +106,10 @@ Marching_Cubes_Implementation(
 
     planar_image_adjacency<float,double> img_adj( grid_imgs, {}, GridZ );
 
-/*
+
 
 // Example of a non-trivial SDF.
-
+/*
 std::shared_ptr<csg::sdf::node> root = std::make_shared<csg::sdf::op::join>();
 
 long int flip = 0;
@@ -189,8 +189,41 @@ for(double x = 0.0; x <= 100.0; x += 50.0){
                 intersect->children.emplace_back(std::move(sphere));
                 trans->children.emplace_back(std::move(intersect));
                 root->children.emplace_back(std::move(trans));
+
+             }else if(flip == 8){
+                auto boxA = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(20.0,20.0,7.5));
+                auto boxB = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(7.5,7.5,20.0));
+                auto join = std::make_shared<csg::sdf::op::chamfer_join>(2.0);
+                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x,y,z));
+
+                join->children.emplace_back(std::move(boxA));
+                join->children.emplace_back(std::move(boxB));
+                trans->children.emplace_back(std::move(join));
+                root->children.emplace_back(std::move(trans));
+
+             }else if(flip == 9){
+                auto boxA = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(20.0,20.0,7.5));
+                auto boxB = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(7.5,7.5,20.0));
+                auto subtract = std::make_shared<csg::sdf::op::chamfer_subtract>(2.0);
+                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x,y,z));
+
+                subtract->children.emplace_back(std::move(boxA));
+                subtract->children.emplace_back(std::move(boxB));
+                trans->children.emplace_back(std::move(subtract));
+                root->children.emplace_back(std::move(trans));
+
+             }else if(flip == 10){
+                auto boxA = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(20.0,20.0,7.5));
+                auto boxB = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(7.5,7.5,20.0));
+                auto intersect = std::make_shared<csg::sdf::op::chamfer_intersect>(2.0);
+                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x,y,z));
+
+                intersect->children.emplace_back(std::move(boxA));
+                intersect->children.emplace_back(std::move(boxB));
+                trans->children.emplace_back(std::move(intersect));
+                root->children.emplace_back(std::move(trans));
              }
-             flip = ((flip + 1) % 8);
+             flip = ((flip + 1) % 11);
         }
     }
 }

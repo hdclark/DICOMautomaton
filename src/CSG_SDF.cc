@@ -140,6 +140,74 @@ double intersect::evaluate_sdf(const vec3<double> &pos) const {
     return max_sdf;
 }
 
+// Chamfer-Booleans.
+chamfer_join::chamfer_join(double t) : thickness(t) {};
+
+double chamfer_join::evaluate_sdf(const vec3<double> &pos) const {
+//    FUNCINFO("df_node_chamfer_join::evaluate_sdf()");
+    if(this->children.empty()){
+        throw std::runtime_error("chamfer_join: no children present, cannot compute chamfer_join");
+    }
+
+    std::vector<double> sdfs;
+    sdfs.reserve(this->children.size());
+    for(const auto& c_it : this->children){
+        const auto sdf = c_it->evaluate_sdf(pos);
+        sdfs.emplace_back( sdf );
+    }
+    double min_sdf = std::numeric_limits<double>::infinity();
+    const auto end = std::end(sdfs);
+    for(auto c1_it = std::begin(sdfs); c1_it != end; ++c1_it){
+        for(auto c2_it = std::next(c1_it); c2_it != end; ++c2_it){
+            const auto l_min = std::min({ *c1_it, *c2_it, (*c1_it + *c2_it - this->thickness)*std::sqrt(0.5) });
+            if(l_min < min_sdf) min_sdf = l_min;
+        }
+    }
+    return min_sdf;
+}
+
+
+chamfer_subtract::chamfer_subtract(double t) : thickness(t) {};
+
+double chamfer_subtract::evaluate_sdf(const vec3<double> &pos) const {
+//    FUNCINFO("df_node_chamfer_subtract::evaluate_sdf()");
+    if(this->children.size() != 2UL){
+        throw std::runtime_error("chamfer_subtract: incorrect number of children present, chamfer_subtraction requires exactly two");
+    }
+
+    // Difference -- can be APPROXIMATED by taking the maximum of children SDF, but negating one of them.
+    const auto cA_sdf = this->children[0]->evaluate_sdf(pos);
+    const auto cB_sdf = this->children[1]->evaluate_sdf(pos);
+    const auto sdf = std::max({ cA_sdf, -cB_sdf, (cA_sdf - cB_sdf + this->thickness)*std::sqrt(0.5) });
+    return sdf;
+}
+
+chamfer_intersect::chamfer_intersect(double t) : thickness(t) {};
+
+double chamfer_intersect::evaluate_sdf(const vec3<double> &pos) const {
+//    FUNCINFO("df_node_chamfer_intersect::evaluate_sdf()");
+    if(this->children.empty()){
+        throw std::runtime_error("chamfer_intersect: no children present, cannot compute chamfer_intersect");
+    }
+
+    std::vector<double> sdfs;
+    sdfs.reserve(this->children.size());
+    for(const auto& c_it : this->children){
+        const auto sdf = c_it->evaluate_sdf(pos);
+        sdfs.emplace_back( sdf );
+    }
+    double max_sdf = -std::numeric_limits<double>::infinity();
+    const auto end = std::end(sdfs);
+    for(auto c1_it = std::begin(sdfs); c1_it != end; ++c1_it){
+        for(auto c2_it = std::next(c1_it); c2_it != end; ++c2_it){
+            const auto l_max = std::max({ *c1_it, *c2_it, (*c1_it + *c2_it + this->thickness)*std::sqrt(0.5) });
+            if(max_sdf < l_max) max_sdf = l_max;
+        }
+    }
+    return max_sdf;
+}
+
+
 // Dilation and erosion.
 dilate::dilate(double dist) : offset(dist) {};
 

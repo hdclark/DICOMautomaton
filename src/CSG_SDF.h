@@ -56,6 +56,7 @@ struct aa_box : public node {
  
 namespace op {
 
+
 // Translate.
 struct translate : public node {
     vec3<double> dR;
@@ -64,6 +65,7 @@ struct translate : public node {
     double evaluate_sdf(const vec3<double>& pos) const override;
 };
 
+
 // Rotate.
 struct rotate : public node {
     affine_transform<double> rot;
@@ -71,6 +73,7 @@ struct rotate : public node {
     rotate(const vec3<double>& axis, double angle_rad);
     double evaluate_sdf(const vec3<double>& pos) const override;
 };
+
 
 // Boolean 'AND' or 'add' or 'union' or 'join.'
 struct join : public node {
@@ -89,6 +92,30 @@ struct intersect : public node {
     intersect();
     double evaluate_sdf(const vec3<double>& pos) const override;
 };
+
+
+// Chamfer-Booleans, which produce a 45-degree edge where surfaces meet.
+struct chamfer_join : public node {
+    double thickness;
+
+    chamfer_join(double thickness);
+    double evaluate_sdf(const vec3<double>& pos) const override;
+};
+
+struct chamfer_subtract : public node {
+    double thickness;
+
+    chamfer_subtract(double thickness);
+    double evaluate_sdf(const vec3<double>& pos) const override;
+};
+
+struct chamfer_intersect : public node {
+    double thickness;
+
+    chamfer_intersect(double thickness);
+    double evaluate_sdf(const vec3<double>& pos) const override;
+};
+
 
 // Dilation and erosion.
 //
