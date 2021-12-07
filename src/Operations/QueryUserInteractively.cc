@@ -93,6 +93,9 @@ bool QueryUserInteractively(Drover &DICOM_data,
 
     std::vector<user_query_packet_t> qv;
     for(const auto &pf : pfs){
+        if(!pf.children.empty()){
+            throw std::invalid_argument("Children functions are not accepted");
+        }
         if(pf.parameters.size() != 3){
             throw std::invalid_argument("Incorrect number of arguments were provided");
         }

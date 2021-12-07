@@ -185,6 +185,9 @@ bool PerturbPixels(Drover &DICOM_data,
         throw std::invalid_argument("Model accepts a single function only");
     }
     auto pf = pfs.front();
+    if(!pf.children.empty()){
+        throw std::invalid_argument("Children functions are not accepted");
+    }
 
     if( !method_is_add
     &&  !method_is_mult ){

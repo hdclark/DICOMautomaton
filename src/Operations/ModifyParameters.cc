@@ -88,6 +88,9 @@ bool ModifyParameters(Drover &DICOM_data,
     }
 
     for(const auto &pf : pfs){
+        if(!pf.children.empty()){
+            throw std::invalid_argument("Children functions are not accepted");
+        }
 
         // Definitions.
         if(std::regex_match(pf.name, regex_define)){
