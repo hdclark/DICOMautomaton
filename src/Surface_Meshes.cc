@@ -65,6 +65,7 @@
 
 #include "Surface_Meshes.h"
 
+
 // ----------------------------------------------- Pure contour meshing -----------------------------------------------
 namespace dcma_surface_meshes {
 
@@ -76,13 +77,12 @@ namespace dcma_surface_meshes {
 //       version to support rectangular cubes, avoid 3D interpolation, and explicitly constructs a polyhedron mesh.
 //       Thanks Cory! Thanks Paul!
 //
-using sdf_t = std::function<double(const vec3<double> &)>;
 
 static
 fv_surface_mesh<double, uint64_t>
 Marching_Cubes_Implementation(
         std::list<std::reference_wrapper<planar_image<float,double>>> grid_imgs,
-        sdf_t signed_dist_func,
+        std::shared_ptr<csg::sdf::node> sdf,
         double inclusion_threshold, // The voxel value threshold demarcating surface 'interior' and 'exterior.'
         bool below_is_interior,  // Controls how the inclusion_threshold is interpretted.
                                  // If true, anything <= is considered to be interior to the surface.
@@ -106,134 +106,7 @@ Marching_Cubes_Implementation(
 
     planar_image_adjacency<float,double> img_adj( grid_imgs, {}, GridZ );
 
-
-
-// Example of a non-trivial SDF.
-/*
-std::shared_ptr<csg::sdf::node> root = std::make_shared<csg::sdf::op::join>();
-
-long int flip = 0;
-for(double x = 0.0; x <= 100.0; x += 50.0){
-    for(double y = 0.0; y <= 100.0; y += 50.0){
-        for(double z = 0.0; z <= 100.0; z += 50.0){
-            if(flip == 0){
-                auto sphere = std::make_shared<csg::sdf::shape::sphere>(15.0);
-                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x, y, z));
-
-                trans->children.emplace_back(std::move(sphere));
-                root->children.emplace_back(std::move(trans));
-
-             }else if(flip == 1){
-                auto box = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(5.0,10.0,15.0));
-                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x,y,z));
-
-                trans->children.emplace_back(std::move(box));
-                root->children.emplace_back(std::move(trans));
-
-             }else if(flip == 2){
-                auto box = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(5.0,10.0,15.0));
-                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x,y,z));
-                auto dilate = std::make_shared<csg::sdf::op::dilate>(3.0);
-
-                trans->children.emplace_back(std::move(box));
-                dilate->children.emplace_back(std::move(trans));
-                root->children.emplace_back(std::move(dilate));
-
-             }else if(flip == 3){
-                auto box = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(10.0,15.0,20.0));
-                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x,y,z));
-                auto erode = std::make_shared<csg::sdf::op::erode>(3.0);
-
-                trans->children.emplace_back(std::move(box));
-                erode->children.emplace_back(std::move(trans));
-                root->children.emplace_back(std::move(erode));
-
-             }else if(flip == 4){
-                auto box = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(5.0,10.0,15.0));
-                auto rot = std::make_shared<csg::sdf::op::rotate>(vec3<double>(1.5,1.0,0.5).unit(),(0.1+x)*(1.0+y)*(2.0+z)/(1'500));
-                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x,y,z));
-
-                rot->children.emplace_back(std::move(box));
-                trans->children.emplace_back(std::move(rot));
-                root->children.emplace_back(std::move(trans));
-
-             }else if(flip == 5){
-                auto box = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(20.0,20.0,5.0));
-                auto sphere = std::make_shared<csg::sdf::shape::sphere>(15.0);
-                auto join = std::make_shared<csg::sdf::op::join>();
-                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x,y,z));
-
-                join->children.emplace_back(std::move(box));
-                join->children.emplace_back(std::move(sphere));
-                trans->children.emplace_back(std::move(join));
-                root->children.emplace_back(std::move(trans));
-
-             }else if(flip == 6){
-                auto box = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(20.0,20.0,5.0));
-                auto sphere = std::make_shared<csg::sdf::shape::sphere>(15.0);
-                auto subtract = std::make_shared<csg::sdf::op::subtract>();
-                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x,y,z));
-
-                subtract->children.emplace_back(std::move(box));
-                subtract->children.emplace_back(std::move(sphere));
-                trans->children.emplace_back(std::move(subtract));
-                root->children.emplace_back(std::move(trans));
-
-             }else if(flip == 7){
-                auto box = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(20.0,20.0,5.0));
-                auto sphere = std::make_shared<csg::sdf::shape::sphere>(15.0);
-                auto intersect = std::make_shared<csg::sdf::op::intersect>();
-                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x,y,z));
-
-                intersect->children.emplace_back(std::move(box));
-                intersect->children.emplace_back(std::move(sphere));
-                trans->children.emplace_back(std::move(intersect));
-                root->children.emplace_back(std::move(trans));
-
-             }else if(flip == 8){
-                auto boxA = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(20.0,20.0,7.5));
-                auto boxB = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(7.5,7.5,20.0));
-                auto join = std::make_shared<csg::sdf::op::chamfer_join>(2.0);
-                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x,y,z));
-
-                join->children.emplace_back(std::move(boxA));
-                join->children.emplace_back(std::move(boxB));
-                trans->children.emplace_back(std::move(join));
-                root->children.emplace_back(std::move(trans));
-
-             }else if(flip == 9){
-                auto boxA = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(20.0,20.0,7.5));
-                auto boxB = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(7.5,7.5,20.0));
-                auto subtract = std::make_shared<csg::sdf::op::chamfer_subtract>(2.0);
-                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x,y,z));
-
-                subtract->children.emplace_back(std::move(boxA));
-                subtract->children.emplace_back(std::move(boxB));
-                trans->children.emplace_back(std::move(subtract));
-                root->children.emplace_back(std::move(trans));
-
-             }else if(flip == 10){
-                auto boxA = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(20.0,20.0,7.5));
-                auto boxB = std::make_shared<csg::sdf::shape::aa_box>(vec3<double>(7.5,7.5,20.0));
-                auto intersect = std::make_shared<csg::sdf::op::chamfer_intersect>(2.0);
-                auto trans = std::make_shared<csg::sdf::op::translate>(vec3<double>(x,y,z));
-
-                intersect->children.emplace_back(std::move(boxA));
-                intersect->children.emplace_back(std::move(boxB));
-                trans->children.emplace_back(std::move(intersect));
-                root->children.emplace_back(std::move(trans));
-             }
-             flip = ((flip + 1) % 11);
-        }
-    }
-}
-
-signed_dist_func = [root](const vec3<double> &r) -> double {
-    return root->evaluate_sdf(r);
-};
-*/
-
-    const bool has_signed_dist_func = !!signed_dist_func;
+    const bool has_signed_dist_func = (sdf != nullptr);
 
     // ============================================== Marching Cubes ================================================
 
@@ -740,7 +613,7 @@ signed_dist_func = [root](const vec3<double> &r) -> double {
                 // This approach is slow but extremely flexible for meshing complicated shapes (e.g., Booleans).
                 }else{
                     for(int32_t corner = 0; corner < 8; ++corner){
-                        afCubeValue[corner] = signed_dist_func(pos + a2fVertexOffset[corner]);
+                        afCubeValue[corner] = sdf->evaluate_sdf(pos + a2fVertexOffset[corner]);
                     }
                 }
                 
@@ -1364,7 +1237,73 @@ Estimate_Surface_Mesh_Marching_Cubes(
 
     // Offload the actual Marching Cubes computation.
     return Marching_Cubes_Implementation( grid_imgs,
-                                          sdf_t(),
+                                          std::shared_ptr<csg::sdf::node>(),
+                                          inclusion_threshold,
+                                          below_is_interior,
+                                          params );
+}
+
+// Perform Marching Cubes using a user-provided signed-distance function.
+fv_surface_mesh<double, uint64_t>
+Estimate_Surface_Mesh_Marching_Cubes(
+        std::shared_ptr<csg::sdf::node> sdf,
+        const vec3<double>& minimum_resolution,
+        double inclusion_threshold, // The voxel value threshold demarcating surface 'interior' and 'exterior.'
+        bool below_is_interior,  // Controls how the inclusion_threshold is interpretted.
+                                 // If true, anything <= is considered to be interior to the surface.
+                                 // If false, anything >= is considered to be interior to the surface.
+        Parameters params ){
+
+    auto bb = sdf->evaluate_aa_bbox();
+    if(!bb.min.isfinite() || !bb.max.isfinite()){
+        throw std::invalid_argument("SDF produces a non-finite bounding box");
+    }
+
+    // Make an image volume that covers the bounding box + a margin.
+    const double min_res_x = minimum_resolution.x;
+    const double min_res_y = minimum_resolution.y;
+    const double min_res_z = minimum_resolution.z;
+
+    const double margin_x = min_res_x * 2.0;
+    const double margin_y = min_res_y * 2.0;
+    const double margin_z = min_res_z * 2.0;
+
+    const auto N_cols = static_cast<long int>(std::ceil((bb.max.x - bb.min.x)/min_res_x));
+    const auto N_rows = static_cast<long int>(std::ceil((bb.max.y - bb.min.y)/min_res_y));
+    const auto N_imgs = static_cast<long int>(std::ceil((bb.max.z - bb.min.z)/min_res_z));
+    const auto N_chns = static_cast<long int>(1);
+
+    const vec3<double> col_unit(1.0, 0.0, 0.0);
+    const vec3<double> row_unit(0.0, 1.0, 0.0);
+    const vec3<double> img_unit(0.0, 0.0, 1.0);
+
+    const auto c1 = bb.min;
+    const auto c2 = vec3<double>(bb.max.x, bb.min.y, bb.min.z);
+    const auto c3 = vec3<double>(bb.max.x, bb.max.y, bb.min.z);
+    const auto c4 = vec3<double>(bb.min.x, bb.max.y, bb.min.z);
+    const auto c5 = vec3<double>(bb.max.x, bb.min.y, bb.max.z);
+    const auto c6 = vec3<double>(bb.max.x, bb.max.y, bb.max.z);
+    const auto c7 = vec3<double>(bb.min.x, bb.max.y, bb.max.z);
+    const auto c8 = bb.max;
+
+    contour_collection<double> cc;
+    cc.contours.emplace_back(contour_of_points(std::list<vec3<double>>{{ c1, c2, c3, c4 }}));
+    cc.contours.emplace_back(contour_of_points(std::list<vec3<double>>{{ c5, c6, c7, c8 }}));
+    std::list<std::reference_wrapper<contour_collection<double>>> ccs;
+    ccs.emplace_back( std::ref(cc) );
+
+    auto pic = Contiguously_Grid_Volume<float,double>(ccs,
+                                                      margin_x, margin_y, margin_z,
+                                                      N_rows, N_cols, N_chns, N_imgs,
+                                                      col_unit, row_unit, img_unit);
+
+    std::list<std::reference_wrapper<planar_image<float,double>>> imgs;
+    for(auto& img : pic.images){
+        imgs.emplace_back( std::ref(img) );
+    }
+
+    return Marching_Cubes_Implementation( imgs,
+                                          sdf,
                                           inclusion_threshold,
                                           below_is_interior,
                                           params );
@@ -1392,7 +1331,7 @@ Estimate_Surface_Mesh_Marching_Cubes(
 
     // Offload the actual Marching Cubes computation.
     return Marching_Cubes_Implementation( grid_imgs,
-                                          sdf_t(),
+                                          std::shared_ptr<csg::sdf::node>(),
                                           inclusion_threshold,
                                           below_is_interior,
                                           params );

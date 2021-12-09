@@ -40,3 +40,7 @@ parse_functions(const std::string &,
 std::vector<parsed_function>
 retain_only_numeric_parameters(std::vector<parsed_function>);
 
+// Parser for number lists.
+std::vector<double> parse_numbers(const std::string &split_chars,
+                                  const std::string &in);
+

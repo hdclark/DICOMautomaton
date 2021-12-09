@@ -111,6 +111,7 @@
 #include "Operations/ForEachDistinct.h"
 #include "Operations/FVPicketFence.h"
 #include "Operations/GenerateCalibrationCurve.h"
+#include "Operations/GenerateMeshes.h"
 #include "Operations/GenerateSurfaceMask.h"
 #include "Operations/GenerateSyntheticImages.h"
 #include "Operations/GenerateWarp.h"
@@ -118,7 +119,6 @@
 #include "Operations/GenerateVirtualDataDoseStairsV1.h"
 #include "Operations/GenerateVirtualDataImageSphereV1.h"
 #include "Operations/GenerateVirtualDataPerfusionV1.h"
-#include "Operations/GenerateWarp.h"
 #include "Operations/GiveWholeImageArrayABoneWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAHeadAndNeckWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAThoraxWindowLevel.h"
@@ -325,6 +325,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ForEachDistinct"] = std::make_pair(OpArgDocForEachDistinct, ForEachDistinct);
     out["FVPicketFence"] = std::make_pair(OpArgDocFVPicketFence, FVPicketFence);
     out["GenerateCalibrationCurve"] = std::make_pair(OpArgDocGenerateCalibrationCurve, GenerateCalibrationCurve);
+    out["GenerateMeshes"] = std::make_pair(OpArgDocGenerateMeshes, GenerateMeshes);
     out["GenerateSurfaceMask"] = std::make_pair(OpArgDocGenerateSurfaceMask, GenerateSurfaceMask);
     out["GenerateSyntheticImages"] = std::make_pair(OpArgDocGenerateSyntheticImages, GenerateSyntheticImages);
     out["GenerateVirtualDataContourViaThresholdTestV1"] = std::make_pair(OpArgDocGenerateVirtualDataContourViaThresholdTestV1, GenerateVirtualDataContourViaThresholdTestV1);

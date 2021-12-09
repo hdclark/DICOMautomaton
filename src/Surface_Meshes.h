@@ -5,6 +5,8 @@
 #include <string>
 #include <utility>
 
+#include "CSG_SDF.h"
+
 #ifdef DCMA_USE_CGAL
     #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
     #include <CGAL/Polyhedron_3.h>
@@ -48,6 +50,15 @@ namespace dcma_surface_meshes {
             const std::list<std::reference_wrapper<contour_collection<double>>>& cc_ROIs,
             Parameters p );
 
+    fv_surface_mesh<double, uint64_t>
+    Estimate_Surface_Mesh_Marching_Cubes(
+            std::shared_ptr<csg::sdf::node> sdf,
+            const vec3<double> &minimum_resolution,
+            double inclusion_threshold, // The voxel value threshold demarcating surface 'interior' and 'exterior.'
+            bool below_is_interior,  // Controls how the inclusion_threshold is interpretted.
+                                     // If true, anything <= is considered to be interior to the surface.
+                                     // If false, anything >= is considered to be interior to the surface.
+            Parameters p );
 
     fv_surface_mesh<double, uint64_t>
     Estimate_Surface_Mesh_Marching_Cubes(

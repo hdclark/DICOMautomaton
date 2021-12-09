@@ -329,3 +329,23 @@ retain_only_numeric_parameters(std::vector<parsed_function> pfs){
     return pfs;
 }
 
+
+// Parser for number lists.
+std::vector<double>
+parse_numbers(const std::string &split_chars, const std::string &in){
+    std::vector<std::string> split;
+    split.emplace_back(in);
+    for(const auto& c : split_chars){
+        split = SplitVector(split, c, 'd');
+    }
+
+    std::vector<double> numbers;
+    for(const auto &w : split){
+       try{
+           const auto x = std::stod(w);
+           numbers.emplace_back(x);
+       }catch(const std::exception &){ }
+    }
+    return numbers;
+}
+

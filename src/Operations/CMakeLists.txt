@@ -91,6 +91,7 @@ add_library(Operations_objs OBJECT
     ForEachDistinct.cc
     FVPicketFence.cc
     GenerateCalibrationCurve.cc
+    GenerateMeshes.cc
     GenerateSurfaceMask.cc
     GenerateSyntheticImages.cc
     GenerateVirtualDataContourViaThresholdTestV1.cc
