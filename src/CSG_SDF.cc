@@ -362,7 +362,7 @@ double dilate::evaluate_sdf(const vec3<double> &pos) const {
     if(this->children.size() != 1UL){
         throw std::runtime_error("dilate: this operation requires a single child node");
     }
-    return this->children[0]->evaluate_sdf(pos) + this->offset;
+    return this->children[0]->evaluate_sdf(pos) - this->offset;
 }
 
 aa_bbox dilate::evaluate_aa_bbox() const {
@@ -386,7 +386,7 @@ double erode::evaluate_sdf(const vec3<double> &pos) const {
     if(this->children.size() != 1UL){
         throw std::runtime_error("erode: this operation requires a single child node");
     }
-    return this->children[0]->evaluate_sdf(pos) - this->offset;
+    return this->children[0]->evaluate_sdf(pos) + this->offset;
 }
 
 aa_bbox erode::evaluate_aa_bbox() const {
@@ -471,7 +471,7 @@ struct node {
     }
     std::optional<double> s4;
     if( (4 <= N_p) && (pf.parameters[3].number) ){
-        s1 = pf.parameters[3].number;
+        s4 = pf.parameters[3].number;
     }
     std::optional<vec3<double>> v123;
     if( (3 <= N_p) && (pf.parameters[0].number)
@@ -496,7 +496,6 @@ struct node {
         if( !v123 || (N_p != 3) ){
             throw std::invalid_argument("'aa_box' requires an extent vec3 parameter");
         }
-FUNCINFO("Passing v123 = " << v123.value() << " to aa_box constructor");
         out = std::make_shared<csg::sdf::shape::aa_box>( v123.value() );
 
     // Operations.

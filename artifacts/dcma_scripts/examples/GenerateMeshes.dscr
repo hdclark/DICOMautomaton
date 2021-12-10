@@ -1,69 +1,180 @@
 #!/usr/bin/env -S dicomautomaton_dispatcher -v
 
+# This script provides examples of the the GenerateMeshes operation.
+
+# Spatial resolutions along x, y, and z axes.
 res = "0.25, 0.25, 0.75";
 
+# This sphere is large compared to the resolution, so will be smooth and have
+# lots of vertices.
 GenerateMeshes(
-    MeshLabel = 'sphere(7.0)',
+    Resolution = res,
+    MeshLabel = 'large sphere',
     Objects = 'sphere(7.0)',
-    Resolution = res,
 ){};
 
+# This sphere is small compared to the resolution, so will be 'blocky'.
 GenerateMeshes(
-    MeshLabel = 'sphere(2.0)',
+    Resolution = res,
+    MeshLabel = 'small sphere',
     Objects = 'sphere(2.0)',
-    Resolution = res,
 ){};
 
+# A simple asymmetric axis-aligned box.
 GenerateMeshes(
+    Resolution = res,
     MeshLabel = 'box',
     Objects = 'aa_box(1.0, 2.0, 4.0)',
-    Resolution = res,
 ){};
 
+# Two disjoint spheres.
 GenerateMeshes(
+    Resolution = res,
     MeshLabel = 'sphere + sphere',
-    Objects = 'join(){ sphere(5.0);
-                       translate(8.0, 8.0, 8.0){ 
-                           sphere(5.0)
-                       }
-               }',
-    Resolution = res,
+    Objects = '
+        join(){
+            sphere(5.0);
+            translate(8.0, 8.0, 8.0){ 
+                sphere(5.0)
+            }
+        }',
 ){};
 
-
+# Two conjoined spheres.
 GenerateMeshes(
+    Resolution = res,
+    MeshLabel = 'sphere + sphere',
+    Objects = '
+        join(){
+            sphere(5.0);
+            translate(3.0, 3.0, 3.0){ 
+                sphere(6.0)
+            }
+        }',
+){};
+
+# Boolean addition (join) of a sphere and an axis-aligned box.
+GenerateMeshes(
+    Resolution = res,
     MeshLabel = 'sphere + box',
-    Objects = 'join(){ sphere(2.0); aa_box(1.0, 5.0, 5.0) }',
-    Resolution = res,
+    Objects = 'join(){ sphere(4.0); aa_box(3.0, 6.0, 8.0); }',
 ){};
 
+# Same as previous, but objects specified in opposite order.
+# (Joins are commutative.)
 GenerateMeshes(
+    Resolution = res,
     MeshLabel = 'box + sphere',
-    Objects = 'join(){ aa_box(1.0, 5.0, 5.0); sphere(2.0) }',
-    Resolution = res,
+    Objects = 'join(){ aa_box(3.0, 6.0, 8.0); sphere(4.0); }',
 ){};
 
+# Same as previous, but the box in a different orientation.
+# (The result should be the same, except for differences due to resolutions.)
 GenerateMeshes(
+    Resolution = res,
     MeshLabel = 'box + sphere',
-    Objects = 'join(){ aa_box(5.0, 5.0, 1.0); sphere(2.0) }',
-    Resolution = res,
+    Objects = 'join(){ aa_box(8.0, 6.0, 3.0); sphere(4.0); }',
 ){};
 
+# Boolean subtraction of a box from a sphere.
 GenerateMeshes(
-    MeshLabel = 'box - sphere',
-    Objects = 'subtract(){ aa_box(1.0, 5.0, 5.0); sphere(2.5) }',
     Resolution = res,
-){};
-
-GenerateMeshes(
     MeshLabel = 'sphere - box',
-    Objects = 'subtract(){ sphere(20.0); aa_box(10.0, 50.0, 50.0) }',
-    Resolution = res,
+    Objects = 'subtract(){ sphere(12.0); aa_box(8.0, 20.0, 20.0); }',
 ){};
 
+# Same as previous, but objects specified in opposite order.
+# (Subtractions are not commutative.)
 GenerateMeshes(
-    MeshLabel = 'chamfered sphere - box',
-    Objects = 'chamfer_subtract(2.0){ sphere(20.0); aa_box(10.0, 50.0, 50.0) }',
     Resolution = res,
+    MeshLabel = 'box - sphere',
+    Objects = 'subtract(){ aa_box(8.0, 20.0, 20.0); sphere(12.0); }',
+){};
+
+# Same as above, but the subtraction is 'chamfered' so it bridges the sphere
+# and box with a 'ramp'.
+GenerateMeshes(
+    Resolution = res,
+    MeshLabel = 'chamfered (box - sphere)',
+    Objects = 'chamfer_subtract(2.0){ aa_box(8.0, 20.0, 20.0); sphere(12.0); }',
+){};
+
+# Same as previous, but the chamfer is increased.
+GenerateMeshes(
+    Resolution = res,
+    MeshLabel = 'chamfered (box - sphere)',
+    Objects = 'chamfer_subtract(3.0){ aa_box(8.0, 20.0, 20.0); sphere(12.0); }',
+){};
+
+# A complicated example with compound Boolean operations.
+GenerateMeshes(
+    Resolution = res,
+    MeshLabel = 'Boolean composite "hollow star"',
+    Objects = '
+        subtract(){
+            join(){
+                aa_box(15.0, 3.0, 3.0);
+                aa_box(3.0, 15.0, 3.0);
+                aa_box(3.0, 3.0, 15.0);
+            };
+            join(){
+                aa_box(20.0, 2.0, 2.0);
+                aa_box(2.0, 20.0, 2.0);
+                aa_box(2.0, 2.0, 20.0);
+                sphere(6.0);
+            };
+        }',
+){};
+
+# Similar to previous, but with rotations.
+GenerateMeshes(
+    Resolution = res,
+    MeshLabel = 'box + box + box + box',
+    Objects = '
+        join(){
+            aa_box(15.0, 3.0, 3.0);
+            rotate(0, 0, 1, 0.75){ aa_box(3.0, 15.0, 3.0) };
+            rotate(0, 1, 0, 0.75){ aa_box(3.0, 3.0, 15.0) };
+            rotate(1, 1, 0, 0.25){ aa_box(2.0, 2.0, 20.0) };
+        }',
+){};
+
+# Toroidal box.
+GenerateMeshes(
+    Resolution = res,
+    MeshLabel = 'toroidal box',
+    Objects = '
+        join(){
+            translate( 0,-7.5, 0){ rotate(1, 0, 0, 0.75){ aa_box(10.0, 3.0, 3.0); }; };
+            translate( 0, 7.5, 0){ rotate(1, 0, 0, 0.75){ aa_box(10.0, 3.0, 3.0); }; };
+            translate(-7.5, 0, 0){ rotate(0, 1, 0, 0.75){ aa_box(3.0, 10.0, 3.0); }; };
+            translate( 7.5, 0, 0){ rotate(0, 1, 0, 0.75){ aa_box(3.0, 10.0, 3.0); }; };
+        }',
+){};
+
+# Dilated (i.e., 'inflated' or 'expanded') and eroded (i.e., 'deflated' or
+# 'contracted') boxes.
+GenerateMeshes(
+    Resolution = res,
+    MeshLabel = 'dilated box',
+    Objects = '
+        join(){
+            translate(-30, 0, 0){ dilate(4.0){ aa_box( 10.0, 15.0, 20.0 ); }; };
+            translate(  0, 0, 0){              aa_box( 10.0, 15.0, 20.0 );    };
+            translate( 20, 0, 0){  erode(4.0){ aa_box( 10.0, 15.0, 20.0 ); }; };
+        }',
+){};
+
+# Dilation and erosion are not exactly commutative since the SDF may not be
+# entirely accurate (especially when Booleans are performed).
+GenerateMeshes(
+    Resolution = res,
+    MeshLabel = 'commutative dilation + erosion',
+    Objects = '
+        join(){
+            translate(-30, 0, 0){ erode(4.0){ dilate(4.0){ aa_box( 10.0, 15.0, 20.0 ); }; }; };
+            translate(  0, 0, 0){                          aa_box( 10.0, 15.0, 20.0 );    };
+            translate( 30, 0, 0){ dilate(4.0){ erode(4.0){ aa_box( 10.0, 15.0, 20.0 ); }; }; };
+        }',
 ){};
 
