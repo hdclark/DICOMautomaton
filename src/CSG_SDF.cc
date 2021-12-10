@@ -25,6 +25,23 @@
 namespace csg {
 namespace sdf {
 
+aa_bbox::aa_bbox(){
+    const auto inf = std::numeric_limits<double>::infinity();
+    this->min = vec3<double>( inf, inf, inf );
+    this->max = vec3<double>( -inf, -inf, -inf );
+};
+
+void aa_bbox::digest(const vec3<double>& r){
+    this->min.x = std::min( this->min.x, r.x );
+    this->min.y = std::min( this->min.y, r.y );
+    this->min.z = std::min( this->min.z, r.z );
+
+    this->max.x = std::max( this->max.x, r.x );
+    this->max.y = std::max( this->max.y, r.y );
+    this->max.z = std::max( this->max.z, r.z );
+};
+
+
 // -------------------------------- 3D Shapes -------------------------------------
 namespace shape {
 
@@ -163,18 +180,11 @@ aa_bbox join_aa_bbox_impl(const std::vector<std::shared_ptr<node>>& nodes){
     if(nodes.empty()){
         throw std::logic_error("join_aa_bbox_impl: no nodes present");
     }
-    const auto inf = std::numeric_limits<double>::infinity();
     aa_bbox bb;
-    bb.min.x = bb.min.y = bb.min.z = inf;
-    bb.max.x = bb.max.y = bb.max.z = -inf;
     for(const auto& c_it : nodes){
         const auto c_bb = c_it->evaluate_aa_bbox();
-        bb.min.x = std::min( bb.min.x, c_bb.min.x );
-        bb.min.y = std::min( bb.min.y, c_bb.min.y );
-        bb.min.z = std::min( bb.min.z, c_bb.min.z );
-        bb.max.x = std::max( bb.max.x, c_bb.max.x );
-        bb.max.y = std::max( bb.max.y, c_bb.max.y );
-        bb.max.z = std::max( bb.max.z, c_bb.max.z );
+        bb.digest( c_bb.min );
+        bb.digest( c_bb.max );
     }
     return bb;
 }
@@ -486,6 +496,7 @@ struct node {
         if( !v123 || (N_p != 3) ){
             throw std::invalid_argument("'aa_box' requires an extent vec3 parameter");
         }
+FUNCINFO("Passing v123 = " << v123.value() << " to aa_box constructor");
         out = std::make_shared<csg::sdf::shape::aa_box>( v123.value() );
 
     // Operations.

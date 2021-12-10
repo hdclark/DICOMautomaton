@@ -27,6 +27,9 @@ namespace sdf {
 struct aa_bbox {
     vec3<double> min;
     vec3<double> max;
+
+    aa_bbox();
+    void digest(const vec3<double>&);
 };
 
 // Abstract base expression tree node.

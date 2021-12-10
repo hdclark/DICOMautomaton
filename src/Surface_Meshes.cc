@@ -1264,27 +1264,27 @@ Estimate_Surface_Mesh_Marching_Cubes(
     const double min_res_y = minimum_resolution.y;
     const double min_res_z = minimum_resolution.z;
 
-    const double margin_x = min_res_x * 2.0;
-    const double margin_y = min_res_y * 2.0;
-    const double margin_z = min_res_z * 2.0;
+    const double margin_x = min_res_x * 4.0; // Ensure at least one voxel surrounds entire object.
+    const double margin_y = min_res_y * 4.0;
+    const double margin_z = min_res_z * 4.0;
 
-    const auto N_cols = static_cast<long int>(std::ceil((bb.max.x - bb.min.x)/min_res_x));
-    const auto N_rows = static_cast<long int>(std::ceil((bb.max.y - bb.min.y)/min_res_y));
+    const auto N_rows = static_cast<long int>(std::ceil((bb.max.x - bb.min.x)/min_res_x));
+    const auto N_cols = static_cast<long int>(std::ceil((bb.max.y - bb.min.y)/min_res_y));
     const auto N_imgs = static_cast<long int>(std::ceil((bb.max.z - bb.min.z)/min_res_z));
     const auto N_chns = static_cast<long int>(1);
 
-    const vec3<double> col_unit(1.0, 0.0, 0.0);
-    const vec3<double> row_unit(0.0, 1.0, 0.0);
-    const vec3<double> img_unit(0.0, 0.0, 1.0);
+    const vec3<double> row_unit(1.0, 0.0, 0.0);
+    const vec3<double> col_unit(0.0, 1.0, 0.0);
 
-    const auto c1 = bb.min;
+    const auto c1 = vec3<double>(bb.min.x, bb.min.y, bb.min.z);
     const auto c2 = vec3<double>(bb.max.x, bb.min.y, bb.min.z);
     const auto c3 = vec3<double>(bb.max.x, bb.max.y, bb.min.z);
     const auto c4 = vec3<double>(bb.min.x, bb.max.y, bb.min.z);
-    const auto c5 = vec3<double>(bb.max.x, bb.min.y, bb.max.z);
-    const auto c6 = vec3<double>(bb.max.x, bb.max.y, bb.max.z);
-    const auto c7 = vec3<double>(bb.min.x, bb.max.y, bb.max.z);
-    const auto c8 = bb.max;
+
+    const auto c5 = vec3<double>(bb.min.x, bb.min.y, bb.max.z);
+    const auto c6 = vec3<double>(bb.max.x, bb.min.y, bb.max.z);
+    const auto c7 = vec3<double>(bb.max.x, bb.max.y, bb.max.z);
+    const auto c8 = vec3<double>(bb.min.x, bb.max.y, bb.max.z);
 
     contour_collection<double> cc;
     cc.contours.emplace_back(contour_of_points(std::list<vec3<double>>{{ c1, c2, c3, c4 }}));
@@ -1292,15 +1292,34 @@ Estimate_Surface_Mesh_Marching_Cubes(
     std::list<std::reference_wrapper<contour_collection<double>>> ccs;
     ccs.emplace_back( std::ref(cc) );
 
+    csg::sdf::aa_bbox c_bb;
+    for(const auto& cc_refw : ccs){
+        for(const auto& c : cc_refw.get().contours){
+            for(const auto& p : c.points){
+                c_bb.digest(p);
+            }
+        }
+    }
+//FUNCINFO("Contours stretch from " << c_bb.min << " to " << c_bb.max);
+//FUNCINFO("Using N_rows, N_cols, N_imgs = " << N_rows << ", " << N_cols << ", " << N_imgs);
+//FUNCINFO("Margin {x,y,z} = " << margin_x << ", " << margin_y << ", " << margin_z);
+//FUNCINFO("row_unit, col_unit = " << row_unit << ", " << col_unit);
+
     auto pic = Contiguously_Grid_Volume<float,double>(ccs,
                                                       margin_x, margin_y, margin_z,
                                                       N_rows, N_cols, N_chns, N_imgs,
-                                                      col_unit, row_unit, img_unit);
+                                                      row_unit, col_unit); //, img_unit);
 
     std::list<std::reference_wrapper<planar_image<float,double>>> imgs;
+//csg::sdf::aa_bbox img_bb;
     for(auto& img : pic.images){
         imgs.emplace_back( std::ref(img) );
+//img_bb.digest( img.position(0,0) );
+//img_bb.digest( img.position(N_rows-1,0) );
+//img_bb.digest( img.position(0,N_cols-1) );
+//img_bb.digest( img.position(N_rows-1,N_cols-1) );
     }
+//FUNCINFO("Images stretch from " << img_bb.min << " to " << img_bb.max);
 
     return Marching_Cubes_Implementation( imgs,
                                           sdf,
