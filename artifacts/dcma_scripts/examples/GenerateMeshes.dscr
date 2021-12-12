@@ -178,3 +178,17 @@ GenerateMeshes(
         }',
 ){};
 
+# Poly chain example. 
+GenerateMeshes(
+    Resolution = res,
+    MeshLabel = 'poly chain',
+    Objects = '
+        poly_chain(2.5,  0,0,0,   0,10,0,   10,10,0,   10,0,0,
+                         0,0,10,  0,10,10,  10,10,10,  10,0,10,
+
+                         20,0,20, 20,20,20, 0,20,20,
+                         20,20,0, 10,10,10
+                  );
+    ',
+){};
+

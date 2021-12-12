@@ -63,6 +63,17 @@ struct aa_box : public node {
     aa_bbox evaluate_aa_bbox() const override;
 };
 
+// Connected line segments with rounded edges.
+struct poly_chain : public node {
+    double radius;
+    std::vector<vec3<double>> vertices;
+
+    poly_chain(double r, const std::vector<vec3<double>> &pc);
+    poly_chain(double r, const std::list<vec3<double>> &pc);
+    double evaluate_sdf(const vec3<double>& pos) const override;
+    aa_bbox evaluate_aa_bbox() const override;
+};
+
 } // namespace shape
 
 // -------------------------------- Operations ------------------------------------

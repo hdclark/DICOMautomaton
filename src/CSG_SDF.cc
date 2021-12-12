@@ -82,6 +82,46 @@ aa_bbox aa_box::evaluate_aa_bbox() const {
     return bb;
 }
 
+// Connected line segments with rounded edges.
+poly_chain::poly_chain(double r, const std::vector<vec3<double>> &v) : radius(r), vertices(v) {};
+poly_chain::poly_chain(double r, const std::list<vec3<double>> &v) : radius(r), vertices(std::begin(v), std::end(v)) {};
+
+double poly_chain::evaluate_sdf(const vec3<double>& pos) const {
+    if(this->vertices.size() < 2UL){
+        throw std::runtime_error("poly_chain: this operation requires at least two vertices");
+    }
+
+    // Note: this is a Boolean union of each line segment followed by a dilation.
+    double min_sdf = std::numeric_limits<double>::infinity();
+    const auto end = std::cend(this->vertices);
+    auto A_it = std::cbegin(this->vertices);
+    auto B_it = std::next(A_it);
+    for( ; B_it != end; ++A_it, ++B_it){
+        const auto dPA = pos - *A_it;
+        const auto dBA = *B_it - *A_it;
+        const auto t = std::clamp( dPA.Dot(dBA) / dBA.Dot(dBA), 0.0, 1.0 );
+        const auto sdf = (dPA - dBA * t).length() - this->radius;
+        min_sdf = std::min( min_sdf, sdf );
+    }
+
+    if(!std::isfinite(min_sdf)){
+        throw std::runtime_error("poly_chain: computed non-finite SDF");
+    }
+    return min_sdf;
+}
+
+aa_bbox poly_chain::evaluate_aa_bbox() const {
+    aa_bbox bb;
+    for(const auto& v : this->vertices) bb.digest(v);
+    bb.min.x -= this->radius;
+    bb.min.y -= this->radius;
+    bb.min.z -= this->radius;
+    bb.max.x += this->radius;
+    bb.max.y += this->radius;
+    bb.max.z += this->radius;
+    return bb;
+}
+
 } // namespace shape
 
 // -------------------------------- Operations ------------------------------------
@@ -416,29 +456,6 @@ aa_bbox erode::evaluate_aa_bbox() const {
 // Convert parsed function nodes to an 'SDF' object that can be evaluated.
 std::shared_ptr<node> build_node(const parsed_function& pf){
 
-/*    
-struct function_parameter {
-    std::string raw;
-    std::optional<double> number;
-    bool is_fractional = false;
-    bool is_percentage = false;
-};
-
-struct parsed_function {
-    std::string name;
-    std::vector<function_parameter> parameters;
-
-    std::vector<parsed_function> children;
-};
-
-struct node {
-    std::vector<std::shared_ptr<node>> children;
-
-    virtual double evaluate_sdf(const vec3<double>&) const = 0;
-    virtual ~node(){};
-};
-*/
-
     // Convert children first.
     std::vector<std::shared_ptr<node>> children;
     for(const auto &pfc : pf.children){
@@ -450,6 +467,7 @@ struct node {
     // Shapes.
     const auto r_sphere            = Compile_Regex("^sphere$");
     const auto r_aa_box            = Compile_Regex("^aa[-_]?box$");
+    const auto r_poly_chain        = Compile_Regex("^poly[-_]?chain$");
 
     // Operations.
     const auto r_translate         = Compile_Regex("^translate$");
@@ -497,6 +515,24 @@ struct node {
             throw std::invalid_argument("'aa_box' requires an extent vec3 parameter");
         }
         out = std::make_shared<csg::sdf::shape::aa_box>( v123.value() );
+
+    }else if(std::regex_match(pf.name, r_poly_chain)){
+        if( !s1 || (N_p <= 7) ){
+            throw std::invalid_argument("'poly_chain' requires a radius vec3 parameter and two or more vertices");
+        }
+        std::vector<vec3<double>> verts;
+        for(auto i = 1; i < pf.parameters.size(); i += 3){
+            if( (N_p < (i + 3))
+            ||  !(pf.parameters[i+0].number)
+            ||  !(pf.parameters[i+1].number)
+            ||  !(pf.parameters[i+2].number) ){
+                throw std::invalid_argument("'poly_chain' requires a list of three-vector vertices");
+            }
+            verts.emplace_back( pf.parameters[i+0].number.value(),
+                                pf.parameters[i+1].number.value(),
+                                pf.parameters[i+2].number.value() );
+        }
+        out = std::make_shared<csg::sdf::shape::poly_chain>( s1.value(), verts );
 
     // Operations.
     }else if(std::regex_match(pf.name, r_translate)){
