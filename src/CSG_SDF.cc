@@ -453,6 +453,145 @@ aa_bbox erode::evaluate_aa_bbox() const {
 
 } // namespace op
 
+// Convert text to a 3D representation using SDFs.
+std::shared_ptr<node> text(const std::string& text,
+                           double radius,
+                           double text_height,
+                           double text_width,
+                           double char_spacing,
+                           double line_spacing ){
+    std::shared_ptr<node> root = std::make_shared<csg::sdf::op::join>();
+
+    const auto clean = [](char c){
+        c = static_cast<char>(std::toupper(static_cast<unsigned char>(c)));
+        return c;
+    };
+
+    const auto start  = vec3<double>(0.0, 0.0, 0.0);
+    const auto d_w    = vec3<double>(text_width, 0.0, 0.0);
+    const auto d_h    = vec3<double>(0.0, text_height, 0.0);
+    const auto d_line = vec3<double>(0.0, -line_spacing, 0.0);
+    const auto d_char = vec3<double>(char_spacing, 0.0, 0.0);
+
+    auto pos = start;
+    for(auto c : text){
+        c = clean(c);
+
+        // Approximately emulate 7-segment display.
+        //
+        //   A ---- B
+        //   |      |  
+        //   |      |  
+        //   C ---- D  
+        //   |      |  
+        //   |      |  
+        //   E ---- F  
+        //
+        const auto A = pos + d_h;
+        const auto B = pos + d_w + d_h;
+        const auto C = pos + d_h * 0.5;
+        const auto D = pos + d_w + d_h * 0.5;
+        const auto E = pos;
+        const auto F = pos + d_w;
+
+        const auto AB = (A+B)*0.5;
+        const auto AC = (A+C)*0.5;
+        const auto BD = (B+D)*0.5;
+        const auto CD = (C+D)*0.5;
+        const auto CE = (C+E)*0.5;
+        const auto DF = (D+F)*0.5;
+        const auto EF = (E+F)*0.5;
+        const auto ABCD = (A+B+C+D)*0.25;
+        const auto CDEF = (C+D+E+F)*0.25;
+        const auto eps = 0.0005;
+
+        std::vector<std::vector<vec3<double>>> vv;
+        const auto add = [&](const std::vector<vec3<double>>& l){
+            vv.emplace_back(l);
+        };
+
+        if(false){
+        }else if(c == 'A'){ add({ E, C, AB, D, F }); add({ C, D });
+        }else if(c == 'B'){ add({ E, A, AB, BD, CD, DF, F, E }); add({ C, CD });
+        }else if(c == 'C'){ add({ B, A, E, F }); 
+        }else if(c == 'D'){ add({ E, A, AB, BD, DF, EF, E }); 
+        }else if(c == 'E'){ add({ B, A, E, F }); add({ C, D }); 
+        }else if(c == 'F'){ add({ E, A, B }); add({ C, D });
+        }else if(c == 'G'){ add({ B, A, E, F, D, CD }); 
+        }else if(c == 'H'){ add({ A, E }); add({ C, D }); add({ B, F }); 
+        }else if(c == 'I'){ add({ A, B }); add({ E, F }); add({ AB, EF });
+        }else if(c == 'J'){ add({ AB, B, F, E, CE });
+        }else if(c == 'K'){ add({ A, E }); add({ C, CD }); add({ B, CD, F });
+        }else if(c == 'L'){ add({ A, E, F });
+        }else if(c == 'M'){ add({ E, A, CD, B, F });
+        }else if(c == 'N'){ add({ E, A, F, B });
+        }else if(c == 'O'){ add({ AC, AB, BD, DF, EF, CE, AC });
+        }else if(c == 'P'){ add({ E, A, B, D, C });
+        }else if(c == 'Q'){ add({ A, E, F, B, A }); add({ F, (C*0.35 + F*0.65) });
+        }else if(c == 'R'){ add({ E, A, AB, BD, CD, F }); add({ C, CD });
+        }else if(c == 'S'){ add({ E, F, D, C, A, B });
+        }else if(c == 'T'){ add({ A, B }); add({ AB, EF });
+        }else if(c == 'U'){ add({ A, E, F, B });
+        }else if(c == 'V'){ add({ A, EF, B });
+        }else if(c == 'W'){ add({ A, E, CD, F, B });
+        }else if(c == 'X'){ add({ A, F }); add({ E, B });
+        }else if(c == 'Y'){ add({ A, CD, B }); add({ CD, EF });
+        }else if(c == 'Z'){ add({ A, B, E, F });
+        }else if(c == '1'){ add({ AC, AB, EF }); add({ E, F });
+        }else if(c == '2'){ add({ A, B, D, C, E, F });
+        }else if(c == '3'){ add({ A, B, F, E }); add({ C, D });
+        }else if(c == '4'){ add({ A, C, D }); add({ B, F });
+        }else if(c == '5'){ add({ B, A, C, D, F, E });
+        }else if(c == '6'){ add({ B, A, C, D, F, E, C });
+        }else if(c == '7'){ add({ A, B, EF });
+        }else if(c == '8'){ add({ A, B, D, F, E, C, A }); add({ C, D });
+        }else if(c == '9'){ add({ D, B, A, C, D, F });
+        }else if(c == '0'){ add({ A, E, F, B, A });
+        }else if(c == ' '){ // do nothing, just advance the cursor.
+        }else if(c == '-'){ add({ C, D });
+        }else if(c == '_'){ add({ E, F });
+        }else if(c == '\\'){ add({ A, F });
+        }else if(c == '/'){ add({ E, B });
+        }else if(c == '#'){ add({ A*0.85 + B*0.15, E*0.85 + F*0.15 }); add({ A*0.15 + B*0.85, E*0.15 + F*0.85 });
+                            add({ A*0.85 + E*0.15, B*0.85 + F*0.15 }); add({ A*0.15 + E*0.85, B*0.15 + F*0.85 });
+        }else if(c == '('){ add({ B, ABCD, CDEF, F });
+        }else if(c == ')'){ add({ A, ABCD, CDEF, E });
+        }else if(c == '['){ add({ B, AB, EF, F });
+        }else if(c == ']'){ add({ A, AB, EF, E });
+        }else if(c == '|'){ add({ AB, EF });
+        }else if(c == '\''){ add({ (A*0.85 + B*0.15), (AC*0.85 + BD*0.15) }); add({ (A*0.15 + B*0.85), (AC*0.15 + BD*0.85) });
+        }else if(c == '"'){ add({ });
+        }else if(c == '^'){ add({ AC, AB, BD });
+        }else if(c == '+'){ add({ C, D }); add({ CD + d_h*0.25, CD - d_h*0.25 });
+        }else if(c == '='){ add({ AC, BD }); add({ CE, DF });
+        }else if(c == ','){ add({ (C*0.25 + EF*0.75), EF });
+        }else if(c == '.'){ add({ EF - (F - EF) * eps, EF + (F - EF) * eps});
+        }else if(c == ':'){ add({ ABCD - (AC - ABCD) * eps, ABCD + (AC - ABCD) * eps }); add({ CDEF - (CE - CDEF) * eps, CDEF + (CE - CDEF) * eps });
+        }else if(c == '?'){ add({ AC, A, B, BD, CD, (CD+EF)*0.5 }); add({ EF - (F - EF) * eps, EF + (F - EF) * eps });
+        }else if(c == '!'){ add({ AB, (CD+EF)*0.5 }); add({ EF - (F - EF) * eps, EF + (F - EF) * eps });
+        }else if(c == '\t'){ pos += d_char * 4.0;
+        }else if(c == '\r'){ pos -= d_char;
+        }else if(c == '\0'){ // do nothing, just advance the cursor.
+        }else if(c == '\n'){
+            pos += d_line;
+            pos.x = start.x;
+            pos -= d_char;
+        }else{
+            // Draw an interrobang if symbol is not available.
+            add({ AC, A, B, BD, CD, (CD+EF)*0.5 });
+            add({ AB, (CD+EF)*0.5 }); add({ EF - (F - EF) * eps, EF + (F - EF) * eps });
+        }
+        pos += d_char;
+
+        for(const auto& verts : vv){
+            std::shared_ptr<node> n = std::make_shared<csg::sdf::shape::poly_chain>( radius, verts );
+            root->children.emplace_back( n );
+        }
+    }
+
+    return root;
+}
+
 // Convert parsed function nodes to an 'SDF' object that can be evaluated.
 std::shared_ptr<node> build_node(const parsed_function& pf){
 
@@ -468,6 +607,7 @@ std::shared_ptr<node> build_node(const parsed_function& pf){
     const auto r_sphere            = Compile_Regex("^sphere$");
     const auto r_aa_box            = Compile_Regex("^aa[-_]?box$");
     const auto r_poly_chain        = Compile_Regex("^poly[-_]?chain$");
+    const auto r_text              = Compile_Regex("^text$");
 
     // Operations.
     const auto r_translate         = Compile_Regex("^translate$");
@@ -533,6 +673,13 @@ std::shared_ptr<node> build_node(const parsed_function& pf){
                                 pf.parameters[i+2].number.value() );
         }
         out = std::make_shared<csg::sdf::shape::poly_chain>( s1.value(), verts );
+
+    }else if(std::regex_match(pf.name, r_text)){
+        if( !s1 || (N_p < 2) ){
+            throw std::invalid_argument("'text' requires a radius parameter and a text parameter");
+        }
+        out = csg::sdf::text(pf.parameters.at(1).raw, s1.value());
+        std::swap(out->children, children); // Make children accessible.
 
     // Operations.
     }else if(std::regex_match(pf.name, r_translate)){
@@ -608,6 +755,7 @@ std::shared_ptr<node> build_node(const parsed_function& pf){
     std::swap(out->children, children);
     return out;
 }
+
 
 } // namespace csg
 } // namespace sdf

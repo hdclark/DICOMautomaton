@@ -176,6 +176,14 @@ struct erode : public node {
 
 } // namespace op
 
+// Convert text to a 3D representation using SDFs.
+std::shared_ptr<node> text(const std::string& text,
+                           double radius = 1.0,
+                           double text_height = 10.0,
+                           double text_width = 5.0,
+                           double char_spacing = 8.0,
+                           double line_spacing = 14.0 );
+
 // Convert parsed function nodes to an 'SDF' object that can be evaluated.
 std::shared_ptr<node> build_node(const parsed_function& pf);
 
