@@ -635,6 +635,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_images_enabled = true;
         bool view_image_metadata_enabled = false;
         bool view_meshes_enabled = true;
+        bool view_mesh_metadata_enabled = false;
         bool view_plots_enabled = true;
         bool view_plots_metadata = true;
         bool view_contours_enabled = true;
@@ -750,6 +751,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     };
 
     // Meshes.
+    using disp_mesh_it_t = decltype(DICOM_data.smesh_data.begin());
     std::unique_ptr<opengl_mesh> oglm_ptr;
     long int mesh_num = -1;
 
@@ -1338,6 +1340,25 @@ bool SDL_Viewer(Drover &DICOM_data,
                 FUNCWARN("Contouring image not valid: '" << e.what() << "'");
                 break;
             }
+        }while(false);
+        return out;
+    };
+
+    // Recompute mesh iterators the current mesh.
+    const auto recompute_smesh_iters = [ &DICOM_data,
+                                         &mesh_num ](){
+        std::tuple<bool, disp_mesh_it_t > out;
+        std::get<bool>( out ) = false;
+
+        do{ 
+            const auto has_meshes = DICOM_data.Has_Mesh_Data();
+            if( !has_meshes ) break;
+            if( !isininc(1, mesh_num+1, DICOM_data.smesh_data.size()) ) break;
+            auto smesh_ptr_it = std::next(DICOM_data.smesh_data.begin(), mesh_num);
+            if( smesh_ptr_it == std::end(DICOM_data.smesh_data) ) break;
+
+            std::get<bool>( out ) = true;
+            std::get<disp_mesh_it_t>( out ) = smesh_ptr_it;
         }while(false);
         return out;
     };
@@ -2211,6 +2232,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if(ImGui::MenuItem("Plots", nullptr, &view_toggles.view_plots_enabled)){
                         lsamps_visible.clear();
                     }
+                    ImGui::MenuItem("Mesh Metadata", nullptr, &view_toggles.view_mesh_metadata_enabled);
                     ImGui::MenuItem("Plot Hover Metadata", nullptr, &view_toggles.view_plots_metadata);
                     if(ImGui::MenuItem("Row and Column Profiles", nullptr, &view_toggles.view_row_column_profiles)){
                         row_profile.samples.clear();
@@ -4615,6 +4637,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                           &oglm_ptr,
                                           &mesh_num,
                                           &mesh_display_transform,
+                                          &display_metadata_table,
+                                          &recompute_smesh_iters,
                                           &frame_count ]() -> void {
 
             std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
@@ -4622,18 +4646,16 @@ bool SDL_Viewer(Drover &DICOM_data,
             if( !view_toggles.view_meshes_enabled
             ||  !DICOM_data.Has_Mesh_Data() ) return;
 
-            const auto load_mesh = [&](){
-                if(!DICOM_data.Has_Mesh_Data()) return;
-                const auto N_meshes = static_cast<long int>(DICOM_data.smesh_data.size());
-                mesh_num = std::clamp(mesh_num, 0L, N_meshes - 1L);
-                const auto smesh_ptr = *(std::next( std::begin(DICOM_data.smesh_data), mesh_num));
-                oglm_ptr = std::make_unique<opengl_mesh>( smesh_ptr->meshes, mesh_display_transform.reverse_normals );
+            const auto reload_opengl_mesh = [&](){
+                auto [mesh_is_valid, smesh_ptr_it] = recompute_smesh_iters();
+                if(!mesh_is_valid) return;
+                oglm_ptr = std::make_unique<opengl_mesh>( (*smesh_ptr_it)->meshes, mesh_display_transform.reverse_normals );
             };
 
             const auto N_meshes = DICOM_data.smesh_data.size();
             if(!oglm_ptr){
                 mesh_num = 0;
-                load_mesh();
+                reload_opengl_mesh();
             }
 
             if(oglm_ptr){
@@ -4648,20 +4670,21 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     + std::to_string(oglm_ptr->N_indices) + " indices, and "
                                     + std::to_string(oglm_ptr->N_triangles) + " triangles.";
                     ImGui::Text("%s", msg.c_str());
-                    
+
                     auto scroll_meshes = static_cast<int>(mesh_num);
                     ImGui::SliderInt("Mesh", &scroll_meshes, 0, N_meshes - 1);
                     if(static_cast<long int>(scroll_meshes) != mesh_num){
                         mesh_num = static_cast<long int>(scroll_meshes);
-                        load_mesh();
+                        reload_opengl_mesh();
                     }
 
                     ImGui::ColorEdit4("Colour", mesh_display_transform.colours.data());
 
+                    ImGui::Checkbox("Metadata", &view_toggles.view_mesh_metadata_enabled);
                     ImGui::Checkbox("Precess", &mesh_display_transform.precess);
                     ImGui::Checkbox("Wireframe", &mesh_display_transform.render_wireframe);
                     if(ImGui::Checkbox("Reverse normals", &mesh_display_transform.reverse_normals)){
-                        load_mesh();
+                        reload_opengl_mesh();
                     }
                     ImGui::Checkbox("Use lighting", &mesh_display_transform.use_lighting);
                     float drag_speed = 0.05f;
@@ -4676,6 +4699,19 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::DragScalar("Z rotation", ImGuiDataType_Double, &mesh_display_transform.rot_z, drag_speed, &clamp_l, &clamp_h, "%.1f");
                     if(ImGui::Button("Reset")){
                         mesh_display_transform = mesh_display_transform_t();
+                    }
+
+                    // Mesh metadata window.
+                    if( view_toggles.view_mesh_metadata_enabled ){
+                        auto [mesh_is_valid, smesh_ptr_it] = recompute_smesh_iters();
+                        if(mesh_is_valid){
+                            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+                            ImGui::Begin("Mesh Metadata", &view_toggles.view_mesh_metadata_enabled);
+
+                            display_metadata_table( (*smesh_ptr_it)->meshes.metadata );
+
+                            ImGui::End();
+                        }
                     }
                 }
                 ImGui::End();
