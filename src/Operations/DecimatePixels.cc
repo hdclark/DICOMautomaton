@@ -66,7 +66,7 @@ bool DecimatePixels(Drover &DICOM_data,
             if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                    DecimateRC,
                                                    {}, {} )){
-                FUNCERR("Unable to decimate pixels");
+                throw std::runtime_error("Unable to decimate pixels");
             }
         }
     }

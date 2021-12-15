@@ -34,7 +34,7 @@ bool GiveWholeImageArrayABoneWindowLevel(Drover &DICOM_data,
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                StandardBoneHUWindow,
                                                {},{} )){
-            FUNCERR("Unable to force window to cover a reasonable bone HU range");
+            throw std::runtime_error("Unable to force window to cover a reasonable bone HU range");
         }
     }
 

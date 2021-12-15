@@ -20,6 +20,7 @@
 #include <vector>
 #include <utility>
 #include <random>
+#include <filesystem>
 
 #ifdef DCMA_USE_NLOPT
 #include <nlopt.hpp>
@@ -455,7 +456,7 @@ bool OptimizeStaticBeams(Drover &DICOM_data,
     nlopt::result nlopt_result = optimizer.optimize(open_weights, minf); // open_weights will contain the current-best weights on success.
     FUNCINFO("Optimizer result: " << nlopt_result);
 #else // DCMA_USE_NLOPT
-    FUNCERR("Unable to optimize -- nlopt was not used");
+    throw std::runtime_error("Unable to optimize -- nlopt was not used");
 #endif // DCMA_USE_NLOPT
 
     std::vector<double> weights(open_weights);
@@ -501,22 +502,20 @@ bool OptimizeStaticBeams(Drover &DICOM_data,
     std::cout << summary.str();
 
     //Write the summary to file.
-    try{
+    {
         auto gen_filename = [&]() -> std::string {
-            if(ResultsSummaryFileName.empty()){
-                ResultsSummaryFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_staticbeamoptisummary_", 6, ".csv");
+            if(!ResultsSummaryFileName.empty()){
+                return ResultsSummaryFileName;
             }
-            return ResultsSummaryFileName;
+            const auto base = std::filesystem::temp_directory_path() / "dcma_staticbeamoptisummary_";
+            return Get_Unique_Sequential_Filename(base.string(), 6, ".csv");
         };
 
         FUNCINFO("About to claim a mutex");
         Append_File( gen_filename,
-                     "dicomautomaton_operation_optimizestaticbeam_mutex",
+                     "dcma_op_optimizestaticbeams_mutex",
                      "",
                      summary.str() );
-
-    }catch(const std::exception &e){
-        FUNCERR("Unable to write to output file: '" << e.what() << "'");
     }
 
     return true;

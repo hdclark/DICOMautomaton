@@ -16,6 +16,7 @@
 #include <mutex>
 #include <limits>
 #include <cmath>
+#include <filesystem>
 
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.

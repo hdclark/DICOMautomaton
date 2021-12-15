@@ -34,7 +34,7 @@ bool GiveWholeImageArrayAnAbdominalWindowLevel(Drover &DICOM_data,
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                StandardAbdominalHUWindow,
                                                {}, {} )){
-            FUNCERR("Unable to force window to cover a reasonable abdominal HU range");
+            throw std::runtime_error("Unable to force window to cover a reasonable abdominal HU range");
         }
     }
 

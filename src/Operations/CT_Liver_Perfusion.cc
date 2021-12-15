@@ -67,7 +67,7 @@ bool CT_Liver_Perfusion(Drover &DICOM_data,
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                StandardAbdominalHUWindow,
                                                {}, {} )){
-            FUNCERR("Unable to force window to cover reasonable HU range");
+            throw std::runtime_error("Unable to force window to cover reasonable HU range");
         }
     }
 
@@ -98,7 +98,7 @@ bool CT_Liver_Perfusion(Drover &DICOM_data,
             baseline_img_arrays.back()->imagecoll.Prune_Images_Satisfying(PurgeAboveNSeconds);
     
             if(!baseline_img_arrays.back()->imagecoll.Condense_Average_Images(GroupSpatiallyOverlappingImages)){
-                FUNCERR("Cannot temporally average data set. Is it able to be averaged?");
+                throw std::runtime_error("Cannot temporally average data set. Is it able to be averaged?");
             }
         }
     
@@ -113,7 +113,7 @@ bool CT_Liver_Perfusion(Drover &DICOM_data,
             if(!baseline_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupSpatiallyOverlappingImages,
                                                                       CondenseMinPixel,
                                                                       {}, {} )){
-                FUNCERR("Unable to generate min(pixel) images over the time course");
+                throw std::runtime_error("Unable to generate min(pixel) images over the time course");
             }
         }
     }
@@ -129,7 +129,7 @@ bool CT_Liver_Perfusion(Drover &DICOM_data,
         if(!C_enhancement_img_arrays.back()->imagecoll.Transform_Images( CTPerfusionSigDiffC,
                                                                          { baseline_img_arrays.front()->imagecoll },
                                                                          { } )){
-            FUNCERR("Unable to transform image array to make poor-man's C map");
+            throw std::runtime_error("Unable to transform image array to make poor-man's C map");
         }
     }
 
@@ -141,7 +141,7 @@ bool CT_Liver_Perfusion(Drover &DICOM_data,
         temporal_avg_img_arrays.emplace_back( DICOM_data.image_data.back() );
 
         if(!temporal_avg_img_arrays.back()->imagecoll.Condense_Average_Images(GroupSpatiallyOverlappingImages)){
-            FUNCERR("Cannot temporally average large-pixel-censored data set. Is it able to be averaged?");
+            throw std::runtime_error("Cannot temporally average large-pixel-censored data set. Is it able to be averaged?");
         }
     }
 
@@ -156,7 +156,7 @@ bool CT_Liver_Perfusion(Drover &DICOM_data,
         temp_avg_C_img_arrays.emplace_back( DICOM_data.image_data.back() );
 
         if(!temp_avg_C_img_arrays.back()->imagecoll.Condense_Average_Images(GroupSpatiallyOverlappingImages)){
-            FUNCERR("Cannot temporally average C map data set. Is it able to be averaged?");
+            throw std::runtime_error("Cannot temporally average C map data set. Is it able to be averaged?");
         }
     }
 
@@ -174,7 +174,7 @@ bool CT_Liver_Perfusion(Drover &DICOM_data,
                                                                    DBSCANTimeCourses,
                                                                    {}, cc_all,
                                                                    UD )){
-            FUNCERR("Unable to perform DBSCAN clustering");
+            throw std::runtime_error("Unable to perform DBSCAN clustering");
         }
     }
 
@@ -203,7 +203,7 @@ bool CT_Liver_Perfusion(Drover &DICOM_data,
                                                                              PartitionedImageVoxelVisitorMutator,
                                                                              {}, cc_all,
                                                                              &ud )){
-                FUNCERR("Unable to highlight ROIs");
+                throw std::runtime_error("Unable to highlight ROIs");
             }
         }
     }
@@ -225,7 +225,7 @@ for(auto & img_arr : C_enhancement_img_arrays){
                                                    PerROITimeCourses,
                                                    {}, cc_all,
                                                    &ud )){
-                FUNCERR("Unable to generate per-ROI time courses");
+                throw std::runtime_error("Unable to generate per-ROI time courses");
             }
         }
  
@@ -252,7 +252,7 @@ for(auto & img_arr : C_enhancement_img_arrays){
         if(!max_pixel_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupSpatiallyOverlappingImages,
                                                                    CondenseMaxPixel,
                                                                    {}, {} )){
-            FUNCERR("Unable to generate max(pixel) images over the time course");
+            throw std::runtime_error("Unable to generate max(pixel) images over the time course");
         }
     }
 
@@ -265,7 +265,7 @@ for(auto & img_arr : C_enhancement_img_arrays){
         if(!log_scaled_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                                     LogScalePixels,
                                                                     {}, {} )){
-            FUNCERR("Unable to perform logarithmic pixel scaling");
+            throw std::runtime_error("Unable to perform logarithmic pixel scaling");
         }
     }
 
@@ -276,7 +276,7 @@ for(auto & img_arr : C_enhancement_img_arrays){
     //    temporalavgd_logscaled_img_arrays.emplace_back( DICOM_data.image_data.back() );
     //
     //    if(!temporalavgd_logscaled_img_arrays.back()->imagecoll.Condense_Average_Images(GroupSpatiallyOverlappingImages)){
-    //        FUNCERR("Cannot temporally average data set. Is it able to be averaged?");
+    //        throw std::runtime_error("Cannot temporally average data set. Is it able to be averaged?");
     //    }
     //}
 
@@ -300,7 +300,7 @@ for(auto & img_arr : C_enhancement_img_arrays){
         if(!min_pixel_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupSpatiallyOverlappingImages,
                                                                    CondenseMinPixel,
                                                                    {}, {} )){
-            FUNCERR("Unable to generate min(pixel) images over the time course");
+            throw std::runtime_error("Unable to generate min(pixel) images over the time course");
         }
     }
 
@@ -316,7 +316,7 @@ for(auto & img_arr : C_enhancement_img_arrays){
             external_imgs.push_back( std::ref(img_arr2->imagecoll) );
         }
         if(!sub_min_pixel_img_arrays.back()->imagecoll.Transform_Images( SubtractSpatiallyOverlappingImages, std::move(external_imgs), {} )){
-            FUNCERR("Unable to subtract the min(pixel) map from the time course");
+            throw std::runtime_error("Unable to subtract the min(pixel) map from the time course");
         }
     }
 
@@ -336,7 +336,7 @@ for(auto & img_arr : C_enhancement_img_arrays){
         if(!clip_likelihood_map_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                                              CTPerfusionSearchForLiverClips,
                                                                              {}, {} )){
-            FUNCERR("Unable to perform search for liver clip markers");
+            throw std::runtime_error("Unable to perform search for liver clip markers");
         }
     }
 
@@ -349,7 +349,7 @@ for(auto & img_arr : C_enhancement_img_arrays){
 
         if(!tavgd_clip_likelihood_map_img_arrays.back()->imagecoll.Condense_Average_Images(
                                                                  GroupSpatiallyOverlappingImages)){
-            FUNCERR("Unable to time-average clip likelihood maps");
+            throw std::runtime_error("Unable to time-average clip likelihood maps");
         }
     }
  

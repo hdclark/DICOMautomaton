@@ -2006,13 +2006,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                 // Only perform a single operation at a time, which results in slightly less mutex contention.
                 bool success = true;
                 for(const auto &op : op_list){
-                    if(!Operation_Dispatcher(DICOM_data,
-                                             InvocationMetadata,
-                                             FilenameLex,
-                                             {op})){
-                        success = false;
-                        break;
-                    }
+                    success = false;
+                    try{
+                        success = Operation_Dispatcher(DICOM_data,
+                                                       InvocationMetadata,
+                                                       FilenameLex,
+                                                       {op});
+                    }catch(const std::exception &){}
+                    if(!success) break;
                 }
                 if(!success){
                     // Report the failure to the user.
@@ -4773,8 +4774,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                 glLightModeliv(GL_LIGHT_MODEL_TWO_SIDE, &use_double_sided_lighting);
                 std::array<float, 4> light_diff { 1.0, 1.0, 1.0, 1.0 };
                 std::array<float, 4> light_spec { 1.0, 1.0, 1.0, 1.0 };
-                std::array<float, 4> light_pos { 1.5 * std::sin(1.0 * frame_count / 53.0),
-                                                 1.5 * std::sin(1.0 * frame_count / 75.0),
+                std::array<float, 4> light_pos { static_cast<float>(1.5 * std::sin(1.0 * frame_count / 53.0)),
+                                                 static_cast<float>(1.5 * std::sin(1.0 * frame_count / 75.0)),
                                                  1.5,  1.0 };
 
                 CHECK_FOR_GL_ERRORS();

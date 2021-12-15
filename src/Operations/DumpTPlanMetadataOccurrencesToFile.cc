@@ -8,6 +8,7 @@
 #include <memory>
 #include <string>    
 #include <utility>            //Needed for std::pair.
+#include <filesystem>
 
 #include <boost/interprocess/creation_tags.hpp>
 #include <boost/interprocess/sync/named_mutex.hpp>
@@ -94,16 +95,17 @@ bool DumpTPlanMetadataOccurrencesToFile(Drover &DICOM_data,
 
     //Report the findings. 
     FUNCINFO("Attempting to claim a mutex");
-    try{
+    {
         //File-based locking is used so this program can be run over many patients concurrently.
         //
         //Try open a named mutex. Probably created in /dev/shm/ if you need to clear it manually...
         boost::interprocess::named_mutex mutex(boost::interprocess::open_or_create,
-                                               "dicomautomaton_operation_dumptplanmetadataoccurrencestofile_mutex");
+                                               "dcma_op_dumptplanmetadataoccurrencestofile_mutex");
         boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(mutex);
 
         if(FileName.empty()){
-            FileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_dumptplanmetadataoccurrencestofile_", 6, ".tsv");
+            const auto base = std::filesystem::temp_directory_path() / "dcma_dumptplanmetadataoccurrencestofile_";
+            FileName = Get_Unique_Sequential_Filename(base.string(), 6, ".csv");
         }
         const auto FirstWrite = !Does_File_Exist_And_Can_Be_Read(FileName);
         std::fstream FO(FileName, std::fstream::out | std::fstream::app);
@@ -135,9 +137,6 @@ bool DumpTPlanMetadataOccurrencesToFile(Drover &DICOM_data,
         }
         FO.flush();
         FO.close();
-
-    }catch(const std::exception &e){
-        FUNCERR("Unable to write to output file: '" << e.what() << "'");
     }
 
     return true;

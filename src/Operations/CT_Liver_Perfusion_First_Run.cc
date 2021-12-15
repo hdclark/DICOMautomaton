@@ -46,7 +46,7 @@ bool CT_Liver_Perfusion_First_Run(Drover &DICOM_data,
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                StandardAbdominalHUWindow,
                                                {}, {} )){
-            FUNCERR("Unable to force window to cover reasonable HU range");
+            throw std::runtime_error("Unable to force window to cover reasonable HU range");
         }
     }
 
@@ -57,7 +57,7 @@ bool CT_Liver_Perfusion_First_Run(Drover &DICOM_data,
         temp_avgd.emplace_back( DICOM_data.image_data.back() );
 
         if(!temp_avgd.back()->imagecoll.Condense_Average_Images(GroupSpatiallyOverlappingImages)){
-            FUNCERR("Cannot temporally average images");
+            throw std::runtime_error("Cannot temporally average images");
         }
     }
 
@@ -66,7 +66,7 @@ bool CT_Liver_Perfusion_First_Run(Drover &DICOM_data,
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                StandardAbdominalHUWindow,
                                                {}, {} )){
-            FUNCERR("Unable to force window to cover reasonable HU range");
+            throw std::runtime_error("Unable to force window to cover reasonable HU range");
         }
     }
 
@@ -79,7 +79,7 @@ bool CT_Liver_Perfusion_First_Run(Drover &DICOM_data,
         if(!all_avgd.back()->imagecoll.Process_Images_Parallel( GroupAllImages,
                                                        CondenseMaxPixel,
                                                        {}, {} )){
-            FUNCERR("Unable to generate max(pixel) images");
+            throw std::runtime_error("Unable to generate max(pixel) images");
         }
     }
 
@@ -100,7 +100,7 @@ bool CT_Liver_Perfusion_First_Run(Drover &DICOM_data,
                                                { std::ref(intersecting_row.back()->imagecoll),
                                                  std::ref(intersecting_col.back()->imagecoll) },
                                                {}, {} )){
-            FUNCERR("Unable to generate orthogonal image slices");
+            throw std::runtime_error("Unable to generate orthogonal image slices");
         }else{
             img_arr->imagecoll.images.clear();
         }
@@ -111,14 +111,14 @@ bool CT_Liver_Perfusion_First_Run(Drover &DICOM_data,
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                StandardAbdominalHUWindow,
                                                {}, {} )){
-            FUNCERR("Unable to force window to cover reasonable HU range");
+            throw std::runtime_error("Unable to force window to cover reasonable HU range");
         }
     }
     if(true) for(auto & img_arr : intersecting_col){
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                StandardAbdominalHUWindow,
                                                {}, {} )){
-            FUNCERR("Unable to force window to cover reasonable HU range");
+            throw std::runtime_error("Unable to force window to cover reasonable HU range");
         }
     }
 

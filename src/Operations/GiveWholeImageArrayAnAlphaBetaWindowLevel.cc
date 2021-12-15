@@ -34,7 +34,7 @@ bool GiveWholeImageArrayAnAlphaBetaWindowLevel(Drover &DICOM_data,
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                StandardAlphaBetaWindow,
                                                {},{} )){
-            FUNCERR("Unable to force window to cover a reasonable alpha/beta range");
+            throw std::runtime_error("Unable to force window to cover a reasonable alpha/beta range");
         }
     }
 

@@ -47,7 +47,7 @@ bool ContouringAides(Drover &DICOM_data,
         if(!log_scaled_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                                     LogScalePixels,
                                                                     {}, {} )){
-            FUNCERR("Unable to perform logarithmic pixel scaling");
+            throw std::runtime_error("Unable to perform logarithmic pixel scaling");
         }
     }
 

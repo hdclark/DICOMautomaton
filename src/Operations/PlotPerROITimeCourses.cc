@@ -79,7 +79,7 @@ bool PlotPerROITimeCourses(Drover &DICOM_data,
                                            { },
                                            cc_ROIs,
                                            &ud )){
-        FUNCERR("Unable to compute per-ROI time courses");
+        throw std::runtime_error("Unable to compute per-ROI time courses");
     }
     //For perfusion purposes, Scale down the ROIs per-atomos (i.e., per-voxel).
     for(auto & tcs : ud.time_courses){

@@ -51,7 +51,7 @@ bool UBC3TMRI_DCE_Differences(Drover &DICOM_data,
     }
 
 
-    if(DICOM_data.image_data.size() != 2) FUNCERR("Expected two image arrays in a specific order. Cannot continue");  
+    if(DICOM_data.image_data.size() != 2) throw std::runtime_error("Expected two image arrays in a specific order. Cannot continue");  
  
     //Get named handles for each image array so we can easily refer to them later.
     std::shared_ptr<Image_Array> orig_unstim_long  = *std::next(DICOM_data.image_data.begin(),0); //full (long) DCE 01 scan (no stim).
@@ -65,27 +65,27 @@ bool UBC3TMRI_DCE_Differences(Drover &DICOM_data,
     std::shared_ptr<Image_Array> tavgd_unstim_long = std::make_shared<Image_Array>( *orig_unstim_long );
     tavgd_unstim_long->imagecoll.Prune_Images_Satisfying(PurgeAbove35Seconds);
     if(!tavgd_unstim_long->imagecoll.Condense_Average_Images(GroupSpatiallyOverlappingImages)){
-        FUNCERR("Cannot temporally average data set. Is it able to be averaged?");
+        throw std::runtime_error("Cannot temporally average data set. Is it able to be averaged?");
     }
 
     std::shared_ptr<Image_Array> tavgd_stim_long = std::make_shared<Image_Array>( *orig_stim_long );
     tavgd_stim_long->imagecoll.Prune_Images_Satisfying(PurgeAbove35Seconds);
     if(!tavgd_stim_long->imagecoll.Condense_Average_Images(GroupSpatiallyOverlappingImages)){
-        FUNCERR("Cannot temporally average data set. Is it able to be averaged?");
+        throw std::runtime_error("Cannot temporally average data set. Is it able to be averaged?");
     }       
 
 
     //Deep-copy the original long image array and use the temporally-averaged, pre-contrast map to work out the poor-man's Gad C in each voxel.
     std::shared_ptr<Image_Array> unstim_C = std::make_shared<Image_Array>( *orig_unstim_long );
     if(!unstim_C->imagecoll.Transform_Images( DCEMRISigDiffC, { tavgd_unstim_long->imagecoll }, {}) ){
-        FUNCERR("Unable to transform image array to make poor-man's C map");
+        throw std::runtime_error("Unable to transform image array to make poor-man's C map");
     }
     orig_unstim_long.reset();
     //DICOM_data.image_data.emplace_back(unstim_C);
     
     std::shared_ptr<Image_Array> stim_C = std::make_shared<Image_Array>( *orig_stim_long );
     if(!stim_C->imagecoll.Transform_Images( DCEMRISigDiffC, { tavgd_stim_long->imagecoll }, {}) ){
-        FUNCERR("Unable to transform image array to make poor-man's C map");
+        throw std::runtime_error("Unable to transform image array to make poor-man's C map");
     }
     orig_stim_long.reset();
     //DICOM_data.image_data.emplace_back(stim_C);
@@ -104,7 +104,7 @@ bool UBC3TMRI_DCE_Differences(Drover &DICOM_data,
     if(!nostim_case->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
                                                TimeCourseSlopeDifferenceOverStim,
                                                {}, cc_all )){
-        FUNCERR("Unable to compute time course slope map");
+        throw std::runtime_error("Unable to compute time course slope map");
     }
     unstim_C.reset(); 
 
@@ -112,7 +112,7 @@ bool UBC3TMRI_DCE_Differences(Drover &DICOM_data,
     if(!stim_case->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
                                              TimeCourseSlopeDifferenceOverStim,
                                              {}, cc_all )){
-        FUNCERR("Unable to compute time course slope map");
+        throw std::runtime_error("Unable to compute time course slope map");
     }
     stim_C.reset();
 
@@ -126,7 +126,7 @@ bool UBC3TMRI_DCE_Differences(Drover &DICOM_data,
       external_imgs.push_back( std::ref(nostim_case->imagecoll) );
 
       if(!difference->imagecoll.Transform_Images( SubtractSpatiallyOverlappingImages, std::move(external_imgs), {} )){
-          FUNCERR("Unable to subtract the pixel maps");
+          throw std::runtime_error("Unable to subtract the pixel maps");
       }
     }
 

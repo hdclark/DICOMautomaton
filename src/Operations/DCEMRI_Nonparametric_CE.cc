@@ -86,7 +86,7 @@ bool DCEMRI_Nonparametric_CE(Drover &DICOM_data,
     if(false){
         for(const auto& img_ptr : orig_img_arrays){
             if(!img_ptr->imagecoll.Gaussian_Pixel_Blur({ }, 1.5)){
-                FUNCERR("Unable to blur temporally averaged images");
+                throw std::runtime_error("Unable to blur temporally averaged images");
             }
         }
     }

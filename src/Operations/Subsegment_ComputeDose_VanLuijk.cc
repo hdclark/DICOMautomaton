@@ -19,6 +19,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <filesystem>
 
 #include "../Dose_Meld.h"
 #include "../Structs.h"
@@ -492,14 +493,15 @@ bool Subsegment_ComputeDose_VanLuijk(Drover &DICOM_data,
     }
 
     //Report the findings.
-    try{
+    {
         //Try open a named mutex. Probably created in /dev/shm/ if you need to clear it manually...
         boost::interprocess::named_mutex mutex(boost::interprocess::open_or_create,
-                                               "dicomautomaton_operation_van_luijk_subsegmentation_mutex");
+                                               "dcma_op_van_luijk_subsegmentation_mutex");
         boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(mutex);
 
         if(DerivativeDataFileName.empty()){
-            DerivativeDataFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_subsegment_vanluijk_derivatives_", 6, ".csv");
+            const auto base = std::filesystem::temp_directory_path() / "dcma_subsegment_vanluijk_derivatives_";
+            DerivativeDataFileName = Get_Unique_Sequential_Filename(base.string(), 6, ".csv");
         }
         std::fstream FO_deriv(DerivativeDataFileName, std::fstream::out | std::fstream::app);
         if(!FO_deriv){
@@ -562,9 +564,6 @@ bool Subsegment_ComputeDose_VanLuijk(Drover &DICOM_data,
             FO_dist.flush();
             FO_dist.close();
         }
-
-    }catch(const std::exception &e){
-        FUNCERR("Unable to write to log files: '" << e.what() << "'");
     }
 
     //Keep the sub-segment if the user wants it.

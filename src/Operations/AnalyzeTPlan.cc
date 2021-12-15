@@ -22,6 +22,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <filesystem>
 
 #include "../Insert_Contours.h"
 #include "../Structs.h"
@@ -239,23 +240,18 @@ bool AnalyzeTPlan(Drover &DICOM_data,
 
     //Write the report to file.
     if(!TPs.empty()){
-        try{
-            auto gen_filename = [&]() -> std::string {
-                if(!SummaryFilename.empty()){
-                    return SummaryFilename;
-                }
-                return Get_Unique_Sequential_Filename("/tmp/dcma_analyzetreatmentplans_", 6, ".csv");
-            };
+        auto gen_filename = [&]() -> std::string {
+            if(!SummaryFilename.empty()){
+                return SummaryFilename;
+            }
+            const auto base = std::filesystem::temp_directory_path() / "dcma_analyzetreatmentplans_";
+            return Get_Unique_Sequential_Filename(base.string(), 6, ".csv");
+        };
 
-            FUNCINFO("About to claim a mutex");
-            Append_File( gen_filename,
-                         "dicomautomaton_operation_analyzetreatmentplans_mutex",
-                         header.str(),
-                         report.str() );
-
-        }catch(const std::exception &e){
-            FUNCERR("Unable to write to output file: '" << e.what() << "'");
-        }
+        Append_File( gen_filename,
+                     "dcma_op_analyzetreatmentplans_mutex",
+                     header.str(),
+                     report.str() );
     }
 
     return true;

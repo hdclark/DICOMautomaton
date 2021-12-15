@@ -33,7 +33,7 @@ bool ConvertNaNsToAir(Drover &DICOM_data,
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                CTNaNsToAir,
                                                {}, {} )){
-            FUNCERR("Unable to censor pixels with enormous values");
+            throw std::runtime_error("Unable to censor pixels with enormous values");
         }
     }
 

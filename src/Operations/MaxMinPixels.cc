@@ -33,7 +33,7 @@ bool MaxMinPixels(Drover &DICOM_data,
     if(!img_arr->imagecoll.Process_Images_Parallel( GroupSpatiallyOverlappingImages,
                                            CondenseMaxMinPixel,
                                            {}, {} )){
-        FUNCERR("Unable to max-min pixel values");
+        throw std::runtime_error("Unable to max-min pixel values");
     }
 
     return true;

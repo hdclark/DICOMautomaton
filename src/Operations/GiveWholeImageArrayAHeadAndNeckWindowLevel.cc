@@ -34,7 +34,7 @@ bool GiveWholeImageArrayAHeadAndNeckWindowLevel(Drover &DICOM_data,
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                StandardHeadAndNeckHUWindow,
                                                {}, {})){
-            FUNCERR("Unable to force window to cover a reasonable head-and-neck HU range");
+            throw std::runtime_error("Unable to force window to cover a reasonable head-and-neck HU range");
         }
     }
 

@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <string>    
 #include <vector>
+#include <filesystem>
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"

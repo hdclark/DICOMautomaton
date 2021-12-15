@@ -34,7 +34,7 @@ bool ConvertNaNsToZeros(Drover &DICOM_data,
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                NaNsToZeros,
                                                {}, {} )){
-            FUNCERR("Unable to censor NaN pixels");
+            throw std::runtime_error("Unable to censor NaN pixels");
         }
     }
 

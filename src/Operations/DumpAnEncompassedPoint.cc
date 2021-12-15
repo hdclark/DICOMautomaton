@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include <string>    
+#include <filesystem>
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"

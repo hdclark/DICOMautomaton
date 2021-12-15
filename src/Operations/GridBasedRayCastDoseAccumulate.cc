@@ -355,7 +355,7 @@ bool GridBasedRayCastDoseAccumulate(Drover &DICOM_data,
         if(!grid_arr_ptr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                              InImagePlaneBicubicSupersample,
                                                              {}, {}, &bicub_ud )){
-            FUNCERR("Unable to bicubically supersample surface mask");
+            throw std::runtime_error("Unable to bicubically supersample surface mask");
         }
     }
 

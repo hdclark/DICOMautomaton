@@ -12,6 +12,7 @@
 #include <tuple>
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <filesystem>
 
 #include "../Structs.h"
 #include "DumpROIData.h"

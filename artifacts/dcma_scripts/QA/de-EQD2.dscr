@@ -64,7 +64,7 @@ AnalyzeHistograms(
                     D(coldest 25%) gte 2.0 Gy ;
                     Dmean lte 3.0 Gy ;
                     Dmean gte 2.0 Gy ',
-     SummaryFilename = 'dcma_alpha_beta_assessment.csv',
+     #SummaryFilename = 'dcma_alpha_beta_assessment.csv',
 ){};
 
 GiveWholeImageArrayAnAlphaBetaWindowLevel(

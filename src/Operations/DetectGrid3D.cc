@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <string>    
 #include <algorithm>    
+#include <filesystem>
 
 /*
 #include <boost/geometry.hpp>
@@ -726,35 +727,30 @@ Score_Fit( ICP_Context &ICPC,
 
     //Report a summary.
     if(gen_filename){
-        FUNCINFO("Attempting to claim a mutex");
-        try{
-            std::stringstream header;
-            header << "Patient ID,"
-                   << "Minimum,"
-                   << "Mean,"
-                   << "Median,"
-                   << "Maximum,"
-                   << "User comment"
-                   << std::endl;
+        std::stringstream header;
+        header << "Patient ID,"
+               << "Minimum,"
+               << "Mean,"
+               << "Median,"
+               << "Maximum,"
+               << "User comment"
+               << std::endl;
 
-            std::stringstream body;
-            body << "unknown" << "," //PatientID.value_or("Unknown") << ","
-                 << Stats::Min(dists) << ","
-                 << Stats::Mean(dists) << ","
-                 << Stats::Median(dists) << ","
-                 << Stats::Max(dists) << ","
-                 << "" //UserComment.value_or("")
-                 << std::endl;
+        std::stringstream body;
+        body << "unknown" << "," //PatientID.value_or("Unknown") << ","
+             << Stats::Min(dists) << ","
+             << Stats::Mean(dists) << ","
+             << Stats::Median(dists) << ","
+             << Stats::Max(dists) << ","
+             << "" //UserComment.value_or("")
+             << std::endl;
 
-            Append_File( gen_filename,
-                         "dicomautomaton_operation_detectgrid3d_mutex",
-                         header.str(),
-                         body.str() );
+        Append_File( gen_filename,
+                     "dcma_op_detectgrid3d_mutex",
+                     header.str(),
+                     body.str() );
 
-            FUNCINFO("Writing file containing:" << std::endl << header.str() << std::endl << body.str() << std::endl);
-        }catch(const std::exception &e){
-            FUNCERR("Unable to write to output file: '" << e.what() << "'");
-        }
+        FUNCINFO("Writing file containing:" << std::endl << header.str() << std::endl << body.str() << std::endl);
     }
 
     const auto score = Stats::Mean(dists); // Better scores should be less than worse scores.
@@ -1201,12 +1197,13 @@ bool DetectGrid3D(Drover &DICOM_data,
     }
 
     auto gen_filename = [&]() -> std::string {
-        if(ResultsSummaryFileName.empty()){
-            ResultsSummaryFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_detectgrid3d_", 6, ".csv");
+        if(!ResultsSummaryFileName.empty()){
+            return ResultsSummaryFileName;
         }
-        return ResultsSummaryFileName;
+        const auto base = std::filesystem::temp_directory_path() / "dcma_detectgrid3d_";
+        return Get_Unique_Sequential_Filename(base.string(), 6, ".csv");
     };
-
+    
     std::mt19937 re( RandomSeed );
 
 FUNCINFO("Loading point clouds");

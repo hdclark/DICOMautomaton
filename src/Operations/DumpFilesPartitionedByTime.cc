@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>    
 #include <utility>            //Needed for std::pair.
+#include <filesystem>
 
 #include "../Structs.h"
 #include "DumpFilesPartitionedByTime.h"

@@ -251,7 +251,7 @@ bool ModelIVIM(Drover &DICOM_data,
                                                                  vec3<double> ) -> float {
                 vals.erase(vals.begin()); // Remove the base image's value.
                 if(vals.size() != bvalues.size()){
-                    FUNCERR("Unmatched voxel and b-value vectors. Refusing to continue.");
+                    throw std::runtime_error("Unmatched voxel and b-value vectors. Refusing to continue.");
                 }
 
                 const auto bvalue_min = bvalues.at( bvalue_min_i );
@@ -272,7 +272,7 @@ bool ModelIVIM(Drover &DICOM_data,
                                                                  vec3<double> ) -> float {
                 vals.erase(vals.begin()); // Remove the base image's value.
                 if(vals.size() != bvalues.size()){
-                    FUNCERR("Unmatched voxel and b-value vectors. Refusing to continue.");
+                    throw std::runtime_error("Unmatched voxel and b-value vectors. Refusing to continue.");
                 }
 
                 const auto adc = GetADCls(bvalues, vals);
@@ -303,7 +303,7 @@ bool ModelIVIM(Drover &DICOM_data,
                                       vec3<double> pos ) -> float {
                 vals.erase(vals.begin()); // Remove the base image's value.
                 if(vals.size() != bvalues.size()){
-                    FUNCERR("Unmatched voxel and b-value vectors. Refusing to continue.");
+                    throw std::runtime_error("Unmatched voxel and b-value vectors. Refusing to continue.");
                 }
                 int numIterations = 600;
                 
@@ -351,7 +351,7 @@ bool ModelIVIM(Drover &DICOM_data,
                                       vec3<double> pos ) -> float {
                 vals.erase(vals.begin()); // Remove the base image's value.
                 if(vals.size() != bvalues.size()){
-                    FUNCERR("Unmatched voxel and b-value vectors. Refusing to continue.");
+                    throw std::runtime_error("Unmatched voxel and b-value vectors. Refusing to continue.");
                 }
                 int numIterations = 1000;
                 const auto [f, D, pseudoD] = GetBiExpf(bvalues, vals, numIterations);

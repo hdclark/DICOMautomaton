@@ -9,6 +9,7 @@
 #include <string>    
 
 #include "YgorFilesDirs.h"
+#include "YgorMisc.h"
 
 #include "Write_File.h"
 
@@ -19,6 +20,7 @@ void Append_File( const std::function<std::string(void)>& gen_file_name,
                  
     //File-based locking is used so this program can be run over many patients concurrently.
     // Try open a named mutex. Probably created in /dev/shm/ if you need to clear it manually...
+    FUNCINFO("About to claim mutex '" << mutex_name << "'");
     boost::interprocess::named_mutex mutex(boost::interprocess::open_or_create, mutex_name.c_str());
     boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(mutex);
 
@@ -36,6 +38,9 @@ void Append_File( const std::function<std::string(void)>& gen_file_name,
     FO << body;
     FO.flush();
     FO.close();
+
+    const std::string msg = (FirstWrite ? "Wrote to new file" : "Appended to existing file");
+    FUNCINFO(msg << " '" << file_name << "'");
 
     return;
 }

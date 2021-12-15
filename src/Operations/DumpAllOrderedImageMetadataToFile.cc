@@ -7,6 +7,7 @@
 #include <set> 
 #include <string>    
 #include <utility>            //Needed for std::pair.
+#include <filesystem>
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
@@ -49,7 +50,7 @@ bool DumpAllOrderedImageMetadataToFile(Drover &DICOM_data,
                 for(const auto &akey : sset) df << img.metadata.find(akey)->second << "\t";
                 df << std::endl;
             }
-            if(!OverwriteStringToFile(df.str(),dumpfile)) FUNCERR("Unable to dump ordered image metadata to file");
+            if(!OverwriteStringToFile(df.str(),dumpfile)) throw std::runtime_error("Unable to dump ordered image metadata to file");
             return;
         };
 

@@ -19,6 +19,7 @@
 #include <string>    
 #include <vector>
 #include <utility>
+#include <filesystem>
 
 #include "../Insert_Contours.h"
 #include "../Structs.h"
@@ -1010,12 +1011,13 @@ bool AnalyzePicketFence(Drover &DICOM_data,
 
                 //Report findings about this leaf-pair.
                 FUNCINFO("Attempting to claim a mutex");
-                try{
+                {
                     auto gen_filename = [&]() -> std::string {
-                        if(LeafGapsFileName.empty()){
-                            LeafGapsFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_evaluatepf_", 6, ".csv");
+                        if(!LeafGapsFileName.empty()){
+                            return LeafGapsFileName;
                         }
-                        return LeafGapsFileName;
+                        const auto base = std::filesystem::temp_directory_path() / "dcma_analyzepicketfence_";
+                        return Get_Unique_Sequential_Filename(base.string(), 6, ".csv");
                     };
 
                     std::stringstream header;
@@ -1051,12 +1053,9 @@ bool AnalyzePicketFence(Drover &DICOM_data,
                          << std::endl;
 
                     Append_File( gen_filename,
-                                 "dicomautomaton_operation_analyzepicketfence_mutex",
+                                 "dcma_op_analyzepicketfence_mutex",
                                  header.str(),
                                  body.str() );
-
-                }catch(const std::exception &e){
-                    FUNCERR("Unable to write to output file: '" << e.what() << "'");
                 }
 
 
