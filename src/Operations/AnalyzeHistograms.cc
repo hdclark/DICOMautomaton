@@ -22,6 +22,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <filesystem>
 
 #include "../Insert_Contours.h"
 #include "../Structs.h"
@@ -559,7 +560,8 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                 if(!SummaryFilename.empty()){
                     return SummaryFilename;
                 }
-                return Get_Unique_Sequential_Filename("/tmp/dcma_analyzedosevolumehistograms_", 6, ".csv");
+                const auto base = std::filesystem::temp_directory_path() / "dcma_analyzedosevolumehistograms_";
+                return Get_Unique_Sequential_Filename(base.string(), 6, ".csv");
             };
 
             FUNCINFO("About to claim a mutex");
