@@ -18,6 +18,9 @@ target_compile_definitions( DCMA_Version_obj PUBLIC -DDCMA_VERSION=${DCMA_VERSIO
 add_library(            Structs_obj OBJECT Structs.cc)
 set_target_properties(  Structs_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            Tables_obj OBJECT Tables.cc)
+set_target_properties(  Tables_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Partition_Drover_obj OBJECT Partition_Drover.cc)
 set_target_properties(  Partition_Drover_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -174,6 +177,7 @@ endif()
 add_library (imebrashim 
     Imebra_Shim.cc 
     $<TARGET_OBJECTS:Structs_obj>
+    $<TARGET_OBJECTS:Tables_obj>
     $<TARGET_OBJECTS:Alignment_Rigid_obj>
     $<TARGET_OBJECTS:Alignment_Field_obj>
     $<TARGET_OBJECTS:DCMA_DICOM_obj>
@@ -329,6 +333,7 @@ add_executable (dicomautomaton_dispatcher
     DICOMautomaton_Dispatcher.cc
 
     $<TARGET_OBJECTS:Structs_obj>
+    $<TARGET_OBJECTS:Tables_obj>
     $<TARGET_OBJECTS:Partition_Drover_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:BED_Conversion_obj>
@@ -416,6 +421,7 @@ if(WITH_WT)
         DICOMautomaton_WebServer.cc
 
         $<TARGET_OBJECTS:Structs_obj>
+        $<TARGET_OBJECTS:Tables_obj>
         $<TARGET_OBJECTS:Partition_Drover_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:BED_Conversion_obj>
@@ -503,6 +509,7 @@ endif()
 add_executable(dicomautomaton_bsarchive_convert
     Boost_Serialization_Archive_Converter.cc
     $<TARGET_OBJECTS:Structs_obj>
+    $<TARGET_OBJECTS:Tables_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
@@ -531,6 +538,7 @@ if(WITH_POSTGRES)
     add_executable(pacs_ingress
         PACS_Ingress.cc
         $<TARGET_OBJECTS:Structs_obj>
+        $<TARGET_OBJECTS:Tables_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
         $<TARGET_OBJECTS:String_Parsing_obj>
@@ -550,6 +558,7 @@ if(WITH_POSTGRES)
     add_executable(pacs_duplicate_cleaner
         PACS_Duplicate_Cleaner.cc
         $<TARGET_OBJECTS:Structs_obj>
+        $<TARGET_OBJECTS:Tables_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
         $<TARGET_OBJECTS:String_Parsing_obj>
@@ -569,6 +578,7 @@ if(WITH_POSTGRES)
     add_executable(pacs_refresh
         PACS_Refresh.cc
         $<TARGET_OBJECTS:Structs_obj>
+        $<TARGET_OBJECTS:Tables_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
         $<TARGET_OBJECTS:String_Parsing_obj>
@@ -590,6 +600,7 @@ endif()
 add_executable(dicomautomaton_dump
     DICOMautomaton_Dump.cc
     $<TARGET_OBJECTS:Structs_obj>
+    $<TARGET_OBJECTS:Tables_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
     $<TARGET_OBJECTS:String_Parsing_obj>
