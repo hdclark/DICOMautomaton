@@ -127,6 +127,28 @@ table2::min_max_col() const {
     return {min, max};
 }
 
+std::pair<int64_t, int64_t>
+table2::standard_min_max_row() const {
+    const int64_t zero = 0;
+    const int64_t ten = 10;
+    if(this->data.empty()){
+        return { zero, ten };
+    }
+    auto [min_row, max_row] = this->min_max_row();
+    return { std::min( zero, min_row ), std::max( ten, max_row + 5 ) };
+}
+
+std::pair<int64_t, int64_t>
+table2::standard_min_max_col() const {
+    const int64_t zero = 0;
+    const int64_t five = 5;
+    if(this->data.empty()){
+        return { zero, five };
+    }
+    auto [min_col, max_col] = this->min_max_col();
+    return { std::min( zero, min_col ), std::max( five, max_col + 2 ) };
+}
+
 std::optional<std::reference_wrapper<std::string>>
 table2::value(int64_t row, int64_t col){
     std::optional<std::reference_wrapper<std::string>> out;
@@ -223,12 +245,8 @@ table2::visit_block( const std::pair<int64_t, int64_t>& row_bounds,
 
 void
 table2::visit_standard_block( const visitor_func_t& f ){
-    auto [min_row, max_row] = this->min_max_row();
-    auto [min_col, max_col] = this->min_max_col();
-    int64_t zero = 0;
-    int64_t five = 5;
-    this->visit_block( { std::min( zero, min_row ), std::max( five, max_row + 1 ) },
-                       { std::min( zero, min_col ), std::max( five, max_col + 1 ) },
+    this->visit_block( this->standard_min_max_row(),
+                       this->standard_min_max_col(),
                        f );
     return;
 }

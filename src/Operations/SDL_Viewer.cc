@@ -645,6 +645,8 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_row_column_profiles = false;
         bool view_time_profiles = false;
         bool view_parameter_table = false;
+        bool view_tables_enabled = false;
+        bool view_table_metadata_enabled = false;
         bool save_time_profiles = false;
         bool view_script_editor_enabled = false;
         bool view_script_feedback = true;
@@ -768,6 +770,10 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         std::array<float, 4> colours = { 1.000, 0.588, 0.005, 0.8 };
     } mesh_display_transform;
+
+    // Tables.
+    using disp_table_it_t = decltype(DICOM_data.table_data.begin());
+    long int table_num = -1;
 
     // ------------------------------------------ Viewer State --------------------------------------------
     auto background_colour = ImVec4(0.025f, 0.087f, 0.118f, 1.00f);
@@ -1344,25 +1350,6 @@ bool SDL_Viewer(Drover &DICOM_data,
         return out;
     };
 
-    // Recompute mesh iterators the current mesh.
-    const auto recompute_smesh_iters = [ &DICOM_data,
-                                         &mesh_num ](){
-        std::tuple<bool, disp_mesh_it_t > out;
-        std::get<bool>( out ) = false;
-
-        do{ 
-            const auto has_meshes = DICOM_data.Has_Mesh_Data();
-            if( !has_meshes ) break;
-            if( !isininc(1, mesh_num+1, DICOM_data.smesh_data.size()) ) break;
-            auto smesh_ptr_it = std::next(DICOM_data.smesh_data.begin(), mesh_num);
-            if( smesh_ptr_it == std::end(DICOM_data.smesh_data) ) break;
-
-            std::get<bool>( out ) = true;
-            std::get<disp_mesh_it_t>( out ) = smesh_ptr_it;
-        }while(false);
-        return out;
-    };
-
     // Recompute the image viewer state, e.g., after the image data is altered by another operation.
     const auto recompute_image_state = [ &DICOM_data,
                                          &img_array_num,
@@ -1416,6 +1403,45 @@ bool SDL_Viewer(Drover &DICOM_data,
         //}
         return;
     };
+
+    // Recompute mesh iterators for the current mesh.
+    const auto recompute_smesh_iters = [ &DICOM_data,
+                                         &mesh_num ](){
+        std::tuple<bool, disp_mesh_it_t > out;
+        std::get<bool>( out ) = false;
+
+        do{ 
+            const auto has_meshes = DICOM_data.Has_Mesh_Data();
+            if( !has_meshes ) break;
+            if( !isininc(1, mesh_num+1, DICOM_data.smesh_data.size()) ) break;
+            auto smesh_ptr_it = std::next(DICOM_data.smesh_data.begin(), mesh_num);
+            if( smesh_ptr_it == std::end(DICOM_data.smesh_data) ) break;
+
+            std::get<bool>( out ) = true;
+            std::get<disp_mesh_it_t>( out ) = smesh_ptr_it;
+        }while(false);
+        return out;
+    };
+
+    // Recompute table iterators for the current table
+    const auto recompute_table_iters = [ &DICOM_data,
+                                         &table_num ](){
+        std::tuple<bool, disp_table_it_t > out;
+        std::get<bool>( out ) = false;
+
+        do{ 
+            const auto has_tables = DICOM_data.Has_Table_Data();
+            if( !has_tables ) break;
+            if( !isininc(1, table_num+1, DICOM_data.table_data.size()) ) break;
+            auto table_ptr_it = std::next(DICOM_data.table_data.begin(), table_num);
+            if( table_ptr_it == std::end(DICOM_data.table_data) ) break;
+
+            std::get<bool>( out ) = true;
+            std::get<disp_table_it_t>( out ) = table_ptr_it;
+        }while(false);
+        return out;
+    };
+
 
     const auto recompute_scale_bar_image_state = [ &scale_bar_img,
                                                    &scale_bar_texture,
@@ -1731,7 +1757,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::SetNextItemWidth(-FLT_MIN);
                     string_to_array(metadata_text_entry, key);
                     ImGui::PushID(++i);
-                    const bool key_changed = ImGui::InputText("key", metadata_text_entry.data(), metadata_text_entry.size());
+                    const bool key_changed = ImGui::InputText("##key", metadata_text_entry.data(), metadata_text_entry.size());
                     ImGui::PopID();
 
                     // Since key_changed is true whenever any changes have occured, even if the mouse is idling
@@ -2243,6 +2269,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                         time_profile.samples.clear();
                     };
                     ImGui::MenuItem("Parameter Table", nullptr, &view_toggles.view_parameter_table);
+                    ImGui::MenuItem("Tables", nullptr, &view_toggles.view_tables_enabled);
+                    ImGui::MenuItem("Table Metadata", nullptr, &view_toggles.view_table_metadata_enabled);
                     ImGui::MenuItem("Script Editor", nullptr, &view_toggles.view_script_editor_enabled);
                     ImGui::MenuItem("Script Feedback", nullptr, &view_toggles.view_script_feedback);
                     ImGui::EndMenu();
@@ -4288,6 +4316,123 @@ bool SDL_Viewer(Drover &DICOM_data,
             throw;
         }
 
+        // Display tables.
+        const auto display_tables = [&view_toggles,
+                                     &drover_mutex,
+                                     &mutex_dt,
+                                     &table_num,
+                                     &recompute_table_iters,
+                                     &display_metadata_table,
+                                     &DICOM_data ]() -> void {
+
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            if(!drover_lock) return;
+
+            if( !view_toggles.view_tables_enabled ) return;
+
+            // Display a selection and navigation window.
+            ImGui::SetNextWindowSize(ImVec2(450, 400), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Table Selection", &view_toggles.view_tables_enabled);
+
+            if(ImGui::Button("Create table")){
+                DICOM_data.table_data.emplace_back( std::make_shared<Sparse_Table>() );
+                table_num = DICOM_data.table_data.size() - 1;
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Remove table")){
+                auto [table_is_valid, table_ptr_it] = recompute_table_iters();
+                if(table_is_valid){
+                    DICOM_data.table_data.erase( table_ptr_it );
+                    table_num -= 1;
+                }
+            }
+
+            // Scroll through tables.
+            if(DICOM_data.Has_Table_Data()){
+                int scroll_tables = table_num;
+                const int N_tables = DICOM_data.table_data.size();
+                ImGui::SliderInt("Table", &scroll_tables, 0, N_tables - 1);
+                const long int new_table_num = std::clamp(scroll_tables, 0, N_tables - 1);
+                if(new_table_num != table_num){
+                    table_num = new_table_num;
+                }
+            }
+
+            // Display the table.
+            if( auto [table_is_valid, table_ptr_it] = recompute_table_iters();  table_is_valid ){
+                const auto [min_col, max_col] = (*table_ptr_it)->table.standard_min_max_col();
+                const auto [min_row, max_row] = (*table_ptr_it)->table.standard_min_max_row();
+
+                ImVec2 cell_padding(0.0f, 0.0f);
+                ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, cell_padding);
+                if(ImGui::BeginTable("Table display", (max_col - min_col),  ImGuiTableFlags_Borders
+                                                                   //| ImGuiTableFlags_ScrollX
+                                                                   //| ImGuiTableFlags_ScrollY
+                                                                   | ImGuiTableFlags_RowBg
+                                                                   | ImGuiTableFlags_BordersV
+                                                                   | ImGuiTableFlags_BordersInner
+                                                                   | ImGuiTableFlags_Resizable )){
+
+                    // Number the columns.
+                    for(long int c = min_col; c < max_col; ++c){
+                        ImGui::TableSetupColumn(std::to_string(c).c_str());
+                    }
+                    ImGui::TableHeadersRow();
+
+                    std::array<char, 1024> buf;
+                    string_to_array(buf, "");
+
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
+
+                    int i = 0;
+                    tables::visitor_func_t f = [&](int64_t row, int64_t col, std::string& v) -> tables::action {
+                        ImGui::TableNextColumn();
+                        //ImGui::SetNextItemWidth(-FLT_MIN);
+                        string_to_array(buf, v);
+                        ImGui::PushID(++i);
+                        ImGui::SetNextItemWidth(-FLT_MIN);
+                        const bool key_changed = ImGui::InputText("##datum", buf.data(), buf.size() - 1);
+                        ImGui::PopID();
+ 
+                        //const auto im_row = ImGui::TableGetRowIndex() + min_row - 1; // +1 for the header.
+                        //const auto im_col = ImGui::TableGetColumnIndex() + min_col;
+                        //
+                        // if( (row == 2) && (col == 3) ){
+                        //     FUNCINFO("row,col = 2,3 and IMGui row,col = " << im_row << ", " << im_col);
+                        // }
+                        if( key_changed ) array_to_string(v, buf);
+
+                        return tables::action::automatic; // Retain only non-empty cells.
+                    };
+                    (*table_ptr_it)->table.visit_standard_block(f);
+
+                    ImGui::PopStyleColor();
+                    ImGui::EndTable();
+                }
+                ImGui::PopID();
+                ImGui::PopStyleVar();
+
+
+                if( view_toggles.view_table_metadata_enabled ){
+                    ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+                    ImGui::Begin("Image Metadata", &view_toggles.view_table_metadata_enabled);
+
+                    display_metadata_table( (*table_ptr_it)->table.metadata );
+
+                    ImGui::End();
+                }
+            }
+
+            ImGui::End();
+            return;
+        };
+        try{
+            display_tables();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in display_tables(): '" << e.what() << "'");
+            throw;
+        }
 
         // Display the image navigation dialog.
         const auto display_image_navigation = [&view_toggles,

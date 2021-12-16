@@ -55,6 +55,12 @@ struct table2 {
     std::pair<int64_t, int64_t> min_max_row() const;
     std::pair<int64_t, int64_t> min_max_col() const;
 
+    // These functions return the (inclusive) bounds spanning
+    // [r,c] = [min(0,min_row), min(0,min_col)] to [max(10,max_row+5), max(5,max_col+2)].
+    // which helps when the table needs to expand to the bottom-right.
+    std::pair<int64_t, int64_t> standard_min_max_row() const;
+    std::pair<int64_t, int64_t> standard_min_max_col() const;
+
     // These functions locate the next empty row or column to the bottom/right of all existing rows/columns.
     // Note that holes in the interior are ignored. They are useful for appending data.
     int64_t next_empty_row() const;
@@ -75,7 +81,7 @@ struct table2 {
                       const std::pair<int64_t, int64_t>& col_bounds,
                       const visitor_func_t& f );
     
-    // Same as previous, but visits block from [r,c] = [min(0,min_row), min(0,min_col)] to [max(5,max_row+1), max(5,max_col+1)].
+    // Same as previous, but visits the 'standard' block (see above).
     void visit_standard_block( const visitor_func_t& f );
 
 };
