@@ -8,6 +8,8 @@
 #include <optional>
 #include <functional>
 #include <utility>
+#include <istream>
+#include <ostream>
 
 namespace tables {
 
@@ -72,8 +74,11 @@ struct table2 {
     // Remove existing cell, if present.
     void remove(int64_t row, int64_t col);
 
+    // Const value extraction.
+    std::optional<std::string> value(int64_t row, int64_t col) const;
+
     // Optional is disengaged if cell does not exist.
-    std::optional<std::reference_wrapper<std::string>> value(int64_t row, int64_t col);
+    std::optional<std::reference_wrapper<std::string>> value_ref(int64_t row, int64_t col);
 
     // Visits every cell within the bounds (inclusive), even if not active.
     // Whether the cell should be engaged or disengaged after iteration is controlled by the user functor.
@@ -83,6 +88,19 @@ struct table2 {
     
     // Same as previous, but visits the 'standard' block (see above).
     void visit_standard_block( const visitor_func_t& f );
+
+    // Read from a stream.
+    //
+    // Purges any existing cells and metadata, and does not read metadata from the file.
+    // Also accepts TSV files (auto-detects tabs in the first few lines).
+    // Throws on error or if nothing was read. Should work equally well with binary and text mode streams.
+    void read_csv_file( std::istream &is );
+
+    // Write to a stream.
+    //
+    // Quotes cells for maxmimum portability. Best to use with binary streams to avoid platform-specific line endings.
+    // Throws on error. Disregards all metadata. Uses 'standard' bounds (see above).
+    void write_csv_file( std::ostream &os ) const;
 
 };
 

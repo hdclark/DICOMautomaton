@@ -4367,7 +4367,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                 ImVec2 cell_padding(0.0f, 0.0f);
                 ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, cell_padding);
-                if(ImGui::BeginTable("Table display", (max_col - min_col),  ImGuiTableFlags_Borders
+                if(ImGui::BeginTable("Table display", (max_col - min_col) + 1,  ImGuiTableFlags_Borders
                                                                    //| ImGuiTableFlags_ScrollX
                                                                    //| ImGuiTableFlags_ScrollY
                                                                    | ImGuiTableFlags_RowBg
@@ -4376,7 +4376,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                                    | ImGuiTableFlags_Resizable )){
 
                     // Number the columns.
-                    for(long int c = min_col; c < max_col; ++c){
+                    for(long int c = min_col; c <= max_col; ++c){
                         ImGui::TableSetupColumn(std::to_string(c).c_str());
                     }
                     ImGui::TableHeadersRow();

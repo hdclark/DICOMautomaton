@@ -32,123 +32,6 @@
 #include "Structs.h"
 //#include "Imebra_Shim.h"      //Needed for Collate_Image_Arrays().
 
-static
-tables::table2
-read_csv_file( std::istream &is ){
-    tables::table2 t;
-
-    const std::string quotes = "\"";  // Characters that open a quote at beginning of line only.
-    const std::string escs   = "\\";  // The escape character(s) inside quotes.
-    const std::string pseps  = "\t";  // 'Priority' separation characters. If detected, these take priority over others.
-    std::string seps   = ",";   // The characters that separate cells.
-
-    std::stringstream ss;
-
-    // --- Automatic separator detection ---
-    const long int autodetect_separator_rows = 10;
-
-    // Buffer the input stream into a stringstream, checking for the presence of priority separators.
-    bool use_pseps = false;
-    for(long int i = 0; i < autodetect_separator_rows; ++i){
-        std::string line;
-        if(std::getline(is, line)){
-            // Avoid newline at end, which can appear as an extra empty row later.
-            ss << ((i==0) ? "" : "\n") << line;
-
-            const bool has_pseps = (line.find_first_of(pseps) != std::string::npos);
-            if(has_pseps){
-                use_pseps = true;
-                break;
-            }
-        }
-    }
-    if(use_pseps){
-        seps = pseps;
-        FUNCINFO("Detected alternative separators, switching acceptable separators");
-    }
-
-    // -------------------------------------
-
-    const auto clean_string = [](const std::string &in){
-        return Canonicalize_String2(in, CANONICALIZE::TRIM_ENDS);
-    };
-
-    int64_t row_num = -1;
-    std::string line;
-    while(std::getline(ss, line) || std::getline(is, line)){
-        ++row_num;
-        bool inside_quote;
-        std::string cell;
-
-        int64_t col_num = 0;
-        auto c_it = std::begin(line);
-        const auto end = std::end(line);
-        for( ; c_it != end; ++c_it){
-            const bool is_quote = (quotes.find_first_of(*c_it) != std::string::npos);
-            auto c_next_it = std::next(c_it);
-
-            if(inside_quote){
-                const bool is_esc = (escs.find_first_of(*c_it) != std::string::npos);
-
-                if(is_quote){
-                    // Close the quote.
-                    inside_quote = false;
-
-                }else if(is_esc){
-                    // Implement escape of next character.
-                    if(c_next_it == end){
-                        throw std::runtime_error("Nothing to escape (row "_s + std::to_string(row_num) + ")");
-                    }
-                    cell.push_back( *c_next_it );
-                    ++c_it;
-                    ++c_next_it;
-
-                }else{
-                    cell.push_back( *c_it );
-                }
-                
-            }else{
-                const bool is_sep = (seps.find_first_of(*c_it) != std::string::npos);
-
-                if(is_quote){
-                    // Open the quote.
-                    inside_quote = true;
-
-                }else if( is_sep ){
-                    // Push cell into table.
-                    cell = clean_string(cell);
-                    if(!cell.empty()) t.inject(row_num, col_num, cell);
-                    ++col_num;
-                    cell.clear();
-
-                }else{
-                    cell.push_back( *c_it );
-                }
-            }
-
-            if( c_next_it == end ){
-                // Push cell into table.
-                cell = clean_string(cell);
-                if(!cell.empty()) t.inject(row_num, col_num, cell);
-                ++col_num;
-                cell.clear();
-            }
-        }
-
-        // Add any outstanding contents as a cell.
-        cell = clean_string(cell);
-        if( !cell.empty()
-        ||  inside_quote ){
-            throw std::invalid_argument("Unable to parse row "_s + std::to_string(row_num));
-        }
-    }
-
-    if(t.data.empty()){
-        throw std::runtime_error("Unable to extract any data from file");
-    }
-    return t;
-}
-
 
 bool Load_From_CSV_Files( Drover &DICOM_data,
                           std::map<std::string,std::string> & /* InvocationMetadata */,
@@ -173,24 +56,25 @@ bool Load_From_CSV_Files( Drover &DICOM_data,
         const auto Filename = *bfit;
 
         try{
+            DICOM_data.table_data.emplace_back( std::make_shared<Sparse_Table>() );
+            auto* tab_ptr = &( DICOM_data.table_data.back()->table );
+
             std::ifstream is(Filename.string(), std::ios::in | std::ios::binary);
-            auto tab = read_csv_file(is);
+            tab_ptr->read_csv_file(is);
 
             // Ensure a minimal amount of metadata is present for image purposes.
-            auto l_meta = coalesce_metadata_for_basic_table(tab.metadata);
-            l_meta.merge(tab.metadata);
-            tab.metadata = l_meta;
-            tab.metadata["Filename"] = Filename.string();
+            auto l_meta = coalesce_metadata_for_basic_table(tab_ptr->metadata);
+            l_meta.merge(tab_ptr->metadata);
+            tab_ptr->metadata = l_meta;
+            tab_ptr->metadata["Filename"] = Filename.string();
 
-            FUNCINFO("Loaded CSV file with " << tab.data.size() << " rows"); 
-
-            DICOM_data.table_data.emplace_back( std::make_shared<Sparse_Table>() );
-            DICOM_data.table_data.back()->table = tab;
+            FUNCINFO("Loaded CSV file with " << tab_ptr->data.size() << " rows"); 
 
             bfit = Filenames.erase( bfit ); 
             continue;
         }catch(const std::exception &e){
             FUNCINFO("Unable to load as CSV file: '" << e.what() << "'");
+            DICOM_data.table_data.pop_back();
         };
 
         //Skip the file. It might be destined for some other loader.

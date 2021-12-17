@@ -4,6 +4,12 @@
 #include <iostream>
 #include <limits>
 #include <utility>
+#include <istream>
+#include <ostream>
+#include <iomanip>
+
+#include "YgorString.h"
+#include "YgorMisc.h"
 
 #include "Tables.h"
 
@@ -149,8 +155,18 @@ table2::standard_min_max_col() const {
     return { std::min( zero, min_col ), std::max( five, max_col + 2 ) };
 }
 
+std::optional<std::string>
+table2::value(int64_t row, int64_t col) const {
+    std::optional<std::string> out;
+    auto it = this->data.find( cell<std::string>(row, col, "") );
+    if(it != std::end(this->data)){
+        out = it->val;
+    }
+    return out;
+}
+
 std::optional<std::reference_wrapper<std::string>>
-table2::value(int64_t row, int64_t col){
+table2::value_ref(int64_t row, int64_t col){
     std::optional<std::reference_wrapper<std::string>> out;
     auto it = this->data.find( cell<std::string>(row, col, "") );
     if(it != std::end(this->data)){
@@ -205,8 +221,8 @@ table2::visit_block( const std::pair<int64_t, int64_t>& row_bounds,
     if(!f){
         throw std::invalid_argument("Invalid user functor");
     }
-    for(int64_t row = row_bounds.first; row < row_bounds.second; ++row){
-        for(int64_t col = col_bounds.first; col < col_bounds.second; ++col){
+    for(int64_t row = row_bounds.first; row <= row_bounds.second; ++row){
+        for(int64_t col = col_bounds.first; col <= col_bounds.second; ++col){
             cell<std::string> shtl(row, col, "");
             cell<std::string>* cell_ptr = &shtl;
             
@@ -250,6 +266,147 @@ table2::visit_standard_block( const visitor_func_t& f ){
                        f );
     return;
 }
+
+void
+table2::read_csv_file( std::istream &is ){
+    this->data.clear();
+    this->metadata.clear();
+
+    const std::string quotes = "\"";  // Characters that open a quote at beginning of line only.
+    const std::string escs   = "\\";  // The escape character(s) inside quotes.
+    const std::string pseps  = "\t";  // 'Priority' separation characters. If detected, these take priority over others.
+    std::string seps   = ",";   // The characters that separate cells.
+
+    std::stringstream ss;
+
+    // --- Automatic separator detection ---
+    const long int autodetect_separator_rows = 10;
+
+    // Buffer the input stream into a stringstream, checking for the presence of priority separators.
+    bool use_pseps = false;
+    for(long int i = 0; i < autodetect_separator_rows; ++i){
+        std::string line;
+        if(std::getline(is, line)){
+            // Avoid newline at end, which can appear as an extra empty row later.
+            ss << ((i==0) ? "" : "\n") << line;
+
+            const bool has_pseps = (line.find_first_of(pseps) != std::string::npos);
+            if(has_pseps){
+                use_pseps = true;
+                break;
+            }
+        }
+    }
+    if(use_pseps){
+        seps = pseps;
+        FUNCINFO("Detected alternative separators, switching acceptable separators");
+    }
+
+    // -------------------------------------
+
+    const auto clean_string = [](const std::string &in){
+        return Canonicalize_String2(in, CANONICALIZE::TRIM_ENDS);
+    };
+
+    int64_t row_num = -1;
+    std::string line;
+    while(std::getline(ss, line) || std::getline(is, line)){
+        ++row_num;
+        bool inside_quote;
+        std::string cell;
+
+        int64_t col_num = 0;
+        auto c_it = std::begin(line);
+        const auto end = std::end(line);
+        for( ; c_it != end; ++c_it){
+            const bool is_quote = (quotes.find_first_of(*c_it) != std::string::npos);
+            const bool is_print = std::isprint(static_cast<unsigned char>(*c_it));
+            auto c_next_it = std::next(c_it);
+
+            if(inside_quote){
+                const bool is_esc = (escs.find_first_of(*c_it) != std::string::npos);
+
+                if(is_quote){
+                    // Close the quote.
+                    inside_quote = false;
+
+                }else if(is_esc){
+                    // Implement escape of next character.
+                    if(c_next_it == end){
+                        throw std::runtime_error("Nothing to escape (row "_s + std::to_string(row_num) + ")");
+                    }
+                    cell.push_back( *c_next_it );
+                    ++c_it;
+                    ++c_next_it;
+
+                }else if(is_print){
+                    cell.push_back( *c_it );
+                }
+                
+            }else{
+                const bool is_sep = (seps.find_first_of(*c_it) != std::string::npos);
+
+                if(is_quote){
+                    // Open the quote.
+                    inside_quote = true;
+
+                }else if( is_sep ){
+                    // Push cell into table.
+                    cell = clean_string(cell);
+                    if(!cell.empty()) this->inject(row_num, col_num, cell);
+                    ++col_num;
+                    cell.clear();
+
+                }else if(is_print){
+                    cell.push_back( *c_it );
+                }
+            }
+
+            if( c_next_it == end ){
+                // Push cell into table.
+                cell = clean_string(cell);
+                if(!cell.empty()) this->inject(row_num, col_num, cell);
+                ++col_num;
+                cell.clear();
+            }
+        }
+
+        // Add any outstanding contents as a cell.
+        cell = clean_string(cell);
+        if( !cell.empty()
+        ||  inside_quote ){
+            throw std::invalid_argument("Unable to parse row "_s + std::to_string(row_num));
+        }
+    }
+
+    if(this->data.empty()){
+        throw std::runtime_error("Unable to extract any data from file");
+    }
+    return;
+}
+
+void
+table2::write_csv_file( std::ostream &os ) const {
+    const auto [row_min, row_max] = this->standard_min_max_row();
+    const auto [col_min, col_max] = this->standard_min_max_col();
+    const char quote = '"';
+    const char esc = '\\';
+    const char sep = ',';
+
+    for(int64_t row = row_min; row <= row_max; ++row){
+        for(int64_t col = col_min; col <= col_max; ++col){
+            const auto val = this->value(row, col).value_or("");
+            os << std::quoted(val, quote, esc) << sep;
+        }
+        os << "\n";
+    }
+    os.flush();
+    if(!os){
+        throw std::runtime_error("Unable to write file");
+    }
+    return;
+}
+
 
 } // namespace tables
 
