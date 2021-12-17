@@ -4386,12 +4386,15 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                     ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
 
-                    int i = 0;
                     tables::visitor_func_t f = [&](int64_t row, int64_t col, std::string& v) -> tables::action {
                         ImGui::TableNextColumn();
                         //ImGui::SetNextItemWidth(-FLT_MIN);
                         string_to_array(buf, v);
-                        ImGui::PushID(++i);
+                        // This ID ensures the table can grow and retain the same ID. It splits an int32_t into two
+                        // ranges, allowing rows to span [0,100'000] and columns to span [0,max_int32_t/100'000] =
+                        // [0,20'000].
+                        int cell_ID = row + col * 100'000;
+                        ImGui::PushID(cell_ID);
                         ImGui::SetNextItemWidth(-FLT_MIN);
                         const bool key_changed = ImGui::InputText("##datum", buf.data(), buf.size() - 1);
                         ImGui::PopID();
