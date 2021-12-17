@@ -413,7 +413,9 @@ try{
                  || DICOM_data.Has_Point_Data()
                  || DICOM_data.Has_Mesh_Data()
                  || DICOM_data.Has_TPlan_Data()
-                 || DICOM_data.Has_LSamp_Data() ) ){
+                 || DICOM_data.Has_LSamp_Data()
+                 || DICOM_data.Has_Tran3_Data()
+                 || DICOM_data.Has_Table_Data() ) ){
 
 // TODO: Special case: Launch RPC server to wait for data if no files or SQL files provided?
         throw std::runtime_error("No data was loaded, and virtual data switch was not provided. Refusing to proceed");

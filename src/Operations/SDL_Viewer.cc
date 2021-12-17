@@ -645,7 +645,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_row_column_profiles = false;
         bool view_time_profiles = false;
         bool view_parameter_table = false;
-        bool view_tables_enabled = false;
+        bool view_tables_enabled = true;
         bool view_table_metadata_enabled = false;
         bool save_time_profiles = false;
         bool view_script_editor_enabled = false;
@@ -4328,7 +4328,8 @@ bool SDL_Viewer(Drover &DICOM_data,
             std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
             if(!drover_lock) return;
 
-            if( !view_toggles.view_tables_enabled ) return;
+            if( !view_toggles.view_tables_enabled
+            ||  !DICOM_data.Has_Table_Data() ) return;
 
             // Display a selection and navigation window.
             ImGui::SetNextWindowSize(ImVec2(450, 400), ImGuiCond_FirstUseEver);

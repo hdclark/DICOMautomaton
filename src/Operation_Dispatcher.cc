@@ -59,6 +59,7 @@
 #include "Operations/CopyContours.h"
 #include "Operations/CopyImages.h"
 #include "Operations/CopyMeshes.h"
+#include "Operations/CopyTables.h"
 #include "Operations/CopyPoints.h"
 #include "Operations/CountVoxels.h"
 #include "Operations/CropImageDoseToROIs.h"
@@ -76,6 +77,7 @@
 #include "Operations/DeleteContours.h"
 #include "Operations/DeleteImages.h"
 #include "Operations/DeleteMeshes.h"
+#include "Operations/DeleteTables.h"
 #include "Operations/DeletePoints.h"
 #include "Operations/DetectShapes3D.h"
 #include "Operations/DrawGeometry.h"
@@ -114,6 +116,7 @@
 #include "Operations/GenerateMeshes.h"
 #include "Operations/GenerateSurfaceMask.h"
 #include "Operations/GenerateSyntheticImages.h"
+#include "Operations/GenerateTable.h"
 #include "Operations/GenerateWarp.h"
 #include "Operations/GenerateVirtualDataContourViaThresholdTestV1.h"
 #include "Operations/GenerateVirtualDataDoseStairsV1.h"
@@ -273,6 +276,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["CopyContours"] = std::make_pair(OpArgDocCopyContours, CopyContours);
     out["CopyImages"] = std::make_pair(OpArgDocCopyImages, CopyImages);
     out["CopyMeshes"] = std::make_pair(OpArgDocCopyMeshes, CopyMeshes);
+    out["CopyTables"] = std::make_pair(OpArgDocCopyTables, CopyTables);
     out["CopyPoints"] = std::make_pair(OpArgDocCopyPoints, CopyPoints);
     out["CountVoxels"] = std::make_pair(OpArgDocCountVoxels, CountVoxels);
     out["CropImageDoseToROIs"] = std::make_pair(OpArgDocCropImageDoseToROIs, CropImageDoseToROIs);
@@ -287,6 +291,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["DeleteContours"] = std::make_pair(OpArgDocDeleteContours, DeleteContours);
     out["DeleteImages"] = std::make_pair(OpArgDocDeleteImages, DeleteImages);
     out["DeleteMeshes"] = std::make_pair(OpArgDocDeleteMeshes, DeleteMeshes);
+    out["DeleteTables"] = std::make_pair(OpArgDocDeleteTables, DeleteTables);
     out["DeletePoints"] = std::make_pair(OpArgDocDeletePoints, DeletePoints);
     out["DetectShapes3D"] = std::make_pair(OpArgDocDetectShapes3D, DetectShapes3D);
     out["DICOMExportContours"] = std::make_pair(OpArgDocDICOMExportContours, DICOMExportContours);
@@ -328,6 +333,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["GenerateMeshes"] = std::make_pair(OpArgDocGenerateMeshes, GenerateMeshes);
     out["GenerateSurfaceMask"] = std::make_pair(OpArgDocGenerateSurfaceMask, GenerateSurfaceMask);
     out["GenerateSyntheticImages"] = std::make_pair(OpArgDocGenerateSyntheticImages, GenerateSyntheticImages);
+    out["GenerateTable"] = std::make_pair(OpArgDocGenerateTable, GenerateTable);
     out["GenerateVirtualDataContourViaThresholdTestV1"] = std::make_pair(OpArgDocGenerateVirtualDataContourViaThresholdTestV1, GenerateVirtualDataContourViaThresholdTestV1);
     out["GenerateVirtualDataDoseStairsV1"] = std::make_pair(OpArgDocGenerateVirtualDataDoseStairsV1, GenerateVirtualDataDoseStairsV1);
     out["GenerateVirtualDataImageSphereV1"] = std::make_pair(OpArgDocGenerateVirtualDataImageSphereV1, GenerateVirtualDataImageSphereV1);

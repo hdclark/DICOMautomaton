@@ -290,6 +290,28 @@ bool DroverDebug(Drover &DICOM_data,
         }
     }
 
+    //Table data.
+    {
+        FUNCINFO("There are " << DICOM_data.table_data.size() << " Sparse_Tables loaded");
+
+        size_t t_cnt = 0;
+        for(auto &tp : DICOM_data.table_data){
+            if(tp == nullptr){
+                FUNCINFO("  Sparse_Table " << t_cnt << " is not valid");
+
+            }else{
+                FUNCINFO("  Sparse_Table " << t_cnt << " has " << 
+                         tp->table.data.size() << " rows and " <<
+                         tp->table.metadata.size() << " metadata keys");
+                if(IncludeMetadata){
+                    FUNCINFO("    Sparse_Table " << t_cnt << " metadata:");
+                    dump_metadata(std::cout, "        ", tp->table.metadata);
+                }
+            }
+            ++t_cnt;
+        }
+    }
+
     //InvocationMetadata.
     {
         FUNCINFO("There are " << InvocationMetadata.size() << " metadata parameters defined");

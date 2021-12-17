@@ -34,6 +34,7 @@
 #include "Line_Sample_File_Loader.h"
 #include "TAR_File_Loader.h"
 #include "DVH_File_Loader.h"
+#include "CSV_File_Loader.h"
 #include "Script_Loader.h"
 
 using loader_func_t = std::function<bool(std::list<std::filesystem::path>&)>;
@@ -90,7 +91,7 @@ Load_Files( Drover &DICOM_data,
             return true;
         }});
 
-        //Standalone file loading: DICOM files.
+        //Standalone file loading: XIM files.
         loaders.emplace_back(file_loader_t{{".xim"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_XIM_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
@@ -240,6 +241,19 @@ Load_Files( Drover &DICOM_data,
             return true;
         }});
 
+        //Standalone file loading: CSV files.
+        //
+        // Note: this file can be confused with many other formats, so it should be near the end.
+        loaders.emplace_back(file_loader_t{{".csv", ".tsv"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
+            if(!p.empty()
+            && !Load_From_CSV_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
+                FUNCWARN("Failed to load CSV/TSV file");
+                return false;
+            }
+            return true;
+        }});
+
+
         return loaders;
     };
 
@@ -348,6 +362,8 @@ Load_Files( Drover &DICOM_data,
              || icase_str_eq(ext, ".xyz")
              || icase_str_eq(ext, ".scr")
              || icase_str_eq(ext, ".dscr")
+             || icase_str_eq(ext, ".csv")
+             || icase_str_eq(ext, ".tsv")
              || icase_str_eq(ext, ".lsamps") ) ){
             loaders.remove_if( [ext](const file_loader_t &l){
                                     return std::none_of( std::begin(l.exts),

@@ -94,6 +94,9 @@ set_target_properties(  FITS_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_COD
 add_library(            XYZ_File_Loader_obj OBJECT XYZ_File_Loader.cc )
 set_target_properties(  XYZ_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            CSV_File_Loader_obj OBJECT CSV_File_Loader.cc )
+set_target_properties(  CSV_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            XIM_File_Loader_obj OBJECT XIM_File_Loader.cc )
 set_target_properties(  XIM_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -361,6 +364,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:FITS_File_Loader_obj>
     $<TARGET_OBJECTS:XYZ_File_Loader_obj>
     $<TARGET_OBJECTS:XIM_File_Loader_obj>
+    $<TARGET_OBJECTS:CSV_File_Loader_obj>
     $<TARGET_OBJECTS:DVH_File_Loader_obj>
     $<TARGET_OBJECTS:TAR_File_Loader_obj>
     $<TARGET_OBJECTS:3ddose_File_Loader_obj>
@@ -449,6 +453,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:FITS_File_Loader_obj>
         $<TARGET_OBJECTS:XYZ_File_Loader_obj>
         $<TARGET_OBJECTS:XIM_File_Loader_obj>
+        $<TARGET_OBJECTS:CSV_File_Loader_obj>
         $<TARGET_OBJECTS:DVH_File_Loader_obj>
         $<TARGET_OBJECTS:TAR_File_Loader_obj>
         $<TARGET_OBJECTS:3ddose_File_Loader_obj>

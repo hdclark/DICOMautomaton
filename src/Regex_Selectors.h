@@ -265,4 +265,36 @@ Whitelist( std::list<std::list<std::shared_ptr<Transform3>>::iterator> lss,
 // Utility function documenting the transform whitelist routines for operations.
 OperationArgDoc T3WhitelistOpArgDoc();
 
+// ----------------------------------- Sparse Tables ------------------------------------
+
+// Provide pointers for all line samples into a list.
+//
+// Note: The output is meant to be filtered using the selectors below.
+std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator>
+All_STs( Drover &DICOM_data );
+
+
+// Whitelist line samples using the provided regex.
+std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator> sts,
+           std::string MetadataKey,
+           std::string MetadataValueRegex,
+           Regex_Selector_Opts Opts = Regex_Selector_Opts() );
+
+// Whitelist line samples using a limited vocabulary of specifiers.
+std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator> sts,
+           std::string Specifier,
+           Regex_Selector_Opts Opts = Regex_Selector_Opts() );
+
+// This is a convenience routine to combine multiple filtering passes into a single logical statement.
+std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator> sts,
+           std::initializer_list< std::pair<std::string,        // MetadataKey
+                                            std::string> > MetadataKeyValueRegex, // MetadataValueRegex
+           Regex_Selector_Opts Opts = Regex_Selector_Opts() );
+
+// Utility function documenting the line sample whitelist routines for operations.
+OperationArgDoc STWhitelistOpArgDoc();
+
 

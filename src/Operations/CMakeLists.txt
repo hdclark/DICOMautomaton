@@ -39,6 +39,7 @@ add_library(Operations_objs OBJECT
     CopyContours.cc
     CopyImages.cc
     CopyMeshes.cc
+    CopyTables.cc
     CopyPoints.cc
     CountVoxels.cc
     CropImageDoseToROIs.cc
@@ -56,6 +57,7 @@ add_library(Operations_objs OBJECT
     DeleteContours.cc
     DeleteImages.cc
     DeleteMeshes.cc
+    DeleteTables.cc
     DeletePoints.cc
     DetectShapes3D.cc
     DrawGeometry.cc
@@ -94,6 +96,7 @@ add_library(Operations_objs OBJECT
     GenerateMeshes.cc
     GenerateSurfaceMask.cc
     GenerateSyntheticImages.cc
+    GenerateTable.cc
     GenerateVirtualDataContourViaThresholdTestV1.cc
     GenerateVirtualDataDoseStairsV1.cc
     GenerateVirtualDataImageSphereV1.cc
