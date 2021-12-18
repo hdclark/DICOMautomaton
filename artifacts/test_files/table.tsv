@@ -1,0 +1,7 @@
+This is a large cell.	"This is a large quoted cell."
+"R,C = 1,0"	"R,C = 1,1"	"R,C = 1,2"				
+"R,C = 2,0"	"R,C = 2,1"	"R,C = 2,2"				
+"R,C = 3,0"	"R,C = 3,1"	"R,C = 3,2"				
+long line that doesn't have any tabs and won't have any outside quotes but does have two apostrophes
+shorter line with some "quoted text that contains an escaped \a"
+"quoted cell with an escaped \""	"quoted cell with an escaped \'"

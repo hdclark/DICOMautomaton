@@ -94,13 +94,13 @@ struct table2 {
     // Purges any existing cells and metadata, and does not read metadata from the file.
     // Also accepts TSV files (auto-detects tabs in the first few lines).
     // Throws on error or if nothing was read. Should work equally well with binary and text mode streams.
-    void read_csv_file( std::istream &is );
+    void read_csv( std::istream &is );
 
     // Write to a stream.
     //
     // Quotes cells for maxmimum portability. Best to use with binary streams to avoid platform-specific line endings.
     // Throws on error. Disregards all metadata. Uses 'standard' bounds (see above).
-    void write_csv_file( std::ostream &os ) const;
+    void write_csv( std::ostream &os ) const;
 
 };
 

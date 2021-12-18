@@ -60,7 +60,7 @@ bool Load_From_CSV_Files( Drover &DICOM_data,
             auto* tab_ptr = &( DICOM_data.table_data.back()->table );
 
             std::ifstream is(Filename.string(), std::ios::in | std::ios::binary);
-            tab_ptr->read_csv_file(is);
+            tab_ptr->read_csv(is);
 
             // Ensure a minimal amount of metadata is present for image purposes.
             auto l_meta = coalesce_metadata_for_basic_table(tab_ptr->metadata);

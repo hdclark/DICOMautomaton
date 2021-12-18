@@ -268,7 +268,7 @@ table2::visit_standard_block( const visitor_func_t& f ){
 }
 
 void
-table2::read_csv_file( std::istream &is ){
+table2::read_csv( std::istream &is ){
     this->data.clear();
     this->metadata.clear();
 
@@ -386,7 +386,7 @@ table2::read_csv_file( std::istream &is ){
 }
 
 void
-table2::write_csv_file( std::ostream &os ) const {
+table2::write_csv( std::ostream &os ) const {
     const auto [row_min, row_max] = this->standard_min_max_row();
     const auto [col_min, col_max] = this->standard_min_max_col();
     const char quote = '"';
@@ -396,7 +396,8 @@ table2::write_csv_file( std::ostream &os ) const {
     for(int64_t row = row_min; row <= row_max; ++row){
         for(int64_t col = col_min; col <= col_max; ++col){
             const auto val = this->value(row, col).value_or("");
-            os << std::quoted(val, quote, esc) << sep;
+            if(!val.empty()) os << std::quoted(val, quote, esc);
+            os << sep;
         }
         os << "\n";
     }

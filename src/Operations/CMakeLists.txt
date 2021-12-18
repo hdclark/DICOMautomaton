@@ -85,6 +85,7 @@ add_library(Operations_objs OBJECT
     ExportSurfaceMeshesPLY.cc
     ExportSurfaceMeshesSTL.cc
     ExportSurfaceMeshesOFF.cc
+    ExportTables.cc
     ExportWarps.cc
     ExtractImageHistograms.cc
     ExtractAlphaBeta.cc
