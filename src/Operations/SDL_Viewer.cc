@@ -756,6 +756,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     using disp_mesh_it_t = decltype(DICOM_data.smesh_data.begin());
     std::unique_ptr<opengl_mesh> oglm_ptr;
     long int mesh_num = -1;
+    std::atomic<bool> need_to_reload_opengl_mesh = true;
 
     struct mesh_display_transform_t {
         bool precess = true;
@@ -1996,6 +1997,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                   &recompute_image_state,
                                   &recompute_image_iters,
                                   &reset_contouring_state,
+                                  &need_to_reload_opengl_mesh,
 
                                   &wq,
                                   &script_mutex,
@@ -2056,6 +2058,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         launch_contour_preprocessor();
                         reset_contouring_state(img_array_ptr_it);
                     }
+                    need_to_reload_opengl_mesh = true;
                     tagged_pos = {};
                 }
                 return;
@@ -4789,6 +4792,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                           &mesh_display_transform,
                                           &display_metadata_table,
                                           &recompute_smesh_iters,
+                                          &need_to_reload_opengl_mesh,
                                           &frame_count ]() -> void {
 
             std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
@@ -4800,7 +4804,11 @@ bool SDL_Viewer(Drover &DICOM_data,
                 auto [mesh_is_valid, smesh_ptr_it] = recompute_smesh_iters();
                 if(!mesh_is_valid) return;
                 oglm_ptr = std::make_unique<opengl_mesh>( (*smesh_ptr_it)->meshes, mesh_display_transform.reverse_normals );
+                need_to_reload_opengl_mesh = false;
             };
+            if(need_to_reload_opengl_mesh){
+                reload_opengl_mesh();
+            }
 
             const auto N_meshes = DICOM_data.smesh_data.size();
             if(!oglm_ptr){
