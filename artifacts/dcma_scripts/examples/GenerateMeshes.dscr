@@ -200,3 +200,21 @@ GenerateMeshes(
 BELOW [456]");',
 ){};
 
+# Extrusion example with default cutting xy plane at 0,0,0.
+GenerateMeshes(
+    Resolution = res,
+    MeshLabel = 'circle extrusion (cylinder)',
+    Objects = ' extrude(5.0){ sphere(7.0); }; ',
+){};
+
+# Extrusion example with oblique cutting plane and offset.
+GenerateMeshes(
+    Resolution = res,
+    MeshLabel = 'oblique cut and extrusion',
+    Objects = '
+        extrude(5.0, 1.2,1.5,1.9, 0,0.5,1.5){
+            aa_box(10.0, 10.0, 10.0);
+        };
+    ',
+){};
+

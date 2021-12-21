@@ -32,9 +32,6 @@ aa_bbox::aa_bbox(){
 };
 
 void aa_bbox::digest(const vec3<double>& r){
-//    const auto eps = 0.1; // 10.0 * std::sqrt( std::numeric_limits<double>::min() );
-//    const vec3<double> eps3(eps, eps, eps);
-
     this->min.x = std::min( this->min.x, r.x );
     this->min.y = std::min( this->min.y, r.y );
     this->min.z = std::min( this->min.z, r.z );
@@ -42,9 +39,6 @@ void aa_bbox::digest(const vec3<double>& r){
     this->max.x = std::max( this->max.x, r.x );
     this->max.y = std::max( this->max.y, r.y );
     this->max.z = std::max( this->max.z, r.z );
-
-//    this->min -= eps3;
-//    this->max += eps3;
 };
 
 
@@ -462,13 +456,6 @@ double extrude::evaluate_sdf(const vec3<double> &pos) const {
     if(this->children.size() != 1UL){
         throw std::runtime_error("extrude: this operation requires a single child node");
     }
-/*
-    // Extrusion strictly along z-axis.
-    const auto c_sdf = this->children[0]->evaluate_sdf(vec3<double>(pos.x, pos.y, 0.0));
-    const auto dz = std::abs(pos.z) - this->distance;
-    const auto sdf = std::min(0.0, std::max(dz, c_sdf))
-                   + std::hypot( std::max(0.0, dz), std::max(0.0, c_sdf) );
-*/
 
     // Extrusion of the shape cut by the plane along the normal of the plane.
     const auto proj_pos = this->cut_plane.Project_Onto_Plane_Orthogonally(pos);
@@ -495,6 +482,8 @@ aa_bbox extrude::evaluate_aa_bbox() const {
 
 /*
     // More selective and elegant approach which unfortunately doesn't quite work...
+    //
+    // TODO: FIXME
     const auto proj_min = this->cut_plane.Project_Onto_Plane_Orthogonally(bb.min);
     const auto proj_max = this->cut_plane.Project_Onto_Plane_Orthogonally(bb.max);
     aa_bbox new_bb;
