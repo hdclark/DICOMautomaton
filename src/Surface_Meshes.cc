@@ -1264,9 +1264,15 @@ Estimate_Surface_Mesh_Marching_Cubes(
     const double min_res_y = minimum_resolution.y;
     const double min_res_z = minimum_resolution.z;
 
-    const double margin_x = min_res_x * 4.0; // Ensure at least one voxel surrounds entire object.
-    const double margin_y = min_res_y * 4.0;
-    const double margin_z = min_res_z * 4.0;
+    // Add a resolution-aware margin to the bounding box.
+    const auto l_bb_min = bb.min;
+    const auto l_bb_max = bb.max;
+    bb.digest( l_bb_min - vec3<double>(min_res_x, min_res_y, min_res_z) * 2.0 );
+    bb.digest( l_bb_max + vec3<double>(min_res_x, min_res_y, min_res_z) * 2.0 );
+
+    const double margin_x = min_res_x; // Ensure at least one voxel surrounds entire object.
+    const double margin_y = min_res_y;
+    const double margin_z = min_res_z;
 
     const auto N_rows = static_cast<long int>(std::ceil((bb.max.x - bb.min.x)/min_res_x));
     const auto N_cols = static_cast<long int>(std::ceil((bb.max.y - bb.min.y)/min_res_y));

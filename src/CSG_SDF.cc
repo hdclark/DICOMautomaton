@@ -32,6 +32,9 @@ aa_bbox::aa_bbox(){
 };
 
 void aa_bbox::digest(const vec3<double>& r){
+//    const auto eps = 0.1; // 10.0 * std::sqrt( std::numeric_limits<double>::min() );
+//    const vec3<double> eps3(eps, eps, eps);
+
     this->min.x = std::min( this->min.x, r.x );
     this->min.y = std::min( this->min.y, r.y );
     this->min.z = std::min( this->min.z, r.z );
@@ -39,12 +42,14 @@ void aa_bbox::digest(const vec3<double>& r){
     this->max.x = std::max( this->max.x, r.x );
     this->max.y = std::max( this->max.y, r.y );
     this->max.z = std::max( this->max.z, r.z );
+
+//    this->min -= eps3;
+//    this->max += eps3;
 };
 
 
 // -------------------------------- 3D Shapes -------------------------------------
 namespace shape {
-
 
 // Sphere centred at (0,0,0).
 sphere::sphere(double r) : radius(r) {};
@@ -56,8 +61,8 @@ double sphere::evaluate_sdf(const vec3<double>& pos) const {
 
 aa_bbox sphere::evaluate_aa_bbox() const {
     aa_bbox bb;
-    bb.min = vec3<double>( -this->radius, -this->radius, -this->radius );
-    bb.max = vec3<double>(  this->radius,  this->radius,  this->radius );
+    bb.digest( vec3<double>( -this->radius, -this->radius, -this->radius ) );
+    bb.digest( vec3<double>(  this->radius,  this->radius,  this->radius ) );
     return bb;
 }
 
@@ -77,8 +82,8 @@ double aa_box::evaluate_sdf(const vec3<double>& pos) const {
 
 aa_bbox aa_box::evaluate_aa_bbox() const {
     aa_bbox bb;
-    bb.min = this->radii * -1.0;
-    bb.max = this->radii;
+    bb.digest( this->radii * -1.0 );
+    bb.digest( this->radii );
     return bb;
 }
 
@@ -112,13 +117,11 @@ double poly_chain::evaluate_sdf(const vec3<double>& pos) const {
 
 aa_bbox poly_chain::evaluate_aa_bbox() const {
     aa_bbox bb;
-    for(const auto& v : this->vertices) bb.digest(v);
-    bb.min.x -= this->radius;
-    bb.min.y -= this->radius;
-    bb.min.z -= this->radius;
-    bb.max.x += this->radius;
-    bb.max.y += this->radius;
-    bb.max.z += this->radius;
+    const vec3<double> rad3(this->radius, this->radius, this->radius);
+    for(const auto& v : this->vertices){
+        bb.digest(v + rad3);
+        bb.digest(v - rad3);
+    }
     return bb;
 }
 
@@ -451,6 +454,62 @@ aa_bbox erode::evaluate_aa_bbox() const {
     return bb;
 }
 
+
+// Extrude.
+extrude::extrude(double dist, const plane<double> &p) : distance(dist), cut_plane(p) {};
+
+double extrude::evaluate_sdf(const vec3<double> &pos) const {
+    if(this->children.size() != 1UL){
+        throw std::runtime_error("extrude: this operation requires a single child node");
+    }
+/*
+    // Extrusion strictly along z-axis.
+    const auto c_sdf = this->children[0]->evaluate_sdf(vec3<double>(pos.x, pos.y, 0.0));
+    const auto dz = std::abs(pos.z) - this->distance;
+    const auto sdf = std::min(0.0, std::max(dz, c_sdf))
+                   + std::hypot( std::max(0.0, dz), std::max(0.0, c_sdf) );
+*/
+
+    // Extrusion of the shape cut by the plane along the normal of the plane.
+    const auto proj_pos = this->cut_plane.Project_Onto_Plane_Orthogonally(pos);
+    const auto pos_plane_sdist = this->cut_plane.Get_Signed_Distance_To_Point(pos);
+    const auto c_sdf = this->children[0]->evaluate_sdf( proj_pos );
+    const auto dz = std::abs(pos_plane_sdist) - this->distance;
+    const auto sdf = std::min(0.0, std::max(dz, c_sdf))
+                   + std::hypot( std::max(0.0, dz), std::max(0.0, c_sdf) );
+    return sdf;
+}
+
+aa_bbox extrude::evaluate_aa_bbox() const {
+    if(this->children.size() != 1UL){
+        throw std::runtime_error("extrude: this operation requires a single child node");
+    }
+    auto bb = this->children[0]->evaluate_aa_bbox();
+
+    // Wasteful upper limit which includes irrelevant original geometry.
+    bb.digest( bb.min - this->cut_plane.N_0 * this->distance );
+    bb.digest( bb.max - this->cut_plane.N_0 * this->distance );
+    bb.digest( bb.min + this->cut_plane.N_0 * this->distance );
+    bb.digest( bb.max + this->cut_plane.N_0 * this->distance );
+    return bb;
+
+/*
+    // More selective and elegant approach which unfortunately doesn't quite work...
+    const auto proj_min = this->cut_plane.Project_Onto_Plane_Orthogonally(bb.min);
+    const auto proj_max = this->cut_plane.Project_Onto_Plane_Orthogonally(bb.max);
+    aa_bbox new_bb;
+    new_bb.digest( proj_min );
+    new_bb.digest( proj_max );
+    new_bb.digest( proj_min + this->cut_plane.N_0 * this->distance );
+    new_bb.digest( proj_max + this->cut_plane.N_0 * this->distance );
+    new_bb.digest( proj_min - this->cut_plane.N_0 * this->distance );
+    new_bb.digest( proj_max - this->cut_plane.N_0 * this->distance );
+    return new_bb;
+*/
+
+}
+
+
 } // namespace op
 
 // Convert text to a 3D representation using SDFs.
@@ -620,24 +679,43 @@ std::shared_ptr<node> build_node(const parsed_function& pf){
     const auto r_chamfer_intersect = Compile_Regex("^chamfer[-_]?intersect$");
     const auto r_dilate            = Compile_Regex("^dilate$");
     const auto r_erode             = Compile_Regex("^erode$");
+    const auto r_extrude           = Compile_Regex("^extrude$");
 
+    const vec3<double> u_z(0.0, 0.0, 1.0);
+    const vec3<double> zero3(0.0, 0.0, 0.0);
 
     // Simplify common parameter extractions.
-    std::optional<double> s1;
+    std::optional<double> s0;
     if( (1 <= N_p) && (pf.parameters[0].number) ){
-        s1 = pf.parameters[0].number;
+        s0 = pf.parameters[0].number;
     }
-    std::optional<double> s4;
+    std::optional<double> s3;
     if( (4 <= N_p) && (pf.parameters[3].number) ){
-        s4 = pf.parameters[3].number;
+        s3 = pf.parameters[3].number;
     }
-    std::optional<vec3<double>> v123;
+    std::optional<vec3<double>> v012;
     if( (3 <= N_p) && (pf.parameters[0].number)
                    && (pf.parameters[1].number)
                    && (pf.parameters[2].number) ){
-        v123 = vec3<double>(pf.parameters[0].number.value(),
+        v012 = vec3<double>(pf.parameters[0].number.value(),
                             pf.parameters[1].number.value(),
                             pf.parameters[2].number.value());
+    }
+    std::optional<vec3<double>> v123;
+    if( (4 <= N_p) && (pf.parameters[1].number)
+                   && (pf.parameters[2].number)
+                   && (pf.parameters[3].number) ){
+        v123 = vec3<double>(pf.parameters[1].number.value(),
+                            pf.parameters[2].number.value(),
+                            pf.parameters[3].number.value());
+    }
+    std::optional<vec3<double>> v456;
+    if( (7 <= N_p) && (pf.parameters[4].number)
+                   && (pf.parameters[5].number)
+                   && (pf.parameters[6].number) ){
+        v456 = vec3<double>(pf.parameters[4].number.value(),
+                            pf.parameters[5].number.value(),
+                            pf.parameters[6].number.value());
     }
 
     std::shared_ptr<csg::sdf::node> out;
@@ -645,24 +723,24 @@ std::shared_ptr<node> build_node(const parsed_function& pf){
     // Shapes.
     if(false){
     }else if(std::regex_match(pf.name, r_sphere)){
-        if( !s1 || (N_p != 1) ){
+        if( !s0 || (N_p != 1) ){
             throw std::invalid_argument("'sphere' requires a radius parameter");
         }
-        out = std::make_shared<csg::sdf::shape::sphere>( s1.value() );
+        out = std::make_shared<csg::sdf::shape::sphere>( s0.value() );
 
     }else if(std::regex_match(pf.name, r_aa_box)){
-        if( !v123 || (N_p != 3) ){
+        if( !v012 || (N_p != 3) ){
             throw std::invalid_argument("'aa_box' requires an extent vec3 parameter");
         }
-        out = std::make_shared<csg::sdf::shape::aa_box>( v123.value() );
+        out = std::make_shared<csg::sdf::shape::aa_box>( v012.value() );
 
     }else if(std::regex_match(pf.name, r_poly_chain)){
-        if( !s1 || (N_p <= 7) ){
+        if( !s0 || (N_p <= 7) ){
             throw std::invalid_argument("'poly_chain' requires a radius vec3 parameter and two or more vertices");
         }
         std::vector<vec3<double>> verts;
-        for(auto i = 1; i < pf.parameters.size(); i += 3){
-            if( (N_p < (i + 3))
+        for(auto i = 1U; i < pf.parameters.size(); i += 3U){
+            if( (N_p < (i + 3U))
             ||  !(pf.parameters[i+0].number)
             ||  !(pf.parameters[i+1].number)
             ||  !(pf.parameters[i+2].number) ){
@@ -672,27 +750,27 @@ std::shared_ptr<node> build_node(const parsed_function& pf){
                                 pf.parameters[i+1].number.value(),
                                 pf.parameters[i+2].number.value() );
         }
-        out = std::make_shared<csg::sdf::shape::poly_chain>( s1.value(), verts );
+        out = std::make_shared<csg::sdf::shape::poly_chain>( s0.value(), verts );
 
     }else if(std::regex_match(pf.name, r_text)){
-        if( !s1 || (N_p < 2) ){
+        if( !s0 || (N_p < 2) ){
             throw std::invalid_argument("'text' requires a radius parameter and a text parameter");
         }
-        out = csg::sdf::text(pf.parameters.at(1).raw, s1.value());
+        out = csg::sdf::text(pf.parameters.at(1).raw, s0.value());
         std::swap(out->children, children); // Make children accessible.
 
     // Operations.
     }else if(std::regex_match(pf.name, r_translate)){
-        if( !v123 || (N_p != 3) ){
+        if( !v012 || (N_p != 3) ){
             throw std::invalid_argument("'translate' requires an extent vec3 parameter");
         }
-        out = std::make_shared<csg::sdf::op::translate>( v123.value() );
+        out = std::make_shared<csg::sdf::op::translate>( v012.value() );
 
     }else if(std::regex_match(pf.name, r_rotate)){
-        if( !v123 || !s4 || (N_p != 4) ){
+        if( !v012 || !s3 || (N_p != 4) ){
             throw std::invalid_argument("'rotate' requires a rotation axis vec3 and an angle parameter");
         }
-        out = std::make_shared<csg::sdf::op::rotate>( v123.value(), s4.value() );
+        out = std::make_shared<csg::sdf::op::rotate>( v012.value(), s3.value() );
 
 
     }else if(std::regex_match(pf.name, r_join)){
@@ -715,35 +793,45 @@ std::shared_ptr<node> build_node(const parsed_function& pf){
 
 
     }else if(std::regex_match(pf.name, r_chamfer_join)){
-        if( !s1 || (N_p != 1) ){
+        if( !s0 || (N_p != 1) ){
             throw std::invalid_argument("'chamfer_join' requires a chamfer distance parameter");
         }
-        out = std::make_shared<csg::sdf::op::chamfer_join>( s1.value() );
+        out = std::make_shared<csg::sdf::op::chamfer_join>( s0.value() );
 
     }else if(std::regex_match(pf.name, r_chamfer_subtract)){
-        if( !s1 || (N_p != 1) ){
+        if( !s0 || (N_p != 1) ){
             throw std::invalid_argument("'chamfer_subtract' requires a chamfer distance parameter");
         }
-        out = std::make_shared<csg::sdf::op::chamfer_subtract>( s1.value() );
+        out = std::make_shared<csg::sdf::op::chamfer_subtract>( s0.value() );
 
     }else if(std::regex_match(pf.name, r_chamfer_intersect)){
-        if( !s1 || (N_p != 1) ){
+        if( !s0 || (N_p != 1) ){
             throw std::invalid_argument("'chamfer_intersect' requires a chamfer distance parameter");
         }
-        out = std::make_shared<csg::sdf::op::chamfer_intersect>( s1.value() );
+        out = std::make_shared<csg::sdf::op::chamfer_intersect>( s0.value() );
 
 
     }else if(std::regex_match(pf.name, r_dilate)){
-        if( !s1 || (N_p != 1) ){
+        if( !s0 || (N_p != 1) ){
             throw std::invalid_argument("'dilate' requires a scalar distance parameter");
         }
-        out = std::make_shared<csg::sdf::op::dilate>( s1.value() );
+        out = std::make_shared<csg::sdf::op::dilate>( s0.value() );
 
     }else if(std::regex_match(pf.name, r_erode)){
-        if( !s1 || (N_p != 1) ){
+        if( !s0 || (N_p != 1) ){
             throw std::invalid_argument("'erode' requires a scalar distance parameter");
         }
-        out = std::make_shared<csg::sdf::op::erode>( s1.value() );
+        out = std::make_shared<csg::sdf::op::erode>( s0.value() );
+
+    }else if(std::regex_match(pf.name, r_extrude)){
+        if( !s0 || (N_p < 1) || (7 < N_p) ){
+            throw std::invalid_argument("'extrude' requires a scalar distance parameter and optional planar normal vec3 and optional planar anchor vec3");
+        }
+        const auto normal = v123.value_or( u_z ).unit();
+        const auto anchor = v456.value_or( zero3 );
+FUNCINFO("Extrusion: using normal " << normal << " and anchor " << anchor );
+        const plane<double> pln(normal, anchor);
+        out = std::make_shared<csg::sdf::op::extrude>( s0.value(), pln );
 
     }else{
         throw std::invalid_argument("Unrecognized CSG-SDF node name '"_s + pf.name + "'");

@@ -174,6 +174,16 @@ struct erode : public node {
 };
 
 
+// Extrude.
+struct extrude : public node {
+    double distance;
+    plane<double> cut_plane;
+
+    extrude(double, const plane<double> &);
+    double evaluate_sdf(const vec3<double>& pos) const override;
+    aa_bbox evaluate_aa_bbox() const override;
+};
+
 } // namespace op
 
 // Convert text to a 3D representation using SDFs.
