@@ -4795,10 +4795,17 @@ bool SDL_Viewer(Drover &DICOM_data,
                                           &need_to_reload_opengl_mesh,
                                           &frame_count ]() -> void {
 
-            std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
             if(!drover_lock) return;
             if( !view_toggles.view_meshes_enabled
             ||  !DICOM_data.Has_Mesh_Data() ) return;
+
+            const auto N_meshes = static_cast<long int>(DICOM_data.smesh_data.size());
+            const auto new_mesh_num = std::clamp(mesh_num, 0L, N_meshes - 1L);
+            if(new_mesh_num != mesh_num){
+                mesh_num = new_mesh_num;
+                need_to_reload_opengl_mesh = true;
+            }
 
             const auto reload_opengl_mesh = [&](){
                 auto [mesh_is_valid, smesh_ptr_it] = recompute_smesh_iters();
@@ -4810,7 +4817,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                 reload_opengl_mesh();
             }
 
-            const auto N_meshes = DICOM_data.smesh_data.size();
             if(!oglm_ptr){
                 mesh_num = 0;
                 reload_opengl_mesh();
@@ -4832,7 +4838,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     auto scroll_meshes = static_cast<int>(mesh_num);
                     ImGui::SliderInt("Mesh", &scroll_meshes, 0, N_meshes - 1);
                     if(static_cast<long int>(scroll_meshes) != mesh_num){
-                        mesh_num = static_cast<long int>(scroll_meshes);
+                        mesh_num = std::clamp(static_cast<long int>(scroll_meshes), 0L, N_meshes - 1L);
                         reload_opengl_mesh();
                     }
 
