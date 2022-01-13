@@ -103,7 +103,7 @@
 
 static
 void
-array_to_string(std::string &s, const std::array<char, 1024> &a){
+array_to_string(std::string &s, const std::array<char, 2048> &a){
     s.clear();
     for(const auto &c : a){
         if(c == '\0') break;
@@ -113,14 +113,30 @@ array_to_string(std::string &s, const std::array<char, 1024> &a){
 }
 
 static
+std::string
+array_to_string(const std::array<char, 2048> &a){
+    std::string s;
+    array_to_string(s,a);
+    return s;
+}
+
+static
 void
-string_to_array(std::array<char, 1024> &a, const std::string &s){
+string_to_array(std::array<char, 2048> &a, const std::string &s){
     a.fill('\0');
     for(size_t i = 0; (i < s.size()) && ((i+1) < a.size()); ++i){
         a[i] = s[i];
         //a[i+1] = '\0';
     }
     return;
+}
+
+static
+std::array<char, 2048>
+string_to_array(const std::string &s){
+    std::array<char, 2048> a;
+    string_to_array(a,s);
+    return a;
 }
 
 // Compute an axis-aligned bounding box in pixel coordinates.
@@ -159,9 +175,10 @@ get_pixelspace_axis_aligned_bounding_box(const planar_image<float, double> &img,
 
 // Represents a buffer stored in GPU memory that is accessible by OpenGL.
 struct opengl_mesh {
-    GLuint vao = 0;
-    GLuint vbo = 0;
-    GLuint ebo = 0;
+    GLuint vao = 0;  // vertex array object.
+    GLuint vbo = 0;  // vertex buffer object (vertex positions).
+    GLuint nbo = 0;  // normals buffer object (per-vertex normals)
+    GLuint ebo = 0;  // element buffer object (per-face integer vertex coordinates)
 
     GLsizei N_indices = 0;
     GLsizei N_vertices = 0;
@@ -178,6 +195,8 @@ struct opengl_mesh {
             if(l_N_indices < 3) continue; // Ignore faces that cannot be broken into triangles.
             this->N_triangles += static_cast<GLsizei>(l_N_indices - 2);
         }
+        const auto N_vert_normals = static_cast<GLsizei>(meshes.vertex_normals.size());
+        const bool has_vert_normals = (N_vert_normals == this->N_vertices);
 
         // Find an axis-aligned bounding box.
         const auto inf = std::numeric_limits<double>::infinity();
@@ -210,18 +229,23 @@ struct opengl_mesh {
 
         // Marshall the vertex and index information in CPU-accessible buffers where they can be freely
         // preprocessed.
-        std::vector<float> vertices;
-        vertices.reserve(3 * this->N_vertices);
+        std::vector<vec3<float>> vertices;
+        vertices.reserve(this->N_vertices);
         for(const auto &v : meshes.vertices){
             // Scale each of x, y, and z to [-1,+1], respecting the aspect ratio, but shrink down further to
             // [-1/sqrt(3),+1/sqrt(3)] to account for rotation. Scaling down will ensure the corners are not clipped
             // when the cube is rotated.
-            vec3<double> w( (2.0 * (v.x - x_min) / (x_max - x_min) - 1.0) / std::sqrt(3.0),
+            vec3<float>  w( (2.0 * (v.x - x_min) / (x_max - x_min) - 1.0) / std::sqrt(3.0),
                             (2.0 * (v.y - y_min) / (y_max - y_min) - 1.0) / std::sqrt(3.0),
                             (2.0 * (v.z - z_min) / (z_max - z_min) - 1.0) / std::sqrt(3.0) );
-            vertices.push_back(static_cast<float>(w.x));
-            vertices.push_back(static_cast<float>(w.y));
-            vertices.push_back(static_cast<float>(w.z));
+            vertices.push_back(w);
+        }
+
+        std::vector<vec3<float>> normals;
+        if(has_vert_normals){
+            normals.reserve(this->N_vertices);
+        }else{
+            normals.resize(this->N_vertices, vec3<float>(0,0,0));
         }
         
         std::vector<unsigned int> indices;
@@ -234,15 +258,43 @@ struct opengl_mesh {
             const auto it_2 = std::next(it_1);
             const auto end = std::end(f);
             for(auto it_3 = std::next(it_2); it_3 != end; ++it_3){
-                indices.push_back(static_cast<unsigned int>(*it_1));
-                indices.push_back(static_cast<unsigned int>(*it_2));
-                indices.push_back(static_cast<unsigned int>(*it_3));
+                const auto i_A = static_cast<unsigned int>( (reverse_normals) ? *it_1 : *it_3 );
+                const auto i_B = static_cast<unsigned int>( *it_2 );
+                const auto i_C = static_cast<unsigned int>( (reverse_normals) ? *it_3 : *it_1 );
+
+                indices.push_back(i_A);
+                indices.push_back(i_B);
+                indices.push_back(i_C);
+
+                if(!has_vert_normals){
+                    // Make area-averaged normals for each vertex by summing the area-weighted normal for each face.
+                    const auto awn = (meshes.vertices[i_C] - meshes.vertices[i_B]).Cross(meshes.vertices[i_A] - meshes.vertices[i_B]);
+                    const auto fawn = vec3<float>( static_cast<float>(awn.x),  static_cast<float>(awn.y), static_cast<float>(awn.z) );
+                                                 
+                    normals[i_A] += fawn;
+                    normals[i_B] += fawn;
+                    normals[i_C] += fawn;
+                }
             }
         }
-        if(reverse_normals){
-            std::reverse(std::begin(indices), std::end(indices));
-        }
         this->N_indices = static_cast<GLsizei>(indices.size());
+
+        if(has_vert_normals){
+            // Convert from double to float.
+            for(const auto& v : meshes.vertex_normals){
+                normals.push_back( vec3<float>( static_cast<float>(v.x),
+                                                static_cast<float>(v.y),
+                                                static_cast<float>(v.z) ) );
+            }
+
+        }else{
+            // Note that this step is not needed if we normalize in the shader. Probably best to keep it correct though.
+            for(auto &v : normals) v = v.unit();
+        }
+
+        if(vertices.size() != normals.size()){
+            throw std::logic_error("Vertex normals not consistent with vertex positions");
+        }
 
         // Push the data into OpenGL buffers.
         CHECK_FOR_GL_ERRORS();
@@ -253,7 +305,16 @@ struct opengl_mesh {
         CHECK_FOR_GL_ERRORS();
         glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
         CHECK_FOR_GL_ERRORS();
-        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), static_cast<void*>(vertices.data()), GL_STATIC_DRAW); // Copy vertex data.
+        glBufferData(GL_ARRAY_BUFFER, (3 * vertices.size()) * sizeof(GLfloat), static_cast<void*>(vertices.data()), GL_STATIC_DRAW); // Copy vertex data.
+        CHECK_FOR_GL_ERRORS();
+
+        // Normals data.
+        glGenBuffers(1, &this->nbo); // Create a VBO inside the OpenGL context.
+        if(this->nbo == 0) throw std::runtime_error("Unable to generate vertex buffer object");
+        CHECK_FOR_GL_ERRORS();
+        glBindBuffer(GL_ARRAY_BUFFER, this->nbo);
+        CHECK_FOR_GL_ERRORS();
+        glBufferData(GL_ARRAY_BUFFER, (3 * normals.size()) * sizeof(GLfloat), static_cast<void*>(normals.data()), GL_STATIC_DRAW); // Copy normals data.
         CHECK_FOR_GL_ERRORS();
 
         // Element data.
@@ -277,15 +338,22 @@ struct opengl_mesh {
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0); // Vertex positions, 3 floats per vertex, attrib index 0.
         CHECK_FOR_GL_ERRORS();
 
+        glBindBuffer(GL_ARRAY_BUFFER, this->nbo);
+        CHECK_FOR_GL_ERRORS();
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0); // Vertex normals, 3 floats per vertex, attrib index 1.
+        CHECK_FOR_GL_ERRORS();
+
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ebo);
         CHECK_FOR_GL_ERRORS();
-        glVertexAttribPointer(1, 3, GL_UNSIGNED_INT, GL_FALSE, 0, 0); // Indices, 3 coordinates per face (triangles only), attrib index 1.
+        glVertexAttribPointer(2, 3, GL_UNSIGNED_INT, GL_FALSE, 0, 0); // Indices, 3 coordinates per face (triangles only), attrib index 2.
         CHECK_FOR_GL_ERRORS();
 
 
         glEnableVertexAttribArray(0);
         CHECK_FOR_GL_ERRORS();
         glEnableVertexAttribArray(1);
+        CHECK_FOR_GL_ERRORS();
+        glEnableVertexAttribArray(2);
         CHECK_FOR_GL_ERRORS();
 
         FUNCINFO("Registered new OpenGL mesh");
@@ -312,6 +380,7 @@ struct opengl_mesh {
         // Bind the vertex array object so we can unlink the attribute buffers.
         if( (0 < this->vao)
         &&  (0 < this->vbo)
+        &&  (0 < this->nbo)
         &&  (0 < this->ebo) ){
             glBindVertexArray(this->vao);
             glDisableVertexAttribArray(0); // Free OpenGL resources.
@@ -320,16 +389,132 @@ struct opengl_mesh {
 
             // Delete the attribute buffers and then finally the vertex array object.
             glDeleteBuffers(1, &this->ebo);
+            glDeleteBuffers(1, &this->nbo);
             glDeleteBuffers(1, &this->vbo);
             glDeleteVertexArrays(1, &this->vao);
             CHECK_FOR_GL_ERRORS();
         }
 
         // Reset accessible class state for good measure.
-        this->ebo = this->vbo = this->vao = 0;
+        this->ebo = this->vbo = this->nbo = this->vao = 0;
         this->N_triangles = this->N_indices = this->N_vertices = 0;
     };
 };
+
+class ogl_shader_program {
+    private:
+        GLuint program_ID;
+
+    public:
+        // Compiles and links the provided shaders. Also registers them with OpenGL.
+        // Throws on failure.
+        ogl_shader_program( std::string vert_shader_src,
+                            std::string frag_shader_src,
+                            std::ostream &os){
+
+            // Compile vertex shader.
+            GLchar* vert_shader_src_c[2] = { static_cast<GLchar*>(vert_shader_src.data()), nullptr };
+            GLuint vert_handle = glCreateShader(GL_VERTEX_SHADER);
+            glShaderSource(vert_handle, 1, vert_shader_src_c, NULL);
+            glCompileShader(vert_handle);
+
+            {
+                GLint status = 0, log_length = 0;
+                glGetShaderiv(vert_handle, GL_COMPILE_STATUS, &status);
+                glGetShaderiv(vert_handle, GL_INFO_LOG_LENGTH, &log_length);
+                if(1 < log_length){
+                    std::string buf;
+                    buf.resize((long int)(log_length + 1), '\0');
+                    glGetShaderInfoLog(vert_handle, log_length, NULL, static_cast<GLchar*>(&(buf[0])) );
+                    os << "Vertex shader compilation log:\n" << buf;
+                }
+                if( static_cast<GLboolean>(status) == GL_FALSE ){
+                    throw std::runtime_error("Unable to compile vertex shader");
+                }
+            }
+
+            // Compile fragment shader.
+            GLchar* frag_shader_src_c[2] = { static_cast<GLchar*>(frag_shader_src.data()), nullptr };
+            GLuint frag_handle = glCreateShader(GL_FRAGMENT_SHADER);
+            glShaderSource(frag_handle, 1, frag_shader_src_c, NULL);
+            glCompileShader(frag_handle);
+
+            {
+                GLint status = 0, log_length = 0;
+                glGetShaderiv(frag_handle, GL_COMPILE_STATUS, &status);
+                glGetShaderiv(frag_handle, GL_INFO_LOG_LENGTH, &log_length);
+                if(1 < log_length){
+                    std::string buf;
+                    buf.resize((long int)(log_length + 1), '\0');
+                    glGetShaderInfoLog(frag_handle, log_length, NULL, static_cast<GLchar*>(&(buf[0])) );
+                    os << "Fragment shader compilation log:\n" << buf;
+                }
+                if( static_cast<GLboolean>(status) == GL_FALSE ){
+                    throw std::runtime_error("Unable to compile fragment shader");
+                }
+            }
+
+            // Link shaders into a program.
+            GLuint custom_gl_program = glCreateProgram();
+            glAttachShader(custom_gl_program, vert_handle);
+            glAttachShader(custom_gl_program, frag_handle);
+            glLinkProgram(custom_gl_program);
+
+            {
+                GLint status = 0, log_length = 0;
+                glGetProgramiv(custom_gl_program, GL_LINK_STATUS, &status);
+                glGetProgramiv(custom_gl_program, GL_INFO_LOG_LENGTH, &log_length);
+                if(1 < log_length){
+                    std::string buf;
+                    buf.resize((long int)(log_length + 1), '\0');
+                    glGetProgramInfoLog(custom_gl_program, log_length, NULL, static_cast<GLchar*>(&(buf[0])) );
+                    os << "Shader link log:\n" << buf;
+                }
+                if( static_cast<GLboolean>(status) == GL_FALSE ){
+                    throw std::runtime_error("Unable to link shader program");
+                }
+            }
+
+            // Lazily delete the shaders.
+            glDetachShader(custom_gl_program, vert_handle);
+            glDetachShader(custom_gl_program, frag_handle);
+            glDeleteShader(vert_handle);
+            glDeleteShader(frag_handle);
+
+            // Shader program is now valid and registered.
+            this->program_ID = custom_gl_program;
+        }
+
+        // Unregisters shader program from OpenGL.
+        ~ogl_shader_program(){
+            glDeleteProgram( this->program_ID );
+        }
+
+        // Get the program ID for use in rendering.
+        GLuint get_program_ID() const {
+            return this->program_ID;
+        }
+};
+
+static
+std::unique_ptr<ogl_shader_program>
+compile_shader_program(const std::array<char, 2048> &vert_shader_src,
+                       const std::array<char, 2048> &frag_shader_src,
+                       std::array<char, 2048> &shader_log ){
+    shader_log.fill('\0');
+    std::stringstream ss;
+    try{
+        auto l_custom_shader = std::make_unique<ogl_shader_program>(array_to_string(vert_shader_src),
+                                                                    array_to_string(frag_shader_src),
+                                                                    ss);
+        return std::move(l_custom_shader);
+    }catch(const std::exception &e){
+        shader_log = string_to_array(ss.str());
+        throw;
+    };
+    return nullptr;
+}
+
 
 enum class brush_t {
     // 2D brushes.
@@ -653,6 +838,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool show_image_hover_tooltips = true;
         bool adjust_window_level_enabled = false;
         bool adjust_colour_map_enabled = false;
+        bool view_shader_editor_enabled = false;
     } view_toggles;
 
     // Plot viewer state.
@@ -762,12 +948,15 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool precess = true;
         bool render_wireframe = true;
         bool reverse_normals = false;
-        bool use_lighting = false;
+        bool use_lighting = true;
+        bool use_opaque = false;
 
         double precess_rate = 1.0;
         double rot_x = 0.0;
         double rot_y = 0.0;
-        double rot_z = 0.0;
+
+        double zoom = 1.0;
+        double cam_distort = 0.0;
 
         std::array<float, 4> colours = { 1.000, 0.588, 0.005, 0.8 };
     } mesh_display_transform;
@@ -808,9 +997,9 @@ bool SDL_Viewer(Drover &DICOM_data,
         all,      // Spatially overlapping pixels from within any image array.
     } time_course_image_inclusivity = time_course_image_inclusivity_t::current;
     bool time_course_abscissa_relative = false;
-    std::array<char, 1024> time_course_abscissa_key;
+    std::array<char, 2048> time_course_abscissa_key;
     string_to_array(time_course_abscissa_key, "ContentTime");
-    std::array<char, 1024> time_course_text_entry;
+    std::array<char, 2048> time_course_text_entry;
     string_to_array(time_course_text_entry, "");
 
     // --------------------------------------------- Setup ------------------------------------------------
@@ -890,19 +1079,86 @@ bool SDL_Viewer(Drover &DICOM_data,
     }
     CHECK_FOR_GL_ERRORS();
     if(!ImGui_ImplOpenGL3_Init()){
-        throw std::runtime_error("ImGui unable to initialize OpenGL with given shader.");
+        throw std::runtime_error("ImGui unable to initialize OpenGL with default shader.");
     }
     CHECK_FOR_GL_ERRORS();
+    std::string gl_version;
+    std::string glsl_version;
     try{
-        auto gl_version = reinterpret_cast<const char *>(glGetString(GL_VERSION));
-        auto glsl_version = reinterpret_cast<const char *>(glGetString(GL_SHADING_LANGUAGE_VERSION));
-        if(gl_version == nullptr) throw std::runtime_error("OpenGL version not accessible.");
-        if(glsl_version == nullptr) throw std::runtime_error("GLSL version not accessible.");
+        auto l_gl_version = reinterpret_cast<const char *>(glGetString(GL_VERSION));
+        auto l_glsl_version = reinterpret_cast<const char *>(glGetString(GL_SHADING_LANGUAGE_VERSION));
+        if(l_gl_version == nullptr) throw std::runtime_error("OpenGL version not accessible.");
+        if(l_glsl_version == nullptr) throw std::runtime_error("GLSL version not accessible.");
+        gl_version = std::string(l_gl_version);
+        glsl_version = PurgeCharsFromString(std::string(l_glsl_version), ".");
 
-        FUNCINFO("Initialized OpenGL '" << std::string(gl_version) << "' with GLSL '" << std::string(glsl_version) << "'");
+        FUNCINFO("Initialized OpenGL '" << gl_version << "' with GLSL '" << glsl_version << "'");
     }catch(const std::exception &e){
         FUNCWARN("Unable to detect OpenGL/GLSL version");
     }
+
+    // ------------------------------------------ Shaders -------------------------------------------------
+
+    std::array<char, 2048> vert_shader_src = string_to_array(
+        "#version " + glsl_version + "\n"
+        "\n"
+        "in vec3 v_pos;\n"
+        "in vec3 v_norm;\n"
+        "\n"
+        "uniform mat4 mvp_matrix;      // model-view-projection matrix.\n"
+        "uniform mat4 mv_matrix;       // model-view matrix.\n"
+        "uniform mat3 norm_matrix;     // rotation-only matrix.\n"
+        "\n"
+        "uniform vec4 diffuse_colour;\n"
+        "uniform vec4 user_colour;\n"
+        "uniform vec3 light_position;\n"
+        "uniform bool use_lighting;\n"
+        "\n"
+        "out vec4 interp_colour;\n"
+        "\n"
+        "void main(){\n"
+        "    gl_Position = mvp_matrix * vec4(v_pos, 1.0);\n"
+        "\n"
+        "    if(use_lighting){\n"
+        "        vec3 l_norm = normalize(norm_matrix * v_norm);\n"
+        "\n"
+        "        vec4 l_pos4 = mv_matrix * vec4(v_pos, 1.0);\n"
+        "        vec3 l_pos3 = l_pos4.xyz / l_pos4.w;\n"
+        "\n"
+        "        vec3 l_light_pos = vec3(-1000.0, -1000.0, 250.0);\n"
+        "        vec3 light_dir = normalize( l_light_pos - l_pos3 );\n"
+        "\n"
+        "        float diffuse_intensity = max(0.0, 1.0 + 0.5*dot(l_norm, light_dir));\n"
+        "\n"
+        "        interp_colour.rgb = diffuse_intensity * diffuse_colour.rgb;\n"
+        "        //interp_colour.a = 1.0;\n"
+        "        interp_colour.a = user_colour.a;\n"
+        "    }else{\n"
+        "        interp_colour = user_colour;\n"
+        "    }\n"
+        "}\n" );
+
+    std::array<char, 2048> frag_shader_src = string_to_array(
+        "#version " + glsl_version + "\n"
+        "\n"
+        "in vec4 interp_colour;\n"
+        "\n"
+        "uniform vec4 user_colour;\n"
+        "uniform bool use_lighting;\n"
+        "\n"
+        "out vec4 frag_colour;\n"
+        "\n"
+        "void main(){\n"
+        "    frag_colour = 0.65 * interp_colour + 0.35 * user_colour;\n"
+        "}\n" );
+
+    std::array<char, 2048> shader_log; // Output from most recent compilation and linking.
+
+    //FUNCINFO("Using default vertex shader source: '" << array_to_string(vert_shader_src) << "'");
+    //FUNCINFO("Using default fragment shader source: '" << array_to_string(frag_shader_src) << "'");
+
+    // Note: the following will throw if the default shader fails to compile and link.
+    auto custom_shader = compile_shader_program(vert_shader_src, frag_shader_src, shader_log);
 
     // -------------------------------- Functors for various things ---------------------------------------
 
@@ -1745,7 +2001,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::TableSetupColumn("Value");
                 ImGui::TableHeadersRow();
 
-                std::array<char, 1024> metadata_text_entry;
+                std::array<char, 2048> metadata_text_entry;
                 string_to_array(metadata_text_entry, "");
 
                 int i = 0;
@@ -1804,7 +2060,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // Open file dialog state.
     std::filesystem::path open_file_root = std::filesystem::current_path();
-    std::array<char,1024> root_entry_text;
+    std::array<char,2048> root_entry_text;
     enum class file_selection_intent {
         files,    // Treat files as files that should be loaded using Load_Files() and eagerly converted into operations.
         scripts,  // Treat files as scripts that should be read as text files and the contents not interpretted.
@@ -2276,6 +2532,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::MenuItem("Table Metadata", nullptr, &view_toggles.view_table_metadata_enabled);
                     ImGui::MenuItem("Script Editor", nullptr, &view_toggles.view_script_editor_enabled);
                     ImGui::MenuItem("Script Feedback", nullptr, &view_toggles.view_script_feedback);
+                    ImGui::MenuItem("Shader Editor", nullptr, &view_toggles.view_shader_editor_enabled);
                     ImGui::EndMenu();
                 }
                 if(ImGui::BeginMenu("Adjust")){
@@ -2500,6 +2757,69 @@ bool SDL_Viewer(Drover &DICOM_data,
         if( view_toggles.view_metrics_window ){
             ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
             ImGui::ShowMetricsWindow(&view_toggles.view_metrics_window);
+        }
+
+        // Display the shader editor dialog.
+        const auto display_shader_editor = [&view_toggles,
+                                            &custom_shader,
+                                            &vert_shader_src,
+                                            &frag_shader_src,
+                                            &shader_log ]() -> void {
+            if( !view_toggles.view_shader_editor_enabled ) return;
+
+            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
+            if(ImGui::Begin("Shader Editor", &view_toggles.view_shader_editor_enabled )){
+                ImVec2 window_extent = ImGui::GetContentRegionAvail();
+                if(ImGui::Button("Compile", ImVec2(window_extent.x/4, 0))){ 
+                    std::stringstream ss;
+                    try{
+                        auto l_custom_shader = compile_shader_program(vert_shader_src,
+                                                                      frag_shader_src,
+                                                                      shader_log);
+                        custom_shader = std::move(l_custom_shader);
+                        shader_log = string_to_array( array_to_string(shader_log) + "\nShader updated" );
+                    }catch(const std::exception &e){
+                        FUNCWARN("Shader compilation failed: '" << e.what() << "'");
+                    };
+                }
+
+
+                ImGui::Text("Vertex shader");
+                ImVec2 edit_box_extent = ImGui::GetContentRegionAvail();
+                edit_box_extent.y *= 3.0 / 7.0;
+
+                ImGuiInputTextFlags flags;
+                ImGui::InputTextMultiline("#vert_shader_editor",
+                                          vert_shader_src.data(),
+                                          vert_shader_src.size(),
+                                          edit_box_extent, flags);
+
+                ImGui::Text("Fragment shader");
+                edit_box_extent = ImGui::GetContentRegionAvail();
+                edit_box_extent.y *= 3.0 / 4.0;
+                ImGui::InputTextMultiline("#frag_shader_editor",
+                                          frag_shader_src.data(),
+                                          frag_shader_src.size(),
+                                          edit_box_extent, flags);
+
+                ImGui::Text("Compilation feedback");
+                flags |= ImGuiInputTextFlags_ReadOnly;
+                edit_box_extent = ImGui::GetContentRegionAvail();
+                ImGui::InputTextMultiline("#shader_compile_feedback",
+                                          shader_log.data(),
+                                          shader_log.size(),
+                                          edit_box_extent, flags);
+
+            }
+            ImGui::End();
+            return;
+        };
+        try{
+            display_shader_editor();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in display_shader_editor(): '" << e.what() << "'");
+            throw;
         }
 
         // Display the script editor dialog.
@@ -4384,7 +4704,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     }
                     ImGui::TableHeadersRow();
 
-                    std::array<char, 1024> buf;
+                    std::array<char, 2048> buf;
                     string_to_array(buf, "");
 
                     ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
@@ -4793,6 +5113,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                           &display_metadata_table,
                                           &recompute_smesh_iters,
                                           &need_to_reload_opengl_mesh,
+                                          &custom_shader,
                                           &frame_count ]() -> void {
 
             std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
@@ -4847,6 +5168,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::Checkbox("Metadata", &view_toggles.view_mesh_metadata_enabled);
                     ImGui::Checkbox("Precess", &mesh_display_transform.precess);
                     ImGui::Checkbox("Wireframe", &mesh_display_transform.render_wireframe);
+                    ImGui::Checkbox("Cull back faces", &mesh_display_transform.use_opaque);
                     if(ImGui::Checkbox("Reverse normals", &mesh_display_transform.reverse_normals)){
                         reload_opengl_mesh();
                     }
@@ -4858,9 +5180,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                     drag_speed = 0.3f;
                     clamp_l = -360.0 * 10.0;
                     clamp_h =  360.0 * 10.0;
-                    ImGui::DragScalar("X rotation", ImGuiDataType_Double, &mesh_display_transform.rot_x, drag_speed, &clamp_l, &clamp_h, "%.1f");
-                    ImGui::DragScalar("Y rotation", ImGuiDataType_Double, &mesh_display_transform.rot_y, drag_speed, &clamp_l, &clamp_h, "%.1f");
-                    ImGui::DragScalar("Z rotation", ImGuiDataType_Double, &mesh_display_transform.rot_z, drag_speed, &clamp_l, &clamp_h, "%.1f");
+                    ImGui::DragScalar("A rotation", ImGuiDataType_Double, &mesh_display_transform.rot_x, drag_speed, &clamp_l, &clamp_h, "%.1f");
+                    ImGui::DragScalar("B rotation", ImGuiDataType_Double, &mesh_display_transform.rot_y, drag_speed, &clamp_l, &clamp_h, "%.1f");
+
+                    drag_speed = 0.005f;
+                    clamp_l = -10.0;
+                    clamp_h = 10.0;
+                    ImGui::DragScalar("Zoom", ImGuiDataType_Double, &mesh_display_transform.zoom, drag_speed, &clamp_l, &clamp_h, "%.1f");
+                    ImGui::DragScalar("Camera distort", ImGuiDataType_Double, &mesh_display_transform.cam_distort, drag_speed, &clamp_l, &clamp_h, "%.1f");
                     if(ImGui::Button("Reset")){
                         mesh_display_transform = mesh_display_transform_t();
                     }
@@ -4893,7 +5220,6 @@ bool SDL_Viewer(Drover &DICOM_data,
         // Handle direct OpenGL rendering.
         {
             CHECK_FOR_GL_ERRORS();
-            glViewport(0, 0, static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y));
             glClearColor(background_colour.x,
                          background_colour.y,
                          background_colour.z,
@@ -4901,74 +5227,199 @@ bool SDL_Viewer(Drover &DICOM_data,
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             CHECK_FOR_GL_ERRORS();
 
-            glPushMatrix();
-            glLoadIdentity();
-            glRotated(mesh_display_transform.rot_x,  1.0f, 0.0f, 0.0f);
-            glRotated(mesh_display_transform.rot_y,  0.0f, 1.0f, 0.0f);
-            glRotated(mesh_display_transform.rot_z,  0.0f, 0.0f, 1.0f);
             if(mesh_display_transform.precess){
                 mesh_display_transform.rot_x += 0.0028 * mesh_display_transform.precess_rate;
                 mesh_display_transform.rot_y -= 0.0104 * mesh_display_transform.precess_rate;
-                mesh_display_transform.rot_z += 0.0012 * mesh_display_transform.precess_rate;
             }
             mesh_display_transform.rot_x = std::fmod(mesh_display_transform.rot_x, 360.0);
             mesh_display_transform.rot_y = std::fmod(mesh_display_transform.rot_y, 360.0);
-            mesh_display_transform.rot_z = std::fmod(mesh_display_transform.rot_z, 360.0);
 
+            // Locate uniform locations in the custom shader program.
+            if(!custom_shader) throw std::logic_error("No available shader, cannot continue");
+            const auto custom_gl_program = custom_shader->get_program_ID();
+            auto shader_user_colour_loc = glGetUniformLocation(custom_gl_program, "user_colour");
+            auto shader_diffuse_colour_loc = glGetUniformLocation(custom_gl_program, "diffuse_colour");
+            auto mvp_loc = glGetUniformLocation(custom_gl_program, "mvp_matrix");
+            auto mv_loc = glGetUniformLocation(custom_gl_program, "mv_matrix");
+            auto norm_loc = glGetUniformLocation(custom_gl_program, "norm_matrix");
+            auto use_lighting_loc = glGetUniformLocation(custom_gl_program, "use_lighting");
 
-            // Account for viewport aspect ratio to make the render square.
-            const auto w = static_cast<int>(io.DisplaySize.x);
-            const auto h = static_cast<int>(io.DisplaySize.y);
-            const auto l_w = std::min(w, h);
-            const auto l_h = std::min(h, w);
-            glViewport((w - l_w)/2, (h - l_h)/2, l_w, l_h);
+            // Activate the custom shader program.
+            // Note: this must be done after locating uniforms but before uploading them.
+            glUseProgram(custom_gl_program);
+
+            // Set various matrices that describe the coordinate system transformations.
+            const auto wpos  = ImGui::GetMainViewport()->WorkPos;
+            const auto wsize = ImGui::GetMainViewport()->WorkSize;
+            const auto waspect = wsize.x / wsize.y;
+
+            // Override to normalized and aspect-corrected screen space coords.
+            auto l_bound = -waspect/mesh_display_transform.zoom;
+            auto r_bound =  waspect/mesh_display_transform.zoom;
+            auto t_bound = -1.0/mesh_display_transform.zoom;
+            auto b_bound =  1.0/mesh_display_transform.zoom;
+            auto n_bound = -1000.0f/mesh_display_transform.zoom;
+            auto f_bound =  1000.0f/mesh_display_transform.zoom;
+
+            // Orthographic projection.
+            num_array<float> proj(4,4,0.0f);
+            proj.coeff(0,0) = 2.0f/(r_bound - l_bound);
+            proj.coeff(1,1) = 2.0f/(t_bound - b_bound);
+            proj.coeff(2,2) = -2.0f/(f_bound - n_bound);
+            proj.coeff(0,3) = -(r_bound + l_bound) / (r_bound - l_bound);
+            proj.coeff(1,3) = -(t_bound + b_bound) / (t_bound - b_bound);
+            proj.coeff(2,3) = -(f_bound + n_bound) / (f_bound - n_bound);
+            proj.coeff(3,3) = 1.0f;
+            proj = proj.transpose();
+
+            // Model matrix.
+            num_array<float> model = num_array<float>().identity(4);
+
+            // Camera matrix.
+            auto make_camera_matrix = [](const vec3<double> &cam_pos,
+                                         const vec3<double> &target_pos,
+                                         const vec3<double> &up_unit){
+
+                num_array<float> out(4, 4, 0.0f);
+
+                // Extract the camera-facing coordinate system via a Gram-Schmidt-like process.
+                const auto inward   = (cam_pos - target_pos).unit(); // From target point of view.
+                const auto leftward = up_unit.Cross(inward).unit();
+                const auto upward   = inward.Cross(leftward).unit();
+
+                if( inward.isfinite()
+                &&  leftward.isfinite()
+                &&  upward.isfinite() ){
+                /*
+                    // Rotational component (inverted = transposed).
+                    out.coeff(0,0) = leftward.x;
+                    out.coeff(0,1) = leftward.y;
+                    out.coeff(0,2) = leftward.z;
+                                 
+                    out.coeff(1,0) = upward.x;
+                    out.coeff(1,1) = upward.y;
+                    out.coeff(1,2) = upward.z;
+                                 
+                    out.coeff(2,0) = inward.x;
+                    out.coeff(2,1) = inward.y;
+                    out.coeff(2,2) = inward.z;
+
+                    // Translational component (inverted = negated).
+                    out.coeff(0,3) = - cam_pos.Dot(leftward);
+                    out.coeff(1,3) = - cam_pos.Dot(upward);
+                    out.coeff(2,3) = - cam_pos.Dot(inward);
+                */
+                    // Rotational component.
+                    out.coeff(0,0) = leftward.x;
+                    out.coeff(1,0) = leftward.y;
+                    out.coeff(2,0) = leftward.z;
+                                 
+                    out.coeff(0,1) = upward.x;
+                    out.coeff(1,1) = upward.y;
+                    out.coeff(2,1) = upward.z;
+                                 
+                    out.coeff(0,2) = inward.x;
+                    out.coeff(1,2) = inward.y;
+                    out.coeff(2,2) = inward.z;
+
+                    // Translational component.
+                    out.coeff(0,3) = cam_pos.Dot(leftward);
+                    out.coeff(1,3) = cam_pos.Dot(upward);
+                    out.coeff(2,3) = cam_pos.Dot(inward);
+
+                    // Projection component.
+                    out.coeff(3,3) = 1.0f;
+                    out = out.transpose();
+
+                }else{
+                    out = num_array<float>().identity(4);
+                }
+                return out;
+            };
+
+            auto extract_normal_matrix = [](const num_array<float>& mvp){
+                // Extract only the rotational component of the MVP matrix. This can be used to transform mesh normals.
+                if( (mvp.num_rows() != 4) || (mvp.num_cols() != 4) ){
+                    throw std::logic_error("Expected 4x4 matrix");
+                }
+                num_array<float> out(3, 3, 0.0f);
+                for(long int r = 0; r < 3; ++r){
+                    for(long int c = 0; c < 3; ++c){
+                        out.coeff(r,c) = mvp.read_coeff(r,c);
+                    }
+                }
+                return out;
+            };
+
+            // Rotate camera according as per user's settings / precession.
+            const auto pi = std::acos(-1.0);
+            const auto x_rot = mesh_display_transform.rot_x * (2.0 * pi) / 360.0;
+            const auto y_rot = mesh_display_transform.rot_y * (2.0 * pi) / 360.0;
+            vec3<double> cam_pos = vec3<double>(0,0,1).rotate_around_y(y_rot)
+                                                      .rotate_around_x(x_rot)
+                                                      .unit() * std::exp(mesh_display_transform.cam_distort - 5.0);
+            vec3<double> target_pos = vec3<double>(0.0, 0.0, 0.0);
+            vec3<double> up_unit = vec3<double>(0.0, 1.0, 0.0).unit();
+            num_array<float> camera = make_camera_matrix( cam_pos, target_pos, up_unit );
+
+            // Final coordinate system transforms.
+            const auto mv = camera * model;
+            const auto mvp = proj * mv;
+            const auto norm = extract_normal_matrix(mvp);
+
+            // Pass uniforms to custom shader program iff they are needed.
+            const std::vector<float> mv_data( mv.cbegin(), mv.cend() );
+            if(0 <= mv_loc) glUniformMatrix4fv(mv_loc, 1, GL_FALSE, mv_data.data());
+
+            const std::vector<float> mvp_data( mvp.cbegin(), mvp.cend() );
+            if(0 <= mvp_loc) glUniformMatrix4fv(mvp_loc, 1, GL_FALSE, mvp_data.data());
+
+            const std::vector<float> norm_data( norm.cbegin(), norm.cend() );
+            if(0 <= norm_loc) glUniformMatrix3fv(norm_loc, 1, GL_FALSE, norm_data.data());
+
+            if(0 <= use_lighting_loc){
+                glUniform1ui(use_lighting_loc, (mesh_display_transform.use_lighting ? GL_TRUE : GL_FALSE));
+            }
+            if(0 < shader_user_colour_loc){
+                glUniform4f(shader_user_colour_loc, mesh_display_transform.colours[0],
+                                                    mesh_display_transform.colours[1],
+                                                    mesh_display_transform.colours[2],
+                                                    mesh_display_transform.colours[3] );
+            }
+            if(0 <= shader_diffuse_colour_loc){
+                glUniform4f(shader_diffuse_colour_loc, mesh_display_transform.colours[0],
+                                                       mesh_display_transform.colours[1],
+                                                       mesh_display_transform.colours[2],
+                                                       mesh_display_transform.colours[3] );
+            }
             CHECK_FOR_GL_ERRORS();
 
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            glColor4f( mesh_display_transform.colours[0],
-                       mesh_display_transform.colours[1],
-                       mesh_display_transform.colours[2],
-                       mesh_display_transform.colours[3] );
+            // Set how overlapping vertices are rendered.
+            glEnable(GL_DEPTH_TEST);
+            glDepthFunc(GL_LESS);
 
-            if(mesh_display_transform.use_lighting){
-                glShadeModel(GL_FLAT);
-                GLint use_double_sided_lighting = 1;
-                glLightModeliv(GL_LIGHT_MODEL_TWO_SIDE, &use_double_sided_lighting);
-                std::array<float, 4> light_diff { 1.0, 1.0, 1.0, 1.0 };
-                std::array<float, 4> light_spec { 1.0, 1.0, 1.0, 1.0 };
-                std::array<float, 4> light_pos { static_cast<float>(1.5 * std::sin(1.0 * frame_count / 53.0)),
-                                                 static_cast<float>(1.5 * std::sin(1.0 * frame_count / 75.0)),
-                                                 1.5,  1.0 };
+            if(mesh_display_transform.use_opaque){
+                glDisable(GL_BLEND);
 
-                CHECK_FOR_GL_ERRORS();
-                glEnable(GL_LIGHTING);
-                CHECK_FOR_GL_ERRORS();
-                glEnable(GL_LIGHT0);
-                CHECK_FOR_GL_ERRORS();
-                glLightModelfv(GL_LIGHT_MODEL_AMBIENT, mesh_display_transform.colours.data());
-                glLightfv(GL_LIGHT0, GL_AMBIENT,       mesh_display_transform.colours.data());
-                glLightfv(GL_LIGHT0, GL_DIFFUSE,  light_diff.data());
-                glLightfv(GL_LIGHT0, GL_SPECULAR, light_spec.data());
-                glLightfv(GL_LIGHT0, GL_POSITION, light_pos.data());
-                CHECK_FOR_GL_ERRORS();
+                glEnable(GL_CULL_FACE);
+                glCullFace(GL_BACK);
+
+            }else{
+                glEnable(GL_BLEND);
+                // Order-dependent rendering:
+                //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                // Order-independent rendering.
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
+                glDisable(GL_CULL_FACE);
             }
+
+            CHECK_FOR_GL_ERRORS();
 
             draw_surface_meshes();
 
-            if(mesh_display_transform.use_lighting){
-                CHECK_FOR_GL_ERRORS();
-                glDisable(GL_LIGHT0);
-                CHECK_FOR_GL_ERRORS();
-                glDisable(GL_LIGHTING);
-                CHECK_FOR_GL_ERRORS();
-            }
-
-            glPopMatrix();
-            glViewport(0, 0, static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y));
             CHECK_FOR_GL_ERRORS();
         }
-
 
         // Show a pop-up with information about DICOMautomaton.
         if(view_toggles.set_about_popup){
@@ -5014,6 +5465,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                                  // signal termination!
 
     oglm_ptr = nullptr;  // Release OpenGL resources while context is valid.
+    custom_shader = nullptr;
     Free_OpenGL_Texture(current_texture);
     Free_OpenGL_Texture(contouring_texture);
     Free_OpenGL_Texture(scale_bar_texture);
