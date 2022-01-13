@@ -1091,7 +1091,16 @@ bool SDL_Viewer(Drover &DICOM_data,
         if(l_gl_version == nullptr) throw std::runtime_error("OpenGL version not accessible.");
         if(l_glsl_version == nullptr) throw std::runtime_error("GLSL version not accessible.");
         gl_version = std::string(l_gl_version);
-        glsl_version = PurgeCharsFromString(std::string(l_glsl_version), ".");
+
+        // The string can often have extra characters and punctuation. The standard guarantees a space separates
+        // components, but version numbers may still be present.
+        auto version_vec = SplitStringToVector(std::string(l_glsl_version), " ", 'd');
+        glsl_version = (version_vec.empty()) ? "" : version_vec.front();
+
+        glsl_version.erase( std::remove_if( std::begin(glsl_version),
+                                            std::end(glsl_version),
+                                            [](unsigned char c){ return !std::isdigit(c); } ),
+                            std::end(glsl_version) );
 
         FUNCINFO("Initialized OpenGL '" << gl_version << "' with GLSL '" << glsl_version << "'");
     }catch(const std::exception &e){
