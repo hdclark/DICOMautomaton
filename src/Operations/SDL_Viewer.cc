@@ -5257,6 +5257,15 @@ bool SDL_Viewer(Drover &DICOM_data,
             // Note: this must be done after locating uniforms but before uploading them.
             glUseProgram(custom_gl_program);
 
+            // Account for viewport aspect ratio to make the render square.
+            const auto w = static_cast<int>(io.DisplaySize.x);
+            const auto h = static_cast<int>(io.DisplaySize.y);
+            const auto l_w = std::min(w, h);
+            const auto l_h = std::min(h, w);
+            //glViewport((w - l_w)/2, (h - l_h)/2, l_w, l_h);
+            glViewport(0, 0, w, h);
+            CHECK_FOR_GL_ERRORS();
+
             // Set various matrices that describe the coordinate system transformations.
             const auto wpos  = ImGui::GetMainViewport()->WorkPos;
             const auto wsize = ImGui::GetMainViewport()->WorkSize;
