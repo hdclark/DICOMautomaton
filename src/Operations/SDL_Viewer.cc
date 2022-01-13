@@ -950,6 +950,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool reverse_normals = false;
         bool use_lighting = true;
         bool use_opaque = false;
+        bool use_smoothing = true;
 
         double precess_rate = 1.0;
         double rot_x = 0.0;
@@ -1113,8 +1114,10 @@ bool SDL_Viewer(Drover &DICOM_data,
         "uniform vec4 user_colour;\n"
         "uniform vec3 light_position;\n"
         "uniform bool use_lighting;\n"
+        "uniform bool use_smoothing;\n"
         "\n"
         "out vec4 interp_colour;\n"
+        "flat out vec4 flat_colour;\n"
         "\n"
         "void main(){\n"
         "    gl_Position = mvp_matrix * vec4(v_pos, 1.0);\n"
@@ -1136,20 +1139,24 @@ bool SDL_Viewer(Drover &DICOM_data,
         "    }else{\n"
         "        interp_colour = user_colour;\n"
         "    }\n"
+        "    flat_colour = interp_colour;\n"
         "}\n" );
 
     std::array<char, 2048> frag_shader_src = string_to_array(
         "#version " + glsl_version + "\n"
         "\n"
         "in vec4 interp_colour;\n"
+        "flat in vec4 flat_colour;\n"
         "\n"
         "uniform vec4 user_colour;\n"
         "uniform bool use_lighting;\n"
+        "uniform bool use_smoothing;\n"
         "\n"
         "out vec4 frag_colour;\n"
         "\n"
         "void main(){\n"
-        "    frag_colour = 0.65 * interp_colour + 0.35 * user_colour;\n"
+        "    frag_colour = 0.65 * (use_smoothing ? interp_colour : flat_colour)\n"
+        "                + 0.35 * user_colour;\n"
         "}\n" );
 
     std::array<char, 2048> shader_log; // Output from most recent compilation and linking.
@@ -5173,6 +5180,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         reload_opengl_mesh();
                     }
                     ImGui::Checkbox("Use lighting", &mesh_display_transform.use_lighting);
+                    ImGui::Checkbox("Use smoothing", &mesh_display_transform.use_smoothing);
                     float drag_speed = 0.05f;
                     double clamp_l = -10.0;
                     double clamp_h =  10.0;
@@ -5243,6 +5251,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             auto mv_loc = glGetUniformLocation(custom_gl_program, "mv_matrix");
             auto norm_loc = glGetUniformLocation(custom_gl_program, "norm_matrix");
             auto use_lighting_loc = glGetUniformLocation(custom_gl_program, "use_lighting");
+            auto use_smoothing_loc = glGetUniformLocation(custom_gl_program, "use_smoothing");
 
             // Activate the custom shader program.
             // Note: this must be done after locating uniforms but before uploading them.
@@ -5379,6 +5388,9 @@ bool SDL_Viewer(Drover &DICOM_data,
 
             if(0 <= use_lighting_loc){
                 glUniform1ui(use_lighting_loc, (mesh_display_transform.use_lighting ? GL_TRUE : GL_FALSE));
+            }
+            if(0 <= use_smoothing_loc){
+                glUniform1ui(use_smoothing_loc, (mesh_display_transform.use_smoothing ? GL_TRUE : GL_FALSE));
             }
             if(0 < shader_user_colour_loc){
                 glUniform4f(shader_user_colour_loc, mesh_display_transform.colours[0],
