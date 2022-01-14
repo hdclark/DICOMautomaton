@@ -945,13 +945,15 @@ bool SDL_Viewer(Drover &DICOM_data,
     std::atomic<bool> need_to_reload_opengl_mesh = true;
 
     struct mesh_display_transform_t {
-        bool precess = true;
+        // Viewing options.
         bool render_wireframe = true;
         bool reverse_normals = false;
         bool use_lighting = true;
         bool use_opaque = false;
         bool use_smoothing = true;
 
+        // Camera transformations.
+        bool precess = true;
         double precess_rate = 1.0;
         double rot_x = 0.0;
         double rot_y = 0.0;
@@ -959,6 +961,10 @@ bool SDL_Viewer(Drover &DICOM_data,
         double zoom = 1.0;
         double cam_distort = 0.0;
 
+        // Transformations applied to all models.
+        num_array<float> model = num_array<float>().identity(4);
+
+        // Nominal colours.
         std::array<float, 4> colours = { 1.000, 0.588, 0.005, 0.8 };
     } mesh_display_transform;
 
@@ -5166,6 +5172,37 @@ bool SDL_Viewer(Drover &DICOM_data,
                 //ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
                 ImGui::SetNextWindowPos(ImVec2(10, 20), ImGuiCond_FirstUseEver);
                 if(ImGui::Begin("Meshes", &view_toggles.view_meshes_enabled)){
+
+                    // Alter the common model transformation.
+                    if(ImGui::IsWindowFocused()){
+                        if( ImGui::IsKeyDown( SDL_SCANCODE_RIGHT ) ){
+                            mesh_display_transform.model.coeff(0,3) += 0.001;
+                        }
+                        if( ImGui::IsKeyDown( SDL_SCANCODE_LEFT ) ){
+                            mesh_display_transform.model.coeff(0,3) -= 0.001;
+                        }
+                        if( ImGui::IsKeyDown( SDL_SCANCODE_DOWN ) ){
+                            mesh_display_transform.model.coeff(1,3) += 0.001;
+                        }
+                        if( ImGui::IsKeyDown( SDL_SCANCODE_UP ) ){
+                            mesh_display_transform.model.coeff(1,3) -= 0.001;
+                        }
+                        if( ImGui::IsKeyDown( SDL_SCANCODE_W ) ){
+                            mesh_display_transform.model.coeff(2,3) += 0.001;
+                        }
+                        if( ImGui::IsKeyDown( SDL_SCANCODE_S ) ){
+                            mesh_display_transform.model.coeff(2,3) -= 0.001;
+                        }
+                        if( ImGui::IsKeyDown( SDL_SCANCODE_Q ) ){
+                            auto rot = affine_rotate<float>( vec3<float>(0,0,0), vec3<float>(0,0,1), 3.14/100.0 );
+                            mesh_display_transform.model = mesh_display_transform.model * static_cast<num_array<float>>(rot);
+                        }
+                        if( ImGui::IsKeyDown( SDL_SCANCODE_E ) ){
+                            auto rot = affine_rotate<float>( vec3<float>(0,0,0), vec3<float>(0,0,1), -3.14/100.0 );
+                            mesh_display_transform.model = mesh_display_transform.model * static_cast<num_array<float>>(rot);
+                        }
+                    }
+
                     std::string msg = "Drawing "_s
                                     + std::to_string(oglm_ptr->N_vertices) + " vertices, "
                                     + std::to_string(oglm_ptr->N_indices) + " indices, and "
@@ -5300,7 +5337,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             proj = proj.transpose();
 
             // Model matrix.
-            num_array<float> model = num_array<float>().identity(4);
+            num_array<float> model = mesh_display_transform.model;
 
             // Camera matrix.
             auto make_camera_matrix = [](const vec3<double> &cam_pos,
