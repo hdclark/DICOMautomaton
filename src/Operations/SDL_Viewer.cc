@@ -5181,10 +5181,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                         if( ImGui::IsKeyDown( SDL_SCANCODE_LEFT ) ){
                             mesh_display_transform.model.coeff(0,3) -= 0.001;
                         }
-                        if( ImGui::IsKeyDown( SDL_SCANCODE_DOWN ) ){
+                        if( ImGui::IsKeyDown( SDL_SCANCODE_UP ) ){
                             mesh_display_transform.model.coeff(1,3) += 0.001;
                         }
-                        if( ImGui::IsKeyDown( SDL_SCANCODE_UP ) ){
+                        if( ImGui::IsKeyDown( SDL_SCANCODE_DOWN ) ){
                             mesh_display_transform.model.coeff(1,3) -= 0.001;
                         }
                         if( ImGui::IsKeyDown( SDL_SCANCODE_W ) ){
@@ -5320,21 +5320,30 @@ bool SDL_Viewer(Drover &DICOM_data,
             // Override to normalized and aspect-corrected screen space coords.
             auto l_bound = -waspect/mesh_display_transform.zoom;
             auto r_bound =  waspect/mesh_display_transform.zoom;
-            auto t_bound = -1.0/mesh_display_transform.zoom;
-            auto b_bound =  1.0/mesh_display_transform.zoom;
+            auto b_bound = -1.0/mesh_display_transform.zoom;
+            auto t_bound =  1.0/mesh_display_transform.zoom;
             auto n_bound = -1000.0f/mesh_display_transform.zoom;
             auto f_bound =  1000.0f/mesh_display_transform.zoom;
 
             // Orthographic projection.
-            num_array<float> proj(4,4,0.0f);
-            proj.coeff(0,0) = 2.0f/(r_bound - l_bound);
-            proj.coeff(1,1) = 2.0f/(t_bound - b_bound);
-            proj.coeff(2,2) = -2.0f/(f_bound - n_bound);
-            proj.coeff(0,3) = -(r_bound + l_bound) / (r_bound - l_bound);
-            proj.coeff(1,3) = -(t_bound + b_bound) / (t_bound - b_bound);
-            proj.coeff(2,3) = -(f_bound + n_bound) / (f_bound - n_bound);
-            proj.coeff(3,3) = 1.0f;
-            proj = proj.transpose();
+            auto make_orthographic_projection_matrix = []( float left_bound   = -1.0f,
+                                                           float right_bound  =  1.0f,
+                                                           float bottom_bound = -1.0f,
+                                                           float top_bound    =  1.0f,
+                                                           float near_bound   = -1.0f,
+                                                           float far_bound    =  1.0f ){
+                num_array<float> proj(4,4,0.0f);
+                proj.coeff(0,0) = 2.0f/(right_bound - left_bound);
+                proj.coeff(1,1) = 2.0f/(top_bound - bottom_bound);
+                proj.coeff(2,2) = 2.0f/(near_bound - far_bound);
+                proj.coeff(0,3) = -(right_bound + left_bound) / (right_bound - left_bound);
+                proj.coeff(1,3) = -(top_bound + bottom_bound) / (top_bound - bottom_bound);
+                proj.coeff(2,3) = -(far_bound + near_bound) / (far_bound - near_bound);
+                proj.coeff(3,3) = 1.0f;
+                proj = proj.transpose();
+                return proj;
+            };
+            auto proj = make_orthographic_projection_matrix(l_bound, r_bound, b_bound, t_bound, n_bound, f_bound);
 
             // Model matrix.
             num_array<float> model = mesh_display_transform.model;
