@@ -97,6 +97,7 @@
 #include "Operations/EvaluateDoseVolumeStats.h"
 #include "Operations/EvaluateNTCPModels.h"
 #include "Operations/EvaluateTCPModels.h"
+#include "Operations/ValidateTPlan.h"
 #include "Operations/ExportFITSImages.h"
 #include "Operations/ExportLineSamples.h"
 #include "Operations/ExportSurfaceMeshes.h"
@@ -315,6 +316,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["EvaluateDoseVolumeStats"] = std::make_pair(OpArgDocEvaluateDoseVolumeStats, EvaluateDoseVolumeStats);
     out["EvaluateNTCPModels"] = std::make_pair(OpArgDocEvaluateNTCPModels, EvaluateNTCPModels);
     out["EvaluateTCPModels"] = std::make_pair(OpArgDocEvaluateTCPModels, EvaluateTCPModels);
+    out["ValidateTPlan"] = std::make_pair(OpArgDocValidateTPlan, ValidateTPlan);
     out["ExportFITSImages"] = std::make_pair(OpArgDocExportFITSImages, ExportFITSImages);
     out["ExportLineSamples"] = std::make_pair(OpArgDocExportLineSamples, ExportLineSamples);
     out["ExportPointClouds"] = std::make_pair(OpArgDocExportPointClouds, ExportPointClouds);

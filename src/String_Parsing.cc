@@ -57,6 +57,15 @@ parse_functions(const std::string &in,
         const auto clean_string = [](const std::string &in){
             return Canonicalize_String2(in, CANONICALIZE::TRIM_ENDS);
         };
+        const auto clean_function_name = [](const std::string &in){
+            std::string out = in;
+            out.erase( std::remove_if( std::begin(out), std::end(out),
+                                       [](unsigned char c){
+                                           return !(std::isalnum(c) || (c == '_')); 
+                                       }),
+                       std::end(out));
+            return out;
+        };
         
         parsed_function pshtl;
         std::string shtl;
@@ -220,6 +229,7 @@ parse_functions(const std::string &in,
 
                     // Assign function name.
                     shtl = clean_string(shtl);
+                    shtl = clean_function_name(shtl);
                     if(shtl.empty()){
                         throw std::invalid_argument("Function names cannot be empty");
                     }
