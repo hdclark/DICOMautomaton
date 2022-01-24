@@ -970,7 +970,17 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // Tables.
     using disp_table_it_t = decltype(DICOM_data.table_data.begin());
-    long int table_num = -1;
+    struct table_display_t {
+        long int table_num = -1;
+        bool use_keyword_highlighting = true;
+        std::map<std::string, ImVec4> colours = { { std::string("pass"),  ImVec4(0.175f, 0.500f, 0.000f, 1.00f) },
+                                                  { std::string("true"),  ImVec4(0.175f, 0.500f, 0.000f, 1.00f) },
+                                                  { std::string("fail"),  ImVec4(0.600f, 0.100f, 0.000f, 1.00f) },
+                                                  { std::string("false"), ImVec4(0.600f, 0.100f, 0.000f, 1.00f) } };
+
+        //ImVec4 pass_colour = ImVec4(0.175f, 0.500f, 0.000f, 1.00f);
+        //ImVec4 fail_colour = ImVec4(0.600f, 0.100f, 0.000f, 1.00f);
+    } table_display;
 
     // ------------------------------------------ Viewer State --------------------------------------------
     auto background_colour = ImVec4(0.025f, 0.087f, 0.118f, 1.00f);
@@ -1704,15 +1714,15 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // Recompute table iterators for the current table
     const auto recompute_table_iters = [ &DICOM_data,
-                                         &table_num ](){
+                                         &table_display ](){
         std::tuple<bool, disp_table_it_t > out;
         std::get<bool>( out ) = false;
 
         do{ 
             const auto has_tables = DICOM_data.Has_Table_Data();
             if( !has_tables ) break;
-            if( !isininc(1, table_num+1, DICOM_data.table_data.size()) ) break;
-            auto table_ptr_it = std::next(DICOM_data.table_data.begin(), table_num);
+            if( !isininc(1, table_display.table_num+1, DICOM_data.table_data.size()) ) break;
+            auto table_ptr_it = std::next(DICOM_data.table_data.begin(), table_display.table_num);
             if( table_ptr_it == std::end(DICOM_data.table_data) ) break;
 
             std::get<bool>( out ) = true;
@@ -4665,7 +4675,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         const auto display_tables = [&view_toggles,
                                      &drover_mutex,
                                      &mutex_dt,
-                                     &table_num,
+                                     &table_display,
                                      &recompute_table_iters,
                                      &display_metadata_table,
                                      &DICOM_data ]() -> void {
@@ -4677,31 +4687,32 @@ bool SDL_Viewer(Drover &DICOM_data,
             ||  !DICOM_data.Has_Table_Data() ) return;
 
             // Display a selection and navigation window.
-            ImGui::SetNextWindowSize(ImVec2(450, 400), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(450, 650), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_FirstUseEver);
             ImGui::Begin("Table Selection", &view_toggles.view_tables_enabled);
 
             if(ImGui::Button("Create table")){
                 DICOM_data.table_data.emplace_back( std::make_shared<Sparse_Table>() );
-                table_num = DICOM_data.table_data.size() - 1;
+                table_display.table_num = DICOM_data.table_data.size() - 1;
             }
             ImGui::SameLine();
             if(ImGui::Button("Remove table")){
                 auto [table_is_valid, table_ptr_it] = recompute_table_iters();
                 if(table_is_valid){
                     DICOM_data.table_data.erase( table_ptr_it );
-                    table_num -= 1;
+                    table_display.table_num -= 1;
                 }
             }
+            ImGui::Checkbox("Keyword highlighting", &table_display.use_keyword_highlighting);
 
             // Scroll through tables.
             if(DICOM_data.Has_Table_Data()){
-                int scroll_tables = table_num;
+                int scroll_tables = table_display.table_num;
                 const int N_tables = DICOM_data.table_data.size();
                 ImGui::SliderInt("Table", &scroll_tables, 0, N_tables - 1);
                 const long int new_table_num = std::clamp(scroll_tables, 0, N_tables - 1);
-                if(new_table_num != table_num){
-                    table_num = new_table_num;
+                if(new_table_num != table_display.table_num){
+                    table_display.table_num = new_table_num;
                 }
             }
 
@@ -4742,6 +4753,17 @@ bool SDL_Viewer(Drover &DICOM_data,
                         ImGui::PushID(cell_ID);
                         ImGui::SetNextItemWidth(-FLT_MIN);
                         const bool key_changed = ImGui::InputText("##datum", buf.data(), buf.size() - 1);
+ 
+                        // Colourize if keywords are present.
+                        if(table_display.use_keyword_highlighting){
+                            for(const auto &kv : table_display.colours){
+                                if(v == kv.first){
+                                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(kv.second));
+                                    break;
+                                }
+                            }
+                        }
+
                         ImGui::PopID();
  
                         //const auto im_row = ImGui::TableGetRowIndex() + min_row - 1; // +1 for the header.
