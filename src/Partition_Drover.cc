@@ -66,6 +66,13 @@ std::list<std::string> Extract_Unique_Metadata_Values(ptr p, const std::string &
                                                p->metadata[key] : std::optional<std::string>();
         if(val_opt) out.emplace_back(val_opt.value());
         return out;
+
+    // Sparse_Table.
+    }else if constexpr (std::is_same_v< obj_t, Sparse_Table >){
+        std::optional<std::string> val_opt = ( p->table.metadata.count(key) != 0 ) ?
+                                               p->table.metadata[key] : std::optional<std::string>();
+        if(val_opt) out.emplace_back(val_opt.value());
+        return out;
     }
 
     throw std::logic_error("Type not detected properly. Refusing to continue.");
@@ -117,12 +124,13 @@ Partition_Drover( Drover& DICOM_data,
             }
         };
 
+        compute_keys_and_partition(DICOM_data.image_data);
         compute_keys_and_partition(DICOM_data.point_data);
         compute_keys_and_partition(DICOM_data.smesh_data);
         compute_keys_and_partition(DICOM_data.tplan_data);
         compute_keys_and_partition(DICOM_data.lsamp_data);
         compute_keys_and_partition(DICOM_data.trans_data);
-        compute_keys_and_partition(DICOM_data.image_data);
+        compute_keys_and_partition(DICOM_data.table_data);
 
         if(DICOM_data.Has_Contour_Data()){
             while(!DICOM_data.contour_data->ccs.empty()){
