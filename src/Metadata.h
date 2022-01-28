@@ -18,8 +18,13 @@
 #include "Structs.h"
 
 
-using metadata_map_t = std::map<std::string,std::string>;
-using metadata_multimap_t = std::map<std::string,std::set<std::string>>;
+using metadata_map_t = std::map<std::string,std::string>; // key, value.
+using metadata_multimap_t = std::map<std::string,std::set<std::string>>; // key, value.
+
+// ---------------------------------- Extractors ------------------------------------------
+// A routine that extracts metadata from each of the Drover members.
+template <class ptr>
+std::set<std::string> Extract_Distinct_Values(ptr p, const std::string &key);
 
 // -------------------------------- Generic helpers ---------------------------------------
 //Generic helper functions.

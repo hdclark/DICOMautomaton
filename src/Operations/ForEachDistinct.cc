@@ -6,6 +6,7 @@
 #include <fstream>
 #include <iterator>
 #include <list>
+#include <set>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -62,7 +63,7 @@ OperationDoc OpArgDocForEachDistinct() {
         " However, partitions are generated before any child operations are invoked, so newly-added elements (e.g.,"
         " new Image_Arrays) created by one invocation will not participate in subsequent invocations."
         " The order of the de-partitioned data is stable, though additional elements added will follow the partition"
-        " they were generated from (and will thus not necessarily be placed at the last element)."
+        " they were generated from (and will thus not necessarily be placed at the last position)."
     );
     out.notes.emplace_back(
         "This operation will most often be used to process data group-wise rather than as a whole."
@@ -82,6 +83,14 @@ OperationDoc OpArgDocForEachDistinct() {
                                  "SeriesInstanceUID", 
                                  "StationName" };
 
+    out.args.emplace_back();
+    out.args.back().name = "IncludeNA";
+    out.args.back().desc = "Whether to perform the loop body for the 'N/A' (i.e., non-matching) group if non-empty.";
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
+
     return out;
 }
 
@@ -91,22 +100,32 @@ bool ForEachDistinct(Drover &DICOM_data,
               const std::string& FilenameLex){
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto KeysCommonStr = OptArgs.getValueStr("KeysCommon").value();
+    const auto IncludeNAStr = OptArgs.getValueStr("IncludeNA").value();
 
     //-----------------------------------------------------------------------------------------------------------------
+    const auto regex_true = Compile_Regex("^tr?u?e?$");
+    const bool IncludeNA = std::regex_match(IncludeNAStr, regex_true);
 
     // Parse the chain of metadata keys.
-    std::list<std::string> KeysCommon;
+    std::set<std::string> KeysCommon;
     for(auto a : SplitStringToVector(KeysCommonStr, ';', 'd')){
-        KeysCommon.emplace_back(a);
+        KeysCommon.insert(a);
     }
 
     if(!KeysCommon.empty()){
         auto pd = Partition_Drover(DICOM_data, KeysCommon );
 
         // Invoke children operations over each valid partition.
-        FUNCINFO("Performing children operations over " << pd.partitions.size() << " partitions (+1 'N/A' partition)");
+        FUNCINFO("Performing children operation(s) over " << pd.partitions.size() << " partitions");
         for(auto & d : pd.partitions){
             if(!Operation_Dispatcher(d, InvocationMetadata, FilenameLex, OptArgs.getChildren())){
+                throw std::runtime_error("Child analysis failed. Cannot continue");
+            }
+        }
+
+        if(IncludeNA && pd.na_partition){
+            FUNCINFO("Performing children operation(s) for 'N/A' partition");
+            if(!Operation_Dispatcher(pd.na_partition.value(), InvocationMetadata, FilenameLex, OptArgs.getChildren())){
                 throw std::runtime_error("Child analysis failed. Cannot continue");
             }
         }
