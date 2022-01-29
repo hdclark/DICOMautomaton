@@ -1064,6 +1064,11 @@ std::map<std::string,std::string> get_metadata_top_level_tags(const std::filesys
         // Note that each contour can have a separate FrameOfReferenceUID. This simple mapping won't work in those cases.
         out["FrameOfReferenceUID"] = out["ReferencedFrameOfReferenceSequence/FrameOfReferenceUID"];
     }
+    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                              { { 0x3006, 0x0010, "ReferencedFrameOfReferenceSequence" },
+                                                { 0x3006, 0x0012, "RTReferencedStudySequence" },
+                                                { 0x3006, 0x0014, "RTReferencedSeriesSequence" },
+                                                { 0x0020, 0x000e, "SeriesInstanceUID" } }) );
 
     //General Equipment Module.
     insert_as_string_if_nonempty(0x0008, 0x0070, "Manufacturer");
@@ -2199,8 +2204,18 @@ Load_TPlan_Config(const std::filesystem::path &FilenameIn){
         insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x0016}, prfx + "DoseReferenceDescription");
         insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x0020}, prfx + "DoseReferenceType");
         insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x300a, 0x0026}, prfx + "TargetPrescriptionDose");
-
     } // DoseReferenceSequence
+
+    // ReferencedStructureSetSequence
+    for(uint32_t i = 0; i < 100000; ++i){
+        ptr<imebra::dataSet> seq_item_ptr = base_node_ptr->getSequenceItem(0x300c, 0, 0x0060, i);
+        if(seq_item_ptr == nullptr) break;
+
+        const std::string prfx = R"***(ReferencedStructureSetSequence)***"_s + std::to_string(i) + R"***(/)***"_s;
+
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x0008, 0x1150}, prfx + "ReferencedSOPClassUID");
+        insert_as_string_if_nonempty(out->metadata, seq_item_ptr, {0x0008, 0x1155}, prfx + "ReferencedSOPInstanceUID");
+    } // ReferencedStructureSetSequence
 
 
     // ToleranceTableSequence

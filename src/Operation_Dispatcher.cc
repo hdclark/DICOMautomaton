@@ -113,6 +113,7 @@
 #include "Operations/ExtractPointsWarp.h"
 #include "Operations/False.h"
 #include "Operations/ForEachDistinct.h"
+#include "Operations/ForEachTPlan.h"
 #include "Operations/FVPicketFence.h"
 #include "Operations/GenerateCalibrationCurve.h"
 #include "Operations/GenerateMeshes.h"
@@ -332,6 +333,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ExtractPointsWarp"] = std::make_pair(OpArgDocExtractPointsWarp, ExtractPointsWarp);
     out["False"] = std::make_pair(OpArgDocFalse, False);
     out["ForEachDistinct"] = std::make_pair(OpArgDocForEachDistinct, ForEachDistinct);
+    out["ForEachTPlan"] = std::make_pair(OpArgDocForEachTPlan, ForEachTPlan);
     out["FVPicketFence"] = std::make_pair(OpArgDocFVPicketFence, FVPicketFence);
     out["GenerateCalibrationCurve"] = std::make_pair(OpArgDocGenerateCalibrationCurve, GenerateCalibrationCurve);
     out["GenerateMeshes"] = std::make_pair(OpArgDocGenerateMeshes, GenerateMeshes);

@@ -93,6 +93,7 @@ add_library(Operations_objs OBJECT
     ExtractPointsWarp.cc
     False.cc
     ForEachDistinct.cc
+    ForEachTPlan.cc
     FVPicketFence.cc
     GenerateCalibrationCurve.cc
     GenerateMeshes.cc

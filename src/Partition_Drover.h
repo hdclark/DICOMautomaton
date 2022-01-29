@@ -42,21 +42,21 @@ Partition_Drover( Drover &,
 Drover
 Combine_Partitioned_Drover( Partitioned_Drover & );
 
-/*
+
 // -------------------------------------------------------------------------------------------------------------------
 // ---------------------------------- TPlan partitioning based on DICOM linkage --------------------------------------
 // -------------------------------------------------------------------------------------------------------------------
-struct TPlan_Partitioned_Drover {
-    std::list< Drover > partitions;
-    Drover na_partition;
-    Drover original_order;
+struct Drover_Selection {
+    Drover select; // The relevant parts.
+    Drover extras; // The non-relevant parts.
 };
 
+// Split a Drover object into two parts based on relevance to a given Tplan.
+Drover_Selection
+Select_Drover( Drover &, std::list<std::shared_ptr<TPlan_Config>>::iterator );
 
-TPlan_Partitioned_Drover
-TPlan_Partition_Drover( Drover & );
-
+// Re-combine a split Drover object, handling additions/removals/modifications.
 Drover
-Combine_TPlan_Partitioned_Drover( TPlan_Partitioned_Drover & );
-*/
+Recombine_Selected_Drover( Drover_Selection );
+
 
