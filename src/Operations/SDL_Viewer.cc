@@ -4687,8 +4687,8 @@ bool SDL_Viewer(Drover &DICOM_data,
             ||  !DICOM_data.Has_Table_Data() ) return;
 
             // Display a selection and navigation window.
-            ImGui::SetNextWindowSize(ImVec2(450, 650), ImGuiCond_FirstUseEver);
-            ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(750, 500), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(680, 140), ImGuiCond_FirstUseEver);
             ImGui::Begin("Table Selection", &view_toggles.view_tables_enabled);
 
             if(ImGui::Button("Create table")){
