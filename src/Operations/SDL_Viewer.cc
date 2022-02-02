@@ -1324,7 +1324,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     const auto Free_OpenGL_Texture = [](opengl_texture_handle_t &tex){
         // Release the previous texture, iff needed.
-        if(tex.texture_number != 0){
+        if( tex.texture_exists &&
+            (tex.texture_number != 0) ){
             CHECK_FOR_GL_ERRORS();
             glBindTexture(GL_TEXTURE_2D, 0);
             glDeleteTextures(1, &tex.texture_number);
@@ -4366,16 +4367,18 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::Begin("Adjust Colour Map", &view_toggles.adjust_colour_map_enabled, ImGuiWindowFlags_AlwaysAutoResize);
                 bool reload_texture = false;
 
-                // Draw the scale bar.
-                auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(scale_bar_texture.texture_number));
-                ImGui::Image(gl_tex_ptr, ImVec2(250,25), ImVec2(0.0, 0.0), ImVec2(1.0, 1.0));
-
                 // Draw buttons for each available colour map.
                 for(size_t i = 0; i < colour_maps.size(); ++i){
                     if( ImGui::Button(colour_maps[i].first.c_str(), ImVec2(250, 0)) ){
                         colour_map = i;
                         reload_texture = true;
                     }
+                }
+
+                if(!reload_texture){
+                    // Draw the scale bar.
+                    auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(scale_bar_texture.texture_number));
+                    ImGui::Image(gl_tex_ptr, ImVec2(250,25), ImVec2(0.0, 0.0), ImVec2(1.0, 1.0));
                 }
 
                 ImGui::End();
@@ -5323,6 +5326,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
             // Activate the custom shader program.
             // Note: this must be done after locating uniforms but before uploading them.
+            GLuint prior_gl_program = 0;
+            glGetIntegerv(GL_CURRENT_PROGRAM, reinterpret_cast<GLint*>(&prior_gl_program));
             glUseProgram(custom_gl_program);
 
             // Account for viewport aspect ratio to make the render square.
@@ -5513,9 +5518,9 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
 
             CHECK_FOR_GL_ERRORS();
-
             draw_surface_meshes();
-
+            CHECK_FOR_GL_ERRORS();
+            glUseProgram(prior_gl_program);
             CHECK_FOR_GL_ERRORS();
         }
 
