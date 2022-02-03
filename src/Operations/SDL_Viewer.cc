@@ -832,6 +832,8 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_parameter_table = false;
         bool view_tables_enabled = true;
         bool view_table_metadata_enabled = false;
+        bool view_tplans_enabled = true;
+        bool view_tplan_metadata_enabled = false;
         bool save_time_profiles = false;
         bool view_script_editor_enabled = false;
         bool view_script_feedback = true;
@@ -981,6 +983,13 @@ bool SDL_Viewer(Drover &DICOM_data,
         //ImVec4 pass_colour = ImVec4(0.175f, 0.500f, 0.000f, 1.00f);
         //ImVec4 fail_colour = ImVec4(0.600f, 0.100f, 0.000f, 1.00f);
     } table_display;
+
+    // RT Plans.
+    using disp_tplan_it_t = decltype(DICOM_data.tplan_data.begin());
+    long int tplan_num = -1;
+    long int tplan_dynstate_num = -1;
+    long int tplan_statstate_num = -1;
+
 
     // ------------------------------------------ Viewer State --------------------------------------------
     auto background_colour = ImVec4(0.025f, 0.087f, 0.118f, 1.00f);
@@ -1728,6 +1737,25 @@ bool SDL_Viewer(Drover &DICOM_data,
 
             std::get<bool>( out ) = true;
             std::get<disp_table_it_t>( out ) = table_ptr_it;
+        }while(false);
+        return out;
+    };
+
+    // Recompute tplan iterators for the current tplan
+    const auto recompute_tplan_iters = [ &DICOM_data,
+                                         &tplan_num ](){
+        std::tuple<bool, disp_tplan_it_t > out;
+        std::get<bool>( out ) = false;
+
+        do{ 
+            const auto has_tplans = DICOM_data.Has_TPlan_Data();
+            if( !has_tplans ) break;
+            if( !isininc(1, tplan_num+1, DICOM_data.tplan_data.size()) ) break;
+            auto tplan_ptr_it = std::next(DICOM_data.tplan_data.begin(), tplan_num);
+            if( tplan_ptr_it == std::end(DICOM_data.tplan_data) ) break;
+
+            std::get<bool>( out ) = true;
+            std::get<disp_tplan_it_t>( out ) = tplan_ptr_it;
         }while(false);
         return out;
     };
@@ -2545,14 +2573,11 @@ bool SDL_Viewer(Drover &DICOM_data,
                         view_toggles.view_contouring_enabled = false;
                         tagged_pos = {};
                     }
-                    ImGui::MenuItem("Image Metadata", nullptr, &view_toggles.view_image_metadata_enabled);
                     ImGui::MenuItem("Image Hover Tooltips", nullptr, &view_toggles.show_image_hover_tooltips);
                     ImGui::MenuItem("Meshes", nullptr, &view_toggles.view_meshes_enabled);
                     if(ImGui::MenuItem("Plots", nullptr, &view_toggles.view_plots_enabled)){
                         lsamps_visible.clear();
                     }
-                    ImGui::MenuItem("Mesh Metadata", nullptr, &view_toggles.view_mesh_metadata_enabled);
-                    ImGui::MenuItem("Plot Hover Metadata", nullptr, &view_toggles.view_plots_metadata);
                     if(ImGui::MenuItem("Row and Column Profiles", nullptr, &view_toggles.view_row_column_profiles)){
                         row_profile.samples.clear();
                         col_profile.samples.clear();
@@ -2560,12 +2585,20 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if(ImGui::MenuItem("Time Profiles", nullptr, &view_toggles.view_time_profiles)){
                         time_profile.samples.clear();
                     };
-                    ImGui::MenuItem("Parameter Table", nullptr, &view_toggles.view_parameter_table);
+                    ImGui::MenuItem("RT Plans", nullptr, &view_toggles.view_tplans_enabled);
                     ImGui::MenuItem("Tables", nullptr, &view_toggles.view_tables_enabled);
-                    ImGui::MenuItem("Table Metadata", nullptr, &view_toggles.view_table_metadata_enabled);
                     ImGui::MenuItem("Script Editor", nullptr, &view_toggles.view_script_editor_enabled);
                     ImGui::MenuItem("Script Feedback", nullptr, &view_toggles.view_script_feedback);
+                    ImGui::MenuItem("Parameter Table", nullptr, &view_toggles.view_parameter_table);
                     ImGui::MenuItem("Shader Editor", nullptr, &view_toggles.view_shader_editor_enabled);
+                    ImGui::EndMenu();
+                }
+                if(ImGui::BeginMenu("Metadata")){
+                    ImGui::MenuItem("Image Metadata", nullptr, &view_toggles.view_image_metadata_enabled);
+                    ImGui::MenuItem("Mesh Metadata", nullptr, &view_toggles.view_mesh_metadata_enabled);
+                    ImGui::MenuItem("Plot Hover Metadata", nullptr, &view_toggles.view_plots_metadata);
+                    ImGui::MenuItem("RT Plan Metadata", nullptr, &view_toggles.view_tplan_metadata_enabled);
+                    ImGui::MenuItem("Table Metadata", nullptr, &view_toggles.view_table_metadata_enabled);
                     ImGui::EndMenu();
                 }
                 if(ImGui::BeginMenu("Adjust")){
@@ -4805,6 +4838,117 @@ bool SDL_Viewer(Drover &DICOM_data,
             display_tables();
         }catch(const std::exception &e){
             FUNCWARN("Exception in display_tables(): '" << e.what() << "'");
+            throw;
+        }
+
+        // Display RT plans.
+        const auto display_tplans = [&view_toggles,
+                                     &drover_mutex,
+                                     &mutex_dt,
+                                     &tplan_num,
+                                     &tplan_dynstate_num,
+                                     &tplan_statstate_num,
+                                     &recompute_tplan_iters,
+                                     &display_metadata_table,
+                                     &DICOM_data ]() -> void {
+
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            if(!drover_lock) return;
+
+            if( !view_toggles.view_tplans_enabled
+            ||  !DICOM_data.Has_TPlan_Data() ) return;
+
+            // Display a selection and navigation window.
+            ImGui::SetNextWindowSize(ImVec2(450, 400), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_FirstUseEver);
+            ImGui::Begin("RT Plans", &view_toggles.view_tplans_enabled);
+
+            // Scroll through RT plans.
+            if(DICOM_data.Has_TPlan_Data()){
+                int scroll_tplans = tplan_num;
+                const int N_tplans = DICOM_data.tplan_data.size();
+                ImGui::SliderInt("Plan", &scroll_tplans, 0, N_tplans - 1);
+                const long int new_tplan_num = std::clamp(scroll_tplans, 0, N_tplans - 1);
+                if(new_tplan_num != tplan_num){
+                    tplan_num = new_tplan_num;
+                }
+            }
+
+            ImGui::Checkbox("View RT plan metadata", &view_toggles.view_tplan_metadata_enabled);
+
+            if(auto [tplan_is_valid, tplan_ptr_it] = recompute_tplan_iters(); tplan_is_valid){
+
+                // Display the RT plan.
+                //
+                // Note: we currently only display the top-level metadata without any visual display.
+                ImGui::Begin("RT Plan", &view_toggles.view_tplans_enabled);
+                display_metadata_table( (*tplan_ptr_it)->metadata );
+                ImGui::End();
+
+                if( view_toggles.view_tplan_metadata_enabled
+                &&  !(*tplan_ptr_it)->dynamic_states.empty() ){
+                    // Scroll through dynamic states.
+                    int scroll_dynstate = tplan_dynstate_num;
+                    const int N_dynstates = (*tplan_ptr_it)->dynamic_states.size();
+                    ImGui::SliderInt("Beam", &scroll_dynstate, 0, N_dynstates - 1);
+                    const long int new_dynstate_num = std::clamp(scroll_dynstate, 0, N_dynstates - 1);
+                    if(new_dynstate_num != tplan_dynstate_num){
+                        tplan_dynstate_num = new_dynstate_num;
+                    }
+                    auto *dynstate_ptr = &( (*tplan_ptr_it)->dynamic_states.at(tplan_dynstate_num) );
+
+                    // Display the selected dynamic state (i.e., the beam).
+                    {
+                        std::stringstream ss;
+                        ss << "Beam number: " << std::to_string(dynstate_ptr->BeamNumber) << std::endl;
+                        ss << "Cumulative meterset: " << std::to_string(dynstate_ptr->FinalCumulativeMetersetWeight) << std::endl;
+                        ss << "Number of control points: " << std::to_string(dynstate_ptr->static_states.size()) << std::endl;
+                        ImGui::Text("%s", ss.str().c_str());
+                    }
+                    if(view_toggles.view_tplan_metadata_enabled){
+                        ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+                        ImGui::Begin("Beam view", &view_toggles.view_tplan_metadata_enabled);
+                        display_metadata_table( dynstate_ptr->metadata );
+                        ImGui::End();
+                    }
+
+                    if( !dynstate_ptr->static_states.empty() ){
+                        // Scroll through static states.
+                        int scroll_statstate = tplan_statstate_num;
+                        const int N_statstates = dynstate_ptr->static_states.size();
+                        ImGui::SliderInt("Control point", &scroll_statstate, 0, N_statstates - 1);
+                        const long int new_statstate_num = std::clamp(scroll_statstate, 0, N_statstates - 1);
+                        if(new_statstate_num != tplan_statstate_num){
+                            tplan_statstate_num = new_statstate_num;
+                        }
+                        auto *statstate_ptr = &( dynstate_ptr->static_states.at(tplan_statstate_num) );
+
+                        // Display the selected static state (i.e., the control point).
+                        {
+                            std::stringstream ss;
+                            ss << "Control point index: " << std::to_string(statstate_ptr->ControlPointIndex) << std::endl
+                               << "Cumulative meterset: " << std::to_string(statstate_ptr->CumulativeMetersetWeight) << std::endl
+                               << "Gantry angle: " << std::to_string(statstate_ptr->GantryAngle) << std::endl;
+                            ImGui::Text("%s", ss.str().c_str());
+                        }
+                        if(view_toggles.view_tplan_metadata_enabled){
+                            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+                            ImGui::Begin("Control point view", &view_toggles.view_tplan_metadata_enabled);
+                            display_metadata_table( statstate_ptr->metadata );
+                            ImGui::End();
+                        }
+
+                    }
+                }
+            }
+
+            ImGui::End();
+            return;
+        };
+        try{
+            display_tplans();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in display_tplans(): '" << e.what() << "'");
             throw;
         }
 
