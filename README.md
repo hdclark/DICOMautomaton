@@ -7,7 +7,8 @@
 [![Language Grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/hdclark/DICOMautomaton.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/hdclark/DICOMautomaton/context:cpp)
 [![GitLab CI Pipeline Status](https://gitlab.com/hdeanclark/DICOMautomaton/badges/master/pipeline.svg)](https://gitlab.com/hdeanclark/DICOMautomaton/-/commits/master)
 
-[![Latest Release DOI](https://zenodo.org/badge/89630691.svg)](https://zenodo.org/badge/latestdoi/89630691)
+[![Project DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4088796.svg)](https://doi.org/10.5281/zenodo.4088796)
+
 
 
 ![SDL_Viewer_01](https://user-images.githubusercontent.com/934858/136631960-585c14dc-75df-4d76-b037-1b09005008ed.png)
@@ -264,8 +265,7 @@ integration testing for specific workflows.
 ## License and Copying
 
 All materials herein which may be copywrited, where applicable, are. Copyright
-2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021 Hal
-Clark and other contributing authors.
+2010-2022 Hal Clark and contributing authors.
 
 See [LICENSE.txt](LICENSE.txt) for details about the license. Informally,
 `DICOMautomaton` is available under a GPLv3+ license. The Imebra library is
@@ -288,8 +288,8 @@ most relevant publication for that work or the most relevant release DOI, if pos
 [doi:10.5281/zenodo.4088796](https://doi.org/10.5281/zenodo.4088796).
 
 Individual releases are assigned a DOI too; the latest release DOI can be found via
-[![DOI](https://zenodo.org/badge/89630691.svg)](https://zenodo.org/badge/latestdoi/89630691)
-or by clicking [here](https://zenodo.org/badge/latestdoi/89630691).
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5962185.svg)](https://doi.org/10.5281/zenodo.5962185)
+or by clicking [here](https://doi.org/10.5281/zenodo.4088796).
 
 Finally, several publications describe core functionality of `DICOMautomaton`
 and may be more appropriate to cite.
