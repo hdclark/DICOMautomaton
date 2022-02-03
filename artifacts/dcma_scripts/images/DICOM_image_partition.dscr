@@ -2,7 +2,7 @@
 
 GroupImages(
     ImageSelection = 'all',
-    KeysCommon = 'PatientID;FrameOfReferenceUID;StudyInstanceUID;SeriesInstanceUID;SeriesNumber;SeriesDescription',
+    KeysCommon = 'PatientID;FrameOfReferenceUID;StudyInstanceUID;SeriesInstanceUID;SeriesNumber',
     AutoSelectKeysCommon = 'false',
     Enforce = ''
 ){};
