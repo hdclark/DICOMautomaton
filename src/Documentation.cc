@@ -326,7 +326,7 @@ void Emit_Documentation(std::ostream &os){
     reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
         "The core command-line interface to DICOMautomaton is the `dicomautomaton_dispatcher` program."
         " It is presents an interface based on chaining of discrete operations on collections of images,"
-        " DICOM images, DICOM radiotherapy files (RTSTRUCTS and RTDOSE), and various other types of files."
+        " DICOM images, DICOM radiotherapy files (RTSTRUCTs, RTPLANs, and RTDOSE), and various other types of files."
         " `dicomautomaton_dispatcher` has access to all defined operations described"
         " in [Operations](#operations). It can be used to launch both interactive and non-interactive"
         " tasks. Data can be sourced from a database or files in a variety of formats."
@@ -336,13 +336,6 @@ void Emit_Documentation(std::ostream &os){
         " [libexplicator](https://gitlab.com/hdeanclark/Explicator) or regular expressions."
         " The operations and parameters that provide these"
         " options are documented in [Operations](#operations)."
-    );
-    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-        "Filetype support differs in some cases. A custom FITS file reader and writer are supported,"
-        " and DICOM files are generally supported. There is currently no support for RTPLANs, though"
-        " DICOM image, RTSTRUCT, and RTDOSE files are well supported. There is limited support for"
-        " writing files -- currently JPEG, PNG, and FITS images; RTDOSE files; and Boost.Serialize"
-        " archive writing are supported."
     );
     reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
         "#### Usage Examples"
@@ -742,17 +735,6 @@ void Emit_Documentation(std::ostream &os){
     reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
         "DICOMautomaton depends on several heavily templated libraries and"
         " external projects. It requires a considerable amount of memory to build."
-    );
-
-    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-        "## DICOM-RT Support Incomplete"
-    );
-    reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-        "Support for the DICOM Radiotherapy extensions are limited."
-        " In particular, only RTDOSE files can currently be exported,"
-        " and RTPLAN files are not supported at all. Read support for"
-        " DICOM image modalities and RTSTRUCTS are generally supported well."
-        " Broader DICOM support is planned for a future release."
     );
 
     return;
