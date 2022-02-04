@@ -7,6 +7,7 @@ add_library(Operations_objs OBJECT
     AnalyzePicketFence.cc
     AnalyzeTPlan.cc
     And.cc
+    AnyOf.cc
     ApplyCalibrationCurve.cc
     AutoCropImages.cc
     Average.cc
@@ -130,6 +131,7 @@ add_library(Operations_objs OBJECT
     ModifyParameters.cc
     NegatePixels.cc
     NoOp.cc
+    NoneOf.cc
     NormalizeLineSamples.cc
     NormalizePixels.cc
     Not.cc

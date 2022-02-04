@@ -27,6 +27,7 @@
 #include "Operations/AnalyzePicketFence.h"
 #include "Operations/AnalyzeTPlan.h"
 #include "Operations/And.h"
+#include "Operations/AnyOf.h"
 #include "Operations/ApplyCalibrationCurve.h"
 #include "Operations/AutoCropImages.h"
 #include "Operations/Average.h"
@@ -150,6 +151,7 @@
 #include "Operations/ModifyParameters.h"
 #include "Operations/NegatePixels.h"
 #include "Operations/NoOp.h"
+#include "Operations/NoneOf.h"
 #include "Operations/NormalizeLineSamples.h"
 #include "Operations/NormalizePixels.h"
 #include "Operations/Not.h"
@@ -247,6 +249,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["AnalyzePicketFence"] = std::make_pair(OpArgDocAnalyzePicketFence, AnalyzePicketFence);
     out["AnalyzeTPlan"] = std::make_pair(OpArgDocAnalyzeTPlan, AnalyzeTPlan);
     out["And"] = std::make_pair(OpArgDocAnd, And);
+    out["AnyOf"] = std::make_pair(OpArgDocAnyOf, AnyOf);
     out["ApplyCalibrationCurve"] = std::make_pair(OpArgDocApplyCalibrationCurve, ApplyCalibrationCurve);
     out["AutoCropImages"] = std::make_pair(OpArgDocAutoCropImages, AutoCropImages);
     out["Average"] = std::make_pair(OpArgDocAverage, Average);
@@ -370,6 +373,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ModifyParameters"] = std::make_pair(OpArgDocModifyParameters, ModifyParameters);
     out["NegatePixels"] = std::make_pair(OpArgDocNegatePixels, NegatePixels);
     out["NoOp"] = std::make_pair(OpArgDocNoOp, NoOp);
+    out["NoneOf"] = std::make_pair(OpArgDocNoneOf, NoneOf);
     out["NormalizeLineSamples"] = std::make_pair(OpArgDocNormalizeLineSamples, NormalizeLineSamples);
     out["NormalizePixels"] = std::make_pair(OpArgDocNormalizePixels, NormalizePixels);
     out["Not"] = std::make_pair(OpArgDocNot, Not);

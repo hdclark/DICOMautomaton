@@ -39,6 +39,7 @@
 OperationDoc OpArgDocAnd() {
     OperationDoc out;
     out.name = "And";
+    out.aliases.emplace_back("AllOf");
     out.aliases.emplace_back("Group");
 
     out.desc = "This operation is a control flow meta-operation that requires all children to complete successfully.";
