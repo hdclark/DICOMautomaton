@@ -4881,6 +4881,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                 // Display the RT plan.
                 //
                 // Note: we currently only display the top-level metadata without any visual display.
+                ImGui::SetNextWindowSize(ImVec2(450, 600), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(ImVec2(40, 40), ImGuiCond_FirstUseEver);
                 ImGui::Begin("RT Plan", &view_toggles.view_tplans_enabled);
                 display_metadata_table( (*tplan_ptr_it)->metadata );
                 ImGui::End();
@@ -4906,7 +4908,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                         ImGui::Text("%s", ss.str().c_str());
                     }
                     if(view_toggles.view_tplan_metadata_enabled){
-                        ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+                        ImGui::SetNextWindowSize(ImVec2(450, 600), ImGuiCond_FirstUseEver);
+                        ImGui::SetNextWindowPos(ImVec2(80, 80), ImGuiCond_FirstUseEver);
                         ImGui::Begin("Beam view", &view_toggles.view_tplan_metadata_enabled);
                         display_metadata_table( dynstate_ptr->metadata );
                         ImGui::End();
@@ -4932,7 +4935,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                             ImGui::Text("%s", ss.str().c_str());
                         }
                         if(view_toggles.view_tplan_metadata_enabled){
-                            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+                            ImGui::SetNextWindowSize(ImVec2(450, 600), ImGuiCond_FirstUseEver);
+                            ImGui::SetNextWindowPos(ImVec2(120, 120), ImGuiCond_FirstUseEver);
                             ImGui::Begin("Control point view", &view_toggles.view_tplan_metadata_enabled);
                             display_metadata_table( statstate_ptr->metadata );
                             ImGui::End();
