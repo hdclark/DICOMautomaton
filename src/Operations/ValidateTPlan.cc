@@ -36,54 +36,6 @@
 
 
 
-struct common_context_t {
-    std::reference_wrapper< const parsed_function > pf;
-    std::reference_wrapper< TPlan_Config > plan;
-    std::reference_wrapper< tables::table2 > table;
-
-    std::reference_wrapper< Drover > DICOM_data;
-    std::reference_wrapper< const OperationArgPkg > OptArgs;
-    std::reference_wrapper< std::map<std::string, std::string> > InvocationMetadata;
-    std::reference_wrapper< const std::string > FilenameLex;
-
-    int64_t depth;
-    int64_t report_row;
-};
-
-
-
-bool dispatch_checks( common_context_t& c );
-
-
-// I'm toying with the idea of making classes into an object and factory function.
-// Upsides:
-//     - Easier to inspect (documentation).
-//     - Easier to implement check dispatch.
-//     - Better separation of tabular output from checks.
-//     - Easier to split up implementation of many checks (**** important upside for managing complexity *****)
-//     - Better re-use of checks. (Maybe? Not sure if would ever be needed separately??)
-//
-// Downsides:
-//     - Have to write out the function parameters a million times. (Use a macro???)
-//     - More complicated to handle tabular outputs. (Make an 'insert shrinkwrapped table B into table A at x,y cell' routine?)
-
-struct check_t {
-    std::string name;
-    std::string desc;
-    std::string name_regex;
-
-    using check_impl_t = std::function<bool(common_context_t& c)>;
-    check_impl_t check_impl;
-};
-
-struct table_placement_t {
-    int64_t empty_row;
-    int64_t pass_fail_col;
-    int64_t title_col;
-    int64_t expl_col;
-};
-
-table_placement_t get_table_placement(common_context_t& c);
 
 table_placement_t get_table_placement(common_context_t& c){
     table_placement_t out;
@@ -94,7 +46,53 @@ table_placement_t get_table_placement(common_context_t& c){
     return out;
 }
 
-std::vector<check_t> get_checks();
+
+// Ensure beam is a VMAT arc.
+static bool beam_is_vmat_arc(const Dynamic_Machine_State &beam){
+    const auto beg = std::begin(beam.static_states);
+    const auto end = std::end(beam.static_states);
+    const auto mmp = std::minmax_element( beg, end,
+                                          []( const Static_Machine_State &l,
+                                              const Static_Machine_State &r ){
+                                              return (l.GantryAngle < r.GantryAngle);
+                                          } );
+    return ( 1u < beam.static_states.size() )
+        && ( mmp.first != mmp.second )
+        && ( 1.0 < std::abs(mmp.first->GantryAngle - mmp.second->GantryAngle) );
+}
+
+// Get the collimator angle (should usually be unique).
+static std::optional<double> get_collimator_angle(const Dynamic_Machine_State &beam){
+    std::optional<double> out;
+    const double equivalent_angle_tol = 1.0; // in degrees.
+    if(!beam.static_states.empty()){
+        const auto beg = std::begin(beam.static_states);
+        const auto end = std::end(beam.static_states);
+        const auto mmp = std::minmax_element( beg, end,
+                                              []( const Static_Machine_State &l,
+                                                  const Static_Machine_State &r ){
+                                                  return (l.BeamLimitingDeviceAngle < r.BeamLimitingDeviceAngle);
+                                              } );
+        const auto disc = std::abs(mmp.first->BeamLimitingDeviceAngle - mmp.second->BeamLimitingDeviceAngle);
+        if(disc < equivalent_angle_tol){
+            out = mmp.first->BeamLimitingDeviceAngle;
+        }
+    }
+    return out;
+}
+
+// Look for angles closer than the user-provided tolerance.
+static bool minimal_separation_is_larger_than(std::vector<double> numbers,
+                                              double tolerance ){
+    const auto beg = std::begin(numbers);
+    const auto end = std::end(numbers);
+    std::sort( beg, end );
+    const auto dup = std::adjacent_find( beg, end,
+                                         [tolerance](const double &l, const double &r){
+                                             return std::abs(l - r) < tolerance;
+                                         } );
+    return (dup == end);
+};
 
 std::vector<check_t> get_checks(){
     std::vector<check_t> out;
@@ -175,6 +173,55 @@ std::vector<check_t> get_checks(){
         c.table.get().inject(c.report_row, tp.expl_col, RTPlanLabel);
         const bool has_space = (RTPlanLabel.find(" ") != std::string::npos);
         const bool passed = !has_space;
+        return passed;
+    };
+
+    out.emplace_back();
+    out.back().name = "has VMAT arc";
+    out.back().desc = "Ensure the plan name does not contain any spaces.";
+    out.back().name_regex = "^has[-_ ]?VMAT[-_ ]arc$";
+    out.back().check_impl = [](common_context_t& c) -> bool {
+        const auto tp = get_table_placement(c);
+
+        bool has_VMAT_arc = false;
+        for(const auto& beam : c.plan.get().dynamic_states){
+            has_VMAT_arc = beam_is_vmat_arc(beam);
+            if(has_VMAT_arc) break;
+        }
+        return has_VMAT_arc;
+    };
+
+    out.emplace_back();
+    out.back().name = "VMAT arc collimator angles not degenerate";
+    out.back().desc = "All VMAT arc collimator angles should be distinct to minimize optimization cost-function degeneracy.";
+    out.back().name_regex = "^VMAT[-_ ]?arc[-_ ]?collimator[-_ ]?angles[-_ ]?not[-_ ]?degenerate$";
+    out.back().check_impl = [](common_context_t& c) -> bool {
+        const auto tp = get_table_placement(c);
+
+        std::vector<double> coll_angles;
+        for(const auto& beam : c.plan.get().dynamic_states){
+            if(!beam_is_vmat_arc(beam)) continue;
+
+            const auto coll_angle = get_collimator_angle(beam);
+            if(coll_angle) coll_angles.push_back( coll_angle.value() );
+        }
+
+        bool passed = true;
+        std::stringstream ss;
+        if(coll_angles.empty()){
+            ss << "no VMAT arcs detected";
+
+        }else{
+            for(const auto& ca : coll_angles) ss << std::to_string(ca) << " ";
+
+            // Wrap angles around 360 and look for angle pairs nearer than tolerance.
+            auto wrapped = coll_angles;
+            for(const auto& a : coll_angles) wrapped.emplace_back(a + 360.0);
+            const double tol = 10.0;
+            passed = minimal_separation_is_larger_than(wrapped, tol);
+        }
+
+        c.table.get().inject(c.report_row, tp.expl_col, ss.str());
         return passed;
     };
 

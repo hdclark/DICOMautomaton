@@ -28,6 +28,10 @@ ForEachTPlan(
         TableSelection=last,
         Checks='
 
+            has_VMAT_arc();
+
+            VMAT_arc_collimator_angles_not_degenerate();
+
             plan_name_has_no_spaces();
 
             fail();
