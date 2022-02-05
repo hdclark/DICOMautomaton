@@ -116,6 +116,7 @@ add_library(Operations_objs OBJECT
     GrowContours.cc
     HighlightROIs.cc
     IfElse.cc
+    Ignore.cc
     ImageRoutineTests.cc
     ImprintImages.cc
     InterpolateSlices.cc
@@ -134,7 +135,6 @@ add_library(Operations_objs OBJECT
     NoneOf.cc
     NormalizeLineSamples.cc
     NormalizePixels.cc
-    Not.cc
     OptimizeStaticBeams.cc
     OrderImages.cc
     PartitionContours.cc

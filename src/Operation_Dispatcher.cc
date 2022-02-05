@@ -136,6 +136,7 @@
 #include "Operations/GrowContours.h"
 #include "Operations/HighlightROIs.h"
 #include "Operations/IfElse.h"
+#include "Operations/Ignore.h"
 #include "Operations/ImageRoutineTests.h"
 #include "Operations/ImprintImages.h"
 #include "Operations/InterpolateSlices.h"
@@ -154,7 +155,6 @@
 #include "Operations/NoneOf.h"
 #include "Operations/NormalizeLineSamples.h"
 #include "Operations/NormalizePixels.h"
-#include "Operations/Not.h"
 #include "Operations/OptimizeStaticBeams.h"
 #include "Operations/OrderImages.h"
 #include "Operations/PartitionContours.h"
@@ -357,6 +357,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["GrowContours"] = std::make_pair(OpArgDocGrowContours, GrowContours);
     out["HighlightROIs"] = std::make_pair(OpArgDocHighlightROIs, HighlightROIs);
     out["IfElse"] = std::make_pair(OpArgDocIfElse, IfElse);
+    out["Ignore"] = std::make_pair(OpArgDocIgnore, Ignore);
     out["ImageRoutineTests"] = std::make_pair(OpArgDocImageRoutineTests, ImageRoutineTests);
     out["ImprintImages"] = std::make_pair(OpArgDocImprintImages, ImprintImages);
     out["InterpolateSlices"] = std::make_pair(OpArgDocInterpolateSlices, InterpolateSlices);
@@ -375,7 +376,6 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["NoneOf"] = std::make_pair(OpArgDocNoneOf, NoneOf);
     out["NormalizeLineSamples"] = std::make_pair(OpArgDocNormalizeLineSamples, NormalizeLineSamples);
     out["NormalizePixels"] = std::make_pair(OpArgDocNormalizePixels, NormalizePixels);
-    out["Not"] = std::make_pair(OpArgDocNot, Not);
     out["OptimizeStaticBeams"] = std::make_pair(OpArgDocOptimizeStaticBeams, OptimizeStaticBeams);
     out["OrderImages"] = std::make_pair(OpArgDocOrderImages, OrderImages);
     out["PartitionContours"] = std::make_pair(OpArgDocPartitionContours, PartitionContours);

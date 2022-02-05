@@ -1,4 +1,4 @@
-//Not.cc - A part of DICOMautomaton 2021. Written by hal clark.
+//Ignore.cc - A part of DICOMautomaton 2022. Written by hal clark.
 
 #include <asio.hpp>
 #include <algorithm>
@@ -33,43 +33,40 @@
 #include "../File_Loader.h"
 #include "../Operation_Dispatcher.h"
 
-#include "Not.h"
+#include "Ignore.h"
 
 
-OperationDoc OpArgDocNot() {
+OperationDoc OpArgDocIgnore() {
     OperationDoc out;
-    out.name = "Not";
+    out.name = "Ignore";
+    out.aliases.emplace_back("Always");
+    out.aliases.emplace_back("Force");
 
-    out.desc = "This operation is a control flow meta-operation that requires no child operation to complete successfully.";
+    out.desc = "This operation is a control flow meta-operation that ignores the return"
+               " value of all child operations.";
 
     out.notes.emplace_back(
-        "If this operation has no children, this operation will evaluate to a no-op."
-    );
-    out.notes.emplace_back(
-        "Each child is performed sequentially in the order specified, and all side-effects are carried forward."
+        "Child operations are performed in order, and all side-effects are carried forward."
         " In particular, all selectors in child operations are evaluated lazily, at the moment when the child"
         " operation is invoked."
+    );
+    out.notes.emplace_back(
+        "This operation ' will always succeed, even if no children are present."
+        " This operation works well with idempotent or non-critical children operations."
     );
 
     return out;
 }
 
-bool Not(Drover &DICOM_data,
+bool Ignore(Drover &DICOM_data,
            const OperationArgPkg& OptArgs,
            std::map<std::string, std::string>& InvocationMetadata,
            const std::string& FilenameLex){
-
     //-----------------------------------------------------------------------------------------------------------------
 
     auto children = OptArgs.getChildren();
-    while(!children.empty()){
-        decltype(children) first_child;
-        first_child.splice( std::end(first_child), children, std::begin(children) );
-
-        const bool condition = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, first_child);
-        if(condition){
-            throw std::runtime_error("Child evaluated to 'true'");
-        }
+    for(const auto& child : children){
+        Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, {child});
     }
 
     return true;

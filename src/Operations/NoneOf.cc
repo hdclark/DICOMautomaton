@@ -39,6 +39,9 @@
 OperationDoc OpArgDocNoneOf() {
     OperationDoc out;
     out.name = "NoneOf";
+    out.aliases.emplace_back("Not");
+    out.aliases.emplace_back("Negate");
+    out.aliases.emplace_back("Invert");
 
     out.desc = "This operation is a control flow meta-operation that performs a 'none-of' Boolean check"
                " by evaluating child operations. The first child operation that succeeds short-circuits the remaining"
