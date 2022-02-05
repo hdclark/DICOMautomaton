@@ -40,6 +40,8 @@ OperationDoc OpArgDocAnyOf() {
     OperationDoc out;
     out.name = "AnyOf";
     out.aliases.emplace_back("FirstOf");
+    out.aliases.emplace_back("Or");
+    out.aliases.emplace_back("Coalesce");
 
     out.desc = "This operation is a control flow meta-operation that performs an 'any-of' or 'first-of' Boolean check"
                " by evaluating child operations. The first child operation that succeeds short-circuits the remaining"
@@ -50,6 +52,10 @@ OperationDoc OpArgDocAnyOf() {
         "Child operations are performed in order, and all side-effects are carried forward."
         " In particular, all selectors in child operations are evaluated lazily, at the moment when the child"
         " operation is invoked."
+    );
+    out.notes.emplace_back(
+        "If this operation has no children, or no children complete successfully, then this operation signals"
+        " false truthiness."
     );
     out.notes.emplace_back(
         "Some operations may succeed without directly signalling failure. For example, an operation that"
@@ -72,11 +78,7 @@ bool AnyOf(Drover &DICOM_data,
     }
 
     for(const auto& child : children){
-        bool condition = false;
-        try{
-            condition = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, {child});
-        }catch(const std::exception &){ }
-
+        const bool condition = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, {child});
         if(condition) return true;
     }
 

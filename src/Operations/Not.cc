@@ -66,11 +66,7 @@ bool Not(Drover &DICOM_data,
         decltype(children) first_child;
         first_child.splice( std::end(first_child), children, std::begin(children) );
 
-        bool condition = false;
-        try{
-            condition = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, first_child);
-        }catch(const std::exception &){ }
-
+        const bool condition = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, first_child);
         if(condition){
             throw std::runtime_error("Child evaluated to 'true'");
         }

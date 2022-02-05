@@ -156,7 +156,6 @@
 #include "Operations/NormalizePixels.h"
 #include "Operations/Not.h"
 #include "Operations/OptimizeStaticBeams.h"
-#include "Operations/Or.h"
 #include "Operations/OrderImages.h"
 #include "Operations/PartitionContours.h"
 #include "Operations/PerturbPixels.h"
@@ -379,7 +378,6 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["Not"] = std::make_pair(OpArgDocNot, Not);
     out["OptimizeStaticBeams"] = std::make_pair(OpArgDocOptimizeStaticBeams, OptimizeStaticBeams);
     out["OrderImages"] = std::make_pair(OpArgDocOrderImages, OrderImages);
-    out["Or"] = std::make_pair(OpArgDocOr, Or);
     out["PartitionContours"] = std::make_pair(OpArgDocPartitionContours, PartitionContours);
     out["PerturbPixels"] = std::make_pair(OpArgDocPerturbPixels, PerturbPixels);
     out["PlotLineSamples"] = std::make_pair(OpArgDocPlotLineSamples, PlotLineSamples);

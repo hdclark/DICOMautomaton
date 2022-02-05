@@ -71,11 +71,7 @@ bool NoneOf(Drover &DICOM_data,
     }
 
     for(const auto& child : children){
-        bool condition = true;
-        try{
-            condition = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, {child});
-        }catch(const std::exception &){ }
-
+        const bool condition = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, {child});
         if(condition) return false;
     }
 

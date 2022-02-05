@@ -136,7 +136,6 @@ add_library(Operations_objs OBJECT
     NormalizePixels.cc
     Not.cc
     OptimizeStaticBeams.cc
-    Or.cc
     OrderImages.cc
     PartitionContours.cc
     PerturbPixels.cc

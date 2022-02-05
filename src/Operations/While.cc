@@ -92,9 +92,7 @@ bool While(Drover &DICOM_data,
     while(true){
         if( (0 <= N) && (N <= i++) ) return false;
 
-        try{
-            condition = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, child_condition);
-        }catch(const std::exception &){ }
+        condition = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, child_condition);
         if(!condition) break;
 
         if(!Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, child_body)){
