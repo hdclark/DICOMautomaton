@@ -46,6 +46,16 @@ table_placement_t get_table_placement(common_context_t& c){
     return out;
 }
 
+static
+std::optional<double> get_min(const std::vector<double> &numbers){
+    std::optional<double> out;
+    const auto beg = std::begin(numbers);
+    const auto end = std::end(numbers);
+    const auto mp = std::min_element(beg, end);
+    if(mp != end) out = *mp;
+    return out;
+}
+
 
 // Ensure beam is a VMAT arc.
 static bool beam_is_vmat_arc(const Dynamic_Machine_State &beam){
@@ -81,6 +91,44 @@ static std::optional<double> get_collimator_angle(const Dynamic_Machine_State &b
     return out;
 }
 
+// Extract jaw openings.
+static
+std::vector<std::pair<double,double>>
+get_jaw_openings( const Dynamic_Machine_State &beam ){
+    std::vector<std::pair<double,double>> out;
+    const auto nan = std::numeric_limits<double>::quiet_NaN();
+    for(const auto& s : beam.static_states){
+        const auto x = (s.JawPositionsX.size() == 2) ? std::abs(s.JawPositionsX[1] - s.JawPositionsX[0]) : nan;
+        const auto y = (s.JawPositionsY.size() == 2) ? std::abs(s.JawPositionsY[1] - s.JawPositionsY[0]) : nan;
+        out.push_back( {x, y} );
+    }
+    return out;
+}
+
+static
+std::optional<double>
+get_smallest_jaw_perimeter( const std::vector<std::pair<double,double>>& jaw_openings ){
+    std::vector<double> p;
+    for(const auto& o : jaw_openings) p.emplace_back(2.0 * (o.first + o.second));
+    return get_min(p);
+}
+
+static
+std::optional<double>
+get_smallest_X_jaw_opening( const std::vector<std::pair<double,double>>& jaw_openings ){
+    std::vector<double> p;
+    for(const auto& o : jaw_openings) p.emplace_back(o.first);
+    return get_min(p);
+}
+
+static
+std::optional<double>
+get_smallest_Y_jaw_opening( const std::vector<std::pair<double,double>>& jaw_openings ){
+    std::vector<double> p;
+    for(const auto& o : jaw_openings) p.emplace_back(o.second);
+    return get_min(p);
+}
+
 // Look for angles closer than the user-provided tolerance.
 static bool minimal_separation_is_larger_than(std::vector<double> numbers,
                                               double tolerance ){
@@ -92,7 +140,17 @@ static bool minimal_separation_is_larger_than(std::vector<double> numbers,
                                              return std::abs(l - r) < tolerance;
                                          } );
     return (dup == end);
-};
+}
+
+static
+std::optional<double> min_number(const std::vector<double> &numbers){
+    std::optional<double> out;
+    const auto beg = std::begin(numbers);
+    const auto end = std::end(numbers);
+    const auto mp = std::min_element(beg, end);
+    if(mp != end) out = *mp;
+    return out;
+}
 
 std::vector<check_t> get_checks(){
     std::vector<check_t> out;
@@ -219,6 +277,50 @@ std::vector<check_t> get_checks(){
             for(const auto& a : coll_angles) wrapped.emplace_back(a + 360.0);
             const double tol = 10.0;
             passed = minimal_separation_is_larger_than(wrapped, tol);
+        }
+
+        c.table.get().inject(c.report_row, tp.expl_col, ss.str());
+        return passed;
+    };
+
+    out.emplace_back();
+    out.back().name = "jaw openings larger than";
+    out.back().desc = "The X and Y jaws should be opened sufficiently to facilitate accurate dosimetric modeling."
+                      " Minimum X and Y jaw openings (in mm) are required";
+    out.back().name_regex = "^jaw[-_ ]?openings[-_ ]?larger[-_ ]?than$";
+    out.back().check_impl = [](common_context_t& c) -> bool {
+        const auto tp = get_table_placement(c);
+        std::stringstream ss;
+
+        // Get user-provided parameters.
+        double X_min = 20.0;
+        double Y_min = 20.0;
+        if( (c.pf.get().parameters.size() == 2)
+        &&  (c.pf.get().parameters[0].number)
+        &&  (c.pf.get().parameters[1].number) ){
+            X_min = c.pf.get().parameters[0].number.value();
+            Y_min = c.pf.get().parameters[1].number.value();
+        }else{
+            throw std::invalid_argument("This function requires X and Y jaw arguments");
+        }
+        ss << X_min << "/" << Y_min << ": ";
+
+        const auto nan = std::numeric_limits<double>::quiet_NaN();
+        bool passed = true;
+        for(const auto& beam : c.plan.get().dynamic_states){
+            const auto openings = get_jaw_openings(beam);
+            const auto actual_X_min = get_smallest_X_jaw_opening(openings);
+            const auto actual_Y_min = get_smallest_Y_jaw_opening(openings);
+            passed =  actual_X_min
+                   && actual_Y_min
+                   && std::isfinite(actual_X_min.value())
+                   && std::isfinite(actual_Y_min.value())
+                   && (X_min <= actual_X_min.value())
+                   && (Y_min <= actual_Y_min.value());
+
+            ss << actual_X_min.value_or(nan) << "/"
+               << actual_Y_min.value_or(nan) << " ";
+            if(!passed) break;
         }
 
         c.table.get().inject(c.report_row, tp.expl_col, ss.str());

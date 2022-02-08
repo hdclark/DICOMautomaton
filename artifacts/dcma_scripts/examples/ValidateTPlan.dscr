@@ -32,6 +32,10 @@ ForEachTPlan(
 
             VMAT_arc_collimator_angles_not_degenerate();
 
+            # X jaw minimum: 20 mm.
+            # Y jaw minimum: 25 mm.
+            jaw_openings_larger_than(20.0, 25.0);
+
             plan_name_has_no_spaces();
 
             fail();
