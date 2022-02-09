@@ -28,8 +28,59 @@
 
 #include "Alignment_ABC.h"
 
+// Member functions of the AlignViaABCTransform class.
+//
+// Note: See Alignment_ABC.h to learn about the AlignViaABCTransform class.
+planar_image<float, double>
+AlignViaABCTransform::transform(const planar_image<float, double> &i) const {
+    // TODO
+    return i;
+}
+
+vec3<double>
+AlignViaABCTransform::transform(const vec3<double> &v) const {
+    // TODO
+    return v;
+}
+
+void
+AlignViaABCTransform::apply_to(vec3<double> &v) const {
+    // TODO.
+    //v += ...
+    return;
+}
+
+void
+AlignViaABCTransform::apply_to(planar_image_collection<float, double> &img_array) const {
+    //TODO: do this
+//    for (auto& img : img_array.images) {
+//        img = transform(img);
+//    }
+    img_array.apply_to_pixels([this](long int row, long int col, long int chnl, float &val) {
+        if (val > this->blur) val = 0;
+    });
+    return;
+}
+
+bool
+AlignViaABCTransform::write_to( std::ostream &os ) const {
+    // TODO.
+    os << this->xyz << std::endl;
+    return true; // true == write was successful.
+}
+
+bool
+AlignViaABCTransform::read_from( std::istream &is ){
+    // TODO.
+    is >> this->xyz;
+    return true; // true == read was successful and data is logical.
+}
+
 
 // This function is where the deformable registration algorithm should be implemented.
+
+//
+// Note: See Alignment_ABC.h to learn about the AlignViaABCTransform class.
 std::optional<AlignViaABCTransform>
 AlignViaABC(AlignViaABCParams & params,
             const planar_image_collection<float, double> & moving,
@@ -90,6 +141,9 @@ AlignViaABC(AlignViaABCParams & params,
     // For now, we'll leave it undefined. But a valid AlignViaABCTransform should be created and returned if the algorithm
     // successfully completes.
     AlignViaABCTransform transform;
+    auto& img = moving.images.front();
+    transform.blur = img.fixed_gaussian_blur_3x3(img.rows/2, img.columns/2, 0);
+    params.blur = transform.blur;
     return transform;
 }
 

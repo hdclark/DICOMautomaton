@@ -10,8 +10,8 @@
 #include <memory>
 #include <string>    
 #include <vector>
+#include <filesystem>
 
-#include <boost/filesystem.hpp>
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
 #include <chrono>
@@ -65,6 +65,9 @@ int main(int argc, char* argv[]){
                      };
     arger.description = "A program for running a deformable registration algorithm.";
 
+    // save the moving filenames
+    std::vector<std::string> movingFN;
+
     arger.default_callback = [](int, const std::string &optarg) -> void {
       FUNCERR("Unrecognized option with argument: '" << optarg << "'");
       return; 
@@ -74,17 +77,33 @@ int main(int argc, char* argv[]){
       return; 
     };
     arger.push_back( ygor_arg_handlr_t(1, 'm', "moving", true, "moving.fits",
-      "Load a moving image array from the given file.",
+      "Load a moving image array from the given file, or directory of images.",
       [&](const std::string &optarg) -> void {
-        moving.images.emplace_back(ReadFromFITS<float,double>(optarg));
-        return;
+          const auto p = std::filesystem::path(optarg);
+          if(std::filesystem::is_directory(p)){
+              for(const auto &f_it : std::filesystem::directory_iterator{p}){
+                  moving.images.emplace_back(ReadFromFITS<float,double>(f_it.path().string()));
+              }
+          }else{
+              // Assume it's a file.
+              moving.images.emplace_back(ReadFromFITS<float,double>(optarg));
+          }
+          return;
       })
     );
     arger.push_back( ygor_arg_handlr_t(1, 's', "stationary", true, "stationary.fits",
-      "Load a stationary image array from the given file.",
+      "Load a stationary image array from the given file, or directory of images.",
       [&](const std::string &optarg) -> void {
-        stationary.images.emplace_back(ReadFromFITS<float,double>(optarg));
-        return;
+          const auto p = std::filesystem::path(optarg);
+          if(std::filesystem::is_directory(p)){
+              for(const auto &f_it : std::filesystem::directory_iterator{p}){
+                  stationary.images.emplace_back(ReadFromFITS<float,double>(f_it.path().string()));
+              }
+          }else{
+              // Assume it's a file.
+              stationary.images.emplace_back(ReadFromFITS<float,double>(optarg));
+          }
+          return;
       })
     );
 
@@ -130,7 +149,17 @@ int main(int argc, char* argv[]){
         std::optional<AlignViaABCTransform> transform_opt = AlignViaABC(params, moving, stationary );
 
         if(transform_opt){
-            FUNCERR("ABC algorithm failed");
+            transform_opt.value().apply_to(moving);
+
+            // save the transformed images
+            int i = 1;
+            for (auto& img : moving.images) {
+                bool save = WriteToFITS<float,double>(img, "images/transformed/" + std::to_string(i) + ".fits");
+                if (!save) {
+                    FUNCERR("Could not save transformed images.");
+                    return 1;
+                }
+            }
         }
 
         // If needed (for testing, debugging, ...) try to apply the transform.

@@ -395,6 +395,7 @@ set(BASH_COMPLETION_INSTALL_DIR   "${CMAKE_INSTALL_DATAROOTDIR}/bash-completion/
 add_subdirectory(src)
 add_subdirectory(config-files)
 add_subdirectory(scripts)
+add_subdirectory(img_registration)
 
 
 ####################################################################################
