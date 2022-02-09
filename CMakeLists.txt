@@ -396,7 +396,7 @@ add_subdirectory(src)
 add_subdirectory(config-files)
 add_subdirectory(scripts)
 add_subdirectory(img_registration)
-
+add_subdirectory(unit_tests)
 
 ####################################################################################
 #                                    Packaging    
