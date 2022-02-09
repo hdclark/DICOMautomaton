@@ -42,5 +42,19 @@ TEST_CASE( "thin_plate_spline class" ){
         REQUIRE( tps_B.control_points.points == ps_B.points );
         REQUIRE( tps_B.kernel_dimension == kdim3 );
     }
+
+    SUBCASE("transform") {
+        AlignViaTPSParams params;
+        std::optional<thin_plate_spline> transform_opt = AlignViaTPS(params, ps_B, ps_A);
+        REQUIRE(transform_opt);
+
+        transform_opt.value().apply_to(ps_B);
+        const double margin = 0.00001;        // error margin
+        for (int i = 0; i < ps_B.points.size(); ++i) {
+            REQUIRE(std::abs(ps_B.points[i].x - ps_A.points[i].x) < margin);
+            REQUIRE(std::abs(ps_B.points[i].y - ps_A.points[i].y) < margin);
+            REQUIRE(std::abs(ps_B.points[i].z - ps_A.points[i].z) < margin);
+        }
+    }
 }
 
