@@ -1,0 +1,52 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# This script demonstrates how to use the ModelIVIM operation.
+# It uses MR diffusion images to model the IVIM process.
+
+
+# Partition images based on SequenceName.
+GroupImages(
+    ImageSelection = 'all',
+    KeysCommon = 'SequenceName',
+    Enforce = 'no-overlap-adjust',
+){};
+
+
+# Delete irrelevant images.
+#
+# Note: the relevant images have a SequenceName like 'WIP_b40t'.
+DeleteImages(
+    ImageSelection = '!SequenceName@^WIP_b[0-9]*t$'
+){};
+
+
+# Arrange images in b-value order.
+#OrderImages( Key = 'CSAImage/B_value' );
+OrderImages( Key = 'DiffusionBValue' );
+
+
+# Create a copy that we can write over.
+CopyImages( ImageSelection = 'first' );
+
+
+# Make a contour around each image, which will confine where
+# the IVIM model will be evaluated.
+ContourWholeImages( 
+    ImageSelection = 'last',
+    ROILabel='all',
+){};
+
+
+# Run the IVIM model.
+ModelIVIM(
+    # Write to the last image (the one we copied).
+    ImageSelection = 'last',
+
+    # Use all other images for the model.
+    ReferenceImageSelection = '!last',
+
+    ROILabelRegex = 'all',
+    Model = 'biexp',
+){};
+
+
