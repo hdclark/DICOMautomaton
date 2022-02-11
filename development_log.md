@@ -3,11 +3,359 @@
 
 Below is a simplified timeline of `DICOMautomaton` development, broken down by month.
 
+
+## 202111
+
+- Add LoadFilesInteractively, which uses recently-added dialog functionality.
+- Add read support for (proprietary) XIM format images.
+- Added a position-based image sorter.
+- Added de-EQD2 standard script.
+- Always prospectively rebuild Ygor on Debian.
+- Avoid std::filesystem::absolute on Windows.
+- CMake: replace large macro (stringified standard scripts) with generated file.
+- ConvertContoursToMeshes: expose marching-cubes extractor.
+- ExtractRadiomicFeatures: use DCMA marching cubes for speed-up.
+- FITS images: imbue minimal DICOM metadata in images.
+- OrderImages: add spatial ordering option.
+- PFD: remove OS version check, which seemingly fails for no discernable reason?
+- SDL\_Viewer: add native dialog support via PFD.
+- SDL\_Viewer: disable optional parameters in stringified scripts.
+- SDL\_Viewer: handle empty metadata tags.
+- SDL\_Viewer: isolate dialogs into separate library.
+- SDL\_Viewer: limit default script open dialog to script extensions.
+- SDL\_Viewer: rely on select\_files defaults.
+- SDL\_Viewer: simplify file loading.
+- SDL\_Viewer: simplify script optional parameters.
+- Scripts: support quotation escapes.
+- Standard\_Scripts: generator: disable verbose mode
+- Windows: delay for longer when terminating abnormally.
+- Windows: provide a new icon.
+
+## 202110
+
+- Add ConvertWarpToMeshes operation.
+- Add MingW-specific winsock libs for Asio/Boost.
+- Added ConvertImageToWarp to pair with ConvertWarpToImage.
+- CI: GitHub: add aarch64 and x86\_64 static builds.
+- ConvertWarpToMeshes: provide means to disregard rigid component.
+- ConvertWarpTo\*: inject user-provided metadata.
+- De-CGALify marching cubes implementation.
+- Explicitly link imebrashim.
+- Fallback to previous wstring offload when needed.
+- Imbue converted warps with DICOM-style metadata.
+- Imebra\_Shim: def reg reading: swap spatial dimensions.
+- Img Reg: add an example of accessing images and voxels.
+- Img Reg: added placeholder write\_to and apply\_to functions.
+- Img Reg: support reading whole directories of FITS files.
+- Musl: Fallback to an identity conversion if iconv does not support required conversion.
+- Properly differentiate fv\_surface\_mesh and Polyhedron meshes.
+- Documented current state of GUI intefaces via screenshots in GitHub issue.
+- Roughed in field-based deformations.
+- SDL\_Viewer: add 3D Gaussian brush.
+- SDL\_Viewer: add custom mesh colouring with alpha support.
+- SDL\_Viewer: add image auto-advance.
+- SDL\_Viewer: add rudimentary lighting for meshes.
+- SDL\_Viewer: cleanup OpenGL textures when re-assigning.
+- SDL\_Viewer: encapsulate mesh loading and rendering in a class.
+- SDL\_Viewer: fix clipping bug.
+- SDL\_Viewer: honour minimizing the script window.
+- SDL\_Viewer: maintain aspect ratio in model space.
+- SDL\_Viewer: normalize soft brushes and add tanh{2D,3D}.
+- SDL\_Viewer: release OpenGL resources while context valid.
+- SDL\_Viewer: simplify placeholder script.
+- SDL\_Viewer: support light mode.
+- SDL\_Viewer: support mesh selection, rotation, and precession.
+- SDL\_Viewer: tighten range for tanh brushes.
+- SDL\_Viewer: embed raw opengl mesh in imgui window.
+- Script: list exhaustive arguments in debug feedback.
+- Scripts: map parent directory to category.
+- Split point cloud and image registration working directories.
+- Surface\_Meshes: accelerate marching cubes.
+- Surface\_Meshes: face re-orientation: allow unorientable faces.
+- Surface\_Meshes: implement orientation normalizer.
+- Surface\_Meshes: marching cubes: track per-component orientation.
+- Surface\_Meshes: use a faster vertex de-duplication method.
+- Swap long int --> int64\_t to appease mingw64 ygor linking issue (and some arm archs).
+- Support reading and visualizing deformation fields.
+- Add minimal Affine registration DICOM read support.
+- deformation\_field: conceal a spatial index.
+- deformation\_field: implement basic apply\_to().
+
+## 202109
+
+- Add 'standard' scripts.
+- Add an operation to add noise to an image array.
+- Add script to build statically-linked DCMA binaries.
+- Added extremely minimal terminal-based image viewer.
+- Address upstream Boost bind placeholder de-escalation.
+- AppImage: manually set rpath for binaries.
+- Arm: also avoid clobbering user-provided mcpu and mtune.
+- Arm: avoid clobbering user-provided march flag.
+- CI: GitHub: WIP: add armv7 static build + test.
+- CI: github: be more forceful with artifact sync.
+- Common\_Plotting: when forking, use std::exit() rather than std::quick\_exit().
+- Cross compiling: more clearly state which configurations work.
+- Cross compiling: remove BUILD\_SHARED\_LIBS="ON" override.
+- Cross-compiling: more tinkering to get armv8 to cross-compile with zig-cc or musl toolchain.
+- DCMA: check that CWD is valid, else make it valid.
+- DICOM loader: warn when modality cannot be assessed.
+- Dispatcher: load command-line script operations before command-line operations.
+- Docker: Alpine: add X and OpenGL-related packages.
+- Docker: Alpine: add aarch64 and x86\_64 build\_bases.
+- Docker: Alpine: add builders to complement build\_bases.
+- Docker: Alpine: add note wrt mesa/OpenGL support.
+- Docker: Alpine: avoid failing if unable to delete directory.
+- Docker: Alpine: fix arm64 --> amd64 typo.
+- Docker: Alpine: follow MXE build\_base and defer building DCMA.
+- Docker: Alpine: make use of GSL and Eigen.
+- Docker: CI: ensure patchelf is available.
+- Docker: add Alpine armv7 container build\_base.
+- GenerateSyntheticImages: provide UIDs that parse correctly.
+- Metadata: bug fix: to\_seconds() string replacement.
+- Metadata: generalize metadata evaluation and macro replacement.
+- Metadata: implement WIP DICOM module-based metadata coalescers.
+- Metadata: provide helper for key-value modifying operations.
+- NormalizePixels: add PET SUVbw normalization.
+- Remove vestigial getopts.h include.
+- Scripts: bundle scripts during builds.
+- SDL\_Viewer: WIP: support modifying image pixels.
+- SDL\_Viewer: add 2D median filter brushes.
+- SDL\_Viewer: add 3D median brushes.
+- SDL\_Viewer: contouring: handle case with multiple overlapping images.
+- SDL\_Viewer: display contour metadata as a tooltip.
+- SDL\_Viewer: drawing: added full complement of 2D and 3D rigid/mean/median brushes.
+- SDL\_Viewer: hoist image drawing from contouring.
+- SDL\_Viewer: improve metadata handling for line samples.
+- SDL\_Viewer: proactively set LIBGL\_ALWAYS\_SOFTWARE=1 within AppImages.
+- SDL\_Viewer: provide a way to directly run scripts as actions.
+- SDL\_Viewer: use bounding box to speed drawing.
+- SDL\_Viewer: use imgui table for image metadata viewer.
+- Terminal\_Viewer: add bare-bones shade glyphs display option.
+- Terminal\_Viewer: add displays for non-ansi, non-unicode terminals.
+- Terminal\_Viewer: allow user to override display settings.
+- Terminal\_Viewer: disable use of terminal control codes for completely portable display option.
+
+## 202108
+
+- ModifyImageMetadata: support macro expansion and time extraction.
+- GroupImages: add note about de-grouping.
+- Address LGTM static analysis concerns.
+- SYCL: switch to triSYCL.
+- Operations: separate Drover updates from return/exit.
+- Support loading scripts from files.
+- Add control flow meta-operations for programming scripts.
+- Provide conditional (if-then-else) control flow meta-operation.
+- Debian: continue with buster (now oldstable) for now.
+- Documentation: do not clobber inline paragraphs.
+- Regex\_selectors: add compliment to 'numerous': 'fewest'.
+- Regex\_Selectors: add undocumented image selector (numerous).
+- GroupImages: provide automated partition key selection.
+- ModelIVIM: support Siemens CSA b-values
+- Imebra\_Shim: switch pixel extraction to metadata.
+- Imebra\_Shim: added ad-hoc support Siemens private DICOM tag 'CSA2' binary blob decoding.
+- Dispatcher: default to SDL\_Viewer.
+- Dispatcher: added workaround for AppImageKit chdir() call.
+- Replace boost::filesystem with std::filesystem.
+- check\_syntax: document libraries needed for linkage.
+- File\_Loader: verbosely report unloadable files.
+- File\_Loader: attempt to resolve relative paths.
+- File\_Loader: add a few more short-circuit extensions.
+- File\_Loader: only FUNCINFO notice when loader is invoked.
+- Load\_Files: bug fix: let user override extension filtering.
+- Dispatcher: disable file checking logic.
+- Scripts: check for shebang and provide compilation feedback to stdout.
+- Script\_Loader: merely suggest non-expected arguments.
+- SDL\_Viewer: expose abscissa for time courses.
+- SDL\_Viewer: default to 'dt' metadata element for time courses.
+- SDL\_Viewer: WIP time course viewing.
+- SDL\_Viewer: display aliases in add-to=script menu.
+- SDL\_Viewer: support saving generated contours.
+- SDL\_Viewer: plots: give buttons unique IDs.
+- SDL\_Viewer: plots: allow legend to be disabled.
+- SDL\_Viewer: plots: more tooltip weidth tweaking.
+- SDL\_Viewer: Plots: adjust column widths.
+- SDL\_Viewer: attempt to widen plot hover metadata.
+- SDL\_Viewer: Plots: view metadata and add on-the-fly normalization.
+- SDL\_Viewer: plot selection bug fix.
+
+## 202107
+
+- Dispatcher: permit directory file command line arguments.
+- Testing: report verbose results before summary.
+- CI: provide verbose feedback for integration test failures.
+- TAR loader: attempt to use file extensions from the archive.
+- DICOM: add (ad-hoc) proprietary CSA header tag parser.
+- check\_syntax: optionally check YAML files.
+- DCMA-Dump: support printing beyond null bytes.
+- File\_Loader: recursively find files when directories provided.
+- File\_Loader: disable reprioritization when extension missing.
+- File\_Loader: switch from constexpr lambda to regular function.
+- File\_Loader: switch to priority-based file loading via file extension.
+- Load\_Files: provide more insight into which loaders are being used.
+- ContourWholeImages: only allocate space when creating contours.
+- Scripts: accept up to 500 feedback notifications.
+- Add single-thread worker FIFO queue class.
+- ModelIVIM: use fuzzy key-value lookup for b-values.
+- Docker: avoid unnecessary costly rebuilds (Debian stable).
+- Add support for shellcheck-based checks.
+- Provide better support for remote aarch64 compilation.
+- CI: attempt to add armhf CI builds.
+- CI: GitLab: use a loopback swapfile for all builders.
+- Script\_Editor: make variable replacement exhaustion an error.
+- Script\_Loader: support variable replacements.
+- Script\_Editor: recursively parse operations and variables.
+- Script\_Editor: imbue characters with basic parsing metadata.
+- Script\_Editor: expand script validation feedback.
+- Script\_Editor: validate parentheses and quotations.
+- SDL\_Viewer: bug-fix: honour user image view setting.
+- SDL\_Viewer: Script\_Editor: provide line numbers.
+- SDL\_Viewer: added rudimentary script parser.
+- SDL\_Viewer: make auto-scaler aware of multi-channel images.
+- SDL\_Viewer: script editor: emphasize active script file better.
+- SDL\_Viewer: continue to display previous image texture without locking.
+- SDL\_Viewer: used timed mutex to skip locked data access.
+- SDL\_Viewer: compartmentalize sub-operations.
+- SDL\_Viewer: roughed-in worker offload thread.
+- SDL\_Viewer: roughed-in script support.
+
+## 202106
+
+- CI: add binutils explicitly.
+- CI: adjust rpath for aarch64 dynamic linked binaries and libraries.
+- CI: mitigate AppImage naming differences on aarch64.
+- CI: GitHub: account for chroot-nested AppImage.
+- CI: altogether disable Wt for CI builds.
+- CI: switch to CMake '-B' option.
+- CI: more Wt compilation wrangling.
+- CI: adjust Wt optimization level.
+- CI: speed up Wt compilation.
+- CI: GitHub: lengthen timeout for aarch64 AppImahe building.
+- CI: AppImage: fallback to linuxdeploy for x86\_64.
+- CI: permit longer aarch64 builds.
+- CI: Debian: add script to make aarch64 chroot.
+- AppImage: switch to appimagetool directly.
+- CellularAutomata: added simplistic 'gravity' mode for voxel values.
+- Added 2D cellular automata operation.
+- ModelIVIM: Fixed bugs for Kurtosis model fitting
+- ModelIVIM: utilize multiple model params as separate channels
+- WIP: ModelIVIM: add bounds checks for debugging.
+- WIP: ModelIVIM: Bayesian kurtosis model with noise floor (CSample)
+- HighlightROIs: use r\*-tree for faster spatial lookups.
+- HighlightROIs: rely on modified upstream Mutate\_Voxels() for contour overlap
+- HighlightROIs: added integration test.
+- HighlightROIs: expose receding-squares method
+- HighlightROIs: add WIP marching-squares-inverse algorithm
+- ContourViaThreshold: consistently handle contour orientation
+- ContourViaThreshold: support marching-sqaure lower and upper thresholds
+- ContourViaThreshold: make marching-squares handle boundaries
+- ContourViaThreshold: add marching squares option.
+- SDL\_Viewer: support 3D contour brushes.
+- SDL\_Viewer: add snapping distance measuring tool.
+- SDL\_Viewer: provide colour map scale bar.
+- SDL\_Viewer: provide visual cue of contouring brush
+- SDL\_Viewer: avoid double-counting overlapping line segments.
+- SDL\_Viewer: support gapless contouring.
+- SDL\_Viewer: added square rigid brush.
+- SDL\_Viewer: add channel selector.
+- SDL\_Viewer: support erosion and dilation (margins)
+- SDL\_Viewer: contouring respects image aspect ratio
+- SDL\_Viewer: use public ContourViaThreshold interface
+- SDL\_Viewer: support multi-plotting
+- SDL\_Viewer: contouring: notify user of contour deletion
+- SDL\_Viewer: marching squares: switch to grid-based representation.
+- SDL\_Viewer: contouring: implemented marching squares
+- SDL\_Viewer: provide contouring fallback method.
+- SDL\_Viewer: give user control of contouring resolution.
+
+## 202105
+
+- Added diffusion MR DICOM attributes.
+- CI: GitLab: Fedora: workaround LD\_PRELOAD issues, explicitly preload libs, add gmp-c++ dependency.
+- CI: remove Travis.ci.
+- CI: upload artifacts to GitHub.
+- Docker: added Ubuntu build\_base.
+- ModelIVIM: account for extra voxel value.
+- ModelIVIM: bug fix: log-transform MR intensities
+- ModelIVIM: expose model selection flag.
+- ModelIVIM: merge pull request from samplecm (biexponential model)
+- Regex\_Selectors: add simplistic regex inversion mechanism.
+- Regex\_Selectors: provide basic missing key selector.
+- SDL\_Viewer: WIP asynchronous contours overlay
+- SDL\_Viewer: WIP contours overlay
+- SDL\_Viewer: WIP mask-based contouring.
+- SDL\_Viewer: add image coordinates tooltip.
+- SDL\_Viewer: add realtime row and column profile viewer
+- SDL\_Viewer: add realtime-updating image metadata window.
+- SDL\_Viewer: add simple linesample plots.
+- SDL\_Viewer: add voxel intensity probe.
+- SDL\_Viewer: allow contour line thickness adjustment, provide per-contour display toggle
+- SDL\_Viewer: cache filesystem queries.
+- SDL\_Viewer: disable default OpenGL word-alignment.
+- SDL\_Viewer: expose window/level and colour maps.
+- SDL\_Viewer: generate mipmaps and use nearest pixel sampling.
+- SDL\_Viewer: improve file opener edge cases.
+- SDL\_Viewer: load files asynchronously.
+- SDL\_Viewer: protect against empty root paths.
+- SDL\_Viewer: provide rudimentary file loader.
+- SDL\_Viewer: report DICOM position.
+- SDL\_Viewer: retain custom window and level
+- SDL\_Viewer: revert mipmaps, keep nearest pixel sampling.
+- SDL\_Viewer: support contour colour adjustment
+- SDL\_Viewer: support mouse zoom and pan, zooming and panning images, keyboard image navigation
+- SDL\_Viewer: support multiple file selections.
+- SDL\_Viewer: support synchronized low-high and window-level.
+- SDL\_Viewer: use shared\_mutexes for contour threads
+- SDL\_Viewer: workaround wstring/wchar.
+- Support remote AppImage builds.
+
+## 202104
+
+- SDL: provide explicit format strings.
+
+## 202103
+
+- Perfusion: implement a single-compartment model
+
+## 202102
+
+- SDL\_Viewer: make specific views toggleable.
+- SDL\_Viewer: added basic operation documentation menu.
+- Convert version macro to extern variable.
+- CI: GitHub: support manual launch.
+- Merge pull requests/branches from anthonyho.
+
+## 202101
+
+- Simple\_Meshing: accept disoriented contours.
+- PurgeContours: expand functionality.
+- Expose Drover partitioning backend.
+- Merge pull requests/branches from mojanjz and ceringstrom
+- Provide version information.
+- CI: use GitHub actions to deploy CI to GitHub page.
+- Add no-op operation.
+- Bug fix: properly document Repeat operation.
+- Support fuzzy operation names and explicit aliases.
+- Clean up and similarity threshold
+- Rearranged includes and fixed a lot of warning and added more parameters
+- ContourViaThreshold: enable partial support without CGAL.
+- Added DeleteContours operation.
+- Avoid running tests when functionality unavailable.
+- Add a non-trivial example (double-threaded screw).
+- ConvertContoursToMeshes: contour selection bug fix.
+- CGAL: use exact-exact kernel for boolean operations.
+- CopyContours: rely on metadata update member.
+- CopyContour: added missing contour duplication operation.
+- WarpImages: test spatial mirroring.
+- GenerateTransform: rely on upstream affine factories.
+
 ## 202012
 
+- Enable rigid and affine registration implementation
+- Improve compatibility with older Boost::Serialization versions.
+- Support for Boost::Serialization 1.74.
 - Support loading point clouds and surface meshes from both ASCII and binary PLY files.
 - Added support for vertex normals (surface meshes, point clouds).
-- Added basic support for vertex colours ((surface meshes, point clouds).
+- Added basic support for vertex colours (surface meshes, point clouds).
 - Partial migration from Travis CI to GitHub actions.
 - Added explicit support surface mesh export in (ASCII+binary) PLY, OBJ, OFF, and (ASCII+binary) STL formats.
 

@@ -27,7 +27,7 @@
 
 
 bool Load_From_3ddose_Files( Drover &DICOM_data,
-                          const std::map<std::string,std::string> & /* InvocationMetadata */,
+                          std::map<std::string,std::string> & /* InvocationMetadata */,
                           const std::string &,
                           std::list<std::filesystem::path> &Filenames ){
 
@@ -72,12 +72,12 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
     while(bfit != Filenames.end()){
         FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
-        const auto Filename = bfit->string();
+        const auto Filename = *bfit;
 
         try{
             //////////////////////////////////////////////////////////////
             // Attempt to load the file.
-            std::fstream FI(Filename.c_str(), std::ios::in);
+            std::fstream FI(Filename, std::ios::in);
             if(!FI.good()){
                 throw std::runtime_error("Unable to read file.");
             }
@@ -302,7 +302,7 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
                 auto out = std::make_unique<Image_Array>();
                 out->imagecoll.images.emplace_back();
 
-                out->imagecoll.images.back().metadata["Filename"] = Filename;
+                out->imagecoll.images.back().metadata["Filename"] = Filename.string();
                 //out->imagecoll.images.back().metadata["PatientID"] = PatientID;
                 //out->imagecoll.images.back().metadata["StudyInstanceUID"] = StudyInstanceUID;
                 //out->imagecoll.images.back().metadata["SeriesInstanceUID"] = SeriesInstanceUID;

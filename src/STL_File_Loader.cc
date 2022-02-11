@@ -25,7 +25,7 @@
 #include "Imebra_Shim.h"
 
 bool Load_Mesh_From_ASCII_STL_Files( Drover &DICOM_data,
-                                     const std::map<std::string,std::string> & /* InvocationMetadata */,
+                                     std::map<std::string,std::string> & /* InvocationMetadata */,
                                      const std::string &,
                                      std::list<std::filesystem::path> &Filenames ){
 
@@ -50,14 +50,14 @@ bool Load_Mesh_From_ASCII_STL_Files( Drover &DICOM_data,
         while(bfit != Filenames.end()){
             FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
             ++i;
-            const auto Filename = bfit->string();
+            const auto Filename = *bfit;
 
             DICOM_data.smesh_data.emplace_back( std::make_shared<Surface_Mesh>() );
 
             try{
                 //////////////////////////////////////////////////////////////
                 // Attempt to load the file.
-                std::ifstream FI(Filename.c_str(), std::ios::in);
+                std::ifstream FI(Filename, std::ios::in);
                 if(!ReadFVSMeshFromASCIISTL(DICOM_data.smesh_data.back()->meshes, FI)){
                     throw std::runtime_error("Unable to read mesh from file.");
                 }
@@ -75,7 +75,7 @@ bool Load_Mesh_From_ASCII_STL_Files( Drover &DICOM_data,
                 // Supply generic minimal metadata iff it is needed.
                 std::map<std::string, std::string> generic_metadata;
 
-                generic_metadata["Filename"] = Filename; 
+                generic_metadata["Filename"] = Filename.string(); 
 
                 generic_metadata["PatientID"] = "unspecified";
                 generic_metadata["StudyInstanceUID"] = Generate_Random_UID(60);
@@ -110,7 +110,7 @@ bool Load_Mesh_From_ASCII_STL_Files( Drover &DICOM_data,
 }
 
 bool Load_Mesh_From_Binary_STL_Files( Drover &DICOM_data,
-                                      const std::map<std::string,std::string> & /* InvocationMetadata */,
+                                      std::map<std::string,std::string> & /* InvocationMetadata */,
                                       const std::string &,
                                       std::list<std::filesystem::path> &Filenames ){
 
@@ -133,14 +133,14 @@ bool Load_Mesh_From_Binary_STL_Files( Drover &DICOM_data,
         while(bfit != Filenames.end()){
             FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
             ++i;
-            const auto Filename = bfit->string();
+            const auto Filename = *bfit;
 
             DICOM_data.smesh_data.emplace_back( std::make_shared<Surface_Mesh>() );
 
             try{
                 //////////////////////////////////////////////////////////////
                 // Attempt to load the file.
-                std::ifstream FI(Filename.c_str(), std::ios::in);
+                std::ifstream FI(Filename, std::ios::in | std::ios::binary);
                 if(!ReadFVSMeshFromBinarySTL(DICOM_data.smesh_data.back()->meshes, FI)){
                     throw std::runtime_error("Unable to read mesh from file.");
                 }
@@ -158,7 +158,7 @@ bool Load_Mesh_From_Binary_STL_Files( Drover &DICOM_data,
                 // Supply generic minimal metadata iff it is needed.
                 std::map<std::string, std::string> generic_metadata;
 
-                generic_metadata["Filename"] = Filename; 
+                generic_metadata["Filename"] = Filename.string(); 
 
                 generic_metadata["PatientID"] = "unspecified";
                 generic_metadata["StudyInstanceUID"] = Generate_Random_UID(60);

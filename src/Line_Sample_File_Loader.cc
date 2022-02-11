@@ -24,7 +24,7 @@
 
 
 bool Load_From_Line_Sample_Files( Drover &DICOM_data,
-                                  const std::map<std::string,std::string> & /* InvocationMetadata */,
+                                  std::map<std::string,std::string> & /* InvocationMetadata */,
                                   const std::string &,
                                   std::list<std::filesystem::path> &Filenames ){
 
@@ -42,7 +42,7 @@ bool Load_From_Line_Sample_Files( Drover &DICOM_data,
     while(bfit != Filenames.end()){
         FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
-        const auto Filename = bfit->string();
+        const auto Filename = *bfit;
 
         DICOM_data.lsamp_data.emplace_back( std::make_shared<Line_Sample>() );
 
@@ -52,12 +52,12 @@ bool Load_From_Line_Sample_Files( Drover &DICOM_data,
             bool read_ok = true;
             {
                 // Stringified version.
-                std::ifstream FI(Filename.c_str(), std::ios::in);
+                std::ifstream FI(Filename, std::ios::in);
                 read_ok = DICOM_data.lsamp_data.back()->line.Read_From_Stream(FI);
             }
             if(!read_ok){
                 // Serialized version.
-                std::ifstream FI(Filename.c_str(), std::ios::in);
+                std::ifstream FI(Filename, std::ios::in);
                 read_ok = !!(FI >> DICOM_data.lsamp_data.back()->line);
             }
             if(!read_ok){

@@ -46,8 +46,7 @@ OperationDoc OpArgDocDecimatePixels(){
 
 bool DecimatePixels(Drover &DICOM_data,
                       const OperationArgPkg& OptArgs,
-                      const std::map<std::string, std::string>&
-                      /*InvocationMetadata*/,
+                      std::map<std::string, std::string>& /*InvocationMetadata*/,
                       const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
@@ -67,7 +66,7 @@ bool DecimatePixels(Drover &DICOM_data,
             if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                    DecimateRC,
                                                    {}, {} )){
-                FUNCERR("Unable to decimate pixels");
+                throw std::runtime_error("Unable to decimate pixels");
             }
         }
     }

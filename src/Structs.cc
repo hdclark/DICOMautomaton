@@ -29,6 +29,7 @@
 #include "YgorString.h"
 
 #include "Structs.h"
+#include "Tables.h"
 #include "Dose_Meld.h"
 
 //This is a mapping from the segmentation history to a human-readable description.
@@ -979,6 +980,24 @@ template std::optional<double     > Transform3::GetMetadataValueAs(const std::st
 template std::optional<std::string> Transform3::GetMetadataValueAs(const std::string &) const;
 
 //---------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------- Sparse_Table ------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------
+Sparse_Table::Sparse_Table()= default;
+
+Sparse_Table::Sparse_Table(const Sparse_Table &rhs){
+    *this = rhs; //Performs a deep copy (unless copying self).
+}
+
+Sparse_Table & Sparse_Table::operator=(const Sparse_Table &rhs){
+    //Performs a deep copy (unless copying self).
+    if(this != &rhs){
+        this->table = rhs.table;
+    }
+    return *this;
+}
+
+
+//---------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------ Drover -------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
 
@@ -1037,6 +1056,7 @@ void Drover::operator=(const Drover &rhs){
         this->tplan_data      = rhs.tplan_data;
         this->lsamp_data      = rhs.lsamp_data;
         this->trans_data      = rhs.trans_data;
+        this->table_data      = rhs.table_data;
     }
     return;
 }
@@ -1598,6 +1618,16 @@ bool Drover::Has_Tran3_Data() const {
     return false;
 }
 
+bool Drover::Has_Table_Data() const {
+    //Does not verify the table's data itself, it merely looks to see if we have any valid Sparse_Tables attached.
+    if(this->table_data.size() == 0) return false;
+    for(const auto & td_it : this->table_data){
+        if(td_it != nullptr) return true; 
+    }
+    return false;
+}
+
+
 void Drover::Ensure_Contour_Data_Allocated(){
      if(this->contour_data == nullptr){
          this->contour_data = std::make_unique<Contour_Data>();
@@ -1649,6 +1679,12 @@ void Drover::Concatenate(std::list<std::shared_ptr<Transform3>> in){
     return;
 }
 
+void Drover::Concatenate(std::list<std::shared_ptr<Sparse_Table>> in){
+    this->table_data.splice( this->table_data.end(), in );
+    return;
+}
+
+
 void Drover::Concatenate(Drover in){
     this->Concatenate(in.contour_data);
     this->Concatenate(in.image_data);
@@ -1657,6 +1693,7 @@ void Drover::Concatenate(Drover in){
     this->Concatenate(in.tplan_data);
     this->Concatenate(in.lsamp_data);
     this->Concatenate(in.trans_data);
+    this->Concatenate(in.table_data);
     return;
 }
 
@@ -1710,6 +1747,11 @@ void Drover::Consume(std::list<std::shared_ptr<Transform3>> in){
     return;
 }
 
+void Drover::Consume(std::list<std::shared_ptr<Sparse_Table>> in){
+    this->Concatenate(std::move(in));
+    return;
+}
+
 void Drover::Consume(Drover in){
     this->Consume(in.contour_data);
     this->Consume(in.image_data);
@@ -1718,6 +1760,7 @@ void Drover::Consume(Drover in){
     this->Consume(in.tplan_data);
     this->Consume(in.lsamp_data);
     this->Consume(in.trans_data);
+    this->Consume(in.table_data);
     return;
 }
 
@@ -1980,6 +2023,15 @@ OperationArgPkg::insert(const std::string& keyval){
         }
     }
     return true;
+}
+
+void
+OperationArgPkg::visit_opts( const std::function<void(const std::string &key, std::string &val)> &f){
+    for(auto &o : this->opts){
+        const auto key = o.first; // Distruct user due to const-cast, which would be problematic.
+        if(f) f(key, o.second);
+    }
+    return;
 }
 
 // Children.

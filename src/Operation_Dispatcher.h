@@ -12,7 +12,7 @@
 
 using op_func_t = std::function<bool (Drover &, 
                                       const OperationArgPkg &,
-                                      const std::map<std::string, std::string> &,
+                                      std::map<std::string, std::string> &,
                                       const std::string & )>;
 using op_doc_func_t = std::function<OperationDoc ()>;
 typedef std::pair<op_doc_func_t,op_func_t> op_packet_t;
@@ -22,7 +22,7 @@ std::map<std::string, op_packet_t> Known_Operations();
 std::map<std::string, std::string> Operation_Lexicon();
 
 bool Operation_Dispatcher( Drover &DICOM_data,
-                           const std::map<std::string,std::string> &InvocationMetadata,
+                           std::map<std::string,std::string> &InvocationMetadata,
                            const std::string &FilenameLex,
                            const std::list<OperationArgPkg> &Operations);
 

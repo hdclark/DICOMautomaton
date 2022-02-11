@@ -16,6 +16,7 @@
 #include <mutex>
 #include <limits>
 #include <cmath>
+#include <filesystem>
 
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
@@ -216,7 +217,7 @@ OperationDoc OpArgDocDumpROISurfaceMeshes(){
 
 bool DumpROISurfaceMeshes(Drover &DICOM_data,
                             const OperationArgPkg& OptArgs,
-                            const std::map<std::string, std::string>&,
+                            std::map<std::string, std::string>& /*InvocationMetadata*/,
                             const std::string&){
 
     //---------------------------------------------- User Parameters --------------------------------------------------

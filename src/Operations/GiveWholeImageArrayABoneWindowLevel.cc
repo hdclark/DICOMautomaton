@@ -28,13 +28,13 @@ OperationDoc OpArgDocGiveWholeImageArrayABoneWindowLevel(){
 
 bool GiveWholeImageArrayABoneWindowLevel(Drover &DICOM_data,
                                            const OperationArgPkg& /*OptArgs*/,
-                                           const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                                           std::map<std::string, std::string>& /*InvocationMetadata*/,
                                            const std::string& /*FilenameLex*/){
     for(auto & img_arr : DICOM_data.image_data){
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                StandardBoneHUWindow,
                                                {},{} )){
-            FUNCERR("Unable to force window to cover a reasonable bone HU range");
+            throw std::runtime_error("Unable to force window to cover a reasonable bone HU range");
         }
     }
 

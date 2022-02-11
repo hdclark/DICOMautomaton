@@ -15,6 +15,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <filesystem>
 
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -151,8 +152,7 @@ OperationDoc OpArgDocCountVoxels(){
 
 bool CountVoxels(Drover &DICOM_data,
                    const OperationArgPkg& OptArgs,
-                   const std::map<std::string, std::string>&
-                   /*InvocationMetadata*/,
+                   std::map<std::string, std::string>& /*InvocationMetadata*/,
                    const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
@@ -314,12 +314,13 @@ bool CountVoxels(Drover &DICOM_data,
 
     //Report a summary.
     FUNCINFO("Attempting to claim a mutex");
-    try{
+    {
         auto gen_filename = [&]() -> std::string {
-            if(ResultsSummaryFileName.empty()){
-                ResultsSummaryFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_countvoxels_", 6, ".csv");
+            if(!ResultsSummaryFileName.empty()){
+                return ResultsSummaryFileName;
             }
-            return ResultsSummaryFileName;
+            const auto base = std::filesystem::temp_directory_path() / "dcma_countvoxels_";
+            return Get_Unique_Sequential_Filename(base.string(), 6, ".csv");
         };
 
         std::stringstream header;
@@ -352,14 +353,11 @@ bool CountVoxels(Drover &DICOM_data,
              << std::endl;
 
         Append_File( gen_filename,
-                     "dicomautomaton_operation_countvoxels_mutex",
+                     "dcma_op_countvoxels_mutex",
                      header.str(),
                      body.str() );
 
         FUNCINFO("Writing file containing:" << std::endl << header.str() << std::endl << body.str() << std::endl);
-
-    }catch(const std::exception &e){
-        FUNCERR("Unable to write to output file: '" << e.what() << "'");
     }
 
     return true;

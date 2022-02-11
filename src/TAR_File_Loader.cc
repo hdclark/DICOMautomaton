@@ -35,7 +35,7 @@
 
 
 bool Load_From_TAR_Files( Drover &DICOM_data,
-                          const std::map<std::string,std::string> &InvocationMetadata,
+                          std::map<std::string,std::string> &InvocationMetadata,
                           const std::string &FilenameLex,
                           std::list<OperationArgPkg> &Operations,
                           std::list<std::filesystem::path> &Filenames ){
@@ -52,7 +52,7 @@ bool Load_From_TAR_Files( Drover &DICOM_data,
     while(bfit != Filenames.end()){
         FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
-        const auto Filename = bfit->string();
+        const auto Filename = *bfit;
 
         // Encapsulated file handler.
         //

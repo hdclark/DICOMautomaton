@@ -1121,4 +1121,104 @@ OperationArgDoc T3WhitelistOpArgDoc(){
     return out;
 }
 
+// ----------------------------------- Sparse Tables ------------------------------------
+
+// Provide pointers for all line samples into a list.
+//
+// Note: The output is meant to be filtered using the selectors below.
+std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator>
+All_STs( Drover &DICOM_data ){
+    std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator> st_all;
+
+    for(auto stp_it = DICOM_data.table_data.begin(); stp_it != DICOM_data.table_data.end(); ++stp_it){
+        if((*stp_it) == nullptr) continue;
+        st_all.push_back(stp_it);
+    }
+    return st_all;
+}
+
+
+// Whitelist tables using the provided regex.
+std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator> sts,
+           std::string MetadataKey,
+           std::string MetadataValueRegex,
+           Regex_Selector_Opts Opts ){
+
+    auto theregex = Compile_Regex(std::move(MetadataValueRegex));
+
+    sts.remove_if([&](std::list<std::shared_ptr<Sparse_Table>>::iterator stp_it) -> bool {
+        if((*stp_it) == nullptr) return true;
+        //if((*stp_it)->table.data().empty()) return true; // Remove tables containing no cells.
+
+        if( // Note: Sparse_Tables are dissimilar to Image_Arrays in that individual images can have different
+            //       metadata, but tables are 1-to-1. We keep these options for consistency.
+                  (Opts.validation == Regex_Selector_Opts::Validation::Representative)
+              ||  (Opts.validation == Regex_Selector_Opts::Validation::Pedantic)        ){
+
+            std::optional<std::string> ValueOpt 
+                    = ( (*stp_it)->table.metadata.count(MetadataKey) != 0 ) ?
+                      (*stp_it)->table.metadata[MetadataKey] :
+                      std::optional<std::string>();
+            if(ValueOpt){
+                return !(std::regex_match(ValueOpt.value(),theregex));
+            }else if(Opts.nas == Regex_Selector_Opts::NAs::Include){
+                return false;
+            }else if(Opts.nas == Regex_Selector_Opts::NAs::Exclude){
+                return true;
+            }else if(Opts.nas == Regex_Selector_Opts::NAs::TreatAsEmpty){
+                return !(std::regex_match("",theregex));
+            }
+            throw std::logic_error("NAs option not understood. Cannot continue.");
+        }
+        throw std::logic_error("Regex selector option not understood. Cannot continue.");
+        return true; // Should never get here.
+    });
+    return sts;
+}
+
+
+// Whitelist sparse tables using a limited vocabulary of specifiers.
+//
+// Note: this routine shares the generic Image_Arrays implementation above.
+std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator> sts,
+           std::string Specifier,
+           Regex_Selector_Opts Opts ){
+
+    return Whitelist_Core( std::move(sts), std::move(Specifier), Opts );
+}    
+
+
+// This is a convenience routine to combine multiple filtering passes into a single logical statement.
+//
+// Note: this routine shares the generic Image_Arrays implementation above.
+std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator> sts,
+           std::initializer_list< std::pair<std::string, 
+                                            std::string> > MetadataKeyValueRegex,
+           Regex_Selector_Opts Opts ){
+
+    return Whitelist_Core( std::move(sts), MetadataKeyValueRegex, Opts );
+}
+
+
+// Utility function documenting the sparse table whitelist routines for operations.
+OperationArgDoc STWhitelistOpArgDoc(){
+    OperationArgDoc out;
+
+    out.name = "TableSelection";
+    out.desc = "Select one or more tables."_s
+               + GenericSelectionInfo("table");
+    out.default_val = "all";
+    out.expected = true;
+    out.examples = { "last", "first", "all", "none", 
+                     "#0", "#-0",
+                     "!last", "!#-3",
+                     "key@.*value.*", "key1@.*value1.*;key2@^value2$;first",
+                     "numerous" };
+
+    return out;
+}
+
 

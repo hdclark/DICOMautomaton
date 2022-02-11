@@ -58,11 +58,13 @@
 
 #include "Thread_Pool.h"
 #include "Structs.h"
+#include "CSG_SDF.h"
 
 #include "YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
 
 #include "Surface_Meshes.h"
+
 
 // ----------------------------------------------- Pure contour meshing -----------------------------------------------
 namespace dcma_surface_meshes {
@@ -75,10 +77,12 @@ namespace dcma_surface_meshes {
 //       version to support rectangular cubes, avoid 3D interpolation, and explicitly constructs a polyhedron mesh.
 //       Thanks Cory! Thanks Paul!
 //
+
 static
 fv_surface_mesh<double, uint64_t>
 Marching_Cubes_Implementation(
         std::list<std::reference_wrapper<planar_image<float,double>>> grid_imgs,
+        std::shared_ptr<csg::sdf::node> sdf,
         double inclusion_threshold, // The voxel value threshold demarcating surface 'interior' and 'exterior.'
         bool below_is_interior,  // Controls how the inclusion_threshold is interpretted.
                                  // If true, anything <= is considered to be interior to the surface.
@@ -101,6 +105,8 @@ Marching_Cubes_Implementation(
                               static_cast<double>(0) );
 
     planar_image_adjacency<float,double> img_adj( grid_imgs, {}, GridZ );
+
+    const bool has_signed_dist_func = (sdf != nullptr);
 
     // ============================================== Marching Cubes ================================================
 
@@ -574,14 +580,19 @@ Marching_Cubes_Implementation(
 
                 // Sample voxel corner values.
                 std::array<double, 8> afCubeValue;
-                //
-                // Option A: Interpolate. This way is slow but extremely flexible.
-                //for(int32_t corner = 0; corner < 8; ++corner){
-                //    afCubeValue[corner] = surface_oracle(pos + a2fVertexOffset[corner]);
-                //}
-                //
-                // Option B: Align Marching Cube voxel corners with image voxel centres. This way is fast.
-                {
+                
+                // Use the voxel intensity as a level-set or 'oracle' function to define the mesh boundary.
+                if(!has_signed_dist_func){
+                    //// Option A: Interpolate in 3D using trilinear interpolation.
+                    ////
+                    //// This approach is slow but extremely flexible, e.g, does not require image rectilinearity.
+                    //for(int32_t corner = 0; corner < 8; ++corner){
+                    //    afCubeValue[corner] = interpolate_3D(pos + a2fVertexOffset[corner]);
+                    //}
+                    
+                    // Option B: Align Marching Cube voxel corners with image voxel centres.
+                    //
+                    // This approach is fast, but requires image rectilinearity.
                     const auto row_p1 = (row+1);
                     const auto row_is_adj = (row_p1 < N_rows);
 
@@ -596,8 +607,16 @@ Marching_Cubes_Implementation(
                     afCubeValue[5] = (row_is_adj && img_is_adj)               ? img_p1.get().value(row_p1, col, 0)      : ExteriorVal;
                     afCubeValue[6] = (row_is_adj && col_is_adj && img_is_adj) ? img_p1.get().value(row_p1, col_p1, 0)   : ExteriorVal;
                     afCubeValue[7] = (col_is_adj && img_is_adj)               ? img_p1.get().value(row, col_p1, 0)      : ExteriorVal;
-                }
 
+                // Use the provided signed distance function to 'override' the image voxel intensities.
+                //
+                // This approach is slow but extremely flexible for meshing complicated shapes (e.g., Booleans).
+                }else{
+                    for(int32_t corner = 0; corner < 8; ++corner){
+                        afCubeValue[corner] = sdf->evaluate_sdf(pos + a2fVertexOffset[corner]);
+                    }
+                }
+                
                 // Convert vertex inclusion to a bitmask.
                 int32_t iFlagIndex = 0;
                 for(int32_t corner = 0; corner < 8; ++corner){
@@ -1218,6 +1237,98 @@ Estimate_Surface_Mesh_Marching_Cubes(
 
     // Offload the actual Marching Cubes computation.
     return Marching_Cubes_Implementation( grid_imgs,
+                                          std::shared_ptr<csg::sdf::node>(),
+                                          inclusion_threshold,
+                                          below_is_interior,
+                                          params );
+}
+
+// Perform Marching Cubes using a user-provided signed-distance function.
+fv_surface_mesh<double, uint64_t>
+Estimate_Surface_Mesh_Marching_Cubes(
+        std::shared_ptr<csg::sdf::node> sdf,
+        const vec3<double>& minimum_resolution,
+        double inclusion_threshold, // The voxel value threshold demarcating surface 'interior' and 'exterior.'
+        bool below_is_interior,  // Controls how the inclusion_threshold is interpretted.
+                                 // If true, anything <= is considered to be interior to the surface.
+                                 // If false, anything >= is considered to be interior to the surface.
+        Parameters params ){
+
+    auto bb = sdf->evaluate_aa_bbox();
+    if(!bb.min.isfinite() || !bb.max.isfinite()){
+        throw std::invalid_argument("SDF produces a non-finite bounding box");
+    }
+
+    // Make an image volume that covers the bounding box + a margin.
+    const double min_res_x = minimum_resolution.x;
+    const double min_res_y = minimum_resolution.y;
+    const double min_res_z = minimum_resolution.z;
+
+    // Add a resolution-aware margin to the bounding box.
+    const auto l_bb_min = bb.min;
+    const auto l_bb_max = bb.max;
+    bb.digest( l_bb_min - vec3<double>(min_res_x, min_res_y, min_res_z) * 2.0 );
+    bb.digest( l_bb_max + vec3<double>(min_res_x, min_res_y, min_res_z) * 2.0 );
+
+    const double margin_x = min_res_x; // Ensure at least one voxel surrounds entire object.
+    const double margin_y = min_res_y;
+    const double margin_z = min_res_z;
+
+    const auto N_rows = static_cast<long int>(std::ceil((bb.max.x - bb.min.x)/min_res_x));
+    const auto N_cols = static_cast<long int>(std::ceil((bb.max.y - bb.min.y)/min_res_y));
+    const auto N_imgs = static_cast<long int>(std::ceil((bb.max.z - bb.min.z)/min_res_z));
+    const auto N_chns = static_cast<long int>(1);
+
+    const vec3<double> row_unit(1.0, 0.0, 0.0);
+    const vec3<double> col_unit(0.0, 1.0, 0.0);
+
+    const auto c1 = vec3<double>(bb.min.x, bb.min.y, bb.min.z);
+    const auto c2 = vec3<double>(bb.max.x, bb.min.y, bb.min.z);
+    const auto c3 = vec3<double>(bb.max.x, bb.max.y, bb.min.z);
+    const auto c4 = vec3<double>(bb.min.x, bb.max.y, bb.min.z);
+
+    const auto c5 = vec3<double>(bb.min.x, bb.min.y, bb.max.z);
+    const auto c6 = vec3<double>(bb.max.x, bb.min.y, bb.max.z);
+    const auto c7 = vec3<double>(bb.max.x, bb.max.y, bb.max.z);
+    const auto c8 = vec3<double>(bb.min.x, bb.max.y, bb.max.z);
+
+    contour_collection<double> cc;
+    cc.contours.emplace_back(contour_of_points(std::list<vec3<double>>{{ c1, c2, c3, c4 }}));
+    cc.contours.emplace_back(contour_of_points(std::list<vec3<double>>{{ c5, c6, c7, c8 }}));
+    std::list<std::reference_wrapper<contour_collection<double>>> ccs;
+    ccs.emplace_back( std::ref(cc) );
+
+    csg::sdf::aa_bbox c_bb;
+    for(const auto& cc_refw : ccs){
+        for(const auto& c : cc_refw.get().contours){
+            for(const auto& p : c.points){
+                c_bb.digest(p);
+            }
+        }
+    }
+//FUNCINFO("Contours stretch from " << c_bb.min << " to " << c_bb.max);
+//FUNCINFO("Using N_rows, N_cols, N_imgs = " << N_rows << ", " << N_cols << ", " << N_imgs);
+//FUNCINFO("Margin {x,y,z} = " << margin_x << ", " << margin_y << ", " << margin_z);
+//FUNCINFO("row_unit, col_unit = " << row_unit << ", " << col_unit);
+
+    auto pic = Contiguously_Grid_Volume<float,double>(ccs,
+                                                      margin_x, margin_y, margin_z,
+                                                      N_rows, N_cols, N_chns, N_imgs,
+                                                      row_unit, col_unit); //, img_unit);
+
+    std::list<std::reference_wrapper<planar_image<float,double>>> imgs;
+//csg::sdf::aa_bbox img_bb;
+    for(auto& img : pic.images){
+        imgs.emplace_back( std::ref(img) );
+//img_bb.digest( img.position(0,0) );
+//img_bb.digest( img.position(N_rows-1,0) );
+//img_bb.digest( img.position(0,N_cols-1) );
+//img_bb.digest( img.position(N_rows-1,N_cols-1) );
+    }
+//FUNCINFO("Images stretch from " << img_bb.min << " to " << img_bb.max);
+
+    return Marching_Cubes_Implementation( imgs,
+                                          sdf,
                                           inclusion_threshold,
                                           below_is_interior,
                                           params );
@@ -1245,6 +1356,7 @@ Estimate_Surface_Mesh_Marching_Cubes(
 
     // Offload the actual Marching Cubes computation.
     return Marching_Cubes_Implementation( grid_imgs,
+                                          std::shared_ptr<csg::sdf::node>(),
                                           inclusion_threshold,
                                           below_is_interior,
                                           params );

@@ -169,7 +169,7 @@ OperationDoc OpArgDocGridBasedRayCastDoseAccumulate(){
 
 bool GridBasedRayCastDoseAccumulate(Drover &DICOM_data,
                                       const OperationArgPkg& OptArgs,
-                                      const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                                      std::map<std::string, std::string>& /*InvocationMetadata*/,
                                       const std::string& FilenameLex){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
@@ -355,7 +355,7 @@ bool GridBasedRayCastDoseAccumulate(Drover &DICOM_data,
         if(!grid_arr_ptr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                              InImagePlaneBicubicSupersample,
                                                              {}, {}, &bicub_ud )){
-            FUNCERR("Unable to bicubically supersample surface mask");
+            throw std::runtime_error("Unable to bicubically supersample surface mask");
         }
     }
 

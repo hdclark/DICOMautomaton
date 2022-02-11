@@ -45,8 +45,7 @@ OperationDoc OpArgDocPlotPerROITimeCourses(){
 
 bool PlotPerROITimeCourses(Drover &DICOM_data,
                              const OperationArgPkg& OptArgs,
-                             const std::map<std::string, std::string>&
-                             /*InvocationMetadata*/,
+                             std::map<std::string, std::string>& /*InvocationMetadata*/,
                              const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
@@ -80,7 +79,7 @@ bool PlotPerROITimeCourses(Drover &DICOM_data,
                                            { },
                                            cc_ROIs,
                                            &ud )){
-        FUNCERR("Unable to compute per-ROI time courses");
+        throw std::runtime_error("Unable to compute per-ROI time courses");
     }
     //For perfusion purposes, Scale down the ROIs per-atomos (i.e., per-voxel).
     for(auto & tcs : ud.time_courses){

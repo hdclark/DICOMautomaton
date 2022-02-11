@@ -1,0 +1,47 @@
+// Standard_Scripts.cc - A part of DICOMautomaton 2021. Written by hal clark.
+
+#include <list>
+#include <cmath>
+#include <cctype>
+#include <algorithm>
+#include <cstdint>
+#include <exception>
+#include <set>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <filesystem>
+
+#include "Structs.h"
+#include "Standard_Scripts.h"
+
+
+#ifndef DCMA_SCRIPT_INLINES
+#define DCMA_SCRIPT_INLINES
+#endif //DCMA_SCRIPT_INLINES
+
+std::list<standard_script_t> standard_scripts(){
+    std::list<standard_script_t> out {
+        // Autopopulated during build.
+        DCMA_SCRIPT_INLINES
+    };
+
+    out.remove_if([](const standard_script_t &s){ return (s.category.empty() || s.name.empty() || s.text.empty()); });
+    out.sort([](const standard_script_t &L, const standard_script_t &R){
+        return std::make_tuple(L.category, L.name) < std::make_tuple(R.category, R.name);
+    });
+    return out;
+}
+
+std::list<standard_script_t> standard_scripts_with_category(const std::string &category){
+    auto out = standard_scripts();
+    out.remove_if([&](const standard_script_t &s){ return (s.category != category); });
+    return out;
+}
+
+std::set<std::string> standard_script_categories(){
+    std::set<std::string> out;
+    for(const auto &s : standard_scripts()) out.insert(s.category);
+    return out;
+}
+

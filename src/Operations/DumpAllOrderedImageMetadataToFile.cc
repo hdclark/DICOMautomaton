@@ -7,6 +7,7 @@
 #include <set> 
 #include <string>    
 #include <utility>            //Needed for std::pair.
+#include <filesystem>
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
@@ -27,7 +28,7 @@ OperationDoc OpArgDocDumpAllOrderedImageMetadataToFile(){
 
 bool DumpAllOrderedImageMetadataToFile(Drover &DICOM_data,
                                          const OperationArgPkg& /*OptArgs*/,
-                                         const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                                         std::map<std::string, std::string>& /*InvocationMetadata*/,
                                          const std::string& /*FilenameLex*/){
 
     const auto Dump_All_Ordered_Image_Metadata_To_File = 
@@ -49,7 +50,7 @@ bool DumpAllOrderedImageMetadataToFile(Drover &DICOM_data,
                 for(const auto &akey : sset) df << img.metadata.find(akey)->second << "\t";
                 df << std::endl;
             }
-            if(!OverwriteStringToFile(df.str(),dumpfile)) FUNCERR("Unable to dump ordered image metadata to file");
+            if(!OverwriteStringToFile(df.str(),dumpfile)) throw std::runtime_error("Unable to dump ordered image metadata to file");
             return;
         };
 

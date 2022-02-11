@@ -68,7 +68,7 @@ OperationDoc OpArgDocIfElse() {
 
 bool IfElse(Drover &DICOM_data,
               const OperationArgPkg& OptArgs,
-              const std::map<std::string, std::string>& InvocationMetadata,
+              std::map<std::string, std::string>& InvocationMetadata,
               const std::string& FilenameLex){
     //-----------------------------------------------------------------------------------------------------------------
 
@@ -86,11 +86,7 @@ bool IfElse(Drover &DICOM_data,
     if(!children.empty()) child_else.splice( std::end(child_else), children );
     
 
-    bool condition = false;
-    try{
-        condition = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, child_condition);
-    }catch(const std::exception &){ }
-
+    const bool condition = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, {child_condition});
     if(condition){
         if(!child_then.empty()){
             if(!Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, child_then)){

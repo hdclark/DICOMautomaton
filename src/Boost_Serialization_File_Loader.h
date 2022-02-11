@@ -11,6 +11,6 @@
 #include "Structs.h"
 
 bool Load_From_Boost_Serialization_Files( Drover &DICOM_data,
-                                          const std::map<std::string,std::string> &InvocationMetadata,
+                                          std::map<std::string,std::string> &InvocationMetadata,
                                           const std::string &FilenameLex,
                                           std::list<std::filesystem::path> &Filenames );

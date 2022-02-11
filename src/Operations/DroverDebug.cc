@@ -23,7 +23,7 @@
 
 static void dump_metadata(std::ostream &os,
                           const std::string& indent,
-                          const std::map<std::string, std::string> m){
+                          const std::map<std::string, std::string>& m){
     for(const auto &p : m){
         os << indent << "'" << p.first << "' : '" << p.second << "'" << std::endl;
     }
@@ -45,6 +45,15 @@ OperationDoc OpArgDocDroverDebug(){
     out.args.back().default_val = "false";
     out.args.back().expected = true;
     out.args.back().examples = { "true", "false" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
+
+    out.args.emplace_back();
+    out.args.back().name = "Verbosity";
+    out.args.back().desc = "Controls the amount of information printed.";
+    out.args.back().default_val = "verbose";
+    out.args.back().expected = true;
+    out.args.back().examples = { "verbose", "medium", "quiet" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     return out;
 }
@@ -52,21 +61,41 @@ OperationDoc OpArgDocDroverDebug(){
 
 
 bool DroverDebug(Drover &DICOM_data,
-                   const OperationArgPkg& OptArgs,
-                   const std::map<std::string, std::string>& /*InvocationMetadata*/,
-                   const std::string& /*FilenameLex*/){
+                 const OperationArgPkg& OptArgs,
+                 std::map<std::string, std::string>& InvocationMetadata,
+                 const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto IncludeMetadataStr = OptArgs.getValueStr("IncludeMetadata").value();
+    const auto VerbosityStr = OptArgs.getValueStr("Verbosity").value();
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_true = Compile_Regex("^tr?u?e?$");
+    const auto regex_verbose = Compile_Regex("^ve?r?b?o?s?e?$");
+    const auto regex_medium = Compile_Regex("^me?d?i?u?m?$");
+    const auto regex_quiet = Compile_Regex("^qu?i?e?t?$");
 
     const auto IncludeMetadata = std::regex_match(IncludeMetadataStr, regex_true);
 
+    enum class verbosity_t {
+        verbose,
+        medium,
+        quiet,
+    } verbosity = verbosity_t::verbose;
+    if(std::regex_match(VerbosityStr, regex_verbose)){
+        verbosity = verbosity_t::verbose;
+    }else if(std::regex_match(VerbosityStr, regex_medium)){
+        verbosity = verbosity_t::medium;
+    }else if(std::regex_match(VerbosityStr, regex_quiet)){
+        verbosity = verbosity_t::quiet;
+    }else{
+        throw std::invalid_argument("Verbosity level not understood");
+    }
+
     //Image data.
-    {
+    do{
         FUNCINFO("There are " << DICOM_data.image_data.size() << " Image_Arrays loaded");
+        if(verbosity == verbosity_t::quiet) break;
 
         size_t i_arr = 0;
         for(auto &iap : DICOM_data.image_data){
@@ -76,6 +105,7 @@ bool DroverDebug(Drover &DICOM_data,
             }else{
                 FUNCINFO("  Image_Array " << i_arr << " has " <<
                          iap->imagecoll.images.size() << " image slices");
+                if(verbosity == verbosity_t::medium) continue;
 
                 size_t i_num = 0;
                 for(auto &img : iap->imagecoll.images){
@@ -108,7 +138,7 @@ bool DroverDebug(Drover &DICOM_data,
                 ++i_arr;
             }
         }
-    }
+    }while(false);
 
     //Contour data.
     do{
@@ -116,10 +146,10 @@ bool DroverDebug(Drover &DICOM_data,
             FUNCINFO("There are 0 contour_collections loaded");
             break;
         }
-
         FUNCINFO("There are " <<
                  DICOM_data.contour_data->ccs.size() <<
                  " contour_collections loaded");
+        if(verbosity == verbosity_t::quiet) break;
 
         size_t c_dat = 0;
         for(auto & cc : DICOM_data.contour_data->ccs){
@@ -128,6 +158,8 @@ bool DroverDebug(Drover &DICOM_data,
                      " has " <<
                      cc.contours.size() <<
                      " contours");
+            if(verbosity == verbosity_t::medium) continue;
+
             size_t c_num = 0;
             for(auto & c : cc.contours){
                 FUNCINFO("    contour " <<
@@ -152,8 +184,9 @@ bool DroverDebug(Drover &DICOM_data,
     }while(false);
 
     //Point data.
-    {
+    do{
         FUNCINFO("There are " << DICOM_data.point_data.size() << " Point_Clouds loaded");
+        if(verbosity == verbosity_t::quiet) break;
 
         size_t p_cnt = 0;
         for(auto &pc : DICOM_data.point_data){
@@ -163,6 +196,7 @@ bool DroverDebug(Drover &DICOM_data,
             }else{
                 FUNCINFO("  Point_Cloud " << p_cnt << " has " <<
                          pc->pset.points.size() << " points");
+                if(verbosity == verbosity_t::medium) continue;
                 if(IncludeMetadata){
                     FUNCINFO("    Point_Cloud " << p_cnt << " metadata:");
                     dump_metadata(std::cout, "        ", pc->pset.metadata);
@@ -170,11 +204,12 @@ bool DroverDebug(Drover &DICOM_data,
             }
             ++p_cnt;
         }
-    }
+    }while(false);
 
     //Surface mesh data.
-    {
+    do{
         FUNCINFO("There are " << DICOM_data.smesh_data.size() << " Surface_Meshes loaded");
+        if(verbosity == verbosity_t::quiet) break;
 
         size_t m_cnt = 0;
         for(auto &sm : DICOM_data.smesh_data){
@@ -185,6 +220,7 @@ bool DroverDebug(Drover &DICOM_data,
                 FUNCINFO("  Surface_Mesh " << m_cnt << " has " << 
                          sm->meshes.vertices.size() << " vertices and " <<
                          sm->meshes.faces.size() << " faces");
+                if(verbosity == verbosity_t::medium) continue;
                 if(IncludeMetadata){
                     FUNCINFO("    Surface_Mesh " << m_cnt << " metadata:");
                     dump_metadata(std::cout, "        ", sm->meshes.metadata);
@@ -192,11 +228,12 @@ bool DroverDebug(Drover &DICOM_data,
             }
             ++m_cnt;
         }
-    }
+    }while(false);
 
     //Treatment plan data.
-    {
+    do{
         FUNCINFO("There are " << DICOM_data.tplan_data.size() << " TPlan_Configs loaded");
+        if(verbosity == verbosity_t::quiet) break;
 
         size_t tp_cnt = 0;
         for(auto &tp : DICOM_data.tplan_data){
@@ -206,6 +243,7 @@ bool DroverDebug(Drover &DICOM_data,
             }else{
                 FUNCINFO("  TPlan_Config " << tp_cnt << " has " <<
                          tp->dynamic_states.size() << " beams");
+                if(verbosity == verbosity_t::medium) continue;
                 if(IncludeMetadata){
                     FUNCINFO("  TPlan_Config " << tp_cnt << " metadata:");
                     dump_metadata(std::cout, "      ", tp->metadata);
@@ -224,11 +262,12 @@ bool DroverDebug(Drover &DICOM_data,
             }
             ++tp_cnt;
         }
-    }
+    }while(false);
 
     //Line sample data.
-    {
+    do{
         FUNCINFO("There are " << DICOM_data.lsamp_data.size() << " Line_Samples loaded");
+        if(verbosity == verbosity_t::quiet) break;
 
         size_t l_cnt = 0;
         for(auto &lsp : DICOM_data.lsamp_data){
@@ -239,6 +278,7 @@ bool DroverDebug(Drover &DICOM_data,
                 FUNCINFO("  Line_Sample " << l_cnt << " has " << 
                          lsp->line.samples.size() << " datum and " <<
                          lsp->line.metadata.size() << " metadata keys");
+                if(verbosity == verbosity_t::medium) continue;
                 if(IncludeMetadata){
                     FUNCINFO("    Line_Sample " << l_cnt << " metadata:");
                     dump_metadata(std::cout, "        ", lsp->line.metadata);
@@ -246,11 +286,13 @@ bool DroverDebug(Drover &DICOM_data,
             }
             ++l_cnt;
         }
-    }
+    }while(false);
 
     //Transformation data.
-    {
+    do{
         FUNCINFO("There are " << DICOM_data.trans_data.size() << " Transform3s loaded");
+        if(verbosity == verbosity_t::quiet) break;
+
         FUNCINFO("  The Transform3 class is " << sizeof(Transform3) << " bytes");
 
         size_t t_cnt = 0;
@@ -281,6 +323,7 @@ bool DroverDebug(Drover &DICOM_data,
                 FUNCINFO("  Transform3 " << t_cnt << " has " << 
                          t3p->metadata.size() << " metadata keys");
 
+                if(verbosity == verbosity_t::medium) continue;
                 if(IncludeMetadata){
                     FUNCINFO("    Transform3 " << t_cnt << " metadata:");
                     dump_metadata(std::cout, "        ", t3p->metadata);
@@ -288,7 +331,42 @@ bool DroverDebug(Drover &DICOM_data,
             }
             ++t_cnt;
         }
-    }
+    }while(false);
+
+    //Table data.
+    do{
+        FUNCINFO("There are " << DICOM_data.table_data.size() << " Sparse_Tables loaded");
+        if(verbosity == verbosity_t::quiet) break;
+
+        size_t t_cnt = 0;
+        for(auto &tp : DICOM_data.table_data){
+            if(tp == nullptr){
+                FUNCINFO("  Sparse_Table " << t_cnt << " is not valid");
+
+            }else{
+                FUNCINFO("  Sparse_Table " << t_cnt << " has " << 
+                         tp->table.data.size() << " rows and " <<
+                         tp->table.metadata.size() << " metadata keys");
+                if(verbosity == verbosity_t::medium) continue;
+                if(IncludeMetadata){
+                    FUNCINFO("    Sparse_Table " << t_cnt << " metadata:");
+                    dump_metadata(std::cout, "        ", tp->table.metadata);
+                }
+            }
+            ++t_cnt;
+        }
+    }while(false);
+
+    //InvocationMetadata.
+    do{
+        FUNCINFO("There are " << InvocationMetadata.size() << " metadata parameters defined");
+        if(verbosity == verbosity_t::quiet) break;
+        if(verbosity == verbosity_t::medium) break;
+
+        if(IncludeMetadata){
+            dump_metadata(std::cout, "  ", InvocationMetadata);
+        }
+    }while(false);
 
     return true;
 }

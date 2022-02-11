@@ -41,14 +41,14 @@ OperationDoc OpArgDocTrue() {
     out.name = "True";
 
     out.desc = "This operation is a control flow meta-operation that completes successfully."
-               " It has not side effects and evaluates to a no-op.";
+               " It has no side effects and evaluates to a no-op.";
 
     return out;
 }
 
 bool True(Drover &DICOM_data,
             const OperationArgPkg& /*OptArgs*/,
-            const std::map<std::string, std::string>& /*InvocationMetadata*/,
+            std::map<std::string, std::string>& /*InvocationMetadata*/,
             const std::string& /*FilenameLex*/){
 
     return true;

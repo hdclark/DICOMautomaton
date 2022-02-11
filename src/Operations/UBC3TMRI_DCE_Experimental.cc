@@ -39,7 +39,7 @@ OperationDoc OpArgDocUBC3TMRI_DCE_Experimental(){
 
 bool UBC3TMRI_DCE_Experimental(Drover &DICOM_data,
                                  const OperationArgPkg& /*OptArgs*/,
-                                 const std::map<std::string, std::string>& InvocationMetadata,
+                                 std::map<std::string, std::string>& InvocationMetadata,
                                  const std::string& /*FilenameLex*/){
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
@@ -77,8 +77,9 @@ bool UBC3TMRI_DCE_Experimental(Drover &DICOM_data,
     auto PurgeAboveNSeconds = std::bind(PurgeAboveTemporalThreshold, std::placeholders::_1, ContrastInjectionLeadTime);
 
     img_arr_copy_long_temporally_avgd->imagecoll.Prune_Images_Satisfying(PurgeAboveNSeconds);
-    if(!img_arr_copy_long_temporally_avgd->imagecoll.Condense_Average_Images(GroupSpatiallyOverlappingImages)) FUNCERR("Cannot temporally avg long img_arr");
-
+    if(!img_arr_copy_long_temporally_avgd->imagecoll.Condense_Average_Images(GroupSpatiallyOverlappingImages)){
+        throw std::runtime_error("Cannot temporally avg long img_arr");
+    }
  
     //Temporally average the short arrays for later S0 and T1 map creation.
     std::vector<std::shared_ptr<Image_Array>> short_tavgd;
@@ -86,7 +87,9 @@ bool UBC3TMRI_DCE_Experimental(Drover &DICOM_data,
         DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_ptr ) );
         short_tavgd.push_back( DICOM_data.image_data.back() );
 
-        if(!short_tavgd.back()->imagecoll.Condense_Average_Images(GroupSpatiallyOverlappingImages)) FUNCERR("Cannot temporally avg short img_arr");
+        if(!short_tavgd.back()->imagecoll.Condense_Average_Images(GroupSpatiallyOverlappingImages)){
+            throw std::runtime_error("Cannot temporally avg short img_arr");
+        }
     }
 
 
@@ -97,7 +100,7 @@ bool UBC3TMRI_DCE_Experimental(Drover &DICOM_data,
         img_arr_long_tavgd_blurred = DICOM_data.image_data.back();
 
         if(!img_arr_long_tavgd_blurred->imagecoll.Gaussian_Pixel_Blur({ }, 1.5)){
-            FUNCERR("Unable to blur long temporally averaged images");
+            throw std::runtime_error("Unable to blur long temporally averaged images");
         }
     }
 
@@ -108,7 +111,7 @@ bool UBC3TMRI_DCE_Experimental(Drover &DICOM_data,
             short_tavgd_blurred.push_back( DICOM_data.image_data.back() );
 
             if(!short_tavgd_blurred.back()->imagecoll.Gaussian_Pixel_Blur({ }, 1.5)){
-                FUNCERR("Unable to blur short temporally averaged images");
+                throw std::runtime_error("Unable to blur short temporally averaged images");
             }
         }
     }else{
@@ -125,7 +128,7 @@ bool UBC3TMRI_DCE_Experimental(Drover &DICOM_data,
     std::shared_ptr<Image_Array> img_arr_T1_map( DICOM_data.image_data.back() );
 
     if(!img_arr_T1_map->imagecoll.Transform_Images( DCEMRIT1MapV2, tavgd_blurred, { } )){
-        FUNCERR("Unable to transform image array to make T1 map");
+        throw std::runtime_error("Unable to transform image array to make T1 map");
     }
 
     //Produce an S0 map.
@@ -133,7 +136,7 @@ bool UBC3TMRI_DCE_Experimental(Drover &DICOM_data,
     std::shared_ptr<Image_Array> img_arr_S0_map( DICOM_data.image_data.back() );
 
     if(!img_arr_S0_map->imagecoll.Transform_Images( DCEMRIS0MapV2, tavgd_blurred, { } )){
-        FUNCERR("Unable to transform image array to make S0 map");
+        throw std::runtime_error("Unable to transform image array to make S0 map");
     }
 
     //Blur the S0 and T1 maps if needed.
@@ -143,7 +146,7 @@ bool UBC3TMRI_DCE_Experimental(Drover &DICOM_data,
         img_arr_T1_map_blurred = DICOM_data.image_data.back();
     
         if(!img_arr_T1_map_blurred->imagecoll.Gaussian_Pixel_Blur({ }, 1.5)){
-            FUNCERR("Unable to blur T1 map");
+            throw std::runtime_error("Unable to blur T1 map");
         }
     }
 
@@ -153,7 +156,7 @@ bool UBC3TMRI_DCE_Experimental(Drover &DICOM_data,
         img_arr_S0_map_blurred = DICOM_data.image_data.back();
         
         if(!img_arr_S0_map_blurred->imagecoll.Gaussian_Pixel_Blur({ }, 1.5)){
-            FUNCERR("Unable to blur S0 map");
+            throw std::runtime_error("Unable to blur S0 map");
         }
     }
 
@@ -167,7 +170,7 @@ bool UBC3TMRI_DCE_Experimental(Drover &DICOM_data,
         if(!img_arr_C_map->imagecoll.Transform_Images( DCEMRICMap,
                                                        { img_arr_S0_map_blurred->imagecoll, img_arr_T1_map_blurred->imagecoll }, 
                                                        { } )){
-            FUNCERR("Unable to transform image array to make C map");
+            throw std::runtime_error("Unable to transform image array to make C map");
         }
 
     //Or compute it using the signal difference method (without S0 or T1 maps).
@@ -178,7 +181,7 @@ bool UBC3TMRI_DCE_Experimental(Drover &DICOM_data,
         if(!img_arr_C_map->imagecoll.Transform_Images( DCEMRISigDiffC,
                                                        { img_arr_copy_long_temporally_avgd->imagecoll }, 
                                                        { } )){
-            FUNCERR("Unable to transform image array to make poor-man's C map");
+            throw std::runtime_error("Unable to transform image array to make poor-man's C map");
         }
     }
 
@@ -188,7 +191,7 @@ bool UBC3TMRI_DCE_Experimental(Drover &DICOM_data,
         std::shared_ptr<Image_Array> img_arr_iauc_map( DICOM_data.image_data.back() );
     
         if(!img_arr_iauc_map->imagecoll.Process_Images( GroupSpatiallyOverlappingImages, DCEMRIAUCMap, {}, {} )){
-            FUNCERR("Unable to process image array to make IAUC map");
+            throw std::runtime_error("Unable to process image array to make IAUC map");
         }
     }
 
@@ -200,7 +203,7 @@ bool UBC3TMRI_DCE_Experimental(Drover &DICOM_data,
                                                                 { cc_all } )){
                                                                 //{ cc_r_parotid_int, cc_l_parotid_int } )){
                                                                 //{ cc_r_parotid_int, cc_l_parotid_int, cc_r_masseter_int, cc_pharynx_int } )){
-            FUNCERR("Unable to compute pixel value intensity histograms");
+            throw std::runtime_error("Unable to compute pixel value intensity histograms");
         }else{
             DumpPixelHistogramResults();
         }
@@ -229,7 +232,7 @@ bool UBC3TMRI_DCE_Experimental(Drover &DICOM_data,
                                                                 { cc_all },
                                                                 &ud )){
                                                                 //{ cc_r_parotid_int, cc_l_parotid_int, cc_r_masseter_int, cc_pharynx_int } )){
-            FUNCERR("Unable to highlight ROIs");
+            throw std::runtime_error("Unable to highlight ROIs");
         }
     }
 

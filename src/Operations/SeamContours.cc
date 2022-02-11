@@ -77,7 +77,7 @@ OperationDoc OpArgDocSeamContours(){
 
 bool SeamContours(Drover &DICOM_data,
                     const OperationArgPkg&,
-                    const std::map<std::string, std::string>&,
+                    std::map<std::string, std::string>& /*InvocationMetadata*/,
                     const std::string&){
 
     if(!DICOM_data.Has_Contour_Data()) return false;

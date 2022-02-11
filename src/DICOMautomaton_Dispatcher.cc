@@ -11,6 +11,8 @@
 #include <memory>
 #include <string>    
 #include <vector>
+#include <thread>
+#include <chrono>
 //#include <cfenv>              //Needed for std::feclearexcept(FE_ALL_EXCEPT).
 
 #include <filesystem>
@@ -35,6 +37,7 @@
 //extern const std::string DCMA_VERSION_STR;
 
 int main(int argc, char* argv[]){
+try{
     //This is the main entry-point into various routines. All major options are set here, via command line arguments.
     // Depending on the arguments received, data is loaded through a variety of loaders and sent on to an analysis
     // dispatcher.
@@ -119,7 +122,7 @@ int main(int argc, char* argv[]){
     arger.description = "A program for launching DICOMautomaton analyses. Version:"_s + DCMA_VERSION_STR;
 
     arger.default_callback = [](int, const std::string &optarg) -> void {
-      FUNCERR("Unrecognized option with argument: '" << optarg << "'");
+      throw std::invalid_argument("Unrecognized option with argument: '"_s + optarg + "'");
       return; 
     };
     arger.optionless_callback = [&](const std::string &optarg) -> void {
@@ -203,7 +206,7 @@ int main(int argc, char* argv[]){
       "If there is an conflicting key-value pair, the values are concatenated.",
       [&](const std::string &optarg) -> void {
         auto tokens = SplitStringToVector(optarg, '=', 'd');
-        if(tokens.size() != 2) FUNCERR("Metadata format not recognized: '" << optarg << "'. Use 'A=B'");
+        if(tokens.size() != 2) throw std::invalid_argument("Metadata format not recognized: '"_s + optarg + "'. Use 'A=B'");
         InvocationMetadata[tokens.front()] += tokens.back();
         return;
       })
@@ -213,22 +216,18 @@ int main(int argc, char* argv[]){
       "An operation to perform on the fully loaded data. Some operations can be chained, some"
       " may necessarily terminate computation. See '-u' for detailed operation information.",
       [&](const std::string &optarg) -> void {
-        try{
-          if(OperationDepth == 0){
-            Operations.emplace_back(optarg);
-          }else{
-            if(Operations.empty()) throw std::invalid_argument("No parent node found");
-            OperationArgPkg *o = &( Operations.back() );
-            for(long int i = 1; i < OperationDepth; ++i){
-              o = o->lastChild();
-              if(o == nullptr) throw std::invalid_argument("No child node found");
-            }
-            o->makeChild(optarg);
+        if(OperationDepth == 0){
+          Operations.emplace_back(optarg);
+        }else{
+          if(Operations.empty()) throw std::invalid_argument("Unable to parse operation: no parent node found");
+          OperationArgPkg *o = &( Operations.back() );
+          for(long int i = 1; i < OperationDepth; ++i){
+            o = o->lastChild();
+            if(o == nullptr) throw std::invalid_argument("Unable to parse operation: no child node found");
           }
-          MostRecentOperationActive = true;
-        }catch(const std::exception &e){
-          FUNCERR("Unable to parse operation: " << e.what());
+          o->makeChild(optarg);
         }
+        MostRecentOperationActive = true;
         return;
       })
     );
@@ -246,22 +245,18 @@ int main(int argc, char* argv[]){
       "A parameter to apply to the previous operation. This option is convenient when the number or length"
       " or parameters supplied to an operation is large.",
       [&](const std::string &optarg) -> void {
-        try{
-          if(MostRecentOperationActive){
-            if(Operations.empty()) throw std::invalid_argument("No parent node found");
-            OperationArgPkg *o = &( Operations.back() );
+        if(MostRecentOperationActive){
+          if(Operations.empty()) throw std::invalid_argument("Unable to append parameter: no parent node found");
+          OperationArgPkg *o = &( Operations.back() );
 
-            for(long int i = 0; i < OperationDepth; ++i){
-              o = o->lastChild();
-              if(o == nullptr) throw std::invalid_argument("No child node found");
-            }
-
-            if(!(o->insert(optarg))){
-              throw std::invalid_argument("Parameter insertion failed (is it duplicated?");
-            }
+          for(long int i = 0; i < OperationDepth; ++i){
+            o = o->lastChild();
+            if(o == nullptr) throw std::invalid_argument("Unable to append parameter: no child node found");
           }
-        }catch(const std::exception &e){
-          FUNCERR("Unable to append parameter: " << e.what());
+
+          if(!(o->insert(optarg))){
+            throw std::invalid_argument("Unable to append parameter: parameter insertion failed (is it duplicated?");
+          }
         }
         return;
       })
@@ -281,7 +276,7 @@ int main(int argc, char* argv[]){
       " Note that this option may require escaping like '-\\('.",
       [&](const std::string &) -> void {
         if(Operations.empty()){
-            FUNCERR("This option can only be specified after a valid operation");
+            throw std::invalid_argument("This option can only be specified after a valid operation");
         }
         ++OperationDepth;
         MostRecentOperationActive = false;
@@ -296,7 +291,7 @@ int main(int argc, char* argv[]){
         --OperationDepth;
         MostRecentOperationActive = false;
         if(OperationDepth < 0){
-            FUNCERR("Mismatched scope modifiers '(' or ')' detected");
+            throw std::invalid_argument("Mismatched scope modifiers '(' or ')' detected");
         }
         return;
       })
@@ -307,7 +302,7 @@ int main(int argc, char* argv[]){
     //============================================== Input Verification ==============================================
 
     if(OperationDepth != 0){
-        FUNCERR("Mismatched scope modifiers '(' or ')' detected");
+        throw std::invalid_argument("Mismatched scope modifiers '(' or ')' detected");
     }
 
 #ifdef DCMA_USE_POSTGRES
@@ -351,7 +346,9 @@ int main(int argc, char* argv[]){
         }
     }
 
-    // Transform filenme arguments to paths.
+    // Transform filename arguments to paths.
+    //
+    // Note: reachability/existence and path transformation is handled in the file loader.
     for(const auto &auri : StandaloneFilesDirs){
         StandaloneFilesDirsReachable.emplace_back(auri);
     }
@@ -376,7 +373,7 @@ int main(int argc, char* argv[]){
     if(!GroupedFilterQueryFiles.empty()){
         if(!Load_From_PACS_DB( DICOM_data, InvocationMetadata, FilenameLex, 
                                db_connection_params, GroupedFilterQueryFiles )){
-            FUNCERR("Unable to load files from the PACS db. Cannot continue");
+            throw std::runtime_error("Unable to load files from the PACS db. Cannot continue");
         }
     }
 #endif // DCMA_USE_POSTGRES
@@ -390,7 +387,7 @@ int main(int argc, char* argv[]){
             return 0;
 #else
             //FUNCERR("Unable to load file " << StandaloneFilesDirsReachable.front() << ". Refusing to continue");
-            FUNCERR("File loading unsuccessful. Refusing to continue"); // TODO: provide better diagnostic here.
+            throw std::runtime_error("File loading unsuccessful. Refusing to continue"); // TODO: provide better diagnostic here.
 #endif // DCMA_FUZZ_TESTING
         }
 
@@ -416,15 +413,26 @@ int main(int argc, char* argv[]){
                  || DICOM_data.Has_Point_Data()
                  || DICOM_data.Has_Mesh_Data()
                  || DICOM_data.Has_TPlan_Data()
-                 || DICOM_data.Has_LSamp_Data() ) ){
+                 || DICOM_data.Has_LSamp_Data()
+                 || DICOM_data.Has_Tran3_Data()
+                 || DICOM_data.Has_Table_Data() ) ){
 
 // TODO: Special case: Launch RPC server to wait for data if no files or SQL files provided?
-        FUNCERR("No data was loaded, and virtual data switch was not provided. Refusing to proceed");
+        throw std::runtime_error("No data was loaded, and virtual data switch was not provided. Refusing to proceed");
     }
 
     if(!Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, Operations)){
-        FUNCERR("Analysis failed. Cannot continue");
+        throw std::runtime_error("Analysis failed. Cannot continue");
     }
 
+}catch(const std::exception &e){
+#if defined(__MINGW64__) || defined(__MINGW32__)
+    // Add a delay on Windows so we can inspect debug info.
+    // Note: this will be replaced when logging is improved.
+    FUNCWARN(e.what());
+    std::this_thread::sleep_for(std::chrono::seconds(10));
+#endif
+    FUNCERR(e.what());
+}
     return 0;
 }

@@ -54,6 +54,7 @@ OperationDoc OpArgDocGroupImages(){
 
     out.notes.emplace_back(
         "Images that do not contain the specified metadata will be grouped into a special N/A group at the end."
+        " Use strict mode to abort grouping if any image is missing any tag."
     );
 
 
@@ -76,6 +77,17 @@ OperationDoc OpArgDocGroupImages(){
                                  "SeriesInstanceUID", 
                                  "StationName" };
 
+
+    out.args.emplace_back();
+    out.args.back().name = "Strict";
+    out.args.back().desc = "Require all images to have all tags present, and abort otherwise."
+                           " Using this option, if the operation succeeds there will be no N/A partition.";
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true",
+                                 "false" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
+   
 
     out.args.emplace_back();
     out.args.back().name = "AutoSelectKeysCommon";
@@ -127,7 +139,7 @@ OperationDoc OpArgDocGroupImages(){
 
 bool GroupImages(Drover &DICOM_data,
                    const OperationArgPkg& OptArgs,
-                   const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                   std::map<std::string, std::string>& /*InvocationMetadata*/,
                    const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
@@ -136,15 +148,19 @@ bool GroupImages(Drover &DICOM_data,
     const auto KeysCommonStr = OptArgs.getValueStr("KeysCommon").value();
     const auto AutoSelectKeysCommonStr = OptArgs.getValueStr("AutoSelectKeysCommon").value();
     const auto EnforceStr = OptArgs.getValueStr("Enforce").value();
+    const auto StrictStr = OptArgs.getValueStr("Strict").value();
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_true = Compile_Regex("^tr?u?e?$");
     const auto nooverlap_asis = Compile_Regex("^no?-?ov?e?r?l?a?p?-a?s-?i?s?$");
     const auto nooverlap_adjust = Compile_Regex("^no?-?ov?e?r?l?a?p?-a?dj?u?s?t?$");
 
+    const bool strict = std::regex_match(StrictStr, regex_true);
+
     // Parse the chain of metadata keys.
     std::vector<std::string> KeysCommon;
     for(auto a : SplitStringToVector(KeysCommonStr, ';', 'd')){
+        a = Canonicalize_String2(a, CANONICALIZE::TRIM_ENDS | CANONICALIZE::TO_NUMAZ);
         KeysCommon.emplace_back(a);
     }
 
@@ -236,13 +252,27 @@ bool GroupImages(Drover &DICOM_data,
     //-----------------------------------------------------------------------------------------------------------------
     // --- Metadata-based grouping ---
     if(!KeysCommon.empty()){
+        auto IAs_all = All_IAs( DICOM_data );
+        auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+
+        // When strict mode enabled, pre-scan to ensure all images have all keys present.
+        if(strict){
+            for(const auto & iap_it : IAs){
+                for(const auto & img : (*iap_it)->imagecoll.images){
+                    for(auto &akey : KeysCommon){
+                        auto v = img.GetMetadataValueAs<std::string>(akey);
+                        if(!v) return false;
+                    }
+                }
+            }
+        }
+
+
         // Grouping data structures.
         std::map<std::vector<std::string>, 
                  std::shared_ptr<Image_Array>> new_group;
         std::shared_ptr<Image_Array> na_group; // The special N/A group.
 
-        auto IAs_all = All_IAs( DICOM_data );
-        auto IAs = Whitelist( IAs_all, ImageSelectionStr );
         for(auto & iap_it : IAs){
             while(!(*iap_it)->imagecoll.images.empty()){
                 auto img_it = (*iap_it)->imagecoll.images.begin();

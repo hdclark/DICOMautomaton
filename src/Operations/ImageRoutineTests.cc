@@ -29,8 +29,7 @@ OperationDoc OpArgDocImageRoutineTests(){
 
 bool ImageRoutineTests(Drover &DICOM_data,
                          const OperationArgPkg& /*OptArgs*/,
-                         const std::map<std::string, std::string>&
-                         /*InvocationMetadata*/,
+                         std::map<std::string, std::string>& /*InvocationMetadata*/,
                          const std::string& /*FilenameLex*/){
 
     //Get handles for each of the original image arrays so we can easily refer to them later.
@@ -49,7 +48,7 @@ bool ImageRoutineTests(Drover &DICOM_data,
         if(!bilin_resampled_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                                          InImagePlaneBilinearSupersample,
                                                                          {}, {}, &bilin_ud )){
-            FUNCERR("Unable to bilinearly supersample images");
+            throw std::runtime_error("Unable to bilinearly supersample images");
         }
     }
 
@@ -64,7 +63,7 @@ bool ImageRoutineTests(Drover &DICOM_data,
         if(!bicub_resampled_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                                          InImagePlaneBicubicSupersample,
                                                                          {}, {}, &bicub_ud )){
-            FUNCERR("Unable to bicubically supersample images");
+            throw std::runtime_error("Unable to bicubically supersample images");
         }
     }
 
@@ -82,7 +81,7 @@ bool ImageRoutineTests(Drover &DICOM_data,
         if(!cross_second_deriv_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                                             ImagePartialDerivative,
                                                                             {}, {}, &csd_ud )){
-            FUNCERR("Unable to compute 'cross' second-order partial derivative");
+            throw std::runtime_error("Unable to compute 'cross' second-order partial derivative");
         }
     }
 

@@ -1,82 +1,28 @@
 //Partition_Drover.cc - A part of DICOMautomaton 2021. Written by hal clark.
 
 #include <list>
+#include <set>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <utility>
 #include <memory>
 #include <type_traits>
 
 #include "Structs.h"
+#include "Metadata.h"
 
 #include "Partition_Drover.h"
 
 
-// A routine that extracts metadata from each of the Drover members.
-template <class ptr>
-std::list<std::string> Extract_Unique_Metadata_Values(ptr p, const std::string &key){
-    std::list<std::string> out;
-    if(p == nullptr) return out;
-
-    using obj_t = std::decay_t<decltype(*p)>;
-
-    // Image_Array.
-    if constexpr (std::is_same_v< obj_t, Image_Array >){
-        const auto uniq_vals = p->imagecoll.get_distinct_values_for_key(key);
-        return uniq_vals;
-    
-    // Contour_Data (actually contour_collection<double>).
-    //
-    // NOTE: accessing Contour_Data elements is different from other Drover elements!
-    }else if constexpr (std::is_same_v< obj_t, contour_collection<double> >){
-        const auto uniq_vals = p->get_distinct_values_for_key(key);
-        return uniq_vals;
-
-    // Point_Cloud.
-    }else if constexpr (std::is_same_v< obj_t, Point_Cloud >){
-        std::optional<std::string> val_opt = ( p->pset.metadata.count(key) != 0 ) ?
-                                               p->pset.metadata[key] : std::optional<std::string>();
-        if(val_opt) out.emplace_back(val_opt.value());
-        return out;
-
-    // Surface_Mesh.
-    }else if constexpr (std::is_same_v< obj_t, Surface_Mesh >){
-        std::optional<std::string> val_opt = ( p->meshes.metadata.count(key) != 0 ) ?
-                                               p->meshes.metadata[key] : std::optional<std::string>();
-        if(val_opt) out.emplace_back(val_opt.value());
-        return out;
-
-    // TPlan_Config.
-    }else if constexpr (std::is_same_v< obj_t, TPlan_Config >){
-        std::optional<std::string> val_opt = ( p->metadata.count(key) != 0 ) ?
-                                               p->metadata[key] : std::optional<std::string>();
-        if(val_opt) out.emplace_back(val_opt.value());
-        return out;
-
-    // Line_Sample.
-    }else if constexpr (std::is_same_v< obj_t, Line_Sample >){
-        std::optional<std::string> val_opt = ( p->line.metadata.count(key) != 0 ) ?
-                                               p->line.metadata[key] : std::optional<std::string>();
-        if(val_opt) out.emplace_back(val_opt.value());
-        return out;
-
-    // Transform3.
-    }else if constexpr (std::is_same_v< obj_t, Transform3 >){
-        std::optional<std::string> val_opt = ( p->metadata.count(key) != 0 ) ?
-                                               p->metadata[key] : std::optional<std::string>();
-        if(val_opt) out.emplace_back(val_opt.value());
-        return out;
-    }
-
-    throw std::logic_error("Type not detected properly. Refusing to continue.");
-    return out;
-}
-
+// -------------------------------------------------------------------------------------------------------------------
+// ------------------------------------ Key-value based metadata partitioning ----------------------------------------
+// -------------------------------------------------------------------------------------------------------------------
 
 // Split a Drover object according to the provided metadata keys.
 Partitioned_Drover
 Partition_Drover( Drover& DICOM_data,
-                  std::list<std::string> keys_common ){
+                  std::set<std::string> keys_common ){
 
     Partitioned_Drover pd;
     pd.keys_common = keys_common;
@@ -90,17 +36,17 @@ Partition_Drover( Drover& DICOM_data,
         auto compute_keys_and_partition = [&] (auto container_of_ptrs){
             const std::string container_type = typeid(decltype(container_of_ptrs)).name();
             for(auto & ptr : container_of_ptrs){
-                std::list<std::string> value_signature;
+                std::set<std::string> value_signature;
                 for(const auto &key : keys_common){
-                    const auto uniq_vals = Extract_Unique_Metadata_Values(ptr, key);
-                    if(uniq_vals.empty()){
+                    const auto distinct_vals = Extract_Distinct_Values(ptr, key);
+                    if(distinct_vals.empty()){
                         break;
-                    }else if(1 < uniq_vals.size()){
-                        // Strictly require all metadata in each object to be consistent.
-                        FUNCWARN("Refusing to partition heterogeneous element '" << container_type << "' which contains " << uniq_vals.size() << " unique values");
+                    }else if(1 < distinct_vals.size()){
+                        // Strictly require all sub-object metadata in each object to be consistent.
+                        FUNCWARN("Refusing to partition heterogeneous element '" << container_type << "' which contains " << distinct_vals.size() << " distinct key-values");
                         break;
                     }else{
-                        value_signature.emplace_back(uniq_vals.front());
+                        value_signature.insert(*std::begin(distinct_vals));
                     }
                 }
 
@@ -112,30 +58,32 @@ Partition_Drover( Drover& DICOM_data,
                     auto partition_it = pd.index[value_signature];
                     partition_it->Concatenate({ptr});
                 }else{
-                    pd.na_partition.Concatenate({ptr});
+                    if(!pd.na_partition) pd.na_partition.emplace();
+                    pd.na_partition.value().Concatenate({ptr});
                 }
             }
         };
 
+        compute_keys_and_partition(DICOM_data.image_data);
         compute_keys_and_partition(DICOM_data.point_data);
         compute_keys_and_partition(DICOM_data.smesh_data);
         compute_keys_and_partition(DICOM_data.tplan_data);
         compute_keys_and_partition(DICOM_data.lsamp_data);
         compute_keys_and_partition(DICOM_data.trans_data);
-        compute_keys_and_partition(DICOM_data.image_data);
+        compute_keys_and_partition(DICOM_data.table_data);
 
         if(DICOM_data.Has_Contour_Data()){
             while(!DICOM_data.contour_data->ccs.empty()){
                 auto it = DICOM_data.contour_data->ccs.begin();
                 auto ptr = &( *it ); // Pointer to contour_collection<double> rather than whole Contour_Data.
 
-                std::list<std::string> value_signature;
+                std::set<std::string> value_signature;
                 for(const auto &key : keys_common){
-                    const auto uniq_vals = Extract_Unique_Metadata_Values(ptr, key);
-                    if(uniq_vals.size() != 1){ // Strictly require all metadata to be consistent.
+                    const auto distinct_vals = Extract_Distinct_Values(ptr, key);
+                    if(distinct_vals.size() != 1){ // Strictly require all sub-object metadata to be consistent.
                         break;
                     }else{
-                        value_signature.emplace_back(uniq_vals.front());
+                        value_signature.insert(*std::begin(distinct_vals));
                     }
                 }
 
@@ -150,9 +98,10 @@ Partition_Drover( Drover& DICOM_data,
                       std::begin(partition_it->contour_data->ccs),
                       DICOM_data.contour_data->ccs, it);
                 }else{
-                    pd.na_partition.Ensure_Contour_Data_Allocated();
-                    pd.na_partition.contour_data->ccs.splice(
-                      std::begin( pd.na_partition.contour_data->ccs),
+                    if(!pd.na_partition) pd.na_partition.emplace();
+                    pd.na_partition.value().Ensure_Contour_Data_Allocated();
+                    pd.na_partition.value().contour_data->ccs.splice(
+                      std::begin( pd.na_partition.value().contour_data->ccs),
                       DICOM_data.contour_data->ccs, it);
                 }
             }
@@ -162,7 +111,6 @@ Partition_Drover( Drover& DICOM_data,
     return pd;
 }
 
-
 // Re-combine a Partitioned_Drover into a regular Drover.
 Drover
 Combine_Partitioned_Drover( Partitioned_Drover &pd ){
@@ -171,8 +119,243 @@ Combine_Partitioned_Drover( Partitioned_Drover &pd ){
     for(auto & d : pd.partitions){
         DICOM_data.Consume(d);
     }
-    DICOM_data.Consume(pd.na_partition);
+    if(pd.na_partition){
+        DICOM_data.Consume(pd.na_partition.value());
+    }
 
     return DICOM_data;
 }
+
+// -------------------------------------------------------------------------------------------------------------------
+// ---------------------------------- TPlan partitioning based on DICOM linkage --------------------------------------
+// -------------------------------------------------------------------------------------------------------------------
+
+Drover_Selection
+Select_Drover( Drover &DICOM_data, std::list<std::shared_ptr<TPlan_Config>>::iterator tp_it ){
+    Drover_Selection pd;
+    pd.extras = DICOM_data;
+
+    const auto get_first_value = [](auto ptr, const std::string &key) -> std::optional<std::string> {
+        std::optional<std::string> out;
+
+        const auto distinct_vals = Extract_Distinct_Values(ptr, key);
+        if(distinct_vals.size() == 1){
+            out = *(std::begin(distinct_vals));
+        }
+        return out;
+    };
+    const auto get_required_first_value = [&get_first_value](auto ptr, const std::string &key) -> std::string {
+        auto out = get_first_value(ptr, key);
+        if(!out) throw std::runtime_error("Required key '"_s + key + "' not available");
+        return out.value();
+    };
+
+    auto tp = *tp_it; // pointer to TPlan_Config object.
+    if(tp == nullptr){
+        throw std::invalid_argument("TPlan not accessible");
+    }
+    try{
+        // Defer making the partition until we have all required metadata from the plan.
+        //const auto tp_SOPClassUID = get_required_first_value(tp, "SOPClassUID"); // '1.2.840.10008.5.1.4.1.1.481.5'
+        const auto tp_SOPInstanceUID = get_required_first_value(tp, "SOPInstanceUID");
+        const auto tp_FrameOfReferenceUID = get_required_first_value(tp, "FrameOfReferenceUID");
+        const auto tp_SeriesInstanceUID = get_required_first_value(tp, "SeriesInstanceUID");
+        const auto tp_StudyInstanceUID = get_required_first_value(tp, "StudyInstanceUID");
+        const auto tp_RTPlanLabel = get_required_first_value(tp, "RTPlanLabel");
+        //const auto tp_RTPlanName = get_required_first_value(tp, "RTPlanName");
+
+        // 'Move' the plan.
+        pd.select.tplan_data.emplace_back(tp);
+        pd.extras.tplan_data.remove(tp);
+
+        // Look for referenced RTDOSE images.
+        for(uint32_t i = 0; i < 100000; ++i){
+            const std::string tp_key = "DoseReferenceSequence"_s + std::to_string(i) + "/DoseReferenceUID";
+            const auto tp_DoseUID_opt = get_first_value(tp, tp_key);
+            if(!tp_DoseUID_opt) break;
+
+            for(auto &ia : DICOM_data.image_data){
+                // Check if the plan references this image array.
+                const auto ia_SOPInstanceUID_opt = get_first_value(ia, "SOPInstanceUID");
+                if( ia_SOPInstanceUID_opt
+                &&  (tp_DoseUID_opt == ia_SOPInstanceUID_opt) ){
+                    pd.select.image_data.emplace_back(ia);
+                    pd.extras.image_data.remove(ia);
+                    continue;
+                }
+
+                // Check if this image array references the plan.
+                const std::string ia_key = "ReferencedRTPlanSequence/ReferencedSOPInstanceUID";
+                const auto ia_PlanUID_opt = get_first_value(ia, ia_key);
+                if( ia_PlanUID_opt
+                &&  (ia_PlanUID_opt == tp_SOPInstanceUID) ){
+                    pd.select.image_data.emplace_back(ia);
+                    pd.extras.image_data.remove(ia);
+                    continue;
+                }
+            }
+        }
+
+        // Look for referenced RTSTRUCT contours.
+        pd.select.Ensure_Contour_Data_Allocated();
+        pd.extras.Ensure_Contour_Data_Allocated();
+        for(uint32_t i = 0; i < 100000; ++i){
+            if(!pd.extras.Has_Contour_Data()) break;
+
+            const std::string tp_key = "ReferencedStructureSetSequence"_s + std::to_string(i) + "/ReferencedSOPInstanceUID";
+            const auto tp_StructUID_opt = get_first_value(tp, tp_key);
+            if(!tp_StructUID_opt) break;
+
+            auto cc_it = std::begin(pd.extras.contour_data->ccs);
+            const auto end_it = std::end(pd.extras.contour_data->ccs);
+            while(cc_it != end_it){
+                auto cc_ptr = &( *cc_it );
+
+                // Check if the plan references this cc.
+                const auto cc_SOPInstanceUID_opt = get_first_value(cc_ptr, "SOPInstanceUID");
+                if( cc_SOPInstanceUID_opt
+                &&  (tp_StructUID_opt == cc_SOPInstanceUID_opt) ){
+
+                    // Move the cc from extras to select.
+                    const auto next_it = std::next(cc_it);
+                    pd.select.contour_data->ccs.splice( 
+                        std::end(pd.select.contour_data->ccs),
+                        pd.extras.contour_data->ccs,
+                        cc_it );
+                    cc_it = next_it;
+                    // Do not advance, since cc_it is already the next iter.
+                    continue;
+                }
+
+                ++cc_it;
+            }
+        }
+
+        // Look for (indirectly) referenced images.
+        for(auto &cc : pd.select.contour_data->ccs){
+            // Note: it's possible that there might be suffixed nodes or '\'-separated values here.
+            // For now I just ignore if there are multiples. Ideally, this should be more consistent during parsing.
+            // Awaiting re-write of DICOM file handling, especially for RTSTRUCT files.  TODO.
+            const std::string cc_key = "ReferencedFrameOfReferenceSequence/RTReferencedStudySequence/RTReferencedSeriesSequence/SeriesInstanceUID";
+            auto cc_ptr = &( cc );
+            const auto cc_SeriesUID_opt = get_first_value(cc_ptr, cc_key);
+            if(!cc_SeriesUID_opt) break;
+  
+            auto ia_it = std::begin(pd.extras.image_data);
+            const auto end_it = std::end(pd.extras.image_data);
+            while(ia_it != end_it){
+                auto ia_ptr = ( *ia_it );
+
+                // Check if the cc references this image array.
+                const auto ia_SeriesUID_opt = get_first_value(ia_ptr, "SeriesInstanceUID");
+                if( ia_SeriesUID_opt
+                &&  (cc_SeriesUID_opt == ia_SeriesUID_opt) ){
+                    // Move the cc from extras to select.
+                    const auto next_it = std::next(ia_it);
+                    pd.select.image_data.splice( 
+                        std::end(pd.select.image_data),
+                        pd.extras.image_data,
+                        ia_it );
+                    ia_it = next_it;
+                    // Do not advance, since ia_it is already the next iter.
+                    continue;
+                }
+
+                ++ia_it;
+            }
+        }
+
+    }catch(const std::exception &){}
+
+
+    // Look for the corresponding RTDOSE images.
+
+    // RTPLAN metadata:
+    //   "DoseReferenceSequence0/DoseReferenceUID"
+    //   "ReferencedStructureSetSequence0/ReferencedSOPInstanceUID"
+    //   "FrameOfReferenceUID"
+    //   "SeriesInstanceUID"
+    //   "StudyInstanceUID"
+    //   "RTPlanLabel"
+    //   "RTPlanName"
+    //   "SOPClassUID"  ('1.2.840.10008.5.1.4.1.1.481.5')
+    //   "SOPInstanceUID"
+    //
+                    // (300c,0060) SQ (Sequence with explicit length #=1)      # 110, 1 ReferencedStructureSetSequence
+                    //   (fffe,e000) na (Item with explicit length #=2)          # 102, 1 Item
+                    //     (0008,1150) UI =RTStructureSetStorage                   #  30, 1 ReferencedSOPClassUID
+                    //     (0008,1155) UI [1.2.246.352.205.4826671977035386720.1568118767464602552] #  56, 1 ReferencedSOPInstanceUID
+                    //   (fffe,e00d) na (ItemDelimitationItem for re-encoding)   #   0, 0 ItemDelimitationItem
+                    // (fffe,e0dd) na (SequenceDelimitationItem for re-encod.) #   0, 0 SequenceDelimitationItem
+
+
+    // RTDOSE metadata:
+    //         'ReferencedRTPlanSequence/ReferencedSOPClassUID' : ('1.2.840.10008.5.1.4.1.1.481.5')
+    //         'ReferencedRTPlanSequence/ReferencedSOPInstanceUID'
+    //         'SOPClassUID' : ('1.2.840.10008.5.1.4.1.1.481.2')
+    //         'SOPInstanceUID'
+    //         'SeriesInstanceUID'
+    //         'StudyInstanceUID'
+
+    // RTSTRUCT metadata:
+    //           'FrameOfReferenceUID'    and/or  'ReferencedFrameOfReferenceSequence/FrameOfReferenceUID' ?
+    //           'SOPClassUID' : ('1.2.840.10008.5.1.4.1.1.481.3')
+    //           'SOPInstanceUID'
+    //           'SeriesInstanceUID'
+    //           'StudyInstanceUID'
+    // 
+    // (3006,0010) SQ (Sequence with explicit length #=1)      # 26354, 1 ReferencedFrameOfReferenceSequence
+    //   (fffe,e000) na (Item with explicit length #=2)          # 26346, 1 Item
+    //     (0020,0052) UI [1.2.840.113619.2.278.3.34220241.101.1620780463.520.14860.1] #  58, 1 FrameOfReferenceUID
+    //     (3006,0012) SQ (Sequence with explicit length #=1)      # 26272, 1 RTReferencedStudySequence
+    //       (fffe,e000) na (Item with explicit length #=3)          # 26264, 1 Item
+    //         (0008,1150) UI =RTStructureSetStorage                   #  30, 1 ReferencedSOPClassUID
+    //         (0008,1155) UI [1.2.840.113619.2.278.3.34220241.101.1620780463.519] #  50, 1 ReferencedSOPInstanceUID
+    //         (3006,0014) SQ (Sequence with explicit length #=1)      # 26160, 1 RTReferencedSeriesSequence
+    //           (fffe,e000) na (Item with explicit length #=2)          # 26152, 1 Item
+    //             (0020,000e) UI [1.2.840.113619.2.278.3.34220241.101.1620780463.592] #  50, 1 SeriesInstanceUID
+    //             (3006,0016) SQ (Sequence with explicit length #=251)    # 26086, 1 ContourImageSequence
+    //               (fffe,e000) na (Item with explicit length #=2)          #  96, 1 Item
+    //                 (0008,1150) UI =CTImageStorage                          #  26, 1 ReferencedSOPClassUID
+    //                 (0008,1155) UI [1.2.840.113619.2.278.3.34220241.101.1620780463.593.251] #  54, 1 ReferencedSOPInstanceUID
+    //               (fffe,e00d) na (ItemDelimitationItem for re-encoding)   #   0, 0 ItemDelimitationItem
+    //               (fffe,e000) na (Item with explicit length #=2)          #  96, 1 Item
+    //                 (0008,1150) UI =CTImageStorage                          #  26, 1 ReferencedSOPClassUID
+    //                 (0008,1155) UI [1.2.840.113619.2.278.3.34220241.101.1620780463.593.250] #  54, 1 ReferencedSOPInstanceUID
+    //               (fffe,e00d) na (ItemDelimitationItem for re-encoding)   #   0, 0 ItemDelimitationItem
+    // ...
+    // (3006,0020) SQ (Sequence with explicit length #=16)     # 1914, 1 StructureSetROISequence
+    //   (fffe,e000) na (Item with explicit length #=4)          # 106, 1 Item
+    //     (3006,0022) IS [33]                                     #   2, 1 ROINumber
+    //     (3006,0024) UI [1.2.840.113619.2.278.3.34220241.101.1620780463.520.14860.1] #  58, 1 ReferencedFrameOfReferenceUID
+    //     (3006,0026) LO [PTVEdit]                                #   8, 1 ROIName
+    //     (3006,0036) CS [MANUAL]                                 #   6, 1 ROIGenerationAlgorithm
+    //   (fffe,e00d) na (ItemDelimitationItem for re-encoding)   #   0, 0 ItemDelimitationItem
+    // ...
+
+
+    // CT metadata:
+    //         'FrameOfReferenceUID' : '1.2.840.113619.2.278.3.34220241.101.1620780463.520.14860.1'
+    //         'SOPClassUID' : ('1.2.840.10008.5.1.4.1.1.2')
+    //         'SOPInstanceUID'
+    //         'SeriesInstanceUID'
+    //         'StudyInstanceUID'
+    // (0008,1140) SQ (Sequence with explicit length #=1)      # 102, 1 ReferencedImageSequence
+    //   (fffe,e000) na (Item with explicit length #=2)          #  94, 1 Item
+    //     (0008,1150) UI =CTImageStorage                          #  26, 1 ReferencedSOPClassUID
+    //     (0008,1155) UI [...] #  52, 1 ReferencedSOPInstanceUID
+    //   (fffe,e00d) na (ItemDelimitationItem for re-encoding)   #   0, 0 ItemDelimitationItem
+    // (fffe,e0dd) na (SequenceDelimitationItem for re-encod.) #   0, 0 SequenceDelimitationItem
+
+    return pd;
+}
+
+Drover
+Recombine_Selected_Drover( Drover_Selection pd ){
+    Drover DICOM_data;
+    DICOM_data.Consume(pd.select);
+    DICOM_data.Consume(pd.extras);
+    return DICOM_data;
+}
+
 

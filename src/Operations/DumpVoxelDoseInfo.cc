@@ -31,7 +31,7 @@ OperationDoc OpArgDocDumpVoxelDoseInfo(){
 
 bool DumpVoxelDoseInfo(Drover &DICOM_data,
                          const OperationArgPkg&,
-                         const std::map<std::string, std::string>&,
+                         std::map<std::string, std::string>& /*InvocationMetadata*/,
                          const std::string&){
 
     double themin = std::numeric_limits<double>::infinity();
@@ -43,7 +43,7 @@ bool DumpVoxelDoseInfo(Drover &DICOM_data,
         if(d.image_data.size() > 1){
             dose_data_to_use = Meld_Image_Data(d.image_data);
             if(dose_data_to_use.size() != 1){
-                FUNCERR("This routine cannot handle multiple dose data which cannot be melded. This has " << dose_data_to_use.size());
+                throw std::runtime_error("This routine cannot handle multiple dose data which cannot be melded.");
             }
         }
 

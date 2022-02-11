@@ -81,7 +81,7 @@ OperationDoc OpArgDocCropROIDose(){
 
 bool CropROIDose(Drover &DICOM_data,
                    const OperationArgPkg& OptArgs,
-                   const std::map<std::string, std::string>& InvocationMetadata,
+                   std::map<std::string, std::string>& InvocationMetadata,
                    const std::string& FilenameLex){
 
     DICOM_data = Meld_Only_Dose_Data(DICOM_data);

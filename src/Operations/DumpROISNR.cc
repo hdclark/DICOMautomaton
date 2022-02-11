@@ -1,8 +1,5 @@
 //DumpROISNR.cc - A part of DICOMautomaton 2017. Written by hal clark.
 
-#include <boost/interprocess/creation_tags.hpp>
-#include <boost/interprocess/sync/named_mutex.hpp>
-#include <boost/interprocess/sync/scoped_lock.hpp>
 #include <cmath>
 #include <exception>
 #include <any>
@@ -18,6 +15,11 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <filesystem>
+
+#include <boost/interprocess/creation_tags.hpp>
+#include <boost/interprocess/sync/named_mutex.hpp>
+#include <boost/interprocess/sync/scoped_lock.hpp>
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
@@ -76,8 +78,7 @@ OperationDoc OpArgDocDumpROISNR(){
 
 bool DumpROISNR(Drover &DICOM_data,
                   const OperationArgPkg& OptArgs,
-                  const std::map<std::string, std::string>&
-                  /*InvocationMetadata*/,
+                  std::map<std::string, std::string>& /*InvocationMetadata*/,
                   const std::string& FilenameLex){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
@@ -128,16 +129,17 @@ bool DumpROISNR(Drover &DICOM_data,
     }
 
     //Report the findings. 
-    try{
+    {
         //File-based locking is used so this program can be run over many patients concurrently.
         //
         //Try open a named mutex. Probably created in /dev/shm/ if you need to clear it manually...
         boost::interprocess::named_mutex mutex(boost::interprocess::open_or_create,
-                                               "dicomautomaton_operation_dumproisnr_mutex");
+                                               "dcma_op_dumproisnr_mutex");
         boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(mutex);
 
         if(SNRFileName.empty()){
-            SNRFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_dumproisnr_", 6, ".csv");
+            const auto base = std::filesystem::temp_directory_path() / "dcma_dumproisnr_";
+            SNRFileName = Get_Unique_Sequential_Filename(base.string(), 6, ".csv");
         }
         std::fstream FO_snr(SNRFileName, std::fstream::out | std::fstream::app);
         if(!FO_snr){
@@ -160,9 +162,6 @@ bool DumpROISNR(Drover &DICOM_data,
         }
         FO_snr.flush();
         FO_snr.close();
-
-    }catch(const std::exception &e){
-        FUNCERR("Unable to write to log files: '" << e.what() << "'");
     }
 
     return true;

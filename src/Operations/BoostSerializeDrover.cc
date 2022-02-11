@@ -55,7 +55,7 @@ OperationDoc OpArgDocBoost_Serialize_Drover(){
 
 bool Boost_Serialize_Drover(Drover &DICOM_data,
                               const OperationArgPkg& OptArgs,
-                              const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                              std::map<std::string, std::string>& /*InvocationMetadata*/,
                               const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------

@@ -1,4 +1,4 @@
-// Not.h.
+// NoneOf.h.
 
 #pragma once
 
@@ -8,9 +8,9 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocNot();
+OperationDoc OpArgDocNoneOf();
 
-bool Not(Drover &DICOM_data,
+bool NoneOf(Drover &DICOM_data,
            const OperationArgPkg& /*OptArgs*/,
-           const std::map<std::string, std::string>& /*InvocationMetadata*/,
+           std::map<std::string, std::string>& /*InvocationMetadata*/,
            const std::string& /*FilenameLex*/);

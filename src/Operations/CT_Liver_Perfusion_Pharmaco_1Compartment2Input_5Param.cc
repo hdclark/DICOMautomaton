@@ -272,7 +272,7 @@ OperationDoc OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_5Param(){
 
 bool CT_Liver_Perfusion_Pharmaco_1C2I_5Param(Drover &DICOM_data,
                                                const OperationArgPkg& OptArgs,
-                                               const std::map<std::string, std::string>& InvocationMetadata,
+                                               std::map<std::string, std::string>& InvocationMetadata,
                                                const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
@@ -392,7 +392,7 @@ bool CT_Liver_Perfusion_Pharmaco_1C2I_5Param(Drover &DICOM_data,
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                StandardAbdominalHUWindow,
                                                {}, {} )){
-            FUNCERR("Unable to force window to cover reasonable HU range");
+            throw std::runtime_error("Unable to force window to cover reasonable HU range");
         }
     }
 
@@ -451,7 +451,7 @@ bool CT_Liver_Perfusion_Pharmaco_1C2I_5Param(Drover &DICOM_data,
             baseline_img_arrays.back()->imagecoll.Prune_Images_Satisfying(PurgeAboveNSeconds);
     
             if(!baseline_img_arrays.back()->imagecoll.Condense_Average_Images(GroupSpatiallyOverlappingImages)){
-                FUNCERR("Cannot temporally average data set. Is it able to be averaged?");
+                throw std::runtime_error("Cannot temporally average data set. Is it able to be averaged?");
             }
         }
     
@@ -466,7 +466,7 @@ bool CT_Liver_Perfusion_Pharmaco_1C2I_5Param(Drover &DICOM_data,
             if(!baseline_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupSpatiallyOverlappingImages,
                                                                       CondenseMinPixel,
                                                                       {}, {} )){
-                FUNCERR("Unable to generate min(pixel) images over the time course");
+                throw std::runtime_error("Unable to generate min(pixel) images over the time course");
             }
         }
     }
@@ -483,7 +483,7 @@ bool CT_Liver_Perfusion_Pharmaco_1C2I_5Param(Drover &DICOM_data,
         if(!C_enhancement_img_arrays.back()->imagecoll.Transform_Images( CTPerfusionSigDiffC,
                                                                          { baseline_img_arrays.front()->imagecoll },
                                                                          { } )){
-            FUNCERR("Unable to transform image array to make poor-man's C map");
+            throw std::runtime_error("Unable to transform image array to make poor-man's C map");
         }
     }
        
@@ -505,7 +505,7 @@ bool CT_Liver_Perfusion_Pharmaco_1C2I_5Param(Drover &DICOM_data,
                                                { },
                                                cc_AIF_VIF,
                                                &ud )){
-            FUNCERR("Unable to compute per-ROI time courses");
+            throw std::runtime_error("Unable to compute per-ROI time courses");
         }
     }
     //For perfusion purposes, we always want to scale down the ROIs per-atomos (i.e., per-voxel).
@@ -538,7 +538,7 @@ bool CT_Liver_Perfusion_Pharmaco_1C2I_5Param(Drover &DICOM_data,
             if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                    DecimateRC,
                                                    {}, {} )){
-                FUNCERR("Unable to decimate pixels");
+                throw std::runtime_error("Unable to decimate pixels");
             }
         }
     }
@@ -703,7 +703,7 @@ bool CT_Liver_Perfusion_Pharmaco_1C2I_5Param(Drover &DICOM_data,
                                 std::ref(pharmaco_model_k2.back()->imagecoll) }, 
                               cc_all,
                               &ud_cheby )){
-                FUNCERR("Unable to pharmacokinetically model liver!");
+                throw std::runtime_error("Unable to pharmacokinetically model liver!");
             }else{
                 pharmaco_model_dummy.back()->imagecoll.images.clear();
             }
@@ -812,7 +812,7 @@ bool CT_Liver_Perfusion_Pharmaco_1C2I_5Param(Drover &DICOM_data,
                                 std::ref(pharmaco_model_k2.back()->imagecoll) }, 
                               cc_all,
                               &ud_linear )){
-                FUNCERR("Unable to pharmacokinetically model liver!");
+                throw std::runtime_error("Unable to pharmacokinetically model liver!");
             }else{
                 pharmaco_model_dummy.back()->imagecoll.images.clear();
             }

@@ -18,6 +18,8 @@
 #include <string>    
 #include <vector>
 #include <utility>
+#include <filesystem>
+#include <numeric>
 
 #ifdef DCMA_USE_CGAL
 #else
@@ -106,7 +108,7 @@ OperationDoc OpArgDocExtractRadiomicFeatures(){
 
 bool ExtractRadiomicFeatures(Drover &DICOM_data,
                                const OperationArgPkg& OptArgs,
-                               const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                               std::map<std::string, std::string>& /*InvocationMetadata*/,
                                const std::string& FilenameLex){
 
     Explicator X(FilenameLex);
@@ -527,22 +529,19 @@ bool ExtractRadiomicFeatures(Drover &DICOM_data,
     //std::cout << report.str();
 
     //Write the report to file.
-    try{
+    {
         auto gen_filename = [&]() -> std::string {
-            if(FeaturesFileName.empty()){
-                FeaturesFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_extractradiomicfeatures_", 6, ".csv");
+            if(!FeaturesFileName.empty()){
+                return FeaturesFileName;
             }
-            return FeaturesFileName;
+            const auto base = std::filesystem::temp_directory_path() / "dcma_extractradiomicfeatures_";
+            return Get_Unique_Sequential_Filename(base.string(), 6, ".csv");
         };
 
-        FUNCINFO("About to claim a mutex");
         Append_File( gen_filename,
-                     "dicomautomaton_operation_extractradiomicfeatures_mutex",
+                     "dcma_op_extractradiomicfeatures_mutex",
                      header.str(),
                      report.str() );
-
-    }catch(const std::exception &e){
-        FUNCERR("Unable to write to output file: '" << e.what() << "'");
     }
 
     return true;

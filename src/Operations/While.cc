@@ -69,7 +69,7 @@ OperationDoc OpArgDocWhile() {
 
 bool While(Drover &DICOM_data,
               const OperationArgPkg& OptArgs,
-              const std::map<std::string, std::string>& InvocationMetadata,
+              std::map<std::string, std::string>& InvocationMetadata,
               const std::string& FilenameLex){
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto N = std::stol( OptArgs.getValueStr("N").value_or("-1") );
@@ -92,9 +92,7 @@ bool While(Drover &DICOM_data,
     while(true){
         if( (0 <= N) && (N <= i++) ) return false;
 
-        try{
-            condition = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, child_condition);
-        }catch(const std::exception &){ }
+        condition = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, child_condition);
         if(!condition) break;
 
         if(!Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, child_body)){

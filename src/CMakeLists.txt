@@ -1,39 +1,13 @@
 
 
-# CMake-only function for embedded the contents of DCMA scripts into C++ source via a -D definition.
-set(script_inlines "")
-function(embed_script
-         filename)
-    # Read the file contents.
-    file(READ "${filename}" script_contents HEX)
-    #message(AUTHOR_WARNING "${script_contents}")
-
-    # Derive a name for the script from the filename.
-    set(script_path "${filename}")
-    string(REGEX REPLACE ".*/(.*)/[^/]*" "\\1" script_category "${script_path}")
-    string(REGEX REPLACE "_" " " script_category "${script_category}")
-
-    string(REGEX REPLACE ".*/(.*)" "\\1" script_filename "${script_path}")
-    string(REGEX REPLACE "_" " " script_filename "${script_filename}")
-    string(REGEX REPLACE "[.]dscr$" "" script_filename "${script_filename}")
-
-    # Convert the file contents to a C++ string with hex escapes.
-    string(REGEX REPLACE "([0-9a-f][0-9a-f])" "\\\\x\\1" script_contents "${script_contents}")
-    #message(AUTHOR_WARNING "${script_contents}")
-
-    set(entry "{\"${script_category}\",\"${script_filename}\",\"${script_contents}\"},")
-
-    # Append the string to a variable for later access.
-    set(script_inlines "${script_inlines}" PARENT_SCOPE)
-    set(script_inlines "${script_inlines}${entry}" PARENT_SCOPE)
-endfunction()
-
-file(GLOB script_files "../artifacts/dcma_scripts/*/*.dscr")
-foreach(script_file ${script_files})
-    embed_script("${script_file}")
-endforeach()
-#message(AUTHOR_WARNING "${script_inlines}")
-
+add_custom_command(
+    OUTPUT  "${CMAKE_CURRENT_BINARY_DIR}/Standard_Scripts.cc" # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/generate_standard_scripts.sh"
+                "${CMAKE_CURRENT_SOURCE_DIR}/Standard_Scripts.cc.in"
+                "${CMAKE_CURRENT_BINARY_DIR}/Standard_Scripts.cc"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Standard_Scripts.cc.in"   # Treated as relative to CMAKE_CURRENT_SOURCE_DIR
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../"
+)
 
 add_subdirectory(Operations)
 
@@ -43,6 +17,9 @@ target_compile_definitions( DCMA_Version_obj PUBLIC -DDCMA_VERSION=${DCMA_VERSIO
 
 add_library(            Structs_obj OBJECT Structs.cc)
 set_target_properties(  Structs_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+add_library(            Tables_obj OBJECT Tables.cc)
+set_target_properties(  Tables_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
 add_library(            Partition_Drover_obj OBJECT Partition_Drover.cc)
 set_target_properties(  Partition_Drover_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -80,6 +57,9 @@ set_target_properties(  String_Parsing_obj PROPERTIES POSITION_INDEPENDENT_CODE 
 add_library(            Metadata_obj OBJECT Metadata.cc )
 set_target_properties(  Metadata_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            CSG_SDF_obj OBJECT CSG_SDF.cc )
+set_target_properties(  CSG_SDF_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Common_Boost_Serialization_obj OBJECT Common_Boost_Serialization.cc )
 set_target_properties(  Common_Boost_Serialization_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -114,6 +94,12 @@ set_target_properties(  FITS_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_COD
 add_library(            XYZ_File_Loader_obj OBJECT XYZ_File_Loader.cc )
 set_target_properties(  XYZ_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            CSV_File_Loader_obj OBJECT CSV_File_Loader.cc )
+set_target_properties(  CSV_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+add_library(            XIM_File_Loader_obj OBJECT XIM_File_Loader.cc )
+set_target_properties(  XIM_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            DVH_File_Loader_obj OBJECT DVH_File_Loader.cc )
 set_target_properties(  DVH_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -144,7 +130,9 @@ set_target_properties(  Boost_Serialization_File_Loader_obj PROPERTIES POSITION_
 
 add_library(            Script_Loader_obj OBJECT Script_Loader.cc )
 set_target_properties(  Script_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
-target_compile_definitions( Script_Loader_obj PUBLIC -DDCMA_SCRIPT_INLINES=${script_inlines} )
+
+add_library(            Standard_Scripts_obj OBJECT Standard_Scripts.cc )
+set_target_properties(  Standard_Scripts_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
 add_library(            Surface_Meshes_obj OBJECT Surface_Meshes.cc )
 set_target_properties(  Surface_Meshes_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -192,6 +180,7 @@ endif()
 add_library (imebrashim 
     Imebra_Shim.cc 
     $<TARGET_OBJECTS:Structs_obj>
+    $<TARGET_OBJECTS:Tables_obj>
     $<TARGET_OBJECTS:Alignment_Rigid_obj>
     $<TARGET_OBJECTS:Alignment_Field_obj>
     $<TARGET_OBJECTS:DCMA_DICOM_obj>
@@ -267,7 +256,6 @@ target_include_directories(imebrashim SYSTEM PUBLIC
     ./imebra20121219/library/imebra/include/ 
 )
 target_compile_options(imebrashim PUBLIC -w) # Inhibit imebra-related warnings.
-
 target_link_libraries(imebrashim
     explicator 
     ygor 
@@ -284,6 +272,24 @@ target_link_libraries(imebrashim
     m
     Threads::Threads
 )
+
+# Dialog library (built separately to minimize header/macro clashes).
+add_library (dialogshim
+    Dialogs.cc 
+    Dialogs/Text_Query.cc
+)
+target_link_libraries(dialogshim
+    "$<$<BOOL:${MINGW}>:ws2_32>"
+    "$<$<BOOL:${MINGW}>:wsock32>"
+    "$<$<BOOL:${MINGW}>:comctl32>"
+    "$<$<BOOL:${MINGW}>:uuid>"
+    "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
+    mpfr
+    gmp
+    m
+    Threads::Threads
+)
+
 
 # Pharmacokinetic modeling libraries (built separately for easier reuse).
 
@@ -316,11 +322,21 @@ if(WITH_GNU_GSL)
 
 endif()
 
+# Windows icon bundling.
+#    "${TOOLCHAIN}-windres" win_res.rc -O coff -o win_res.o
+#    "${TOOLCHAIN}-g++" -o dicomautomaton_dispatcher.exe ... win_res.o ...
+if(MINGW)
+    add_library(               WindowsIcon_obj OBJECT WindowsIcon.rc )
+    #set_target_properties(     WindowsIcon_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+    target_include_directories(WindowsIcon_obj PRIVATE "${CMAKE_CURRENT_LIST_DIR}/../artifacts/logos/")
+endif()
+
 # Executable.
 add_executable (dicomautomaton_dispatcher
     DICOMautomaton_Dispatcher.cc
 
     $<TARGET_OBJECTS:Structs_obj>
+    $<TARGET_OBJECTS:Tables_obj>
     $<TARGET_OBJECTS:Partition_Drover_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:BED_Conversion_obj>
@@ -338,6 +354,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Regex_Selectors_obj>
     $<TARGET_OBJECTS:String_Parsing_obj>
     $<TARGET_OBJECTS:Metadata_obj>
+    $<TARGET_OBJECTS:CSG_SDF_obj>
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
     $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
     $<TARGET_OBJECTS:File_Loader_obj>
@@ -346,6 +363,8 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Lexicon_Loader_obj>
     $<TARGET_OBJECTS:FITS_File_Loader_obj>
     $<TARGET_OBJECTS:XYZ_File_Loader_obj>
+    $<TARGET_OBJECTS:XIM_File_Loader_obj>
+    $<TARGET_OBJECTS:CSV_File_Loader_obj>
     $<TARGET_OBJECTS:DVH_File_Loader_obj>
     $<TARGET_OBJECTS:TAR_File_Loader_obj>
     $<TARGET_OBJECTS:3ddose_File_Loader_obj>
@@ -355,6 +374,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:PLY_File_Loader_obj>
     $<TARGET_OBJECTS:Line_Sample_File_Loader_obj>
     $<TARGET_OBJECTS:Script_Loader_obj>
+    $<TARGET_OBJECTS:Standard_Scripts_obj>
     $<TARGET_OBJECTS:Write_File_obj>
     $<TARGET_OBJECTS:Operation_Dispatcher_obj>
     $<TARGET_OBJECTS:Documentation_obj>
@@ -365,9 +385,11 @@ add_executable (dicomautomaton_dispatcher
 
     $<TARGET_OBJECTS:Operations_objs>
     $<TARGET_OBJECTS:DCMA_Version_obj>
+    $<$<BOOL:${MINGW}>:$<TARGET_OBJECTS:WindowsIcon_obj>>
 )
 target_link_libraries (dicomautomaton_dispatcher
     imebrashim
+    dialogshim
     $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt>
     $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt>
     $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization>
@@ -403,6 +425,7 @@ if(WITH_WT)
         DICOMautomaton_WebServer.cc
 
         $<TARGET_OBJECTS:Structs_obj>
+        $<TARGET_OBJECTS:Tables_obj>
         $<TARGET_OBJECTS:Partition_Drover_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:BED_Conversion_obj>
@@ -420,6 +443,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Regex_Selectors_obj>
         $<TARGET_OBJECTS:String_Parsing_obj>
         $<TARGET_OBJECTS:Metadata_obj>
+        $<TARGET_OBJECTS:CSG_SDF_obj>
         $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
         $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
         $<TARGET_OBJECTS:File_Loader_obj>
@@ -428,6 +452,8 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Lexicon_Loader_obj>
         $<TARGET_OBJECTS:FITS_File_Loader_obj>
         $<TARGET_OBJECTS:XYZ_File_Loader_obj>
+        $<TARGET_OBJECTS:XIM_File_Loader_obj>
+        $<TARGET_OBJECTS:CSV_File_Loader_obj>
         $<TARGET_OBJECTS:DVH_File_Loader_obj>
         $<TARGET_OBJECTS:TAR_File_Loader_obj>
         $<TARGET_OBJECTS:3ddose_File_Loader_obj>
@@ -437,6 +463,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:PLY_File_Loader_obj>
         $<TARGET_OBJECTS:Line_Sample_File_Loader_obj>
         $<TARGET_OBJECTS:Script_Loader_obj>
+        $<TARGET_OBJECTS:Standard_Scripts_obj>
         $<TARGET_OBJECTS:Write_File_obj>
         $<TARGET_OBJECTS:Operation_Dispatcher_obj>
         $<TARGET_OBJECTS:Documentation_obj>
@@ -450,6 +477,7 @@ if(WITH_WT)
     )
     target_link_libraries(dicomautomaton_webserver
         imebrashim
+        dialogshim
         $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt>
         $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt>
         $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization>
@@ -486,6 +514,7 @@ endif()
 add_executable(dicomautomaton_bsarchive_convert
     Boost_Serialization_Archive_Converter.cc
     $<TARGET_OBJECTS:Structs_obj>
+    $<TARGET_OBJECTS:Tables_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
@@ -514,6 +543,7 @@ if(WITH_POSTGRES)
     add_executable(pacs_ingress
         PACS_Ingress.cc
         $<TARGET_OBJECTS:Structs_obj>
+        $<TARGET_OBJECTS:Tables_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
         $<TARGET_OBJECTS:String_Parsing_obj>
@@ -533,6 +563,7 @@ if(WITH_POSTGRES)
     add_executable(pacs_duplicate_cleaner
         PACS_Duplicate_Cleaner.cc
         $<TARGET_OBJECTS:Structs_obj>
+        $<TARGET_OBJECTS:Tables_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
         $<TARGET_OBJECTS:String_Parsing_obj>
@@ -552,6 +583,7 @@ if(WITH_POSTGRES)
     add_executable(pacs_refresh
         PACS_Refresh.cc
         $<TARGET_OBJECTS:Structs_obj>
+        $<TARGET_OBJECTS:Tables_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
         $<TARGET_OBJECTS:String_Parsing_obj>
@@ -573,6 +605,7 @@ endif()
 add_executable(dicomautomaton_dump
     DICOMautomaton_Dump.cc
     $<TARGET_OBJECTS:Structs_obj>
+    $<TARGET_OBJECTS:Tables_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
     $<TARGET_OBJECTS:String_Parsing_obj>
@@ -590,6 +623,7 @@ install(TARGETS dicomautomaton_dispatcher
                 dicomautomaton_bsarchive_convert
                 dicomautomaton_dump
                 imebrashim
+                dialogshim
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

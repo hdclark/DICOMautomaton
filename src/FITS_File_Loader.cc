@@ -18,6 +18,7 @@
 #include <filesystem>
 #include <cstdlib>            //Needed for exit() calls.
 
+#include "Metadata.h"
 #include "Structs.h"
 #include "YgorImages.h"
 #include "YgorImagesIO.h"
@@ -26,7 +27,7 @@
 
 
 bool Load_From_FITS_Files( Drover &DICOM_data,
-                           const std::map<std::string,std::string> & /* InvocationMetadata */,
+                           std::map<std::string,std::string> & /* InvocationMetadata */,
                            const std::string &,
                            std::list<std::filesystem::path> &Filenames ){
 
@@ -42,16 +43,17 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
 
     size_t i = 0;
     const size_t N = Filenames.size();
+    auto l_meta = coalesce_metadata_for_basic_image({});
 
     auto bfit = Filenames.begin();
     while(bfit != Filenames.end()){
         FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
-        const auto Filename = bfit->string();
+        const auto Filename = *bfit;
 
         //First, try planar_images that have been exported in the expected format.
         try{
-            auto animg = ReadFromFITS<float,double>(Filename);
+            auto animg = ReadFromFITS<float,double>(Filename.string());
 
             //Set some default parameters if none were included in the file metadata.
             if(!std::isfinite(animg.pxl_dx) 
@@ -76,6 +78,9 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
                 throw std::runtime_error("FITS file missing key image parameters. Cannot continue.");
             }
 
+            animg.metadata = l_meta;
+            animg.metadata["Filename"] = Filename.string();
+
             FUNCINFO("Loaded FITS file with dimensions " 
                      << animg.rows << " x " << animg.columns
                      << " and " << animg.channels << " channels");
@@ -89,7 +94,7 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
 
         //Then try the most likely format as exported by other programs.
         try{
-            auto animg = ReadFromFITS<uint8_t,double>(Filename);
+            auto animg = ReadFromFITS<uint8_t,double>(Filename.string());
 
             //Set some default parameters if none were included in the file metadata.
             if(!std::isfinite(animg.pxl_dx) 
@@ -116,6 +121,8 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
 
             planar_image<float,double> animg2;
             animg2.cast_from(animg);
+            animg2.metadata = l_meta;
+            animg2.metadata["Filename"] = Filename.string();
 
             FUNCINFO("Loaded FITS file with dimensions " 
                      << animg2.rows << " x " << animg2.columns
@@ -127,6 +134,9 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
         }catch(const std::exception &e){
             FUNCINFO("Unable to load as FITS file with uint8_t,double types: '" << e.what() << "'");
         };
+
+        // Iterate metadata for next file.
+        l_meta = coalesce_metadata_for_basic_image(l_meta, meta_evolve::iterate);
 
         //Skip the file. It might be destined for some other loader.
         ++bfit;

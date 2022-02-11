@@ -103,7 +103,7 @@ OperationDoc OpArgDocSFML_Viewer(){
 
 bool SFML_Viewer(Drover &DICOM_data,
                    const OperationArgPkg& OptArgs,
-                   const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                   std::map<std::string, std::string>& /*InvocationMetadata*/,
                    const std::string& FilenameLex){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
@@ -179,7 +179,7 @@ bool SFML_Viewer(Drover &DICOM_data,
     &&  !afont.loadFromFile("/usr/share/fonts/truetype/freefont/FreeMono.ttf") ){ // Debian 'fonts-freefont-ttf' pkg.
         FUNCWARN("Unable to find a suitable font file on host system -- loading embedded minimal font");
         if(!afont.loadFromMemory(static_cast<void*>(dcma_minimal_ttf), static_cast<size_t>(dcma_minimal_ttf_len))){
-            FUNCERR("Unable to load embedded font. Cannot continue");
+            throw std::runtime_error("Unable to load embedded font. Cannot continue");
         }
     }
 
@@ -304,7 +304,7 @@ bool SFML_Viewer(Drover &DICOM_data,
         const auto img_rows = img_it->rows;
 
         if(!isininc(1,img_rows,10000) || !isininc(1,img_cols,10000)){
-            FUNCERR("Image dimensions are not reasonable. Is this a mistake? Refusing to continue");
+            throw std::runtime_error("Image dimensions are not reasonable. Is this a mistake? Refusing to continue");
         }
 
         sf::Image animage;
@@ -432,8 +432,8 @@ bool SFML_Viewer(Drover &DICOM_data,
 
         out.first = sf::Texture();
         out.second = sf::Sprite();
-        if(!out.first.create(img_cols, img_rows)) FUNCERR("Unable to create empty SFML texture");
-        if(!out.first.loadFromImage(animage)) FUNCERR("Unable to create SFML texture from planar_image");
+        if(!out.first.create(img_cols, img_rows)) throw std::runtime_error("Unable to create empty SFML texture");
+        if(!out.first.loadFromImage(animage)) throw std::runtime_error("Unable to create SFML texture from planar_image");
         //out.first.setSmooth(true);        
         out.first.setSmooth(false);        
         out.second.setTexture(out.first);
@@ -481,7 +481,7 @@ bool SFML_Viewer(Drover &DICOM_data,
 
     //Prep the first image.
     if(!load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
-        FUNCERR("Unable to load image --> texture --> sprite");
+        throw std::runtime_error("Unable to load image --> texture --> sprite");
     }
     scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
 
@@ -713,7 +713,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
                 FUNCINFO("Reloaded texture using '" << colour_maps[colour_map].first << "' colour map");
             }else{
-                FUNCERR("Unable to reload texture using selected colour map");
+                throw std::runtime_error("Unable to reload texture using selected colour map");
             }
             return;
     };
@@ -725,7 +725,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
                 FUNCINFO("Reloaded texture using '" << colour_maps[colour_map].first << "' colour map");
             }else{
-                FUNCERR("Unable to reload texture using selected colour map");
+                throw std::runtime_error("Unable to reload texture using selected colour map");
             }
             return;
     };
@@ -1126,7 +1126,7 @@ bool SFML_Viewer(Drover &DICOM_data,
 
             const auto FOname = Get_Unique_Sequential_Filename("/tmp/pixel_intensity_from_all_overlapping_images_", 6, ".csv");
             std::fstream FO(FOname, std::fstream::out);
-            if(!FO) FUNCERR("Unable to write to the file '" << FOname << "'. Cannot continue");
+            if(!FO) throw std::runtime_error("Unable to write to the file '"_s + FOname + "'. Cannot continue");
 
             //Metadata quantities to also harvest.
             std::vector<std::string> quantities_d = { "dt", "FlipAngle" };
@@ -1238,7 +1238,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                          "There are " << (*img_array_ptr_it)->imagecoll.images.size() << " images in this Image_Array");
                 
             }else{ 
-                FUNCERR("Unable to load image --> texture --> sprite");
+                throw std::runtime_error("Unable to load image --> texture --> sprite");
             }   
 
             if(auto ImageDesc = disp_img_it->GetMetadataValueAs<std::string>("Description")){
@@ -1289,7 +1289,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 FUNCINFO("Loaded next texture in unaltered Image_Array order. Displaying image number " << img_number);
                 
             }else{
-                FUNCERR("Unable to load image --> texture --> sprite");
+                throw std::runtime_error("Unable to load image --> texture --> sprite");
             }
 
             if(auto ImageDesc = disp_img_it->GetMetadataValueAs<std::string>("Description")){
@@ -1364,7 +1364,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                     FUNCINFO("Loaded next texture in unaltered Image_Array order. Displaying image number " << img_number);
                     
                 }else{
-                    FUNCERR("Unable to load image --> texture --> sprite");
+                    throw std::runtime_error("Unable to load image --> texture --> sprite");
                 }
 
                 //Scale the image to fill the available space.
@@ -1397,7 +1397,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 FUNCINFO("Loaded next texture in unaltered Image_Array order. Displaying image number " << img_number);
                 
             }else{
-                FUNCERR("Unable to load image --> texture --> sprite");
+                throw std::runtime_error("Unable to load image --> texture --> sprite");
             }
 
             //Scale the image to fill the available space.
@@ -1456,7 +1456,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 FUNCINFO("Loaded next/previous spatially-overlapping texture. Displaying image number " << img_number);
 
             }else{
-                FUNCERR("Unable to load image --> texture --> sprite");
+                throw std::runtime_error("Unable to load image --> texture --> sprite");
             }
 
             if(auto ImageDesc = disp_img_it->GetMetadataValueAs<std::string>("Description")){
@@ -1680,7 +1680,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
                     scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
                 }else{
-                    FUNCERR("Unable to reload image after adjusting window/level");
+                    throw std::runtime_error("Unable to reload image after adjusting window/level");
                 }
             }catch(const std::exception &e){
                 FUNCWARN("Unable to parse window and level: '" << e.what() << "'");
@@ -1906,7 +1906,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                     if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
                         scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
                     }else{
-                        FUNCERR("Unable to reload image after adjusting window/level");
+                        throw std::runtime_error("Unable to reload image after adjusting window/level");
                     }
                 }
 

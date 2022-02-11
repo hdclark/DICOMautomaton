@@ -31,8 +31,7 @@ OperationDoc OpArgDocContouringAides(){
 
 bool ContouringAides(Drover &DICOM_data,
                        const OperationArgPkg& /*OptArgs*/,
-                       const std::map<std::string, std::string>&
-                       /*InvocationMetadata*/,
+                       std::map<std::string, std::string>& /*InvocationMetadata*/,
                        const std::string& /*FilenameLex*/){
 
     //Get handles for each of the original image arrays so we can easily refer to them later.
@@ -48,7 +47,7 @@ bool ContouringAides(Drover &DICOM_data,
         if(!log_scaled_img_arrays.back()->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                                     LogScalePixels,
                                                                     {}, {} )){
-            FUNCERR("Unable to perform logarithmic pixel scaling");
+            throw std::runtime_error("Unable to perform logarithmic pixel scaling");
         }
     }
 

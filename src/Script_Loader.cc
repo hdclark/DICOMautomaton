@@ -419,7 +419,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
             // Escapes.
             }else if( !prev_escape
                   &&  !inside_comment
-                  &&  quote_stack.empty()
+                  &&  !quote_stack.empty()
                   &&  (c == '\\') ){
                 prev_escape = true;
                 this_caused_escape = true;
@@ -835,7 +835,7 @@ bool Load_From_Script_Files( std::list<OperationArgPkg> &Operations,
         while(bfit != Filenames.end()){
             FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
             ++i;
-            const auto Filename = bfit->string();
+            const auto Filename = *bfit;
             bool found_shebang = false;
             std::list<script_feedback_t> feedback;
             std::list<OperationArgPkg> ops;
@@ -924,30 +924,5 @@ void Print_Feedback(std::ostream &os,
            << std::endl;
     }
     return;
-}
-
-std::list<standard_script_t> standard_scripts(){
-    std::list<standard_script_t> out {
-        // Autopopulated during build.
-        DCMA_SCRIPT_INLINES
-    };
-
-    out.remove_if([](const standard_script_t &s){ return (s.category.empty() || s.name.empty() || s.text.empty()); });
-    out.sort([](const standard_script_t &L, const standard_script_t &R){
-        return std::make_tuple(L.category, L.name) < std::make_tuple(R.category, R.name);
-    });
-    return out;
-}
-
-std::list<standard_script_t> standard_scripts_with_category(const std::string &category){
-    auto out = standard_scripts();
-    out.remove_if([&](const standard_script_t &s){ return (s.category != category); });
-    return out;
-}
-
-std::set<std::string> standard_script_categories(){
-    std::set<std::string> out;
-    for(const auto &s : standard_scripts()) out.insert(s.category);
-    return out;
 }
 

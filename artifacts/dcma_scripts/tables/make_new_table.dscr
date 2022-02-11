@@ -1,0 +1,5 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+
+GenerateTable(){};
+

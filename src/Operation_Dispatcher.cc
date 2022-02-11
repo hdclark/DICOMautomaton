@@ -17,6 +17,7 @@
 #include <Explicator.h>
 
 #include <YgorMisc.h>
+#include <YgorString.h>
 
 #include "Structs.h"
 
@@ -26,6 +27,7 @@
 #include "Operations/AnalyzePicketFence.h"
 #include "Operations/AnalyzeTPlan.h"
 #include "Operations/And.h"
+#include "Operations/AnyOf.h"
 #include "Operations/ApplyCalibrationCurve.h"
 #include "Operations/AutoCropImages.h"
 #include "Operations/Average.h"
@@ -58,6 +60,7 @@
 #include "Operations/CopyContours.h"
 #include "Operations/CopyImages.h"
 #include "Operations/CopyMeshes.h"
+#include "Operations/CopyTables.h"
 #include "Operations/CopyPoints.h"
 #include "Operations/CountVoxels.h"
 #include "Operations/CropImageDoseToROIs.h"
@@ -75,6 +78,7 @@
 #include "Operations/DeleteContours.h"
 #include "Operations/DeleteImages.h"
 #include "Operations/DeleteMeshes.h"
+#include "Operations/DeleteTables.h"
 #include "Operations/DeletePoints.h"
 #include "Operations/DetectShapes3D.h"
 #include "Operations/DrawGeometry.h"
@@ -94,6 +98,7 @@
 #include "Operations/EvaluateDoseVolumeStats.h"
 #include "Operations/EvaluateNTCPModels.h"
 #include "Operations/EvaluateTCPModels.h"
+#include "Operations/ValidateTPlan.h"
 #include "Operations/ExportFITSImages.h"
 #include "Operations/ExportLineSamples.h"
 #include "Operations/ExportSurfaceMeshes.h"
@@ -101,6 +106,7 @@
 #include "Operations/ExportSurfaceMeshesPLY.h"
 #include "Operations/ExportSurfaceMeshesSTL.h"
 #include "Operations/ExportSurfaceMeshesOFF.h"
+#include "Operations/ExportTables.h"
 #include "Operations/ExportWarps.h"
 #include "Operations/ExportPointClouds.h"
 #include "Operations/ExtractAlphaBeta.h"
@@ -108,16 +114,18 @@
 #include "Operations/ExtractPointsWarp.h"
 #include "Operations/False.h"
 #include "Operations/ForEachDistinct.h"
+#include "Operations/ForEachTPlan.h"
 #include "Operations/FVPicketFence.h"
 #include "Operations/GenerateCalibrationCurve.h"
+#include "Operations/GenerateMeshes.h"
 #include "Operations/GenerateSurfaceMask.h"
 #include "Operations/GenerateSyntheticImages.h"
+#include "Operations/GenerateTable.h"
 #include "Operations/GenerateWarp.h"
 #include "Operations/GenerateVirtualDataContourViaThresholdTestV1.h"
 #include "Operations/GenerateVirtualDataDoseStairsV1.h"
 #include "Operations/GenerateVirtualDataImageSphereV1.h"
 #include "Operations/GenerateVirtualDataPerfusionV1.h"
-#include "Operations/GenerateWarp.h"
 #include "Operations/GiveWholeImageArrayABoneWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAHeadAndNeckWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAThoraxWindowLevel.h"
@@ -128,24 +136,26 @@
 #include "Operations/GrowContours.h"
 #include "Operations/HighlightROIs.h"
 #include "Operations/IfElse.h"
+#include "Operations/Ignore.h"
 #include "Operations/ImageRoutineTests.h"
 #include "Operations/ImprintImages.h"
 #include "Operations/InterpolateSlices.h"
 #include "Operations/IsolatedVoxelFilter.h"
 #include "Operations/LoadFiles.h"
+#include "Operations/LoadFilesInteractively.h"
 #include "Operations/LogScale.h"
 #include "Operations/MaxMinPixels.h"
 #include "Operations/MeldDose.h"
 #include "Operations/ModelIVIM.h"
 #include "Operations/ModifyContourMetadata.h"
 #include "Operations/ModifyImageMetadata.h"
+#include "Operations/ModifyParameters.h"
 #include "Operations/NegatePixels.h"
 #include "Operations/NoOp.h"
+#include "Operations/NoneOf.h"
 #include "Operations/NormalizeLineSamples.h"
 #include "Operations/NormalizePixels.h"
-#include "Operations/Not.h"
 #include "Operations/OptimizeStaticBeams.h"
-#include "Operations/Or.h"
 #include "Operations/OrderImages.h"
 #include "Operations/PartitionContours.h"
 #include "Operations/PerturbPixels.h"
@@ -189,6 +199,7 @@
 
 #ifdef DCMA_USE_SDL
     #include "Operations/SDL_Viewer.h"
+    #include "Operations/QueryUserInteractively.h"
 #endif // DCMA_USE_SDL
 
 #ifdef DCMA_USE_SFML
@@ -237,6 +248,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["AnalyzePicketFence"] = std::make_pair(OpArgDocAnalyzePicketFence, AnalyzePicketFence);
     out["AnalyzeTPlan"] = std::make_pair(OpArgDocAnalyzeTPlan, AnalyzeTPlan);
     out["And"] = std::make_pair(OpArgDocAnd, And);
+    out["AnyOf"] = std::make_pair(OpArgDocAnyOf, AnyOf);
     out["ApplyCalibrationCurve"] = std::make_pair(OpArgDocApplyCalibrationCurve, ApplyCalibrationCurve);
     out["AutoCropImages"] = std::make_pair(OpArgDocAutoCropImages, AutoCropImages);
     out["Average"] = std::make_pair(OpArgDocAverage, Average);
@@ -269,6 +281,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["CopyContours"] = std::make_pair(OpArgDocCopyContours, CopyContours);
     out["CopyImages"] = std::make_pair(OpArgDocCopyImages, CopyImages);
     out["CopyMeshes"] = std::make_pair(OpArgDocCopyMeshes, CopyMeshes);
+    out["CopyTables"] = std::make_pair(OpArgDocCopyTables, CopyTables);
     out["CopyPoints"] = std::make_pair(OpArgDocCopyPoints, CopyPoints);
     out["CountVoxels"] = std::make_pair(OpArgDocCountVoxels, CountVoxels);
     out["CropImageDoseToROIs"] = std::make_pair(OpArgDocCropImageDoseToROIs, CropImageDoseToROIs);
@@ -283,6 +296,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["DeleteContours"] = std::make_pair(OpArgDocDeleteContours, DeleteContours);
     out["DeleteImages"] = std::make_pair(OpArgDocDeleteImages, DeleteImages);
     out["DeleteMeshes"] = std::make_pair(OpArgDocDeleteMeshes, DeleteMeshes);
+    out["DeleteTables"] = std::make_pair(OpArgDocDeleteTables, DeleteTables);
     out["DeletePoints"] = std::make_pair(OpArgDocDeletePoints, DeletePoints);
     out["DetectShapes3D"] = std::make_pair(OpArgDocDetectShapes3D, DetectShapes3D);
     out["DICOMExportContours"] = std::make_pair(OpArgDocDICOMExportContours, DICOMExportContours);
@@ -305,6 +319,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["EvaluateDoseVolumeStats"] = std::make_pair(OpArgDocEvaluateDoseVolumeStats, EvaluateDoseVolumeStats);
     out["EvaluateNTCPModels"] = std::make_pair(OpArgDocEvaluateNTCPModels, EvaluateNTCPModels);
     out["EvaluateTCPModels"] = std::make_pair(OpArgDocEvaluateTCPModels, EvaluateTCPModels);
+    out["ValidateTPlan"] = std::make_pair(OpArgDocValidateTPlan, ValidateTPlan);
     out["ExportFITSImages"] = std::make_pair(OpArgDocExportFITSImages, ExportFITSImages);
     out["ExportLineSamples"] = std::make_pair(OpArgDocExportLineSamples, ExportLineSamples);
     out["ExportPointClouds"] = std::make_pair(OpArgDocExportPointClouds, ExportPointClouds);
@@ -313,16 +328,20 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ExportSurfaceMeshesPLY"] = std::make_pair(OpArgDocExportSurfaceMeshesPLY, ExportSurfaceMeshesPLY);
     out["ExportSurfaceMeshes"] = std::make_pair(OpArgDocExportSurfaceMeshes, ExportSurfaceMeshes);
     out["ExportSurfaceMeshesSTL"] = std::make_pair(OpArgDocExportSurfaceMeshesSTL, ExportSurfaceMeshesSTL);
+    out["ExportTables"] = std::make_pair(OpArgDocExportTables, ExportTables);
     out["ExportWarps"] = std::make_pair(OpArgDocExportWarps, ExportWarps);
     out["ExtractAlphaBeta"] = std::make_pair(OpArgDocExtractAlphaBeta, ExtractAlphaBeta);
     out["ExtractImageHistograms"] = std::make_pair(OpArgDocExtractImageHistograms, ExtractImageHistograms);
     out["ExtractPointsWarp"] = std::make_pair(OpArgDocExtractPointsWarp, ExtractPointsWarp);
     out["False"] = std::make_pair(OpArgDocFalse, False);
     out["ForEachDistinct"] = std::make_pair(OpArgDocForEachDistinct, ForEachDistinct);
+    out["ForEachTPlan"] = std::make_pair(OpArgDocForEachTPlan, ForEachTPlan);
     out["FVPicketFence"] = std::make_pair(OpArgDocFVPicketFence, FVPicketFence);
     out["GenerateCalibrationCurve"] = std::make_pair(OpArgDocGenerateCalibrationCurve, GenerateCalibrationCurve);
+    out["GenerateMeshes"] = std::make_pair(OpArgDocGenerateMeshes, GenerateMeshes);
     out["GenerateSurfaceMask"] = std::make_pair(OpArgDocGenerateSurfaceMask, GenerateSurfaceMask);
     out["GenerateSyntheticImages"] = std::make_pair(OpArgDocGenerateSyntheticImages, GenerateSyntheticImages);
+    out["GenerateTable"] = std::make_pair(OpArgDocGenerateTable, GenerateTable);
     out["GenerateVirtualDataContourViaThresholdTestV1"] = std::make_pair(OpArgDocGenerateVirtualDataContourViaThresholdTestV1, GenerateVirtualDataContourViaThresholdTestV1);
     out["GenerateVirtualDataDoseStairsV1"] = std::make_pair(OpArgDocGenerateVirtualDataDoseStairsV1, GenerateVirtualDataDoseStairsV1);
     out["GenerateVirtualDataImageSphereV1"] = std::make_pair(OpArgDocGenerateVirtualDataImageSphereV1, GenerateVirtualDataImageSphereV1);
@@ -338,25 +357,27 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["GrowContours"] = std::make_pair(OpArgDocGrowContours, GrowContours);
     out["HighlightROIs"] = std::make_pair(OpArgDocHighlightROIs, HighlightROIs);
     out["IfElse"] = std::make_pair(OpArgDocIfElse, IfElse);
+    out["Ignore"] = std::make_pair(OpArgDocIgnore, Ignore);
     out["ImageRoutineTests"] = std::make_pair(OpArgDocImageRoutineTests, ImageRoutineTests);
     out["ImprintImages"] = std::make_pair(OpArgDocImprintImages, ImprintImages);
     out["InterpolateSlices"] = std::make_pair(OpArgDocInterpolateSlices, InterpolateSlices);
     out["IsolatedVoxelFilter"] = std::make_pair(OpArgDocIsolatedVoxelFilter, IsolatedVoxelFilter);
     out["LoadFiles"] = std::make_pair(OpArgDocLoadFiles, LoadFiles);
+    out["LoadFilesInteractively"] = std::make_pair(OpArgDocLoadFilesInteractively, LoadFilesInteractively);
     out["LogScale"] = std::make_pair(OpArgDocLogScale, LogScale);
     out["MaxMinPixels"] = std::make_pair(OpArgDocMaxMinPixels, MaxMinPixels);
     out["MeldDose"] = std::make_pair(OpArgDocMeldDose, MeldDose);
     out["ModelIVIM"] = std::make_pair(OpArgDocModelIVIM, ModelIVIM);
     out["ModifyContourMetadata"] = std::make_pair(OpArgDocModifyContourMetadata, ModifyContourMetadata);
     out["ModifyImageMetadata"] = std::make_pair(OpArgDocModifyImageMetadata, ModifyImageMetadata);
+    out["ModifyParameters"] = std::make_pair(OpArgDocModifyParameters, ModifyParameters);
     out["NegatePixels"] = std::make_pair(OpArgDocNegatePixels, NegatePixels);
     out["NoOp"] = std::make_pair(OpArgDocNoOp, NoOp);
+    out["NoneOf"] = std::make_pair(OpArgDocNoneOf, NoneOf);
     out["NormalizeLineSamples"] = std::make_pair(OpArgDocNormalizeLineSamples, NormalizeLineSamples);
     out["NormalizePixels"] = std::make_pair(OpArgDocNormalizePixels, NormalizePixels);
-    out["Not"] = std::make_pair(OpArgDocNot, Not);
     out["OptimizeStaticBeams"] = std::make_pair(OpArgDocOptimizeStaticBeams, OptimizeStaticBeams);
     out["OrderImages"] = std::make_pair(OpArgDocOrderImages, OrderImages);
-    out["Or"] = std::make_pair(OpArgDocOr, Or);
     out["PartitionContours"] = std::make_pair(OpArgDocPartitionContours, PartitionContours);
     out["PerturbPixels"] = std::make_pair(OpArgDocPerturbPixels, PerturbPixels);
     out["PlotLineSamples"] = std::make_pair(OpArgDocPlotLineSamples, PlotLineSamples);
@@ -399,6 +420,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
 
 #ifdef DCMA_USE_SDL
     out["SDL_Viewer"] = std::make_pair(OpArgDocSDL_Viewer, SDL_Viewer);
+    out["QueryUserInteractively"] = std::make_pair(OpArgDocQueryUserInteractively, QueryUserInteractively);
 #endif // DCMA_USE_SDL
 
 #ifdef DCMA_USE_SFML
@@ -461,7 +483,7 @@ std::map<std::string, std::string> Operation_Lexicon(){
 }
 
 bool Operation_Dispatcher( Drover &DICOM_data,
-                           const std::map<std::string,std::string> &InvocationMetadata,
+                           std::map<std::string,std::string> &InvocationMetadata,
                            const std::string &FilenameLex,
                            const std::list<OperationArgPkg> &Operations ){
 
@@ -484,11 +506,19 @@ bool Operation_Dispatcher( Drover &DICOM_data,
                 if(boost::iequals(op_func.first, canonical_op_name)){
                     WasFound = true;
 
-                    //Attempt to insert all expected, documented parameters with the default value.
+                    // Attempt to insert all expected, documented parameters with the default value.
+                    //
+                    // Note that existing keys will not be replaced.
                     auto OpDocs = op_func.second.first();
                     for(const auto &r : OpDocs.args){
                         if(r.expected) optargs.insert( r.name, r.default_val );
                     }
+
+                    // Perform macro replacement using the parameter table.
+                    optargs.visit_opts([&InvocationMetadata](const std::string &key, std::string &val){
+                        val = ExpandMacros(val, InvocationMetadata, "$");
+                        return;
+                    });
 
                     FUNCINFO("Performing operation '" << op_func.first << "' now..");
                     const bool res = op_func.second.second(DICOM_data,

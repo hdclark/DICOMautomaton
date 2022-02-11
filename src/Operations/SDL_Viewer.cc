@@ -73,7 +73,9 @@
 #include "../DCMA_Version.h"
 #include "../File_Loader.h"
 #include "../Script_Loader.h"
+#include "../Standard_Scripts.h"
 #include "../Thread_Pool.h"
+#include "../Dialogs.h"
 
 #ifdef DCMA_USE_CGAL
     #include "../Surface_Meshes.h"
@@ -101,7 +103,7 @@
 
 static
 void
-array_to_string(std::string &s, const std::array<char, 1024> &a){
+array_to_string(std::string &s, const std::array<char, 2048> &a){
     s.clear();
     for(const auto &c : a){
         if(c == '\0') break;
@@ -111,13 +113,30 @@ array_to_string(std::string &s, const std::array<char, 1024> &a){
 }
 
 static
+std::string
+array_to_string(const std::array<char, 2048> &a){
+    std::string s;
+    array_to_string(s,a);
+    return s;
+}
+
+static
 void
-string_to_array(std::array<char, 1024> &a, const std::string &s){
+string_to_array(std::array<char, 2048> &a, const std::string &s){
+    a.fill('\0');
     for(size_t i = 0; (i < s.size()) && ((i+1) < a.size()); ++i){
         a[i] = s[i];
-        a[i+1] = '\0';
+        //a[i+1] = '\0';
     }
     return;
+}
+
+static
+std::array<char, 2048>
+string_to_array(const std::string &s){
+    std::array<char, 2048> a;
+    string_to_array(a,s);
+    return a;
 }
 
 // Compute an axis-aligned bounding box in pixel coordinates.
@@ -156,9 +175,10 @@ get_pixelspace_axis_aligned_bounding_box(const planar_image<float, double> &img,
 
 // Represents a buffer stored in GPU memory that is accessible by OpenGL.
 struct opengl_mesh {
-    GLuint vao = 0;
-    GLuint vbo = 0;
-    GLuint ebo = 0;
+    GLuint vao = 0;  // vertex array object.
+    GLuint vbo = 0;  // vertex buffer object (vertex positions).
+    GLuint nbo = 0;  // normals buffer object (per-vertex normals)
+    GLuint ebo = 0;  // element buffer object (per-face integer vertex coordinates)
 
     GLsizei N_indices = 0;
     GLsizei N_vertices = 0;
@@ -175,6 +195,8 @@ struct opengl_mesh {
             if(l_N_indices < 3) continue; // Ignore faces that cannot be broken into triangles.
             this->N_triangles += static_cast<GLsizei>(l_N_indices - 2);
         }
+        const auto N_vert_normals = static_cast<GLsizei>(meshes.vertex_normals.size());
+        const bool has_vert_normals = (N_vert_normals == this->N_vertices);
 
         // Find an axis-aligned bounding box.
         const auto inf = std::numeric_limits<double>::infinity();
@@ -207,18 +229,23 @@ struct opengl_mesh {
 
         // Marshall the vertex and index information in CPU-accessible buffers where they can be freely
         // preprocessed.
-        std::vector<float> vertices;
-        vertices.reserve(3 * this->N_vertices);
+        std::vector<vec3<float>> vertices;
+        vertices.reserve(this->N_vertices);
         for(const auto &v : meshes.vertices){
             // Scale each of x, y, and z to [-1,+1], respecting the aspect ratio, but shrink down further to
             // [-1/sqrt(3),+1/sqrt(3)] to account for rotation. Scaling down will ensure the corners are not clipped
             // when the cube is rotated.
-            vec3<double> w( (2.0 * (v.x - x_min) / (x_max - x_min) - 1.0) / std::sqrt(3.0),
+            vec3<float>  w( (2.0 * (v.x - x_min) / (x_max - x_min) - 1.0) / std::sqrt(3.0),
                             (2.0 * (v.y - y_min) / (y_max - y_min) - 1.0) / std::sqrt(3.0),
                             (2.0 * (v.z - z_min) / (z_max - z_min) - 1.0) / std::sqrt(3.0) );
-            vertices.push_back(static_cast<float>(w.x));
-            vertices.push_back(static_cast<float>(w.y));
-            vertices.push_back(static_cast<float>(w.z));
+            vertices.push_back(w);
+        }
+
+        std::vector<vec3<float>> normals;
+        if(has_vert_normals){
+            normals.reserve(this->N_vertices);
+        }else{
+            normals.resize(this->N_vertices, vec3<float>(0,0,0));
         }
         
         std::vector<unsigned int> indices;
@@ -231,15 +258,43 @@ struct opengl_mesh {
             const auto it_2 = std::next(it_1);
             const auto end = std::end(f);
             for(auto it_3 = std::next(it_2); it_3 != end; ++it_3){
-                indices.push_back(static_cast<unsigned int>(*it_1));
-                indices.push_back(static_cast<unsigned int>(*it_2));
-                indices.push_back(static_cast<unsigned int>(*it_3));
+                const auto i_A = static_cast<unsigned int>( (reverse_normals) ? *it_1 : *it_3 );
+                const auto i_B = static_cast<unsigned int>( *it_2 );
+                const auto i_C = static_cast<unsigned int>( (reverse_normals) ? *it_3 : *it_1 );
+
+                indices.push_back(i_A);
+                indices.push_back(i_B);
+                indices.push_back(i_C);
+
+                if(!has_vert_normals){
+                    // Make area-averaged normals for each vertex by summing the area-weighted normal for each face.
+                    const auto awn = (meshes.vertices[i_C] - meshes.vertices[i_B]).Cross(meshes.vertices[i_A] - meshes.vertices[i_B]);
+                    const auto fawn = vec3<float>( static_cast<float>(awn.x),  static_cast<float>(awn.y), static_cast<float>(awn.z) );
+                                                 
+                    normals[i_A] += fawn;
+                    normals[i_B] += fawn;
+                    normals[i_C] += fawn;
+                }
             }
         }
-        if(reverse_normals){
-            std::reverse(std::begin(indices), std::end(indices));
-        }
         this->N_indices = static_cast<GLsizei>(indices.size());
+
+        if(has_vert_normals){
+            // Convert from double to float.
+            for(const auto& v : meshes.vertex_normals){
+                normals.push_back( vec3<float>( static_cast<float>(v.x),
+                                                static_cast<float>(v.y),
+                                                static_cast<float>(v.z) ) );
+            }
+
+        }else{
+            // Note that this step is not needed if we normalize in the shader. Probably best to keep it correct though.
+            for(auto &v : normals) v = v.unit();
+        }
+
+        if(vertices.size() != normals.size()){
+            throw std::logic_error("Vertex normals not consistent with vertex positions");
+        }
 
         // Push the data into OpenGL buffers.
         CHECK_FOR_GL_ERRORS();
@@ -250,7 +305,16 @@ struct opengl_mesh {
         CHECK_FOR_GL_ERRORS();
         glBindBuffer(GL_ARRAY_BUFFER, this->vbo);
         CHECK_FOR_GL_ERRORS();
-        glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(GLfloat), static_cast<void*>(vertices.data()), GL_STATIC_DRAW); // Copy vertex data.
+        glBufferData(GL_ARRAY_BUFFER, (3 * vertices.size()) * sizeof(GLfloat), static_cast<void*>(vertices.data()), GL_STATIC_DRAW); // Copy vertex data.
+        CHECK_FOR_GL_ERRORS();
+
+        // Normals data.
+        glGenBuffers(1, &this->nbo); // Create a VBO inside the OpenGL context.
+        if(this->nbo == 0) throw std::runtime_error("Unable to generate vertex buffer object");
+        CHECK_FOR_GL_ERRORS();
+        glBindBuffer(GL_ARRAY_BUFFER, this->nbo);
+        CHECK_FOR_GL_ERRORS();
+        glBufferData(GL_ARRAY_BUFFER, (3 * normals.size()) * sizeof(GLfloat), static_cast<void*>(normals.data()), GL_STATIC_DRAW); // Copy normals data.
         CHECK_FOR_GL_ERRORS();
 
         // Element data.
@@ -274,15 +338,22 @@ struct opengl_mesh {
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0); // Vertex positions, 3 floats per vertex, attrib index 0.
         CHECK_FOR_GL_ERRORS();
 
+        glBindBuffer(GL_ARRAY_BUFFER, this->nbo);
+        CHECK_FOR_GL_ERRORS();
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, 0); // Vertex normals, 3 floats per vertex, attrib index 1.
+        CHECK_FOR_GL_ERRORS();
+
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, this->ebo);
         CHECK_FOR_GL_ERRORS();
-        glVertexAttribPointer(1, 3, GL_UNSIGNED_INT, GL_FALSE, 0, 0); // Indices, 3 coordinates per face (triangles only), attrib index 1.
+        glVertexAttribPointer(2, 3, GL_UNSIGNED_INT, GL_FALSE, 0, 0); // Indices, 3 coordinates per face (triangles only), attrib index 2.
         CHECK_FOR_GL_ERRORS();
 
 
         glEnableVertexAttribArray(0);
         CHECK_FOR_GL_ERRORS();
         glEnableVertexAttribArray(1);
+        CHECK_FOR_GL_ERRORS();
+        glEnableVertexAttribArray(2);
         CHECK_FOR_GL_ERRORS();
 
         FUNCINFO("Registered new OpenGL mesh");
@@ -309,6 +380,7 @@ struct opengl_mesh {
         // Bind the vertex array object so we can unlink the attribute buffers.
         if( (0 < this->vao)
         &&  (0 < this->vbo)
+        &&  (0 < this->nbo)
         &&  (0 < this->ebo) ){
             glBindVertexArray(this->vao);
             glDisableVertexAttribArray(0); // Free OpenGL resources.
@@ -317,16 +389,132 @@ struct opengl_mesh {
 
             // Delete the attribute buffers and then finally the vertex array object.
             glDeleteBuffers(1, &this->ebo);
+            glDeleteBuffers(1, &this->nbo);
             glDeleteBuffers(1, &this->vbo);
             glDeleteVertexArrays(1, &this->vao);
             CHECK_FOR_GL_ERRORS();
         }
 
         // Reset accessible class state for good measure.
-        this->ebo = this->vbo = this->vao = 0;
+        this->ebo = this->vbo = this->nbo = this->vao = 0;
         this->N_triangles = this->N_indices = this->N_vertices = 0;
     };
 };
+
+class ogl_shader_program {
+    private:
+        GLuint program_ID;
+
+    public:
+        // Compiles and links the provided shaders. Also registers them with OpenGL.
+        // Throws on failure.
+        ogl_shader_program( std::string vert_shader_src,
+                            std::string frag_shader_src,
+                            std::ostream &os){
+
+            // Compile vertex shader.
+            GLchar* vert_shader_src_c[2] = { static_cast<GLchar*>(vert_shader_src.data()), nullptr };
+            GLuint vert_handle = glCreateShader(GL_VERTEX_SHADER);
+            glShaderSource(vert_handle, 1, vert_shader_src_c, NULL);
+            glCompileShader(vert_handle);
+
+            {
+                GLint status = 0, log_length = 0;
+                glGetShaderiv(vert_handle, GL_COMPILE_STATUS, &status);
+                glGetShaderiv(vert_handle, GL_INFO_LOG_LENGTH, &log_length);
+                if(1 < log_length){
+                    std::string buf;
+                    buf.resize((long int)(log_length + 1), '\0');
+                    glGetShaderInfoLog(vert_handle, log_length, NULL, static_cast<GLchar*>(&(buf[0])) );
+                    os << "Vertex shader compilation log:\n" << buf;
+                }
+                if( static_cast<GLboolean>(status) == GL_FALSE ){
+                    throw std::runtime_error("Unable to compile vertex shader");
+                }
+            }
+
+            // Compile fragment shader.
+            GLchar* frag_shader_src_c[2] = { static_cast<GLchar*>(frag_shader_src.data()), nullptr };
+            GLuint frag_handle = glCreateShader(GL_FRAGMENT_SHADER);
+            glShaderSource(frag_handle, 1, frag_shader_src_c, NULL);
+            glCompileShader(frag_handle);
+
+            {
+                GLint status = 0, log_length = 0;
+                glGetShaderiv(frag_handle, GL_COMPILE_STATUS, &status);
+                glGetShaderiv(frag_handle, GL_INFO_LOG_LENGTH, &log_length);
+                if(1 < log_length){
+                    std::string buf;
+                    buf.resize((long int)(log_length + 1), '\0');
+                    glGetShaderInfoLog(frag_handle, log_length, NULL, static_cast<GLchar*>(&(buf[0])) );
+                    os << "Fragment shader compilation log:\n" << buf;
+                }
+                if( static_cast<GLboolean>(status) == GL_FALSE ){
+                    throw std::runtime_error("Unable to compile fragment shader");
+                }
+            }
+
+            // Link shaders into a program.
+            GLuint custom_gl_program = glCreateProgram();
+            glAttachShader(custom_gl_program, vert_handle);
+            glAttachShader(custom_gl_program, frag_handle);
+            glLinkProgram(custom_gl_program);
+
+            {
+                GLint status = 0, log_length = 0;
+                glGetProgramiv(custom_gl_program, GL_LINK_STATUS, &status);
+                glGetProgramiv(custom_gl_program, GL_INFO_LOG_LENGTH, &log_length);
+                if(1 < log_length){
+                    std::string buf;
+                    buf.resize((long int)(log_length + 1), '\0');
+                    glGetProgramInfoLog(custom_gl_program, log_length, NULL, static_cast<GLchar*>(&(buf[0])) );
+                    os << "Shader link log:\n" << buf;
+                }
+                if( static_cast<GLboolean>(status) == GL_FALSE ){
+                    throw std::runtime_error("Unable to link shader program");
+                }
+            }
+
+            // Lazily delete the shaders.
+            glDetachShader(custom_gl_program, vert_handle);
+            glDetachShader(custom_gl_program, frag_handle);
+            glDeleteShader(vert_handle);
+            glDeleteShader(frag_handle);
+
+            // Shader program is now valid and registered.
+            this->program_ID = custom_gl_program;
+        }
+
+        // Unregisters shader program from OpenGL.
+        ~ogl_shader_program(){
+            glDeleteProgram( this->program_ID );
+        }
+
+        // Get the program ID for use in rendering.
+        GLuint get_program_ID() const {
+            return this->program_ID;
+        }
+};
+
+static
+std::unique_ptr<ogl_shader_program>
+compile_shader_program(const std::array<char, 2048> &vert_shader_src,
+                       const std::array<char, 2048> &frag_shader_src,
+                       std::array<char, 2048> &shader_log ){
+    shader_log.fill('\0');
+    std::stringstream ss;
+    try{
+        auto l_custom_shader = std::make_unique<ogl_shader_program>(array_to_string(vert_shader_src),
+                                                                    array_to_string(frag_shader_src),
+                                                                    ss);
+        return std::move(l_custom_shader);
+    }catch(const std::exception &e){
+        shader_log = string_to_array(ss.str());
+        throw;
+    };
+    return nullptr;
+}
+
 
 enum class brush_t {
     // 2D brushes.
@@ -607,7 +795,7 @@ OperationDoc OpArgDocSDL_Viewer(){
 
 bool SDL_Viewer(Drover &DICOM_data,
                   const OperationArgPkg& /*OptArgs*/,
-                  const std::map<std::string, std::string>& InvocationMetadata,
+                  std::map<std::string, std::string>& InvocationMetadata,
                   const std::string& FilenameLex){
 
     // --------------------------------------- Operational State ------------------------------------------
@@ -632,6 +820,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_images_enabled = true;
         bool view_image_metadata_enabled = false;
         bool view_meshes_enabled = true;
+        bool view_mesh_metadata_enabled = false;
         bool view_plots_enabled = true;
         bool view_plots_metadata = true;
         bool view_contours_enabled = true;
@@ -640,12 +829,18 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_drawing_enabled = false;
         bool view_row_column_profiles = false;
         bool view_time_profiles = false;
+        bool view_parameter_table = false;
+        bool view_tables_enabled = true;
+        bool view_table_metadata_enabled = false;
+        bool view_tplans_enabled = true;
+        bool view_tplan_metadata_enabled = false;
         bool save_time_profiles = false;
         bool view_script_editor_enabled = false;
         bool view_script_feedback = true;
         bool show_image_hover_tooltips = true;
         bool adjust_window_level_enabled = false;
         bool adjust_colour_map_enabled = false;
+        bool view_shader_editor_enabled = false;
     } view_toggles;
 
     // Plot viewer state.
@@ -746,22 +941,55 @@ bool SDL_Viewer(Drover &DICOM_data,
     };
 
     // Meshes.
+    using disp_mesh_it_t = decltype(DICOM_data.smesh_data.begin());
     std::unique_ptr<opengl_mesh> oglm_ptr;
     long int mesh_num = -1;
+    std::atomic<bool> need_to_reload_opengl_mesh = true;
 
     struct mesh_display_transform_t {
-        bool precess = true;
+        // Viewing options.
         bool render_wireframe = true;
         bool reverse_normals = false;
-        bool use_lighting = false;
+        bool use_lighting = true;
+        bool use_opaque = false;
+        bool use_smoothing = true;
 
+        // Camera transformations.
+        bool precess = true;
         double precess_rate = 1.0;
         double rot_x = 0.0;
         double rot_y = 0.0;
-        double rot_z = 0.0;
 
+        double zoom = 1.0;
+        double cam_distort = 0.0;
+
+        // Transformations applied to all models.
+        num_array<float> model = num_array<float>().identity(4);
+
+        // Nominal colours.
         std::array<float, 4> colours = { 1.000, 0.588, 0.005, 0.8 };
     } mesh_display_transform;
+
+    // Tables.
+    using disp_table_it_t = decltype(DICOM_data.table_data.begin());
+    struct table_display_t {
+        long int table_num = -1;
+        bool use_keyword_highlighting = true;
+        std::map<std::string, ImVec4> colours = { { std::string("pass"),  ImVec4(0.175f, 0.500f, 0.000f, 1.00f) },
+                                                  { std::string("true"),  ImVec4(0.175f, 0.500f, 0.000f, 1.00f) },
+                                                  { std::string("fail"),  ImVec4(0.600f, 0.100f, 0.000f, 1.00f) },
+                                                  { std::string("false"), ImVec4(0.600f, 0.100f, 0.000f, 1.00f) } };
+
+        //ImVec4 pass_colour = ImVec4(0.175f, 0.500f, 0.000f, 1.00f);
+        //ImVec4 fail_colour = ImVec4(0.600f, 0.100f, 0.000f, 1.00f);
+    } table_display;
+
+    // RT Plans.
+    using disp_tplan_it_t = decltype(DICOM_data.tplan_data.begin());
+    long int tplan_num = -1;
+    long int tplan_dynstate_num = -1;
+    long int tplan_statstate_num = -1;
+
 
     // ------------------------------------------ Viewer State --------------------------------------------
     auto background_colour = ImVec4(0.025f, 0.087f, 0.118f, 1.00f);
@@ -783,7 +1011,8 @@ bool SDL_Viewer(Drover &DICOM_data,
         float pixel_scale; // Conversion factor from DICOM distance to screen pixels.
 
         std::function<ImVec2(const vec3<double>&)> DICOM_to_pixels; 
-    } image_mouse_pos;
+    };
+    std::optional<image_mouse_pos_s> image_mouse_pos_opt;
 
     samples_1D<double> row_profile;
     samples_1D<double> col_profile;
@@ -794,13 +1023,10 @@ bool SDL_Viewer(Drover &DICOM_data,
         all,      // Spatially overlapping pixels from within any image array.
     } time_course_image_inclusivity = time_course_image_inclusivity_t::current;
     bool time_course_abscissa_relative = false;
-    std::array<char, 1024> time_course_abscissa_key;
+    std::array<char, 2048> time_course_abscissa_key;
     string_to_array(time_course_abscissa_key, "ContentTime");
-    std::array<char, 1024> time_course_text_entry;
+    std::array<char, 2048> time_course_text_entry;
     string_to_array(time_course_text_entry, "");
-
-    std::array<char, 1024> metadata_text_entry;
-    string_to_array(metadata_text_entry, "");
 
     // --------------------------------------------- Setup ------------------------------------------------
     if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0){
@@ -808,7 +1034,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     }
 
     // Configure the desired OpenGL version (v3.0).
-    if(0 != SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0)){
+    if(0 != SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG)){
         throw std::runtime_error("Unable to set SDL_GL_CONTEXT_FLAGS: "_s + SDL_GetError());
     }
     if(0 != SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE)){
@@ -817,7 +1043,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     if(0 != SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3)){
         throw std::runtime_error("Unable to set SDL_GL_CONTEXT_MAJOR_VERSION: "_s + SDL_GetError());
     }
-    if(0 != SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0)){
+    if(0 != SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1)){
         throw std::runtime_error("Unable to set SDL_GL_CONTEXT_MINOR_VERSION: "_s + SDL_GetError());
     }
 
@@ -879,19 +1105,101 @@ bool SDL_Viewer(Drover &DICOM_data,
     }
     CHECK_FOR_GL_ERRORS();
     if(!ImGui_ImplOpenGL3_Init()){
-        throw std::runtime_error("ImGui unable to initialize OpenGL with given shader.");
+        throw std::runtime_error("ImGui unable to initialize OpenGL with default shader.");
     }
     CHECK_FOR_GL_ERRORS();
+    std::string gl_version;
+    std::string glsl_version;
     try{
-        auto gl_version = reinterpret_cast<const char *>(glGetString(GL_VERSION));
-        auto glsl_version = reinterpret_cast<const char *>(glGetString(GL_SHADING_LANGUAGE_VERSION));
-        if(gl_version == nullptr) throw std::runtime_error("OpenGL version not accessible.");
-        if(glsl_version == nullptr) throw std::runtime_error("GLSL version not accessible.");
+        auto l_gl_version = reinterpret_cast<const char *>(glGetString(GL_VERSION));
+        auto l_glsl_version = reinterpret_cast<const char *>(glGetString(GL_SHADING_LANGUAGE_VERSION));
+        if(l_gl_version == nullptr) throw std::runtime_error("OpenGL version not accessible.");
+        if(l_glsl_version == nullptr) throw std::runtime_error("GLSL version not accessible.");
+        gl_version = std::string(l_gl_version);
 
-        FUNCINFO("Initialized OpenGL '" << std::string(gl_version) << "' with GLSL '" << std::string(glsl_version) << "'");
+        // The string can often have extra characters and punctuation. The standard guarantees a space separates
+        // components, but version numbers may still be present.
+        auto version_vec = SplitStringToVector(std::string(l_glsl_version), " ", 'd');
+        glsl_version = (version_vec.empty()) ? "" : version_vec.front();
+
+        glsl_version.erase( std::remove_if( std::begin(glsl_version),
+                                            std::end(glsl_version),
+                                            [](unsigned char c){ return !std::isdigit(c); } ),
+                            std::end(glsl_version) );
+
+        FUNCINFO("Initialized OpenGL '" << gl_version << "' with GLSL '" << glsl_version << "'");
     }catch(const std::exception &e){
         FUNCWARN("Unable to detect OpenGL/GLSL version");
     }
+
+    // ------------------------------------------ Shaders -------------------------------------------------
+
+    std::array<char, 2048> vert_shader_src = string_to_array(
+        "#version " + glsl_version + "\n"
+        "\n"
+        "in vec3 v_pos;\n"
+        "in vec3 v_norm;\n"
+        "\n"
+        "uniform mat4 mvp_matrix;      // model-view-projection matrix.\n"
+        "uniform mat4 mv_matrix;       // model-view matrix.\n"
+        "uniform mat3 norm_matrix;     // rotation-only matrix.\n"
+        "\n"
+        "uniform vec4 diffuse_colour;\n"
+        "uniform vec4 user_colour;\n"
+        "uniform vec3 light_position;\n"
+        "uniform bool use_lighting;\n"
+        "uniform bool use_smoothing;\n"
+        "\n"
+        "out vec4 interp_colour;\n"
+        "flat out vec4 flat_colour;\n"
+        "\n"
+        "void main(){\n"
+        "    gl_Position = mvp_matrix * vec4(v_pos, 1.0);\n"
+        "\n"
+        "    if(use_lighting){\n"
+        "        vec3 l_norm = normalize(norm_matrix * v_norm);\n"
+        "\n"
+        "        vec4 l_pos4 = mv_matrix * vec4(v_pos, 1.0);\n"
+        "        vec3 l_pos3 = l_pos4.xyz / l_pos4.w;\n"
+        "\n"
+        "        vec3 l_light_pos = vec3(-1000.0, -1000.0, 250.0);\n"
+        "        vec3 light_dir = normalize( l_light_pos - l_pos3 );\n"
+        "\n"
+        "        float diffuse_intensity = max(0.0, 1.0 + 0.5*dot(l_norm, light_dir));\n"
+        "\n"
+        "        interp_colour.rgb = diffuse_intensity * diffuse_colour.rgb;\n"
+        "        //interp_colour.a = 1.0;\n"
+        "        interp_colour.a = user_colour.a;\n"
+        "    }else{\n"
+        "        interp_colour = user_colour;\n"
+        "    }\n"
+        "    flat_colour = interp_colour;\n"
+        "}\n" );
+
+    std::array<char, 2048> frag_shader_src = string_to_array(
+        "#version " + glsl_version + "\n"
+        "\n"
+        "in vec4 interp_colour;\n"
+        "flat in vec4 flat_colour;\n"
+        "\n"
+        "uniform vec4 user_colour;\n"
+        "uniform bool use_lighting;\n"
+        "uniform bool use_smoothing;\n"
+        "\n"
+        "out vec4 frag_colour;\n"
+        "\n"
+        "void main(){\n"
+        "    frag_colour = 0.65 * (use_smoothing ? interp_colour : flat_colour)\n"
+        "                + 0.35 * user_colour;\n"
+        "}\n" );
+
+    std::array<char, 2048> shader_log; // Output from most recent compilation and linking.
+
+    //FUNCINFO("Using default vertex shader source: '" << array_to_string(vert_shader_src) << "'");
+    //FUNCINFO("Using default fragment shader source: '" << array_to_string(frag_shader_src) << "'");
+
+    // Note: the following will throw if the default shader fails to compile and link.
+    auto custom_shader = compile_shader_program(vert_shader_src, frag_shader_src, shader_log);
 
     // -------------------------------- Functors for various things ---------------------------------------
 
@@ -1025,7 +1333,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     const auto Free_OpenGL_Texture = [](opengl_texture_handle_t &tex){
         // Release the previous texture, iff needed.
-        if(tex.texture_number != 0){
+        if( tex.texture_exists &&
+            (tex.texture_number != 0) ){
             CHECK_FOR_GL_ERRORS();
             glBindTexture(GL_TEXTURE_2D, 0);
             glDeleteTextures(1, &tex.texture_number);
@@ -1285,6 +1594,10 @@ bool SDL_Viewer(Drover &DICOM_data,
             ||  (disp_img_it->rows <= 0)
             ||  (disp_img_it->columns <= 0) ) break;
 
+            if( ((*cimg_array_ptr_it)->imagecoll.images.front().rows <= 0)
+            ||  ((*cimg_array_ptr_it)->imagecoll.images.front().columns <= 0)
+            ||  ((*cimg_array_ptr_it)->imagecoll.images.front().channels <= 0) ) break;
+
             // Find the spatially-overlapping image.
             //const auto ortho_offset = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit() * disp_img_it->pxl_dz * 0.25;
             //const std::list<vec3<double>> points = { centre,
@@ -1306,27 +1619,32 @@ bool SDL_Viewer(Drover &DICOM_data,
 
             //auto encompassing_images = (*cimg_array_ptr_it)->imagecoll.get_images_which_encompass_point( disp_img_it->center() );
 
-            const auto centre = disp_img_it->center();
-            const auto A_corners = disp_img_it->corners2D();
-            auto encompassing_images = (*cimg_array_ptr_it)->imagecoll.get_images_which_sandwich_point_within_top_bottom_planes( centre );
-            encompassing_images.remove_if([&](const decltype((*cimg_array_ptr_it)->imagecoll.get_all_images().front()) &img_it){
-                const auto B_corners = img_it->corners2D();
+            try{
+                const auto centre = disp_img_it->center();
+                const auto A_corners = disp_img_it->corners2D();
+                auto encompassing_images = (*cimg_array_ptr_it)->imagecoll.get_images_which_sandwich_point_within_top_bottom_planes( centre );
+                encompassing_images.remove_if([&](const decltype((*cimg_array_ptr_it)->imagecoll.get_all_images().front()) &img_it){
+                    const auto B_corners = img_it->corners2D();
 
-                //Fixed corner-to-corner distance.
-                double dist = 0.0;
-                for(auto A_it = std::begin(A_corners), B_it = std::begin(B_corners);
-                    (A_it != std::end(A_corners)) && (B_it != std::end(B_corners)); ){
-                    dist += A_it->sq_dist(*B_it);
-                    ++A_it;
-                    ++B_it;
-                }
-                return (std::min(disp_img_it->pxl_dx, disp_img_it->pxl_dy) < dist);
-            });
-            if(encompassing_images.size() != 1) break;
+                    //Fixed corner-to-corner distance.
+                    double dist = 0.0;
+                    for(auto A_it = std::begin(A_corners), B_it = std::begin(B_corners);
+                        (A_it != std::end(A_corners)) && (B_it != std::end(B_corners)); ){
+                        dist += A_it->sq_dist(*B_it);
+                        ++A_it;
+                        ++B_it;
+                    }
+                    return (std::min(disp_img_it->pxl_dx, disp_img_it->pxl_dy) < dist);
+                });
+                if(encompassing_images.size() != 1) break;
 
-            std::get<bool>( out ) = true;
-            std::get<img_array_ptr_it_t>( out ) = cimg_array_ptr_it;
-            std::get<disp_img_it_t>( out ) = encompassing_images.front();
+                std::get<bool>( out ) = true;
+                std::get<img_array_ptr_it_t>( out ) = cimg_array_ptr_it;
+                std::get<disp_img_it_t>( out ) = encompassing_images.front();
+            }catch(const std::exception &e){
+                FUNCWARN("Contouring image not valid: '" << e.what() << "'");
+                break;
+            }
         }while(false);
         return out;
     };
@@ -1384,6 +1702,64 @@ bool SDL_Viewer(Drover &DICOM_data,
         //}
         return;
     };
+
+    // Recompute mesh iterators for the current mesh.
+    const auto recompute_smesh_iters = [ &DICOM_data,
+                                         &mesh_num ](){
+        std::tuple<bool, disp_mesh_it_t > out;
+        std::get<bool>( out ) = false;
+
+        do{ 
+            const auto has_meshes = DICOM_data.Has_Mesh_Data();
+            if( !has_meshes ) break;
+            if( !isininc(1, mesh_num+1, DICOM_data.smesh_data.size()) ) break;
+            auto smesh_ptr_it = std::next(DICOM_data.smesh_data.begin(), mesh_num);
+            if( smesh_ptr_it == std::end(DICOM_data.smesh_data) ) break;
+
+            std::get<bool>( out ) = true;
+            std::get<disp_mesh_it_t>( out ) = smesh_ptr_it;
+        }while(false);
+        return out;
+    };
+
+    // Recompute table iterators for the current table
+    const auto recompute_table_iters = [ &DICOM_data,
+                                         &table_display ](){
+        std::tuple<bool, disp_table_it_t > out;
+        std::get<bool>( out ) = false;
+
+        do{ 
+            const auto has_tables = DICOM_data.Has_Table_Data();
+            if( !has_tables ) break;
+            if( !isininc(1, table_display.table_num+1, DICOM_data.table_data.size()) ) break;
+            auto table_ptr_it = std::next(DICOM_data.table_data.begin(), table_display.table_num);
+            if( table_ptr_it == std::end(DICOM_data.table_data) ) break;
+
+            std::get<bool>( out ) = true;
+            std::get<disp_table_it_t>( out ) = table_ptr_it;
+        }while(false);
+        return out;
+    };
+
+    // Recompute tplan iterators for the current tplan
+    const auto recompute_tplan_iters = [ &DICOM_data,
+                                         &tplan_num ](){
+        std::tuple<bool, disp_tplan_it_t > out;
+        std::get<bool>( out ) = false;
+
+        do{ 
+            const auto has_tplans = DICOM_data.Has_TPlan_Data();
+            if( !has_tplans ) break;
+            if( !isininc(1, tplan_num+1, DICOM_data.tplan_data.size()) ) break;
+            auto tplan_ptr_it = std::next(DICOM_data.tplan_data.begin(), tplan_num);
+            if( tplan_ptr_it == std::end(DICOM_data.tplan_data) ) break;
+
+            std::get<bool>( out ) = true;
+            std::get<disp_tplan_it_t>( out ) = tplan_ptr_it;
+        }while(false);
+        return out;
+    };
+
 
     const auto recompute_scale_bar_image_state = [ &scale_bar_img,
                                                    &scale_bar_texture,
@@ -1671,12 +2047,85 @@ bool SDL_Viewer(Drover &DICOM_data,
             return best;
     };
 
+    // Draw an editable metadata table.
+    const auto display_metadata_table = []( metadata_map_t &m ){
+            ImVec2 cell_padding(0.0f, 0.0f);
+            ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, cell_padding);
+            ImGui::PushID(&m);
+            if(ImGui::BeginTable("Metadata Table", 2,   ImGuiTableFlags_Borders
+                                                      | ImGuiTableFlags_RowBg
+                                                      | ImGuiTableFlags_BordersV
+                                                      | ImGuiTableFlags_BordersInner
+                                                      | ImGuiTableFlags_Resizable )){
+
+                ImGui::TableSetupColumn("Key");
+                ImGui::TableSetupColumn("Value");
+                ImGui::TableHeadersRow();
+
+                std::array<char, 2048> metadata_text_entry;
+                string_to_array(metadata_text_entry, "");
+
+                int i = 0;
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
+                for(const auto &apair : m){
+                    auto key = apair.first;
+                    auto val = apair.second;
+
+                    ImGui::TableNextColumn();
+                    ImGui::SetNextItemWidth(-FLT_MIN);
+                    string_to_array(metadata_text_entry, key);
+                    ImGui::PushID(++i);
+                    const bool key_changed = ImGui::InputText("##key", metadata_text_entry.data(), metadata_text_entry.size());
+                    ImGui::PopID();
+
+                    // Since key_changed is true whenever any changes have occured, even if the mouse is idling
+                    // after a change, then the following causes havoc by continuously editing the key and messing
+                    // with the ID system. A better system would only implement the change when the focus is lost
+                    // and/or enter is pressed. I'm not sure if there is a simple way to do this at the moment, so
+                    // I'll leave key editing disabled until I figure out a reasonable fix.
+                    //
+                    // TODO.
+                    //
+                    //if(key_changed){
+                    //    std::string new_key;
+                    //    array_to_string(new_key, metadata_text_entry);
+                    //    if(new_key != key){
+                    //        disp_img_it->metadata.erase(key);
+                    //        disp_img_it->metadata[new_key] = val;
+                    //        key = new_key;
+                    //    }
+                    //}
+
+                    ImGui::TableNextColumn();
+                    ImGui::SetNextItemWidth(-FLT_MIN);
+                    string_to_array(metadata_text_entry, val);
+                    ImGui::PushID(++i);
+                    const bool val_changed = ImGui::InputText("val", metadata_text_entry.data(), metadata_text_entry.size());
+                    ImGui::PopID();
+                    if(val_changed){
+                        // Replace key's value with updated value in place.
+                        array_to_string(val, metadata_text_entry);
+                        m[key] = val;
+                    }
+                }
+                ImGui::PopStyleColor();
+                ImGui::EndTable();
+            }
+            ImGui::PopID();
+            ImGui::PopStyleVar();
+            return;
+    };
+
     // ------------------------------------------- Main loop ----------------------------------------------
 
 
     // Open file dialog state.
     std::filesystem::path open_file_root = std::filesystem::current_path();
-    std::array<char,1024> root_entry_text;
+    std::array<char,2048> root_entry_text;
+    enum class file_selection_intent {
+        files,    // Treat files as files that should be loaded using Load_Files() and eagerly converted into operations.
+        scripts,  // Treat files as scripts that should be read as text files and the contents not interpretted.
+    };
     struct file_selection {
         std::filesystem::path path;
         bool is_dir;
@@ -1684,8 +2133,10 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool selected;
     };
     std::vector<file_selection> open_files_selection;
-    const auto query_files = [&]( std::filesystem::path root ){
-        open_files_selection.clear();
+    std::vector<file_selection> open_scripts_selection;
+
+    const auto query_files = []( std::filesystem::path root ){
+        std::vector<file_selection> files;
         try{
             if( !root.empty()
             &&  std::filesystem::exists(root)
@@ -1693,22 +2144,22 @@ bool SDL_Viewer(Drover &DICOM_data,
                 for(const auto &d : std::filesystem::directory_iterator( root )){
                     const auto p = d.path();
                     const std::uintmax_t file_size = ( !std::filesystem::is_directory(p) && std::filesystem::exists(p) )
-                                                   ? std::filesystem::file_size(p) : 0;
-                    open_files_selection.push_back( { p,
-                                                      std::filesystem::is_directory(p),
-                                                      file_size,
-                                                      false } );
+                                                     ? std::filesystem::file_size(p) : 0;
+                    files.push_back( { p,
+                                       std::filesystem::is_directory(p),
+                                       file_size,
+                                       false } );
                 }
-                std::sort( std::begin(open_files_selection), std::end(open_files_selection), 
+                std::sort( std::begin(files), std::end(files), 
                            [](const file_selection &L, const file_selection &R){
                                 return L.path < R.path;
                            } );
             }
         }catch(const std::exception &e){
             FUNCINFO("Unable to query files: '" << e.what() << "'");
-            open_files_selection.clear();
+            files.clear();
         }
-        return;
+        return files;
     };
 
     recompute_image_state();
@@ -1722,8 +2173,52 @@ bool SDL_Viewer(Drover &DICOM_data,
     struct loaded_files_res {
         bool res;
         Drover DICOM_data;
+        std::map<std::string,std::string> InvocationMetadata;
     };
     std::future<loaded_files_res> loaded_files;
+
+    // This is meant to be run asynchronously.
+    const auto launch_file_open_dialog = [InvocationMetadata,
+                                          FilenameLex,
+                                          &view_toggles,
+                                          &query_files ](std::filesystem::path open_file_root) -> loaded_files_res {
+        if(!std::filesystem::is_directory(open_file_root)){
+            open_file_root = std::filesystem::current_path();
+        }
+
+        // Create a dialog box.
+        std::optional<select_files> selector_opt;
+        if(!selector_opt){
+            selector_opt.emplace("Select file(s) to open"_s);
+//                                         open_file_root.string(),
+//                                         std::vector<std::string>{ "DICOM Files"_s, "*.dcm *.DCM"_s,
+//                                                                   "All Files"_s, "*"_s } );
+        }
+
+        // Wait for the user to provide input.
+        //
+        // Note: the following blocks by continuous polling.
+        const auto selection = selector_opt.value().get_selection();
+        selector_opt.reset();
+
+        std::list<std::filesystem::path> paths;
+        for(const auto &f : selection){
+            paths.push_back( f );
+        }
+
+        // Load the files.
+        loaded_files_res lfs;
+        lfs.InvocationMetadata = InvocationMetadata;
+        std::list<OperationArgPkg> Operations;
+        lfs.res = Load_Files(lfs.DICOM_data, lfs.InvocationMetadata, FilenameLex, Operations, paths);
+        if(!Operations.empty()){
+             lfs.res = false;
+             FUNCWARN("Loaded file contains a script. Currently unable to handle script files here");
+        }
+
+        // Notify that the files can be inserted into the 
+        return lfs;
+    };
 
     // Script files.
     struct script_file {
@@ -1743,6 +2238,68 @@ bool SDL_Viewer(Drover &DICOM_data,
         return;
     };
 
+    struct loaded_scripts_res {
+        bool res;
+        std::vector<script_file> script_files;
+    };
+    std::future<loaded_scripts_res> loaded_scripts;
+
+    // This is meant to be run asynchronously.
+    const auto launch_script_open_dialog = [](std::filesystem::path open_file_root) -> loaded_scripts_res {
+        if(!std::filesystem::is_directory(open_file_root)){
+            open_file_root = std::filesystem::current_path();
+        }
+
+        // Create a dialog box.
+        std::optional<select_files> selector_opt;
+        if(!selector_opt){
+            selector_opt.emplace("Select script(s) to open"_s,
+                    std::filesystem::path(),
+                    std::vector<std::string>{ "DCMA Script Files"_s, "*.txt *.TXT *.scr *.SCR *.dscr *.DSCR"_s,
+                                              "All Files"_s, "*"_s } );
+        }
+
+        // Wait for the user to provide input.
+        //
+        // Note: the following blocks by continuous polling.
+        const auto selection = selector_opt.value().get_selection();
+        selector_opt.reset();
+
+        std::list<std::filesystem::path> paths;
+        for(const auto &f : selection){
+            paths.push_back( f );
+        }
+
+        // Load the files.
+        loaded_scripts_res lss;
+        lss.res = true;
+
+        for(const auto &p : paths){
+            std::ifstream is(p, std::ios::in);
+            if(!is){
+                lss.res = false;
+                FUNCWARN("Unable to access script file '" << p.string() << "'");
+                break;
+            }
+            lss.script_files.emplace_back();
+            lss.script_files.back().path = p;
+
+            lss.script_files.back().altered = false;
+            const auto end_it = std::istreambuf_iterator<char>();
+            for(auto c_it = std::istreambuf_iterator<char>(is); c_it != end_it; ++c_it){
+                lss.script_files.back().content.emplace_back(*c_it);
+            }
+            lss.script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
+        }
+
+        if(!lss.res){
+            lss.script_files.clear();
+        }
+
+        // Notify that the files can be inserted into the 
+        return lss;
+    };
+
     const auto execute_script = [ &launch_contour_preprocessor,
                                   &preprocessed_contour_mutex,
                                   &terminate_contour_preprocessors,
@@ -1757,6 +2314,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                   &recompute_image_state,
                                   &recompute_image_iters,
                                   &reset_contouring_state,
+                                  &need_to_reload_opengl_mesh,
 
                                   &wq,
                                   &script_mutex,
@@ -1793,13 +2351,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                 // Only perform a single operation at a time, which results in slightly less mutex contention.
                 bool success = true;
                 for(const auto &op : op_list){
-                    if(!Operation_Dispatcher(DICOM_data,
-                                             InvocationMetadata,
-                                             FilenameLex,
-                                             {op})){
-                        success = false;
-                        break;
-                    }
+                    success = false;
+                    try{
+                        success = Operation_Dispatcher(DICOM_data,
+                                                       InvocationMetadata,
+                                                       FilenameLex,
+                                                       {op});
+                    }catch(const std::exception &){}
+                    if(!success) break;
                 }
                 if(!success){
                     // Report the failure to the user.
@@ -1816,6 +2375,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         launch_contour_preprocessor();
                         reset_contouring_state(img_array_ptr_it);
                     }
+                    need_to_reload_opengl_mesh = true;
                     tagged_pos = {};
                 }
                 return;
@@ -1844,6 +2404,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     long int frame_count = 0;
     while(true){
         ++frame_count;
+        image_mouse_pos_opt = {};
 
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -1879,6 +2440,34 @@ bool SDL_Viewer(Drover &DICOM_data,
         if(view_toggles.view_implot_demo){
             ImPlot::ShowDemoWindow(&view_toggles.view_implot_demo);
         }
+
+
+        const auto display_parameter_table = [&drover_mutex,
+                                              &mutex_dt,
+                                              &InvocationMetadata,
+                                              &display_metadata_table,
+                                              &view_toggles ]() -> void {
+            if( !view_toggles.view_parameter_table ) return;
+
+            // Attempt to acquire an exclusive lock.
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            if(!drover_lock) return;
+
+            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Parameter Table", &view_toggles.view_parameter_table);
+
+            display_metadata_table( InvocationMetadata );
+
+            ImGui::End();
+            return;
+        };
+        try{
+            display_parameter_table();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in display_parameter_table(): '" << e.what() << "'");
+            throw;
+        }
+
 
         // Reload the image texture. Needs to be done by the main thread.
         const auto reload_image_texture = [&drover_mutex,
@@ -1929,8 +2518,9 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         // Display the main menu bar, which should always be visible.
         const auto display_main_menu_bar = [&view_toggles,
-                                            &query_files,
                                             &open_file_root,
+                                            &loaded_files,
+                                            &launch_file_open_dialog,
                                             &contour_enabled,
                                             &contour_hovered,
                                             &launch_contour_preprocessor,
@@ -1952,7 +2542,9 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(ImGui::BeginMainMenuBar()){
                 if(ImGui::BeginMenu("File")){
                     if(ImGui::MenuItem("Open", "ctrl+o", &view_toggles.open_files_enabled)){
-                        query_files(open_file_root);
+                        if(!loaded_files.valid()){
+                            loaded_files = std::async(std::launch::async, launch_file_open_dialog, open_file_root);
+                        }
                     }
                     //if(ImGui::MenuItem("Open", "ctrl+o")){
                     //    ImGui::OpenPopup("OpenFileSelector");
@@ -1981,13 +2573,11 @@ bool SDL_Viewer(Drover &DICOM_data,
                         view_toggles.view_contouring_enabled = false;
                         tagged_pos = {};
                     }
-                    ImGui::MenuItem("Image Metadata", nullptr, &view_toggles.view_image_metadata_enabled);
                     ImGui::MenuItem("Image Hover Tooltips", nullptr, &view_toggles.show_image_hover_tooltips);
                     ImGui::MenuItem("Meshes", nullptr, &view_toggles.view_meshes_enabled);
                     if(ImGui::MenuItem("Plots", nullptr, &view_toggles.view_plots_enabled)){
                         lsamps_visible.clear();
                     }
-                    ImGui::MenuItem("Plot Hover Metadata", nullptr, &view_toggles.view_plots_metadata);
                     if(ImGui::MenuItem("Row and Column Profiles", nullptr, &view_toggles.view_row_column_profiles)){
                         row_profile.samples.clear();
                         col_profile.samples.clear();
@@ -1995,8 +2585,20 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if(ImGui::MenuItem("Time Profiles", nullptr, &view_toggles.view_time_profiles)){
                         time_profile.samples.clear();
                     };
+                    ImGui::MenuItem("RT Plans", nullptr, &view_toggles.view_tplans_enabled);
+                    ImGui::MenuItem("Tables", nullptr, &view_toggles.view_tables_enabled);
                     ImGui::MenuItem("Script Editor", nullptr, &view_toggles.view_script_editor_enabled);
                     ImGui::MenuItem("Script Feedback", nullptr, &view_toggles.view_script_feedback);
+                    ImGui::MenuItem("Parameter Table", nullptr, &view_toggles.view_parameter_table);
+                    ImGui::MenuItem("Shader Editor", nullptr, &view_toggles.view_shader_editor_enabled);
+                    ImGui::EndMenu();
+                }
+                if(ImGui::BeginMenu("Metadata")){
+                    ImGui::MenuItem("Image Metadata", nullptr, &view_toggles.view_image_metadata_enabled);
+                    ImGui::MenuItem("Mesh Metadata", nullptr, &view_toggles.view_mesh_metadata_enabled);
+                    ImGui::MenuItem("Plot Hover Metadata", nullptr, &view_toggles.view_plots_metadata);
+                    ImGui::MenuItem("RT Plan Metadata", nullptr, &view_toggles.view_tplan_metadata_enabled);
+                    ImGui::MenuItem("Table Metadata", nullptr, &view_toggles.view_table_metadata_enabled);
                     ImGui::EndMenu();
                 }
                 if(ImGui::BeginMenu("Adjust")){
@@ -2064,7 +2666,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     std::stringstream sc; // required arguments.
                                     std::stringstream oc; // optional arguments.
                                     sc << std::endl << op_name << "(";
-                                    bool first = true;
                                     std::set<std::string> args;
                                     for(const auto & a : op_docs.args){
                                         // Avoid duplicate arguments (from composite operations).
@@ -2074,23 +2675,32 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                                         // Escape any quotes in the default value, which will generally be parsed
                                         // fuzzily via regex and should be OK.
-                                        std::string val = a.default_val;
-                                        val.erase( std::remove_if( std::begin(val),
-                                                                   std::end(val),
-                                                                   [](char c) -> bool { return (c == '\''); }),
-                                                   std::end(val) );
+                                        std::string escaped_val;
+                                        {
+                                            bool prev_was_escape = false;
+                                            for(const auto &c : a.default_val){
+                                                if(!prev_was_escape && (c == '\'')) escaped_val += '\\';
+                                                escaped_val += c;
+                                                prev_was_escape = (c == '\\');
+                                            }
+                                        }
+
+                                        // Emit the parameter and default value.
                                         if(a.expected){
-                                            if(!first) sc << ", ";
-                                            sc << std::endl << "    " << name << " = '" << val << "'";
-                                            first = false;
+                                            // Note the trailing comma. This is valid syntax and makes it easier to
+                                            // enable/disable optional arguments.
+                                            sc << std::endl << "    " << name << " = '" << escaped_val << "',";
                                         }else{
-                                            oc << "    # " <<  name << " = '" << val << "',";
+                                            oc << std::endl << "    # " << name << " = '" << escaped_val << "',";
                                         }
                                     }
-                                    if(!oc.str().empty()){
-                                        sc << std::endl << oc.str() << std::endl;
-                                    }
-                                    sc << " ){};" << std::endl;
+
+                                    // Print optional arguments at the end.
+                                    if(!oc.str().empty()) sc << oc.str();
+
+                                    // Avoid all newlines for parameter-less operations (e.g., 'True(){};').
+                                    if(!op_docs.args.empty()) sc << std::endl;
+                                    sc << "){};" << std::endl;
 
                                     append_to_script(script_files.at(active_script_file).content, sc.str());
                                     script_files.back().content.emplace_back('\0');
@@ -2203,11 +2813,79 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
             return true;
         };
-        if(!display_main_menu_bar()) break;
+        try{
+            if(!display_main_menu_bar()) break;
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in display_main_menu_bar(): '" << e.what() << "'");
+            throw;
+        }
 
         if( view_toggles.view_metrics_window ){
             ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
             ImGui::ShowMetricsWindow(&view_toggles.view_metrics_window);
+        }
+
+        // Display the shader editor dialog.
+        const auto display_shader_editor = [&view_toggles,
+                                            &custom_shader,
+                                            &vert_shader_src,
+                                            &frag_shader_src,
+                                            &shader_log ]() -> void {
+            if( !view_toggles.view_shader_editor_enabled ) return;
+
+            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
+            if(ImGui::Begin("Shader Editor", &view_toggles.view_shader_editor_enabled )){
+                ImVec2 window_extent = ImGui::GetContentRegionAvail();
+                if(ImGui::Button("Compile", ImVec2(window_extent.x/4, 0))){ 
+                    std::stringstream ss;
+                    try{
+                        auto l_custom_shader = compile_shader_program(vert_shader_src,
+                                                                      frag_shader_src,
+                                                                      shader_log);
+                        custom_shader = std::move(l_custom_shader);
+                        shader_log = string_to_array( array_to_string(shader_log) + "\nShader updated" );
+                    }catch(const std::exception &e){
+                        FUNCWARN("Shader compilation failed: '" << e.what() << "'");
+                    };
+                }
+
+
+                ImGui::Text("Vertex shader");
+                ImVec2 edit_box_extent = ImGui::GetContentRegionAvail();
+                edit_box_extent.y *= 3.0 / 7.0;
+
+                ImGuiInputTextFlags flags;
+                ImGui::InputTextMultiline("#vert_shader_editor",
+                                          vert_shader_src.data(),
+                                          vert_shader_src.size(),
+                                          edit_box_extent, flags);
+
+                ImGui::Text("Fragment shader");
+                edit_box_extent = ImGui::GetContentRegionAvail();
+                edit_box_extent.y *= 3.0 / 4.0;
+                ImGui::InputTextMultiline("#frag_shader_editor",
+                                          frag_shader_src.data(),
+                                          frag_shader_src.size(),
+                                          edit_box_extent, flags);
+
+                ImGui::Text("Compilation feedback");
+                flags |= ImGuiInputTextFlags_ReadOnly;
+                edit_box_extent = ImGui::GetContentRegionAvail();
+                ImGui::InputTextMultiline("#shader_compile_feedback",
+                                          shader_log.data(),
+                                          shader_log.size(),
+                                          edit_box_extent, flags);
+
+            }
+            ImGui::End();
+            return;
+        };
+        try{
+            display_shader_editor();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in display_shader_editor(): '" << e.what() << "'");
+            throw;
         }
 
         // Display the script editor dialog.
@@ -2216,6 +2894,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                             &custom_width,
                                             &open_file_root,
                                             &root_entry_text,
+                                            &launch_script_open_dialog,
+                                            &loaded_scripts,
 
                                             &script_mutex,
                                             &script_files,
@@ -2263,27 +2943,31 @@ bool SDL_Viewer(Drover &DICOM_data,
                     }
                     ImGui::SameLine();
                     if(ImGui::Button("Open", ImVec2(window_extent.x/4, 0))){ 
-                        // TODO
-
-                        // Note: ensure there is at least a null character. TODO.
-
-                        // Mimic the 'new' button for testing.
-                        script_files.emplace_back();
-                        script_files.back().altered = true;
-                        script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
-                        active_script_file = N_sfs;
-                        ++N_sfs;
+                        if(!loaded_scripts.valid()){
+                            loaded_scripts = std::async(std::launch::async, launch_script_open_dialog, open_file_root);
+                        }
                     }
                     ImGui::SameLine();
-                    if(ImGui::Button("Save", ImVec2(window_extent.x/4, 0))){ 
+                    if(ImGui::Button("Save As", ImVec2(window_extent.x/4, 0))){ 
                         if( (N_sfs != 0) 
                         &&  isininc(0, active_script_file, N_sfs-1)){
-                            if( script_files.at(active_script_file).path.empty() ){
-                                try{
-                                    const auto open_file_root_str = std::filesystem::absolute(open_file_root / "script.txt").string();
+                            try{
+                                if( script_files.at(active_script_file).path.empty() ){
+                                    // Attempt to determine the absolute path.
+                                    auto l_root = open_file_root;
+                                    const auto l_root_abs = std::filesystem::absolute(open_file_root);
+                                    l_root = (std::filesystem::exists(l_root_abs)) ? l_root_abs : l_root;
+
+                                    const auto open_file_root_str = (l_root / "script.dscr").string();
                                     string_to_array(root_entry_text, open_file_root_str);
-                                    ImGui::OpenPopup("Save Script Filename Picker");
-                                }catch(const std::exception &e){ };
+                                }else{
+                                    // Re-use the existing path.
+                                    const auto path_str = script_files.at(active_script_file).path.string();
+                                    string_to_array(root_entry_text, path_str);
+                                }
+                                ImGui::OpenPopup("Save Script Filename Picker");
+                            }catch(const std::exception &e){
+                                FUNCWARN("Unable to access current filesystem path");
                             }
                         }
                     }
@@ -2379,10 +3063,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                             script_files.at(active_script_file).path.assign(
                                 std::begin(root_entry_text),
                                 std::find( std::begin(root_entry_text), std::end(root_entry_text), '\0') );
-                            script_files.at(active_script_file).path.replace_extension(".txt");
+                            script_files.at(active_script_file).path.replace_extension(".dscr");
 
                             // Write the file contents to the given path.
-                            std::ofstream FO(script_files.at(active_script_file).path.string());
+                            std::ofstream FO(script_files.at(active_script_file).path);
                             FO.write( script_files.at(active_script_file).content.data(),
                                       (script_files.at(active_script_file).content.size() - 1) ); // Disregard trailing null.
                             FO << std::endl;
@@ -2530,7 +3214,12 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
             return;
         };
-        display_script_editor();
+        try{
+            display_script_editor();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in display_script_editor(): '" << e.what() << "'");
+            throw;
+        }
 
 
         // Display the image dialog.
@@ -2540,7 +3229,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                            &current_texture,
                                            &uv_min,
                                            &uv_max,
-                                           &image_mouse_pos,
+                                           &image_mouse_pos_opt,
                                            &tagged_pos,
                                            &largest_projection,
 
@@ -2601,7 +3290,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                            &time_course_image_inclusivity,
                                            &time_course_abscissa_relative,
 
-                                           &metadata_text_entry,
+                                           &display_metadata_table,
 
                                            &frame_count ]() -> void {
 
@@ -2610,7 +3299,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 // ... TODO ...
 //
             if( !view_toggles.view_images_enabled
-            ||  !current_texture.texture_exists ) return;
+            ||  !current_texture.texture_exists
+            ||  need_to_reload_opengl_texture.load() ) return;
 
             ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(10, 40), ImGuiCond_FirstUseEver);
@@ -2627,6 +3317,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
             ImVec2 pos = ImGui::GetCursorScreenPos();
             ImGui::Image(gl_tex_ptr, image_extent, uv_min, uv_max);
+            image_mouse_pos_s image_mouse_pos;
             image_mouse_pos.mouse_hovering_image = ImGui::IsItemHovered();
             image_mouse_pos.image_window_focused = ImGui::IsWindowFocused();
 
@@ -3355,248 +4046,42 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
             }
 
-            // Metadata window.
+            // Image metadata window.
             if( view_toggles.view_image_metadata_enabled ){
                 ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Image Metadata", &view_toggles.view_image_metadata_enabled);
 
-
-                ImVec2 cell_padding(0.0f, 0.0f);
-                ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, cell_padding);
-                if(ImGui::BeginTable("Image Metadata", 2,   ImGuiTableFlags_Borders
-                                                          | ImGuiTableFlags_RowBg
-                                                          | ImGuiTableFlags_BordersV
-                                                          | ImGuiTableFlags_BordersInner
-                                                          | ImGuiTableFlags_Resizable )){
-
-                    ImGui::TableSetupColumn("Key");
-                    ImGui::TableSetupColumn("Value");
-                    ImGui::TableHeadersRow();
-
-                    int i = 0;
-                    const auto l_metadata = disp_img_it->metadata;
-                    ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
-                    for(const auto &apair : l_metadata){
-                        auto key = apair.first;
-                        auto val = apair.second;
-
-                        ImGui::TableNextColumn();
-                        ImGui::SetNextItemWidth(-FLT_MIN);
-                        string_to_array(metadata_text_entry, key);
-                        ImGui::PushID(++i);
-                        const bool key_changed = ImGui::InputText("##key", metadata_text_entry.data(), metadata_text_entry.size());
-                        ImGui::PopID();
-                        // Since key_changed is true whenever any changes have occured, even if the mouse is idling
-                        // after a change, then the following causes havoc by continuously editing the key and messing
-                        // with the ID system. A better system would only implement the change when the focus is lost
-                        // and/or enter is pressed. I'm not sure if there is a simple way to do this at the moment, so
-                        // I'll leave key editing disabled until I figure out a reasonable fix.
-                        //if(key_changed){
-                        //    std::string new_key;
-                        //    array_to_string(new_key, metadata_text_entry);
-                        //    if(new_key != key){
-                        //        disp_img_it->metadata.erase(key);
-                        //        disp_img_it->metadata[new_key] = val;
-                        //        key = new_key;
-                        //    }
-                        //}
-
-                        ImGui::TableNextColumn();
-                        ImGui::SetNextItemWidth(-FLT_MIN);
-                        string_to_array(metadata_text_entry, val);
-                        ImGui::PushID(++i);
-                        const bool val_changed = ImGui::InputText("##val", metadata_text_entry.data(), metadata_text_entry.size());
-                        ImGui::PopID();
-                        if(val_changed){
-                            // Replace key's value with updated value in place.
-                            array_to_string(val, metadata_text_entry);
-                            disp_img_it->metadata[key] = val;
-                        }
-                    }
-                    ImGui::PopStyleColor();
-                    ImGui::EndTable();
-                }
-                ImGui::PopStyleVar();
+                display_metadata_table( disp_img_it->metadata );
 
                 ImGui::End();
             }
+            image_mouse_pos_opt = image_mouse_pos;
             return;
         };
-        display_image_viewer();
+        try{
+            display_image_viewer();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in display_image_viewer(): '" << e.what() << "'");
+            throw;
+        }
 
 
-        // Open files dialog.
-        const auto open_files_viewer = [&view_toggles,
-                                        
-                                        &drover_mutex,
-                                        &mutex_dt,
-                                        &InvocationMetadata,
-                                        &FilenameLex,
-
-                                        &open_file_root,
-                                        &root_entry_text,
-                                        &open_files_selection,
-                                        &loaded_files,
-                                        &query_files ]() -> void {
-            std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
-            if(!drover_lock) return;
-
-            if( !view_toggles.open_files_enabled
-            ||  loaded_files.valid()) return;
-
-            ImGui::SetNextWindowSize(ImVec2(600, 650), ImGuiCond_FirstUseEver);
-            ImGui::Begin("Open File", &view_toggles.open_files_enabled);
-
-        // Always center this window when appearing
-//        ImVec2 center(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
-//        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-
-            ImGui::Text("%s", "Select one or more files to load.");
-            ImGui::Separator();
-            std::string open_file_root_str;
-            try{
-                open_file_root_str = std::filesystem::absolute(open_file_root).string();
-            }catch(const std::exception &){ };
-            for(size_t i = 0; (i < open_file_root_str.size()) && ((i+1) < root_entry_text.size()); ++i){
-                root_entry_text[i] = open_file_root_str[i];
-                root_entry_text[i+1] = '\0';
-            }
-
-            ImGui::Text("Current directory:");
-            ImGui::SameLine();
-            ImGui::InputText("", root_entry_text.data(), root_entry_text.size());
-            std::string entered_text;
-            for(size_t i = 0; i < root_entry_text.size(); ++i){
-                if(root_entry_text[i] == '\0') break;
-                if(!std::isprint( static_cast<unsigned char>(root_entry_text[i]) )) break;
-                entered_text.push_back(root_entry_text[i]);
-            }
-            if(entered_text != open_file_root_str){
-                open_files_selection.clear();
-                open_file_root = entered_text;
-                if( !entered_text.empty() 
-                &&  std::filesystem::exists(open_file_root)
-                &&  std::filesystem::is_directory(open_file_root) ){
-                    query_files(open_file_root);
-                }
-            }
-            ImGui::Separator();
-
-
-            if(ImGui::Button("Parent directory", ImVec2(120, 0))){ 
-                if(!open_file_root.empty()){
-                    open_file_root = open_file_root.parent_path();
-                    query_files(open_file_root);
-                }
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("Select all", ImVec2(120, 0))){ 
-                for(auto &ofs : open_files_selection){
-                    if(!ofs.is_dir){
-                        ofs.selected = true;
-                    }
-                }
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("Select none", ImVec2(120, 0))){ 
-                for(auto &ofs : open_files_selection){
-                    ofs.selected = false;
-                }
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("Invert selection", ImVec2(120, 0))){ 
-                for(auto &ofs : open_files_selection){
-                    if(ofs.is_dir){
-                        ofs.selected = false;
-                    }else{
-                        ofs.selected = !ofs.selected;
-                    }
-                }
-            }
-            ImGui::Separator();
-
-            for(auto &ofs : open_files_selection){
-                const auto is_selected = ImGui::Selectable(ofs.path.lexically_relative(open_file_root).string().c_str(), &(ofs.selected), ImGuiSelectableFlags_AllowDoubleClick);
-                const auto is_doubleclicked = is_selected && ImGui::IsMouseDoubleClicked(0);
-                ImGui::SameLine(500);
-                if(ofs.is_dir){
-                    ImGui::Text("(dir)");
-                }else if(ofs.file_size != 0){
-                    const float file_size_kB = ofs.file_size / 1000.0;
-                    if(file_size_kB < 500.0){
-                        ImGui::Text("%.1f kB", file_size_kB );
-                    }else{
-                        ImGui::Text("%.2f MB", file_size_kB / 1000.0 );
-                    }
-                }
-
-                if(is_doubleclicked){
-                    if(ofs.is_dir){
-                        open_file_root = ofs.path;
-                        query_files(open_file_root);
-                        break;
-                    }
-                }
-            }
-
-            ImGui::Separator();
-            ImGui::SetItemDefaultFocus();
-            if(ImGui::Button("Load selection", ImVec2(120, 0))){ 
-                // Extract all files from the selection.
-                std::list<std::filesystem::path> paths;
-                for(auto &ofs : open_files_selection){
-                    if(ofs.selected){
-                        // Resolve all files within a directory.
-                        if(ofs.is_dir){
-                            for(const auto &d : std::filesystem::directory_iterator( ofs.path )){
-                                paths.push_back( d.path().string() );
-                            }
-
-                        // Add a single file to the collection.
-                        }else{
-                            paths.push_back( ofs.path.string() );
-                        }
-                    }
-                }
-
-                // Load into to a separate Drover and only merge if all loads are successful.
-                loaded_files = std::async(std::launch::async, [InvocationMetadata,
-                                                               FilenameLex,
-                                                               paths]() -> loaded_files_res {
-                    loaded_files_res lfs;
-                    auto paths_l = paths;
-                    std::list<OperationArgPkg> Operations;
-                    lfs.res = Load_Files(lfs.DICOM_data, InvocationMetadata, FilenameLex, Operations, paths_l);
-                    if(!Operations.empty()){
-                         lfs.res = false;
-                         FUNCWARN("Loaded file contains a script. Currently unable to handle script files here");
-                    }
-                    return lfs;
-                });
-
-            }
-            ImGui::SameLine();
-            if(ImGui::Button("Cancel", ImVec2(120, 0))){ 
-                view_toggles.open_files_enabled = false;
-                open_files_selection.clear();
-                // Reset the root directory.
-                open_file_root = std::filesystem::current_path();
-            }
-            ImGui::End();
-            return;
-        };
-        open_files_viewer();
-
-
-        // Handle file loading future.
+        // Handle insertion for the file loading future.
         const auto handle_file_loading = [&view_toggles,
 
                                           &drover_mutex,
                                           &DICOM_data,
+                                          &InvocationMetadata,
                                           &recompute_image_state,
+                                          &reload_image_texture,
+                                          &recompute_image_iters,
+                                          &need_to_reload_opengl_texture,
+                                          &tagged_pos,
+
+                                          &launch_contour_preprocessor,
+                                          &reset_contouring_state,
 
                                           &loaded_files,
-                                          &open_files_selection,
 
                                           &frame_count]() -> void {
             if( loaded_files.valid() ){
@@ -3616,19 +4101,80 @@ bool SDL_Viewer(Drover &DICOM_data,
                     auto f = loaded_files.get();
 
                     if(f.res){
-                        view_toggles.open_files_enabled = false;
-                        open_files_selection.clear();
                         DICOM_data.Consume(f.DICOM_data);
+                        f.InvocationMetadata.merge(InvocationMetadata);
+                        InvocationMetadata = f.InvocationMetadata;
                     }else{
                         FUNCWARN("Unable to load files");
                         // TODO ... warn about the issue.
                     }
+
+                    view_toggles.open_files_enabled = false;
                     recompute_image_state();
+                    need_to_reload_opengl_texture.store(true);
                     loaded_files = decltype(loaded_files)();
+                    auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+                    if(img_valid){
+                        if(view_toggles.view_contours_enabled) launch_contour_preprocessor();
+                        reset_contouring_state(img_array_ptr_it);
+                        tagged_pos = {};
+                    }
+
                 }
             }
         };
-        handle_file_loading();
+        try{
+            handle_file_loading();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in handle_file_loading(): '" << e.what() << "'");
+            throw;
+        }
+
+        // Handle insertion for the script loading future.
+        const auto handle_script_loading = [&view_toggles,
+
+                                            &script_mutex,
+                                            &loaded_scripts,
+                                            &script_files,
+                                            &active_script_file,
+
+                                            &frame_count]() -> void {
+            if( loaded_scripts.valid() ){
+                ImGui::OpenPopup("Loading");
+                if(ImGui::BeginPopupModal("Loading", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+                    const std::string str((frame_count / 15) % 4, '.'); // Simplistic animation.
+                    ImGui::Text("Loading files%s", str.c_str());
+
+                    if(ImGui::Button("Close")){
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::EndPopup();
+                }
+
+                if(std::future_status::ready == loaded_scripts.wait_for(std::chrono::microseconds(1))){
+                    std::unique_lock<std::shared_mutex> script_lock(script_mutex);
+                    auto f = loaded_scripts.get();
+
+                    if(f.res){
+                        script_files.insert( std::end(script_files), std::begin(f.script_files),
+                                                                     std::end(f.script_files) );
+                        active_script_file = static_cast<long int>(script_files.size()) - 1;
+                    }else{
+                        FUNCWARN("Unable to load scripts");
+                        // TODO ... warn about the issue.
+                    }
+                    view_toggles.open_files_enabled = false;
+
+                    loaded_scripts = decltype(loaded_scripts)();
+                }
+            }
+        };
+        try{
+            handle_script_loading();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in handle_script_loading(): '" << e.what() << "'");
+            throw;
+        }
 
 
         // Adjust the window and level.
@@ -3832,7 +4378,12 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
             return;
         };
-        adjust_window_level();
+        try{
+            adjust_window_level();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in adjust_window_level(): '" << e.what() << "'");
+            throw;
+        }
 
 
         // Adjust the colour map.
@@ -3849,16 +4400,18 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::Begin("Adjust Colour Map", &view_toggles.adjust_colour_map_enabled, ImGuiWindowFlags_AlwaysAutoResize);
                 bool reload_texture = false;
 
-                // Draw the scale bar.
-                auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(scale_bar_texture.texture_number));
-                ImGui::Image(gl_tex_ptr, ImVec2(250,25), ImVec2(0.0, 0.0), ImVec2(1.0, 1.0));
-
                 // Draw buttons for each available colour map.
                 for(size_t i = 0; i < colour_maps.size(); ++i){
                     if( ImGui::Button(colour_maps[i].first.c_str(), ImVec2(250, 0)) ){
                         colour_map = i;
                         reload_texture = true;
                     }
+                }
+
+                if(!reload_texture){
+                    // Draw the scale bar.
+                    auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(scale_bar_texture.texture_number));
+                    ImGui::Image(gl_tex_ptr, ImVec2(250,25), ImVec2(0.0, 0.0), ImVec2(1.0, 1.0));
                 }
 
                 ImGui::End();
@@ -3871,7 +4424,12 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
             return;
         };
-        adjust_colour_map();
+        try{
+            adjust_colour_map();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in adjust_colour_map(): '" << e.what() << "'");
+            throw;
+        }
 
 
         // Display plots.
@@ -4017,7 +4575,12 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
             return;
         };
-        display_plots();
+        try{
+            display_plots();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in display_plots(): '" << e.what() << "'");
+            throw;
+        }
 
 
         // Display row and column profiles.
@@ -4059,7 +4622,12 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
             return;
         };
-        display_row_column_profiles();
+        try{
+            display_row_column_profiles();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in display_row_column_profiles(): '" << e.what() << "'");
+            throw;
+        }
 
 
         // Display time profile.
@@ -4132,8 +4700,261 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
             return;
         };
-        display_time_profiles();
+        try{
+            display_time_profiles();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in display_time_profiles(): '" << e.what() << "'");
+            throw;
+        }
 
+        // Display tables.
+        const auto display_tables = [&view_toggles,
+                                     &drover_mutex,
+                                     &mutex_dt,
+                                     &table_display,
+                                     &recompute_table_iters,
+                                     &display_metadata_table,
+                                     &DICOM_data ]() -> void {
+
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            if(!drover_lock) return;
+
+            if( !view_toggles.view_tables_enabled
+            ||  !DICOM_data.Has_Table_Data() ) return;
+
+            // Display a selection and navigation window.
+            ImGui::SetNextWindowSize(ImVec2(750, 500), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(680, 140), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Table Selection", &view_toggles.view_tables_enabled);
+
+            if(ImGui::Button("Create table")){
+                DICOM_data.table_data.emplace_back( std::make_shared<Sparse_Table>() );
+                table_display.table_num = DICOM_data.table_data.size() - 1;
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Remove table")){
+                auto [table_is_valid, table_ptr_it] = recompute_table_iters();
+                if(table_is_valid){
+                    DICOM_data.table_data.erase( table_ptr_it );
+                    table_display.table_num -= 1;
+                }
+            }
+            ImGui::Checkbox("Keyword highlighting", &table_display.use_keyword_highlighting);
+
+            // Scroll through tables.
+            if(DICOM_data.Has_Table_Data()){
+                int scroll_tables = table_display.table_num;
+                const int N_tables = DICOM_data.table_data.size();
+                ImGui::SliderInt("Table", &scroll_tables, 0, N_tables - 1);
+                const long int new_table_num = std::clamp(scroll_tables, 0, N_tables - 1);
+                if(new_table_num != table_display.table_num){
+                    table_display.table_num = new_table_num;
+                }
+            }
+
+            // Display the table.
+            if( auto [table_is_valid, table_ptr_it] = recompute_table_iters();  table_is_valid ){
+                const auto [min_col, max_col] = (*table_ptr_it)->table.standard_min_max_col();
+                const auto [min_row, max_row] = (*table_ptr_it)->table.standard_min_max_row();
+
+                ImVec2 cell_padding(0.0f, 0.0f);
+                ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, cell_padding);
+                if(ImGui::BeginTable("Table display", (max_col - min_col) + 1,  ImGuiTableFlags_Borders
+                                                                   //| ImGuiTableFlags_ScrollX
+                                                                   //| ImGuiTableFlags_ScrollY
+                                                                   | ImGuiTableFlags_RowBg
+                                                                   | ImGuiTableFlags_BordersV
+                                                                   | ImGuiTableFlags_BordersInner
+                                                                   | ImGuiTableFlags_Resizable )){
+
+                    // Number the columns.
+                    for(long int c = min_col; c <= max_col; ++c){
+                        ImGui::TableSetupColumn(std::to_string(c).c_str());
+                    }
+                    ImGui::TableHeadersRow();
+
+                    std::array<char, 2048> buf;
+                    string_to_array(buf, "");
+
+                    ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
+
+                    tables::visitor_func_t f = [&](int64_t row, int64_t col, std::string& v) -> tables::action {
+                        ImGui::TableNextColumn();
+                        //ImGui::SetNextItemWidth(-FLT_MIN);
+                        string_to_array(buf, v);
+                        // This ID ensures the table can grow and retain the same ID. It splits an int32_t into two
+                        // ranges, allowing rows to span [0,100'000] and columns to span [0,max_int32_t/100'000] =
+                        // [0,20'000].
+                        int cell_ID = row + col * 100'000;
+                        ImGui::PushID(cell_ID);
+                        ImGui::SetNextItemWidth(-FLT_MIN);
+                        const bool key_changed = ImGui::InputText("##datum", buf.data(), buf.size() - 1);
+ 
+                        // Colourize if keywords are present.
+                        if(table_display.use_keyword_highlighting){
+                            for(const auto &kv : table_display.colours){
+                                if(v == kv.first){
+                                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(kv.second));
+                                    break;
+                                }
+                            }
+                        }
+
+                        ImGui::PopID();
+ 
+                        //const auto im_row = ImGui::TableGetRowIndex() + min_row - 1; // +1 for the header.
+                        //const auto im_col = ImGui::TableGetColumnIndex() + min_col;
+                        //
+                        // if( (row == 2) && (col == 3) ){
+                        //     FUNCINFO("row,col = 2,3 and IMGui row,col = " << im_row << ", " << im_col);
+                        // }
+                        if( key_changed ) array_to_string(v, buf);
+
+                        return tables::action::automatic; // Retain only non-empty cells.
+                    };
+                    (*table_ptr_it)->table.visit_standard_block(f);
+
+                    ImGui::PopStyleColor();
+                    ImGui::EndTable();
+                }
+                ImGui::PopID();
+                ImGui::PopStyleVar();
+
+
+                if( view_toggles.view_table_metadata_enabled ){
+                    ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+                    ImGui::Begin("Image Metadata", &view_toggles.view_table_metadata_enabled);
+
+                    display_metadata_table( (*table_ptr_it)->table.metadata );
+
+                    ImGui::End();
+                }
+            }
+
+            ImGui::End();
+            return;
+        };
+        try{
+            display_tables();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in display_tables(): '" << e.what() << "'");
+            throw;
+        }
+
+        // Display RT plans.
+        const auto display_tplans = [&view_toggles,
+                                     &drover_mutex,
+                                     &mutex_dt,
+                                     &tplan_num,
+                                     &tplan_dynstate_num,
+                                     &tplan_statstate_num,
+                                     &recompute_tplan_iters,
+                                     &display_metadata_table,
+                                     &DICOM_data ]() -> void {
+
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            if(!drover_lock) return;
+
+            if( !view_toggles.view_tplans_enabled
+            ||  !DICOM_data.Has_TPlan_Data() ) return;
+
+            // Display a selection and navigation window.
+            ImGui::SetNextWindowSize(ImVec2(450, 400), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(680, 40), ImGuiCond_FirstUseEver);
+            ImGui::Begin("RT Plans", &view_toggles.view_tplans_enabled);
+
+            // Scroll through RT plans.
+            if(DICOM_data.Has_TPlan_Data()){
+                int scroll_tplans = tplan_num;
+                const int N_tplans = DICOM_data.tplan_data.size();
+                ImGui::SliderInt("Plan", &scroll_tplans, 0, N_tplans - 1);
+                const long int new_tplan_num = std::clamp(scroll_tplans, 0, N_tplans - 1);
+                if(new_tplan_num != tplan_num){
+                    tplan_num = new_tplan_num;
+                }
+            }
+
+            ImGui::Checkbox("View RT plan metadata", &view_toggles.view_tplan_metadata_enabled);
+
+            if(auto [tplan_is_valid, tplan_ptr_it] = recompute_tplan_iters(); tplan_is_valid){
+
+                // Display the RT plan.
+                //
+                // Note: we currently only display the top-level metadata without any visual display.
+                ImGui::SetNextWindowSize(ImVec2(450, 600), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(ImVec2(40, 40), ImGuiCond_FirstUseEver);
+                ImGui::Begin("RT Plan", &view_toggles.view_tplans_enabled);
+                display_metadata_table( (*tplan_ptr_it)->metadata );
+                ImGui::End();
+
+                if( view_toggles.view_tplan_metadata_enabled
+                &&  !(*tplan_ptr_it)->dynamic_states.empty() ){
+                    // Scroll through dynamic states.
+                    int scroll_dynstate = tplan_dynstate_num;
+                    const int N_dynstates = (*tplan_ptr_it)->dynamic_states.size();
+                    ImGui::SliderInt("Beam", &scroll_dynstate, 0, N_dynstates - 1);
+                    const long int new_dynstate_num = std::clamp(scroll_dynstate, 0, N_dynstates - 1);
+                    if(new_dynstate_num != tplan_dynstate_num){
+                        tplan_dynstate_num = new_dynstate_num;
+                    }
+                    auto *dynstate_ptr = &( (*tplan_ptr_it)->dynamic_states.at(tplan_dynstate_num) );
+
+                    // Display the selected dynamic state (i.e., the beam).
+                    {
+                        std::stringstream ss;
+                        ss << "Beam number: " << std::to_string(dynstate_ptr->BeamNumber) << std::endl;
+                        ss << "Cumulative meterset: " << std::to_string(dynstate_ptr->FinalCumulativeMetersetWeight) << std::endl;
+                        ss << "Number of control points: " << std::to_string(dynstate_ptr->static_states.size()) << std::endl;
+                        ImGui::Text("%s", ss.str().c_str());
+                    }
+                    if(view_toggles.view_tplan_metadata_enabled){
+                        ImGui::SetNextWindowSize(ImVec2(450, 600), ImGuiCond_FirstUseEver);
+                        ImGui::SetNextWindowPos(ImVec2(80, 80), ImGuiCond_FirstUseEver);
+                        ImGui::Begin("Beam view", &view_toggles.view_tplan_metadata_enabled);
+                        display_metadata_table( dynstate_ptr->metadata );
+                        ImGui::End();
+                    }
+
+                    if( !dynstate_ptr->static_states.empty() ){
+                        // Scroll through static states.
+                        int scroll_statstate = tplan_statstate_num;
+                        const int N_statstates = dynstate_ptr->static_states.size();
+                        ImGui::SliderInt("Control point", &scroll_statstate, 0, N_statstates - 1);
+                        const long int new_statstate_num = std::clamp(scroll_statstate, 0, N_statstates - 1);
+                        if(new_statstate_num != tplan_statstate_num){
+                            tplan_statstate_num = new_statstate_num;
+                        }
+                        auto *statstate_ptr = &( dynstate_ptr->static_states.at(tplan_statstate_num) );
+
+                        // Display the selected static state (i.e., the control point).
+                        {
+                            std::stringstream ss;
+                            ss << "Control point index: " << std::to_string(statstate_ptr->ControlPointIndex) << std::endl
+                               << "Cumulative meterset: " << std::to_string(statstate_ptr->CumulativeMetersetWeight) << std::endl
+                               << "Gantry angle: " << std::to_string(statstate_ptr->GantryAngle) << std::endl;
+                            ImGui::Text("%s", ss.str().c_str());
+                        }
+                        if(view_toggles.view_tplan_metadata_enabled){
+                            ImGui::SetNextWindowSize(ImVec2(450, 600), ImGuiCond_FirstUseEver);
+                            ImGui::SetNextWindowPos(ImVec2(120, 120), ImGuiCond_FirstUseEver);
+                            ImGui::Begin("Control point view", &view_toggles.view_tplan_metadata_enabled);
+                            display_metadata_table( statstate_ptr->metadata );
+                            ImGui::End();
+                        }
+
+                    }
+                }
+            }
+
+            ImGui::End();
+            return;
+        };
+        try{
+            display_tplans();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in display_tplans(): '" << e.what() << "'");
+            throw;
+        }
 
         // Display the image navigation dialog.
         const auto display_image_navigation = [&view_toggles,
@@ -4153,7 +4974,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                &pan,
                                                &uv_min,
                                                &uv_max,
-                                               &image_mouse_pos,
+                                               &image_mouse_pos_opt,
                                                &io,
 
                                                &recompute_cimage_iters,
@@ -4178,7 +4999,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                &frame_count ]() -> void {
 
             std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
-            if(!drover_lock) return;
+            if( !drover_lock
+            ||  !image_mouse_pos_opt
+            ||  need_to_reload_opengl_texture.load() ) return;
 
             auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
             if( !view_toggles.view_images_enabled
@@ -4252,7 +5075,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::Text("Display");
                 ImGui::SliderInt("Channel", &scroll_channel, 0, static_cast<int>(disp_img_it->channels - 1));
 
-                if(ImGui::IsWindowFocused() || image_mouse_pos.image_window_focused){
+                if(ImGui::IsWindowFocused() || image_mouse_pos_opt.value().image_window_focused){
                     auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
 
                     const int d_l = static_cast<int>( std::floor(io.MouseWheel) );
@@ -4280,7 +5103,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                           &&  (0 < IM_ARRAYSIZE(io.MouseDown))
                           &&  (1 < IM_ARRAYSIZE(io.MouseDown))
                           &&  ((0.0f <= io.MouseDownDuration[0]) || (0.0f <= io.MouseDownDuration[1]))
-                          &&  image_mouse_pos.mouse_hovering_image ){
+                          &&  image_mouse_pos_opt.value().mouse_hovering_image ){
                         contouring_img_altered = true;
                         need_to_reload_opengl_texture.store(true);
 
@@ -4304,7 +5127,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         }else if( any_mouse_button_sticky
                               && last_mouse_button_pos
                               && io.KeyCtrl){
-                            const auto pA = image_mouse_pos.dicom_pos; // Current position.
+                            const auto pA = image_mouse_pos_opt.value().dicom_pos; // Current position.
                             const auto pB = last_mouse_button_pos.value(); // Previous position.
                             // Project along image axes to create a taxi-cab metric corner vertex.
                             const auto corner = largest_projection(pA, pB, {l_img_it->row_unit, l_img_it->col_unit});
@@ -4313,13 +5136,13 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                         }else if( any_mouse_button_sticky
                               &&  last_mouse_button_pos ){
-                            const auto pA = image_mouse_pos.dicom_pos; // Current position.
+                            const auto pA = image_mouse_pos_opt.value().dicom_pos; // Current position.
                             const auto pB = last_mouse_button_pos.value(); // Previous position.
                             lss.emplace_back(pA,pB);
 
                         }else{
                             // Slightly offset the line segment endpoints to avoid degeneracy.
-                            auto pA = image_mouse_pos.dicom_pos; // Current position.
+                            auto pA = image_mouse_pos_opt.value().dicom_pos; // Current position.
                             lss.emplace_back(pA,pA);
                         }
 
@@ -4357,15 +5180,15 @@ bool SDL_Viewer(Drover &DICOM_data,
                         // Update mouse position for next time, if applicable.
                         if( mouse_button_0 ){
                             last_mouse_button_0_down = io.MouseDownDuration[0];
-                            last_mouse_button_pos = image_mouse_pos.dicom_pos;
+                            last_mouse_button_pos = image_mouse_pos_opt.value().dicom_pos;
                         }
                         if( mouse_button_1 ){
                             last_mouse_button_1_down = io.MouseDownDuration[1];
-                            last_mouse_button_pos = image_mouse_pos.dicom_pos;
+                            last_mouse_button_pos = image_mouse_pos_opt.value().dicom_pos;
                         }
 
                     // Left-button mouse click on an image.
-                    }else if( image_mouse_pos.mouse_hovering_image
+                    }else if( image_mouse_pos_opt.value().mouse_hovering_image
                           &&  (0 < IM_ARRAYSIZE(io.MouseDown))
                           &&  (0.0f == io.MouseDownDuration[0]) ){ // Debounced!
 
@@ -4374,7 +5197,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                           }else{
                               if(!tagged_pos){
-                                  tagged_pos = image_mouse_pos.dicom_pos;
+                                  tagged_pos = image_mouse_pos_opt.value().dicom_pos;
                               }else{
                                   tagged_pos = {};
                               }
@@ -4398,6 +5221,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     //ImGui::Text("%.2f secs", io.KeysDownDuration[ (int)(ImGui::GetKeyIndex(ImGuiKey_PageUp)) ]);
                 }
             }
+
             long int new_img_array_num = scroll_arrays;
             long int new_img_num = scroll_images;
             long int new_img_chnl = scroll_channel;
@@ -4427,10 +5251,16 @@ bool SDL_Viewer(Drover &DICOM_data,
                 auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
                 if( !img_valid ) throw std::runtime_error("Advanced to inaccessible image channel");
             }
+
             ImGui::End();
             return;
         };
-        display_image_navigation();
+        try{
+            display_image_navigation();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in display_image_navigation(): '" << e.what() << "'");
+            throw;
+        }
 
 
         // Saving time courses as line samples.
@@ -4475,25 +5305,37 @@ bool SDL_Viewer(Drover &DICOM_data,
                                           &oglm_ptr,
                                           &mesh_num,
                                           &mesh_display_transform,
+                                          &display_metadata_table,
+                                          &recompute_smesh_iters,
+                                          &need_to_reload_opengl_mesh,
+                                          &custom_shader,
                                           &frame_count ]() -> void {
 
-            std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
             if(!drover_lock) return;
             if( !view_toggles.view_meshes_enabled
             ||  !DICOM_data.Has_Mesh_Data() ) return;
 
-            const auto load_mesh = [&](){
-                if(!DICOM_data.Has_Mesh_Data()) return;
-                const auto N_meshes = static_cast<long int>(DICOM_data.smesh_data.size());
-                mesh_num = std::clamp(mesh_num, 0L, N_meshes - 1L);
-                const auto smesh_ptr = *(std::next( std::begin(DICOM_data.smesh_data), mesh_num));
-                oglm_ptr = std::make_unique<opengl_mesh>( smesh_ptr->meshes, mesh_display_transform.reverse_normals );
-            };
+            const auto N_meshes = static_cast<long int>(DICOM_data.smesh_data.size());
+            const auto new_mesh_num = std::clamp(mesh_num, 0L, N_meshes - 1L);
+            if(new_mesh_num != mesh_num){
+                mesh_num = new_mesh_num;
+                need_to_reload_opengl_mesh = true;
+            }
 
-            const auto N_meshes = DICOM_data.smesh_data.size();
+            const auto reload_opengl_mesh = [&](){
+                auto [mesh_is_valid, smesh_ptr_it] = recompute_smesh_iters();
+                if(!mesh_is_valid) return;
+                oglm_ptr = std::make_unique<opengl_mesh>( (*smesh_ptr_it)->meshes, mesh_display_transform.reverse_normals );
+                need_to_reload_opengl_mesh = false;
+            };
+            if(need_to_reload_opengl_mesh){
+                reload_opengl_mesh();
+            }
+
             if(!oglm_ptr){
                 mesh_num = 0;
-                load_mesh();
+                reload_opengl_mesh();
             }
 
             if(oglm_ptr){
@@ -4503,27 +5345,61 @@ bool SDL_Viewer(Drover &DICOM_data,
                 //ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
                 ImGui::SetNextWindowPos(ImVec2(10, 20), ImGuiCond_FirstUseEver);
                 if(ImGui::Begin("Meshes", &view_toggles.view_meshes_enabled)){
+
+                    // Alter the common model transformation.
+                    if(ImGui::IsWindowFocused()){
+                        if( ImGui::IsKeyDown( SDL_SCANCODE_RIGHT ) ){
+                            mesh_display_transform.model.coeff(0,3) += 0.001;
+                        }
+                        if( ImGui::IsKeyDown( SDL_SCANCODE_LEFT ) ){
+                            mesh_display_transform.model.coeff(0,3) -= 0.001;
+                        }
+                        if( ImGui::IsKeyDown( SDL_SCANCODE_UP ) ){
+                            mesh_display_transform.model.coeff(1,3) += 0.001;
+                        }
+                        if( ImGui::IsKeyDown( SDL_SCANCODE_DOWN ) ){
+                            mesh_display_transform.model.coeff(1,3) -= 0.001;
+                        }
+                        if( ImGui::IsKeyDown( SDL_SCANCODE_W ) ){
+                            mesh_display_transform.model.coeff(2,3) += 0.001;
+                        }
+                        if( ImGui::IsKeyDown( SDL_SCANCODE_S ) ){
+                            mesh_display_transform.model.coeff(2,3) -= 0.001;
+                        }
+                        if( ImGui::IsKeyDown( SDL_SCANCODE_Q ) ){
+                            auto rot = affine_rotate<float>( vec3<float>(0,0,0), vec3<float>(0,0,1), 3.14/100.0 );
+                            mesh_display_transform.model = mesh_display_transform.model * static_cast<num_array<float>>(rot);
+                        }
+                        if( ImGui::IsKeyDown( SDL_SCANCODE_E ) ){
+                            auto rot = affine_rotate<float>( vec3<float>(0,0,0), vec3<float>(0,0,1), -3.14/100.0 );
+                            mesh_display_transform.model = mesh_display_transform.model * static_cast<num_array<float>>(rot);
+                        }
+                    }
+
                     std::string msg = "Drawing "_s
                                     + std::to_string(oglm_ptr->N_vertices) + " vertices, "
                                     + std::to_string(oglm_ptr->N_indices) + " indices, and "
                                     + std::to_string(oglm_ptr->N_triangles) + " triangles.";
                     ImGui::Text("%s", msg.c_str());
-                    
+
                     auto scroll_meshes = static_cast<int>(mesh_num);
                     ImGui::SliderInt("Mesh", &scroll_meshes, 0, N_meshes - 1);
                     if(static_cast<long int>(scroll_meshes) != mesh_num){
-                        mesh_num = static_cast<long int>(scroll_meshes);
-                        load_mesh();
+                        mesh_num = std::clamp(static_cast<long int>(scroll_meshes), 0L, N_meshes - 1L);
+                        reload_opengl_mesh();
                     }
 
                     ImGui::ColorEdit4("Colour", mesh_display_transform.colours.data());
 
+                    ImGui::Checkbox("Metadata", &view_toggles.view_mesh_metadata_enabled);
                     ImGui::Checkbox("Precess", &mesh_display_transform.precess);
                     ImGui::Checkbox("Wireframe", &mesh_display_transform.render_wireframe);
+                    ImGui::Checkbox("Cull back faces", &mesh_display_transform.use_opaque);
                     if(ImGui::Checkbox("Reverse normals", &mesh_display_transform.reverse_normals)){
-                        load_mesh();
+                        reload_opengl_mesh();
                     }
                     ImGui::Checkbox("Use lighting", &mesh_display_transform.use_lighting);
+                    ImGui::Checkbox("Use smoothing", &mesh_display_transform.use_smoothing);
                     float drag_speed = 0.05f;
                     double clamp_l = -10.0;
                     double clamp_h =  10.0;
@@ -4531,11 +5407,29 @@ bool SDL_Viewer(Drover &DICOM_data,
                     drag_speed = 0.3f;
                     clamp_l = -360.0 * 10.0;
                     clamp_h =  360.0 * 10.0;
-                    ImGui::DragScalar("X rotation", ImGuiDataType_Double, &mesh_display_transform.rot_x, drag_speed, &clamp_l, &clamp_h, "%.1f");
-                    ImGui::DragScalar("Y rotation", ImGuiDataType_Double, &mesh_display_transform.rot_y, drag_speed, &clamp_l, &clamp_h, "%.1f");
-                    ImGui::DragScalar("Z rotation", ImGuiDataType_Double, &mesh_display_transform.rot_z, drag_speed, &clamp_l, &clamp_h, "%.1f");
+                    ImGui::DragScalar("A rotation", ImGuiDataType_Double, &mesh_display_transform.rot_x, drag_speed, &clamp_l, &clamp_h, "%.1f");
+                    ImGui::DragScalar("B rotation", ImGuiDataType_Double, &mesh_display_transform.rot_y, drag_speed, &clamp_l, &clamp_h, "%.1f");
+
+                    drag_speed = 0.005f;
+                    clamp_l = -10.0;
+                    clamp_h = 10.0;
+                    ImGui::DragScalar("Zoom", ImGuiDataType_Double, &mesh_display_transform.zoom, drag_speed, &clamp_l, &clamp_h, "%.1f");
+                    ImGui::DragScalar("Camera distort", ImGuiDataType_Double, &mesh_display_transform.cam_distort, drag_speed, &clamp_l, &clamp_h, "%.1f");
                     if(ImGui::Button("Reset")){
                         mesh_display_transform = mesh_display_transform_t();
+                    }
+
+                    // Mesh metadata window.
+                    if( view_toggles.view_mesh_metadata_enabled ){
+                        auto [mesh_is_valid, smesh_ptr_it] = recompute_smesh_iters();
+                        if(mesh_is_valid){
+                            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+                            ImGui::Begin("Mesh Metadata", &view_toggles.view_mesh_metadata_enabled);
+
+                            display_metadata_table( (*smesh_ptr_it)->meshes.metadata );
+
+                            ImGui::End();
+                        }
                     }
                 }
                 ImGui::End();
@@ -4553,7 +5447,6 @@ bool SDL_Viewer(Drover &DICOM_data,
         // Handle direct OpenGL rendering.
         {
             CHECK_FOR_GL_ERRORS();
-            glViewport(0, 0, static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y));
             glClearColor(background_colour.x,
                          background_colour.y,
                          background_colour.z,
@@ -4561,74 +5454,223 @@ bool SDL_Viewer(Drover &DICOM_data,
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             CHECK_FOR_GL_ERRORS();
 
-            glPushMatrix();
-            glLoadIdentity();
-            glRotated(mesh_display_transform.rot_x,  1.0f, 0.0f, 0.0f);
-            glRotated(mesh_display_transform.rot_y,  0.0f, 1.0f, 0.0f);
-            glRotated(mesh_display_transform.rot_z,  0.0f, 0.0f, 1.0f);
             if(mesh_display_transform.precess){
                 mesh_display_transform.rot_x += 0.0028 * mesh_display_transform.precess_rate;
                 mesh_display_transform.rot_y -= 0.0104 * mesh_display_transform.precess_rate;
-                mesh_display_transform.rot_z += 0.0012 * mesh_display_transform.precess_rate;
             }
             mesh_display_transform.rot_x = std::fmod(mesh_display_transform.rot_x, 360.0);
             mesh_display_transform.rot_y = std::fmod(mesh_display_transform.rot_y, 360.0);
-            mesh_display_transform.rot_z = std::fmod(mesh_display_transform.rot_z, 360.0);
 
+            // Locate uniform locations in the custom shader program.
+            if(!custom_shader) throw std::logic_error("No available shader, cannot continue");
+            const auto custom_gl_program = custom_shader->get_program_ID();
+            auto shader_user_colour_loc = glGetUniformLocation(custom_gl_program, "user_colour");
+            auto shader_diffuse_colour_loc = glGetUniformLocation(custom_gl_program, "diffuse_colour");
+            auto mvp_loc = glGetUniformLocation(custom_gl_program, "mvp_matrix");
+            auto mv_loc = glGetUniformLocation(custom_gl_program, "mv_matrix");
+            auto norm_loc = glGetUniformLocation(custom_gl_program, "norm_matrix");
+            auto use_lighting_loc = glGetUniformLocation(custom_gl_program, "use_lighting");
+            auto use_smoothing_loc = glGetUniformLocation(custom_gl_program, "use_smoothing");
+
+            // Activate the custom shader program.
+            // Note: this must be done after locating uniforms but before uploading them.
+            GLuint prior_gl_program = 0;
+            glGetIntegerv(GL_CURRENT_PROGRAM, reinterpret_cast<GLint*>(&prior_gl_program));
+            glUseProgram(custom_gl_program);
 
             // Account for viewport aspect ratio to make the render square.
             const auto w = static_cast<int>(io.DisplaySize.x);
             const auto h = static_cast<int>(io.DisplaySize.y);
             const auto l_w = std::min(w, h);
             const auto l_h = std::min(h, w);
-            glViewport((w - l_w)/2, (h - l_h)/2, l_w, l_h);
+            //glViewport((w - l_w)/2, (h - l_h)/2, l_w, l_h);
+            glViewport(0, 0, w, h);
             CHECK_FOR_GL_ERRORS();
 
-            glEnable(GL_BLEND);
-            glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-            glColor4f( mesh_display_transform.colours[0],
-                       mesh_display_transform.colours[1],
-                       mesh_display_transform.colours[2],
-                       mesh_display_transform.colours[3] );
+            // Set various matrices that describe the coordinate system transformations.
+            const auto wpos  = ImGui::GetMainViewport()->WorkPos;
+            const auto wsize = ImGui::GetMainViewport()->WorkSize;
+            const auto waspect = wsize.x / wsize.y;
 
-            if(mesh_display_transform.use_lighting){
-                glShadeModel(GL_FLAT);
-                GLint use_double_sided_lighting = 1;
-                glLightModeliv(GL_LIGHT_MODEL_TWO_SIDE, &use_double_sided_lighting);
-                std::array<float, 4> light_diff { 1.0, 1.0, 1.0, 1.0 };
-                std::array<float, 4> light_spec { 1.0, 1.0, 1.0, 1.0 };
-                std::array<float, 4> light_pos { 1.5 * std::sin(1.0 * frame_count / 53.0),
-                                                 1.5 * std::sin(1.0 * frame_count / 75.0),
-                                                 1.5,  1.0 };
+            // Override to normalized and aspect-corrected screen space coords.
+            auto l_bound = -waspect/mesh_display_transform.zoom;
+            auto r_bound =  waspect/mesh_display_transform.zoom;
+            auto b_bound = -1.0/mesh_display_transform.zoom;
+            auto t_bound =  1.0/mesh_display_transform.zoom;
+            auto n_bound = -1000.0f/mesh_display_transform.zoom;
+            auto f_bound =  1000.0f/mesh_display_transform.zoom;
 
-                CHECK_FOR_GL_ERRORS();
-                glEnable(GL_LIGHTING);
-                CHECK_FOR_GL_ERRORS();
-                glEnable(GL_LIGHT0);
-                CHECK_FOR_GL_ERRORS();
-                glLightModelfv(GL_LIGHT_MODEL_AMBIENT, mesh_display_transform.colours.data());
-                glLightfv(GL_LIGHT0, GL_AMBIENT,       mesh_display_transform.colours.data());
-                glLightfv(GL_LIGHT0, GL_DIFFUSE,  light_diff.data());
-                glLightfv(GL_LIGHT0, GL_SPECULAR, light_spec.data());
-                glLightfv(GL_LIGHT0, GL_POSITION, light_pos.data());
-                CHECK_FOR_GL_ERRORS();
+            // Orthographic projection.
+            auto make_orthographic_projection_matrix = []( float left_bound   = -1.0f,
+                                                           float right_bound  =  1.0f,
+                                                           float bottom_bound = -1.0f,
+                                                           float top_bound    =  1.0f,
+                                                           float near_bound   = -1.0f,
+                                                           float far_bound    =  1.0f ){
+                num_array<float> proj(4,4,0.0f);
+                proj.coeff(0,0) = 2.0f/(right_bound - left_bound);
+                proj.coeff(1,1) = 2.0f/(top_bound - bottom_bound);
+                proj.coeff(2,2) = 2.0f/(near_bound - far_bound);
+                proj.coeff(0,3) = -(right_bound + left_bound) / (right_bound - left_bound);
+                proj.coeff(1,3) = -(top_bound + bottom_bound) / (top_bound - bottom_bound);
+                proj.coeff(2,3) = -(far_bound + near_bound) / (far_bound - near_bound);
+                proj.coeff(3,3) = 1.0f;
+                proj = proj.transpose();
+                return proj;
+            };
+            auto proj = make_orthographic_projection_matrix(l_bound, r_bound, b_bound, t_bound, n_bound, f_bound);
+
+            // Model matrix.
+            num_array<float> model = mesh_display_transform.model;
+
+            // Camera matrix.
+            auto make_camera_matrix = [](const vec3<double> &cam_pos,
+                                         const vec3<double> &target_pos,
+                                         const vec3<double> &up_unit){
+
+                num_array<float> out(4, 4, 0.0f);
+
+                // Extract the camera-facing coordinate system via a Gram-Schmidt-like process.
+                const auto inward   = (cam_pos - target_pos).unit(); // From target point of view.
+                const auto leftward = up_unit.Cross(inward).unit();
+                const auto upward   = inward.Cross(leftward).unit();
+
+                if( inward.isfinite()
+                &&  leftward.isfinite()
+                &&  upward.isfinite() ){
+                /*
+                    // Rotational component (inverted = transposed).
+                    out.coeff(0,0) = leftward.x;
+                    out.coeff(0,1) = leftward.y;
+                    out.coeff(0,2) = leftward.z;
+                                 
+                    out.coeff(1,0) = upward.x;
+                    out.coeff(1,1) = upward.y;
+                    out.coeff(1,2) = upward.z;
+                                 
+                    out.coeff(2,0) = inward.x;
+                    out.coeff(2,1) = inward.y;
+                    out.coeff(2,2) = inward.z;
+
+                    // Translational component (inverted = negated).
+                    out.coeff(0,3) = - cam_pos.Dot(leftward);
+                    out.coeff(1,3) = - cam_pos.Dot(upward);
+                    out.coeff(2,3) = - cam_pos.Dot(inward);
+                */
+                    // Rotational component.
+                    out.coeff(0,0) = leftward.x;
+                    out.coeff(1,0) = leftward.y;
+                    out.coeff(2,0) = leftward.z;
+                                 
+                    out.coeff(0,1) = upward.x;
+                    out.coeff(1,1) = upward.y;
+                    out.coeff(2,1) = upward.z;
+                                 
+                    out.coeff(0,2) = inward.x;
+                    out.coeff(1,2) = inward.y;
+                    out.coeff(2,2) = inward.z;
+
+                    // Translational component.
+                    out.coeff(0,3) = cam_pos.Dot(leftward);
+                    out.coeff(1,3) = cam_pos.Dot(upward);
+                    out.coeff(2,3) = cam_pos.Dot(inward);
+
+                    // Projection component.
+                    out.coeff(3,3) = 1.0f;
+                    out = out.transpose();
+
+                }else{
+                    out = num_array<float>().identity(4);
+                }
+                return out;
+            };
+
+            auto extract_normal_matrix = [](const num_array<float>& mvp){
+                // Extract only the rotational component of the MVP matrix. This can be used to transform mesh normals.
+                if( (mvp.num_rows() != 4) || (mvp.num_cols() != 4) ){
+                    throw std::logic_error("Expected 4x4 matrix");
+                }
+                num_array<float> out(3, 3, 0.0f);
+                for(long int r = 0; r < 3; ++r){
+                    for(long int c = 0; c < 3; ++c){
+                        out.coeff(r,c) = mvp.read_coeff(r,c);
+                    }
+                }
+                return out;
+            };
+
+            // Rotate camera according as per user's settings / precession.
+            const auto pi = std::acos(-1.0);
+            const auto x_rot = mesh_display_transform.rot_x * (2.0 * pi) / 360.0;
+            const auto y_rot = mesh_display_transform.rot_y * (2.0 * pi) / 360.0;
+            vec3<double> cam_pos = vec3<double>(0,0,1).rotate_around_y(y_rot)
+                                                      .rotate_around_x(x_rot)
+                                                      .unit() * std::exp(mesh_display_transform.cam_distort - 5.0);
+            vec3<double> target_pos = vec3<double>(0.0, 0.0, 0.0);
+            vec3<double> up_unit = vec3<double>(0.0, 1.0, 0.0).unit();
+            num_array<float> camera = make_camera_matrix( cam_pos, target_pos, up_unit );
+
+            // Final coordinate system transforms.
+            const auto mv = camera * model;
+            const auto mvp = proj * mv;
+            const auto norm = extract_normal_matrix(mvp);
+
+            // Pass uniforms to custom shader program iff they are needed.
+            const std::vector<float> mv_data( mv.cbegin(), mv.cend() );
+            if(0 <= mv_loc) glUniformMatrix4fv(mv_loc, 1, GL_FALSE, mv_data.data());
+
+            const std::vector<float> mvp_data( mvp.cbegin(), mvp.cend() );
+            if(0 <= mvp_loc) glUniformMatrix4fv(mvp_loc, 1, GL_FALSE, mvp_data.data());
+
+            const std::vector<float> norm_data( norm.cbegin(), norm.cend() );
+            if(0 <= norm_loc) glUniformMatrix3fv(norm_loc, 1, GL_FALSE, norm_data.data());
+
+            if(0 <= use_lighting_loc){
+                glUniform1ui(use_lighting_loc, (mesh_display_transform.use_lighting ? GL_TRUE : GL_FALSE));
+            }
+            if(0 <= use_smoothing_loc){
+                glUniform1ui(use_smoothing_loc, (mesh_display_transform.use_smoothing ? GL_TRUE : GL_FALSE));
+            }
+            if(0 < shader_user_colour_loc){
+                glUniform4f(shader_user_colour_loc, mesh_display_transform.colours[0],
+                                                    mesh_display_transform.colours[1],
+                                                    mesh_display_transform.colours[2],
+                                                    mesh_display_transform.colours[3] );
+            }
+            if(0 <= shader_diffuse_colour_loc){
+                glUniform4f(shader_diffuse_colour_loc, mesh_display_transform.colours[0],
+                                                       mesh_display_transform.colours[1],
+                                                       mesh_display_transform.colours[2],
+                                                       mesh_display_transform.colours[3] );
+            }
+            CHECK_FOR_GL_ERRORS();
+
+            // Set how overlapping vertices are rendered.
+            glEnable(GL_DEPTH_TEST);
+            glDepthFunc(GL_LESS);
+
+            if(mesh_display_transform.use_opaque){
+                glDisable(GL_BLEND);
+
+                glEnable(GL_CULL_FACE);
+                glCullFace(GL_BACK);
+
+            }else{
+                glEnable(GL_BLEND);
+                // Order-dependent rendering:
+                //glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+                // Order-independent rendering.
+                glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
+                glDisable(GL_CULL_FACE);
             }
 
+            CHECK_FOR_GL_ERRORS();
             draw_surface_meshes();
-
-            if(mesh_display_transform.use_lighting){
-                CHECK_FOR_GL_ERRORS();
-                glDisable(GL_LIGHT0);
-                CHECK_FOR_GL_ERRORS();
-                glDisable(GL_LIGHTING);
-                CHECK_FOR_GL_ERRORS();
-            }
-
-            glPopMatrix();
-            glViewport(0, 0, static_cast<int>(io.DisplaySize.x), static_cast<int>(io.DisplaySize.y));
+            CHECK_FOR_GL_ERRORS();
+            glUseProgram(prior_gl_program);
             CHECK_FOR_GL_ERRORS();
         }
-
 
         // Show a pop-up with information about DICOMautomaton.
         if(view_toggles.set_about_popup){
@@ -4674,6 +5716,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                                  // signal termination!
 
     oglm_ptr = nullptr;  // Release OpenGL resources while context is valid.
+    custom_shader = nullptr;
     Free_OpenGL_Texture(current_texture);
     Free_OpenGL_Texture(contouring_texture);
     Free_OpenGL_Texture(scale_bar_texture);

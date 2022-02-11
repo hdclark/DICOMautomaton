@@ -28,13 +28,13 @@ OperationDoc OpArgDocGiveWholeImageArrayAnAbdominalWindowLevel(){
 
 bool GiveWholeImageArrayAnAbdominalWindowLevel(Drover &DICOM_data,
                                                  const OperationArgPkg& /*OptArgs*/,
-                                                 const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                                                 std::map<std::string, std::string>& /*InvocationMetadata*/,
                                                  const std::string& /*FilenameLex*/){
     for(auto & img_arr : DICOM_data.image_data){
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                StandardAbdominalHUWindow,
                                                {}, {} )){
-            FUNCERR("Unable to force window to cover a reasonable abdominal HU range");
+            throw std::runtime_error("Unable to force window to cover a reasonable abdominal HU range");
         }
     }
 

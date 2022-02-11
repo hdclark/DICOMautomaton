@@ -5,6 +5,7 @@
 #include <map>
 #include <memory>
 #include <string>    
+#include <filesystem>
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
@@ -26,7 +27,7 @@ OperationDoc OpArgDocDumpAnEncompassedPoint(){
 
 bool DumpAnEncompassedPoint(Drover &DICOM_data,
                               const OperationArgPkg& /*OptArgs*/,
-                              const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                              std::map<std::string, std::string>& /*InvocationMetadata*/,
                               const std::string& /*FilenameLex*/){
     const auto apoint = DICOM_data.image_data.front()->imagecoll.images.front().center();
     auto encompassing_images = DICOM_data.image_data.front()->imagecoll.get_images_which_encompass_point(apoint);

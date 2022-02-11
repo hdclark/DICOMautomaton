@@ -598,7 +598,7 @@ OperationDoc OpArgDocTerminal_Viewer(){
 
 bool Terminal_Viewer(Drover &DICOM_data,
                      const OperationArgPkg& OptArgs,
-                     const std::map<std::string, std::string>& InvocationMetadata,
+                     std::map<std::string, std::string>& InvocationMetadata,
                      const std::string& FilenameLex){
 
     //---------------------------------------------- User Parameters --------------------------------------------------

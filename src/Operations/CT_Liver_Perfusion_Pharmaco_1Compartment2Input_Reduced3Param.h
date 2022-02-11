@@ -12,5 +12,5 @@ OperationDoc OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param();
 
 bool CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(Drover &DICOM_data,
                                                       const OperationArgPkg& /*OptArgs*/,
-                                                      const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                                                      std::map<std::string, std::string>& /*InvocationMetadata*/,
                                                       const std::string& /*FilenameLex*/);

@@ -1,0 +1,184 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# This script demonstrates Boolean logical operations.
+#
+# All top-level statements should evaluate to true.
+
+#####################################
+#       'Constant' operations       #
+#####################################
+
+True();
+
+# False(); # Would halt the rest of the script if executed here.
+
+NoOp();    # The default is to succeed and return true.
+
+# Note that some operations can have side-effects, meaning
+# they may partially succeed or alter the global state before
+# failing, which can lead to unexpected results.
+
+
+#####################################
+#         Nested operations         #
+#####################################
+
+NoneOf(){
+    False();
+};
+
+Not(){
+    Negate(){
+        True();
+    };
+};
+
+AllOf(){ NoneOf(){ False(); }; };
+
+Invert(){
+    False();
+};
+
+Ignore(){
+    False();
+};
+
+Ignore(){
+    True();
+};
+
+#####################################
+#          Group operations         #
+#####################################
+
+AllOf(){      # All child operations must evaluate to true.
+    True();
+    True();
+    True();
+};
+
+# AllOf() is aliased to And() and Group(), which all behave the same.
+
+
+AnyOf(){      # Succeeds when the first child operation evaluates to true.
+    False();
+    False();
+    True();
+    True();   # Never reached.
+};
+
+# Anyof() is aliased to FirstOf(), Coalesce(), and Or().
+
+
+NoneOf(){     # Succeeds only if all child operations evaluate to false.
+    False();
+    False();
+};
+
+# NoneOf() is aliased to Not(), Negate(), and Invert().
+
+
+Ignore(){     # Always evaluates child operations and returns true.
+    True();   # Executed and return value ignored.
+    False();  # Executed and return value ignored.
+    True();   # Executed and return value ignored.
+};
+
+# Ignore() is aliased to Always() and Force().
+
+
+#####################################
+#        Branching operations       #
+#####################################
+
+IfElse(){
+    True();    # Conditional.
+    True();    # Only executed if condition is true.
+};
+
+IfElse(){      # Returns true, even if condition is false.
+    False();   # Conditional.
+    False();   # Not reached in this example.
+};
+
+IfThenElse(){
+    False();   # Conditional.
+    False();   # Only executed if condition is true.
+    True();    # Only executed if condition is false.
+};
+
+#####################################
+#         Looping operations        #
+#####################################
+
+Repeat( N = 3 ){  # Perform all child operations N times.
+    NoOp();
+    NoOp();
+    True();
+    NoOp();
+};
+
+
+#While(){  # Loop until the conditional operation evaluates to true.
+#    CheckSomething();
+#    DoSomething1();
+#    DoSomething2();
+#};
+
+While( N = 5 ){  # Limit to 5 loops only.
+    False();  # Conditional.
+    True();   # Executed every loop.
+    True();   # Executed every loop.
+    NoOp();   # Executed every loop.
+};
+
+
+# Create a partition view where every item in the partition shares
+# the same metadata key-value information, execute the children
+# operations for every partition, and then re-combine all items.
+ForEachDistinct( KeysCommon='StudyDate;StudyTime' ){
+    True();
+    NoOp();
+};
+
+
+# Create a grouped view where every group is logically linked
+# (according to DICOM linkage rules) to a single radiotherapy
+# treatment plan, execute the children operations for every group,
+# and then recombine all items.
+#
+# Note that the same items may appear in multiple groups due to
+# DICOM linkage rules.
+#ForEachTPlan( ... ){
+#    True();
+#    NoOp();
+#};
+
+
+#####################################
+#       A complicated example       #
+#####################################
+
+IfThenElse(){
+    And(){
+        True();
+        True();
+        Not(){ False(); };
+        Not(){ Not(){ True(); }; };
+    };
+
+    Coalesce(){
+        False();  # Evaluated.
+        False();  # Evaluated.
+        True();   # Evaluated and breaks.
+        False();  # Not reached.
+    };
+
+    NoOp();       # Not reached.
+};
+
+
+# Finally, do something to prove we reached the end.
+DroverDebug();
+
+

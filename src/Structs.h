@@ -16,6 +16,8 @@
 #include <variant>
 #include <any>
 
+#include "Tables.h"
+
 #include <YgorMisc.h>
 #include "YgorImages.h"
 #include "YgorMath.h"
@@ -315,6 +317,21 @@ class Transform3 {
         template <class U> std::optional<U> GetMetadataValueAs(const std::string& key) const;
 };
 
+// This class holds two-dimensional tabular data, e.g., a simple spreadsheet.
+class Sparse_Table {
+    public:
+
+        tables::table2 table;
+
+        //Constructor/Destructors.
+        Sparse_Table();
+        Sparse_Table(const Sparse_Table &rhs); //Performs a deep copy (unless copying self).
+
+        //Member functions.
+        Sparse_Table & operator=(const Sparse_Table &rhs); //Performs a deep copy (unless copying self).
+};
+
+
 
 //---------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------------ Drover -------------------------------------------------------
@@ -418,6 +435,7 @@ class Drover {
         std::list<std::shared_ptr<TPlan_Config>> tplan_data;
         std::list<std::shared_ptr<Line_Sample>>  lsamp_data;
         std::list<std::shared_ptr<Transform3>>   trans_data;
+        std::list<std::shared_ptr<Sparse_Table>> table_data;
     
         //Constructors.
         Drover();
@@ -457,6 +475,7 @@ class Drover {
         bool Has_TPlan_Data() const;
         bool Has_LSamp_Data() const;
         bool Has_Tran3_Data() const;
+        bool Has_Table_Data() const;
 
         void Ensure_Contour_Data_Allocated();
 
@@ -467,6 +486,7 @@ class Drover {
         void Concatenate(std::list<std::shared_ptr<TPlan_Config>> in);
         void Concatenate(std::list<std::shared_ptr<Line_Sample>> in);
         void Concatenate(std::list<std::shared_ptr<Transform3>> in);
+        void Concatenate(std::list<std::shared_ptr<Sparse_Table>> in);
         void Concatenate(Drover in);
 
         void Consume(const std::shared_ptr<Contour_Data>& in);
@@ -476,6 +496,7 @@ class Drover {
         void Consume(std::list<std::shared_ptr<TPlan_Config>> in);
         void Consume(std::list<std::shared_ptr<Line_Sample>> in);
         void Consume(std::list<std::shared_ptr<Transform3>> in);
+        void Consume(std::list<std::shared_ptr<Sparse_Table>> in);
         void Consume(Drover in);
     
         void Plot_Dose_And_Contours() const;
@@ -519,6 +540,8 @@ class OperationArgPkg {
 
         bool insert(const std::string& key, std::string val); //Will not overwrite.
         bool insert(const std::string& keyval); //Will not overwrite.
+
+        void visit_opts( const std::function<void(const std::string &key, std::string &val)> &);
 
         //Children.
         void makeChild(std::string unparsed, const std::string& sepr = ":", const std::string& eqls = "=");

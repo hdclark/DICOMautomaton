@@ -7,6 +7,7 @@ add_library(Operations_objs OBJECT
     AnalyzePicketFence.cc
     AnalyzeTPlan.cc
     And.cc
+    AnyOf.cc
     ApplyCalibrationCurve.cc
     AutoCropImages.cc
     Average.cc
@@ -39,6 +40,7 @@ add_library(Operations_objs OBJECT
     CopyContours.cc
     CopyImages.cc
     CopyMeshes.cc
+    CopyTables.cc
     CopyPoints.cc
     CountVoxels.cc
     CropImageDoseToROIs.cc
@@ -56,6 +58,7 @@ add_library(Operations_objs OBJECT
     DeleteContours.cc
     DeleteImages.cc
     DeleteMeshes.cc
+    DeleteTables.cc
     DeletePoints.cc
     DetectShapes3D.cc
     DrawGeometry.cc
@@ -75,6 +78,7 @@ add_library(Operations_objs OBJECT
     EvaluateDoseVolumeStats.cc
     EvaluateNTCPModels.cc
     EvaluateTCPModels.cc
+    ValidateTPlan.cc
     ExportFITSImages.cc
     ExportLineSamples.cc
     ExportPointClouds.cc
@@ -83,16 +87,20 @@ add_library(Operations_objs OBJECT
     ExportSurfaceMeshesPLY.cc
     ExportSurfaceMeshesSTL.cc
     ExportSurfaceMeshesOFF.cc
+    ExportTables.cc
     ExportWarps.cc
     ExtractImageHistograms.cc
     ExtractAlphaBeta.cc
     ExtractPointsWarp.cc
     False.cc
     ForEachDistinct.cc
+    ForEachTPlan.cc
     FVPicketFence.cc
     GenerateCalibrationCurve.cc
+    GenerateMeshes.cc
     GenerateSurfaceMask.cc
     GenerateSyntheticImages.cc
+    GenerateTable.cc
     GenerateVirtualDataContourViaThresholdTestV1.cc
     GenerateVirtualDataDoseStairsV1.cc
     GenerateVirtualDataImageSphereV1.cc
@@ -108,24 +116,26 @@ add_library(Operations_objs OBJECT
     GrowContours.cc
     HighlightROIs.cc
     IfElse.cc
+    Ignore.cc
     ImageRoutineTests.cc
     ImprintImages.cc
     InterpolateSlices.cc
     IsolatedVoxelFilter.cc
     LoadFiles.cc
+    LoadFilesInteractively.cc
     LogScale.cc
     MaxMinPixels.cc
     MeldDose.cc
     ModelIVIM.cc
     ModifyContourMetadata.cc
     ModifyImageMetadata.cc
+    ModifyParameters.cc
     NegatePixels.cc
     NoOp.cc
+    NoneOf.cc
     NormalizeLineSamples.cc
     NormalizePixels.cc
-    Not.cc
     OptimizeStaticBeams.cc
-    Or.cc
     OrderImages.cc
     PartitionContours.cc
     PerturbPixels.cc
@@ -170,6 +180,7 @@ add_library(Operations_objs OBJECT
     $<$<BOOL:${WITH_SFML}>:PresentationImage.cc>
     $<$<BOOL:${WITH_SFML}>:SFML_Viewer.cc>
     $<$<BOOL:${WITH_SDL}>:SDL_Viewer.cc>
+    $<$<BOOL:${WITH_SDL}>:QueryUserInteractively.cc>
 
     $<$<BOOL:${WITH_EIGEN}>:DetectGrid3D.cc>
     $<$<BOOL:${WITH_EIGEN}>:VoxelRANSAC.cc>

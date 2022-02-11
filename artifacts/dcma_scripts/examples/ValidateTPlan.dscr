@@ -1,0 +1,87 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# Partition images logically.
+GroupImages(
+    ImageSelection = 'all',
+    KeysCommon = 'PatientID;
+                  StudyInstanceUID;
+                  SeriesInstanceUID;
+                  FrameOfReferenceUID',
+    #AutoSelectKeysCommon = 'false',
+    #Enforce = ''
+){};
+
+# Process each RTPLAN separately.
+ForEachTPlan(
+    #TPlanSelection = 'RTPlanLabel@ec.*'
+    TPlanSelection = 'RTPlanLabel@.*'
+){
+    # Document metadata.
+    #DroverDebug(
+    #    Verbosity = 'quiet',
+    #    IncludeMetadata = 'true',
+    #){};
+
+    # Test core functionality and nesting.
+    ValidateTPlan(
+        TPlanSelection=last,
+        TableSelection=last,
+        Checks='
+
+            has_VMAT_arc();
+
+            VMAT_arc_collimator_angles_not_degenerate();
+
+            # X jaw minimum: 20 mm.
+            # Y jaw minimum: 25 mm.
+            jaw_openings_larger_than(20.0, 25.0);
+
+            plan_name_has_no_spaces();
+
+            fail();
+
+            pass();
+
+            all_of(){
+                plan_name_has_no_spaces();
+                plan_name_has_no_spaces();
+            }
+
+            any_of(){
+                plan_name_has_no_spaces();
+                plan_name_has_no_spaces();
+            }
+
+            any_of(){
+                plan_name_has_no_spaces();
+                none_of(){
+                    plan_name_has_no_spaces();
+                }
+            }
+
+            all_of(){
+                plan_name_has_no_spaces();
+                none_of(){
+                    plan_name_has_no_spaces();
+                }
+            }
+
+            all_of(){
+                plan_name_has_no_spaces();
+                plan_name_has_no_spaces();
+                any_of(){
+                    plan_name_has_no_spaces();
+                    plan_name_has_no_spaces();
+                }
+            }
+        '
+    ){};
+  
+    #ExportTables(
+    #    Filename='table.csv',
+    #){};
+
+};
+
+
+

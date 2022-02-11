@@ -34,7 +34,7 @@ OperationDoc OpArgDocUBC3TMRI_DCE(){
 
 bool UBC3TMRI_DCE(Drover &DICOM_data,
                     const OperationArgPkg& /*OptArgs*/,
-                    const std::map<std::string, std::string>& InvocationMetadata,
+                    std::map<std::string, std::string>& InvocationMetadata,
                     const std::string& /*FilenameLex*/){
 
     //============================================= UBC3TMRI Vol01 DCE ================================================
@@ -78,7 +78,7 @@ bool UBC3TMRI_DCE(Drover &DICOM_data,
         temporal_avg_img_arrays.back()->imagecoll.Prune_Images_Satisfying(PurgeAboveNSeconds);
 
         if(!temporal_avg_img_arrays.back()->imagecoll.Condense_Average_Images(GroupSpatiallyOverlappingImages)){
-            FUNCERR("Cannot temporally average data set. Is it able to be averaged?");
+            throw std::runtime_error("Cannot temporally average data set. Is it able to be averaged?");
         }
     }
 
@@ -106,7 +106,7 @@ bool UBC3TMRI_DCE(Drover &DICOM_data,
                                                                              PartitionedImageVoxelVisitorMutator,
                                                                              {}, cc_all,
                                                                              &ud )){
-                FUNCERR("Unable to highlight ROIs");
+                throw std::runtime_error("Unable to highlight ROIs");
             }
         }
     }
@@ -119,7 +119,7 @@ bool UBC3TMRI_DCE(Drover &DICOM_data,
             tavgd_blurred.push_back( DICOM_data.image_data.back() );
 
             if(!tavgd_blurred.back()->imagecoll.Gaussian_Pixel_Blur({ }, 1.5)){
-                FUNCERR("Unable to blur temporally averaged images");
+                throw std::runtime_error("Unable to blur temporally averaged images");
             }
         }
     }else{
@@ -138,7 +138,7 @@ bool UBC3TMRI_DCE(Drover &DICOM_data,
         if(!poormans_C_map_img_arrays.back()->imagecoll.Transform_Images( DCEMRISigDiffC,
                                                                           { tavgd_blurred.front()->imagecoll },
                                                                           { } )){
-            FUNCERR("Unable to transform image array to make poor-man's C map");
+            throw std::runtime_error("Unable to transform image array to make poor-man's C map");
         }
     }
 
@@ -156,7 +156,7 @@ bool UBC3TMRI_DCE(Drover &DICOM_data,
             if(!iauc_c_map_img_arrays.back()->imagecoll.Process_Images( GroupSpatiallyOverlappingImages,
                                                                         DCEMRIAUCMap,
                                                                         {}, {} )){
-                FUNCERR("Unable to process image array to make IAUC map");
+                throw std::runtime_error("Unable to process image array to make IAUC map");
             }
         }
     }

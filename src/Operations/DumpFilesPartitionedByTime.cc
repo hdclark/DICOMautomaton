@@ -6,6 +6,7 @@
 #include <memory>
 #include <string>    
 #include <utility>            //Needed for std::pair.
+#include <filesystem>
 
 #include "../Structs.h"
 #include "DumpFilesPartitionedByTime.h"
@@ -27,7 +28,7 @@ OperationDoc OpArgDocDumpFilesPartitionedByTime(){
 
 bool DumpFilesPartitionedByTime(Drover &DICOM_data,
                                   const OperationArgPkg& /*OptArgs*/,
-                                  const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                                  std::map<std::string, std::string>& /*InvocationMetadata*/,
                                   const std::string& /*FilenameLex*/){
 
     std::multimap<std::string,std::string> partitions;

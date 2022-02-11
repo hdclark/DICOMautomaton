@@ -68,7 +68,7 @@ OperationDoc OpArgDocSpatialBlur(){
 
 bool SpatialBlur(Drover &DICOM_data,
                    const OperationArgPkg& OptArgs,
-                   const std::map<std::string, std::string>&,
+                   std::map<std::string, std::string>& /*InvocationMetadata*/,
                    const std::string&){
 
     //---------------------------------------------- User Parameters --------------------------------------------------

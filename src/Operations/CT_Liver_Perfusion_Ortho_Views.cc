@@ -33,7 +33,7 @@ OperationDoc OpArgDocCT_Liver_Perfusion_Ortho_Views (){
 
 bool CT_Liver_Perfusion_Ortho_Views(Drover &DICOM_data,
                                       const OperationArgPkg& /*OptArgs*/,
-                                      const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                                      std::map<std::string, std::string>& /*InvocationMetadata*/,
                                       const std::string& /*FilenameLex*/){
 
     //Get handles for each of the original image arrays so we can easily refer to them later.
@@ -45,7 +45,7 @@ bool CT_Liver_Perfusion_Ortho_Views(Drover &DICOM_data,
         if(!img_arr->imagecoll.Process_Images( GroupIndividualImages,
                                                StandardAbdominalHUWindow,
                                                {}, {} )){
-            FUNCERR("Unable to force window to cover reasonable HU range");
+            throw std::runtime_error("Unable to force window to cover reasonable HU range");
         }
     }
 
@@ -66,7 +66,7 @@ bool CT_Liver_Perfusion_Ortho_Views(Drover &DICOM_data,
                                                { std::ref(intersecting_row.back()->imagecoll),
                                                  std::ref(intersecting_col.back()->imagecoll) },
                                                {}, {} )){
-            FUNCERR("Unable to generate orthogonal image slices");
+            throw std::runtime_error("Unable to generate orthogonal image slices");
         }else{
             img_arr->imagecoll.images.clear();
         }
@@ -77,14 +77,14 @@ bool CT_Liver_Perfusion_Ortho_Views(Drover &DICOM_data,
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                StandardAbdominalHUWindow,
                                                {}, {} )){
-            FUNCERR("Unable to force window to cover reasonable HU range");
+            throw std::runtime_error("Unable to force window to cover reasonable HU range");
         }
     }
     if(true) for(auto & img_arr : intersecting_col){
         if(!img_arr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                StandardAbdominalHUWindow,
                                                {}, {} )){
-            FUNCERR("Unable to force window to cover reasonable HU range");
+            throw std::runtime_error("Unable to force window to cover reasonable HU range");
         }
     }
 

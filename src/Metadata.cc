@@ -17,6 +17,82 @@
 
 #include "Metadata.h"
 
+// A routine that extracts metadata from each of the Drover members.
+template <class ptr>
+std::set<std::string> Extract_Distinct_Values(ptr p, const std::string &key){
+    std::set<std::string> out;
+    if(p == nullptr) return out;
+    using obj_t = std::decay_t<decltype(*p)>;
+
+    // Contour_Data (actually contour_collection<double>).
+    //
+    // NOTE: accessing Contour_Data elements is different from other Drover elements!
+    if constexpr (std::is_same_v< obj_t, contour_collection<double> >){
+        const auto distinct_vals = p->get_distinct_values_for_key(key);
+        return std::set<std::string>( std::begin(distinct_vals), std::end(distinct_vals) );
+
+    // Image_Array.
+    }else if constexpr (std::is_same_v< obj_t, Image_Array >){
+        const auto distinct_vals = p->imagecoll.get_distinct_values_for_key(key);
+        return std::set<std::string>( std::begin(distinct_vals), std::end(distinct_vals) );
+    
+    // Point_Cloud.
+    }else if constexpr (std::is_same_v< obj_t, Point_Cloud >){
+        std::optional<std::string> val_opt = ( p->pset.metadata.count(key) != 0 ) ?
+                                               p->pset.metadata[key] : std::optional<std::string>();
+        if(val_opt) out.insert(val_opt.value());
+        return out;
+
+    // Surface_Mesh.
+    }else if constexpr (std::is_same_v< obj_t, Surface_Mesh >){
+        std::optional<std::string> val_opt = ( p->meshes.metadata.count(key) != 0 ) ?
+                                               p->meshes.metadata[key] : std::optional<std::string>();
+        if(val_opt) out.insert(val_opt.value());
+        return out;
+
+    // TPlan_Config.
+    }else if constexpr (std::is_same_v< obj_t, TPlan_Config >){
+        std::optional<std::string> val_opt = ( p->metadata.count(key) != 0 ) ?
+                                               p->metadata[key] : std::optional<std::string>();
+        if(val_opt) out.insert(val_opt.value());
+        return out;
+
+    // Line_Sample.
+    }else if constexpr (std::is_same_v< obj_t, Line_Sample >){
+        std::optional<std::string> val_opt = ( p->line.metadata.count(key) != 0 ) ?
+                                               p->line.metadata[key] : std::optional<std::string>();
+        if(val_opt) out.insert(val_opt.value());
+        return out;
+
+    // Transform3.
+    }else if constexpr (std::is_same_v< obj_t, Transform3 >){
+        std::optional<std::string> val_opt = ( p->metadata.count(key) != 0 ) ?
+                                               p->metadata[key] : std::optional<std::string>();
+        if(val_opt) out.insert(val_opt.value());
+        return out;
+
+    // Sparse_Table.
+    }else if constexpr (std::is_same_v< obj_t, Sparse_Table >){
+        std::optional<std::string> val_opt = ( p->table.metadata.count(key) != 0 ) ?
+                                               p->table.metadata[key] : std::optional<std::string>();
+        if(val_opt) out.insert(val_opt.value());
+        return out;
+    }
+
+    throw std::logic_error("Type not detected properly. Refusing to continue.");
+    return out;
+}
+//template std::set<std::string> Extract_Distinct_Values(std::shared_ptr<Contour_Data>, const std::string &);
+template std::set<std::string> Extract_Distinct_Values(contour_collection<double>*, const std::string &);
+template std::set<std::string> Extract_Distinct_Values(std::shared_ptr<Image_Array >, const std::string &);
+template std::set<std::string> Extract_Distinct_Values(std::shared_ptr<Point_Cloud >, const std::string &);
+template std::set<std::string> Extract_Distinct_Values(std::shared_ptr<Surface_Mesh>, const std::string &);
+template std::set<std::string> Extract_Distinct_Values(std::shared_ptr<TPlan_Config>, const std::string &);
+template std::set<std::string> Extract_Distinct_Values(std::shared_ptr<Line_Sample >, const std::string &);
+template std::set<std::string> Extract_Distinct_Values(std::shared_ptr<Transform3  >, const std::string &);
+template std::set<std::string> Extract_Distinct_Values(std::shared_ptr<Sparse_Table>, const std::string &);
+
+
 static
 void insert(metadata_map_t &out, const std::string &key, const std::string &val){
     out[key] = val;
@@ -731,6 +807,30 @@ metadata_map_t coalesce_metadata_for_rtdose(const metadata_map_t &ref, meta_evol
     return out;
 }
 
+metadata_map_t coalesce_metadata_for_basic_image(const metadata_map_t &ref, meta_evolve e){
+    metadata_map_t out;
+
+    out.merge( coalesce_metadata_sop_common(ref) );
+    out.merge( coalesce_metadata_patient(ref) );
+    out.merge( coalesce_metadata_general_study(ref) );
+    out.merge( coalesce_metadata_general_series(ref) );
+    out.merge( coalesce_metadata_patient_study(ref) );
+    out.merge( coalesce_metadata_frame_of_reference(ref) );
+    out.merge( coalesce_metadata_general_equipment(ref) );
+    out.merge( coalesce_metadata_general_image(ref) );
+    out.merge( coalesce_metadata_image_plane(ref) );
+    out.merge( coalesce_metadata_image_pixel(ref) );
+    out.merge( coalesce_metadata_misc(ref) );
+
+    if(e == meta_evolve::iterate){
+        // Assign a new SOP Instance UID.
+        auto new_sop = coalesce_metadata_sop_common({});
+        insert(out, "SOPInstanceUID", new_sop["SOPInstanceUID"]);
+        insert(out, "MediaStorageSOPInstanceUID", new_sop["MediaStorageSOPInstanceUID"]);
+    }
+    return out;
+}
+
 metadata_map_t coalesce_metadata_for_basic_mr_image(const metadata_map_t &ref, meta_evolve e){
     metadata_map_t out;
     out["Modality"] = "MR";
@@ -832,6 +932,28 @@ metadata_map_t coalesce_metadata_for_basic_def_reg(const metadata_map_t &ref, me
     //out.merge( coalesce_metadata_enhanced_general_equipment(ref) );
     //out.merge( coalesce_metadata_spatial_registration(ref) );
     //out.merge( coalesce_metadata_deformable_spatial_registration(ref) );
+    out.merge( coalesce_metadata_misc(ref) );
+
+    if(e == meta_evolve::iterate){
+        // Assign a new SOP Instance UID.
+        auto new_sop = coalesce_metadata_sop_common({});
+        insert(out, "SOPInstanceUID", new_sop["SOPInstanceUID"]);
+        insert(out, "MediaStorageSOPInstanceUID", new_sop["MediaStorageSOPInstanceUID"]);
+    }
+    return out;
+}
+
+metadata_map_t coalesce_metadata_for_basic_table(const metadata_map_t &ref, meta_evolve e){
+    metadata_map_t out;
+    out["Modality"] = "TAB";
+
+    out.merge( coalesce_metadata_sop_common(ref) );
+    //out.merge( coalesce_metadata_patient(ref) );
+    out.merge( coalesce_metadata_general_study(ref) );
+    out.merge( coalesce_metadata_general_series(ref) );
+    //out.merge( coalesce_metadata_patient_study(ref) );
+    //out.merge( coalesce_metadata_frame_of_reference(ref) );
+    //out.merge( coalesce_metadata_general_equipment(ref) );
     out.merge( coalesce_metadata_misc(ref) );
 
     if(e == meta_evolve::iterate){

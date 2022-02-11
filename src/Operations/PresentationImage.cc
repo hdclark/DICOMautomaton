@@ -124,7 +124,7 @@ OperationDoc OpArgDocPresentationImage(){
 
 bool PresentationImage(Drover &DICOM_data,
                          const OperationArgPkg& OptArgs,
-                         const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                         std::map<std::string, std::string>& /*InvocationMetadata*/,
                          const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
@@ -262,7 +262,7 @@ bool PresentationImage(Drover &DICOM_data,
         const auto img_rows = img_it->rows;
 
         if(!isininc(1,img_rows,10000) || !isininc(1,img_cols,10000)){
-            FUNCERR("Image dimensions are not reasonable. Is this a mistake? Refusing to continue");
+            throw std::runtime_error("Image dimensions are not reasonable. Is this a mistake? Refusing to continue");
         }
 
         sf::Image animage;
@@ -382,8 +382,8 @@ bool PresentationImage(Drover &DICOM_data,
 
         out.first = sf::Texture();
         out.second = sf::Sprite();
-        if(!out.first.create(img_cols, img_rows)) FUNCERR("Unable to create empty SFML texture");
-        if(!out.first.loadFromImage(animage)) FUNCERR("Unable to create SFML texture from planar_image");
+        if(!out.first.create(img_cols, img_rows)) throw std::runtime_error("Unable to create empty SFML texture");
+        if(!out.first.loadFromImage(animage)) throw std::runtime_error("Unable to create SFML texture from planar_image");
         //out.first.setSmooth(true);        
         out.first.setSmooth(false);        
         out.second.setTexture(out.first);
@@ -430,7 +430,7 @@ bool PresentationImage(Drover &DICOM_data,
 
     // Prep the first image.
     if(!load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
-        FUNCERR("Unable to load image --> texture --> sprite");
+        throw std::runtime_error("Unable to load image --> texture --> sprite");
     }
     scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
 

@@ -22,6 +22,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <filesystem>
 
 #include "../Insert_Contours.h"
 #include "../Structs.h"
@@ -186,8 +187,7 @@ lCompile_Regex(const std::string& input){
 }
 bool AnalyzeHistograms(Drover &DICOM_data,
                          const OperationArgPkg& OptArgs,
-                         const std::map<std::string, std::string>&
-                         /*InvocationMetadata*/,
+                         std::map<std::string, std::string>& /*InvocationMetadata*/,
                          const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
@@ -555,23 +555,18 @@ bool AnalyzeHistograms(Drover &DICOM_data,
 
     //Write the report to file.
     if(!LSs.empty()){
-        try{
-            auto gen_filename = [&]() -> std::string {
-                if(!SummaryFilename.empty()){
-                    return SummaryFilename;
-                }
-                return Get_Unique_Sequential_Filename("/tmp/dcma_analyzedosevolumehistograms_", 6, ".csv");
-            };
+        auto gen_filename = [&]() -> std::string {
+            if(!SummaryFilename.empty()){
+                return SummaryFilename;
+            }
+            const auto base = std::filesystem::temp_directory_path() / "dcma_analyzehistograms_";
+            return Get_Unique_Sequential_Filename(base.string(), 6, ".csv");
+        };
 
-            FUNCINFO("About to claim a mutex");
-            Append_File( gen_filename,
-                         "dicomautomaton_operation_analyzedosevolumehistograms_mutex",
-                         header.str(),
-                         report.str() );
-
-        }catch(const std::exception &e){
-            FUNCERR("Unable to write to output file: '" << e.what() << "'");
-        }
+        Append_File( gen_filename,
+                     "dcma_op_analyzehistograms_mutex",
+                     header.str(),
+                     report.str() );
     }
 
     return true;

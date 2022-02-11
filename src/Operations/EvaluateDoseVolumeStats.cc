@@ -18,6 +18,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <filesystem>
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
@@ -108,7 +109,7 @@ OperationDoc OpArgDocEvaluateDoseVolumeStats(){
 
 bool EvaluateDoseVolumeStats(Drover &DICOM_data,
                                const OperationArgPkg& OptArgs,
-                               const std::map<std::string, std::string>& /*InvocationMetadata*/,
+                               std::map<std::string, std::string>& /*InvocationMetadata*/,
                                const std::string& FilenameLex){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
@@ -257,16 +258,17 @@ bool EvaluateDoseVolumeStats(Drover &DICOM_data,
 
     //Report the findings. 
     FUNCINFO("Attempting to claim a mutex");
-    try{
+    {
         //File-based locking is used so this program can be run over many patients concurrently.
         //
         //Try open a named mutex. Probably created in /dev/shm/ if you need to clear it manually...
         boost::interprocess::named_mutex mutex(boost::interprocess::open_or_create,
-                                               "dicomautomaton_operation_evaluatendvstats_mutex");
+                                               "dcma_op_evaluatendvstats_mutex");
         boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(mutex);
 
         if(OutFilename.empty()){
-            OutFilename = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_evaluatendvstats_", 6, ".csv");
+            const auto base = std::filesystem::temp_directory_path() / "dcma_evaluatedvstats_";
+            OutFilename = Get_Unique_Sequential_Filename(base.string(), 6, ".csv");
         }
         const auto FirstWrite = !Does_File_Exist_And_Can_Be_Read(OutFilename);
         std::fstream FO_tcp(OutFilename, std::fstream::out | std::fstream::app);
@@ -314,9 +316,6 @@ bool EvaluateDoseVolumeStats(Drover &DICOM_data,
         }
         FO_tcp.flush();
         FO_tcp.close();
-
-    }catch(const std::exception &e){
-        FUNCERR("Unable to write to output dose-volume stats file: '" << e.what() << "'");
     }
 
     return true;

@@ -319,7 +319,7 @@ samples_1D<double> Read_Histogram(std::istream &is,
 
 
 bool Load_From_DVH_Files( Drover &DICOM_data,
-                          const std::map<std::string,std::string> & /* InvocationMetadata */,
+                          std::map<std::string,std::string> & /* InvocationMetadata */,
                           const std::string &FilenameLex,
                           std::list<std::filesystem::path> &Filenames ){
 
@@ -340,14 +340,14 @@ bool Load_From_DVH_Files( Drover &DICOM_data,
     while(bfit != Filenames.end()){
         FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
-        const auto Filename = bfit->string();
+        const auto Filename = *bfit;
 
         try{
             std::list<std::shared_ptr<Line_Sample>> lsamp_data;
 
             //////////////////////////////////////////////////////////////
             // Attempt to load the file.
-            std::ifstream FI(Filename.c_str(), std::ios::in);
+            std::ifstream FI(Filename, std::ios::in);
 
             if(!FI.good()) throw std::runtime_error("Unable to read file.");
 

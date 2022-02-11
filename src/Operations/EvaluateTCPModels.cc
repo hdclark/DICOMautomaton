@@ -18,6 +18,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <filesystem>
 
 #include "../Contour_Collection_Estimates.h"
 #include "../Structs.h"
@@ -232,8 +233,7 @@ OperationDoc OpArgDocEvaluateTCPModels(){
 
 bool EvaluateTCPModels(Drover &DICOM_data,
                          const OperationArgPkg& OptArgs,
-                         const std::map<std::string, std::string>&
-                         /*InvocationMetadata*/,
+                         std::map<std::string, std::string>& /*InvocationMetadata*/,
                          const std::string& FilenameLex){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
@@ -368,16 +368,17 @@ bool EvaluateTCPModels(Drover &DICOM_data,
 
     //Report the findings. 
     FUNCINFO("Attempting to claim a mutex");
-    try{
+    {
         //File-based locking is used so this program can be run over many patients concurrently.
         //
         //Try open a named mutex. Probably created in /dev/shm/ if you need to clear it manually...
         boost::interprocess::named_mutex mutex(boost::interprocess::open_or_create,
-                                               "dicomautomaton_operation_evaluatetcp_mutex");
+                                               "dcma_op_evaluatetcp_mutex");
         boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(mutex);
 
         if(TCPFileName.empty()){
-            TCPFileName = Get_Unique_Sequential_Filename("/tmp/dicomautomaton_evaluatetcp_", 6, ".csv");
+            const auto base = std::filesystem::temp_directory_path() / "dcma_evaluatetcp_";
+            TCPFileName = Get_Unique_Sequential_Filename(base.string(), 6, ".csv");
         }
         const auto FirstWrite = !Does_File_Exist_And_Can_Be_Read(TCPFileName);
         std::fstream FO_tcp(TCPFileName, std::fstream::out | std::fstream::app);
@@ -421,9 +422,6 @@ bool EvaluateTCPModels(Drover &DICOM_data,
         }
         FO_tcp.flush();
         FO_tcp.close();
-
-    }catch(const std::exception &e){
-        FUNCERR("Unable to write to output TCP file: '" << e.what() << "'");
     }
 
     return true;

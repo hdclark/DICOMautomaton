@@ -16,6 +16,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <filesystem>
 
 #include "../Common_Boost_Serialization.h"
 #include "../KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"
@@ -68,7 +69,7 @@ OperationDoc OpArgDocDumpPerROIParams_KineticModel_1Compartment2Input_5Param(){
 bool DumpPerROIParams_KineticModel_1Compartment2Input_5Param(
     Drover &DICOM_data,
     const OperationArgPkg& OptArgs,
-    const std::map<std::string, std::string>& /*InvocationMetadata*/,
+    std::map<std::string, std::string>& /*InvocationMetadata*/,
     const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
