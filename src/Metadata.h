@@ -93,6 +93,7 @@ metadata_map_t coalesce_metadata_sop_common(const metadata_map_t &ref);
 metadata_map_t coalesce_metadata_patient(const metadata_map_t &ref);
 metadata_map_t coalesce_metadata_general_study(const metadata_map_t &ref);
 metadata_map_t coalesce_metadata_general_series(const metadata_map_t &ref);
+metadata_map_t coalesce_metadata_rt_series(const metadata_map_t &ref);
 metadata_map_t coalesce_metadata_patient_study(const metadata_map_t &ref);
 metadata_map_t coalesce_metadata_frame_of_reference(const metadata_map_t &ref);
 metadata_map_t coalesce_metadata_general_equipment(const metadata_map_t &ref);
@@ -110,6 +111,9 @@ metadata_map_t coalesce_metadata_mr_image(const metadata_map_t &ref);
 metadata_map_t coalesce_metadata_mr_diffusion(const metadata_map_t &ref);
 metadata_map_t coalesce_metadata_mr_spectroscopy(const metadata_map_t &ref);
 metadata_map_t coalesce_metadata_mr_private_siemens_diffusion(const metadata_map_t &ref);
+metadata_map_t coalesce_metadata_structure_set(const metadata_map_t &ref);
+metadata_map_t coalesce_metadata_roi_contour(const metadata_map_t &ref);
+metadata_map_t coalesce_metadata_rt_roi_observations(const metadata_map_t &ref);
 metadata_map_t coalesce_metadata_misc(const metadata_map_t &ref);
 
 
@@ -123,6 +127,7 @@ enum class meta_evolve {
 };
 metadata_map_t coalesce_metadata_for_lsamp(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
 metadata_map_t coalesce_metadata_for_rtdose(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
+metadata_map_t coalesce_metadata_for_rtstruct(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
 metadata_map_t coalesce_metadata_for_basic_image(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
 metadata_map_t coalesce_metadata_for_basic_mr_image(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
 metadata_map_t coalesce_metadata_for_basic_ct_image(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);

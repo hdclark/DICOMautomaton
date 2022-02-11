@@ -1323,6 +1323,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                 cimg_ptr->fill_pixels(-1.0f);
             }
 
+            // Inherit common metadata from the parent.
+
+
             // Reset any existing contours.
             contouring_imgs.Ensure_Contour_Data_Allocated();
             contouring_imgs.contour_data->ccs.clear();
@@ -1940,6 +1943,19 @@ bool SDL_Viewer(Drover &DICOM_data,
             try{
                 if( !img_valid ) throw std::runtime_error("Contouring image not valid.");
 
+                auto cm = (*img_array_ptr_it)->imagecoll.get_common_metadata({});
+                cm = coalesce_metadata_for_rtstruct(cm);
+
+                auto FrameOfReferenceUID_opt = get_as<std::string>(cm, "FrameOfReferenceUID");
+                if(!FrameOfReferenceUID_opt){
+                    throw std::runtime_error("Missing 'FrameOfReferenceUID' metadata element. Cannot continue.");
+                }
+                auto StudyInstanceUID_opt = get_as<std::string>(cm, "StudyInstanceUID");
+                if(!StudyInstanceUID_opt){
+                    throw std::runtime_error("Missing 'StudyInstanceUID' metadata element. Cannot continue.");
+                }
+
+
                 for(auto &cc : contouring_imgs.contour_data->ccs){
                     contouring_imgs.Ensure_Contour_Data_Allocated();
 
@@ -1947,23 +1963,10 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                     //Trim empty contours from the shuttle.
                     cc.Purge_Contours_Below_Point_Count_Threshold(3);
-                    if(cc.contours.empty()) throw std::runtime_error("Given empty contour collection. Contours need >3 points each.");
-
-                    auto FrameOfReferenceUID = disp_img_it->GetMetadataValueAs<std::string>("FrameOfReferenceUID");
-                    if(FrameOfReferenceUID){
-                        cc.Insert_Metadata("FrameOfReferenceUID", FrameOfReferenceUID.value());
-                    }else{
-                        throw std::runtime_error("Missing 'FrameOfReferenceUID' metadata element. Cannot continue.");
-                    }
-
-                    auto StudyInstanceUID = disp_img_it->GetMetadataValueAs<std::string>("StudyInstanceUID");
-                    if(StudyInstanceUID){
-                        cc.Insert_Metadata("StudyInstanceUID", StudyInstanceUID.value());
-                    }else{
-                        throw std::runtime_error("Missing 'StudyInstanceUID' metadata element. Cannot continue.");
-                    }
+                    if(cc.contours.empty()) throw std::runtime_error("Given empty contour collection. Contours need at least 3 vertices each.");
 
                     const double MinimumSeparation = disp_img_it->pxl_dz; // TODO: use more robust method here.
+                    for(auto &cop : cc.contours) cop.metadata = cm;
                     cc.Insert_Metadata("ROIName", roi_name);
                     cc.Insert_Metadata("NormalizedROIName", X(roi_name));
                     cc.Insert_Metadata("ROINumber", "10000"); // TODO: find highest existing and ++ it.
