@@ -3341,7 +3341,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             ||  !img_valid ) return;
 
             //We have three distinct coordinate systems: DICOM, pixel coordinates and screen pixel coordinates,
-            // and SFML 'world' coordinates. We need to map from the DICOM coordinates to screen pixel coords.
+            // and SDL 'world' coordinates. We need to map from the DICOM coordinates to screen pixel coords.
             //
             //Get a DICOM-coordinate bounding box for the image.
             const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->rows;
@@ -3391,7 +3391,8 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
 
             // Display a visual cue of the tagged position.
-            if( tagged_pos ){
+            if( tagged_pos 
+            &&  image_mouse_pos.DICOM_to_pixels ){
                 const auto box_radius = 3.0f;
                 const auto c = ImColor(1.0f, 0.2f, 0.2f, 1.0f);
 
