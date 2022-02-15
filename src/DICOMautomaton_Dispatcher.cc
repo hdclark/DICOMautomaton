@@ -430,7 +430,7 @@ try{
     // Add a delay on Windows so we can inspect debug info.
     // Note: this will be replaced when logging is improved.
     FUNCWARN(e.what());
-    std::this_thread::sleep_for(std::chrono::seconds(10));
+    std::this_thread::sleep_for(std::chrono::seconds(15));
 #endif
     FUNCERR(e.what());
 }
