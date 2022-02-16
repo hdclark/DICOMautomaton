@@ -677,7 +677,7 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                         ||  (buffer_space < std::abs((closest - pos).Dot(cit->col_unit)))
                         ||  (buffer_space < std::abs((closest - pos).Dot(cit->row_unit.Cross(cit->col_unit)))) ) continue;
 
-                        if(buffer_space < dR) continue;
+                        //if(buffer_space < dR) continue;
                     }
 
                     cit->reference( r, c, channel ) = std::clamp(f(pos, dR, cit->value(r, c, channel)), intensity_min, intensity_max);
@@ -2817,6 +2817,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             return true;
         };
         try{
+            // Break from the main render loop if false is received.
             if(!display_main_menu_bar()) break;
         }catch(const std::exception &e){
             FUNCWARN("Exception in display_main_menu_bar(): '" << e.what() << "'");
@@ -3595,7 +3596,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             if( view_toggles.view_contouring_enabled
             ||  view_toggles.view_drawing_enabled ){
                 // Provide a visual cue for the contouring brush.
-                {
+                if(image_mouse_pos.mouse_hovering_image){
                     const auto pixel_radius = static_cast<float>(contouring_reach) * image_mouse_pos.pixel_scale;
                     const auto c = ImColor(0.0f, 1.0f, 0.8f, 1.0f);
 
@@ -5714,6 +5715,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         SDL_GL_SwapWindow(window);
     }
+
+    std::unique_lock<std::shared_mutex> ppc_lock(preprocessed_contour_mutex);
     terminate_contour_preprocessors();
     std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Hope that this is enough time for preprocessing threads to terminate.
                                                                  // TODO: use a work queue with condition variable to
