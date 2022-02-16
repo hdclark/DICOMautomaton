@@ -27,6 +27,7 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
+#include "../Metadata.h"
 #ifdef DCMA_USE_CGAL
     #include "../Surface_Meshes.h"
 #endif // DCMA_USE_CGAL
@@ -261,13 +262,16 @@ bool ContourViaThreshold(Drover &DICOM_data,
         if(cl > cu){
             throw std::invalid_argument("Thresholds conflict. Mesh will contain zero faces. Refusing to continue.");
         }
+        
+        auto cm = (*iap_it)->imagecoll.get_common_metadata({});
+        cm = coalesce_metadata_for_rtstruct(cm);
 
         for(const auto &animg : (*iap_it)->imagecoll.images){
             if( (animg.rows < 1) || (animg.columns < 1) || (Channel >= animg.channels) ){
                 throw std::runtime_error("Image or channel is empty -- cannot contour via thresholds.");
             }
             const auto animg_ptr = &(animg);
-            tp.submit_task([&,cl,cu,animg_ptr]() -> void {
+            tp.submit_task([&,cl,cu,animg_ptr,cm]() -> void {
 
                 // ---------------------------------------------------
                 // The binary inclusivity method.
@@ -370,15 +374,13 @@ bool ContourViaThreshold(Drover &DICOM_data,
 
                             copl.emplace_back();
                             copl.back().closed = true;
+                            copl.back().metadata = cm;
                             copl.back().metadata["ROIName"] = ROILabel;
                             copl.back().metadata["NormalizedROIName"] = NormalizedROILabel;
                             copl.back().metadata["Description"] = "Contoured via threshold ("_s + std::to_string(Lower)
                                                                  + " <= pixel_val <= " + std::to_string(Upper) + ")";
                             copl.back().metadata["ROINumber"] = std::to_string(10000); // TODO: find highest existing and ++ it.
                             copl.back().metadata["MinimumSeparation"] = std::to_string(MinimumSeparation);
-                            for(const auto &key : { "StudyInstanceUID", "FrameOfReferenceUID" }){
-                                if(animg_ptr->metadata.count(key) != 0) copl.back().metadata[key] = animg_ptr->metadata.at(key);
-                            }
 
                             const auto A = he_it->first; //The starting node.
                             auto B = A;
@@ -762,15 +764,13 @@ bool ContourViaThreshold(Drover &DICOM_data,
                                 // If a valid contour edge was found, start following along the contour.
                                 copl.emplace_back();
                                 copl.back().closed = true;
+                                copl.back().metadata = cm;
                                 copl.back().metadata["ROIName"] = ROILabel;
                                 copl.back().metadata["NormalizedROIName"] = NormalizedROILabel;
                                 copl.back().metadata["Description"] = "Contoured via threshold ("_s + std::to_string(Lower)
                                                                      + " <= pixel_val <= " + std::to_string(Upper) + ")";
                                 copl.back().metadata["ROINumber"] = std::to_string(10000); // TODO: find highest existing and ++ it.
                                 copl.back().metadata["MinimumSeparation"] = std::to_string(MinimumSeparation);
-                                for(const auto &key : { "StudyInstanceUID", "FrameOfReferenceUID" }){
-                                    if(animg_ptr->metadata.count(key) != 0) copl.back().metadata[key] = animg_ptr->metadata.at(key);
-                                }
 
                                 copl.back().points.push_back( n1_ptr->tail );
 
@@ -901,15 +901,13 @@ bool ContourViaThreshold(Drover &DICOM_data,
                     // Tag the contours with metadata.
                     for(auto &cop : lcc.contours){
                         cop.closed = true;
+                        cop.metadata = cm;
                         cop.metadata["ROIName"] = ROILabel;
                         cop.metadata["NormalizedROIName"] = NormalizedROILabel;
                         cop.metadata["Description"] = "Contoured via threshold ("_s + LowerStr
                                                      + " <= pixel_val <= " + UpperStr + ")";
                         cop.metadata["MinimumSeparation"] = std::to_string(MinimumSeparation);
                         cop.metadata["ROINumber"] = std::to_string(10000); // TODO: find highest existing and ++ it.
-                        for(const auto &key : { "StudyInstanceUID", "FrameOfReferenceUID" }){
-                            if(animg_ptr->metadata.count(key) != 0) cop.metadata[key] = animg_ptr->metadata.at(key);
-                        }
                     }
 
                     // Try to simplify the contours as much as possible.

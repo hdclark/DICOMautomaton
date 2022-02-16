@@ -677,7 +677,7 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                         ||  (buffer_space < std::abs((closest - pos).Dot(cit->col_unit)))
                         ||  (buffer_space < std::abs((closest - pos).Dot(cit->row_unit.Cross(cit->col_unit)))) ) continue;
 
-                        if(buffer_space < dR) continue;
+                        //if(buffer_space < dR) continue;
                     }
 
                     cit->reference( r, c, channel ) = std::clamp(f(pos, dR, cit->value(r, c, channel)), intensity_min, intensity_max);
@@ -1323,6 +1323,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                 cimg_ptr->fill_pixels(-1.0f);
             }
 
+            // Inherit common metadata from the parent.
+
+
             // Reset any existing contours.
             contouring_imgs.Ensure_Contour_Data_Allocated();
             contouring_imgs.contour_data->ccs.clear();
@@ -1940,6 +1943,19 @@ bool SDL_Viewer(Drover &DICOM_data,
             try{
                 if( !img_valid ) throw std::runtime_error("Contouring image not valid.");
 
+                auto cm = (*img_array_ptr_it)->imagecoll.get_common_metadata({});
+                cm = coalesce_metadata_for_rtstruct(cm);
+
+                auto FrameOfReferenceUID_opt = get_as<std::string>(cm, "FrameOfReferenceUID");
+                if(!FrameOfReferenceUID_opt){
+                    throw std::runtime_error("Missing 'FrameOfReferenceUID' metadata element. Cannot continue.");
+                }
+                auto StudyInstanceUID_opt = get_as<std::string>(cm, "StudyInstanceUID");
+                if(!StudyInstanceUID_opt){
+                    throw std::runtime_error("Missing 'StudyInstanceUID' metadata element. Cannot continue.");
+                }
+
+
                 for(auto &cc : contouring_imgs.contour_data->ccs){
                     contouring_imgs.Ensure_Contour_Data_Allocated();
 
@@ -1947,23 +1963,10 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                     //Trim empty contours from the shuttle.
                     cc.Purge_Contours_Below_Point_Count_Threshold(3);
-                    if(cc.contours.empty()) throw std::runtime_error("Given empty contour collection. Contours need >3 points each.");
-
-                    auto FrameOfReferenceUID = disp_img_it->GetMetadataValueAs<std::string>("FrameOfReferenceUID");
-                    if(FrameOfReferenceUID){
-                        cc.Insert_Metadata("FrameOfReferenceUID", FrameOfReferenceUID.value());
-                    }else{
-                        throw std::runtime_error("Missing 'FrameOfReferenceUID' metadata element. Cannot continue.");
-                    }
-
-                    auto StudyInstanceUID = disp_img_it->GetMetadataValueAs<std::string>("StudyInstanceUID");
-                    if(StudyInstanceUID){
-                        cc.Insert_Metadata("StudyInstanceUID", StudyInstanceUID.value());
-                    }else{
-                        throw std::runtime_error("Missing 'StudyInstanceUID' metadata element. Cannot continue.");
-                    }
+                    if(cc.contours.empty()) throw std::runtime_error("Given empty contour collection. Contours need at least 3 vertices each.");
 
                     const double MinimumSeparation = disp_img_it->pxl_dz; // TODO: use more robust method here.
+                    for(auto &cop : cc.contours) cop.metadata = cm;
                     cc.Insert_Metadata("ROIName", roi_name);
                     cc.Insert_Metadata("NormalizedROIName", X(roi_name));
                     cc.Insert_Metadata("ROINumber", "10000"); // TODO: find highest existing and ++ it.
@@ -2814,6 +2817,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             return true;
         };
         try{
+            // Break from the main render loop if false is received.
             if(!display_main_menu_bar()) break;
         }catch(const std::exception &e){
             FUNCWARN("Exception in display_main_menu_bar(): '" << e.what() << "'");
@@ -3338,7 +3342,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             ||  !img_valid ) return;
 
             //We have three distinct coordinate systems: DICOM, pixel coordinates and screen pixel coordinates,
-            // and SFML 'world' coordinates. We need to map from the DICOM coordinates to screen pixel coords.
+            // and SDL 'world' coordinates. We need to map from the DICOM coordinates to screen pixel coords.
             //
             //Get a DICOM-coordinate bounding box for the image.
             const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->rows;
@@ -3388,7 +3392,8 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
 
             // Display a visual cue of the tagged position.
-            if( tagged_pos ){
+            if( tagged_pos 
+            &&  image_mouse_pos.DICOM_to_pixels ){
                 const auto box_radius = 3.0f;
                 const auto c = ImColor(1.0f, 0.2f, 0.2f, 1.0f);
 
@@ -3591,7 +3596,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             if( view_toggles.view_contouring_enabled
             ||  view_toggles.view_drawing_enabled ){
                 // Provide a visual cue for the contouring brush.
-                {
+                if(image_mouse_pos.mouse_hovering_image){
                     const auto pixel_radius = static_cast<float>(contouring_reach) * image_mouse_pos.pixel_scale;
                     const auto c = ImColor(0.0f, 1.0f, 0.8f, 1.0f);
 
@@ -5710,6 +5715,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         SDL_GL_SwapWindow(window);
     }
+
+    std::unique_lock<std::shared_mutex> ppc_lock(preprocessed_contour_mutex);
     terminate_contour_preprocessors();
     std::this_thread::sleep_for(std::chrono::milliseconds(500)); // Hope that this is enough time for preprocessing threads to terminate.
                                                                  // TODO: use a work queue with condition variable to

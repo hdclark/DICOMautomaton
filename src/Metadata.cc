@@ -433,6 +433,21 @@ metadata_map_t coalesce_metadata_general_series(const metadata_map_t &ref){
     return out;
 }
 
+metadata_map_t coalesce_metadata_rt_series(const metadata_map_t &ref){
+    metadata_map_t out;
+    const auto [date_now, time_now] = get_date_time();
+
+    //General Series Module.
+    insert_or_default(out, ref, "SeriesDate", date_now);
+    insert_or_default(out, ref, "SeriesTime", time_now);
+    insert_or_default(out, ref, "Modality", "UNSPECIFIED");
+    insert_or_default(out, ref, "SeriesDescription", "UNSPECIFIED");
+    insert_or_default(out, ref, "OperatorsName", "");
+    insert_or_default(out, ref, "SeriesInstanceUID", Generate_Random_UID(31));
+    insert_or_default(out, ref, "SeriesNumber", Generate_Random_Int_Str(5000, 32767)); // Upper: 2^15 - 1.
+    return out;
+}
+
 metadata_map_t coalesce_metadata_patient_study(const metadata_map_t &ref){
     metadata_map_t out;
 
@@ -714,6 +729,31 @@ metadata_map_t coalesce_metadata_mr_private_siemens_diffusion(const metadata_map
     return out;
 }
 
+metadata_map_t coalesce_metadata_structure_set(const metadata_map_t &ref){
+    metadata_map_t out;
+    const auto [date_now, time_now] = get_date_time();
+
+    //Structure Set Module.
+    insert_if_nonempty(out, ref, "InstanceNumber");
+    insert_or_default(out, ref, "StructureSetLabel", "UNSPECIFIED");
+    insert_if_nonempty(out, ref, "StructureSetName");
+    insert_if_nonempty(out, ref, "StructureSetDescription");
+
+    insert_or_default(out, ref, "StructuredSetDate", date_now);
+    insert_or_default(out, ref, "StructuredSetTime", time_now);
+    return out;
+}
+
+metadata_map_t coalesce_metadata_roi_contour(const metadata_map_t &ref){
+    metadata_map_t out;
+    return out;
+}
+
+metadata_map_t coalesce_metadata_rt_roi_observations(const metadata_map_t &ref){
+    metadata_map_t out;
+    return out;
+}
+
 metadata_map_t coalesce_metadata_misc(const metadata_map_t &ref){
     metadata_map_t out;
 
@@ -796,6 +836,34 @@ metadata_map_t coalesce_metadata_for_rtdose(const metadata_map_t &ref, meta_evol
     out.merge( coalesce_metadata_multi_frame(ref) );
     out.merge( coalesce_metadata_voi_lut(ref) );
     out.merge( coalesce_metadata_rt_dose(ref) );
+    out.merge( coalesce_metadata_misc(ref) );
+
+    if(e == meta_evolve::iterate){
+        // Assign a new SOP Instance UID.
+        auto new_sop = coalesce_metadata_sop_common({});
+        insert(out, "SOPInstanceUID", new_sop["SOPInstanceUID"]);
+        insert(out, "MediaStorageSOPInstanceUID", new_sop["MediaStorageSOPInstanceUID"]);
+    }
+    return out;
+}
+
+metadata_map_t coalesce_metadata_for_rtstruct(const metadata_map_t &ref, meta_evolve e){
+    metadata_map_t out;
+    out["Modality"] = "RTSTRUCT";
+    out["MediaStorageSOPClassUID"] = "1.2.840.10008.5.1.4.1.1.481.3"; //RT Structure Set IOD
+    out["SOPClassUID"] = "1.2.840.10008.5.1.4.1.1.481.2";
+
+    out.merge( coalesce_metadata_patient(ref) );
+    out.merge( coalesce_metadata_general_study(ref) );
+    out.merge( coalesce_metadata_patient_study(ref) );
+    out.merge( coalesce_metadata_rt_series(ref) );
+    out.merge( coalesce_metadata_general_equipment(ref) );
+    out.merge( coalesce_metadata_frame_of_reference(ref) );
+    out.merge( coalesce_metadata_structure_set(ref) );
+    out.merge( coalesce_metadata_roi_contour(ref) );
+    out.merge( coalesce_metadata_rt_roi_observations(ref) );
+
+    out.merge( coalesce_metadata_sop_common(ref) );
     out.merge( coalesce_metadata_misc(ref) );
 
     if(e == meta_evolve::iterate){
