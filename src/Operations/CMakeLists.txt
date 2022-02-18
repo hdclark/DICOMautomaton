@@ -126,7 +126,6 @@ add_library(Operations_objs OBJECT
     LogScale.cc
     MaxMinPixels.cc
     MeldDose.cc
-    ModelIVIM.cc
     ModifyContourMetadata.cc
     ModifyImageMetadata.cc
     ModifyParameters.cc
@@ -183,6 +182,7 @@ add_library(Operations_objs OBJECT
     $<$<BOOL:${WITH_SDL}>:QueryUserInteractively.cc>
 
     $<$<BOOL:${WITH_EIGEN}>:DetectGrid3D.cc>
+    $<$<BOOL:${WITH_EIGEN}>:ModelIVIM.cc>
     $<$<BOOL:${WITH_EIGEN}>:VoxelRANSAC.cc>
 
     $<$<BOOL:${WITH_GNU_GSL}>:CT_Liver_Perfusion.cc>

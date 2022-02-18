@@ -146,7 +146,6 @@
 #include "Operations/LogScale.h"
 #include "Operations/MaxMinPixels.h"
 #include "Operations/MeldDose.h"
-#include "Operations/ModelIVIM.h"
 #include "Operations/ModifyContourMetadata.h"
 #include "Operations/ModifyImageMetadata.h"
 #include "Operations/ModifyParameters.h"
@@ -209,6 +208,7 @@
 
 #ifdef DCMA_USE_EIGEN
     #include "Operations/DetectGrid3D.h"
+    #include "Operations/ModelIVIM.h"
     #include "Operations/VoxelRANSAC.h"
 #endif // DCMA_USE_EIGEN
 
@@ -367,7 +367,6 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["LogScale"] = std::make_pair(OpArgDocLogScale, LogScale);
     out["MaxMinPixels"] = std::make_pair(OpArgDocMaxMinPixels, MaxMinPixels);
     out["MeldDose"] = std::make_pair(OpArgDocMeldDose, MeldDose);
-    out["ModelIVIM"] = std::make_pair(OpArgDocModelIVIM, ModelIVIM);
     out["ModifyContourMetadata"] = std::make_pair(OpArgDocModifyContourMetadata, ModifyContourMetadata);
     out["ModifyImageMetadata"] = std::make_pair(OpArgDocModifyImageMetadata, ModifyImageMetadata);
     out["ModifyParameters"] = std::make_pair(OpArgDocModifyParameters, ModifyParameters);
@@ -430,6 +429,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
 
 #ifdef DCMA_USE_EIGEN
     out["DetectGrid3D"] = std::make_pair(OpArgDocDetectGrid3D, DetectGrid3D);
+    out["ModelIVIM"] = std::make_pair(OpArgDocModelIVIM, ModelIVIM);
     out["VoxelRANSAC"] = std::make_pair(OpArgDocVoxelRANSAC, VoxelRANSAC);
 #endif // DCMA_USE_EIGEN
 
