@@ -11,7 +11,7 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 #include <math.h>
-
+#include<algorithm>
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -354,7 +354,7 @@ bool ModelIVIM(Drover &DICOM_data,
                     throw std::runtime_error("Unmatched voxel and b-value vectors. Refusing to continue.");
                 }
                 int numIterations = 1000;
-                const auto [f, D, pseudoD] = GetBiExpf(bvalues, vals, numIterations);
+                const auto [f, D, pseudoD] = GetBiExp(bvalues, vals, numIterations);
                 if(!std::isfinite( f )) throw std::runtime_error("f is not finite");
 
                 // The image/voxel iterator interface isn't capable of handling multiple-channel values,
@@ -795,122 +795,132 @@ double GetADCls(const std::vector<float> &bvalues, const std::vector<float> &val
         sum_denominator += std::pow((b-b_avg), 2.0);
     }
 
-    const double ADC = - sum_numerator / sum_denominator;
+    const double ADC = std::max(- sum_numerator / sum_denominator, 0.0);
     return ADC;
 }
 
-std::array<double, 3> GetBiExpf(const std::vector<float> &bvalues, const std::vector<float> &vals, int numIterations){
+std::array<double, 3> GetBiExp(const std::vector<float> &bvalues, const std::vector<float> &vals, int numIterations){
     //This function will use the a segmented approach with Marquardts method of squared residuals minimization to fit the signal to a biexponential 
     const auto nan = std::numeric_limits<double>::quiet_NaN();
     //The biexponential model
     //S(b) = S(0)[f * exp(-b D*) + (1-f) * exp(-b D)]
 
-    //Divide all signals by S(0)
-    float signalTemp; 
-    std::vector<float> signals;
-    const auto number_bVals = static_cast<double>( bvalues.size() );
+    
+    
+    
+    const int number_bVals = static_cast<int>( bvalues.size() );
     int b0_index = 0;
+
+    //first get the index of b = 0 (I'm unsure if b values are in order already)
     for(size_t i = 0; i < number_bVals; ++i){
          
-        if (bvalues[i] == 0){ //first get the index of b = 0 (I'm unsure if b values are in order already)
+        if (bvalues[i] == 0){ 
             b0_index = i;
             break;
         }         
         
     }
+    //Divide all signals by S(0)
+    //also create a vector for signals and b-values
+
+    std::vector<float> bvaluesH; //for high b values and signals
+    std::vector<float> signalsH;
+
+    MatrixXd sigs(number_bVals,1);
+    MatrixXd b_vals(number_bVals,1);   
+    std::vector<float> signals;
+
     for(size_t i = 0; i < number_bVals; ++i){
          
-        signals.push_back(vals.at(b0_index));           
-        
-    }
+        signals.push_back(vals[0]/vals.at(b0_index));   
+        sigs(i,0) = vals[i]/vals.at(b0_index);       
+        b_vals(i,0) = bvalues[i];
 
-    //First we use a cutoff of b values greater than 200 to have signals of the form S(b) = S(0) * exp(-b D) to obtain the diffusion coefficient
-
-    //make a vector for the high b values and their signals
-    
-
-    std::vector<float> bvaluesH;
-    std::vector<float> signalsH;
-    float bTemp;
-    
-    for(size_t i = 0; i < number_bVals; ++i){
-        if (bvalues[i] > 200){
-            bTemp = bvalues.at(i);      
-            signalTemp = vals.at(i);           
-            bvaluesH.push_back(bTemp);
-            signalsH.push_back(signalTemp); 
-            
-            
+        //we use a cutoff of b values greater than 200 to have signals of the form S(b) = S(0) * exp(-b D) to obtain the diffusion coefficient
+        //make a vector for the high b values and their signals
+        if (bvalues[i] > 200){         
+            bvaluesH.push_back(bvalues.at(i));
+            signalsH.push_back(vals.at(i));            
         }
     }
+
+    
+    
     
     //Now use least squares regression to obtain D from the high b value signals: 
     double D = GetADCls(bvaluesH, signalsH);
-    if (D < 0){
-            D = 0;
-        }
+
     //Now we can use this D value and fit f and D* with Marquardts method
     //Cost function is sum (Signal_i - (fexp(-bD*) + (1-f)exp(-bD)) )^2
-    float lambda = 50;
+    float lambda = 10;
     double pseudoD = 10.0 * D;
     float f = 0.5;
     double new_pseudoD;
-    float newf;
-    double cost;
-    double newCost;
-    std::vector<double> H;
-    std::vector<double> inverse;
-    std::vector<double> gradient;
-    
+    float new_f;
+    double cost; 
+    double new_cost;
+
+    MatrixXd h(2,1);
+    MatrixXd r(number_bVals, 1); //residuals
+    MatrixXd J(number_bVals, 2);
+    MatrixXd sigs_pred(number_bVals, 1);
+    MatrixXd I(2,2);
 
 //Get the current cost
-    cost = 0;
-    for(size_t i = 0; i < number_bVals; ++i){
-        bTemp = bvalues[i];         
-        signalTemp = signals.at(i);
-        cost += std::pow( ( (signalTemp) - f*exp(-bTemp * pseudoD) - (1-f)*exp(-bTemp * D)   ), 2.0);
-    }  
+    // cost = 0;
+    // for(size_t i = 0; i < number_bVals; ++i){
+    //     bTemp = bvalues[i];         
+    //     signalTemp = signals.at(i);
+    //     cost += std::pow( ( (signalTemp) - f*exp(-bTemp * pseudoD) - (1-f)*exp(-bTemp * D)   ), 2.0);
+    // }  
     
-    
+    //Get initial predictions
+    for(size_t i = 0; i < number_bVals; ++i){ 
+        double exp_pseudo = exp(-bvalues[i]*pseudoD);
+        sigs_pred(i,1) = f * exp_pseudo + (1-f)*exp(-bvalues[i] * D);
+    }
+    //Get the initial residuals:
+    r = sigs - sigs_pred;
+    //get initial cost
+    cost = 0.5 * (r.transpose() * r)(0);
+
+
+    //iteratively adjust parameters to minimize cost
     for (int i = 0; i < numIterations; i++){
-         
-        //Now calculate the Hessian matrix which is in the form of a vector (columns then rows), which also contains the gradient at the end
-        H = GetHessianAndGradient(bvalues, signals, f, pseudoD, D);
-        //Now I need to calculate the inverse of (H + lamda I)
-        H[0] += lambda;
-        H[3] += lambda;
-        inverse = GetInverse(H);
-        
-        //Now update parameters 
-        newf = f + -inverse[0]*H[4] - inverse[1]*H[5];
-        new_pseudoD = pseudoD - inverse[2]*H[4] - inverse[3] * H[5];  
 
-        //if f is less than 0 or greater than 1, rescale back to boundary, and don't let pseudoDD get smaller than D
-        if (newf < 0){
-            f = 0;
-        }else if (f > 1){
-            f = 1;
-        }
-        if (pseudoD < 0){
-            pseudoD = 0;
+        //Get Jacobian
+        for(size_t i = 0; i < number_bVals; ++i){ 
+            double exp_pseudo = exp(-bvalues[i]*pseudoD);
+            //get Jacobian
+            J(i,0) = -exp_pseudo + exp(-bvalues[i]*D);
+            J(i,1) = bvalues[i] * f * exp_pseudo;
         }
         
+        //levenberg marquardt --> update increment is h = (J^T * J + lambda I )^-1 * J^T r
+        h = ((J.transpose() * J + lambda * I).inverse() * J.transpose() * r);
+        //update parameters
+        new_f = f + h(0,0);
+        new_pseudoD = pseudoD + h(1,0); 
 
-        //Now check if we have lowered the cost
-        newCost = 0;
-        for(size_t i = 0; i < number_bVals; ++i){
-            newCost += std::pow( ( signals.at(i) - newf*exp(-bvalues[i] * new_pseudoD) - (1-newf)*exp(-bvalues[i] * D)  ), 2.0);
-        }  
-        //accept changes if we have have reduced cost, and lower lambda
-        if (newCost < cost){
-            cost = newCost;
-            lambda *= 0.8;
-            f = newf;
+        //get new predictions and residuals and cost
+        //Get predictions
+        for(size_t i = 0; i < number_bVals; ++i){ 
+            double exp_pseudo = exp(-bvalues[i]*new_pseudoD);
+            sigs_pred(i,1) = new_f * exp_pseudo + (1-new_f)*exp(-bvalues[i] * D);
+        }
+        //Get residuals:
+        r = sigs - sigs_pred;
+        //get cost
+        new_cost = 0.5 * (r.transpose() * r)(0);
+
+        if (new_cost < cost){
+            f = new_f;
             pseudoD = new_pseudoD;
-            
-            
+            cost = new_cost;
+            lambda /= 1.5;
+
         }else{
-            lambda *= 2;
+            lambda *= 1.1;
         }
 
 

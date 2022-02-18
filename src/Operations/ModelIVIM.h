@@ -8,6 +8,15 @@
 
 #include "../Structs.h"
 
+#ifdef DCMA_USE_EIGEN
+#include "eigen3/Eigen/Core"
+#include "eigen3/Eigen/Dense"
+#include "eigen3/Eigen/LU"
+#endif //DCMA_USE_EIGEN
+
+#ifdef DCMA_USE_EIGEN
+using Eigen::MatrixXd;
+#endif //DCMA_USE_EIGEN
 
 OperationDoc OpArgDocModelIVIM();
 
@@ -27,7 +36,7 @@ std::vector<double> GetKurtosisPriors(const std::vector<double> &params);
 std::array<double, 3> GetKurtosisParams(const std::vector<float> &bvalues, const std::vector<float> &vals, int numIterations);
 #endif //DCMA_USE_EIGEN
 
-std::array<double, 3> GetBiExpf(const std::vector<float> &bvalues, const std::vector<float> &vals, int numIterations);
+std::array<double, 3> GetBiExp(const std::vector<float> &bvalues, const std::vector<float> &vals, int numIterations);
 std::vector<double> GetHessianAndGradient(const std::vector<float> &bvalues, const std::vector<float> &vals, float f, double pseudoD, const double D);
 std::vector<double> GetInverse(const std::vector<double> &matrix);
 
