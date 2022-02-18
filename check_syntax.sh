@@ -36,7 +36,7 @@ check_cpp_syntax () {
           -I'src/imebra20121219/library/imebra/include/' \
           -I"${temp_dir}/" \
           -I"${temp_dir}/src/" \
-          $(pkg-config --cflags --libs sdl2 glew sfml-window sfml-graphics sfml-system libpqxx libpq nlopt gsl) \
+          $(pkg-config --cflags --libs sdl2 glew sfml-window sfml-graphics sfml-system libpqxx libpq nlopt gsl eigen3) \
           -lygor -lboost_serialization -lboost_iostreams -lboost_thread -lboost_system \
           "$f"
     }
