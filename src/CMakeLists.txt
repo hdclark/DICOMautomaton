@@ -274,10 +274,12 @@ target_link_libraries(imebrashim
 )
 
 # Dialog library (built separately to minimize header/macro clashes).
-add_library (dialogshim
+add_library(dialogshim
     Dialogs.cc 
     Dialogs/Text_Query.cc
+    Dialogs/Tray_Notification.cc
 )
+set_target_properties(dialogshim PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 target_link_libraries(dialogshim
     "$<$<BOOL:${MINGW}>:ws2_32>"
     "$<$<BOOL:${MINGW}>:wsock32>"

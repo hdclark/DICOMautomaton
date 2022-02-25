@@ -75,6 +75,7 @@
 #include "../Script_Loader.h"
 #include "../Standard_Scripts.h"
 #include "../Thread_Pool.h"
+#include "../String_Parsing.h"
 #include "../Dialogs.h"
 
 #ifdef DCMA_USE_CGAL
@@ -100,44 +101,6 @@
     }
 #endif
 
-
-static
-void
-array_to_string(std::string &s, const std::array<char, 2048> &a){
-    s.clear();
-    for(const auto &c : a){
-        if(c == '\0') break;
-        s.push_back(c);
-    }
-    return;
-}
-
-static
-std::string
-array_to_string(const std::array<char, 2048> &a){
-    std::string s;
-    array_to_string(s,a);
-    return s;
-}
-
-static
-void
-string_to_array(std::array<char, 2048> &a, const std::string &s){
-    a.fill('\0');
-    for(size_t i = 0; (i < s.size()) && ((i+1) < a.size()); ++i){
-        a[i] = s[i];
-        //a[i+1] = '\0';
-    }
-    return;
-}
-
-static
-std::array<char, 2048>
-string_to_array(const std::string &s){
-    std::array<char, 2048> a;
-    string_to_array(a,s);
-    return a;
-}
 
 // Compute an axis-aligned bounding box in pixel coordinates.
 std::tuple<long int, long int, long int, long int>

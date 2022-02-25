@@ -9,6 +9,19 @@
 #include "YgorString.h"
 #include "YgorMath.h"
 
+// String <--> fixed array conversion routines.
+void array_to_string(std::string &s, const std::array<char, 2048> &a);
+
+std::string array_to_string(const std::array<char, 2048> &a);
+
+void string_to_array(std::array<char, 2048> &a, const std::string &s);
+
+std::array<char, 2048> string_to_array(const std::string &s);
+
+// Remove characters so that the argument can be inserted like '...' on command line.
+std::string escape_for_quotes(std::string s);
+
+
 // Parser for functions like 'func(1.0, 2.0,3.0, -1.23, 1.0x, 123%, "some text", ...)'.
 //
 // Note: Supports nested functions.

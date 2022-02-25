@@ -154,6 +154,7 @@
 #include "Operations/NoneOf.h"
 #include "Operations/NormalizeLineSamples.h"
 #include "Operations/NormalizePixels.h"
+#include "Operations/NotifyUser.h"
 #include "Operations/OptimizeStaticBeams.h"
 #include "Operations/OrderImages.h"
 #include "Operations/PartitionContours.h"
@@ -371,10 +372,11 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ModifyImageMetadata"] = std::make_pair(OpArgDocModifyImageMetadata, ModifyImageMetadata);
     out["ModifyParameters"] = std::make_pair(OpArgDocModifyParameters, ModifyParameters);
     out["NegatePixels"] = std::make_pair(OpArgDocNegatePixels, NegatePixels);
-    out["NoOp"] = std::make_pair(OpArgDocNoOp, NoOp);
     out["NoneOf"] = std::make_pair(OpArgDocNoneOf, NoneOf);
+    out["NoOp"] = std::make_pair(OpArgDocNoOp, NoOp);
     out["NormalizeLineSamples"] = std::make_pair(OpArgDocNormalizeLineSamples, NormalizeLineSamples);
     out["NormalizePixels"] = std::make_pair(OpArgDocNormalizePixels, NormalizePixels);
+    out["NotifyUser"] = std::make_pair(OpArgDocNotifyUser, NotifyUser);
     out["OptimizeStaticBeams"] = std::make_pair(OpArgDocOptimizeStaticBeams, OptimizeStaticBeams);
     out["OrderImages"] = std::make_pair(OpArgDocOrderImages, OrderImages);
     out["PartitionContours"] = std::make_pair(OpArgDocPartitionContours, PartitionContours);

@@ -1,4 +1,4 @@
-// SDL_query.h -- dialogs for user interaction.
+// Text_Query.h -- dialogs for user input.
 
 #pragma once
 

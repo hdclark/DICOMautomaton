@@ -134,6 +134,7 @@ add_library(Operations_objs OBJECT
     NoneOf.cc
     NormalizeLineSamples.cc
     NormalizePixels.cc
+    NotifyUser.cc
     OptimizeStaticBeams.cc
     OrderImages.cc
     PartitionContours.cc

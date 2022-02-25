@@ -11,6 +11,57 @@
 
 #include "String_Parsing.h"
 
+
+void array_to_string(std::string &s, const std::array<char, 2048> &a){
+    s.clear();
+    for(const auto &c : a){
+        if(c == '\0') break;
+        s.push_back(c);
+    }
+    return;
+}
+
+std::string array_to_string(const std::array<char, 2048> &a){
+    std::string s;
+    array_to_string(s,a);
+    return s;
+}
+
+void string_to_array(std::array<char, 2048> &a, const std::string &s){
+    a.fill('\0');
+    for(size_t i = 0; (i < s.size()) && ((i+1) < a.size()); ++i){
+        a[i] = s[i];
+        //a[i+1] = '\0';
+    }
+    return;
+}
+
+std::array<char, 2048> string_to_array(const std::string &s){
+    std::array<char, 2048> a;
+    string_to_array(a,s);
+    return a;
+}
+
+
+// Remove characters so that the argument can be inserted like '...' on command line.
+std::string escape_for_quotes(std::string s){
+    // Remove unprintable characters and newlines.
+    const auto rem = [](unsigned char c){
+        return (   !std::isprint(c)
+                || (c == '\n')
+                || (c == '\r') );
+    };
+    s.erase( std::remove_if(std::begin(s), std::end(s), rem),
+             std::end(s) );
+
+    // Replace all single quotes with double quotes.
+    for(auto &c : s) if(c == '\'') c = '"';
+
+    return s;
+}
+
+
+
 std::vector<parsed_function>
 parse_functions(const std::string &in, 
                 char escape_char,
