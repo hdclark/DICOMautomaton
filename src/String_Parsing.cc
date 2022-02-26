@@ -43,20 +43,22 @@ std::array<char, 2048> string_to_array(const std::string &s){
 }
 
 
-// Remove characters so that the argument can be inserted like '...' on command line.
+// Remove characters so that the argument can be inserted like '...' or "..." on command line without interfering with
+// the quotes.
+//
+// Note that this does *NOT* protect against shell expansion within "..." quotes.
 std::string escape_for_quotes(std::string s){
     // Remove unprintable characters and newlines.
+    // We also remove quotes of either kind to ensure the result can be embedded in either kind of quotes.
     const auto rem = [](unsigned char c){
         return (   !std::isprint(c)
+                || (c == '\'')
+                || (c == '"')
                 || (c == '\n')
                 || (c == '\r') );
     };
     s.erase( std::remove_if(std::begin(s), std::end(s), rem),
              std::end(s) );
-
-    // Replace all single quotes with double quotes.
-    for(auto &c : s) if(c == '\'') c = '"';
-
     return s;
 }
 

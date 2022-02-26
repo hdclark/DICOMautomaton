@@ -106,22 +106,22 @@ tray_notification(const notification_t &n){
 
             // Prepare the query parameters.
             std::map<std::string, std::string> key_vals;
-            key_vals["TITLE"] = escape_for_quotes("DICOMautomaton");
+            key_vals["TITLE"]   = escape_for_quotes("DICOMautomaton");
             key_vals["MESSAGE"] = escape_for_quotes(n.message);
 
             key_vals["DURATION_MS"] = escape_for_quotes(std::to_string(n.duration));
-            key_vals["DURATION_S"] = escape_for_quotes(std::to_string(n.duration/1000));
+            key_vals["DURATION_S"]  = escape_for_quotes(std::to_string(n.duration/1000));
 
             if(n.urgency == notification_urgency_t::low){
-                key_vals["PS_URGENCY"]  = escape_for_quotes("Information");
+                key_vals["PS_URGENCY"] = escape_for_quotes("Information");
                 key_vals["NS_URGENCY"] = escape_for_quotes("low");
                 key_vals["Z_URGENCY"]  = escape_for_quotes("info");
             }else if(n.urgency == notification_urgency_t::medium){
-                key_vals["PS_URGENCY"]  = escape_for_quotes("Warning");
+                key_vals["PS_URGENCY"] = escape_for_quotes("Warning");
                 key_vals["NS_URGENCY"] = escape_for_quotes("normal");
                 key_vals["Z_URGENCY"]  = escape_for_quotes("warning");
             }else if(n.urgency == notification_urgency_t::high){
-                key_vals["PS_URGENCY"]  = escape_for_quotes("Error");
+                key_vals["PS_URGENCY"] = escape_for_quotes("Error");
                 key_vals["NS_URGENCY"] = escape_for_quotes("critical");
                 key_vals["Z_URGENCY"]  = escape_for_quotes("error");
             }else{
@@ -133,16 +133,20 @@ tray_notification(const notification_t &n){
             if(qm.count(query_method::pshell) != 0){
                 // Build the invocation.
                 std::stringstream ss;
-                ss << R"***( powershell -Command '{ )***"
-                   << R"***(  [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms"); )***"
-                   << R"***(  $objNotifyIcon=New-Object System.Windows.Forms.NotifyIcon; )***"
-                   << R"***(  $objNotifyIcon.Icon=[system.drawing.systemicons]::"@PS_URGENCY"; )***"
-                   << R"***(  $objNotifyIcon.ShowBalloonTip(@DURATION_MS); )***"
-                   << R"***(  $objNotifyIcon.BalloonTipIcon="None"; )***"
-                   << R"***(  $objNotifyIcon.Visible=$True; )***"
-                   << R"***(  $objNotifyIcon.BalloonTipTitle="@TITLE"; )***"
-                   << R"***(  $objNotifyIcon.BalloonTipText="@MESSAGE"; )***"
-                   << R"***( }' )***";
+                ss << R"***(powershell)***"
+                   << R"***( -WindowStyle hidden")***"
+                   << R"***( -ExecutionPolicy bypass")***"
+                   << R"***( -NonInteractive")***"
+                   << R"***( -Command "& {)***"
+                   << R"***(  [void] [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms');)***"
+                   << R"***(  $objNotifyIcon=New-Object System.Windows.Forms.NotifyIcon;)***"
+                   << R"***(  $objNotifyIcon.Icon=[system.drawing.systemicons]::'@PS_URGENCY';)***"
+                   << R"***(  $objNotifyIcon.BalloonTipIcon='None';)***"
+                   << R"***(  $objNotifyIcon.BalloonTipTitle='@TITLE';)***"
+                   << R"***(  $objNotifyIcon.BalloonTipText='@MESSAGE';)***"
+                   << R"***(  $objNotifyIcon.Visible=$True;)***"
+                   << R"***(  $objNotifyIcon.ShowBalloonTip(@DURATION_MS);)***"
+                   << R"***( }")***";
                 const std::string proto_cmd = ss.str();
                 std::string cmd = ExpandMacros(proto_cmd, key_vals, "@");
 
