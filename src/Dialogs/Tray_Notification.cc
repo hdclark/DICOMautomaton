@@ -134,9 +134,9 @@ tray_notification(const notification_t &n){
                 // Build the invocation.
                 std::stringstream ss;
                 ss << R"***(powershell)***"
-                   << R"***( -WindowStyle hidden")***"
-                   << R"***( -ExecutionPolicy bypass")***"
-                   << R"***( -NonInteractive")***"
+                   << R"***( -WindowStyle hidden)***"
+                   << R"***( -ExecutionPolicy bypass)***"
+                   << R"***( -NonInteractive)***"
                    << R"***( -Command "& {)***"
                    << R"***(  [void] [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms');)***"
                    << R"***(  $objNotifyIcon=New-Object System.Windows.Forms.NotifyIcon;)***"
