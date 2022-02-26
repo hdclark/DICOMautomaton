@@ -133,22 +133,27 @@ tray_notification(const notification_t &n){
             if(qm.count(query_method::pshell) != 0){
                 // Build the invocation.
                 std::stringstream ss;
-                ss << R"***( powershell -Command "& { )***"
-                   << R"***(  [void] [System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms'); )***"
+                ss << R"***( powershell -Command '{ )***"
+                   << R"***(  [void] [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms"); )***"
                    << R"***(  $objNotifyIcon=New-Object System.Windows.Forms.NotifyIcon; )***"
-                   << R"***(  $objNotifyIcon.Icon=[system.drawing.systemicons]::'@PS_URGENCY'; )***"
+                   << R"***(  $objNotifyIcon.Icon=[system.drawing.systemicons]::"@PS_URGENCY"; )***"
                    << R"***(  $objNotifyIcon.ShowBalloonTip(@DURATION_MS); )***"
-                   << R"***(  $objNotifyIcon.BalloonTipIcon='None'; )***"
+                   << R"***(  $objNotifyIcon.BalloonTipIcon="None"; )***"
                    << R"***(  $objNotifyIcon.Visible=$True; )***"
-                   << R"***(  $objNotifyIcon.BalloonTipTitle='@TITLE'; )***"
-                   << R"***(  $objNotifyIcon.BalloonTipText='@MESSAGE'; )***"
-                   << R"***( }" )***";
+                   << R"***(  $objNotifyIcon.BalloonTipTitle="@TITLE"; )***"
+                   << R"***(  $objNotifyIcon.BalloonTipText="@MESSAGE"; )***"
+                   << R"***( }' )***";
                 const std::string proto_cmd = ss.str();
                 std::string cmd = ExpandMacros(proto_cmd, key_vals, "@");
 
                 // Notify the user.
+                const auto exec_cmd = [](std::string cmd){
+                    Execute_Command_In_Pipe(cmd);
+                    return;
+                };
                 FUNCINFO("About to perform pshell command: '" << cmd << "'");
-                Execute_Command_In_Pipe(cmd);
+                std::thread t(exec_cmd, cmd);
+                t.detach();
                 break;
             }
 
@@ -191,7 +196,7 @@ tray_notification(const notification_t &n){
                 const std::string proto_cmd = ss.str();
                 std::string cmd = ExpandMacros(proto_cmd, key_vals, "@");
 
-                const auto exec_cmd = [](const std::string& cmd){
+                const auto exec_cmd = [](std::string cmd){
                     Execute_Command_In_Pipe(cmd);
                     return;
                 };
