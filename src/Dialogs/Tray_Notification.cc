@@ -81,10 +81,12 @@ tray_notification(const notification_t &n){
     };
     std::set<query_method> qm;
 #if defined(_WIN32) || defined(_WIN64)
-    if(win_cmd_is_available("powershell")){
-        FUNCINFO("powershell is available");
-        qm.insert( query_method::pshell );
-    }
+    FUNCINFO("Assuming powershell is available");
+    qm.insert( query_method::pshell );
+    //if(win_cmd_is_available("powershell")){
+    //    FUNCINFO("powershell is available");
+    //    qm.insert( query_method::pshell );
+    //}
 #endif
 #if defined(__linux__)
     if(sh_cmd_is_available("notify-send")){
