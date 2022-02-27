@@ -1034,7 +1034,7 @@ inline internal::file_dialog::file_dialog(type in_type,
 
         ofn.lpstrFilter = wfilter_list.c_str();
 
-        auto woutput = std::wstring(MAX_PATH * 256, L'\0');
+        auto woutput = std::wstring(MAX_PATH * 4096, L'\0');
         ofn.lpstrFile = (LPWSTR)woutput.data();
         ofn.nMaxFile = (DWORD)woutput.size();
         if (!m_wdefault_path.empty())
@@ -1047,7 +1047,7 @@ inline internal::file_dialog::file_dialog(type in_type,
                 ofn.lpstrInitialDir = m_wdefault_path.c_str();
             else if (m_wdefault_path.size() <= woutput.size())
                 //second argument is size of buffer, not length of string
-                StringCchCopyW(ofn.lpstrFile, MAX_PATH*256+1, m_wdefault_path.c_str());
+                StringCchCopyW(ofn.lpstrFile, MAX_PATH*4096+1, m_wdefault_path.c_str());
             else
             {
                 ofn.lpstrFileTitle = (LPWSTR)m_wdefault_path.data();
@@ -1079,8 +1079,10 @@ inline internal::file_dialog::file_dialog(type in_type,
             ofn.Flags |= OFN_PATHMUSTEXIST;
 
             dll::proc<BOOL WINAPI (LPOPENFILENAMEW)> get_open_file_name(comdlg32, "GetOpenFileNameW");
-            if (get_open_file_name(&ofn) == 0)
+            if(get_open_file_name(&ofn) == 0){
+                std::cerr << "Encountered error during GetOpenFileNameW call. No files selected." << std::endl;
                 return "";
+            }
         }
 
         std::string prefix;
