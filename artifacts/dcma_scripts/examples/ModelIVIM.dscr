@@ -2,51 +2,101 @@
 
 # This script demonstrates how to use the ModelIVIM operation.
 # It uses MR diffusion images to model the IVIM process.
+#
+# Rather than directly selecting images via SeriesNumber (which
+# is convenient if you already know the relevant number), we try
+# prune images known to be irrelevant and then select relevant
+# images using information derived from the desired sequence.
 
 
-# Partition images based on SequenceName.
+# Step 1.
+#
+# Eliminate composite images (mosaics), derived images (e.g.,
+# ADC and FA maps), and any other images mixed into the data
+# set that are not diffusion images.
+GroupImages(
+    ImageSelection = 'all',
+    KeysCommon = 'ImageType',
+){};
+DeleteImages(
+    # Like: '...\DIFFUSION\MOSAIC\NORM\...'.
+    ImageSelection = 'ImageType@.*MOSAIC.*$'
+){};
+DeleteImages(
+    # Like: '...\DIFFUSION\ADC\DIS2D\...' or '...\FA\...'.
+    ImageSelection = 'ImageType@.*[^A-Z]ADC[^A-Z].*|.*[^A-Z]FA[^A-Z].*$'
+){};
+DeleteImages(
+    # Like: '...\IVIM\...' (see below).
+    ImageSelection = 'ImageType@.*IVIM.*$'
+){};
+DeleteImages(
+    ImageSelection = '!ImageType@.*DIFFUSION.*$'
+){};
+
+
+# Step 2.
+#
+# Eliminate irrelevant diffusion images. In this case, we only
+# retain images with a sequence name like 'WIP_b40t' or 'WIP_b0'.
+#
+# Note that when b!=0 the ImageType is
+#    'DERIVED\PRIMARY\DIFFUSION\TRACEW\NORM\DIS2D'
+# but when b=0 the ImageType is
+#    'DERIVED\PRIMARY\DIFFUSION\NONE\NORM\DIS2D'
+# even though they are part of the same series.
+# So instead of using ImageType, we rely on the SequenceName.
 GroupImages(
     ImageSelection = 'all',
     KeysCommon = 'SequenceName',
     Enforce = 'no-overlap-adjust',
 ){};
-
-
-# Delete irrelevant images.
-#
-# Note: the relevant images have a SequenceName like 'WIP_b40t'.
 DeleteImages(
-    ImageSelection = '!SequenceName@^WIP_b[0-9]*t$'
+    ImageSelection = '!SequenceName@^WIP_b[0-9]*t?$'
 ){};
 
 
-# Arrange images in b-value order.
+# Step 3.
+#
+# Arrange images in lexicographical b-value order.
 #OrderImages( Key = 'CSAImage/B_value' );
 OrderImages( Key = 'DiffusionBValue' );
 
 
-# Create a copy that we can write over.
+# Step 4.
+#
+# Create a copy of one of the image arrays that we can
+# later overwrite with IVIM model parameters.
 CopyImages( ImageSelection = 'first' );
 
 
+# Step 5.
+#
 # Make a contour around each image, which will confine where
-# the IVIM model will be evaluated.
+# the IVIM model will be evaluated, and run the model.
 ContourWholeImages( 
     ImageSelection = 'last',
     ROILabel='all',
 ){};
-
-
-# Run the IVIM model.
 ModelIVIM(
-    # Write to the last image (the one we copied).
+    # Overwrite the last image (the one we copied).
     ImageSelection = 'last',
 
-    # Use all other images for the model.
+    # Use all other images for analysis.
     ReferenceImageSelection = '!last',
 
     ROILabelRegex = 'all',
     Model = 'biexp',
+){};
+
+
+# Step 6.
+#
+# Tag the images so we can more conveniently refer to the
+# image maps later.
+ModifyImageMetadata(
+    ImageSelection = 'last',
+    KeyValues = 'ImageType@$ImageType\\IVIM',
 ){};
 
 
