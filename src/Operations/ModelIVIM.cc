@@ -10,8 +10,10 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
-#include <math.h>
-#include<algorithm>
+#include <mutex>
+#include <cmath>
+#include <algorithm>
+
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -19,7 +21,6 @@
 #else
     #error "Attempted to compile without Eigen support, which is required."
 #endif
-#include <eigen3/Eigen/Core>
 #include <eigen3/Eigen/Dense>
 #include <eigen3/Eigen/LU>
 
@@ -301,12 +302,11 @@ bool ModelIVIM(Drover &DICOM_data,
             // Add channels to each image for each model parameter.
             auto imgarr_ptr = &((*iap_it)->imagecoll);
             for(auto &img : imgarr_ptr->images){
-                img.add_channel( nan ); // for D.
-                img.add_channel( nan ); // for pseduoD.
+                img.init_buffer( img.rows, img.columns, 3 ); // for f, D, pseudoD.
             }
-            const long int chan_f = Channel;
-            const long int chan_D = chan_f + 1;
-            const long int chan_pD = chan_f + 2;
+            const long int chan_f  = 0;
+            const long int chan_D  = 1;
+            const long int chan_pD = 2;
 
             ud.description = "f, D, pseudoD (Kurtosis Model fit)";
             ud.f_reduce = [bvalues,
@@ -349,12 +349,12 @@ bool ModelIVIM(Drover &DICOM_data,
             // Add channels to each image for each model parameter.
             auto imgarr_ptr = &((*iap_it)->imagecoll);
             for(auto &img : imgarr_ptr->images){
-                img.add_channel( nan ); // for D.
-                img.add_channel( nan ); // for pseduoD.
+                img.init_buffer( img.rows, img.columns, 3 ); // for f, D, pseudoD.
             }
-            const long int chan_f = Channel;
-            const long int chan_D = chan_f + 1;
-            const long int chan_pD = chan_f + 2;
+            const long int chan_f  = 0;
+            const long int chan_D  = 1;
+            const long int chan_pD = 2;
+
 
             ud.description = "f, D, pseudoD (Bi-exponential segmented fit)";
             ud.f_reduce = [bvalues,
@@ -367,6 +367,9 @@ bool ModelIVIM(Drover &DICOM_data,
                 vals.erase(vals.begin()); // Remove the base image's value.
                 if(vals.size() != bvalues.size()){
                     throw std::runtime_error("Unmatched voxel and b-value vectors. Refusing to continue.");
+                }
+                if(vals.empty()){
+                    throw std::runtime_error("No overlapping images detected. Unable to continue.");
                 }
                 int numIterations = 1000;
                 const auto [f, D, pseudoD] = GetBiExp(bvalues, vals, numIterations);
@@ -660,22 +663,21 @@ std::array<double, 3> GetKurtosisParams(const std::vector<float> &bvalues, const
 //This function will use a Bayesian regression approach to fit IVIM kurtosis model with noise floor parameters to the data.
 //Kurtosis model: S(b)/S(0) = {(f exp(-bD*) + (1-f)exp(-bD + (bD)^2K/6))^2 + NCF}^1/2
 
-const auto nan = std::numeric_limits<double>::quiet_NaN();
+    const auto nan = std::numeric_limits<double>::quiet_NaN();
 
-//First divide all signals by S(b=0)
-std::vector<float> signals;
-const auto number_bVals = static_cast<double>( bvalues.size() );
-int b0_index = 0;
-    for(size_t i = 0; i < bvalues.size(); ++i){
-         
+    //First divide all signals by S(b=0)
+    std::vector<float> signals;
+    const auto number_bVals = bvalues.size();
+    int b0_index = 0;
+
+    for(size_t i = 0; i < number_bVals; ++i){
         if (bvalues.at(i) == 0){ //first get the index of b = 0 (I'm unsure if b values are in order already)
             b0_index = i;
             break;
         }         
         
     }
-    for(size_t i = 0; i < bvalues.size(); ++i){
-         
+    for(size_t i = 0; i < number_bVals; ++i){
         signals.push_back(vals.at(b0_index));           
         
     }
@@ -789,7 +791,7 @@ double GetADCls(const std::vector<float> &bvalues, const std::vector<float> &val
     //get b_avg and S_avg
     double b_avg = 0.0;
     double log_S_avg = 0.0;
-    const auto number_bVals = static_cast<double>( bvalues.size() );
+    const auto number_bVals = bvalues.size();
     for(size_t i = 0; i < number_bVals; ++i){
         b_avg += bvalues[i]; 
         log_S_avg += std::log( vals[i] );
@@ -797,8 +799,8 @@ double GetADCls(const std::vector<float> &bvalues, const std::vector<float> &val
             return nan;
         }
     }
-    b_avg /= number_bVals;
-    log_S_avg /= number_bVals;
+    b_avg /= (1.0 * number_bVals);
+    log_S_avg /= (1.0 * number_bVals);
 
     //Now do the sums
     double sum_numerator = 0.0;
@@ -821,9 +823,7 @@ std::array<double, 3> GetBiExp(const std::vector<float> &bvalues, const std::vec
     //S(b) = S(0)[f * exp(-b D*) + (1-f) * exp(-b D)]
 
     
-    
-    
-    const int number_bVals = static_cast<int>( bvalues.size() );
+    const auto number_bVals = bvalues.size();
     int b0_index = 0;
 
     //first get the index of b = 0 (I'm unsure if b values are in order already)
@@ -844,9 +844,11 @@ std::array<double, 3> GetBiExp(const std::vector<float> &bvalues, const std::vec
     std::vector<float> signals;
 
     for(size_t i = 0; i < number_bVals; ++i){
-        signals.push_back(vals[i]/vals.at(b0_index));
-        sigs(i,0) = vals[i]/vals.at(b0_index);       
-        b_vals(i,0) = bvalues[i];
+
+        const auto normalized = vals.at(i)/vals.at(b0_index);
+        signals.push_back(normalized);
+        sigs(i,0) = normalized;
+        b_vals(i,0) = bvalues.at(i);
 
         //we use a cutoff of b values greater than 200 to have signals of the form S(b) = S(0) * exp(-b D) to obtain the diffusion coefficient
         //make a vector for the high b values and their signals
@@ -856,8 +858,6 @@ std::array<double, 3> GetBiExp(const std::vector<float> &bvalues, const std::vec
         }
     }
 
-    
-    
     
     //Now use least squares regression to obtain D from the high b value signals: 
     double D = GetADCls(bvaluesH, signalsH);
@@ -888,23 +888,23 @@ std::array<double, 3> GetBiExp(const std::vector<float> &bvalues, const std::vec
     
     //Get initial predictions
     for(size_t i = 0; i < number_bVals; ++i){ 
-        double exp_pseudo = exp(-bvalues[i]*pseudoD);
-        sigs_pred(i,1) = f * exp_pseudo + (1-f)*exp(-bvalues[i] * D);
+        const double exp_diff   = std::exp(-bvalues.at(i) * D);
+        const double exp_pseudo = std::exp(-bvalues.at(i) * pseudoD);
+        sigs_pred(i,0) = f * exp_pseudo + (1.0 - f) * exp_diff;
     }
     //Get the initial residuals:
     r = sigs - sigs_pred;
     //get initial cost
     cost = 0.5 * (r.transpose() * r)(0);
 
-
     //iteratively adjust parameters to minimize cost
     for (int i = 0; i < numIterations; i++){
 
         //Get Jacobian
         for(size_t i = 0; i < number_bVals; ++i){ 
-            double exp_pseudo = exp(-bvalues[i]*pseudoD);
+            const double exp_pseudo = std::exp(-bvalues[i]*pseudoD);
             //get Jacobian
-            J(i,0) = -exp_pseudo + exp(-bvalues[i]*D);
+            J(i,0) = -exp_pseudo + std::exp(-bvalues[i]*D);
             J(i,1) = bvalues[i] * f * exp_pseudo;
         }
         
@@ -917,8 +917,9 @@ std::array<double, 3> GetBiExp(const std::vector<float> &bvalues, const std::vec
         //get new predictions and residuals and cost
         //Get predictions
         for(size_t i = 0; i < number_bVals; ++i){ 
-            double exp_pseudo = exp(-bvalues[i]*new_pseudoD);
-            sigs_pred(i,1) = new_f * exp_pseudo + (1-new_f)*exp(-bvalues[i] * D);
+            const double exp_diff       = std::exp(-bvalues.at(i) * D);
+            const double exp_new_pseudo = std::exp(-bvalues.at(i) * new_pseudoD);
+            sigs_pred(i,0) = new_f * exp_new_pseudo + (1.0 - new_f) * exp_diff;
         }
         //Get residuals:
         r = sigs - sigs_pred;
@@ -934,8 +935,6 @@ std::array<double, 3> GetBiExp(const std::vector<float> &bvalues, const std::vec
         }else{
             lambda *= 1.1;
         }
-
-
     }
     return { f, D, pseudoD };
 }

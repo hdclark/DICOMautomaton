@@ -10,6 +10,7 @@
 #include <random>
 #include <ostream>
 #include <stdexcept>
+#include <mutex>
 
 #include "../../Thread_Pool.h"
 #include "../Grouping/Misc_Functors.h"
@@ -125,7 +126,7 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
 
                     if( (img_refw.get().rows == overlapping_img_refws.front().get().rows)
                     &&  (img_refw.get().columns == overlapping_img_refws.front().get().columns)
-                    &&  (img_refw.get().channels == overlapping_img_refws.front().get().channels)
+                    //&&  (img_refw.get().channels == overlapping_img_refws.front().get().channels)
                     &&  (0.99 < img_refw.get().row_unit.Dot(overlapping_img_refws.front().get().row_unit))
                     &&  (0.99 < img_refw.get().col_unit.Dot(overlapping_img_refws.front().get().col_unit)) ){
                         // exact_overlap *= 1.0;
@@ -179,6 +180,11 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
 
                     // Sample the image.
                     if(exact_overlap){
+                        if((*(int_img_it))->channels <= channel){
+                            vals.emplace_back(inaccessible_val); // Cannot access this voxel.
+                            continue;
+                        }
+
                         try{
                             vals.emplace_back( (*(int_img_it))->value(E_row, E_col, channel) );
                         }catch(const std::exception &){
