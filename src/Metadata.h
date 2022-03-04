@@ -84,6 +84,13 @@ void inject_metadata( metadata_map_t &target,
 // Utility function documenting the metadata mutation operation.
 OperationArgDoc MetadataInjectionOpArgDoc();
 
+// 'Natural' sort based on metadata values (i.e., optional-wrapped strings).
+// This sort separately considers text fragments (lexicographically) and numbers
+// (numerically) by splitting non-numbers and numbers into token strings.
+// Disengaged optionals are treated as nulls.
+bool natural_lt( const std::optional<std::string>& A_opt,
+                 const std::optional<std::string>& B_opt );
+
 // ----------------------------- Object creation helpers ------------------------------------
 // Sets of DICOM metadata key-value elements that provide reasonable defaults or which draw from the provided reference
 // map, if available.

@@ -366,6 +366,95 @@ OperationArgDoc MetadataInjectionOpArgDoc(){
     return out;
 }
 
+bool natural_lt( const std::optional<std::string>& A_opt,
+                 const std::optional<std::string>& B_opt ){
+
+    // Handle degenerate cases.
+    if(false){
+    }else if(  A_opt && !B_opt ){
+        return true;  // Known before unknown.
+    }else if( !A_opt &&  B_opt ){
+        return false; // Known before unknown.
+    }else if( !A_opt && !B_opt ){
+        return true;  // Both unknown. Considered equal, not less-than.
+    }
+
+    // Handle full case.
+
+    // Break each string into text and number tokens.
+    const auto split_into_tokens = [](std::string in) -> std::vector<std::string> {
+        std::vector<std::string> out;
+        std::string shtl;
+        bool last_was_num = false;
+        bool last_was_eE  = false; // for scientific notation.
+        for(char i : in){
+            const auto as_int = static_cast<int>(i);
+            const auto is_eE  = (i == 'e') || (i == 'E'); 
+            const auto is_num =  ( isdigit(as_int) != 0 ) 
+                              || (!last_was_num && (i == '-'))  // '-123'
+                              || (!last_was_num && (i == '+'))  // "+123"
+                              || ( last_was_num && (i == '.'))  // "1.23"
+                              || ( last_was_num && is_eE)       // "1.0E10" or "1.0e10"
+                              || ( last_was_eE  && (i == '-'))  // "1.0E-2"
+                              || ( last_was_eE  && (i == '+')); // "1.0E+2"
+
+            if( is_num == !last_was_num ){  // Iff there is a transition.
+                if(!shtl.empty()) out.emplace_back(shtl);
+                shtl.clear();
+            }
+            shtl += i;
+
+            last_was_num = is_num;
+            last_was_eE  = is_eE;
+        }
+        if(!shtl.empty()) out.emplace_back(shtl);
+        return out;
+    };
+    const auto A_vec = split_into_tokens(A_opt.value());
+    const auto B_vec = split_into_tokens(B_opt.value());
+
+    size_t i = 0;
+    while(true){
+        // Check if either vectors have run out of tokens.
+        if( (A_vec.size() <= i) && (B_vec.size() <= i)){
+            return false; // Strings were (effectively) identical.
+        }else if(A_vec.size() <= i){
+            return true;
+        }else if(B_vec.size() <= i){
+            return false;
+        }
+
+        // Check if either vectors can employ numeric sorting.
+        const bool A_is_num = Is_String_An_X<double>(A_vec[i]);
+        const bool B_is_num = Is_String_An_X<double>(B_vec[i]);
+
+        if( !A_is_num && !B_is_num ){
+            if( A_vec[i] == B_vec[i] ){
+                ++i;
+                continue;
+            }
+            return (A_vec[i] < B_vec[i]);
+        }else if(  A_is_num && !B_is_num ){
+            return true;
+        }else if( !A_is_num &&  B_is_num ){
+            return false;
+        }else if(  A_is_num &&  B_is_num ){
+            const auto A_num = stringtoX<double>(A_vec[i]);
+            const auto B_num = stringtoX<double>(B_vec[i]);
+            if( A_num == B_num ){
+                ++i;
+                continue;
+            }
+            return (A_num < B_num);
+        }
+
+        throw std::logic_error("Should never get here (1/2). Refusing to continue.");
+    }
+
+    throw std::logic_error("Should never get here (2/2). Refusing to continue.");
+    return true;
+}
+
 metadata_map_t coalesce_metadata_sop_common(const metadata_map_t &ref){
     metadata_map_t out;
     const auto SOPInstanceUID = Generate_Random_UID(60);

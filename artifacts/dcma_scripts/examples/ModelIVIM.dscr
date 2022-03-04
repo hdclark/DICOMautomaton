@@ -58,9 +58,18 @@ DeleteImages(
 
 # Step 3.
 #
-# Arrange images in lexicographical b-value order.
-#OrderImages( Key = 'CSAImage/B_value' );
-OrderImages( Key = 'DiffusionBValue' );
+# Arrange images according to SliceLocation, and image arrays
+# according to b-value.
+OrderImages(
+    ImageSelection = 'all',
+    Variant = 'internal',
+    Key = 'SliceLocation',
+);
+OrderImages(
+    ImageSelection = 'all',
+    Variant = 'external',
+    Key = 'DiffusionBValue',
+);
 
 
 # Step 4.

@@ -1,4 +1,4 @@
-//OrderImages.cc - A part of DICOMautomaton 2019. Written by hal clark.
+//OrderImages.cc - A part of DICOMautomaton 2022. Written by hal clark.
 
 #include <optional>
 #include <iterator>
@@ -11,11 +11,14 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "OrderImages.h"
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "../Metadata.h"
+
+#include "OrderImages.h"
 
 
 
@@ -23,19 +26,27 @@ OperationDoc OpArgDocOrderImages(){
     OperationDoc out;
     out.name = "OrderImages";
     out.desc = 
-        "This operation will order individual image slices within collections (Image_Arrays) based on the values"
-        " of the specified metadata tags.";
+        "This operation will order either individual image slices within each image array, or image arrays"
+        " based on the values of the specified metadata tags.";
 
     out.notes.emplace_back(
-        "Images are moved, not copied."
+        "Images and image arrays are moved, not copied."
     );
-
     out.notes.emplace_back(
-        "Image groupings are retained, and the order of groupings is not altered."
+        "Image arrays (groupings) are always retained, though the order of images within each array"
+        " and the order of the arrays themselves will change."
     );
-
     out.notes.emplace_back(
-        "Images that do not contain the specified metadata will be sorted after the end."
+        "Images that do not contain the specified metadata will be placed at the end."
+        " Similarly, image arrays that do not have consensus (i.e., the constituent images have heterogeneous"
+        " metadata) will be placed at the end."
+    );
+    out.notes.emplace_back(
+        "Image array sorting permits selection of specific image arrays. Only selected arrays will participate"
+        " in the sort, and sorted selection will be reinjected such that the position of all unselected arrays"
+        " remain unchanged. For example, representing unselected arrays as letters (ABC...) and selected arrays"
+        " as numbers (123...) then sorting 'AB3C12' would result in 'AB1C23'. Note that the unselected arrays"
+        " do not move, even when the selected arrays are reordered."
     );
 
 
@@ -46,10 +57,19 @@ OperationDoc OpArgDocOrderImages(){
 
 
     out.args.emplace_back();
+    out.args.back().name = "Variant";
+    out.args.back().desc = "Controls whether images (internal) or image arrays (external) are sorted.";
+    out.args.back().default_val = "internal";
+    out.args.back().expected = false;
+    out.args.back().examples = { "internal",
+                                 "external" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
+
+    out.args.emplace_back();
     out.args.back().name = "Key";
-    out.args.back().desc = "Image metadata key to use for ordering."
-                           " Images will be sorted according to the key's value 'natural' sorting order, which"
-                           " compares sub-strings of numbers and characters separately."
+    out.args.back().desc = "Metadata key to use for ordering."
+                           " Values will be sorted according to a 'natural' sorting order, which"
+                           " greedily compares sub-strings of numbers and characters separately."
                            " Note this ordering is expected to be stable, but may not always be on some systems.";
     out.args.back().default_val = "";
     out.args.back().expected = false;
@@ -62,7 +82,8 @@ OperationDoc OpArgDocOrderImages(){
     out.args.back().name = "Unit";
     out.args.back().desc = "Unit vector use for spatial ordering."
                            " Images will be sorted according to the position of the corner nearest the (0,0) voxel"
-                           " along the given unit vector.";
+                           " along the given unit vector. For image arrays, the 'first' image is used -- which"
+                           " occurs 'first' can be controlled by first sorting internally.";
     out.args.back().default_val = "";
     out.args.back().expected = false;
     out.args.back().examples = { "(0.0, 0.0, 1.0)",
@@ -74,124 +95,167 @@ OperationDoc OpArgDocOrderImages(){
 
 
 bool OrderImages(Drover &DICOM_data,
-                   const OperationArgPkg& OptArgs,
-                   std::map<std::string, std::string>& /*InvocationMetadata*/,
-                   const std::string& /*FilenameLex*/){
+                 const OperationArgPkg& OptArgs,
+                 std::map<std::string, std::string>& /*InvocationMetadata*/,
+                 const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
 
+    const auto VariantStr = OptArgs.getValueStr("Variant").value();
     const auto KeyStrOpt = OptArgs.getValueStr("Key");
     const auto UnitStrOpt = OptArgs.getValueStr("Unit");
 
     //-----------------------------------------------------------------------------------------------------------------
-    using img_t = planar_image<float,double>;
+    const auto regex_internal = Compile_Regex("^int?e?r?n?a?l?");
+    const auto regex_external = Compile_Regex("^ext?e?r?n?a?l?");
 
-    // Define an ordering that will work for words/characters and numbers mixed together.
-    const auto key_ordering = [KeyStrOpt]( const img_t &A, const img_t &B ) -> bool {
-        const auto A_opt = A.GetMetadataValueAs<std::string>(KeyStrOpt.value());
-        const auto B_opt = B.GetMetadataValueAs<std::string>(KeyStrOpt.value());
+    if( std::regex_match(VariantStr, regex_internal) ){
+        using img_t = planar_image<float,double>;
 
-        if(  A_opt && !B_opt ){
-            return true;
-        }else if( !A_opt &&  B_opt ){
-            return false;
-        }else if( !A_opt && !B_opt ){
-            return true; // Non-sensical, because both are NA. Hopefully this at least preserves order.
-        }else if(  A_opt &&  B_opt ){
-            // A 'natural' sort algorithm that performs look-ahead for numerical values.
+        // Define an ordering that will work for words/characters and numbers mixed together.
+        const auto key_ordering = [KeyStrOpt]( const img_t &A, const img_t &B ) -> bool {
+            const auto A_opt = A.GetMetadataValueAs<std::string>(KeyStrOpt.value());
+            const auto B_opt = B.GetMetadataValueAs<std::string>(KeyStrOpt.value());
+            
+            return natural_lt( A_opt, B_opt );
+        };
 
-            const auto Break = [](std::string in) -> std::vector<std::string> {
-                std::vector<std::string> out;
-                std::string shtl;
-                bool last_was_num = false;
-                for(char i : in){
-                    const auto as_int = static_cast<int>(i);
-                    const auto is_num = ( isdigit(as_int) != 0 ) 
-                                        || (!last_was_num && (i == '-'))
-                                        || ( last_was_num && (i == '.')) ;  // TODO: Support exponential notation.
+        // Spatial ordering.
+        const auto unit_ordering = [UnitStrOpt]( const img_t &A, const img_t &B ) -> bool {
+            const auto A_pos = A.anchor + A.offset;
+            const auto B_pos = B.anchor + B.offset;
 
-                    if( is_num == !last_was_num ){  // Iff there is a transition.
-                        if(!shtl.empty()) out.emplace_back(shtl);
-                        shtl.clear();
-                    }
-                    shtl += i;
+            const auto unit = vec3<double>().from_string( UnitStrOpt.value() ).unit();
 
-                    last_was_num = is_num;
-                }
-                if(!shtl.empty()) out.emplace_back(shtl);
-                return out;
-            };
+            const auto A_proj = A_pos.Dot(unit);
+            const auto B_proj = B_pos.Dot(unit);
+            return (A_proj < B_proj);
+        };
 
-            const auto A_vec = Break(A_opt.value());
-            const auto B_vec = Break(B_opt.value());
+        auto IAs_all = All_IAs( DICOM_data );
+        auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+        for(auto & iap_it : IAs){
+            if(KeyStrOpt){
+                (*iap_it)->imagecoll.images.sort( key_ordering );
+            }else if(UnitStrOpt){
+                (*iap_it)->imagecoll.images.sort( unit_ordering );
+            }
+        }
 
-            size_t i = 0;
-            while(true){
-                // Check if either vectors have run out of tokens.
-                if( (A_vec.size() <= i) && (B_vec.size() <= i)){
-                    return true; // Strings were (effectively) identical.
-                }else if(A_vec.size() <= i){
-                    return true;
-                }else if(B_vec.size() <= i){
-                    return false;
-                }
+    }else if( std::regex_match(VariantStr, regex_external) ){
+        using img_arr_ptr_t = std::shared_ptr<Image_Array>;
 
-                // Check if either vectors can employ numeric sorting.
-                const bool A_is_num = Is_String_An_X<double>(A_vec[i]);
-                const bool B_is_num = Is_String_An_X<double>(B_vec[i]);
-                if( !A_is_num && !B_is_num ){
-                    if( A_vec[i] == B_vec[i] ){
-                        ++i;
-                        continue;
-                    }
-                    return (A_vec[i] < B_vec[i]);
-                }else if(  A_is_num && !B_is_num ){
-                    return true;
-                }else if( !A_is_num &&  B_is_num ){
-                    return false;
-                }else if(  A_is_num &&  B_is_num ){
-                    const auto A_num = stringtoX<double>(A_vec[i]);
-                    const auto B_num = stringtoX<double>(B_vec[i]);
-                    if( A_num == B_num ){
-                        ++i;
-                        continue;
-                    }
-                    return (A_num < B_num);
-                }
+        // Maintain the relative ordering of selected vs un-selected image arrays by sorting with proxy objects.
+        //
+        // Unselected image arrays will retain their position, but selected image arrays will be extracted, sorted, and
+        // re-inserted to maintain unselected positions.
+        //
+        // Note that using proxy objects also provides transactional behaviour -- exceptions won't result in data loss.
+        auto IAs_all = All_IAs( DICOM_data );
+        auto IAs = Whitelist( IAs_all, ImageSelectionStr );
 
-                throw std::logic_error("Should never get here (1/3). Refusing to continue.");
-                return true;
+        // The selection are isolated to simplify later sorting.
+        std::list<img_arr_ptr_t> selected;
+        for(auto& img_arr_ptr_it : IAs){
+            selected.emplace_back( *img_arr_ptr_it );
+        }
+
+        // All image arrays are assessed to determine if they were selected, but also to simplify later re-insertion.
+        struct tagged_all_t {
+            bool selected;
+            img_arr_ptr_t img_arr_ptr;
+        };
+        std::list<tagged_all_t> all_img_arrs;
+        for(auto& img_arr_ptr : DICOM_data.image_data){
+            all_img_arrs.emplace_back();
+            const auto l_selected = (std::find(std::begin(selected), std::end(selected), img_arr_ptr) != std::end(selected));
+            all_img_arrs.back().selected = l_selected;
+            if(l_selected) all_img_arrs.back().img_arr_ptr = img_arr_ptr;
+        }
+
+        // Sort the selected images arrays.
+
+        // Define an ordering that will work for words/characters and numbers mixed together.
+        const auto key_ordering = [KeyStrOpt]( const img_arr_ptr_t &A,
+                                               const img_arr_ptr_t &B ) -> bool {
+            std::optional<std::string> A_opt;
+            if(A != nullptr){
+                auto A_m = A->imagecoll.get_common_metadata({});
+                A_opt = get_as<std::string>(A_m, KeyStrOpt.value());
+            }
+
+            std::optional<std::string> B_opt;
+            if(B != nullptr){
+                auto B_m = B->imagecoll.get_common_metadata({});
+                B_opt = get_as<std::string>(B_m, KeyStrOpt.value());
             }
             
-            throw std::logic_error("Should never get here (2/3). Refusing to continue.");
-            return true;
-        }
+            return natural_lt( A_opt, B_opt );
+        };
 
-        throw std::logic_error("Should never get here (3/3). Refusing to continue.");
-        return true;
-    };
+        // Spatial ordering.
+        const auto unit_ordering = [UnitStrOpt]( const img_arr_ptr_t &A,
+                                                 const img_arr_ptr_t &B ) -> bool {
+            const bool A_valid =  (A != nullptr)
+                               && !A->imagecoll.images.empty()
+                               && A->imagecoll.images.front().anchor.isfinite()
+                               && A->imagecoll.images.front().offset.isfinite();
+            const bool B_valid =  (B != nullptr)
+                               && !B->imagecoll.images.empty()
+                               && B->imagecoll.images.front().anchor.isfinite()
+                               && B->imagecoll.images.front().offset.isfinite();
 
-    // Spatial ordering.
-    const auto unit_ordering = [UnitStrOpt]( const img_t &A, const img_t &B ) -> bool {
-        const auto A_pos = A.anchor + A.offset;
-        const auto B_pos = B.anchor + B.offset;
+            // Handle degenerate cases.
+            if(false){
+            }else if( A_valid && !B_valid ){
+                return true;  // Known before unknown.
+            }else if(!A_valid &&  B_valid ){
+                return false; // Known before unknown.
+            }else if(!A_valid && !B_valid ){
+                return false; // Both unknown. Considered equal.
+            }
 
-        const auto unit = vec3<double>().from_string( UnitStrOpt.value() ).unit();
+            // Handle full case.
+            const auto A_pos = A->imagecoll.images.front().anchor + A->imagecoll.images.front().offset;
+            const auto B_pos = B->imagecoll.images.front().anchor + B->imagecoll.images.front().offset;
 
-        const auto A_proj = A_pos.Dot(unit);
-        const auto B_proj = B_pos.Dot(unit);
-        return (A_proj < B_proj);
-    };
+            const auto unit = vec3<double>().from_string( UnitStrOpt.value() ).unit();
 
-    auto IAs_all = All_IAs( DICOM_data );
-    auto IAs = Whitelist( IAs_all, ImageSelectionStr );
-    for(auto & iap_it : IAs){
+            const auto A_proj = A_pos.Dot(unit);
+            const auto B_proj = B_pos.Dot(unit);
+            return (A_proj < B_proj);
+        };
+
         if(KeyStrOpt){
-            (*iap_it)->imagecoll.images.sort( key_ordering );
+            selected.sort( key_ordering );
         }else if(UnitStrOpt){
-            (*iap_it)->imagecoll.images.sort( unit_ordering );
+            selected.sort( unit_ordering );
         }
+
+        // Re-insert the sorted selection back into the Drover class.
+        std::list<std::shared_ptr<Image_Array>> image_data;
+        for(auto& tia : all_img_arrs){
+            if(!tia.selected){
+                // Insert the unselected image array directly.
+                image_data.emplace_back(tia.img_arr_ptr);
+            }else{
+                // 'Steal' the first available sorted image array to take the previous array's place.
+                if(selected.empty()){
+                    throw std::logic_error("Sort stability broken, expecting another selected image. Aborting transaction");
+                }
+                image_data.splice( std::end(image_data),
+                                   selected,
+                                   std::begin(selected) );
+            }
+        }
+        if(!selected.empty()){
+            throw std::logic_error("Unused selected images were not reinjected back into Drover object. Aborting transaction");
+        }
+        std::swap(DICOM_data.image_data, image_data);
+
+    }else{
+        throw std::invalid_argument("Variant not understood");
     }
 
     return true;
