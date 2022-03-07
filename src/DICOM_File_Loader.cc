@@ -110,8 +110,8 @@ if(std::get_if<std::monostate>(&(t->transform)) != nullptr) FUNCWARN("(std::get_
         }else if(boost::iequals(Modality,"RTPLAN")){
             FUNCWARN("RTPLAN file support is experimental");
 
-            auto tplan = Load_TPlan_Config(Filename);
-            DICOM_data.tplan_data.emplace_back( std::move(tplan) );
+            auto rtplan = Load_RTPlan(Filename);
+            DICOM_data.rtplan_data.emplace_back( std::move(rtplan) );
 
             bfit = Filenames.erase( bfit ); 
 

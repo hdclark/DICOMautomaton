@@ -1,4 +1,4 @@
-//DumpTPlanMetadataOccurrencesToFile.cc - A part of DICOMautomaton 2019. Written by hal clark.
+//DumpRTPlanMetadataOccurrencesToFile.cc - A part of DICOMautomaton 2019. Written by hal clark.
 
 #include <cstdlib>            //Needed for exit() calls.
 #include <fstream>
@@ -16,23 +16,23 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
-#include "DumpTPlanMetadataOccurrencesToFile.h"
+#include "DumpRTPlanMetadataOccurrencesToFile.h"
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorImages.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-OperationDoc OpArgDocDumpTPlanMetadataOccurrencesToFile(){
+OperationDoc OpArgDocDumpRTPlanMetadataOccurrencesToFile(){
     OperationDoc out;
-    out.name = "DumpTPlanMetadataOccurrencesToFile";
+    out.name = "DumpRTPlanMetadataOccurrencesToFile";
 
     out.desc = 
         "Dump all the metadata elements, but group like-items together and also print the occurence number.";
 
     out.args.emplace_back();
     out.args.back() = TPWhitelistOpArgDoc();
-    out.args.back().name = "TPlanSelection";
+    out.args.back().name = "RTPlanSelection";
     out.args.back().default_val = "last";
 
 
@@ -60,13 +60,13 @@ OperationDoc OpArgDocDumpTPlanMetadataOccurrencesToFile(){
     return out;
 }
 
-bool DumpTPlanMetadataOccurrencesToFile(Drover &DICOM_data,
+bool DumpRTPlanMetadataOccurrencesToFile(Drover &DICOM_data,
                                           const OperationArgPkg& OptArgs,
                                           std::map<std::string, std::string>& /*InvocationMetadata*/,
                                           const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-    const auto TPlanSelectionStr = OptArgs.getValueStr("TPlanSelection").value();
+    const auto RTPlanSelectionStr = OptArgs.getValueStr("RTPlanSelection").value();
 
     auto FileName = OptArgs.getValueStr("FileName").value();
 
@@ -77,7 +77,7 @@ bool DumpTPlanMetadataOccurrencesToFile(Drover &DICOM_data,
     std::map<std::string, std::map<std::string,long int>> sset; // [metadata_name][metadata_value] = count.
 
     auto TPs_all = All_TPs( DICOM_data );
-    auto TPs = Whitelist( TPs_all, TPlanSelectionStr );
+    auto TPs = Whitelist( TPs_all, RTPlanSelectionStr );
     for(auto & tpp_it : TPs){
 
         // Plan metadata.
@@ -100,11 +100,11 @@ bool DumpTPlanMetadataOccurrencesToFile(Drover &DICOM_data,
         //
         //Try open a named mutex. Probably created in /dev/shm/ if you need to clear it manually...
         boost::interprocess::named_mutex mutex(boost::interprocess::open_or_create,
-                                               "dcma_op_dumptplanmetadataoccurrencestofile_mutex");
+                                               "dcma_op_dumprtplanmetadataoccurrencestofile_mutex");
         boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(mutex);
 
         if(FileName.empty()){
-            const auto base = std::filesystem::temp_directory_path() / "dcma_dumptplanmetadataoccurrencestofile_";
+            const auto base = std::filesystem::temp_directory_path() / "dcma_dumprtplanmetadataoccurrencestofile_";
             FileName = Get_Unique_Sequential_Filename(base.string(), 6, ".csv");
         }
         const auto FirstWrite = !Does_File_Exist_And_Can_Be_Read(FileName);

@@ -60,7 +60,7 @@ std::unique_ptr<Image_Array> Load_Dose_Array(const std::filesystem::path &filena
 std::list<std::shared_ptr<Image_Array>>  Load_Dose_Arrays(const std::list<std::filesystem::path> &filenames);
 
 //-------------------- Plans ------------------------
-std::unique_ptr<TPlan_Config> Load_TPlan_Config(const std::filesystem::path &filename);
+std::unique_ptr<RTPlan> Load_RTPlan(const std::filesystem::path &filename);
 
 //---------------- Registrations --------------------
 std::unique_ptr<Transform3> Load_Transform(const std::filesystem::path &filename);

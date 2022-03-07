@@ -232,20 +232,20 @@ bool DroverDebug(Drover &DICOM_data,
 
     //Treatment plan data.
     do{
-        FUNCINFO("There are " << DICOM_data.tplan_data.size() << " TPlan_Configs loaded");
+        FUNCINFO("There are " << DICOM_data.rtplan_data.size() << " RTPlans loaded");
         if(verbosity == verbosity_t::quiet) break;
 
         size_t tp_cnt = 0;
-        for(auto &tp : DICOM_data.tplan_data){
+        for(auto &tp : DICOM_data.rtplan_data){
             if(tp == nullptr){
-                FUNCINFO("  TPlan_Config " << tp_cnt << " is not valid");
+                FUNCINFO("  RTPlan " << tp_cnt << " is not valid");
 
             }else{
-                FUNCINFO("  TPlan_Config " << tp_cnt << " has " <<
+                FUNCINFO("  RTPlan " << tp_cnt << " has " <<
                          tp->dynamic_states.size() << " beams");
                 if(verbosity == verbosity_t::medium) continue;
                 if(IncludeMetadata){
-                    FUNCINFO("  TPlan_Config " << tp_cnt << " metadata:");
+                    FUNCINFO("  RTPlan " << tp_cnt << " metadata:");
                     dump_metadata(std::cout, "      ", tp->metadata);
                 }
 

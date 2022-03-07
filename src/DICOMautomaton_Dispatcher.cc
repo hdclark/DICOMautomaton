@@ -412,7 +412,7 @@ try{
                  || DICOM_data.Has_Image_Data()
                  || DICOM_data.Has_Point_Data()
                  || DICOM_data.Has_Mesh_Data()
-                 || DICOM_data.Has_TPlan_Data()
+                 || DICOM_data.Has_RTPlan_Data()
                  || DICOM_data.Has_LSamp_Data()
                  || DICOM_data.Has_Tran3_Data()
                  || DICOM_data.Has_Table_Data() ) ){

@@ -12,9 +12,9 @@ GroupImages(
 ){};
 
 # Process each RTPLAN separately.
-ForEachTPlan(
-    #TPlanSelection = 'RTPlanLabel@ec.*'
-    TPlanSelection = 'RTPlanLabel@.*'
+ForEachRTPlan(
+    #RTPlanSelection = 'RTPlanLabel@ec.*'
+    RTPlanSelection = 'RTPlanLabel@.*'
 ){
     # Document metadata.
     #DroverDebug(
@@ -23,8 +23,8 @@ ForEachTPlan(
     #){};
 
     # Test core functionality and nesting.
-    ValidateTPlan(
-        TPlanSelection=last,
+    ValidateRTPlan(
+        RTPlanSelection=last,
         TableSelection=last,
         Checks='
 

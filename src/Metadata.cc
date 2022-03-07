@@ -50,8 +50,8 @@ std::set<std::string> Extract_Distinct_Values(ptr p, const std::string &key){
         if(val_opt) out.insert(val_opt.value());
         return out;
 
-    // TPlan_Config.
-    }else if constexpr (std::is_same_v< obj_t, TPlan_Config >){
+    // RTPlan.
+    }else if constexpr (std::is_same_v< obj_t, RTPlan >){
         std::optional<std::string> val_opt = ( p->metadata.count(key) != 0 ) ?
                                                p->metadata[key] : std::optional<std::string>();
         if(val_opt) out.insert(val_opt.value());
@@ -87,7 +87,7 @@ template std::set<std::string> Extract_Distinct_Values(contour_collection<double
 template std::set<std::string> Extract_Distinct_Values(std::shared_ptr<Image_Array >, const std::string &);
 template std::set<std::string> Extract_Distinct_Values(std::shared_ptr<Point_Cloud >, const std::string &);
 template std::set<std::string> Extract_Distinct_Values(std::shared_ptr<Surface_Mesh>, const std::string &);
-template std::set<std::string> Extract_Distinct_Values(std::shared_ptr<TPlan_Config>, const std::string &);
+template std::set<std::string> Extract_Distinct_Values(std::shared_ptr<RTPlan>, const std::string &);
 template std::set<std::string> Extract_Distinct_Values(std::shared_ptr<Line_Sample >, const std::string &);
 template std::set<std::string> Extract_Distinct_Values(std::shared_ptr<Transform3  >, const std::string &);
 template std::set<std::string> Extract_Distinct_Values(std::shared_ptr<Sparse_Table>, const std::string &);

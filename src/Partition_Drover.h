@@ -44,16 +44,16 @@ Combine_Partitioned_Drover( Partitioned_Drover & );
 
 
 // -------------------------------------------------------------------------------------------------------------------
-// ---------------------------------- TPlan partitioning based on DICOM linkage --------------------------------------
+// ---------------------------------- RTPlan partitioning based on DICOM linkage -------------------------------------
 // -------------------------------------------------------------------------------------------------------------------
 struct Drover_Selection {
     Drover select; // The relevant parts.
     Drover extras; // The non-relevant parts.
 };
 
-// Split a Drover object into two parts based on relevance to a given Tplan.
+// Split a Drover object into two parts based on relevance to a given RTPlan.
 Drover_Selection
-Select_Drover( Drover &, std::list<std::shared_ptr<TPlan_Config>>::iterator );
+Select_Drover( Drover &, std::list<std::shared_ptr<RTPlan>>::iterator );
 
 // Re-combine a split Drover object, handling additions/removals/modifications.
 Drover

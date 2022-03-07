@@ -149,7 +149,7 @@ ForEachDistinct( KeysCommon='StudyDate;StudyTime' ){
 #
 # Note that the same items may appear in multiple groups due to
 # DICOM linkage rules.
-#ForEachTPlan( ... ){
+#ForEachRTPlan( ... ){
 #    True();
 #    NoOp();
 #};

@@ -1,4 +1,4 @@
-// ForEachTPlan.h.
+// ForEachRTPlan.h.
 
 #pragma once
 
@@ -8,9 +8,9 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocForEachTPlan();
+OperationDoc OpArgDocForEachRTPlan();
 
-bool ForEachTPlan(Drover &DICOM_data,
+bool ForEachRTPlan(Drover &DICOM_data,
                   const OperationArgPkg& /*OptArgs*/,
                   std::map<std::string, std::string>& /*InvocationMetadata*/,
                   const std::string& /*FilenameLex*/);

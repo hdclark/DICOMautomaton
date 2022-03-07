@@ -1,4 +1,4 @@
-//ValidateTPlan.cc - A part of DICOMautomaton 2022. Written by hal clark.
+//ValidateRTPlan.cc - A part of DICOMautomaton 2022. Written by hal clark.
 
 #include <asio.hpp>
 #include <algorithm>
@@ -32,7 +32,7 @@
 #include "../Metadata.h"
 #include "../Tables.h"
 
-#include "ValidateTPlan.h"
+#include "ValidateRTPlan.h"
 
 
 
@@ -355,16 +355,16 @@ bool dispatch_checks( common_context_t& c ){
 }
 
 
-OperationDoc OpArgDocValidateTPlan(){
+OperationDoc OpArgDocValidateRTPlan(){
     OperationDoc out;
-    out.name = "ValidateTPlan";
+    out.name = "ValidateRTPlan";
 
     out.desc = 
         "This operation evaluates a radiotherapy treatment plan against user-specified criteria.";
 
     out.args.emplace_back();
     out.args.back() = TPWhitelistOpArgDoc();
-    out.args.back().name = "TPlanSelection";
+    out.args.back().name = "RTPlanSelection";
     out.args.back().default_val = "last";
 
 
@@ -390,7 +390,7 @@ OperationDoc OpArgDocValidateTPlan(){
     return out;
 }
 
-bool ValidateTPlan(Drover &DICOM_data,
+bool ValidateRTPlan(Drover &DICOM_data,
                     const OperationArgPkg& OptArgs,
                     std::map<std::string, std::string>& InvocationMetadata,
                     const std::string& FilenameLex){
@@ -398,7 +398,7 @@ bool ValidateTPlan(Drover &DICOM_data,
     Explicator X(FilenameLex);
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-    const auto TPlanSelectionStr = OptArgs.getValueStr("TPlanSelection").value();
+    const auto RTPlanSelectionStr = OptArgs.getValueStr("RTPlanSelection").value();
 
     const auto TableSelectionStr = OptArgs.getValueStr("TableSelection").value();
     const auto ChecksStr = OptArgs.getValueStr("Checks").value();
@@ -411,7 +411,7 @@ bool ValidateTPlan(Drover &DICOM_data,
     }
 
     auto TPs_all = All_TPs( DICOM_data );
-    auto TPs = Whitelist( TPs_all, TPlanSelectionStr );
+    auto TPs = Whitelist( TPs_all, RTPlanSelectionStr );
     if(TPs.empty()){
         throw std::invalid_argument("No plans specified, nothing to check");
     }

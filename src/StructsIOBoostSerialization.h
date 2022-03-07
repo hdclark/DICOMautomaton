@@ -144,15 +144,15 @@ void serialize(Archive &a, Dynamic_Machine_State &p, const unsigned int version)
     return;
 }
 
-//Class: TPlan_Config.
+//Class: RTPlan.
 template<typename Archive>
-void serialize(Archive &a, TPlan_Config &p, const unsigned int version){
+void serialize(Archive &a, RTPlan &p, const unsigned int version){
     if(version == 0){
         a & boost::serialization::make_nvp("dynamic_states",p.dynamic_states)
 
           & boost::serialization::make_nvp("metadata",p.metadata);
     }else{
-        FUNCWARN("TPlan_Config archives with version " << version << " are not recognized");
+        FUNCWARN("RTPlan archives with version " << version << " are not recognized");
     }
     return;
 }
@@ -187,7 +187,7 @@ void serialize(Archive &a, Drover &d, const unsigned int version){
           & boost::serialization::make_nvp("image_data",d.image_data)
           & boost::serialization::make_nvp("point_data",d.point_data)
           & boost::serialization::make_nvp("smesh_data",d.smesh_data)
-          & boost::serialization::make_nvp("tplan_data",d.tplan_data)
+          & boost::serialization::make_nvp("rtplan_data",d.rtplan_data)
           & boost::serialization::make_nvp("lsamp_data",d.lsamp_data);
     }else{
         FUNCWARN("Drover archives with version " << version << " are not recognized");
@@ -208,12 +208,12 @@ BOOST_CLASS_VERSION(Surface_Mesh, 0) // Initial version number, effectively just
 
 BOOST_CLASS_VERSION(Static_Machine_State, 0) // Initial version number.
 BOOST_CLASS_VERSION(Dynamic_Machine_State, 0) // Initial version number.
-BOOST_CLASS_VERSION(TPlan_Config, 0) // Initial version number.
+BOOST_CLASS_VERSION(RTPlan, 0) // Initial version number.
 
 BOOST_CLASS_VERSION(Line_Sample, 0) // Initial version number.
 
 //BOOST_CLASS_VERSION(Drover, 0); // Initial version number.
 //BOOST_CLASS_VERSION(Drover, 1); // After removing Dose_Arrays and Drover::Has_Been_Melded.
 //BOOST_CLASS_VERSION(Drover, 2); // After adding v0 of the Surface_Mesh member.
-BOOST_CLASS_VERSION(Drover, 3) // After adding v0 of the TPlan_Config member and v0 of the Line_Sample member.
+BOOST_CLASS_VERSION(Drover, 3) // After adding v0 of the RTPlan member and v0 of the Line_Sample member.
 

@@ -67,7 +67,7 @@ Partition_Drover( Drover& DICOM_data,
         compute_keys_and_partition(DICOM_data.image_data);
         compute_keys_and_partition(DICOM_data.point_data);
         compute_keys_and_partition(DICOM_data.smesh_data);
-        compute_keys_and_partition(DICOM_data.tplan_data);
+        compute_keys_and_partition(DICOM_data.rtplan_data);
         compute_keys_and_partition(DICOM_data.lsamp_data);
         compute_keys_and_partition(DICOM_data.trans_data);
         compute_keys_and_partition(DICOM_data.table_data);
@@ -127,11 +127,11 @@ Combine_Partitioned_Drover( Partitioned_Drover &pd ){
 }
 
 // -------------------------------------------------------------------------------------------------------------------
-// ---------------------------------- TPlan partitioning based on DICOM linkage --------------------------------------
+// --------------------------------- RTPlan partitioning based on DICOM linkage --------------------------------------
 // -------------------------------------------------------------------------------------------------------------------
 
 Drover_Selection
-Select_Drover( Drover &DICOM_data, std::list<std::shared_ptr<TPlan_Config>>::iterator tp_it ){
+Select_Drover( Drover &DICOM_data, std::list<std::shared_ptr<RTPlan>>::iterator tp_it ){
     Drover_Selection pd;
     pd.extras = DICOM_data;
 
@@ -150,9 +150,9 @@ Select_Drover( Drover &DICOM_data, std::list<std::shared_ptr<TPlan_Config>>::ite
         return out.value();
     };
 
-    auto tp = *tp_it; // pointer to TPlan_Config object.
+    auto tp = *tp_it; // pointer to RTPlan object.
     if(tp == nullptr){
-        throw std::invalid_argument("TPlan not accessible");
+        throw std::invalid_argument("RTPlan not accessible");
     }
     try{
         // Defer making the partition until we have all required metadata from the plan.
@@ -165,8 +165,8 @@ Select_Drover( Drover &DICOM_data, std::list<std::shared_ptr<TPlan_Config>>::ite
         //const auto tp_RTPlanName = get_required_first_value(tp, "RTPlanName");
 
         // 'Move' the plan.
-        pd.select.tplan_data.emplace_back(tp);
-        pd.extras.tplan_data.remove(tp);
+        pd.select.rtplan_data.emplace_back(tp);
+        pd.extras.rtplan_data.remove(tp);
 
         // Look for referenced RTDOSE images.
         for(uint32_t i = 0; i < 100000; ++i){

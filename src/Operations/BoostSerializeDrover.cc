@@ -41,13 +41,13 @@ OperationDoc OpArgDocBoost_Serialize_Drover(){
                            " Currently, any combination of (all images), (all contours), (all point clouds), "
                            " (all surface meshes), and (all treatment plans) can be selected."
                            " Note that RTDOSEs are treated as images.";
-    out.args.back().default_val = "images+contours+pointclouds+surfacemeshes+tplans";
+    out.args.back().default_val = "images+contours+pointclouds+surfacemeshes+rtplans";
     out.args.back().expected = true;
     out.args.back().examples = { "images",
                                  "images+pointclouds",
                                  "images+pointclouds+surfacemeshes",
                                  "pointclouds+surfacemeshes",
-                                 "tplans+images+contours",
+                                 "rtplans+images+contours",
                                  "contours+images+pointclouds" };
 
     return out;
@@ -66,15 +66,15 @@ bool Boost_Serialize_Drover(Drover &DICOM_data,
 
     const auto regex_images   = Compile_Regex(".*ima?ge?s?.*");
     const auto regex_contours = Compile_Regex(".*cont?o?u?r?s?.*");
-    const auto regex_pclouds  = Compile_Regex(".*po?i?n?t?.*clo?u?d?s?.*");
-    const auto regex_smeshes  = Compile_Regex(".*su?r?f?a?c?e?.*mes?h?e?s?.*");
-    const auto regex_tplans   = Compile_Regex(".*t?r?e?a?t?m?e?n?t?.*pla?n?s?.*");
+    const auto regex_pclouds  = Compile_Regex(".*po?i?n?t?.?clo?u?d?s?.*");
+    const auto regex_smeshes  = Compile_Regex(".*su?r?f?a?c?e?.?mes?h?e?s?.*");
+    const auto regex_rtplans  = Compile_Regex(".*r?t?.?pla?n?s?.*");
 
     const bool include_images   = std::regex_match(ComponentsStr, regex_images);
     const bool include_contours = std::regex_match(ComponentsStr, regex_contours);
     const bool include_pclouds  = std::regex_match(ComponentsStr, regex_pclouds);
     const bool include_smeshes  = std::regex_match(ComponentsStr, regex_smeshes);
-    const bool include_tplans   = std::regex_match(ComponentsStr, regex_tplans);
+    const bool include_rtplans  = std::regex_match(ComponentsStr, regex_rtplans);
 
     const std::filesystem::path apath(FilenameStr);
 
@@ -95,8 +95,8 @@ bool Boost_Serialize_Drover(Drover &DICOM_data,
     if(include_smeshes){
         d.smesh_data = DICOM_data.smesh_data;
     }
-    if(include_tplans){
-        d.tplan_data = DICOM_data.tplan_data;
+    if(include_rtplans){
+        d.rtplan_data = DICOM_data.rtplan_data;
     }
 
     const auto res = Common_Boost_Serialize_Drover(d, apath);

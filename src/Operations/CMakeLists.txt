@@ -5,7 +5,7 @@ add_library(Operations_objs OBJECT
     AnalyzeHistograms.cc
     AnalyzeLightRadFieldCoincidence.cc
     AnalyzePicketFence.cc
-    AnalyzeTPlan.cc
+    AnalyzeRTPlan.cc
     And.cc
     AnyOf.cc
     ApplyCalibrationCurve.cc
@@ -73,12 +73,12 @@ add_library(Operations_objs OBJECT
     DumpROIContours.cc
     DumpROIData.cc
     DumpROISNR.cc
-    DumpTPlanMetadataOccurrencesToFile.cc
+    DumpRTPlanMetadataOccurrencesToFile.cc
     DumpVoxelDoseInfo.cc
     EvaluateDoseVolumeStats.cc
     EvaluateNTCPModels.cc
     EvaluateTCPModels.cc
-    ValidateTPlan.cc
+    ValidateRTPlan.cc
     ExportFITSImages.cc
     ExportLineSamples.cc
     ExportPointClouds.cc
@@ -94,7 +94,7 @@ add_library(Operations_objs OBJECT
     ExtractPointsWarp.cc
     False.cc
     ForEachDistinct.cc
-    ForEachTPlan.cc
+    ForEachRTPlan.cc
     FVPicketFence.cc
     GenerateCalibrationCurve.cc
     GenerateMeshes.cc

@@ -25,7 +25,7 @@
 #include "Operations/AnalyzeHistograms.h"
 #include "Operations/AnalyzeLightRadFieldCoincidence.h"
 #include "Operations/AnalyzePicketFence.h"
-#include "Operations/AnalyzeTPlan.h"
+#include "Operations/AnalyzeRTPlan.h"
 #include "Operations/And.h"
 #include "Operations/AnyOf.h"
 #include "Operations/ApplyCalibrationCurve.h"
@@ -93,12 +93,12 @@
 #include "Operations/DumpROIContours.h"
 #include "Operations/DumpROIData.h"
 #include "Operations/DumpROISNR.h"
-#include "Operations/DumpTPlanMetadataOccurrencesToFile.h"
+#include "Operations/DumpRTPlanMetadataOccurrencesToFile.h"
 #include "Operations/DumpVoxelDoseInfo.h"
 #include "Operations/EvaluateDoseVolumeStats.h"
 #include "Operations/EvaluateNTCPModels.h"
 #include "Operations/EvaluateTCPModels.h"
-#include "Operations/ValidateTPlan.h"
+#include "Operations/ValidateRTPlan.h"
 #include "Operations/ExportFITSImages.h"
 #include "Operations/ExportLineSamples.h"
 #include "Operations/ExportSurfaceMeshes.h"
@@ -114,7 +114,7 @@
 #include "Operations/ExtractPointsWarp.h"
 #include "Operations/False.h"
 #include "Operations/ForEachDistinct.h"
-#include "Operations/ForEachTPlan.h"
+#include "Operations/ForEachRTPlan.h"
 #include "Operations/FVPicketFence.h"
 #include "Operations/GenerateCalibrationCurve.h"
 #include "Operations/GenerateMeshes.h"
@@ -247,7 +247,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["AnalyzeHistograms"] = std::make_pair(OpArgDocAnalyzeHistograms, AnalyzeHistograms);
     out["AnalyzeLightRadFieldCoincidence"] = std::make_pair(OpArgDocAnalyzeLightRadFieldCoincidence, AnalyzeLightRadFieldCoincidence);
     out["AnalyzePicketFence"] = std::make_pair(OpArgDocAnalyzePicketFence, AnalyzePicketFence);
-    out["AnalyzeTPlan"] = std::make_pair(OpArgDocAnalyzeTPlan, AnalyzeTPlan);
+    out["AnalyzeRTPlan"] = std::make_pair(OpArgDocAnalyzeRTPlan, AnalyzeRTPlan);
     out["And"] = std::make_pair(OpArgDocAnd, And);
     out["AnyOf"] = std::make_pair(OpArgDocAnyOf, AnyOf);
     out["ApplyCalibrationCurve"] = std::make_pair(OpArgDocApplyCalibrationCurve, ApplyCalibrationCurve);
@@ -315,12 +315,12 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["DumpROIContours"] = std::make_pair(OpArgDocDumpROIContours, DumpROIContours);
     out["DumpROIData"] = std::make_pair(OpArgDocDumpROIData, DumpROIData);
     out["DumpROISNR"] = std::make_pair(OpArgDocDumpROISNR, DumpROISNR);
-    out["DumpTPlanMetadataOccurrencesToFile"] = std::make_pair(OpArgDocDumpTPlanMetadataOccurrencesToFile, DumpTPlanMetadataOccurrencesToFile);
+    out["DumpRTPlanMetadataOccurrencesToFile"] = std::make_pair(OpArgDocDumpRTPlanMetadataOccurrencesToFile, DumpRTPlanMetadataOccurrencesToFile);
     out["DumpVoxelDoseInfo"] = std::make_pair(OpArgDocDumpVoxelDoseInfo, DumpVoxelDoseInfo);
     out["EvaluateDoseVolumeStats"] = std::make_pair(OpArgDocEvaluateDoseVolumeStats, EvaluateDoseVolumeStats);
     out["EvaluateNTCPModels"] = std::make_pair(OpArgDocEvaluateNTCPModels, EvaluateNTCPModels);
     out["EvaluateTCPModels"] = std::make_pair(OpArgDocEvaluateTCPModels, EvaluateTCPModels);
-    out["ValidateTPlan"] = std::make_pair(OpArgDocValidateTPlan, ValidateTPlan);
+    out["ValidateRTPlan"] = std::make_pair(OpArgDocValidateRTPlan, ValidateRTPlan);
     out["ExportFITSImages"] = std::make_pair(OpArgDocExportFITSImages, ExportFITSImages);
     out["ExportLineSamples"] = std::make_pair(OpArgDocExportLineSamples, ExportLineSamples);
     out["ExportPointClouds"] = std::make_pair(OpArgDocExportPointClouds, ExportPointClouds);
@@ -336,7 +336,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ExtractPointsWarp"] = std::make_pair(OpArgDocExtractPointsWarp, ExtractPointsWarp);
     out["False"] = std::make_pair(OpArgDocFalse, False);
     out["ForEachDistinct"] = std::make_pair(OpArgDocForEachDistinct, ForEachDistinct);
-    out["ForEachTPlan"] = std::make_pair(OpArgDocForEachTPlan, ForEachTPlan);
+    out["ForEachRTPlan"] = std::make_pair(OpArgDocForEachRTPlan, ForEachRTPlan);
     out["FVPicketFence"] = std::make_pair(OpArgDocFVPicketFence, FVPicketFence);
     out["GenerateCalibrationCurve"] = std::make_pair(OpArgDocGenerateCalibrationCurve, GenerateCalibrationCurve);
     out["GenerateMeshes"] = std::make_pair(OpArgDocGenerateMeshes, GenerateMeshes);

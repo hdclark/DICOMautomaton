@@ -1,4 +1,4 @@
-// AnalyzeTPlan.h.
+// AnalyzeRTPlan.h.
 
 #pragma once
 
@@ -8,9 +8,9 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocAnalyzeTPlan();
+OperationDoc OpArgDocAnalyzeRTPlan();
 
-bool AnalyzeTPlan(Drover &DICOM_data,
+bool AnalyzeRTPlan(Drover &DICOM_data,
                     const OperationArgPkg& /*OptArgs*/,
                     std::map<std::string, std::string>& /*InvocationMetadata*/,
                     const std::string& /*FilenameLex*/);

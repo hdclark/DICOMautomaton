@@ -1,4 +1,4 @@
-// ValidateTPlan.h.
+// ValidateRTPlan.h.
 
 #pragma once
 
@@ -12,7 +12,7 @@
 
 struct common_context_t {
     std::reference_wrapper< const parsed_function > pf;
-    std::reference_wrapper< TPlan_Config > plan;
+    std::reference_wrapper< RTPlan > plan;
     std::reference_wrapper< tables::table2 > table;
 
     std::reference_wrapper< Drover > DICOM_data;
@@ -47,9 +47,9 @@ table_placement_t get_table_placement(common_context_t& c);
 std::vector<check_t> get_checks();
 
 
-OperationDoc OpArgDocValidateTPlan();
+OperationDoc OpArgDocValidateRTPlan();
 
-bool ValidateTPlan(Drover &DICOM_data,
+bool ValidateRTPlan(Drover &DICOM_data,
                    const OperationArgPkg& /*OptArgs*/,
                    std::map<std::string, std::string>& /*InvocationMetadata*/,
                    const std::string& /*FilenameLex*/);

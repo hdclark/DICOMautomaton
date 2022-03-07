@@ -261,7 +261,7 @@ class Dynamic_Machine_State {
 
 // This class holds a radiotherapy plan, i.e., an arrangement of multiple dynamic particle beams and treatment
 // structures (e.g., treatment couch) combined with other relevant information, such as prescription dose.
-class TPlan_Config {
+class RTPlan {
     public:
 
         std::vector<Dynamic_Machine_State> dynamic_states; // Each dynamic state represents a unique beam.
@@ -269,11 +269,11 @@ class TPlan_Config {
         std::map< std::string, std::string > metadata; //User-defined metadata.
 
         //Constructor/Destructors.
-        TPlan_Config();
-        TPlan_Config(const TPlan_Config &rhs); //Performs a deep copy (unless copying self).
+        RTPlan();
+        RTPlan(const RTPlan &rhs); //Performs a deep copy (unless copying self).
 
         //Member functions.
-        TPlan_Config & operator=(const TPlan_Config &rhs); //Performs a deep copy (unless copying self).
+        RTPlan & operator=(const RTPlan &rhs); //Performs a deep copy (unless copying self).
 
         template <class U> std::optional<U> GetMetadataValueAs(const std::string& key) const;
 };
@@ -432,7 +432,7 @@ class Drover {
         std::list<std::shared_ptr<Image_Array>>  image_data;   //In case we ever get more than one set of images (different modalities?)
         std::list<std::shared_ptr<Point_Cloud>>  point_data;
         std::list<std::shared_ptr<Surface_Mesh>> smesh_data;
-        std::list<std::shared_ptr<TPlan_Config>> tplan_data;
+        std::list<std::shared_ptr<RTPlan>>       rtplan_data;
         std::list<std::shared_ptr<Line_Sample>>  lsamp_data;
         std::list<std::shared_ptr<Transform3>>   trans_data;
         std::list<std::shared_ptr<Sparse_Table>> table_data;
@@ -472,7 +472,7 @@ class Drover {
         bool Has_Image_Data() const;
         bool Has_Point_Data() const;
         bool Has_Mesh_Data() const;
-        bool Has_TPlan_Data() const;
+        bool Has_RTPlan_Data() const;
         bool Has_LSamp_Data() const;
         bool Has_Tran3_Data() const;
         bool Has_Table_Data() const;
@@ -483,7 +483,7 @@ class Drover {
         void Concatenate(std::list<std::shared_ptr<Image_Array>> in);
         void Concatenate(std::list<std::shared_ptr<Point_Cloud>> in);
         void Concatenate(std::list<std::shared_ptr<Surface_Mesh>> in);
-        void Concatenate(std::list<std::shared_ptr<TPlan_Config>> in);
+        void Concatenate(std::list<std::shared_ptr<RTPlan>> in);
         void Concatenate(std::list<std::shared_ptr<Line_Sample>> in);
         void Concatenate(std::list<std::shared_ptr<Transform3>> in);
         void Concatenate(std::list<std::shared_ptr<Sparse_Table>> in);
@@ -493,7 +493,7 @@ class Drover {
         void Consume(std::list<std::shared_ptr<Image_Array>> in);
         void Consume(std::list<std::shared_ptr<Point_Cloud>> in);
         void Consume(std::list<std::shared_ptr<Surface_Mesh>> in);
-        void Consume(std::list<std::shared_ptr<TPlan_Config>> in);
+        void Consume(std::list<std::shared_ptr<RTPlan>> in);
         void Consume(std::list<std::shared_ptr<Line_Sample>> in);
         void Consume(std::list<std::shared_ptr<Transform3>> in);
         void Consume(std::list<std::shared_ptr<Sparse_Table>> in);

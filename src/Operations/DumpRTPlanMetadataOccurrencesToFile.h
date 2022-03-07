@@ -1,4 +1,4 @@
-// DumpTPlanMetadataOccurrencesToFile.h.
+// DumpRTPlanMetadataOccurrencesToFile.h.
 
 #pragma once
 
@@ -8,9 +8,9 @@
 #include "../Structs.h"
 
 
-OperationDoc OpArgDocDumpTPlanMetadataOccurrencesToFile();
+OperationDoc OpArgDocDumpRTPlanMetadataOccurrencesToFile();
 
-bool DumpTPlanMetadataOccurrencesToFile(Drover &DICOM_data,
+bool DumpRTPlanMetadataOccurrencesToFile(Drover &DICOM_data,
                                           const OperationArgPkg& OptArgs,
                                           std::map<std::string, std::string>& /*InvocationMetadata*/,
                                           const std::string& /*FilenameLex*/);

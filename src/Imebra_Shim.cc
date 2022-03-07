@@ -2105,9 +2105,9 @@ std::list<std::shared_ptr<Image_Array>>  Load_Dose_Arrays(const std::list<std::f
 //
 // See DICOM standard, RT Beams module (C.8.8.14).
 
-std::unique_ptr<TPlan_Config> 
-Load_TPlan_Config(const std::filesystem::path &FilenameIn){
-    std::unique_ptr<TPlan_Config> out(new TPlan_Config());
+std::unique_ptr<RTPlan> 
+Load_RTPlan(const std::filesystem::path &FilenameIn){
+    std::unique_ptr<RTPlan> out(new RTPlan());
 
     using namespace puntoexe;
     ptr<puntoexe::stream> readStream(new puntoexe::stream);

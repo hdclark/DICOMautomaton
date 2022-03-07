@@ -169,31 +169,31 @@ Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> sms,
 OperationArgDoc SMWhitelistOpArgDoc();
 
 
-// ------------------------------------ TPlan_Config -------------------------------------
+// ------------------------------------ RTPlan -------------------------------------
 
 // Provide pointers for all surface meshes into a list.
 //
 // Note: The output is meant to be filtered using the selectors below.
-std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator>
+std::list<std::list<std::shared_ptr<RTPlan>>::iterator>
 All_TPs( Drover &DICOM_data );
 
 
 // Whitelist surface meshes using the provided regex.
-std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator>
-Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
+std::list<std::list<std::shared_ptr<RTPlan>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<RTPlan>>::iterator> tps,
            std::string MetadataKey,
            std::string MetadataValueRegex,
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // Whitelist surface meshes using a limited vocabulary of specifiers.
-std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator>
-Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
+std::list<std::list<std::shared_ptr<RTPlan>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<RTPlan>>::iterator> tps,
            std::string Specifier,
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // This is a convenience routine to combine multiple filtering passes into a single logical statement.
-std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator>
-Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
+std::list<std::list<std::shared_ptr<RTPlan>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<RTPlan>>::iterator> tps,
            std::initializer_list< std::pair<std::string,        // MetadataKey
                                             std::string> > MetadataKeyValueRegex, // MetadataValueRegex
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );

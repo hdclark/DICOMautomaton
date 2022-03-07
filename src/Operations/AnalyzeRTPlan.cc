@@ -1,4 +1,4 @@
-//AnalyzeTPlan.cc - A part of DICOMautomaton 2018. Written by hal clark.
+//AnalyzeRTPlan.cc - A part of DICOMautomaton 2018. Written by hal clark.
 
 #include <boost/interprocess/creation_tags.hpp>
 #include <boost/interprocess/sync/named_mutex.hpp>
@@ -29,7 +29,7 @@
 #include "../Write_File.h"
 #include "../Regex_Selectors.h"
 
-#include "AnalyzeTPlan.h"
+#include "AnalyzeRTPlan.h"
 
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorImages.h"
@@ -40,9 +40,9 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
-OperationDoc OpArgDocAnalyzeTPlan(){
+OperationDoc OpArgDocAnalyzeRTPlan(){
     OperationDoc out;
-    out.name = "AnalyzeTPlan";
+    out.name = "AnalyzeRTPlan";
 
     out.desc = 
         "This operation analyzes the selected RT plans, performing a general analysis"
@@ -55,7 +55,7 @@ OperationDoc OpArgDocAnalyzeTPlan(){
 
     out.args.emplace_back();
     out.args.back() = TPWhitelistOpArgDoc();
-    out.args.back().name = "TPlanSelection";
+    out.args.back().name = "RTPlanSelection";
     out.args.back().default_val = "last";
 
 
@@ -103,13 +103,13 @@ OperationDoc OpArgDocAnalyzeTPlan(){
     return out;
 }
 
-bool AnalyzeTPlan(Drover &DICOM_data,
+bool AnalyzeRTPlan(Drover &DICOM_data,
                     const OperationArgPkg& OptArgs,
                     std::map<std::string, std::string>& /*InvocationMetadata*/,
                     const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-    const auto TPlanSelectionStr = OptArgs.getValueStr("TPlanSelection").value();
+    const auto RTPlanSelectionStr = OptArgs.getValueStr("RTPlanSelection").value();
 
     const auto SummaryFilename = OptArgs.getValueStr("SummaryFilename").value();
 
@@ -121,7 +121,7 @@ bool AnalyzeTPlan(Drover &DICOM_data,
 
     // Cycle over the Line_Segments, processing each one-at-a-time.
     auto TPs_all = All_TPs( DICOM_data );
-    auto TPs = Whitelist( TPs_all, TPlanSelectionStr );
+    auto TPs = Whitelist( TPs_all, RTPlanSelectionStr );
 
     for(auto & tp_it : TPs){
 
@@ -131,7 +131,7 @@ bool AnalyzeTPlan(Drover &DICOM_data,
 
         const auto RTPlanLabelOpt = (*tp_it)->GetMetadataValueAs<std::string>("RTPlanLabel");
         const auto RTPlanNameOpt = (*tp_it)->GetMetadataValueAs<std::string>("RTPlanName");
-        const auto TPlanLabel = RTPlanLabelOpt.value_or( RTPlanNameOpt.value_or("unknown") );
+        const auto RTPlanLabel = RTPlanLabelOpt.value_or( RTPlanNameOpt.value_or("unknown") );
 
         // Expand $-variables in the UserComment and Description with metadata.
         auto ExpandedUserCommentOpt = UserCommentOpt;
@@ -159,8 +159,8 @@ bool AnalyzeTPlan(Drover &DICOM_data,
                 header << "PatientID";
                 report << PatientID;
                 
-                header << ",TPlanLabel";
-                report << "," << TPlanLabel;
+                header << ",RTPlanLabel";
+                report << "," << RTPlanLabel;
 
                 header << ",UserComment";
                 report << "," << ExpandedUserCommentOpt.value_or("");
@@ -244,12 +244,12 @@ bool AnalyzeTPlan(Drover &DICOM_data,
             if(!SummaryFilename.empty()){
                 return SummaryFilename;
             }
-            const auto base = std::filesystem::temp_directory_path() / "dcma_analyzetreatmentplans_";
+            const auto base = std::filesystem::temp_directory_path() / "dcma_analyzertplans_";
             return Get_Unique_Sequential_Filename(base.string(), 6, ".csv");
         };
 
         Append_File( gen_filename,
-                     "dcma_op_analyzetreatmentplans_mutex",
+                     "dcma_op_analyzertplans_mutex",
                      header.str(),
                      report.str() );
     }

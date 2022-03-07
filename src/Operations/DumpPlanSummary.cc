@@ -94,7 +94,7 @@ bool DumpPlanSummary(Drover &DICOM_data,
     std::map<multi_key, std::vector<double>> coords;
 
 
-    for(auto &tp : DICOM_data.tplan_data){
+    for(auto &tp : DICOM_data.rtplan_data){
         if(tp == nullptr) continue;
 
         multi_key k;

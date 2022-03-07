@@ -876,15 +876,15 @@ template std::optional<double     > Dynamic_Machine_State::GetMetadataValueAs(co
 template std::optional<std::string> Dynamic_Machine_State::GetMetadataValueAs(const std::string &) const;
 
 //---------------------------------------------------------------------------------------------------------------------------
-//------------------------------------------------------- TPlan_Config ------------------------------------------------------
+//---------------------------------------------------------- RTPlan ---------------------------------------------------------
 //---------------------------------------------------------------------------------------------------------------------------
-TPlan_Config::TPlan_Config()= default;
+RTPlan::RTPlan()= default;
 
-TPlan_Config::TPlan_Config(const TPlan_Config &rhs){
+RTPlan::RTPlan(const RTPlan &rhs){
     *this = rhs; //Performs a deep copy (unless copying self).
 }
 
-TPlan_Config & TPlan_Config::operator=(const TPlan_Config &rhs){
+RTPlan & RTPlan::operator=(const RTPlan &rhs){
     //Performs a deep copy (unless copying self).
     if(this != &rhs){
         this->metadata       = rhs.metadata;
@@ -896,18 +896,18 @@ TPlan_Config & TPlan_Config::operator=(const TPlan_Config &rhs){
 //Attempts to cast the value if present. Optional is disengaged if key is missing or cast fails.
 template <class U>
 std::optional<U>
-TPlan_Config::GetMetadataValueAs(const std::string& key) const {
+RTPlan::GetMetadataValueAs(const std::string& key) const {
     const auto metadata_cit = this->metadata.find(key);
     if( (metadata_cit == this->metadata.end())  || !Is_String_An_X<U>(metadata_cit->second) ){
         return std::optional<U>();
     }
     return std::make_optional(stringtoX<U>(metadata_cit->second));
 }
-template std::optional<uint32_t   > TPlan_Config::GetMetadataValueAs(const std::string &) const;
-template std::optional<long int   > TPlan_Config::GetMetadataValueAs(const std::string &) const;
-template std::optional<float      > TPlan_Config::GetMetadataValueAs(const std::string &) const;
-template std::optional<double     > TPlan_Config::GetMetadataValueAs(const std::string &) const;
-template std::optional<std::string> TPlan_Config::GetMetadataValueAs(const std::string &) const;
+template std::optional<uint32_t   > RTPlan::GetMetadataValueAs(const std::string &) const;
+template std::optional<long int   > RTPlan::GetMetadataValueAs(const std::string &) const;
+template std::optional<float      > RTPlan::GetMetadataValueAs(const std::string &) const;
+template std::optional<double     > RTPlan::GetMetadataValueAs(const std::string &) const;
+template std::optional<std::string> RTPlan::GetMetadataValueAs(const std::string &) const;
 
 //---------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------- Surface_Mesh ------------------------------------------------------
@@ -1053,7 +1053,7 @@ void Drover::operator=(const Drover &rhs){
         this->image_data      = rhs.image_data;
         this->point_data      = rhs.point_data;
         this->smesh_data      = rhs.smesh_data;
-        this->tplan_data      = rhs.tplan_data;
+        this->rtplan_data     = rhs.rtplan_data;
         this->lsamp_data      = rhs.lsamp_data;
         this->trans_data      = rhs.trans_data;
         this->table_data      = rhs.table_data;
@@ -1591,10 +1591,10 @@ bool Drover::Has_Mesh_Data() const {
     return false;
 }
 
-bool Drover::Has_TPlan_Data() const {
-    //Does not verify the tplan data itself, it merely looks to see if we have any valid TPlan_Configs attached.
-    if(this->tplan_data.size() == 0) return false;
-    for(const auto & sm_it : this->tplan_data){
+bool Drover::Has_RTPlan_Data() const {
+    //Does not verify the rtplan data itself, it merely looks to see if we have any valid RTPlans attached.
+    if(this->rtplan_data.size() == 0) return false;
+    for(const auto & sm_it : this->rtplan_data){
         if(sm_it != nullptr) return true; 
     }
     return false;
@@ -1664,8 +1664,8 @@ void Drover::Concatenate(std::list<std::shared_ptr<Surface_Mesh>> in){
     return;
 }
 
-void Drover::Concatenate(std::list<std::shared_ptr<TPlan_Config>> in){
-    this->tplan_data.splice( this->tplan_data.end(), in );
+void Drover::Concatenate(std::list<std::shared_ptr<RTPlan>> in){
+    this->rtplan_data.splice( this->rtplan_data.end(), in );
     return;
 }
 
@@ -1690,7 +1690,7 @@ void Drover::Concatenate(Drover in){
     this->Concatenate(in.image_data);
     this->Concatenate(in.point_data);
     this->Concatenate(in.smesh_data);
-    this->Concatenate(in.tplan_data);
+    this->Concatenate(in.rtplan_data);
     this->Concatenate(in.lsamp_data);
     this->Concatenate(in.trans_data);
     this->Concatenate(in.table_data);
@@ -1732,7 +1732,7 @@ void Drover::Consume(std::list<std::shared_ptr<Surface_Mesh>> in){
     return;
 }
 
-void Drover::Consume(std::list<std::shared_ptr<TPlan_Config>> in){
+void Drover::Consume(std::list<std::shared_ptr<RTPlan>> in){
     this->Concatenate(std::move(in));
     return;
 }
@@ -1757,7 +1757,7 @@ void Drover::Consume(Drover in){
     this->Consume(in.image_data);
     this->Consume(in.point_data);
     this->Consume(in.smesh_data);
-    this->Consume(in.tplan_data);
+    this->Consume(in.rtplan_data);
     this->Consume(in.lsamp_data);
     this->Consume(in.trans_data);
     this->Consume(in.table_data);

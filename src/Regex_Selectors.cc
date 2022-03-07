@@ -278,8 +278,8 @@ Whitelist_Core( L lops,
                         return sort_order( N_l, N_r );
 
                     }else if constexpr (std::is_same< decltype(lops),
-                                                      std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> >::value){
-                        const auto count_static_keyframes = [](const TPlan_Config &t) -> size_t {
+                                                      std::list<std::list<std::shared_ptr<RTPlan>>::iterator> >::value){
+                        const auto count_static_keyframes = [](const RTPlan &t) -> size_t {
                                                                 size_t c = 0;
                                                                 for(const auto &ds : t.dynamic_states) c += ds.static_states.size();
                                                                 return c;
@@ -818,16 +818,16 @@ OperationArgDoc SMWhitelistOpArgDoc(){
     return out;
 }
 
-// ------------------------------------ TPlan_Config -------------------------------------
+// ------------------------------------ RTPlan -------------------------------------
 
 // Provide pointers for all treatment plans into a list.
 //
 // Note: The output is meant to be filtered using the selectors below.
-std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator>
+std::list<std::list<std::shared_ptr<RTPlan>>::iterator>
 All_TPs( Drover &DICOM_data ){
-    std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tp_all;
+    std::list<std::list<std::shared_ptr<RTPlan>>::iterator> tp_all;
 
-    for(auto tpp_it = DICOM_data.tplan_data.begin(); tpp_it != DICOM_data.tplan_data.end(); ++tpp_it){
+    for(auto tpp_it = DICOM_data.rtplan_data.begin(); tpp_it != DICOM_data.rtplan_data.end(); ++tpp_it){
         if((*tpp_it) == nullptr) continue;
         tp_all.push_back(tpp_it);
     }
@@ -836,20 +836,20 @@ All_TPs( Drover &DICOM_data ){
 
 
 // Whitelist treatment plans using the provided regex.
-std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator>
-Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
+std::list<std::list<std::shared_ptr<RTPlan>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<RTPlan>>::iterator> tps,
            std::string MetadataKey,
            std::string MetadataValueRegex,
            Regex_Selector_Opts Opts ){
 
     auto theregex = Compile_Regex(std::move(MetadataValueRegex));
 
-    tps.remove_if([&](std::list<std::shared_ptr<TPlan_Config>>::iterator tpp_it) -> bool {
+    tps.remove_if([&](std::list<std::shared_ptr<RTPlan>>::iterator tpp_it) -> bool {
         if((*tpp_it) == nullptr) return true;
         if((*tpp_it)->dynamic_states.empty()) return true; // Remove plans containing no beams.
 
-        if( // Note: A TPlan_Config corresponds to one individual metadata store. While a single
-                  //       TPlan_Config can be comprised of multiple disconnected beams, they are 
+        if( // Note: A RTPlan corresponds to one individual metadata store. While a single
+                  //       RTPlan can be comprised of multiple disconnected beams, they are 
                   //       herein considered to be part of the same logical group.
                   (Opts.validation == Regex_Selector_Opts::Validation::Representative)
               ||  (Opts.validation == Regex_Selector_Opts::Validation::Pedantic)        ){
@@ -882,8 +882,8 @@ Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
 // Whitelist treatment plans using a limited vocabulary of specifiers.
 //
 // Note: this routine shares the generic Image_Arrays, Point_Clouds, and Surface_Mesh implementation above.
-std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator>
-Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
+std::list<std::list<std::shared_ptr<RTPlan>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<RTPlan>>::iterator> tps,
            std::string Specifier,
            Regex_Selector_Opts Opts ){
 
@@ -894,8 +894,8 @@ Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
 // This is a convenience routine to combine multiple filtering passes into a single logical statement.
 //
 // Note: this routine shares the generic Image_Arrays, Point_Clouds, and Surface_Mesh implementation above.
-std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator>
-Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
+std::list<std::list<std::shared_ptr<RTPlan>>::iterator>
+Whitelist( std::list<std::list<std::shared_ptr<RTPlan>>::iterator> tps,
            std::initializer_list< std::pair<std::string, 
                                             std::string> > MetadataKeyValueRegex,
            Regex_Selector_Opts Opts ){
@@ -908,7 +908,7 @@ Whitelist( std::list<std::list<std::shared_ptr<TPlan_Config>>::iterator> tps,
 OperationArgDoc TPWhitelistOpArgDoc(){
     OperationArgDoc out;
 
-    out.name = "TPlanSelection";
+    out.name = "RTPlanSelection";
     out.desc = "Select one or more treatment plans."_s
                + " Note that a single treatment plan may be composed of multiple beams;"_s
                + " if delivered sequentially, they should collectively represent a single logically cohesive plan."_s
