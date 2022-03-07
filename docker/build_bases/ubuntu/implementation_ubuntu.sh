@@ -53,10 +53,7 @@ apt-get install --yes --no-install-recommends \
     freeglut3-dev \
     libxi-dev \
     libxmu-dev \
-    gnuplot \
-    zenity \
     patchelf \
-    bash-completion \
     ` # Additional dependencies for headless OpenGL rendering with SFML ` \
     x-window-system \
     mesa-utils \
@@ -65,7 +62,13 @@ apt-get install --yes --no-install-recommends \
     libsdl2-dev \
     libice-dev \
     libsm-dev \
-    libopengl0
+    libopengl0 \
+    ` # Other optional dependencies ` \
+    libnotify \
+    dunst \
+    bash-completion \
+    gnuplot \
+    zenity 
 
 
 

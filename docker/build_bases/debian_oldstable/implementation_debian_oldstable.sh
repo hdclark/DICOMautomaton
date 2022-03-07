@@ -52,15 +52,18 @@ apt-get install --yes --no-install-recommends \
     freeglut3-dev \
     libxi-dev \
     libxmu-dev \
-    gnuplot \
-    zenity \
     patchelf \
-    bash-completion \
     ` # Additional dependencies for headless OpenGL rendering with SFML ` \
     x-window-system \
     mesa-utils \
     xserver-xorg-video-dummy \
-    x11-apps
+    x11-apps \
+    ` # Other optional dependencies ` \
+    libnotify \
+    dunst \
+    bash-completion \
+    gnuplot \
+    zenity 
 
 cp /scratch_base/xpra-xorg.conf /etc/X11/xorg.conf
 

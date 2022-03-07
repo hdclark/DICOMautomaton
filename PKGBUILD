@@ -30,6 +30,8 @@ depends=(
    'ygor'
 )
 optdepends=(
+   'libnotify'
+   'dunst' # Or any other notification server compatible with libnotify.
    'zenity'
    'dialog'
    'gnuplot'

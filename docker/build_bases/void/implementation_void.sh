@@ -40,16 +40,19 @@ xbps-install -y -S \
     nlopt-devel \
     asio \
     freefont-ttf \
-    gnuplot \
-    zenity  \
     patchelf \
-    bash-completion \
     ` # Additional dependencies for headless OpenGL rendering with SFML ` \
     xorg-minimal \
     glu-devel \
     xorg-video-drivers \
     xf86-video-dummy \
-    xorg-apps
+    xorg-apps \
+    ` # Other optional dependencies ` \
+    libnotify \
+    dunst \
+    bash-completion \
+    gnuplot \
+    zenity 
 
 cp /scratch_base/xpra-xorg.conf /etc/X11/xorg.conf
 

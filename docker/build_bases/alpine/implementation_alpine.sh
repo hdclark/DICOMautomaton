@@ -38,7 +38,9 @@ apk add --no-cache \
     glu-dev glu \
     mesa mesa-dev \
     xorg-server-dev \
-    xf86-video-dummy
+    xf86-video-dummy \
+    ` # Other optional dependencies ` \
+    libnotify-dev dunst
 
 # Omitted (for now):
 #    cgal-dev \

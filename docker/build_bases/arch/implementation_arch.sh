@@ -53,7 +53,6 @@ pacman -S --noconfirm --needed  \
   wt \
   asio \
   nlopt \
-  bash-completion \
   patchelf \
   freeglut \
   libxi \
@@ -62,7 +61,11 @@ pacman -S --noconfirm --needed  \
   xorg-server \
   xorg-apps \
   mesa \
-  xf86-video-dummy
+  xf86-video-dummy \
+  ` # Other optional dependencies ` \
+  bash-completion \
+  libnotify \
+  dunst
 rm -f /var/cache/pacman/pkg/*
 
 cp /scratch_base/xpra-xorg.conf /etc/X11/xorg.conf
