@@ -135,18 +135,13 @@ or the most relevant release DOI, if possible.
 
 The core command-line interface to DICOMautomaton is the `dicomautomaton_dispatcher` program. It is presents an
 interface based on chaining of discrete operations on collections of images, DICOM images, DICOM radiotherapy files
-(RTSTRUCTS and RTDOSE), and various other types of files. `dicomautomaton_dispatcher` has access to all defined
-operations described in [Operations](#operations). It can be used to launch both interactive and non-interactive tasks.
-Data can be sourced from a database or files in a variety of formats.
+(RTSTRUCTs, RTPLANs, and RTDOSE), and various other types of files. `dicomautomaton_dispatcher` has access to all
+defined operations described in [Operations](#operations). It can be used to launch both interactive and non-interactive
+tasks. Data can be sourced from a database or files in a variety of formats.
 
 Name/label selectors in dicomautomaton_dispatcher generally support fuzzy matching via
 [libexplicator](https://gitlab.com/hdeanclark/Explicator) or regular expressions. The operations and parameters that
 provide these options are documented in [Operations](#operations).
-
-Filetype support differs in some cases. A custom FITS file reader and writer are supported, and DICOM files are
-generally supported. There is currently no support for RTPLANs, though DICOM image, RTSTRUCT, and RTDOSE files are well
-supported. There is limited support for writing files -- currently JPEG, PNG, and FITS images; RTDOSE files; and
-Boost.Serialize archive writing are supported.
 
 #### Usage Examples
 
@@ -315,11 +310,14 @@ will work.
 # List of Available Operations
 
 - AccumulateRowsColumns
+- AllOf (alias for And)
+- Always (alias for Ignore)
 - AnalyzeHistograms
 - AnalyzeLightRadFieldCoincidence
 - AnalyzePicketFence
-- AnalyzeTPlan
+- AnalyzeRTPlan
 - And
+- AnyOf
 - ApplyCalibrationCurve
 - AutoCropImages
 - Average
@@ -335,7 +333,7 @@ will work.
 - CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param
 - CellularAutomata
 - ClusterDBSCAN
-- Coalesce (alias for Or)
+- Coalesce (alias for AnyOf)
 - ComparePixels
 - ContourBasedRayCastDoseAccumulate
 - ContourBooleanOperations
@@ -351,17 +349,21 @@ will work.
 - ConvertDoseToImage
 - ConvertImageToDose
 - ConvertImageToMeshes
+- ConvertImageToWarp
 - ConvertImagesToContours (alias for ContourViaThreshold)
 - ConvertMeshesToContours
 - ConvertMeshesToPoints
 - ConvertNaNsToAir
 - ConvertNaNsToZeros
 - ConvertPixelsToPoints
+- ConvertWarpToImage
+- ConvertWarpToMeshes
 - ConvolveImages
 - CopyContours
 - CopyImages
 - CopyMeshes
 - CopyPoints
+- CopyTables
 - CountVoxels
 - CropImageDoseToROIs
 - CropImages
@@ -379,6 +381,7 @@ will work.
 - DeleteImages
 - DeleteMeshes
 - DeletePoints
+- DeleteTables
 - DetectGrid3D
 - DetectShapes3D
 - DrawGeometry
@@ -395,7 +398,7 @@ will work.
 - DumpROIData
 - DumpROISNR
 - DumpROISurfaceMeshes
-- DumpTPlanMetadataOccurrencesToFile
+- DumpRTPlanMetadataOccurrencesToFile
 - DumpVoxelDoseInfo
 - ElseIf (alias for IfElse)
 - EvaluateDoseVolumeStats
@@ -409,6 +412,7 @@ will work.
 - ExportSurfaceMeshesOFF
 - ExportSurfaceMeshesPLY
 - ExportSurfaceMeshesSTL
+- ExportTables
 - ExportWarps
 - ExtractAlphaBeta
 - ExtractImageHistograms
@@ -416,10 +420,15 @@ will work.
 - ExtractRadiomicFeatures
 - FVPicketFence
 - False
+- FirstOf (alias for AnyOf)
 - ForEachDistinct
+- ForEachRTPlan
+- Force (alias for Ignore)
 - GenerateCalibrationCurve
+- GenerateMeshes
 - GenerateSurfaceMask
 - GenerateSyntheticImages
+- GenerateTable
 - GenerateVirtualDataContourViaThresholdTestV1
 - GenerateVirtualDataDoseStairsV1
 - GenerateVirtualDataImageSphereV1
@@ -438,11 +447,14 @@ will work.
 - If (alias for IfElse)
 - IfElse
 - IfThenElse (alias for IfElse)
+- Ignore
 - ImageRoutineTests
 - ImprintImages
 - InterpolateSlices
+- Invert (alias for NoneOf)
 - IsolatedVoxelFilter
 - LoadFiles
+- LoadFilesInteractively
 - LogScale
 - MakeMeshesManifold
 - MaxMinPixels
@@ -451,13 +463,17 @@ will work.
 - ModelIVIM
 - ModifyContourMetadata
 - ModifyImageMetadata
+- ModifyParameters
+- Negate (alias for NoneOf)
 - NegatePixels
 - NoOp
+- NoneOf
 - NormalizeLineSamples
 - NormalizePixels
-- Not
+- Not (alias for NoneOf)
+- NotifyUser
 - OptimizeStaticBeams
-- Or
+- Or (alias for AnyOf)
 - OrderImages
 - PartitionContours
 - PartitionImages (alias for GroupImages)
@@ -469,6 +485,7 @@ will work.
 - PresentationImage
 - PruneEmptyImageDoseArrays
 - PurgeContours
+- QueryUserInteractively
 - RankPixels
 - ReduceNeighbourhood
 - RemeshSurfaceMeshes
@@ -500,6 +517,7 @@ will work.
 - UBC3TMRI_DCE_Differences
 - UBC3TMRI_DCE_Experimental
 - UBC3TMRI_IVIM_ADC
+- ValidateRTPlan
 - VolumetricCorrelationDetector
 - VolumetricSpatialBlur
 - VolumetricSpatialDerivative
@@ -1215,7 +1233,7 @@ Whether to interactively show plots showing detected edges.
 
 ----------------------------------------------------
 
-## AnalyzeTPlan
+## AnalyzeRTPlan
 
 ### Description
 
@@ -1226,12 +1244,12 @@ file that can be concatenated or appended to other output files to provide a sum
 
 ### Parameters
 
-- TPlanSelection
+- RTPlanSelection
 - SummaryFilename
 - UserComment
 - Description
 
-#### TPlanSelection
+#### RTPlanSelection
 
 ##### Description
 
@@ -1348,6 +1366,31 @@ This operation is a control flow meta-operation that requires all children to co
 
 - Each child is performed sequentially in the order specified, and all side-effects are carried forward. In particular,
   all selectors in child operations are evaluated lazily, at the moment when the child operation is invoked.
+
+### Parameters
+
+No registered options.
+
+----------------------------------------------------
+
+## AnyOf
+
+### Description
+
+This operation is a control flow meta-operation that performs an 'any-of' or 'first-of' Boolean check by evaluating
+child operations. The first child operation that succeeds short-circuits the remaining checks and returns true. If no
+child operation succeeds, false is returned. Side effects from all evaluated operations are possible.
+
+### Notes
+
+- Child operations are performed in order, and all side-effects are carried forward. In particular, all selectors in
+  child operations are evaluated lazily, at the moment when the child operation is invoked.
+
+- If this operation has no children, or no children complete successfully, then this operation signals false truthiness.
+
+- Some operations may succeed without directly signalling failure. For example, an operation that loops over all
+  selected images may not throw if zero images are selected. This operation works well with other control flow
+  meta-operations, for example as a conditional in an if-else statement.
 
 ### Parameters
 
@@ -2382,7 +2425,7 @@ clouds), (all surface meshes), and (all treatment plans) can be selected. Note t
 
 ##### Default
 
-- ```"images+contours+pointclouds+surfacemeshes+tplans"```
+- ```"images+contours+pointclouds+surfacemeshes+rtplans"```
 
 ##### Examples
 
@@ -2390,7 +2433,7 @@ clouds), (all surface meshes), and (all treatment plans) can be selected. Note t
 - ```"images+pointclouds"```
 - ```"images+pointclouds+surfacemeshes"```
 - ```"pointclouds+surfacemeshes"```
-- ```"tplans+images+contours"```
+- ```"rtplans+images+contours"```
 - ```"contours+images+pointclouds"```
 
 
@@ -5405,32 +5448,39 @@ No registered options.
 
 ### Description
 
-This routine creates a mesh directly from contours, finding a correspondence between adjacent contours and 'zippering'
-them together. Please note that this operation is not robust and should only be expected to work for simple, sphere-like
+This routine creates a mesh from contours. There are two methods supported: one that directly stitches together contours
+(polygons) by finding a correspondence between adjacent contours and 'zippering' them together, and another that uses
+contours to first generate an image mask and then uses Marching Cubes to extract a mesh.
+
+The direct method, when it can be used appropriately, should be significantly faster than meshing via voxelization
+(e.g., marching cubes). It will also insert few (or zero) additional vertices on the original contour planes, meaning
+the resulting mesh can be sliced to give (nearly) the exact original contours.
+
+However, please note that the direct method is not robust and should only be expected to work for simple, sphere-like
 contours (i.e., convex polyhedra and mostly-convex polyhedra with only small concavities; see notes for additional
-information). This operation, when it can be used appropriately, should be significantly faster than meshing via
-voxelization (e.g., marching cubes). It will also insert no additional vertices on the original contour planes.
+information).
 
 ### Notes
 
-- This routine is experimental and currently relies on simple heuristics to find an adjacent contour correspondence.
+- The 'direct' method is experimental and currently relies on simple heuristics to find an adjacent contour
+  correspondence.
 
-- Meshes sliced on the same planes as the original contours *should* reproduce the original contours (barring numerical
-  instabilities). In between the original slices, the mesh may exhibit distortions or obviously invalid correspondence
-  with adjacent contours.
+- Using the 'direct' method, meshes sliced on the same planes as the original contours *should* reproduce the original
+  contours (barring numerical instabilities). In between the original slices, the mesh may exhibit distortions or
+  obviously invalid correspondence with adjacent contours. Using the 'marching' method, contours may vary somewhat.
 
-- Mesh 'pairing' on adjacent slices is evaluated using a mutual overlap heuristic. The following adjacent slice pairing
-  scenarios are supported: 1-0, 1-1, N-0, N-1, and N-M (for any N and M greater than 1). Adjacent contours with
-  inconsistent orientations will either be reordered or wholly disregarded. For N-0, N-1, and N-M pairings all contours
-  in N (and M) are fused using with a simple distance heuristic; the fusion bridges are extended off the original
-  contour plane so that mesh slicing will recover the original contours. For 1-0 and N-0 pairings the 'hole' is filled
-  by placing a single vertex offset from the occupied contour plane from the centroid and connecting all vertices; mesh
-  slicing should also recover the original contours in this case.
+- For the 'direct' method, mesh 'pairing' on adjacent slices is evaluated using a mutual overlap heuristic. The
+  following adjacent slice pairing scenarios are supported: 1-0, 1-1, N-0, N-1, and N-M (for any N and M greater than
+  1). Adjacent contours with inconsistent orientations will either be reordered or wholly disregarded. For N-0, N-1, and
+  N-M pairings all contours in N (and M) are fused using with a simple distance heuristic; the fusion bridges are
+  extended off the original contour plane so that mesh slicing will recover the original contours. For 1-0 and N-0
+  pairings the 'hole' is filled by placing a single vertex offset from the occupied contour plane from the centroid and
+  connecting all vertices; mesh slicing should also recover the original contours in this case.
 
-- Overlapping contours **on the same plane** are **not** currently supported. Only the contour with the largest area
-  will be retained.
+- For the 'direct' method, overlapping contours **on the same plane** are **not** currently supported. Only the contour
+  with the largest area will be retained.
 
-- This routine should only be expected to work for simple, sphere-like geometries (i.e., convex polyhedra). Some
+- The 'direct' method should only be expected to work for simple, sphere-like geometries (i.e., convex polyhedra). Some
   concavities can be tolerated, but not all. For example, tori can only be meshed if the 'hole' is oriented away from
   the contour normal. (Otherwise the 'hole' produces concentric contours -- which are not supported.) Contours
   representing convex polyhedra **should** result in manifold meshes, though they may not be watertight and if contour
@@ -5441,6 +5491,7 @@ voxelization (e.g., marching cubes). It will also insert no additional vertices 
 - NormalizedROILabelRegex
 - ROILabelRegex
 - MeshLabel
+- Method
 
 #### NormalizedROILabelRegex
 
@@ -5516,6 +5567,23 @@ A label to attach to the surface mesh.
 - ```"invalid"```
 - ```"above_zero"```
 - ```"below_5.3"```
+
+#### Method
+
+##### Description
+
+There are currently two supported methods for mesh extraction: (1) a simplistic but fast contour stitching method known
+as the 'direct' method, and (2) a method that first converts contours to a binary mask and then uses Marching Cubes to
+extract meshes. The latter is known as the 'marching' method. See operation description and notes for more details.
+
+##### Default
+
+- ```"direct"```
+
+##### Supported Options
+
+- ```"direct"```
+- ```"marching"```
 
 
 ----------------------------------------------------
@@ -5842,6 +5910,97 @@ A label to attach to the surface mesh.
 - ```"invalid"```
 - ```"above_zero"```
 - ```"below_5.3"```
+
+
+----------------------------------------------------
+
+## ConvertImageToWarp
+
+### Description
+
+This operation attempts to convert an image array into a warp (i.e., a spatial registration or deformable spatial
+registration).
+
+### Notes
+
+- This operation creates a deformation field transformation. The input images are required to have three channels and be
+  regular.
+
+### Parameters
+
+- ImageSelection
+- KeyValues
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
+composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
+Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
+image array (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+
+#### KeyValues
+
+##### Description
+
+Key-value pairs in the form of 'key1@value1;key2@value2' that will be injected into the selected objects. Values can use
+macros that refer to other metadata keys using the '$' character. If macros refer to non-existent metadata elements,
+then the replacement is literal. Dates, times, and datetimes can be converted to seconds (since the Unix epoch) using
+the 'to_seconds()' function.
+
+Existing conflicting metadata will be overwritten. Both keys and values are case-sensitive. Note that a semi-colon
+separates key-value pairs, not a colon. Note that quotation marks are not stripped internally, but may have to be
+provided on the command line for shells to properly interpret the argument. Also note that updating spatial metadata
+will not result in the object characteristics being altered -- use the specific parameters provided to update spatial
+characteristics.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"Description@'some description'"```
+- ```"'Description@some description'"```
+- ```"'Description@Research scan performed on $ContentDate'"```
+- ```"'ContentTimeInSeconds@to_seconds($ContentDate-$ContentDate)'"```
+- ```"MinimumSeparation@1.23"```
+- ```"'Description@some description;MinimumSeparation@1.23'"```
 
 
 ----------------------------------------------------
@@ -6282,6 +6441,215 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+
+
+----------------------------------------------------
+
+## ConvertWarpToImage
+
+### Description
+
+This operation attempts to convert a warp (i.e., a spatial registration or deformable spatial registration) to an image
+array suitable for viewing or inspecting the geometry.
+
+### Parameters
+
+- TransformSelection
+- KeyValues
+
+#### TransformSelection
+
+##### Description
+
+Select one or more transform objects (aka 'warp' objects). Selection specifiers can be of three types: positional,
+metadata-based key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth transformation (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last transformation.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the transformation
+composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
+Note that '!numerous' means all transformation that do not have the greatest number of sub-objects, not the
+least-numerous transformation (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### KeyValues
+
+##### Description
+
+Key-value pairs in the form of 'key1@value1;key2@value2' that will be injected into the selected objects. Values can use
+macros that refer to other metadata keys using the '$' character. If macros refer to non-existent metadata elements,
+then the replacement is literal. Dates, times, and datetimes can be converted to seconds (since the Unix epoch) using
+the 'to_seconds()' function.
+
+Existing conflicting metadata will be overwritten. Both keys and values are case-sensitive. Note that a semi-colon
+separates key-value pairs, not a colon. Note that quotation marks are not stripped internally, but may have to be
+provided on the command line for shells to properly interpret the argument. Also note that updating spatial metadata
+will not result in the object characteristics being altered -- use the specific parameters provided to update spatial
+characteristics.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"Description@'some description'"```
+- ```"'Description@some description'"```
+- ```"'Description@Research scan performed on $ContentDate'"```
+- ```"'ContentTimeInSeconds@to_seconds($ContentDate-$ContentDate)'"```
+- ```"MinimumSeparation@1.23"```
+- ```"'Description@some description;MinimumSeparation@1.23'"```
+
+
+----------------------------------------------------
+
+## ConvertWarpToMeshes
+
+### Description
+
+This operation attempts to convert a warp (i.e., a spatial registration or deformable spatial registration) to a mesh
+suitable for viewing or inspecting the geometry.
+
+### Parameters
+
+- TransformSelection
+- VoxelCadence
+- RemoveRigid
+- KeyValues
+
+#### TransformSelection
+
+##### Description
+
+Select one or more transform objects (aka 'warp' objects). Selection specifiers can be of three types: positional,
+metadata-based key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth transformation (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last transformation.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the transformation
+composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
+Note that '!numerous' means all transformation that do not have the greatest number of sub-objects, not the
+least-numerous transformation (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### VoxelCadence
+
+##### Description
+
+The number of voxels to skip over. This can be used to reduce the number of triangles in the resulting mesh. Prefer
+prime numbers distant to the number of rows, columns, images, and multiples of all three to minimize
+bunching/clustering. Set to negative or zero to display all voxels.
+
+##### Default
+
+- ```"7"```
+
+##### Examples
+
+- ```"0"```
+- ```"7"```
+- ```"71"```
+- ```"197"```
+- ```"313"```
+- ```"971"```
+- ```"1663"```
+- ```"3739"```
+
+#### RemoveRigid
+
+##### Description
+
+If enabled, this option subtracts off any rigid component of a deformation field. The rigid component is estimated by
+averaging all vectors and can misrepresent the true rigid component if the perhiphery are inconsistent with the
+transformation in a sub-volume. Nevertheless, this option can help remove large translations that otherwise would make
+visualization challenging.
+
+##### Default
+
+- ```"false"```
+
+##### Supported Options
+
+- ```"true"```
+- ```"false"```
+
+#### KeyValues
+
+##### Description
+
+Key-value pairs in the form of 'key1@value1;key2@value2' that will be injected into the selected objects. Values can use
+macros that refer to other metadata keys using the '$' character. If macros refer to non-existent metadata elements,
+then the replacement is literal. Dates, times, and datetimes can be converted to seconds (since the Unix epoch) using
+the 'to_seconds()' function.
+
+Existing conflicting metadata will be overwritten. Both keys and values are case-sensitive. Note that a semi-colon
+separates key-value pairs, not a colon. Note that quotation marks are not stripped internally, but may have to be
+provided on the command line for shells to properly interpret the argument. Also note that updating spatial metadata
+will not result in the object characteristics being altered -- use the specific parameters provided to update spatial
+characteristics.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"Description@'some description'"```
+- ```"'Description@some description'"```
+- ```"'Description@Research scan performed on $ContentDate'"```
+- ```"'ContentTimeInSeconds@to_seconds($ContentDate-$ContentDate)'"```
+- ```"MinimumSeparation@1.23"```
+- ```"'Description@some description;MinimumSeparation@1.23'"```
 
 
 ----------------------------------------------------
@@ -6732,6 +7100,60 @@ Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' litera
 composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
 Note that '!numerous' means all point cloud that do not have the greatest number of sub-objects, not the least-numerous
 point cloud (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+
+
+----------------------------------------------------
+
+## CopyTables
+
+### Description
+
+This operation deep-copies the selected tables.
+
+### Parameters
+
+- TableSelection
+
+#### TableSelection
+
+##### Description
+
+Select one or more tables. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth table (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last table. Positional specifiers
+can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the table composed of
+the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all table that do not have the greatest number of sub-objects, not the least-numerous table (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -7518,7 +7940,7 @@ Whether to overwrite voxels exterior to the specified ROI(s).
 
 - ```"true"```
 
-##### Examples
+##### Supported Options
 
 - ```"true"```
 - ```"false"```
@@ -7533,7 +7955,7 @@ Whether to overwrite voxels interior to the specified ROI(s).
 
 - ```"false"```
 
-##### Examples
+##### Supported Options
 
 - ```"true"```
 - ```"false"```
@@ -8682,6 +9104,60 @@ separating them with a ';' and are applied in the order specified.
 
 ----------------------------------------------------
 
+## DeleteTables
+
+### Description
+
+This routine deletes tables.
+
+### Parameters
+
+- TableSelection
+
+#### TableSelection
+
+##### Description
+
+Select one or more tables. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth table (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last table. Positional specifiers
+can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the table composed of
+the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all table that do not have the greatest number of sub-objects, not the least-numerous table (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+
+
+----------------------------------------------------
+
 ## DetectGrid3D
 
 ### Description
@@ -9274,6 +9750,7 @@ the data, which can be useful for debugging.
 ### Parameters
 
 - IncludeMetadata
+- Verbosity
 
 #### IncludeMetadata
 
@@ -9285,10 +9762,26 @@ Whether to include metadata in the output. This data can significantly increase 
 
 - ```"false"```
 
-##### Examples
+##### Supported Options
 
 - ```"true"```
 - ```"false"```
+
+#### Verbosity
+
+##### Description
+
+Controls the amount of information printed.
+
+##### Default
+
+- ```"verbose"```
+
+##### Supported Options
+
+- ```"verbose"```
+- ```"medium"```
+- ```"quiet"```
 
 
 ----------------------------------------------------
@@ -10108,7 +10601,7 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 
 ----------------------------------------------------
 
-## DumpTPlanMetadataOccurrencesToFile
+## DumpRTPlanMetadataOccurrencesToFile
 
 ### Description
 
@@ -10116,11 +10609,11 @@ Dump all the metadata elements, but group like-items together and also print the
 
 ### Parameters
 
-- TPlanSelection
+- RTPlanSelection
 - FileName
 - UserComment
 
-#### TPlanSelection
+#### RTPlanSelection
 
 ##### Description
 
@@ -11603,6 +12096,79 @@ and may be more widely supported. ASCII is generally recommended unless performa
 
 - ```"ascii"```
 - ```"binary"```
+
+
+----------------------------------------------------
+
+## ExportTables
+
+### Description
+
+This operation exports the selected table(s) into a single CSV formatted file.
+
+### Parameters
+
+- TableSelection
+- Filename
+
+#### TableSelection
+
+##### Description
+
+Select one or more tables. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth table (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last table. Positional specifiers
+can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the table composed of
+the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all table that do not have the greatest number of sub-objects, not the least-numerous table (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+
+#### Filename
+
+##### Description
+
+The exported file's name. The format is CSV. Leave empty to generate a unique temporary file. If an existing file is
+present, the contents will be appended. If multiple tables are selected, they will all be appended to the same file.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"/tmp/somefile"```
+- ```"localfile.csv"```
+- ```"derivative_data.csv"```
 
 
 ----------------------------------------------------
@@ -13919,13 +14485,14 @@ for each distinct partition.
   partitions are generated before any child operations are invoked, so newly-added elements (e.g., new Image_Arrays)
   created by one invocation will not participate in subsequent invocations. The order of the de-partitioned data is
   stable, though additional elements added will follow the partition they were generated from (and will thus not
-  necessarily be placed at the last element).
+  necessarily be placed at the last position).
 
 - This operation will most often be used to process data group-wise rather than as a whole.
 
 ### Parameters
 
 - KeysCommon
+- IncludeNA
 
 #### KeysCommon
 
@@ -13946,6 +14513,111 @@ metadata-based grouping.
 - ```"BodyPartExamined;StudyDate"```
 - ```"SeriesInstanceUID"```
 - ```"StationName"```
+
+#### IncludeNA
+
+##### Description
+
+Whether to perform the loop body for the 'N/A' (i.e., non-matching) group if non-empty.
+
+##### Default
+
+- ```"false"```
+
+##### Supported Options
+
+- ```"true"```
+- ```"false"```
+
+
+----------------------------------------------------
+
+## ForEachRTPlan
+
+### Description
+
+This operation is a control flow meta-operation that creates a 'view' of all available data such that each grouping
+contains a single treatment plan and any supplementary data it references (e.g., CT images, RTDOSE images, RTSTRUCT
+contours, etc.).
+
+### Notes
+
+- If this operation has no children, it will evaluate to a no-op.
+
+- The same supplementary data may appear in multiple groupings (e.g., if multiple plans reference the same images).
+
+- This operation will only partition homogeneous objects, i.e., composite objects in which all sub-objects share the
+  same set of metadata (e.g., image arrays, since each image carries its own metadata). See the GroupImages operation to
+  permanently partition heterogeneous image arrays.
+
+- Each invocation is performed sequentially, and all modifications are carried forward for each grouping. Groups are
+  generated on-the-fly, so newly-added elements (e.g., new images) created by one invocation are available to
+  participate in subsequent invocations.
+
+- The order of all elements, whether included in a plan's group or not, will potentially be re-ordered after this
+  operation.
+
+### Parameters
+
+- RTPlanSelection
+- IncludeNA
+
+#### RTPlanSelection
+
+##### Description
+
+Select one or more treatment plans. Note that a single treatment plan may be composed of multiple beams; if delivered
+sequentially, they should collectively represent a single logically cohesive plan. Selection specifiers can be of three
+types: positional, metadata-based key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth treatment plan (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last treatment plan.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the treatment plan
+composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
+Note that '!numerous' means all treatment plan that do not have the greatest number of sub-objects, not the
+least-numerous treatment plan (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+
+#### IncludeNA
+
+##### Description
+
+Whether to perform the loop body for the 'N/A' (i.e., non-matching) group if non-empty.
+
+##### Default
+
+- ```"false"```
+
+##### Supported Options
+
+- ```"true"```
+- ```"false"```
 
 
 ----------------------------------------------------
@@ -14196,6 +14868,70 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+
+
+----------------------------------------------------
+
+## GenerateMeshes
+
+### Description
+
+This operation contructs surface meshes using constructive solid geometry (CSG) with signed distance functions (SDFs).
+
+### Parameters
+
+- Objects
+- MeshLabel
+- Resolution
+
+#### Objects
+
+##### Description
+
+This parameter is used to specify a hierarchial tree of CSG-SDF objects. It can include shape primitives and operations
+over these shapes.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"sphere(2.34);"```
+- ```"aa_box(1.0, 2.0, 3.0);"```
+- ```"join(){ sphere(1.5); aa_box(1.0, 2.0, 3.0); }"```
+
+#### MeshLabel
+
+##### Description
+
+A label to attach to the surface mesh.
+
+##### Default
+
+- ```"unspecified"```
+
+##### Examples
+
+- ```"unspecified"```
+- ```"shape"```
+- ```"sphere and box"```
+
+#### Resolution
+
+##### Description
+
+The (minimal) spatial resolution to apply along x, y, and z axes. Can be specified as a list of three numbers.
+
+##### Default
+
+- ```"1.0, 1.0, 1.0"```
+
+##### Examples
+
+- ```"1.0, 1.0, 1.0"```
+- ```"0.1, 0.1, 1.0"```
+- ```"0.12, 3.45, 6.78"```
 
 
 ----------------------------------------------------
@@ -14644,6 +15380,35 @@ keys with the provided values.
 ##### Examples
 
 - ```"keyA@valueA;keyB@valueB"```
+
+
+----------------------------------------------------
+
+## GenerateTable
+
+### Description
+
+This operation creates an empty table.
+
+### Parameters
+
+- TableLabel
+
+#### TableLabel
+
+##### Description
+
+A label to attach to the new table.
+
+##### Default
+
+- ```"unspecified"```
+
+##### Examples
+
+- ```"unspecified"```
+- ```"xyz"```
+- ```"sheet A"```
 
 
 ----------------------------------------------------
@@ -15172,12 +15937,14 @@ specified StationName.
 - Image order within a group is retained (i.e., stable grouping), but groups are appended to the back of the Image_Array
   list according to the default sort for the group's key-value value.
 
-- Images that do not contain the specified metadata will be grouped into a special N/A group at the end.
+- Images that do not contain the specified metadata will be grouped into a special N/A group at the end. Use strict mode
+  to abort grouping if any image is missing any tag.
 
 ### Parameters
 
 - ImageSelection
 - KeysCommon
+- Strict
 - AutoSelectKeysCommon
 - Enforce
 
@@ -15242,6 +16009,22 @@ be specified to group on multiple criteria simultaneously. An empty string disab
 - ```"BodyPartExamined;StudyDate"```
 - ```"SeriesInstanceUID"```
 - ```"StationName"```
+
+#### Strict
+
+##### Description
+
+Require all images to have all tags present, and abort otherwise. Using this option, if the operation succeeds there
+will be no N/A partition.
+
+##### Default
+
+- ```"false"```
+
+##### Supported Options
+
+- ```"true"```
+- ```"false"```
 
 #### AutoSelectKeysCommon
 
@@ -15598,7 +16381,7 @@ Whether to overwrite voxels exterior to the specified ROI(s).
 
 - ```"true"```
 
-##### Examples
+##### Supported Options
 
 - ```"true"```
 - ```"false"```
@@ -15613,7 +16396,7 @@ Whether to overwrite voxels interior to the specified ROI(s).
 
 - ```"true"```
 
-##### Examples
+##### Supported Options
 
 - ```"true"```
 - ```"false"```
@@ -15696,6 +16479,26 @@ all evaluated operations are possible.
 - Some operations may succeed without directly signalling failure. For example, an operation that loops over all
   selected images may not throw if zero images are selected. This operation works best with other control flow
   meta-operations.
+
+### Parameters
+
+No registered options.
+
+----------------------------------------------------
+
+## Ignore
+
+### Description
+
+This operation is a control flow meta-operation that ignores the return value of all child operations.
+
+### Notes
+
+- Child operations are performed in order, and all side-effects are carried forward. In particular, all selectors in
+  child operations are evaluated lazily, at the moment when the child operation is invoked.
+
+- This operation ' will always succeed, even if no children are present. This operation works well with idempotent or
+  non-critical children operations.
 
 ### Parameters
 
@@ -16252,6 +17055,39 @@ Currently this includes serialized Drover class files, DICOM files, FITS image f
 - ```"dose.dcm"```
 - ```"image.fits"```
 - ```"point_cloud.xyz"```
+
+
+----------------------------------------------------
+
+## LoadFilesInteractively
+
+### Description
+
+This operation lets the user interactively select one or more files and then attempts to load them.
+
+### Notes
+
+- This operation requires all files provided to it to exist and be accessible. Inaccessible files are not silently
+  ignored and will cause this operation to fail.
+
+### Parameters
+
+- Instruction
+
+#### Instruction
+
+##### Description
+
+An instruction provided to the user, if possible. In most cases this will be the title of a GUI dialog box.
+
+##### Default
+
+- ```"Please select one or more files to load"```
+
+##### Examples
+
+- ```"Select files"```
+- ```"Select XYZ files to load"```
 
 
 ----------------------------------------------------
@@ -16980,10 +17816,10 @@ separating them with a ';' and are applied in the order specified.
 
 ##### Description
 
-Key-value pairs in the form of 'key1@value1;key2@value2' that will be injected into the selected objects.Values can use
+Key-value pairs in the form of 'key1@value1;key2@value2' that will be injected into the selected objects. Values can use
 macros that refer to other metadata keys using the '$' character. If macros refer to non-existent metadata elements,
-then the replacement is literal.Dates, times, and datetimes can be converted to seconds (since the Unix epoch) using the
-'to_seconds()' function.
+then the replacement is literal. Dates, times, and datetimes can be converted to seconds (since the Unix epoch) using
+the 'to_seconds()' function.
 
 Existing conflicting metadata will be overwritten. Both keys and values are case-sensitive. Note that a semi-colon
 separates key-value pairs, not a colon. Note that quotation marks are not stripped internally, but may have to be
@@ -17137,6 +17973,38 @@ convenience. Specify coordinates separated by commas.
 
 ----------------------------------------------------
 
+## ModifyParameters
+
+### Description
+
+Define or delete a key-value parameter into/from the global parameter table.
+
+### Parameters
+
+- Actions
+
+#### Actions
+
+##### Description
+
+Three actions are understood: 'define', 'insert', and 'remove'. The 'define' action accepts a key-value pair and injects
+it into the global parameter table. Note that this operation will overwrite any existing parameters with the same key.
+The 'insert' action behaves like 'define' except it will not overwrite any existing parameters. The 'delete' action
+accepts a key and removes it from the global parameter table if it is already present. Otherwise, no action is taken.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"define(key_1, value_1)"```
+- ```"insert(key_1, value_1); define('key 2', 'value 2\, which has a comma')"```
+- ```"remove('key 3')"```
+
+
+----------------------------------------------------
+
 ## NegatePixels
 
 ### Description
@@ -17199,6 +18067,29 @@ separating them with a ';' and are applied in the order specified.
 ### Description
 
 This operation does nothing. It produces no side-effects.
+
+### Parameters
+
+No registered options.
+
+----------------------------------------------------
+
+## NoneOf
+
+### Description
+
+This operation is a control flow meta-operation that performs a 'none-of' Boolean check by evaluating child operations.
+The first child operation that succeeds short-circuits the remaining checks and returns false. If no child operation
+succeeds, true is returned. Side effects from all evaluated operations are possible.
+
+### Notes
+
+- Child operations are performed in order, and all side-effects are carried forward. In particular, all selectors in
+  child operations are evaluated lazily, at the moment when the child operation is invoked.
+
+- Some operations may succeed without directly signalling failure. For example, an operation that loops over all
+  selected images may not throw if zero images are selected. This operation works well with other control flow
+  meta-operations, for example as a conditional in an if-else statement.
 
 ### Parameters
 
@@ -17498,22 +18389,35 @@ PET modality. See <https://doi.org/10.2967/jnmt.119.233353> for additional detai
 
 ----------------------------------------------------
 
-## Not
+## NotifyUser
 
 ### Description
 
-This operation is a control flow meta-operation that requires no child operation to complete successfully.
-
-### Notes
-
-- If this operation has no children, this operation will evaluate to a no-op.
-
-- Each child is performed sequentially in the order specified, and all side-effects are carried forward. In particular,
-  all selectors in child operations are evaluated lazily, at the moment when the child operation is invoked.
+This operation attempts to notify the user using a tray notification.
 
 ### Parameters
 
-No registered options.
+- Notifications
+
+#### Notifications
+
+##### Description
+
+A list of notifications to send to the user, where each function represents a single notification. Currently only tray
+notifications are supported. Accepted syntax is 'tray(urgency, message, duration)' where urgency is 'low', 'medium', or
+'high' and duration is in milliseconds. Duration is optional. All notifications will be displayed concurrently. For
+example, 'tray("low", "Calculation finished.", 5000)' will send a low-urgency notification that a calculation finished.
+It will be displayed for 5 seconds.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"tray('low', 'Calculation finished')"```
+- ```"tray('medium', 'Minor issue detected', 5000); tray(high, 'Severe error encountered', 10000)"```
+
 
 ----------------------------------------------------
 
@@ -17766,45 +18670,34 @@ The dose prescribed to the ROI that will be optimized. The units depend on the D
 
 ----------------------------------------------------
 
-## Or
-
-### Description
-
-This operation is a control flow meta-operation that evaluates all children operations until one completes successfully.
-
-### Notes
-
-- If this operation has no children, or no children complete successfully, then this operation signals false truthiness.
-
-- Each child is performed sequentially and lazily in the order specified, with all side-effects carried forward. In
-  particular, all selectors in child operations are evaluated lazily, at the moment when the child operation is invoked.
-  After the first child completes successfully, no other children will be evaluated.
-
-### Parameters
-
-No registered options.
-
-----------------------------------------------------
-
 ## OrderImages
 
 ### Description
 
-This operation will order individual image slices within collections (Image_Arrays) based on the values of the specified
-metadata tags.
+This operation will order either individual image slices within each image array, or image arrays based on the values of
+the specified metadata tags.
 
 ### Notes
 
-- Images are moved, not copied.
+- Images and image arrays are moved, not copied.
 
-- Image groupings are retained, and the order of groupings is not altered.
+- Image arrays (groupings) are always retained, though the order of images within each array and the order of the arrays
+  themselves will change.
 
-- Images that do not contain the specified metadata will be sorted after the end.
+- Images that do not contain the specified metadata will be placed at the end. Similarly, image arrays that do not have
+  consensus (i.e., the constituent images have heterogeneous metadata) will be placed at the end.
+
+- Image array sorting permits selection of specific image arrays. Only selected arrays will participate in the sort, and
+  sorted selection will be reinjected such that the position of all unselected arrays remain unchanged. For example,
+  representing unselected arrays as letters (ABC...) and selected arrays as numbers (123...) then sorting 'AB3C12' would
+  result in 'AB1C23'. Note that the unselected arrays do not move, even when the selected arrays are reordered.
 
 ### Parameters
 
 - ImageSelection
+- Variant
 - Key
+- Unit
 
 #### ImageSelection
 
@@ -17849,13 +18742,28 @@ separating them with a ';' and are applied in the order specified.
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
 
+#### Variant
+
+##### Description
+
+Controls whether images (internal) or image arrays (external) are sorted.
+
+##### Default
+
+- ```"internal"```
+
+##### Supported Options
+
+- ```"internal"```
+- ```"external"```
+
 #### Key
 
 ##### Description
 
-Image metadata key to use for ordering. Images will be sorted according to the key's value 'natural' sorting order,
-which compares sub-strings of numbers and characters separately. Note this ordering is expected to be stable, but may
-not always be on some systems.
+Metadata key to use for ordering. Values will be sorted according to a 'natural' sorting order, which greedily compares
+sub-strings of numbers and characters separately. Note this ordering is expected to be stable, but may not always be on
+some systems.
 
 ##### Default
 
@@ -17867,6 +18775,24 @@ not always be on some systems.
 - ```"ContentTime"```
 - ```"SeriesNumber"```
 - ```"SeriesDescription"```
+
+#### Unit
+
+##### Description
+
+Unit vector use for spatial ordering. Images will be sorted according to the position of the corner nearest the (0,0)
+voxel along the given unit vector. For image arrays, the 'first' image is used -- which occurs 'first' can be controlled
+by first sorting internally.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"(0.0, 0.0, 1.0)"```
+- ```"(0.0, -1.0, 0.0)"```
+- ```"(0.1, -0.2, 0.3)"```
 
 
 ----------------------------------------------------
@@ -19090,6 +20016,40 @@ option.)
 - ```"10.0"```
 - ```"100"```
 - ```"10.23E4"```
+
+
+----------------------------------------------------
+
+## QueryUserInteractively
+
+### Description
+
+This operation queries the user interactively, and then injects parameters into the global parameter table.
+
+### Parameters
+
+- Queries
+
+#### Queries
+
+##### Description
+
+A list of queries to pose to the user, where each function represents a single query. There are currently three query
+types: 'integer', 'real', and 'string'. The only difference being how the user input is validated. All three functions
+have the same signature: the variable name (which is used to store the user input), a query/instruction string that is
+provided to the user, and a default/example value. For example, 'integer(x, "Input the day of the month.", 0)' will
+query the user for an integer with the instructions 'Input the day of the month.' and the result will be stored in
+variable named 'x'. Note that multiple queries can be separated by a semicolon, characters can be escaped inside
+quotations using a backslash, and outer quotation marks are stripped away. Note that the query interface may also remove
+or transform problematic characters.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"integer(var1, 'Please provide an integer', 123); real(var2, 'Please provide a float', -1.23); string(var3, 'Please provide a string', 'default text')"```
 
 
 ----------------------------------------------------
@@ -22700,7 +23660,7 @@ Whether to overwrite voxels exterior to the specified ROI(s).
 
 - ```"false"```
 
-##### Examples
+##### Supported Options
 
 - ```"true"```
 - ```"false"```
@@ -22715,7 +23675,7 @@ Whether to overwrite voxels interior to the specified ROI(s).
 
 - ```"true"```
 
-##### Examples
+##### Supported Options
 
 - ```"true"```
 - ```"false"```
@@ -22861,7 +23821,7 @@ you don't. Use the high setting if your TPS goes overboard linking data sets by 
 
 ### Description
 
-This operation is a control flow meta-operation that completes successfully. It has not side effects and evaluates to a
+This operation is a control flow meta-operation that completes successfully. It has no side effects and evaluates to a
 no-op.
 
 ### Parameters
@@ -22920,6 +23880,141 @@ This operation is an experimental operation for processing IVIM MR images into A
 ### Parameters
 
 No registered options.
+
+----------------------------------------------------
+
+## ValidateRTPlan
+
+### Description
+
+This operation evaluates a radiotherapy treatment plan against user-specified criteria.
+
+### Parameters
+
+- RTPlanSelection
+- Checks
+- TableSelection
+
+#### RTPlanSelection
+
+##### Description
+
+Select one or more treatment plans. Note that a single treatment plan may be composed of multiple beams; if delivered
+sequentially, they should collectively represent a single logically cohesive plan. Selection specifiers can be of three
+types: positional, metadata-based key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth treatment plan (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last treatment plan.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the treatment plan
+composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
+Note that '!numerous' means all treatment plan that do not have the greatest number of sub-objects, not the
+least-numerous treatment plan (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+
+#### Checks
+
+##### Description
+
+The specific checks to perform when evaluating the plan. This parameter will often contain a script with multiple
+checks. List of supported checks:
+
+'pass' -- This check always passes.
+
+'fail' -- This check never passes.
+
+'all of' -- All children checks must pass for this check to pass.
+
+'one or more of' -- At least one of the children checks must pass for this check to pass.
+
+'none of' -- All children checks must fail for this check to pass.
+
+'plan name has no spaces' -- Ensure the plan name does not contain any spaces.
+
+'has VMAT arc' -- Ensure the plan name does not contain any spaces.
+
+'VMAT arc collimator angles not degenerate' -- All VMAT arc collimator angles should be distinct to minimize
+optimization cost-function degeneracy.
+
+'jaw openings larger than' -- The X and Y jaws should be opened sufficiently to facilitate accurate dosimetric modeling.
+Minimum X and Y jaw openings (in mm) are required
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"require(){ check_A(); check_B(); ... }"```
+- ```"all_of(){ check_A(); check_B(); ... }"```
+- ```"any_of(){ check_A(); check_B(); ... }"```
+
+#### TableSelection
+
+##### Description
+
+Select one or more tables. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth table (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last table. Positional specifiers
+can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the table composed of
+the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all table that do not have the greatest number of sub-objects, not the least-numerous table (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+
 
 ----------------------------------------------------
 
@@ -24160,10 +25255,4 @@ Ygor.
 
 DICOMautomaton depends on several heavily templated libraries and external projects. It requires a considerable amount
 of memory to build.
-
-## DICOM-RT Support Incomplete
-
-Support for the DICOM Radiotherapy extensions are limited. In particular, only RTDOSE files can currently be exported,
-and RTPLAN files are not supported at all. Read support for DICOM image modalities and RTSTRUCTS are generally supported
-well. Broader DICOM support is planned for a future release.
 
