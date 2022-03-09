@@ -60,5 +60,14 @@ FirstOf(){
 
 };
 
-
+# Sort images according to the SeriesNumber, which is how they are
+# commonly displayed at the time of acquisition.
+#
+# Note: ideally we would use the AcquisitionTime, but it often is
+# unhelpfully set to a placeholder time (e.g., StudyTime).
+OrderImages(
+    ImageSelection = 'all',
+    Variant = 'external',
+    Key = 'SeriesNumber',
+){};
 
