@@ -60,7 +60,7 @@ OperationDoc OpArgDocOrderImages(){
     out.args.back().name = "Variant";
     out.args.back().desc = "Controls whether images (internal) or image arrays (external) are sorted.";
     out.args.back().default_val = "internal";
-    out.args.back().expected = false;
+    out.args.back().expected = true;
     out.args.back().examples = { "internal",
                                  "external" };
     out.args.back().samples = OpArgSamples::Exhaustive;
