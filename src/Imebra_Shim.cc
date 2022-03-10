@@ -1265,6 +1265,8 @@ get_metadata_top_level_tags(const std::filesystem::path &filename){
     //insert_as_string_if_nonempty(0x7FE0, 0x0010, "PixelData"); //Raw pixel bytes.
     insert_as_string_if_nonempty(0x0028, 0x0006, "PlanarConfiguration");
     insert_as_string_if_nonempty(0x0028, 0x0034, "PixelAspectRatio");
+    insert_as_string_if_nonempty(0x0028, 0x0106, "SmallestImagePixelValue");
+    insert_as_string_if_nonempty(0x0028, 0x0107, "LargestImagePixelValue");
 
     //Multi-Frame Module.
     insert_as_string_if_nonempty(0x0028, 0x0008, "NumberOfFrames");
@@ -1387,18 +1389,18 @@ get_metadata_top_level_tags(const std::filesystem::path &filename){
 
     insert_as_string_if_nonempty(0x0018, 0x0025, "AngioFlag");
     insert_as_string_if_nonempty(0x0018, 0x1062, "NominalInterval");
-    insert_as_string_if_nonempty(0x0018, 0x1090, "CardiacNumberofImages");
+    insert_as_string_if_nonempty(0x0018, 0x1090, "CardiacNumberOfImages");
 
-    insert_as_string_if_nonempty(0x0018, 0x0083, "NumberofAverages");
+    insert_as_string_if_nonempty(0x0018, 0x0083, "NumberOfAverages");
     insert_as_string_if_nonempty(0x0018, 0x0084, "ImagingFrequency");
     insert_as_string_if_nonempty(0x0018, 0x0085, "ImagedNucleus");
     insert_as_string_if_nonempty(0x0018, 0x0086, "EchoNumbers");
     insert_as_string_if_nonempty(0x0018, 0x0087, "MagneticFieldStrength");
 
     insert_as_string_if_nonempty(0x0018, 0x0088, "SpacingBetweenSlices");
-    insert_as_string_if_nonempty(0x0018, 0x0089, "NumberofPhaseEncodingSteps");
+    insert_as_string_if_nonempty(0x0018, 0x0089, "NumberOfPhaseEncodingSteps");
     insert_as_string_if_nonempty(0x0018, 0x0093, "PercentSampling");
-    insert_as_string_if_nonempty(0x0018, 0x0094, "PercentPhaseFieldofView");
+    insert_as_string_if_nonempty(0x0018, 0x0094, "PercentPhaseFieldOfView");
     insert_as_string_if_nonempty(0x0018, 0x0095, "PixelBandwidth");
 
     insert_as_string_if_nonempty(0x0018, 0x1250, "ReceiveCoilName");
@@ -1408,7 +1410,7 @@ get_metadata_top_level_tags(const std::filesystem::path &filename){
     insert_as_string_if_nonempty(0x0018, 0x1314, "FlipAngle");
     insert_as_string_if_nonempty(0x0018, 0x1315, "VariableFlipAngleFlag");
     insert_as_string_if_nonempty(0x0018, 0x1316, "SAR");
-    insert_as_string_if_nonempty(0x0018, 0x1318, "dB_dt");
+    insert_as_string_if_nonempty(0x0018, 0x1318, "dBdt");
 
     //MR Diffusion Macro Attributes.
     insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
@@ -1490,7 +1492,7 @@ get_metadata_top_level_tags(const std::filesystem::path &filename){
     insert_as_string_if_nonempty(0x0020, 0x9128, "TemporalPositionIndex");
     //insert_seq_vec_tag_as_string_if_nonempty(std::deque<path_node>(
     //                                         { { 0x0020, 0x9128, "TemporalPositionIndex" } }) );
-    insert_as_string_if_nonempty(0x0020, 0x0105, "NumberofTemporalPositions");
+    insert_as_string_if_nonempty(0x0020, 0x0105, "NumberOfTemporalPositions");
 
     insert_as_string_if_nonempty(0x0020, 0x0110, "TemporalResolution");
     insert_as_string_if_nonempty(0x0054, 0x1300, "FrameReferenceTime");
