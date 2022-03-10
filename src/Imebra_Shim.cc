@@ -1700,8 +1700,22 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
         auto l_meta = tlm;
         out->imagecoll.images.emplace_back();
 
+        // Use Rows and Columns tages as 'indicator' data. Non-images lack these tags, but all legitimate images I've
+        // encountered have these two tags at the top-level.
+        //
+        // Note: It's common for 'MR'-modality files to not contain image data. Instead of checking for known
+        //       SOPClassUIDs it's easiest to try access needed data directly.
+        const auto image_rows_opt = l_coalesce_as_long_int({ { {0x0028, 0x0010, 0} } });
+        const auto image_cols_opt = l_coalesce_as_long_int({ { {0x0028, 0x0011, 0} } });
+        if(!image_rows_opt || !image_cols_opt){
+            throw std::invalid_argument("File does not appear to contain image data");
+        }
+        const auto image_rows = image_rows_opt.value();
+        const auto image_cols = image_cols_opt.value();
+
+
         // Extract the image's 3D position. Here we consider:
-        // - the normal ImagePositionPatient tag (most single-frame images)
+        // - the 'normal' top-level tags (likely for most single-frame images)
         // - RTIMAGE tags
         // - multi-frame MR tags
         // - MR CSA header metadata
@@ -1764,6 +1778,7 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
                                                       + std::to_string(image_pos.y) + '\\'
                                                       + std::to_string(image_pos.z) );
 
+        const auto image_anchor = vec3<double>(0.0,0.0,0.0); //Could use RTIMAGE IsocenterPosition (300a,012c) ?
 
 
         // Orientation vectors.
@@ -1805,11 +1820,6 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
                                                          + std::to_string(image_orien_r.x) + '\\'
                                                          + std::to_string(image_orien_r.y) + '\\'
                                                          + std::to_string(image_orien_r.z) );
-
-        const auto image_anchor = vec3<double>(0.0,0.0,0.0); //Could use RTIMAGE IsocenterPosition (300a,012c) ?
-
-        const auto image_rows = l_coalesce_as_long_int({ { {0x0028, 0x0010, 0} } }).value();
-        const auto image_cols = l_coalesce_as_long_int({ { {0x0028, 0x0011, 0} } }).value();
 
 
         std::optional<double> image_pxldy_opt;
