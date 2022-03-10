@@ -33,7 +33,7 @@ std::string get_patient_ID(const std::filesystem::path &filename);
 //Mass top-level tag enumeration, for ingress into database.
 //
 //NOTE: May not be complete. Add additional tags as needed!
-std::map<std::string,std::string> get_metadata_top_level_tags(const std::filesystem::path &filename);
+metadata_map_t get_metadata_top_level_tags(const std::filesystem::path &filename);
 
 
 //------------------ Contours ---------------------

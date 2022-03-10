@@ -33,6 +33,12 @@ std::string Generate_Random_UID(long int len);
 std::string Generate_Random_Int_Str(long int low, long int high);
 
 
+// Insert a *new* key-value pair. Will not overwrite an existing key-value pair if the key is already present.
+// Returns true only when insertion successful.
+bool insert_if_new( metadata_map_t &map,
+                    const std::string &key,
+                    const std::string &val );
+
 // Retrieve the metadata value corresponding to a given key, but only if present and it can be converted to type T.
 template <class T>
 std::optional<T>

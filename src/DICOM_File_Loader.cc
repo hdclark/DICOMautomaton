@@ -168,22 +168,7 @@ if(std::get_if<std::monostate>(&(t->transform)) != nullptr) FUNCWARN("(std::get_
                 continue;
             }
 
-            if(loaded_imgs_storage.back().back()->imagecoll.images.size() != 1){
-                FUNCWARN("More or less than one image loaded into the image array. You'll need to tweak the code to handle this");
-                return false;
-                //If you get here, you've tried to load a file that contains more than one image slice. This is OK,
-                // (and is legitimate behaviour) but you'll need to update the following code to ensure each file's 
-                // metadata is set accordingly. This is all you need to do at the time of writing, but take a look over
-                // the rest of the code to ensure the code doesn't assume too much.
-            }
-            
             bfit = Filenames.erase( bfit ); 
-
-            //If we want to add any additional image metadata, or replace the default Imebra_Shim.cc populated metadata
-            // with, say, the non-null PostgreSQL metadata, it should be done here.
-            loaded_imgs_storage.back().back()->imagecoll.images.back().metadata["Filename"] = Filename.string();
-            //loaded_imgs_storage.back().back()->imagecoll.images.back().metadata["dt"] = "0.0";
-            // ... more metadata operations ...
 
         }else{
             //Skip the file. It might be destined for some other loader.
@@ -218,7 +203,6 @@ if(std::get_if<std::monostate>(&(t->transform)) != nullptr) FUNCWARN("(std::get_
     }
 
     //Collate each group of images into a single set, if possible. Also stuff the correct contour data in the same set.
-    // Also load dose data into the fray.
     for(auto &loaded_img_set : loaded_imgs_storage){
         if(loaded_img_set.empty()) continue;
 
@@ -232,6 +216,7 @@ if(std::get_if<std::monostate>(&(t->transform)) != nullptr) FUNCWARN("(std::get_
     }
     FUNCINFO("Number of image set groups currently loaded = " << DICOM_data.image_data.size());
 
+    //Also load dose data into the fray.
     for(auto &loaded_dose_set : loaded_dose_storage){
         if(loaded_dose_set.empty()) continue;
 

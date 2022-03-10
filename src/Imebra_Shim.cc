@@ -1,4 +1,4 @@
-//Imebra_Shim.cc - DICOMautomaton 2012-2021. Written by hal clark.
+//Imebra_Shim.cc - DICOMautomaton 2012-2022. Written by hal clark.
 //
 // This file is supposed to 'shim' or wrap the Imebra library. It is used to abstract the Imebra library so that it can
 // eventually be replaced with an alternative library, and also reduce the number of template instantiations generated
@@ -46,6 +46,7 @@
 
 #include "DCMA_DICOM.h"
 #include "Structs.h"
+#include "Metadata.h"
 #include "Alignment_Rigid.h"
 #include "Alignment_Field.h"
 
@@ -56,12 +57,14 @@ struct path_node {
     uint16_t group   = 0; // The first number in common DICOM tag parlance.
     uint16_t tag     = 0; // The second number in common DICOM tag parlance.
 
-    uint32_t order   = 0; // Rarely used in modern DICOM. Almost always going to be zero.
     uint32_t element = 0; // Used to enumerate items in lists.
+    uint32_t order   = 0; // Rarely used in modern DICOM. Almost always going to be zero.
 
 };
 
-
+// DICOM extractors.
+//
+// Note: multiple values represent DICOM multiplicity, e.g., the individual coordinates of a vector.
 static
 std::vector<std::string>
 extract_tag_as_string( const puntoexe::ptr<puntoexe::imebra::dataSet>& base_node_ptr,
@@ -194,7 +197,6 @@ extract_seq_tag_as_string( const puntoexe::ptr<puntoexe::imebra::dataSet>& base_
     return out;
 }
 
-
 static
 std::vector<std::string>
 extract_seq_vec_tag_as_string( const puntoexe::ptr<puntoexe::imebra::dataSet>& base_node_ptr,
@@ -274,6 +276,162 @@ extract_seq_vec_tag_as_string( const puntoexe::ptr<puntoexe::imebra::dataSet>& b
 
     return out;
 }
+
+static
+affine_transform<double>
+extract_affine_transform(const std::vector<double> &v){
+    affine_transform<double> t;
+    if(v.size() != 16){
+        throw std::runtime_error("Unanticipated matrix transformation dimensions");
+    }
+    for(size_t row = 0; row < 3; ++row){
+        for(size_t col = 0; col < 4; ++col){
+            const size_t indx = col + row * 4;
+            t.coeff(row,col) = v[indx];
+        }
+    }
+    if(  (v[12] != 0.0)
+    ||   (v[13] != 0.0)
+    ||   (v[14] != 0.0)
+    ||   (v[15] != 1.0) ){
+        throw std::runtime_error("Transformation cannot be represented using an Affine matrix");
+    }
+    return t;
+}
+
+// "Coalesce" wrappers that extract only the first available tag.
+//
+// Note: multiple values represent DICOM multiplicity, e.g., the individual coordinates of a vector.
+static
+std::vector<std::string>
+coalesce_seq_tag_as_string( const puntoexe::ptr<puntoexe::imebra::dataSet>& base_node_ptr,
+                            std::deque<std::deque<path_node>> paths ){
+    std::vector<std::string> out;
+    for(const auto &p : paths){
+        out = extract_seq_tag_as_string( base_node_ptr, p );
+        if(!out.empty()) break;
+    }
+    return out;
+}
+
+static
+std::vector<std::string>
+coalesce_metadata_as_string( const metadata_map_t& tlm,
+                             const std::list<std::string>& keys ){
+    std::vector<std::string> out;
+    for(const auto &key : keys){
+        const auto res = tlm.find(key);
+        if(res != std::end(tlm)){
+            try{
+                auto tokens = SplitStringToVector(res->second, '\\', 'd');
+                // DICOM multiplicity is strictly using '\' char, but metadata is often written in
+                // CSV or TSV style (especially if not originally from DICOM, like CSA headers),
+                // so handle non-standard token markers as well.
+                tokens = SplitVector(tokens, ',', 'd');
+                tokens = SplitVector(tokens, '\t', 'd');
+                out = tokens;
+                break;
+            }catch(const std::exception &){}
+        }
+    }
+    return out;
+}
+
+// Converters to be used with the above extractors.
+static
+std::optional<std::string>
+convert_first_to_string(const std::vector<std::string> &in){
+    if(!in.empty()){
+        return std::optional<std::string>(in.front());
+    }
+    return std::optional<std::string>();
+}
+
+static
+std::optional<long int>
+convert_first_to_long_int(const std::vector<std::string> &in){
+    if(!in.empty()){
+        try{
+            const auto res = std::stol(in.front());
+            return std::optional<long int>(res);
+        }catch(const std::exception &){}
+    }
+    return std::optional<long int>();
+}
+
+static
+std::optional<double>
+convert_first_to_double(const std::vector<std::string> &in){
+    if(!in.empty()){
+        try{
+            const auto res = std::stod(in.front());
+            return std::optional<double>(res);
+        }catch(const std::exception &){}
+    }
+    return std::optional<double>();
+}
+
+static
+std::optional<vec3<double>>
+convert_to_vec3_double(const std::vector<std::string> &in){
+    if(3 <= in.size()){
+        try{
+            const auto x = std::stod(in.at(0));
+            const auto y = std::stod(in.at(1));
+            const auto z = std::stod(in.at(2));
+            return std::optional<vec3<double>>( vec3<double>(x,y,z) );
+        }catch(const std::exception &){}
+    }
+    return std::optional<vec3<double>>();
+}
+
+static
+std::optional<vec3<int64_t>>
+convert_to_vec3_int64(const std::vector<std::string> &in){
+    if(3 <= in.size()){
+        try{
+            const auto x = std::stol(in.at(0));
+            const auto y = std::stol(in.at(1));
+            const auto z = std::stol(in.at(2));
+            return std::optional<vec3<int64_t>>( vec3<int64_t>(x,y,z) );
+        }catch(const std::exception &){}
+    }
+    return std::optional<vec3<int64_t>>();
+}
+
+static
+std::vector<double>
+convert_to_vector_double(const std::vector<std::string> &in){
+    std::vector<double> out;
+    for(const auto &x : in){
+        try{
+            const auto y = std::stod(x);
+            out.emplace_back(y);
+        }catch(const std::exception &){}
+    }
+    return out;
+}
+
+// Metadata inserters.
+static
+void
+insert_as_string_if_nonempty( metadata_map_t &metadata,
+                              puntoexe::ptr<puntoexe::imebra::dataSet> base_node_ptr,
+                              path_node dicom_path,
+                              const std::string name){
+    auto res_str_vec = extract_tag_as_string(base_node_ptr, dicom_path);
+
+    const auto ctrim = CANONICALIZE::TRIM_ENDS;
+    bool add_sep = (metadata.count(name) != 0); // Controls whether a separator will be added.
+    for(const auto &s : res_str_vec){
+        const auto trimmed = Canonicalize_String2(s, ctrim);
+        if(trimmed.empty()) continue;
+        metadata[name] += (add_sep ? R"***(\)***"_s : ""_s) + trimmed;
+        add_sep = true;
+    }
+    return;
+}
+
 
 // This is an ad-hoc Siemens CSA2 header parser. I wasn't able to find any specifications, so I had to rely on
 // sample files as examples. Seems to work for the samples I have, but may not be accurate!
@@ -463,9 +621,7 @@ static
 void
 ds_OB_insert(puntoexe::ptr<puntoexe::imebra::dataSet> &ds, 
              path_node pn,
-//             uint16_t group, uint16_t tag, 
              std::string i_val){
-//    const uint16_t order = 0;
     
     //For OB type, we simply copy the string's buffer as-is. 
     const auto d_t = ds->getDefaultDataType(pn.group, pn.tag);
@@ -488,13 +644,7 @@ static
 void
 ds_insert(puntoexe::ptr<puntoexe::imebra::dataSet> &ds,
           path_node pn,
-//          uint16_t group, uint16_t tag,
           const std::string& i_val){
-//    const uint16_t order = 0;
-//    uint32_t element = 0;
-
-//    pn.order = 0;
-//    pn.element = 0;
 
     //Search for '\' characters. If present, split the string up and register each token separately.
     auto tokens = SplitStringToVector(i_val, '\\', 'd');
@@ -580,10 +730,7 @@ void
 ds_seq_insert(puntoexe::ptr<puntoexe::imebra::dataSet> &ds, 
               path_node seq_pn,
               path_node tag_pn,
-//              uint16_t seq_group, uint16_t seq_tag, 
-//              uint16_t tag_group, uint16_t tag_tag,
               std::string tag_val){
-//    const uint32_t first_order = 0; // Always zero for modern DICOM files.
     seq_pn.order = 0; // Always zero for modern DICOM files.
 
     //Get a reference to an existing sequence item, or create one if needed.
@@ -757,8 +904,9 @@ std::string get_patient_ID(const std::filesystem::path &filename){
 //Mass top-level tag enumeration, for ingress into database.
 //
 //NOTE: May not be complete. Add additional tags as needed!
-std::map<std::string,std::string> get_metadata_top_level_tags(const std::filesystem::path &filename){
-    std::map<std::string,std::string> out;
+metadata_map_t
+get_metadata_top_level_tags(const std::filesystem::path &filename){
+    metadata_map_t out;
     const auto ctrim = CANONICALIZE::TRIM_ENDS;
 
     //Attempt to parse the DICOM file and harvest the elements of interest. We are only interested in
@@ -1504,13 +1652,13 @@ std::unique_ptr<Contour_Data> get_Contour_Data(const std::filesystem::path &file
 
 
 //-------------------- Images ----------------------
-//This routine will often result in an array with only a single image. So collate output as needed.
+
+// Load a single 2D image or a multi-frame MR image array.
 //
-// NOTE: I believe this routine is only valid for single frame images, like common CT and MR images.
-//       PT and US have not been tested. RTDOSE files should use the Load_Dose_Array code, which 
-//       handles multi-frame images (and thus might be adaptable for other non-RTDOSE multi-frame 
-//       images).
-std::unique_ptr<Image_Array> Load_Image_Array(const std::filesystem::path &FilenameIn){
+// Note that individual images loaded as part of a set will likely need to be collated.
+std::unique_ptr<Image_Array>
+Load_Image_Array(const std::filesystem::path &FilenameIn){
+    const auto inf = std::numeric_limits<double>::infinity();
     auto out = std::make_unique<Image_Array>();
 
     using namespace puntoexe;
@@ -1520,216 +1668,272 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::filesystem::path &Filen
     ptr<puntoexe::streamReader> reader(new puntoexe::streamReader(readStream));
     ptr<imebra::dataSet> TopDataSet = imebra::codecs::codecFactory::getCodecFactory()->load(reader);
 
-    //Helper routines that do not create tags when they are missing.
-    //
-    // Note: Issuing the following:
-    //    const auto image_pos_x = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0032, 0)); 
-    //       will result in a new tag with a default value being created if it did not previously exist!
-    auto retrieve_as_string = [&TopDataSet](uint16_t group, 
-                                            uint16_t tag, 
-                                            uint32_t element = 0) 
-                                            -> std::optional<std::string> {
-        const uint32_t first_order = 0; // Always zero for modern DICOM files.
-
-        //Check if the tag is present in the file. If not, bail.
-        const bool create_if_not_found = false;
-        const auto ptr = TopDataSet->getTag(group, first_order, tag, create_if_not_found);
-        if(ptr == nullptr) return std::optional<std::string>();
-
-        //Retrieve the element.
-        const auto str = TopDataSet->getString(group, first_order, tag, element);
-        return str;
-    };
-    auto retrieve_as_long_int = [&TopDataSet,&retrieve_as_string](uint16_t group, 
-                                              uint16_t tag, 
-                                              uint32_t element = 0) 
-                                              -> std::optional<double> {
-        auto o = retrieve_as_string(group,tag,element);
-        if(!o) return std::nullopt;
-        return std::stol(o.value());
-    };                                            
-    auto retrieve_as_double = [&TopDataSet,&retrieve_as_string](uint16_t group, 
-                                            uint16_t tag, 
-                                            uint32_t element = 0) 
-                                            -> std::optional<double> {
-        auto o = retrieve_as_string(group,tag,element);
-
-        std::optional<double> out = std::nullopt;
-        if(!o) return out;
-        try{
-            out = std::stod(o.value());
-        }catch(const std::exception &){}
-        return out;
-    };                                            
-    auto retrieve_coalesce_as_string = [&TopDataSet,&retrieve_as_string](std::list<std::array<uint32_t,3>> qs) 
-                                                    -> std::optional<std::string> {
-        for(const auto &q : qs){
-            const auto group = static_cast<uint16_t>(q[0]);
-            const auto tag = static_cast<uint16_t>(q[1]);
-            const auto element = q[2];
-            auto o = retrieve_as_string(group,tag,element);
-            if(o) return o;
-        }
-
-        //None were available.
-        return std::nullopt;
-    };
-    auto retrieve_coalesce_as_long_int = [&TopDataSet,&retrieve_coalesce_as_string](std::list<std::array<uint32_t,3>> qs)
-                                                       -> std::optional<double> {
-        auto o = retrieve_coalesce_as_string(qs);
-
-        std::optional<double> out = std::nullopt;
-        if(!o) return out;
-        try{
-            out = std::stol(o.value());
-        }catch(const std::exception &){}
-        return out;
-    };
-    auto retrieve_coalesce_as_double = [&TopDataSet,&retrieve_coalesce_as_string](std::list<std::array<uint32_t,3>> qs)
-                                                     -> std::optional<double> {
-        auto o = retrieve_coalesce_as_string(qs);
-
-        std::optional<double> out = std::nullopt;
-        if(!o) return out;
-        try{
-            out = std::stod(o.value());
-        }catch(const std::exception &){}
-        return out;
-    };
-
-    auto metadata_coalesce_as_double = [](const decltype(get_metadata_top_level_tags("")) &tlm,
-                                          std::list<std::tuple<std::string, uint32_t>> qs ) -> std::optional<double> {
-        // Note: the DICOM multiplicity is accepted with the key name.
-        std::optional<double> out = std::nullopt;
-        for(const auto &t : qs){
-            const auto res = tlm.find(std::get<std::string>(t));
-            if(res != std::end(tlm)){
-                try{
-                    auto tokens = SplitStringToVector(res->second, '\\', 'd');
-                    tokens = SplitVector(tokens, ',', 'd');
-                    out = std::stod( tokens.at( std::get<uint32_t>(t) ) );
-                    break;
-                }catch(const std::exception &){}
-            }
-        }
-        return out;
-    };                                            
-        
-
-    // ------------------------------------------- General --------------------------------------------------
-    const auto modality = retrieve_as_string(0x0008, 0x0060).value();
-
-
-    // ---------------------------------------- Image Metadata ----------------------------------------------
     const auto tlm = get_metadata_top_level_tags(FilenameIn);
 
-    //These should exist in all files. They appear to be the same for CT and DS files of the same set. Not sure
-    // if this is *always* the case.
-    const auto image_pos_x = retrieve_coalesce_as_double({ {0x0020, 0x0032, 0}, //"ImagePositionPatient".
-                                                           {0x3002, 0x0012, 0}  //"RTImagePosition".
-                                                         }).value_or(0.0);
-    const auto image_pos_y = retrieve_coalesce_as_double({ {0x0020, 0x0032, 1}, //"ImagePositionPatient".
-                                                           {0x3002, 0x0012, 1}  //"RTImagePosition".
-                                                         }).value_or(0.0);
+    const auto l_coalesce_metadata_as_vector_double = [&tlm](const std::list<std::string>& keys ){
+        return convert_to_vector_double( coalesce_metadata_as_string(tlm, keys) );
+    };
+    const auto l_coalesce_metadata_as_double = [&tlm](const std::list<std::string>& keys ){
+        return convert_first_to_double( coalesce_metadata_as_string(tlm, keys) );
+    };
 
-    auto image_pos_z = retrieve_coalesce_as_double({ {0x0020, 0x0032, 2}, //"ImagePositionPatient".
-                                                     {0x3002, 0x000d, 2}  //"XRayImageReceptorTranslation".
-                                                   }).value_or(std::numeric_limits<double>::quiet_NaN());
-    if(!std::isfinite(image_pos_z)){ // Try derived values.
-        // This is useful for RTIMAGES.
-        const auto RTImageSID = retrieve_coalesce_as_double({ {0x3002, 0x0026, 0} }).value_or(1000.0);
-        const auto RadMchnSAD = retrieve_coalesce_as_double({ {0x3002, 0x0022, 0} }).value_or(1000.0);
-        image_pos_z = (RadMchnSAD - RTImageSID); // For consistency with XRayImageReceptorTranslation z-coord.
-    }
-    const vec3<double> image_pos(image_pos_x,image_pos_y,image_pos_z); //Only for first image!
+    const auto l_coalesce_as_string = [&TopDataSet]( std::deque<std::deque<path_node>> ds ){
+        return convert_first_to_string( coalesce_seq_tag_as_string( TopDataSet, ds ) );
+    };
+    const auto l_coalesce_as_double = [&TopDataSet]( std::deque<std::deque<path_node>> ds ){
+        return convert_first_to_double( coalesce_seq_tag_as_string( TopDataSet, ds ) );
+    };
+    const auto l_coalesce_as_long_int = [&TopDataSet]( std::deque<std::deque<path_node>> ds ){
+        return convert_first_to_long_int( coalesce_seq_tag_as_string( TopDataSet, ds ) );
+    };
+    const auto l_coalesce_as_vector_double = [&TopDataSet]( std::deque<std::deque<path_node>> ds ){
+        return convert_to_vector_double( coalesce_seq_tag_as_string( TopDataSet, ds ) );
+    };
+    
+    // ------------------------------------------- General --------------------------------------------------
+    const auto modality = l_coalesce_as_string({ { {0x0008, 0x0060, 0} } }).value();
+    const auto frame_count = l_coalesce_as_long_int({ { {0x0028, 0x0008, 0} } }).value_or(1);
 
+    // ---------------------------------------- Image Metadata ----------------------------------------------
 
-    const auto image_orien_c_x = retrieve_coalesce_as_double({ {0x0020, 0x0037, 0}, //"ImagePositionPatient".
-                                                               {0x3002, 0x0010, 0}  //"RTImageOrientation".
-                                                             }).value_or(1.0);
-    const auto image_orien_c_y = retrieve_coalesce_as_double({ {0x0020, 0x0037, 1}, //"ImagePositionPatient".
-                                                               {0x3002, 0x0010, 1}  //"RTImageOrientation".
-                                                             }).value_or(0.0);
-    const auto image_orien_c_z = retrieve_coalesce_as_double({ {0x0020, 0x0037, 2}, //"ImagePositionPatient".
-                                                               {0x3002, 0x0010, 2}  //"RTImageOrientation".
-                                                             }).value_or(0.0);
-    const vec3<double> image_orien_c = vec3<double>(image_orien_c_x,image_orien_c_y,image_orien_c_z).unit();
-
-
-    const auto image_orien_r_x = retrieve_coalesce_as_double({ {0x0020, 0x0037, 3}, //"ImageOrientationPatient".
-                                                               {0x3002, 0x0010, 3}  //"RTImageOrientation".
-                                                             }).value_or(0.0);
-    const auto image_orien_r_y = retrieve_coalesce_as_double({ {0x0020, 0x0037, 4}, //"ImageOrientationPatient".
-                                                               {0x3002, 0x0010, 4}  //"RTImageOrientation".
-                                                             }).value_or(1.0);
-    const auto image_orien_r_z = retrieve_coalesce_as_double({ {0x0020, 0x0037, 5}, //"ImageOrientationPatient".
-                                                               {0x3002, 0x0010, 5}  //"RTImageOrientation".
-                                                             }).value_or(0.0);
-    const vec3<double> image_orien_r = vec3<double>(image_orien_r_x,image_orien_r_y,image_orien_r_z).unit();
-
-    const vec3<double> image_anchor  = vec3<double>(0.0,0.0,0.0); //Could us RTIMAGE IsocenterPosition (300a,012c) ?
-
-    //Determine how many frames there are in the pixel data. A CT scan may just be a 2d jpeg or something, 
-    // but dose pixel data is 3d data composed of 'frames' of stacked 2d data.
-    const auto frame_count = retrieve_coalesce_as_long_int({ {0x0028, 0x0008, 0} }).value_or(0.0);
-    if(frame_count != 0) throw std::domain_error("This routine only supports 2D images."
-                                                 " Adapt the dose array loading code. Cannot continue");
-
-    const auto image_rows  = retrieve_coalesce_as_long_int({ {0x0028, 0x0010, 0} }).value();
-    const auto image_cols  = retrieve_coalesce_as_long_int({ {0x0028, 0x0011, 0} }).value();
-
-    const auto image_pxldy = metadata_coalesce_as_double(tlm, { { "PixelSpacing", 0 }, // Spacing between adjacent rows.
-                                                                { "ImagePlanePixelSpacing", 0 },
-                                                                { "CSAImage/PixelSpacing", 0 } }).value_or(1.0);
-
-    const auto image_pxldx = metadata_coalesce_as_double(tlm, { { "PixelSpacing", 1 }, // Spacing between adjacent columns.
-                                                                { "ImagePlanePixelSpacing", 1 },
-                                                                { "CSAImage/PixelSpacing", 1 } }).value_or(image_pxldy);
-
-    //For 2D images, there is often no thickness given. For CT we might have to compare to other files to figure this out.
-    // For MR images, the thickness should be specified.
-    //
-    // Note: In general, images should be given a non-zero thickness since many core routines are build around slices of
-    //       finite thickness.
-    const auto image_thickness = retrieve_coalesce_as_double({ {0x0018, 0x0050, 0} }).value_or(1.0); //"SliceThickness"
-
-    // -------------------------------------- Pixel Interpretation ------------------------------------------
-    if( (TopDataSet->getTag(0x0040,0,0x9212) != nullptr)
-    ||  (TopDataSet->getTag(0x0040,0,0x9216) != nullptr)
-    ||  (TopDataSet->getTag(0x0040,0,0x9096) != nullptr)
-    ||  (TopDataSet->getTag(0x0040,0,0x9211) != nullptr)
-    ||  (TopDataSet->getTag(0x0040,0,0x9224) != nullptr)
-    ||  (TopDataSet->getTag(0x0040,0,0x9225) != nullptr)
-    ||  (TopDataSet->getTag(0x0040,0,0x9212) != nullptr)
-    ||  (TopDataSet->getTag(0x0040,0,0x9210) != nullptr)
-    ||  (TopDataSet->getTag(0x0028,0,0x3003) != nullptr)
-    ||  (TopDataSet->getTag(0x0040,0,0x08EA) != nullptr) ){ 
-        throw std::domain_error("This image contains a 'Real World Value' LUT (Look-Up Table), which is presently"
-                                " not supported. You will need to fix the code to handle this");
-        // NOTE: See DICOM Supplement 49 "Enhanced MR Image Storage SOP Class" at 
-        //       ftp://medical.nema.org/medical/dicom/final/sup49_ft.pdf 
-        //       (or another document if it has been superceded) for more info.
-        //
-        //       It should be rather easy to implement this. I just haven't needed to yet.
-        //       You could potentially just get Imebra to do it for you. See the LUT code elsewhere
-        //       in this routine.
-    }
-
-    // --------------------------------------- Image Pixel Data ---------------------------------------------
-    {    
+    for(uint32_t f = 0; f < frame_count; ++f){
+        auto l_meta = tlm;
         out->imagecoll.images.emplace_back();
 
-        //--------------------------------------------------------------------------------------------------
-        //Retrieve the pixel data from file. This is an excessively long exercise!
+        // Extract the image's 3D position. Here we consider:
+        // - the normal ImagePositionPatient tag (most single-frame images)
+        // - RTIMAGE tags
+        // - multi-frame MR tags
+        // - MR CSA header metadata
+        auto image_pos_x_opt = l_coalesce_as_double(
+            { { {0x0020, 0x0032, 0} }, // ImagePositionPatient
+              { {0x3002, 0x0012, 0} }, // RTImagePosition
+              { {0x5200, 0x9230, f},   // PerFrameFunctionalGroupsSequence
+                {0x0020, 0x9113, 0},   //   PlanePositionSequence
+                {0x0020, 0x0032, 0} }, //     ImagePositionPatient
+            });
+        auto image_pos_y_opt = l_coalesce_as_double(
+            { { {0x0020, 0x0032, 1} }, // ImagePositionPatient
+              { {0x3002, 0x0012, 1} }, // RTImagePosition
+              { {0x5200, 0x9230, f},   // PerFrameFunctionalGroupsSequence
+                {0x0020, 0x9113, 0},   //   PlanePositionSequence
+                {0x0020, 0x0032, 1} }, //     ImagePositionPatient
+            });
+        auto image_pos_z_opt = l_coalesce_as_double(
+            { { {0x0020, 0x0032, 2} }, // ImagePositionPatient
+              { {0x3002, 0x000d, 2} }, // XRayImageReceptorTranslation
+              { {0x5200, 0x9230, f},   // PerFrameFunctionalGroupsSequence
+                {0x0020, 0x9113, 0},   //   PlanePositionSequence
+                {0x0020, 0x0032, 2} }, //     ImagePositionPatient
+            });
+
+        const auto grid_frame_offset_vec = l_coalesce_as_vector_double(
+            { { {0x3004, 0x000C, 0} } }); // GridFrameOffsetVector
+
+        if(!grid_frame_offset_vec.empty()){
+            throw std::runtime_error("Encountered unexpected GridFrameOffsetVector. Refusing to continue");
+            // Note: if this is ever encountered, you might be dealing with an RTDOSE file. See the RTDOSE
+            //       file loader. Adding functionality here will be relatively straightforward if needed,
+            //       but I haven't ever encountered a multi-fram image that uses a RTDOSE-style offset vector.
+        }
+        if(!image_pos_x_opt || !image_pos_y_opt || !image_pos_z_opt){
+            const auto xyz = l_coalesce_metadata_as_vector_double({"CSAImage/ImagePositionPatient"});
+            if(xyz.size() == 3UL){
+                FUNCWARN("Using non-standard CSAImage/ImagePositionPatient");
+                image_pos_x_opt = xyz.at(0);
+                image_pos_y_opt = xyz.at(1);
+                image_pos_z_opt = xyz.at(2);
+            }
+        }
+        if(!image_pos_z_opt && (modality == "RTIMAGE")){ // Try derived values.
+            // Try derive z-coordinate from machine dimensions.
+            const auto RTImageSID = l_coalesce_as_double({ { {0x3002, 0x0026, 0} } }).value_or(1000.0);
+            const auto RadMchnSAD = l_coalesce_as_double({ { {0x3002, 0x0022, 0} } }).value_or(1000.0);
+            image_pos_z_opt = (RadMchnSAD - RTImageSID); // For consistency with XRayImageReceptorTranslation z-coord.
+        }
+        if(!image_pos_x_opt || !image_pos_y_opt || !image_pos_z_opt){
+            FUNCWARN("Unable to find ImagePositionPatient, using defaults");
+            image_pos_x_opt = {};
+            image_pos_y_opt = {};
+            image_pos_z_opt = {};
+        }
+        const vec3<double> image_pos( image_pos_x_opt.value_or(0.0),
+                                      image_pos_y_opt.value_or(0.0),
+                                      image_pos_z_opt.value_or(0.0) );
+        insert_if_new(l_meta, "ImagePositionPatient",   std::to_string(image_pos.x) + '\\'
+                                                      + std::to_string(image_pos.y) + '\\'
+                                                      + std::to_string(image_pos.z) );
+
+
+
+        // Orientation vectors.
+        std::optional<vec3<double>> image_orien_c_opt;
+        std::optional<vec3<double>> image_orien_r_opt;
+        const auto image_orien_vec = l_coalesce_as_vector_double(
+            { { {0x0020, 0x0037, 0} }, // ImageOrientationPatient
+              { {0x3002, 0x0010, 0} }, // RTImageOrientation
+              { {0x5200, 0x9230, f},   // PerFrameFunctionalGroupsSequence
+                {0x0020, 0x9116, 0},   //   PlaneOrientationSequence
+                {0x0020, 0x0037, 0} }, //     ImageOrientationPatient
+            });
+        if(image_orien_vec.size() == 6UL){
+            image_orien_c_opt = vec3<double>( image_orien_vec.at(0),
+                                              image_orien_vec.at(1),
+                                              image_orien_vec.at(2) ).unit();
+            image_orien_r_opt = vec3<double>( image_orien_vec.at(3),
+                                              image_orien_vec.at(4),
+                                              image_orien_vec.at(5) ).unit();
+        }
+        if(!image_orien_c_opt || !image_orien_r_opt){
+            const auto o = l_coalesce_metadata_as_vector_double({"CSAImage/ImageOrientationPatient"});
+            if(o.size() == 6UL){
+                FUNCWARN("Using non-standard CSAImage/ImageOrientationPatient");
+                image_orien_c_opt = vec3<double>( o.at(0), o.at(1), o.at(2) );
+                image_orien_r_opt = vec3<double>( o.at(3), o.at(4), o.at(5) );
+            }
+        }
+        if(!image_orien_c_opt || !image_orien_r_opt){
+            FUNCWARN("Unable to find ImageOrientationPatient, using defaults");
+            image_orien_c_opt = {};
+            image_orien_r_opt = {};
+        }
+        const auto image_orien_c = image_orien_c_opt.value_or( vec3<double>(1.0, 0.0, 0.0) ).unit();
+        const auto image_orien_r = image_orien_r_opt.value_or( vec3<double>(0.0, 1.0, 0.0) ).unit();
+        insert_if_new(l_meta, "ImageOrientationPatient",   std::to_string(image_orien_c.x) + '\\'
+                                                         + std::to_string(image_orien_c.y) + '\\'
+                                                         + std::to_string(image_orien_c.z) + '\\'
+                                                         + std::to_string(image_orien_r.x) + '\\'
+                                                         + std::to_string(image_orien_r.y) + '\\'
+                                                         + std::to_string(image_orien_r.z) );
+
+        const auto image_anchor = vec3<double>(0.0,0.0,0.0); //Could use RTIMAGE IsocenterPosition (300a,012c) ?
+
+        const auto image_rows = l_coalesce_as_long_int({ { {0x0028, 0x0010, 0} } }).value();
+        const auto image_cols = l_coalesce_as_long_int({ { {0x0028, 0x0011, 0} } }).value();
+
+
+        std::optional<double> image_pxldy_opt;
+        std::optional<double> image_pxldx_opt;
+        const auto image_pxl_extent = l_coalesce_as_vector_double(
+            { { {0x0028, 0x0030, 0} }, // PixelSpacing
+              { {0x3002, 0x0011, 0} }, // ImagePlanePixelSpacing
+              { {0x5200, 0x9230, f},   // PerFrameFunctionalGroupsSequence
+                {0x0028, 0x9110, 0},   //   PixelMeasuresSequence
+                {0x0028, 0x0030, 0} }, //     PixelSpacing
+            });
+        if(image_pxl_extent.size() == 2UL){
+            image_pxldy_opt = image_pxl_extent.at(0);
+            image_pxldx_opt = image_pxl_extent.at(1);
+        }
+        if(!image_pxldy_opt || !image_pxldx_opt){
+            const auto o = l_coalesce_metadata_as_vector_double({"CSAImage/PixelSpacing"});
+            if(o.size() == 2UL){
+                FUNCWARN("Using non-standard CSAImage/PixelSpacing");
+                image_pxldy_opt = o.at(0);
+                image_pxldx_opt = o.at(1);
+            }
+        }
+        if(!image_pxldy_opt || !image_pxldx_opt){
+            FUNCWARN("Unable to find voxel extent, using defaults");
+        }
+        const auto image_pxldy = image_pxldy_opt.value_or(1.0);
+        const auto image_pxldx = image_pxldx_opt.value_or(1.0);
+        insert_if_new(l_meta, "PixelSpacing",   std::to_string(image_pxldy) + '\\'
+                                              + std::to_string(image_pxldx) );
+
+
+        //For 2D images, there is often no thickness provided. We might have to calculate/estimate ourselves.
+        //
+        // Note: In general, images should be explicitly assigned a non-zero thickness since many core
+        //       routines need finite thicknesses.
+        auto image_thickness_opt = l_coalesce_as_double(
+            { { {0x0018, 0x0050, 0} }, // SliceThickness
+              { {0x5200, 0x9230, f},   // PerFrameFunctionalGroupsSequence
+                {0x0028, 0x9110, 0},   //   PixelMeasuresSequence
+                {0x0018, 0x0050, 0} }, //     SliceThickness
+            });
+        if(!image_thickness_opt){
+            image_thickness_opt = l_coalesce_metadata_as_double({"CSAImage/SliceThickness"});
+        }
+        if(!image_thickness_opt){
+            FUNCWARN("Unable to find image thickness, using default");
+        }
+        const auto image_thickness = image_thickness_opt.value_or(1.0);
+        insert_if_new(l_meta, "SliceThickness", std::to_string(image_thickness));
+
+        // Implement 'real-world' mapping if present.
+        //
+        // Note: several caveats here:
+        // - This is supposed to be separate from the modality, VOI, and presentation LUTs but Imebra pplies them below
+        //   and doesn't seem to handle real-world LUTs. So if both are present the real-world map might be applied to
+        //   the wrong input values.
+        // - Only linear maps are supported. Nonlinear maps (proper LUTs) are not currently supported. (I haven't
+        //   encountered them yet.)
+        // - Multiple real-world LUTs are possible. I'm not sure if they need to stack sequentially, or can be applied
+        //   separately. (I haven't encountered this situation yet.)
+        std::function<float(float)> real_world_mapping;
+
+        auto rw_lut_intercept = l_coalesce_as_double(
+            { { {0x0040, 0x9096, 0},   // RealWorldValueMappingSequence (MR -> General Image)
+                {0x0040, 0x9224, 0} }, //   RealWorldValueIntercept
+              { {0x5200, 0x9230, f},   // PerFrameFunctionalGroupsSequence (observed in wild; multi-frame MR??)
+                {0x0028, 0x9145, 0},   //   PixelValueTransformationSequence
+                {0x0028, 0x1052, 0} }, //     RescaleIntercept
+            });
+        auto rw_lut_slope = l_coalesce_as_double(
+            { { {0x0040, 0x9096, 0},   // RealWorldValueMappingSequence (MR -> General Image)
+                {0x0040, 0x9225, 0} }, //   RealWorldValueSlope
+              { {0x5200, 0x9230, f},   // PerFrameFunctionalGroupsSequence (observed in wild; multi-frame MR??)
+                {0x0028, 0x9145, 0},   //   PixelValueTransformationSequence
+                {0x0028, 0x1053, 0} }, //     RescaleIntercept
+            });
+        auto rw_lut_min = l_coalesce_as_double(
+            { { {0x0040, 0x9096, 0},   // RealWorldValueMappingSequence (MR -> General Image)
+                {0x0040, 0x9216, 0} }, //   RealWorldValueFirstValueMapped
+              { {0x0040, 0x9096, 0},   // RealWorldValueMappingSequence (MR -> General Image)
+                {0x0040, 0x9214, 0} }, //   DoubleFloatRealWorldValueFirstValueMapped
+            });
+        auto rw_lut_max = l_coalesce_as_double(
+            { { {0x0040, 0x9096, 0},   // RealWorldValueMappingSequence (MR -> General Image)
+                {0x0040, 0x9211, 0} }, //   RealWorldValueLastValueMapped
+              { {0x0040, 0x9096, 0},   // RealWorldValueMappingSequence (MR -> General Image)
+                {0x0040, 0x9213, 0} }, //   DoubleFloatRealWorldValueLastValueMapped
+            });
+
+        // Non-linear LUT data.
+        auto rw_lut_data_vec = l_coalesce_as_vector_double(
+            { { {0x0040, 0x9096, 0},   // RealWorldValueMappingSequence (MR -> General Image)
+                {0x0040, 0x9212, 0} }, //   RealWorldValueLUTData
+            });
+
+        if(!rw_lut_data_vec.empty()){
+            throw std::runtime_error("Encountered nonlinear real-world LUT. This functionality is not yet supported");
+
+        }else if(rw_lut_intercept && rw_lut_slope){
+            FUNCWARN("Encountered linear real-world LUT, applying it");
+            auto m = rw_lut_slope.value();
+            auto b = rw_lut_intercept.value();
+
+            auto min_x = rw_lut_min.value_or(-inf); // Range endpoints should be inclusive.
+            auto max_x = rw_lut_min.value_or(inf);
+            if(max_x < min_x) std::swap(min_x, max_x);
+
+            real_world_mapping = [min_x, max_x, m, b](float x) -> float {
+                return ((min_x <= x) && (x <= max_x)) ? b + m*x : x;
+            };
+        }
+        const bool real_world_map_present = !!real_world_mapping;
+
+        // -------------------------------------- Image Pixel Data -----------------------------------------
         ptr<puntoexe::imebra::image> firstImage;
         try{
-            firstImage = TopDataSet->getImage(0);
+            firstImage = TopDataSet->getImage(f);
         }catch(const std::exception &e){
             throw std::domain_error("This file does not have accessible pixel data."
                                     " The DICOM image loader should not be called for this file");
         }
     
-        //Process image using modalityVOILUT transform to convert its pixel values into meaningful values.
+        // Process image using modalityVOILUT transform to convert its pixel values into meaningful values.
         // From what I can tell, this conversion is necessary to transform the raw data from a possibly
         // manufacturer-specific, proprietary format into something physically meaningful for us. 
         //
@@ -1744,8 +1948,7 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::filesystem::path &Filen
         ptr<imebra::image> convertedImage(modVOILUT->allocateOutputImage(firstImage, width, height));
         modVOILUT->runTransform(firstImage, 0, 0, width, height, convertedImage, 0, 0);
 
-    
-        //Convert the 'convertedImage' into an image suitable for the viewing on screen. The VOILUT transform 
+        // Convert the 'convertedImage' into an image suitable for the viewing on screen. The VOILUT transform 
         // applies the contrast suggested by the dataSet to the image. Apply the first one we find. Relevant
         // DICOM tags reside around (0x0028,0x3010) and (0x0028,0x1050). This lookup generally applies window
         // and level factors, but can also apply non-linear VOI LUT Sequence transformations.
@@ -1809,7 +2012,6 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::filesystem::path &Filen
         //      FUNCINFO("Using VOI/LUT with centre = " << VoiLutCenter << " and width = " << VoiLutWidth);
         //  }
         //}
-
  
         //Get the image in terms of 'RGB'/'MONOCHROME1'/'MONOCHROME2'/'YBR_FULL'/etc.. channels.
         //
@@ -1851,7 +2053,7 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::filesystem::path &Filen
             // a 'row'. Perhaps I've got many things backward...
         }
 
-        out->imagecoll.images.back().metadata = tlm;
+        out->imagecoll.images.back().metadata = l_meta;
         out->imagecoll.images.back().init_orientation(image_orien_r,image_orien_c);
 
         const auto img_chnls = static_cast<long int>(channelsNumber);
@@ -1861,7 +2063,7 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::filesystem::path &Filen
         out->imagecoll.images.back().init_spatial(image_pxldx,image_pxldy,img_pxldz, image_anchor, image_pos);
 
         //Sometimes Imebra returns a different number of bits than the DICOM header specifies. Presumably this
-        // is for some reason (maybe even simplification of implementation, which is fair). Since I convert to
+        // is for a valid reason (maybe even simplification of implementation, which is fair). Since I convert to
         // a float or uint32_t, the only practical concern is whether or not it will fit.
         const auto img_bits  = static_cast<unsigned int>(channelPixelSize*8); //16 bit, 32 bit, 8 bit, etc..
         if(img_bits > 32){
@@ -1878,8 +2080,10 @@ std::unique_ptr<Image_Array> Load_Image_Array(const std::filesystem::path &Filen
                     //Let Imebra work out the conversion by asking for a double. Hope it can be narrowed if necessary!
                     const auto DoubleChannelValue = myHandler->getDouble(data_index);
                     const auto OutgoingPixelValue = static_cast<float>(DoubleChannelValue);
+                    const auto MappedPixelValue = (real_world_map_present) ? real_world_mapping(OutgoingPixelValue)
+                                                                           : OutgoingPixelValue;
 
-                    out->imagecoll.images.back().reference(row,col,chnl) = OutgoingPixelValue;
+                    out->imagecoll.images.back().reference(row,col,chnl) = MappedPixelValue;
                     ++data_index;
                 } //Loop over channels.
             } //Loop over columns.
@@ -1931,7 +2135,9 @@ std::unique_ptr<Image_Array> Collate_Image_Arrays(std::list<std::shared_ptr<Imag
 //This routine reads a single DICOM dose file.
 std::unique_ptr<Image_Array>  Load_Dose_Array(const std::filesystem::path &FilenameIn){
     auto metadata = get_metadata_top_level_tags(FilenameIn);
-    metadata["Modality"] = "RTDOSE";
+    if(metadata["Modality"] != "RTDOSE"){
+        throw std::runtime_error("Unsupported modality");
+    }
 
     auto out = std::make_unique<Image_Array>();
 
@@ -2117,78 +2323,11 @@ Load_RTPlan(const std::filesystem::path &FilenameIn){
     ptr<imebra::dataSet> base_node_ptr = imebra::codecs::codecFactory::getCodecFactory()->load(reader);
 
 
-    const auto convert_first_to_string = [](const std::vector<std::string> &in) -> std::optional<std::string> {
-        if(!in.empty()){
-            return std::optional<std::string>(in.front());
-        }
-        return std::optional<std::string>();
-    };
-
-    const auto convert_first_to_long_int = [](const std::vector<std::string> &in) -> std::optional<long int> {
-        if(!in.empty()){
-            try{
-                const auto res = std::stol(in.front());
-                return std::optional<long int>(res);
-            }catch(const std::exception &){}
-        }
-        return std::optional<long int>();
-    };
-
-    const auto convert_first_to_double = [](const std::vector<std::string> &in) -> std::optional<double> {
-        if(!in.empty()){
-            try{
-                const auto res = std::stod(in.front());
-                return std::optional<double>(res);
-            }catch(const std::exception &){}
-        }
-        return std::optional<double>();
-    };
-
-    const auto convert_to_vec3_double = [](const std::vector<std::string> &in) -> std::optional<vec3<double>> {
-        if(in.size() == 3){
-            try{
-                const auto x = std::stod(in.at(0));
-                const auto y = std::stod(in.at(1));
-                const auto z = std::stod(in.at(2));
-                return std::optional<vec3<double>>( vec3<double>(x,y,z) );
-            }catch(const std::exception &){}
-        }
-        return std::optional<vec3<double>>();
-    };
-
-    const auto convert_to_vector_double = [](const std::vector<std::string> &in) -> std::vector<double> {
-        std::vector<double> out;
-        for(const auto &x : in){
-            try{
-                const auto y = std::stod(x);
-                out.emplace_back(y);
-            }catch(const std::exception &){}
-        }
-        return out;
-    };
-
-    const auto insert_as_string_if_nonempty = []( std::map<std::string, std::string> &metadata,
-                                                  puntoexe::ptr<puntoexe::imebra::dataSet> base_node_ptr,
-                                                  path_node dicom_path,
-                                                  const std::string name) -> void {
-
-        auto res_str_vec = extract_tag_as_string(base_node_ptr, dicom_path);
-
-        const auto ctrim = CANONICALIZE::TRIM_ENDS;
-        bool add_sep = (metadata.count(name) != 0); // Controls whether a separator will be added.
-        for(const auto &s : res_str_vec){
-            const auto trimmed = Canonicalize_String2(s, ctrim);
-            if(trimmed.empty()) continue;
-            metadata[name] += (add_sep ? R"***(\)***"_s : ""_s) + trimmed;
-            add_sep = true;
-        }
-        return;
-    };
-
-
     // ------------------------------------------- General --------------------------------------------------
     out->metadata = get_metadata_top_level_tags(FilenameIn);
-    out->metadata["Modality"] = "RTPLAN";
+    if(out->metadata["Modality"] != "RTPLAN"){
+        throw std::runtime_error("Unsupported modality");
+    }
 
     // DoseReferenceSequence
     for(uint32_t i = 0; i < 100000; ++i){
@@ -2540,110 +2679,11 @@ Load_Transform(const std::filesystem::path &FilenameIn){
     ptr<puntoexe::streamReader> reader(new puntoexe::streamReader(readStream));
     ptr<imebra::dataSet> base_node_ptr = imebra::codecs::codecFactory::getCodecFactory()->load(reader);
 
-
-    const auto convert_first_to_string = [](const std::vector<std::string> &in) -> std::optional<std::string> {
-        if(!in.empty()){
-            return std::optional<std::string>(in.front());
-        }
-        return std::optional<std::string>();
-    };
-
-    const auto convert_first_to_long_int = [](const std::vector<std::string> &in) -> std::optional<long int> {
-        if(!in.empty()){
-            try{
-                const auto res = std::stol(in.front());
-                return std::optional<long int>(res);
-            }catch(const std::exception &){}
-        }
-        return std::optional<long int>();
-    };
-
-    const auto convert_first_to_double = [](const std::vector<std::string> &in) -> std::optional<double> {
-        if(!in.empty()){
-            try{
-                const auto res = std::stod(in.front());
-                return std::optional<double>(res);
-            }catch(const std::exception &){}
-        }
-        return std::optional<double>();
-    };
-
-    const auto convert_to_vec3_double = [](const std::vector<std::string> &in) -> std::optional<vec3<double>> {
-        if(in.size() == 3){
-            try{
-                const auto x = std::stod(in.at(0));
-                const auto y = std::stod(in.at(1));
-                const auto z = std::stod(in.at(2));
-                return std::optional<vec3<double>>( vec3<double>(x,y,z) );
-            }catch(const std::exception &){}
-        }
-        return std::optional<vec3<double>>();
-    };
-
-    const auto convert_to_vec3_int64 = [](const std::vector<std::string> &in) -> std::optional<vec3<int64_t>> {
-        if(in.size() == 3){
-            try{
-                const auto x = std::stol(in.at(0));
-                const auto y = std::stol(in.at(1));
-                const auto z = std::stol(in.at(2));
-                return std::optional<vec3<int64_t>>( vec3<int64_t>(x,y,z) );
-            }catch(const std::exception &){}
-        }
-        return std::optional<vec3<int64_t>>();
-    };
-
-    const auto convert_to_vector_double = [](const std::vector<std::string> &in) -> std::vector<double> {
-        std::vector<double> out;
-        for(const auto &x : in){
-            try{
-                const auto y = std::stod(x);
-                out.emplace_back(y);
-            }catch(const std::exception &){}
-        }
-        return out;
-    };
-
-    const auto insert_as_string_if_nonempty = []( std::map<std::string, std::string> &metadata,
-                                                  puntoexe::ptr<puntoexe::imebra::dataSet> base_node_ptr,
-                                                  path_node dicom_path,
-                                                  const std::string name) -> void {
-
-        auto res_str_vec = extract_tag_as_string(base_node_ptr, dicom_path);
-
-        const auto ctrim = CANONICALIZE::TRIM_ENDS;
-        bool add_sep = (metadata.count(name) != 0); // Controls whether a separator will be added.
-        for(const auto &s : res_str_vec){
-            const auto trimmed = Canonicalize_String2(s, ctrim);
-            if(trimmed.empty()) continue;
-            metadata[name] += (add_sep ? R"***(\)***"_s : ""_s) + trimmed;
-            add_sep = true;
-        }
-        return;
-    };
-
-    const auto extract_affine_transform = [](const std::vector<double> &v) -> affine_transform<double> {
-        affine_transform<double> t;
-        if(v.size() != 16){
-            throw std::runtime_error("Unanticipated matrix transformation dimensions");
-        }
-        for(size_t row = 0; row < 3; ++row){
-            for(size_t col = 0; col < 4; ++col){
-                const size_t indx = col + row * 4;
-                t.coeff(row,col) = v[indx];
-            }
-        }
-        if(  (v[12] != 0.0)
-        ||   (v[13] != 0.0)
-        ||   (v[14] != 0.0)
-        ||   (v[15] != 1.0) ){
-            throw std::runtime_error("Transformation cannot be represented using an Affine matrix");
-        }
-        return t;
-    };
-
     // ------------------------------------------- General --------------------------------------------------
     out->metadata = get_metadata_top_level_tags(FilenameIn);
-    out->metadata["Modality"] = "REG";
+    if(out->metadata["Modality"] != "REG"){
+        throw std::runtime_error("Unsupported modality");
+    }
 
     // --------------------------------------- Rigid / Affine -----------------------------------------------
     // RegistrationSequence

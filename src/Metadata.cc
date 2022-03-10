@@ -164,6 +164,11 @@ std::string Generate_Random_Int_Str(long int L, long int H){
     return std::to_string(dist(gen));
 }
 
+bool insert_if_new( metadata_map_t &map,
+                    const std::string &key,
+                    const std::string &val ){
+    return map.insert( {key, val} ).second;
+}
 
 template <class T>
 std::optional<T>
