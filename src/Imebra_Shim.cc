@@ -1367,13 +1367,20 @@ get_metadata_top_level_tags(const std::filesystem::path &filename){
                                                 { 0x300A, 0x00B6, "BeamLimitingDeviceSequence" },
                                                 { 0x300A, 0x011C, "LeafJawPositions" } }) );
 
-    //RT Plan Module.
+    // RT Plan Module.
     insert_as_string_if_nonempty(0x300a, 0x0002, "RTPlanLabel");
     insert_as_string_if_nonempty(0x300a, 0x0003, "RTPlanName");
     insert_as_string_if_nonempty(0x300a, 0x0004, "RTPlanDescription");
     insert_as_string_if_nonempty(0x300a, 0x0006, "RTPlanDate");
     insert_as_string_if_nonempty(0x300a, 0x0007, "RTPlanTime");
     insert_as_string_if_nonempty(0x300a, 0x000c, "RTPlanGeometry");
+    insert_as_string_if_nonempty(0x300a, 0x000a, "PlanIntent");
+
+    // RT Plan Approval Module
+    insert_as_string_if_nonempty(0x300e, 0x0002, "ApprovalStatus");
+    insert_as_string_if_nonempty(0x300e, 0x0004, "ReviewDate");
+    insert_as_string_if_nonempty(0x300e, 0x0005, "ReviewTime");
+    insert_as_string_if_nonempty(0x300e, 0x0008, "ReviewerName");
 
     // MR Image Module
     insert_as_string_if_nonempty(0x0018, 0x0020, "ScanningSequence");
