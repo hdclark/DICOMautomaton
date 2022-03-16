@@ -12,6 +12,7 @@
 #include <stdexcept>
 
 #include "../../Thread_Pool.h"
+#include "../../Metadata.h"
 #include "../Grouping/Misc_Functors.h"
 #include "../ConvenienceRoutines.h"
 #include "Extract_Histograms.h"
@@ -297,6 +298,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
     }
 
     // Prepare differential histograms.
+    auto cm = imagecoll.get_common_metadata({});
     for(auto & named_ccsl : named_ccsls){
         const auto key = named_ccsl.first;
 
@@ -311,12 +313,18 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
             // -dDose being too large.
         }
 
+        const auto RescaleType = get_as<std::string>(cm, "RescaleType"); // For CT (should be HU).
+        const auto DoseUnits = get_as<std::string>(cm, "DoseUnits"); // For RTDOSE (should be GY).
+        const auto AbscissaStr = RescaleType ? RescaleType.value() : DoseUnits.value_or("unknown");
+
         user_data_s->differential_histograms[key].samples.swap( raw_diff_histograms.at(key) );
 
         user_data_s->differential_histograms[key].metadata["Modality"]        = "Histogram"; 
         user_data_s->differential_histograms[key].metadata["HistogramType"]   = "Differential";
         user_data_s->differential_histograms[key].metadata["AbscissaScaling"] = "None"; // Absolute values in DICOM units, Gy.
         user_data_s->differential_histograms[key].metadata["OrdinateScaling"] = "None"; // Absolute values in DICOM units, mm^3.
+        user_data_s->differential_histograms[key].metadata["Ordinate"]        = "Volume (mm^3)";
+        user_data_s->differential_histograms[key].metadata["Abscissa"]        = AbscissaStr;
 
         const auto voxel_min = voxel_extrema.at(key).first;
         const auto voxel_max = voxel_extrema.at(key).second;

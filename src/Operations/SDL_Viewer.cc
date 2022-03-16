@@ -813,6 +813,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         max,
     } plot_norm = plot_norm_t::none;
     bool show_plot_legend = true;
+    float plot_thickness = 1.0;
 
     // Image viewer state.
     long int img_array_num = -1; // The image array currently displayed.
@@ -4002,7 +4003,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
                 time_profile.stable_sort();
                 time_profile.metadata = common_metadata;
-                time_profile.metadata["Abscissa"] = (meta_key) ? abscissa_key : "Image Number";
+                time_profile.metadata["Abscissa"] = (meta_key) ? abscissa_key : "ImageNumber";
                 time_profile.metadata["CurrentAbscissa"] = (meta_key) ? std::to_string(meta_key.value()) : std::to_string(n_current_img);
 
                 if( time_course_abscissa_relative
@@ -4408,6 +4409,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                                     &lsamps_visible,
                                     &plot_norm,
+                                    &plot_thickness,
                                     &show_plot_legend ]() -> void {
 
             std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
@@ -4424,39 +4426,42 @@ bool SDL_Viewer(Drover &DICOM_data,
             {
                 ImVec2 window_extent = ImGui::GetContentRegionAvail();
                 ImGui::Text("Settings");
+                ImGui::DragFloat("Line thickness", &plot_thickness, 0.1f, 0.1f, 10.0f, "%.01f");
                 ImGui::Checkbox("Show metadata on hover", &view_toggles.view_plots_metadata);
                 ImGui::Checkbox("Show legend", &show_plot_legend);
 
                 ImGui::Text("Normalization: ");
                 ImGui::SameLine();
-                if(ImGui::Button("None", ImVec2(window_extent.x/3, 0))){ 
+                if(ImGui::Button("None", ImVec2(window_extent.x/4, 0))){ 
                     plot_norm = plot_norm_t::none;
                 }
                 ImGui::SameLine();
-                if(ImGui::Button("Max", ImVec2(window_extent.x/3, 0))){ 
+                if(ImGui::Button("Max", ImVec2(window_extent.x/4, 0))){ 
                     plot_norm = plot_norm_t::max;
                 }
             }
-            
+
             const int N_lsamps = static_cast<int>(DICOM_data.lsamp_data.size());
 
             {
                 ImVec2 window_extent = ImGui::GetContentRegionAvail();
                 ImGui::Text("Display");
-                if(ImGui::Button("All##plots_display", ImVec2(window_extent.x/3, 0))){ 
+                if(ImGui::Button("All##plots_display", ImVec2(window_extent.x/4, 0))){ 
                     for(auto &p : lsamps_visible) p.second = true;
                 }
                 ImGui::SameLine();
-                if(ImGui::Button("None##plots_display", ImVec2(window_extent.x/3, 0))){ 
+                if(ImGui::Button("None##plots_display", ImVec2(window_extent.x/4, 0))){ 
                     for(auto &p : lsamps_visible) p.second = false;
                 }
                 ImGui::SameLine();
-                if(ImGui::Button("Invert##plots_display", ImVec2(window_extent.x/3, 0))){ 
+                if(ImGui::Button("Invert##plots_display", ImVec2(window_extent.x/4, 0))){ 
                     for(auto &p : lsamps_visible) p.second = !p.second;
                 }
             }
 
             bool any_selected = false;
+            std::optional<std::string> abscissa;
+            std::optional<std::string> ordinate;
             for(int i = 0; i < N_lsamps; ++i){
                 auto lsamp_ptr_it = std::next(DICOM_data.lsamp_data.begin(), i);
                 const auto name = (*lsamp_ptr_it)->line.GetMetadataValueAs<std::string>("LineName").value_or("unknown"_s);
@@ -4489,25 +4494,48 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::Text("%s", histtype.c_str());
 
                 const auto is_visible = lsamps_visible[i];
-                if(is_visible) any_selected = true;
+                if(is_visible){
+                    any_selected = true;
+
+                    const auto l_abscissa = (*lsamp_ptr_it)->line.GetMetadataValueAs<std::string>("Abscissa").value_or("unknown"_s);
+                    if(!abscissa){
+                        abscissa = l_abscissa;
+                    }else if(abscissa.value() != l_abscissa){
+                        abscissa = "(mixed)";
+                    }
+                    const auto l_ordinate = (*lsamp_ptr_it)->line.GetMetadataValueAs<std::string>("Ordinate").value_or("unknown"_s);
+                    if(!ordinate){
+                        ordinate = l_ordinate;
+                    }else if(ordinate.value() != l_ordinate){
+                        ordinate = "(mixed)";
+                    }
+                }
             }
             ImGui::End();
+
+            if(plot_norm != plot_norm_t::none){
+                ordinate = {};
+            }
 
             if(any_selected){
                 ImGui::SetNextWindowSize(ImVec2(620, 640), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Plots", &view_toggles.view_plots_enabled);
                 ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
-                auto flags = ImPlotFlags_AntiAliased | ImPlotFlags_NoLegend;
-                if(show_plot_legend) flags = ImPlotFlags_AntiAliased;
+                auto flags = ImPlotFlags_AntiAliased
+                           | ImPlotFlags_NoLegend
+                           | ImPlotFlags_Query;
+                if(show_plot_legend) flags ^= ImPlotFlags_NoLegend;
 
                 if(ImPlot::BeginPlot("Plots",
-                                     nullptr,
-                                     nullptr,
+                                     abscissa ? abscissa.value().c_str() : nullptr,
+                                     ordinate ? ordinate.value().c_str() : nullptr,
                                      window_extent,
                                      flags,
                                      ImPlotAxisFlags_AutoFit,
                                      ImPlotAxisFlags_AutoFit )) {
+
+                    ImPlot::SetLegendLocation(ImPlotLocation_NorthEast, ImPlotOrientation_Vertical);
 
                     for(int i = 0; i < N_lsamps; ++i){
                         if(!lsamps_visible[i]) continue;
@@ -4530,11 +4558,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                         const auto name = s_ptr->GetMetadataValueAs<std::string>("LineName").value_or("unknown"_s);
                         const auto title = std::to_string(i) + " " + name;
 
+                        ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, plot_thickness);
                         ImPlot::PlotLine<double>(title.c_str(),
                                                  &s_ptr->samples[0][0], 
                                                  &s_ptr->samples[0][2],
                                                  s_ptr->samples.size(),
                                                  offset, stride );
+                        ImPlot::PopStyleVar();
                     }
                     ImPlot::EndPlot();
                 }
