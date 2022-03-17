@@ -194,6 +194,11 @@ bool AnalyzePicketFence(Drover &DICOM_data,
     const auto ThresholdDistance = std::stod( OptArgs.getValueStr("ThresholdDistance").value() );
 
     auto LeafGapsFileName = OptArgs.getValueStr("LeafGapsFileName").value();
+    if(LeafGapsFileName.empty()){
+        const auto base = std::filesystem::temp_directory_path() / "dcma_analyzepicketfence_";
+        LeafGapsFileName = Get_Unique_Sequential_Filename(base.string(), 6, ".csv");
+    }
+
     auto ResultsSummaryFileName = OptArgs.getValueStr("ResultsSummaryFileName").value();
 
     const auto UserComment = OptArgs.getValueStr("UserComment");
@@ -1013,11 +1018,10 @@ bool AnalyzePicketFence(Drover &DICOM_data,
                 FUNCINFO("Attempting to claim a mutex");
                 {
                     auto gen_filename = [&]() -> std::string {
-                        if(!LeafGapsFileName.empty()){
-                            return LeafGapsFileName;
+                        if(LeafGapsFileName.empty()){
+                            throw std::logic_error("No filename selected, not able to write analysis");
                         }
-                        const auto base = std::filesystem::temp_directory_path() / "dcma_analyzepicketfence_";
-                        return Get_Unique_Sequential_Filename(base.string(), 6, ".csv");
+                        return LeafGapsFileName;
                     };
 
                     std::stringstream header;
