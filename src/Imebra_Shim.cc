@@ -1904,7 +1904,7 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
                 {0x0040, 0x9225, 0} }, //   RealWorldValueSlope
               { {0x5200, 0x9230, f},   // PerFrameFunctionalGroupsSequence (observed in wild; multi-frame MR??)
                 {0x0028, 0x9145, 0},   //   PixelValueTransformationSequence
-                {0x0028, 0x1053, 0} }, //     RescaleIntercept
+                {0x0028, 0x1053, 0} }, //     RescaleSlope
             });
         auto rw_lut_min = l_coalesce_as_double(
             { { {0x0040, 0x9096, 0},   // RealWorldValueMappingSequence (MR -> General Image)
@@ -1941,6 +1941,23 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
                 return ((min_x <= x) && (x <= max_x)) ? b + m*x : x;
             };
         }
+
+        // Manually-apply LUTs as needed.
+        auto lut_intercept = l_coalesce_as_double({ { {0x0028, 0x1052, 0} } }); // RescaleIntercept
+        auto lut_slope     = l_coalesce_as_double({ { {0x0028, 0x1053, 0} } }); // RescaleSlope
+        if( (modality == "RTIMAGE")
+        &&  !real_world_mapping
+        &&  lut_intercept
+        &&  lut_slope ){
+            FUNCWARN("Found RTIMAGE rescaling, applying it");
+            auto m = lut_slope.value();
+            auto b = lut_intercept.value();
+
+            real_world_mapping = [m, b](float x) -> float {
+                return b + m*x;
+            };
+        }
+
         const bool real_world_map_present = !!real_world_mapping;
 
         // -------------------------------------- Image Pixel Data -----------------------------------------
