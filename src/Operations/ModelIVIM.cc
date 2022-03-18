@@ -25,6 +25,7 @@
 #include <eigen3/Eigen/LU>
 
 #include "../Structs.h"
+#include "../Metadata.h"
 #include "../Regex_Selectors.h"
 #include "../BED_Conversion.h"
 #include "../YgorImages_Functors/Compute/Joint_Pixel_Sampler.h"
@@ -200,8 +201,12 @@ bool ModelIVIM(Drover &DICOM_data,
         throw std::invalid_argument("At least two b-value images are required to model ADC.");
     }
     std::list<std::reference_wrapper<planar_image_collection<float, double>>> RIARL;
-    for(const auto & RIA : RIAs){
+    std::list<planar_image_collection<float, double>::images_list_it_t> ref_img_iters;
+    for(auto & RIA : RIAs){
         RIARL.emplace_back( std::ref( (*RIA)->imagecoll ) );
+        for(auto it = (*RIA)->imagecoll.images.begin(); it != (*RIA)->imagecoll.images.end(); ++it){
+            ref_img_iters.emplace_back(it);
+        }
     }
 
     // Identify the b-value of each reference image, which is needed for later analysis.
@@ -231,6 +236,10 @@ bool ModelIVIM(Drover &DICOM_data,
         }
         bvalues.emplace_back( std::stod(vals.front()) );
     }
+
+    // Extract common metadata from reference images.
+    auto cm = planar_image_collection<float, double>().get_common_metadata(ref_img_iters);
+    cm = coalesce_metadata_for_basic_mr_image(cm);
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
@@ -402,6 +411,14 @@ bool ModelIVIM(Drover &DICOM_data,
         if(!(*iap_it)->imagecoll.Compute_Images( ComputeJointPixelSampler, 
                                                  RIARL, cc_ROIs, &ud )){
             throw std::runtime_error("Unable to analyze images.");
+        }
+
+        // Assign common metadata.
+        for(auto & img : (*iap_it)->imagecoll.images){
+            auto l_cm = cm;
+            img.metadata.clear();
+            inject_metadata( img.metadata, std::move(l_cm) );
+            cm = coalesce_metadata_for_basic_mr_image(cm, meta_evolve::iterate);
         }
     }
 
