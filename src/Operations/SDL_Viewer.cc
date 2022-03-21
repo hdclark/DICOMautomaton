@@ -77,6 +77,7 @@
 #include "../Thread_Pool.h"
 #include "../String_Parsing.h"
 #include "../Dialogs.h"
+#include "../Alignment_Rigid.h"
 
 #ifdef DCMA_USE_CGAL
     #include "../Surface_Meshes.h"
@@ -779,30 +780,48 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_imgui_demo = false;
         bool view_implot_demo = false;
         bool view_metrics_window = false;
+
         bool open_files_enabled = false;
+
         bool view_images_enabled = true;
         bool view_image_metadata_enabled = false;
-        bool view_meshes_enabled = true;
-        bool view_mesh_metadata_enabled = false;
-        bool view_plots_enabled = true;
-        bool view_plots_metadata = true;
         bool view_contours_enabled = true;
         bool view_contouring_enabled = false;
         bool view_contouring_debug = false;
         bool view_drawing_enabled = false;
         bool view_row_column_profiles = false;
         bool view_time_profiles = false;
+        bool view_image_feature_extraction = false;
+        bool save_time_profiles = false;
+
+        bool view_meshes_enabled = true;
+        bool view_mesh_metadata_enabled = false;
+
+        bool view_plots_enabled = true;
+        bool view_plots_metadata = true;
+
         bool view_parameter_table = false;
+
         bool view_tables_enabled = true;
         bool view_table_metadata_enabled = false;
+
         bool view_rtplans_enabled = true;
         bool view_rtplan_metadata_enabled = false;
-        bool save_time_profiles = false;
+
+        bool view_psets_enabled = true;
+        bool view_psets_metadata_enabled = false;
+
+        bool view_tforms_enabled = true;
+        bool view_tforms_metadata_enabled = false;
+
         bool view_script_editor_enabled = false;
         bool view_script_feedback = true;
+
         bool show_image_hover_tooltips = true;
+
         bool adjust_window_level_enabled = false;
         bool adjust_colour_map_enabled = false;
+
         bool view_shader_editor_enabled = false;
     } view_toggles;
 
@@ -954,6 +973,29 @@ bool SDL_Viewer(Drover &DICOM_data,
     long int rtplan_dynstate_num = -1;
     long int rtplan_statstate_num = -1;
 
+    // Point Sets / Point Clouds.
+    using disp_pset_it_t = decltype(DICOM_data.point_data.begin());
+    long int pset_num = -1;
+
+    // Transforms.
+    using disp_tform_it_t = decltype(DICOM_data.trans_data.begin());
+    long int tform_num = -1;
+
+
+    // Image feature extraction.
+    struct img_features_t {
+        point_set<double> features_A;
+        point_set<double> features_B;
+
+        std::string metadata_key = "FrameOfReferenceUID";
+        std::string description;
+        std::array<char, 2048> buff;
+
+        float snap_dist = 5.0f; // Distance between mouse click and feature to 'snap' click to existing feature.
+
+        std::array<float, 4> o_col = { 1.0f, 1.0f, 1.0f, 1.0f }; // Override colour.
+        bool use_override_colour = false;
+    } img_features;
 
     // ------------------------------------------ Viewer State --------------------------------------------
     auto background_colour = ImVec4(0.025f, 0.087f, 0.118f, 1.00f);
@@ -1723,6 +1765,44 @@ bool SDL_Viewer(Drover &DICOM_data,
 
             std::get<bool>( out ) = true;
             std::get<disp_rtplan_it_t>( out ) = rtplan_ptr_it;
+        }while(false);
+        return out;
+    };
+
+    // Recompute point set iterators for the current pset
+    const auto recompute_pset_iters = [ &DICOM_data,
+                                        &pset_num ](){
+        std::tuple<bool, disp_pset_it_t > out;
+        std::get<bool>( out ) = false;
+
+        do{ 
+            const auto has_psets = DICOM_data.Has_Point_Data();
+            if( !has_psets ) break;
+            if( !isininc(1, pset_num+1, DICOM_data.point_data.size()) ) break;
+            auto pset_ptr_it = std::next(DICOM_data.point_data.begin(), pset_num);
+            if( pset_ptr_it == std::end(DICOM_data.point_data) ) break;
+
+            std::get<bool>( out ) = true;
+            std::get<disp_pset_it_t>( out ) = pset_ptr_it;
+        }while(false);
+        return out;
+    };
+
+    // Recompute transform iterators for the current transform
+    const auto recompute_tform_iters = [ &DICOM_data,
+                                         &tform_num ](){
+        std::tuple<bool, disp_tform_it_t > out;
+        std::get<bool>( out ) = false;
+
+        do{ 
+            const auto has_tforms = DICOM_data.Has_Tran3_Data();
+            if( !has_tforms ) break;
+            if( !isininc(1, tform_num+1, DICOM_data.trans_data.size()) ) break;
+            auto tform_ptr_it = std::next(DICOM_data.trans_data.begin(), tform_num);
+            if( tform_ptr_it == std::end(DICOM_data.trans_data) ) break;
+
+            std::get<bool>( out ) = true;
+            std::get<disp_tform_it_t>( out ) = tform_ptr_it;
         }while(false);
         return out;
     };
@@ -2505,7 +2585,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                                             &lsamps_visible,
                                             &row_profile,
                                             &col_profile,
-                                            &time_profile ](void) -> bool {
+                                            &time_profile,
+
+                                            &img_features ](void) -> bool {
             if(ImGui::BeginMainMenuBar()){
                 if(ImGui::BeginMenu("File")){
                     if(ImGui::MenuItem("Open", "ctrl+o", &view_toggles.open_files_enabled)){
@@ -2532,40 +2614,87 @@ bool SDL_Viewer(Drover &DICOM_data,
                         if(view_toggles.view_contours_enabled) launch_contour_preprocessor();
                     }
                     if(ImGui::MenuItem("Contouring", nullptr, &view_toggles.view_contouring_enabled)){
+                        //view_toggles.view_contouring_enabled = false;
                         view_toggles.view_drawing_enabled = false;
+                        view_toggles.view_row_column_profiles = false;
+                        view_toggles.view_image_feature_extraction = false;
+                        view_toggles.view_time_profiles = false;
+
                         contouring_img_altered = true;
                         tagged_pos = {};
                     }
                     if(ImGui::MenuItem("Drawing", nullptr, &view_toggles.view_drawing_enabled)){
                         view_toggles.view_contouring_enabled = false;
+                        //view_toggles.view_drawing_enabled = false;
+                        view_toggles.view_row_column_profiles = false;
+                        view_toggles.view_image_feature_extraction = false;
+                        view_toggles.view_time_profiles = false;
+
                         tagged_pos = {};
                     }
-                    ImGui::MenuItem("Image Hover Tooltips", nullptr, &view_toggles.show_image_hover_tooltips);
-                    ImGui::MenuItem("Meshes", nullptr, &view_toggles.view_meshes_enabled);
-                    if(ImGui::MenuItem("Plots", nullptr, &view_toggles.view_plots_enabled)){
-                        lsamps_visible.clear();
-                    }
                     if(ImGui::MenuItem("Row and Column Profiles", nullptr, &view_toggles.view_row_column_profiles)){
+                        view_toggles.view_contouring_enabled = false;
+                        view_toggles.view_drawing_enabled = false;
+                        //view_toggles.view_row_column_profiles = false;
+                        view_toggles.view_image_feature_extraction = false;
+                        view_toggles.view_time_profiles = false;
+
                         row_profile.samples.clear();
                         col_profile.samples.clear();
                     };
                     if(ImGui::MenuItem("Time Profiles", nullptr, &view_toggles.view_time_profiles)){
+                        view_toggles.view_contouring_enabled = false;
+                        view_toggles.view_drawing_enabled = false;
+                        view_toggles.view_row_column_profiles = false;
+                        view_toggles.view_image_feature_extraction = false;
+                        //view_toggles.view_time_profiles = false;
+
                         time_profile.samples.clear();
                     };
+                    if(ImGui::MenuItem("Image Feature Extractor", nullptr, &view_toggles.view_image_feature_extraction)){
+                        view_toggles.view_contouring_enabled = false;
+                        view_toggles.view_drawing_enabled = false;
+                        view_toggles.view_row_column_profiles = false;
+                        //view_toggles.view_image_feature_extraction = false;
+                        view_toggles.view_time_profiles = false;
+
+                    };
+                    ImGui::Separator();
+                    ImGui::MenuItem("Meshes", nullptr, &view_toggles.view_meshes_enabled);
+                    ImGui::MenuItem("Point Sets", nullptr, &view_toggles.view_psets_enabled);
+                    ImGui::Separator();
+                    if(ImGui::MenuItem("Plots", nullptr, &view_toggles.view_plots_enabled)){
+                        lsamps_visible.clear();
+                    }
+                    ImGui::Separator();
                     ImGui::MenuItem("RT Plans", nullptr, &view_toggles.view_rtplans_enabled);
+                    ImGui::Separator();
                     ImGui::MenuItem("Tables", nullptr, &view_toggles.view_tables_enabled);
+                    ImGui::Separator();
+                    ImGui::MenuItem("Transforms", nullptr, &view_toggles.view_tforms_enabled);
+                    ImGui::Separator();
                     ImGui::MenuItem("Script Editor", nullptr, &view_toggles.view_script_editor_enabled);
                     ImGui::MenuItem("Script Feedback", nullptr, &view_toggles.view_script_feedback);
+                    ImGui::Separator();
                     ImGui::MenuItem("Parameter Table", nullptr, &view_toggles.view_parameter_table);
+                    ImGui::Separator();
                     ImGui::MenuItem("Shader Editor", nullptr, &view_toggles.view_shader_editor_enabled);
                     ImGui::EndMenu();
                 }
                 if(ImGui::BeginMenu("Metadata")){
                     ImGui::MenuItem("Image Metadata", nullptr, &view_toggles.view_image_metadata_enabled);
+                    ImGui::MenuItem("Image Hover Tooltips", nullptr, &view_toggles.show_image_hover_tooltips);
+                    ImGui::Separator();
                     ImGui::MenuItem("Mesh Metadata", nullptr, &view_toggles.view_mesh_metadata_enabled);
+                    ImGui::MenuItem("Point Set Metadata", nullptr, &view_toggles.view_psets_metadata_enabled);
+                    ImGui::Separator();
                     ImGui::MenuItem("Plot Hover Metadata", nullptr, &view_toggles.view_plots_metadata);
+                    ImGui::Separator();
                     ImGui::MenuItem("RT Plan Metadata", nullptr, &view_toggles.view_rtplan_metadata_enabled);
+                    ImGui::Separator();
                     ImGui::MenuItem("Table Metadata", nullptr, &view_toggles.view_table_metadata_enabled);
+                    ImGui::Separator();
+                    ImGui::MenuItem("Transform Metadata", nullptr, &view_toggles.view_tforms_metadata_enabled);
                     ImGui::EndMenu();
                 }
                 if(ImGui::BeginMenu("Adjust")){
@@ -3260,7 +3389,9 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                                            &display_metadata_table,
 
-                                           &frame_count ]() -> void {
+                                           &frame_count,
+
+                                           &img_features ]() -> void {
 
 // Lock the image details mutex in shared mode.
 // 
@@ -3341,19 +3472,23 @@ bool SDL_Viewer(Drover &DICOM_data,
                 image_mouse_pos.voxel_pos = disp_img_it->position(image_mouse_pos.r, image_mouse_pos.c);
                 image_mouse_pos.pixel_scale = static_cast<float>(real_extent.x) / (disp_img_it->pxl_dx * disp_img_it->rows);
 
-                const auto Z = image_mouse_pos.zero_pos;
-                image_mouse_pos.DICOM_to_pixels = [=](const vec3<double> &P) -> ImVec2 {
-                    // Convert from absolute DICOM coordinates to ImGui screen pixel coordinates for the image.
-                    // This routine basically just inverts the above transformation.
-                    const auto region_y = (disp_img_it->row_unit.Dot(P - Z) + 0.5 * disp_img_it->pxl_dx)/(disp_img_it->pxl_dx * img_rows_f);
-                    const auto region_x = (disp_img_it->col_unit.Dot(P - Z) + 0.5 * disp_img_it->pxl_dy)/(disp_img_it->pxl_dy * img_cols_f);
-
-                    const auto pixel_x = pos.x + (region_x - uv_min.x) * image_extent.x/(uv_max.x - uv_min.x);
-                    const auto pixel_y = pos.y + (region_y - uv_min.y) * image_extent.y/(uv_max.y - uv_min.y);
-
-                    return ImVec2(pixel_x, pixel_y);
-                };
             }
+            image_mouse_pos.DICOM_to_pixels = [=](const vec3<double> &P) -> ImVec2 {
+                // Convert from absolute DICOM coordinates to ImGui screen pixel coordinates for the image.
+                // This routine basically just inverts the above transformation.
+                const auto img_rows = current_texture.row_count;
+                const auto img_cols = current_texture.col_count;
+                const auto img_rows_f = static_cast<float>(img_rows);
+                const auto img_cols_f = static_cast<float>(img_cols);
+                const auto Z = disp_img_it->position(0L, 0L);
+                const auto region_y = (disp_img_it->row_unit.Dot(P - Z) + 0.5 * disp_img_it->pxl_dx)/(disp_img_it->pxl_dx * img_rows_f);
+                const auto region_x = (disp_img_it->col_unit.Dot(P - Z) + 0.5 * disp_img_it->pxl_dy)/(disp_img_it->pxl_dy * img_cols_f);
+
+                const auto pixel_x = pos.x + (region_x - uv_min.x) * image_extent.x/(uv_max.x - uv_min.x);
+                const auto pixel_y = pos.y + (region_y - uv_min.y) * image_extent.y/(uv_max.y - uv_min.y);
+
+                return ImVec2(pixel_x, pixel_y);
+            };
 
             // Display a visual cue of the tagged position.
             if( tagged_pos 
@@ -3553,6 +3688,39 @@ bool SDL_Viewer(Drover &DICOM_data,
                     const bool closed = true;
                     imgs_window_draw_list->PathStroke(pc.colour, closed, thickness);
                     //AddPolyline(const ImVec2* points, int num_points, ImU32 col, bool closed, float thickness);
+                }
+            }
+
+            //Draw any features that lie in the plane of the current image.
+            if( view_toggles.view_image_feature_extraction
+            &&  image_mouse_pos.DICOM_to_pixels ){
+                const auto box_radius = 3.0f;
+                //const auto c = ImColor(1.0f, 0.2f, 0.2f, 1.0f);
+
+                long int feature_num = 0;
+                int32_t colour_num = 0;
+                const auto img_val_opt = get_as<std::string>(disp_img_it->metadata, img_features.metadata_key);
+                for(const auto &pset : { &img_features.features_A, &img_features.features_B }){
+                    const auto pset_val_opt = get_as<std::string>(pset->metadata, img_features.metadata_key);
+                    if(pset_val_opt != img_val_opt) continue;
+
+                    for(const auto &p : pset->points){
+                        const auto c_rgb = Colour_cycle_max_contrast_20(colour_num);
+                        const auto c = img_features.use_override_colour
+                                ? ImColor(img_features.o_col[0], img_features.o_col[1], img_features.o_col[2], img_features.o_col[3])
+                                : ImColor(c_rgb.R, c_rgb.G, c_rgb.B, 1.0f);
+
+                        if( disp_img_it->sandwiches_point_within_top_bottom_planes(p) ){
+                            ImVec2 p1 = image_mouse_pos.DICOM_to_pixels(p);
+                            ImVec2 ul1( p1.x - box_radius, p1.y - box_radius );
+                            ImVec2 lr1( p1.x + box_radius, p1.y + box_radius );
+                            imgs_window_draw_list->AddRect(ul1, lr1, c);
+
+                            const auto fn_str = std::to_string(feature_num);
+                            imgs_window_draw_list->AddText(lr1, c, fn_str.c_str());
+                            ++feature_num;
+                        }
+                    }
                 }
             }
 
@@ -4954,6 +5122,215 @@ bool SDL_Viewer(Drover &DICOM_data,
             throw;
         }
 
+        // Display feature selection dialog.
+        const auto display_feat_sel = [&view_toggles,
+                                       &drover_mutex,
+                                       &mutex_dt,
+                                       &display_metadata_table,
+                                       &DICOM_data,
+                                       &img_features ]() -> void {
+
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            if(!drover_lock) return;
+
+            if( !view_toggles.view_image_feature_extraction ) return;
+
+            // Display a selection and navigation window.
+            ImGui::SetNextWindowSize(ImVec2(520, 350), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(680, 410), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Image Feature Selection", &view_toggles.view_image_feature_extraction);
+
+            ImGui::DragFloat("Snap distance", &img_features.snap_dist, 0.01f, 0.0f, 50.0f, "%.01f");
+
+            string_to_array(img_features.buff, img_features.metadata_key);
+            ImGui::InputText("Metadata key", img_features.buff.data(), img_features.buff.size());
+            array_to_string(img_features.metadata_key, img_features.buff);
+
+            string_to_array(img_features.buff, img_features.description);
+            ImGui::InputText("Description", img_features.buff.data(), img_features.buff.size());
+            array_to_string(img_features.description, img_features.buff);
+            
+            ImGui::Checkbox("Use colour override", &img_features.use_override_colour);
+            ImGui::ColorEdit4("Override colour", img_features.o_col.data());
+
+            {
+                int i = 0;
+                for(auto &pset : { &img_features.features_A, &img_features.features_B } ){
+                    ImGui::PushID(i);
+                    const auto pset_val_opt = get_as<std::string>(pset->metadata, img_features.metadata_key);
+
+                    std::stringstream ss;
+                    ss << "Image array " << ++i << ":" << std::endl;
+                    ss << "  Features: " << pset->points.size() << std::endl;
+                    ss << "  Key value: " << pset_val_opt.value_or("N/A") << std::endl;
+                    ImGui::Separator();
+                    ImGui::Text("%s", ss.str().c_str());
+                    if(ImGui::Button("Save feature snapshot")){
+                        DICOM_data.point_data.emplace_back( std::make_shared<Point_Cloud>() );
+                        DICOM_data.point_data.back()->pset = (*pset);
+                        if(!img_features.description.empty()){
+                            DICOM_data.point_data.back()->pset.metadata["Description"] = img_features.description;
+                        }
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Delete features")){
+                        (*pset) = point_set<double>();
+                    }
+                    ImGui::PopID();
+                }
+            }
+            ImGui::Separator();
+
+            if(ImGui::Button("Swap features (1 <-> 2)")){
+                std::swap(img_features.features_A, img_features.features_B);
+            }
+
+            if( ImGui::Button("Make rigid transform (1 -> 2)") ){
+                const std::string TransformName = "unspecified";
+                std::optional<affine_transform<double>> tform;
+                try{
+#ifdef DCMA_USE_EIGEN
+                    tform = AlignViaPCA(img_features.features_A, img_features.features_B);
+#else
+                    FUNCWARN("Falling back to centroid translation transformation");
+                    tform = AlignViaCentroid(img_features.features_A, img_features.features_B);
+#endif // DCMA_USE_EIGEN
+                    if(!tform){
+                        throw std::runtime_error("(no explanation available)");
+                    }
+
+                    metadata_multimap_t cmm;
+                    combine_distinct(cmm, img_features.features_A.metadata);
+                    combine_distinct(cmm, img_features.features_B.metadata);
+                    auto cm = singular_keys(cmm);
+                    cm = coalesce_metadata_for_basic_def_reg(cm);
+
+                    DICOM_data.trans_data.emplace_back( std::make_shared<Transform3>( ) );
+                    DICOM_data.trans_data.back()->transform = tform.value();
+                    DICOM_data.trans_data.back()->metadata = cm;
+                    DICOM_data.trans_data.back()->metadata["TransformName"] = TransformName;
+
+                }catch(const std::exception &e){
+                    FUNCWARN("Unable to create transformation: " << e.what());
+                }
+            }
+
+            ImGui::End();
+            return;
+        };
+        try{
+            display_feat_sel();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in display_feat_sel(): '" << e.what() << "'");
+            throw;
+        }
+
+        // Display Point Sets.
+        const auto display_psets = [&view_toggles,
+                                    &drover_mutex,
+                                    &mutex_dt,
+                                    &pset_num,
+                                    &recompute_pset_iters,
+                                    &display_metadata_table,
+                                    &DICOM_data ]() -> void {
+
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            if(!drover_lock) return;
+
+            if( !view_toggles.view_psets_enabled
+            ||  !DICOM_data.Has_Point_Data() ) return;
+
+            // Display a selection and navigation window.
+            ImGui::SetNextWindowSize(ImVec2(450, 400), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(680, 140), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Point Sets", &view_toggles.view_psets_enabled);
+
+            // Scroll through point sets.
+            if(DICOM_data.Has_Point_Data()){
+                int scroll_psets = pset_num;
+                const int N_psets = DICOM_data.point_data.size();
+                ImGui::SliderInt("Set", &scroll_psets, 0, N_psets - 1);
+                const long int new_pset_num = std::clamp(scroll_psets, 0, N_psets - 1);
+                if(new_pset_num != pset_num){
+                    pset_num = new_pset_num;
+                }
+            }
+
+            ImGui::Checkbox("View point set metadata", &view_toggles.view_psets_metadata_enabled);
+
+            if(auto [pset_is_valid, pset_ptr_it] = recompute_pset_iters();
+                view_toggles.view_psets_metadata_enabled && pset_is_valid ){
+                ImGui::SetNextWindowSize(ImVec2(450, 600), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(ImVec2(40, 140), ImGuiCond_FirstUseEver);
+                ImGui::Begin("Point Set Metadata", &view_toggles.view_psets_metadata_enabled);
+                display_metadata_table( (*pset_ptr_it)->pset.metadata );
+                ImGui::End();
+            }
+
+            ImGui::End();
+            return;
+        };
+        try{
+            display_psets();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in display_psets(): '" << e.what() << "'");
+            throw;
+        }
+
+
+        // Display Transforms.
+        const auto display_tforms = [&view_toggles,
+                                     &drover_mutex,
+                                     &mutex_dt,
+                                     &tform_num,
+                                     &recompute_tform_iters,
+                                     &display_metadata_table,
+                                     &DICOM_data ]() -> void {
+
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            if(!drover_lock) return;
+
+            if( !view_toggles.view_tforms_enabled
+            ||  !DICOM_data.Has_Tran3_Data() ) return;
+
+            // Display a selection and navigation window.
+            ImGui::SetNextWindowSize(ImVec2(450, 400), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(680, 240), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Transform", &view_toggles.view_tforms_enabled);
+
+            // Scroll through point sets.
+            if(DICOM_data.Has_Tran3_Data()){
+                int scroll_tforms = tform_num;
+                const int N_tforms = DICOM_data.trans_data.size();
+                ImGui::SliderInt("Transform", &scroll_tforms, 0, N_tforms - 1);
+                const long int new_tform_num = std::clamp(scroll_tforms, 0, N_tforms - 1);
+                if(new_tform_num != tform_num){
+                    tform_num = new_tform_num;
+                }
+            }
+
+            ImGui::Checkbox("View transform metadata", &view_toggles.view_tforms_metadata_enabled);
+
+            if(auto [tform_is_valid, tform_ptr_it] = recompute_tform_iters();
+                view_toggles.view_tforms_metadata_enabled && tform_is_valid ){
+                ImGui::SetNextWindowSize(ImVec2(450, 600), ImGuiCond_FirstUseEver);
+                ImGui::SetNextWindowPos(ImVec2(40, 240), ImGuiCond_FirstUseEver);
+                ImGui::Begin("Transform Metadata", &view_toggles.view_tforms_metadata_enabled);
+                display_metadata_table( (*tform_ptr_it)->metadata );
+                ImGui::End();
+            }
+
+            ImGui::End();
+            return;
+        };
+        try{
+            display_tforms();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in display_tforms(): '" << e.what() << "'");
+            throw;
+        }
+
+
         // Display the image navigation dialog.
         const auto display_image_navigation = [&view_toggles,
                                                &drover_mutex,
@@ -4994,7 +5371,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                &reset_contouring_state,
                                                &advance_to_image,
 
-                                               &frame_count ]() -> void {
+                                               &frame_count,
+
+                                               &img_features ]() -> void {
 
             std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
             if( !drover_lock
@@ -5187,19 +5566,83 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                     // Left-button mouse click on an image.
                     }else if( image_mouse_pos_opt.value().mouse_hovering_image
+                          &&  img_valid
+                          &&  image_mouse_pos_opt
                           &&  (0 < IM_ARRAYSIZE(io.MouseDown))
                           &&  (0.0f == io.MouseDownDuration[0]) ){ // Debounced!
 
-                          if(view_toggles.view_time_profiles){
-                              view_toggles.save_time_profiles = true;
+                        if(view_toggles.view_time_profiles){
+                            view_toggles.save_time_profiles = true;
 
-                          }else{
-                              if(!tagged_pos){
-                                  tagged_pos = image_mouse_pos_opt.value().dicom_pos;
-                              }else{
-                                  tagged_pos = {};
-                              }
-                          }
+                        }else if(view_toggles.view_image_feature_extraction){
+                            // Add a feature to the first matching or empty features point set.
+                            const auto dicom_pos = image_mouse_pos_opt.value().dicom_pos;
+                            const auto img_val_opt = get_as<std::string>(disp_img_it->metadata, img_features.metadata_key);
+
+                            for(auto &pset : { &img_features.features_A, &img_features.features_B } ){
+                                const auto pset_val_opt = get_as<std::string>(pset->metadata, img_features.metadata_key);
+                                if( pset_val_opt
+                                &&  (pset_val_opt != img_val_opt) ) continue;
+
+                                auto existing = std::find_if( std::begin(pset->points),
+                                                              std::end(pset->points),
+                                                              [&](const vec3<double> &p) -> bool {
+                                                                  return dicom_pos.distance(p) < img_features.snap_dist;
+                                                              });
+                                const auto is_near_existing = (existing != std::end(pset->points));
+                                if(!is_near_existing){
+                                    auto cm = (*img_array_ptr_it)->imagecoll.get_common_metadata({});
+                                    cm = coalesce_metadata_for_basic_pset(cm);
+
+                                    pset->points.emplace_back(dicom_pos);
+                                    pset->metadata = cm;
+                                    if(img_val_opt) pset->metadata[img_features.metadata_key] = img_val_opt.value();
+
+                                    break;
+                                }
+                            }
+
+                        }else{
+                            if(!tagged_pos){
+                                tagged_pos = image_mouse_pos_opt.value().dicom_pos;
+                            }else{
+                                tagged_pos = {};
+                            }
+                        }
+
+                    // Right-button mouse click on an image.
+                    }else if( image_mouse_pos_opt.value().mouse_hovering_image
+                        &&  img_valid
+                        &&  image_mouse_pos_opt
+                        &&  (1 < IM_ARRAYSIZE(io.MouseDown))
+                        &&  (0.0f == io.MouseDownDuration[1]) ){ // Debounced!
+
+                        if(view_toggles.view_image_feature_extraction){
+                            // Remove nearby features.
+                            const auto dicom_pos = image_mouse_pos_opt.value().dicom_pos;
+                            const auto img_val_opt = get_as<std::string>(disp_img_it->metadata, img_features.metadata_key);
+
+                            for(auto &pset : { &img_features.features_A, &img_features.features_B }){
+                                const auto pset_val_opt = get_as<std::string>(pset->metadata, img_features.metadata_key);
+                                if(pset->points.empty()) continue;
+                                if( pset_val_opt
+                                &&  (pset_val_opt != img_val_opt) ) continue;
+
+                                auto existing = std::find_if( std::begin(pset->points),
+                                                              std::end(pset->points),
+                                                              [&](const vec3<double> &p) -> bool {
+                                                                  return dicom_pos.distance(p) < img_features.snap_dist;
+                                                              });
+                                const auto is_near_existing = (existing != std::end(pset->points));
+                                if(is_near_existing){
+                                    pset->points.erase(existing);
+                                    if(pset->points.empty()) pset->metadata.clear();
+
+                                    break;
+                                }
+                            }
+
+                        }
 
                     }else if(0 < io.MouseWheel){
                         scroll_images = std::clamp((scroll_images + N_images + d_h) % N_images, 0, N_images - 1);

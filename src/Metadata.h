@@ -145,6 +145,7 @@ metadata_map_t coalesce_metadata_for_basic_image(const metadata_map_t &ref, meta
 metadata_map_t coalesce_metadata_for_basic_mr_image(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
 metadata_map_t coalesce_metadata_for_basic_ct_image(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
 metadata_map_t coalesce_metadata_for_basic_mesh(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
+metadata_map_t coalesce_metadata_for_basic_pset(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
 metadata_map_t coalesce_metadata_for_basic_def_reg(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
 metadata_map_t coalesce_metadata_for_basic_table(const metadata_map_t &ref, meta_evolve e = meta_evolve::none);
 

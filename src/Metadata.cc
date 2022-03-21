@@ -890,6 +890,7 @@ metadata_map_t coalesce_metadata_for_lsamp(const metadata_map_t &ref, meta_evolv
     out["SOPClassUID"] = "";
 
     insert_or_default(out, ref, "LineName", "unspecified");
+    insert_or_default(out, ref, "NormalizedLineName", "unspecified");
     insert_or_default(out, ref, "Abscissa", "unspecified");
     insert_or_default(out, ref, "Ordinate", "unspecified");
 
@@ -1078,6 +1079,33 @@ metadata_map_t coalesce_metadata_for_basic_mesh(const metadata_map_t &ref, meta_
     return out;
 }
 
+metadata_map_t coalesce_metadata_for_basic_pset(const metadata_map_t &ref, meta_evolve e){
+    metadata_map_t out;
+    out["Modality"] = "POINTSET";
+    out["MediaStorageSOPClassUID"] = "";
+    out["SOPClassUID"] = "";
+
+    insert_or_default(out, ref, "PointName", "unspecified");
+    insert_or_default(out, ref, "NormalizedPointName", "unspecified");
+
+    out.merge( coalesce_metadata_sop_common(ref) );
+    out.merge( coalesce_metadata_patient(ref) );
+    out.merge( coalesce_metadata_general_study(ref) );
+    out.merge( coalesce_metadata_general_series(ref) );
+    out.merge( coalesce_metadata_patient_study(ref) );
+    out.merge( coalesce_metadata_frame_of_reference(ref) );
+    out.merge( coalesce_metadata_general_equipment(ref) );
+    out.merge( coalesce_metadata_misc(ref) );
+
+    if(e == meta_evolve::iterate){
+        // Assign a new SOP Instance UID.
+        auto new_sop = coalesce_metadata_sop_common({});
+        insert(out, "SOPInstanceUID", new_sop["SOPInstanceUID"]);
+        insert(out, "MediaStorageSOPInstanceUID", new_sop["MediaStorageSOPInstanceUID"]);
+    }
+    return out;
+}
+
 metadata_map_t coalesce_metadata_for_basic_def_reg(const metadata_map_t &ref, meta_evolve e){
     metadata_map_t out;
     out["Modality"] = "REG";
@@ -1107,7 +1135,7 @@ metadata_map_t coalesce_metadata_for_basic_def_reg(const metadata_map_t &ref, me
 
 metadata_map_t coalesce_metadata_for_basic_table(const metadata_map_t &ref, meta_evolve e){
     metadata_map_t out;
-    out["Modality"] = "TAB";
+    out["Modality"] = "TABLE";
 
     out.merge( coalesce_metadata_sop_common(ref) );
     //out.merge( coalesce_metadata_patient(ref) );

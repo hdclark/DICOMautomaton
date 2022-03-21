@@ -46,3 +46,6 @@ ClampedColourRGB ColourMap_Composite_50_90_100_107_110(double y);
 //This function takes a named colour and map it to a colour specified in terms of R,G,B all within [0,1].
 std::optional<ClampedColourRGB> Colour_from_name(const std::string& n);
 
+//These functions cycle through colours.
+ClampedColourRGB Colour_cycle_max_contrast_20(int32_t &i);
+

@@ -78,7 +78,8 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
                 throw std::runtime_error("FITS file missing key image parameters. Cannot continue.");
             }
 
-            animg.metadata = l_meta;
+            auto ll_meta = l_meta;
+            inject_metadata(animg.metadata, std::move(ll_meta));
             animg.metadata["Filename"] = Filename.string();
 
             FUNCINFO("Loaded FITS file with dimensions " 
@@ -121,7 +122,8 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
 
             planar_image<float,double> animg2;
             animg2.cast_from(animg);
-            animg2.metadata = l_meta;
+            auto ll_meta = l_meta;
+            inject_metadata(animg2.metadata, std::move(ll_meta));
             animg2.metadata["Filename"] = Filename.string();
 
             FUNCINFO("Loaded FITS file with dimensions " 

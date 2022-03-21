@@ -81,8 +81,8 @@ OperationDoc OpArgDocGenerateWarp(){
                                  "translate(1,0,0) ; scale(0,0,0, 5) ; translate(-1,0,0)" };
 
     out.args.emplace_back();
-    out.args.back().name = "TransformLabel";
-    out.args.back().desc = "A label to attach to the transformation.";
+    out.args.back().name = "TransformName";
+    out.args.back().desc = "A name or label to attach to the transformation.";
     out.args.back().default_val = "unspecified";
     out.args.back().expected = true;
     out.args.back().examples = { "unspecified", "offset", "expansion", "rotation_around_xyz", "move_to_origin" };
@@ -107,7 +107,7 @@ bool GenerateWarp(Drover &DICOM_data,
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto TransformsStr = OptArgs.getValueStr("Transforms").value();
-    const auto TransformLabel = OptArgs.getValueStr("TransformLabel").value();
+    const auto TransformName = OptArgs.getValueStr("TransformName").value();
     const auto MetadataOpt = OptArgs.getValueStr("Metadata");
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -259,7 +259,7 @@ bool GenerateWarp(Drover &DICOM_data,
 
     DICOM_data.trans_data.emplace_back( std::make_shared<Transform3>( ) );
     DICOM_data.trans_data.back()->transform = final_affine;
-    DICOM_data.trans_data.back()->metadata["TransformLabel"] = TransformLabel;
+    DICOM_data.trans_data.back()->metadata["TransformName"] = TransformName;
 
     // Insert user-specified metadata.
     //

@@ -22,7 +22,7 @@
 #include "YgorString.h"       //Needed for SplitStringToVector, Canonicalize_String2, SplitVector functions.
 
 #include "Structs.h"
-#include "Imebra_Shim.h"
+#include "Metadata.h"
 
 bool Load_From_XYZ_Files( Drover &DICOM_data,
                           std::map<std::string,std::string> & /* InvocationMetadata */,
@@ -89,23 +89,10 @@ bool Load_From_XYZ_Files( Drover &DICOM_data,
             }
 
             // Supply generic minimal metadata iff it is needed.
-            std::map<std::string, std::string> generic_metadata;
-
-            generic_metadata["Filename"] = Filename.string(); 
-
-            generic_metadata["PatientID"] = "unspecified";
-            generic_metadata["StudyInstanceUID"] = Generate_Random_UID(60);
-            generic_metadata["SeriesInstanceUID"] = Generate_Random_UID(60);
-            generic_metadata["FrameOfReferenceUID"] = Generate_Random_UID(60);
-            generic_metadata["SOPInstanceUID"] = Generate_Random_UID(60);
-            generic_metadata["Modality"] = "PointCloud";
-
-            generic_metadata["PointName"] = "unspecified"; 
-            generic_metadata["NormalizedPointName"] = "unspecified"; 
-
-            generic_metadata["ROIName"] = "unspecified"; 
-            generic_metadata["NormalizedROIName"] = "unspecified"; 
-            DICOM_data.point_data.back()->pset.metadata.merge(generic_metadata);
+            auto l_meta = DICOM_data.point_data.back()->pset.metadata;
+            l_meta = coalesce_metadata_for_basic_pset(l_meta);
+            l_meta["Filename"] = Filename.string();
+            inject_metadata(DICOM_data.point_data.back()->pset.metadata, std::move(l_meta));
 
             FUNCINFO("Loaded point cloud with " << N_points << " points");
             bfit = Filenames.erase( bfit ); 

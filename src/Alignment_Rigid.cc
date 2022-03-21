@@ -46,9 +46,23 @@ std::optional<affine_transform<double>>
 AlignViaCentroid(const point_set<double> & moving,
                  const point_set<double> & stationary ){
 
+    if( moving.points.empty() ){
+        throw std::invalid_argument("Moving point set does not contain any points");
+    }
+    if( stationary.points.empty() ){
+        throw std::invalid_argument("Stationary point set does not contain any points");
+    }
+
     // Compute the centroid for both point clouds.
     const auto centroid_s = stationary.Centroid();
     const auto centroid_m = moving.Centroid();
+
+    if( !centroid_m.isfinite() ){
+        throw std::invalid_argument("Moving point set does not have a finite centroid");
+    }
+    if( !centroid_s.isfinite() ){
+        throw std::invalid_argument("Stationary point set does not have a finite centroid");
+    }
 
     const auto dcentroid = (centroid_s - centroid_m);
     affine_transform<double> t = affine_translate<double>(dcentroid);
@@ -76,10 +90,24 @@ AlignViaPCA(const point_set<double> & moving,
             const point_set<double> & stationary ){
     affine_transform<double> t;
 
+    if( moving.points.empty() ){
+        throw std::invalid_argument("Moving point set does not contain any points");
+    }
+    if( stationary.points.empty() ){
+        throw std::invalid_argument("Stationary point set does not contain any points");
+    }
+
     // Compute the centroid for both point clouds.
     const auto centroid_s = stationary.Centroid();
     const auto centroid_m = moving.Centroid();
-    
+   
+    if( !centroid_m.isfinite() ){
+        throw std::invalid_argument("Moving point set does not have a finite centroid");
+    }
+    if( !centroid_s.isfinite() ){
+        throw std::invalid_argument("Stationary point set does not have a finite centroid");
+    }
+
     // Compute the PCA for both point clouds.
     struct pcomps {
         vec3<double> pc1;

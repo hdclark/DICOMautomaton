@@ -17922,5 +17922,36 @@ std::optional<ClampedColourRGB> Colour_from_name(const std::string& n){
 }
 
 
+ClampedColourRGB Colour_cycle_max_contrast_20(int32_t &i){
+    // From 'http://stackoverflow.com/questions/470690/how-to-automatically-generate-n-distinct-colors' on 20160919
+    // which originate from: Kelly, Kenneth L. "Twenty-two colors of maximum contrast." Color Engineering 3.26 (1965): 26-27.
+    //
+    // Note that white and black were both removed.
+    const std::array<ClampedColourRGB, 20> colours {{
+        { 1.000, 0.702, 0.000 }, // "vivid_yellow"
+        { 0.502, 0.243, 0.459 }, // "strong_purple"
+        { 1.000, 0.408, 0.000 }, // "vivid_orange"
+        { 0.651, 0.741, 0.843 }, // "very_light_blue"
+        { 0.757, 0.000, 0.125 }, // "vivid_red"
 
+        { 0.808, 0.635, 0.384 }, // "grayish_yellow"
+        { 0.506, 0.439, 0.400 }, // "medium_gray"
+        { 0.000, 0.490, 0.204 }, // "vivid_green"
+        { 0.965, 0.463, 0.557 }, // "strong_purplish_pink"
+        { 0.000, 0.325, 0.541 }, // "strong_blue"
 
+        { 1.000, 0.478, 0.361 }, // "strong_yellowish_pink"
+        { 0.325, 0.216, 0.478 }, // "strong_violet"
+        { 1.000, 0.557, 0.000 }, // "vivid_orange_yellow"
+        { 0.702, 0.157, 0.318 }, // "strong_purplish_red"
+        { 0.957, 0.784, 0.000 }, // "vivid_greenish_yellow"
+
+        { 0.498, 0.094, 0.051 }, // "strong_reddish_brown"
+        { 0.576, 0.667, 0.000 }, // "vivid_yellowish_green"
+        { 0.349, 0.200, 0.082 }, // "deep_yellowish_brown"
+        { 0.945, 0.227, 0.075 }, // "vivid_reddish_orange"
+        { 0.137, 0.173, 0.086 }  // "dark_olive_green"
+    }};
+
+    return colours.at( i++ % 20 );
+}
