@@ -36,6 +36,8 @@ check_cpp_syntax () {
           -I'src/imebra20121219/library/imebra/include/' \
           -I"${temp_dir}/" \
           -I"${temp_dir}/src/" \
+          `# Check if Eigen is available. If so, enable via preprocessor directive.` \
+          ` [ ! -z "$(pkg-config --cflags --libs eigen3)" ] && printf -- '-DDCMA_USE_EIGEN=1' ` \
           $(pkg-config --cflags --libs sdl2 glew sfml-window sfml-graphics sfml-system libpqxx libpq nlopt gsl eigen3) \
           -lygor -lboost_serialization -lboost_iostreams -lboost_thread -lboost_system \
           "$f"
