@@ -315,6 +315,150 @@ AlignViaPCA(const point_set<double> & moving,
 }
 #endif // DCMA_USE_EIGEN
 
+#ifdef DCMA_USE_EIGEN
+// This routine performs an alignment using the "Orthogonal Procrustes" algorithm.
+//
+// This method is similar to PCA-based alignment, but singular-value decomposition (SVD) is used to estimate the best
+// rotation. For more information, see the "Wahba problem" or the "Kabsch algorithm."
+//
+// In contrast to PCA this method disallows mirroring, making it suitable for low-density and/or symmetric point sets.
+//
+// Note that this routine only identifies a suitable transform, it does not implement it by altering the inputs.
+//
+// Moving and stationary sets must be paired and corresponding. Low-dimensional degeneracies are somewhat protected
+// against, but the resulting transformation is not robust and may involve mirroring, so it is recommended to
+// avoid cases with low-dimensional degeneracies.
+//
+std::optional<affine_transform<double>>
+AlignViaOrthogonalProcrustes(const point_set<double> & moving,
+                             const point_set<double> & stationary ){
+
+    if( moving.points.empty() ){
+        throw std::invalid_argument("Moving point set does not contain any points");
+    }
+    if( stationary.points.empty() ){
+        throw std::invalid_argument("Stationary point set does not contain any points");
+    }
+
+    // --- Translation ----
+
+    // Compute the centroid for both point clouds.
+    const auto centroid_s = stationary.Centroid();
+    const auto centroid_m = moving.Centroid();
+
+    if( !centroid_m.isfinite() ){
+        throw std::invalid_argument("Moving point set does not have a finite centroid");
+    }
+    if( !centroid_s.isfinite() ){
+        throw std::invalid_argument("Stationary point set does not have a finite centroid");
+    }
+
+    // --- Rotation ---
+
+    const auto N_rows = 3ul; // Dimensions (note: this process does not generalize beyond 3).
+    const auto N_cols = moving.points.size();
+    Eigen::MatrixXd S(N_rows, N_cols);
+    Eigen::MatrixXd M(N_rows, N_cols);
+    for(size_t i = 0; i < N_cols; ++i){
+        // Shift both sets so their centroids coincide with origin.
+        S(0, i) = stationary.points[i].x - centroid_s.x; // The desired point location.
+        S(1, i) = stationary.points[i].y - centroid_s.y;
+        S(2, i) = stationary.points[i].z - centroid_s.z;
+
+        M(0, i) = moving.points[i].x - centroid_m.x; // The actual point location.
+        M(1, i) = moving.points[i].y - centroid_m.y;
+        M(2, i) = moving.points[i].z - centroid_m.z;
+    }
+    auto ST = S.transpose();
+    auto MST = M * ST;
+
+    //Eigen::JacobiSVD<Eigen::MatrixXd> SVD(MST, Eigen::ComputeThinU | Eigen::ComputeThinV);
+    //Eigen::SVDBase<Eigen::JacobiSVD<Eigen::MatrixXd>> SVD(MST, Eigen::ComputeFullU | Eigen::ComputeFullV );
+    //if(SVD.info() != Eigen::ComputationInfo::Success){
+    //    throw std::runtime_error("SVD computation failed");
+    //}
+    Eigen::JacobiSVD<Eigen::MatrixXd> SVD(MST, Eigen::ComputeFullU | Eigen::ComputeFullV );
+    auto U = SVD.matrixU();
+    const auto& V = SVD.matrixV();
+
+    // Use the SVD result directly.
+    //
+    // Note that spatial inversions (i.e., mirror flips) are permitted this way.
+    //auto A = U * V.transpose();
+
+    // Disallow spatial inversions and restrict solutions to rotations only.
+    Eigen::Matrix3d PI;
+    //PI << 1.0 , 0.0 , 0.0,
+    //      0.0 , 1.0 , 0.0,
+    //      0.0 , 0.0 , ( U * V.transpose() ).determinant();
+    //auto A = U * PI * V.transpose();
+    PI << 1.0 , 0.0 , 0.0
+        , 0.0 , 1.0 , 0.0
+        , 0.0 , 0.0 , ( V * U.transpose() ).determinant();
+    auto A = V * PI * U.transpose();
+
+    // --- Combine translation and rotation ---
+
+    // Transfer the transformation into a full Affine transformation.
+    affine_transform<double> t;
+
+    // Rotation and scaling components.
+    t.coeff(0,0) = A(0,0);
+    t.coeff(1,0) = A(1,0);
+    t.coeff(2,0) = A(2,0);
+               
+    t.coeff(0,1) = A(0,1);
+    t.coeff(1,1) = A(1,1);
+    t.coeff(2,1) = A(2,1);
+               
+    t.coeff(0,2) = A(0,2);
+    t.coeff(1,2) = A(1,2);
+    t.coeff(2,2) = A(2,2);
+
+    // The complete transformation we have found for bringing the moving points $P_{M}$ into alignment with the
+    // stationary points is:
+    //
+    //   $centroid_{S} + A * \left( P_{M} - centroid_{M} \right)$.
+    //
+    // Rearranging, an Affine transformation of the form $A * P_{M} + b$ can be written as:
+    //
+    //   $A * P_{M} + \left( centroid_{S} - A * centroid_{M} \right)$.
+    // 
+    // Specifically, the transformed moving point cloud centroid component needs to be pre-subtracted for each
+    // vector $P_{M}$ to anticipate not having an explicit centroid subtraction step prior to applying the
+    // scale/rotation matrix.
+    {
+        Eigen::Vector3d e_centroid(centroid_m.x, centroid_m.y, centroid_m.z);
+        auto A_e_centroid = A * e_centroid; 
+
+        t.coeff(0,3) = centroid_s.x - A_e_centroid(0);
+        t.coeff(1,3) = centroid_s.y - A_e_centroid(1);
+        t.coeff(2,3) = centroid_s.z - A_e_centroid(2);
+    }
+
+    FUNCINFO("Final linear transform:");
+    FUNCINFO("    ( " << t.coeff(0,0) << "  " << t.coeff(0,1) << "  " << t.coeff(0,2) << " )");
+    FUNCINFO("    ( " << t.coeff(1,0) << "  " << t.coeff(1,1) << "  " << t.coeff(1,2) << " )");
+    FUNCINFO("    ( " << t.coeff(2,0) << "  " << t.coeff(2,1) << "  " << t.coeff(2,2) << " )");
+    FUNCINFO("Final translation:");
+    FUNCINFO("    ( " << t.coeff(0,3) << " )");
+    FUNCINFO("    ( " << t.coeff(1,3) << " )");
+    FUNCINFO("    ( " << t.coeff(2,3) << " )");
+    //FUNCINFO("Final Affine transformation:");
+    //t.write_to(std::cout);
+
+    // Test if the transformation is valid.
+    vec3<double> v_test(1.0, 1.0, 1.0);
+    t.apply_to(v_test);
+    if( !v_test.isfinite() ){
+        return std::nullopt;
+    }
+
+    return t;
+
+}
+#endif // DCMA_USE_EIGEN
+
 
 #ifdef DCMA_USE_EIGEN
 // This routine performs an exhaustive iterative closest point (ICP) alignment.
