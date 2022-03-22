@@ -984,8 +984,9 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // Image feature extraction.
     struct img_features_t {
-        point_set<double> features_A;
-        point_set<double> features_B;
+        point_set<double> features_A;  // Input features (A).
+        point_set<double> features_B;  // Input features (B).
+        point_set<double> features_C;  // Output features (transformed features from A onto B coordinate system).
 
         std::string metadata_key = "FrameOfReferenceUID";
         std::string description;
@@ -3691,35 +3692,40 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
             }
 
-            //Draw any features that lie in the plane of the current image.
+            // Overlay features on the current image.
             if( view_toggles.view_image_feature_extraction
             &&  image_mouse_pos.DICOM_to_pixels ){
                 const auto box_radius = 3.0f;
-                //const auto c = ImColor(1.0f, 0.2f, 0.2f, 1.0f);
 
-                long int feature_num = 0;
-                int32_t colour_num = 0;
                 const auto img_val_opt = get_as<std::string>(disp_img_it->metadata, img_features.metadata_key);
-                for(const auto &pset : { &img_features.features_A, &img_features.features_B }){
+                for(const auto &pset : { &img_features.features_A,
+                                         &img_features.features_B,
+                                         &img_features.features_C }){
                     const auto pset_val_opt = get_as<std::string>(pset->metadata, img_features.metadata_key);
                     if(pset_val_opt != img_val_opt) continue;
 
+                    long int feature_num = 0;
+                    int32_t colour_num = 0;
                     for(const auto &p : pset->points){
                         const auto c_rgb = Colour_cycle_max_contrast_20(colour_num);
-                        const auto c = img_features.use_override_colour
-                                ? ImColor(img_features.o_col[0], img_features.o_col[1], img_features.o_col[2], img_features.o_col[3])
-                                : ImColor(c_rgb.R, c_rgb.G, c_rgb.B, 1.0f);
+                        auto c = img_features.use_override_colour
+                               ? ImColor(img_features.o_col[0], img_features.o_col[1], img_features.o_col[2], img_features.o_col[3])
+                               : ImColor(c_rgb.R, c_rgb.G, c_rgb.B, 1.0f);
 
-                        if( disp_img_it->sandwiches_point_within_top_bottom_planes(p) ){
-                            ImVec2 p1 = image_mouse_pos.DICOM_to_pixels(p);
-                            ImVec2 ul1( p1.x - box_radius, p1.y - box_radius );
-                            ImVec2 lr1( p1.x + box_radius, p1.y + box_radius );
-                            imgs_window_draw_list->AddRect(ul1, lr1, c);
-
-                            const auto fn_str = std::to_string(feature_num);
-                            imgs_window_draw_list->AddText(lr1, c, fn_str.c_str());
-                            ++feature_num;
+                        // Display out-of-plane features with low alpha.
+                        if( !disp_img_it->sandwiches_point_within_top_bottom_planes(p) ){
+                            c.Value.w *= 0.25;
                         }
+
+                        ImVec2 p1 = image_mouse_pos.DICOM_to_pixels(p);
+                        ImVec2 ul1( p1.x - box_radius, p1.y - box_radius );
+                        ImVec2 lr1( p1.x + box_radius, p1.y + box_radius );
+                        imgs_window_draw_list->AddRect(ul1, lr1, c);
+
+                        const auto fn_str = std::to_string(feature_num);
+                        imgs_window_draw_list->AddText(lr1, c, fn_str.c_str());
+
+                        ++feature_num;
                     }
                 }
             }
@@ -5184,8 +5190,20 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(ImGui::Button("Swap features (1 <-> 2)")){
                 std::swap(img_features.features_A, img_features.features_B);
             }
+            ImGui::SameLine();
+            if(ImGui::Button("Delete transformed features")){
+                img_features.features_C = point_set<double>();
+            }
 
-            if( ImGui::Button("Make rigid transform (1 -> 2)") ){
+            ImGui::Separator();
+            const bool make_rigid = ImGui::Button("Make rigid transform (1 -> 2)");
+            if( ImGui::IsItemHovered() 
+            &&  (img_features.features_A.points.size() != img_features.features_B.points.size()) ){
+                ImGui::BeginTooltip();
+                ImGui::Text("Not recommended -- features are currently mismatched");
+                ImGui::EndTooltip();
+            }
+            if( make_rigid ){
                 const std::string TransformName = "unspecified";
                 std::optional<affine_transform<double>> tform;
                 try{
@@ -5209,6 +5227,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                     DICOM_data.trans_data.back()->transform = tform.value();
                     DICOM_data.trans_data.back()->metadata = cm;
                     DICOM_data.trans_data.back()->metadata["TransformName"] = TransformName;
+
+                    // Apply transform to features A to compare with features B for inspection.
+                    img_features.features_C = img_features.features_A;
+                    const auto B_val_opt = get_as<std::string>(img_features.features_B.metadata, img_features.metadata_key);
+                    if(B_val_opt) img_features.features_C.metadata[img_features.metadata_key] = B_val_opt.value();
+                    for(auto& p : img_features.features_C.points){
+                        tform.value().apply_to(p);
+                    }
 
                 }catch(const std::exception &e){
                     FUNCWARN("Unable to create transformation: " << e.what());
@@ -5575,6 +5601,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                             view_toggles.save_time_profiles = true;
 
                         }else if(view_toggles.view_image_feature_extraction){
+                            img_features.features_C = point_set<double>();
+
                             // Add a feature to the first matching or empty features point set.
                             const auto dicom_pos = image_mouse_pos_opt.value().dicom_pos;
                             const auto img_val_opt = get_as<std::string>(disp_img_it->metadata, img_features.metadata_key);
@@ -5618,6 +5646,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                         &&  (0.0f == io.MouseDownDuration[1]) ){ // Debounced!
 
                         if(view_toggles.view_image_feature_extraction){
+                            img_features.features_C = point_set<double>();
+
                             // Remove nearby features.
                             const auto dicom_pos = image_mouse_pos_opt.value().dicom_pos;
                             const auto img_val_opt = get_as<std::string>(disp_img_it->metadata, img_features.metadata_key);
