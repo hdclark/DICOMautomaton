@@ -376,13 +376,17 @@ AlignViaOrthogonalProcrustes(AlignViaOrthogonalProcrustesParams & params,
     auto ST = S.transpose();
     auto MST = M * ST;
 
-    Eigen::JacobiSVD<Eigen::MatrixXd> SVD;
-    auto& SVDbase = SVD.compute(MST, Eigen::ComputeFullU | Eigen::ComputeFullV );
-    if(SVDbase.info() != Eigen::ComputationInfo::Success){
-        throw std::runtime_error("SVD computation failed");
-    }
-    auto U = SVDbase.matrixU();
-    const auto& V = SVDbase.matrixV();
+    using SVD_t = Eigen::JacobiSVD<Eigen::MatrixXd>;
+    SVD_t SVD;
+    SVD.compute(MST, Eigen::ComputeFullU | Eigen::ComputeFullV );
+    // TODO: how do I access the info function??
+    //using SVD_base_t = Eigen::EigenBase<SVD_t>; // Needed to access status.
+    //auto *SVD_base = reinterpret_cast<SVD_base_t*>(SVD.compute(MST, Eigen::ComputeFullU | Eigen::ComputeFullV ));
+    //if(SVD_base->info() != Eigen::ComputationInfo::Success){
+    //    throw std::runtime_error("SVD computation failed");
+    //}
+    auto U = SVD.matrixU();
+    const auto& V = SVD.matrixV();
 
     // Handle mirroring.
     Eigen::Matrix3d A;
