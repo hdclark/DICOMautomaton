@@ -58,8 +58,20 @@ AlignViaPCA(const point_set<double> & moving,
 // against, but the resulting transformation is not robust and may involve mirroring, so it is recommended to
 // avoid cases with low-dimensional degeneracies.
 //
+struct AlignViaOrthogonalProcrustesParams {
+
+    // Controls whether the non-translational part of the solution will be purely rotational, or possibly will include
+    // one or more mirror flips.
+    bool permit_mirroring = false;
+
+    // Controls whether the rotational component of the transformation is permitted to apply an isotropic scaling
+    // factor.
+    bool permit_isotropic_scaling = false;
+};
+
 std::optional<affine_transform<double>>
-AlignViaOrthogonalProcrustes(const point_set<double> & moving,
+AlignViaOrthogonalProcrustes(AlignViaOrthogonalProcrustesParams & params,
+                             const point_set<double> & moving,
                              const point_set<double> & stationary );
 #endif // DCMA_USE_EIGEN
 

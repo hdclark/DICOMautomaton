@@ -5208,7 +5208,11 @@ bool SDL_Viewer(Drover &DICOM_data,
                 std::optional<affine_transform<double>> tform;
                 try{
 #ifdef DCMA_USE_EIGEN
-                    tform = AlignViaOrthogonalProcrustes(img_features.features_A, img_features.features_B);
+                    AlignViaOrthogonalProcrustesParams params;
+                    params.permit_mirroring = false;
+                    params.permit_isotropic_scaling = true;
+
+                    tform = AlignViaOrthogonalProcrustes(params, img_features.features_A, img_features.features_B);
 #else
                     FUNCWARN("Falling back to centroid translation transformation");
                     tform = AlignViaCentroid(img_features.features_A, img_features.features_B);

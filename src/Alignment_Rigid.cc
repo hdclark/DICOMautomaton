@@ -330,7 +330,8 @@ AlignViaPCA(const point_set<double> & moving,
 // avoid cases with low-dimensional degeneracies.
 //
 std::optional<affine_transform<double>>
-AlignViaOrthogonalProcrustes(const point_set<double> & moving,
+AlignViaOrthogonalProcrustes(AlignViaOrthogonalProcrustesParams & params,
+                             const point_set<double> & moving,
                              const point_set<double> & stationary ){
 
     if( moving.points.empty() ){
@@ -383,21 +384,38 @@ AlignViaOrthogonalProcrustes(const point_set<double> & moving,
     auto U = SVDbase.matrixU();
     const auto& V = SVDbase.matrixV();
 
-    // Use the SVD result directly.
-    //
-    // Note that spatial inversions (i.e., mirror flips) are permitted this way.
-    //auto A = U * V.transpose();
+    // Handle mirroring.
+    Eigen::Matrix3d A;
+    if(params.permit_mirroring){
+        // Use the SVD result directly.
+        //
+        // Note that spatial inversions (i.e., mirror flips) are permitted this way.
+        A = V * U.transpose();
+    }else{
+        // Disallow spatial inversions, thus restricting solutions to rotations only.
+        const auto s = std::copysign(1.0, ( V * U.transpose() ).determinant() );
+        Eigen::Matrix3d PI;
+        PI << 1.0 , 0.0 , 0.0
+            , 0.0 , 1.0 , 0.0
+            , 0.0 , 0.0 , s;
+        A = V * PI * U.transpose();
+    }
 
-    // Disallow spatial inversions and restrict solutions to rotations only.
-    Eigen::Matrix3d PI;
-    //PI << 1.0 , 0.0 , 0.0,
-    //      0.0 , 1.0 , 0.0,
-    //      0.0 , 0.0 , ( U * V.transpose() ).determinant();
-    //auto A = U * PI * V.transpose();
-    PI << 1.0 , 0.0 , 0.0
-        , 0.0 , 1.0 , 0.0
-        , 0.0 , 0.0 , ( V * U.transpose() ).determinant();
-    auto A = V * PI * U.transpose();
+    // Handle isotropic scaling.
+    //
+    // Note that this scale factor is appropriate regardless of how the transformation is determined.
+    //
+    // See Section 3.3 (page 25) of Gower and Dijksterhuis's "Procrustes problems." Vol. 30. OUP Oxford, 2004.
+    if(params.permit_isotropic_scaling){
+        const auto numer = ( S.transpose() * (A * M) ).trace();
+        const auto denom = ( (A * M).transpose() * (A * M) ).trace();
+        const auto s = numer / denom;
+        FUNCINFO("Isotropic scale factor: " << s);
+        if(!std::isfinite(s)){
+            throw std::runtime_error("Isotropic scaling factor is not finite");
+        }
+        A *= s;
+    }
 
     // --- Combine translation and rotation ---
 
