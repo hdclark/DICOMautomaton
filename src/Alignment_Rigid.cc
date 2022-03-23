@@ -339,6 +339,9 @@ AlignViaOrthogonalProcrustes(const point_set<double> & moving,
     if( stationary.points.empty() ){
         throw std::invalid_argument("Stationary point set does not contain any points");
     }
+    if( moving.points.size() != stationary.points.size() ){
+        throw std::invalid_argument("Moving and stationary point sets differ in number of points");
+    }
 
     // --- Translation ----
 
@@ -372,14 +375,13 @@ AlignViaOrthogonalProcrustes(const point_set<double> & moving,
     auto ST = S.transpose();
     auto MST = M * ST;
 
-    //Eigen::JacobiSVD<Eigen::MatrixXd> SVD(MST, Eigen::ComputeThinU | Eigen::ComputeThinV);
-    //Eigen::SVDBase<Eigen::JacobiSVD<Eigen::MatrixXd>> SVD(MST, Eigen::ComputeFullU | Eigen::ComputeFullV );
-    //if(SVD.info() != Eigen::ComputationInfo::Success){
-    //    throw std::runtime_error("SVD computation failed");
-    //}
-    Eigen::JacobiSVD<Eigen::MatrixXd> SVD(MST, Eigen::ComputeFullU | Eigen::ComputeFullV );
-    auto U = SVD.matrixU();
-    const auto& V = SVD.matrixV();
+    Eigen::JacobiSVD<Eigen::MatrixXd> SVD;
+    auto& SVDbase = SVD.compute(MST, Eigen::ComputeFullU | Eigen::ComputeFullV );
+    if(SVDbase.info() != Eigen::ComputationInfo::Success){
+        throw std::runtime_error("SVD computation failed");
+    }
+    auto U = SVDbase.matrixU();
+    const auto& V = SVDbase.matrixV();
 
     // Use the SVD result directly.
     //
