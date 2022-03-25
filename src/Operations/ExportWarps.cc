@@ -32,6 +32,7 @@
 #include "../Alignment_Field.h"
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
+#include "../Transformation_File_Loader.h"
 
 #include "ExportWarps.h"
 
@@ -59,8 +60,8 @@ OperationDoc OpArgDocExportWarps(){
     out.args.back().default_val = "";
     out.args.back().expected = true;
     out.args.back().examples = { "transformation.trans",
-                                 "trans.txt",
-                                 "/path/to/some/trans.txt" };
+                                 "affine.trans",
+                                 "/path/to/some/mapping.trans" };
     out.args.back().mimetype = "text/plain";
 
     return out;
@@ -95,38 +96,9 @@ bool ExportWarps(Drover &DICOM_data,
             FN = Get_Unique_Sequential_Filename("/tmp/dcma_export_warps_", 6, ".trans");
         }
         std::fstream FO(FN, std::fstream::out);
-
-        std::visit([&](auto && t){
-            using V = std::decay_t<decltype(t)>;
-            if constexpr (std::is_same_v<V, std::monostate>){
-                throw std::invalid_argument("Transformation is invalid. Unable to continue.");
-
-            // Affine transformations.
-            }else if constexpr (std::is_same_v<V, affine_transform<double>>){
-                FUNCINFO("Exporting affine transformation now");
-                if(!(t.write_to(FO))){
-                    std::runtime_error("Unable to write to file. Cannot continue.");
-                }
-
-            // Thin-plate spline transformations.
-            }else if constexpr (std::is_same_v<V, thin_plate_spline>){
-                FUNCINFO("Exporting thin-plate spline transformation now");
-                if(!(t.write_to(FO))){
-                    std::runtime_error("Unable to write to file. Cannot continue.");
-                }
-
-            // Vector deformation fields.
-            }else if constexpr (std::is_same_v<V, deformation_field>){
-                FUNCINFO("Exporting vector deformation field now");
-                if(!(t.write_to(FO))){
-                    std::runtime_error("Unable to write to file. Cannot continue.");
-                }
-
-            }else{
-                static_assert(std::is_same_v<V,void>, "Transformation not understood.");
-            }
-            return;
-        }, (*t3p_it)->transform);
+        if(!WriteTransform3(*(*t3p_it), FO)){
+             std::runtime_error("Unable to write to file. Cannot continue.");
+        }
     }
  
     return true;

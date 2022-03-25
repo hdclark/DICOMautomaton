@@ -124,6 +124,9 @@ set_target_properties(  PLY_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE
 add_library(            Line_Sample_File_Loader_obj OBJECT Line_Sample_File_Loader.cc )
 set_target_properties(  Line_Sample_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            Transformation_File_Loader_obj OBJECT Transformation_File_Loader.cc )
+set_target_properties(  Transformation_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Boost_Serialization_File_Loader_obj OBJECT Boost_Serialization_File_Loader.cc 
                                                                    StructsIOBoostSerialization.h )
 set_target_properties(  Boost_Serialization_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -375,6 +378,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:OBJ_File_Loader_obj>
     $<TARGET_OBJECTS:PLY_File_Loader_obj>
     $<TARGET_OBJECTS:Line_Sample_File_Loader_obj>
+    $<TARGET_OBJECTS:Transformation_File_Loader_obj>
     $<TARGET_OBJECTS:Script_Loader_obj>
     $<TARGET_OBJECTS:Standard_Scripts_obj>
     $<TARGET_OBJECTS:Write_File_obj>
@@ -464,6 +468,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:OBJ_File_Loader_obj>
         $<TARGET_OBJECTS:PLY_File_Loader_obj>
         $<TARGET_OBJECTS:Line_Sample_File_Loader_obj>
+        $<TARGET_OBJECTS:Transformation_File_Loader_obj>
         $<TARGET_OBJECTS:Script_Loader_obj>
         $<TARGET_OBJECTS:Standard_Scripts_obj>
         $<TARGET_OBJECTS:Write_File_obj>

@@ -32,6 +32,7 @@
 #include "PLY_File_Loader.h"
 #include "3ddose_File_Loader.h"
 #include "Line_Sample_File_Loader.h"
+#include "Transformation_File_Loader.h"
 #include "TAR_File_Loader.h"
 #include "DVH_File_Loader.h"
 #include "CSV_File_Loader.h"
@@ -224,6 +225,18 @@ Load_Files( Drover &DICOM_data,
             if(!p.empty()
             && !Load_From_XYZ_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
                 FUNCWARN("Failed to load XYZ file");
+                return false;
+            }
+            return true;
+        }});
+
+        //Standalone file loading: transformation files.
+        //
+        // Note: this file can be confused with many other formats, so it should be near the end.
+        loaders.emplace_back(file_loader_t{{".trans", ".txt"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
+            if(!p.empty()
+            && !Load_Transforms_From_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
+                FUNCWARN("Failed to load transformation file");
                 return false;
             }
             return true;
