@@ -21,6 +21,7 @@ class deformation_field {
     public:
         // Constructor.
         deformation_field() = delete; // Ensures field always valid -- use optional for empty transform.
+        deformation_field(std::istream &is); // Defers to read_from(), but throws on errors.
         deformation_field(planar_image_collection<double,double> &&);
 
         // Re-constructor.

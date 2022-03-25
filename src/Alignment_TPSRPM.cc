@@ -37,6 +37,11 @@
 #include "Alignment_Rigid.h"
 #include "Alignment_TPSRPM.h"
 
+thin_plate_spline::thin_plate_spline(std::istream &is){
+    if(!this->read_from(is)){
+        throw std::invalid_argument("Input not understood, refusing to contruct empty TPS");
+    }
+}
 
 thin_plate_spline::thin_plate_spline(const point_set<double> &ps,
                                      long int k_dim){

@@ -20,6 +20,7 @@ class thin_plate_spline {
         // Constructor.
         //
         thin_plate_spline() = delete;
+        thin_plate_spline(std::istream &is); // Defers to read_from(), but throws on errors.
         thin_plate_spline(const point_set<double> &ps,     // Requires moving points, not stationary points.
                           long int kernel_dimension = 2L); // 2 seems to work best, even in 3D.
 

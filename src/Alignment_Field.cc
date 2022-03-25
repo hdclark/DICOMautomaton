@@ -30,6 +30,12 @@
 #include "Alignment_Field.h"
 
 
+deformation_field::deformation_field(std::istream &is){
+    if(!this->read_from(is)){
+        throw std::invalid_argument("Input not understood, refusing to contruct empty field");
+    }
+}
+
 deformation_field::deformation_field(planar_image_collection<double,double> &&in){
     this->swap_and_rebuild(in);
 }
