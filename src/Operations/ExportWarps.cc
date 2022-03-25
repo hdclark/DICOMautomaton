@@ -41,7 +41,11 @@ OperationDoc OpArgDocExportWarps(){
     out.name = "ExportWarps";
 
     out.desc = 
-        "This operation exports a transform object (e.g., affine matrix, vector deformation field) to file.";
+        "This operation exports a transform object (e.g., affine matrix, TPS, vector deformation field) to file.";
+
+    out.notes.emplace_back(
+        "Written files include all available metadata. Unprintable characters are transparently base-64 encoded."
+    );
         
     out.args.emplace_back();
     out.args.back() = T3WhitelistOpArgDoc();
@@ -55,7 +59,6 @@ OperationDoc OpArgDocExportWarps(){
     out.args.back().name = "Filename";
     out.args.back().desc = "The filename (or full path name) to which the transformation should be written."
                            " Existing files will be overwritten."
-                           " The file format is a 4x4 Affine matrix."
                            " If no name is given, a unique name will be chosen automatically.";
     out.args.back().default_val = "";
     out.args.back().expected = true;
@@ -95,7 +98,9 @@ bool ExportWarps(Drover &DICOM_data,
         if(FN.empty()){
             FN = Get_Unique_Sequential_Filename("/tmp/dcma_export_warps_", 6, ".trans");
         }
-        std::fstream FO(FN, std::fstream::out);
+
+        const auto FN_path = std::filesystem::path(FN).replace_extension(".trans");
+        std::fstream FO(FN_path, std::fstream::out);
         if(!WriteTransform3(*(*t3p_it), FO)){
              std::runtime_error("Unable to write to file. Cannot continue.");
         }
