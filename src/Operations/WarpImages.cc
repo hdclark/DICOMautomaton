@@ -1,4 +1,4 @@
-//WarpImages.cc - A part of DICOMautomaton 2021. Written by hal clark.
+//WarpImages.cc - A part of DICOMautomaton 2022. Written by hal clark.
 
 #include <asio.hpp>
 #include <algorithm>
@@ -28,6 +28,10 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
+#include "../Metadata.h"
+
+#include "../YgorImages_Functors/Grouping/Misc_Functors.h"
+#include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
 
 #include "../Alignment_Rigid.h"
 #include "../Alignment_TPSRPM.h"
@@ -47,7 +51,7 @@ OperationDoc OpArgDocWarpImages(){
         " Transforms can be generated via registration or by parsing user-provided functions."
     );
     out.notes.emplace_back(
-        "Images are transformed in-place. Metadata may become invalid by this operation."
+        "Image metadata may become invalidated by this operation."
     );
     out.notes.emplace_back(
         "This operation can only handle individual transforms. If multiple, sequential transforms"
@@ -68,11 +72,92 @@ OperationDoc OpArgDocWarpImages(){
     out.args.back() = IAWhitelistOpArgDoc();
     out.args.back().name = "ImageSelection";
     out.args.back().default_val = "last";
+    out.args.back().desc = "The image array that will be transformed or sampled. "
+                           "Voxel intensities from ImageSelection will be retain, but possibly resampled. "
+                         + out.args.back().desc;
+
+
+    out.args.emplace_back();
+    out.args.back() = IAWhitelistOpArgDoc();
+    out.args.back().name = "ReferenceImageSelection";
+    out.args.back().default_val = "first";
+    out.args.back().desc = "The image array that will be copied and voxel values overwritten. "
+                           "The ImageSelection will inherit geometry from the ReferenceImageSelection. "
+                         + out.args.back().desc;
+
 
     out.args.emplace_back();
     out.args.back() = T3WhitelistOpArgDoc();
     out.args.back().name = "TransformSelection";
     out.args.back().default_val = "last";
+    out.args.back().desc = "Transformations to be applied to the ImageSelection array. "
+                         + out.args.back().desc;
+
+
+    out.args.emplace_back();
+    out.args.back() = NCWhitelistOpArgDoc();
+    out.args.back().name = "NormalizedROILabelRegex";
+    out.args.back().default_val = ".*";
+    out.args.back().desc = "Contours on the ReferenceImageSelection images that limit resampling. "
+                         + out.args.back().desc;
+
+
+    out.args.emplace_back();
+    out.args.back() = RCWhitelistOpArgDoc();
+    out.args.back().name = "ROILabelRegex";
+    out.args.back().default_val = ".*";
+    out.args.back().desc = "Contours on the ReferenceImageSelection images that limit resampling. "
+                         + out.args.back().desc;
+
+
+    out.args.emplace_back();
+    out.args.back().name = "ContourOverlap";
+    out.args.back().desc = "Controls overlapping contours are treated."
+                           " The default 'ignore' treats overlapping contours as a single contour, regardless of"
+                           " contour orientation. This will effectively honour only the outermost contour regardless of"
+                           " orientation, but provides the most predictable and consistent results."
+                           " The option 'honour_opposite_orientations' makes overlapping contours"
+                           " with opposite orientation cancel. Otherwise, orientation is ignored. This is useful"
+                           " for Boolean structures where contour orientation is significant for interior contours (holes)."
+                           " If contours do not have consistent overlap (e.g., if contours intersect) the results"
+                           " can be unpredictable and hard to interpret."
+                           " The option 'overlapping_contours_cancel' ignores orientation and alternately cancerls"
+                           " all overlapping contours."
+                           " Again, if the contours do not have consistent overlap (e.g., if contours intersect) the results"
+                           " can be unpredictable and hard to interpret.";
+    out.args.back().default_val = "ignore";
+    out.args.back().expected = true;
+    out.args.back().examples = { "ignore", "honour_opposite_orientations", 
+                            "overlapping_contours_cancel", "honour_opps", "overlap_cancel" }; 
+    out.args.back().samples = OpArgSamples::Exhaustive;
+
+
+    out.args.emplace_back();
+    out.args.back().name = "Inclusivity";
+    out.args.back().desc = "Controls how voxels are deemed to be 'within' the interior of the selected ROI(s)."
+                           " The default 'center' considers only the central-most point of each voxel."
+                           " There are two corner options that correspond to a 2D projection of the voxel onto the image plane."
+                           " The first, 'planar_corner_inclusive', considers a voxel interior if ANY corner is interior."
+                           " The second, 'planar_corner_exclusive', considers a voxel interior if ALL (four) corners are interior.";
+    out.args.back().default_val = "center";
+    out.args.back().expected = true;
+    out.args.back().examples = { "center", "centre", 
+                                 "planar_corner_inclusive", "planar_inc",
+                                 "planar_corner_exclusive", "planar_exc" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
+
+
+    out.args.emplace_back();
+    out.args.back().name = "Channel";
+    out.args.back().desc = "The channel to use (zero-based)."
+                           " Setting to -1 will use each channel separately."
+                           " Note that both images sets will share this specifier.";
+    out.args.back().default_val = "0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "-1",
+                                 "0",
+                                 "1",
+                                 "2" };
  
     return out;
 }
@@ -85,14 +170,58 @@ bool WarpImages(Drover &DICOM_data,
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
+    const auto ReferenceImageSelectionStr = OptArgs.getValueStr("ReferenceImageSelection").value();
 
     const auto TFormSelectionStr = OptArgs.getValueStr("TransformSelection").value();
 
+    const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
+    const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
+    const auto InclusivityStr = OptArgs.getValueStr("Inclusivity").value();
+    const auto ContourOverlapStr = OptArgs.getValueStr("ContourOverlap").value();
+
+    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+
+    const float InaccessibleValue = 0.0;
+
     //-----------------------------------------------------------------------------------------------------------------
+    const auto regex_centre = Compile_Regex("^ce?n?t?[re]?[er]?");
+    const auto regex_pci = Compile_Regex("^pl?a?n?a?r?[_-]?c?o?r?n?e?r?s?[_-]?inc?l?u?s?i?v?e?$");
+    const auto regex_pce = Compile_Regex("^pl?a?n?a?r?[_-]?c?o?r?n?e?r?s?[_-]?exc?l?u?s?i?v?e?$");
+
+    const auto regex_ignore = Compile_Regex("^ig?n?o?r?e?$");
+    const auto regex_honopps = Compile_Regex("^ho?n?o?u?r?_?o?p?p?o?s?i?t?e?[_-]?o?r?i?e?n?t?a?t?i?o?n?s?$");
+    const auto regex_cancel = Compile_Regex("^ov?e?r?l?a?p?p?i?n?g?[_-]?c?o?n?t?o?u?r?s?[_-]?c?a?n?c?e?l?s?$");
+
+    const bool contour_overlap_ignore  = std::regex_match(ContourOverlapStr, regex_ignore);
+    const bool contour_overlap_honopps = std::regex_match(ContourOverlapStr, regex_honopps);
+    const bool contour_overlap_cancel  = std::regex_match(ContourOverlapStr, regex_cancel);
+
+
+    //Stuff references to all contours into a list. Remember that you can still address specific contours through
+    // the original holding containers (which are not modified here).
+    auto cc_all = All_CCs( DICOM_data );
+    auto cc_ROIs = Whitelist( cc_all, { { "ROIName", ROILabelRegex },
+                                        { "NormalizedROIName", NormalizedROILabelRegex } } );
+    if(cc_ROIs.empty()){
+        throw std::invalid_argument("No contours selected. Cannot continue.");
+    }
 
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+    if(IAs.size() != 1){
+        throw std::invalid_argument("Only one image array can be specified.");
+    }
     FUNCINFO("Selected " << IAs.size() << " image arrays");
+
+
+    auto RIAs_all = All_IAs( DICOM_data );
+    auto RIAs = Whitelist( RIAs_all, ReferenceImageSelectionStr );
+    if(RIAs.size() != 1){
+        throw std::invalid_argument("Only one reference image collection can be specified.");
+    }
+    std::list<std::reference_wrapper<planar_image_collection<float, double>>> RIARL = { std::ref( (*( RIAs.front() ))->imagecoll ) };
+    FUNCINFO("Selected " << RIAs.size() << " reference image arrays");
+
 
     auto T3s_all = All_T3s( DICOM_data );
     auto T3s = Whitelist( T3s_all, TFormSelectionStr );
@@ -102,20 +231,8 @@ bool WarpImages(Drover &DICOM_data,
         throw std::invalid_argument("Selection of only a single transformation is currently supported. Refusing to continue.");
     }
 
-
-    for(auto & iap_it : IAs){
-        for(auto & t3p_it : T3s){
-
-            std::visit([&](auto && t){
-                using V = std::decay_t<decltype(t)>;
-                if constexpr (std::is_same_v<V, std::monostate>){
-                    throw std::invalid_argument("Transformation is invalid. Unable to continue.");
-
-                // Affine transformations.
-                }else if constexpr (std::is_same_v<V, affine_transform<double>>){
-                    FUNCINFO("Applying affine transformation now");
-
-                    for(auto & animg : (*iap_it)->imagecoll.images){
+/*
+// Apply a rigid transformation to the position and orientation of an image without resampling.
 
                         // We have to decompose the orientation vectors from the position vectors, since the orientation
                         // vectors can only be operated on by the rotational part of the Affine transform.
@@ -159,33 +276,186 @@ bool WarpImages(Drover &DICOM_data,
                                             new_pxl_dz,
                                             animg.anchor, // Anchor is tied to the underlying space, not a specific object.
                                             new_offset );
+*/
+
+
+    for(auto & iap_it : IAs){
+        // Build an index to interpolate the ImageSelection.
+        {
+            std::list<std::reference_wrapper<planar_image<float,double>>> selected_imgs;
+            for(auto & iap_it : IAs){
+                for(auto &img : (*iap_it)->imagecoll.images){
+                    if( (0 <= Channel)
+                    &&  (img.channels <= Channel) ){
+                        throw std::invalid_argument("Encountered image without requested channel");
                     }
+                    selected_imgs.push_back( std::ref(img) );
+                }
+            }
+            if(selected_imgs.empty()){
+                throw std::invalid_argument("No valid reference images selected. Cannot continue");
+            }
+            if(!Images_Form_Rectilinear_Grid(selected_imgs)){
+                throw std::invalid_argument("Reference images do not form a rectilinear grid. Cannot continue");
+            }
+        }
+        if((*iap_it)->imagecoll.images.empty()){
+            throw std::logic_error("Provide better image orientation sampler");
+        }
+        const auto row_unit = (*iap_it)->imagecoll.images.front().row_unit.unit();
+        const auto col_unit = (*iap_it)->imagecoll.images.front().col_unit.unit();
+        const auto img_unit = col_unit.Cross(row_unit).unit();
+
+        planar_image_adjacency<float,double> img_adj( {}, { { std::ref((*iap_it)->imagecoll) } }, img_unit );
+        if(img_adj.int_to_img.empty()){
+            throw std::invalid_argument("Reference image array (kernel) contained no images. Cannot continue.");
+        }
+
+        const auto ia_cm = (*iap_it)->imagecoll.get_common_metadata({});
+
+        for(auto & t3p_it : T3s){
+            // Invert the transformation, if possible.
+            Transform3 t_inv;
+            //std::optional<affine_transform<double>> t_inv;
+
+            FUNCINFO("Inverting affine transformation now");
+            std::visit([&](auto && t){
+                using V = std::decay_t<decltype(t)>;
+                if constexpr (std::is_same_v<V, std::monostate>){
+                    throw std::invalid_argument("Transformation is invalid. Unable to continue.");
+
+                // Affine transformations.
+                }else if constexpr (std::is_same_v<V, affine_transform<double>>){
+                    t_inv.transform = t.invert();
 
                 // Thin-plate spline transformations.
                 }else if constexpr (std::is_same_v<V, thin_plate_spline>){
-                    FUNCINFO("Applying thin-plate spline transformation now");
-
-                    throw std::invalid_argument("TPS transformations are not yet supported for images. Unable to continue.");
-                    // This will require voxels to be resampled, and may even require inverting the transform. TODO.
-                    // Note: can probably convert TPS to deformation grid and re-use the deformation field machinery.
+                    throw std::invalid_argument("Inverting TPS transformations is not yet supported. Unable to continue.");
 
                 // Deformation field transformations.
                 }else if constexpr (std::is_same_v<V, deformation_field>){
-                    FUNCINFO("Applying deformation field transformation now");
-
-                    throw std::invalid_argument("Not yet supported. Unable to continue.");
+                    throw std::invalid_argument("Inverting a deformation field is not yet supported. Unable to continue.");
 
                 }else{
                     static_assert(std::is_same_v<V,void>, "Transformation not understood.");
                 }
                 return;
-            }, (*t3p_it)->transform);
-        }
+            }, (*t3p_it)->transform );
+            
+            if(std::holds_alternative<std::monostate>( t_inv.transform )){
+                throw std::runtime_error("Unable to invert transformation. Unable to continue.");
+            }
 
-        // TODO: re-compute image metadata to reflect the transformation.
-        //
-        // Note: This should be a standalone function that operates on an Image_Array or equivalent.
-        //       It should re-compute afresh all metadata using the current planar_image data members.
+            // Process the image.
+            for(auto & riap_it : RIAs){
+
+                // Prepare a common metadata for the resampled images.
+                auto l_meta = coalesce_metadata_for_basic_image(ia_cm);
+
+                auto ria_cm = (*riap_it)->imagecoll.get_common_metadata({});
+                ria_cm = coalesce_metadata_for_basic_image(ria_cm);
+                const auto frameUID_opt = get_as<std::string>(ria_cm, "FrameOfReferenceUID");
+                if(!frameUID_opt){
+                    throw std::logic_error("Expected FrameOfReferenceUID to be present");
+                }
+                l_meta["FrameOfReferenceUID"] = frameUID_opt.value();
+
+
+                // Copy the reference image array as a geometry placeholder for the sampling.
+                auto edit_ia_ptr = std::make_shared<Image_Array>( *(*riap_it) );
+
+                // Inherit the original image metadata, but update to the new frame UID.
+                for(auto& rimg : edit_ia_ptr->imagecoll.images){
+                    l_meta = coalesce_metadata_for_basic_image(l_meta, meta_evolve::iterate);
+                    rimg.metadata = l_meta;
+                }
+
+                PartitionedImageVoxelVisitorMutatorUserData ud;
+                ud.mutation_opts.editstyle = Mutate_Voxels_Opts::EditStyle::InPlace;
+                ud.mutation_opts.aggregate = Mutate_Voxels_Opts::Aggregate::First;
+                ud.mutation_opts.adjacency = Mutate_Voxels_Opts::Adjacency::SingleVoxel;
+                ud.mutation_opts.maskmod   = Mutate_Voxels_Opts::MaskMod::Noop;
+                ud.description = "Warped";
+
+                if( contour_overlap_ignore ){
+                    ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
+                }else if( contour_overlap_honopps ){
+                    ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::HonourOppositeOrientations;
+                }else if( contour_overlap_cancel ){
+                    ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::ImplicitOrientations;
+                }else{
+                    throw std::invalid_argument("ContourOverlap argument '"_s + ContourOverlapStr + "' is not valid");
+                }
+                if( std::regex_match(InclusivityStr, regex_centre) ){
+                    ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
+                }else if( std::regex_match(InclusivityStr, regex_pci) ){
+                    ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Inclusive;
+                }else if( std::regex_match(InclusivityStr, regex_pce) ){
+                    ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Exclusive;
+                }else{
+                    throw std::invalid_argument("Inclusivity argument '"_s + InclusivityStr + "' is not valid");
+                }
+
+                Mutate_Voxels_Functor<float,double> f_noop;
+                ud.f_bounded = f_noop;
+                ud.f_unbounded = f_noop;
+                ud.f_visitor = f_noop;
+
+                ud.f_bounded = [&](long int row, long int col, long int chan,
+                                   std::reference_wrapper<planar_image<float,double>> img_refw,
+                                   std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
+                                   float &voxel_val) {
+                    if( (Channel < 0) || (Channel == chan) ){
+                        // Get position of this voxel.
+                        const auto ref_p = img_refw.get().position(row, col);
+
+                        // Apply inverse transform to get corresponding position in un-warped image array.
+                        auto corr_p = ref_p;
+                        std::visit([&](auto && t){
+                            using V = std::decay_t<decltype(t)>;
+                            if constexpr (std::is_same_v<V, std::monostate>){
+                                throw std::invalid_argument("Transformation is invalid. Unable to continue.");
+
+                            // Affine transformations.
+                            }else if constexpr (std::is_same_v<V, affine_transform<double>>){
+                                t.apply_to(corr_p);
+
+                            // Thin-plate spline transformations.
+                            }else if constexpr (std::is_same_v<V, thin_plate_spline>){
+                                throw std::invalid_argument("Inverting TPS transformations is not yet supported. Unable to continue.");
+
+                            // Deformation field transformations.
+                            }else if constexpr (std::is_same_v<V, deformation_field>){
+                                throw std::invalid_argument("Inverting a deformation field is not yet supported. Unable to continue.");
+
+                            }else{
+                                static_assert(std::is_same_v<V,void>, "Transformation not understood.");
+                            }
+                            return;
+                        }, t_inv.transform );
+
+                        // Interpolate the un-transformed image array.
+                        const auto interp_val = img_adj.trilinearly_interpolate(corr_p, chan, InaccessibleValue);
+
+                        voxel_val = interp_val;
+                    }
+                };
+
+                // Optionally fill voxels with a 'background' intensity.
+                //ud.f_unbounded = ...    TODO?
+
+                if(!edit_ia_ptr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
+                                                                    PartitionedImageVoxelVisitorMutator,
+                                                                    {}, cc_ROIs, &ud )){
+                    throw std::runtime_error("Unable to warp image array");
+                }
+
+                // Insert the image into the Drover class.
+                //DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );
+                DICOM_data.image_data.emplace_back( edit_ia_ptr );
+
+            }
+        }
     }
 
     return true;
