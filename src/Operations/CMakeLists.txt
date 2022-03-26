@@ -148,6 +148,7 @@ add_library(Operations_objs OBJECT
     RankPixels.cc
     ReduceNeighbourhood.cc
     Repeat.cc
+    RigidWarpImages.cc
     ScalePixels.cc
     SelectSlicesIntersectingROI.cc
     SimplifyContours.cc

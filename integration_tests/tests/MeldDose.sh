@@ -49,7 +49,7 @@ printf 'Test 3\n' |
   -o GenerateVirtualDataDoseStairsV1 \
   -o GenerateWarp \
      -p Transforms='translate(0.001, 0.001, 0.001)' \
-  -o WarpImages \
+  -o RigidWarpImages \
      -p ImageSelection=last \
      -p TransformSelection=last \
   -o MeldDose \

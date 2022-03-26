@@ -15,7 +15,7 @@ printf 'Test 1\n' |
   -o GenerateVirtualDataDoseStairsV1 \
   -o GenerateWarp \
      -p Transforms='translate(0.0, 0.0, 0.0) ; rotate(109.5, 109.5, 100.0,  0.0, 0.0, 1.0,  0.0) ; scale(109.5, 109.5, 100.0,  1.0)' \
-  -o WarpImages \
+  -o RigidWarpImages \
      -p ImageSelection=last \
      -p TransformSelection=last \
   -o MeldDose \
@@ -38,7 +38,7 @@ printf 'Test 2\n' |
   -o GenerateVirtualDataDoseStairsV1 \
   -o GenerateWarp \
      -p Transforms='translate( 10.0, 0.0, 0.0 ); translate( 5.0, 10.0, 0.0 ); translate( 0.0, 5.0, 10.0 ); translate( 0.0, 0.0, 5.0 ); translate( -15.0, -15.0, -15.0 )' \
-  -o WarpImages \
+  -o RigidWarpImages \
      -p ImageSelection=last \
      -p TransformSelection=last \
   -o MeldDose \
@@ -62,7 +62,7 @@ printf 'Test 3\n' |
   -o GenerateVirtualDataDoseStairsV1 \
   -o GenerateWarp \
      -p Transforms='mirror(109.5,109.5,100, 1,0,0); mirror(109.5,109.5,100, 0,1,0)' \
-  -o WarpImages \
+  -o RigidWarpImages \
      -p ImageSelection=last \
      -p TransformSelection=last \
   -o MeldDose \
@@ -86,7 +86,7 @@ printf 'Test 4\n' |
   -o GenerateVirtualDataDoseStairsV1 \
   -o GenerateWarp \
      -p Transforms='rotate(109.5, 109.5, 100.0,  0.0, 0.0, 1.0,  3.14159265)' \
-  -o WarpImages \
+  -o RigidWarpImages \
      -p ImageSelection=last \
      -p TransformSelection=last \
   -o MeldDose \
@@ -110,7 +110,7 @@ printf 'Test 5\n' |
   -o GenerateVirtualDataDoseStairsV1 \
   -o GenerateWarp \
      -p Transforms='rotate(109.5, 109.5, 100.0,  0.0, 0.0, 1.0,  6.2831853)' \
-  -o WarpImages \
+  -o RigidWarpImages \
      -p ImageSelection=last \
      -p TransformSelection=last \
   -o MeldDose \
@@ -129,7 +129,7 @@ printf 'Test 6\n' |
   -o GenerateVirtualDataDoseStairsV1 \
   -o GenerateWarp \
      -p Transforms='rotate(109.5, 109.5, 100.0,  0.0, 0.0, 1.0,  3.14159265); rotate(109.5, 109.5, 100.0,  0.0, 0.0, -1.0,  -3.14159265)' \
-  -o WarpImages \
+  -o RigidWarpImages \
      -p ImageSelection=last \
      -p TransformSelection=last \
   -o MeldDose \
@@ -153,7 +153,7 @@ printf 'Test 7\n' |
   -o GenerateVirtualDataDoseStairsV1 \
   -o GenerateWarp \
      -p Transforms='scale(0.0, 0.0, 0.0, 2.0) ; scale(0.0, 0.0, 0.0, 0.5)' \
-  -o WarpImages \
+  -o RigidWarpImages \
      -p ImageSelection=last \
      -p TransformSelection=last \
   -o MeldDose \

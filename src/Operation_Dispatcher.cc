@@ -168,6 +168,7 @@
 #include "Operations/RankPixels.h"
 #include "Operations/ReduceNeighbourhood.h"
 #include "Operations/Repeat.h"
+#include "Operations/RigidWarpImages.h"
 #include "Operations/ScalePixels.h"
 #include "Operations/SelectSlicesIntersectingROI.h"
 #include "Operations/SimplifyContours.h"
@@ -390,6 +391,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["RankPixels"] = std::make_pair(OpArgDocRankPixels, RankPixels);
     out["ReduceNeighbourhood"] = std::make_pair(OpArgDocReduceNeighbourhood, ReduceNeighbourhood);
     out["Repeat"] = std::make_pair(OpArgDocRepeat, Repeat);
+    out["RigidWarpImages"] = std::make_pair(OpArgDocRigidWarpImages, RigidWarpImages);
     out["ScalePixels"] = std::make_pair(OpArgDocScalePixels, ScalePixels);
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);
     out["SimplifyContours"] = std::make_pair(OpArgDocSimplifyContours, SimplifyContours);
