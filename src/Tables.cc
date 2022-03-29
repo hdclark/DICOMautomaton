@@ -104,7 +104,7 @@ table2::table2(){};
 std::pair<int64_t, int64_t>
 table2::min_max_row() const {
     int64_t min = std::numeric_limits<int64_t>::max();
-    int64_t max = std::numeric_limits<int64_t>::min();
+    int64_t max = std::numeric_limits<int64_t>::lowest();
     if(const auto it = std::rbegin(this->data); it != std::rend(this->data)){
         max = it->get_row();
     }
@@ -120,7 +120,7 @@ table2::min_max_row() const {
 std::pair<int64_t, int64_t>
 table2::min_max_col() const {
     int64_t min = std::numeric_limits<int64_t>::max();
-    int64_t max = std::numeric_limits<int64_t>::min();
+    int64_t max = std::numeric_limits<int64_t>::lowest();
 
     for(const auto& c : this->data){
         const auto col = c.get_col();

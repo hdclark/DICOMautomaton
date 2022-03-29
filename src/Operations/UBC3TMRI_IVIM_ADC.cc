@@ -62,7 +62,7 @@ bool UBC3TMRI_IVIM_ADC(Drover &DICOM_data,
         auto TimeCourseSlopeMapAllTime = std::bind(TimeCourseSlopeMap, 
                                                    std::placeholders::_1, std::placeholders::_2, 
                                                    std::placeholders::_3, std::placeholders::_4,
-                                                   std::numeric_limits<double>::min(), std::numeric_limits<double>::max(),
+                                                   std::numeric_limits<double>::lowest(), std::numeric_limits<double>::max(),
                                                    std::placeholders::_5);
         for(auto & img_arr : adc_map_img_arrays){
             DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>( *img_arr ) );

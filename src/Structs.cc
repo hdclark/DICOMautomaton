@@ -818,7 +818,7 @@ Dynamic_Machine_State::interpolate(double CumulativeMetersetWeight) const {
     // Blend the measurements.
     out = *lb_it; // Allocates vectors appropriately. Also provides metadata.
     out.CumulativeMetersetWeight = CumulativeMetersetWeight;
-    out.ControlPointIndex = std::numeric_limits<long int>::min();
+    out.ControlPointIndex = std::numeric_limits<long int>::lowest();
 
     out.GantryAngle = lb_it->GantryAngle * x + ub_it->GantryAngle * (1.0 - x);
     out.GantryRotationDirection = lb_it->GantryRotationDirection * x + ub_it->GantryRotationDirection * (1.0 - x);

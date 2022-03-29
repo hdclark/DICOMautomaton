@@ -1480,7 +1480,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 //const auto highest = Stats::Percentile(img.data, 0.99);
 
                 const auto pixel_type_max = static_cast<double>(std::numeric_limits<pixel_value_t>::max());
-                const auto pixel_type_min = static_cast<double>(std::numeric_limits<pixel_value_t>::min());
+                const auto pixel_type_min = static_cast<double>(std::numeric_limits<pixel_value_t>::lowest());
                 const auto dest_type_max = static_cast<double>(std::numeric_limits<uint8_t>::max()); //Min is implicitly 0.
 
                 const double clamped_low  = static_cast<double>(lowest )/pixel_type_max;
@@ -1890,7 +1890,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                               //( disp_img_it->sandwiches_point_within_top_bottom_planes(c.Average_Point())
                               disp_img_it->sandwiches_point_within_top_bottom_planes(c.points.front())
                               || disp_img_it->encompasses_any_of_contour_of_points(c)
-                              || ( disp_img_it->pxl_dz <= std::numeric_limits<double>::min() ) // Permit contours on purely 2D images.
+                              || ( disp_img_it->pxl_dz <= std::numeric_limits<double>::lowest() ) // Permit contours on purely 2D images.
                            ) ){
 
                             // If the contour epoch has moved on, this thread is futile. Terminate ASAP.

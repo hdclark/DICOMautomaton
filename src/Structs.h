@@ -179,7 +179,7 @@ class Static_Machine_State {
     public:
 
         double CumulativeMetersetWeight             = std::numeric_limits<double>::quiet_NaN();
-        long int ControlPointIndex                  = std::numeric_limits<long int>::min();
+        long int ControlPointIndex                  = std::numeric_limits<long int>::lowest();
 
         double GantryAngle                          = std::numeric_limits<double>::quiet_NaN();
         double GantryRotationDirection              = std::numeric_limits<double>::quiet_NaN();

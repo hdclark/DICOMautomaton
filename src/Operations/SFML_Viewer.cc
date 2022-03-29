@@ -395,7 +395,7 @@ bool SFML_Viewer(Drover &DICOM_data,
             //const auto highest = Stats::Percentile(img_it->data, 0.99);
 
             const auto pixel_type_max = static_cast<double>(std::numeric_limits<pixel_value_t>::max());
-            const auto pixel_type_min = static_cast<double>(std::numeric_limits<pixel_value_t>::min());
+            const auto pixel_type_min = static_cast<double>(std::numeric_limits<pixel_value_t>::lowest());
             const auto dest_type_max = static_cast<double>(std::numeric_limits<uint8_t>::max()); //Min is implicitly 0.
 
             const double clamped_low  = static_cast<double>(lowest )/pixel_type_max;
@@ -2222,7 +2222,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                           ( disp_img_it->sandwiches_point_within_top_bottom_planes(c.Average_Point())
                             || disp_img_it->encompasses_any_of_contour_of_points(c) )
                           || 
-                          ( disp_img_it->pxl_dz <= std::numeric_limits<double>::min() ) // //Permit contours on purely 2D images.
+                          ( disp_img_it->pxl_dz <= std::numeric_limits<double>::lowest() ) // //Permit contours on purely 2D images.
                        ) ){
                         sf::VertexArray lines;
                         lines.setPrimitiveType(sf::LinesStrip);
@@ -2341,7 +2341,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                       ( disp_img_it->sandwiches_point_within_top_bottom_planes(c.Average_Point())
                         || disp_img_it->encompasses_any_of_contour_of_points(c) )
                       || 
-                      ( disp_img_it->pxl_dz <= std::numeric_limits<double>::min() ) // //Permit contours on purely 2D images.
+                      ( disp_img_it->pxl_dz <= std::numeric_limits<double>::lowest() ) // //Permit contours on purely 2D images.
                    ) ){
                     sf::VertexArray lines;
                     lines.setPrimitiveType(sf::LinesStrip);
@@ -2488,8 +2488,8 @@ bool SFML_Viewer(Drover &DICOM_data,
                 const auto D_H = std::abs(D_MaxH - D_MinH);
                 const auto D_V = std::abs(D_MaxV - D_MinV);
 
-                if(  ( D_H < std::numeric_limits<float>::min() )
-                  || ( D_V < std::numeric_limits<float>::min() ) ){
+                if(  ( D_H < std::numeric_limits<float>::lowest() )
+                  || ( D_V < std::numeric_limits<float>::lowest() ) ){
                     //Too small to plot...
                     plotwindow.clear(sf::Color::Black);
                     break;
