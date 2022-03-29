@@ -3031,7 +3031,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
                     auto N_sfs = static_cast<long int>(script_files.size());
-                    if(ImGui::Button("New", ImVec2(window_extent.x/4, 0))){ 
+                    if(ImGui::Button("New", ImVec2(window_extent.x/5, 0))){ 
                         script_files.emplace_back();
                         script_files.back().altered = true;
                         append_to_script(script_files.back().content, new_script_content);
@@ -3040,13 +3040,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                         N_sfs = static_cast<long int>(script_files.size());
                     }
                     ImGui::SameLine();
-                    if(ImGui::Button("Open", ImVec2(window_extent.x/4, 0))){ 
+                    if(ImGui::Button("Open", ImVec2(window_extent.x/5, 0))){ 
                         if(!loaded_scripts.valid()){
                             loaded_scripts = std::async(std::launch::async, launch_script_open_dialog, open_file_root);
                         }
                     }
                     ImGui::SameLine();
-                    if(ImGui::Button("Save As", ImVec2(window_extent.x/4, 0))){ 
+                    if(ImGui::Button("Save As", ImVec2(window_extent.x/5, 0))){ 
                         if( (N_sfs != 0) 
                         &&  isininc(0, active_script_file, N_sfs-1)){
                             try{
@@ -3070,7 +3070,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         }
                     }
                     ImGui::SameLine();
-                    if(ImGui::Button("Close", ImVec2(window_extent.x/4, 0))){ 
+                    if(ImGui::Button("Close", ImVec2(window_extent.x/5, 0))){ 
                         if( (N_sfs != 0) 
                         &&  isininc(0, active_script_file, N_sfs-1)){
                             script_files.erase( std::next( std::begin( script_files ), active_script_file ) );
@@ -3079,7 +3079,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         }
                     }
 
-                    if(ImGui::Button("Validate", ImVec2(window_extent.x/4, 0))){ 
+                    if(ImGui::Button("Validate", ImVec2(window_extent.x/5, 0))){ 
                         if( (N_sfs != 0) 
                         &&  isininc(0, active_script_file, N_sfs-1)){
                             std::stringstream ss( std::string( std::begin(script_files.at(active_script_file).content),
@@ -3091,7 +3091,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         }
                     }
                     ImGui::SameLine();
-                    if(ImGui::Button("Run", ImVec2(window_extent.x/4, 0))){ 
+                    if(ImGui::Button("Run", ImVec2(window_extent.x/5, 0))){ 
                         if( (N_sfs != 0) 
                         &&  isininc(0, active_script_file, N_sfs-1)){
                             script_files.at(active_script_file).feedback.clear();
