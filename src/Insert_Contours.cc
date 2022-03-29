@@ -55,7 +55,7 @@ void Inject_Thin_Line_Contour( const planar_image<float,double> &animg,
 
     // Ensure they're within the image bounds. (If both are, assume the whole line is; if neither forgo the line?).
     // Note: Contours on purely 2D images are permitted.
-    if( (animg.pxl_dz > std::numeric_limits<double>::lowest())
+    if( (animg.pxl_dz >= std::numeric_limits<double>::min())
     &&  (   !animg.sandwiches_point_within_top_bottom_planes(I0)
          || !animg.sandwiches_point_within_top_bottom_planes(I1) ) ){
         throw std::domain_error("Cannot approximate line with contour: line-image intersections out-of-plane.");

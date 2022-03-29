@@ -346,15 +346,10 @@ bool PresentationImage(Drover &DICOM_data,
             //       around, ensuring there is minimal precision loss).
             using pixel_value_t = decltype(img_it->value(0, 0, 0));
             const auto pixel_minmax_allchnls = img_it->minmax();
-            const auto lowest = std::get<0>(pixel_minmax_allchnls);
-            const auto highest = std::get<1>(pixel_minmax_allchnls);
-
-            const auto pixel_type_max = static_cast<double>(std::numeric_limits<pixel_value_t>::max());
-            const auto pixel_type_min = static_cast<double>(std::numeric_limits<pixel_value_t>::lowest());
-            const auto dest_type_max = static_cast<double>(std::numeric_limits<uint8_t>::max()); //Min is implicitly 0.
-
-            const double clamped_low  = static_cast<double>(lowest )/pixel_type_max;
-            const double clamped_high = static_cast<double>(highest)/pixel_type_max;
+            const auto lowest = static_cast<double>(std::get<0>(pixel_minmax_allchnls));
+            const auto highest = static_cast<double>(std::get<1>(pixel_minmax_allchnls));
+            const auto dest_type_max = static_cast<double>(std::numeric_limits<uint8_t>::max());
+            const auto dest_type_min = static_cast<double>(std::numeric_limits<uint8_t>::lowest());
     
             for(auto i = 0; i < img_cols; ++i){ 
                 for(auto j = 0; j < img_rows; ++j){ 
@@ -362,17 +357,16 @@ bool PresentationImage(Drover &DICOM_data,
                     if(!std::isfinite(val)){
                         animage.setPixel(i,j,NaN_Color);
                     }else{
-                        const double clamped_value = (static_cast<double>(val) - pixel_type_min)/(pixel_type_max - pixel_type_min);
-                        const auto rescaled_value = (clamped_value - clamped_low)/(clamped_high - clamped_low);
+                        const auto rescaled_value = (static_cast<double>(val)/lowest - 1.0)/(highest/lowest - 1.0);
 
                         const auto res = colour_maps[colour_map].second(rescaled_value);
                         const double x_R = res.R;
                         const double x_G = res.G;
                         const double x_B = res.B;
-                        
-                        const auto scaled_R = static_cast<uint8_t>(x_R * dest_type_max);
-                        const auto scaled_G = static_cast<uint8_t>(x_G * dest_type_max);
-                        const auto scaled_B = static_cast<uint8_t>(x_B * dest_type_max);
+                        const auto scaled_R = static_cast<uint8_t>(dest_type_min + x_R * dest_type_max);
+                        const auto scaled_G = static_cast<uint8_t>(dest_type_min + x_G * dest_type_max);
+                        const auto scaled_B = static_cast<uint8_t>(dest_type_min + x_B * dest_type_max);
+
                         animage.setPixel(i,j,sf::Color(scaled_R,scaled_G,scaled_B));
                     }
                 }
@@ -451,7 +445,7 @@ bool PresentationImage(Drover &DICOM_data,
                       ( disp_img_it->sandwiches_point_within_top_bottom_planes(c.Average_Point())
                         || disp_img_it->encompasses_any_of_contour_of_points(c) )
                       || 
-                      ( disp_img_it->pxl_dz <= std::numeric_limits<double>::lowest() ) // //Permit contours on purely 2D images.
+                      ( disp_img_it->pxl_dz <= std::numeric_limits<double>::min() ) // //Permit contours on purely 2D images.
                    ) ){
                     sf::VertexArray lines;
                     lines.setPrimitiveType(sf::LinesStrip);

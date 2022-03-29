@@ -390,16 +390,11 @@ bool SFML_Viewer(Drover &DICOM_data,
             const auto pixel_minmax_allchnls = img_it->minmax();
             const auto lowest = std::get<0>(pixel_minmax_allchnls);
             const auto highest = std::get<1>(pixel_minmax_allchnls);
-
             //const auto lowest = Stats::Percentile(img_it->data, 0.01);
             //const auto highest = Stats::Percentile(img_it->data, 0.99);
 
-            const auto pixel_type_max = static_cast<double>(std::numeric_limits<pixel_value_t>::max());
-            const auto pixel_type_min = static_cast<double>(std::numeric_limits<pixel_value_t>::lowest());
-            const auto dest_type_max = static_cast<double>(std::numeric_limits<uint8_t>::max()); //Min is implicitly 0.
-
-            const double clamped_low  = static_cast<double>(lowest )/pixel_type_max;
-            const double clamped_high = static_cast<double>(highest)/pixel_type_max;
+            const auto dest_type_max = static_cast<double>(std::numeric_limits<uint8_t>::max());
+            const auto dest_type_min = static_cast<double>(std::numeric_limits<uint8_t>::lowest());
     
             for(auto i = 0; i < img_cols; ++i){ 
                 for(auto j = 0; j < img_rows; ++j){ 
@@ -407,22 +402,16 @@ bool SFML_Viewer(Drover &DICOM_data,
                     if(!std::isfinite(val)){
                         animage.setPixel(i,j,NaN_Color);
                     }else{
-                        const double clamped_value = (static_cast<double>(val) - pixel_type_min)/(pixel_type_max - pixel_type_min);
-                        auto rescaled_value = (clamped_value - clamped_low)/(clamped_high - clamped_low);
-                        if( rescaled_value < 0.0 ){
-                            rescaled_value = 0.0;
-                        }else if( rescaled_value > 1.0 ){
-                            rescaled_value = 1.0;
-                        }
+                        const auto rescaled_value = (static_cast<double>(val)/lowest - 1.0)/(highest/lowest - 1.0);
 
                         const auto res = colour_maps[colour_map].second(rescaled_value);
                         const double x_R = res.R;
                         const double x_G = res.G;
                         const double x_B = res.B;
-                        
-                        const auto scaled_R = static_cast<uint8_t>(x_R * dest_type_max);
-                        const auto scaled_G = static_cast<uint8_t>(x_G * dest_type_max);
-                        const auto scaled_B = static_cast<uint8_t>(x_B * dest_type_max);
+                        const auto scaled_R = static_cast<uint8_t>(dest_type_min + x_R * dest_type_max);
+                        const auto scaled_G = static_cast<uint8_t>(dest_type_min + x_G * dest_type_max);
+                        const auto scaled_B = static_cast<uint8_t>(dest_type_min + x_B * dest_type_max);
+
                         animage.setPixel(i,j,sf::Color(scaled_R,scaled_G,scaled_B));
                     }
                 }
@@ -2222,7 +2211,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                           ( disp_img_it->sandwiches_point_within_top_bottom_planes(c.Average_Point())
                             || disp_img_it->encompasses_any_of_contour_of_points(c) )
                           || 
-                          ( disp_img_it->pxl_dz <= std::numeric_limits<double>::lowest() ) // //Permit contours on purely 2D images.
+                          ( disp_img_it->pxl_dz <= std::numeric_limits<double>::min() ) // //Permit contours on purely 2D images.
                        ) ){
                         sf::VertexArray lines;
                         lines.setPrimitiveType(sf::LinesStrip);
@@ -2341,7 +2330,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                       ( disp_img_it->sandwiches_point_within_top_bottom_planes(c.Average_Point())
                         || disp_img_it->encompasses_any_of_contour_of_points(c) )
                       || 
-                      ( disp_img_it->pxl_dz <= std::numeric_limits<double>::lowest() ) // //Permit contours on purely 2D images.
+                      ( disp_img_it->pxl_dz <= std::numeric_limits<double>::min() ) // //Permit contours on purely 2D images.
                    ) ){
                     sf::VertexArray lines;
                     lines.setPrimitiveType(sf::LinesStrip);
@@ -2488,8 +2477,8 @@ bool SFML_Viewer(Drover &DICOM_data,
                 const auto D_H = std::abs(D_MaxH - D_MinH);
                 const auto D_V = std::abs(D_MaxV - D_MinV);
 
-                if(  ( D_H < std::numeric_limits<float>::lowest() )
-                  || ( D_V < std::numeric_limits<float>::lowest() ) ){
+                if(  ( D_H <= std::numeric_limits<float>::min() )
+                  || ( D_V <= std::numeric_limits<float>::min() ) ){
                     //Too small to plot...
                     plotwindow.clear(sf::Color::Black);
                     break;
