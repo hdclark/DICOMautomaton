@@ -163,6 +163,7 @@ add_library(Operations_objs OBJECT
     Terminal_Viewer.cc
     ThresholdImages.cc
     ThresholdOtsu.cc
+    Time.cc
     TrimROIDose.cc
     True.cc
     UBC3TMRI_DCE.cc
