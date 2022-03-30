@@ -940,8 +940,10 @@ bool SDL_Viewer(Drover &DICOM_data,
         // Camera transformations.
         bool precess = true;
         double precess_rate = 1.0;
-        double rot_x = 0.0;
-        double rot_y = 0.0;
+
+        double rot_y = 0.0; // Yaw.
+        double rot_p = 0.0; // Pitch.
+        double rot_r = 0.0; // Roll.
 
         double zoom = 1.0;
         double cam_distort = 0.0;
@@ -5870,8 +5872,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                     drag_speed = 0.3f;
                     clamp_l = -360.0 * 10.0;
                     clamp_h =  360.0 * 10.0;
-                    ImGui::DragScalar("A rotation", ImGuiDataType_Double, &mesh_display_transform.rot_x, drag_speed, &clamp_l, &clamp_h, "%.1f");
-                    ImGui::DragScalar("B rotation", ImGuiDataType_Double, &mesh_display_transform.rot_y, drag_speed, &clamp_l, &clamp_h, "%.1f");
+                    ImGui::DragScalar("Yaw",   ImGuiDataType_Double, &mesh_display_transform.rot_y, drag_speed, &clamp_l, &clamp_h, "%.1f");
+                    ImGui::DragScalar("Pitch", ImGuiDataType_Double, &mesh_display_transform.rot_p, drag_speed, &clamp_l, &clamp_h, "%.1f");
+                    ImGui::DragScalar("Roll",  ImGuiDataType_Double, &mesh_display_transform.rot_r, drag_speed, &clamp_l, &clamp_h, "%.1f");
 
                     drag_speed = 0.005f;
                     clamp_l = -10.0;
@@ -5918,11 +5921,13 @@ bool SDL_Viewer(Drover &DICOM_data,
             CHECK_FOR_GL_ERRORS();
 
             if(mesh_display_transform.precess){
-                mesh_display_transform.rot_x += 0.0028 * mesh_display_transform.precess_rate;
-                mesh_display_transform.rot_y -= 0.0104 * mesh_display_transform.precess_rate;
+                mesh_display_transform.rot_y += 0.0100 * mesh_display_transform.precess_rate;
+                mesh_display_transform.rot_p -= 0.0029 * mesh_display_transform.precess_rate;
+                mesh_display_transform.rot_r -= 0.0003 * mesh_display_transform.precess_rate;
             }
-            mesh_display_transform.rot_x = std::fmod(mesh_display_transform.rot_x, 360.0);
             mesh_display_transform.rot_y = std::fmod(mesh_display_transform.rot_y, 360.0);
+            mesh_display_transform.rot_p = std::fmod(mesh_display_transform.rot_p, 360.0);
+            mesh_display_transform.rot_r = std::fmod(mesh_display_transform.rot_r, 360.0);
 
             // Locate uniform locations in the custom shader program.
             if(!custom_shader) throw std::logic_error("No available shader, cannot continue");
@@ -6064,13 +6069,30 @@ bool SDL_Viewer(Drover &DICOM_data,
 
             // Rotate camera according as per user's settings / precession.
             const auto pi = std::acos(-1.0);
-            const auto x_rot = mesh_display_transform.rot_x * (2.0 * pi) / 360.0;
-            const auto y_rot = mesh_display_transform.rot_y * (2.0 * pi) / 360.0;
-            vec3<double> cam_pos = vec3<double>(0,0,1).rotate_around_y(y_rot)
-                                                      .rotate_around_x(x_rot)
-                                                      .unit() * std::exp(mesh_display_transform.cam_distort - 5.0);
-            vec3<double> target_pos = vec3<double>(0.0, 0.0, 0.0);
-            vec3<double> up_unit = vec3<double>(0.0, 1.0, 0.0).unit();
+            const auto y_rot = 0.0 + mesh_display_transform.rot_y * (2.0 * pi) / 360.0; // Yaw.
+            const auto p_rot = 0.0 + mesh_display_transform.rot_p * (2.0 * pi) / 360.0; // Pitch.
+            const auto r_rot = 0.0 - mesh_display_transform.rot_r * (2.0 * pi) / 360.0; // Roll.
+
+            auto axis_1 = vec3<double>(0,0,1); // Represents camera position (looking inward, toward origin).
+            auto axis_2 = vec3<double>(1,0,0); // Represents camera view's leftward direction.
+            auto axis_3 = vec3<double>(0,1,0); // Represents camera views's upward direction.
+
+            axis_1 = axis_1.rotate_around_unit(axis_2, p_rot);
+            axis_3 = axis_3.rotate_around_unit(axis_2, p_rot);
+            axis_2 = axis_2.rotate_around_unit(axis_2, p_rot);
+
+            axis_3 = axis_3.rotate_around_unit(axis_1, r_rot);
+            axis_2 = axis_2.rotate_around_unit(axis_1, r_rot);
+            axis_1 = axis_1.rotate_around_unit(axis_1, r_rot);
+
+            axis_1 = axis_1.rotate_around_unit(axis_3, y_rot);
+            axis_2 = axis_2.rotate_around_unit(axis_3, y_rot);
+            axis_3 = axis_3.rotate_around_unit(axis_3, y_rot);
+
+            const auto target_pos = vec3<double>(0.0, 0.0, 0.0);
+            const auto up_unit = axis_3.unit();
+            const auto cam_pos = axis_1.unit() * std::exp(mesh_display_transform.cam_distort - 5.0);
+
             num_array<float> camera = make_camera_matrix( cam_pos, target_pos, up_unit );
 
             // Final coordinate system transforms.
