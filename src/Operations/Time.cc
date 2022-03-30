@@ -4,6 +4,7 @@
 #include <optional>
 #include <fstream>
 #include <iterator>
+#include <sstream>
 #include <list>
 #include <map>
 #include <memory>
@@ -82,7 +83,10 @@ bool Time(Drover &DICOM_data,
     FUNCINFO("Stop time: " << time_str(std::chrono::system_clock::to_time_t(end)));
 
     const std::chrono::duration<double> diff = (end - start);
-    const auto diff_str = (std::stringstream() << std::fixed << std::setprecision(6) << diff.count()).str();
+
+    std::stringstream ss;
+    ss << std::fixed << std::setprecision(6) << diff.count();
+    const auto diff_str = ss.str();
     FUNCINFO("Elapsed time: " << diff_str << " seconds");
 
     if(!res){
