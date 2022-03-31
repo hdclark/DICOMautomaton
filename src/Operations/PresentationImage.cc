@@ -351,13 +351,46 @@ bool PresentationImage(Drover &DICOM_data,
             const auto dest_type_max = static_cast<double>(std::numeric_limits<uint8_t>::max());
             const auto dest_type_min = static_cast<double>(std::numeric_limits<uint8_t>::lowest());
     
+            // Rescale avoiding overflow if lowest and highest span the full range, avoiding division by zero if
+            // lowest is zero, and using a null transformation if lowest and highest are equal. Also avoid 'trial'
+            // division in case floats are not IEEE 754.
+            //
+            // We do this by setting the slope and intercept rescale parameters for each scenario.
+            const auto zero = static_cast<pixel_value_t>(0);
+            const auto one  = static_cast<pixel_value_t>(1);
+            const bool lowest_is_zero = !std::isnormal(lowest);
+            const bool lowest_is_highest = !std::isnormal(highest - lowest);
+
+            auto rescale_m = zero;
+            auto rescale_b = one;
+            if( lowest_is_zero
+            &&  lowest_is_highest ){
+                // There is no sensible scale, so set everything to zero.
+                rescale_m = zero;
+                rescale_b = zero;
+
+            }else if( lowest_is_zero
+                  &&  !lowest_is_highest ){
+                // Since lowest is not normal, highest is necessarily normal.
+                rescale_m = one / highest;
+                rescale_b = zero;
+
+            }else{
+                // All numbers and inverses are finite, so just need to avoid overflow.
+                // Rescale like (val - low)/(high - low) = (val/low - 1)/(high/low - 1).
+                const auto inv_lowest = one / lowest;
+                const auto inv_denom = one / (highest * inv_lowest - one);
+                rescale_m = inv_lowest * inv_denom;
+                rescale_b = -inv_denom;
+            }
+
             for(auto i = 0; i < img_cols; ++i){ 
                 for(auto j = 0; j < img_rows; ++j){ 
                     const auto val = img_it->value(j,i,0);
                     if(!std::isfinite(val)){
                         animage.setPixel(i,j,NaN_Color);
                     }else{
-                        const auto rescaled_value = (static_cast<double>(val)/lowest - 1.0)/(highest/lowest - 1.0);
+                        const auto rescaled_value = val * rescale_m + rescale_b;
 
                         const auto res = colour_maps[colour_map].second(rescaled_value);
                         const double x_R = res.R;
