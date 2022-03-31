@@ -1581,7 +1581,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                             animage.push_back( nan_colour[1] );
                             animage.push_back( nan_colour[2] );
                         }else{
-                            const auto rescaled_value = val * rescale_m + rescale_b;
+                            const auto rescaled_value = std::clamp(val * rescale_m + rescale_b, 0.0f, 1.0f);
                             const auto res = colour_maps[colour_map].second(rescaled_value);
                             const double x_R = res.R;
                             const double x_G = res.G;

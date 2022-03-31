@@ -390,7 +390,7 @@ bool PresentationImage(Drover &DICOM_data,
                     if(!std::isfinite(val)){
                         animage.setPixel(i,j,NaN_Color);
                     }else{
-                        const auto rescaled_value = val * rescale_m + rescale_b;
+                        const auto rescaled_value = std::clamp(val * rescale_m + rescale_b, 0.0f, 1.0f);
 
                         const auto res = colour_maps[colour_map].second(rescaled_value);
                         const double x_R = res.R;
