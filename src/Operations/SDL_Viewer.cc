@@ -107,7 +107,11 @@
 // Looks like a wave propagating through a line of squares.
 static
 void
-CustomImGuiWidget_LoadingBar(long int frame_number){
+CustomImGuiWidget_LoadingBar(const std::chrono::time_point<std::chrono::system_clock> &t_start){
+
+    const std::chrono::time_point<std::chrono::system_clock> t_now = std::chrono::system_clock::now();
+    const auto t = std::chrono::duration<float>(t_now - t_start).count();
+
     auto drawList = ImGui::GetWindowDrawList();
     const auto orig_screen_pos = ImGui::GetCursorScreenPos();
     const auto avail_space = ImGui::GetContentRegionAvail();
@@ -117,7 +121,8 @@ CustomImGuiWidget_LoadingBar(long int frame_number){
     const auto rect_width_offset = rect_height_offset;
     const auto rect_space = rect_width * 0.25f;
     const auto num_rects_f = std::clamp( (avail_space.x - ImGui::GetCursorPosX() * 2.0f + rect_space) / (rect_width + rect_space), 3.0f, 50.0f );
-    const auto wave_speed = 5.0f; // Relative to frame rate.
+    const auto wave_speed = 125.0f;
+
     if( std::isfinite(rect_width)
     &&  std::isfinite(rect_height)
     &&  std::isfinite(rect_height_offset)
@@ -139,7 +144,7 @@ CustomImGuiWidget_LoadingBar(long int frame_number){
             br_pos.x = tl_pos.x + rect_width;
             br_pos.y = tl_pos.y + rect_height;
 
-            const auto intensity = std::cos(2.0f*pi*(wave_speed * frame_number - x_offset)/wave_period);
+            const auto intensity = std::cos(2.0f*pi*(wave_speed * t - x_offset)/wave_period);
             const auto clamped = std::clamp(intensity, 0.2, 1.0);
             ImU32 col = ImGui::GetColorU32( ImVec4(clamped, clamped * 0.5f, clamped * 0.1f, 1.0f ) );
 
@@ -815,6 +820,8 @@ bool SDL_Viewer(Drover &DICOM_data,
     // --------------------------------------- Operational State ------------------------------------------
     std::shared_timed_mutex drover_mutex;
     const auto mutex_dt = std::chrono::microseconds(5);
+
+    const std::chrono::time_point<std::chrono::system_clock> t_start = std::chrono::system_clock::now();
 
     // General-purpose Drover processing offloading worker thread.
     work_queue<std::function<void(void)>> wq;
@@ -5964,7 +5971,8 @@ bool SDL_Viewer(Drover &DICOM_data,
         // Show a loading animation.
         const auto display_loading_animation = [&drover_mutex,
                                                 &mutex_dt,
-                                                &frame_count]() -> void {
+                                                &frame_count,
+                                                &t_start]() -> void {
 
             std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
             if(drover_lock) return; // Only draw when the lock IS held.
@@ -5980,13 +5988,13 @@ bool SDL_Viewer(Drover &DICOM_data,
             bool placeholder = true;
 
             ImGuiIO& io = ImGui::GetIO();
-            ImGui::SetNextWindowSize(ImVec2(200, 40), ImGuiCond_Always);
+            ImGui::SetNextWindowSize(ImVec2(250, 40), ImGuiCond_Always);
 
             // Position bottom-right corner of window at screen bottom-right.
             ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x, io.DisplaySize.y), ImGuiCond_Always, ImVec2(1.0f, 1.0f));
 
             ImGui::Begin("Script Loading Bar", &placeholder, flags);
-            CustomImGuiWidget_LoadingBar(frame_count);
+            CustomImGuiWidget_LoadingBar(t_start);
             ImGui::End();
             return;
         };
