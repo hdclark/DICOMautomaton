@@ -102,6 +102,55 @@
     }
 #endif
 
+// Draw a loading animation using ImGui primitives.
+//
+// Looks like a wave propagating through a line of squares.
+static
+void
+CustomImGuiWidget_LoadingBar(long int frame_number){
+    auto drawList = ImGui::GetWindowDrawList();
+    const auto orig_screen_pos = ImGui::GetCursorScreenPos();
+    const auto avail_space = ImGui::GetContentRegionAvail();
+    const auto rect_width = std::clamp(ImGui::GetFontSize(), 1.0f, 100.0f);
+    const auto rect_height = std::clamp(ImGui::GetTextLineHeight(), 1.0f, 100.0f);
+    const auto rect_height_offset = (ImGui::GetTextLineHeightWithSpacing() / rect_height) * 0.5f;
+    const auto rect_width_offset = rect_height_offset;
+    const auto rect_space = rect_width * 0.25f;
+    const auto num_rects_f = std::clamp( (avail_space.x - ImGui::GetCursorPosX() * 2.0f + rect_space) / (rect_width + rect_space), 3.0f, 50.0f );
+    if( std::isfinite(rect_width)
+    &&  std::isfinite(rect_height)
+    &&  std::isfinite(rect_height_offset)
+    &&  std::isfinite(rect_width_offset)
+    &&  std::isfinite(rect_space)
+    &&  std::isfinite(num_rects_f)  ){
+        const long int num_rects = static_cast<long int>(std::floor(num_rects_f));
+        const auto wave_period = rect_width + rect_space * 20.0f * 5.0f; // 'tuned' for 20 rectangles.
+        const auto pi = std::acos(-1.0);
+
+        for(long int i = 1; i <= num_rects; i += 1){
+            const auto x_offset = (rect_width * i) + (rect_space * (i - 1));
+
+            ImVec2 tl_pos;
+            tl_pos.x = orig_screen_pos.x + rect_width_offset + x_offset;
+            tl_pos.y = orig_screen_pos.y + rect_height_offset;
+
+            ImVec2 br_pos;
+            br_pos.x = tl_pos.x + rect_width;
+            br_pos.y = tl_pos.y + rect_height;
+
+            const auto intensity = std::cos(2.0f*pi*(3.0*frame_number - x_offset)/wave_period);
+            const auto clamped = std::clamp(intensity, 0.2, 1.0);
+            ImU32 col = ImGui::GetColorU32( ImVec4(clamped, clamped * 0.5f, clamped * 0.1f, 1.0f ) );
+
+            drawList->AddRectFilled( tl_pos, br_pos, col );
+        }
+        ImVec2 placeholder_extent;
+        placeholder_extent.x = avail_space.x;
+        placeholder_extent.y = rect_height_offset * 2.0f + rect_height;
+        ImGui::Dummy(placeholder_extent);
+    }
+    return;
+}
 
 // Compute an axis-aligned bounding box in pixel coordinates.
 std::tuple<long int, long int, long int, long int>
@@ -5909,6 +5958,45 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
             return;
         };
+
+
+        // Show a loading animation.
+        const auto display_loading_animation = [&drover_mutex,
+                                                &mutex_dt,
+                                                &frame_count]() -> void {
+
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            if(drover_lock) return; // Only draw when the lock IS held.
+
+            auto flags = ImGuiWindowFlags_NoBackground
+                       | ImGuiWindowFlags_NoInputs
+                       | ImGuiWindowFlags_NoScrollWithMouse
+                       | ImGuiWindowFlags_NoDecoration
+                       | ImGuiWindowFlags_NoMove
+                       | ImGuiWindowFlags_NoNav
+                       | ImGuiWindowFlags_NoBackground
+                       | ImGuiWindowFlags_NoBringToFrontOnFocus;
+            bool placeholder = true;
+
+            ImGuiIO& io = ImGui::GetIO();
+            ImGui::SetNextWindowSize(ImVec2(200, 40), ImGuiCond_Always);
+
+            // Position bottom-right corner of window at screen bottom-right.
+            ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x, io.DisplaySize.y), ImGuiCond_Always, ImVec2(1.0f, 1.0f));
+
+            ImGui::Begin("Script Loading Bar", &placeholder, flags);
+            CustomImGuiWidget_LoadingBar(frame_count);
+            ImGui::End();
+            return;
+        };
+        try{
+            display_loading_animation();
+        }catch(const std::exception &e){
+            FUNCWARN("Exception in display_loading_animation(): '" << e.what() << "'");
+            throw;
+        }
+
+
 
         // Handle direct OpenGL rendering.
         {
