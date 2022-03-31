@@ -117,6 +117,7 @@ CustomImGuiWidget_LoadingBar(long int frame_number){
     const auto rect_width_offset = rect_height_offset;
     const auto rect_space = rect_width * 0.25f;
     const auto num_rects_f = std::clamp( (avail_space.x - ImGui::GetCursorPosX() * 2.0f + rect_space) / (rect_width + rect_space), 3.0f, 50.0f );
+    const auto wave_speed = 5.0f; // Relative to frame rate.
     if( std::isfinite(rect_width)
     &&  std::isfinite(rect_height)
     &&  std::isfinite(rect_height_offset)
@@ -138,7 +139,7 @@ CustomImGuiWidget_LoadingBar(long int frame_number){
             br_pos.x = tl_pos.x + rect_width;
             br_pos.y = tl_pos.y + rect_height;
 
-            const auto intensity = std::cos(2.0f*pi*(3.0*frame_number - x_offset)/wave_period);
+            const auto intensity = std::cos(2.0f*pi*(wave_speed * frame_number - x_offset)/wave_period);
             const auto clamped = std::clamp(intensity, 0.2, 1.0);
             ImU32 col = ImGui::GetColorU32( ImVec4(clamped, clamped * 0.5f, clamped * 0.1f, 1.0f ) );
 
