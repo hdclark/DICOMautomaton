@@ -99,6 +99,7 @@ OperationDoc OpArgDocReduceNeighbourhood(){
                                  "11sphere",
                                  "13sphere",
                                  "15sphere" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
 
     out.args.emplace_back();
