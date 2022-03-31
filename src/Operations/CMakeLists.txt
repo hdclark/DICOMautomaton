@@ -153,6 +153,7 @@ add_library(Operations_objs OBJECT
     SelectSlicesIntersectingROI.cc
     SimplifyContours.cc
     SimulateRadiograph.cc
+    Sleep.cc
     SpatialBlur.cc
     SpatialDerivative.cc
     SpatialSharpen.cc
