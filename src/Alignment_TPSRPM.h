@@ -16,6 +16,7 @@ class thin_plate_spline {
         point_set<double> control_points;
         long int kernel_dimension;
         num_array<double> W_A;
+        num_array<double> W_A_inverse;
 
         // Constructor.
         //
@@ -27,8 +28,11 @@ class thin_plate_spline {
         double eval_kernel(const double &dist) const;
 
         vec3<double> transform(const vec3<double> &v) const;
+        vec3<double> pull(const vec3<double> &v) const;
         void apply_to(point_set<double> &ps) const; // Included for parity with affine_transform class.
         void apply_to(vec3<double> &v) const;       // Included for parity with affine_transform class.
+
+        void apply_with_pull(point_set<double> &ps) const;
 
         // Serialize and deserialize to a human- and machine-readable format.
         bool write_to( std::ostream &os ) const;
@@ -68,8 +72,12 @@ std::optional<thin_plate_spline>
 AlignViaTPS(AlignViaTPSParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary );
-#endif // DCMA_USE_EIGEN
 
+std::optional<thin_plate_spline>
+AlignViaTPS(AlignViaTPSParams & params,
+            const planar_image_collection<float, double> & moving,
+            const planar_image_collection<float, double> & stationary );
+#endif // DCMA_USE_EIGEN
 
 #ifdef DCMA_USE_EIGEN
 // This routine finds a non-rigid alignment using the 'robust point matching: thin plate spline' algorithm.

@@ -37,6 +37,7 @@
 #include "Alignment_Rigid.h"
 #include "Alignment_TPSRPM.h"
 
+#include <math.h>
 
 thin_plate_spline::thin_plate_spline(const point_set<double> &ps,
                                      long int k_dim){
@@ -44,11 +45,16 @@ thin_plate_spline::thin_plate_spline(const point_set<double> &ps,
     this->control_points = ps;
     this->kernel_dimension = k_dim;
     this->W_A = num_array<double>(N + 3 + 1, 3, 0.0); // Initialize to all zeros.
+    this->W_A_inverse = num_array<double>(N + 3 + 1, 3, 0.0);
 
     // Default to an identity affine transform without any warp components.
     this->W_A.coeff(N + 1, 0) = 1.0; // x-component.
     this->W_A.coeff(N + 2, 1) = 1.0; // y-component.
     this->W_A.coeff(N + 3, 2) = 1.0; // z-component.
+
+    this->W_A_inverse.coeff(N + 1, 0) = 1.0; // x-component.
+    this->W_A_inverse.coeff(N + 2, 1) = 1.0; // y-component.
+    this->W_A_inverse.coeff(N + 3, 2) = 1.0; // z-component.
 }
 
 double
@@ -117,6 +123,55 @@ thin_plate_spline::transform(const vec3<double> &v) const {
         throw std::runtime_error("Failed to evaluate TPS mapping function. Cannot continue.");
     }
     return f_v;
+}
+
+vec3<double> thin_plate_spline::pull(const vec3<double> &v) const {
+    const auto N = static_cast<long int>(this->control_points.points.size());
+    Stats::Running_Sum<double> x;
+    Stats::Running_Sum<double> y;
+    Stats::Running_Sum<double> z;
+
+    // affine component.
+    x.Digest(W_A_inverse.read_coeff(N + 0, 0));
+    x.Digest(W_A_inverse.read_coeff(N + 1, 0) * v.x);
+    x.Digest(W_A_inverse.read_coeff(N + 2, 0) * v.y);
+    x.Digest(W_A_inverse.read_coeff(N + 3, 0) * v.z);
+
+    y.Digest(W_A_inverse.read_coeff(N + 0, 1));
+    y.Digest(W_A_inverse.read_coeff(N + 1, 1) * v.x);
+    y.Digest(W_A_inverse.read_coeff(N + 2, 1) * v.y);
+    y.Digest(W_A_inverse.read_coeff(N + 3, 1) * v.z);
+
+    z.Digest(W_A_inverse.read_coeff(N + 0, 2));
+    z.Digest(W_A_inverse.read_coeff(N + 1, 2) * v.x);
+    z.Digest(W_A_inverse.read_coeff(N + 2, 2) * v.y);
+    z.Digest(W_A_inverse.read_coeff(N + 3, 2) * v.z);
+
+    // Warp component.
+    for(long int i = 0; i < N; ++i){
+        const auto P_i = this->control_points.points[i];
+        const auto dist = P_i.distance(v);
+        const auto ki = this->eval_kernel(dist);
+
+        x.Digest(W_A_inverse.read_coeff(i, 0) * ki);
+        y.Digest(W_A_inverse.read_coeff(i, 1) * ki);
+        z.Digest(W_A_inverse.read_coeff(i, 2) * ki);
+    }
+
+    const vec3<double> f_v( x.Current_Sum(),
+                           y.Current_Sum(),
+                           z.Current_Sum() );
+    if(!f_v.isfinite()){
+        throw std::runtime_error("Failed to evaluate TPS mapping function. Cannot continue.");
+    }
+    return f_v;
+}
+
+void thin_plate_spline::apply_with_pull(point_set<double> &ps) const {
+    for(auto &p : ps.points){
+        p = this->pull(p);
+    }
+    return;
 }
 
 void
@@ -308,10 +363,180 @@ AlignViaTPS(AlignViaTPSParams & params,
         return std::nullopt;
     }
 
+    // try to invert W_A here
+    Eigen::Map<Eigen::Matrix< double,
+                             Eigen::Dynamic,
+                             Eigen::Dynamic,
+                             Eigen::ColMajor >> W_A_inverse(&(*(t.W_A_inverse.begin())),
+                                                    N_move_points + 4,  3);
+
+    if( (t.W_A_inverse.num_rows() != W_A_inverse.rows())
+       ||  (t.W_A_inverse.num_cols() != W_A_inverse.cols()) ){
+        throw std::logic_error("TPS coefficient matrix dimesions do not match. Refusing to continue.");
+    }
+
+    Eigen::MatrixXd W_A_TEMP = Eigen::MatrixXd::Zero(3, N_move_points + 4 );
+    Eigen::MatrixXd Id = Eigen::MatrixXd::Identity(3,3);
+
+    for (long int i = 0; i < N_move_points+4; ++i) {
+        W_A_TEMP(0, i) = W_A(i, 0);
+        W_A_TEMP(1, i) = W_A(i, 1);
+        W_A_TEMP(2, i) = W_A(i, 2);
+    }
+
+    Eigen::MatrixXd W_A_TEMP_I = W_A_TEMP.completeOrthogonalDecomposition().pseudoInverse();
+
+    W_A_inverse = W_A_TEMP_I * Id;
+
     return t;
 }
-#endif // DCMA_USE_EIGEN
 
+std::optional<thin_plate_spline>
+AlignViaTPS(AlignViaTPSParams & params,
+            const planar_image_collection<float, double> & moving,
+            const planar_image_collection<float, double> & stationary )
+{
+    // potential steps:
+    // 1. extract corresponding points from moving and statinary
+    // 2. obtain the TPS transformation with the point sets
+    // 3. for each point in moving, apply the transform on the point to get a new coordinate
+    // 4. map the points with the intensity value at the new coordinate
+
+    // dummy image loader - take the first of each stack (2D)
+    auto& movImg = moving.images.front();
+    auto& statImg = stationary.images.front();
+
+    // select random points for testing purpose,
+    // stationary point set: circle centered in the middle (255,255) with diameter of 100 pixels
+    // moving point set: rotate these points by random angle like in the unit test
+    // for now: generate 12 points
+    point_set<double> ps_s;
+    point_set<double> ps_m;
+
+    const double pi = 3.141592653;
+
+    double center_x = 255.0, center_y = 255.0;
+    double radius = 50.0;
+
+    // hard-coded control points for testing purposes
+    ps_s.points.emplace_back(vec3<double>(338,511-213,0));
+    ps_m.points.emplace_back(vec3<double>(312,511-199,0));
+
+    ps_s.points.emplace_back(vec3<double>(204,511-211,0));
+    ps_m.points.emplace_back(vec3<double>(179,511-215,0));
+
+    ps_s.points.emplace_back(vec3<double>(210,511-224,0));
+    ps_m.points.emplace_back(vec3<double>(191,511-219,0));
+
+    ps_s.points.emplace_back(vec3<double>(212,511-257,0));
+    ps_m.points.emplace_back(vec3<double>(193,511-262,0));
+
+    ps_s.points.emplace_back(vec3<double>(234,511-281,0));
+    ps_m.points.emplace_back(vec3<double>(211,511-278,0));
+
+    ps_s.points.emplace_back(vec3<double>(264,511-288,0));
+    ps_m.points.emplace_back(vec3<double>(255,511-281,0));
+
+    ps_s.points.emplace_back(vec3<double>(308,511-275,0));
+    ps_m.points.emplace_back(vec3<double>(289,511-269,0));
+
+    ps_s.points.emplace_back(vec3<double>(323,511-248,0));
+    ps_m.points.emplace_back(vec3<double>(299,511-243,0));
+
+    ps_s.points.emplace_back(vec3<double>(318,511-216,0));
+    ps_m.points.emplace_back(vec3<double>(294,511-215,0));
+
+    ps_s.points.emplace_back(vec3<double>(285,511-283,0));
+    ps_m.points.emplace_back(vec3<double>(279,511-275,0));
+
+    ps_s.points.emplace_back(vec3<double>(230,511-190,0));
+    ps_m.points.emplace_back(vec3<double>(209,511-186,0));
+
+    ps_s.points.emplace_back(vec3<double>(205,511-244,0));
+    ps_m.points.emplace_back(vec3<double>(186,511-241,0));
+
+    ps_s.points.emplace_back(vec3<double>(321,511-224,0));
+    ps_m.points.emplace_back(vec3<double>(301,511-225,0));
+
+    ps_s.points.emplace_back(vec3<double>(205,511-241,0));
+    ps_m.points.emplace_back(vec3<double>(186,511-234,0));
+
+    ps_s.points.emplace_back(vec3<double>(212,511-262,0));
+    ps_m.points.emplace_back(vec3<double>(197,511-265,0));
+
+    ps_s.points.emplace_back(vec3<double>(233,511-204,0));
+    ps_m.points.emplace_back(vec3<double>(208,511-203,0));
+
+    ps_s.points.emplace_back(vec3<double>(205,511-227,0));
+    ps_m.points.emplace_back(vec3<double>(190,511-226,0));
+
+    ps_s.points.emplace_back(vec3<double>(294,511-282,0));
+    ps_m.points.emplace_back(vec3<double>(283,511-272,0));
+
+    ps_s.points.emplace_back(vec3<double>(216,511-211,0));
+    ps_m.points.emplace_back(vec3<double>(192,511-211,0));
+
+    ps_s.points.emplace_back(vec3<double>(109,511-125,0));
+    ps_m.points.emplace_back(vec3<double>(109,511-125,0));
+
+    ps_s.points.emplace_back(vec3<double>(112,511-384,0));
+    ps_m.points.emplace_back(vec3<double>(112,511-384,0));
+
+    ps_s.points.emplace_back(vec3<double>(152,511-152,0));
+    ps_m.points.emplace_back(vec3<double>(152,511-152,0));
+
+    ps_s.points.emplace_back(vec3<double>(48,511-337,0));
+    ps_m.points.emplace_back(vec3<double>(48,511-337,0));
+
+    ps_s.points.emplace_back(vec3<double>(121,511-171,0));
+    ps_m.points.emplace_back(vec3<double>(121,511-171,0));
+
+    ps_s.points.emplace_back(vec3<double>(166,511-280,0));
+    ps_m.points.emplace_back(vec3<double>(166,511-280,0));
+
+    ps_s.points.emplace_back(vec3<double>(169,511-251,0));
+    ps_m.points.emplace_back(vec3<double>(169,511-251,0));
+
+    ps_s.points.emplace_back(vec3<double>(364,511-172,0));
+    ps_m.points.emplace_back(vec3<double>(364,511-172,0));
+
+    ps_s.points.emplace_back(vec3<double>(301,511-129,0));
+    ps_m.points.emplace_back(vec3<double>(301,511-129,0));
+
+    ps_s.points.emplace_back(vec3<double>(158,511-262,0));
+    ps_m.points.emplace_back(vec3<double>(158,511-262,0));
+
+    ps_s.points.emplace_back(vec3<double>(255,511-141,0));
+    ps_m.points.emplace_back(vec3<double>(255,511-141,0));
+
+    ps_s.points.emplace_back(vec3<double>(180,511-16,0));
+    ps_m.points.emplace_back(vec3<double>(180,511-16,0));
+
+    ps_s.points.emplace_back(vec3<double>(250,511-16,0));
+    ps_m.points.emplace_back(vec3<double>(250,511-16,0));
+
+    ps_s.points.emplace_back(vec3<double>(328,511-16,0));
+    ps_m.points.emplace_back(vec3<double>(328,511-16,0));
+
+    ps_s.points.emplace_back(vec3<double>(245,511-285,0));
+    ps_m.points.emplace_back(vec3<double>(221,511-286,0));
+
+    ps_s.points.emplace_back(vec3<double>(427,511-82,0));
+    ps_m.points.emplace_back(vec3<double>(427,511-82,0));
+
+    ps_s.points.emplace_back(vec3<double>(114,511-390,0));
+    ps_m.points.emplace_back(vec3<double>(114,511-390,0));
+
+    ps_s.points.emplace_back(vec3<double>(308,511-276,0));
+    ps_m.points.emplace_back(vec3<double>(283,511-271,0));
+
+    ps_s.points.emplace_back(vec3<double>(206,511-240,0));
+    ps_m.points.emplace_back(vec3<double>(186,511-242,0));
+
+    std::optional<thin_plate_spline> transform_opt = AlignViaTPS(params, ps_m, ps_s);
+    return transform_opt;
+}
+#endif // DCMA_USE_EIGEN
 
 
 #ifdef DCMA_USE_EIGEN

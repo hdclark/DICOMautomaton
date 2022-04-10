@@ -50,11 +50,21 @@ TEST_CASE( "thin_plate_spline class" ){
 
         transform_opt.value().apply_to(ps_B);
         const double margin = 0.00001;        // error margin
+
+        for (int i = 0; i < ps_A.points.size(); ++i) {
+            std::cout << ps_A.points[i] << " -> " << ps_B.points[i] << std::endl;
+        }
+
         for (int i = 0; i < ps_B.points.size(); ++i) {
             REQUIRE(std::abs(ps_B.points[i].x - ps_A.points[i].x) < margin);
             REQUIRE(std::abs(ps_B.points[i].y - ps_A.points[i].y) < margin);
             REQUIRE(std::abs(ps_B.points[i].z - ps_A.points[i].z) < margin);
         }
     }
+}
+
+TEST_CASE("thin_plate_spline_image")
+{
+
 }
 

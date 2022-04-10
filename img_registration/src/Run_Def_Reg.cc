@@ -25,6 +25,7 @@
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 #include "Alignment_ABC.h"    // Put header file for implementation 'ABC' here.
+#include "../src/Alignment_TPSRPM.h"
 
 using namespace std::chrono;
 
@@ -44,11 +45,11 @@ int main(int argc, char* argv[]){
     planar_image_collection<float, double> stationary;
 
     // This structure is described in Alignment_ABC.h.
-    AlignViaABCParams params;
+//    AlignViaABCParams params;
 
     // See below for description of these parameters. You can also put them in the AlignViaABCParams structure to more
     // easily pass them into your algorithm.
-    std::string type = "ABC";
+    std::string type = "TPS";
     long int iters = 1;
     double tune = 0.0;
 
@@ -142,6 +143,8 @@ int main(int argc, char* argv[]){
 
     high_resolution_clock::time_point start = high_resolution_clock::now();
     if(type == "ABC") {
+
+        AlignViaABCParams params;
         
         // Perform your registration algorithm here.
         // The result is a transform that can be saved, applied to the moving images, or applied to other kinds of
@@ -167,6 +170,59 @@ int main(int argc, char* argv[]){
 
         // If needed, try save the transform by writing it to file.
         //transform_opt.value().write_to("transform.txt");
+
+    } else if (type == "TPS") {
+
+        AlignViaTPSParams params;
+
+        auto& movImg = moving.images.front();
+        auto& statImg = stationary.images.front();
+        auto& movCp = movImg;
+
+        std::optional<thin_plate_spline> transform_opt = AlignViaTPS(params, moving, stationary);
+
+        point_set<double> ps_mov_all;
+
+        if (transform_opt) {
+            // images: 512x512
+            for (long r = 0; r < 512; ++r) {
+                for (long c = 0; c < 512; ++c) {
+                    ps_mov_all.points.emplace_back(vec3<double>(c, r, 0));
+                }
+            }
+
+            auto ps_mov_orig = ps_mov_all.points;
+
+            transform_opt.value().apply_with_pull(ps_mov_all);
+
+            auto& ps_mov_trans = ps_mov_all.points;
+
+            // try to pull the pixels
+            for (long r = 0; r < 512; ++r) {
+                for (long c = 0; c < 512; ++c) {
+                    double dx = (double)(int)ps_mov_trans[r*512+c].x;
+                    double dy = (double)(int)ps_mov_trans[r*512+c].y;
+
+                    double x = std::min(c+dx, 511.0);
+                    x = std::max(x, 0.0);
+                    double y = std::min(r+dy, 511.0);
+                    y = std::max(y, 0.0);
+                    movImg.data[r*512+c] = movCp.data[y*512+x];
+                }
+            }
+
+            // save the transformed images
+            int i = 1;
+            for (auto& img : moving.images) {
+                bool save = WriteToFITS<float,double>(img, "images/transformed/tps_test_pull_apr5_" + std::to_string(i) + ".fits");
+                if (!save) {
+                    FUNCERR("Could not save transformed images.");
+                    return 1;
+                }
+            }
+        }
+
+
 
     } else {
         FUNCERR("Specified algorithm specified was invalid. Options are ABC, ...");
