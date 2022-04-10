@@ -59,8 +59,3 @@ TEST_CASE( "thin_plate_spline class" ){
     }
 }
 
-TEST_CASE("thin_plate_spline_image")
-{
-
-}
-
