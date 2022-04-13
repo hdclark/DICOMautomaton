@@ -62,7 +62,7 @@ OperationDoc OpArgDocSimplifySurfaceMeshes(){
                            " and 'edge-collapse'"
 #endif //DCMA_USE_CGAL
                            "."
-                           "\n"
+                           "\n\n"
                            "'flat' removes vertices when the immediate surrounding patch is uniformly"
                            " flat within a given tolerance distance. Border and non-manifold vertices"
                            " are not removed, maintaining surface topology."
@@ -71,7 +71,7 @@ OperationDoc OpArgDocSimplifySurfaceMeshes(){
                            " Choosing a small tolerance distance should result in a nearly lossless simplification,"
                            " but will only be applicable for meshes with redundant flat sections."
 #ifdef DCMA_USE_CGAL
-                           "\n"
+                           "\n\n"
                            "'edge-collapse' builds a priority queue of edges that can be collapsed"
                            " (converting two vertices into one) one at a time"
                            " with minimal impact on the surface."
@@ -110,12 +110,12 @@ OperationDoc OpArgDocSimplifySurfaceMeshes(){
     out.args.back().desc = "Needed for 'flat' algorithm."
                            " The maximum allowed surface deviation (in DICOM units; mm)"
                            " above which vertices will NOT be simplified."
-                           "\n"
+                           "\n\n"
                            "Note that this number is not the same as the maximum surface deviation after"
                            " simplification, since every nearby vertex can in principle perturb the surface"
                            " up to the tolerance distance. In most practical situations, the tolerance distance"
                            " is representative of the surface deviation after simplification."
-                           "\n"
+                           "\n\n"
                            "Setting this number to a value much smaller than the smallest feature should cause"
                            " effectively lossless simplification of exactly-flat patches.";
     out.args.back().default_val = "0.001";
