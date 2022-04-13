@@ -12,6 +12,7 @@
 #include <set> 
 #include <stdexcept>
 #include <string>    
+#include <random>
 
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathIOOBJ.h"
@@ -34,19 +35,24 @@ OperationDoc OpArgDocConvertContoursToMeshes(){
     out.name = "ConvertContoursToMeshes";
 
     out.desc = 
-        "This routine creates a mesh from contours. There are two methods supported: one that directly stitches"
+        "This routine creates a mesh from contours. There are three supported methods: 'direct', which stitches"
         " together contours (polygons) by finding a correspondence between adjacent contours"
-        " and 'zippering' them together, and another that uses contours to first generate an image mask and"
-        " then uses Marching Cubes to extract a mesh."
+        " and zippering them together; 'marching', which uses contours to first generate an image mask and"
+        " then uses Marching Cubes to extract a mesh; and finally a 'convex-hull' method."
         "\n\n"
-        " The direct method, when it can be used appropriately, should be significantly faster than meshing"
+        " The 'direct' method, when it can be used appropriately, should be significantly faster than meshing"
         " via voxelization (e.g., marching cubes)."
         " It will also insert few (or zero) additional vertices on the original contour planes, meaning the"
         " resulting mesh can be sliced to give (nearly) the exact original contours."
-        "\n\n"
-        " However, please note that the direct method is not robust and should only be expected"
+        " However, please note that the 'direct' method is not robust and should only be expected"
         " to work for simple, sphere-like contours (i.e., convex polyhedra and mostly-convex polyhedra with only"
-        " small concavities; see notes for additional information).";
+        " small concavities; see notes for additional information)."
+        "\n\n"
+        "The 'marching' method is robust, but slow since it requires conversion to an intermediate bitmask."
+        " There is also a loss of spatial resolution due to use of bitmasks."
+        "\n\n"
+        "The 'convex-hull' method is reasonably accurate, but scales poorly."
+        " It will also provide a zero-volume (i.e., non-manifold) surface if only a single contour is present.";
 
     out.notes.emplace_back(
         "The 'direct' method is experimental and currently relies on simple heuristics to find an adjacent contour"
@@ -84,6 +90,10 @@ OperationDoc OpArgDocConvertContoursToMeshes(){
         " not be watertight and if contour"
         " vertices are degenerate (or too close together numerically) meshes will fail to remain manifold."
     );
+    out.notes.emplace_back(
+        "The 'convex-hull' method uses an algorithm that scales poorly, especially when the contours are mostly convex"
+        " (and thus have many vertices on the hull)."
+    );
 
         
     out.args.emplace_back();
@@ -108,15 +118,17 @@ OperationDoc OpArgDocConvertContoursToMeshes(){
     
     out.args.emplace_back();
     out.args.back().name = "Method";
-    out.args.back().desc = "There are currently two supported methods for mesh extraction:"
-                           " (1) a simplistic but fast contour stitching method known as the 'direct' method, and"
-                           " (2) a method that first converts contours to a binary mask and then uses Marching Cubes"
-                           " to extract meshes. The latter is known as the 'marching' method. See operation"
-                           " description and notes for more details.";
+    out.args.back().desc = "There are currently three supported methods:"
+                           " 'direct' -- a simplistic but fast contour stitching method;"
+                           " 'marching' -- a method that first converts contours to a binary bitmask and then"
+                           " uses Marching Cubes to extract meshes; and 'convex-hull' -- a robust routine that"
+                           " only works for convex contours."
+                           " See operation description and notes for more details.";
     out.args.back().default_val = "direct";
     out.args.back().expected = true;
     out.args.back().examples = { "direct",
-                                 "marching" };
+                                 "marching",
+                                 "convex-hull" };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
     return out;
@@ -142,6 +154,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
 
     const auto direct_regex = Compile_Regex("^di?r?e?c?t?$");
     const auto marching_regex = Compile_Regex("^ma?r?c?h?i?n?g?$");
+    const auto convex_regex = Compile_Regex("^co?n?v?e?x?[-_]?h?u?l?l?$");
 
     auto cc_all = All_CCs( DICOM_data );
     auto cc_ROIs = Whitelist( cc_all, { { "ROIName", ROILabelRegex },
@@ -525,6 +538,62 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
     }else if(std::regex_match(MethodStr, marching_regex)){
         auto meshing_params = dcma_surface_meshes::Parameters();
         amesh = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_ref, meshing_params );
+
+    }else if(std::regex_match(MethodStr, convex_regex)){
+        // Gather all available vertices.
+        for(const auto &cc_refw : cc_ROIs){
+            for(const auto &c : cc_refw.get().contours){
+                for(const auto &p : c.points){
+                    amesh.vertices.emplace_back(p);
+
+                }
+            }
+        }
+
+//        // Sort and remove exact duplicates.
+//        std::sort( std::begin(amesh.vertices), std::end(amesh.vertices) );
+//        amesh.vertices.erase( std::unique( std::begin(amesh.vertices), std::end(amesh.vertices) ),
+//                              std::end(amesh.vertices) );
+
+        FUNCINFO("Generating convex hull from " << amesh.vertices.size() << " vertices");
+
+/*
+        // Sort and remove near duplicates by truncating decimal precision.
+        const auto N_digits = 3;
+        const auto truncate = [](const vec3<double> &v, long int N_digits){
+            const auto pwr = std::pow(10.0, static_cast<double>(N_digits));
+            return vec3<double>(  static_cast<double>( static_cast<int64_t>( std::round(v.x * pwr) ) ) / pwr,
+                                  static_cast<double>( static_cast<int64_t>( std::round(v.y * pwr) ) ) / pwr,
+                                  static_cast<double>( static_cast<int64_t>( std::round(v.z * pwr) ) ) / pwr );
+        };
+        std::sort( std::begin(amesh.vertices),
+                   std::end(amesh.vertices),
+                   [&truncate,&N_digits](const vec3<double>& A, const vec3<double>& B){
+                       return truncate(A, N_digits) < truncate(B, N_digits);
+                   } );
+        amesh.vertices.erase( std::unique( std::begin(amesh.vertices),
+                                           std::end(amesh.vertices),
+                                           [&truncate,&N_digits](const vec3<double>& A, const vec3<double>& B){
+                                               return truncate(A, N_digits) == truncate(B, N_digits);
+                                           } ),
+                              std::end(amesh.vertices) );
+
+        FUNCINFO("Deduplicated vertices via truncation to " << amesh.vertices.size() << " vertices");
+*/
+
+        // Randomly shuffle vertices to (hopefully) speed up hull extraction.
+//        std::random_device rd;
+//        std::mt19937 rng(rd());
+//        std::shuffle(std::begin(amesh.vertices), std::end(amesh.vertices), rng);
+
+        // Construct the convex hull.
+        using vert_vec_t = decltype(std::begin(amesh.vertices));
+        amesh.faces = Convex_Hull_3<vert_vec_t,uint64_t>( std::begin(amesh.vertices),
+                                                          std::end(amesh.vertices) );
+
+        // Prune unneeded vertices.
+        amesh.remove_disconnected_vertices();
+        //amesh.recreate_involved_face_index();
 
     }else{
         throw std::invalid_argument("Unrecognized method");
