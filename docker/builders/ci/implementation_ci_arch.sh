@@ -57,8 +57,6 @@ pacman -S --noconfirm --needed \
   nlopt
 rm -f /var/cache/pacman/pkg/*
 
-# Simplify git repo ownership issues.
-git config --global --add safe.directory '/**'
 
 # Install Ygor.
 #
@@ -72,6 +70,7 @@ mkdir -pv /ygor
 cd /ygor
 git clone https://github.com/hdclark/Ygor .
 chown -R builduser:builduser .
+git config --global --add safe.directory /ygor
 su - builduser -c "cd /ygor && ./compile_and_install.sh -b build"
 git reset --hard
 git clean -fxd :/ 
@@ -89,6 +88,7 @@ mkdir -pv /explicator
 cd /explicator
 git clone https://github.com/hdclark/explicator .
 chown -R builduser:builduser .
+git config --global --add safe.directory /explicator
 su - builduser -c "cd /explicator && ./compile_and_install.sh -b build"
 git reset --hard
 git clean -fxd :/ 
@@ -99,6 +99,7 @@ mkdir -pv /ygorcluster
 cd /ygorcluster
 git clone https://github.com/hdclark/YgorClustering .
 chown -R builduser:builduser .
+git config --global --add safe.directory /ygorcluster
 su - builduser -c "cd /ygorcluster && ./compile_and_install.sh -b build"
 git reset --hard
 git clean -fxd :/ 
@@ -121,6 +122,7 @@ git clean -fxd :/
 mkdir -pv /dcma
 cd /dcma
 chown -R builduser:builduser .
+git config --global --add safe.directory /dcma
 sed -i -e 's@MEMORY_CONSTRAINED_BUILD=OFF@MEMORY_CONSTRAINED_BUILD=ON@' /dcma/PKGBUILD
 su - builduser -c "cd /dcma && makepkg --syncdeps --install --clean --needed --noconfirm"
 git reset --hard
