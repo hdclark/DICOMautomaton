@@ -23,7 +23,7 @@ cd "${REPOROOT}"
 
 #########################
 
-commit_hash="$(git rev-parse --short HEAD)"
+commit_hash="$(git rev-parse --short HEAD || printf 'unknown')"
 
 # Gather core files.
 mkdir -pv AppDir
