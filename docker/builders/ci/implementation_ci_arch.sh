@@ -58,7 +58,7 @@ pacman -S --noconfirm --needed \
 rm -f /var/cache/pacman/pkg/*
 
 # Simplify git repo ownership issues.
-git config --global --add safe.directory /
+git config --global --add safe.directory '/**'
 
 # Install Ygor.
 #
