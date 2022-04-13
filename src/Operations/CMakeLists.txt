@@ -152,6 +152,7 @@ add_library(Operations_objs OBJECT
     ScalePixels.cc
     SelectSlicesIntersectingROI.cc
     SimplifyContours.cc
+    SimplifySurfaceMeshes.cc
     SimulateRadiograph.cc
     Sleep.cc
     SpatialBlur.cc
@@ -205,7 +206,6 @@ add_library(Operations_objs OBJECT
     $<$<BOOL:${WITH_CGAL}>:MinkowskiSum3D.cc>
     $<$<BOOL:${WITH_CGAL}>:RemeshSurfaceMeshes.cc>
     $<$<BOOL:${WITH_CGAL}>:SeamContours.cc>
-    $<$<BOOL:${WITH_CGAL}>:SimplifySurfaceMeshes.cc>
     $<$<BOOL:${WITH_CGAL}>:SubdivideSurfaceMeshes.cc>
     $<$<BOOL:${WITH_CGAL}>:SurfaceBasedRayCastDoseAccumulate.cc>
 )

@@ -172,6 +172,7 @@
 #include "Operations/ScalePixels.h"
 #include "Operations/SelectSlicesIntersectingROI.h"
 #include "Operations/SimplifyContours.h"
+#include "Operations/SimplifySurfaceMeshes.h"
 #include "Operations/SimulateRadiograph.h"
 #include "Operations/Sleep.h"
 #include "Operations/SpatialBlur.h"
@@ -235,7 +236,6 @@
     #include "Operations/MinkowskiSum3D.h"
     #include "Operations/RemeshSurfaceMeshes.h"
     #include "Operations/SeamContours.h"
-    #include "Operations/SimplifySurfaceMeshes.h"
     #include "Operations/SubdivideSurfaceMeshes.h"
     #include "Operations/SurfaceBasedRayCastDoseAccumulate.h"
 #endif // DCMA_USE_CGAL
