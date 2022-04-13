@@ -2,20 +2,22 @@
 
 set -eu
 
-# Move to a standard location.
-export REPOROOT=$(git rev-parse --show-toplevel || true)
+# Move to the repository root.
+REPOROOT="$(git rev-parse --show-toplevel || true)"
 if [ ! -d "${REPOROOT}" ] ; then
-    printf 'Unable to find git repo root. Refusing to continue.\n' 1>&2
-    exit 1
-fi
-#cd "${REPOROOT}"
 
-export SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
-if [ ! -d "${SCRIPT_DIR}" ] ; then
-    printf 'Unable to find script directory. Refusing to continue.\n' 1>&2
-    exit 1
+    # Fall-back on the source position of this script.
+    SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
+    if [ ! -d "${SCRIPT_DIR}" ] ; then
+        printf "Cannot access repository root or root directory containing this script. Cannot continue.\n" 1>&2
+        exit 1
+    fi
+    REPOROOT="${SCRIPT_DIR}/../"
 fi
-cd "${SCRIPT_DIR}"
+cd "${REPOROOT}"
+
+# Move to script location.
+cd "unit_tests/"
 
 # Ensure the doctest header is available.
 if [ ! -f doctest/doctest.h ] ; then

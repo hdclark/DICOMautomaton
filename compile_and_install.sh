@@ -108,8 +108,9 @@ if [[ "${DISTRIBUTION}" =~ .*auto.* ]] &&
     DISTRIBUTION=$( bash -c '. /etc/os-release && printf "${NAME}"' )
 fi
 
+
 # Move to the repository root.
-REPOROOT=$(git rev-parse --show-toplevel || true) 
+REPOROOT="$(git rev-parse --show-toplevel || true)"
 if [ ! -d "${REPOROOT}" ] ; then
 
     # Fall-back on the source position of this script.

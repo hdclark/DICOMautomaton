@@ -5,15 +5,26 @@
 #
 # Note that the end-user's glibc version must be equivalent or newer than the Docker image glibc.
 
-reporoot=$(git rev-parse --show-toplevel)
-
 set -eu
 
-if [ -d "${reporoot}" ] ; then
-    cd "${reporoot}"
+# Move to the repository root.
+REPOROOT="$(git rev-parse --show-toplevel || true)"
+if [ ! -d "${REPOROOT}" ] ; then
+
+    # Fall-back on the source position of this script.
+    SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
+    if [ ! -d "${SCRIPT_DIR}" ] ; then
+        printf "Cannot access repository root or root directory containing this script. Cannot continue.\n" 1>&2
+        exit 1
+    fi
+    REPOROOT="${SCRIPT_DIR}/../"
 fi
+cd "${REPOROOT}"
 
 #########################
+
+commit_hash="$(git rev-parse --short HEAD)"
+
 # Gather core files.
 mkdir -pv AppDir
 
@@ -120,7 +131,7 @@ elif [ "$ARCH" == "aarch64" ] || [ "$ARCH" == "armhf" ] ; then
     ./squashfs-root/AppRun -v ./AppDir
     rm -rf ./squashfs-root/ ./appimagetool-${ARCH}.AppImage 
 
-    mv DICOMautomaton*AppImage "DICOMautomaton-$(git rev-parse --short HEAD)-${ARCH}.AppImage"
+    mv DICOMautomaton*AppImage "DICOMautomaton-${commit_hash}-${ARCH}.AppImage"
 
 fi
 

@@ -2,18 +2,19 @@
 
 set -eu
 
-# Move to a standard location.
-export REPO_ROOT=$(git rev-parse --show-toplevel || true)
-if [ ! -d "${REPO_ROOT}" ] ; then
-    printf 'Unable to find git repo root. Refusing to continue.\n' 1>&2
-    exit 1
+# Move to the repository root.
+REPOROOT="$(git rev-parse --show-toplevel || true)"
+if [ ! -d "${REPOROOT}" ] ; then
+
+    # Fall-back on the source position of this script.
+    SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
+    if [ ! -d "${SCRIPT_DIR}" ] ; then
+        printf "Cannot access repository root or root directory containing this script. Cannot continue.\n" 1>&2
+        exit 1
+    fi
+    REPOROOT="${SCRIPT_DIR}/../"
 fi
 
-export SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
-if [ ! -d "${SCRIPT_DIR}" ] ; then
-    printf 'Unable to find script directory. Refusing to continue.\n' 1>&2
-    exit 1
-fi
 
 # The file that will be edited.
 declare -a edit_files
@@ -27,7 +28,7 @@ comp_file="/dev/null"
 set +e
 
 function compile_func {
-    cd "${REPO_ROOT}"
+    cd "${REPOROOT}"
     #g++ \
     #  -DBOOST_ALL_NO_LIB \
     #  -DBOOST_SYSTEM_DYN_LINK \

@@ -38,26 +38,26 @@ while getopts "huv" opt; do
 done
 shift $(( OPTIND - 1 ))  # Purge all consumed options to the left of the first non-option token.
 
-# Move to a standard location.
-export REPO_ROOT=$(git rev-parse --show-toplevel || true)
-if [ ! -d "${REPO_ROOT}" ] ; then
-    printf 'Unable to find git repo root. Refusing to continue.\n' 1>&2
-    exit 1
-fi
+# Move to the repository root.
+REPOROOT="$(git rev-parse --show-toplevel || true)"
+if [ ! -d "${REPOROOT}" ] ; then
 
-export SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
-if [ ! -d "${SCRIPT_DIR}" ] ; then
-    printf 'Unable to find script directory. Refusing to continue.\n' 1>&2
-    exit 1
+    # Fall-back on the source position of this script.
+    SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" )" )"
+    if [ ! -d "${SCRIPT_DIR}" ] ; then
+        printf "Cannot access repository root or root directory containing this script. Cannot continue.\n" 1>&2
+        exit 1
+    fi
+    REPOROOT="${SCRIPT_DIR}/../"
 fi
 
 # Common setup.
 export DCMA_BIN="dicomautomaton_dispatcher"
 #export TESTING_ROOT="/tmp/dcma_integration_testing"
-export TESTING_ROOT="${REPO_ROOT}/dcma_integration_testing"
+export TESTING_ROOT="${REPOROOT}/dcma_integration_testing"
 mkdir -v -p "${TESTING_ROOT}"
-export DCMA_REPO_ROOT="${REPO_ROOT}"
-export TEST_FILES_ROOT="${REPO_ROOT}/artifacts/test_files/"
+export DCMA_REPO_ROOT="${REPOROOT}"
+export TEST_FILES_ROOT="${REPOROOT}/artifacts/test_files/"
 export TEST_FAILURES="$(mktemp "${TESTING_ROOT}"/failures_XXXXXXXXXX)" 
 export TEST_SUCCESSES="$(mktemp "${TESTING_ROOT}"/successes_XXXXXXXXXX)" 
 export KEEP_ALL_OUTPUTS="0" # Successes are only purged when != "1".
@@ -119,8 +119,8 @@ export -f perform_test
 # Run all scripts, reporting only failures.
 set +e
 
-find "${SCRIPT_DIR}"/tests/ -type f -exec bash -c 'perform_test {}' \;
-#find "${SCRIPT_DIR}"/tests/ -type f -print0 |
+find "${REPOROOT}"/tests/ -type f -exec bash -c 'perform_test {}' \;
+#find "${REPOROOT}"/tests/ -type f -print0 |
 #  xargs -0 -I '{}' -P $(nproc || echo 2) -n 1 -r  \
 #         bash -c '{}'
 

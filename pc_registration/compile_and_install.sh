@@ -8,7 +8,7 @@ INSTALLPREFIX="/usr"
 INSTALLVIASUDO="yes" # whether to use sudo during installation.
 
 # Move to the repository root.
-REPOROOT=$(git rev-parse --show-toplevel || true) 
+REPOROOT="$(git rev-parse --show-toplevel || true)"
 if [ ! -d "${REPOROOT}" ] ; then
 
     # Fall-back on the source position of this script.
@@ -17,7 +17,7 @@ if [ ! -d "${REPOROOT}" ] ; then
         printf "Cannot access repository root or root directory containing this script. Cannot continue.\n" 1>&2
         exit 1
     fi
-    REPOROOT="${SCRIPT_DIR}"
+    REPOROOT="${SCRIPT_DIR}/../"
 fi
 cd "${REPOROOT}"
 
