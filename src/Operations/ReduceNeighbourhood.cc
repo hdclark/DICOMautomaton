@@ -75,13 +75,17 @@ OperationDoc OpArgDocReduceNeighbourhood(){
     out.args.emplace_back();
     out.args.back().name = "Neighbourhood";
     out.args.back().desc = "Controls how the neighbourhood surrounding a voxel is defined."
+                           "\n\n"
                            " Variable-size neighbourhoods 'spherical' and 'cubic' are defined."
                            " An appropriate isotropic extent must be provided for these neighbourhoods."
                            " (See below; extents must be provided in DICOM units, i.e., mm.)"
+                           "\n\n"
                            " Fixed-size neighbourhoods specify a fixed number of adjacent voxels."
+                           "\n\n"
                            " Fixed rectagular neighbourhoods are specified like 'RxCxI' for"
                            " row, column, and image slice extents (as integer number of rows, columns,"
                            " and slices)."
+                           "\n\n"
                            " Fixed spherical neighbourhoods are specified like 'Wsphere' where W"
                            " is the width (i.e., the number of voxels wide)."
                            " In morphological terminology, the neighbourhood is referred to as a"
@@ -105,7 +109,8 @@ OperationDoc OpArgDocReduceNeighbourhood(){
     out.args.emplace_back();
     out.args.back().name = "Reduction";
     out.args.back().desc = "Controls how the distribution of voxel values from neighbouring voxels is reduced."
-                           " Statistical distribution reducers 'min', 'mean', 'median', and 'max' are defined."
+                           "\n\n"
+                           "Statistical distribution reducers 'min', 'mean', 'median', and 'max' are defined."
                            " 'min' is also known as the 'erosion' operation. Likewise, 'max' is also known as"
                            " the 'dilation' operation."
                            " Note that the morphological 'opening' operation can be accomplished by sequentially"
@@ -113,20 +118,28 @@ OperationDoc OpArgDocReduceNeighbourhood(){
                            " The 'standardize' reduction method can be used for adaptive rescaling by"
                            " subtracting the local neighbourhood mean and dividing the local neighbourhood"
                            " standard deviation."
-                           " The 'standardize' reduction method is a way to (locally) transform variables on"
+                           "\n\n"
+                           "The 'geometric_mean' implements the Nth root of the product of N intensities within"
+                           " the neighbourhood. It is a smoothing filter often used to remove Gaussian noise."
+                           " Note that all pixels should be non-negative, otherwise the geometric mean is"
+                           " not well-defined. Otherwise NaN is returned."
+                           "\n\n"
+                           "The 'standardize' reduction method is a way to (locally) transform variables on"
                            " different scales so they can more easily be compared. Note that standardization can"
                            " result in undefined voxel values when the local neighbourhood is perfectly uniform."
                            " Also, since only the local neighbourhood is considered, voxels will in general have"
                            " *neither* zero mean *nor* a  unit standard deviation (growing the neighbourhood"
                            " extremely large *will* accomplish this, but the calculation will be inefficient)."
-                           " The 'percentile01' reduction method evaluates which percentile the central voxel"
+                           "\n\n"
+                           "The 'percentile01' reduction method evaluates which percentile the central voxel"
                            " occupies within the local neighbourhood."
                            " It is reported scaled to $[0,1]$. 'percentile01' can be used to"
                            " implement non-parametric adaptive scaling since only the local neighbourhood is"
                            " examined. (Duplicate values assume the percentile of the middle of the range.)"
                            " In contrast to 'standardize', the 'percentile01' reduction should remain valid"
                            " anywhere the local neighbourhood has a non-zero number of finite voxels."
-                           " Logical reducers 'is_min' and 'is_max' are also available -- is_min (is_max)"
+                           "\n\n"
+                           "Logical reducers 'is_min' and 'is_max' are also available -- is_min (is_max)"
                            " replace the voxel value with 1.0 if it was the min (max) in the neighbourhood and"
                            " 0.0 otherwise. Logical reducers 'is_min_nan' and 'is_max_nan' are variants that"
                            " replace the voxel with a NaN instead of 1.0 and otherwise do not overwrite the"
@@ -139,6 +152,7 @@ OperationDoc OpArgDocReduceNeighbourhood(){
                                  "median",
                                  "max",
                                  "dilate",
+                                 "geometric_mean",
                                  "standardize",
                                  "percentile01",
                                  "is_min",
@@ -154,6 +168,7 @@ OperationDoc OpArgDocReduceNeighbourhood(){
                            " voxels will be evaluated for variable-size neighbourhoods."
                            " Note that this parameter will be ignored if a fixed-size neighbourhood has"
                            " been specified."
+                           "\n\n"
                            " For spherical neighbourhoods, this distance refers to the"
                            " radius. For cubic neighbourhoods, this distance refers to 'box radius' or the distance"
                            " from the cube centre to the nearest point on each bounding face."
@@ -205,14 +220,15 @@ bool ReduceNeighbourhood(Drover &DICOM_data,
     const auto regex_mean    = Compile_Regex("^mean?$");
     const auto regex_max     = Compile_Regex("^maxi?m?u?m?$");
     const auto regex_dilate  = Compile_Regex("^di?l?a?t?.*"); // 'dilate' and 'dilation'.
+    const auto regex_geomean = Compile_Regex("^ge?o?m?e?t?r?i?c?[-_]?mean?$");
 
     const auto regex_stdize  = Compile_Regex("^st?a?n?d?a?r?d?i?z?e?d?$");
-    const auto regex_ptile01 = Compile_Regex("^pe?r?c?e?n?[_-]?t?i?l?e?0?1?$");
+    const auto regex_ptile01 = Compile_Regex("^pe?r?c?e?n?[-_]?t?i?l?e?0?1?$");
 
-    const auto regex_is_min = Compile_Regex("^is?_?m?ini?m?u?m?$");
-    const auto regex_is_max = Compile_Regex("^is?_?m?axi?m?u?m?$");
-    const auto regex_is_min_nan = Compile_Regex("^is?_?m?ini?m?u?m?_?nan$");
-    const auto regex_is_max_nan = Compile_Regex("^is?_?m?axi?m?u?m?_?nan$");
+    const auto regex_is_min = Compile_Regex("^is?[-_]?m?ini?m?u?m?$");
+    const auto regex_is_max = Compile_Regex("^is?[-_]?m?axi?m?u?m?$");
+    const auto regex_is_min_nan = Compile_Regex("^is?[-_]?m?ini?m?u?m?[-_]?nan$");
+    const auto regex_is_max_nan = Compile_Regex("^is?[-_]?m?axi?m?u?m?[-_]?nan$");
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
@@ -527,6 +543,19 @@ bool ReduceNeighbourhood(Drover &DICOM_data,
               ||  std::regex_match(ReductionStr, regex_dilate) ){
             ud.f_reduce = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                               return Stats::Max(shtl);
+                          };
+
+        }else if( std::regex_match(ReductionStr, regex_geomean) ){
+            const auto nan = std::numeric_limits<double>::quiet_NaN();
+            ud.f_reduce = [nan](float, std::vector<float> &shtl, vec3<double>) -> float {
+                              double prod = 1.0;
+                              if(!shtl.empty()){
+                                  const double expon = 1.0 / static_cast<double>(shtl.size());
+                                  for(const auto& x : shtl) prod *= std::pow(x, expon);
+                              }else{
+                                  prod = nan;
+                              }
+                              return static_cast<float>(prod);
                           };
 
         }else if( std::regex_match(ReductionStr, regex_stdize) ){
