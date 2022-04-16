@@ -122,6 +122,24 @@ OperationDoc OpArgDocSimplifySurfaceMeshes(){
     out.args.back().expected = true;
     out.args.back().examples = { "0.001", "1E-4", "0.5", "1.5" };
 
+
+    out.args.emplace_back();
+    out.args.back().name = "MinAlignAngle";
+    out.args.back().desc = "Needed for 'flat' algorithm."
+                           " The minimum angle (in rads) between a candidate surface and the original surface"
+                           " patch's area-weighted average normal in order for the candidate surface to be"
+                           " accepted."
+                           "\n\n"
+                           "The range is from zero to pi with zero being perfect alignment and pi (180 degrees)"
+                           " accepting any surface, even if it faces away from the original."
+                           "\n\n"
+                           "Note that being too permissive can result in the surface folding back on itself,"
+                           " resulting in (potentially) non-manifold pinches. An angle between zero and pi/2"
+                           " is recommended.";
+    out.args.back().default_val = "1.045";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.01", "0.1", "0.5", "1.0", "1.5", "3.14159" };
+
     return out;
 }
 
@@ -138,6 +156,7 @@ bool SimplifySurfaceMeshes(Drover &DICOM_data,
 
     const auto MeshEdgeCountLimit = std::stol( OptArgs.getValueStr("EdgeCountLimit").value() );
     const auto ToleranceDistance = std::stod(OptArgs.getValueStr("ToleranceDistance").value());
+    const auto MinAlignAngle = std::stod(OptArgs.getValueStr("MinAlignAngle").value());
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_edge_collapse = Compile_Regex("^ed?g?e?[-_]?c?o?l?l?a?p?s?e?$");
@@ -151,7 +170,8 @@ bool SimplifySurfaceMeshes(Drover &DICOM_data,
     for(auto & smp_it : SMs){
 
         if(std::regex_match(MethodStr, regex_flat)){
-            (*smp_it)->meshes.simplify_inner_triangles(ToleranceDistance);
+            (*smp_it)->meshes.simplify_inner_triangles(ToleranceDistance, 
+                                                       MinAlignAngle);
 
 #ifdef DCMA_USE_CGAL
         }else if(std::regex_match(MethodStr, regex_edge_collapse)){
