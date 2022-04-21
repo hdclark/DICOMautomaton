@@ -119,10 +119,11 @@ export -f perform_test
 # Run all scripts, reporting only failures.
 set +e
 
-find "${REPOROOT}"/tests/ -type f -exec bash -c 'perform_test {}' \;
-#find "${REPOROOT}"/tests/ -type f -print0 |
-#  xargs -0 -I '{}' -P $(nproc || echo 2) -n 1 -r  \
-#         bash -c '{}'
+find "${REPOROOT}"/integration_tests/tests/ -type f -iname '*.sh' -exec bash -c 'perform_test {}' \;
+#num_procs="$(nproc 2>/dev/null || echo 2)"
+#find "${REPOROOT}"/integration_tests/tests/ -type f -iname '*.sh' -print0 |
+#  xargs -0 -I '{}' -P "${num_procs}" -n 1 -r  \
+#         bash -c 'perform_test {}'
 
 # Report a summary.
 #cat "${TEST_SUCCESSES}" 
