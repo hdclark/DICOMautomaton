@@ -390,6 +390,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["PreFilterEnormousCTValues"] = std::make_pair(OpArgDocPreFilterEnormousCTValues, PreFilterEnormousCTValues);
     out["PruneEmptyImageDoseArrays"] = std::make_pair(OpArgDocPruneEmptyImageDoseArrays, PruneEmptyImageDoseArrays);
     out["PurgeContours"] = std::make_pair(OpArgDocPurgeContours, PurgeContours);
+    out["QueryUserInteractively"] = std::make_pair(OpArgDocQueryUserInteractively, QueryUserInteractively);
     out["RankPixels"] = std::make_pair(OpArgDocRankPixels, RankPixels);
     out["ReduceNeighbourhood"] = std::make_pair(OpArgDocReduceNeighbourhood, ReduceNeighbourhood);
     out["Repeat"] = std::make_pair(OpArgDocRepeat, Repeat);
@@ -397,6 +398,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ScalePixels"] = std::make_pair(OpArgDocScalePixels, ScalePixels);
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);
     out["SimplifyContours"] = std::make_pair(OpArgDocSimplifyContours, SimplifyContours);
+    out["SimplifySurfaceMeshes"] = std::make_pair(OpArgDocSimplifySurfaceMeshes, SimplifySurfaceMeshes);
     out["SimulateRadiograph"] = std::make_pair(OpArgDocSimulateRadiograph, SimulateRadiograph);
     out["Sleep"] = std::make_pair(OpArgDocSleep, Sleep);
     out["SpatialBlur"] = std::make_pair(OpArgDocSpatialBlur, SpatialBlur);
@@ -427,7 +429,6 @@ std::map<std::string, op_packet_t> Known_Operations(){
 
 #ifdef DCMA_USE_SDL
     out["SDL_Viewer"] = std::make_pair(OpArgDocSDL_Viewer, SDL_Viewer);
-    out["QueryUserInteractively"] = std::make_pair(OpArgDocQueryUserInteractively, QueryUserInteractively);
 #endif // DCMA_USE_SDL
 
 #ifdef DCMA_USE_SFML
@@ -460,7 +461,6 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["MinkowskiSum3D"] = std::make_pair(OpArgDocMinkowskiSum3D, MinkowskiSum3D);
     out["RemeshSurfaceMeshes"] = std::make_pair(OpArgDocRemeshSurfaceMeshes, RemeshSurfaceMeshes);
     out["SeamContours"] = std::make_pair(OpArgDocSeamContours, SeamContours);
-    out["SimplifySurfaceMeshes"] = std::make_pair(OpArgDocSimplifySurfaceMeshes, SimplifySurfaceMeshes);
     out["SubdivideSurfaceMeshes"] = std::make_pair(OpArgDocSubdivideSurfaceMeshes, SubdivideSurfaceMeshes);
     out["SurfaceBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocSurfaceBasedRayCastDoseAccumulate, SurfaceBasedRayCastDoseAccumulate);
 #endif // DCMA_USE_CGAL
