@@ -154,7 +154,9 @@ bool SimplifySurfaceMeshes(Drover &DICOM_data,
 
     const auto MethodStr = OptArgs.getValueStr("Method").value();
 
+#ifdef DCMA_USE_CGAL
     const auto MeshEdgeCountLimit = std::stol( OptArgs.getValueStr("EdgeCountLimit").value() );
+#endif //DCMA_USE_CGAL
     const auto ToleranceDistance = std::stod(OptArgs.getValueStr("ToleranceDistance").value());
     const auto MinAlignAngle = std::stod(OptArgs.getValueStr("MinAlignAngle").value());
 
