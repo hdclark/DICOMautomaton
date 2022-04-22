@@ -165,6 +165,7 @@
 #include "Operations/PreFilterEnormousCTValues.h"
 #include "Operations/PruneEmptyImageDoseArrays.h"
 #include "Operations/PurgeContours.h"
+#include "Operations/QueryUserInteractively.h"
 #include "Operations/RankPixels.h"
 #include "Operations/ReduceNeighbourhood.h"
 #include "Operations/Repeat.h"
@@ -203,7 +204,6 @@
 
 #ifdef DCMA_USE_SDL
     #include "Operations/SDL_Viewer.h"
-    #include "Operations/QueryUserInteractively.h"
 #endif // DCMA_USE_SDL
 
 #ifdef DCMA_USE_SFML
