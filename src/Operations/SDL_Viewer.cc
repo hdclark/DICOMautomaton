@@ -719,10 +719,9 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
           ||  (brush == brush_t::gaussian_3D) ){
         for(const auto &img_it : img_its){
             apply_to_inner_pixels({img_it}, [radius,intensity](const vec3<double> &, double dR, float v) -> float {
-                const float scale = 0.5;
-                const auto l_exp = std::exp( -std::pow(dR / (0.5 * radius), 2.0f) );
+                const float scale = 0.5f;
+                const auto l_exp = std::exp( -std::pow(dR / (scale * radius), 2.0f) );
                 return (intensity - v) * l_exp + v;
-                //return v + intensity * std::exp( -std::pow(dR / (0.5 * radius), 2.0f) );
             });
         }
 
@@ -733,7 +732,6 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                 const float steepness = 0.75;
                 const auto l_tanh = 0.5 * (1.0 + std::tanh( steepness * (radius - dR)));
                 return (intensity - v) * l_tanh + v;
-                //return v + intensity * 0.5 * (1.0 + std::tanh( steepness * (radius - dR)));
             });
         }
 
@@ -3032,7 +3030,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImVec2 edit_box_extent = ImGui::GetContentRegionAvail();
                 edit_box_extent.y *= 3.0 / 7.0;
 
-                ImGuiInputTextFlags flags;
+                ImGuiInputTextFlags flags = 0;
                 ImGui::InputTextMultiline("#vert_shader_editor",
                                           vert_shader_src.data(),
                                           vert_shader_src.size(),
@@ -6078,14 +6076,9 @@ bool SDL_Viewer(Drover &DICOM_data,
             // Account for viewport aspect ratio to make the render square.
             const auto w = static_cast<int>(io.DisplaySize.x);
             const auto h = static_cast<int>(io.DisplaySize.y);
-            const auto l_w = std::min(w, h);
-            const auto l_h = std::min(h, w);
-            //glViewport((w - l_w)/2, (h - l_h)/2, l_w, l_h);
             glViewport(0, 0, w, h);
             CHECK_FOR_GL_ERRORS();
 
-            // Set various matrices that describe the coordinate system transformations.
-            const auto wpos  = ImGui::GetMainViewport()->WorkPos;
             const auto wsize = ImGui::GetMainViewport()->WorkSize;
             const auto waspect = wsize.x / wsize.y;
 
