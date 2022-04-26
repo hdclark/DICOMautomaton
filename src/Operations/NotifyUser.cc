@@ -65,10 +65,10 @@ OperationDoc OpArgDocNotifyUser(){
     return out;
 }
 
-bool NotifyUser(Drover &DICOM_data,
+bool NotifyUser(Drover&,
                 const OperationArgPkg& OptArgs,
-                std::map<std::string, std::string>& InvocationMetadata,
-                const std::string& FilenameLex){
+                std::map<std::string, std::string>&,
+                const std::string&){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto NotificationsStr = OptArgs.getValueStr("Notifications").value();

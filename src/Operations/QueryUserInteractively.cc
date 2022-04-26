@@ -72,10 +72,10 @@ OperationDoc OpArgDocQueryUserInteractively(){
     return out;
 }
 
-bool QueryUserInteractively(Drover &DICOM_data,
+bool QueryUserInteractively(Drover &,
                             const OperationArgPkg& OptArgs,
                             std::map<std::string, std::string>& InvocationMetadata,
-                            const std::string& FilenameLex){
+                            const std::string&){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto QueriesStr = OptArgs.getValueStr("Queries").value();

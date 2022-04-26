@@ -20,10 +20,10 @@ OperationDoc OpArgDocNoOp(){
     return out;
 }
 
-bool NoOp(Drover &DICOM_data,
-            const OperationArgPkg&,
-            std::map<std::string, std::string>& /*InvocationMetadata*/,
-            const std::string& ){
+bool NoOp(Drover&,
+          const OperationArgPkg&,
+          std::map<std::string, std::string>&,
+          const std::string& ){
 
     return true;
 }

@@ -48,10 +48,10 @@ OperationDoc OpArgDocFalse() {
     return out;
 }
 
-bool False(Drover &DICOM_data,
-             const OperationArgPkg& /*OptArgs*/,
-             std::map<std::string, std::string>& /*InvocationMetadata*/,
-             const std::string& /*FilenameLex*/){
+bool False(Drover& /*DICOM_data*/,
+           const OperationArgPkg& /*OptArgs*/,
+           std::map<std::string, std::string>& /*InvocationMetadata*/,
+           const std::string& /*FilenameLex*/){
 
     throw std::runtime_error("This is a false truthiness signal."
                              " It should only be used within a conditional control flow meta-operation.");

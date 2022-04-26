@@ -68,10 +68,10 @@ OperationDoc OpArgDocModifyParameters(){
     return out;
 }
 
-bool ModifyParameters(Drover &DICOM_data,
+bool ModifyParameters(Drover& /*DICOM_data*/,
                       const OperationArgPkg& OptArgs,
                       std::map<std::string, std::string>& InvocationMetadata,
-                      const std::string& FilenameLex){
+                      const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ActionsStr = OptArgs.getValueStr("Actions").value();

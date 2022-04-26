@@ -67,10 +67,10 @@ OperationDoc OpArgDocSleep() {
     return out;
 }
 
-bool Sleep(Drover &DICOM_data,
+bool Sleep(Drover&,
            const OperationArgPkg& OptArgs,
-           std::map<std::string, std::string>& InvocationMetadata,
-           const std::string& FilenameLex){
+           std::map<std::string, std::string>&,
+           const std::string&){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto Duration = std::stod( OptArgs.getValueStr("Duration").value() );
