@@ -145,12 +145,12 @@ set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  "-O3 -g")
 if(MEMORY_CONSTRAINED_BUILD)
     # Do not overwrite user-provided flags, but do provide sane defaults.
     if(NOT CMAKE_CXX_FLAGS)
-        set(CMAKE_CXX_FLAGS "-O0 -DNDEBUG")
+        set(CMAKE_CXX_FLAGS "-Os -DNDEBUG")
     endif()
-    set(CMAKE_CXX_FLAGS_DEBUG           "-O0 -DNDEBUG")
-    set(CMAKE_CXX_FLAGS_MINSIZEREL      "-O0 -DNDEBUG")
-    set(CMAKE_CXX_FLAGS_RELEASE         "-O0 -DNDEBUG")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  "-O0 -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_DEBUG           "-Os -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_MINSIZEREL      "-Os -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_RELEASE         "-Os -DNDEBUG")
+    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  "-Os -DNDEBUG")
 endif()
 
 
