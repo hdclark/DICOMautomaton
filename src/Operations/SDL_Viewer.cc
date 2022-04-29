@@ -2652,6 +2652,12 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if(ImGui::MenuItem("Open", "ctrl+o", &view_toggles.open_files_enabled)){
                         loaded_files.emplace_back(std::async(std::launch::async, launch_file_open_dialog, open_file_root));
                     }
+                    if(ImGui::IsItemHovered()){
+                        ImGui::BeginTooltip();
+                        ImGui::Text("Note: your system might support drag-and-drop for files and directories.");
+                        ImGui::EndTooltip();
+                    }
+
                     //if(ImGui::MenuItem("Open", "ctrl+o")){
                     //    ImGui::OpenPopup("OpenFileSelector");
                     //}
