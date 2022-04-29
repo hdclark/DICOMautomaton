@@ -1129,6 +1129,8 @@ bool SDL_Viewer(Drover &DICOM_data,
     if(window == nullptr){
         throw std::runtime_error("Unable to create an SDL window: "_s + SDL_GetError());
     }
+    SDL_EventState(SDL_DROPFILE, SDL_ENABLE); // Enable file/dir drag-and-drop.
+
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     if(gl_context == nullptr){
         throw std::runtime_error("Unable to create an OpenGL context for SDL: "_s + SDL_GetError());
@@ -2247,45 +2249,6 @@ bool SDL_Viewer(Drover &DICOM_data,
     // Open file dialog state.
     std::filesystem::path open_file_root = std::filesystem::current_path();
     std::array<char,2048> root_entry_text;
-    enum class file_selection_intent {
-        files,    // Treat files as files that should be loaded using Load_Files() and eagerly converted into operations.
-        scripts,  // Treat files as scripts that should be read as text files and the contents not interpretted.
-    };
-    struct file_selection {
-        std::filesystem::path path;
-        bool is_dir;
-        std::uintmax_t file_size;
-        bool selected;
-    };
-    std::vector<file_selection> open_files_selection;
-    std::vector<file_selection> open_scripts_selection;
-
-    const auto query_files = []( std::filesystem::path root ){
-        std::vector<file_selection> files;
-        try{
-            if( !root.empty()
-            &&  std::filesystem::exists(root)
-            &&  std::filesystem::is_directory(root) ){
-                for(const auto &d : std::filesystem::directory_iterator( root )){
-                    const auto p = d.path();
-                    const std::uintmax_t file_size = ( !std::filesystem::is_directory(p) && std::filesystem::exists(p) )
-                                                     ? std::filesystem::file_size(p) : 0;
-                    files.push_back( { p,
-                                       std::filesystem::is_directory(p),
-                                       file_size,
-                                       false } );
-                }
-                std::sort( std::begin(files), std::end(files), 
-                           [](const file_selection &L, const file_selection &R){
-                                return L.path < R.path;
-                           } );
-            }
-        }catch(const std::exception &e){
-            FUNCINFO("Unable to query files: '" << e.what() << "'");
-            files.clear();
-        }
-        return files;
-    };
 
     recompute_image_state();
     recompute_scale_bar_image_state();
@@ -2300,13 +2263,29 @@ bool SDL_Viewer(Drover &DICOM_data,
         Drover DICOM_data;
         std::map<std::string,std::string> InvocationMetadata;
     };
-    std::future<loaded_files_res> loaded_files;
+    std::list<std::future<loaded_files_res>> loaded_files;
 
-    // This is meant to be run asynchronously.
-    const auto launch_file_open_dialog = [InvocationMetadata,
-                                          FilenameLex,
-                                          &view_toggles,
-                                          &query_files ](std::filesystem::path open_file_root) -> loaded_files_res {
+    // Load a list of files/directories.
+    // Note: This is meant to be called asynchronously.
+    const auto load_paths = [InvocationMetadata,
+                             FilenameLex ](std::list<std::filesystem::path> paths) -> loaded_files_res {
+
+        loaded_files_res lfs;
+        lfs.InvocationMetadata = InvocationMetadata;
+        std::list<OperationArgPkg> Operations;
+        lfs.res = Load_Files(lfs.DICOM_data, lfs.InvocationMetadata, FilenameLex, Operations, paths);
+        if(!Operations.empty()){
+             lfs.res = false;
+             FUNCWARN("Loaded file contains a script. Currently unable to handle script files here");
+        }
+
+        // Notify that the files can be inserted into the main Drover.
+        return lfs;
+    };
+
+    // Launch an interactive dialog box for file selection.
+    // Note: This is meant to be run asynchronously.
+    const auto launch_file_open_dialog = [ &load_paths ](std::filesystem::path open_file_root) -> loaded_files_res {
         if(!std::filesystem::is_directory(open_file_root)){
             open_file_root = std::filesystem::current_path();
         }
@@ -2331,18 +2310,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             paths.push_back( f );
         }
 
-        // Load the files.
-        loaded_files_res lfs;
-        lfs.InvocationMetadata = InvocationMetadata;
-        std::list<OperationArgPkg> Operations;
-        lfs.res = Load_Files(lfs.DICOM_data, lfs.InvocationMetadata, FilenameLex, Operations, paths);
-        if(!Operations.empty()){
-             lfs.res = false;
-             FUNCWARN("Loaded file contains a script. Currently unable to handle script files here");
-        }
-
-        // Notify that the files can be inserted into the 
-        return lfs;
+        return load_paths(paths);
     };
 
     // Script files.
@@ -2531,28 +2499,41 @@ bool SDL_Viewer(Drover &DICOM_data,
         ++frame_count;
         image_mouse_pos_opt = {};
 
-        // Poll and handle events (inputs, window resize, etc.)
-        // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
-        // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
-        // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
-        // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-        SDL_Event event;
-        bool close_window = false;
-        while(SDL_PollEvent(&event)){
-            ImGui_ImplSDL2_ProcessEvent(&event);
-            if(event.type == SDL_QUIT){
-                close_window = true;
-                break;
+        // Poll for queued SDL events.
+        {
+            SDL_Event event;
+            bool close_window = false;
+            std::list<std::filesystem::path> paths; // Drag-and-dropped paths from OS/window manager.
 
-            }else if( (event.type == SDL_WINDOWEVENT)
-                  &&  (event.window.event == SDL_WINDOWEVENT_CLOSE)
-                  &&  (event.window.windowID == SDL_GetWindowID(window)) ){
-                close_window = true;
-                break;
+            while(SDL_PollEvent(&event)){
+                if(event.type == SDL_QUIT){
+                    close_window = true;
+                    break;
 
+                }else if( (event.type == SDL_WINDOWEVENT)
+                      &&  (event.window.event == SDL_WINDOWEVENT_CLOSE)
+                      &&  (event.window.windowID == SDL_GetWindowID(window)) ){
+                    close_window = true;
+                    break;
+
+                }else if( event.type == SDL_DROPFILE ){
+                    if(nullptr != event.drop.file){
+                        const std::string p(event.drop.file);
+                        SDL_free(event.drop.file);
+                        paths.emplace_back(p);
+                    }
+                }else{
+                    ImGui_ImplSDL2_ProcessEvent(&event);
+                }
             }
+
+            if(close_window) break;
+
+            if( !paths.empty() ){
+                loaded_files.emplace_back(std::async(std::launch::async, load_paths, paths));
+            }
+
         }
-        if(close_window) break;
 
         // Build a frame using ImGui.
         ImGui_ImplOpenGL3_NewFrame();
@@ -2669,9 +2650,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(ImGui::BeginMainMenuBar()){
                 if(ImGui::BeginMenu("File")){
                     if(ImGui::MenuItem("Open", "ctrl+o", &view_toggles.open_files_enabled)){
-                        if(!loaded_files.valid()){
-                            loaded_files = std::async(std::launch::async, launch_file_open_dialog, open_file_root);
-                        }
+                        loaded_files.emplace_back(std::async(std::launch::async, launch_file_open_dialog, open_file_root));
                     }
                     //if(ImGui::MenuItem("Open", "ctrl+o")){
                     //    ImGui::OpenPopup("OpenFileSelector");
@@ -4304,44 +4283,56 @@ bool SDL_Viewer(Drover &DICOM_data,
                                           &loaded_files,
 
                                           &frame_count]() -> void {
-            if( loaded_files.valid() ){
-                ImGui::OpenPopup("Loading");
-                if(ImGui::BeginPopupModal("Loading", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
-                    const std::string str((frame_count / 15) % 4, '.'); // Simplistic animation.
-                    ImGui::Text("Loading files%s", str.c_str());
 
-                    if(ImGui::Button("Close")){
-                        ImGui::CloseCurrentPopup();
-                    }
-                    ImGui::EndPopup();
+            // Process only one future every frame.
+            // This keeps frame delays minimum, and also retains future creation order.
+            if(loaded_files.empty()) return;
+
+            // Prune invalid (default-constructed) futures.
+            if(!loaded_files.front().valid()){
+                loaded_files.pop_front();
+                return;
+            }
+
+            ImGui::OpenPopup("Loading");
+            if(ImGui::BeginPopupModal("Loading", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+                std::string str((frame_count / 15) % 4, '.'); // Simplistic animation.
+                str.insert(str.size(), 4UL - str.size(), ' ');
+
+                ImGui::Text("Loading files%s", str.c_str());
+
+                if(ImGui::Button("Close")){
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::EndPopup();
+            }
+
+            if(std::future_status::ready == loaded_files.front().wait_for(std::chrono::microseconds(1))){
+                std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
+                auto f = loaded_files.front().get();
+
+                if(f.res){
+                    DICOM_data.Consume(f.DICOM_data);
+                    f.InvocationMetadata.merge(InvocationMetadata);
+                    InvocationMetadata = f.InvocationMetadata;
+                }else{
+                    FUNCWARN("Unable to load files");
+                    // TODO ... warn about the issue.
                 }
 
-                if(std::future_status::ready == loaded_files.wait_for(std::chrono::microseconds(1))){
-                    std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
-                    auto f = loaded_files.get();
+                view_toggles.open_files_enabled = false;
+                recompute_image_state();
+                need_to_reload_opengl_texture.store(true);
+                loaded_files.pop_front();
 
-                    if(f.res){
-                        DICOM_data.Consume(f.DICOM_data);
-                        f.InvocationMetadata.merge(InvocationMetadata);
-                        InvocationMetadata = f.InvocationMetadata;
-                    }else{
-                        FUNCWARN("Unable to load files");
-                        // TODO ... warn about the issue.
-                    }
-
-                    view_toggles.open_files_enabled = false;
-                    recompute_image_state();
-                    need_to_reload_opengl_texture.store(true);
-                    loaded_files = decltype(loaded_files)();
-                    auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
-                    if(img_valid){
-                        if(view_toggles.view_contours_enabled) launch_contour_preprocessor();
-                        reset_contouring_state(img_array_ptr_it);
-                        tagged_pos = {};
-                    }
-
+                auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+                if(img_valid){
+                    if(view_toggles.view_contours_enabled) launch_contour_preprocessor();
+                    reset_contouring_state(img_array_ptr_it);
+                    tagged_pos = {};
                 }
             }
+            return;
         };
         try{
             handle_file_loading();
