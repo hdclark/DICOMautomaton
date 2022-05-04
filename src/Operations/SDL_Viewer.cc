@@ -836,8 +836,6 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_implot_demo = false;
         bool view_metrics_window = false;
 
-        bool open_files_enabled = false;
-
         bool view_images_enabled = true;
         bool view_image_metadata_enabled = false;
         bool view_contours_enabled = true;
@@ -2647,22 +2645,38 @@ bool SDL_Viewer(Drover &DICOM_data,
                                             &time_profile,
 
                                             &img_features ](void) -> bool {
+
+            // Check for hot keys.
+            ImGuiIO &io = ImGui::GetIO();
+            const bool hotkey_ctrl_o = io.KeyCtrl && ImGui::IsKeyPressed(SDL_SCANCODE_O);
+            const bool hotkey_ctrl_q = io.KeyCtrl && ImGui::IsKeyPressed(SDL_SCANCODE_Q);
+            const bool hotkey_ctrl_h = io.KeyCtrl && ImGui::IsKeyPressed(SDL_SCANCODE_H);
+
+            const auto implement_file_open = [&]() -> void {
+                loaded_files.emplace_back(std::async(std::launch::async, launch_file_open_dialog, open_file_root));
+                return;
+            };
+            const auto implement_show_help = [&]() -> void {
+                view_toggles.set_about_popup = true;
+                return;
+            };
+
+            if( hotkey_ctrl_o ) implement_file_open();
+            if( hotkey_ctrl_q ) return false;
+            if( hotkey_ctrl_h ) implement_show_help();
+
             if(ImGui::BeginMainMenuBar()){
                 if(ImGui::BeginMenu("File")){
-                    if(ImGui::MenuItem("Open", "ctrl+o", &view_toggles.open_files_enabled)){
-                        loaded_files.emplace_back(std::async(std::launch::async, launch_file_open_dialog, open_file_root));
+                    if( ImGui::MenuItem("Open", "ctrl+o") ){
+                        implement_file_open();
                     }
-                    if(ImGui::IsItemHovered()){
+                    if( ImGui::IsItemHovered()){
                         ImGui::BeginTooltip();
                         ImGui::Text("Note: your system might support drag-and-drop for files and directories.");
                         ImGui::EndTooltip();
                     }
-
-                    //if(ImGui::MenuItem("Open", "ctrl+o")){
-                    //    ImGui::OpenPopup("OpenFileSelector");
-                    //}
                     ImGui::Separator();
-                    if(ImGui::MenuItem("Exit", "ctrl+q")){
+                    if( ImGui::MenuItem("Exit", "ctrl+q") ){
                         ImGui::EndMenu();
                         return false;
                     }
@@ -2934,14 +2948,15 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
 
                 ImGui::Separator();
-                if(ImGui::BeginMenu("Help", "ctrl+h")){
-                    if(ImGui::MenuItem("About")){
-                        view_toggles.set_about_popup = true;
+
+                if( ImGui::BeginMenu("Help") ){
+                    if(ImGui::MenuItem("About", "ctrl+h")){
+                        implement_show_help();
                     }
                     ImGui::MenuItem("Metrics", nullptr, &view_toggles.view_metrics_window);
                     ImGui::Separator();
 
-                    if(ImGui::BeginMenu("Operations", "ctrl+d")){
+                    if(ImGui::BeginMenu("Operations")){
                         auto known_ops = Known_Operations();
                         for(auto &anop : known_ops){
                             const auto op_name = anop.first;
@@ -4326,7 +4341,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                     // TODO ... warn about the issue.
                 }
 
-                view_toggles.open_files_enabled = false;
                 recompute_image_state();
                 need_to_reload_opengl_texture.store(true);
                 loaded_files.pop_front();
@@ -4380,7 +4394,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                         FUNCWARN("Unable to load scripts");
                         // TODO ... warn about the issue.
                     }
-                    view_toggles.open_files_enabled = false;
 
                     loaded_scripts = decltype(loaded_scripts)();
                 }
