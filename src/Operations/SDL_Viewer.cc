@@ -1937,6 +1937,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             contour_colours_l = contour_colours;
             contour_colour_from_orientation_l = contour_colour_from_orientation;
         }
+        std::set<std::string> encountered;
 
         long int n = contour_colours_l.size();
 
@@ -1951,9 +1952,24 @@ bool SDL_Viewer(Drover &DICOM_data,
                 for(const auto & cc : DICOM_data.contour_data->ccs){
                     for(const auto & c : cc.contours){
                         const auto ROIName = c.GetMetadataValueAs<std::string>("ROIName").value_or("unknown");
+                        encountered.insert(ROIName);
 
                         if(contour_colours_l.count(ROIName) == 0){
                             contour_colours_l[ROIName] = get_unique_colour( n++ );
+                        }
+                    }
+                }
+
+                // Remove any irrelevant entries.
+                {
+                    auto it = std::begin(contour_colours_l);
+                    const auto end = std::end(contour_colours_l);
+                    while(it != end){
+                        const bool was_encountered = (encountered.count(it->first) != 0UL);
+                        if(was_encountered){
+                            ++it;
+                        }else{
+                            it = contour_colours_l.erase(it);
                         }
                     }
                 }
