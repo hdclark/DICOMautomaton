@@ -183,6 +183,7 @@
 #include "Operations/SubsegmentContours.h"
 #include "Operations/SubtractImages.h"
 #include "Operations/SupersampleImageGrid.h"
+#include "Operations/TabulateImageMetadata.h"
 #include "Operations/Terminal_Viewer.h"
 #include "Operations/ThresholdImages.h"
 #include "Operations/ThresholdOtsu.h"
@@ -408,6 +409,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["SubsegmentContours"] = std::make_pair(OpArgDocSubsegmentContours, SubsegmentContours);
     out["SubtractImages"] = std::make_pair(OpArgDocSubtractImages, SubtractImages);
     out["SupersampleImageGrid"] = std::make_pair(OpArgDocSupersampleImageGrid, SupersampleImageGrid);
+    out["TabulateImageMetadata"] = std::make_pair(OpArgDocTabulateImageMetadata, TabulateImageMetadata);
     out["Terminal_Viewer"] = std::make_pair(OpArgDocTerminal_Viewer, Terminal_Viewer);
     out["ThresholdImages"] = std::make_pair(OpArgDocThresholdImages, ThresholdImages);
     out["ThresholdOtsu"] = std::make_pair(OpArgDocThresholdOtsu, ThresholdOtsu);
