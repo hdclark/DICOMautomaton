@@ -216,6 +216,7 @@
     #include "Operations/DetectGrid3D.h"
     #include "Operations/ModelIVIM.h"
     #include "Operations/VoxelRANSAC.h"
+    #include "Operations/DecomposeImagesSVD.h"
 #endif // DCMA_USE_EIGEN
 
 #ifdef DCMA_USE_GNU_GSL
@@ -442,6 +443,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["DetectGrid3D"] = std::make_pair(OpArgDocDetectGrid3D, DetectGrid3D);
     out["ModelIVIM"] = std::make_pair(OpArgDocModelIVIM, ModelIVIM);
     out["VoxelRANSAC"] = std::make_pair(OpArgDocVoxelRANSAC, VoxelRANSAC);
+    out["DecomposeImagesSVD"] = std::make_pair(OpArgDocDecomposeImagesSVD, DecomposeImagesSVD);
 #endif // DCMA_USE_EIGEN
 
 #ifdef DCMA_USE_GNU_GSL
