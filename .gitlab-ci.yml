@@ -18,6 +18,7 @@ stages:
 # Notes: reduced (or missing) optimization, some components may be missing.
 build_ci_debian_oldstable:
   stage: build
+  tags: dcma
   needs: []
   image: "debian:oldstable"
   before_script:
@@ -39,6 +40,7 @@ build_ci_debian_oldstable:
 # Notes: reduced (or missing) optimization, some components may be missing.
 build_ci_arch:
   stage: build
+  tags: dcma
   needs: []
   image: "archlinux:latest"
   before_script:
@@ -60,6 +62,7 @@ build_ci_arch:
 # Notes: reduced (or missing) optimization, some components may be missing.
 cross_compile_mxe:
   stage: build
+  tags: dcma
   needs: []
   image: "hdclark/dcma_build_base_mxe:latest"
   before_script:
@@ -77,6 +80,7 @@ cross_compile_mxe:
 ## Full Arch Linux build.
 #build_arch:
 #  stage: build
+#  tags: dcma
 #  needs: []
 #  image: "archlinux:latest"
 #  before_script:
@@ -105,6 +109,7 @@ cross_compile_mxe:
 # Same-system testing.
 test_ci_debian_oldstable_on_debian_oldstable:
   stage: test
+  tags: dcma
   needs: ["build_ci_debian_oldstable"]
   image: "debian:oldstable"
   script:
@@ -124,6 +129,7 @@ test_ci_debian_oldstable_on_debian_oldstable:
 
 test_ci_arch_on_arch:
   stage: test
+  tags: dcma
   needs: ["build_ci_arch"]
   image: "archlinux:latest"
   script:
@@ -144,6 +150,7 @@ test_ci_arch_on_arch:
 # Cross-system testing.
 test_ci_debian_oldstable_on_arch:
   stage: test
+  tags: dcma
   needs: ["build_ci_debian_oldstable"]
   image: "archlinux:latest"
   script:
@@ -163,6 +170,7 @@ test_ci_debian_oldstable_on_arch:
 
 test_ci_debian_oldstable_on_ubuntu_latest:
   stage: test
+  tags: dcma
   needs: ["build_ci_debian_oldstable"]
   image: "ubuntu:latest"
   script:
@@ -185,6 +193,7 @@ test_ci_debian_oldstable_on_ubuntu_latest:
 
 test_ci_debian_oldstable_on_fedora_latest:
   stage: test
+  tags: dcma
   needs: ["build_ci_debian_oldstable"]
   image: "fedora:latest"
   script:
@@ -213,6 +222,7 @@ test_ci_debian_oldstable_on_fedora_latest:
 # Cross-compilation testing.
 test_cross_compile_mxe_on_debian_oldstable:
   stage: test
+  tags: dcma
   needs: ["cross_compile_mxe"]
   image: "debian:oldstable"
   script:
@@ -248,6 +258,7 @@ test_cross_compile_mxe_on_debian_oldstable:
 
 deploy_ci_debian_oldstable:
   stage: deploy
+  tags: dcma
   needs: ["test_ci_debian_oldstable_on_debian_oldstable"]
   script:
     - "echo 'Deployment placeholder successful'"
