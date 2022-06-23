@@ -78,9 +78,15 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
                 throw std::runtime_error("FITS file missing key image parameters. Cannot continue.");
             }
 
-            auto ll_meta = l_meta;
-            inject_metadata(animg.metadata, std::move(ll_meta));
+            // Fill in any missing metadata in a consistent way, but honour any existing metadata that might be present.
+            // Evolve the metadata so images loaded together stay linked, but allow existing metadata to take
+            // precendent.
+            auto ll_meta = animg.metadata;
+            inject_metadata( l_meta, std::move(ll_meta) ); // ll_meta takes priority.
+            l_meta = coalesce_metadata_for_basic_image(l_meta); // Ensure any gaps are filled.
+            animg.metadata = l_meta;
             animg.metadata["Filename"] = Filename.string();
+            l_meta = coalesce_metadata_for_basic_image(l_meta, meta_evolve::iterate); // Evolve for next image.
 
             FUNCINFO("Loaded FITS file with dimensions " 
                      << animg.rows << " x " << animg.columns
@@ -122,9 +128,16 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
 
             planar_image<float,double> animg2;
             animg2.cast_from(animg);
-            auto ll_meta = l_meta;
-            inject_metadata(animg2.metadata, std::move(ll_meta));
+
+            // Fill in any missing metadata in a consistent way, but honour any existing metadata that might be present.
+            // Evolve the metadata so images loaded together stay linked, but allow existing metadata to take
+            // precendent.
+            auto ll_meta = animg2.metadata;
+            inject_metadata( l_meta, std::move(ll_meta) ); // ll_meta takes priority.
+            l_meta = coalesce_metadata_for_basic_image(l_meta); // Ensure any gaps are filled.
+            animg2.metadata = l_meta;
             animg2.metadata["Filename"] = Filename.string();
+            l_meta = coalesce_metadata_for_basic_image(l_meta, meta_evolve::iterate); // Evolve for next image.
 
             FUNCINFO("Loaded FITS file with dimensions " 
                      << animg2.rows << " x " << animg2.columns
@@ -136,9 +149,6 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
         }catch(const std::exception &e){
             FUNCINFO("Unable to load as FITS file with uint8_t,double types: '" << e.what() << "'");
         };
-
-        // Iterate metadata for next file.
-        l_meta = coalesce_metadata_for_basic_image(l_meta, meta_evolve::iterate);
 
         //Skip the file. It might be destined for some other loader.
         ++bfit;
