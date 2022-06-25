@@ -53,46 +53,50 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
 
         //First, try planar_images that have been exported in the expected format.
         try{
-            auto animg = ReadFromFITS<float,double>(Filename.string());
+            auto imgcoll = ReadFromFITS<float,double>(Filename.string());
 
-            //Set some default parameters if none were included in the file metadata.
-            if(!std::isfinite(animg.pxl_dx) 
-            || !std::isfinite(animg.pxl_dy)
-            || !std::isfinite(animg.pxl_dz)
-            || (animg.pxl_dx <= 0.0)
-            || (animg.pxl_dy <= 0.0) 
-            || (animg.pxl_dz <= 0.0) 
-            || !std::isfinite(animg.anchor.length())
-            || !std::isfinite(animg.offset.length()) ){
-                animg.init_spatial( 1.0, 1.0, 1.0, vec3<double>(0.0, 0.0, 0.0), vec3<double>(0.0, 0.0, 0.0));
+            for(auto& animg : imgcoll.images){
+                //Set some default parameters if none were included in the file metadata.
+                if(!std::isfinite(animg.pxl_dx) 
+                || !std::isfinite(animg.pxl_dy)
+                || !std::isfinite(animg.pxl_dz)
+                || (animg.pxl_dx <= 0.0)
+                || (animg.pxl_dy <= 0.0) 
+                || (animg.pxl_dz <= 0.0) 
+                || !std::isfinite(animg.anchor.length())
+                || !std::isfinite(animg.offset.length()) ){
+                    animg.init_spatial( 1.0, 1.0, 1.0, vec3<double>(0.0, 0.0, 0.0), vec3<double>(0.0, 0.0, 0.0));
+                }
+                if(!std::isfinite(animg.row_unit.length())
+                || !std::isfinite(animg.col_unit.length())
+                || (animg.row_unit.length() < 1E-5) 
+                || (animg.col_unit.length() < 1E-5)  ){
+                    animg.init_orientation( vec3<double>(0.0, 1.0, 0.0), vec3<double>(1.0, 0.0, 0.0) );
+                }
+                if(!std::isfinite(animg.rows)
+                || !std::isfinite(animg.columns)
+                || !std::isfinite(animg.channels) ){
+                    throw std::runtime_error("FITS file missing key image parameters. Cannot continue.");
+                }
+
+                // Fill in any missing metadata in a consistent way, but honour any existing metadata that might be present.
+                // Evolve the metadata so images loaded together stay linked, but allow existing metadata to take
+                // precendent.
+                auto ll_meta = animg.metadata;
+                inject_metadata( l_meta, std::move(ll_meta) ); // ll_meta takes priority.
+                l_meta = coalesce_metadata_for_basic_image(l_meta); // Ensure any gaps are filled.
+                animg.metadata = l_meta;
+                animg.metadata["Filename"] = Filename.string();
+                l_meta = coalesce_metadata_for_basic_image(l_meta, meta_evolve::iterate); // Evolve for next image.
+
+                FUNCINFO("Loaded FITS image with dimensions " 
+                         << animg.rows << " x " << animg.columns
+                         << " and " << animg.channels << " channels");
             }
-            if(!std::isfinite(animg.row_unit.length())
-            || !std::isfinite(animg.col_unit.length())
-            || (animg.row_unit.length() < 1E-5) 
-            || (animg.col_unit.length() < 1E-5)  ){
-                animg.init_orientation( vec3<double>(0.0, 1.0, 0.0), vec3<double>(1.0, 0.0, 0.0) );
-            }
-            if(!std::isfinite(animg.rows)
-            || !std::isfinite(animg.columns)
-            || !std::isfinite(animg.channels) ){
-                throw std::runtime_error("FITS file missing key image parameters. Cannot continue.");
-            }
 
-            // Fill in any missing metadata in a consistent way, but honour any existing metadata that might be present.
-            // Evolve the metadata so images loaded together stay linked, but allow existing metadata to take
-            // precendent.
-            auto ll_meta = animg.metadata;
-            inject_metadata( l_meta, std::move(ll_meta) ); // ll_meta takes priority.
-            l_meta = coalesce_metadata_for_basic_image(l_meta); // Ensure any gaps are filled.
-            animg.metadata = l_meta;
-            animg.metadata["Filename"] = Filename.string();
-            l_meta = coalesce_metadata_for_basic_image(l_meta, meta_evolve::iterate); // Evolve for next image.
-
-            FUNCINFO("Loaded FITS file with dimensions " 
-                     << animg.rows << " x " << animg.columns
-                     << " and " << animg.channels << " channels");
-
-            DICOM_data.image_data.back()->imagecoll.images.emplace_back( animg );
+            DICOM_data.image_data.back()->imagecoll.images.splice(
+                std::end( DICOM_data.image_data.back()->imagecoll.images),
+                imgcoll.images );
             bfit = Filenames.erase( bfit ); 
             continue;
         }catch(const std::exception &e){
@@ -101,49 +105,52 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
 
         //Then try the most likely format as exported by other programs.
         try{
-            auto animg = ReadFromFITS<uint8_t,double>(Filename.string());
+            auto imgcoll = ReadFromFITS<uint8_t,double>(Filename.string());
 
-            //Set some default parameters if none were included in the file metadata.
-            if(!std::isfinite(animg.pxl_dx) 
-            || !std::isfinite(animg.pxl_dy)
-            || !std::isfinite(animg.pxl_dz)
-            || (animg.pxl_dx <= 0.0)
-            || (animg.pxl_dy <= 0.0) 
-            || (animg.pxl_dz <= 0.0) 
-            || !std::isfinite(animg.anchor.length())
-            || !std::isfinite(animg.offset.length()) ){
-                animg.init_spatial( 1.0, 1.0, 1.0, vec3<double>(0.0, 0.0, 0.0), vec3<double>(0.0, 0.0, 0.0));
+            for(auto& animg : imgcoll.images){
+                //Set some default parameters if none were included in the file metadata.
+                if(!std::isfinite(animg.pxl_dx) 
+                || !std::isfinite(animg.pxl_dy)
+                || !std::isfinite(animg.pxl_dz)
+                || (animg.pxl_dx <= 0.0)
+                || (animg.pxl_dy <= 0.0) 
+                || (animg.pxl_dz <= 0.0) 
+                || !std::isfinite(animg.anchor.length())
+                || !std::isfinite(animg.offset.length()) ){
+                    animg.init_spatial( 1.0, 1.0, 1.0, vec3<double>(0.0, 0.0, 0.0), vec3<double>(0.0, 0.0, 0.0));
+                }
+                if(!std::isfinite(animg.row_unit.length())
+                || !std::isfinite(animg.col_unit.length())
+                || (animg.row_unit.length() < 1E-5) 
+                || (animg.col_unit.length() < 1E-5)  ){
+                    animg.init_orientation( vec3<double>(0.0, 1.0, 0.0), vec3<double>(1.0, 0.0, 0.0) );
+                }
+                if(!std::isfinite(animg.rows)
+                || !std::isfinite(animg.columns)
+                || !std::isfinite(animg.channels) ){
+                    throw std::runtime_error("FITS file missing key image parameters. Cannot continue.");
+                }
+
+                planar_image<float,double> animg2;
+                animg2.cast_from(animg);
+
+                // Fill in any missing metadata in a consistent way, but honour any existing metadata that might be present.
+                // Evolve the metadata so images loaded together stay linked, but allow existing metadata to take
+                // precendent.
+                auto ll_meta = animg2.metadata;
+                inject_metadata( l_meta, std::move(ll_meta) ); // ll_meta takes priority.
+                l_meta = coalesce_metadata_for_basic_image(l_meta); // Ensure any gaps are filled.
+                animg2.metadata = l_meta;
+                animg2.metadata["Filename"] = Filename.string();
+                l_meta = coalesce_metadata_for_basic_image(l_meta, meta_evolve::iterate); // Evolve for next image.
+
+                FUNCINFO("Loaded FITS image with dimensions " 
+                         << animg2.rows << " x " << animg2.columns
+                         << " and " << animg2.channels << " channels");
+
+                DICOM_data.image_data.back()->imagecoll.images.emplace_back( animg2 );
             }
-            if(!std::isfinite(animg.row_unit.length())
-            || !std::isfinite(animg.col_unit.length())
-            || (animg.row_unit.length() < 1E-5) 
-            || (animg.col_unit.length() < 1E-5)  ){
-                animg.init_orientation( vec3<double>(0.0, 1.0, 0.0), vec3<double>(1.0, 0.0, 0.0) );
-            }
-            if(!std::isfinite(animg.rows)
-            || !std::isfinite(animg.columns)
-            || !std::isfinite(animg.channels) ){
-                throw std::runtime_error("FITS file missing key image parameters. Cannot continue.");
-            }
 
-            planar_image<float,double> animg2;
-            animg2.cast_from(animg);
-
-            // Fill in any missing metadata in a consistent way, but honour any existing metadata that might be present.
-            // Evolve the metadata so images loaded together stay linked, but allow existing metadata to take
-            // precendent.
-            auto ll_meta = animg2.metadata;
-            inject_metadata( l_meta, std::move(ll_meta) ); // ll_meta takes priority.
-            l_meta = coalesce_metadata_for_basic_image(l_meta); // Ensure any gaps are filled.
-            animg2.metadata = l_meta;
-            animg2.metadata["Filename"] = Filename.string();
-            l_meta = coalesce_metadata_for_basic_image(l_meta, meta_evolve::iterate); // Evolve for next image.
-
-            FUNCINFO("Loaded FITS file with dimensions " 
-                     << animg2.rows << " x " << animg2.columns
-                     << " and " << animg2.channels << " channels");
-
-            DICOM_data.image_data.back()->imagecoll.images.emplace_back( animg2 );
             bfit = Filenames.erase( bfit ); 
             continue;
         }catch(const std::exception &e){

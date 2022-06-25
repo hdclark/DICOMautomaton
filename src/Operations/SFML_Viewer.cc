@@ -1345,15 +1345,17 @@ bool SFML_Viewer(Drover &DICOM_data,
                 bool loaded = false;
                 {
                     try{
-                        auto animg = ReadFromFITS<uint8_t,double>(fname);
-                        casted_img.cast_from(animg);
+                        auto imgcoll = ReadFromFITS<uint8_t,double>(fname);
+                        if(imgcoll.images.empty()) throw std::runtime_error("");
+                        casted_img.cast_from(imgcoll.images.front());
                         loaded = true;
                     }catch(const std::exception &e){ };
                 }
                 if(!loaded){
                     try{
-                        auto animg = ReadFromFITS<float,double>(fname);
-                        casted_img = animg;
+                        auto imgcoll = ReadFromFITS<float,double>(fname);
+                        if(imgcoll.images.empty()) throw std::runtime_error("");
+                        casted_img = imgcoll.images.front();
                         loaded = true;
                     }catch(const std::exception &e){ };
                 }

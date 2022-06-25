@@ -79,11 +79,13 @@ int main(int argc, char* argv[]){
           const auto p = std::filesystem::path(optarg);
           if(std::filesystem::is_directory(p)){
               for(const auto &f_it : std::filesystem::directory_iterator{p}){
-                  moving.images.emplace_back(ReadFromFITS<float,double>(f_it.path().string()));
+                  auto imgcoll = ReadFromFITS<float,double>(f_it.path().string());
+                  moving.images.splice( std::end(moving.images), imgcoll.images );
               }
           }else{
               // Assume it's a file.
-              moving.images.emplace_back(ReadFromFITS<float,double>(optarg));
+              auto imgcoll = ReadFromFITS<float,double>(optarg);
+              moving.images.splice( std::end(moving.images), imgcoll.images );
           }
           return;
       })
@@ -94,11 +96,13 @@ int main(int argc, char* argv[]){
           const auto p = std::filesystem::path(optarg);
           if(std::filesystem::is_directory(p)){
               for(const auto &f_it : std::filesystem::directory_iterator{p}){
-                  stationary.images.emplace_back(ReadFromFITS<float,double>(f_it.path().string()));
+                  auto imgcoll = ReadFromFITS<float,double>(f_it.path().string());
+                  stationary.images.splice( std::end(stationary.images), imgcoll.images );
               }
           }else{
               // Assume it's a file.
-              stationary.images.emplace_back(ReadFromFITS<float,double>(optarg));
+              auto imgcoll = ReadFromFITS<float,double>(optarg);
+              stationary.images.splice( std::end(stationary.images), imgcoll.images );
           }
           return;
       })

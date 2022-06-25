@@ -41,9 +41,9 @@ OperationDoc OpArgDocExportFITSImages(){
         "This operation writes image arrays to FITS-formatted image files.";
 
     out.notes.emplace_back(
-        "Only pixel information and basic image positioning metadata are exported."
-        " In particular, contours and arbitrary metadata are **not** exported by this routine."
-        " (If a rendering of the image with contours drawn is needed, consult the PresentationImage operation.)"
+        "FITS images support lossless metadata export, but the metadata is embedded in a non-standard (but compliant)"
+        " manner. Altering images using other software may result in invalidated metadata or (partial) removal of"
+        " metadata."
     );
 
     out.args.emplace_back();
@@ -61,7 +61,7 @@ OperationDoc OpArgDocExportFITSImages(){
     out.args.back().expected = true;
     out.args.back().examples = { "../somedir/out", 
                                  "/path/to/some/dir/file_prefix" };
-    out.args.back().mimetype = "application/object-file-format"; // TODO: find correct MIME type.
+    out.args.back().mimetype = "application/fits"; // According to FITSv4.0 specification.
 
     return out;
 }
@@ -81,15 +81,11 @@ bool ExportFITSImages(Drover &DICOM_data,
     const auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
-        long int count = 0;
-        for(auto &pimg : (*iap_it)->imagecoll.images){
-            const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename(FilenameBaseStr + "_", 6, ".fits");
-            if(WriteToFITS(pimg, pixel_dump_filename_out)){
-                FUNCINFO("Exported image " << count << " to file '" << pixel_dump_filename_out << "'");
-            }else{
-                FUNCWARN("Unable to export image to file '" << pixel_dump_filename_out << "'");
-            }
-            ++count;
+        const auto fname = Get_Unique_Sequential_Filename(FilenameBaseStr + "_", 6, ".fits");
+        if(WriteToFITS((*iap_it)->imagecoll, fname)){
+            FUNCINFO("Exported image array to file '" << fname << "'");
+        }else{
+            FUNCWARN("Unable to export image array to file '" << fname << "'");
         }
     }
 
