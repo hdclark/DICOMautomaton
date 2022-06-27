@@ -74,24 +74,36 @@ if [ "${INSTALLVIASUDO}" != "yes" ] ; then
 fi
 #################
 
+retry_count=0
+retry_limit=5
+
 if [[ "${DISTRIBUTION}" =~ .*[dD]ebian.* ]] ; then
     printf 'Installing dependencies for Debian...\n'
     export DEBIAN_FRONTEND='noninteractive'
-    $SUDO apt-get update --yes
-    $SUDO apt-get install --yes --no-install-recommends \
-      bash git rsync \
-      wget ca-certificates \
-      mesa-utils libfreetype6 libsdl2-dev libice-dev libsm-dev libopengl0 g++
+
+    until $SUDO apt-get update --yes && \
+          $SUDO apt-get install --yes --no-install-recommends \
+            bash git rsync \
+            wget ca-certificates \
+            mesa-utils libfreetype6 libsdl2-dev libice-dev libsm-dev libopengl0 g++
+    do
+        (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
+        printf 'Waiting to retry.\n' && sleep 5
+    done
 
 elif [[ "${DISTRIBUTION}" =~ .*[uU]buntu.* ]] ; then
     printf 'Installing dependencies for Ubuntu...\n'
     export DEBIAN_FRONTEND='noninteractive'
 
-    $SUDO apt-get update --yes
-    $SUDO apt-get install --yes --no-install-recommends \
-      bash git rsync \
-      wget ca-certificates \
-      mesa-utils libfreetype6 libsdl2-dev libice-dev libsm-dev libopengl0 g++
+    until $SUDO apt-get update --yes && \
+          $SUDO apt-get install --yes --no-install-recommends \
+            bash git rsync \
+            wget ca-certificates \
+            mesa-utils libfreetype6 libsdl2-dev libice-dev libsm-dev libopengl0 g++
+    do
+        (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
+        printf 'Waiting to retry.\n' && sleep 5
+    done
 
 elif [[ "${DISTRIBUTION}" =~ .*[aA]rch.* ]] ; then
     printf 'Installing dependencies for Arch Linux...\n'
@@ -100,18 +112,27 @@ elif [[ "${DISTRIBUTION}" =~ .*[aA]rch.* ]] ; then
     #- "curl -o /etc/pacman.d/mirrorlist 'https://archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on'"
     #- "sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist"
     #- "sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf"
-    $SUDO pacman -Syu --noconfirm --needed \
-      bash git rsync \
-      wget ca-certificates \
-      mesa freetype2 sdl2 alsa-lib libice libsm libglvnd gcc-libs
+    until $SUDO pacman -Syu --noconfirm --needed \
+            bash git rsync \
+            wget ca-certificates \
+            mesa freetype2 sdl2 alsa-lib libice libsm libglvnd gcc-libs
+    do
+        (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
+        printf 'Waiting to retry.\n' && sleep 5
+    done
 
 elif [[ "${DISTRIBUTION}" =~ .*[fF]edora.* ]] ; then
     printf 'Installing dependencies for Fedora...\n'
-    $SUDO dnf -y upgrade
-    $SUDO dnf -y install \
-      bash git rsync \
-      wget ca-certificates \
-      findutils mesa-libGL freetype SDL2 alsa-lib libICE libSM libgcc libglvnd-opengl libstdc++
+
+    until $SUDO dnf -y upgrade && \
+          $SUDO dnf -y install \
+            bash git rsync \
+            wget ca-certificates \
+            findutils mesa-libGL freetype SDL2 alsa-lib libICE libSM libgcc libglvnd-opengl libstdc++
+    do
+        (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
+        printf 'Waiting to retry.\n' && sleep 5
+    done
 
 else
     printf 'Linux distribution not recognized. Cannot continue.\n'

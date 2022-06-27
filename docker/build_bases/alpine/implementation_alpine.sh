@@ -9,38 +9,46 @@ cd /scratch_base
 
 source /scratch_base/set_environment.sh
 
-# Install build dependencies.
-apk add --no-cache --update \
-  alpine-sdk \
-  bash \
-  git \
-  cmake \
-  vim \
-  gdb \
-  rsync \
-  openssh \
-  wget 
 
-apk add --no-cache \
-    ` # Ygor dependencies ` \
-    gsl-static gsl-dev \
-    eigen-dev \
-    ` # DICOMautomaton dependencies ` \
-    openssl-libs-static \
-    zlib-static zlib-dev \
-    sfml-dev \
-    sdl2-dev sdl-static \
-    glew-dev \
-    jansson-dev \
-    patchelf \
-    ` # Additional dependencies for headless OpenGL rendering with SFML ` \
-    libx11-dev libx11-static \
-    glu-dev glu \
-    mesa mesa-dev \
-    xorg-server-dev \
-    xf86-video-dummy \
-    ` # Other optional dependencies ` \
-    libnotify-dev dunst
+retry_count=0
+retry_limit=5
+until
+    # Install build dependencies.
+    apk add --no-cache --update \
+        alpine-sdk \
+        bash \
+        git \
+        cmake \
+        vim \
+        gdb \
+        rsync \
+        openssh \
+        wget \
+    && \
+    apk add --no-cache \
+        ` # Ygor dependencies ` \
+        gsl-static gsl-dev \
+        eigen-dev \
+        ` # DICOMautomaton dependencies ` \
+        openssl-libs-static \
+        zlib-static zlib-dev \
+        sfml-dev \
+        sdl2-dev sdl-static \
+        glew-dev \
+        jansson-dev \
+        patchelf \
+        ` # Additional dependencies for headless OpenGL rendering with SFML ` \
+        libx11-dev libx11-static \
+        glu-dev glu \
+        mesa mesa-dev \
+        xorg-server-dev \
+        xf86-video-dummy \
+        ` # Other optional dependencies ` \
+        libnotify-dev dunst
+do
+    (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
+    printf 'Waiting to retry.\n' && sleep 5
+done
 
 # Omitted (for now):
 #    cgal-dev \

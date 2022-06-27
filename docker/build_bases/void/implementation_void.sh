@@ -7,52 +7,60 @@ set -eux
 mkdir -pv /scratch_base
 cd /scratch_base
 
-# Install build dependencies.
-xbps-install -y -Su xbps
-xbps-install -y -Su
-xbps-install -y -S \
-  base-devel \
-  bash \
-  git \
-  cmake \
-  vim \
-  ncurses-term \
-  gdb \
-  rsync \
-  wget 
-
-xbps-install -y -S \
-    ` # Ygor dependencies ` \
-    boost-devel \
-    gsl-devel \
-    eigen \
-    ` # DICOMautomaton dependencies ` \
-    eigen \
-    boost-devel \
-    zlib-devel \
-    SFML-devel \
-    SDL2-devel \
-    glew-devel \
-    jansson-devel \
-    libpqxx-devel \
-    postgresql-client \
-    cgal-devel \
-    nlopt-devel \
-    asio \
-    freefont-ttf \
-    patchelf \
-    ` # Additional dependencies for headless OpenGL rendering with SFML ` \
-    xorg-minimal \
-    glu-devel \
-    xorg-video-drivers \
-    xf86-video-dummy \
-    xorg-apps \
-    ` # Other optional dependencies ` \
-    libnotify \
-    dunst \
-    bash-completion \
-    gnuplot \
-    zenity 
+retry_count=0
+retry_limit=5
+until 
+    # Install build dependencies.
+    xbps-install -y -Su xbps && \
+    xbps-install -y -Su && \
+    xbps-install -y -S \
+        base-devel \
+        bash \
+        git \
+        cmake \
+        vim \
+        ncurses-term \
+        gdb \
+        rsync \
+        wget \
+    && \
+       \
+    xbps-install -y -S \
+        ` # Ygor dependencies ` \
+        boost-devel \
+        gsl-devel \
+        eigen \
+        ` # DICOMautomaton dependencies ` \
+        eigen \
+        boost-devel \
+        zlib-devel \
+        SFML-devel \
+        SDL2-devel \
+        glew-devel \
+        jansson-devel \
+        libpqxx-devel \
+        postgresql-client \
+        cgal-devel \
+        nlopt-devel \
+        asio \
+        freefont-ttf \
+        patchelf \
+        ` # Additional dependencies for headless OpenGL rendering with SFML ` \
+        xorg-minimal \
+        glu-devel \
+        xorg-video-drivers \
+        xf86-video-dummy \
+        xorg-apps \
+        ` # Other optional dependencies ` \
+        libnotify \
+        dunst \
+        bash-completion \
+        gnuplot \
+        zenity 
+do
+    (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
+    printf 'Waiting to retry.\n' && sleep 5
+done
 
 cp /scratch_base/xpra-xorg.conf /etc/X11/xorg.conf
 

@@ -22,61 +22,69 @@ cd /scratch_base
 export DEBIAN_FRONTEND="noninteractive"
 
 
-apt-get update --yes
-apt-get install --yes --no-install-recommends \
-  git \
-  cmake \
-  make \
-  g++ \
-  vim \
-  ncurses-term \
-  gdb \
-  rsync \
-  wget \
-  ca-certificates
-
-apt-get install --yes --no-install-recommends \
-    ` # Ygor dependencies ` \
-    libboost-dev \
-    libgsl-dev \
-    libeigen3-dev \
-    ` # DICOMautomaton dependencies ` \
-    libeigen3-dev \
-    libboost-dev \
-    libboost-filesystem-dev \
-    libboost-iostreams-dev \
-    libboost-program-options-dev \
-    libboost-thread-dev \
-    libz-dev \
-    libsfml-dev \
-    libsdl2-dev \
-    libglew-dev \
-    libjansson-dev \
-    libpqxx-dev \
-    postgresql-client \
-    libcgal-dev \
-    libnlopt-dev \
-    libasio-dev \
-    fonts-freefont-ttf \
-    fonts-cmu \
-    freeglut3 \
-    freeglut3-dev \
-    libxi-dev \
-    libxmu-dev \
-    xz-utils \
-    `# 'libc++-dev' ` \
-    patchelf \
-    ` # Additional dependencies for headless OpenGL rendering with SFML ` \
-    x-window-system \
-    mesa-utils \
-    xserver-xorg-video-dummy \
-    x11-apps
-    ` # Other optional dependencies ` \
-    libnotify \
-    dunst \
-    bash-completion \
-    gnuplot \
-    zenity 
+retry_count=0
+retry_limit=5
+until
+    apt-get update --yes && \
+    apt-get install --yes --no-install-recommends \
+        git \
+        cmake \
+        make \
+        g++ \
+        vim \
+        ncurses-term \
+        gdb \
+        rsync \
+        wget \
+        ca-certificates \
+    && \
+       \
+    apt-get install --yes --no-install-recommends \
+        ` # Ygor dependencies ` \
+        libboost-dev \
+        libgsl-dev \
+        libeigen3-dev \
+        ` # DICOMautomaton dependencies ` \
+        libeigen3-dev \
+        libboost-dev \
+        libboost-filesystem-dev \
+        libboost-iostreams-dev \
+        libboost-program-options-dev \
+        libboost-thread-dev \
+        libz-dev \
+        libsfml-dev \
+        libsdl2-dev \
+        libglew-dev \
+        libjansson-dev \
+        libpqxx-dev \
+        postgresql-client \
+        libcgal-dev \
+        libnlopt-dev \
+        libasio-dev \
+        fonts-freefont-ttf \
+        fonts-cmu \
+        freeglut3 \
+        freeglut3-dev \
+        libxi-dev \
+        libxmu-dev \
+        xz-utils \
+        `# 'libc++-dev' ` \
+        patchelf \
+        ` # Additional dependencies for headless OpenGL rendering with SFML ` \
+        x-window-system \
+        mesa-utils \
+        xserver-xorg-video-dummy \
+        x11-apps
+        ` # Other optional dependencies ` \
+        libnotify \
+        dunst \
+        bash-completion \
+        gnuplot \
+        zenity 
+do
+    (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
+    printf 'Waiting to retry.\n' && sleep 5
+done
 
 cp /scratch_base/xpra-xorg.conf /etc/X11/xorg.conf
 

@@ -10,65 +10,73 @@ cd /scratch_base
 export DEBIAN_FRONTEND="noninteractive"
 
 
-apt-get update --yes
-apt-get install --yes --no-install-recommends \
-  bash \
-  git \
-  cmake \
-  make \
-  g++ \
-  vim \
-  ncurses-term \
-  gdb \
-  rsync \
-  wget \
-  ca-certificates
-
-apt-get install --yes --no-install-recommends \
-    ` # Ygor dependencies ` \
-    libboost-dev \
-    libgsl-dev \
-    libeigen3-dev \
-    ` # DICOMautomaton dependencies ` \
-    libeigen3-dev \
-    libboost-dev \
-    libboost-filesystem-dev \
-    libboost-iostreams-dev \
-    libboost-program-options-dev \
-    libboost-thread-dev \
-    libz-dev \
-    libsfml-dev \
-    libsdl2-dev \
-    libglew-dev \
-    libjansson-dev \
-    libpqxx-dev \
-    postgresql-client \
-    libcgal-dev \
-    libnlopt-dev \
-    libnlopt-cxx-dev \
-    libasio-dev \
-    fonts-freefont-ttf \
-    fonts-cmu \
-    freeglut3 \
-    freeglut3-dev \
-    libxi-dev \
-    libxmu-dev \
-    patchelf \
-    ` # Additional dependencies for headless OpenGL rendering with SFML ` \
-    x-window-system \
-    mesa-utils \
-    x11-apps \
-    libfreetype6 \
-    libsdl2-dev \
-    libice-dev \
-    libsm-dev \
-    libopengl0 \
-    ` # Other optional dependencies ` \
-    libnotify \
-    dunst \
-    bash-completion \
-    gnuplot \
-    zenity 
+retry_count=0
+retry_limit=5
+until \
+    apt-get update --yes && \
+    apt-get install --yes --no-install-recommends \
+        bash \
+        git \
+        cmake \
+        make \
+        g++ \
+        vim \
+        ncurses-term \
+        gdb \
+        rsync \
+        wget \
+        ca-certificates \
+    && \
+       \
+    apt-get install --yes --no-install-recommends \
+        ` # Ygor dependencies ` \
+        libboost-dev \
+        libgsl-dev \
+        libeigen3-dev \
+        ` # DICOMautomaton dependencies ` \
+        libeigen3-dev \
+        libboost-dev \
+        libboost-filesystem-dev \
+        libboost-iostreams-dev \
+        libboost-program-options-dev \
+        libboost-thread-dev \
+        libz-dev \
+        libsfml-dev \
+        libsdl2-dev \
+        libglew-dev \
+        libjansson-dev \
+        libpqxx-dev \
+        postgresql-client \
+        libcgal-dev \
+        libnlopt-dev \
+        libnlopt-cxx-dev \
+        libasio-dev \
+        fonts-freefont-ttf \
+        fonts-cmu \
+        freeglut3 \
+        freeglut3-dev \
+        libxi-dev \
+        libxmu-dev \
+        patchelf \
+        ` # Additional dependencies for headless OpenGL rendering with SFML ` \
+        x-window-system \
+        mesa-utils \
+        x11-apps \
+        libfreetype6 \
+        libsdl2-dev \
+        libice-dev \
+        libsm-dev \
+        libopengl0 \
+        ` # Other optional dependencies ` \
+        libnotify \
+        dunst \
+        bash-completion \
+        gnuplot \
+        zenity 
+do
+    (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
+    printf 'Waiting to retry.\n' && sleep 5
+done
 
 
 

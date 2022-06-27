@@ -17,55 +17,61 @@ sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
 sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' \
        -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf
 
-# Install build dependencies.
-#pacman -Sy --noconfirm archlinux-keyring
-pacman -Syu --noconfirm --needed \
-  base-devel \
-  git \
-  cmake \
-  gcc \
-  vim \
-  gdb \
-  screen \
-  ` # Needed for an AUR helper ` \
-  sudo \
-  pyalpm \
-  wget \
-  rsync
-rm -f /var/cache/pacman/pkg/*
+retry_count=0
+retry_limit=5
+until
+    `# Install build dependencies. ` \
+    pacman -Syu --noconfirm --needed \
+      base-devel \
+      git \
+      cmake \
+      gcc \
+      vim \
+      gdb \
+      screen \
+      ` # Needed for an AUR helper ` \
+      sudo \
+      pyalpm \
+      wget \
+      rsync \
+    && \
+       \
+    ` # Install known official dependencies. ` \
+    pacman -S --noconfirm --needed  \
+      gcc-libs \
+      gsl \
+      eigen \
+      boost-libs \
+      gnu-free-fonts \
+      sfml \
+      sdl2 \
+      glew \
+      jansson \
+      libpqxx \
+      postgresql \
+      zlib \
+      cgal \
+      wt \
+      asio \
+      nlopt \
+      patchelf \
+      freeglut \
+      libxi \
+      libxmu \
+      ` # Additional dependencies for headless OpenGL rendering with SFML ` \
+      xorg-server \
+      xorg-apps \
+      mesa \
+      xf86-video-dummy \
+      ` # Other optional dependencies ` \
+      bash-completion \
+      libnotify \
+      dunst
+do
+    (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
+    printf 'Waiting to retry.\n' && sleep 5
+done
 
-
-# Install known official dependencies.
-pacman -S --noconfirm --needed  \
-  gcc-libs \
-  gsl \
-  eigen \
-  boost-libs \
-  gnu-free-fonts \
-  sfml \
-  sdl2 \
-  glew \
-  jansson \
-  libpqxx \
-  postgresql \
-  zlib \
-  cgal \
-  wt \
-  asio \
-  nlopt \
-  patchelf \
-  freeglut \
-  libxi \
-  libxmu \
-  ` # Additional dependencies for headless OpenGL rendering with SFML ` \
-  xorg-server \
-  xorg-apps \
-  mesa \
-  xf86-video-dummy \
-  ` # Other optional dependencies ` \
-  bash-completion \
-  libnotify \
-  dunst
 rm -f /var/cache/pacman/pkg/*
 
 cp /scratch_base/xpra-xorg.conf /etc/X11/xorg.conf
