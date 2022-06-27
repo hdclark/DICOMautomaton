@@ -15,19 +15,26 @@ sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
 sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' \
        -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf
 
-# Install build dependencies.
-#pacman -Sy --noconfirm archlinux-keyring
-pacman -Syu --noconfirm --needed \
-  base-devel \
-  git \
-  cmake \
-  gcc \
-  ` # Needed for an AUR helper ` \
-  sudo \
-  pyalpm \
-  wget \
-  rsync \
-  patchelf
+retry_count=0
+retry_limit=5
+until
+    # Install build dependencies.
+    #pacman -Sy --noconfirm archlinux-keyring
+    pacman -Syu --noconfirm --needed \
+      base-devel \
+      git \
+      cmake \
+      gcc \
+      ` # Needed for an AUR helper ` \
+      sudo \
+      pyalpm \
+      wget \
+      rsync \
+      patchelf
+do
+    (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
+    printf 'Waiting to retry.\n' && sleep 5
+done
 rm -f /var/cache/pacman/pkg/*
 
 
@@ -38,23 +45,30 @@ chown -R builduser:builduser /var/empty/
 printf '\n''builduser ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
 
 
-# Install hard build dependencies.
-pacman -S --noconfirm --needed \
-  gcc-libs \
-  gnu-free-fonts \
-  sfml \
-  sdl2 \
-  glew \
-  jansson \
-  libpqxx \
-  postgresql \
-  gsl \
-  boost-libs \
-  zlib \
-  cgal \
-  wt \
-  asio \
-  nlopt
+retry_count=0
+retry_limit=5
+until
+    # Install hard build dependencies.
+    pacman -S --noconfirm --needed \
+      gcc-libs \
+      gnu-free-fonts \
+      sfml \
+      sdl2 \
+      glew \
+      jansson \
+      libpqxx \
+      postgresql \
+      gsl \
+      boost-libs \
+      zlib \
+      cgal \
+      wt \
+      asio \
+      nlopt
+do
+    (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
+    printf 'Waiting to retry.\n' && sleep 5
+done
 rm -f /var/cache/pacman/pkg/*
 
 
