@@ -3,21 +3,176 @@
 
 Below is a simplified timeline of `DICOMautomaton` development, broken down by month.
 
+## 202206
+
+- CI: added custom gitlab runner tags.
+- CI: add wait-and-retry when dealing with (most) package managers.
+- ExportFITSImages: notify user how many images are being exported.
+- FITS: support full metadata encoding. FITS images are now an option for lossless image transfer.
+- FITS: upgrade support from single-image to multi-image for both reader/writer.
+- WIP documentation for forthcoming network protocol.
+
+## 202205
+
+- Add operation for decomposing images using SVD (i.e., 'eigenfaces').
+- Add TabulateImageMetadata operation.
+- SDL\_Viewer: contours: garbage-collect entries for removed ROIs.
+- SDL\_Viewer: support hot-keys (open, quit, help).
+
+## 202204
+
+- Add grid-like test meshes to test simplification.
+- Address operation parameter compiler warning (unused parameters).
+- Always expose SimplifySurfaceMeshes and QueryUserInteractively operations.
+- AppImage: proceed if git commit hash not available.
+- CMakeLists: enable optimization for memory-constrained builds.
+- ConvertContoursToMeshes: add convex hull method.
+- QueryUserInteractively: include header.
+- ReduceNeighbourhood: add geometric mean reduction method.
+- SDL\_Viewer: address minor compiler warnings.
+- SDL\_Viewer: add tooltip 'advertising' drag-and-drop.
+- SDL\_Viewer: support file drag-and-drop loading.
+- SimplifySurfaceMeshes: add Ygor 'flat' mesh simplification method.
+- SimplifySurfaceMeshes: disregard option for disengaged functionality.
+- SimplifySurfaceMeshes: expose Ygor MinAlignAngle threshold criteria.
+- SimplifySurfaceMeshes: fix documentation layout typo.
+- Workaround for git CVE-2022-24765 on Arch.
+
+## 202203
+
+- Added Time and Sleep operations.
+- Added file selector helper script.
+- Add libnotify as optional (runtime) dependency.
+- Add transform file reader and expand writer.
+- AnalyzePicketFence: consolidate CSV output files.
+- Bug fix: replace numeric\_limits::min --> lowest.
+- check\_syntax: auto-enable Eigen, if available.
+- DICOM image loading: provide better message if rows/columns data missing.
+- DICOM metadata: add optional pixel extrema.
+- DICOM reader: add optional metadata.
+- DICOM: support multi-frame images.
+- Ensure alignment classes can be in-place constructed from a stream.
+- ExportWarps: ensure file has consistent extension.
+- Expose Orthogonal Procrustes (SVD) point set alignment.
+- ModelIVIM: replace placeholder image metadata.
+- OrderImages: ensure the default variant is provided.
+- OrderImages: support stable image array sorting.
+- OrthogonalProcrustes: confirm solution validity.
+- OrthogonalProcrustes: disable use of SVDBase.
+- OrthogonalProcrustes: parametrize mirroring and isotropic scaling.
+- Pixel mapping: clamp rescale for good measure.
+- Pixel mapping: protect against degenerate cases.
+- ReduceNeighbourhood: label neighbourhood arg examples as exhaustive.
+- Re-introduce previous resample-less WarpImages.
+- Rename 'TPlan' to 'RTPlan' for clarity.
+- RTIMAGE: explicitly apply top-level LUT.
+- Script: add img sort after partitioning.
+- SDL\_Viewer: image feature matching: default to SVD-based solver.
+- SDL\_Viewer: image feature matching: visualize transformed points.
+- SDL\_Viewer: implement manual image feature selector.
+- SDL\_Viewer: loading bar: decouple wave speed from frame rate.
+- SDL\_Viewer: meshes: expose yaw, pitch, and roll angles.
+- SDL\_Viewer: plot viewer: display ordinate and abscissa, if available.
+- SDL\_Viewer: show loading animation.
+- SDL\_Viewer: shrink script editor button width.
+- SDL\_Viewer: speed up loading bar wave speed.
+- Surface\_Meshes: add missing CGAL header.
+- Time: explicitly include stringstream header.
+- WarpImages: support resampling warped images.
+
+## 202202
+
+- Add AnyOf/FirstOf/AllOf/NoneOf operations or aliases.
+- Added Eigen support to syntax checking script.
+- Add Ignore operation.
+- Add NotifyUser operation.
+- Add ValidateTPlan example script.
+- Dispatcher: lengthen pause time for error messages on Windows.
+- Documentation: remove duplicated DICOM RT warnings.
+- Harmonize control flow meta-operations.
+- ModelIVIM: add example script.
+- ModelIVIM: fix bi-exp model matrix coeff access bug.
+- ModelIVIM: rewrite script filtering steps.
+- Notifications: powershell: switch to blocking notifications.
+- NotifyUser: assume powershell is always available.
+- PFD: increase result buffer.
+- README: update Zenodo DOI for previous release
+- SDL\_Viewer: add rudimentary RTPLAN viewer.
+- SDL\_Viewer: avoid drawing scale bar when changing colour map.
+- SDL\_Viewer: avoid RTPLAN metadata window overlap.
+- SDL\_Viewer: contouring: standardize contour metadata.
+- SDL\_Viewer: default to wider table view.
+- SDL\_Viewer: explicitly check coordinate map validity.
+- Tray\_Notification: re-order powershell commands.
+- Valgrind and TSAN bug fixes.
+- ValidateTPlan: add is\_VMAT and collimator angle degeneracy checks.
+- ValidateTPlan: add minimum jaw-defined field size check.
+
+## 202201
+
+- Add support for RTPLAN-based grouping.
+- Add WIP TPlan checking operation.
+- DroverDebug: provide more granular control over verbosity.
+- ForEachDistinct: make N/A partition accessible.
+- Partitioning: support partitioning tables.
+- SDL\_Viewer: account for viewer aspect ratio.
+- SDL\_Viewer: add keyword-based cell highlighting for tables.
+- SDL\_Viewer: add minimal keyboard positioning for meshes.
+- SDL\_Viewer: add toggleable face smoothing.
+- SDL\_Viewer: flip vertical screen axis.
+- SDL\_Viewer: force deprecation of pre-3.0 OpenGL functionality.
+- SDL\_Viewer: more aggressively strip chars from GLSL version string.
+- SDL\_Viewer: OpenGL: switch to shader-based rendering.
+
+## 202112
+
+- Add basic table operations (Delete, Copy, Generate).
+- Added constructive solid geometry functionality using signed distance functions (CSG-SDF).
+- Add ExportTables operation.
+- Add MakeMeshes example script.
+- Add minimal 'table' class.
+- AnalyzeHistograms: use OS-dependent tmp dir.
+- CSG: add poly chain shape.
+- CSG-SDF: add 2D->3D extrusion operation.
+- CSG-SDF: add extrusion example.
+- CSG: SDF: add rotations and more Boolean ops.
+- CSG-SDF: add text primitive.
+- CSG: SDFs: add chamfer Boolean variants.
+- CSG-SDF: support asymmetric SDFs.
+- Expand CSG-SDF operation examples.
+- Move README content to wiki.
+- parse\_functions: added nested function support.
+- Remove non-critical FUNCERRs in operations.
+- SDL\_Viewer: always ensure mesh number is valid.
+- SDL\_Viewer: enable mesh metadata viewer.
+- SDL\_Viewer: fix table expansion ID issue.
+- SDL\_Viewer: force reload of OpenGL meshes after script execution
+- SDL\_Viewer: integrate table and table metadata editor
+- Surface\_Meshes: support marching cubes with oracle functor.
+- Tables: implement CSV write.
 
 ## 202111
 
-- Add LoadFilesInteractively, which uses recently-added dialog functionality.
-- Add read support for (proprietary) XIM format images.
+- Added a position-based image sorter.
 - Added a position-based image sorter.
 - Added de-EQD2 standard script.
+- Added ModifyParameters operation.
+- Add LoadFilesInteractively, which uses recently-added dialog functionality.
+- Add QueryUserInteractively operation.
+- Add read support for (proprietary) XIM format images.
 - Always prospectively rebuild Ygor on Debian.
 - Avoid std::filesystem::absolute on Windows.
 - CMake: replace large macro (stringified standard scripts) with generated file.
 - ConvertContoursToMeshes: expose marching-cubes extractor.
+- Dialogs: disable prospective pfd::kill().
+- Dialogs: try to accept more Windows-like systems.
 - ExtractRadiomicFeatures: use DCMA marching cubes for speed-up.
 - FITS images: imbue minimal DICOM metadata in images.
 - OrderImages: add spatial ordering option.
+- OrderImages: add spatial ordering option.
 - PFD: remove OS version check, which seemingly fails for no discernable reason?
+- Replace large macro with generated file.
+- Scripts: support quotation escapes.
 - SDL\_Viewer: add native dialog support via PFD.
 - SDL\_Viewer: disable optional parameters in stringified scripts.
 - SDL\_Viewer: handle empty metadata tags.
@@ -26,7 +181,6 @@ Below is a simplified timeline of `DICOMautomaton` development, broken down by m
 - SDL\_Viewer: rely on select\_files defaults.
 - SDL\_Viewer: simplify file loading.
 - SDL\_Viewer: simplify script optional parameters.
-- Scripts: support quotation escapes.
 - Standard\_Scripts: generator: disable verbose mode
 - Windows: delay for longer when terminating abnormally.
 - Windows: provide a new icon.
