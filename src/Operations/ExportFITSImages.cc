@@ -80,8 +80,10 @@ bool ExportFITSImages(Drover &DICOM_data,
 
     const auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
-    for(auto & iap_it : IAs){
+    for(const auto& iap_it : IAs){
         const auto fname = Get_Unique_Sequential_Filename(FilenameBaseStr + "_", 6, ".fits");
+
+        FUNCINFO("Exporting " << (*iap_it)->imagecoll.images.size() << " images to file '" << fname << "' now..");
         if(WriteToFITS((*iap_it)->imagecoll, fname)){
             FUNCINFO("Exported image array to file '" << fname << "'");
         }else{
