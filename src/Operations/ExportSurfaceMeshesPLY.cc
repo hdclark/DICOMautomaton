@@ -41,7 +41,7 @@ OperationDoc OpArgDocExportSurfaceMeshesPLY(){
         "This operation writes one or more surface meshs to file in the 'Stanford' Polygon File format.";
 
     out.notes.emplace_back(
-        "Support for metadata in OBJ files is fully supported. Surface mesh metadata will be encoded in"
+        "Support for metadata in PLY files is fully supported. Surface mesh metadata will be encoded in"
         " specially-marked comments and base64 encoded if non-printable characters are present."
         " Metadata will be recovered when PLY files are loaded in DICOMautomaton."
         " Note that other software may disregard these comments."
