@@ -39,6 +39,7 @@ add_library(Operations_objs OBJECT
     CellularAutomata.cc
     CopyContours.cc
     CopyImages.cc
+    CopyLineSamples.cc
     CopyMeshes.cc
     CopyTables.cc
     CopyPoints.cc
@@ -57,6 +58,7 @@ add_library(Operations_objs OBJECT
     DeDuplicateImages.cc
     DeleteContours.cc
     DeleteImages.cc
+    DeleteLineSamples.cc
     DeleteMeshes.cc
     DeleteTables.cc
     DeletePoints.cc

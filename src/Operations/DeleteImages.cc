@@ -20,8 +20,7 @@ OperationDoc OpArgDocDeleteImages(){
     OperationDoc out;
     out.name = "DeleteImages";
     out.desc = 
-        " This routine deletes images from memory."
-        " It is most useful when working with positional operations in stages.";
+        "This routine deletes image arrays.";
 
     out.args.emplace_back();
     out.args.back() = IAWhitelistOpArgDoc();
@@ -34,9 +33,9 @@ OperationDoc OpArgDocDeleteImages(){
 
 
 bool DeleteImages(Drover &DICOM_data,
-                    const OperationArgPkg& OptArgs,
-                    std::map<std::string, std::string>& /*InvocationMetadata*/,
-                    const std::string&){
+                  const OperationArgPkg& OptArgs,
+                  std::map<std::string, std::string>& /*InvocationMetadata*/,
+                  const std::string&){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();

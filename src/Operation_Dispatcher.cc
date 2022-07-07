@@ -59,6 +59,7 @@
 #include "Operations/CellularAutomata.h"
 #include "Operations/CopyContours.h"
 #include "Operations/CopyImages.h"
+#include "Operations/CopyLineSamples.h"
 #include "Operations/CopyMeshes.h"
 #include "Operations/CopyTables.h"
 #include "Operations/CopyPoints.h"
@@ -77,6 +78,7 @@
 #include "Operations/DeDuplicateImages.h"
 #include "Operations/DeleteContours.h"
 #include "Operations/DeleteImages.h"
+#include "Operations/DeleteLineSamples.h"
 #include "Operations/DeleteMeshes.h"
 #include "Operations/DeleteTables.h"
 #include "Operations/DeletePoints.h"
@@ -286,6 +288,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ConvolveImages"] = std::make_pair(OpArgDocConvolveImages, ConvolveImages);
     out["CopyContours"] = std::make_pair(OpArgDocCopyContours, CopyContours);
     out["CopyImages"] = std::make_pair(OpArgDocCopyImages, CopyImages);
+    out["CopyLineSamples"] = std::make_pair(OpArgDocCopyLineSamples, CopyLineSamples);
     out["CopyMeshes"] = std::make_pair(OpArgDocCopyMeshes, CopyMeshes);
     out["CopyTables"] = std::make_pair(OpArgDocCopyTables, CopyTables);
     out["CopyPoints"] = std::make_pair(OpArgDocCopyPoints, CopyPoints);
@@ -301,6 +304,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["DeDuplicateImages"] = std::make_pair(OpArgDocDeDuplicateImages, DeDuplicateImages);
     out["DeleteContours"] = std::make_pair(OpArgDocDeleteContours, DeleteContours);
     out["DeleteImages"] = std::make_pair(OpArgDocDeleteImages, DeleteImages);
+    out["DeleteLineSamples"] = std::make_pair(OpArgDocDeleteLineSamples, DeleteLineSamples);
     out["DeleteMeshes"] = std::make_pair(OpArgDocDeleteMeshes, DeleteMeshes);
     out["DeleteTables"] = std::make_pair(OpArgDocDeleteTables, DeleteTables);
     out["DeletePoints"] = std::make_pair(OpArgDocDeletePoints, DeletePoints);
