@@ -846,6 +846,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_time_profiles = false;
         bool view_image_feature_extraction = false;
         bool save_time_profiles = false;
+        bool save_row_column_profiles = false;
 
         bool view_meshes_enabled = true;
         bool view_mesh_metadata_enabled = false;
@@ -1089,6 +1090,10 @@ bool SDL_Viewer(Drover &DICOM_data,
     string_to_array(time_course_abscissa_key, "ContentTime");
     std::array<char, 2048> time_course_text_entry;
     string_to_array(time_course_text_entry, "");
+    std::array<char, 2048> row_profile_text_entry;
+    string_to_array(row_profile_text_entry, "");
+    std::array<char, 2048> col_profile_text_entry;
+    string_to_array(col_profile_text_entry, "");
 
     // --------------------------------------------- Setup ------------------------------------------------
     if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0){
@@ -2734,7 +2739,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                         row_profile.samples.clear();
                         col_profile.samples.clear();
-                    };
+                        tagged_pos = {};
+                    }
                     if(ImGui::MenuItem("Time Profiles", nullptr, &view_toggles.view_time_profiles)){
                         view_toggles.view_contouring_enabled = false;
                         view_toggles.view_drawing_enabled = false;
@@ -2743,7 +2749,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                         //view_toggles.view_time_profiles = false;
 
                         time_profile.samples.clear();
-                    };
+                        tagged_pos = {};
+                    }
                     if(ImGui::MenuItem("Image Feature Extractor", nullptr, &view_toggles.view_image_feature_extraction)){
                         view_toggles.view_contouring_enabled = false;
                         view_toggles.view_drawing_enabled = false;
@@ -2751,7 +2758,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                         //view_toggles.view_image_feature_extraction = false;
                         view_toggles.view_time_profiles = false;
 
-                    };
+                        tagged_pos = {};
+
+                    }
                     ImGui::Separator();
                     ImGui::MenuItem("Meshes", nullptr, &view_toggles.view_meshes_enabled);
                     ImGui::MenuItem("Point Sets", nullptr, &view_toggles.view_psets_enabled);
@@ -5707,6 +5716,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                         if(view_toggles.view_time_profiles){
                             view_toggles.save_time_profiles = true;
 
+                        }else if(view_toggles.view_row_column_profiles){
+                            view_toggles.save_row_column_profiles = true;
+
                         }else if(view_toggles.view_image_feature_extraction){
                             img_features.features_C = point_set<double>();
 
@@ -5863,6 +5875,47 @@ bool SDL_Viewer(Drover &DICOM_data,
                     // Save a copy of the current time profile.
                     DICOM_data.lsamp_data.emplace_back( std::make_shared<Line_Sample>() );
                     DICOM_data.lsamp_data.back()->line = time_profile;
+
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Cancel")){
+                    ImGui::CloseCurrentPopup();
+                }
+            }while(false);
+            ImGui::EndPopup();
+        }
+
+        if(view_toggles.save_row_column_profiles){
+            view_toggles.save_row_column_profiles = false;
+            string_to_array(col_profile_text_entry, "unspecified column profile");
+            string_to_array(row_profile_text_entry, "unspecified row profile");
+            ImGui::OpenPopup("Save Row and Column Profiles");
+        }
+        if(ImGui::BeginPopupModal("Save Row and Column Profiles", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+            do{
+                if(ImGui::InputText("Row Profile Name", row_profile_text_entry.data(), row_profile_text_entry.size() - 1)){
+                    std::string text;
+                    array_to_string(text, row_profile_text_entry);
+                    row_profile.metadata["LineName"] = text;
+                }
+                if(ImGui::InputText("Column Profile Name", col_profile_text_entry.data(), col_profile_text_entry.size() - 1)){
+                    std::string text;
+                    array_to_string(text, col_profile_text_entry);
+                    col_profile.metadata["LineName"] = text;
+                }
+
+                ImGui::Separator();
+                if(ImGui::Button("Save")){
+                    std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+                    if(!drover_lock) break;
+
+                    // Save a copy of the current profiles.
+                    DICOM_data.lsamp_data.emplace_back( std::make_shared<Line_Sample>() );
+                    DICOM_data.lsamp_data.back()->line = row_profile;
+
+                    DICOM_data.lsamp_data.emplace_back( std::make_shared<Line_Sample>() );
+                    DICOM_data.lsamp_data.back()->line = col_profile;
 
                     ImGui::CloseCurrentPopup();
                 }
