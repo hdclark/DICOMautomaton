@@ -4212,16 +4212,28 @@ bool SDL_Viewer(Drover &DICOM_data,
             &&  view_toggles.view_row_column_profiles ){
                 row_profile.samples.clear();
                 col_profile.samples.clear();
+
+                auto common_metadata = coalesce_metadata_for_lsamp(disp_img_it->metadata);
+
                 for(auto i = 0; i < disp_img_it->columns; ++i){
                     const auto val_raw = disp_img_it->value(image_mouse_pos.r,i,0);
                     const auto col_num = static_cast<double>(i);
                     if(std::isfinite(val_raw)) row_profile.push_back({ col_num, 0.0, val_raw, 0.0 });
                 }
+
                 for(auto i = 0; i < disp_img_it->rows; ++i){
                     const auto val_raw = disp_img_it->value(i,image_mouse_pos.c,0);
                     const auto row_num = static_cast<double>(i);
                     if(std::isfinite(val_raw)) col_profile.push_back({ row_num, 0.0, val_raw, 0.0 });
                 }
+
+                row_profile.metadata = common_metadata;
+                row_profile.metadata["Abscissa"] = "ColumnNumber";
+                row_profile.metadata["CurrentAbscissa"] = std::to_string(image_mouse_pos.c);
+
+                col_profile.metadata = common_metadata;
+                col_profile.metadata["Abscissa"] = "RowNumber";
+                col_profile.metadata["CurrentAbscissa"] = std::to_string(image_mouse_pos.r);
             }
 
             // Extract data for time profiles.
