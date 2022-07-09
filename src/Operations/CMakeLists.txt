@@ -153,6 +153,7 @@ add_library(Operations_objs OBJECT
     Repeat.cc
     RigidWarpImages.cc
     ScalePixels.cc
+    SelectionIsPresent.cc
     SelectSlicesIntersectingROI.cc
     SimplifyContours.cc
     SimplifySurfaceMeshes.cc
