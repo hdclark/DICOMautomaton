@@ -5873,16 +5873,16 @@ bool SDL_Viewer(Drover &DICOM_data,
         }
         if(ImGui::BeginPopupModal("Save Time Profile", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
             do{
-                if(ImGui::InputText("Name", time_course_text_entry.data(), time_course_text_entry.size() - 1)){
-                    std::string text;
-                    array_to_string(text, time_course_text_entry);
-                    time_profile.metadata["LineName"] = text;
-                }
+                ImGui::InputText("Name", time_course_text_entry.data(), time_course_text_entry.size() - 1);
 
                 ImGui::Separator();
                 if(ImGui::Button("Save")){
                     std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
                     if(!drover_lock) break;
+
+                    std::string text;
+                    array_to_string(text, time_course_text_entry);
+                    time_profile.metadata["LineName"] = text;
 
                     // Save a copy of the current time profile.
                     DICOM_data.lsamp_data.emplace_back( std::make_shared<Line_Sample>() );
@@ -5900,27 +5900,25 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         if(view_toggles.save_row_column_profiles){
             view_toggles.save_row_column_profiles = false;
-            string_to_array(col_profile_text_entry, "unspecified column profile");
-            string_to_array(row_profile_text_entry, "unspecified row profile");
+            string_to_array(col_profile_text_entry, "unspecified");
+            string_to_array(row_profile_text_entry, "unspecified");
             ImGui::OpenPopup("Save Row and Column Profiles");
         }
         if(ImGui::BeginPopupModal("Save Row and Column Profiles", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
             do{
-                if(ImGui::InputText("Row Profile Name", row_profile_text_entry.data(), row_profile_text_entry.size() - 1)){
-                    std::string text;
-                    array_to_string(text, row_profile_text_entry);
-                    row_profile.metadata["LineName"] = text;
-                }
-                if(ImGui::InputText("Column Profile Name", col_profile_text_entry.data(), col_profile_text_entry.size() - 1)){
-                    std::string text;
-                    array_to_string(text, col_profile_text_entry);
-                    col_profile.metadata["LineName"] = text;
-                }
+                ImGui::InputText("Row Profile Name", row_profile_text_entry.data(), row_profile_text_entry.size() - 1);
+                ImGui::InputText("Column Profile Name", col_profile_text_entry.data(), col_profile_text_entry.size() - 1);
 
                 ImGui::Separator();
                 if(ImGui::Button("Save")){
                     std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
                     if(!drover_lock) break;
+
+                    std::string text;
+                    array_to_string(text, row_profile_text_entry);
+                    row_profile.metadata["LineName"] = text;
+                    array_to_string(text, col_profile_text_entry);
+                    col_profile.metadata["LineName"] = text;
 
                     // Save a copy of the current profiles.
                     DICOM_data.lsamp_data.emplace_back( std::make_shared<Line_Sample>() );
