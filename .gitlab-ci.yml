@@ -120,6 +120,7 @@ test_ci_debian_oldstable_on_debian_oldstable:
     - "./DICOMautomaton*AppImage --appimage-extract"
     - "rsync -a ./squashfs-root/usr/ /usr/"
     # Ensure it can be run and then run tests.
+    - "ldd $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher || true"
     - "dicomautomaton_dispatcher -h"
     - "./integration_tests/Run.sh -v"
   artifacts:
@@ -140,6 +141,7 @@ test_ci_arch_on_arch:
     - "./DICOMautomaton*AppImage --appimage-extract"
     - "rsync -a ./squashfs-root/usr/ /usr/"
     # Ensure it can be run and then run tests.
+    - "ldd $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher || true"
     - "dicomautomaton_dispatcher -h"
     - "./integration_tests/Run.sh -v"
   artifacts:
@@ -161,6 +163,7 @@ test_ci_debian_oldstable_on_arch:
     - "./DICOMautomaton*AppImage --appimage-extract"
     - "rsync -a ./squashfs-root/usr/ /usr/"
     # Ensure it can be run and then run tests.
+    - "ldd $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher || true"
     - "dicomautomaton_dispatcher -h"
     - "./integration_tests/Run.sh -v"
   artifacts:
@@ -182,6 +185,7 @@ test_ci_debian_oldstable_on_ubuntu_latest:
     - "./DICOMautomaton*AppImage --appimage-extract"
     - "rsync -a ./squashfs-root/usr/ /usr/"
     # Ensure it can be run and then run tests.
+    - "ldd $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher || true"
     - "dicomautomaton_dispatcher -h"
     #- git clone 'https://github.com/hdclark/DICOMautomaton'
     #- cd DICOMautomaton
@@ -210,6 +214,7 @@ test_ci_debian_oldstable_on_fedora_latest:
       printf '%s "$@"\n' "/usr/lib64/ld-linux-x86-64.so.2 --library-path $(pwd)/squashfs-root/usr/lib $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher" >> /usr/bin/dicomautomaton_dispatcher
       chmod 777 /usr/bin/dicomautomaton_dispatcher
     # Ensure it can be run and then run tests.
+    - "ldd $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher || true"
     - "dicomautomaton_dispatcher -h"
     #- "git clone 'https://github.com/hdclark/DICOMautomaton'"
     #- "cd DICOMautomaton"
