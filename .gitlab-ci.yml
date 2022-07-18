@@ -27,7 +27,7 @@ build_ci_debian_oldstable:
     - "./scripts/enable_swapfile.sh"
   script:
     - |
-      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; cat /proc/meminfo | grep 'Mem\|Cache\|Swap' ; printf '\n\n' ; done ) &)
       ./docker/builders/ci/implementation_ci_debian_oldstable.sh
       ./integration_tests/Run.sh -v
       ./scripts/extract_system_appimage.sh
@@ -49,7 +49,7 @@ build_ci_arch:
     - "./scripts/enable_swapfile.sh"
   script:
     - |
-      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; cat /proc/meminfo | grep 'Mem\|Cache\|Swap' ; printf '\n\n' ; done ) &)
       ./docker/builders/ci/implementation_ci_arch.sh
       ./integration_tests/Run.sh -v
       ./scripts/extract_system_appimage.sh
@@ -70,7 +70,7 @@ cross_compile_mxe:
     - "./scripts/enable_swapfile.sh"
   script:
     - |
-      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; cat /proc/meminfo | grep 'Mem\|Cache\|Swap' ; printf '\n\n' ; done ) &)
       ./docker/builders/mxe/implementation_mxe.sh
       rsync -avP /out/ ./Windows/
   artifacts:
@@ -89,7 +89,7 @@ cross_compile_mxe:
 #    - "cp -R . /dcma"
 #  script:
 #    - |
-#      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; free -h ; printf '\n\n' ; done ) &)
+#      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; cat /proc/meminfo | grep 'Mem\|Cache\|Swap' ; printf '\n\n' ; done ) &)
 #      "/scratch_base/implementation_arch.sh"
 #      "/scratch/implementation_arch.sh"
 ##  artifacts:
