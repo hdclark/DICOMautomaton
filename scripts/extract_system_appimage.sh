@@ -65,9 +65,14 @@ fi
 if [ "$ARCH" == "x86_64" ] || [ "$ARCH" == "i686" ] ; then
 
     # Awful workaround (step 1 of 2) for glibc v 2.36 changing format of ldd output.
-    mv /usr/sbin/ldd{,_orig}
-    printf '#!/usr/bin/env bash\nldd_orig "$@" | grep -v linux-vdso | grep -v ld-linux\n' > /usr/sbin/ldd
-    chmod 777 /usr/sbin/ldd
+    ldd_path="$(which ldd)"
+    printf 'Wrapping system ldd...\n'
+    mv "${ldd_path}"{,_orig}
+    printf '#!/usr/bin/env bash\nldd_orig "$@" | grep -v linux-vdso | grep -v ld-linux\n' > "${ldd_path}"
+    chmod 777 "${ldd_path}"
+
+    # Awful workaround (step 2 of 2) restore original ldd when no longer needed.
+    trap "printf 'Returning system ldd...\n' ; mv "${ldd_path}"{_orig,} ; exit ;" EXIT
 
     # Use continuous artifacts.
     wget "https://halclark.ca/linuxdeploy-${ARCH}.AppImage" ||
@@ -82,9 +87,6 @@ if [ "$ARCH" == "x86_64" ] || [ "$ARCH" == "i686" ] ; then
       --icon-file ./artifacts/logos/DCMA_cycle_opti.svg \
       --desktop-file ./dcma.desktop
     rm -rf ./squashfs-root/ ./linuxdeploy-${ARCH}.AppImage 
-
-    # Awful workaround (step 2 of 2) restore original ldd.
-    mv /usr/sbin/ldd{_orig,}
 
 # Otherwise, try making the AppImage directly.
 # Note that this method is less robust!
