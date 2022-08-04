@@ -64,9 +64,14 @@ fi
 # If a helper is available, use it.
 if [ "$ARCH" == "x86_64" ] || [ "$ARCH" == "i686" ] ; then
 
+    # Awful workaround (step 1 of 2) for glibc v 2.36 changing format of ldd output.
+    mv /usr/sbin/ldd{,_orig}
+    printf '#!/usr/bin/env bash\nldd_orig "$@" | grep -v linux-vdso | grep -v ld-linux\n' > /usr/sbin/ldd
+    chmod 777 /usr/sbin/ldd
+
     # Use continuous artifacts.
-#    wget "https://halclark.ca/linuxdeploy-${ARCH}.AppImage" ||
-#    wget "https://artifacts.assassinate-you.net/linuxdeploy/travis-456/linuxdeploy-${ARCH}.AppImage" ||
+    wget "https://halclark.ca/linuxdeploy-${ARCH}.AppImage" ||
+    wget "https://artifacts.assassinate-you.net/linuxdeploy/travis-456/linuxdeploy-${ARCH}.AppImage" ||
       wget "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-${ARCH}.AppImage"
     chmod 777 ./linuxdeploy-${ARCH}.AppImage
     ./linuxdeploy-${ARCH}.AppImage --appimage-extract # Unpack because FUSE cannot be used in Docker.
@@ -78,6 +83,8 @@ if [ "$ARCH" == "x86_64" ] || [ "$ARCH" == "i686" ] ; then
       --desktop-file ./dcma.desktop
     rm -rf ./squashfs-root/ ./linuxdeploy-${ARCH}.AppImage 
 
+    # Awful workaround (step 2 of 2) restore original ldd.
+    mv /usr/sbin/ldd{_orig,}
 
 # Otherwise, try making the AppImage directly.
 # Note that this method is less robust!
