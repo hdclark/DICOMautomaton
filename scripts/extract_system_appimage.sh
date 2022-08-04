@@ -5,7 +5,7 @@
 #
 # Note that the end-user's glibc version must be equivalent or newer than the Docker image glibc.
 
-set -eu
+set -eux
 
 # Move to the repository root.
 REPOROOT="$(git rev-parse --show-toplevel || true)"
@@ -107,7 +107,8 @@ elif [ "$ARCH" == "aarch64" ] || [ "$ARCH" == "armhf" ] ; then
     chmod 777 ./AppDir/AppRun
 
     # Bundle required libraries, but exclude libraries known to be problematic.
-    wget 'https://raw.githubusercontent.com/AppImage/pkg2appimage/master/excludelist' -O - |
+    #wget 'https://raw.githubusercontent.com/AppImage/pkg2appimage/master/excludelist' -O - |
+    wget 'https://raw.githubusercontent.com/AppImage/pkg2appimage/f2df956789f36204213876c96500c8b05595e43b/excludelist' -O - |
       sed -e 's/[ ]*[#].*//' |
       sed -e 's/[.]/[.]/g' |
       grep -v '^$' |
