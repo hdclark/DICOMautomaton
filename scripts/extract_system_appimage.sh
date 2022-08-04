@@ -112,6 +112,9 @@ elif [ "$ARCH" == "aarch64" ] || [ "$ARCH" == "armhf" ] ; then
       sed -e 's/[.]/[.]/g' |
       grep -v '^$' |
       sed -e 's/^/.*/' -e 's/$/.*/' > excludelist
+    printf -- '.*linux.*vdso.*\n' >> excludelist
+    printf 'Excluding the following objects:\n'
+    cat excludelist
 
     rsync -L -v -r \
       $( ldd ./AppDir/usr/bin/dicomautomaton_dispatcher | 
