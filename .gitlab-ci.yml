@@ -126,7 +126,7 @@ test_ci_debian_oldstable_on_debian_oldstable:
   artifacts:
     paths:
       - "dcma_integration_testing"
-    expire_in: 1 week
+    expire_in: 84 hours
 
 test_ci_arch_on_arch:
   stage: test
@@ -147,7 +147,7 @@ test_ci_arch_on_arch:
   artifacts:
     paths:
       - "dcma_integration_testing"
-    expire_in: 1 week
+    expire_in: 84 hours
 
 # Cross-system testing.
 test_ci_debian_oldstable_on_arch:
@@ -169,7 +169,7 @@ test_ci_debian_oldstable_on_arch:
   artifacts:
     paths:
       - "dcma_integration_testing"
-    expire_in: 1 week
+    expire_in: 84 hours
 
 test_ci_debian_oldstable_on_ubuntu_latest:
   stage: test
@@ -193,7 +193,7 @@ test_ci_debian_oldstable_on_ubuntu_latest:
   artifacts:
     paths:
       - "dcma_integration_testing"
-    expire_in: 1 week
+    expire_in: 84 hours
 
 test_ci_debian_oldstable_on_fedora_latest:
   stage: test
@@ -222,7 +222,7 @@ test_ci_debian_oldstable_on_fedora_latest:
   artifacts:
     paths:
       - "dcma_integration_testing"
-    expire_in: 1 week
+    expire_in: 84 hours
 
 # Cross-compilation testing.
 test_cross_compile_mxe_on_debian_oldstable:
@@ -255,7 +255,7 @@ test_cross_compile_mxe_on_debian_oldstable:
   artifacts:
     paths:
       - "dcma_integration_testing"
-    expire_in: 1 week
+    expire_in: 84 hours
 
 #######################################################################################################################
 ### Deployment stages.
