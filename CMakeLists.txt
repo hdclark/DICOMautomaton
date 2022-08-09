@@ -251,6 +251,10 @@ if(ARCH_IS_ARM OR ARCH_IS_ARM64)
     endif()
 endif()
 
+check_cxx_symbol_exists(std::regex::multiline "regex" HAS_REGEX_MULTILINE)
+if(HAS_REGEX_MULTILINE)
+    add_definitions(-DDCMA_CPPSTDLIB_HAS_REGEX_MULTILINE=1)
+endif()
 
 ####################################################################################
 #                                    Definitions

@@ -389,7 +389,12 @@ Compile_Regex(const std::string& input){
     return std::regex(input, std::regex::icase | 
                              std::regex::nosubs |
                              std::regex::optimize |
-                             std::regex::extended);
+#ifdef DCMA_CPPSTDLIB_HAS_REGEX_MULTILINE
+                             // This symbol may be absent for older toolchains.
+                             // See https://gcc.gnu.org/pipermail/libstdc++/2021-September/053209.html for libstdc++.
+                             std::regex_constants::multiline |
+#endif
+                             std::regex::ECMAScript);
 }
 
 // Human-readable information about how selectors can be specified.
@@ -522,13 +527,16 @@ OperationArgDoc RCWhitelistOpArgDoc(){
                " Be aware that input spaces are trimmed to a single space."
                " If your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them."
                " All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed."
-               " The regular expression engine is extended POSIX and is case insensitive."
-               " '.*' will match all available ROIs."
+               "\n\n"
+               " The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which"
+               " is documented at <https://en.cppreference.com/w/cpp/regex/ecmascript>."
+               " Note that '.*' will match all available ROIs and '^(?!xyz).*$' will match all except 'xyz'."
                "\n\n"
                "Note that this parameter will match 'raw' contour labels.";
     out.examples = { ".*", ".*body.*", "body", "^body$", "Liver",
                      R"***(.*left.*parotid.*|.*right.*parotid.*|.*eyes.*)***",
-                     R"***(left_parotid|right_parotid)***" };
+                     R"***(left_parotid|right_parotid)***",
+                     R"***(^(?!left_parotid).*$)***"};
     out.default_val = ".*";
     out.expected = true;
 
@@ -545,8 +553,10 @@ OperationArgDoc NCWhitelistOpArgDoc(){
                " Be aware that input spaces are trimmed to a single space."
                " If your ROI name has more than two sequential spaces, use regular expressions or escaping to avoid them."
                " All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed."
-               " The regular expression engine is extended POSIX and is case insensitive."
-               " '.*' will match all available ROIs."
+               "\n\n"
+               " The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which"
+               " is documented at <https://en.cppreference.com/w/cpp/regex/ecmascript>."
+               " Note that '.*' will match all available ROIs and '^(?!xyz).*$' will match all except 'xyz'."
                "\n\n"
                "Note that this parameter will match contour labels that have been"
                " *normalized* (i.e., mapped, translated) using the user-provided provided lexicon."
@@ -554,7 +564,8 @@ OperationArgDoc NCWhitelistOpArgDoc(){
                " Refer to the lexicon for available labels.";
     out.examples = { ".*", ".*Body.*", "Body", "liver",
                      R"***(.*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*)***",
-                     R"***(Left Parotid|Right Parotid)***" };
+                     R"***(Left Parotid|Right Parotid)***",
+                     R"***(^(?!Left Parotid).*$)***"};
     out.default_val = ".*";
     out.expected = true;
 
