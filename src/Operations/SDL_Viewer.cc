@@ -5584,8 +5584,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                 ImGui::Separator();
                 ImGui::Text("Magnification");
-                ImGui::DragFloat("Zoom level", &zoom, 0.01f, 1.0f, 10.0f, "%.03f");
-                zoom = std::clamp(zoom, 0.1f, 1000.0f);
+                ImGui::DragFloat("Zoom level", &zoom, 0.01f, 1.0f, 100.0f, "%.03f");
+                zoom = std::clamp(zoom, 1.0f, 1000.0f);
                 const float uv_width = 1.0f / zoom;
                 ImGui::DragFloat("Pan horizontal", &pan.x, 0.01f, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f, "%.03f");
                 ImGui::DragFloat("Pan vertical",   &pan.y, 0.01f, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f, "%.03f");
@@ -5614,10 +5614,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if(false){
                     }else if(io.KeyCtrl && (0 < io.MouseWheel)){
                         zoom += std::log(zoom + 0.25f);
-                        zoom = std::clamp( zoom, 1.0f, 10.0f );
+                        zoom = std::clamp( zoom, 1.0f, 100.0f );
                     }else if(io.KeyCtrl && (io.MouseWheel < 0)){
                         zoom -= std::log(zoom + 0.25f);
-                        zoom = std::clamp( zoom, 1.0f, 10.0f );
+                        zoom = std::clamp( zoom, 1.0f, 100.0f );
 
                     }else if( (2 < IM_ARRAYSIZE(io.MouseDown))
                           &&  (0.0f <= io.MouseDownDuration[2]) ){
