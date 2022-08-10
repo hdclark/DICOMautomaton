@@ -200,8 +200,13 @@ bool HighlightROIs(Drover &DICOM_data,
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
 
-    const bool ClampResult = true; // Only for receding_squares. Confines voxels within InteriorValue and ExteriorValue (inclusive).
+    // Receding squares parameters.
+    const bool ClampResult = true; // Confines voxels within InteriorValue and ExteriorValue (inclusive).
     const auto RecedingThreshold = ExteriorVal * 0.5 + InteriorVal * 0.5;
+    const double NominalSpan = 0.05;  // The relative distance from threshold to assign to interior/exterior pixels.
+                                      // Setting too large will reduce accuracy due to lack of freedom to compensate.
+                                      // Setting too small will reduce the nominal contrast between interior/exterior
+                                      // values.
 
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -278,91 +283,131 @@ bool HighlightROIs(Drover &DICOM_data,
                                         std::reference_wrapper<planar_image<float,double>> mask_img_refw,
                                         float &val ) -> void {
 
-        const double just_exterior = (RecedingThreshold * 0.999 + ExteriorVal * 0.001);
-        const double just_interior = (RecedingThreshold * 0.999 + InteriorVal * 0.001);
+        const double just_exterior = (RecedingThreshold * (1.0 - NominalSpan) + ExteriorVal * NominalSpan);
+        const double just_interior = (RecedingThreshold * (1.0 - NominalSpan) + InteriorVal * NominalSpan);
+        //const double just_exterior = (RecedingThreshold * 0.25 + ExteriorVal * 0.75);
+        //const double just_interior = (RecedingThreshold * 0.25 + InteriorVal * 0.75);
 
+        const bool p_rmc0_exists = (isininc(0,r-1,img_refw.get().rows-1)); // upward neighbour.
+        const bool p_r0cm_exists = (isininc(0,c-1,img_refw.get().columns-1)); // leftward neighbour.
+        const bool p_rmcm_exists = p_rmc0_exists && p_r0cm_exists; // upper-left diagonal neighbour.
+
+        // Get the interior/exterior mask values to decide if this pixel needs to be processed.
         const auto mask_chnl = mask_img_refw.get().channels - 1;
         const auto M_r0c0 = mask_img_refw.get().value(r,c,mask_chnl);
-        const auto M_rmc0 = (isininc(0,r-1,img_refw.get().rows-1)) ? mask_img_refw.get().value(r-1,c,mask_chnl) : M_r0c0;
-        const auto M_r0cm = (isininc(0,c-1,img_refw.get().columns-1)) ? mask_img_refw.get().value(r,c-1,mask_chnl) : M_r0c0;
+        const auto M_rmc0 = p_rmc0_exists ? mask_img_refw.get().value(r-1,c,mask_chnl)   : M_r0c0; // up.
+        const auto M_r0cm = p_r0cm_exists ? mask_img_refw.get().value(r,c-1,mask_chnl)   : M_r0c0; // left.
+        const auto M_rmcm = p_rmcm_exists ? mask_img_refw.get().value(r-1,c-1,mask_chnl) : M_r0c0; // diagonal.
 
-        // Short-circuit the calculation if there are no large contours that delineate this voxel from its neighbours.
-        if( (M_r0c0 == M_rmc0) 
-        &&  (M_r0c0 == M_r0cm) ){
+        // Short-circuit the calculation if there are no unbalanced contour crossings (according to the mask).
+        if( (M_r0c0 == M_rmc0)    // up
+        &&  (M_r0c0 == M_r0cm)    // left
+        &&  (M_r0c0 == M_rmcm) ){ // diagonal
             val = (is_interior) ? just_interior : just_exterior;
             return;
         }
 
-        // This algorithm uses the left (c-1) and top (r-1) neighbours and any contours that pass between them and this
-        // voxel (r,c) to determine an appropriate value for this voxel.
+        // This algorithm uses the left (c-1), top (r-1), and top-left corner (c-1, r-1) pixel neighbours and any
+        // contours that pass between them and this voxel (r,c) to determine an appropriate value for this voxel.
         const auto pos_r0c0 = img_refw.get().position(r, c);
-        const auto pos_rmc0 = pos_r0c0 - img_refw.get().row_unit * img_refw.get().pxl_dx;
-        const auto pos_r0cm = pos_r0c0 - img_refw.get().col_unit * img_refw.get().pxl_dy;
+        const auto pos_rmc0 = pos_r0c0 - img_refw.get().row_unit * img_refw.get().pxl_dx; // up.
+        const auto pos_r0cm = pos_r0c0 - img_refw.get().col_unit * img_refw.get().pxl_dy; // left.
+        const auto pos_rmcm = pos_r0c0 - img_refw.get().row_unit * img_refw.get().pxl_dx  // diagonal.
+                                       - img_refw.get().col_unit * img_refw.get().pxl_dy;
 
         const auto I_r0c0 = val;
-        const auto I_rmc0 = (isininc(0,r-1,img_refw.get().rows-1)) ? img_refw.get().value(r-1, c, channel) : just_exterior;
-        const auto I_r0cm = (isininc(0,c-1,img_refw.get().columns-1)) ? img_refw.get().value(r, c-1, channel) : just_exterior;
+        const auto I_rmc0 = p_rmc0_exists ? img_refw.get().value(r-1, c  , channel) : just_exterior; // up.
+        const auto I_r0cm = p_r0cm_exists ? img_refw.get().value(r  , c-1, channel) : just_exterior; // left.
+        const auto I_rmcm = p_rmcm_exists ? img_refw.get().value(r-1, c-1, channel) : just_exterior; // diagonal.
 
-        const line<double> l_l(pos_rmc0, pos_r0c0);
-        const line<double> l_t(pos_r0cm, pos_r0c0);
-        const auto dist_l = img_refw.get().pxl_dx;
-        const auto dist_t = img_refw.get().pxl_dy;
+        const line<double> l_u(pos_rmc0, pos_r0c0); // up.
+        const line<double> l_l(pos_r0cm, pos_r0c0); // left.
+        const line<double> l_d(pos_rmcm, pos_r0c0); // diagonal.
+        const auto dist_u = img_refw.get().pxl_dx;
+        const auto dist_l = img_refw.get().pxl_dy;
+        const auto dist_d = std::hypot(dist_u, dist_l);
+        const auto sq_dist_u = std::pow(dist_u, 2.0);
         const auto sq_dist_l = std::pow(dist_l, 2.0);
-        const auto sq_dist_t = std::pow(dist_t, 2.0);
+        const auto sq_dist_d = std::pow(dist_d, 2.0);
         const auto img_plane = img_refw.get().image_plane();
 
         double newval = I_r0c0;
-        std::vector<double> newvals_tb; // Estimates of what the modified intensity should be.
-        std::vector<double> newvals_lr; // Estimates of what the modified intensity should be.
+        std::vector<double> newvals_u; // Estimates of what the modified intensity should be.
+        std::vector<double> newvals_l;
+        std::vector<double> newvals_d;
 
         const auto find_intersections = [&](){
-
-            const box3 bb( point3( std::min({ pos_r0c0.x, pos_rmc0.x, pos_r0cm.x }),
-                                   std::min({ pos_r0c0.y, pos_rmc0.y, pos_r0cm.y }),
-                                   std::min({ pos_r0c0.z, pos_rmc0.z, pos_r0cm.z }) - 0.1 * img_refw.get().pxl_dz),
-                           point3( std::max({ pos_r0c0.x, pos_rmc0.x, pos_r0cm.x }),
-                                   std::max({ pos_r0c0.y, pos_rmc0.y, pos_r0cm.y }),
-                                   std::max({ pos_r0c0.z, pos_rmc0.z, pos_r0cm.z }) + 0.1 * img_refw.get().pxl_dz) );
+            const box3 bb( point3( std::min({ pos_r0c0.x, pos_rmc0.x, pos_r0cm.x, pos_rmcm.x }),
+                                   std::min({ pos_r0c0.y, pos_rmc0.y, pos_r0cm.y, pos_rmcm.y }),
+                                   std::min({ pos_r0c0.z, pos_rmc0.z, pos_r0cm.z, pos_rmcm.z }) - 0.1 * img_refw.get().pxl_dz),
+                           point3( std::max({ pos_r0c0.x, pos_rmc0.x, pos_r0cm.x, pos_rmcm.x }),
+                                   std::max({ pos_r0c0.y, pos_rmc0.y, pos_r0cm.y, pos_rmcm.y }),
+                                   std::max({ pos_r0c0.z, pos_rmc0.z, pos_r0cm.z, pos_rmcm.z }) + 0.1 * img_refw.get().pxl_dz) );
             std::vector<value> nearby;
             rtree.query(bgi::intersects(bb), std::back_inserter(nearby));
 
-            //auto itB = std::prev( std::end(c.points) );
-            //for(auto itA = std::begin(c.points); itA != std::end(c.points); itB = itA, itA++){
             for(const auto &n : nearby){
-                const auto vA = n.second.first;
-                const auto vB = n.second.second;
+                const auto vA = img_plane.Project_Onto_Plane_Orthogonally(n.second.first);
+                const auto vB = img_plane.Project_Onto_Plane_Orthogonally(n.second.second);
 
                 const double sq_dist_v = vA.sq_dist(vB);
                 const line<double> l_v(vA, vB);
 
-                // Determine if the line segments intersect. (Is there a categorically faster way?)
-                vec3<double> p_t;
-                const bool intersect_t =    l_t.Intersects_With_Line_Once(l_v, p_t)
-                                         && (p_t.sq_dist(vA) <= sq_dist_v)
-                                         && (p_t.sq_dist(vB) <= sq_dist_v)
-                                         && (p_t.sq_dist(pos_r0cm) <= sq_dist_t)
-                                         && (p_t.sq_dist(pos_r0c0) <= sq_dist_t);
-                if(intersect_t){
-                    // Assume linear interpolation, which marching-squares would typically use.
-                    // Invert the 'slope' of a linear interpolation based on threshold extraction.
-                    const auto inv_m_t = dist_t / (dist_t - p_t.distance(pos_r0c0));
-                    if(std::isfinite(inv_m_t)){
-                        newvals_tb.push_back( I_r0cm - (I_r0cm - RecedingThreshold) * inv_m_t);
-                    }
-                }
+                vec3<double> p_i;
+                // Upward crossings.
+                if(false){
+                }else if( (M_r0c0 != M_rmc0)
+                      // Determine if the line segments intersect. (Is there a categorically faster way?)
+                      //
+                      // Check if the (infinite) lines intersect within eps.
+                      &&  l_u.Closest_Point_To_Line(l_v, p_i)
+                      &&  (l_u.Distance_To_Point(p_i) < machine_eps)
+                      &&  (l_v.Distance_To_Point(p_i) < machine_eps)
 
-                vec3<double> p_l;
-                const bool intersect_l =    l_l.Intersects_With_Line_Once(l_v, p_l)
-                                         && (p_l.sq_dist(vA) <= sq_dist_v)
-                                         && (p_l.sq_dist(vB) <= sq_dist_v)
-                                         && (p_l.sq_dist(pos_rmc0) <= sq_dist_l)
-                                         && (p_l.sq_dist(pos_r0c0) <= sq_dist_l);
-                if(intersect_l){
+                      // The intersection is along both (infinite) lines, so check if it is
+                      // within the bounds of both ends of each line segment.
+                      &&  (p_i.sq_dist(vA) <= sq_dist_v)
+                      &&  (p_i.sq_dist(vB) <= sq_dist_v)
+                      &&  (p_i.sq_dist(pos_rmc0) <= sq_dist_u)
+                      &&  (p_i.sq_dist(pos_r0c0) <= sq_dist_u) ){
+
                     // Assume linear interpolation, which marching-squares would typically use.
                     // Invert the 'slope' of a linear interpolation based on threshold extraction.
-                    const auto inv_m_l = dist_l / (dist_l - p_l.distance(pos_r0c0));
-                    if(std::isfinite(inv_m_l)){
-                        newvals_lr.push_back( I_rmc0 - (I_rmc0 - RecedingThreshold) * inv_m_l);
+                    const auto inv_m = dist_u / (dist_u - p_i.distance(pos_r0c0));
+                    if(std::isfinite(inv_m)){
+                        newvals_u.push_back( I_rmc0 - (I_rmc0 - RecedingThreshold) * inv_m);
+                    }
+
+                // Leftward crossings.
+                }else if( (M_r0c0 != M_r0cm)
+                      &&  l_l.Closest_Point_To_Line(l_v, p_i)
+                      &&  (l_l.Distance_To_Point(p_i) < machine_eps)
+                      &&  (l_v.Distance_To_Point(p_i) < machine_eps)
+
+                      &&  (p_i.sq_dist(vA) <= sq_dist_v)
+                      &&  (p_i.sq_dist(vB) <= sq_dist_v)
+                      &&  (p_i.sq_dist(pos_r0cm) <= sq_dist_l)
+                      &&  (p_i.sq_dist(pos_r0c0) <= sq_dist_l) ){
+
+                    const auto inv_m = dist_l / (dist_l - p_i.distance(pos_r0c0));
+                    if(std::isfinite(inv_m)){
+                        newvals_l.push_back( I_r0cm - (I_r0cm - RecedingThreshold) * inv_m);
+                    }
+
+                // Diagonal crossings.
+                }else if( (M_r0c0 != M_rmcm)
+                      &&  l_d.Closest_Point_To_Line(l_v, p_i)
+                      &&  (l_d.Distance_To_Point(p_i) < machine_eps)
+                      &&  (l_v.Distance_To_Point(p_i) < machine_eps)
+
+                      &&  (p_i.sq_dist(vA) <= sq_dist_v)
+                      &&  (p_i.sq_dist(vB) <= sq_dist_v)
+                      &&  (p_i.sq_dist(pos_rmcm) <= sq_dist_d)
+                      &&  (p_i.sq_dist(pos_r0c0) <= sq_dist_d) ){
+
+                    const auto inv_m = dist_d / (dist_d - p_i.distance(pos_r0c0));
+                    if(std::isfinite(inv_m)){
+                        newvals_d.push_back( I_rmcm - (I_rmcm - RecedingThreshold) * inv_m);
                     }
                 }
             }
@@ -370,30 +415,40 @@ bool HighlightROIs(Drover &DICOM_data,
         find_intersections();
 
         {
+
             if(false){
             }else if( contour_overlap_ignore ){
-
-                // Only honour the change in mask if it is a transition from outside all contours to within the
-                // outermost contour.
-                if(std::abs(M_r0c0 + M_rmc0) <= 1){
+                // Only honour the change in mask if it is a transition from outside all contours to within one or more
+                // contours. So only honour transitions from outside to inside (at any inside overlap multiplicity).
+                if( ( (std::abs(M_r0c0) == 0) ||  (std::abs(M_rmc0) == 0) )
+                &&  ( (std::abs(M_r0c0) != 0) ||  (std::abs(M_rmc0) != 0) ) ){ // up
                     // Do nothing.
                 }else{
-                    newvals_lr.clear();
+                    newvals_u.clear();
                 }
-                if(std::abs(M_r0c0 + M_r0cm) <= 1){
+                if( ( (std::abs(M_r0c0) == 0) ||  (std::abs(M_r0cm) == 0) )
+                &&  ( (std::abs(M_r0c0) != 0) ||  (std::abs(M_r0cm) != 0) ) ){ // left.
                     // Do nothing.
                 }else{
-                    newvals_tb.clear();
+                    newvals_l.clear();
+                }
+                if( ( (std::abs(M_r0c0) == 0) ||  (std::abs(M_rmcm) == 0) )
+                &&  ( (std::abs(M_r0c0) != 0) ||  (std::abs(M_rmcm) != 0) ) ){ // diagonal.
+                    // Do nothing.
+                }else{
+                    newvals_d.clear();
                 }
 
             }else if( contour_overlap_honopps ){
                 // Only accept transitions if the mask change is +-1 and orientations are opposite.
-                if( (std::abs(M_r0c0 + M_rmc0) == 1) 
-                ||  (std::abs(M_r0c0 + M_r0cm) == 1) ){
+                if( (std::abs(M_r0c0 - M_rmc0) == 1)     // up.
+                ||  (std::abs(M_r0c0 - M_r0cm) == 1)     // left.
+                ||  (std::abs(M_r0c0 - M_rmcm) == 1) ){  // diagonal.
                     // Do nothing.
                 }else{
-                    newvals_lr.clear();
-                    newvals_tb.clear();
+                    newvals_u.clear();
+                    newvals_l.clear();
+                    newvals_d.clear();
                 }
                 
             }else if( contour_overlap_cancel ){
@@ -404,20 +459,18 @@ bool HighlightROIs(Drover &DICOM_data,
             }
 
             std::vector<double> newvals;
-            newvals.reserve( newvals_lr.size() + newvals_tb.size() );
-            newvals.insert( std::end(newvals), std::begin(newvals_lr), std::end(newvals_lr) );
-            newvals.insert( std::end(newvals), std::begin(newvals_tb), std::end(newvals_tb) );
+            newvals.reserve( newvals_u.size() + newvals_l.size() + newvals_d.size() );
+            newvals.insert( std::end(newvals), std::begin(newvals_u), std::end(newvals_u) );
+            newvals.insert( std::end(newvals), std::begin(newvals_l), std::end(newvals_l) );
+            newvals.insert( std::end(newvals), std::begin(newvals_d), std::end(newvals_d) );
 
-            if(false){
-            }else if( is_interior ){
-                newval = (newvals.empty()) ? just_interior : Stats::Mean(newvals);
-            }else{
-                newval = (newvals.empty()) ? just_exterior : Stats::Mean(newvals);
-            }
+            const auto fallback_val = (is_interior) ? just_interior : just_exterior;
+            newval = (newvals.empty()) ? fallback_val : Stats::Median(newvals);
         }
 
         // Confine the voxel value to the interior and exterior values, to bound the output.
-        // Note: this step is NOT needed, and can result in lower accuracy.
+        // Note: this step is NOT needed, and can result in lower accuracy, but will guarantee outputs are bounded
+        // within a specific range.
         if(ClampResult){
             newval = std::clamp(newval, std::min(ExteriorVal,InteriorVal), std::max(ExteriorVal,InteriorVal));
         }
