@@ -4031,6 +4031,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                             contouring_imgs.Ensure_Contour_Data_Allocated();
                             contouring_imgs.contour_data->ccs.swap(shtl);
                             const bool res = Operation_Dispatcher(contouring_imgs, InvocationMetadata, FilenameLex, Operations);
+                            contouring_imgs.Ensure_Contour_Data_Allocated();
                             contouring_imgs.contour_data->ccs.swap(shtl);
                             for(auto& c : contouring_imgs.contour_data->ccs.back().contours) c.metadata = cm;
                             
@@ -4191,6 +4192,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::Text("Contour Extraction");
                     if(ImGui::DragInt("Resolution", &contouring_img_row_col_count, 0.1f, 5, 1024)){
                         reset_contouring_state(img_array_ptr_it);
+                        contouring_img_altered = true;
                     }
                     if( ImGui::IsItemHovered() ){
                         ImGui::BeginTooltip();
