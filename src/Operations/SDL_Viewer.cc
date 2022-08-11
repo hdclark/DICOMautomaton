@@ -4024,7 +4024,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                             Operations.back().insert("InteriorVal=1.0");
                             Operations.back().insert("ExteriorOverwrite=true");
                             Operations.back().insert("InteriorOverwrite=true");
-                            contour_overlap_style = std::clamp(contour_overlap_style, 0UL, contour_overlap_styles.size());
+                            contour_overlap_style = std::clamp(contour_overlap_style, static_cast<size_t>(0UL), contour_overlap_styles.size());
                             Operations.back().insert("ContourOverlap="_s + contour_overlap_styles[contour_overlap_style]);
                             Operations.back().insert("ROILabelRegex=.*");
                             Operations.back().insert("ImageSelection=last");
