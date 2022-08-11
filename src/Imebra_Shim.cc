@@ -1614,7 +1614,7 @@ std::unique_ptr<Contour_Data> get_Contour_Data(const std::filesystem::path &file
                     const double z = the_data_handler->getDouble(N + 2);
                     shtl.points.emplace_back(x,y,z);
                 }
-                shtl.Reorient_Counter_Clockwise();
+                //shtl.Reorient_Counter_Clockwise(); // Sometimes orientation is inconsistent.
                 shtl.metadata = FileMetadata;
 
                 auto ROIName = tags_names_and_numbers[ROI_number];
