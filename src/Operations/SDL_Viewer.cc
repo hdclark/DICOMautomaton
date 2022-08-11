@@ -1322,7 +1322,15 @@ bool SDL_Viewer(Drover &DICOM_data,
     contouring_imgs.Ensure_Contour_Data_Allocated();
     contouring_imgs.image_data.push_back(std::make_unique<Image_Array>());
     contouring_imgs.image_data.back()->imagecoll.images.emplace_back();
-    std::string new_contour_name(500, '\0');
+    std::array<char, 2048> new_contour_name;
+    string_to_array(new_contour_name, "");
+    bool overwrite_existing_contours = false;
+    std::optional<decltype(std::begin(DICOM_data.contour_data->ccs))> edit_existing_contour_selection;
+    std::vector<std::string> contour_overlap_styles = {
+        "ignore",
+        "honour_opposite_orientations",
+        "overlapping_contours_cancel" };
+    size_t contour_overlap_style = 0UL;
 
 
     // Resets the contouring image to match the display image characteristics.
@@ -2079,12 +2087,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                                        &recompute_image_iters,
                                        &X,
                                        &reset_contouring_state,
-                                       &launch_contour_preprocessor ](const std::string &roi_name) -> bool {
+                                       &launch_contour_preprocessor,
+                                       &overwrite_existing_contours ]( const std::string &roi_name ) -> bool {
             //std::shared_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
             //auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_cimage_iters();
             auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
             try{
                 if( !img_valid ) throw std::runtime_error("Contouring image not valid.");
+                if(roi_name.empty()) throw std::runtime_error("Cannot save with an empty ROI name.");
 
                 auto cm = (*img_array_ptr_it)->imagecoll.get_common_metadata({});
                 cm = coalesce_metadata_for_rtstruct(cm);
@@ -2098,16 +2108,24 @@ bool SDL_Viewer(Drover &DICOM_data,
                     throw std::runtime_error("Missing 'StudyInstanceUID' metadata element. Cannot continue.");
                 }
 
-
+                contouring_imgs.Ensure_Contour_Data_Allocated();
                 for(auto &cc : contouring_imgs.contour_data->ccs){
-                    contouring_imgs.Ensure_Contour_Data_Allocated();
-
-                    if(roi_name.empty()) throw std::runtime_error("Cannot save with an empty ROI name.");
-
                     //Trim empty contours from the shuttle.
                     cc.Purge_Contours_Below_Point_Count_Threshold(3);
                     if(cc.contours.empty()) throw std::runtime_error("Given empty contour collection. Contours need at least 3 vertices each.");
+                }
 
+                if(overwrite_existing_contours){
+                    DICOM_data.Ensure_Contour_Data_Allocated();
+                    
+                    DICOM_data.contour_data->ccs.remove_if( [roi_name](const contour_collection<double>& cc) -> bool {
+                        const auto n_opt = cc.get_dominant_value_for_key("ROIName");
+                        return n_opt && (n_opt.value() == roi_name);
+                    });
+                }
+
+                // Inject metadata.
+                for(auto &cc : contouring_imgs.contour_data->ccs){
                     const double MinimumSeparation = disp_img_it->pxl_dz; // TODO: use more robust method here.
                     for(auto &cop : cc.contours) cop.metadata = cm;
                     cc.Insert_Metadata("ROIName", roi_name);
@@ -2116,12 +2134,12 @@ bool SDL_Viewer(Drover &DICOM_data,
                     cc.Insert_Metadata("MinimumSeparation", std::to_string(MinimumSeparation));
                 }
 
-                //Insert the contours into the Drover object.
+                // Insert the contours into the Drover object.
                 DICOM_data.Ensure_Contour_Data_Allocated();
                 DICOM_data.contour_data->ccs.splice(std::end(DICOM_data.contour_data->ccs),contouring_imgs.contour_data->ccs);
-                contouring_imgs.contour_data->ccs.clear();
                 FUNCINFO("Drover class imbued with new contour collection");
 
+                contouring_imgs.contour_data->ccs.clear();
                 reset_contouring_state(img_array_ptr_it);
                 launch_contour_preprocessor();
 
@@ -3470,6 +3488,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                                            &contouring_img_row_col_count,
                                            &new_contour_name,
                                            &save_contour_buffer,
+                                           &overwrite_existing_contours,
+                                           &edit_existing_contour_selection,
+                                           &contour_overlap_styles,
+                                           &contour_overlap_style,
 
                                            &recompute_cimage_iters,
                                            &contouring_imgs,
@@ -3899,12 +3921,22 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                         ImGui::InputText("ROI Name", new_contour_name.data(), new_contour_name.size());
                         std::string entered_text;
-                        for(size_t i = 0; i < new_contour_name.size(); ++i){
-                            if( (new_contour_name[i] == '\0')
-                            ||  !std::isprint( static_cast<unsigned char>(new_contour_name[i]) )) break;
-                            entered_text.push_back(new_contour_name[i]);
+                        array_to_string(entered_text, new_contour_name);
+
+                        ImGui::Checkbox("Overwrite existing contours", &overwrite_existing_contours);
+
+                        bool ok_to_save = !entered_text.empty();
+                        if(ok_to_save && !overwrite_existing_contours){
+                            DICOM_data.Ensure_Contour_Data_Allocated();
+                            ok_to_save = ( std::find_if( std::begin(DICOM_data.contour_data->ccs),
+                                                         std::end(DICOM_data.contour_data->ccs),
+                                                         [entered_text](const contour_collection<double> &cc) -> bool {
+                                                             const auto l_roi_name = cc.get_dominant_value_for_key("ROIName").value_or("unspecified");
+                                                             return (l_roi_name == entered_text);
+                                                         }) == std::end(DICOM_data.contour_data->ccs) );
+                            if(!ok_to_save) FUNCWARN("There is an existing contour with the given name. Refusing to save");
                         }
-                        const auto ok_to_save = !entered_text.empty();
+
                         //if(!ok_to_save){
                         //    ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
                         //    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
@@ -3917,10 +3949,103 @@ bool SDL_Viewer(Drover &DICOM_data,
                         if( clicked_save
                         &&  ok_to_save
                         &&  save_contour_buffer(entered_text) ){
+                            string_to_array(new_contour_name, "");
                             ImGui::CloseCurrentPopup();
                         }
 
-                        if(ImGui::Button("Close")){
+                        ImGui::SameLine();
+                        if(ImGui::Button("Cancel")){
+                            ImGui::CloseCurrentPopup();
+                        }
+                        ImGui::EndPopup();
+                    }
+                    DICOM_data.Ensure_Contour_Data_Allocated();
+                    if( ImGui::Button("Edit Existing")
+                    &&  !DICOM_data.contour_data->ccs.empty() ){ 
+                        edit_existing_contour_selection = std::begin(DICOM_data.contour_data->ccs);
+
+                        ImGui::OpenPopup("Edit Existing Contours");
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::BeginPopupModal("Edit Existing Contours", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+                        DICOM_data.Ensure_Contour_Data_Allocated();
+
+                        const auto beg = std::begin(DICOM_data.contour_data->ccs);
+                        const auto end = std::end(DICOM_data.contour_data->ccs);
+                        bool valid_roi_selected = false;
+                        
+                        if(ImGui::BeginListBox("Contours")){
+                            for(auto it = beg; it != end; ++it){
+                                const auto l_roi_name = it->get_dominant_value_for_key("ROIName").value_or("unspecified");
+                                const bool is_selected =  edit_existing_contour_selection
+                                                       && (edit_existing_contour_selection.value() == it);
+                                if(is_selected) valid_roi_selected = true;
+                                ImGui::PushID(static_cast<void*>(std::addressof(*it)));
+                                if(ImGui::Selectable(l_roi_name.data(), is_selected)){
+                                    edit_existing_contour_selection = it;
+                                }
+                                ImGui::PopID();
+                                if(is_selected) ImGui::SetItemDefaultFocus(); // Used for keyboard navigation.
+                            }
+                            ImGui::EndListBox();
+                        }
+
+                        if(ImGui::BeginListBox("Overlap Handling")){
+                            for(size_t i = 0UL; i < contour_overlap_styles.size(); ++i){
+                                const bool is_selected = (i == contour_overlap_style);
+                                ImGui::PushID(i);
+                                if(ImGui::Selectable(contour_overlap_styles[i].data(), is_selected)){
+                                    contour_overlap_style = i;
+                                }
+                                ImGui::PopID();
+                                if(is_selected) ImGui::SetItemDefaultFocus(); // Used for keyboard navigation.
+                            }
+                            ImGui::EndListBox();
+                        }
+
+                        const bool clicked_copy = ImGui::Button("Copy");
+                        if( clicked_copy
+                        &&  valid_roi_selected
+                        &&  edit_existing_contour_selection ){
+
+                            // Copy the selected contours to a shuttle. We use double-buffering here in case there are
+                            // any existing contours.
+                            decltype(contouring_imgs.contour_data->ccs) shtl;
+                            shtl.emplace_back();
+                            for(const auto& c : edit_existing_contour_selection.value()->contours){
+                                shtl.back().contours.push_back( c );
+                            }
+                            auto cm = shtl.back().get_common_metadata({}, {});
+
+                            std::list<OperationArgPkg> Operations;
+                            Operations.emplace_back("HighlightROIs");
+                            Operations.back().insert("Method=receding_squares");
+                            Operations.back().insert("ExteriorVal=0.0");
+                            Operations.back().insert("InteriorVal=1.0");
+                            Operations.back().insert("ExteriorOverwrite=true");
+                            Operations.back().insert("InteriorOverwrite=true");
+                            contour_overlap_style = std::clamp(contour_overlap_style, 0UL, contour_overlap_styles.size());
+                            Operations.back().insert("ContourOverlap="_s + contour_overlap_styles[contour_overlap_style]);
+                            Operations.back().insert("ROILabelRegex=.*");
+                            Operations.back().insert("ImageSelection=last");
+                            contouring_imgs.Ensure_Contour_Data_Allocated();
+                            contouring_imgs.contour_data->ccs.swap(shtl);
+                            const bool res = Operation_Dispatcher(contouring_imgs, InvocationMetadata, FilenameLex, Operations);
+                            contouring_imgs.contour_data->ccs.swap(shtl);
+                            for(auto& c : contouring_imgs.contour_data->ccs.back().contours) c.metadata = cm;
+                            
+                            contouring_img_altered = true;
+
+                            if(res){
+                                edit_existing_contour_selection = {};
+                                ImGui::CloseCurrentPopup();
+                            }else{
+                                FUNCWARN("Copying failed");
+                            }
+                        }
+
+                        ImGui::SameLine();
+                        if(ImGui::Button("Cancel")){
                             ImGui::CloseCurrentPopup();
                         }
                         ImGui::EndPopup();
