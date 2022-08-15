@@ -105,6 +105,7 @@ bool ContourWholeImages(Drover &DICOM_data,
         auto cc = Encircle_Images_with_Contours(imgs, opts, metadata);
 
         //Construct a destination for the ROI contours.
+        DICOM_data.Ensure_Contour_Data_Allocated();
         DICOM_data.contour_data->ccs.emplace_back();
 
         DICOM_data.contour_data->ccs.back().contours.splice(

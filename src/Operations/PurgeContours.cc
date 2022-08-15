@@ -233,6 +233,7 @@ bool PurgeContours(Drover &DICOM_data,
         const auto should_purge = purge_via_area || purge_via_perimeter || purge_via_vert_count;
         return should_purge;
     };
+    DICOM_data.Ensure_Contour_Data_Allocated();
     for(auto & cc : DICOM_data.contour_data->ccs){
         cc.contours.remove_if( remove_all_criteria );
     }

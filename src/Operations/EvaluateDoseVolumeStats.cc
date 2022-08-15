@@ -149,6 +149,7 @@ bool EvaluateDoseVolumeStats(Drover &DICOM_data,
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
     std::list<std::reference_wrapper<contour_collection<double>>> cc_all;
+    DICOM_data.Ensure_Contour_Data_Allocated();
     for(auto & cc : DICOM_data.contour_data->ccs){
         auto base_ptr = reinterpret_cast<contour_collection<double> *>(&cc);
         cc_all.push_back( std::ref(*base_ptr) );

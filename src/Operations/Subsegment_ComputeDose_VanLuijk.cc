@@ -571,10 +571,12 @@ bool Subsegment_ComputeDose_VanLuijk(Drover &DICOM_data,
         for(auto &cc : final_selected_ROI_refs){
             cc.get().Insert_Metadata("ROIName", RetainSubsegment);
             cc.get().Insert_Metadata("NormalizedROIName", RetainSubsegment);
+            DICOM_data.Ensure_Contour_Data_Allocated();
             DICOM_data.contour_data->ccs.emplace_back( cc.get() );
         }
     }
     if(ReplaceAllWithSubsegment){
+        DICOM_data.Ensure_Contour_Data_Allocated();
         DICOM_data.contour_data->ccs.clear();
         for(auto &cc : final_selected_ROI_refs){
             DICOM_data.contour_data->ccs.emplace_back( cc.get() );

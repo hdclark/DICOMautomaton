@@ -122,6 +122,7 @@ bool BuildLexiconInteractively(Drover &DICOM_data,
     // NOTE: Items will be purged if they can be matched exactly by the lexicon.
     std::set<std::string> cc_labels;
     std::string PatientID;
+    DICOM_data.Ensure_Contour_Data_Allocated();
     for(const auto &cc : DICOM_data.contour_data->ccs){
         for(const auto &c : cc.contours){
             auto label = c.GetMetadataValueAs<std::string>("ROIName");

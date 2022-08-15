@@ -482,6 +482,7 @@ bool AnalyzeLightRadFieldCoincidence(Drover &DICOM_data,
                                                        "dcma_op_analyzelightradcoincidence_mutex");
                 boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(mutex);
 
+                DICOM_data.Ensure_Contour_Data_Allocated();
                 DICOM_data.contour_data->ccs.emplace_back();
 
                 if(OutputFileName.empty()){

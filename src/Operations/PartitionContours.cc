@@ -472,6 +472,7 @@ bool PartitionContours(Drover &DICOM_data,
                     cc.Insert_Metadata("NormalizedROIName", X(ROIName));
                     cc.Insert_Metadata("ROINumber", "10000"); // TODO: find highest existing and ++ it.
                     cc.Insert_Metadata("MinimumSeparation", std::to_string(MinimumSeparation));
+                    DICOM_data.Ensure_Contour_Data_Allocated();
                     DICOM_data.contour_data->ccs.emplace_back( cc );  // TODO -- place all subsegment contours inside cc_selection into the same cc.
                 }
 

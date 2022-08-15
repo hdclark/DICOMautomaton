@@ -157,6 +157,7 @@ bool ContourVote(Drover &DICOM_data,
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
     std::list<std::reference_wrapper<contour_of_points<double>>> cop_all;
+    DICOM_data.Ensure_Contour_Data_Allocated();
     for(auto & cc : DICOM_data.contour_data->ccs){
         for(auto & cop : cc.contours){
             cop_all.push_back( std::ref(cop) );
@@ -230,6 +231,7 @@ bool ContourVote(Drover &DICOM_data,
     cc_new.Insert_Metadata("MinimumSeparation", "1.0"); // TODO: fix this.
 
     if(!cc_new.contours.empty()){
+        DICOM_data.Ensure_Contour_Data_Allocated();
         DICOM_data.contour_data->ccs.emplace_back(cc_new);
     }
 

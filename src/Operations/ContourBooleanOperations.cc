@@ -229,6 +229,7 @@ bool ContourBooleanOperations(Drover &DICOM_data,
         // in the collection is not well-defined in many situations and will potentially cause issues in other operations.
         // So the result is not propagated out at this time.
     }else{
+        DICOM_data.Ensure_Contour_Data_Allocated();
         DICOM_data.contour_data->ccs.emplace_back(cc_new);
     }
 

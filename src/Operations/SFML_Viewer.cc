@@ -2237,6 +2237,7 @@ bool SFML_Viewer(Drover &DICOM_data,
             contourtext.setFillColor(sf::Color::Green);
             contourtext.setOutlineColor(sf::Color::Green);
 
+            DICOM_data.Ensure_Contour_Data_Allocated();
             for(auto & cc : DICOM_data.contour_data->ccs){
                 //auto base_ptr = reinterpret_cast<contour_collection<double> *>(&cc);
                 for(auto & c : cc.contours){

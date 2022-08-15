@@ -64,6 +64,7 @@ bool DeleteContours(Drover &DICOM_data,
 
     for(auto &cc_refw : cc_ROIs){
         bool found = false; // Stop searching after removing it because the reference becomes invalid.
+        DICOM_data.Ensure_Contour_Data_Allocated();
         DICOM_data.contour_data->ccs.remove_if( [&](const contour_collection<double>& cc) -> bool {
             if( !found && (std::addressof(cc_refw.get()) == std::addressof(cc)) ){
                 found = true;

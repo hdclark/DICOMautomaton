@@ -66,6 +66,7 @@ bool GrowContours(Drover &DICOM_data,
     const auto theregex = Compile_Regex(ROILabelRegex);
     const auto thenormalizedregex = Compile_Regex(NormalizedROILabelRegex);
 
+    DICOM_data.Ensure_Contour_Data_Allocated();
     for(auto &cc : DICOM_data.contour_data->ccs){
         for(auto &cop : cc.contours){
             if(cop.points.size() < 3) continue;
