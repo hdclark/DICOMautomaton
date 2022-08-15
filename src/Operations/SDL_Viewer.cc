@@ -4033,7 +4033,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                             const bool res = Operation_Dispatcher(contouring_imgs, InvocationMetadata, FilenameLex, Operations);
                             contouring_imgs.Ensure_Contour_Data_Allocated();
                             contouring_imgs.contour_data->ccs.swap(shtl);
-                            for(auto& c : contouring_imgs.contour_data->ccs.back().contours) c.metadata = cm;
                             
                             contouring_img_altered = true;
 
