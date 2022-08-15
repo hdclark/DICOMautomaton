@@ -2836,7 +2836,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::Separator();
                 if(ImGui::BeginMenu("Script")){
                     if(ImGui::BeginMenu("Append Operation")){
-                        auto known_ops = Known_Operations();
+                        auto known_ops = Known_Operations_and_Aliases();
                         for(auto &anop : known_ops){
                             std::stringstream nss;
                             const auto op_name = anop.first;
@@ -3000,7 +3000,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::Separator();
 
                     if(ImGui::BeginMenu("Operations")){
-                        auto known_ops = Known_Operations();
+                        auto known_ops = Known_Operations_and_Aliases();
                         for(auto &anop : known_ops){
                             const auto op_name = anop.first;
                             std::stringstream ss;

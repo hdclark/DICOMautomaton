@@ -478,6 +478,31 @@ std::map<std::string, op_packet_t> Known_Operations(){
     return out;
 }
 
+std::map<std::string, op_packet_t> Known_Operations_and_Aliases(){
+    auto out = Known_Operations();
+
+    // Create a separate map for all listed aliases.
+    std::map<std::string, op_packet_t> aliases;
+    for(const auto &p : out){
+        const auto op_name = p.first;
+        auto OpDocs = p.second.first();
+        for(const auto &alias : OpDocs.aliases){
+            // Wrap the canonical functor to rewrite aliases to both include the canonical name and exclude the alias.
+            op_doc_func_t l_op_doc = [op_name,alias,OpDocs](){
+                auto l_docs = OpDocs;
+                l_docs.aliases.push_back(op_name);
+                l_docs.aliases.remove(alias);
+                return l_docs;
+            };
+
+            aliases[alias] = std::make_pair(l_op_doc, p.second.second);
+        }
+    }
+
+    out.merge(aliases);
+    return out;
+}
+
 std::map<std::string, std::string> Operation_Lexicon(){
     // Prepare a lexicon (suitable for an Explicator instance) for performing fuzzy operation name matching.
     auto op_name_mapping = Known_Operations();
