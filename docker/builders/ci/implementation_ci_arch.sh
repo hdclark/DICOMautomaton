@@ -55,6 +55,7 @@ until
       sfml \
       sdl2 \
       glew \
+      glu \
       jansson \
       libpqxx \
       postgresql \
