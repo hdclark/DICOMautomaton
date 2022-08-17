@@ -81,6 +81,23 @@ aa_bbox aa_box::evaluate_aa_bbox() const {
     return bb;
 }
 
+// Infinite plane.
+plane::plane(const vec3<double>& p,
+             const vec3<double>& n,
+             double w) : point(p), normal(n.unit()), bbox_width(w) {};
+
+double plane::evaluate_sdf(const vec3<double>& pos) const {
+    const auto sdf = (pos - this->point).Dot(this->normal);
+    return sdf;
+}
+
+aa_bbox plane::evaluate_aa_bbox() const {
+    aa_bbox bb;
+    bb.digest( this->point - vec3<double>(1.0, 1.0, 1.0) * this->bbox_width );
+    bb.digest( this->point + vec3<double>(1.0, 1.0, 1.0) * this->bbox_width );
+    return bb;
+}
+
 // Connected line segments with rounded edges.
 poly_chain::poly_chain(double r, const std::vector<vec3<double>> &v) : radius(r), vertices(v) {};
 poly_chain::poly_chain(double r, const std::list<vec3<double>> &v) : radius(r), vertices(std::begin(v), std::end(v)) {};
@@ -654,6 +671,7 @@ std::shared_ptr<node> build_node(const parsed_function& pf){
     // Shapes.
     const auto r_sphere            = Compile_Regex("^sphere$");
     const auto r_aa_box            = Compile_Regex("^aa[-_]?box$");
+    const auto r_plane             = Compile_Regex("^plane$");
     const auto r_poly_chain        = Compile_Regex("^poly[-_]?chain$");
     const auto r_text              = Compile_Regex("^text$");
 
@@ -682,6 +700,11 @@ std::shared_ptr<node> build_node(const parsed_function& pf){
     if( (4 <= N_p) && (pf.parameters[3].number) ){
         s3 = pf.parameters[3].number;
     }
+    std::optional<double> s6;
+    if( (7 <= N_p) && (pf.parameters[6].number) ){
+        s6 = pf.parameters[6].number;
+    }
+
     std::optional<vec3<double>> v012;
     if( (3 <= N_p) && (pf.parameters[0].number)
                    && (pf.parameters[1].number)
@@ -697,6 +720,14 @@ std::shared_ptr<node> build_node(const parsed_function& pf){
         v123 = vec3<double>(pf.parameters[1].number.value(),
                             pf.parameters[2].number.value(),
                             pf.parameters[3].number.value());
+    }
+    std::optional<vec3<double>> v345;
+    if( (6 <= N_p) && (pf.parameters[3].number)
+                   && (pf.parameters[4].number)
+                   && (pf.parameters[5].number) ){
+        v345 = vec3<double>(pf.parameters[3].number.value(),
+                            pf.parameters[4].number.value(),
+                            pf.parameters[5].number.value());
     }
     std::optional<vec3<double>> v456;
     if( (7 <= N_p) && (pf.parameters[4].number)
@@ -722,6 +753,12 @@ std::shared_ptr<node> build_node(const parsed_function& pf){
             throw std::invalid_argument("'aa_box' requires an extent vec3 parameter");
         }
         out = std::make_shared<csg::sdf::shape::aa_box>( v012.value() );
+
+    }else if(std::regex_match(pf.name, r_plane)){
+        if( !v012 || !v345 || !s6 || (N_p != 7) ){
+            throw std::invalid_argument("'plane' requires a vec3 position, a vec3 normal, and scalar bounding box width parameter");
+        }
+        out = std::make_shared<csg::sdf::shape::plane>( v012.value(), v345.value(), s6.value() );
 
     }else if(std::regex_match(pf.name, r_poly_chain)){
         if( !s0 || (N_p <= 7) ){

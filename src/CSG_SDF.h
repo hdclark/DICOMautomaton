@@ -63,6 +63,22 @@ struct aa_box : public node {
     aa_bbox evaluate_aa_bbox() const override;
 };
 
+// Infinite plane.
+//
+// Note: the bounding box for an infinite plane is infinite, so we assume the point
+// (on the plane) defines the centre of a bounding box.
+struct plane : public node {
+    vec3<double> point;  // a point on the plane.
+    vec3<double> normal; // the plane orientation.
+    double bbox_width;
+
+    plane(const vec3<double>& point,
+          const vec3<double>& normal,
+          double bbox_width);
+    double evaluate_sdf(const vec3<double>& pos) const override;
+    aa_bbox evaluate_aa_bbox() const override;
+};
+
 // Connected line segments with rounded edges.
 struct poly_chain : public node {
     double radius;

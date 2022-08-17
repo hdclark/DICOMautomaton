@@ -20,6 +20,15 @@ GenerateMeshes(
     Objects = 'sphere(2.0)',
 ){};
 
+
+# A small patch of an infinite plane at (0,0,0) with normal (1,0,0).
+# The patch extent is 5.0 units (mm).
+GenerateMeshes(
+    Resolution = res,
+    MeshLabel = 'plane patch',
+    Objects = 'plane(0,0,0,  1,0,0,  5.0)',
+){};
+
 # A simple asymmetric axis-aligned box.
 GenerateMeshes(
     Resolution = res,
@@ -104,6 +113,20 @@ GenerateMeshes(
     Resolution = res,
     MeshLabel = 'chamfered (box - sphere)',
     Objects = 'chamfer_subtract(3.0){ aa_box(8.0, 20.0, 20.0); sphere(12.0); }',
+){};
+
+# This generates a hollow hemisphere using a plane.
+GenerateMeshes(
+    Resolution = res,
+    MeshLabel = 'hollow hemisphere',
+    Objects = '
+        subtract(){
+            subtract(){
+                sphere(10);
+                sphere(4);
+            };
+            plane(0,0,0, 1,2,3, 10);
+        };',
 ){};
 
 # A complicated example with compound Boolean operations.
@@ -218,3 +241,33 @@ GenerateMeshes(
     ',
 ){};
 
+
+# This generates a concave 'tri-force' object from infinite planes.
+# Objects made from infinite planes do not always compose intuitively.
+# Subtracting from this 'tri-force' object may not work as intended.
+GenerateMeshes(
+    Resolution = res,
+    MeshLabel = 'tri-force',
+    Objects = '
+        subtract(){
+          join(){
+            plane(0,0,0, 1,1,0, 10);
+            plane(0,0,0, 0,1,1, 10);
+            plane(0,0,0, 1,0,1, 10);
+        
+            plane(10,10,10, -1,-1,-0, 10);
+            plane(10,10,10, -0,-1,-1, 10);
+            plane(10,10,10, -1,-0,-1, 10);
+          };
+
+          join(){
+            plane(0,0,0, 1,2,0, 10);
+            plane(0,0,0, 0,1,2, 10);
+            plane(0,0,0, 2,0,1, 10);  
+
+            plane(10,10,10, -2,-1,-0, 10);
+            plane(10,10,10, -0,-2,-1, 10);
+            plane(10,10,10, -1,-0,-2, 10);
+          };
+        };',
+){};
