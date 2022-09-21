@@ -35,10 +35,18 @@ OperationDoc OpArgDocConvertContoursToMeshes(){
     out.name = "ConvertContoursToMeshes";
 
     out.desc = 
-        "This routine creates a mesh from contours. There are three supported methods: 'direct', which stitches"
+        "This routine creates a mesh from contours. There are four supported methods:"
+        "\n\n"
+        " - 'direct', which stitches"
         " together contours (polygons) by finding a correspondence between adjacent contours"
-        " and zippering them together; 'marching', which uses contours to first generate an image mask and"
-        " then uses Marching Cubes to extract a mesh; and finally a 'convex-hull' method."
+        " and zippering them together;"
+        "\n\n"
+        " - 'marching', which uses contours to first generate an image mask and"
+        " then uses Marching Cubes to extract a mesh;"
+        "\n\n"
+        " - 'convex-hull', which builds the convex hull around the provided contours; and"
+        "\n\n"
+        " - 'contours', which converts the contours into thin triangle strips."
         "\n\n"
         " The 'direct' method, when it can be used appropriately, should be significantly faster than meshing"
         " via voxelization (e.g., marching cubes)."
@@ -52,7 +60,11 @@ OperationDoc OpArgDocConvertContoursToMeshes(){
         " There is also a loss of spatial resolution due to use of bitmasks."
         "\n\n"
         "The 'convex-hull' method is reasonably accurate, but scales poorly."
-        " It will also provide a zero-volume (i.e., non-manifold) surface if only a single contour is present.";
+        " It will also provide a zero-volume (i.e., non-manifold) surface if only a single contour is present."
+        "\n\n"
+        "The 'contours' method will not produce a manifold surface mesh, but will symmetrically extrude each"
+        " contour to make a thin strip. This method is best suited for display purposes."
+        ;
 
     out.notes.emplace_back(
         "The 'direct' method is experimental and currently relies on simple heuristics to find an adjacent contour"
@@ -128,7 +140,8 @@ OperationDoc OpArgDocConvertContoursToMeshes(){
     out.args.back().expected = true;
     out.args.back().examples = { "direct",
                                  "marching",
-                                 "convex-hull" };
+                                 "convex-hull",
+                                 "contours" };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
     return out;
@@ -154,7 +167,8 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
 
     const auto direct_regex = Compile_Regex("^di?r?e?c?t?$");
     const auto marching_regex = Compile_Regex("^ma?r?c?h?i?n?g?$");
-    const auto convex_regex = Compile_Regex("^co?n?v?e?x?[-_]?h?u?l?l?$");
+    const auto convex_regex = Compile_Regex("^conve?x?[-_]?h?u?l?l?$");
+    const auto contours_regex = Compile_Regex("^conto?u?r?s?$");
 
     auto cc_all = All_CCs( DICOM_data );
     auto cc_ROIs = Whitelist( cc_all, { { "ROIName", ROILabelRegex },
@@ -594,6 +608,34 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
         // Prune unneeded vertices.
         amesh.remove_disconnected_vertices();
         //amesh.recreate_involved_face_index();
+
+    }else if(std::regex_match(MethodStr, contours_regex)){
+        const auto orientation_normal = Average_Contour_Normals(cc_ROIs);
+        const double dz = 1E-3;
+
+        for(const auto &cc_refw : cc_ROIs){
+            for(const auto &c : cc_refw.get().contours){
+                const auto first_vert = static_cast<uint64_t>(amesh.vertices.size());
+                const auto N_verts = static_cast<uint64_t>(c.points.size());
+                const auto N_new_verts = N_verts * 2U;
+                auto i = static_cast<uint64_t>(0U);
+                for(const auto &p : c.points){
+                    amesh.vertices.emplace_back(p + orientation_normal * dz);
+                    amesh.vertices.emplace_back(p - orientation_normal * dz);
+
+                    const auto v_A = first_vert + (i + 0U);
+                    const auto v_B = first_vert + (i + 1U);
+                    const auto v_C = first_vert + ((i + 2U) % N_new_verts);
+                    const auto v_D = first_vert + ((i + 3U) % N_new_verts);
+
+                    amesh.faces.emplace_back( std::vector<uint64_t>{{ v_A, v_B, v_C }} );
+                    amesh.faces.emplace_back( std::vector<uint64_t>{{ v_B, v_D, v_C }} );
+                    i += 2;
+                }
+            }
+        }
+
+        FUNCINFO("Generating contours mesh from " << amesh.vertices.size() << " vertices");
 
     }else{
         throw std::invalid_argument("Unrecognized method");
