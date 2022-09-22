@@ -208,7 +208,6 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
             throw std::runtime_error("Unable to handle single contour planes at this time.");
         }
 
-
         //const double fallback_spacing = 0.005; // in DICOM units (usually mm).
         //const auto cont_sep_range = std::abs(ucps.front().Get_Signed_Distance_To_Point( ucps.back().R_0 ));
         //const double est_cont_spacing = (ucps.size() <= 1) ? fallback_spacing : cont_sep_range / static_cast<double>(ucps.size() - 1);
@@ -229,7 +228,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
             for(const auto &cop_refw : cops){
                 const auto p = cop_refw.get().First_N_Point_Avg(1);
                 const auto P_p_dist = std::abs(P.Get_Signed_Distance_To_Point(p));
-                if(P_p_dist < contour_sep){
+                if(P_p_dist < (contour_sep * 0.5)){
                     out.emplace_back(cop_refw);
                 }
             }
