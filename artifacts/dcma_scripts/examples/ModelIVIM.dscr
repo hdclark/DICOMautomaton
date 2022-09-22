@@ -35,10 +35,12 @@ DeleteImages(
 ){};
 
 
+
 # Step 2.
 #
 # Eliminate irrelevant diffusion images. In this case, we only
-# retain images with a sequence name like 'WIP_b40t' or 'WIP_b0'.
+# retain images with a sequence name like 'WIP_b40t', 'WIP_b0',
+# and '*ep_b40t'.
 #
 # Note that when b!=0 the ImageType is
 #    'DERIVED\PRIMARY\DIFFUSION\TRACEW\NORM\DIS2D'
@@ -52,7 +54,7 @@ GroupImages(
     Enforce = 'no-overlap-adjust',
 ){};
 DeleteImages(
-    ImageSelection = '!SequenceName@^WIP_b[0-9]*t?$'
+    ImageSelection = '!SequenceName@^.*WIP_b[0-9]*t?|.*ep_b[0-9]*t?$'
 ){};
 
 
