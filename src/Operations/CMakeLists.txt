@@ -82,6 +82,7 @@ add_library(Operations_objs OBJECT
     EvaluateTCPModels.cc
     ValidateRTPlan.cc
     ExportFITSImages.cc
+    ExportContours.cc
     ExportLineSamples.cc
     ExportPointClouds.cc
     ExportSurfaceMeshes.cc

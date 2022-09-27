@@ -37,6 +37,7 @@
 #include "DVH_File_Loader.h"
 #include "CSV_File_Loader.h"
 #include "Script_Loader.h"
+#include "Contour_Collection_File_Loader.h"
 
 using loader_func_t = std::function<bool(std::list<std::filesystem::path>&)>;
 struct file_loader_t {
@@ -129,6 +130,16 @@ Load_Files( Drover &DICOM_data,
             if(!p.empty()
             && !Load_Mesh_From_Binary_STL_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
                 FUNCWARN("Failed to load binary STL mesh file");
+                return false;
+            }
+            return true;
+        }});
+
+        //Standalone file loading: plaintext contour collection files.
+        loaders.emplace_back(file_loader_t{{".dat", ".txt"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
+            if(!p.empty()
+            && !Load_From_Contour_Collection_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
+                FUNCWARN("Failed to load contour collection file");
                 return false;
             }
             return true;

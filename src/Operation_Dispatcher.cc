@@ -102,6 +102,7 @@
 #include "Operations/EvaluateTCPModels.h"
 #include "Operations/ValidateRTPlan.h"
 #include "Operations/ExportFITSImages.h"
+#include "Operations/ExportContours.h"
 #include "Operations/ExportLineSamples.h"
 #include "Operations/ExportSurfaceMeshes.h"
 #include "Operations/ExportSurfaceMeshesOBJ.h"
@@ -332,6 +333,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["EvaluateTCPModels"] = std::make_pair(OpArgDocEvaluateTCPModels, EvaluateTCPModels);
     out["ValidateRTPlan"] = std::make_pair(OpArgDocValidateRTPlan, ValidateRTPlan);
     out["ExportFITSImages"] = std::make_pair(OpArgDocExportFITSImages, ExportFITSImages);
+    out["ExportContours"] = std::make_pair(OpArgDocExportContours, ExportContours);
     out["ExportLineSamples"] = std::make_pair(OpArgDocExportLineSamples, ExportLineSamples);
     out["ExportPointClouds"] = std::make_pair(OpArgDocExportPointClouds, ExportPointClouds);
     out["ExportSurfaceMeshesOBJ"] = std::make_pair(OpArgDocExportSurfaceMeshesOBJ, ExportSurfaceMeshesOBJ);
