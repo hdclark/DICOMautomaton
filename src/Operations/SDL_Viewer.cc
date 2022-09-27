@@ -5176,21 +5176,62 @@ bool SDL_Viewer(Drover &DICOM_data,
 
             // Display the table.
             if( auto [table_is_valid, table_ptr_it] = recompute_table_iters();  table_is_valid ){
-                const auto [min_col, max_col] = (*table_ptr_it)->table.standard_min_max_col();
-                const auto [min_row, max_row] = (*table_ptr_it)->table.standard_min_max_row();
+                const auto [tbl_min_col, tbl_max_col] = (*table_ptr_it)->table.standard_min_max_col();
+                const auto [tbl_min_row, tbl_max_row] = (*table_ptr_it)->table.standard_min_max_row();
 
+                // ImGui currently has a 64-column limit, so truncate extra columns.
+                // Play it safe with excess rows too.
+                auto l_min_col = tbl_min_col;
+                auto l_max_col = tbl_max_col;
+                auto l_min_row = tbl_min_row;
+                auto l_max_row = tbl_max_row;
+
+                const auto limit_rows_cols = [&](){
+                    l_min_col = std::clamp(l_min_col, tbl_min_col, tbl_max_col);
+                    l_max_col = std::clamp(l_max_col, l_min_col, std::min(tbl_max_col, l_min_col + 63));
+
+                    l_min_row = std::clamp(l_min_row, tbl_min_row, tbl_max_row);
+                    l_max_row = std::clamp(l_max_row, l_min_row, std::min(tbl_max_row, l_min_row + 19'999));
+                    return;
+                };
+                limit_rows_cols();
+
+                if( (l_min_col != tbl_min_col)
+                ||  (l_max_col != tbl_max_col) 
+                ||  (l_min_row != tbl_min_row)
+                ||  (l_max_row != tbl_max_row) ){
+                    ImGui::Text("Warning: this table is truncated for display purposes");
+                }
+
+                const float TEXT_BASE_WIDTH = ImGui::CalcTextSize("A").x;
                 ImVec2 cell_padding(0.0f, 0.0f);
                 ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, cell_padding);
-                if(ImGui::BeginTable("Table display", (max_col - min_col) + 1,  ImGuiTableFlags_Borders
-                                                                   //| ImGuiTableFlags_ScrollX
-                                                                   //| ImGuiTableFlags_ScrollY
-                                                                   | ImGuiTableFlags_RowBg
-                                                                   | ImGuiTableFlags_BordersV
-                                                                   | ImGuiTableFlags_BordersInner
-                                                                   | ImGuiTableFlags_Resizable )){
+                if( (tbl_min_col < tbl_max_col)
+                &&  (tbl_min_row < tbl_max_row)
+                &&  (l_min_col < l_max_col)
+                &&  (l_min_row < l_max_row)
+                &&  ImGui::BeginTable("Table display",
+                                     (l_max_col - l_min_col) + 1,
+                                     ImGuiTableFlags_Borders
+                                       | ImGuiTableFlags_NoSavedSettings
+                                       //| ImGuiTableFlags_ScrollX
+                                       //| ImGuiTableFlags_ScrollY
+                                       | ImGuiTableFlags_ScrollX
+                                       | ImGuiTableFlags_ScrollY
+                                       | ImGuiTableFlags_RowBg
+                                       | ImGuiTableFlags_BordersV
+                                       | ImGuiTableFlags_BordersInnerV
+                                       | ImGuiTableFlags_BordersOuterV
+                                       | ImGuiTableFlags_SizingFixedFit
+                                       //| ImGuiTableFlags_PadOuterX
+                                       //| ImGuiTableFlags_SizingFixedSame
+                                       | ImGuiTableFlags_NoHostExtendX
+                                       | ImGuiTableFlags_NoHostExtendY
+                                       | ImGuiTableFlags_Resizable )){
+                                     //ImVec2(TEXT_BASE_WIDTH * 50, 0.0f) )){
 
                     // Number the columns.
-                    for(long int c = min_col; c <= max_col; ++c){
+                    for(long int c = l_min_col; c <= l_max_col; ++c){
                         ImGui::TableSetupColumn(std::to_string(c).c_str());
                     }
                     ImGui::TableHeadersRow();
@@ -5200,38 +5241,60 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                     ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
 
+                    // Pre-compute the width of the text in each cell to find the max column width.
+                    // This allows the user to click anywhere in a (auto-scaled) cell to edit the content, but still
+                    // allow the auto-scaler to display the full cell contents.
+                    std::map<int64_t, float> col_width;
+                    tables::visitor_func_t f_size = [&](int64_t row, int64_t col, std::string& v) -> tables::action {
+                        if( (l_min_col <= col) && (col <= l_max_col)
+                        &&  (l_min_row <= row) && (row <= l_max_row) ){
+                            const auto truncated_v = v.substr(std::size_t{0}, std::min(v.size(), buf.size()));
+                            const auto w = ImGui::CalcTextSize(v.c_str()).x * 1.02f + TEXT_BASE_WIDTH * 5.0f;
+                            col_width[col] = std::max(col_width[col], w);
+                        }
+                        return tables::action::automatic; // Retain only non-empty cells.
+                    };
+                    (*table_ptr_it)->table.visit_standard_block(f_size);
+
+                    // Visit each cell and render the contents as an InputText widget.
                     tables::visitor_func_t f = [&](int64_t row, int64_t col, std::string& v) -> tables::action {
-                        ImGui::TableNextColumn();
-                        //ImGui::SetNextItemWidth(-FLT_MIN);
-                        string_to_array(buf, v);
-                        // This ID ensures the table can grow and retain the same ID. It splits an int32_t into two
-                        // ranges, allowing rows to span [0,100'000] and columns to span [0,max_int32_t/100'000] =
-                        // [0,20'000].
-                        int cell_ID = row + col * 100'000;
-                        ImGui::PushID(cell_ID);
-                        ImGui::SetNextItemWidth(-FLT_MIN);
-                        const bool key_changed = ImGui::InputText("##datum", buf.data(), buf.size() - 1);
- 
-                        // Colourize if keywords are present.
-                        if(table_display.use_keyword_highlighting){
-                            for(const auto &kv : table_display.colours){
-                                if(v == kv.first){
-                                    ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(kv.second));
-                                    break;
+                        if( (l_min_col <= col) && (col <= l_max_col)
+                        &&  (l_min_row <= row) && (row <= l_max_row) ){
+                            ImGui::TableNextColumn();
+                            string_to_array(buf, v);
+                            const bool buf_holds_full_v = ((v.size() + 1U) < buf.size());
+
+                            // This ID ensures the table can grow and retain the same ID. It splits an int32_t into two
+                            // ranges, allowing rows to span [0,100'000] and columns to span [0,max_int32_t/100'000] =
+                            // [0,20'000].
+                            int cell_ID = (row - l_min_row) + (col - l_min_col) * 100'000;
+                            ImGui::PushID(cell_ID);
+                            // Estimate the width of the text via the string content.
+                            //
+                            // Note: this sets the width of the InputText box. not the cell. The cell can be different.
+                            // We leave a gap so it's easier to click on the InputText box, but won't leave large empty
+                            // space when auto-resizing the cell. Being able to set the cell width separately from the
+                            // InputText, or a minimum cell width, would solve this contention.
+                            //ImGui::SetNextItemWidth(-FLT_MIN); // stretch input box to fit cell, complicates stretching.
+                            //ImGui::SetNextItemWidth(TEXT_BASE_WIDTH * 1.02f * (7U + v.size())); // estimate width.
+                            ImGui::SetNextItemWidth( col_width[col] );
+                            const bool key_changed = ImGui::InputText("##datum", buf.data(), buf.size() - 1);
+
+                            // Colourize if keywords are present.
+                            if(table_display.use_keyword_highlighting){
+                                for(const auto &kv : table_display.colours){
+                                    if(v == kv.first){
+                                        ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(kv.second));
+                                        break;
+                                    }
                                 }
                             }
+
+                            ImGui::PopID();
+
+                            if( key_changed 
+                            &&  buf_holds_full_v ) array_to_string(v, buf);
                         }
-
-                        ImGui::PopID();
- 
-                        //const auto im_row = ImGui::TableGetRowIndex() + min_row - 1; // +1 for the header.
-                        //const auto im_col = ImGui::TableGetColumnIndex() + min_col;
-                        //
-                        // if( (row == 2) && (col == 3) ){
-                        //     FUNCINFO("row,col = 2,3 and IMGui row,col = " << im_row << ", " << im_col);
-                        // }
-                        if( key_changed ) array_to_string(v, buf);
-
                         return tables::action::automatic; // Retain only non-empty cells.
                     };
                     (*table_ptr_it)->table.visit_standard_block(f);
@@ -5239,7 +5302,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::PopStyleColor();
                     ImGui::EndTable();
                 }
-                ImGui::PopID();
                 ImGui::PopStyleVar();
 
 
