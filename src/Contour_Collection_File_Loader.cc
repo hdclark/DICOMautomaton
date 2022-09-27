@@ -28,7 +28,7 @@ bool
 Write_Contour_Collections( const std::list<std::reference_wrapper<contour_collection<double>>> &cc_ROIs,
                            std::ostream &os ){
 
-    os << "DCMA plaintext contours v1" << '\n';
+    os << "DCMA_plaintext_contours_v1" << '\n';
 
     for(auto &cc_refw : cc_ROIs){
         os << "start_collection" << '\n';
@@ -53,7 +53,7 @@ Read_Contour_Collections( std::istream &is ){
     ccs.back().contours.emplace_back();
 
     // Check the magic bytes.
-    const std::string expected_magic("DCMA plaintext contours v1");
+    const std::string expected_magic("DCMA_plaintext_contours_v1");
     std::string magic( expected_magic.length(), '\0');
     if(!is.read(magic.data(), magic.length())){
         throw std::invalid_argument("Unable to read from file");
@@ -69,10 +69,18 @@ Read_Contour_Collections( std::istream &is ){
         while(std::getline(is, line)){
             if(line.empty()) continue;
 
+            // Check if the entire line is whitespace. If so, ignore it.
+            const auto p_nonws = line.find_first_not_of(" \t");
+            if(p_nonws == std::string::npos) continue;
+
             const auto p_space = line.find(" "); // or npos.
             const auto keyword = line.substr(static_cast<size_t>(0), p_space);
 
             if(false){
+            }else if(keyword == expected_magic){
+                // Ignoring repeated the magic header will allow files to be concatenated.
+                continue;
+
             }else if(keyword == "start_collection"){
                 ccs.emplace_back();
                 metadata.clear();
