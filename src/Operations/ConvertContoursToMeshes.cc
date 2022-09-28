@@ -207,6 +207,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
         if(ucps.size() < 2){
             throw std::runtime_error("Unable to handle single contour planes at this time.");
         }
+        ucps.reverse(); // Reverse sorted order so the bottom-most plane appears first.
 
         //const double fallback_spacing = 0.005; // in DICOM units (usually mm).
         //const auto cont_sep_range = std::abs(ucps.front().Get_Signed_Distance_To_Point( ucps.back().R_0 ));
@@ -218,10 +219,10 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
         {
             const auto btm_plane = ucps.front();
             const auto top_plane = ucps.back();
-            ucps.emplace_front( plane<double>( btm_plane.N_0, btm_plane.R_0 - btm_plane.N_0 * contour_sep ) ); 
-            ucps.emplace_back(  plane<double>( top_plane.N_0, top_plane.R_0 + top_plane.N_0 * contour_sep ) ); 
-        }
 
+            ucps.emplace_back(  plane<double>( top_plane.N_0, top_plane.R_0 + top_plane.N_0 * contour_sep) );
+            ucps.emplace_front( plane<double>( btm_plane.N_0, btm_plane.R_0 - btm_plane.N_0 * contour_sep) );
+        }
 
         const auto locate_contours_on_plane = [&](const plane<double> &P){
             decltype(cops) out;
