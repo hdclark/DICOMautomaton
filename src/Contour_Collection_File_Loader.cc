@@ -97,13 +97,15 @@ Read_Contour_Collections( std::istream &is ){
                 }
 
             }else if(keyword == "{"){
+                if(ccs.empty()) ccs.emplace_back();
+
                 ccs.back().contours.emplace_back();
                 if( !ccs.back().contours.back().load_from_string(line) ){
                     throw std::runtime_error("Unable to parse contour");
                 }
                 ccs.back().contours.back().metadata = metadata;
 
-            }else if(keyword == "#"){
+            }else if( line[p_nonws] == '#' ){
                 // Ignore comments.
                 continue;
 
