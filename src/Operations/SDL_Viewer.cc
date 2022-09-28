@@ -78,6 +78,7 @@
 #include "../String_Parsing.h"
 #include "../Dialogs.h"
 #include "../Alignment_Rigid.h"
+#include "../Documentation.h"
 
 #ifdef DCMA_USE_CGAL
     #include "../Surface_Meshes.h"
@@ -834,6 +835,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool set_about_popup = false;
         bool view_imgui_demo = false;
         bool view_implot_demo = false;
+        bool view_documentation_enabled = false;
         bool view_metrics_window = false;
 
         bool view_images_enabled = true;
@@ -878,6 +880,9 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         bool view_shader_editor_enabled = false;
     } view_toggles;
+
+    // Documentation state.
+    std::string docs_str;
 
     // Plot viewer state.
     std::map<long int, bool> lsamps_visible;
@@ -2661,6 +2666,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         // Display the main menu bar, which should always be visible.
         const auto display_main_menu_bar = [&view_toggles,
+                                            &docs_str,
                                             &open_file_root,
                                             &loaded_files,
                                             &launch_file_open_dialog,
@@ -2996,6 +3002,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if(ImGui::MenuItem("About", "ctrl+h")){
                         implement_show_help();
                     }
+                    if(ImGui::MenuItem("Documentation", nullptr, &view_toggles.view_documentation_enabled)){
+                        docs_str.clear();
+                        std::stringstream ss;
+                        Emit_Documentation(ss);
+                        docs_str = ss.str();
+                        docs_str += '\0';
+                    }
                     ImGui::MenuItem("Metrics", nullptr, &view_toggles.view_metrics_window);
                     ImGui::Separator();
 
@@ -3041,6 +3054,17 @@ bool SDL_Viewer(Drover &DICOM_data,
         if( view_toggles.view_metrics_window ){
             ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
             ImGui::ShowMetricsWindow(&view_toggles.view_metrics_window);
+        }
+
+        if( view_toggles.view_documentation_enabled ){
+            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(150, 150), ImGuiCond_FirstUseEver);
+            if(ImGui::Begin("Documentation", &view_toggles.view_documentation_enabled )){
+                if(!docs_str.empty()){
+                    ImGui::TextUnformatted( &(docs_str.front()), &(docs_str.back()) );
+                }
+            }
+            ImGui::End();
         }
 
         // Display the shader editor dialog.
