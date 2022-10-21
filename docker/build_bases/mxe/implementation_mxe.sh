@@ -162,6 +162,18 @@ fi
   cd asio-*/ &&
   cp -v -R include/asio/ include/asio.hpp /mxe/usr/"${TOOLCHAIN}"/include/  )
 
+# CGAL header-only.
+( mkdir -pv /cgal &&
+  cd /cgal &&
+  wget 'https://github.com/CGAL/cgal/releases/download/v5.5.1/CGAL-5.5.1.tar.xz' -O cgal.txz &&
+  ( tar -axf cgal.txz || unzip cgal.txz ) &&
+  cd CGAL-*/ &&
+  cp -v -R include/CGAL/ /mxe/usr/"${TOOLCHAIN}"/include/ &&
+  mkdir -pv /mxe/usr/"${TOOLCHAIN}"/cmake/ &&
+  cp -v -R cmake/modules /mxe/usr/"${TOOLCHAIN}"/cmake/ &&
+  mkdir -pv /mxe/usr/"${TOOLCHAIN}"/lib/cmake/ &&
+  cp -v -R lib/cmake/CGAL /mxe/usr/"${TOOLCHAIN}"/lib/cmake/ )
+
 # Workaround for MXE's SFML pkg-config files missing the standard modules.
 cp "/mxe/usr/${TOOLCHAIN}/lib/pkgconfig/"sfml{,-graphics}.pc
 cp "/mxe/usr/${TOOLCHAIN}/lib/pkgconfig/"sfml{,-window}.pc
