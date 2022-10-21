@@ -37,16 +37,16 @@ until
       p7zip-full \
       patch \
       perl \
-      python \
+      python3 \
+      python3-mako \
       ruby \
       sed \
       unzip \
       wget \
+      xz-utils \
       ca-certificates \
       rsync \
-      xz-utils \
       sudo \
-      python-mako `# <-- needed for mesa (scons) ` \
       gnupg
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
