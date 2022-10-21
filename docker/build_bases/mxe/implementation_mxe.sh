@@ -53,6 +53,9 @@ do
     printf 'Waiting to retry.\n' && sleep 5
 done
 
+# Provide unnumbered 'python' executable.
+ln -s /usr/bin/python3 /usr/bin/python
+
 
 # See <https://mxe.cc/#tutorial> and <https://mxe.cc/#requirements-debian> for more information. Perform the following
 # instructions inside a recent `Debian` `Docker` container (or VM, instance, or bare metal installation). The following
@@ -83,8 +86,8 @@ export TOOLCHAIN="x86_64-w64-mingw32.static"
 # Note: ideally we would download pre-compiled binaries, but not everything we need is available (see below).
 make -j"$(nproc)" --keep-going \
   MXE_TARGETS="${TOOLCHAIN}" \
-  MXE_PLUGIN_DIRS=plugins/gcc9 \
-  gmp mpfr boost eigen sfml sdl2 glew nlopt mesa #wt
+  MXE_PLUGIN_DIRS=plugins/gcc12 \
+  gmp mpfr boost eigen sfml sdl2 glew nlopt mesa cgal #wt
 
 ## Download pre-compiled binaries to speed up toolchain prep.
 ##
@@ -162,17 +165,17 @@ fi
   cd asio-*/ &&
   cp -v -R include/asio/ include/asio.hpp /mxe/usr/"${TOOLCHAIN}"/include/  )
 
-# CGAL header-only.
-( mkdir -pv /cgal &&
-  cd /cgal &&
-  wget 'https://github.com/CGAL/cgal/releases/download/v5.5.1/CGAL-5.5.1.tar.xz' -O cgal.txz &&
-  ( tar -axf cgal.txz || unzip cgal.txz ) &&
-  cd CGAL-*/ &&
-  cp -v -R include/CGAL/ /mxe/usr/"${TOOLCHAIN}"/include/ &&
-  mkdir -pv /mxe/usr/"${TOOLCHAIN}"/cmake/ &&
-  cp -v -R cmake/modules /mxe/usr/"${TOOLCHAIN}"/cmake/ &&
-  mkdir -pv /mxe/usr/"${TOOLCHAIN}"/lib/cmake/ &&
-  cp -v -R lib/cmake/CGAL /mxe/usr/"${TOOLCHAIN}"/lib/cmake/ )
+## CGAL header-only.
+#( mkdir -pv /cgal &&
+#  cd /cgal &&
+#  wget 'https://github.com/CGAL/cgal/releases/download/v5.5.1/CGAL-5.5.1.tar.xz' -O cgal.txz &&
+#  ( tar -axf cgal.txz || unzip cgal.txz ) &&
+#  cd CGAL-*/ &&
+#  cp -v -R include/CGAL/ /mxe/usr/"${TOOLCHAIN}"/include/ &&
+#  mkdir -pv /mxe/usr/"${TOOLCHAIN}"/cmake/ &&
+#  cp -v -R cmake/modules /mxe/usr/"${TOOLCHAIN}"/cmake/ &&
+#  mkdir -pv /mxe/usr/"${TOOLCHAIN}"/lib/cmake/ &&
+#  cp -v -R lib/cmake/CGAL /mxe/usr/"${TOOLCHAIN}"/lib/cmake/ )
 
 # Workaround for MXE's SFML pkg-config files missing the standard modules.
 cp "/mxe/usr/${TOOLCHAIN}/lib/pkgconfig/"sfml{,-graphics}.pc
