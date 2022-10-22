@@ -39,6 +39,7 @@ until
       perl \
       python3 \
       python3-mako \
+      python-is-python3 \
       ruby \
       sed \
       unzip \
@@ -52,9 +53,6 @@ do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5
 done
-
-# Provide unnumbered 'python' executable.
-ln -s /usr/bin/python3 /usr/bin/python
 
 
 # See <https://mxe.cc/#tutorial> and <https://mxe.cc/#requirements-debian> for more information. Perform the following
@@ -157,7 +155,6 @@ if [ ! -f /mxe/usr/"${TOOLCHAIN}"/lib/libstdc++fs.so ] ; then
 fi
 
 # Confirm the search locations reflect the toolchain prefix.
-#/mxe/usr/x86_64-pc-linux-gnu/bin/"${TOOLCHAIN}-g++" -print-search-dirs
 "${TOOLCHAIN}-g++" -print-search-dirs
 
 # Install missing dependencies.
