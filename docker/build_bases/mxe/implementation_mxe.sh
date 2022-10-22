@@ -66,6 +66,7 @@ cd /mxe
 
 # Remove components we won't need to reduce setup time.
 rm -rf src/qt* src/ocaml* src/sdl2_* || true
+sed -i -e 's/qtbase//' src/cgal.mk || true
 
 #export TOOLCHAIN="x86_64-w64-mingw32.shared"
 export TOOLCHAIN="x86_64-w64-mingw32.static"
@@ -85,6 +86,8 @@ export TOOLCHAIN="x86_64-w64-mingw32.static"
 #
 # Note: ideally we would download pre-compiled binaries, but not everything we need is available (see below).
 make -j"$(nproc)" --keep-going \
+  MXE_USE_CCACHE="" \
+  `# MXE_SILENT_NO_NETWORK="1" ` `# Workaround for qtbase build fail. See https://github.com/mxe/mxe/issues/2590 ` \
   MXE_TARGETS="${TOOLCHAIN}" \
   MXE_PLUGIN_DIRS=plugins/gcc12 \
   gmp mpfr boost eigen sfml sdl2 glew nlopt mesa cgal #wt
@@ -150,11 +153,12 @@ if [ ! -f /mxe/usr/"${TOOLCHAIN}"/lib/libstdc++fs.a ] ; then
     cp /mxe/usr/"${TOOLCHAIN}"/lib/{libm.a,libstdc++fs.a} || true
 fi
 if [ ! -f /mxe/usr/"${TOOLCHAIN}"/lib/libstdc++fs.so ] ; then
-    cp /mxe/usr/"${TOOLCHAIN}"/lib/{libm.so,libstdc++fs.so} || true
+    touch /mxe/usr/"${TOOLCHAIN}"/lib/libstdc++fs.so || true
 fi
 
 # Confirm the search locations reflect the toolchain prefix.
-/mxe/usr/x86_64-pc-linux-gnu/bin/"${TOOLCHAIN}-g++" -print-search-dirs
+#/mxe/usr/x86_64-pc-linux-gnu/bin/"${TOOLCHAIN}-g++" -print-search-dirs
+"${TOOLCHAIN}-g++" -print-search-dirs
 
 # Install missing dependencies.
 # Asio.
