@@ -14,7 +14,7 @@ source /etc/profile.d/mxe_toolchain.sh
 # Report the compiler version for debugging.
 "${TOOLCHAIN}-g++" --version
 # Confirm the search locations reflect the toolchain prefix.
-/mxe/usr/x86_64-pc-linux-gnu/bin/"${TOOLCHAIN}-g++" -print-search-dirs
+"${TOOLCHAIN}-g++" -print-search-dirs
 
 if [ ! -d /dcma ] ; then
     printf 'Source not provided at /dcma, pulling public repository.\n'
@@ -45,7 +45,7 @@ for repo_dir in /ygor /ygorclustering /explicator /dcma ; do
       -DCMAKE_BUILD_TYPE=Release \
       -DWITH_LINUX_SYS=OFF \
       -DWITH_EIGEN=ON \
-      -DWITH_CGAL=OFF \
+      -DWITH_CGAL=ON \
       -DWITH_NLOPT=ON \
       -DWITH_SFML=ON \
       -DWITH_SDL=ON \
