@@ -63,10 +63,11 @@ endif()
 find_package(Threads REQUIRED)
 
 if(NOT BUILD_SHARED_LIBS)
-    set(Boost_USE_STATIC_RUNTIME ON)
+    #set(Boost_USE_STATIC_RUNTIME ON)
     set(Boost_USE_STATIC_LIBS ON)
+    set(Boost_DEBUG ON)
 endif()
-find_package(Boost REQUIRED COMPONENTS serialization iostreams thread system)
+find_package(Boost CONFIG REQUIRED COMPONENTS serialization iostreams thread system)
 include_directories(${Boost_INCLUDE_DIRS})
 
 if(WITH_EIGEN)
@@ -100,13 +101,18 @@ endif()
 if(WITH_SDL)
     set(OpenGL_GL_PREFERENCE GLVND)
     find_package(OpenGL REQUIRED COMPONENTS OpenGL) # Will help pick-up opengl32.a with MXE toolchain.
-    message(STATUS "Proceeding with OPENGL_LIBRARIES = ${OPENGL_LIBRARIES}")
-    message(STATUS "Proceeding with OPENGL_INCLUDE_DIR = ${OPENGL_INCLUDE_DIR}")
     include_directories( ${OPENGL_INCLUDE_DIR} )
+    message(STATUS "Proceeding with OPENGL_LIBRARIES = '${OPENGL_LIBRARIES}'")
+    message(STATUS "Proceeding with OPENGL_INCLUDE_DIR = '${OPENGL_INCLUDE_DIR}'")
+    message(STATUS "Proceeding with OPENGL_CFLAGS = '${OPENGL_CFLAGS}'")
 
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules(SDL2 REQUIRED sdl2)
+    #pkg_check_modules(SDL2 REQUIRED sdl2)
+    find_package(SDL2 REQUIRED)
     include_directories( ${SDL2_INCLUDE_DIRS} )
+    message(STATUS "Proceeding with SDL2_LIBRARIES = '${SDL2_LIBRARIES}'")
+    message(STATUS "Proceeding with SDL2_INCLUDE_DIRS = '${SDL2_INCLUDE_DIRS}'")
+    message(STATUS "Proceeding with SDL2_CFLAGS = '${SDL2_CFLAGS}'")
 
     if(NOT BUILD_SHARED_LIBS)
         add_definitions(-DGLEW_STATIC=1)
@@ -378,7 +384,11 @@ configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/src/DCMA_Definitions.h.in
                 ${CMAKE_CURRENT_BINARY_DIR}/src/DCMA_Definitions.h )
 
 # ASIO: target Windows 7 features.
-add_definitions(-D_WIN32_WINNT=0x0601)
+if(MINGW OR WIN32)
+    add_definitions(-D_WIN32_WINNT=0x0601)
+    # See https://github.com/samhocevar/portable-file-dialogs/issues/50
+    add_definitions(-DPFD_HAS_IFILEDIALOG=0)
+endif()
 
 # Use the directory where CMakeLists.txt is for inclusions.
 set(CMAKE_INCLUDE_CURRENT_DIR ON)

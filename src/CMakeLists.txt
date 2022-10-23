@@ -411,7 +411,7 @@ target_link_libraries (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_JANSSON}>:jansson>
     "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
     "$<$<BOOL:${WITH_SFML}>:${SFML_LIBRARIES}>"
-    "$<$<BOOL:${WITH_SDL}>:${SDL2_LIBRARIES}>"
+    "$<$<BOOL:${WITH_SDL}>:$<IF:$<AND:$<BOOL:${MINGW}>,$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>>,mingw32;SDL2::SDL2main;SDL2::SDL2-static,SDL2::SDL2>>"
     "$<$<BOOL:${WITH_SDL}>:${GLEW_LIBRARIES}>"
     "$<$<BOOL:${WITH_SDL}>:${OPENGL_LIBRARIES}>"
     "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
@@ -501,7 +501,7 @@ if(WITH_WT)
         $<$<BOOL:${WITH_JANSSON}>:jansson>
         "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
         "$<$<BOOL:${WITH_SFML}>:${SFML_LIBRARIES}>"
-        "$<$<BOOL:${WITH_SDL}>:${SDL2_LIBRARIES}>"
+        "$<$<BOOL:${WITH_SDL}>:$<IF:$<AND:$<BOOL:${MINGW}>,$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>>,mingw32;SDL2::SDL2main;SDL2::SDL2-static,SDL2::SDL2>>"
         "$<$<BOOL:${WITH_SDL}>:${GLEW_LIBRARIES}>"
         "$<$<BOOL:${WITH_SDL}>:${OPENGL_LIBRARIES}>"
         "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
