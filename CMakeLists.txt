@@ -395,9 +395,13 @@ check_cxx_symbol_exists(O_NONBLOCK "fcntl.h"     DCMA_HAS_FCNTL_O_NONBLOCK)  # M
 configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/src/DCMA_Definitions.h.in
                 ${CMAKE_CURRENT_BINARY_DIR}/src/DCMA_Definitions.h )
 
-# ASIO: target Windows 7 features.
+# mingw-w64 tweaks.
 if(MINGW OR WIN32)
+    # Target Windows 7 features (need to specify for ASIO, maybe other libs).
     add_definitions(-D_WIN32_WINNT=0x0601)
+    # Create 'console' applications, so a terminal will appear when running.
+    add_definitions(-mconsole)
+    # Override IFileDialogs check to disable.
     # See https://github.com/samhocevar/portable-file-dialogs/issues/50
     add_definitions(-DPFD_HAS_IFILEDIALOG=0)
 endif()
