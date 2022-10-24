@@ -400,7 +400,7 @@ if(MINGW OR WIN32)
     # Target Windows 7 features (need to specify for ASIO, maybe other libs).
     add_definitions(-D_WIN32_WINNT=0x0601)
     # Create 'console' applications, so a terminal will appear when running.
-    add_definitions(-mconsole)
+    link_libraries("-mconsole")
     # Override IFileDialogs check to disable.
     # See https://github.com/samhocevar/portable-file-dialogs/issues/50
     add_definitions(-DPFD_HAS_IFILEDIALOG=0)
