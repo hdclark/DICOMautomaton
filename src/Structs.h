@@ -467,6 +467,7 @@ class Drover {
         Drover Duplicate(std::shared_ptr<Contour_Data> in) const; //Duplicates all but our the contours. Inserts those passed in instead.
         Drover Duplicate(const Contour_Data &in) const; 
         Drover Duplicate(const Drover &in) const;
+        Drover Deep_Copy() const; // Make a deep copy of *this.
     
         bool Has_Contour_Data() const;
         bool Has_Image_Data() const;

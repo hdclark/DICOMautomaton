@@ -1559,6 +1559,20 @@ Drover Drover::Duplicate(const Drover &in) const {
     return Drover(in);
 }
 
+Drover Drover::Deep_Copy() const {
+    Drover out;
+    if(this->contour_data != nullptr){
+        out.contour_data = this->contour_data->Duplicate();
+    }
+    for(const auto& x : this->image_data) out.image_data.emplace_back(std::make_shared<Image_Array>(*x));
+    for(const auto& x : this->point_data) out.point_data.emplace_back(std::make_shared<Point_Cloud>(*x));
+    for(const auto& x : this->smesh_data) out.smesh_data.emplace_back(std::make_shared<Surface_Mesh>(*x));
+    for(const auto& x : this->rtplan_data) out.rtplan_data.emplace_back(std::make_shared<RTPlan>(*x));
+    for(const auto& x : this->lsamp_data) out.lsamp_data.emplace_back(std::make_shared<Line_Sample>(*x));
+    for(const auto& x : this->trans_data) out.trans_data.emplace_back(std::make_shared<Transform3>(*x));
+    for(const auto& x : this->table_data) out.table_data.emplace_back(std::make_shared<Sparse_Table>(*x));
+    return out;
+}
 
 bool Drover::Has_Contour_Data() const {
     return (this->contour_data != nullptr);

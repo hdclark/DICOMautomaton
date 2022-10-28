@@ -1336,7 +1336,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         "honour_opposite_orientations",
         "overlapping_contours_cancel" };
     size_t contour_overlap_style = 0UL;
-
+    std::future<Drover> extracted_contours;
 
     // Resets the contouring image to match the display image characteristics.
     const auto reset_contouring_state = [&contouring_imgs,
@@ -1763,8 +1763,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                          &current_texture,
                                          &custom_centre,
                                          &custom_width,
-                                         &need_to_reload_opengl_texture,
-                                         &reset_contouring_state ](){
+                                         &need_to_reload_opengl_texture ](){
 
         //Trim any empty image arrays.
         for(auto it = DICOM_data.image_data.begin(); it != DICOM_data.image_data.end();  ){
@@ -2119,10 +2118,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                     cc.Purge_Contours_Below_Point_Count_Threshold(3);
                     if(cc.contours.empty()) throw std::runtime_error("Given empty contour collection. Contours need at least 3 vertices each.");
                 }
+                contouring_imgs.Ensure_Contour_Data_Allocated();
 
                 if(overwrite_existing_contours){
                     DICOM_data.Ensure_Contour_Data_Allocated();
-                    
                     DICOM_data.contour_data->ccs.remove_if( [roi_name](const contour_collection<double>& cc) -> bool {
                         const auto n_opt = cc.get_dominant_value_for_key("ROIName");
                         return n_opt && (n_opt.value() == roi_name);
@@ -2145,6 +2144,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 FUNCINFO("Drover class imbued with new contour collection");
 
                 contouring_imgs.contour_data->ccs.clear();
+                contouring_imgs.Ensure_Contour_Data_Allocated();
                 reset_contouring_state(img_array_ptr_it);
                 launch_contour_preprocessor();
 
@@ -3512,6 +3512,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                            &contouring_img_row_col_count,
                                            &new_contour_name,
                                            &save_contour_buffer,
+                                           &extracted_contours,
                                            &overwrite_existing_contours,
                                            &edit_existing_contour_selection,
                                            &contour_overlap_styles,
@@ -3923,25 +3924,41 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::Begin("Contouring", &view_toggles.view_contouring_enabled, ImGuiWindowFlags_AlwaysAutoResize);
                     ImGui::Text("Note: this functionality is still under active development.");
                     if(ImGui::Button("Save")){ 
-                        ImGui::OpenPopup("Save Contours");
+                        if(extracted_contours.valid()){
+                            FUNCWARN("Found existing contour save task. Refusing to overwrite");
 
-                        // Fully extract contours from the mask images.
-                        contouring_imgs.Ensure_Contour_Data_Allocated();
-                        contouring_imgs.contour_data->ccs.clear();
+                        }else{
+                            ImGui::OpenPopup("Save Contours");
 
-                        std::list<OperationArgPkg> Operations;
-                        Operations.emplace_back("ContourViaThreshold");
-                        Operations.back().insert("Method="_s + contouring_method);
-                        Operations.back().insert("Lower=0.5");
-                        Operations.back().insert("SimplifyMergeAdjacent=true");
-                        if(!Operation_Dispatcher(contouring_imgs, InvocationMetadata, FilenameLex, Operations)){
-                            FUNCWARN("ContourViaThreshold failed");
+                            // Launch a thread to operate on a copy of the data.
+                            auto l_work = [l_contouring_imgs = contouring_imgs.Deep_Copy(),
+                                           l_InvocationMetadata = InvocationMetadata,
+                                           l_FilenameLex = FilenameLex,
+                                           l_contouring_method = contouring_method ]() mutable -> Drover {
+                                // Fully extract contours from the mask images.
+                                l_contouring_imgs.Ensure_Contour_Data_Allocated();
+                                l_contouring_imgs.contour_data->ccs.clear();
+
+                                std::list<OperationArgPkg> Operations;
+                                Operations.emplace_back("ContourViaThreshold");
+                                Operations.back().insert("Method="_s + l_contouring_method);
+                                Operations.back().insert("Lower=0.5");
+                                Operations.back().insert("SimplifyMergeAdjacent=true");
+                                if(!Operation_Dispatcher(l_contouring_imgs, l_InvocationMetadata, l_FilenameLex, Operations)){
+                                    FUNCWARN("ContourViaThreshold failed");
+
+                                    // Signal to NOT replace the Drover class to the receiving thread.
+                                    throw std::runtime_error("Unable to extract contours");
+                                }
+                                return l_contouring_imgs;
+                            };
+                            extracted_contours = std::async(std::launch::async, std::move(l_work));
                         }
                     }
                     ImGui::SameLine();
                     if(ImGui::BeginPopupModal("Save Contours", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
-                        const std::string str((frame_count / 15) % 4, '.'); // Simplistic animation.
-                        ImGui::Text("Saving contours%s", str.c_str());
+                        const std::string dots((frame_count / 15) % 4, '.'); // Simplistic animation.
+                        ImGui::Text("Saving contours%s", dots.c_str());
 
                         ImGui::InputText("ROI Name", new_contour_name.data(), new_contour_name.size());
                         std::string entered_text;
@@ -3949,29 +3966,43 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                         ImGui::Checkbox("Overwrite existing contours", &overwrite_existing_contours);
 
-                        bool ok_to_save = !entered_text.empty();
-                        if(ok_to_save && !overwrite_existing_contours){
+                        // Check if the contouring task is complete. We assume that the work is done and the results
+                        // have replaced the original contouring Drover object if the future is no longer valid.
+                        const bool work_is_done = !extracted_contours.valid();
+                        if( !work_is_done ){
+                            ImGui::TextDisabled("Waiting for contour extraction%s", dots.c_str());
+                            if(std::future_status::ready == extracted_contours.wait_for(std::chrono::microseconds(1))){
+                                try{
+                                    contouring_imgs = extracted_contours.get();
+                                }catch(const std::exception &){};
+                                extracted_contours = decltype(extracted_contours)();
+                            }
+                        }
+
+                        bool roiname_is_valid = !entered_text.empty();
+                        if(!roiname_is_valid){
+                            ImGui::TextDisabled("Please enter a name to proceed.");
+                        }
+                        if(roiname_is_valid && !overwrite_existing_contours){
                             DICOM_data.Ensure_Contour_Data_Allocated();
-                            ok_to_save = ( std::find_if( std::begin(DICOM_data.contour_data->ccs),
+                            roiname_is_valid = ( std::find_if( std::begin(DICOM_data.contour_data->ccs),
                                                          std::end(DICOM_data.contour_data->ccs),
                                                          [entered_text](const contour_collection<double> &cc) -> bool {
                                                              const auto l_roi_name = cc.get_dominant_value_for_key("ROIName").value_or("unspecified");
                                                              return (l_roi_name == entered_text);
                                                          }) == std::end(DICOM_data.contour_data->ccs) );
-                            if(!ok_to_save) FUNCWARN("There is an existing contour with the given name. Refusing to save");
+                            if(!roiname_is_valid){
+                                ImGui::TextDisabled("Found existing contour with the given name.");
+                            }
                         }
 
-                        //if(!ok_to_save){
-                        //    ImGui::PushItemFlag(ImGuiItemFlags_Disabled, true);
-                        //    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, ImGui::GetStyle().Alpha * 0.5f);
-                        //}
+                        const bool save_possible = roiname_is_valid && work_is_done;
+                        ImGui::BeginDisabled(!save_possible);
                         const bool clicked_save = ImGui::Button("Save");
-                        //if(!ok_to_save){
-                        //    ImGui::PopItemFlag();
-                        //    ImGui::PopStyleVar();
-                        //}
+                        ImGui::EndDisabled();
+
                         if( clicked_save
-                        &&  ok_to_save
+                        &&  save_possible
                         &&  save_contour_buffer(entered_text) ){
                             string_to_array(new_contour_name, "");
                             ImGui::CloseCurrentPopup();
@@ -3980,9 +4011,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                         ImGui::SameLine();
                         if(ImGui::Button("Cancel")){
                             ImGui::CloseCurrentPopup();
+                            // Detaching here would be nice, but not currently available for std::future AFAICT.
+                            // Otherwise, we have to wait for the task to complete. Maybe transfer to yet another thread
+                            // and detach the thread?? TODO.
+                            extracted_contours = decltype(extracted_contours)();
                         }
                         ImGui::EndPopup();
                     }
+
                     DICOM_data.Ensure_Contour_Data_Allocated();
                     if( ImGui::Button("Edit Existing")
                     &&  !DICOM_data.contour_data->ccs.empty() ){ 
@@ -4234,8 +4270,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                     // Regenerate contours from the mask.
                     contouring_imgs.Ensure_Contour_Data_Allocated();
-                    auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
-                    if( cimg_valid
+                    if( auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
+                        cimg_valid
                     &&  contouring_img_altered
                     &&  (frame_count % 5 == 0) ){ // Terrible stop-gap until I can parallelize contour extraction. TODO
 
@@ -4267,7 +4303,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                     }
 
                     // Draw the WIP contours.
-                    if( cimg_valid
+                    contouring_imgs.Ensure_Contour_Data_Allocated();
+                    if( auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
+                        cimg_valid
                     &&  (contouring_imgs.Has_Contour_Data()) ){
                         const auto cimg_dicom_width = cimg_it->pxl_dx * cimg_it->rows;
                         const auto cimg_dicom_height = cimg_it->pxl_dy * cimg_it->columns; 
@@ -4278,8 +4316,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                         //const auto cimg_bottom_left = cimg_top_left + cimg_it->col_unit * cimg_dicom_height;
                         //const auto cimg_plane = cimg_it->image_plane();
 
-                        for(auto &cc : contouring_imgs.contour_data->ccs){
-                            for(auto &cop : cc.contours){
+                        for(const auto &cc : contouring_imgs.contour_data->ccs){
+                            for(const auto &cop : cc.contours){
                                 if( cop.points.empty() ) continue;
                                 if( !cimg_it->sandwiches_point_within_top_bottom_planes( cop.points.front() ) ) continue;
 
