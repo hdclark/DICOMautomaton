@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "dicomautomaton"
+version = "0.1.0"
+description = "A multipurpose tool for analyzing medical physics data with a focus on automation."
+authors = ["Hal Clark <haley.clark@bccancer.bc.ca>"]
+license = "GPL-3.0-or-later"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.7"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
