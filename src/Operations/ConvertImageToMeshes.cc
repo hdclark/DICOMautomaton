@@ -37,10 +37,12 @@ OperationDoc OpArgDocConvertImageToMeshes(){
     out.desc = 
         "This operation extracts surface meshes from images and pixel/voxel value thresholds."
         " Meshes are appended to the back of the Surface_Mesh stack."
-        " There are two methods of contour generation available:"
-        " a simple binary method in which voxels are either fully in or fully out of the contour,"
-        " and a method based on marching cubes that will provide smoother contours."
-        " Both methods make use of marching cubes -- the binary method involves pre-processing.";
+        " There are three methods of mesh extract available:"
+        " (1) a simple 'binary' method in which voxels are either fully in or fully out of the contour,"
+        " (2) a method based on 'marching' cubes that will provide smoother contours, and"
+        " (3) a purely 'geometrical' method that extracts only the shape and extent of images but"
+        " does not use the pixel intensities."
+        " Both pixel-based methods (2) and (3) make use of marching cubes -- the binary method involves pre-processing.";
         
     out.notes.emplace_back(
         "This routine requires images to be regular (i.e., exactly abut nearest adjacent images without"
@@ -93,17 +95,25 @@ OperationDoc OpArgDocConvertImageToMeshes(){
     
     out.args.emplace_back();
     out.args.back().name = "Method";
-    out.args.back().desc = "There are currently two supported methods for generating contours:"
-                           " (1) a simple (and fast) binary inclusivity checker, that simply checks if a voxel is within"
-                           " the ROI by testing the value at the voxel centre, and (2) a robust (but slow) method based"
-                           " on marching cubes. The binary method is fast, but produces extremely jagged contours."
+    out.args.back().desc = "There are currently three supported methods for generating meshes:"
+                           "\n\n"
+                           "1. A simple (and fast) binary inclusivity checker, that simply checks if a voxel is within"
+                           " an ROI by testing the value at the voxel centre. This method is fast, but produces"
+                           " extremely jagged contours."
                            " It may also have problems with 'pinches' and topological consistency."
-                           " The marching method is more robust and should reliably produce contours for even"
-                           " the most complicated topologies, but is considerably slower than the binary method.";
+                           "\n\n"
+                           "2. A robust (but comparatively slower) method based on marching cubes."
+                           " This method is more robust than the binary method and should reliably produce meshes for even"
+                           " the most complicated topologies. It is expected to run slower than the binary method."
+                           "\n\n"
+                           "3. A method that only extracts the geometrical aspects of images, including"
+                           " orientation, position, and spatial extent. This method does not use pixel intensities."
+                           " It is useful for inspecting or debugging spatial alignment.";
     out.args.back().default_val = "marching";
     out.args.back().expected = true;
     out.args.back().examples = { "binary",
-                                 "marching" };
+                                 "marching",
+                                 "geometrical" };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
     
@@ -151,6 +161,7 @@ bool ConvertImageToMeshes(Drover &DICOM_data,
 
     const auto binary_regex = Compile_Regex("^bi?n?a?r?y?$");
     const auto marching_regex = Compile_Regex("^ma?r?c?h?i?n?g?$");
+    const auto geom_regex = Compile_Regex("^ge?o?m?e?t?r?[iy]?c?a?l?$");
 
     //Iterate over each requested image_array. Each image is processed independently, so a thread pool is used.
     auto IAs_all = All_IAs( DICOM_data );
@@ -159,134 +170,192 @@ bool ConvertImageToMeshes(Drover &DICOM_data,
         // The mesh will inheret image metadata.
         auto ia_metadata = (*iap_it)->imagecoll.get_common_metadata({});
 
-        //Determine the bounds in terms of pixel-value thresholds.
-        auto cl = Lower; // Will be replaced if percentages/percentiles requested.
-        auto cu = Upper; // Will be replaced if percentages/percentiles requested.
-        {
-            //Percentage-based.
-            if(Lower_is_Percent || Upper_is_Percent){
-                Stats::Running_MinMax<float> rmm;
-                for(const auto &animg : (*iap_it)->imagecoll.images){
-                    animg.apply_to_pixels([&rmm,Channel](long int, long int, long int chnl, float val) -> void {
-                         if(Channel == chnl) rmm.Digest(val);
-                         return;
-                    });
+        // Pixel-based methods.
+        if( std::regex_match(MethodStr, binary_regex)
+        ||  std::regex_match(MethodStr, marching_regex) ){
+            //Determine the bounds in terms of pixel-value thresholds.
+            auto cl = Lower; // Will be replaced if percentages/percentiles requested.
+            auto cu = Upper; // Will be replaced if percentages/percentiles requested.
+            {
+                //Percentage-based.
+                if(Lower_is_Percent || Upper_is_Percent){
+                    Stats::Running_MinMax<float> rmm;
+                    for(const auto &animg : (*iap_it)->imagecoll.images){
+                        animg.apply_to_pixels([&rmm,Channel](long int, long int, long int chnl, float val) -> void {
+                             if(Channel == chnl) rmm.Digest(val);
+                             return;
+                        });
+                    }
+                    if(Lower_is_Percent) cl = (rmm.Current_Min() + (rmm.Current_Max() - rmm.Current_Min()) * Lower / 100.0);
+                    if(Upper_is_Percent) cu = (rmm.Current_Min() + (rmm.Current_Max() - rmm.Current_Min()) * Upper / 100.0);
                 }
-                if(Lower_is_Percent) cl = (rmm.Current_Min() + (rmm.Current_Max() - rmm.Current_Min()) * Lower / 100.0);
-                if(Upper_is_Percent) cu = (rmm.Current_Min() + (rmm.Current_Max() - rmm.Current_Min()) * Upper / 100.0);
-            }
 
-            //Percentile-based.
-            if(Lower_is_Ptile || Upper_is_Ptile){
-                std::vector<float> pixel_vals;
-                //pixel_vals.reserve(animg.rows * animg.columns * animg.channels * img_count);
-                for(const auto &animg : (*iap_it)->imagecoll.images){
-                    animg.apply_to_pixels([&pixel_vals,Channel](long int, long int, long int chnl, float val) -> void {
-                         if(Channel == chnl) pixel_vals.push_back(val);
-                         return;
-                    });
+                //Percentile-based.
+                if(Lower_is_Ptile || Upper_is_Ptile){
+                    std::vector<float> pixel_vals;
+                    //pixel_vals.reserve(animg.rows * animg.columns * animg.channels * img_count);
+                    for(const auto &animg : (*iap_it)->imagecoll.images){
+                        animg.apply_to_pixels([&pixel_vals,Channel](long int, long int, long int chnl, float val) -> void {
+                             if(Channel == chnl) pixel_vals.push_back(val);
+                             return;
+                        });
+                    }
+                    if(Lower_is_Ptile) cl = Stats::Percentile(pixel_vals, Lower / 100.0);
+                    if(Upper_is_Ptile) cu = Stats::Percentile(pixel_vals, Upper / 100.0);
                 }
-                if(Lower_is_Ptile) cl = Stats::Percentile(pixel_vals, Lower / 100.0);
-                if(Upper_is_Ptile) cu = Stats::Percentile(pixel_vals, Upper / 100.0);
             }
-        }
-        if(cl > cu){
-            throw std::invalid_argument("Thresholds conflict. Mesh will contain zero faces. Refusing to continue.");
-        }
-
-        //Construct a pixel 'oracle' closure using the user-specified threshold criteria. This function identifies whether
-        // the pixel is within (true) or outside of (false) the final ROI. This is used for the binary method.
-        auto pixel_oracle = [cu,cl](float p) -> bool {
-            return (cl <= p) && (p <= cu);
-        };
-
-        double inclusion_threshold = std::numeric_limits<double>::quiet_NaN();
-        double exterior_value = std::numeric_limits<double>::quiet_NaN();
-        bool below_is_interior = false;
-
-        std::list<planar_image<float,double>> masks;
-        for(auto &animg : (*iap_it)->imagecoll.images){
-            if( (animg.rows < 1) || (animg.columns < 1) || (Channel >= animg.channels) ){
-                throw std::runtime_error("Image or channel is empty -- cannot generate surface mesh.");
+            if(cl > cu){
+                throw std::invalid_argument("Thresholds conflict. Mesh will contain zero faces. Refusing to continue.");
             }
 
-            //Prepare a mask image for contouring.
-            masks.push_back(animg);
-            
-            if(std::regex_match(MethodStr, binary_regex)){
-                inclusion_threshold = 0.0;
-                below_is_interior = true;
-                exterior_value = 1.0;
-                const auto interior_value = -exterior_value;
-                masks.back().apply_to_pixels([pixel_oracle,
-                                              Channel,
-                                              interior_value,
-                                              exterior_value](long int, 
-                                                              long int,
-                                                              long int chnl,
-                                                              float &val) -> void {
-                        if(Channel == chnl){
-                            val = (pixel_oracle(val) ? interior_value : exterior_value);
-                        }
-                        return;
-                    });
+            //Construct a pixel 'oracle' closure using the user-specified threshold criteria. This function identifies whether
+            // the pixel is within (true) or outside of (false) the final ROI. This is used for the binary method.
+            auto pixel_oracle = [cu,cl](float p) -> bool {
+                return (cl <= p) && (p <= cu);
+            };
 
-            }else if(std::regex_match(MethodStr, marching_regex)){
-                if(std::isfinite(cl) && std::isfinite(cu)){
-                    // Transform voxels by their |distance| from the midpoint. Only interior voxels will be within
-                    // [0,width*0.5], and all others will be (width*0.5,inf).
-                    const double midpoint = (cl + cu) * 0.5;
-                    const double width = (cu - cl);
+            double inclusion_threshold = std::numeric_limits<double>::quiet_NaN();
+            double exterior_value = std::numeric_limits<double>::quiet_NaN();
+            bool below_is_interior = false;
 
-                    inclusion_threshold = width * 0.5;
-                    exterior_value = inclusion_threshold + 1.0;
+            std::list<planar_image<float,double>> masks;
+            for(auto &animg : (*iap_it)->imagecoll.images){
+                if( (animg.rows < 1) || (animg.columns < 1) || (Channel >= animg.channels) ){
+                    throw std::runtime_error("Image or channel is empty -- cannot generate surface mesh.");
+                }
+
+                //Prepare a mask image for contouring.
+                masks.push_back(animg);
+                
+                if(std::regex_match(MethodStr, binary_regex)){
+                    inclusion_threshold = 0.0;
                     below_is_interior = true;
-                    masks.back().apply_to_pixels([Channel,midpoint](long int, long int, long int chnl, float &val) -> void {
+                    exterior_value = 1.0;
+                    const auto interior_value = -exterior_value;
+                    masks.back().apply_to_pixels([pixel_oracle,
+                                                  Channel,
+                                                  interior_value,
+                                                  exterior_value](long int, 
+                                                                  long int,
+                                                                  long int chnl,
+                                                                  float &val) -> void {
                             if(Channel == chnl){
-                                val = std::abs(val - midpoint);
+                                val = (pixel_oracle(val) ? interior_value : exterior_value);
                             }
                             return;
                         });
 
-                }else if(std::isfinite(cl)){
-                    inclusion_threshold = cl;
-                    exterior_value = inclusion_threshold - 1.0;
-                    below_is_interior = false;
+                }else if(std::regex_match(MethodStr, marching_regex)){
+                    if(std::isfinite(cl) && std::isfinite(cu)){
+                        // Transform voxels by their |distance| from the midpoint. Only interior voxels will be within
+                        // [0,width*0.5], and all others will be (width*0.5,inf).
+                        const double midpoint = (cl + cu) * 0.5;
+                        const double width = (cu - cl);
 
-                }else if(std::isfinite(cu)){
-                    inclusion_threshold = cu;
-                    exterior_value = inclusion_threshold + 1.0;
-                    below_is_interior = true;
+                        inclusion_threshold = width * 0.5;
+                        exterior_value = inclusion_threshold + 1.0;
+                        below_is_interior = true;
+                        masks.back().apply_to_pixels([Channel,midpoint](long int, long int, long int chnl, float &val) -> void {
+                                if(Channel == chnl){
+                                    val = std::abs(val - midpoint);
+                                }
+                                return;
+                            });
 
-                }else{ // Neither threshold is finite.
-                    throw std::invalid_argument("Unable to discern finite threshold for meshing. Refusing to continue.");
-                    // Note: it is possible to deal with these cases and generate meshings for each, i.e., either all
-                    // voxels are included or no voxels are included (both are valid meshings). However, it seems
-                    // most likely this is a user error. Add this functionality if necessary.
+                    }else if(std::isfinite(cl)){
+                        inclusion_threshold = cl;
+                        exterior_value = inclusion_threshold - 1.0;
+                        below_is_interior = false;
 
+                    }else if(std::isfinite(cu)){
+                        inclusion_threshold = cu;
+                        exterior_value = inclusion_threshold + 1.0;
+                        below_is_interior = true;
+
+                    }else{ // Neither threshold is finite.
+                        throw std::invalid_argument("Unable to discern finite threshold for meshing. Refusing to continue.");
+                        // Note: it is possible to deal with these cases and generate meshings for each, i.e., either all
+                        // voxels are included or no voxels are included (both are valid meshings). However, it seems
+                        // most likely this is a user error. Add this functionality if necessary.
+
+                    }
+
+                }else{
+                    throw std::invalid_argument("Meshing method not recognized. Refusing to continue.");
+                }
+            }
+
+
+            // Generate the surface mesh.
+            std::list<std::reference_wrapper<planar_image<float,double>>> mask_imgs;
+            for(auto &amask : masks){
+                mask_imgs.push_back(std::ref(amask));
+            }
+            // Note: meshing parameter MutateOpts are irrelevant since we supply our own mask.
+            auto meshing_params = dcma_surface_meshes::Parameters();
+            auto output_mesh = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( 
+                                                            mask_imgs,
+                                                            inclusion_threshold, 
+                                                            below_is_interior,
+                                                            meshing_params );
+
+            DICOM_data.smesh_data.emplace_back( std::make_unique<Surface_Mesh>() );
+            DICOM_data.smesh_data.back()->meshes = output_mesh;
+
+        // Geometrical methods.
+        }else if( std::regex_match(MethodStr, geom_regex) ){
+            auto sm = std::make_unique<Surface_Mesh>();
+            
+            for(const auto &animg : (*iap_it)->imagecoll.images){
+                // Avoid creating degenerate meshes.
+                bool isvalid =    animg.row_unit.isfinite()
+                               && animg.col_unit.isfinite() 
+                               && std::isfinite(animg.pxl_dx)
+                               && std::isfinite(animg.pxl_dy)
+                               && std::isfinite(animg.pxl_dz)
+                               && (0 < animg.pxl_dx)
+                               && (0 < animg.pxl_dy)
+                               && (0 < animg.pxl_dz)
+                               && (0 < animg.rows)
+                               && (0 < animg.columns);
+                const auto ortho_unit = isvalid ? animg.col_unit.Cross(animg.row_unit).unit() : animg.col_unit;
+                if( !isvalid
+                ||  !ortho_unit.isfinite() ){
+                    FUNCWARN("Skipping image with no spatial extent");
+                    continue;
                 }
 
-            }else{
-                throw std::invalid_argument("Meshing method not recognized. Refusing to continue.");
+                const auto c = animg.corners2D();
+                const auto orig_N_verts = static_cast<uint64_t>(sm->meshes.vertices.size());
+
+                for(const auto& v : c) sm->meshes.vertices.push_back( v - ortho_unit * animg.pxl_dz * 0.5 );
+                for(const auto& v : c) sm->meshes.vertices.push_back( v + ortho_unit * animg.pxl_dz * 0.5 );
+
+                // Bottom.
+                sm->meshes.faces.emplace_back( std::vector<uint64_t>{ orig_N_verts + 0, orig_N_verts + 3, orig_N_verts + 2 } );
+                sm->meshes.faces.emplace_back( std::vector<uint64_t>{ orig_N_verts + 0, orig_N_verts + 2, orig_N_verts + 1 } );
+
+                // Sides.
+                sm->meshes.faces.emplace_back( std::vector<uint64_t>{ orig_N_verts + 0, orig_N_verts + 1, orig_N_verts + 5 } );
+                sm->meshes.faces.emplace_back( std::vector<uint64_t>{ orig_N_verts + 0, orig_N_verts + 5, orig_N_verts + 4 } );
+                sm->meshes.faces.emplace_back( std::vector<uint64_t>{ orig_N_verts + 1, orig_N_verts + 2, orig_N_verts + 6 } );
+                sm->meshes.faces.emplace_back( std::vector<uint64_t>{ orig_N_verts + 1, orig_N_verts + 6, orig_N_verts + 5 } );
+                sm->meshes.faces.emplace_back( std::vector<uint64_t>{ orig_N_verts + 2, orig_N_verts + 3, orig_N_verts + 7 } );
+                sm->meshes.faces.emplace_back( std::vector<uint64_t>{ orig_N_verts + 2, orig_N_verts + 7, orig_N_verts + 6 } );
+                sm->meshes.faces.emplace_back( std::vector<uint64_t>{ orig_N_verts + 3, orig_N_verts + 0, orig_N_verts + 4 } );
+                sm->meshes.faces.emplace_back( std::vector<uint64_t>{ orig_N_verts + 3, orig_N_verts + 4, orig_N_verts + 7 } );
+
+                // Top.
+                sm->meshes.faces.emplace_back( std::vector<uint64_t>{ orig_N_verts + 4, orig_N_verts + 5, orig_N_verts + 6 } );
+                sm->meshes.faces.emplace_back( std::vector<uint64_t>{ orig_N_verts + 4, orig_N_verts + 6, orig_N_verts + 7 } );
+
             }
+            DICOM_data.smesh_data.emplace_back( std::move(sm) );
+
+        }else{
+            throw std::invalid_argument("Meshing method not recognized. Refusing to continue.");
         }
 
-
-        // Generate the surface mesh.
-        std::list<std::reference_wrapper<planar_image<float,double>>> mask_imgs;
-        for(auto &amask : masks){
-            mask_imgs.push_back(std::ref(amask));
-        }
-        // Note: meshing parameter MutateOpts are irrelevant since we supply our own mask.
-        auto meshing_params = dcma_surface_meshes::Parameters();
-        auto output_mesh = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( 
-                                                        mask_imgs,
-                                                        inclusion_threshold, 
-                                                        below_is_interior,
-                                                        meshing_params );
-
-        DICOM_data.smesh_data.emplace_back( std::make_unique<Surface_Mesh>() );
-        DICOM_data.smesh_data.back()->meshes = output_mesh;
         DICOM_data.smesh_data.back()->meshes.metadata = ia_metadata;
         DICOM_data.smesh_data.back()->meshes.metadata["MeshLabel"] = MeshLabel;
         DICOM_data.smesh_data.back()->meshes.metadata["NormalizedMeshLabel"] = NormalizedMeshLabel;
