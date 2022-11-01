@@ -104,7 +104,6 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
                     // precendent.
                     auto ll_meta = fimg_ptr->metadata;
                     inject_metadata( l_meta, std::move(ll_meta) ); // ll_meta takes priority.
-                    l_meta = coalesce_metadata_for_basic_image(l_meta); // Ensure any gaps are filled.
                     fimg_ptr->metadata = l_meta;
                     fimg_ptr->metadata["Filename"] = Filename.string();
                     l_meta = coalesce_metadata_for_basic_image(l_meta, meta_evolve::iterate); // Evolve for next image.
