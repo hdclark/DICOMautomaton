@@ -261,11 +261,15 @@ bool PartitionContours(Drover &DICOM_data,
     }
 
     // Identify a set of three orthogonal planes along which the contours should be cleaved.
-    //
-    // Typical image-axes aligned normals.
-    const auto row_normal = vec3<double>(0.0, 1.0, 0.0);
-    const auto col_normal = vec3<double>(1.0, 0.0, 0.0);
-    const auto ort_normal = col_normal.Cross(row_normal);
+    // Use the contours to estimate the normal vector, but then fall-back to 'typical' image row and column units.
+    auto ort_normal = Average_Contour_Normals(cc_ROIs);
+    //if( ort_normal.Dot(vec3<double>(0.0, 0.0, 1.0)) < 0.75 ) ort_normal *= -1.0; // Flip contours if needed.
+    auto row_normal = vec3<double>(0.0, 1.0, 0.0);
+    auto col_normal = vec3<double>(1.0, 0.0, 0.0);
+    ort_normal.GramSchmidt_orthogonalize(row_normal, col_normal);
+    ort_normal = ort_normal.unit();
+    row_normal = row_normal.unit();
+    col_normal = col_normal.unit();
 
     vec3<double> x_normal = row_normal;
     vec3<double> y_normal = col_normal;
@@ -291,6 +295,9 @@ bool PartitionContours(Drover &DICOM_data,
     }else{
         throw std::invalid_argument("Planar orientations not understood. Cannot continue.");
     }
+    FUNCINFO("Proceeding with x_normal = " << x_normal);
+    FUNCINFO("Proceeding with y_normal = " << y_normal);
+    FUNCINFO("Proceeding with z_normal = " << z_normal);
 
     // This routine returns a pair of planes that approximately encompass the desired interior volume. The ROIs are not
     // altered. The lower plane is the first element of the pair. This routine can be applied to any contour_collection
