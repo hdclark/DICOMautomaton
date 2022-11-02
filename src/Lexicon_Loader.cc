@@ -158,15 +158,15 @@ std::string Create_Default_Lexicon_File(){
         "uterus" }};
     
     for(const auto&c : cleans){
-        of << c << " : " << c;
+        of << c << " : " << c << std::endl;
         
         // Add some common abbreviations.
         //
         // Replace 'left ' with 'l ', and 'right ' with 'r ', if present.
         const auto l = ReplaceAllInstances(c, "left ", "l ");
         const auto r = ReplaceAllInstances(c, "right ", "r ");
-        if(l != c) of << c << " : " << l;
-        if(r != c) of << c << " : " << r;
+        if(l != c) of << c << " : " << l << std::endl;
+        if(r != c) of << c << " : " << r << std::endl;
     }
 
     if(!of) throw std::runtime_error("Unable to create default lexicon file");
