@@ -15,6 +15,7 @@ add_library(Operations_objs OBJECT
     BoostSerializeDrover.cc
     BuildLexiconInteractively.cc
     ClusterDBSCAN.cc
+    CombineMeshes.cc
     ComparePixels.cc
     ContourBasedRayCastDoseAccumulate.cc
     ContouringAides.cc
