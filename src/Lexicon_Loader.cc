@@ -53,108 +53,122 @@ std::string Create_Default_Lexicon_File(){
     // Seed the lexicon with some reasonable defaults.
     std::ofstream of(p);
 
-    of << "artifact : artifact" << std::endl
-       << "axilla : axilla" << std::endl
-       << "bladder : bladder" << std::endl
-       << "body : body" << std::endl
-       << "bolus : bolus" << std::endl
-       << "bone : bone" << std::endl
-       << "both brachial plexuses : both brachial plexuses" << std::endl
-       << "both eyes : both eyes" << std::endl
-       << "both femoral heads : both femoral heads" << std::endl
-       << "both kidneys : both kidneys" << std::endl
-       << "both lenses : both lenses" << std::endl
-       << "both lungs : both lungs" << std::endl
-       << "both parotids : both parotids" << std::endl
-       << "both renal cortexes : both renal cortexes" << std::endl
-       << "both renal hilum : both renal hilum" << std::endl
-       << "brain : brain" << std::endl
-       << "brainstem : brainstem" << std::endl
-       << "carina : carina" << std::endl
-       << "cauda equina : cauda equina" << std::endl
-       << "chest wall : chest wall" << std::endl
-       << "cochlea : cochlea" << std::endl
-       << "contralateral lung : contralateral lung" << std::endl
-       << "contralateral parotid : contralateral parotid" << std::endl
-       << "ctv : ctv" << std::endl
-       << "duodenum : duodenum" << std::endl
-       << "esophagus : esophagus" << std::endl
-       << "extended ptv : extended ptv" << std::endl
-       << "fiducials : fiducials" << std::endl
-       << "genitalia : genitalia" << std::endl
-       << "great vessels : great vessels" << std::endl
-       << "gtv : gtv" << std::endl
-       << "heart : heart" << std::endl
-       << "ipsilateral brachial plexus : ipsilateral brachial plexus" << std::endl
-       << "ipsilateral bronchus : ipsilateral bronchus" << std::endl
-       << "ipsilateral femoral head : ipsilateral femoral head" << std::endl
-       << "ipsilateral lung : ipsilateral lung" << std::endl
-       << "ipsilateral parotid : ipsilateral parotid" << std::endl
-       << "isodose : isodose" << std::endl
-       << "large bowel : large bowel" << std::endl
-       << "laryngopharynx : laryngopharynx" << std::endl
-       << "left anterior chamber : left anterior chamber" << std::endl
-       << "left brachial plexus : left brachial plexus" << std::endl
-       << "left breast : left breast" << std::endl
-       << "left cochlea : left cochlea" << std::endl
-       << "left eye : left eye" << std::endl
-       << "left femoral head : left femoral head" << std::endl
-       << "left iliac crest : left iliac crest" << std::endl
-       << "left kidney : left kidney" << std::endl
-       << "left lacrimal gland : left lacrimal gland" << std::endl
-       << "left lens : left lens" << std::endl
-       << "left lenses : left lenses" << std::endl
-       << "left lung : left lung" << std::endl
-       << "left optic nerve : left optic nerve" << std::endl
-       << "left parotid : left parotid" << std::endl
-       << "left renal cortex : left renal cortex" << std::endl
-       << "left renal hilum : left renal hilum" << std::endl
-       << "left retina : left retina" << std::endl
-       << "left submandibular : left submandibular" << std::endl
-       << "left temporal lobe : left temporal lobe" << std::endl
-       << "lips : lips" << std::endl
-       << "liver : liver" << std::endl
-       << "mandible : mandible" << std::endl
-       << "optic chiasm : optic chiasm" << std::endl
-       << "optics : optics" << std::endl
-       << "oral cavity : oral cavity" << std::endl
-       << "pharynx : pharynx" << std::endl
-       << "planning : planning" << std::endl
-       << "proximal bronchial tree : proximal bronchial tree" << std::endl
-       << "proximal trachea : proximal trachea" << std::endl
-       << "ptv : ptv" << std::endl
-       << "right anterior chamber : right anterior chamber" << std::endl
-       << "right brachial plexus : right brachial plexus" << std::endl
-       << "right breast : right breast" << std::endl
-       << "right cochlea : right cochlea" << std::endl
-       << "right eye : right eye" << std::endl
-       << "right femoral head : right femoral head" << std::endl
-       << "right iliac crest : right iliac crest" << std::endl
-       << "right kidney : right kidney" << std::endl
-       << "right lacrimal gland : right lacrimal gland" << std::endl
-       << "right lens : right lens" << std::endl
-       << "right lung : right lung" << std::endl
-       << "right optic nerve : right optic nerve" << std::endl
-       << "right parotid : right parotid" << std::endl
-       << "right renal cortex : right renal cortex" << std::endl
-       << "right renal hilum : right renal hilum" << std::endl
-       << "right retina : right retina" << std::endl
-       << "right submandibular : right submandibular" << std::endl
-       << "right temporal lobe : right temporal lobe" << std::endl
-       << "sacral canal : sacral canal" << std::endl
-       << "sacral plexus : sacral plexus" << std::endl
-       << "seminal vessicles : seminal vessicles" << std::endl
-       << "skin : skin" << std::endl
-       << "skull : skull" << std::endl
-       << "small bowel : small bowel" << std::endl
-       << "spinal canal : spinal canal" << std::endl
-       << "spinal cord : spinal cord" << std::endl
-       << "stomach : stomach" << std::endl
-       << "support : support" << std::endl
-       << "thyroid : thyroid" << std::endl
-       << "unknown : unknown" << std::endl
-       << "urethra : urethra" << std::endl
-       << "uterus : uterus" << std::endl;
+    const std::vector<std::string> cleans {{
+        "artifact",
+        "axilla",
+        "bladder",
+        "body",
+        "bolus",
+        "bone",
+        "both brachial plexuses",
+        "both eyes",
+        "both femoral heads",
+        "both kidneys",
+        "both lenses",
+        "both lungs",
+        "both parotids",
+        "both renal cortexes",
+        "both renal hilum",
+        "brain",
+        "brainstem",
+        "carina",
+        "cauda equina",
+        "chest wall",
+        "cochlea",
+        "contralateral lung",
+        "contralateral parotid",
+        "ctv",
+        "duodenum",
+        "esophagus",
+        "extended ptv",
+        "fiducials",
+        "genitalia",
+        "great vessels",
+        "gtv",
+        "heart",
+        "ipsilateral brachial plexus",
+        "ipsilateral bronchus",
+        "ipsilateral femoral head",
+        "ipsilateral lung",
+        "ipsilateral parotid",
+        "isodose",
+        "large bowel",
+        "laryngopharynx",
+        "left anterior chamber",
+        "left brachial plexus",
+        "left breast",
+        "left cochlea",
+        "left eye",
+        "left femoral head",
+        "left iliac crest",
+        "left kidney",
+        "left lacrimal gland",
+        "left lens",
+        "left lenses",
+        "left lung",
+        "left optic nerve",
+        "left parotid",
+        "left renal cortex",
+        "left renal hilum",
+        "left retina",
+        "left submandibular",
+        "left temporal lobe",
+        "lips",
+        "liver",
+        "mandible",
+        "optic chiasm",
+        "optics",
+        "oral cavity",
+        "pharynx",
+        "planning",
+        "proximal bronchial tree",
+        "proximal trachea",
+        "ptv",
+        "right anterior chamber",
+        "right brachial plexus",
+        "right breast",
+        "right cochlea",
+        "right eye",
+        "right femoral head",
+        "right iliac crest",
+        "right kidney",
+        "right lacrimal gland",
+        "right lens",
+        "right lung",
+        "right optic nerve",
+        "right parotid",
+        "right renal cortex",
+        "right renal hilum",
+        "right retina",
+        "right submandibular",
+        "right temporal lobe",
+        "sacral canal",
+        "sacral plexus",
+        "seminal vessicles",
+        "skin",
+        "skull",
+        "small bowel",
+        "spinal canal",
+        "spinal cord",
+        "stomach",
+        "support",
+        "thyroid",
+        "unknown",
+        "urethra",
+        "uterus" }};
+    
+    for(const auto&c : cleans){
+        of << c << " : " << c;
+        
+        // Add some common abbreviations.
+        //
+        // Replace 'left ' with 'l ', and 'right ' with 'r ', if present.
+        const auto l = ReplaceAllInstances(c, "left ", "l ");
+        const auto r = ReplaceAllInstances(c, "right ", "r ");
+        if(l != c) of << c << " : " << l;
+        if(r != c) of << c << " : " << r;
+    }
+
     if(!of) throw std::runtime_error("Unable to create default lexicon file");
 
     return p;
