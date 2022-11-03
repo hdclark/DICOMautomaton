@@ -1,9 +1,13 @@
 //SubsegmentContours.cc - A part of DICOMautomaton 2019. Written by hal clark.
 
+#include <cmath>
 #include <cstdlib>            //Needed for exit() calls.
+#include <exception>
+#include <any>
 #include <optional>
 #include <fstream>
 #include <functional>
+#include <iostream>
 #include <list>
 #include <map>
 #include <memory>
@@ -12,17 +16,20 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <numeric>
 
-#include "../Dose_Meld.h"
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
 #include "Explicator.h"       //Needed for Explicator class.
-#include "SubsegmentContours.h"
+
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
+#include "YgorImages.h"
 
-
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "SubsegmentContours.h"
 
 OperationDoc OpArgDocSubsegmentContours(){
     OperationDoc out;
@@ -43,12 +50,30 @@ OperationDoc OpArgDocSubsegmentContours(){
     out.args.emplace_back();
     out.args.back().name = "PlanarOrientation";
     out.args.back().desc = "A string instructing how to orient the cleaving planes."
-                           " Currently supported: (1) 'axis-aligned' (i.e., align with the image/dose grid row and column"
-                           " unit vectors) and (2) 'static-oblique' (i.e., same as axis-aligned but rotated 22.5 degrees"
-                           " to reduce colinearity, which sometimes improves sub-segment area consistency).";
+                           " Currently supported:"
+                           "\n\n"
+                           "1. 'cardinal', which aligns the planes with the cardinal direction axes "
+                           " unit vectors. This method is most consistent, but does not adapt to the"
+                           " anatomy of the subject. It works best when the subject's contours are"
+                           " defined on axial slices in HFS position or have otherwise been"
+                           " transferred or transformed to this alignment."
+                           "\n\n"
+                           "2. 'axis-aligned', which aligns the cleave plane's Z axis with the average"
+                           " contour normal and uses a Gram-Schmidt process to provide best-guesses for"
+                           " appropriate X and Y unit vectors. This method adapts to the subject's position"
+                           " but because the contour planes and the cleaving planes are coplanar, it can"
+                           " result in splitting difficulties (e.g., degeneracies, numerical precision"
+                           " issues like contours being split into many thin, jagged sub-segments)."
+                           " If using this method, consider limiting the number of iterations and fractional"
+                           " tolerance to help minimize risk of numerical issues."
+                           "\n\n"
+                           "3. 'static-oblique', which is the same as 'axis-aligned', but rotates all"
+                           " unit vectors by 22.5 degrees to reduce coplanarity of the contour plane and"
+                           " the cleaving plane. This sometimes improves sub-segment area consistency,"
+                           " but results in oblique sub-segments.";
     out.args.back().default_val = "axis-aligned";
     out.args.back().expected = true;
-    out.args.back().examples = { "axis-aligned", "static-oblique" };
+    out.args.back().examples = { "cardinal", "axis-aligned", "static-oblique" };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
 
@@ -215,11 +240,12 @@ bool SubsegmentContours(Drover &DICOM_data,
     const auto theregex = Compile_Regex(ROILabelRegex);
     const auto TrueRegex = Compile_Regex("^tr?u?e?$");
     const auto thenormalizedregex = Compile_Regex(NormalizedROILabelRegex);
-    const auto SubsegMethodCompound = Compile_Regex("co?m?p?o?u?n?d?-?c?l?e?a?v?e?");
-    const auto SubsegMethodNested = Compile_Regex("ne?s?t?e?d?-?c?l?e?a?v?e?");
+    const auto SubsegMethodCompound = Compile_Regex("co?m?p?o?u?n?d?[-_]?c?l?e?a?v?e?");
+    const auto SubsegMethodNested = Compile_Regex("ne?s?t?e?d?[-_]?c?l?e?a?v?e?");
 
-    const auto OrientAxisAligned = Compile_Regex("ax?i?s?-?a?l?i?g?n?e?d?");
-    const auto OrientStaticObl = Compile_Regex("st?a?t?i?c?-?o?b?l?i?q?u?e?");
+    const auto OrientAxisAligned = Compile_Regex("ax?i?s?[-_]?a?l?i?g?n?e?d?");
+    const auto OrientStaticObl = Compile_Regex("st?a?t?i?c?[-_]?o?b?l?i?q?u?e?");
+    const auto OrientCardinal = Compile_Regex("ca?r?d?i?n?a?l?");
 
     const auto ReplaceAllWithSubsegment = std::regex_match(ReplaceAllWithSubsegmentStr, TrueRegex);
 
@@ -258,7 +284,6 @@ bool SubsegmentContours(Drover &DICOM_data,
 
     Explicator X(FilenameLex);
 
-
     // Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
     auto cc_all = All_CCs( DICOM_data );
@@ -270,40 +295,53 @@ bool SubsegmentContours(Drover &DICOM_data,
     }
 
     // Identify a set of three orthogonal planes along which the contours should be cleaved.
-    // Use the contours to estimate the normal vector, but then fall-back to 'typical' image row and column units.
-    auto ort_normal = Average_Contour_Normals(cc_ROIs);
-    //if( ort_normal.Dot(vec3<double>(0.0, 0.0, 1.0)) < 0.75 ) ort_normal *= -1.0; // Flip contours if needed.
-    auto row_normal = vec3<double>(0.0, 1.0, 0.0);
-    auto col_normal = vec3<double>(1.0, 0.0, 0.0);
-    ort_normal.GramSchmidt_orthogonalize(row_normal, col_normal);
-    ort_normal = ort_normal.unit();
-    row_normal = row_normal.unit();
-    col_normal = col_normal.unit();
+    vec3<double> x_normal(0.0, 1.0, 0.0); // Standard image row_unit.
+    vec3<double> y_normal(1.0, 0.0, 0.0); // Standard image col_unit.
+    vec3<double> z_normal(0.0, 0.0, 1.0); // Standard image ortho unit.
 
-    vec3<double> x_normal = row_normal;
-    vec3<double> y_normal = col_normal;
-    vec3<double> z_normal = ort_normal;
+    const auto find_coordinate_directions = [&]() -> void {
+        if(std::regex_match(PlanarOrientation, OrientCardinal)){
+            // Do nothing.
+            return;
+        }
 
-    // Use the image-axes aligned normals directly. Sub-segmentation might get snagged on voxel rows or columns.
-    if(std::regex_match(PlanarOrientation, OrientAxisAligned)){
-        x_normal = row_normal;
-        y_normal = col_normal;
-        z_normal = ort_normal;
+        // Use the contours to estimate the normal vector, but fall-back to 'typical' image row and column units.
+        // This works best if the subject is rotated forward or backward (e.g., head on a pillow vs. head without a
+        // pillow).
+        auto ort_normal = Average_Contour_Normals(cc_ROIs);
+        auto row_normal = x_normal;
+        auto col_normal = y_normal;
+        ort_normal.GramSchmidt_orthogonalize(row_normal, col_normal);
+        ort_normal = ort_normal.unit();
+        row_normal = row_normal.unit();
+        col_normal = col_normal.unit();
 
-    // Try to offset the axes slightly so they don't align perfectly with the voxel grid. (Align along the row and
-    // column directions, or align along the diagonals, which can be just as bad.)
-    }else if(std::regex_match(PlanarOrientation, OrientStaticObl)){
-        x_normal = (row_normal + col_normal * 0.5).unit();
-        y_normal = (col_normal - row_normal * 0.5).unit();
-        z_normal = (ort_normal - col_normal * 0.5).unit();
-        z_normal.GramSchmidt_orthogonalize(x_normal, y_normal);
-        x_normal = x_normal.unit();
-        y_normal = y_normal.unit();
-        z_normal = z_normal.unit();
+        // Use the image-axes aligned normals directly. Sub-segmentation might get snagged on voxel rows or columns.
+        if(std::regex_match(PlanarOrientation, OrientAxisAligned)){
+            x_normal = row_normal;
+            y_normal = col_normal;
+            z_normal = ort_normal;
+            return;
+        }
 
-    }else{
+        // Try to offset the axes slightly so they don't align perfectly with the voxel grid. (Align along the row and
+        // column directions, or align along the diagonals, which can be just as bad.)
+        if(std::regex_match(PlanarOrientation, OrientStaticObl)){
+            x_normal = (row_normal + col_normal * 0.5).unit();
+            y_normal = (col_normal - row_normal * 0.5).unit();
+            z_normal = (ort_normal - col_normal * 0.5).unit();
+            z_normal.GramSchmidt_orthogonalize(x_normal, y_normal);
+            x_normal = x_normal.unit();
+            y_normal = y_normal.unit();
+            z_normal = z_normal.unit();
+            return;
+        }
+
         throw std::invalid_argument("Planar orientations not understood. Cannot continue.");
-    }
+        return;
+    };
+    find_coordinate_directions();
+
     FUNCINFO("Proceeding with x_normal = " << x_normal);
     FUNCINFO("Proceeding with y_normal = " << y_normal);
     FUNCINFO("Proceeding with z_normal = " << z_normal);
