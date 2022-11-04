@@ -170,6 +170,7 @@
 #include "Operations/PreFilterEnormousCTValues.h"
 #include "Operations/PruneEmptyImageDoseArrays.h"
 #include "Operations/PurgeContours.h"
+#include "Operations/QuantizePixels.h"
 #include "Operations/QueryUserInteractively.h"
 #include "Operations/RankPixels.h"
 #include "Operations/ReduceNeighbourhood.h"
@@ -403,6 +404,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["PreFilterEnormousCTValues"] = std::make_pair(OpArgDocPreFilterEnormousCTValues, PreFilterEnormousCTValues);
     out["PruneEmptyImageDoseArrays"] = std::make_pair(OpArgDocPruneEmptyImageDoseArrays, PruneEmptyImageDoseArrays);
     out["PurgeContours"] = std::make_pair(OpArgDocPurgeContours, PurgeContours);
+    out["QuantizePixels"] = std::make_pair(OpArgDocQuantizePixels, QuantizePixels);
     out["QueryUserInteractively"] = std::make_pair(OpArgDocQueryUserInteractively, QueryUserInteractively);
     out["RankPixels"] = std::make_pair(OpArgDocRankPixels, RankPixels);
     out["ReduceNeighbourhood"] = std::make_pair(OpArgDocReduceNeighbourhood, ReduceNeighbourhood);

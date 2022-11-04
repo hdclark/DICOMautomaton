@@ -56,7 +56,7 @@ OperationDoc OpArgDocExportSNCImages(){
     out.args.back().desc = "The base filename that images will be written to."
                            " A sequentially-increasing number and file suffix are appended after the base filename."
                            " Note that the file type is ASCII SNC.";
-    out.args.back().default_val = "/tmp/dcma_exportfitsimages";
+    out.args.back().default_val = "/tmp/dcma_exportsncimages";
     out.args.back().expected = true;
     out.args.back().examples = { "../somedir/out", 
                                  "/path/to/some/dir/file_prefix" };

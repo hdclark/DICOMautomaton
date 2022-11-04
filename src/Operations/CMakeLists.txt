@@ -150,6 +150,7 @@ add_library(Operations_objs OBJECT
     PreFilterEnormousCTValues.cc
     PruneEmptyImageDoseArrays.cc
     PurgeContours.cc
+    QuantizePixels.cc
     QueryUserInteractively.cc
     RankPixels.cc
     ReduceNeighbourhood.cc
