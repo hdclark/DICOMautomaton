@@ -189,6 +189,7 @@ formats:
     - 3ddose (read)
     - XIM (read)
     - CSA DICOM headers (read)
+    - SNC (read and write; ASCII; partial)
     - PNG (write)
     - JPG (write)
   - contours

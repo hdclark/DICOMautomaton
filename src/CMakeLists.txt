@@ -100,6 +100,9 @@ set_target_properties(  CSV_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE
 add_library(            XIM_File_Loader_obj OBJECT XIM_File_Loader.cc )
 set_target_properties(  XIM_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            SNC_File_Loader_obj OBJECT SNC_File_Loader.cc )
+set_target_properties(  SNC_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            DVH_File_Loader_obj OBJECT DVH_File_Loader.cc )
 set_target_properties(  DVH_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -372,6 +375,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:FITS_File_Loader_obj>
     $<TARGET_OBJECTS:XYZ_File_Loader_obj>
     $<TARGET_OBJECTS:XIM_File_Loader_obj>
+    $<TARGET_OBJECTS:SNC_File_Loader_obj>
     $<TARGET_OBJECTS:CSV_File_Loader_obj>
     $<TARGET_OBJECTS:DVH_File_Loader_obj>
     $<TARGET_OBJECTS:TAR_File_Loader_obj>
@@ -463,6 +467,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:FITS_File_Loader_obj>
         $<TARGET_OBJECTS:XYZ_File_Loader_obj>
         $<TARGET_OBJECTS:XIM_File_Loader_obj>
+        $<TARGET_OBJECTS:SNC_File_Loader_obj>
         $<TARGET_OBJECTS:CSV_File_Loader_obj>
         $<TARGET_OBJECTS:DVH_File_Loader_obj>
         $<TARGET_OBJECTS:TAR_File_Loader_obj>

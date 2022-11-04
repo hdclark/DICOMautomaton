@@ -105,6 +105,7 @@
 #include "Operations/ExportFITSImages.h"
 #include "Operations/ExportContours.h"
 #include "Operations/ExportLineSamples.h"
+#include "Operations/ExportSNCImages.h"
 #include "Operations/ExportSurfaceMeshes.h"
 #include "Operations/ExportSurfaceMeshesOBJ.h"
 #include "Operations/ExportSurfaceMeshesPLY.h"
@@ -338,6 +339,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ExportContours"] = std::make_pair(OpArgDocExportContours, ExportContours);
     out["ExportLineSamples"] = std::make_pair(OpArgDocExportLineSamples, ExportLineSamples);
     out["ExportPointClouds"] = std::make_pair(OpArgDocExportPointClouds, ExportPointClouds);
+    out["ExportSNCImages"] = std::make_pair(OpArgDocExportSNCImages, ExportSNCImages);
     out["ExportSurfaceMeshesOBJ"] = std::make_pair(OpArgDocExportSurfaceMeshesOBJ, ExportSurfaceMeshesOBJ);
     out["ExportSurfaceMeshesOFF"] = std::make_pair(OpArgDocExportSurfaceMeshesOFF, ExportSurfaceMeshesOFF);
     out["ExportSurfaceMeshesPLY"] = std::make_pair(OpArgDocExportSurfaceMeshesPLY, ExportSurfaceMeshesPLY);

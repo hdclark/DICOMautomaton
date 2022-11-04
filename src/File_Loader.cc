@@ -26,6 +26,7 @@
 #include "FITS_File_Loader.h"
 #include "XYZ_File_Loader.h"
 #include "XIM_File_Loader.h"
+#include "SNC_File_Loader.h"
 #include "OFF_File_Loader.h"
 #include "STL_File_Loader.h"
 #include "OBJ_File_Loader.h"
@@ -98,6 +99,16 @@ Load_Files( Drover &DICOM_data,
             if(!p.empty()
             && !Load_From_XIM_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
                 FUNCWARN("Failed to load XIM file");
+                return false;
+            }
+            return true;
+        }});
+
+        //Standalone file loading: SNC files.
+        loaders.emplace_back(file_loader_t{{".snc"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
+            if(!p.empty()
+            && !Load_From_SNC_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
+                FUNCWARN("Failed to load ASCII SNC file");
                 return false;
             }
             return true;

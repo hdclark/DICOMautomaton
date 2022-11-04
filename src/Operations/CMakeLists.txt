@@ -86,6 +86,7 @@ add_library(Operations_objs OBJECT
     ExportContours.cc
     ExportLineSamples.cc
     ExportPointClouds.cc
+    ExportSNCImages.cc
     ExportSurfaceMeshes.cc
     ExportSurfaceMeshesOBJ.cc
     ExportSurfaceMeshesPLY.cc
