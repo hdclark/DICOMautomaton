@@ -3620,7 +3620,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                             - disp_img_it->row_unit * 0.5 * disp_img_it->pxl_dx
                                             - disp_img_it->col_unit * 0.5 * disp_img_it->pxl_dy;
                 image_mouse_pos.voxel_pos = disp_img_it->position(image_mouse_pos.r, image_mouse_pos.c);
-                image_mouse_pos.pixel_scale = static_cast<float>(real_extent.x) / (disp_img_it->pxl_dx * disp_img_it->rows);
+                image_mouse_pos.pixel_scale = static_cast<float>(real_extent.y) / (disp_img_it->pxl_dx * disp_img_it->rows);
 
             }
             image_mouse_pos.DICOM_to_pixels = [=](const vec3<double> &P) -> ImVec2 {
