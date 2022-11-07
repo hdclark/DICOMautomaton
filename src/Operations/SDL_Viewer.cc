@@ -3392,8 +3392,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         ImGui::SetCursorPosX( orig_cursor_pos + line_no_width + horiz_spacing );
 
                         // Draw text entry box.
-                        ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput
-                                                  | ImGuiInputTextFlags_CallbackResize
+                        ImGuiInputTextFlags flags = ImGuiInputTextFlags_CallbackResize
                                                   | ImGuiInputTextFlags_CallbackEdit;
                         ImVec2 edit_box_extent = ImGui::GetContentRegionAvail();
                         const auto altered = ImGui::InputTextMultiline("#script_editor_active_content",
