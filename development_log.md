@@ -3,6 +3,8 @@
 
 Below is a simplified timeline of `DICOMautomaton` development, broken down by month.
 
+Note: this list is periodically updated and is likely to be out-of-date!
+
 ## 202206
 
 - CI: added custom gitlab runner tags.
