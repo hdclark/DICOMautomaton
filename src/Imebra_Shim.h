@@ -17,6 +17,7 @@
 #include "Metadata.h"
 #include "Alignment_Rigid.h"
 #include "Alignment_Field.h"
+#include "DCMA_DICOM.h"
 
 class Contour_Data;
 class Image_Array;
@@ -86,6 +87,7 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
 void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>> CC,
                     const std::function<void(std::istream &is,
                                        long int filesize)>& file_handler,
-                    ParanoiaLevel Paranoia = ParanoiaLevel::Low);
+                    DCMA_DICOM::Encoding enc = DCMA_DICOM::Encoding::ELE, 
+                    ParanoiaLevel Paranoia = ParanoiaLevel::Low );
 
 #endif

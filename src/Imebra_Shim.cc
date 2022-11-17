@@ -3559,6 +3559,7 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
 void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>> CC,
                     const std::function<void(std::istream &is,
                                        long int filesize)>& file_handler,
+                    DCMA_DICOM::Encoding enc,
                     ParanoiaLevel Paranoia){
     if( CC.empty() ){
         throw std::invalid_argument("No contours provided for export. Cannot continue.");
@@ -3580,7 +3581,6 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
         return std::string(); 
     };
 
-    DCMA_DICOM::Encoding enc = DCMA_DICOM::Encoding::ELE;
     DCMA_DICOM::Node root_node;
 
     //Generate some UIDs that need to be duplicated.
@@ -3835,7 +3835,10 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
                     }
                     ss << p.x <<  R"***(\)***" << p.y << R"***(\)***" << p.z;
                 }
-                if(65534 < ss.str().size()) throw std::runtime_error("Contour too large, data loss may occur. Refusing to proceed.");
+                if( (enc == DCMA_DICOM::Encoding::ELE)
+                &&  (65534UL < ss.str().size()) ){
+                    throw std::runtime_error("Contour data too large for explicit transfer syntax encoding, data loss may occur. Refusing to proceed.");
+                }
                 multi_c_seq_ptr->emplace_child_node({{0x3006, 0x0050}, "DS", ss.str() }); // ContourData
 
                 //FUNCINFO("Emitted contour " << contour_seq_n << " of " << cc_refw.get().contours.size() 

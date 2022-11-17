@@ -370,7 +370,7 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         // Value multiplicity embiggens the maximum permissable length, but each individual element should be <= 16 chars.
         auto tokens = SplitStringToVector(this->val,'\\','d');
         for(const auto &token : tokens){
-            if(16 < token.length()) throw std::invalid_argument("Code string is too long. Cannot continue.");
+            if(16ULL < token.length()) throw std::invalid_argument("Code string is too long. Cannot continue.");
         }
 
         if(this->val.find_first_not_of(upper_case + number_digits + multiplicity + "_ ") != std::string::npos){
@@ -379,37 +379,37 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
 
     }else if( this->VR == "SH" ){ //Short string.
-        if(16 < this->val.length()) throw std::runtime_error("Short string is too long. Consider using a longer VR. Cannot continue.");
+        if(16ULL < this->val.length()) throw std::runtime_error("Short string is too long. Consider using a longer VR. Cannot continue.");
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
 
     }else if( this->VR == "LO" ){ //Long strings.
-        if(64 < this->val.length()) throw std::runtime_error("Long string is too long. Consider using a longer VR. Cannot continue.");
+        if(64ULL < this->val.length()) throw std::runtime_error("Long string is too long. Consider using a longer VR. Cannot continue.");
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
 
     }else if( this->VR == "ST" ){ //Short text.
-        if(1024 < this->val.length()) throw std::runtime_error("Short text is too long. Consider using a longer VR. Cannot continue.");
+        if(1024ULL < this->val.length()) throw std::runtime_error("Short text is too long. Consider using a longer VR. Cannot continue.");
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
 
     }else if( this->VR == "LT" ){ //Long text.
-        if(10240 < this->val.length()) throw std::runtime_error("Long text is too long. Consider using a longer VR. Cannot continue.");
+        if(10240ULL < this->val.length()) throw std::runtime_error("Long text is too long. Consider using a longer VR. Cannot continue.");
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
 
     }else if( this->VR == "UT" ){ //Unlimited text.
-        if(4'294'967'294 < this->val.length()) throw std::runtime_error("Unlimited text is too long. Cannot continue.");
+        if(4'294'967'294ULL < this->val.length()) throw std::runtime_error("Unlimited text is too long. Cannot continue.");
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
 
 
     // Name types.
     }else if( this->VR == "AE" ){ //Application entity.
-        if(16 < this->val.length()) throw std::runtime_error("Application entity is too long. Cannot continue.");
+        if(16ULL < this->val.length()) throw std::runtime_error("Application entity is too long. Cannot continue.");
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
 
     }else if( this->VR == "PN" ){ //Person name.
-        if(64 < this->val.length()) throw std::runtime_error("Person name is too long. Cannot continue.");
+        if(64ULL < this->val.length()) throw std::runtime_error("Person name is too long. Cannot continue.");
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
 
     }else if( this->VR == "UI" ){ //Unique Identifier (UID).
-        if(64 < this->val.length()) throw std::runtime_error("UID is too long. Cannot continue.");
+        if(64ULL < this->val.length()) throw std::runtime_error("UID is too long. Cannot continue.");
         // Does value multiplicity embiggen the maximum permissable length? TODO
         if(this->val.find_first_not_of(number_digits + multiplicity + ".") != std::string::npos){
             throw std::invalid_argument("Invalid character found in UID. Cannot continue.");
@@ -434,7 +434,7 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         avec.resize(1);
         digits_only = Lineate_Vector(avec, "");
 
-        if(8 < digits_only.length()) throw std::runtime_error("Date is too long. Cannot continue.");
+        if(8ULL < digits_only.length()) throw std::runtime_error("Date is too long. Cannot continue.");
         if(digits_only.find_first_not_of(number_digits) != std::string::npos){
             throw std::invalid_argument("Invalid character found in date. Cannot continue.");
         }
@@ -448,7 +448,7 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         avec.resize(1);
         digits_only = Lineate_Vector(avec, "");
 
-        if(16 < digits_only.length()) throw std::runtime_error("Time is too long. Cannot continue.");
+        if(16ULL < digits_only.length()) throw std::runtime_error("Time is too long. Cannot continue.");
         if(digits_only.find_first_not_of(number_digits + ".") != std::string::npos){
             throw std::invalid_argument("Invalid character found in time. Cannot continue.");
         }
@@ -462,14 +462,14 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         avec.resize(1);
         digits_only = Lineate_Vector(avec, "");
 
-        if(26 < digits_only.length()) throw std::runtime_error("Date-time is too long. Cannot continue.");
+        if(26ULL < digits_only.length()) throw std::runtime_error("Date-time is too long. Cannot continue.");
         if(digits_only.find_first_not_of(number_digits + "+-.") != std::string::npos){
             throw std::invalid_argument("Invalid character found in date-time. Cannot continue.");
         }
         cumulative_length += emit_DICOM_tag(os, enc, *this, digits_only);
 
     }else if( this->VR == "AS" ){ //Age string.
-        if(4 < this->val.length()) throw std::runtime_error("Age string is too long. Cannot continue.");
+        if(4ULL < this->val.length()) throw std::runtime_error("Age string is too long. Cannot continue.");
         if(this->val.find_first_not_of(number_digits + "DWMY") != std::string::npos){
             throw std::invalid_argument("Invalid character found in age string. Cannot continue.");
         }
@@ -498,12 +498,15 @@ uint64_t Node::emit_DICOM(std::ostream &os,
     //Numeric types that are written as a string of characters.
     }else if( this->VR == "IS" ){ //Integer string.
         // I'm not sure if what the upper limit is for this VR type. Assuming 65534 for consistency with DS. TODO.
-        if(65534 < this->val.length()) throw std::invalid_argument("Decimal string is too long. Cannot continue.");
+        if( ( (enc == Encoding::ELE) && (65'534ULL < this->val.length()) )
+        ||  ( (enc == Encoding::ILE) && (4'294'967'295ULL < this->val.length()) ) ){
+            throw std::invalid_argument("Integer string is too long. Cannot continue.");
+        }
 
         auto tokens = SplitStringToVector(this->val,'\\','d');
         for(const auto &token : tokens){
             // Maximum length per decimal number: 16 bytes.
-            if(12 < token.length()) throw std::invalid_argument("Integer string element is too long. Cannot continue.");
+            if(12ULL < token.length()) throw std::invalid_argument("Integer string element is too long. Cannot continue.");
 
             // Ensure that, if an element is present it parses as a number.
             try{
@@ -520,14 +523,17 @@ uint64_t Node::emit_DICOM(std::ostream &os,
 
     }else if( this->VR == "DS" ){ //Decimal string.
         // Maximum length for entire string (when multiple values are encoded and each is <= 16 bytes): 65534 bytes
-        if(65534 < this->val.length()) throw std::invalid_argument("Decimal string is too long. Cannot continue.");
+        if( ( (enc == Encoding::ELE) && (65'534ULL < this->val.length()) )
+        ||  ( (enc == Encoding::ILE) && (4'294'967'295ULL < this->val.length()) ) ){
+            throw std::invalid_argument("Decimal string is too long. Cannot continue.");
+        }
 
         auto tokens = SplitStringToVector(this->val,'\\','d');
         for(const auto &token : tokens){
             // Maximum length per decimal number: 16 bytes.
-            if(16 < token.length()) throw std::invalid_argument("Decimal string element is too long. Cannot continue.");
+            if(16ULL < token.length()) throw std::invalid_argument("Decimal string element is too long. Cannot continue.");
 
-            // Ensure that, if an element is present it parses as a number.
+            // Ensure that if an element is present it parses as a number.
             try{
                 if(!token.empty()) [[maybe_unused]] auto r = std::stod(token);
             }catch(const std::exception &e){
@@ -608,7 +614,7 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         // Assuming the value payload contains exactly two unsigned integers, e.g., '123\234'.
         std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
         auto tokens = SplitStringToVector(this->val, '\\', 'd');
-        if(tokens.size() != 2) throw std::runtime_error("Invalid number of integers for AT type tag; exactly 2 are needed.");
+        if(tokens.size() != 2ULL) throw std::runtime_error("Invalid number of integers for AT type tag; exactly 2 are needed.");
         for(auto &token_val : tokens){
             const auto val_u = static_cast<uint16_t>(std::stoul(token_val));
             write_to_stream(ss, val_u, 2, enc);
