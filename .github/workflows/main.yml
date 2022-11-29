@@ -8,6 +8,66 @@ on:
   workflow_dispatch:
 
 jobs:
+
+  build_cross_mxe_x86_64:
+    runs-on: ubuntu-latest
+    container:
+      image: "hdclark/dcma_build_base_mxe:latest"
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v1
+      - name: prep
+        run: |
+             cp -R ./docker/builders/mxe /scratch
+             cp -R . /dcma
+             ./scripts/enable_swapfile.sh
+      - name: build
+        run: |
+             ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
+             ./docker/builders/mxe/implementation_mxe.sh
+             rsync -avP /out/ ./Windows/
+             strip ./Windows/usr/bin/*exe
+             strip ./Windows/usr/lib/*a
+      - name: test
+        run: |
+             ./integration_tests/Run.sh -v
+             export DEBIAN_FRONTEND='noninteractive'
+             apt-get update --yes
+             apt-get install --yes --no-install-recommends git ca-certificates rsync mesa-utils
+             dpkg --add-architecture i386
+             apt-get update --yes
+             apt-get install --yes wine32 wine64
+             find ./Windows/usr/bin/ -type f -exec chmod 777 '{}' \;
+             rsync -a ./Windows/usr/ /usr/
+             echo '#!/bin/bash' > /usr/bin/dicomautomaton_dispatcher
+             echo 'exec wine /usr/bin/dicomautomaton_dispatcher.exe \"$@\"' >> /usr/bin/dicomautomaton_dispatcher
+             chmod 777 /usr/bin/dicomautomaton_dispatcher
+             dicomautomaton_dispatcher -h
+             ./integration_tests/Run.sh -v
+      - name: create_zip
+        run: |
+             export DEBIAN_FRONTEND="noninteractive"
+             apt-get update --yes
+             apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf zip
+             rm -rf ci_artifacts
+             mkdir -pv ci_artifacts
+             zip -r ci_artifacts/DICOMautomaton-latest-x86_64.zip ./Windows/
+             cp ci_artifacts/DICOMautomaton-latest-x86_64.zip ci_artifacts/DICOMautomaton-${GITHUB_SHA::8}-x86_64.zip
+             find ci_artifacts/ -iname '*.zip' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
+      - name: deploy_to_github
+        uses: actions/upload-artifact@v2
+        with:
+          name: "DICOMautomaton-exes"
+          if-no-files-found: error
+          path: |
+                ci_artifacts/DICOMautomaton-latest-x86_64.zip
+                ci_artifacts/DICOMautomaton-latest-x86_64.zip.sha256sum
+      - name: deploy_to_halclark_ca
+        run: |
+             echo "${{secrets.HALCLARKCA_DEPLOY_KEY}}" > deploy_key
+             chmod 600 deploy_key
+             for i in `seq 1 20` ; do sleep 5 ; rsync -avP -e 'ssh -v -i deploy_key -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no' ci_artifacts/ root@halclark.ca:/var/www/html/ci/ && break ; done
+
   build_debian_oldstable_x86_64:
     runs-on: ubuntu-latest
     container:
