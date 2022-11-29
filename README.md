@@ -2,9 +2,10 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Language](https://img.shields.io/github/languages/top/hdclark/DICOMautomaton.svg)](https://gitlab.com/hdeanclark/DICOMautomaton)
+[![Language Grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/hdclark/DICOMautomaton.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/hdclark/DICOMautomaton/context:cpp)
 [![SLOC](https://img.shields.io/badge/LOC-110k-green.svg)](https://gitlab.com/hdeanclark/DICOMautomaton)
 
-[![Language Grade: C/C++](https://img.shields.io/lgtm/grade/cpp/g/hdclark/DICOMautomaton.svg?logo=lgtm&logoWidth=18)](https://lgtm.com/projects/g/hdclark/DICOMautomaton/context:cpp)
+[![GitHub CI Actions Status](https://github.com/hdclark/DICOMautomaton/actions/workflows/main.yml/badge.svg)](https://github.com/hdclark/DICOMautomaton)
 [![GitLab CI Pipeline Status](https://gitlab.com/hdeanclark/DICOMautomaton/badges/master/pipeline.svg)](https://gitlab.com/hdeanclark/DICOMautomaton/-/commits/master)
 
 [![Project DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4088796.svg)](https://doi.org/10.5281/zenodo.4088796)
@@ -30,6 +31,7 @@
   - [![Void Linux](https://img.shields.io/badge/Latest_Docker_Build_Base-Void_Linux-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_void)
   - [![MXE](https://img.shields.io/badge/Latest_Docker_Build_Base-MXE-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_mxe)
 
+- [Archive of older pre-built continuous integration artifacts](https://halclark.ca/ci/?C=M;O=D)
 
 ## About
 
