@@ -40,7 +40,7 @@ jobs:
              find ./Windows/usr/bin/ -type f -exec chmod 777 '{}' \;
              rsync -a ./Windows/usr/ /usr/
              echo '#!/bin/bash' > /usr/bin/dicomautomaton_dispatcher
-             echo 'exec wine /usr/bin/dicomautomaton_dispatcher.exe \"$@\"' >> /usr/bin/dicomautomaton_dispatcher
+             echo 'exec wine /usr/bin/dicomautomaton_dispatcher.exe "$@"' >> /usr/bin/dicomautomaton_dispatcher
              chmod 777 /usr/bin/dicomautomaton_dispatcher
              dicomautomaton_dispatcher -h
              ./integration_tests/Run.sh -v
