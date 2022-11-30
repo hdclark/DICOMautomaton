@@ -223,7 +223,7 @@ jobs:
              sudo ./docker/build_bases/alpine/setup_host.sh
              sudo ./scripts/enable_swapfile.sh
       - name: authenticate_with_dockerhub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -282,7 +282,7 @@ jobs:
              sudo ./docker/build_bases/alpine/setup_host.sh
              sudo ./scripts/enable_swapfile.sh
       - name: authenticate_with_dockerhub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -341,7 +341,7 @@ jobs:
              sudo ./docker/build_bases/alpine/setup_host.sh
              sudo ./scripts/enable_swapfile.sh
       - name: authenticate_with_dockerhub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
