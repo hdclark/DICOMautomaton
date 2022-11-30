@@ -38,10 +38,14 @@ jobs:
              apt-get update --yes
              apt-get install --yes wine32 wine64
              find ./Windows/usr/bin/ -type f -exec chmod 777 '{}' \;
-             rsync -a ./Windows/usr/ /usr/
+             rsync -a ./Windows/ /opt/
              echo '#!/bin/bash' > /usr/bin/dicomautomaton_dispatcher
-             echo 'exec wine /usr/bin/dicomautomaton_dispatcher.exe "$@"' >> /usr/bin/dicomautomaton_dispatcher
+             echo 'exec wine /opt/usr/bin/dicomautomaton_dispatcher.exe "$@"' >> /usr/bin/dicomautomaton_dispatcher
              chmod 777 /usr/bin/dicomautomaton_dispatcher
+             ls -lash /opt/
+             ls -lash /opt/usr/
+             ls -lash /opt/usr/bin/
+             export PATH="/opt/usr/bin/:${PATH}"
              dicomautomaton_dispatcher -h
              ./integration_tests/Run.sh -v
       - name: create_zip
