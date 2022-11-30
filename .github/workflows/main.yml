@@ -8,7 +8,6 @@ on:
   workflow_dispatch:
 
 jobs:
-
   build_cross_mxe_x86_64:
     runs-on: ubuntu-latest
     container:
@@ -30,33 +29,32 @@ jobs:
              strip ./Windows/usr/lib/*a
       - name: test
         run: |
-             ./integration_tests/Run.sh -v
              export DEBIAN_FRONTEND='noninteractive'
              apt-get update --yes
              apt-get install --yes --no-install-recommends git ca-certificates rsync mesa-utils
              dpkg --add-architecture i386
              apt-get update --yes
              apt-get install --yes wine32 wine64
+             mkdir -pv wine-conf-dir
+             chown "$(id -u)":"$(id -g)" wine-conf-dir
+             export WINEPREFIX="$(pwd)/wine-conf-dir/.wine-prefix"
              find ./Windows/usr/bin/ -type f -exec chmod 777 '{}' \;
              rsync -a ./Windows/ /opt/
              echo '#!/bin/bash' > /usr/bin/dicomautomaton_dispatcher
              echo 'exec wine /opt/usr/bin/dicomautomaton_dispatcher.exe "$@"' >> /usr/bin/dicomautomaton_dispatcher
              chmod 777 /usr/bin/dicomautomaton_dispatcher
-             ls -lash /opt/
-             ls -lash /opt/usr/
-             ls -lash /opt/usr/bin/
-             export PATH="/opt/usr/bin/:${PATH}"
              dicomautomaton_dispatcher -h
              ./integration_tests/Run.sh -v
       - name: create_zip
         run: |
+             export short_sha="$(git rev-parse --short HEAD)"
              export DEBIAN_FRONTEND="noninteractive"
              apt-get update --yes
              apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf zip
              rm -rf ci_artifacts
              mkdir -pv ci_artifacts
-             zip -r ci_artifacts/DICOMautomaton-latest-x86_64.zip ./Windows/
-             cp ci_artifacts/DICOMautomaton-latest-x86_64.zip ci_artifacts/DICOMautomaton-${GITHUB_SHA::8}-x86_64.zip
+             ( cd ./Windows/ && zip -r ../ci_artifacts/DICOMautomaton-latest-x86_64.zip . )
+             cp ci_artifacts/DICOMautomaton-latest-x86_64.zip "ci_artifacts/DICOMautomaton-${short_sha}-x86_64.zip"
              find ci_artifacts/ -iname '*.zip' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
       - name: deploy_to_github
         uses: actions/upload-artifact@v2
