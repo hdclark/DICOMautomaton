@@ -21,6 +21,21 @@ if [ ! -d /dcma ] ; then
     git clone 'https://github.com/hdclark/DICOMautomaton' /dcma
 fi
 
+# Provide a copy of mesa's opengl32.dll. Note that it should stay in same directory as the final compiled exe files (bin).
+#
+# Note: to get list of all needed dlls:
+#   sudo apt-get install python3-pefile python3-pip
+#   pip install mingw_ldd
+#   /mxe/usr/x86_64-w64-mingw32.static/bin# 
+#   mingw-ldd "/mxe/usr/${TOOLCHAIN}/bin/opengl32.dll"  --dll-lookup-dirs "/mxe/usr/${TOOLCHAIN}/bin/"
+#
+# Note: this is NOT needed, it is only provided for convenience on systems lacking opengl32.dll.
+#
+cp "/mxe/usr/${TOOLCHAIN}/bin/opengl32.dll"  \
+   "/mxe/usr/${TOOLCHAIN}/bin/libgallium_wgl.dll" "/out/usr/bin/"
+"${TOOLCHAIN}-strip" "/out/usr/bin/opengl32.dll" \
+                     "/out/usr/bin/libgallium_wgl.dll"
+
 # Re-build dependencies to improve re-use of the base container.
 #
 # The full MXE toolchain is a heavyweight in terms of size and computation time, which makes it hard to integrate into
