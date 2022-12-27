@@ -86,6 +86,35 @@ apk add --no-cache bzip2 xz unzip
     cd / && rm -rf /asio || true
 )
 
+# Thrift.
+(
+    cd / && rm -rf /thrift || true
+    mkdir -pv /thrift
+    cd /thrift
+
+    wget 'https://dlcdn.apache.org/thrift/0.17.0/thrift-0.17.0.tar.gz' -O thrift.tgz
+    tar -axf thrift.tgz || unzip thrift.tgz
+    cd thrift-*/
+    mkdir cmake_build && cd cmake_build
+    cmake \
+      -DCMAKE_CXX_STANDARD=17 \
+      -DCMAKE_INSTALL_PREFIX=/usr \
+      -DBUILD_CPP=ON \
+      -DBUILD_COMPILER=OFF \
+      -DBUILD_PYTHON=OFF \
+      -DBUILD_NODEJS=OFF \
+      -DBUILD_TESTING=OFF \
+      -DBUILD_C_GLIB=OFF \
+      -DBUILD_JAVA=OFF \
+      -DBUILD_JAVASCRIPT=OFF \
+      -DBUILD_KOTLIN=OFF \
+      ..
+
+    make -j"$JOBS" install
+    cd / && rm -rf /thrift || true
+)
+
+
 # Tinkering with minimal static mesa build. Currently doesn't seem like there is a way forward.
 #
 #apk add --no-cache libx11-dev libx11-static glu-dev glu mesa-dev mesa-dev
