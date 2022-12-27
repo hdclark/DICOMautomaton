@@ -65,7 +65,8 @@ until
       cgal \
       wt \
       asio \
-      nlopt
+      nlopt \
+      thrift
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5

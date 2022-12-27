@@ -51,6 +51,8 @@ until
       freeglut3-dev \
       libxi-dev \
       libxmu-dev \
+      libthrift-dev \
+      thrift-compiler \
       patchelf #\
 #     && \
 #     apt-get install --yes --no-install-recommends \
