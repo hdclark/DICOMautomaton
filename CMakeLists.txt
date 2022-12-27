@@ -25,6 +25,7 @@ option(WITH_WT        "Compile assuming Wt is available."                       
 option(WITH_GNU_GSL   "Compile assuming the GNU GSL is available."              ON)
 option(WITH_POSTGRES  "Compile assuming PostgreSQL libraries are available."    ON)
 option(WITH_JANSSON   "Compile assuming Jansson is available."                  ON)
+option(WITH_THRIFT    "Compile assuming Apache Thrift is available."            ON)
 
 option(BUILD_SHARED_LIBS "Build shared-object/dynamicly-loaded binaries."       ON)
 
@@ -143,6 +144,12 @@ if(WITH_POSTGRES)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(POSTGRES REQUIRED libpq libpqxx)
     include_directories( ${POSTGRES_INCLUDE_DIRS} )
+endif()
+
+if(WITH_THRIFT)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(THRIFT REQUIRED thrift)
+    include_directories( ${THRIFT_INCLUDE_DIRS} )
 endif()
 
 ####################################################################################
@@ -371,6 +378,14 @@ if(WITH_GNU_GSL)
 else()
     message(STATUS "Assuming the GNU GSL is not available.")
     add_definitions(-UDCMA_USE_GNU_GSL)
+endif()
+
+if(WITH_THRIFT)
+    message(STATUS "Assuming Apache Thrift is available.")
+    add_definitions(-DDCMA_USE_THRIFT=1)
+else()
+    message(STATUS "Assuming Apache Thrift is not available.")
+    add_definitions(-UDCMA_USE_THRIFT)
 endif()
 
 # Detect whether specific functions/variable/macros are available.

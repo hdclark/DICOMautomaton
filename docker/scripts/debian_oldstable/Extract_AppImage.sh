@@ -97,6 +97,7 @@ cmake \
   -DWITH_GNU_GSL=ON \
   -DWITH_POSTGRES=ON \
   -DWITH_JANSSON=ON \
+  -DWITH_THRIFT=ON \
   ../
 make -j 8 VERBOSE=1
 make install DESTDIR=/scratch/AppDir/

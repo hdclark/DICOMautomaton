@@ -58,6 +58,8 @@ until \
         libxi-dev \
         libxmu-dev \
         patchelf \
+        libthrift-dev \
+        thrift-compiler \
         ` # Additional dependencies for headless OpenGL rendering with SFML ` \
         x-window-system \
         mesa-utils \

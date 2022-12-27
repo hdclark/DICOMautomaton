@@ -1,0 +1,108 @@
+digraph "DCMA" {
+node [style=filled, shape=record];
+edge [arrowsize=0.5];
+rankdir=LR
+node [fillcolor=azure];
+metadata_t [label="metadata_t :: map\<string, string\>"];
+node [fillcolor=beige];
+vec3_double [label="struct vec3_double|<field_x>x :: double|<field_y>y :: double|<field_z>z :: double"];
+node [fillcolor=beige];
+contour_of_points_double [label="struct contour_of_points_double|<field_points>points :: list\<vec3_double\>|<field_closed>closed :: bool|<field_metadata>metadata :: metadata_t"];
+node [fillcolor=beige];
+contour_collection_double [label="struct contour_collection_double|<field_contours>contours :: list\<contour_of_points_double\>"];
+node [fillcolor=beige];
+point_set_double [label="struct point_set_double|<field_points>points :: list\<vec3_double\>|<field_normals>normals :: list\<vec3_double\>|<field_colours>colours :: list\<i64\>|<field_metadata>metadata :: metadata_t"];
+node [fillcolor=beige];
+sample4_double [label="struct sample4_double|<field_x>x :: double|<field_sigma_x>sigma_x :: double|<field_f>f :: double|<field_sigma_f>sigma_f :: double"];
+node [fillcolor=beige];
+samples_1D_double [label="struct samples_1D_double|<field_samples>samples :: list\<sample4_double\>|<field_uncertainties_known_to_be_independent_and_random>uncertainties_known_to_be_independent_and_random :: bool|<field_metadata>metadata :: metadata_t"];
+node [fillcolor=beige];
+fv_surface_mesh_double_int64 [label="struct fv_surface_mesh_double_int64|<field_vertices>vertices :: list\<vec3_double\>|<field_vertex_normals>vertex_normals :: list\<vec3_double\>|<field_vertex_colours>vertex_colours :: list\<i64\>|<field_faces>faces :: list\<list\<i64\>\>|<field_involved_faces>involved_faces :: list\<list\<i64\>\>|<field_metadata>metadata :: metadata_t"];
+node [fillcolor=beige];
+planar_image_double_double [label="struct planar_image_double_double|<field_data>data :: list\<double\>|<field_rows>rows :: i64|<field_columns>columns :: i64|<field_channels>channels :: i64|<field_pxl_dx>pxl_dx :: double|<field_pxl_dy>pxl_dy :: double|<field_pxl_dz>pxl_dz :: double|<field_anchor>anchor :: vec3_double|<field_offset>offset :: vec3_double|<field_row_unit>row_unit :: vec3_double|<field_col_unit>col_unit :: vec3_double|<field_metadata>metadata :: metadata_t"];
+node [fillcolor=beige];
+planar_image_collection_double_double [label="struct planar_image_collection_double_double|<field_images>images :: list\<planar_image_double_double\>"];
+node [fillcolor=beige];
+cell_string [label="struct cell_string"];
+node [fillcolor=beige];
+table2 [label="struct table2"];
+node [fillcolor=beige];
+Contour_Data [label="struct Contour_Data|<field_ccs>ccs :: list\<contour_collection_double\>"];
+node [fillcolor=beige];
+Image_Array [label="struct Image_Array|<field_imagecoll>imagecoll :: planar_image_collection_double_double|<field_filename>filename :: string"];
+node [fillcolor=beige];
+Point_Cloud [label="struct Point_Cloud|<field_pset>pset :: point_set_double"];
+node [fillcolor=beige];
+Surface_Mesh [label="struct Surface_Mesh|<field_meshes>meshes :: fv_surface_mesh_double_int64"];
+node [fillcolor=beige];
+Static_Machine_State [label="struct Static_Machine_State|<field_CumulativeMetersetWeight>CumulativeMetersetWeight :: double|<field_ControlPointIndex>ControlPointIndex :: i64|<field_GantryAngle>GantryAngle :: double|<field_GantryRotationDirection>GantryRotationDirection :: double|<field_BeamLimitingDeviceAngle>BeamLimitingDeviceAngle :: double|<field_BeamLimitingDeviceRotationDirection>BeamLimitingDeviceRotationDirection :: double|<field_PatientSupportAngle>PatientSupportAngle :: double|<field_PatientSupportRotationDirection>PatientSupportRotationDirection :: double|<field_TableTopEccentricAngle>TableTopEccentricAngle :: double|<field_TableTopEccentricRotationDirection>TableTopEccentricRotationDirection :: double|<field_TableTopVerticalPosition>TableTopVerticalPosition :: double|<field_TableTopLongitudinalPosition>TableTopLongitudinalPosition :: double|<field_TableTopLateralPosition>TableTopLateralPosition :: double|<field_TableTopPitchAngle>TableTopPitchAngle :: double|<field_TableTopPitchRotationDirection>TableTopPitchRotationDirection :: double|<field_TableTopRollAngle>TableTopRollAngle :: double|<field_TableTopRollRotationDirection>TableTopRollRotationDirection :: double|<field_IsocentrePosition>IsocentrePosition :: vec3_double|<field_JawPositionsX>JawPositionsX :: list\<double\>|<field_JawPositionsY>JawPositionsY :: list\<double\>|<field_MLCPositionsX>MLCPositionsX :: list\<double\>|<field_metadata>metadata :: metadata_t"];
+node [fillcolor=beige];
+Dynamic_Machine_State [label="struct Dynamic_Machine_State|<field_BeamNumber>BeamNumber :: i64|<field_FinalCumulativeMetersetWeight>FinalCumulativeMetersetWeight :: double|<field_static_states>static_states :: list\<Static_Machine_State\>|<field_metadata>metadata :: metadata_t"];
+node [fillcolor=beige];
+RTPlan [label="struct RTPlan|<field_dynamic_states>dynamic_states :: list\<Dynamic_Machine_State\>|<field_metadata>metadata :: metadata_t"];
+node [fillcolor=beige];
+Line_Sample [label="struct Line_Sample|<field_line>line :: samples_1D_double"];
+node [fillcolor=beige];
+Transform3 [label="struct Transform3"];
+node [fillcolor=beige];
+Sparse_Table [label="struct Sparse_Table|<field_table>table :: table2"];
+node [fillcolor=beige];
+Drover [label="struct Drover|<field_contour_data>contour_data :: list\<Contour_Data\>|<field_image_data>image_data :: list\<Image_Array\>|<field_point_data>point_data :: list\<Point_Cloud\>|<field_smesh_data>smesh_data :: list\<Surface_Mesh\>|<field_rtplan_data>rtplan_data :: list\<RTPlan\>|<field_lsamp_data>lsamp_data :: list\<Line_Sample\>|<field_trans_data>trans_data :: list\<Transform3\>|<field_table_data>table_data :: list\<Sparse_Table\>"];
+node [fillcolor=beige];
+OperationsQuery [label="struct OperationsQuery"];
+node [fillcolor=beige];
+KnownOperation [label="struct KnownOperation|<field_name>name :: string"];
+node [fillcolor=beige];
+LoadFilesQuery [label="struct LoadFilesQuery|<field_server_filename>server_filename :: string"];
+node [fillcolor=beige];
+LoadFilesResponse [label="struct LoadFilesResponse|<field_success>success :: bool|<field_drover>drover :: Drover"];
+subgraph cluster_Receiver {
+node [fillcolor=bisque];
+style=dashed;
+label = "Receiver service";
+function_ReceiverGetSupportedOperations[label="<return_type>function GetSupportedOperations :: list\<KnownOperation\>|<param_query>query :: OperationsQuery"];
+function_ReceiverLoadFiles[label="<return_type>function LoadFiles :: LoadFilesResponse|<param_server_filenames>server_filenames :: list\<LoadFilesQuery\>"];
+ }
+contour_of_points_double:field_points -> vec3_double
+contour_of_points_double:field_metadata -> metadata_t
+contour_collection_double:field_contours -> contour_of_points_double
+point_set_double:field_points -> vec3_double
+point_set_double:field_normals -> vec3_double
+point_set_double:field_metadata -> metadata_t
+samples_1D_double:field_samples -> sample4_double
+samples_1D_double:field_metadata -> metadata_t
+fv_surface_mesh_double_int64:field_vertices -> vec3_double
+fv_surface_mesh_double_int64:field_vertex_normals -> vec3_double
+fv_surface_mesh_double_int64:field_metadata -> metadata_t
+planar_image_double_double:field_anchor -> vec3_double
+planar_image_double_double:field_offset -> vec3_double
+planar_image_double_double:field_row_unit -> vec3_double
+planar_image_double_double:field_col_unit -> vec3_double
+planar_image_double_double:field_metadata -> metadata_t
+planar_image_collection_double_double:field_images -> planar_image_double_double
+Contour_Data:field_ccs -> contour_collection_double
+Image_Array:field_imagecoll -> planar_image_collection_double_double
+Point_Cloud:field_pset -> point_set_double
+Surface_Mesh:field_meshes -> fv_surface_mesh_double_int64
+Static_Machine_State:field_IsocentrePosition -> vec3_double
+Static_Machine_State:field_metadata -> metadata_t
+Dynamic_Machine_State:field_static_states -> Static_Machine_State
+Dynamic_Machine_State:field_metadata -> metadata_t
+RTPlan:field_dynamic_states -> Dynamic_Machine_State
+RTPlan:field_metadata -> metadata_t
+Line_Sample:field_line -> samples_1D_double
+Sparse_Table:field_table -> table2
+Drover:field_contour_data -> Contour_Data
+Drover:field_image_data -> Image_Array
+Drover:field_point_data -> Point_Cloud
+Drover:field_smesh_data -> Surface_Mesh
+Drover:field_rtplan_data -> RTPlan
+Drover:field_lsamp_data -> Line_Sample
+Drover:field_trans_data -> Transform3
+Drover:field_table_data -> Sparse_Table
+LoadFilesResponse:field_drover -> Drover
+function_ReceiverGetSupportedOperations:return_type -> KnownOperation
+function_ReceiverGetSupportedOperations:param_query -> OperationsQuery
+function_ReceiverLoadFiles:return_type -> LoadFilesResponse
+function_ReceiverLoadFiles:param_server_filenames -> LoadFilesQuery
+}

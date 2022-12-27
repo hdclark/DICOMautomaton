@@ -69,6 +69,8 @@ until
         libxmu-dev \
         xz-utils \
         `# 'libc++-dev' ` \
+        libthrift-dev \
+        thrift-compiler \
         patchelf \
         ` # Additional dependencies for headless OpenGL rendering with SFML ` \
         x-window-system \

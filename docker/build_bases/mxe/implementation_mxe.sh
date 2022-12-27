@@ -59,8 +59,12 @@ done
 # instructions inside a recent `Debian` `Docker` container (or VM, instance, or bare metal installation). The following
 # is essentially a lightly customized version of the MXE tutorial.
 
-git clone https://github.com/mxe/mxe.git /mxe
+git clone 'https://github.com/mxe/mxe.git' /mxe
 cd /mxe
+
+# Add custom package.
+git clone 'https://github.com/hdclark/mxe.git' /mxe_custom
+cp /mxe{_custom,}/src/thrift.mk
 
 # Remove components we won't need to reduce setup time.
 rm -rf src/qt* src/ocaml* src/sdl2_* || true

@@ -59,6 +59,7 @@ until
       freeglut \
       libxi \
       libxmu \
+      thrift \
       ` # Additional dependencies for headless OpenGL rendering with SFML ` \
       xorg-server \
       xorg-apps \

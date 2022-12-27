@@ -1,0 +1,1049 @@
+{
+  "name": "DCMA",
+  "namespaces": {
+    "cpp": "dcma.rpc",
+    "py": "dcma.rpc"
+  },
+  "includes": [
+  ],
+  "enums": [
+  ],
+  "typedefs": [
+    {
+      "name": "metadata_t",
+      "typeId": "map",
+      "type": {
+        "typeId": "map",
+        "keyTypeId": "string",
+        "valueTypeId": "string"
+      }
+    }
+  ],
+  "structs": [
+    {
+      "name": "vec3_double",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "x",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 2,
+          "name": "y",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 3,
+          "name": "z",
+          "typeId": "double",
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "contour_of_points_double",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "points",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "vec3_double"
+            }
+          },
+          "required": "required"
+        },
+        {
+          "key": 2,
+          "name": "closed",
+          "typeId": "bool",
+          "required": "required"
+        },
+        {
+          "key": 3,
+          "name": "metadata",
+          "typeId": "map",
+          "type": {
+            "typeId": "map",
+            "keyTypeId": "string",
+            "valueTypeId": "string"
+          },
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "contour_collection_double",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "contours",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "contour_of_points_double"
+            }
+          },
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "point_set_double",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "points",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "vec3_double"
+            }
+          },
+          "required": "required"
+        },
+        {
+          "key": 2,
+          "name": "normals",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "vec3_double"
+            }
+          },
+          "required": "required"
+        },
+        {
+          "key": 3,
+          "name": "colours",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "i64"
+          },
+          "required": "required"
+        },
+        {
+          "key": 4,
+          "name": "metadata",
+          "typeId": "map",
+          "type": {
+            "typeId": "map",
+            "keyTypeId": "string",
+            "valueTypeId": "string"
+          },
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "sample4_double",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "x",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 2,
+          "name": "sigma_x",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 3,
+          "name": "f",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 4,
+          "name": "sigma_f",
+          "typeId": "double",
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "samples_1D_double",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "samples",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "sample4_double"
+            }
+          },
+          "required": "required"
+        },
+        {
+          "key": 2,
+          "name": "uncertainties_known_to_be_independent_and_random",
+          "typeId": "bool",
+          "required": "required"
+        },
+        {
+          "key": 3,
+          "name": "metadata",
+          "typeId": "map",
+          "type": {
+            "typeId": "map",
+            "keyTypeId": "string",
+            "valueTypeId": "string"
+          },
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "fv_surface_mesh_double_int64",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "vertices",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "vec3_double"
+            }
+          },
+          "required": "required"
+        },
+        {
+          "key": 2,
+          "name": "vertex_normals",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "vec3_double"
+            }
+          },
+          "required": "required"
+        },
+        {
+          "key": 3,
+          "name": "vertex_colours",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "i64"
+          },
+          "required": "required"
+        },
+        {
+          "key": 4,
+          "name": "faces",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "list",
+            "elemType": {
+              "typeId": "list",
+              "elemTypeId": "i64"
+            }
+          },
+          "required": "required"
+        },
+        {
+          "key": 5,
+          "name": "involved_faces",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "list",
+            "elemType": {
+              "typeId": "list",
+              "elemTypeId": "i64"
+            }
+          },
+          "required": "required"
+        },
+        {
+          "key": 6,
+          "name": "metadata",
+          "typeId": "map",
+          "type": {
+            "typeId": "map",
+            "keyTypeId": "string",
+            "valueTypeId": "string"
+          },
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "planar_image_double_double",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "data",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "double"
+          },
+          "required": "required"
+        },
+        {
+          "key": 2,
+          "name": "rows",
+          "typeId": "i64",
+          "required": "required"
+        },
+        {
+          "key": 3,
+          "name": "columns",
+          "typeId": "i64",
+          "required": "required"
+        },
+        {
+          "key": 4,
+          "name": "channels",
+          "typeId": "i64",
+          "required": "required"
+        },
+        {
+          "key": 5,
+          "name": "pxl_dx",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 6,
+          "name": "pxl_dy",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 7,
+          "name": "pxl_dz",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 8,
+          "name": "anchor",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "vec3_double"
+          },
+          "required": "required"
+        },
+        {
+          "key": 9,
+          "name": "offset",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "vec3_double"
+          },
+          "required": "required"
+        },
+        {
+          "key": 10,
+          "name": "row_unit",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "vec3_double"
+          },
+          "required": "required"
+        },
+        {
+          "key": 11,
+          "name": "col_unit",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "vec3_double"
+          },
+          "required": "required"
+        },
+        {
+          "key": 12,
+          "name": "metadata",
+          "typeId": "map",
+          "type": {
+            "typeId": "map",
+            "keyTypeId": "string",
+            "valueTypeId": "string"
+          },
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "planar_image_collection_double_double",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "images",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "planar_image_double_double"
+            }
+          },
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "cell_string",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+      ]
+    },
+    {
+      "name": "table2",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+      ]
+    },
+    {
+      "name": "Contour_Data",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "ccs",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "contour_collection_double"
+            }
+          },
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "Image_Array",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "imagecoll",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "planar_image_collection_double_double"
+          },
+          "required": "required"
+        },
+        {
+          "key": 2,
+          "name": "filename",
+          "typeId": "string",
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "Point_Cloud",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "pset",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "point_set_double"
+          },
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "Surface_Mesh",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "meshes",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "fv_surface_mesh_double_int64"
+          },
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "Static_Machine_State",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "CumulativeMetersetWeight",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 2,
+          "name": "ControlPointIndex",
+          "typeId": "i64",
+          "required": "required"
+        },
+        {
+          "key": 3,
+          "name": "GantryAngle",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 4,
+          "name": "GantryRotationDirection",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 5,
+          "name": "BeamLimitingDeviceAngle",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 6,
+          "name": "BeamLimitingDeviceRotationDirection",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 7,
+          "name": "PatientSupportAngle",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 8,
+          "name": "PatientSupportRotationDirection",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 9,
+          "name": "TableTopEccentricAngle",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 10,
+          "name": "TableTopEccentricRotationDirection",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 11,
+          "name": "TableTopVerticalPosition",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 12,
+          "name": "TableTopLongitudinalPosition",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 13,
+          "name": "TableTopLateralPosition",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 14,
+          "name": "TableTopPitchAngle",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 15,
+          "name": "TableTopPitchRotationDirection",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 16,
+          "name": "TableTopRollAngle",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 17,
+          "name": "TableTopRollRotationDirection",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 18,
+          "name": "IsocentrePosition",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "vec3_double"
+          },
+          "required": "required"
+        },
+        {
+          "key": 19,
+          "name": "JawPositionsX",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "double"
+          },
+          "required": "required"
+        },
+        {
+          "key": 20,
+          "name": "JawPositionsY",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "double"
+          },
+          "required": "required"
+        },
+        {
+          "key": 21,
+          "name": "MLCPositionsX",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "double"
+          },
+          "required": "required"
+        },
+        {
+          "key": 22,
+          "name": "metadata",
+          "typeId": "map",
+          "type": {
+            "typeId": "map",
+            "keyTypeId": "string",
+            "valueTypeId": "string"
+          },
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "Dynamic_Machine_State",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "BeamNumber",
+          "typeId": "i64",
+          "required": "required"
+        },
+        {
+          "key": 2,
+          "name": "FinalCumulativeMetersetWeight",
+          "typeId": "double",
+          "required": "required"
+        },
+        {
+          "key": 3,
+          "name": "static_states",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "Static_Machine_State"
+            }
+          },
+          "required": "required"
+        },
+        {
+          "key": 4,
+          "name": "metadata",
+          "typeId": "map",
+          "type": {
+            "typeId": "map",
+            "keyTypeId": "string",
+            "valueTypeId": "string"
+          },
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "RTPlan",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "dynamic_states",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "Dynamic_Machine_State"
+            }
+          },
+          "required": "required"
+        },
+        {
+          "key": 2,
+          "name": "metadata",
+          "typeId": "map",
+          "type": {
+            "typeId": "map",
+            "keyTypeId": "string",
+            "valueTypeId": "string"
+          },
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "Line_Sample",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "line",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "samples_1D_double"
+          },
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "Transform3",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+      ]
+    },
+    {
+      "name": "Sparse_Table",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "table",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "table2"
+          },
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "Drover",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "contour_data",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "Contour_Data"
+            }
+          },
+          "required": "optional"
+        },
+        {
+          "key": 2,
+          "name": "image_data",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "Image_Array"
+            }
+          },
+          "required": "optional"
+        },
+        {
+          "key": 3,
+          "name": "point_data",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "Point_Cloud"
+            }
+          },
+          "required": "optional"
+        },
+        {
+          "key": 4,
+          "name": "smesh_data",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "Surface_Mesh"
+            }
+          },
+          "required": "optional"
+        },
+        {
+          "key": 5,
+          "name": "rtplan_data",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "RTPlan"
+            }
+          },
+          "required": "optional"
+        },
+        {
+          "key": 6,
+          "name": "lsamp_data",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "Line_Sample"
+            }
+          },
+          "required": "optional"
+        },
+        {
+          "key": 7,
+          "name": "trans_data",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "Transform3"
+            }
+          },
+          "required": "optional"
+        },
+        {
+          "key": 8,
+          "name": "table_data",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "Sparse_Table"
+            }
+          },
+          "required": "optional"
+        }
+      ]
+    },
+    {
+      "name": "OperationsQuery",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+      ]
+    },
+    {
+      "name": "KnownOperation",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "name",
+          "typeId": "string",
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "LoadFilesQuery",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "server_filename",
+          "typeId": "string",
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "LoadFilesResponse",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "success",
+          "typeId": "bool",
+          "required": "required"
+        },
+        {
+          "key": 2,
+          "name": "drover",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "Drover"
+          },
+          "required": "optional"
+        }
+      ]
+    }
+  ],
+  "constants": [
+  ],
+  "services": [
+    {
+      "name": "Receiver",
+      "functions": [
+        {
+          "name": "GetSupportedOperations",
+          "returnTypeId": "list",
+          "returnType": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "KnownOperation"
+            }
+          },
+          "oneway": false,
+          "arguments": [
+            {
+              "key": 1,
+              "name": "query",
+              "typeId": "struct",
+              "type": {
+                "typeId": "struct",
+                "class": "OperationsQuery"
+              },
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "LoadFiles",
+          "returnTypeId": "struct",
+          "returnType": {
+            "typeId": "struct",
+            "class": "LoadFilesResponse"
+          },
+          "oneway": false,
+          "arguments": [
+            {
+              "key": 1,
+              "name": "server_filenames",
+              "typeId": "list",
+              "type": {
+                "typeId": "list",
+                "elemTypeId": "struct",
+                "elemType": {
+                  "typeId": "struct",
+                  "class": "LoadFilesQuery"
+                }
+              },
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        }
+      ]
+    }
+  ]
+}

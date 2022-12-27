@@ -56,6 +56,8 @@ until
         freeglut3-dev \
         libxi-dev \
         libxmu-dev \
+        libthrift-dev \
+        thrift-compiler \
         patchelf \
         ` # Additional dependencies for headless OpenGL rendering with SFML ` \
         x-window-system \

@@ -36,6 +36,7 @@ until
         sdl2-dev sdl-static \
         glew-dev \
         jansson-dev \
+        thrift \
         patchelf \
         ` # Additional dependencies for headless OpenGL rendering with SFML ` \
         libx11-dev libx11-static \

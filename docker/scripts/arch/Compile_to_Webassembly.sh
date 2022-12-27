@@ -162,6 +162,7 @@ emcmake \
     -DWITH_GNU_GSL=OFF \
     -DWITH_POSTGRES=OFF \
     -DWITH_JANSSON=OFF \
+    -DWITH_THRIFT=OFF \
     ../
 emmake \
   make \

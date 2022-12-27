@@ -84,7 +84,7 @@ if [[ "${DISTRIBUTION}" =~ .*[dD]ebian.* ]] ; then
     until $SUDO apt-get update --yes && \
           $SUDO apt-get install --yes --no-install-recommends \
             bash git rsync \
-            wget ca-certificates \
+            wget ca-certificates openssl \
             mesa-utils libfreetype6 libsdl2-dev libice-dev libsm-dev libopengl0 g++
     do
         (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
@@ -98,7 +98,7 @@ elif [[ "${DISTRIBUTION}" =~ .*[uU]buntu.* ]] ; then
     until $SUDO apt-get update --yes && \
           $SUDO apt-get install --yes --no-install-recommends \
             bash git rsync \
-            wget ca-certificates \
+            wget ca-certificates libssl-dev \
             mesa-utils libfreetype6 libsdl2-dev libice-dev libsm-dev libopengl0 g++
     do
         (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
@@ -114,7 +114,7 @@ elif [[ "${DISTRIBUTION}" =~ .*[aA]rch.* ]] ; then
     #- "sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf"
     until $SUDO pacman -Syu --noconfirm --needed \
             bash git rsync \
-            wget ca-certificates \
+            wget ca-certificates openssl \
             mesa freetype2 sdl2 alsa-lib libice libsm libglvnd gcc-libs
     do
         (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
@@ -127,7 +127,7 @@ elif [[ "${DISTRIBUTION}" =~ .*[fF]edora.* ]] ; then
     until $SUDO dnf -y upgrade && \
           $SUDO dnf -y install \
             bash git rsync \
-            wget ca-certificates \
+            wget ca-certificates openssl \
             findutils mesa-libGL freetype SDL2 alsa-lib libICE libSM libgcc libglvnd-opengl libstdc++
     do
         (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1

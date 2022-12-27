@@ -1,0 +1,307 @@
+# Thrift module: DCMA
+
+
+
+| Module | Services & Functions | Data types | Constants |
+| --- | --- | --- | --- |
+|DCMA|[Receiver](#service-receiver)|[metadata_t](#typedef-metadata_t)||
+||	[ &bull; GetSupportedOperations](#function-receivergetsupportedoperations)|[vec3_double](#struct-vec3_double)||
+||	[ &bull; LoadFiles](#function-receiverloadfiles)|[contour_of_points_double](#struct-contour_of_points_double)||
+|||[contour_collection_double](#struct-contour_collection_double)||
+|||[point_set_double](#struct-point_set_double)||
+|||[sample4_double](#struct-sample4_double)||
+|||[samples_1D_double](#struct-samples_1d_double)||
+|||[fv_surface_mesh_double_int64](#struct-fv_surface_mesh_double_int64)||
+|||[planar_image_double_double](#struct-planar_image_double_double)||
+|||[planar_image_collection_double_double](#struct-planar_image_collection_double_double)||
+|||[cell_string](#struct-cell_string)||
+|||[table2](#struct-table2)||
+|||[Contour_Data](#struct-contour_data)||
+|||[Image_Array](#struct-image_array)||
+|||[Point_Cloud](#struct-point_cloud)||
+|||[Surface_Mesh](#struct-surface_mesh)||
+|||[Static_Machine_State](#struct-static_machine_state)||
+|||[Dynamic_Machine_State](#struct-dynamic_machine_state)||
+|||[RTPlan](#struct-rtplan)||
+|||[Line_Sample](#struct-line_sample)||
+|||[Transform3](#struct-transform3)||
+|||[Sparse_Table](#struct-sparse_table)||
+|||[Drover](#struct-drover)||
+|||[OperationsQuery](#struct-operationsquery)||
+|||[KnownOperation](#struct-knownoperation)||
+|||[LoadFilesQuery](#struct-loadfilesquery)||
+|||[LoadFilesResponse](#struct-loadfilesresponse)||
+
+
+***
+## Type declarations
+
+### Typedef: metadata_t
+
+
+_Base type_: **map&lt;```string```, ```string```&gt;**
+
+
+***
+## Data structures
+
+### Struct: vec3_double
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|x|```double```||required||
+|2|y|```double```||required||
+|3|z|```double```||required||
+
+### Struct: contour_of_points_double
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|points|list&lt;[```vec3_double```](#struct-vec3_double)&gt;||required||
+|2|closed|```bool```||required||
+|3|metadata|[```metadata_t```](#typedef-metadata_t)||required||
+
+### Struct: contour_collection_double
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|contours|list&lt;[```contour_of_points_double```](#struct-contour_of_points_double)&gt;||required||
+
+### Struct: point_set_double
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|points|list&lt;[```vec3_double```](#struct-vec3_double)&gt;||required||
+|2|normals|list&lt;[```vec3_double```](#struct-vec3_double)&gt;||required||
+|3|colours|list&lt;```i64```&gt;||required||
+|4|metadata|[```metadata_t```](#typedef-metadata_t)||required||
+
+### Struct: sample4_double
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|x|```double```||required||
+|2|sigma_x|```double```||required||
+|3|f|```double```||required||
+|4|sigma_f|```double```||required||
+
+### Struct: samples_1D_double
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|samples|list&lt;[```sample4_double```](#struct-sample4_double)&gt;||required||
+|2|uncertainties_known_to_be_independent_and_random|```bool```||required||
+|3|metadata|[```metadata_t```](#typedef-metadata_t)||required||
+
+### Struct: fv_surface_mesh_double_int64
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|vertices|list&lt;[```vec3_double```](#struct-vec3_double)&gt;||required||
+|2|vertex_normals|list&lt;[```vec3_double```](#struct-vec3_double)&gt;||required||
+|3|vertex_colours|list&lt;```i64```&gt;||required||
+|4|faces|list&lt;list&lt;```i64```&gt;&gt;||required||
+|5|involved_faces|list&lt;list&lt;```i64```&gt;&gt;||required||
+|6|metadata|[```metadata_t```](#typedef-metadata_t)||required||
+
+### Struct: planar_image_double_double
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|data|list&lt;```double```&gt;||required||
+|2|rows|```i64```||required||
+|3|columns|```i64```||required||
+|4|channels|```i64```||required||
+|5|pxl_dx|```double```||required||
+|6|pxl_dy|```double```||required||
+|7|pxl_dz|```double```||required||
+|8|anchor|[```vec3_double```](#struct-vec3_double)||required||
+|9|offset|[```vec3_double```](#struct-vec3_double)||required||
+|10|row_unit|[```vec3_double```](#struct-vec3_double)||required||
+|11|col_unit|[```vec3_double```](#struct-vec3_double)||required||
+|12|metadata|[```metadata_t```](#typedef-metadata_t)||required||
+
+### Struct: planar_image_collection_double_double
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|images|list&lt;[```planar_image_double_double```](#struct-planar_image_double_double)&gt;||required||
+
+### Struct: cell_string
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+
+### Struct: table2
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+
+### Struct: Contour_Data
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|ccs|list&lt;[```contour_collection_double```](#struct-contour_collection_double)&gt;||required||
+
+### Struct: Image_Array
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|imagecoll|[```planar_image_collection_double_double```](#struct-planar_image_collection_double_double)||required||
+|2|filename|```string```||required||
+
+### Struct: Point_Cloud
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|pset|[```point_set_double```](#struct-point_set_double)||required||
+
+### Struct: Surface_Mesh
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|meshes|[```fv_surface_mesh_double_int64```](#struct-fv_surface_mesh_double_int64)||required||
+
+### Struct: Static_Machine_State
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|CumulativeMetersetWeight|```double```||required||
+|2|ControlPointIndex|```i64```||required||
+|3|GantryAngle|```double```||required||
+|4|GantryRotationDirection|```double```||required||
+|5|BeamLimitingDeviceAngle|```double```||required||
+|6|BeamLimitingDeviceRotationDirection|```double```||required||
+|7|PatientSupportAngle|```double```||required||
+|8|PatientSupportRotationDirection|```double```||required||
+|9|TableTopEccentricAngle|```double```||required||
+|10|TableTopEccentricRotationDirection|```double```||required||
+|11|TableTopVerticalPosition|```double```||required||
+|12|TableTopLongitudinalPosition|```double```||required||
+|13|TableTopLateralPosition|```double```||required||
+|14|TableTopPitchAngle|```double```||required||
+|15|TableTopPitchRotationDirection|```double```||required||
+|16|TableTopRollAngle|```double```||required||
+|17|TableTopRollRotationDirection|```double```||required||
+|18|IsocentrePosition|[```vec3_double```](#struct-vec3_double)||required||
+|19|JawPositionsX|list&lt;```double```&gt;||required||
+|20|JawPositionsY|list&lt;```double```&gt;||required||
+|21|MLCPositionsX|list&lt;```double```&gt;||required||
+|22|metadata|[```metadata_t```](#typedef-metadata_t)||required||
+
+### Struct: Dynamic_Machine_State
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|BeamNumber|```i64```||required||
+|2|FinalCumulativeMetersetWeight|```double```||required||
+|3|static_states|list&lt;[```Static_Machine_State```](#struct-static_machine_state)&gt;||required||
+|4|metadata|[```metadata_t```](#typedef-metadata_t)||required||
+
+### Struct: RTPlan
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|dynamic_states|list&lt;[```Dynamic_Machine_State```](#struct-dynamic_machine_state)&gt;||required||
+|2|metadata|[```metadata_t```](#typedef-metadata_t)||required||
+
+### Struct: Line_Sample
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|line|[```samples_1D_double```](#struct-samples_1d_double)||required||
+
+### Struct: Transform3
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+
+### Struct: Sparse_Table
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|table|[```table2```](#struct-table2)||required||
+
+### Struct: Drover
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|contour_data|list&lt;[```Contour_Data```](#struct-contour_data)&gt;||optional||
+|2|image_data|list&lt;[```Image_Array```](#struct-image_array)&gt;||optional||
+|3|point_data|list&lt;[```Point_Cloud```](#struct-point_cloud)&gt;||optional||
+|4|smesh_data|list&lt;[```Surface_Mesh```](#struct-surface_mesh)&gt;||optional||
+|5|rtplan_data|list&lt;[```RTPlan```](#struct-rtplan)&gt;||optional||
+|6|lsamp_data|list&lt;[```Line_Sample```](#struct-line_sample)&gt;||optional||
+|7|trans_data|list&lt;[```Transform3```](#struct-transform3)&gt;||optional||
+|8|table_data|list&lt;[```Sparse_Table```](#struct-sparse_table)&gt;||optional||
+
+### Struct: OperationsQuery
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+
+### Struct: KnownOperation
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|name|```string```||required||
+
+### Struct: LoadFilesQuery
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|server_filename|```string```||required||
+
+### Struct: LoadFilesResponse
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|success|```bool```||required||
+|2|drover|[```Drover```](#struct-drover)||optional||
+
+***
+## Services
+
+### Service: Receiver
+
+#### Function: Receiver.GetSupportedOperations
+
+
+list&lt;[```KnownOperation```](#struct-knownoperation)&gt;
+ _GetSupportedOperations_([```OperationsQuery```](#struct-operationsquery) query)
+
+
+#### Function: Receiver.LoadFiles
+
+
+[```LoadFilesResponse```](#struct-loadfilesresponse)
+ _LoadFiles_(list&lt;[```LoadFilesQuery```](#struct-loadfilesquery)&gt; server_filenames)
+
+
+

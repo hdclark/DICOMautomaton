@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<link href="style.css" rel="stylesheet" type="text/css"/>
+<title>Thrift module: DCMA</title></head><body>
+<div class="container-fluid">
+<h1>Thrift module: DCMA</h1>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Module</th><th>Services</th><th>Data types</th><th>Constants</th></tr></thead><tbody>
+<tr>
+<td>DCMA</td><td><a href="#Svc_Receiver">Receiver</a><br/>
+<ul>
+<li><a href="#Fn_Receiver_GetSupportedOperations">GetSupportedOperations</a></li>
+<li><a href="#Fn_Receiver_LoadFiles">LoadFiles</a></li>
+</ul>
+</td>
+<td><a href="#Struct_Contour_Data">Contour_Data</a><br/>
+<a href="#Struct_Drover">Drover</a><br/>
+<a href="#Struct_Dynamic_Machine_State">Dynamic_Machine_State</a><br/>
+<a href="#Struct_Image_Array">Image_Array</a><br/>
+<a href="#Struct_KnownOperation">KnownOperation</a><br/>
+<a href="#Struct_Line_Sample">Line_Sample</a><br/>
+<a href="#Struct_LoadFilesQuery">LoadFilesQuery</a><br/>
+<a href="#Struct_LoadFilesResponse">LoadFilesResponse</a><br/>
+<a href="#Struct_OperationsQuery">OperationsQuery</a><br/>
+<a href="#Struct_Point_Cloud">Point_Cloud</a><br/>
+<a href="#Struct_RTPlan">RTPlan</a><br/>
+<a href="#Struct_Sparse_Table">Sparse_Table</a><br/>
+<a href="#Struct_Static_Machine_State">Static_Machine_State</a><br/>
+<a href="#Struct_Surface_Mesh">Surface_Mesh</a><br/>
+<a href="#Struct_Transform3">Transform3</a><br/>
+<a href="#Struct_cell_string">cell_string</a><br/>
+<a href="#Struct_contour_collection_double">contour_collection_double</a><br/>
+<a href="#Struct_contour_of_points_double">contour_of_points_double</a><br/>
+<a href="#Struct_fv_surface_mesh_double_int64">fv_surface_mesh_double_int64</a><br/>
+<a href="#Typedef_metadata_t">metadata_t</a><br/>
+<a href="#Struct_planar_image_collection_double_double">planar_image_collection_double_double</a><br/>
+<a href="#Struct_planar_image_double_double">planar_image_double_double</a><br/>
+<a href="#Struct_point_set_double">point_set_double</a><br/>
+<a href="#Struct_sample4_double">sample4_double</a><br/>
+<a href="#Struct_samples_1D_double">samples_1D_double</a><br/>
+<a href="#Struct_table2">table2</a><br/>
+<a href="#Struct_vec3_double">vec3_double</a><br/>
+</td>
+<td></td>
+</tr></tbody></table>
+<hr/><h2 id="Typedefs">Type declarations</h2>
+<div class="definition"><h3 id="Typedef_metadata_t">Typedef: metadata_t</h3>
+<p><strong>Base type:</strong>&nbsp;<code>map&lt;<code>string</code>, <code>string</code>&gt;</code></p>
+</div>
+<hr/><h2 id="Structs">Data structures</h2>
+<div class="definition"><h3 id="Struct_vec3_double">Struct: vec3_double</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>x</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>2</td><td>y</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>3</td><td>z</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_contour_of_points_double">Struct: contour_of_points_double</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>points</td><td><code>list&lt;<code><a href="#Struct_vec3_double">vec3_double</a></code>&gt;</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>2</td><td>closed</td><td><code>bool</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>3</td><td>metadata</td><td><code><a href="#Typedef_metadata_t">metadata_t</a></code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_contour_collection_double">Struct: contour_collection_double</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>contours</td><td><code>list&lt;<code><a href="#Struct_contour_of_points_double">contour_of_points_double</a></code>&gt;</code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_point_set_double">Struct: point_set_double</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>points</td><td><code>list&lt;<code><a href="#Struct_vec3_double">vec3_double</a></code>&gt;</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>2</td><td>normals</td><td><code>list&lt;<code><a href="#Struct_vec3_double">vec3_double</a></code>&gt;</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>3</td><td>colours</td><td><code>list&lt;<code>i64</code>&gt;</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>4</td><td>metadata</td><td><code><a href="#Typedef_metadata_t">metadata_t</a></code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_sample4_double">Struct: sample4_double</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>x</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>2</td><td>sigma_x</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>3</td><td>f</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>4</td><td>sigma_f</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_samples_1D_double">Struct: samples_1D_double</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>samples</td><td><code>list&lt;<code><a href="#Struct_sample4_double">sample4_double</a></code>&gt;</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>2</td><td>uncertainties_known_to_be_independent_and_random</td><td><code>bool</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>3</td><td>metadata</td><td><code><a href="#Typedef_metadata_t">metadata_t</a></code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_fv_surface_mesh_double_int64">Struct: fv_surface_mesh_double_int64</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>vertices</td><td><code>list&lt;<code><a href="#Struct_vec3_double">vec3_double</a></code>&gt;</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>2</td><td>vertex_normals</td><td><code>list&lt;<code><a href="#Struct_vec3_double">vec3_double</a></code>&gt;</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>3</td><td>vertex_colours</td><td><code>list&lt;<code>i64</code>&gt;</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>4</td><td>faces</td><td><code>list&lt;<code>list&lt;<code>i64</code>&gt;</code>&gt;</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>5</td><td>involved_faces</td><td><code>list&lt;<code>list&lt;<code>i64</code>&gt;</code>&gt;</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>6</td><td>metadata</td><td><code><a href="#Typedef_metadata_t">metadata_t</a></code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_planar_image_double_double">Struct: planar_image_double_double</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>data</td><td><code>list&lt;<code>double</code>&gt;</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>2</td><td>rows</td><td><code>i64</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>3</td><td>columns</td><td><code>i64</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>4</td><td>channels</td><td><code>i64</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>5</td><td>pxl_dx</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>6</td><td>pxl_dy</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>7</td><td>pxl_dz</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>8</td><td>anchor</td><td><code><a href="#Struct_vec3_double">vec3_double</a></code></td><td></td><td>required</td><td></td></tr>
+<tr><td>9</td><td>offset</td><td><code><a href="#Struct_vec3_double">vec3_double</a></code></td><td></td><td>required</td><td></td></tr>
+<tr><td>10</td><td>row_unit</td><td><code><a href="#Struct_vec3_double">vec3_double</a></code></td><td></td><td>required</td><td></td></tr>
+<tr><td>11</td><td>col_unit</td><td><code><a href="#Struct_vec3_double">vec3_double</a></code></td><td></td><td>required</td><td></td></tr>
+<tr><td>12</td><td>metadata</td><td><code><a href="#Typedef_metadata_t">metadata_t</a></code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_planar_image_collection_double_double">Struct: planar_image_collection_double_double</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>images</td><td><code>list&lt;<code><a href="#Struct_planar_image_double_double">planar_image_double_double</a></code>&gt;</code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_cell_string">Struct: cell_string</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_table2">Struct: table2</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_Contour_Data">Struct: Contour_Data</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>ccs</td><td><code>list&lt;<code><a href="#Struct_contour_collection_double">contour_collection_double</a></code>&gt;</code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_Image_Array">Struct: Image_Array</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>imagecoll</td><td><code><a href="#Struct_planar_image_collection_double_double">planar_image_collection_double_double</a></code></td><td></td><td>required</td><td></td></tr>
+<tr><td>2</td><td>filename</td><td><code>string</code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_Point_Cloud">Struct: Point_Cloud</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>pset</td><td><code><a href="#Struct_point_set_double">point_set_double</a></code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_Surface_Mesh">Struct: Surface_Mesh</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>meshes</td><td><code><a href="#Struct_fv_surface_mesh_double_int64">fv_surface_mesh_double_int64</a></code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_Static_Machine_State">Struct: Static_Machine_State</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>CumulativeMetersetWeight</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>2</td><td>ControlPointIndex</td><td><code>i64</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>3</td><td>GantryAngle</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>4</td><td>GantryRotationDirection</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>5</td><td>BeamLimitingDeviceAngle</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>6</td><td>BeamLimitingDeviceRotationDirection</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>7</td><td>PatientSupportAngle</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>8</td><td>PatientSupportRotationDirection</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>9</td><td>TableTopEccentricAngle</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>10</td><td>TableTopEccentricRotationDirection</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>11</td><td>TableTopVerticalPosition</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>12</td><td>TableTopLongitudinalPosition</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>13</td><td>TableTopLateralPosition</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>14</td><td>TableTopPitchAngle</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>15</td><td>TableTopPitchRotationDirection</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>16</td><td>TableTopRollAngle</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>17</td><td>TableTopRollRotationDirection</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>18</td><td>IsocentrePosition</td><td><code><a href="#Struct_vec3_double">vec3_double</a></code></td><td></td><td>required</td><td></td></tr>
+<tr><td>19</td><td>JawPositionsX</td><td><code>list&lt;<code>double</code>&gt;</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>20</td><td>JawPositionsY</td><td><code>list&lt;<code>double</code>&gt;</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>21</td><td>MLCPositionsX</td><td><code>list&lt;<code>double</code>&gt;</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>22</td><td>metadata</td><td><code><a href="#Typedef_metadata_t">metadata_t</a></code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_Dynamic_Machine_State">Struct: Dynamic_Machine_State</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>BeamNumber</td><td><code>i64</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>2</td><td>FinalCumulativeMetersetWeight</td><td><code>double</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>3</td><td>static_states</td><td><code>list&lt;<code><a href="#Struct_Static_Machine_State">Static_Machine_State</a></code>&gt;</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>4</td><td>metadata</td><td><code><a href="#Typedef_metadata_t">metadata_t</a></code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_RTPlan">Struct: RTPlan</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>dynamic_states</td><td><code>list&lt;<code><a href="#Struct_Dynamic_Machine_State">Dynamic_Machine_State</a></code>&gt;</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>2</td><td>metadata</td><td><code><a href="#Typedef_metadata_t">metadata_t</a></code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_Line_Sample">Struct: Line_Sample</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>line</td><td><code><a href="#Struct_samples_1D_double">samples_1D_double</a></code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_Transform3">Struct: Transform3</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_Sparse_Table">Struct: Sparse_Table</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>table</td><td><code><a href="#Struct_table2">table2</a></code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_Drover">Struct: Drover</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>contour_data</td><td><code>list&lt;<code><a href="#Struct_Contour_Data">Contour_Data</a></code>&gt;</code></td><td></td><td>optional</td><td></td></tr>
+<tr><td>2</td><td>image_data</td><td><code>list&lt;<code><a href="#Struct_Image_Array">Image_Array</a></code>&gt;</code></td><td></td><td>optional</td><td></td></tr>
+<tr><td>3</td><td>point_data</td><td><code>list&lt;<code><a href="#Struct_Point_Cloud">Point_Cloud</a></code>&gt;</code></td><td></td><td>optional</td><td></td></tr>
+<tr><td>4</td><td>smesh_data</td><td><code>list&lt;<code><a href="#Struct_Surface_Mesh">Surface_Mesh</a></code>&gt;</code></td><td></td><td>optional</td><td></td></tr>
+<tr><td>5</td><td>rtplan_data</td><td><code>list&lt;<code><a href="#Struct_RTPlan">RTPlan</a></code>&gt;</code></td><td></td><td>optional</td><td></td></tr>
+<tr><td>6</td><td>lsamp_data</td><td><code>list&lt;<code><a href="#Struct_Line_Sample">Line_Sample</a></code>&gt;</code></td><td></td><td>optional</td><td></td></tr>
+<tr><td>7</td><td>trans_data</td><td><code>list&lt;<code><a href="#Struct_Transform3">Transform3</a></code>&gt;</code></td><td></td><td>optional</td><td></td></tr>
+<tr><td>8</td><td>table_data</td><td><code>list&lt;<code><a href="#Struct_Sparse_Table">Sparse_Table</a></code>&gt;</code></td><td></td><td>optional</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_OperationsQuery">Struct: OperationsQuery</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_KnownOperation">Struct: KnownOperation</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>name</td><td><code>string</code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_LoadFilesQuery">Struct: LoadFilesQuery</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>server_filename</td><td><code>string</code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_LoadFilesResponse">Struct: LoadFilesResponse</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>success</td><td><code>bool</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>2</td><td>drover</td><td><code><a href="#Struct_Drover">Drover</a></code></td><td></td><td>optional</td><td></td></tr>
+</tbody></table><br/></div><hr/><h2 id="Services">Services</h2>
+<h3 id="Svc_Receiver">Service: Receiver</h3>
+<div class="definition"><h4 id="Fn_Receiver_GetSupportedOperations">Function: Receiver.GetSupportedOperations</h4>
+<pre><code>list&lt;<code><a href="#Struct_KnownOperation">KnownOperation</a></code>&gt;</code> GetSupportedOperations(<code><a href="#Struct_OperationsQuery">OperationsQuery</a></code> query)
+</pre></div><div class="definition"><h4 id="Fn_Receiver_LoadFiles">Function: Receiver.LoadFiles</h4>
+<pre><code><a href="#Struct_LoadFilesResponse">LoadFilesResponse</a></code> LoadFiles(<code>list&lt;<code><a href="#Struct_LoadFilesQuery">LoadFilesQuery</a></code>&gt;</code> server_filenames)
+</pre></div></div></body></html>

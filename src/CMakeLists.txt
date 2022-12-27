@@ -10,6 +10,9 @@ add_custom_command(
 )
 
 add_subdirectory(Operations)
+if(WITH_THRIFT)
+    add_subdirectory(rpc)
+endif()
 
 add_library(            DCMA_Version_obj OBJECT DCMA_Version.cc)
 set_target_properties(  DCMA_Version_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -398,6 +401,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:YgorImaging_Helper_objs>
 
     $<TARGET_OBJECTS:Operations_objs>
+    $<$<BOOL:${WITH_THRIFT}>:$<TARGET_OBJECTS:Thrift_objs>>
     $<TARGET_OBJECTS:DCMA_Version_obj>
     $<$<BOOL:${MINGW}>:$<TARGET_OBJECTS:WindowsIcon_obj>>
 )
@@ -419,6 +423,7 @@ target_link_libraries (dicomautomaton_dispatcher
     "$<$<BOOL:${WITH_SDL}>:${GLEW_LIBRARIES}>"
     "$<$<BOOL:${WITH_SDL}>:${OPENGL_LIBRARIES}>"
     "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
+    "$<$<BOOL:${WITH_THRIFT}>:${THRIFT_LIBRARIES}>"
     Boost::serialization
     Boost::iostreams
     Boost::thread
@@ -490,6 +495,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:YgorImaging_Helper_objs>
 
         $<TARGET_OBJECTS:Operations_objs>
+        $<$<BOOL:${WITH_THRIFT}>:$<TARGET_OBJECTS:Thrift_objs>>
         $<TARGET_OBJECTS:DCMA_Version_obj>
     )
     target_link_libraries(dicomautomaton_webserver
@@ -510,6 +516,7 @@ if(WITH_WT)
         "$<$<BOOL:${WITH_SDL}>:${GLEW_LIBRARIES}>"
         "$<$<BOOL:${WITH_SDL}>:${OPENGL_LIBRARIES}>"
         "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
+        "$<$<BOOL:${WITH_THRIFT}>:${THRIFT_LIBRARIES}>"
         wt
         wthttp
         Boost::serialization

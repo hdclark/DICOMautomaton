@@ -217,6 +217,9 @@ add_library(Operations_objs OBJECT
     $<$<BOOL:${WITH_CGAL}>:SeamContours.cc>
     $<$<BOOL:${WITH_CGAL}>:SubdivideSurfaceMeshes.cc>
     $<$<BOOL:${WITH_CGAL}>:SurfaceBasedRayCastDoseAccumulate.cc>
+
+    $<$<BOOL:${WITH_THRIFT}>:RPCReceive.cc>
+    $<$<BOOL:${WITH_THRIFT}>:RPCSend.cc>
 )
 
 set_target_properties( Operations_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )

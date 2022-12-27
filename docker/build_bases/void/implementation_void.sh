@@ -45,6 +45,8 @@ until
         asio \
         freefont-ttf \
         patchelf \
+        thrift \
+        thrift-devel \
         ` # Additional dependencies for headless OpenGL rendering with SFML ` \
         xorg-minimal \
         glu-devel \

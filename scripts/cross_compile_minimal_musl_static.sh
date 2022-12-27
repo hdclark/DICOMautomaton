@@ -511,6 +511,7 @@ mkdir -pv /pot/{lib,include,usr/include,usr/lib}/
         -DWITH_GNU_GSL=OFF \
         -DWITH_POSTGRES=OFF \
         -DWITH_JANSSON=OFF \
+        -DWITH_THRIFT=OFF \
         -DBOOST_INCLUDEDIR=/pot/usr/include/ \
         -DBOOST_LIBRARYDIR=/pot/usr/lib/ \
         -DBOOST_ROOT=/pot/ \

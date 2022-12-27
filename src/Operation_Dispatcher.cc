@@ -249,6 +249,11 @@
     #include "Operations/SurfaceBasedRayCastDoseAccumulate.h"
 #endif // DCMA_USE_CGAL
 
+#ifdef DCMA_USE_THRIFT
+    #include "Operations/RPCReceive.h"
+    #include "Operations/RPCSend.h"
+#endif // DCMA_USE_THRIFT
+
 #include "Operation_Dispatcher.h"
 
 
@@ -482,6 +487,11 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["SubdivideSurfaceMeshes"] = std::make_pair(OpArgDocSubdivideSurfaceMeshes, SubdivideSurfaceMeshes);
     out["SurfaceBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocSurfaceBasedRayCastDoseAccumulate, SurfaceBasedRayCastDoseAccumulate);
 #endif // DCMA_USE_CGAL
+
+#ifdef DCMA_USE_THRIFT
+    out["RPCReceive"] = std::make_pair(OpArgDocRPCReceive, RPCReceive);
+    out["RPCSend"] = std::make_pair(OpArgDocRPCSend, RPCSend);
+#endif // DCMA_USE_THRIFT
 
     return out;
 }

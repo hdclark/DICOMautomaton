@@ -45,6 +45,8 @@ extraction:
       - "freeglut3-dev"
       - "libxi-dev"
       - "libxmu-dev"
+      - "libthrift-dev"
+      = "thrift-compiler"
       - "xorg-dev"
       - "xserver-xorg-dev"
       - "mesa-common-dev"

@@ -1,0 +1,32 @@
+# Thrift declarations
+| Module | Services & Functions | Data types | Constants |
+| --- | --- | --- | --- |
+|DCMA|[Receiver](DCMA#service-receiver)|[metadata_t](DCMA#typedef-metadata_t)||
+||	[ &bull; GetSupportedOperations](DCMA#function-receivergetsupportedoperations)|[vec3_double](DCMA#struct-vec3_double)||
+||	[ &bull; LoadFiles](DCMA#function-receiverloadfiles)|[contour_of_points_double](DCMA#struct-contour_of_points_double)||
+|||[contour_collection_double](DCMA#struct-contour_collection_double)||
+|||[point_set_double](DCMA#struct-point_set_double)||
+|||[sample4_double](DCMA#struct-sample4_double)||
+|||[samples_1D_double](DCMA#struct-samples_1d_double)||
+|||[fv_surface_mesh_double_int64](DCMA#struct-fv_surface_mesh_double_int64)||
+|||[planar_image_double_double](DCMA#struct-planar_image_double_double)||
+|||[planar_image_collection_double_double](DCMA#struct-planar_image_collection_double_double)||
+|||[cell_string](DCMA#struct-cell_string)||
+|||[table2](DCMA#struct-table2)||
+|||[Contour_Data](DCMA#struct-contour_data)||
+|||[Image_Array](DCMA#struct-image_array)||
+|||[Point_Cloud](DCMA#struct-point_cloud)||
+|||[Surface_Mesh](DCMA#struct-surface_mesh)||
+|||[Static_Machine_State](DCMA#struct-static_machine_state)||
+|||[Dynamic_Machine_State](DCMA#struct-dynamic_machine_state)||
+|||[RTPlan](DCMA#struct-rtplan)||
+|||[Line_Sample](DCMA#struct-line_sample)||
+|||[Transform3](DCMA#struct-transform3)||
+|||[Sparse_Table](DCMA#struct-sparse_table)||
+|||[Drover](DCMA#struct-drover)||
+|||[OperationsQuery](DCMA#struct-operationsquery)||
+|||[KnownOperation](DCMA#struct-knownoperation)||
+|||[LoadFilesQuery](DCMA#struct-loadfilesquery)||
+|||[LoadFilesResponse](DCMA#struct-loadfilesresponse)||
+
+
