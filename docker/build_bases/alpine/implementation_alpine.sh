@@ -24,6 +24,7 @@ until
         rsync \
         openssh \
         wget \
+        unzip \
     && \
     apk add --no-cache \
         ` # Ygor dependencies ` \

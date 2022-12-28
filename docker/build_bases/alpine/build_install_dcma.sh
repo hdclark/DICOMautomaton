@@ -40,7 +40,6 @@ set -eux
         -DWITH_GNU_GSL=ON \
         -DWITH_POSTGRES=OFF \
         -DWITH_JANSSON=OFF \
-        -DWITH_JANSSON=ON \
         -DWITH_THRIFT=ON \
         -DCMAKE_FIND_LIBRARY_SUFFIXES=".a" \
         -DBoost_USE_STATIC_LIBS=ON \

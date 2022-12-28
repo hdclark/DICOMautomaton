@@ -26,10 +26,7 @@ set -eux
 #    make clean
 #)
 
-# Remove these to trim custom boost build deps.
-apk del --no-cache bzip2 xz icu 
-
-# boost.
+# Boost.
 (
     cd / && rm -rf /boost* || true
     wget 'https://boostorg.jfrog.io/artifactory/main/release/1.77.0/source/boost_1_77_0.tar.gz' 
@@ -40,7 +37,7 @@ apk del --no-cache bzip2 xz icu
     printf '%s\n' "using zlib : : <search>/usr/lib <name>zlib <include>/use/include ;" >> /user-config.jam
     ./build.sh --cxx="g++"
     cd ../../
-    ./bootstrap.sh --cxx="g++"
+    ./bootstrap.sh --cxx="g++" --without-icu
     ./b2 --prefix=/ install
     cd ../../
     ./tools/build/src/engine/b2 -j"$JOBS" \
@@ -64,6 +61,10 @@ apk del --no-cache bzip2 xz icu
         --with-chrono \
         --with-date_time \
         --with-atomic \
+        \
+        -sNO_BZIP2=1 \
+        -sNO_LZMA=1 \
+        -sNO_ZSTD=1 \
         -sZLIB_NAME=libz \
         -sZLIB_INCLUDE=/usr/include/ \
         -sZLIB_LIBRARY_PATH=/usr/lib/ \
@@ -71,8 +72,6 @@ apk del --no-cache bzip2 xz icu
     ls -lash /usr/lib
     cd / && rm -rf /boost* || true
 )
-
-apk add --no-cache bzip2 xz unzip
 
 # Asio.
 (
