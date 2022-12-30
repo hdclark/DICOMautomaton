@@ -92,7 +92,7 @@ make -j"$(nproc)" --keep-going \
   `# MXE_SILENT_NO_NETWORK="1" ` `# Workaround for qtbase build fail. See https://github.com/mxe/mxe/issues/2590 ` \
   MXE_TARGETS="${TOOLCHAIN}" \
   MXE_PLUGIN_DIRS=plugins/gcc12 \
-  gmp mpfr boost eigen sfml sdl2 glew nlopt mesa cgal #wt
+  gmp mpfr boost eigen sfml sdl2 glew nlopt mesa cgal thrift #wt
 
 ## Download pre-compiled binaries to speed up toolchain prep.
 ##

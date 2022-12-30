@@ -68,7 +68,7 @@ for repo_dir in /ygor /ygorclustering /explicator /dcma ; do
       -DWITH_GNU_GSL=OFF \
       -DWITH_POSTGRES=OFF \
       -DWITH_JANSSON=OFF \
-      -DWITH_THRIFT=OFF \
+      -DWITH_THRIFT=ON \
       -DBUILD_SHARED_LIBS=OFF \
       ../
 
