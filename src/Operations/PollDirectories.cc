@@ -22,6 +22,8 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../File_Loader.h"
+#include "../Operation_Dispatcher.h"
 
 #include "PollDirectories.h"
 
@@ -45,6 +47,9 @@ OperationDoc OpArgDocPollDirectories(){
     out.notes.emplace_back(
         "To reduce external dependencies, only rudimentary directory polling methods are used."
         " Polling may therefore be slow and/or inefficient, depending on filesystem/OS caching."
+    );
+    out.notes.emplace_back(
+        "Files will be loaded and processed in batches sequentially, i.e., in 'blocking' mode."
     );
     out.notes.emplace_back(
         "Before files are processed, they are loaded into the existing Drover object."
@@ -87,6 +92,16 @@ OperationDoc OpArgDocPollDirectories(){
     out.args.back().examples = { "30.0", "60", "200" };
 
     out.args.emplace_back();
+    out.args.back().name = "IgnoreExisting";
+    out.args.back().desc = "Controls whether files present during the first poll should be considered already"
+                           " processed. This option can increase robustness if irrelevant files are found, but can"
+                           " also result in files being missed if inputs are provided prior to the first poll.";
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
+
+    out.args.emplace_back();
     out.args.back().name = "GroupBy";
     out.args.back().desc = "Controls how files are grouped together for processing."
                            " Currently supported options are 'separate', 'subdirs', and 'altogether'."
@@ -110,8 +125,6 @@ OperationDoc OpArgDocPollDirectories(){
     out.args.back().examples = { "separate", "subdirs", "altogether" };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
-// TODO: allow option to process individually here.
-
     return out;
 }
 
@@ -119,26 +132,32 @@ OperationDoc OpArgDocPollDirectories(){
 
 bool PollDirectories(Drover &DICOM_data,
                      const OperationArgPkg& OptArgs,
-                     std::map<std::string, std::string>& /*InvocationMetadata*/,
-                     const std::string& /*FilenameLex*/){
+                     std::map<std::string, std::string>& InvocationMetadata,
+                     const std::string& FilenameLex){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto DirectoriesStr = OptArgs.getValueStr("Directories").value();
     const auto PollInterval = std::stod( OptArgs.getValueStr("PollInterval").value() );
     const auto SettleDelay = std::stod( OptArgs.getValueStr("SettleDelay").value() );
     const auto GroupByStr = OptArgs.getValueStr("GroupBy").value();
+    const auto IgnoreExistingStr = OptArgs.getValueStr("IgnoreExisting").value();
 
     long int filesystem_error_count = 0;
     const long int max_filesystem_error_count = 20;
     //-----------------------------------------------------------------------------------------------------------------
+    const auto regex_true       = Compile_Regex("^tr?u?e?$");
     const auto regex_separate   = Compile_Regex("^se?p?a?r?a?t?e?$");
     const auto regex_subdirs    = Compile_Regex("^su?b[_-]?d?i?r?e?c?t?o?r?[iy]?e?s?$");
     const auto regex_altogether = Compile_Regex("^al?t?o?g?e?t?h?e?r?$");
 
+    const auto IgnoreExisting  = std::regex_match(IgnoreExistingStr, regex_true);
     const auto GroupBySeparate = std::regex_match(GroupByStr, regex_separate);
     const auto GroupBySubdirs  = std::regex_match(GroupByStr, regex_subdirs);
     const auto GroupAltogether = std::regex_match(GroupByStr, regex_altogether);
 
+    if(OptArgs.getChildren().empty()){
+        FUNCWARN("No children operations specified; files will be loaded but not processed");
+    }
     if(PollInterval < 0){
         throw std::invalid_argument("Polling interval is invalid. Cannot continue.");
     }
@@ -149,6 +168,10 @@ bool PollDirectories(Drover &DICOM_data,
         FUNCWARN("Settle delay is shorter than polling interval. Files will be considered settled when first detected");
     }
     const auto PollInterval_ms = static_cast<int64_t>(1000.0 * PollInterval);
+    const auto wait = [PollInterval_ms](){
+        std::this_thread::sleep_for(std::chrono::milliseconds(PollInterval_ms));
+        return;
+    };
 
     const auto raw_dirs = SplitStringToVector(DirectoriesStr, ';', 'd');
     std::vector<std::filesystem::path> watch_dirs;
@@ -177,11 +200,8 @@ bool PollDirectories(Drover &DICOM_data,
     using inner_cache_t = std::map<std::filesystem::path, file_metadata>;
     using cache_t = std::map<std::filesystem::path, inner_cache_t>;
     cache_t cache;
+    bool first_pass = true;
     while(true){
-        // Sleep for the polling interval time.
-        //FUNCINFO("Waiting for poll interval");
-        std::this_thread::sleep_for(std::chrono::milliseconds(PollInterval_ms));
-
         // Reset the cache visibility for each entry.
         for(auto& block : cache){
             for(auto& p : block.second){
@@ -194,12 +214,14 @@ bool PollDirectories(Drover &DICOM_data,
             const auto t_start = std::chrono::system_clock::now();
             for(const auto& d : watch_dirs){
                 for(const auto& e : std::filesystem::recursive_directory_iterator(d)){
-                    if(!e.exists() || e.is_directory()) continue;
+                    if(!e.exists() || e.is_directory()){
+                        first_pass = false;
+                        wait();
+                        continue;
+                    }
 
                     const auto f = e.path();
                     const auto p = f.parent_path();
-                    //const auto l = e.last_write_time();
-                    //const auto l = std::chrono::steady_clock::now();
                     const auto s = e.file_size();
                     const auto now = std::chrono::steady_clock::now();
 
@@ -221,7 +243,7 @@ bool PollDirectories(Drover &DICOM_data,
                         entry_ptr->last_time = now;
 
                         entry_ptr->present   = true;
-                        entry_ptr->processed = false;
+                        entry_ptr->processed = (IgnoreExisting && first_pass);
                         entry_ptr->ready     = false;
                     }
 
@@ -230,7 +252,11 @@ bool PollDirectories(Drover &DICOM_data,
                     entry_ptr->present = true;
 
                     // If already processed, ignore.
-                    if( entry_ptr->processed == true ) continue;
+                    if( entry_ptr->processed == true ){
+                        first_pass = false;
+                        wait();
+                        continue;
+                    }
 
                     // Otherwise if size is still being modified, then reset the entry metadata.
                     if( s != entry_ptr->file_size ){
@@ -253,6 +279,10 @@ bool PollDirectories(Drover &DICOM_data,
             ||  ((0.5 * SettleDelay) < elapsed) ){
                 FUNCWARN("Directory enumeration took " << elapsed << " s");
             }
+
+            // Sleep for the polling interval time.
+            first_pass = false;
+            wait();
 
         }catch(const std::exception &e){
             ++filesystem_error_count;
@@ -344,7 +374,7 @@ bool PollDirectories(Drover &DICOM_data,
                                                        is_processed_or_ready );
                                };
 
-        std::vector< std::vector<std::filesystem::path> > to_process;
+        std::list< std::list<std::filesystem::path> > to_process;
 
         // Treat each subdirectory as a distinct logical group.
         if( GroupBySubdirs ){
@@ -361,33 +391,7 @@ bool PollDirectories(Drover &DICOM_data,
                     }
                 }
             }
-/*
-/tmp/dcma_build/src/Operations/PollDirectories.cc: In lambda function:
-/tmp/dcma_build/src/Operations/PollDirectories.cc:373:87: error: no match for call to '(const PollDirectories(Drover&,
-const OperationArgPkg&, std::map<std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >&, const
-std::string&)::<lambda(const std::map<std::filesystem::__cxx11::path, std::map<std::filesystem::__cxx11::path,
-PollDirectories(Drover&, const OperationArgPkg&, std::map<std::__cxx11::basic_string<char>,
-std::__cxx11::basic_string<char> >&, const std::string&)::file_metadata> >::value_type&)>) (const cache_t&)'
-  373 |                                                           return block_has_unprocessed(c);
-        |                                                                  ~~~~~~~~~~~~~~~~~~~~~^~~
-        /tmp/dcma_build/src/Operations/PollDirectories.cc:336:44: note: candidate: 'PollDirectories(Drover&, const
-        OperationArgPkg&, std::map<std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >&, const
-        std::string&)::<lambda(const std::map<std::filesystem::__cxx11::path, std::map<std::filesystem::__cxx11::path,
-        PollDirectories(Drover&, const OperationArgPkg&, std::map<std::__cxx11::basic_string<char>,
-        std::__cxx11::basic_string<char> >&, const std::string&)::file_metadata> >::value_type&)>'
-          336 |         const auto block_has_unprocessed = [is_unprocessed](const cache_t::value_type& block){
-                |                                            ^
-                /tmp/dcma_build/src/Operations/PollDirectories.cc:336:44: note:   no known conversion for argument 1
-                from 'const cache_t' {aka 'const std::map<std::filesystem::__cxx11::path,
-                std::map<std::filesystem::__cxx11::path, PollDirectories(Drover&, const OperationArgPkg&,
-                std::map<std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >&, const
-                std::string&)::file_metadata> >'} to 'const std::map<std::filesystem::__cxx11::path,
-                std::map<std::filesystem::__cxx11::path, PollDirectories(Drover&, const OperationArgPkg&,
-                std::map<std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >&, const
-                std::string&)::file_metadata> >::value_type&' {aka 'const std::pair<const
-                std::filesystem::__cxx11::path, std::map<std::filesystem::__cxx11::p
 
-*/
         // Treat all files as a single logical group.
         }else if( GroupAltogether ){
             const bool has_unprocessed = std::any_of( std::begin(cache),
@@ -430,26 +434,39 @@ std::__cxx11::basic_string<char> >&, const std::string&)::file_metadata> >::valu
             throw std::invalid_argument("Grouping argument not understood. Cannot continue.");
         }
 
-        // Process files in batches.
-FUNCWARN("This operation is WIP! No processing will be performed");
-
+        // Process files in batches, one batch at a time (sequentially).
         for(const auto& batch : to_process){
-            FUNCINFO("Processing the following files");
-            for(const auto&p : batch){
-                FUNCINFO("\t" << p.string());
+            FUNCINFO("Processing a batch with " << batch.size() << " files");
+
+            // Load the files to a placeholder Drover class.
+            Drover DD_work;
+            std::map<std::string, std::string> placeholder_1;
+            std::list<OperationArgPkg> Operations;
+            {
+                std::list<std::filesystem::path> l_batch(batch);
+                const auto res = Load_Files(DD_work, placeholder_1, FilenameLex, Operations, l_batch);
+                if(!res){
+                    throw std::runtime_error("Unable to load one or more files. Refusing to continue.");
+                }
+            }
+            if( !Operations.empty() ){
+                FUNCWARN("Loaded one or more operations. Note that loaded operations will be ignored");
+            }
+
+            // Merge the loaded files into the current Drover class.
+            DICOM_data.Consume(DD_work);
+
+            auto children = OptArgs.getChildren();
+            if(!children.empty()){
+                const auto res = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, children);
+                if(!res){
+                    return false;
+                }
             }
         }
-        /*
-        load_files(batch);
-        //duplicate existing Drover();
-        process_Drover();
-
-        //merge Drover back();  // Easy to work around this if not needed, hard to emulate.
-        */
 
         // Optionally remove all processed files from input directories.
-        // ...
-            
+        // ... could be quite dangerous / easy to cause data loss.
     }
 
     return true;
