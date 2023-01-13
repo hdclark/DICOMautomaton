@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <chrono>
 #include <unordered_set>
+#include <iomanip>            //Needed for std::put_time(...)
 
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
