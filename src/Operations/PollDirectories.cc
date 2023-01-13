@@ -39,12 +39,22 @@ OperationDoc OpArgDocPollDirectories(){
         " Consider this operation a 'trigger' that can initiate further processing."
     );
     out.notes.emplace_back(
-        "Only file names and sizes are used to evaluate when a file was last altered. Filesystem modification times"
-        " are not used, and file contents being altered will not be detected."
+        "Only file names and sizes are used to evaluate when a file was last altered."
+        " Filesystem modification times are not used, and file contents being altered will not be detected."
     );
     out.notes.emplace_back(
-        "To reduce dependencies, only rudimentary directory polling methods are used."
+        "To reduce external dependencies, only rudimentary directory polling methods are used."
         " Polling may therefore be slow and/or inefficient, depending on filesystem/OS caching."
+    );
+    out.notes.emplace_back(
+        "Before files are processed, they are loaded into the existing Drover object."
+        " Similarly after processing, the Drover object containing loaded files and processing results"
+        " are retained. The Drover object can be explicitly cleared after processing if needed."
+    );
+    out.notes.emplace_back(
+        "This operation will stop polling and return false when the first child operation returns false."
+        " If files cannot be loaded, this operation will also stop polling and return false."
+        " Otherwise, this operation will continue polling forever. It will never return true."
     );
 
     out.args.emplace_back();
@@ -77,15 +87,30 @@ OperationDoc OpArgDocPollDirectories(){
     out.args.back().examples = { "30.0", "60", "200" };
 
     out.args.emplace_back();
-    out.args.back().name = "HonourDirectories";
-    out.args.back().desc = "Controls whether files in different (sub-)directories should be considered part of a single"
-                           " logical group. If 'true', then each subdirectory will be loaded and processed separately."
-                           " If 'false', then all files present in all subdirectories will be considered part of the"
-                           " same logical group.";
-    out.args.back().default_val = "false";
+    out.args.back().name = "GroupBy";
+    out.args.back().desc = "Controls how files are grouped together for processing."
+                           " Currently supported options are 'separate', 'subdirs', and 'altogether'."
+                           "\n\n"
+                           "Use 'separate' to process files individually, one-at-a-time. This option is most useful"
+                           " for performing checks or validation of individual files where the logical relations to"
+                           " other files are not important."
+                           "\n\n"
+                           "Use 'subdirs' to group all files that share a common parent sub-directory or folder."
+                           " This option will cause all files in a directory (non-recursively) to be processed"
+                           " together. This option is useful when multiple logically-distinct inputs are received"
+                           " at the same time, but use a single top-level directory to keep separated."
+                           "\n\n"
+                           "Use 'altogether' to process all files together as one logical unit, disregarding the"
+                           " directory structure. This option works best when the directory is expected to receive"
+                           " one set of files at a time, and is robust to the directory structure (e.g., a set of"
+                           " DICOM files which have been nested in a DICOM tree for optimal filesystem lookup, but"
+                           " not necessarily grouped logically).";
+    out.args.back().default_val = "separate";
     out.args.back().expected = true;
-    out.args.back().examples = { "true", "false" };
+    out.args.back().examples = { "separate", "subdirs", "altogether" };
     out.args.back().samples = OpArgSamples::Exhaustive;
+
+// TODO: allow option to process individually here.
 
     return out;
 }
@@ -101,14 +126,18 @@ bool PollDirectories(Drover &DICOM_data,
     const auto DirectoriesStr = OptArgs.getValueStr("Directories").value();
     const auto PollInterval = std::stod( OptArgs.getValueStr("PollInterval").value() );
     const auto SettleDelay = std::stod( OptArgs.getValueStr("SettleDelay").value() );
-    const auto HonourDirectoriesStr = OptArgs.getValueStr("HonourDirectories").value();
+    const auto GroupByStr = OptArgs.getValueStr("GroupBy").value();
 
     long int filesystem_error_count = 0;
     const long int max_filesystem_error_count = 20;
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_true = Compile_Regex("^tr?u?e?$");
+    const auto regex_separate   = Compile_Regex("^se?p?a?r?a?t?e?$");
+    const auto regex_subdirs    = Compile_Regex("^su?b[_-]?d?i?r?e?c?t?o?r?[iy]?e?s?$");
+    const auto regex_altogether = Compile_Regex("^al?t?o?g?e?t?h?e?r?$");
 
-    const auto ShouldHonourDirectories = std::regex_match(HonourDirectoriesStr, regex_true);
+    const auto GroupBySeparate = std::regex_match(GroupByStr, regex_separate);
+    const auto GroupBySubdirs  = std::regex_match(GroupByStr, regex_subdirs);
+    const auto GroupAltogether = std::regex_match(GroupByStr, regex_altogether);
 
     if(PollInterval < 0){
         throw std::invalid_argument("Polling interval is invalid. Cannot continue.");
@@ -162,6 +191,7 @@ bool PollDirectories(Drover &DICOM_data,
 
         // Enumerate the contents of the input directories.
         try{
+            const auto t_start = std::chrono::system_clock::now();
             for(const auto& d : watch_dirs){
                 for(const auto& e : std::filesystem::recursive_directory_iterator(d)){
                     if(!e.exists() || e.is_directory()) continue;
@@ -215,6 +245,15 @@ bool PollDirectories(Drover &DICOM_data,
                     }
                 }
             }
+
+            const auto t_stop = std::chrono::system_clock::now();
+            const auto elapsed = std::chrono::duration<double>(t_stop - t_start).count();
+            if( (5.0 < elapsed) 
+            ||  ((0.5 * PollInterval) < elapsed)
+            ||  ((0.5 * SettleDelay) < elapsed) ){
+                FUNCWARN("Directory enumeration took " << elapsed << " s");
+            }
+
         }catch(const std::exception &e){
             ++filesystem_error_count;
             FUNCWARN("Encountered error enumerating directory: '" << e.what() << "'");
@@ -252,76 +291,164 @@ bool PollDirectories(Drover &DICOM_data,
             }
         }
 
-        // Report on cache contents for monitoring.
-        uint64_t total_count = 0U;
-        uint64_t processed_count = 0U;
-        uint64_t ready_count = 0U;
-        uint64_t pending_count = 0U;
-        for(auto& block : cache){
-            for(auto& p : block.second){
-                ++total_count;
-                if(p.second.processed){
-                    ++processed_count;
-                }else if(p.second.ready){
-                    ++ready_count;
-                }else{
-                    ++pending_count;
-                }
-            }
-        }
+        // Report on cache contents for monitoring / debugging.
         {
-            const auto now = std::chrono::system_clock::now();
-            const std::time_t t_now = std::chrono::system_clock::to_time_t(now);
-            FUNCINFO("Poll results: "
-                 << "(" << std::put_time(std::localtime(&t_now), "%F %T") << ") "
-                 << "cache contains " << total_count << " entries -- "
-                 << pending_count << " pending, "
-                 << ready_count << " ready, and "
-                 << processed_count << " processed");
-        }
-
-        // If all files are ready to process, then process them.
-        if( ShouldHonourDirectories ){
+            uint64_t total_count     = 0U;
+            uint64_t processed_count = 0U;
+            uint64_t ready_count     = 0U;
+            uint64_t pending_count   = 0U;
             for(auto& block : cache){
-                const bool unprocessed_present = std::any_of( std::begin(block.second), std::end(block.second),
-                                                    [](const inner_cache_t::value_type& p){
-                                                        return !(p.second.processed);
-                                                    });
-                if(!unprocessed_present) continue; // Nothing to do.
-
-
-                const bool all_ready = std::all_of( std::begin(block.second), std::end(block.second),
-                                                    [](const inner_cache_t::value_type& p){
-                                                        return (p.second.processed) || p.second.ready;
-                                                    });
-                if(all_ready){
-                    FUNCINFO("Processing the following files");
-FUNCWARN("This operation is WIP! No processing will be performed");
-                    for(auto& p : block.second){
-                        if(!p.second.processed && p.second.ready) FUNCINFO("\t" << p.first.string());
+                for(auto& p : block.second){
+                    ++total_count;
+                    if(p.second.processed){
+                        ++processed_count;
+                    }else if(p.second.ready){
+                        ++ready_count;
+                    }else{
+                        ++pending_count;
                     }
-
-                    /*
-                    duplicate existing Drover();
-                    process_Drover();
-
-                    for( all){
-                        ... processed = true;
-                        // Optionally remove???
-                    }
-
-                    merge Drover back();  // Easy to work around this if not needed, hard to emulate.
-                    */
-
-                    for(auto& p : block.second) p.second.processed = true;
-
-                    // Optionally remove all processed files from input directories.
-                    // ...
                 }
             }
-        }else{
-            throw std::runtime_error("This functionality it not yet supported");
+            {
+                const auto now = std::chrono::system_clock::now();
+                const std::time_t t_now = std::chrono::system_clock::to_time_t(now);
+                FUNCINFO("Poll results: "
+                     << "(" << std::put_time(std::localtime(&t_now), "%Y%m%d-%H%M%S") << ") "
+                     << "cache contains " << total_count << " entries -- "
+                     << pending_count << " pending, "
+                     << ready_count << " ready, and "
+                     << processed_count << " processed");
+            }
         }
+
+        // If all files are ready to process, assemble batches for later processing.
+        // Prospectively mark the file as processed to avoid a second-pass later.
+        const auto is_unprocessed = [](const inner_cache_t::value_type& p){
+                                        return !(p.second.processed);
+                                    };
+        const auto is_ready = [](const inner_cache_t::value_type& p){
+                                  return !p.second.processed && p.second.ready;
+                              };
+        const auto is_processed_or_ready = [](const inner_cache_t::value_type& p){
+                                               return (p.second.processed) || p.second.ready;
+                                           };
+
+        const auto block_has_unprocessed = [is_unprocessed](const cache_t::value_type& block){
+                                        return std::any_of( std::begin(block.second),
+                                                            std::end(block.second),
+                                                            is_unprocessed );
+                                     };
+        const auto block_ready = [&](const cache_t::value_type& block){
+                                   return std::all_of( std::begin(block.second),
+                                                       std::end(block.second),
+                                                       is_processed_or_ready );
+                               };
+
+        std::vector< std::vector<std::filesystem::path> > to_process;
+
+        // Treat each subdirectory as a distinct logical group.
+        if( GroupBySubdirs ){
+            for(auto& block : cache){
+                if(!block_has_unprocessed(block)) continue; // Nothing to do.
+
+                if(block_ready(block)){
+                    to_process.emplace_back();
+                    for(auto& p : block.second){
+                        if(is_ready(p)){
+                            to_process.back().emplace_back(p.first);
+                            p.second.processed = true;
+                        }
+                    }
+                }
+            }
+/*
+/tmp/dcma_build/src/Operations/PollDirectories.cc: In lambda function:
+/tmp/dcma_build/src/Operations/PollDirectories.cc:373:87: error: no match for call to '(const PollDirectories(Drover&,
+const OperationArgPkg&, std::map<std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >&, const
+std::string&)::<lambda(const std::map<std::filesystem::__cxx11::path, std::map<std::filesystem::__cxx11::path,
+PollDirectories(Drover&, const OperationArgPkg&, std::map<std::__cxx11::basic_string<char>,
+std::__cxx11::basic_string<char> >&, const std::string&)::file_metadata> >::value_type&)>) (const cache_t&)'
+  373 |                                                           return block_has_unprocessed(c);
+        |                                                                  ~~~~~~~~~~~~~~~~~~~~~^~~
+        /tmp/dcma_build/src/Operations/PollDirectories.cc:336:44: note: candidate: 'PollDirectories(Drover&, const
+        OperationArgPkg&, std::map<std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >&, const
+        std::string&)::<lambda(const std::map<std::filesystem::__cxx11::path, std::map<std::filesystem::__cxx11::path,
+        PollDirectories(Drover&, const OperationArgPkg&, std::map<std::__cxx11::basic_string<char>,
+        std::__cxx11::basic_string<char> >&, const std::string&)::file_metadata> >::value_type&)>'
+          336 |         const auto block_has_unprocessed = [is_unprocessed](const cache_t::value_type& block){
+                |                                            ^
+                /tmp/dcma_build/src/Operations/PollDirectories.cc:336:44: note:   no known conversion for argument 1
+                from 'const cache_t' {aka 'const std::map<std::filesystem::__cxx11::path,
+                std::map<std::filesystem::__cxx11::path, PollDirectories(Drover&, const OperationArgPkg&,
+                std::map<std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >&, const
+                std::string&)::file_metadata> >'} to 'const std::map<std::filesystem::__cxx11::path,
+                std::map<std::filesystem::__cxx11::path, PollDirectories(Drover&, const OperationArgPkg&,
+                std::map<std::__cxx11::basic_string<char>, std::__cxx11::basic_string<char> >&, const
+                std::string&)::file_metadata> >::value_type&' {aka 'const std::pair<const
+                std::filesystem::__cxx11::path, std::map<std::filesystem::__cxx11::p
+
+*/
+        // Treat all files as a single logical group.
+        }else if( GroupAltogether ){
+            const bool has_unprocessed = std::any_of( std::begin(cache),
+                                                      std::end(cache),
+                                                      [&](const cache_t::value_type& c){
+                                                          return block_has_unprocessed(c);
+                                                      });
+            if(!has_unprocessed) continue; // Nothing to do.
+
+            const bool all_eligible_ready = std::all_of( std::begin(cache),
+                                                         std::end(cache),
+                                                         [&](const cache_t::value_type& c){
+                                                             return block_ready(c);
+                                                         });
+            if(all_eligible_ready){
+                to_process.emplace_back();
+                for(auto& block : cache){
+                    for(auto& p : block.second){
+                        if(is_ready(p)){
+                            to_process.back().emplace_back(p.first);
+                            p.second.processed = true;
+                        }
+                    }
+                }
+            }
+
+        // Consider all files spearate from one another.
+        }else if( GroupBySeparate ){
+            for(auto& block : cache){
+                for(auto& p : block.second){
+                    if(is_ready(p)){
+                        to_process.emplace_back();
+                        to_process.back().emplace_back(p.first);
+                        p.second.processed = true;
+                    }
+                }
+            }
+
+        }else{
+            throw std::invalid_argument("Grouping argument not understood. Cannot continue.");
+        }
+
+        // Process files in batches.
+FUNCWARN("This operation is WIP! No processing will be performed");
+
+        for(const auto& batch : to_process){
+            FUNCINFO("Processing the following files");
+            for(const auto&p : batch){
+                FUNCINFO("\t" << p.string());
+            }
+        }
+        /*
+        load_files(batch);
+        //duplicate existing Drover();
+        process_Drover();
+
+        //merge Drover back();  // Easy to work around this if not needed, hard to emulate.
+        */
+
+        // Optionally remove all processed files from input directories.
+        // ...
             
     }
 
