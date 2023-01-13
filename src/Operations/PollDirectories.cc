@@ -214,11 +214,7 @@ bool PollDirectories(Drover &DICOM_data,
             const auto t_start = std::chrono::system_clock::now();
             for(const auto& d : watch_dirs){
                 for(const auto& e : std::filesystem::recursive_directory_iterator(d)){
-                    if(!e.exists() || e.is_directory()){
-                        first_pass = false;
-                        wait();
-                        continue;
-                    }
+                    if(!e.exists() || e.is_directory()) continue;
 
                     const auto f = e.path();
                     const auto p = f.parent_path();
@@ -252,11 +248,7 @@ bool PollDirectories(Drover &DICOM_data,
                     entry_ptr->present = true;
 
                     // If already processed, ignore.
-                    if( entry_ptr->processed == true ){
-                        first_pass = false;
-                        wait();
-                        continue;
-                    }
+                    if( entry_ptr->processed == true ) continue;
 
                     // Otherwise if size is still being modified, then reset the entry metadata.
                     if( s != entry_ptr->file_size ){
@@ -280,9 +272,7 @@ bool PollDirectories(Drover &DICOM_data,
                 FUNCWARN("Directory enumeration took " << elapsed << " s");
             }
 
-            // Sleep for the polling interval time.
             first_pass = false;
-            wait();
 
         }catch(const std::exception &e){
             ++filesystem_error_count;
@@ -292,6 +282,9 @@ bool PollDirectories(Drover &DICOM_data,
             }else{
                 throw std::runtime_error("Exceeded maximum permissable filesystem error count. Cannot continue.");
             }
+
+            // Sleep for the polling interval time.
+            wait();
             continue;
         }
 
@@ -394,29 +387,31 @@ bool PollDirectories(Drover &DICOM_data,
 
         // Treat all files as a single logical group.
         }else if( GroupAltogether ){
-            const bool has_unprocessed = std::any_of( std::begin(cache),
-                                                      std::end(cache),
-                                                      [&](const cache_t::value_type& c){
-                                                          return block_has_unprocessed(c);
-                                                      });
-            if(!has_unprocessed) continue; // Nothing to do.
+            do{
+                const bool has_unprocessed = std::any_of( std::begin(cache),
+                                                          std::end(cache),
+                                                          [&](const cache_t::value_type& c){
+                                                              return block_has_unprocessed(c);
+                                                          });
+                if(!has_unprocessed) break; // Nothing to do.
 
-            const bool all_eligible_ready = std::all_of( std::begin(cache),
-                                                         std::end(cache),
-                                                         [&](const cache_t::value_type& c){
-                                                             return block_ready(c);
-                                                         });
-            if(all_eligible_ready){
-                to_process.emplace_back();
-                for(auto& block : cache){
-                    for(auto& p : block.second){
-                        if(is_ready(p)){
-                            to_process.back().emplace_back(p.first);
-                            p.second.processed = true;
+                const bool all_eligible_ready = std::all_of( std::begin(cache),
+                                                             std::end(cache),
+                                                             [&](const cache_t::value_type& c){
+                                                                 return block_ready(c);
+                                                             });
+                if(all_eligible_ready){
+                    to_process.emplace_back();
+                    for(auto& block : cache){
+                        for(auto& p : block.second){
+                            if(is_ready(p)){
+                                to_process.back().emplace_back(p.first);
+                                p.second.processed = true;
+                            }
                         }
                     }
                 }
-            }
+            }while(false);
 
         // Consider all files spearate from one another.
         }else if( GroupBySeparate ){
