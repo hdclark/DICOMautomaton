@@ -147,6 +147,7 @@ add_library(Operations_objs OBJECT
     PlotLineSamples.cc
     PlotPerROITimeCourses.cc
     PointSeparation.cc
+    PollDirectories.cc
     PreFilterEnormousCTValues.cc
     PruneEmptyImageDoseArrays.cc
     PurgeContours.cc
