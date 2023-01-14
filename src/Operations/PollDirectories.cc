@@ -202,6 +202,8 @@ bool PollDirectories(Drover &DICOM_data,
     cache_t cache;
     bool first_pass = true;
     while(true){
+        if(!first_pass) wait();
+
         // Reset the cache visibility for each entry.
         for(auto& block : cache){
             for(auto& p : block.second){
