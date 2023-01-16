@@ -196,6 +196,7 @@
 #include "Operations/ThresholdImages.h"
 #include "Operations/ThresholdOtsu.h"
 #include "Operations/Time.h"
+#include "Operations/Transaction.h"
 #include "Operations/TrimROIDose.h"
 #include "Operations/True.h"
 #include "Operations/UBC3TMRI_DCE.h"
@@ -436,6 +437,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ThresholdImages"] = std::make_pair(OpArgDocThresholdImages, ThresholdImages);
     out["ThresholdOtsu"] = std::make_pair(OpArgDocThresholdOtsu, ThresholdOtsu);
     out["Time"] = std::make_pair(OpArgDocTime, Time);
+    out["Transaction"] = std::make_pair(OpArgDocTransaction, Transaction);
     out["TrimROIDose"] = std::make_pair(OpArgDocTrimROIDose, TrimROIDose);
     out["True"] = std::make_pair(OpArgDocTrue, True);
     out["UBC3TMRI_DCE_Differences"] = std::make_pair(OpArgDocUBC3TMRI_DCE_Differences, UBC3TMRI_DCE_Differences);

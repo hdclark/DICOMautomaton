@@ -176,6 +176,7 @@ add_library(Operations_objs OBJECT
     ThresholdImages.cc
     ThresholdOtsu.cc
     Time.cc
+    Transaction.cc
     TrimROIDose.cc
     True.cc
     UBC3TMRI_DCE.cc
