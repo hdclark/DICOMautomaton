@@ -78,6 +78,7 @@ bool Transaction(Drover &DICOM_data,
             FUNCWARN("Transaction failed. Reverting state");
             DICOM_data = orig_DICOM_data;
             InvocationMetadata = orig_InvocationMetadata;
+            return false;
         }
     }
 
