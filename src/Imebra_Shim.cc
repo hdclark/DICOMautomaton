@@ -3312,9 +3312,9 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
         using T_f = decltype(f);
         const int max_p = std::numeric_limits<T_f>::max_digits10 + 1;
         std::string out;
-        for(int p = 1; p <= max_p; ++p){
+        for(int p = 0; p <= max_p; ++p){
             std::stringstream ss;
-            ss << std::setprecision(p) << f;
+            ss << std::scientific << std::setprecision(p) << f;
             out = ss.str();
             if(out.size() == 16U) break;
         }
@@ -3530,10 +3530,22 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
             root_node.emplace_child_node({{0x0028, 0x0006}, "US", "0" }); // PlanarConfiguration, 0 for R1, G1, B1, R2, G2, ..., and 1 for R1 R2 R3 ....
         }
 
+
+        // Create a compressor to perform the conversion from float to int16_t.
         linear_compress_numeric<float, int16_t> compressor;
         {
-            const auto [pix_min, pix_max] = animg.minmax();
-            compressor.optimize(pix_min, pix_max);
+            // Skip compression if the existing inputs are all integer and in the domain of 16-bit integer.
+            const bool all_int16 = std::all_of(std::begin(animg.data), std::end(animg.data),
+                       [](const float &val) -> bool {
+                           return ( std::numeric_limits<int16_t>::lowest() <= val )
+                               && ( val <= std::numeric_limits<int16_t>::max() )
+                               && (std::fabs(std::round(val) - val) < 1E-3 );
+                       });
+
+            if(!all_int16){
+                const auto [pix_min, pix_max] = animg.minmax();
+                compressor.optimize(pix_min, pix_max);
+            }
         }
         const auto rescale_slope     = static_cast<double>( compressor.get_slope() );
         const auto rescale_intercept = static_cast<double>( compressor.get_intercept() );
@@ -3550,12 +3562,6 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
                         const auto f_val = animg.value(row, col, chnl );
                         const auto i_val = compressor.compress(f_val);
                         ss_pixels.write( reinterpret_cast<const char *>(&i_val), sizeof(i_val) );
-                        
-                        const auto f_trans = compressor.decompress_as<double>(i_val);
-                        if(1E-3 < RELATIVE_DIFF(f_val, f_trans)){
-                            FUNCWARN("Pixel compression results in precision losses greater than 0.1%: "
-                                     << f_val << " vs " << f_trans);
-                        }
                     }
                 }
             }
