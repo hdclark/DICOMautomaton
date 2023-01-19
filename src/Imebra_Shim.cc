@@ -17,6 +17,7 @@
 #include <optional>
 #include <functional>
 #include <iostream>
+#include <iomanip>
 #include <limits>
 #include <list>
 #include <map>
@@ -33,6 +34,7 @@
 #include "YgorMisc.h"       //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorString.h"     //Needed for Canonicalize_String2().
 #include "YgorImages.h"
+#include "YgorImagesIO.h"
 #include "YgorTAR.h"
 
 #pragma GCC diagnostic push
@@ -1929,7 +1931,6 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
             throw std::runtime_error("Encountered nonlinear real-world LUT. This functionality is not yet supported");
 
         }else if(rw_lut_intercept && rw_lut_slope){
-            FUNCWARN("Encountered linear real-world LUT, applying it");
             auto m = rw_lut_slope.value();
             auto b = rw_lut_intercept.value();
 
@@ -1945,11 +1946,9 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
         // Manually-apply LUTs as needed.
         auto lut_intercept = l_coalesce_as_double({ { {0x0028, 0x1052, 0} } }); // RescaleIntercept
         auto lut_slope     = l_coalesce_as_double({ { {0x0028, 0x1053, 0} } }); // RescaleSlope
-        if( (modality == "RTIMAGE")
-        &&  !real_world_mapping
+        if( !real_world_mapping
         &&  lut_intercept
         &&  lut_slope ){
-            FUNCWARN("Found RTIMAGE rescaling, applying it");
             auto m = lut_slope.value();
             auto b = lut_intercept.value();
 
@@ -1978,11 +1977,22 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
         //
         // I have not experimented with disabling this conversion. Leaving it intact causes the datum from
         // a Philips "Interra" machine's PAR/REC format to coincide with the exported DICOM data.
-        ptr<imebra::transforms::transform> modVOILUT(new imebra::transforms::modalityVOILUT(TopDataSet));
+        //
+        // 20230119: Switch behaviour to manually apply any linear LUT transformations found, rather than rely
+        // on Imebra. Imebra will unfortunately round to nearest integer *after* performing the transformation.
+        // This results in information loss when inputs have non-zero decimals.
         imbxUint32 width, height;
         firstImage->getSize(&width, &height);
-        ptr<imebra::image> convertedImage(modVOILUT->allocateOutputImage(firstImage, width, height));
-        modVOILUT->runTransform(firstImage, 0, 0, width, height, convertedImage, 0, 0);
+        ptr<puntoexe::imebra::image> convertedImage;
+        if(real_world_map_present){
+            // If we found a transformation, forgo skip Imebra and apply it ourselves (below).
+            convertedImage = firstImage;
+        }else{
+            FUNCWARN("Unable to explicitly locate LUT, attempting automatic conversion");
+            ptr<imebra::transforms::transform> modVOILUT(new imebra::transforms::modalityVOILUT(TopDataSet));
+            convertedImage = modVOILUT->allocateOutputImage(firstImage, width, height);
+            modVOILUT->runTransform(firstImage, 0, 0, width, height, convertedImage, 0, 0);
+        }
 
         // Convert the 'convertedImage' into an image suitable for the viewing on screen. The VOILUT transform 
         // applies the contrast suggested by the dataSet to the image. Apply the first one we find. Relevant
@@ -3292,6 +3302,25 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
         return std::string(); 
     };
 
+    auto to_DS = [](auto f) -> std::string {
+        // Convert a floating point to a DICOM decimal string. The maximum size permitted for this value
+        // representation is 16 bytes. Unfortunately, this is not sufficient to fully specify IEEE 754 doubles, which can
+        // require 16 bytes for the mantissa alone. In text format, there will also be a preceding sign and trailing
+        // exponent, which can be as long as 'e+308', and a decimal point. So seven decimal bytes are consumed. :(
+        //
+        // Here was iteratively maximize the precision to fill the available space.
+        using T_f = decltype(f);
+        const int max_p = std::numeric_limits<T_f>::max_digits10 + 1;
+        std::string out;
+        for(int p = 1; p <= max_p; ++p){
+            std::stringstream ss;
+            ss << std::setprecision(p) << f;
+            out = ss.str();
+            if(out.size() == 16U) break;
+        }
+        return out;
+    };
+
     //Generate UIDs and IDs that need to be duplicated across all images.
     const auto FrameOfReferenceUID = Generate_Random_UID(60);
     const auto StudyInstanceUID = Generate_Random_UID(31);
@@ -3501,13 +3530,32 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
             root_node.emplace_child_node({{0x0028, 0x0006}, "US", "0" }); // PlanarConfiguration, 0 for R1, G1, B1, R2, G2, ..., and 1 for R1 R2 R3 ....
         }
 
+        linear_compress_numeric<float, int16_t> compressor;
+        {
+            const auto [pix_min, pix_max] = animg.minmax();
+            compressor.optimize(pix_min, pix_max);
+        }
+        const auto rescale_slope     = static_cast<double>( compressor.get_slope() );
+        const auto rescale_intercept = static_cast<double>( compressor.get_intercept() );
+        if( !std::isfinite(rescale_slope)
+        ||  !std::isfinite(rescale_intercept) ){
+            throw std::runtime_error("Rescale slope and/or intercept cannot be converted to double");
+        }
+
         {
             std::stringstream ss_pixels;
             for(long int row = 0; row != animg.rows; ++row){
                 for(long int col = 0; col != animg.columns; ++col){
                     for(long int chnl = 0; chnl != animg.channels; ++chnl){
-                        auto val = static_cast<int16_t>( std::round( animg.value(row, col, chnl ) ) );
-                        ss_pixels.write( reinterpret_cast<const char *>(&val), sizeof(val) );
+                        const auto f_val = animg.value(row, col, chnl );
+                        const auto i_val = compressor.compress(f_val);
+                        ss_pixels.write( reinterpret_cast<const char *>(&i_val), sizeof(i_val) );
+                        
+                        const auto f_trans = compressor.decompress_as<double>(i_val);
+                        if(1E-3 < RELATIVE_DIFF(f_val, f_trans)){
+                            FUNCWARN("Pixel compression results in precision losses greater than 0.1%: "
+                                     << f_val << " vs " << f_trans);
+                        }
                     }
                 }
             }
@@ -3527,8 +3575,8 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
         //
         // Note: many elements in this module are duplicated in other modules. Omitted here if they appear above.
         //
-        root_node.emplace_child_node({{0x0028, 0x1052}, "DS", "0" }); //RescaleIntercept.
-        root_node.emplace_child_node({{0x0028, 0x1053}, "DS", "1" }); //RescaleSlope.
+        root_node.emplace_child_node({{0x0028, 0x1052}, "DS", to_DS( rescale_intercept ) }); //RescaleIntercept.
+        root_node.emplace_child_node({{0x0028, 0x1053}, "DS", to_DS( rescale_slope ) }); //RescaleSlope.
         root_node.emplace_child_node({{0x0028, 0x1054}, "LO", "HU" }); //RescaleType, 'HU' for Hounsfield units, or 'US' for unspecified.
         root_node.emplace_child_node({{0x0018, 0x0060}, "DS", foe({ cm["KVP"] }) });
 
