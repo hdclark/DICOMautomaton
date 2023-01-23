@@ -7,7 +7,7 @@
 // NOTE: Support for unicode is absent. All text is marchalled into std::strings.
 //
 
-#include <algorithm>      //Needed for std::sort.
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cmath>
@@ -3537,12 +3537,15 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
             // Skip compression if the existing inputs are all integer and in the domain of 16-bit integer.
             const bool all_int16 = std::all_of(std::begin(animg.data), std::end(animg.data),
                        [](const float &val) -> bool {
-                           return ( std::numeric_limits<int16_t>::lowest() <= val )
-                               && ( val <= std::numeric_limits<int16_t>::max() )
-                               && (std::fabs(std::round(val) - val) < 1E-3 );
+                           constexpr auto min = std::numeric_limits<int16_t>::lowest();
+                           constexpr auto max = std::numeric_limits<int16_t>::max();
+                           return ( min <= val )
+                               && ( val <= max )
+                               && (std::fabs(std::nearbyint(val) - val) < 1E-3 );
                        });
 
             if(!all_int16){
+                FUNCINFO("Identity transform with integer packing is lossy, optimizing to minimize precision loss");
                 const auto [pix_min, pix_max] = animg.minmax();
                 compressor.optimize(pix_min, pix_max);
             }
