@@ -64,6 +64,7 @@
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 namespace Wt {
@@ -229,19 +230,19 @@ BaseWebServerApplication::BaseWebServerApplication(const Wt::WEnvironment &env) 
     // Create a private working directory somewhere.
     this->InstancePrivateDirectory = CreateUniqueDirectoryTimestamped("/home/hal/DICOMautomaton_Webserver_Artifacts/", // timestamp goes here
                                                                       "/");
-    FUNCINFO("The unique directory for this session is '" << this->InstancePrivateDirectory << "'");
+    YLOGINFO("The unique directory for this session is '" << this->InstancePrivateDirectory << "'");
 
     //Try find a lexicon file if none were provided.
     if(FilenameLex.empty()){
         FilenameLex = Locate_Lexicon_File();
         if(FilenameLex.empty()){
-            FUNCINFO("No lexicon was explicitly provided. Using located file '" << FilenameLex << "' as lexicon");
+            YLOGINFO("No lexicon was explicitly provided. Using located file '" << FilenameLex << "' as lexicon");
         }
     }
     if(FilenameLex.empty()){
-        FUNCINFO("No lexicon provided or located. Attempting to write a default lexicon");
+        YLOGINFO("No lexicon provided or located. Attempting to write a default lexicon");
         FilenameLex = Create_Default_Lexicon_File();
-        FUNCINFO("Using file '" << FilenameLex << "' as lexicon");
+        YLOGINFO("Using file '" << FilenameLex << "' as lexicon");
     }
 
     // -----------------------------------------------------------------------------------
@@ -377,7 +378,7 @@ void BaseWebServerApplication::filesUploaded(){
                      this->InstancePrivateDirectory + afile.clientFileName())
         && !CopyFile(afile.spoolFileName(), 
                      this->InstancePrivateDirectory + afile.spoolFileName()) ){
-            FUNCWARN("Unable to copy uploaded file '" << afile.clientFileName() << "'"
+            YLOGWARN("Unable to copy uploaded file '" << afile.clientFileName() << "'"
                      << " aka '" << afile.spoolFileName() << "' to archive directory. Continuing");
         }
     }

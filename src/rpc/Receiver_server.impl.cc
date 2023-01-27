@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorMath.h"
 #include "YgorImages.h"
 
@@ -26,11 +27,11 @@ using namespace ::dcma::rpc;
 class ReceiverHandler : virtual public ReceiverIf {
   public:
     ReceiverHandler() {
-        FUNCINFO("Initialization code goes here");
+        YLOGINFO("Initialization code goes here");
     }
 
     void GetSupportedOperations(std::vector<KnownOperation> & _return, const OperationsQuery& query) {
-        FUNCINFO("GetSupportedOperations implementation goes here");
+        YLOGINFO("GetSupportedOperations implementation goes here");
 
         // Simple test.
         {
@@ -67,7 +68,7 @@ class ReceiverHandler : virtual public ReceiverIf {
     }
 
     void LoadFiles(LoadFilesResponse& _return, const std::vector<LoadFilesQuery> & server_filenames) {
-        FUNCINFO("LoadFiles implementation goes here");
+        YLOGINFO("LoadFiles implementation goes here");
     }
 };
 

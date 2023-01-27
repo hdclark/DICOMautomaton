@@ -14,6 +14,7 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 
 OperationDoc OpArgDocDICOMExportImagesAsDose(){
@@ -100,7 +101,7 @@ bool DICOMExportImagesAsDose(Drover &DICOM_data,
         try{
             Write_Dose_Array(*iap_it, FilenameOut, p);
         }catch(const std::exception &e){
-            FUNCWARN("Unable to export Image_Array as DICOM RTDOSE file: '" << e.what() << "'");
+            YLOGWARN("Unable to export Image_Array as DICOM RTDOSE file: '" << e.what() << "'");
         }
     }
 

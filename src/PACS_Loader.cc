@@ -30,6 +30,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 
 static
@@ -51,7 +52,7 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
 
     std::set<std::string> FrameOfReferenceUIDs;
 
-    FUNCINFO("Executing database queries...");
+    YLOGINFO("Executing database queries...");
 
 
 
@@ -92,18 +93,18 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
                 r1 = txn.exec(query1);
             }
             if(r1.empty()){
-                FUNCWARN("Database query1 stage " << ss.str() << " resulted in no records. Cannot continue");
+                YLOGWARN("Database query1 stage " << ss.str() << " resulted in no records. Cannot continue");
                 return false;
             }
     
     
             //-------------------------------------------------------------------------------------------------------------
-            FUNCINFO("Query1 stage: number of records found = " << r1.size());
+            YLOGINFO("Query1 stage: number of records found = " << r1.size());
     
             //-------------------------------------------------------------------------------------------------------------
             //Query2 stage: process each record, loading whatever data is needed later into memory.
             for(pqxx::result::size_type i = 0; i != r1.size(); ++i){
-                FUNCINFO("Parsing file #" << i+1 << "/" << r1.size() << " = " << 100*(i+1)/r1.size() << "%");
+                YLOGINFO("Parsing file #" << i+1 << "/" << r1.size() << " = " << 100*(i+1)/r1.size() << "%");
 
                 //Get the returned pacsid.
                 //const auto pacsid = r1[i]["pacsid"].as<long int>();
@@ -120,7 +121,7 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
                                                                   get_Contour_Data(StoreFullPathName));
                         loaded_contour_data_storage = std::move(combined);
                     }catch(const std::exception &e){
-                        FUNCWARN("Difficulty encountered during contour data loading: '" << e.what() <<
+                        YLOGWARN("Difficulty encountered during contour data loading: '" << e.what() <<
                                  "'. Ignoring file and continuing");
                         //loaded_contour_data_storage.back().pop_back();
                         continue;
@@ -128,7 +129,7 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
 
                     const auto postloadcount = loaded_contour_data_storage->ccs.size();
                     if(postloadcount == preloadcount){
-                        FUNCWARN("RTSTRUCT file was loaded, but contained no ROIs");
+                        YLOGWARN("RTSTRUCT file was loaded, but contained no ROIs");
                         return false;
                         //If you get here, it isn't necessarily an error. But something has most likely gone wrong. Why bother
                         // to load an RTSTRUCT file if it is empty? If you know what you're doing, you can safely disable this
@@ -140,7 +141,7 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
                     try{
                         loaded_dose_storage.back().push_back( Load_Dose_Array(StoreFullPathName));
                     }catch(const std::exception &e){
-                        FUNCWARN("Difficulty encountered during dose array loading: '" << e.what() <<
+                        YLOGWARN("Difficulty encountered during dose array loading: '" << e.what() <<
                                  "'. Ignoring file and continuing");
                         //loaded_dose_storage.back().pop_back();
                         continue;
@@ -150,14 +151,14 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
                     try{
                         loaded_imgs_storage.back().push_back( Load_Image_Array(StoreFullPathName));
                     }catch(const std::exception &e){
-                        FUNCWARN("Difficulty encountered during image array loading: '" << e.what() <<
+                        YLOGWARN("Difficulty encountered during image array loading: '" << e.what() <<
                                  "'. Ignoring file and continuing");
                         //loaded_imgs_storage.back().pop_back();
                         continue;
                     }
 
                     if(loaded_imgs_storage.back().back()->imagecoll.images.size() != 1){
-                        FUNCWARN("More or less than one image loaded into the image array. You'll need to tweak the code to handle this");
+                        YLOGWARN("More or less than one image loaded into the image array. You'll need to tweak the code to handle this");
                         return false;
                         //If you get here, you've tried to load a file that contains more than one image slice. This is OK,
                         // (and is legitimate behaviour) but you'll need to update the following code to ensure each file's 
@@ -190,7 +191,7 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
         } // Loop over groups of query filter files.
 
     }catch(const std::exception &e){
-        FUNCWARN("Exception caught: " << e.what());
+        YLOGWARN("Exception caught: " << e.what());
         return false;
     }
 
@@ -228,11 +229,11 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
                 const auto keyA = std::make_pair(FrameOfReferenceUID,StudyInstanceUID);
                 contour_collection<double> cc;
                 if(!cc.load_from_string(ContourCollectionString)){
-                    FUNCWARN("Unable to parse contour collection with ROIName '" << ROIName <<
+                    YLOGWARN("Unable to parse contour collection with ROIName '" << ROIName <<
                              "' and StudyInstanceUID '" << StudyInstanceUID << "'. Continuing");
                     continue;
                 }else{
-                    FUNCINFO("Loaded contour with StudyInstanceUID '" << StudyInstanceUID << "' and ROIName '" << ROIName << "'");
+                    YLOGINFO("Loaded contour with StudyInstanceUID '" << StudyInstanceUID << "' and ROIName '" << ROIName << "'");
 
                     //Imbue the contours with their names and any other relevant metadata.
                     for(auto & contour : cc.contours){
@@ -269,7 +270,7 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
             //No transaction needed. Read-only.
             //txn.commit();
         }catch(const std::exception &e){
-            FUNCWARN("Unable to select contours: exception caught: " << e.what());
+            YLOGWARN("Unable to select contours: exception caught: " << e.what());
         }
     } //Loading custom contours from an auxiliary database.
 
@@ -301,13 +302,13 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
 
         auto collated_imgs = Collate_Image_Arrays(loaded_img_set);
         if(!collated_imgs){
-            FUNCWARN("Unable to collate images. It is possible to continue, but only if you are able to handle this case");
+            YLOGWARN("Unable to collate images. It is possible to continue, but only if you are able to handle this case");
             return false;
         }
 
         DICOM_data.image_data.emplace_back(std::move(collated_imgs));
     }
-    FUNCINFO("Number of image set groups loaded = " << DICOM_data.image_data.size());
+    YLOGINFO("Number of image set groups loaded = " << DICOM_data.image_data.size());
 
     for(auto &loaded_dose_set : loaded_dose_storage){
         if(loaded_dose_set.empty()) continue;

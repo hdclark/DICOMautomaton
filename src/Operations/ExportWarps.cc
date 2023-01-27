@@ -22,6 +22,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorFilesDirs.h"
@@ -85,7 +86,7 @@ bool ExportWarps(Drover &DICOM_data,
 
     auto T3s_all = All_T3s( DICOM_data );
     auto T3s = Whitelist( T3s_all, TFormSelectionStr );
-    FUNCINFO(T3s.size() << " transformations selected");
+    YLOGINFO(T3s.size() << " transformations selected");
 
     // I can't think of a better way to handle multiple outputs right now. Maybe a TAR archive?? Disallowing for now...
     if(T3s.size() != 1){

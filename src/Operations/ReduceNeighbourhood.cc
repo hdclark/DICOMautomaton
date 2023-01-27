@@ -638,7 +638,7 @@ bool ReduceNeighbourhood(Drover &DICOM_data,
         }
 
         if(!ud.voxel_triplets.empty()){
-            FUNCINFO("Neighbourhood comprises " << ud.voxel_triplets.size() << " neighbours");
+            YLOGINFO("Neighbourhood comprises " << ud.voxel_triplets.size() << " neighbours");
         }
 
         if(!(*iap_it)->imagecoll.Compute_Images( ComputeVolumetricNeighbourhoodSampler, 

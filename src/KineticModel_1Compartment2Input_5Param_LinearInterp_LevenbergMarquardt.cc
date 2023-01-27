@@ -24,6 +24,7 @@
 #include "KineticModel_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 
 
 static
@@ -261,7 +262,7 @@ static
 double 
 chebyshev_3param_func_to_min(unsigned, const double *, double *, void *){
 
-    FUNCERR("Not yet implemented");
+    YLOGERR("Not yet implemented");
     return 0.0;
 
 }
@@ -269,7 +270,7 @@ chebyshev_3param_func_to_min(unsigned, const double *, double *, void *){
 struct KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters
 Optimize_LevenbergMarquardt_3Param(KineticModel_1Compartment2Input_5Param_LinearInterp_Parameters state){
 
-    FUNCERR("Not yet implemented");
+    YLOGERR("Not yet implemented");
     return state;
 }
 */

@@ -53,6 +53,7 @@
 #endif // DCMA_USE_CGAL
 
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorImages.h"
@@ -786,7 +787,7 @@ Marching_Cubes_Implementation(
         {
             std::lock_guard<std::mutex> lock(saver_printer);
             ++completed;
-            FUNCINFO("Completed " << completed << " of " << img_count
+            YLOGINFO("Completed " << completed << " of " << img_count
                   << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "% done");
         }
         return;
@@ -794,7 +795,7 @@ Marching_Cubes_Implementation(
 
     // NOTE: if lower memory use is needed, we can further break down the traversal order and eagerly purge sidecar
     // information (e.g., vscor for completely deduplicated submeshes).
-    FUNCINFO("Extracting odd-numbered image meshes");
+    YLOGINFO("Extracting odd-numbered image meshes");
     {
         asio_thread_pool tp;
         for(long int i = img_num_min; i <= img_num_max; ++i){
@@ -803,7 +804,7 @@ Marching_Cubes_Implementation(
         }
     }
 
-    FUNCINFO("Extracting even-numbered image meshes");
+    YLOGINFO("Extracting even-numbered image meshes");
     {
         asio_thread_pool tp;
         for(long int i = img_num_min; i <= img_num_max; ++i){
@@ -812,7 +813,7 @@ Marching_Cubes_Implementation(
         }
     }
 
-    FUNCINFO("Joining mesh partitions..");
+    YLOGINFO("Joining mesh partitions..");
     // Count the (non-self-inclusive) running total number of vertices contained within each sub-mesh.
     std::vector<long int> verts_offset;
     verts_offset.push_back( 0 );
@@ -845,10 +846,10 @@ Marching_Cubes_Implementation(
                               std::begin(l_mini_mesh.faces), std::end(l_mini_mesh.faces) );
     }
 
-//    FUNCINFO("Deduplicating vertices..");
+//    YLOGINFO("Deduplicating vertices..");
 //    fv_mesh.merge_duplicate_vertices(final_merge_tol);
 
-    FUNCINFO("Orienting face normals..");
+    YLOGINFO("Orienting face normals..");
     // Note that consistent reorientation can legitimately fail for non-orientable objects (e.g., Klein bottles).
     // Note that non-manifold meshes are difficult to orient consistently since adjacency information can be
     // incomplete.
@@ -1034,19 +1035,19 @@ Marching_Cubes_Implementation(
                 if(!pos_orien) std::swap( fv_mesh.faces[i][0], fv_mesh.faces[i][1] );
             }
         }
-        FUNCINFO("Finished re-orienting mesh with " << connected_component << " connected components");
+        YLOGINFO("Finished re-orienting mesh with " << connected_component << " connected components");
         return true;
     };
     if(!reorient_faces(fv_mesh)){
-        FUNCWARN("Unable to consistently re-orient mesh. This should never happen after marching cubes");
+        YLOGWARN("Unable to consistently re-orient mesh. This should never happen after marching cubes");
     }
 
-    FUNCINFO("Removing disconnected vertices..");
+    YLOGINFO("Removing disconnected vertices..");
     fv_mesh.recreate_involved_face_index();
     fv_mesh.remove_disconnected_vertices();
     fv_mesh.involved_faces.clear();
 
-    FUNCINFO("The triangulated surface has " << fv_mesh.vertices.size() << " vertices"
+    YLOGINFO("The triangulated surface has " << fv_mesh.vertices.size() << " vertices"
              " and " << fv_mesh.faces.size() << " faces");
   
     return fv_mesh;
@@ -1111,7 +1112,7 @@ Estimate_Surface_Mesh_Marching_Cubes(
     // Compute the number of images to make into the grid: number of unique contour planes + 2.
     // The extra two help provide slices above and below the contour extent to ensure polyhedron will be closed.
     if(params.NumberOfImages <= 0) params.NumberOfImages = (ucp.size() + 2);
-    FUNCINFO("Number of images: " << params.NumberOfImages);
+    YLOGINFO("Number of images: " << params.NumberOfImages);
 
     // Find grid alignment vectors.
     const auto pi = std::acos(-1.0);
@@ -1154,8 +1155,8 @@ Estimate_Surface_Mesh_Marching_Cubes(
         const auto sep_per_plane = sep_med;
 
         if(RELATIVE_DIFF(sep_min, sep_max) > 0.01){
-            FUNCINFO("Planar separation: min, median, max = " << sep_min << ", " << sep_med << ", " << sep_max);
-            FUNCWARN("Planar separations are not consistent."
+            YLOGINFO("Planar separation: min, median, max = " << sep_min << ", " << sep_med << ", " << sep_max);
+            YLOGWARN("Planar separations are not consistent."
                      " This could result in topological invalidity (e.g., disconnected or open meshes)."
                      " Assuming the median separation for all contours.");
         }
@@ -1166,7 +1167,7 @@ Estimate_Surface_Mesh_Marching_Cubes(
         z_margin = sep_per_plane * 1.5;
 
     }else{
-        FUNCWARN("Only a single contour plane was detected. Guessing its thickness.."); 
+        YLOGWARN("Only a single contour plane was detected. Guessing its thickness.."); 
         z_margin = 5.0;
     }
 
@@ -1307,10 +1308,10 @@ Estimate_Surface_Mesh_Marching_Cubes(
             }
         }
     }
-//FUNCINFO("Contours stretch from " << c_bb.min << " to " << c_bb.max);
-//FUNCINFO("Using N_rows, N_cols, N_imgs = " << N_rows << ", " << N_cols << ", " << N_imgs);
-//FUNCINFO("Margin {x,y,z} = " << margin_x << ", " << margin_y << ", " << margin_z);
-//FUNCINFO("row_unit, col_unit = " << row_unit << ", " << col_unit);
+//YLOGINFO("Contours stretch from " << c_bb.min << " to " << c_bb.max);
+//YLOGINFO("Using N_rows, N_cols, N_imgs = " << N_rows << ", " << N_cols << ", " << N_imgs);
+//YLOGINFO("Margin {x,y,z} = " << margin_x << ", " << margin_y << ", " << margin_z);
+//YLOGINFO("row_unit, col_unit = " << row_unit << ", " << col_unit);
 
     auto pic = Contiguously_Grid_Volume<float,double>(ccs,
                                                       margin_x, margin_y, margin_z,
@@ -1326,7 +1327,7 @@ Estimate_Surface_Mesh_Marching_Cubes(
 //img_bb.digest( img.position(0,N_cols-1) );
 //img_bb.digest( img.position(N_rows-1,N_cols-1) );
     }
-//FUNCINFO("Images stretch from " << img_bb.min << " to " << img_bb.max);
+//YLOGINFO("Images stretch from " << img_bb.min << " to " << img_bb.max);
 
     return Marching_Cubes_Implementation( imgs,
                                           sdf,
@@ -1430,7 +1431,7 @@ Polyhedron Estimate_Surface_Mesh(
 // TODO: find vertex nearest to the bounding sphere centre and shift+grow the sphere so it is centred on a vertex.
 
     }
-    FUNCINFO("Finished computing bounding sphere for selected ROIs; centre, radius = " << bounding_sphere_center << ", " << bounding_sphere_radius);
+    YLOGINFO("Finished computing bounding sphere for selected ROIs; centre, radius = " << bounding_sphere_center << ", " << bounding_sphere_radius);
 
     // ============================================= Export the data ================================================
     // Export the contour vertices for inspection or processing with other tools.
@@ -1458,7 +1459,7 @@ Polyhedron Estimate_Surface_Mesh(
     // Compute the number of images to make into the grid: number of unique contour planes + 2.
     // The extra two help provide a buffer that simplifies interpolation.
     if(params.NumberOfImages <= 0) params.NumberOfImages = (ucp.size() + 2);
-    FUNCINFO("Number of images: " << params.NumberOfImages);
+    YLOGINFO("Number of images: " << params.NumberOfImages);
 
     // Find grid alignment vectors.
     //
@@ -1506,7 +1507,7 @@ Polyhedron Estimate_Surface_Mesh(
         z_margin = sep_per_plane * 1.5;
 
     }else{
-        FUNCWARN("Only a single contour plane was detected. Guessing its thickness.."); 
+        YLOGWARN("Only a single contour plane was detected. Guessing its thickness.."); 
         z_margin = 5.0;
     }
 
@@ -1598,7 +1599,7 @@ Polyhedron Estimate_Surface_Mesh(
         if(!grid_arr_ptr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
                                                              InImagePlaneBicubicSupersample,
                                                              {}, {}, &bicub_ud )){
-            FUNCERR("Unable to bicubically supersample surface mask");
+            YLOGERR("Unable to bicubically supersample surface mask");
         }
     }
 
@@ -1767,7 +1768,7 @@ Polyhedron Estimate_Surface_Mesh(
   
   
     // Perform the meshing.
-    FUNCINFO("Beginning meshing. This may take a while");
+    YLOGINFO("Beginning meshing. This may take a while");
     C3t3 c3t3 = CGAL::make_mesh_3<C3t3>(domain, 
                                         criteria, 
                                         //CGAL::parameters::lloyd(CGAL::parameters::time_limit=10.0),
@@ -1787,7 +1788,7 @@ Polyhedron Estimate_Surface_Mesh(
     // NOTE: This optimization might not be appropriate for our use-cases. In particular the refine may invalidate
     //       meshing criteria by optimizing connectivity.
     if(params.RQ == ReproductionQuality::High){
-        FUNCINFO("Refining mesh. This may take a while");
+        YLOGINFO("Refining mesh. This may take a while");
         CGAL::refine_mesh_3(c3t3, 
                             domain, 
                             criteria,
@@ -1808,13 +1809,13 @@ Polyhedron Estimate_Surface_Mesh(
     }catch(const std::exception &e){
         throw std::runtime_error(std::string("Could not convert surface mesh to a polyhedron representation: ") + e.what());
     }
-    FUNCINFO("The triangulated surface has " << output_mesh.size_of_vertices() << " vertices"
+    YLOGINFO("The triangulated surface has " << output_mesh.size_of_vertices() << " vertices"
              " and " << output_mesh.size_of_facets() << " faces");
   
     // Remove disconnected vertices, if there are any.
     const auto removed_verts = CGAL::Polygon_mesh_processing::remove_isolated_vertices(output_mesh);
     if(removed_verts != 0){
-        FUNCWARN(removed_verts << " isolated vertices were removed");
+        YLOGWARN(removed_verts << " isolated vertices were removed");
     }
   
     return output_mesh;
@@ -1905,18 +1906,18 @@ Polyhedron Estimate_Surface_Mesh_AdvancingFront(
     // Remove disconnected vertices.
     const auto removed_verts = CGAL::Polygon_mesh_processing::remove_isolated_vertices(output_mesh);
     if(removed_verts != 0){
-        FUNCWARN(removed_verts << " isolated vertices were removed");
+        YLOGWARN(removed_verts << " isolated vertices were removed");
     }
 
     // Retain only the largest surface component.
 /*    
     const auto removed_components = output_mesh.keep_largest_connected_components(1);
     if(removed_components != 0){
-        FUNCWARN(removed_components << " of the smallest mesh components were removed");
+        YLOGWARN(removed_components << " of the smallest mesh components were removed");
     }
 */
 
-    FUNCERR("This routine is not complete. Need to convert mesh types");
+    YLOGERR("This routine is not complete. Need to convert mesh types");
     return Polyhedron();
 }
 #endif // DCMA_USE_CGAL
@@ -1962,7 +1963,7 @@ FVSMeshToPolyhedron(
         }
     }
 
-    FUNCINFO("Orienting face normals..");
+    YLOGINFO("Orienting face normals..");
     CGAL::Polygon_mesh_processing::orient_polygon_soup(triangle_verts, triangle_faces);
 
     // Output the mesh for inspection.
@@ -1970,7 +1971,7 @@ FVSMeshToPolyhedron(
     //c3t3.output_boundary_to_off(off_file);
   
     // Extract the polyhedral surface.
-    FUNCINFO("Extracting the polyhedral surface..");
+    YLOGINFO("Extracting the polyhedral surface..");
     Polyhedron output_mesh;
     CGAL::Polygon_mesh_processing::polygon_soup_to_polygon_mesh(triangle_verts, triangle_faces, output_mesh);
 
@@ -1980,17 +1981,17 @@ FVSMeshToPolyhedron(
 //        throw std::runtime_error("Mesh not closed but should be. Verify vector equality is not too loose. Dumped to /tmp/open_mesh.off.");
 //    }
     if(!CGAL::Polygon_mesh_processing::is_outward_oriented(output_mesh)){
-        FUNCINFO("Reorienting face orientation so faces face outward..");
+        YLOGINFO("Reorienting face orientation so faces face outward..");
         CGAL::Polygon_mesh_processing::reverse_face_orientations(output_mesh);
     }
 
-    FUNCINFO("The triangulated surface has " << output_mesh.size_of_vertices() << " vertices"
+    YLOGINFO("The triangulated surface has " << output_mesh.size_of_vertices() << " vertices"
              " and " << output_mesh.size_of_facets() << " faces");
   
     // Remove disconnected vertices, if there are any.
     const auto removed_verts = CGAL::Polygon_mesh_processing::remove_isolated_vertices(output_mesh);
     if(removed_verts != 0){
-        FUNCWARN(removed_verts << " isolated vertices were removed");
+        YLOGWARN(removed_verts << " isolated vertices were removed");
     }
 
     return output_mesh;
@@ -2068,14 +2069,14 @@ Subdivide(Polyhedron &mesh,
     if(!mesh.is_valid()) throw std::runtime_error("Mesh is not combinatorially valid.");
     //if(!mesh.is_closed()) throw std::runtime_error("Mesh is not closed; it has a boundary")
 
-    FUNCINFO("About to perform mesh subdivision. If this fails, the mesh topology is probably incompatible");
+    YLOGINFO("About to perform mesh subdivision. If this fails, the mesh topology is probably incompatible");
     for(long int i = 0; i < iters; ++i){
         // Note: the following takes a parameter indicating the number of interations to perform, but seems to ignore
         // it. (Perhaps the interface has changed?)
         CGAL::Subdivision_method_3::Loop_subdivision(mesh);
         //CGAL::Subdivision_method_3::DooSabin_subdivision(output_mesh,params.MeshingSubdivisionIterations);
         //CGAL::Subdivision_method_3::Sqrt3_subdivision(output_mesh,params.MeshingSubdivisionIterations);
-        FUNCINFO("The subdivided surface has " << mesh.size_of_vertices() << " vertices"
+        YLOGINFO("The subdivided surface has " << mesh.size_of_vertices() << " vertices"
                  " and " << mesh.size_of_facets() << " faces");
     }
     return;
@@ -2111,7 +2112,7 @@ Remesh(Polyhedron &mesh,
                 CGAL::Polygon_mesh_processing::parameters::number_of_iterations(iters)
                   .face_index_map(boost::make_assoc_property_map(fi_map))
         );
-        FUNCINFO("The remeshed surface has " << mesh.size_of_vertices() << " vertices"
+        YLOGINFO("The remeshed surface has " << mesh.size_of_vertices() << " vertices"
                  " and " << mesh.size_of_facets() << " faces");
     }
     return;
@@ -2132,7 +2133,7 @@ Simplify(Polyhedron &mesh,
     if(!mesh.is_valid()) throw std::runtime_error("Mesh is not combinatorially valid.");
     //if(!mesh.is_closed()) throw std::runtime_error("Mesh is not closed; it has a boundary");
 
-    FUNCINFO("About to perform mesh simplification. If this fails, the mesh topology is probably incompatible");
+    YLOGINFO("About to perform mesh simplification. If this fails, the mesh topology is probably incompatible");
     if(edge_count_limit > 0){
         CGAL::Surface_mesh_simplification::Count_stop_predicate<Polyhedron> stop_crit(edge_count_limit);
   
@@ -2144,8 +2145,8 @@ Simplify(Polyhedron &mesh,
                                                   .get_cost(CGAL::Surface_mesh_simplification::Edge_length_cost<Polyhedron>())
                                                   .get_placement(CGAL::Surface_mesh_simplification::Midpoint_placement<Polyhedron>()) );
 
-        FUNCINFO("Removed " << rem << " edges (" << edge_count_limit << " remain)");
-        FUNCINFO("The simplified surface now has " << mesh.size_of_vertices() << " vertices"
+        YLOGINFO("Removed " << rem << " edges (" << edge_count_limit << " remain)");
+        YLOGINFO("The simplified surface now has " << mesh.size_of_vertices() << " vertices"
                  " and " << mesh.size_of_facets() << " faces");
     }
 
@@ -2202,7 +2203,7 @@ void Dilate( Polyhedron &mesh,
     CGAL::OFF_to_nef_3(ss_sphere_off, nef_sphere);
     ss_sphere_off.clear();
 
-    FUNCINFO("About to compute 3D Minkowski sum");
+    YLOGINFO("About to compute 3D Minkowski sum");
     Nef_polyhedron result = CGAL::minkowski_sum_3(nef_mesh, nef_sphere);
 
     if(!result.is_simple()){
@@ -2361,7 +2362,7 @@ void Dilate( Polyhedron &output_mesh,
                 for(auto &p : polylines) polylines_first_end.emplace_back( std::make_pair( p.begin(), p.end() ) );
                 Nef_polyhedron nef_mesh(polylines_first_end.begin(), polylines_first_end.end(), Nef_polyhedron::Polylines_tag());
 
-                FUNCINFO("About to compute 3D Minkowski sum for a single contour");
+                YLOGINFO("About to compute 3D Minkowski sum for a single contour");
                 Nef_polyhedron result = CGAL::minkowski_sum_3(nef_mesh, nef_sphere);
 
                 // TODO: select outer or inner contours for dilation and erosion, respectively.
@@ -2381,7 +2382,7 @@ void Dilate( Polyhedron &output_mesh,
     // TODO: to compute the erosion, take the complement of the nef_mesh, perform a Minkowski sum, and then complement again.
 
 /*
-    FUNCINFO("About to compute 3D Minkowski sum");
+    YLOGINFO("About to compute 3D Minkowski sum");
     Nef_polyhedron result = CGAL::minkowski_sum_3(nef_mesh, nef_sphere);
 
     //if(!result.is_simple()){
@@ -2472,7 +2473,7 @@ Transform( Polyhedron &output_mesh,
         Nef_polyhedron shifted(orig);
         shifted.transform(trans);
         
-        FUNCINFO("Performing Boolean operation round now");
+        YLOGINFO("Performing Boolean operation round now");
         if(op == TransformOp::Dilate){
             amal += shifted;
         }else if(op == TransformOp::Erode){
@@ -2481,11 +2482,11 @@ Transform( Polyhedron &output_mesh,
             amal ^= shifted;
         }
 
-        FUNCINFO("Amalgam mesh currently has " << amal.number_of_vertices() << " vertices");
+        YLOGINFO("Amalgam mesh currently has " << amal.number_of_vertices() << " vertices");
 
 /*
         // Simplify the mesh to reduce the complexity of future Boolean operations.
-        FUNCINFO("About to simplify surface mesh");
+        YLOGINFO("About to simplify surface mesh");
         output_mesh = NefPoly_to_Poly(amal);
         Simplify(output_mesh, N_edges * 2);
         amal = Poly_to_NefPoly(output_mesh);
@@ -2495,7 +2496,7 @@ Transform( Polyhedron &output_mesh,
     Nef_polyhedron result(amal);
     if(op == TransformOp::Shell) result = orig - amal;
 
-    FUNCINFO("About to simplify surface mesh final time");
+    YLOGINFO("About to simplify surface mesh final time");
     output_mesh = NefPoly_to_Poly(result);
     Simplify(output_mesh, N_edges);
 

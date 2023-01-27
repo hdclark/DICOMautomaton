@@ -12,6 +12,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
 bool IVIMMRIADCMap(planar_image_collection<float,double>::images_list_it_t first_img_it,
@@ -61,7 +62,7 @@ bool IVIMMRIADCMap(planar_image_collection<float,double>::images_list_it_t first
                     const auto avg_val_sigma = std::sqrt(Stats::Unbiased_Var_Est(in_pixs))/std::sqrt(1.0*in_pixs.size());
 
                     auto bval = img_it->GetMetadataValueAs<double>("Diffusion_bValue");
-                    if(!bval) FUNCERR("Image missing diffusion b-value. Cannot continue");
+                    if(!bval) YLOGERR("Image missing diffusion b-value. Cannot continue");
                     channel_bval_course.push_back(bval.value(), 0.0, avg_val, avg_val_sigma, InhibitSort);
                 }
                 channel_bval_course.stable_sort();
@@ -155,12 +156,12 @@ bool IVIMMRIADCMap(planar_image_collection<float,double>::images_list_it_t first
 
                     //Update the pixel value with the ADC, or handle the case of failure.
                     if(!wasOK){
-                        //FUNCWARN("Encountered issue performing least squares. Continuing with voxel set to zero");
+                        //YLOGWARN("Encountered issue performing least squares. Continuing with voxel set to zero");
                         working.reference(row, col, chan) = std::numeric_limits<float>::quiet_NaN();
                         continue;
                     }else if(ADC < 0.0){
-//                        //FUNCWARN("Least-squares resulted in a negative ADC. Continuing with voxel set to zero");
-//FUNCERR("Need to figure out what to put here. Zero? NaN?");
+//                        //YLOGWARN("Least-squares resulted in a negative ADC. Continuing with voxel set to zero");
+//YLOGERR("Need to figure out what to put here. Zero? NaN?");
 //                        working.reference(row, col, chan) = std::numeric_limits<float>::quiet_NaN();
                         //Proceed with negative ADC. It is clearly not a valid result and should somehow be dealt with
                         // in later analyses.
@@ -169,7 +170,7 @@ bool IVIMMRIADCMap(planar_image_collection<float,double>::images_list_it_t first
                     }else{
 //                        //Because the ADC is a small number in these units, scale it (effectively altering the units).
 //                        // We want at least three significant figures, and the ADC should be ~0.9E-3.
-//FUNCERR("Need to figure out if the 1E6x scaling factor is needed here. It might be for precision arguments");
+//YLOGERR("Need to figure out if the 1E6x scaling factor is needed here. It might be for precision arguments");
 //                        const auto ADC_int = static_cast<float>(ADC*1.0E6);
                         working.reference(row, col, chan) = ADC;
 

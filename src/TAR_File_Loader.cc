@@ -28,6 +28,7 @@
 
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for SplitStringToVector, Canonicalize_String2, SplitVector functions.
 #include "YgorFilesDirs.h"
 #include "YgorTAR.h"
@@ -50,7 +51,7 @@ bool Load_From_TAR_Files( Drover &DICOM_data,
 
     auto bfit = Filenames.begin();
     while(bfit != Filenames.end()){
-        FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
+        YLOGINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
         const auto Filename = *bfit;
 
@@ -80,7 +81,7 @@ bool Load_From_TAR_Files( Drover &DICOM_data,
             const auto fname_tmp = Get_Unique_Filename(dir, 6, ext);
             if( 0 <= std::filesystem::temp_directory_path().compare( std::filesystem::path(fname_tmp)) ){
                 // Note: If you get here, it's possible that there was an attempt to access the filesystem maliciously!
-                FUNCERR("Temporary name is not contained within temporary directory. Refusing to continue");
+                YLOGERR("Temporary name is not contained within temporary directory. Refusing to continue");
             }
             {
                 std::ofstream ofs_tmp(fname_tmp, std::ios::out | std::ios::binary);
@@ -98,7 +99,7 @@ bool Load_From_TAR_Files( Drover &DICOM_data,
 
             // Remove the temporary file.
             if(!RemoveFile(fname_tmp)){
-                FUNCERR("Unable to remove temporary file '" << fname_tmp << "'. Refusing to continue");
+                YLOGERR("Unable to remove temporary file '" << fname_tmp << "'. Refusing to continue");
             }
 
             return;
@@ -119,12 +120,12 @@ bool Load_From_TAR_Files( Drover &DICOM_data,
                 throw std::runtime_error("Unable to load all encapsulated files inside TAR file.");
             }
 
-            FUNCINFO("Loaded TAR file containing " << N_encapsulated_files << " encapsulated files");
+            YLOGINFO("Loaded TAR file containing " << N_encapsulated_files << " encapsulated files");
             bfit = Filenames.erase( bfit ); 
             continue;
 
         }catch(const std::exception &e){
-            FUNCINFO(e.what());
+            YLOGINFO(e.what());
         };
 
         // gzip-compressed case.
@@ -146,12 +147,12 @@ bool Load_From_TAR_Files( Drover &DICOM_data,
                 throw std::runtime_error("Unable to load all encapsulated files inside gzipped-TAR file.");
             }
 
-            FUNCINFO("Loaded gzipped TAR file containing " << N_encapsulated_files << " encapsulated files");
+            YLOGINFO("Loaded gzipped TAR file containing " << N_encapsulated_files << " encapsulated files");
             bfit = Filenames.erase( bfit ); 
             continue;
 
         }catch(const std::exception &e){
-            FUNCINFO(e.what());
+            YLOGINFO(e.what());
         };
 
         // Skip the file. It might be destined for some other loader.

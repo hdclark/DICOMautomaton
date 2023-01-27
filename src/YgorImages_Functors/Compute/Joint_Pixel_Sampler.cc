@@ -19,6 +19,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
 #include "YgorClustering.hpp"
@@ -44,22 +45,22 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
     try{
         user_data_s = std::any_cast<ComputeJointPixelSamplerUserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
 
     if( ccsl.empty() ){
-        FUNCWARN("Missing needed contour information. Cannot continue with computation");
+        YLOGWARN("Missing needed contour information. Cannot continue with computation");
         return false;
     }
 
     if( external_imgs.empty() ){
-        FUNCWARN("No reference images provided. Cannot continue");
+        YLOGWARN("No reference images provided. Cannot continue");
         return false;
     }
 
     if( ! user_data_s->f_reduce ){
-        FUNCWARN("Reduction function is not valid; this operation will amount to a no-op. (Is this intentional?) Refusing continue");
+        YLOGWARN("Reduction function is not valid; this operation will amount to a no-op. (Is this intentional?) Refusing continue");
         return false;
     }
 
@@ -75,7 +76,7 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
         }
 
         if(!Images_Form_Rectilinear_Grid(selected_imgs)){
-            FUNCWARN("Reference images do not form a rectilinear grid. Cannot continue");
+            YLOGWARN("Reference images do not form a rectilinear grid. Cannot continue");
             return false;
         }
     }
@@ -142,11 +143,11 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
             }
             if(!envel_overlap){
                 std::lock_guard<std::mutex> lock(saver_printer);
-                FUNCWARN("Reference images do not all envelop-overlap; using slow per-voxel sampling");
+                YLOGWARN("Reference images do not all envelop-overlap; using slow per-voxel sampling");
             }
             if(envel_overlap && !exact_overlap){
                 std::lock_guard<std::mutex> lock(saver_printer);
-                FUNCWARN("Reference images do not all exact-overlap; using per-image sampling");
+                YLOGWARN("Reference images do not all exact-overlap; using per-image sampling");
             }
 
             auto f_bounded = [&](long int E_row,  // "edit-image" row.
@@ -253,7 +254,7 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
             {
                 std::lock_guard<std::mutex> lock(saver_printer);
                 ++completed;
-                FUNCINFO("Completed " << completed << " of " << img_count
+                YLOGINFO("Completed " << completed << " of " << img_count
                       << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "% done");
             }
         }); // thread pool task closure.

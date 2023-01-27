@@ -855,7 +855,7 @@ std::shared_ptr<node> build_node(const parsed_function& pf){
         }
         const auto normal = v123.value_or( u_z ).unit();
         const auto anchor = v456.value_or( zero3 );
-FUNCINFO("Extrusion: using normal " << normal << " and anchor " << anchor );
+YLOGINFO("Extrusion: using normal " << normal << " and anchor " << anchor );
         const plane<double> pln(normal, anchor);
         out = std::make_shared<csg::sdf::op::extrude>( s0.value(), pln );
 

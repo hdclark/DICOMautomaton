@@ -26,6 +26,7 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 //#include "YgorStats.h"        //Needed for Median().
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 #include "Metadata.h"
 #include "Structs.h"
@@ -111,7 +112,7 @@ planar_image<float,double> read_xim_file( std::istream &is ){
     if(magic_number != "VMS.XI"){
         throw std::invalid_argument("Unrecognized file magic number: '"_s + magic_number + "'");
     }
-    if(debug) FUNCINFO("Format ID: '" << magic_number << "'");
+    if(debug) YLOGINFO("Format ID: '" << magic_number << "'");
 
 
     const auto format_version = extract_int32(is);
@@ -121,12 +122,12 @@ planar_image<float,double> read_xim_file( std::istream &is ){
     const auto bytes_per_pixel = extract_int32(is);
     const bool decompression_reqd = (extract_int32(is) != 0);
 
-    if(debug) FUNCINFO("format_version = " << format_version);
-    if(debug) FUNCINFO("image_width = " << image_width);
-    if(debug) FUNCINFO("image_height = " << image_height);
-    if(debug) FUNCINFO("bits_per_pixel = " << bits_per_pixel);
-    if(debug) FUNCINFO("bytes_per_pixel = " << bytes_per_pixel);
-    if(debug) FUNCINFO("decompression_reqd = " << decompression_reqd);
+    if(debug) YLOGINFO("format_version = " << format_version);
+    if(debug) YLOGINFO("image_width = " << image_width);
+    if(debug) YLOGINFO("image_height = " << image_height);
+    if(debug) YLOGINFO("bits_per_pixel = " << bits_per_pixel);
+    if(debug) YLOGINFO("bytes_per_pixel = " << bytes_per_pixel);
+    if(debug) YLOGINFO("decompression_reqd = " << decompression_reqd);
 
     img.metadata["FormatVersion"]   = std::to_string(format_version);
     img.metadata["Columns"]         = std::to_string(image_width);
@@ -171,7 +172,7 @@ planar_image<float,double> read_xim_file( std::istream &is ){
     const auto pxl_buf_size = extract_int32(is); // number of bytes holding compressed pixel data.
     long int num_bytes_read = 4 * (image_width + 1L);
 
-    if(debug) FUNCINFO("LUT vector length = " << lut_vec.size());
+    if(debug) YLOGINFO("LUT vector length = " << lut_vec.size());
 
     // Pixel data.
     // read the first row.
@@ -203,40 +204,40 @@ planar_image<float,double> read_xim_file( std::istream &is ){
 
     const auto expanded_pxl_buf_size = extract_int32(is); // number of bytes holding uncompressed pixel data.
 
-    if(debug) FUNCINFO("pxl_buf_size = " << pxl_buf_size);
-    if(debug) FUNCINFO("num_bytes_read = " << num_bytes_read);
+    if(debug) YLOGINFO("pxl_buf_size = " << pxl_buf_size);
+    if(debug) YLOGINFO("num_bytes_read = " << num_bytes_read);
     if( pxl_buf_size != num_bytes_read ){
         throw std::runtime_error("Number of pixels read does not match expected number of bytes present");
     }
 
     // Note: these don't seem to match at the end. Not off by one either, since the image garbles otherwise.
     // Not sure if it's intentional?
-    if(debug) FUNCINFO("lut_num = " << lut_num);
-    if(debug) FUNCINFO("lut_vec.size() = " << lut_vec.size());
+    if(debug) YLOGINFO("lut_num = " << lut_num);
+    if(debug) YLOGINFO("lut_vec.size() = " << lut_vec.size());
 
-    if(debug) FUNCINFO("pixel_data.size() = " << pixel_data.size());
-    if(debug) FUNCINFO("image_width * image_height = " << image_width * image_height);
+    if(debug) YLOGINFO("pixel_data.size() = " << pixel_data.size());
+    if(debug) YLOGINFO("image_width * image_height = " << image_width * image_height);
     if( pixel_data.size() != (image_width * image_height) ){
         throw std::runtime_error("Expanded pixel data does not match expected image dimensions");
     }
 
-    if(debug) FUNCINFO("expanded_pxl_buf_size = " << expanded_pxl_buf_size);
-    if(debug) FUNCINFO("pixel_data.size() * bytes_per_pixel = " << pixel_data.size() * bytes_per_pixel);
+    if(debug) YLOGINFO("expanded_pxl_buf_size = " << expanded_pxl_buf_size);
+    if(debug) YLOGINFO("pixel_data.size() * bytes_per_pixel = " << pixel_data.size() * bytes_per_pixel);
     if( expanded_pxl_buf_size != (pixel_data.size() * bytes_per_pixel) ){
         throw std::runtime_error("Expanded pixel data does not match expected size reported by file");
     }
 
-    if(debug) FUNCINFO("Done reading pixel data");
+    if(debug) YLOGINFO("Done reading pixel data");
 
     // Embedded histogram.
     const auto num_hist_bins = extract_int32(is);
-    if(debug) FUNCINFO("num_hist_bins = " << num_hist_bins);
+    if(debug) YLOGINFO("num_hist_bins = " << num_hist_bins);
 
     std::vector<int32_t> hist_data;
     if(0 < num_hist_bins){
         hist_data = extract_int32_vec(is, num_hist_bins);
     }
-    if(debug) FUNCINFO("Done reading histogram data");
+    if(debug) YLOGINFO("Done reading histogram data");
 
     // Metadata.
     const auto num_metadata = extract_int32(is);
@@ -283,7 +284,7 @@ planar_image<float,double> read_xim_file( std::istream &is ){
         }
 
         img.metadata[key] = val;
-        if(debug) FUNCINFO("Read metadata key-value pair: '" << key << "' -- '" << val << "'");
+        if(debug) YLOGINFO("Read metadata key-value pair: '" << key << "' -- '" << val << "'");
     }
 
     // Inject DICOM-style metadata for consistency with the same images exported in DICOM format.
@@ -382,7 +383,7 @@ bool Load_From_XIM_Files( Drover &DICOM_data,
 
     auto bfit = Filenames.begin();
     while(bfit != Filenames.end()){
-        FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
+        YLOGINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
         const auto Filename = *bfit;
 
@@ -396,14 +397,14 @@ bool Load_From_XIM_Files( Drover &DICOM_data,
             animg.metadata = l_meta;
             animg.metadata["Filename"] = Filename.string();
 
-            FUNCINFO("Loaded XIM file with dimensions " 
+            YLOGINFO("Loaded XIM file with dimensions " 
                      << animg.rows << " x " << animg.columns);
 
             DICOM_data.image_data.back()->imagecoll.images.emplace_back( animg );
             bfit = Filenames.erase( bfit ); 
             continue;
         }catch(const std::exception &e){
-            FUNCINFO("Unable to load as XIM file: '" << e.what() << "'");
+            YLOGINFO("Unable to load as XIM file: '" << e.what() << "'");
         };
 
         //Skip the file. It might be destined for some other loader.

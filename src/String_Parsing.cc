@@ -8,6 +8,7 @@
 #include "YgorString.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 
 #include "String_Parsing.h"
 
@@ -336,11 +337,11 @@ parse_functions(const std::string &in,
         std::function<void(const std::vector<parsed_function> &, std::string)> print_ast;
         print_ast = [&print_ast](const std::vector<parsed_function> &pfv, std::string depth){
             for(auto &pf : pfv){
-               FUNCINFO(depth << "name = '" << pf.name << "'");
+               YLOGINFO(depth << "name = '" << pf.name << "'");
                for(auto &p : pf.parameters){
-                   FUNCINFO(depth << "  parameter: '" << p.raw << "'");
+                   YLOGINFO(depth << "  parameter: '" << p.raw << "'");
                }
-               FUNCINFO(depth << "  children: " << pf.children.size());
+               YLOGINFO(depth << "  children: " << pf.children.size());
                if(!pf.children.empty()){
                    print_ast(pf.children, depth + "    ");
                }

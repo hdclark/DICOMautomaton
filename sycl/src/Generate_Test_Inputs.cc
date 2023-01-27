@@ -18,6 +18,7 @@
 #include "YgorArguments.h" //Needed for ArgumentHandler class.
 #include "YgorFilesDirs.h" //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMisc.h"      //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorMath.h"      //Needed for samples_1D.
 #include "YgorString.h"    //Needed for GetFirstRegex(...)
 

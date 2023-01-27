@@ -1,6 +1,7 @@
 //Documentation.cc - A part of DICOMautomaton 2019. Written by hal clark.
 
 #include <YgorMisc.h>
+#include "YgorLog.h"
 #include <YgorString.h>
 #include <boost/algorithm/string/predicate.hpp>
 #include <exception>

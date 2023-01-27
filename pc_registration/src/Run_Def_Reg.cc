@@ -19,6 +19,7 @@
 #include "YgorArguments.h"    //Needed for ArgumentHandler class.
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorMath.h"         //Needed for point_set.
 #include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
@@ -69,11 +70,11 @@ int main(int argc, char* argv[]){
     arger.description = "A program for running a deformable registration algorithm.";
 
     arger.default_callback = [](int, const std::string &optarg) -> void {
-      FUNCERR("Unrecognized option with argument: '" << optarg << "'");
+      YLOGERR("Unrecognized option with argument: '" << optarg << "'");
       return; 
     };
     arger.optionless_callback = [&](const std::string &optarg) -> void {
-      FUNCERR("Unrecognized option with argument: '" << optarg << "'");
+      YLOGERR("Unrecognized option with argument: '" << optarg << "'");
       return; 
     };
     arger.push_back( ygor_arg_handlr_t(1, 'm', "moving", true, "moving.txt",
@@ -81,7 +82,7 @@ int main(int argc, char* argv[]){
       [&](const std::string &optarg) -> void {
         std::ifstream FI(optarg);
         if(!ReadPointSetFromXYZ(moving, FI) || moving.points.empty()){
-          FUNCERR("Unable to parse moving point set file: '" << optarg << "'");
+          YLOGERR("Unable to parse moving point set file: '" << optarg << "'");
           exit(1);
         }
         return;
@@ -92,7 +93,7 @@ int main(int argc, char* argv[]){
       [&](const std::string &optarg) -> void {
         std::ifstream FI(optarg);
         if(!ReadPointSetFromXYZ(stationary, FI) || stationary.points.empty()){
-          FUNCERR("Unable to parse stationary point set file: '" << optarg << "'");
+          YLOGERR("Unable to parse stationary point set file: '" << optarg << "'");
           exit(1);
         }
         return;
@@ -208,10 +209,10 @@ int main(int argc, char* argv[]){
 
     //============================================= Input Validation ================================================
     if(moving.points.empty()){
-        FUNCERR("Moving point set contains no points. Unable to continue.");
+        YLOGERR("Moving point set contains no points. Unable to continue.");
     }
     if(stationary.points.empty()){
-        FUNCERR("Stationary point set contains no points. Unable to continue.");
+        YLOGERR("Stationary point set contains no points. Unable to continue.");
     }
 
     //========================================== Launch Perfusion Model =============================================
@@ -233,7 +234,7 @@ int main(int argc, char* argv[]){
           temp_xyz_outfile = xyz_outfile + "_iter0.xyz";
           std::ofstream PFO(temp_xyz_outfile);
           if(!WritePointSetToXYZ(mutable_moving, PFO))
-            FUNCERR("Error writing point set to " << temp_xyz_outfile);
+            YLOGERR("Error writing point set to " << temp_xyz_outfile);
         }
         
         RigidCPDTransform transform = AlignViaRigidCPD(params, moving, stationary, iter_interval, video, xyz_outfile);
@@ -241,11 +242,11 @@ int main(int argc, char* argv[]){
 
         temp_xyz_outfile = xyz_outfile + "_last.xyz";
         std::ofstream PFO(temp_xyz_outfile);
-        FUNCINFO("Writing transformed point set to " << (temp_xyz_outfile))
+        YLOGINFO("Writing transformed point set to " << (temp_xyz_outfile))
         if(!WritePointSetToXYZ(mutable_moving, PFO))
-          FUNCERR("Error writing point set to " << temp_xyz_outfile);
+          YLOGERR("Error writing point set to " << temp_xyz_outfile);
         std::ofstream TFO(tf_outfile);
-        FUNCINFO("Writing transform to " << tf_outfile)
+        YLOGINFO("Writing transform to " << tf_outfile)
         transform.write_to(TFO);
     } else if(type == "affine") {
         params_file << "type=affine";
@@ -253,7 +254,7 @@ int main(int argc, char* argv[]){
           temp_xyz_outfile = xyz_outfile + "_iter0.xyz";
           std::ofstream PFO(temp_xyz_outfile);
           if(!WritePointSetToXYZ(mutable_moving, PFO))
-            FUNCERR("Error writing point set to " << temp_xyz_outfile);
+            YLOGERR("Error writing point set to " << temp_xyz_outfile);
         }
         
         AffineCPDTransform transform = AlignViaAffineCPD(params, moving, stationary, iter_interval, video, xyz_outfile);
@@ -261,11 +262,11 @@ int main(int argc, char* argv[]){
 
         temp_xyz_outfile = xyz_outfile + "_last.xyz";
         std::ofstream PFO(temp_xyz_outfile);
-        FUNCINFO("Writing transformed point set to " << (temp_xyz_outfile))
+        YLOGINFO("Writing transformed point set to " << (temp_xyz_outfile))
         if(!WritePointSetToXYZ(mutable_moving, PFO))
-          FUNCERR("Error writing point set to " << temp_xyz_outfile);
+          YLOGERR("Error writing point set to " << temp_xyz_outfile);
         std::ofstream TFO(tf_outfile);
-        FUNCINFO("Writing transform to " << tf_outfile)
+        YLOGINFO("Writing transform to " << tf_outfile)
         transform.write_to(TFO);
     } else if(type == "nonrigid") {
         params_file << "type=nonrigid";
@@ -273,27 +274,27 @@ int main(int argc, char* argv[]){
           temp_xyz_outfile = xyz_outfile + "_iter0.xyz";
           std::ofstream PFO(temp_xyz_outfile);
           if(!WritePointSetToXYZ(mutable_moving, PFO))
-            FUNCERR("Error writing point set to " << temp_xyz_outfile);
+            YLOGERR("Error writing point set to " << temp_xyz_outfile);
         }
 
         NonRigidCPDTransform transform = AlignViaNonRigidCPD(params, moving, stationary, iter_interval, video, xyz_outfile);
         transform.apply_to(mutable_moving);
         std::ofstream TFO(tf_outfile);
-        FUNCINFO("Writing transform to " << tf_outfile)
+        YLOGINFO("Writing transform to " << tf_outfile)
         transform.write_to(TFO);
         
         temp_xyz_outfile = xyz_outfile + "_last.xyz";
         std::ofstream PFO(temp_xyz_outfile);
-        FUNCINFO("Writing transformed point set to to " << (temp_xyz_outfile))
+        YLOGINFO("Writing transformed point set to to " << (temp_xyz_outfile))
         if(!WritePointSetToXYZ(mutable_moving, PFO))
-          FUNCERR("Error writing point set to " << temp_xyz_outfile);
+          YLOGERR("Error writing point set to " << temp_xyz_outfile);
         // TODO: Add in writing transform to file
     } else {
-        FUNCERR("The CPD algorithm specified was invalid. Options are rigid, affine, nonrigid");
+        YLOGERR("The CPD algorithm specified was invalid. Options are rigid, affine, nonrigid");
         return 1;
     }
     high_resolution_clock::time_point stop = high_resolution_clock::now();
     duration<double> time_span = duration_cast<duration<double>>(stop - start);
-    FUNCINFO("Excecution took time: " << time_span.count())
+    YLOGINFO("Excecution took time: " << time_span.count())
     return 0;
 }

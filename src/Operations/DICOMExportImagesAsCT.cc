@@ -18,6 +18,7 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorTAR.h"
 
 #include "DICOMExportImagesAsCT.h"
@@ -143,7 +144,7 @@ bool DICOMExportImagesAsCT(Drover &DICOM_data,
             try{
                 Write_CT_Images(*iap_it, file_handler, p);
             }catch(const std::exception &e){
-                FUNCWARN("Unable to export Image_Array as DICOM CT-modality files: '" << e.what() << "'");
+                YLOGWARN("Unable to export Image_Array as DICOM CT-modality files: '" << e.what() << "'");
             }
         }
         // TAR file finalization, stream flush, and file handle close all done automatically here.

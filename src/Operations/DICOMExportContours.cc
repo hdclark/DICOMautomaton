@@ -11,6 +11,7 @@
 #include <string>    
 
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 #include "../Structs.h"
 #include "../DCMA_DICOM.h"
@@ -166,7 +167,7 @@ bool DICOMExportContours(Drover &DICOM_data,
     try{
         Write_Contours(cc_ROIs, file_handler, enc, p);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to export contours as DICOM RTSTRUCT file: '" << e.what() << "'");
+        YLOGWARN("Unable to export contours as DICOM RTSTRUCT file: '" << e.what() << "'");
     }
 
     return true;

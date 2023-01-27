@@ -20,6 +20,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -136,7 +137,7 @@ bool SelectionIsPresent(Drover &DICOM_data,
     if(NormalizedROILabelRegexOpt){
         auto cc_all = All_CCs( DICOM_data );
         auto cc_ROIs = Whitelist( cc_all, { { "NormalizedROIName", NormalizedROILabelRegexOpt.value() } } );
-        FUNCINFO("Selected " << cc_ROIs.size() << " contours using NormalizedROILabelRegex selector");
+        YLOGINFO("Selected " << cc_ROIs.size() << " contours using NormalizedROILabelRegex selector");
 
         ++selectors_present;
         if(!cc_ROIs.empty()) ++selection_present;
@@ -145,7 +146,7 @@ bool SelectionIsPresent(Drover &DICOM_data,
     if(ROILabelRegexOpt){
         auto cc_all = All_CCs( DICOM_data );
         auto cc_ROIs = Whitelist( cc_all, { { "ROIName", ROILabelRegexOpt.value() } } );
-        FUNCINFO("Selected " << cc_ROIs.size() << " contours using ROILabelRegex selector");
+        YLOGINFO("Selected " << cc_ROIs.size() << " contours using ROILabelRegex selector");
 
         ++selectors_present;
         if(!cc_ROIs.empty()) ++selection_present;
@@ -154,7 +155,7 @@ bool SelectionIsPresent(Drover &DICOM_data,
     if(ImageSelectionOpt){
         auto IAs_all = All_IAs( DICOM_data );
         auto IAs = Whitelist( IAs_all, ImageSelectionOpt.value() );
-        FUNCINFO("Selected " << IAs.size() << " image arrays using ImageSelection selector");
+        YLOGINFO("Selected " << IAs.size() << " image arrays using ImageSelection selector");
 
         ++selectors_present;
         if(!IAs.empty()) ++selection_present;
@@ -163,7 +164,7 @@ bool SelectionIsPresent(Drover &DICOM_data,
     if(LineSelectionOpt){
         auto LSs_all = All_LSs( DICOM_data );
         auto LSs = Whitelist( LSs_all, LineSelectionOpt.value() );
-        FUNCINFO("Selected " << LSs.size() << " line samples using LineSelection selector");
+        YLOGINFO("Selected " << LSs.size() << " line samples using LineSelection selector");
 
         ++selectors_present;
         if(!LSs.empty()) ++selection_present;
@@ -172,7 +173,7 @@ bool SelectionIsPresent(Drover &DICOM_data,
     if(MeshSelectionOpt){
         auto SMs_all = All_SMs( DICOM_data );
         auto SMs = Whitelist( SMs_all, MeshSelectionOpt.value() );
-        FUNCINFO("Selected " << SMs.size() << " surface meshes using MeshSelection selector");
+        YLOGINFO("Selected " << SMs.size() << " surface meshes using MeshSelection selector");
 
         ++selectors_present;
         if(!SMs.empty()) ++selection_present;
@@ -181,7 +182,7 @@ bool SelectionIsPresent(Drover &DICOM_data,
     if(PointSelectionOpt){
         auto PCs_all = All_PCs( DICOM_data );
         auto PCs = Whitelist( PCs_all, PointSelectionOpt.value() );
-        FUNCINFO("Selected " << PCs.size() << " point clouds using PointSelection selector");
+        YLOGINFO("Selected " << PCs.size() << " point clouds using PointSelection selector");
 
         ++selectors_present;
         if(!PCs.empty()) ++selection_present;
@@ -190,7 +191,7 @@ bool SelectionIsPresent(Drover &DICOM_data,
     if(TableSelectionOpt){
         auto STs_all = All_STs( DICOM_data );
         auto STs = Whitelist( STs_all, TableSelectionOpt.value() );
-        FUNCINFO("Selected " << STs.size() << " tables using TableSelection selector");
+        YLOGINFO("Selected " << STs.size() << " tables using TableSelection selector");
 
         ++selectors_present;
         if(!STs.empty()) ++selection_present;

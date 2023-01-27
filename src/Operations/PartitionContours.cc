@@ -22,6 +22,7 @@
 
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
@@ -322,9 +323,9 @@ bool PartitionContours(Drover &DICOM_data,
     };
     find_coordinate_directions();
 
-    FUNCINFO("Proceeding with x_normal = " << x_normal);
-    FUNCINFO("Proceeding with y_normal = " << y_normal);
-    FUNCINFO("Proceeding with z_normal = " << z_normal);
+    YLOGINFO("Proceeding with x_normal = " << x_normal);
+    YLOGINFO("Proceeding with y_normal = " << y_normal);
+    YLOGINFO("Proceeding with z_normal = " << z_normal);
 
     // This routine returns a pair of planes that approximately encompass the desired interior volume. The ROIs are not
     // altered. The lower plane is the first element of the pair. This routine can be applied to any contour_collection
@@ -349,7 +350,7 @@ bool PartitionContours(Drover &DICOM_data,
                                                       &lower_plane,
                                                       &iters_taken,
                                                       &final_area_frac);
-        FUNCINFO("Bisection: planar area fraction"
+        YLOGINFO("Bisection: planar area fraction"
                  << " above LOWER plane with normal: " << planar_normal
                  << " was " << final_area_frac << "."
                  << " Requested: " << SelectionLower << "."
@@ -364,7 +365,7 @@ bool PartitionContours(Drover &DICOM_data,
                                                       &upper_plane,
                                                       &iters_taken,
                                                       &final_area_frac);
-        FUNCINFO("Bisection: planar area fraction"
+        YLOGINFO("Bisection: planar area fraction"
                  << " above UPPER plane with normal: " << planar_normal
                  << " was " << final_area_frac << "."
                  << " Requested: " << SelectionUpper << "."
@@ -393,7 +394,7 @@ bool PartitionContours(Drover &DICOM_data,
 
         const contour_collection<double> cc_selection( split2.front() );
         if( cc_selection.contours.empty() ){
-            FUNCWARN("Selection contains no contours. Try adjusting your criteria.");
+            YLOGWARN("Selection contains no contours. Try adjusting your criteria.");
         }
         return cc_selection;
     };

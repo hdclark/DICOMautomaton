@@ -27,6 +27,7 @@
 
 #include "YgorImages.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorString.h"
 
 //Filter out all non-dose images, presenting a Drover with only dose image_data.
@@ -115,7 +116,7 @@ std::list<std::shared_ptr<Image_Array>>  Meld_Image_Data(const std::list<std::sh
     while((d1_it != out.end()) && (d2_it != out.end()) && (d1_it != d2_it)){
         //If the geometry is the same, we can easily meld the data. Do so and erase the superfluous data.
         if((*d1_it)->imagecoll.Spatially_eq((*d2_it)->imagecoll)){
-            FUNCINFO("Image images are spatially equal. Performing the equivalent-geometry meld routine");
+            YLOGINFO("Image images are spatially equal. Performing the equivalent-geometry meld routine");
 
             //Put the melded data into the first position.
             *d1_it = Meld_Equal_Geom_Image_Data(*d1_it, *d2_it);
@@ -124,14 +125,14 @@ std::list<std::shared_ptr<Image_Array>>  Meld_Image_Data(const std::list<std::sh
 
         //If the geometry is not the same, we have to further investigate whether we can handle it or not. 
         }else{
-            FUNCINFO("Image images are not spatially equal. Performing the nonequivalent-geometry meld routine");
+            YLOGINFO("Image images are not spatially equal. Performing the nonequivalent-geometry meld routine");
 
             *d1_it = Meld_Unequal_Geom_Image_Data(*d1_it, *d2_it);
             if(*d1_it != nullptr){
                 d2_it = out.erase(d2_it);
                 continue;
             }else{
-                FUNCERR("Unable to meld nonequivalent-geometry images");
+                YLOGERR("Unable to meld nonequivalent-geometry images");
             }
         }
     }
@@ -215,7 +216,7 @@ std::unique_ptr<Image_Array> Meld_Unequal_Geom_Image_Data(std::shared_ptr<Image_
         if( (i1_it->channels != i2_it->channels)
                 || ((i1_it->rows > i2_it->rows) && (i1_it->columns < i2_it->columns)) //One is larger than the other.
                 || ((i1_it->rows < i2_it->rows) && (i1_it->columns > i2_it->columns))  ){
-            FUNCWARN("Unable to meld - one data set (A) is not self-consistent");
+            YLOGWARN("Unable to meld - one data set (A) is not self-consistent");
             return nullptr;
         }
     }
@@ -225,7 +226,7 @@ std::unique_ptr<Image_Array> Meld_Unequal_Geom_Image_Data(std::shared_ptr<Image_
         if( (i1_it->channels != i2_it->channels)
                 || ((i1_it->rows > i2_it->rows) && (i1_it->columns < i2_it->columns)) //One is larger than the other.
                 || ((i1_it->rows < i2_it->rows) && (i1_it->columns > i2_it->columns))  ){
-            FUNCWARN("Unable to meld - one data set (B) is not self-consistent");
+            YLOGWARN("Unable to meld - one data set (B) is not self-consistent");
             return nullptr;
         }
     }

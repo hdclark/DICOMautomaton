@@ -19,6 +19,7 @@
 #include "YgorArguments.h" //Needed for ArgumentHandler class.
 #include "YgorFilesDirs.h" //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMisc.h"      //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorMath.h"      //Needed for samples_1D.
 #include "YgorString.h"    //Needed for GetFirstRegex(...)
 
@@ -87,7 +88,7 @@ main(int argc, char *argv[]) {
     const std::string progname(argv[0]);
     arger.description = "A program to generate the expected measured (C) contrast enhancement time course associated with given aif time course, vif time course, and K parameters.";
     arger.default_callback = [](int, const std::string &optarg) -> void {
-        FUNCERR("Unrecognized option with argument: '" << optarg << "'");
+        YLOGERR("Unrecognized option with argument: '" << optarg << "'");
         return;
     };
 
@@ -95,7 +96,7 @@ main(int argc, char *argv[]) {
                                       "Load an AIF contrast enhancement time course from the given file.",
                                       [&](const std::string &optarg) -> void {
                                           if(!AIF.Read_From_File(optarg) || AIF.samples.empty()) {
-                                              FUNCERR("Unable to parse AIF file: '" << optarg << "'");
+                                              YLOGERR("Unable to parse AIF file: '" << optarg << "'");
                                               exit(1);
                                           }
                                           return;
@@ -105,7 +106,7 @@ main(int argc, char *argv[]) {
                                       "Load a VIF contrast enhancement time course from the given file.",
                                       [&](const std::string &optarg) -> void {
                                           if(!VIF.Read_From_File(optarg) || VIF.samples.empty()) {
-                                              FUNCERR("Unable to parse VIF file: '" << optarg << "'");
+                                              YLOGERR("Unable to parse VIF file: '" << optarg << "'");
                                               exit(1);
                                           }
                                           return;
@@ -115,10 +116,10 @@ main(int argc, char *argv[]) {
 
     // Validate Inputs
     if(AIF.samples.empty()) {
-        FUNCERR("AIF contains no samples. Unable to continue.");
+        YLOGERR("AIF contains no samples. Unable to continue.");
     }
     if(VIF.samples.empty()) {
-        FUNCERR("VIF contains no samples. Unable to continue.");
+        YLOGERR("VIF contains no samples. Unable to continue.");
     }
 
     // Function to resample AIF and VIF as constant spaced 

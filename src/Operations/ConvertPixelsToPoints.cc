@@ -24,6 +24,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -195,7 +196,7 @@ bool ConvertPixelsToPoints(Drover &DICOM_data,
                     std::lock_guard<std::mutex> lock(saver_printer);
 
                     ++completed;
-                    FUNCINFO("Completed " << completed << " of " << img_count
+                    YLOGINFO("Completed " << completed << " of " << img_count
                           << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "% done");
                 }
             }); // Thread pool task.

@@ -9,6 +9,7 @@
 
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 
 template <class T, class R> class planar_image;
 template <class T> class contour_collection;

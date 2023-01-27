@@ -21,6 +21,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -90,17 +91,17 @@ bool WarpPoints(Drover &DICOM_data,
 
     auto PCs_all = All_PCs( DICOM_data );
     auto PCs = Whitelist( PCs_all, PointSelectionStr );
-    FUNCINFO("Selected " << PCs.size() << " point clouds");
+    YLOGINFO("Selected " << PCs.size() << " point clouds");
 
     auto T3s_all = All_T3s( DICOM_data );
     auto T3s = Whitelist( T3s_all, TFormSelectionStr );
-    FUNCINFO("Selected " << T3s.size() << " transformation objects");
+    YLOGINFO("Selected " << T3s.size() << " transformation objects");
     if(T3s.size() != 1){
         throw std::invalid_argument("Only a single transformation must be selected to guarantee ordering. Cannot continue.");
     }
 
     for(auto & pcp_it : PCs){
-        FUNCINFO("Processing a point cloud with " << (*pcp_it)->pset.points.size() << " points");
+        YLOGINFO("Processing a point cloud with " << (*pcp_it)->pset.points.size() << " points");
         for(auto & t3p_it : T3s){
 
             // Apply transformation.
@@ -111,19 +112,19 @@ bool WarpPoints(Drover &DICOM_data,
 
                 // Affine transformations.
                 }else if constexpr (std::is_same_v<V, affine_transform<double>>){
-                    FUNCINFO("Applying affine transformation now");
+                    YLOGINFO("Applying affine transformation now");
                     t.apply_to((*pcp_it)->pset);
                     (*pcp_it)->pset.metadata["Description"] = "Warped via affine transform";
 
                 // TPS transformations.
                 }else if constexpr (std::is_same_v<V, thin_plate_spline>){
-                    FUNCINFO("Applying thin plate spline transformation now");
+                    YLOGINFO("Applying thin plate spline transformation now");
                     t.apply_to((*pcp_it)->pset);
                     (*pcp_it)->pset.metadata["Description"] = "Warped via thin-plate spline transform";
 
                 // Vector deformation field transformations.
                 }else if constexpr (std::is_same_v<V, deformation_field>){
-                    FUNCINFO("Applying vector deformation field transformation now");
+                    YLOGINFO("Applying vector deformation field transformation now");
                     t.apply_to((*pcp_it)->pset);
                     (*pcp_it)->pset.metadata["Description"] = "Warped via vector deformation field transform";
 

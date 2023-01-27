@@ -19,6 +19,7 @@
 #include "Tables.h"
 
 #include <YgorMisc.h>
+#include "YgorLog.h"
 #include "YgorImages.h"
 #include "YgorMath.h"
 
@@ -399,7 +400,7 @@ const auto bnded_dose_map_cmp_lambda = [](const bnded_dose_map_key_t &A, const b
     // vary from machine to machine, but it may or may not ever be a problem. 
     // If we get here, issue a warning.
     // 
-    FUNCWARN("Resorting to a less-than on addresses. This will produce possibly non-reproduceable sorting order! Fix me if required");
+    YLOGWARN("Resorting to a less-than on addresses. This will produce possibly non-reproduceable sorting order! Fix me if required");
     return reinterpret_cast<size_t>(&(*A)) < reinterpret_cast<size_t>(&(*B));
 };
 

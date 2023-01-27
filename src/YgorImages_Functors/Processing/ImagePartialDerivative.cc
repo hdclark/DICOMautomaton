@@ -11,6 +11,7 @@
 #include "ImagePartialDerivative.h"
 #include "YgorImages.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
 template <class T> class contour_collection;
@@ -26,7 +27,7 @@ bool ImagePartialDerivative(
     try{
         user_data_s = std::any_cast<ImagePartialDerivativeUserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
 

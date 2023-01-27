@@ -433,7 +433,7 @@ bool ComparePixels(Drover &DICOM_data,
 
 
         if(std::regex_match(MethodStr, method_gam)){
-            FUNCINFO("Passing rate: " 
+            YLOGINFO("Passing rate: " 
                      << ud.passed
                      << " out of " 
                      << ud.count 

@@ -10,6 +10,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 
@@ -49,10 +50,10 @@ bool InImagePlanePixelDecimate(
     const auto NumberOfColsRequired = static_cast<long int>( std::ceil( 1.0 * first_img_it->columns / ScaleFactorC ) );
 
     if((NumberOfRowsRequired * ScaleFactorR) != first_img_it->rows){
-        FUNCWARN("ScaleFactorR should be a clean divisor of the image size to avoid boundary effect: Rows = " +
+        YLOGWARN("ScaleFactorR should be a clean divisor of the image size to avoid boundary effect: Rows = " +
                                 std::to_string(first_img_it->rows));
     }else if((NumberOfColsRequired * ScaleFactorC) != first_img_it->columns){
-        FUNCWARN("ScaleFactorC should be a clean divisor of the image size to avoid boundary effect: Columns = " +
+        YLOGWARN("ScaleFactorC should be a clean divisor of the image size to avoid boundary effect: Columns = " +
                                 std::to_string(first_img_it->columns));
     } 
 
@@ -62,7 +63,7 @@ bool InImagePlanePixelDecimate(
     newOffset += first_img_it->row_unit * first_img_it->pxl_dx * ScaleFactorR * 0.5;
     newOffset += first_img_it->col_unit * first_img_it->pxl_dy * ScaleFactorR * 0.5;
 
-    if(selected_img_its.size() != 1) FUNCERR("This routine operates on individual images only");
+    if(selected_img_its.size() != 1) YLOGERR("This routine operates on individual images only");
  
     //Make a destination image that has twice the linear dimensions as the input image.
     planar_image<float,double> working;

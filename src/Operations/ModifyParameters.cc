@@ -21,6 +21,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -101,7 +102,7 @@ bool ModifyParameters(Drover& /*DICOM_data*/,
             const auto key = pf.parameters.at(0).raw;
             const auto val = pf.parameters.at(1).raw;
 
-            FUNCINFO("Defining parameter with key '" << key << "' : '" << val << "'");
+            YLOGINFO("Defining parameter with key '" << key << "' : '" << val << "'");
             InvocationMetadata[key] = val;
 
         // Insertions.
@@ -113,7 +114,7 @@ bool ModifyParameters(Drover& /*DICOM_data*/,
             const auto key = pf.parameters.at(0).raw;
             const auto val = pf.parameters.at(1).raw;
 
-            FUNCINFO("Inserting parameter with key '" << key << "' : '" << val << "'");
+            YLOGINFO("Inserting parameter with key '" << key << "' : '" << val << "'");
             if(InvocationMetadata.count(key) == 0){
                 InvocationMetadata[key] = val;
             }
@@ -126,7 +127,7 @@ bool ModifyParameters(Drover& /*DICOM_data*/,
 
             const auto key = pf.parameters.at(0).raw;
 
-            FUNCINFO("Removing key '" << key << "'");
+            YLOGINFO("Removing key '" << key << "'");
             InvocationMetadata.erase(key);
 
         }else{

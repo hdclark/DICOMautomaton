@@ -12,6 +12,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
 
@@ -32,7 +33,7 @@ bool PerROITimeCourses(planar_image_collection<float,double>::images_list_it_t f
     try{
         user_data_s = std::any_cast<PerROITimeCoursesUserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
 
@@ -48,7 +49,7 @@ bool PerROITimeCourses(planar_image_collection<float,double>::images_list_it_t f
     // NOTE: We only bother to grab individual contours here. You could alter this if you wanted 
     //       each contour_collection's contours to have an identifying colour.
     if(ccsl.empty()){
-        FUNCWARN("Missing needed contour information. Cannot continue with computation");
+        YLOGWARN("Missing needed contour information. Cannot continue with computation");
         return false;
     }
 
@@ -88,7 +89,7 @@ bool PerROITimeCourses(planar_image_collection<float,double>::images_list_it_t f
 
             const auto ROIName =  contour.GetMetadataValueAs<std::string>("ROIName");
             if(!ROIName){
-                FUNCWARN("Missing necessary tags for reporting analysis results. Cannot continue");
+                YLOGWARN("Missing necessary tags for reporting analysis results. Cannot continue");
                 return false;
             }
             
@@ -98,7 +99,7 @@ bool PerROITimeCourses(planar_image_collection<float,double>::images_list_it_t f
             const auto ROIName =  roi_it->GetMetadataValueAs<std::string>("ROIName");
             const auto FrameOfReferenceUID = roi_it->GetMetadataValueAs<std::string>("FrameOfReferenceUID");
             if(!StudyInstanceUID || !ROIName || !FrameOfReferenceUID){
-                FUNCWARN("Missing necessary tags for reporting analysis results. Cannot continue");
+                YLOGWARN("Missing necessary tags for reporting analysis results. Cannot continue");
                 return false;
             }
             const analysis_key_t BaseAnalysisKey = { {"StudyInstanceUID", StudyInstanceUID.value()},
@@ -145,7 +146,7 @@ bool PerROITimeCourses(planar_image_collection<float,double>::images_list_it_t f
                             //Check if another ROI has already written to this voxel. Bail if so.
                             {
                                 const auto curr_val = working.value(row, col, chan);
-                                if(curr_val != 0) FUNCERR("There are overlapping ROIs. This code currently cannot handle this. "
+                                if(curr_val != 0) YLOGERR("There are overlapping ROIs. This code currently cannot handle this. "
                                                           "You will need to run the functor individually on the overlapping ROIs.");
                             }
     
@@ -180,7 +181,7 @@ bool PerROITimeCourses(planar_image_collection<float,double>::images_list_it_t f
                                 const auto avg_val_sigma = std::sqrt(Stats::Unbiased_Var_Est(in_pixs))/std::sqrt(1.0*in_pixs.size());
     
                                 auto dt = img_it->GetMetadataValueAs<double>("dt");
-                                if(!dt) FUNCERR("Image is missing time metadata. Bailing");
+                                if(!dt) YLOGERR("Image is missing time metadata. Bailing");
                                 channel_time_course.push_back(dt.value(), 0.0, avg_val, avg_val_sigma, InhibitSort);
                             }
                             channel_time_course.stable_sort();
@@ -209,7 +210,7 @@ bool PerROITimeCourses(planar_image_collection<float,double>::images_list_it_t f
                     }else{
                         //for(auto chan = 0; chan < first_img_it->channels; ++chan){
                         //    const auto curr_val = working.value(row, col, chan);
-                        //    if(curr_val != 0) FUNCERR("There are overlapping ROI bboxes. This code currently cannot handle this. "
+                        //    if(curr_val != 0) YLOGERR("There are overlapping ROI bboxes. This code currently cannot handle this. "
                         //                              "You will need to run the functor individually on the overlapping ROIs.");
                         //    working.reference(row, col, chan) = static_cast<float>(10);
                         //}

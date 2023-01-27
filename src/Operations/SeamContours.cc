@@ -24,6 +24,7 @@
 #include "SeamContours.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 
 
@@ -147,7 +148,7 @@ bool SeamContours(Drover &DICOM_data,
                         ss << ", " << *it;
                     }
                     ss << "). Was this intentional?";
-                    FUNCWARN(ss.str());
+                    YLOGWARN(ss.str());
                     // Implementation Note:
                     // This will happen if a contour collection has contours from more than one ROI.
                     // When I implemented this, I found that there was always 1 ROI per contour_collection.

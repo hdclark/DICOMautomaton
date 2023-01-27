@@ -32,6 +32,7 @@
 #include "YgorContainers.h" //Needed for 'bimap' class.
 #include "YgorMath.h"       //Needed for 'vec3' class.
 #include "YgorMisc.h"       //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"     //Needed for Canonicalize_String2().
 #include "YgorImages.h"
 #include "YgorImagesIO.h"
@@ -103,7 +104,7 @@ extract_tag_as_string( const puntoexe::ptr<puntoexe::imebra::dataSet>& base_node
     try{
         const uint32_t buffer_id = 0;
         auto dh = base_node_ptr->getDataHandler(path.group, path.order, path.tag, buffer_id, create_if_not_found);
-        //FUNCINFO("Encountered " << dh->getSize() << " elements");
+        //YLOGINFO("Encountered " << dh->getSize() << " elements");
         for(uint32_t i = 1 ; i < dh->getSize(); ++i){
             const auto str = base_node_ptr->getString(path.group, path.order, path.tag, path.element + i);
             //const auto trimmed = Canonicalize_String2(str, ctrim);
@@ -180,7 +181,7 @@ extract_seq_tag_as_string( const puntoexe::ptr<puntoexe::imebra::dataSet>& base_
             auto dh = base_node_ptr->getDataHandler(this_node.group, this_node.order,
                                                     this_node.tag,
                                                     buffer_id, create_if_not_found);
-            //FUNCINFO("Encountered " << dh->getSize() << " elements");
+            //YLOGINFO("Encountered " << dh->getSize() << " elements");
 
             for(uint32_t i = 1 ; i < dh->getSize(); ++i){
                 const auto str = base_node_ptr->getString(this_node.group, this_node.order,
@@ -260,7 +261,7 @@ extract_seq_vec_tag_as_string( const puntoexe::ptr<puntoexe::imebra::dataSet>& b
             auto dh = base_node_ptr->getDataHandler(this_node.group, this_node.order,
                                                     this_node.tag,
                                                     buffer_id, create_if_not_found);
-            //FUNCINFO("Encountered " << dh->getSize() << " elements");
+            //YLOGINFO("Encountered " << dh->getSize() << " elements");
 
             for(uint32_t i = 1 ; i < dh->getSize(); ++i){
                 const auto str = base_node_ptr->getString(this_node.group, this_node.order,
@@ -491,7 +492,7 @@ parse_CSA2_binary(const std::vector<unsigned char> &header){
     ||  (shtl != "SV10")
     ||  !read_bytes(const_cast<char*>(shtl.data()), 4)
     ||  (shtl != "\4\3\2\1") ){
-        FUNCWARN("Tag does not contain a CSA2 header. Verify tag is valid");
+        YLOGWARN("Tag does not contain a CSA2 header. Verify tag is valid");
         return out;
     }
 
@@ -501,11 +502,11 @@ parse_CSA2_binary(const std::vector<unsigned char> &header){
         !read_bytes(reinterpret_cast<char*>(&N_tags), sizeof(N_tags))
     ||  !isininc(1,N_tags,1'000)
     ||  !read_bytes(const_cast<char*>(shtl.data()), 4) ){
-        FUNCWARN("Cannot read CSA2 tag count");
+        YLOGWARN("Cannot read CSA2 tag count");
         return out;
     }
 
-    if(debug) FUNCINFO("There are " << N_tags << " tags");
+    if(debug) YLOGINFO("There are " << N_tags << " tags");
     for(uint32_t i = 0; i < N_tags; ++i){
 
         // Parse the next tag.
@@ -531,24 +532,24 @@ parse_CSA2_binary(const std::vector<unsigned char> &header){
         ||  ((layout != 77) && (layout != 205))
         ||  ((layout == 77) && (N_items == 0))
         ||  ((layout == 205) && (N_items != 0)) ){
-            FUNCWARN("Failed to parse tag");
-            if(debug) FUNCINFO("    Tag name = '" << name << "'");
-            if(debug) FUNCINFO("    Tag vm = '" << vm << "'");
-            if(debug) FUNCINFO("    Tag vr = '" << vr << "'");
-            if(debug) FUNCINFO("    Tag syngo_dt = '" << syngo_dt << "'");
-            if(debug) FUNCINFO("    Tag N_items = '" << N_items << "'");
-            if(debug) FUNCINFO("    Tag unused = '" << unused << "'");
-            if(debug) FUNCINFO(" Total bytes read: " << total_bytes_read);
+            YLOGWARN("Failed to parse tag");
+            if(debug) YLOGINFO("    Tag name = '" << name << "'");
+            if(debug) YLOGINFO("    Tag vm = '" << vm << "'");
+            if(debug) YLOGINFO("    Tag vr = '" << vr << "'");
+            if(debug) YLOGINFO("    Tag syngo_dt = '" << syngo_dt << "'");
+            if(debug) YLOGINFO("    Tag N_items = '" << N_items << "'");
+            if(debug) YLOGINFO("    Tag unused = '" << unused << "'");
+            if(debug) YLOGINFO(" Total bytes read: " << total_bytes_read);
             out.clear();
             return out;
         }
-        if(debug) FUNCINFO("Parsed tag " << i << " OK");
-        if(debug) FUNCINFO("    Tag name = '" << name << "'");
-        if(debug) FUNCINFO("    Tag vm = '" << vm << "'");
-        if(debug) FUNCINFO("    Tag vr = '" << vr << "'");
-        if(debug) FUNCINFO("    Tag syngo_dt = '" << syngo_dt << "'");
-        if(debug) FUNCINFO("    Tag N_items = '" << N_items << "'");
-        if(debug) FUNCINFO("    Tag unused = '" << unused << "'");
+        if(debug) YLOGINFO("Parsed tag " << i << " OK");
+        if(debug) YLOGINFO("    Tag name = '" << name << "'");
+        if(debug) YLOGINFO("    Tag vm = '" << vm << "'");
+        if(debug) YLOGINFO("    Tag vr = '" << vr << "'");
+        if(debug) YLOGINFO("    Tag syngo_dt = '" << syngo_dt << "'");
+        if(debug) YLOGINFO("    Tag N_items = '" << N_items << "'");
+        if(debug) YLOGINFO("    Tag unused = '" << unused << "'");
 
         // Parse the items.
         std::list<std::string> items;
@@ -562,14 +563,14 @@ parse_CSA2_binary(const std::vector<unsigned char> &header){
             ||  !read_bytes(reinterpret_cast<char*>(&unused), sizeof(unused))
             ||  (l_item_length != unused)
             ||  !isininc(0,l_item_length,1'000'000) ){
-                FUNCWARN("Encountered extremely long CSA2 item ('" << l_item_length << "'). Refusing to continue");
+                YLOGWARN("Encountered extremely long CSA2 item ('" << l_item_length << "'). Refusing to continue");
                 out.clear();
                 return out;
             }
-            if(debug) FUNCINFO("Item length = " << l_item_length);
+            if(debug) YLOGINFO("Item length = " << l_item_length);
             std::string val(l_item_length, '\0');
             if( !read_bytes(const_cast<char*>(val.data()), l_item_length) ){
-                FUNCWARN("Unable to read CSA2 item. Refusing to continue");
+                YLOGWARN("Unable to read CSA2 item. Refusing to continue");
                 out.clear();
                 return out;
             }
@@ -588,7 +589,7 @@ parse_CSA2_binary(const std::vector<unsigned char> &header){
                 val = crop_to_null(val);
             }
             if(!val.empty()){
-                if(debug) FUNCINFO("    Item " << j << " of " << N_items << " has value = '" << val << "'");
+                if(debug) YLOGINFO("    Item " << j << " of " << N_items << " has value = '" << val << "'");
                 items.emplace_back(val);
             }
 
@@ -596,7 +597,7 @@ parse_CSA2_binary(const std::vector<unsigned char> &header){
             // Consume bytes as needed to achieve proper alignment.
             const auto boundary_reset = (4 - l_item_length % 4) % 4;
             if(!read_bytes(reinterpret_cast<char*>(&unused), boundary_reset )){
-                FUNCWARN("Unable to reset stream to word boundary. Refusing to continue");
+                YLOGWARN("Unable to reset stream to word boundary. Refusing to continue");
                 out.clear();
                 return out;
             }
@@ -770,7 +771,7 @@ ds_seq_insert(puntoexe::ptr<puntoexe::imebra::dataSet> &ds,
     const auto this_node = apath.front();
     apath.pop_front();
 
-FUNCINFO("ds_seq_insert() to " << std::hex << this_node.group   << ", "
+YLOGINFO("ds_seq_insert() to " << std::hex << this_node.group   << ", "
                                << std::hex << this_node.order   << ", "
                                << std::hex << this_node.tag     << ", "
                                << std::hex << this_node.element << ", "
@@ -778,14 +779,14 @@ FUNCINFO("ds_seq_insert() to " << std::hex << this_node.group   << ", "
 
 //    //If this is a sequence, jump to the sequence node as the new base and recurse.
 //    if(!apath.empty()){
-//FUNCINFO("    This node is NOT a leaf node. Creating a sequence tag");
+//YLOGINFO("    This node is NOT a leaf node. Creating a sequence tag");
 //
 //        // Request the sequence item with the item number == the element number.
 //        // If it does not exist it will not be created automatically.
 //        auto seq_ptr = ds->getSequenceItem(this_node.group, this_node.order,
 //                                           this_node.tag,   this_node.element);
 //        if(seq_ptr == nullptr){
-//FUNCINFO("        The sequence tag does NOT yet exist. Creating a new sequence tag and data set");
+//YLOGINFO("        The sequence tag does NOT yet exist. Creating a new sequence tag and data set");
 //            // The sequence tag does not yet exist, so we need to create it.
 //            const bool create_if_not_found = true;
 //            auto tag_ptr = ds->getTag(this_node.group, this_node.order, 
@@ -821,19 +822,19 @@ FUNCINFO("ds_seq_insert() to " << std::hex << this_node.group   << ", "
 //            //seq_ptr = lds;
 //        }else{
 //
-//FUNCINFO("        The sequence tag DOES exist. Reusing it directly");
+//YLOGINFO("        The sequence tag DOES exist. Reusing it directly");
 //            ds_seq_insert(seq_ptr, apath, tag_val);
 //        }
 //
 //    //Otherwise, this is a leaf node. Insert the tag into the current sequence.
 //    }else{
-//FUNCINFO("    This node is a leaf node. Creating a leaf tag");
+//YLOGINFO("    This node is a leaf node. Creating a leaf tag");
 //        ds_insert(ds, this_node, tag_val);
 //    }
 
     //If this is a sequence, jump to the sequence node as the new base and recurse.
     if(!apath.empty()){
-FUNCINFO("    This node is NOT a leaf node. Creating a sequence tag");
+YLOGINFO("    This node is NOT a leaf node. Creating a sequence tag");
 
         const bool create_if_not_found = true;
         auto tag_ptr = ds->getTag(this_node.group, this_node.order, 
@@ -867,7 +868,7 @@ FUNCINFO("    This node is NOT a leaf node. Creating a sequence tag");
 
     //Otherwise, this is a leaf node. Insert the tag into the current sequence.
     }else{
-FUNCINFO("    This node is a leaf node. Creating a leaf tag");
+YLOGINFO("    This node is a leaf node. Creating a leaf tag");
         ds_insert(ds, this_node, tag_val);
     }
     return;
@@ -917,7 +918,7 @@ get_metadata_top_level_tags(const std::filesystem::path &filename){
     puntoexe::ptr<puntoexe::stream> readStream(new puntoexe::stream);
     readStream->openFile(filename.c_str(), std::ios::in);
     if(readStream == nullptr){
-        FUNCWARN("Could not parse file '" << filename << "'. Is it valid DICOM? Cannot continue");
+        YLOGWARN("Could not parse file '" << filename << "'. Is it valid DICOM? Cannot continue");
         return out;
     }
 
@@ -1042,7 +1043,7 @@ get_metadata_top_level_tags(const std::filesystem::path &filename){
             auto rdh_ptr = ptr->getDataHandlerRaw( 0, create_if_not_found, "OB" );
             const auto N_bytes = rdh_ptr->getSize(); // Gives # of elements, but each element is one byte (int8_t).
             if(!isininc(0, N_bytes, 1'000'000'000)){
-                FUNCWARN("Excessively large memory requested. Refusing to extract as binary element");
+                YLOGWARN("Excessively large memory requested. Refusing to extract as binary element");
                 return out;
             }
             out.resize(N_bytes, static_cast<uint8_t>(0x0));
@@ -1652,7 +1653,7 @@ std::unique_ptr<Contour_Data> get_Contour_Data(const std::filesystem::path &file
             if((spacing < min_spacing) && (spacing > 1E-3)) min_spacing = spacing;
         }
     }
-    //FUNCINFO("The minimum spacing found was " << min_spacing);
+    //YLOGINFO("The minimum spacing found was " << min_spacing);
     for(auto & cc_it : output->ccs){
         for(auto & cc : cc_it.contours) cc.metadata["MinimumSeparation"] = std::to_string(min_spacing);
 //        output->ccs.back().metadata["MinimumSeparation"] = std::to_string(min_spacing);
@@ -1764,7 +1765,7 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
         if(!image_pos_x_opt || !image_pos_y_opt || !image_pos_z_opt){
             const auto xyz = l_coalesce_metadata_as_vector_double({"CSAImage/ImagePositionPatient"});
             if(xyz.size() == 3UL){
-                FUNCWARN("Using non-standard CSAImage/ImagePositionPatient");
+                YLOGWARN("Using non-standard CSAImage/ImagePositionPatient");
                 image_pos_x_opt = xyz.at(0);
                 image_pos_y_opt = xyz.at(1);
                 image_pos_z_opt = xyz.at(2);
@@ -1777,7 +1778,7 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
             image_pos_z_opt = (RadMchnSAD - RTImageSID); // For consistency with XRayImageReceptorTranslation z-coord.
         }
         if(!image_pos_x_opt || !image_pos_y_opt || !image_pos_z_opt){
-            FUNCWARN("Unable to find ImagePositionPatient, using defaults");
+            YLOGWARN("Unable to find ImagePositionPatient, using defaults");
             image_pos_x_opt = {};
             image_pos_y_opt = {};
             image_pos_z_opt = {};
@@ -1813,13 +1814,13 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
         if(!image_orien_c_opt || !image_orien_r_opt){
             const auto o = l_coalesce_metadata_as_vector_double({"CSAImage/ImageOrientationPatient"});
             if(o.size() == 6UL){
-                FUNCWARN("Using non-standard CSAImage/ImageOrientationPatient");
+                YLOGWARN("Using non-standard CSAImage/ImageOrientationPatient");
                 image_orien_c_opt = vec3<double>( o.at(0), o.at(1), o.at(2) );
                 image_orien_r_opt = vec3<double>( o.at(3), o.at(4), o.at(5) );
             }
         }
         if(!image_orien_c_opt || !image_orien_r_opt){
-            FUNCWARN("Unable to find ImageOrientationPatient, using defaults");
+            YLOGWARN("Unable to find ImageOrientationPatient, using defaults");
             image_orien_c_opt = {};
             image_orien_r_opt = {};
         }
@@ -1849,13 +1850,13 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
         if(!image_pxldy_opt || !image_pxldx_opt){
             const auto o = l_coalesce_metadata_as_vector_double({"CSAImage/PixelSpacing"});
             if(o.size() == 2UL){
-                FUNCWARN("Using non-standard CSAImage/PixelSpacing");
+                YLOGWARN("Using non-standard CSAImage/PixelSpacing");
                 image_pxldy_opt = o.at(0);
                 image_pxldx_opt = o.at(1);
             }
         }
         if(!image_pxldy_opt || !image_pxldx_opt){
-            FUNCWARN("Unable to find voxel extent, using defaults");
+            YLOGWARN("Unable to find voxel extent, using defaults");
         }
         const auto image_pxldy = image_pxldy_opt.value_or(1.0);
         const auto image_pxldx = image_pxldx_opt.value_or(1.0);
@@ -1877,7 +1878,7 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
             image_thickness_opt = l_coalesce_metadata_as_double({"CSAImage/SliceThickness"});
         }
         if(!image_thickness_opt){
-            FUNCWARN("Unable to find image thickness, using default");
+            YLOGWARN("Unable to find image thickness, using default");
         }
         const auto image_thickness = image_thickness_opt.value_or(1.0);
         insert_if_new(l_meta, "SliceThickness", std::to_string(image_thickness));
@@ -1988,7 +1989,7 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
             // If we found a transformation, forgo skip Imebra and apply it ourselves (below).
             convertedImage = firstImage;
         }else{
-            FUNCWARN("Unable to explicitly locate LUT, attempting automatic conversion");
+            YLOGWARN("Unable to explicitly locate LUT, attempting automatic conversion");
             ptr<imebra::transforms::transform> modVOILUT(new imebra::transforms::modalityVOILUT(TopDataSet));
             convertedImage = modVOILUT->allocateOutputImage(firstImage, width, height);
             modVOILUT->runTransform(firstImage, 0, 0, width, height, convertedImage, 0, 0);
@@ -2021,7 +2022,7 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
             for(auto VoiLutId : VoiLutIds){
                 const std::wstring VoiLutDescriptionWS = myVoiLut->getVOILUTDescription(VoiLutId);
                 const std::string VoiLutDescription(VoiLutDescriptionWS.begin(), VoiLutDescriptionWS.end());
-                FUNCINFO("Found 'presentation' VOI/LUT with description '" << VoiLutDescription << "' (not applying it!)");
+                YLOGINFO("Found 'presentation' VOI/LUT with description '" << VoiLutDescription << "' (not applying it!)");
 
                 //Print the center and width of the VOI/LUT.
                 imbxInt32 VoiLutCenter = std::numeric_limits<imbxInt32>::max();
@@ -2029,7 +2030,7 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
                 myVoiLut->getCenterWidth(&VoiLutCenter, &VoiLutWidth);
                 if((VoiLutCenter != std::numeric_limits<imbxInt32>::max())
                 || (VoiLutWidth  != std::numeric_limits<imbxInt32>::max())){
-                    FUNCINFO("    - 'Presentation' VOI/LUT has centre = " << VoiLutCenter << " and width = " << VoiLutWidth);
+                    YLOGINFO("    - 'Presentation' VOI/LUT has centre = " << VoiLutCenter << " and width = " << VoiLutWidth);
                 }
             }
         }
@@ -2047,7 +2048,7 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
         //  //Print a description of the VOI/LUT if available.
         //  //const std::wstring VoiLutDescriptionWS = myVoiLut->getVOILUTDescription(lutId);
         //  //const std::string VoiLutDescription(VoiLutDescriptionWS.begin(), VoiLutDescriptionWS.end());
-        //  //FUNCINFO("Using VOI/LUT with description '" << VoiLutDescription << "'");
+        //  //YLOGINFO("Using VOI/LUT with description '" << VoiLutDescription << "'");
         //
         //  //Print the center and width of the VOI/LUT.
         //  imbxInt32 VoiLutCenter = std::numeric_limits<imbxInt32>::max();
@@ -2055,7 +2056,7 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
         //  myVoiLut->getCenterWidth(&VoiLutCenter, &VoiLutWidth);
         //  if((VoiLutCenter != std::numeric_limits<imbxInt32>::max())
         //  || (VoiLutWidth  != std::numeric_limits<imbxInt32>::max())){
-        //      FUNCINFO("Using VOI/LUT with centre = " << VoiLutCenter << " and width = " << VoiLutWidth);
+        //      YLOGINFO("Using VOI/LUT with centre = " << VoiLutCenter << " and width = " << VoiLutWidth);
         //  }
         //}
  
@@ -2093,7 +2094,7 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
         //----------------------------------------------------------------------------------------------------
 
         if((static_cast<long int>(sizeX) != image_cols) || (static_cast<long int>(sizeY) != image_rows)){
-            FUNCWARN("sizeX = " << sizeX << ", sizeY = " << sizeY << " and image_cols = " << image_cols << ", image_rows = " << image_rows);
+            YLOGWARN("sizeX = " << sizeX << ", sizeY = " << sizeY << " and image_cols = " << image_cols << ", image_rows = " << image_rows);
             throw std::domain_error("The number of rows and columns in the image data differ when comparing sizeX/Y and img_rows/cols. Please verify");
             //If this issue arises, I have likely confused definition of X and Y. The DICOM standard specifically calls (0028,0010) 
             // a 'row'. Perhaps I've got many things backward...
@@ -2223,7 +2224,7 @@ std::unique_ptr<Image_Array>  Load_Dose_Array(const std::filesystem::path &Filen
     const auto frame_inc_pntrU  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0009, 0));
     const auto frame_inc_pntrL  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0009, 1));
     if((frame_inc_pntrU != static_cast<long int>(0x3004)) || (frame_inc_pntrL != static_cast<long int>(0x000c)) ){
-        FUNCWARN(" frame increment pointer U,L = " << frame_inc_pntrU << "," << frame_inc_pntrL);
+        YLOGWARN(" frame increment pointer U,L = " << frame_inc_pntrU << "," << frame_inc_pntrL);
         throw std::domain_error("Dose file contains a frame increment pointer which we have not encountered before."
                                 " Please ensure we can handle it properly");
     }
@@ -2292,7 +2293,7 @@ std::unique_ptr<Image_Array>  Load_Dose_Array(const std::filesystem::path &Filen
         //----------------------------------------------------------------------------------------------------
 
         if((static_cast<long int>(sizeX) != image_cols) || (static_cast<long int>(sizeY) != image_rows)){
-            FUNCWARN("sizeX = " << sizeX << ", sizeY = " << sizeY << " and image_cols = " << image_cols << ", image_rows = " << image_rows);
+            YLOGWARN("sizeX = " << sizeX << ", sizeY = " << sizeY << " and image_cols = " << image_cols << ", image_rows = " << image_rows);
             throw std::domain_error("The number of rows and columns in the image data differ when comparing sizeX/Y and img_rows/cols. Please verify");
             //If this issue arises, I have likely confused definition of X and Y. The DICOM standard specifically calls (0028,0010) 
             // a 'row'. Perhaps I've got many things backward...
@@ -2852,7 +2853,7 @@ Load_Transform(const std::filesystem::path &FilenameIn){
                     }
                 }
             }
-            FUNCINFO("Loaded deformation field with dimensions " << image_rows << " x " << image_cols << " x " << image_imgs);
+            YLOGINFO("Loaded deformation field with dimensions " << image_rows << " x " << image_cols << " x " << image_imgs);
             deformation_field t(std::move(pic));
             out->transform = t;
 
@@ -3252,7 +3253,7 @@ void Write_Dose_Array(const std::shared_ptr<Image_Array>& IA, const std::filesys
     }
     {
         auto tag_ptr = tds->getTag(0x7FE0, 0, 0x0010, true);
-        //FUNCINFO("Re-reading the tag.  Type is " << tag_ptr->getDataType() << ",  #_of_buffers = " <<
+        //YLOGINFO("Re-reading the tag.  Type is " << tag_ptr->getDataType() << ",  #_of_buffers = " <<
         //     tag_ptr->getBuffersCount() << ",   buffer_0 has size = " << tag_ptr->getBufferSize(0));
 
         auto rdh_ptr = tag_ptr->getDataHandlerRaw(0, true, "OW");
@@ -3545,7 +3546,7 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
                        });
 
             if(!all_int16){
-                FUNCINFO("Identity transform with integer packing is lossy, optimizing to minimize precision loss");
+                YLOGINFO("Identity transform with integer packing is lossy, optimizing to minimize precision loss");
                 const auto [pix_min, pix_max] = animg.minmax();
                 compressor.optimize(pix_min, pix_max);
             }
@@ -3898,7 +3899,7 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
                 }
                 multi_c_seq_ptr->emplace_child_node({{0x3006, 0x0050}, "DS", ss.str() }); // ContourData
 
-                //FUNCINFO("Emitted contour " << contour_seq_n << " of " << cc_refw.get().contours.size() 
+                //YLOGINFO("Emitted contour " << contour_seq_n << " of " << cc_refw.get().contours.size() 
                 //     << " from ROI " << roi_seq_n << " of " << CC.size() );
 
                 ++contour_seq_n;

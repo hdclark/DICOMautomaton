@@ -19,6 +19,7 @@
 #include "Structs.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for SplitStringToVector, Canonicalize_String2, SplitVector functions.
 #include "YgorMathIOOBJ.h"
 
@@ -40,7 +41,7 @@ bool Load_From_Line_Sample_Files( Drover &DICOM_data,
 
     auto bfit = Filenames.begin();
     while(bfit != Filenames.end()){
-        FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
+        YLOGINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
         const auto Filename = *bfit;
 
@@ -73,13 +74,13 @@ bool Load_From_Line_Sample_Files( Drover &DICOM_data,
                 throw std::runtime_error("Unable to read line sample from file.");
             }
 
-            FUNCINFO("Loaded line sample with " 
+            YLOGINFO("Loaded line sample with " 
                      << N_samples << " datum and "
                      << N_metadata << " metadata keys");
             bfit = Filenames.erase( bfit ); 
             continue;
         }catch(const std::exception &e){
-            FUNCINFO("Unable to load as line sample file");
+            YLOGINFO("Unable to load as line sample file");
             DICOM_data.lsamp_data.pop_back();
         };
 

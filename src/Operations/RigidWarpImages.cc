@@ -21,6 +21,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorMathIOOFF.h"
@@ -94,11 +95,11 @@ bool RigidWarpImages(Drover &DICOM_data,
 
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
-    FUNCINFO("Selected " << IAs.size() << " image arrays");
+    YLOGINFO("Selected " << IAs.size() << " image arrays");
 
     auto T3s_all = All_T3s( DICOM_data );
     auto T3s = Whitelist( T3s_all, TFormSelectionStr );
-    FUNCINFO("Selected " << T3s.size() << " transformation objects");
+    YLOGINFO("Selected " << T3s.size() << " transformation objects");
     if(T3s.size() != 1){
         // I can't think of a better way to handle the ordering of multiple transforms right now. Disallowing for now...
         throw std::invalid_argument("Selection of only a single transformation is currently supported. Refusing to continue.");
@@ -115,7 +116,7 @@ bool RigidWarpImages(Drover &DICOM_data,
 
                 // Affine transformations.
                 }else if constexpr (std::is_same_v<V, affine_transform<double>>){
-                    FUNCINFO("Applying affine transformation now");
+                    YLOGINFO("Applying affine transformation now");
 
                     for(auto & animg : (*iap_it)->imagecoll.images){
 

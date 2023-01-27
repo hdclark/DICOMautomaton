@@ -19,6 +19,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorImagesIO.h"
@@ -83,11 +84,11 @@ bool ExportFITSImages(Drover &DICOM_data,
     for(const auto& iap_it : IAs){
         const auto fname = Get_Unique_Sequential_Filename(FilenameBaseStr + "_", 6, ".fits");
 
-        FUNCINFO("Exporting " << (*iap_it)->imagecoll.images.size() << " images to file '" << fname << "' now..");
+        YLOGINFO("Exporting " << (*iap_it)->imagecoll.images.size() << " images to file '" << fname << "' now..");
         if(WriteToFITS((*iap_it)->imagecoll, fname)){
-            FUNCINFO("Exported image array to file '" << fname << "'");
+            YLOGINFO("Exported image array to file '" << fname << "'");
         }else{
-            FUNCWARN("Unable to export image array to file '" << fname << "'");
+            YLOGWARN("Unable to export image array to file '" << fname << "'");
         }
     }
 

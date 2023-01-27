@@ -7,6 +7,7 @@
 #include "../ConvenienceRoutines.h"
 #include "YgorImages.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
 template <class T> class contour_collection;
@@ -29,7 +30,7 @@ bool CTPerfusionSearchForLiverClips(planar_image_collection<float,double>::image
 
     //Ensure only single images are grouped together.
     if(selected_img_its.size() != 1){
-        FUNCWARN("This routine works on single images. It cannot deal with grouped images");
+        YLOGWARN("This routine works on single images. It cannot deal with grouped images");
         return false;
     }
 
@@ -50,7 +51,7 @@ bool CTPerfusionSearchForLiverClips(planar_image_collection<float,double>::image
                 for(auto lrow = (row-boxr); lrow <= (row+boxr); ++lrow){
                     for(auto lcol = (col-boxr); lcol <= (col+boxr); ++lcol){
                         if( !isininc(0,lrow,first_img_it->rows-1) || !isininc(0,lcol,first_img_it->columns-1) ){
-                            FUNCERR("Check your boxr programming. Off by one?");
+                            YLOGERR("Check your boxr programming. Off by one?");
                         }
 
                         const auto val = static_cast<double>(first_img_it->value(lrow, lcol, chan));

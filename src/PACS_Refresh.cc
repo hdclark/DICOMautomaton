@@ -21,6 +21,7 @@
 #include "Imebra_Shim.h"     //Wrapper for Imebra library. Black-boxed to speed up compilation.
 #include "YgorArguments.h"   //Needed for ArgumentHandler class.
 #include "YgorMisc.h"        //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 
 int main(int argc, char* argv[]){
@@ -43,18 +44,18 @@ int main(int argc, char* argv[]){
     arger.description = "A program for trying to replace database NULLs, if possible.";
 
     arger.default_callback = [](int, const std::string &optarg) -> void {
-      FUNCERR("Unrecognized option with argument: '" << optarg << "'");
+      YLOGERR("Unrecognized option with argument: '" << optarg << "'");
       return; 
     };
     arger.optionless_callback = [](const std::string &optarg) -> void {
-      FUNCERR("What do you want me to do with the option '" << optarg << "' ?");
+      YLOGERR("What do you want me to do with the option '" << optarg << "' ?");
       return; 
     };
 
     arger.push_back( ygor_arg_handlr_t(1, 'd', "days-back", true, Xtostring(NumberOfDaysRecent), 
       "The number of days back for which the import was considered 'recent'. (Only recent records are updated.)",
       [&](const std::string &optarg) -> void {
-        if(!Is_String_An_X<long int>(optarg)) FUNCERR("'" << optarg << "' is not a valid number of days");
+        if(!Is_String_An_X<long int>(optarg)) YLOGERR("'" << optarg << "' is not a valid number of days");
         NumberOfDaysRecent = fabs(stringtoX<long int>(optarg));
         return;
       })
@@ -89,8 +90,8 @@ int main(int argc, char* argv[]){
              << "WHERE (metadata.ImportTimepoint > (now() - INTERVAL '" << NumberOfDaysRecent << " days'));"; 
           r1 = txn.exec(ss.str());
         }
-        if(r1.empty()) FUNCERR("Database table 'metadata' contains no records. Nothing to do");
-        FUNCINFO("Found " << r1.size() << " records to inspect");
+        if(r1.empty()) YLOGERR("Database table 'metadata' contains no records. Nothing to do");
+        YLOGINFO("Found " << r1.size() << " records to inspect");
 
         //-------------------------------------------------------------------------------------------------------------
         //Process each record, parsing the file, saving metadata, and walking over the columns to see if they are null.
@@ -105,8 +106,8 @@ int main(int argc, char* argv[]){
             //       if checksum is NULL, compute it and update the db.
 
             //Print to screen what the original filename was, so the user can inspect what files are being processed.
-            FUNCINFO("About to parse file with pacsid = " << pacsid << " at location '" << storefullpathname << "'");
-            FUNCINFO("Completion: " << i << "/" << r1.size() << " == " << static_cast<double>(10000*i/r1.size())/100.0 << "%");
+            YLOGINFO("About to parse file with pacsid = " << pacsid << " at location '" << storefullpathname << "'");
+            YLOGINFO("Completion: " << i << "/" << r1.size() << " == " << static_cast<double>(10000*i/r1.size())/100.0 << "%");
 
             //Harvest the metadata of interest.
             auto mmap = get_metadata_top_level_tags(storefullpathname);
@@ -124,7 +125,7 @@ int main(int argc, char* argv[]){
             };
             const auto check_update_ok = [&](const std::string &colname) -> void {
                 if((r3.size() != 1) || (r3[0]["pacsid"].as<long int>() != pacsid)){
-                    FUNCERR("Update of column name '" << colname << "' failed. Refusing to continue");
+                    YLOGERR("Update of column name '" << colname << "' failed. Refusing to continue");
                 }
                 return;
             };
@@ -711,7 +712,7 @@ int main(int argc, char* argv[]){
         txn.commit();
 
     }catch(const std::exception &e){
-        FUNCERR("Unable to push to database: " << e.what());
+        YLOGERR("Unable to push to database: " << e.what());
     }
 
 //---------------------------------------------------------------------------------------------------------------------

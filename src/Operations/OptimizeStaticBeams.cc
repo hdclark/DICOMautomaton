@@ -30,6 +30,7 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorFilesDirs.h"
 
@@ -277,7 +278,7 @@ bool OptimizeStaticBeams(Drover &DICOM_data,
         }
 
         beam_id.emplace_back(BeamID.value_or("unknown beam number") + " (" + Fname.value_or("unknown field name") + ")");
-        FUNCINFO("Processing dose corresponding to beam number: " << beam_id.back());
+        YLOGINFO("Processing dose corresponding to beam number: " << beam_id.back());
 
         PartitionedImageVoxelVisitorMutatorUserData ud;
         ud.mutation_opts.editstyle = Mutate_Voxels_Opts::EditStyle::InPlace;
@@ -452,9 +453,9 @@ bool OptimizeStaticBeams(Drover &DICOM_data,
     double minf;
 
     generate_dose_dist_stats = false;
-    FUNCINFO("Beginning optimization now..")
+    YLOGINFO("Beginning optimization now..")
     nlopt::result nlopt_result = optimizer.optimize(open_weights, minf); // open_weights will contain the current-best weights on success.
-    FUNCINFO("Optimizer result: " << nlopt_result);
+    YLOGINFO("Optimizer result: " << nlopt_result);
 #else // DCMA_USE_NLOPT
     throw std::runtime_error("Unable to optimize -- nlopt was not used");
 #endif // DCMA_USE_NLOPT
@@ -511,7 +512,7 @@ bool OptimizeStaticBeams(Drover &DICOM_data,
             return Get_Unique_Sequential_Filename(base.string(), 6, ".csv");
         };
 
-        FUNCINFO("About to claim a mutex");
+        YLOGINFO("About to claim a mutex");
         Append_File( gen_filename,
                      "dcma_op_optimizestaticbeams_mutex",
                      "",

@@ -1,11 +1,13 @@
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorMath.h"         //Needed for samples_1D.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "CPD_Rigid.h"
 #include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorMath.h"         //Needed for samples_1D.
 #include <chrono>
 #include <cmath>
@@ -131,7 +133,7 @@ AlignViaRigidCPD(CPDParams & params,
             int iter_interval /*= 0*/,
             std::string video /*= "False"*/,
             std::string xyz_outfile /*= "output"*/ ){
-    FUNCINFO("Performing rigid CPD")
+    YLOGINFO("Performing rigid CPD")
     high_resolution_clock::time_point start = high_resolution_clock::now();
     std::string temp_xyz_outfile;
     point_set<double> mutable_moving = moving;
@@ -145,9 +147,9 @@ AlignViaRigidCPD(CPDParams & params,
     Eigen::MatrixXf X = Eigen::MatrixXf::Zero(N_move_points, params.dimensionality);
     // Moving point matrix
     Eigen::MatrixXf Y = Eigen::MatrixXf::Zero(N_stat_points, params.dimensionality); 
-    FUNCINFO("Number of moving points: " << N_move_points);
-    FUNCINFO("Number of stationary pointsL  " << N_stat_points);
-    FUNCINFO("Initializing...")
+    YLOGINFO("Number of moving points: " << N_move_points);
+    YLOGINFO("Number of stationary pointsL  " << N_stat_points);
+    YLOGINFO("Initializing...")
     // Fill the X vector with the corresponding points.
     for(long int j = 0; j < N_stat_points; ++j){ // column
         const auto P_stationary = stationary.points[j];
@@ -178,9 +180,9 @@ AlignViaRigidCPD(CPDParams & params,
     Eigen::MatrixXf A;
     
     std::ofstream os(xyz_outfile + "_stats.csv");
-    FUNCINFO("Starting loop. Max Iterations: " << params.iterations)
+    YLOGINFO("Starting loop. Max Iterations: " << params.iterations)
     for (int i = 0; i < params.iterations; i++) {
-        FUNCINFO("Starting Iteration: " << i)
+        YLOGINFO("Starting Iteration: " << i)
         P = E_Step(X, Y, transform.R, \
             transform.t, sigma_squared, params.distribution_weight, transform.s);
         Ux = CalculateUx(X, P);
@@ -195,7 +197,7 @@ AlignViaRigidCPD(CPDParams & params,
         sigma_squared = SigmaSquared(transform.s, A, transform.R, X_hat, P);
 
         if (isnan(sigma_squared)) {
-            FUNCINFO("FINAL SIMILARITY: " << similarity);
+            YLOGINFO("FINAL SIMILARITY: " << similarity);
             break;
         }
 
@@ -204,22 +206,22 @@ AlignViaRigidCPD(CPDParams & params,
 
         similarity = GetSimilarity(X, Y, transform.R, transform.t, transform.s);
         objective = GetObjective(X, Y, P, transform.R, transform.t, transform.s, sigma_squared);
-        FUNCINFO("Similarity: " << similarity);
-        FUNCINFO("Objective: " << objective);
+        YLOGINFO("Similarity: " << similarity);
+        YLOGINFO("Objective: " << objective);
         
         if (video == "True") {
             if (iter_interval > 0 && i % iter_interval == 0) {
                 temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i+1) + "_sim" + std::to_string(similarity) + ".xyz";
                 std::ofstream PFO(temp_xyz_outfile);
                 if(!WritePointSetToXYZ(mutable_moving, PFO))
-                    FUNCERR("Error writing point set to " << xyz_outfile);
+                    YLOGERR("Error writing point set to " << xyz_outfile);
             }
         }
         if(abs(prev_objective-objective) < params.similarity_threshold)
             break;
         high_resolution_clock::time_point stop = high_resolution_clock::now();
         duration<double>  time_span = duration_cast<duration<double>>(stop - start);
-        FUNCINFO("Excecution took time: " << time_span.count())
+        YLOGINFO("Excecution took time: " << time_span.count())
 
         os << i+1 << "," << time_span.count() << "," << similarity << "," << temp_xyz_outfile << "\n";
 

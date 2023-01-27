@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorStats.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
@@ -87,9 +88,9 @@ bool RPCSend(Drover &DICOM_data,
         ::dcma::rpc::OperationsQuery q;
         client.GetSupportedOperations(known_ops, q);
 
-        FUNCINFO("Implementation of client goes here");
+        YLOGINFO("Implementation of client goes here");
     }catch( const std::exception &e){
-        FUNCWARN("Client failed: '" << e.what() << "'");
+        YLOGWARN("Client failed: '" << e.what() << "'");
     }
     transport->close();
 

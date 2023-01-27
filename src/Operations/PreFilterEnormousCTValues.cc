@@ -13,6 +13,7 @@
 #include "PreFilterEnormousCTValues.h"
 #include "YgorImages.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 
 OperationDoc OpArgDocPreFilterEnormousCTValues(){

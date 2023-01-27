@@ -37,6 +37,7 @@
 #include "YgorMathBSpline.h" //Needed for basis_spline class.
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
@@ -367,7 +368,7 @@ bool PlotLineSamples(Drover &DICOM_data,
     if(LSs.empty()){
         throw std::invalid_argument("No line samples selected. Cannot continue.");
     }
-    FUNCINFO("Attempting to plot " << LSs.size() << " line samples");
+    YLOGINFO("Attempting to plot " << LSs.size() << " line samples");
 
 
     //NOTE: This routine is spotty. It doesn't always work, and seems to have a hard time opening a 
@@ -386,14 +387,14 @@ bool PlotLineSamples(Drover &DICOM_data,
         const auto fn = Get_Unique_Sequential_Filename("/tmp/dcma_line_sample_",4,".txt");
         ls.Write_To_File(fn);
         AppendStringToFile("# Line sample generated for alternative display: '"_s + LineName + "'.\n", fn);
-        FUNCINFO("Line sample course with name '" << LineName << "' written to '" << fn << "'");
+        YLOGINFO("Line sample course with name '" << LineName << "' written to '" << fn << "'");
     }
 
     try{
         YgorMathPlottingGnuplot::Plot<double>(shuttle, TitleStr, AbscissaLabelStr, OrdinateLabelStr);
         //Plot<double>(shuttle, "Title here", "X-label here", "Y-label here");
     }catch(const std::exception &e){
-        FUNCWARN("Unable to plot line sample: " << e.what());
+        YLOGWARN("Unable to plot line sample: " << e.what());
     }
 
     return true;

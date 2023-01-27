@@ -20,6 +20,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -299,7 +300,7 @@ bool DrawGeometry(Drover &DICOM_data,
             unit_y = unit_y.unit();
             unit_z = unit_z.unit();
 
-            FUNCINFO("Proceeding with orthogonalized grid orientation unit vectors: " 
+            YLOGINFO("Proceeding with orthogonalized grid orientation unit vectors: " 
                      << unit_x << ", "
                      << unit_y << ", and "
                      << unit_z );
@@ -350,7 +351,7 @@ bool DrawGeometry(Drover &DICOM_data,
             unit_y = unit_y.unit();
             unit_z = unit_z.unit();
 
-            FUNCINFO("Proceeding with orthogonalized wireframecube orientation unit vectors: " 
+            YLOGINFO("Proceeding with orthogonalized wireframecube orientation unit vectors: " 
                      << unit_x << ", "
                      << unit_y << ", and "
                      << unit_z );

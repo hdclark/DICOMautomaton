@@ -22,6 +22,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 
 static
@@ -64,7 +65,7 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
 
     auto bfit = Filenames.begin();
     while(bfit != Filenames.end()){
-        FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "% \t" << *bfit);
+        YLOGINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "% \t" << *bfit);
         ++i;
 
         const auto Filename = *bfit;
@@ -72,24 +73,24 @@ bool Load_From_DICOM_Files( Drover &DICOM_data,
         try{
             Modality = get_modality(Filename);
         }catch(const std::exception &e){
-            FUNCWARN("Unable to extract modality ('" << e.what() << "')");
+            YLOGWARN("Unable to extract modality ('" << e.what() << "')");
             Modality = "";
         };
 
         if(boost::iequals(Modality,"RTRECORD")){
-            FUNCWARN("RTRECORD file encountered. "
+            YLOGWARN("RTRECORD file encountered. "
                      "DICOMautomaton currently is not equipped to read RTRECORD-modality DICOM files. "
                      "Disregarding it");
 
             bfit = Filenames.erase( bfit );  // Consume the file; we know what it is, but cannot make use of it.
 
         }else if(boost::iequals(Modality,"REG")){
-            FUNCWARN("REG file support is experimental");
+            YLOGWARN("REG file support is experimental");
 
             try{
                 auto t = Load_Transform(Filename);
-if(t == nullptr) FUNCWARN("(t == nullptr)");
-if(std::get_if<std::monostate>(&(t->transform)) != nullptr) FUNCWARN("(std::get_if<std::monostate>(&(t->transform)) != nullptr)");
+if(t == nullptr) YLOGWARN("(t == nullptr)");
+if(std::get_if<std::monostate>(&(t->transform)) != nullptr) YLOGWARN("(std::get_if<std::monostate>(&(t->transform)) != nullptr)");
                 if( (t == nullptr)
                 ||  (std::get_if<std::monostate>(&(t->transform)) != nullptr) ){
                     throw std::runtime_error("unable to extract transformation");
@@ -98,7 +99,7 @@ if(std::get_if<std::monostate>(&(t->transform)) != nullptr) FUNCWARN("(std::get_
                 DICOM_data.trans_data.emplace_back( std::move(t) );
 
             }catch(const std::exception &e){
-                FUNCWARN("Difficulty encountered during registration transform loading: '" << e.what() << "'. Refusing to continue");
+                YLOGWARN("Difficulty encountered during registration transform loading: '" << e.what() << "'. Refusing to continue");
 
                 return false;
                 //bfit = Filenames.erase( bfit ); 
@@ -108,7 +109,7 @@ if(std::get_if<std::monostate>(&(t->transform)) != nullptr) FUNCWARN("(std::get_
             bfit = Filenames.erase( bfit );  // Consume the file; we know what it is, but cannot make use of it.
 
         }else if(boost::iequals(Modality,"RTPLAN")){
-            FUNCWARN("RTPLAN file support is experimental");
+            YLOGWARN("RTPLAN file support is experimental");
 
             auto rtplan = Load_RTPlan(Filename);
             DICOM_data.rtplan_data.emplace_back( std::move(rtplan) );
@@ -123,7 +124,7 @@ if(std::get_if<std::monostate>(&(t->transform)) != nullptr) FUNCWARN("(std::get_
                 loaded_contour_data_storage = std::move(combined);
 
             }catch(const std::exception &e){
-                FUNCWARN("Difficulty encountered during contour data loading: '" << e.what() << "'. Ignoring file and continuing");
+                YLOGWARN("Difficulty encountered during contour data loading: '" << e.what() << "'. Ignoring file and continuing");
                 //loaded_contour_data_storage.back().pop_back();
                 bfit = Filenames.erase( bfit ); 
                 continue;
@@ -131,7 +132,7 @@ if(std::get_if<std::monostate>(&(t->transform)) != nullptr) FUNCWARN("(std::get_
 
             const auto postloadcount = loaded_contour_data_storage->ccs.size();
             if(postloadcount == preloadcount){
-                FUNCWARN("RTSTRUCT file was loaded, but contained no ROIs");
+                YLOGWARN("RTSTRUCT file was loaded, but contained no ROIs");
                 return false;
                 //If you get here, it isn't necessarily an error. But something has most likely gone wrong. Why bother
                 // to load an RTSTRUCT file if it is empty? If you know what you're doing, you can safely disable this
@@ -144,7 +145,7 @@ if(std::get_if<std::monostate>(&(t->transform)) != nullptr) FUNCWARN("(std::get_
             try{
                 loaded_dose_storage.back().push_back( Load_Dose_Array(Filename));
             }catch(const std::exception &e){
-                FUNCWARN("Difficulty encountered during dose array loading: '" << e.what() << "'. Ignoring file and continuing");
+                YLOGWARN("Difficulty encountered during dose array loading: '" << e.what() << "'. Ignoring file and continuing");
                 //loaded_dose_storage.back().pop_back();
                 bfit = Filenames.erase( bfit ); 
                 continue;
@@ -162,7 +163,7 @@ if(std::get_if<std::monostate>(&(t->transform)) != nullptr) FUNCWARN("(std::get_
             try{
                 loaded_imgs_storage.back().push_back( Load_Image_Array(Filename));
             }catch(const std::exception &e){
-                FUNCWARN("Difficulty encountered during image array loading: '" << e.what() << "'. Ignoring file and continuing");
+                YLOGWARN("Difficulty encountered during image array loading: '" << e.what() << "'. Ignoring file and continuing");
                 //loaded_imgs_storage.back().pop_back();
                 bfit = Filenames.erase( bfit ); 
                 continue;
@@ -208,13 +209,13 @@ if(std::get_if<std::monostate>(&(t->transform)) != nullptr) FUNCWARN("(std::get_
 
         auto collated_imgs = Collate_Image_Arrays(loaded_img_set);
         if(!collated_imgs){
-            FUNCWARN("Unable to collate images. It is possible to continue, but only if you are able to handle this case");
+            YLOGWARN("Unable to collate images. It is possible to continue, but only if you are able to handle this case");
             return false;
         }
 
         DICOM_data.image_data.emplace_back(std::move(collated_imgs));
     }
-    FUNCINFO("Number of image set groups currently loaded = " << DICOM_data.image_data.size());
+    YLOGINFO("Number of image set groups currently loaded = " << DICOM_data.image_data.size());
 
     //Also load dose data into the fray.
     for(auto &loaded_dose_set : loaded_dose_storage){

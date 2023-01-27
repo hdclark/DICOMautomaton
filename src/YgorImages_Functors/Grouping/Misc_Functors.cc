@@ -6,6 +6,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 
 //--------------------------------------------------------------------------------------------------------------
 //------------------------------------------- Image Purging Functors -------------------------------------------
@@ -44,12 +45,12 @@ GroupTemporallyOverlappingImages(planar_image_collection<float,double>::images_l
     //NOTE: The units of time here are unknown and not standard. If possible, it would be best to check other
     //      metadata or have a more definite (standardized) interpretation.
     auto L_time_opt = first_img_it->GetMetadataValueAs<double>("dt");
-    if(!L_time_opt) FUNCERR("Missing metadata info needed for temporal grouping (on L). Cannot continue");
+    if(!L_time_opt) YLOGERR("Missing metadata info needed for temporal grouping (on L). Cannot continue");
     const auto L_time = L_time_opt.value();
   
     auto overlapping_imgs = pic.get().get_images_satisfying([=](const planar_image<float,double> &animg) -> bool {
         auto R_time_opt = animg.GetMetadataValueAs<double>("dt");
-        if(!R_time_opt) FUNCERR("Missing metadata info needed for spatial-temporal grouping (on R). Cannot continue");
+        if(!R_time_opt) YLOGERR("Missing metadata info needed for spatial-temporal grouping (on R). Cannot continue");
         const auto R_time = R_time_opt.value();
         return (RELATIVE_DIFF(L_time,R_time) < 1E-3);
     });
@@ -72,11 +73,11 @@ GroupSpatiallyTemporallyOverlappingImages(planar_image_collection<float,double>:
     //NOTE: The units of time here are unknown and not standard. If possible, it would be best to check other
     //      metadata or have a more definite (standardized) interpretation.
     auto L_time = first_img_it->GetMetadataValueAs<double>("dt");
-    if(!L_time) FUNCERR("Missing metadata info needed for spatial-temporal grouping (on L). Cannot continue");
+    if(!L_time) YLOGERR("Missing metadata info needed for spatial-temporal grouping (on L). Cannot continue");
 
     for(auto &an_img_it : candidate_images){
         auto R_time = an_img_it->GetMetadataValueAs<double>("dt");
-        if(!R_time) FUNCERR("Missing metadata info needed for spatial-temporal grouping (on R). Cannot continue");
+        if(!R_time) YLOGERR("Missing metadata info needed for spatial-temporal grouping (on R). Cannot continue");
         if(RELATIVE_DIFF(L_time.value(), R_time.value()) < 1E-3) out.push_back(an_img_it);
     }
 

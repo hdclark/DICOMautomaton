@@ -156,7 +156,7 @@ bool PollDirectories(Drover &DICOM_data,
     const auto GroupAltogether = std::regex_match(GroupByStr, regex_altogether);
 
     if(OptArgs.getChildren().empty()){
-        FUNCWARN("No children operations specified; files will be loaded but not processed");
+        YLOGWARN("No children operations specified; files will be loaded but not processed");
     }
     if(PollInterval < 0){
         throw std::invalid_argument("Polling interval is invalid. Cannot continue.");
@@ -165,7 +165,7 @@ bool PollDirectories(Drover &DICOM_data,
         throw std::invalid_argument("Settle delay is invalid. Cannot continue.");
     }
     if(SettleDelay < PollInterval){
-        FUNCWARN("Settle delay is shorter than polling interval. Files will be considered settled when first detected");
+        YLOGWARN("Settle delay is shorter than polling interval. Files will be considered settled when first detected");
     }
     const auto PollInterval_ms = static_cast<int64_t>(1000.0 * PollInterval);
     const auto wait = [PollInterval_ms](){
@@ -271,16 +271,16 @@ bool PollDirectories(Drover &DICOM_data,
             if( (5.0 < elapsed) 
             ||  ((0.5 * PollInterval) < elapsed)
             ||  ((0.5 * SettleDelay) < elapsed) ){
-                FUNCWARN("Directory enumeration took " << elapsed << " s");
+                YLOGWARN("Directory enumeration took " << elapsed << " s");
             }
 
             first_pass = false;
 
         }catch(const std::exception &e){
             ++filesystem_error_count;
-            FUNCWARN("Encountered error enumerating directory: '" << e.what() << "'");
+            YLOGWARN("Encountered error enumerating directory: '" << e.what() << "'");
             if(filesystem_error_count < max_filesystem_error_count){
-                FUNCINFO("Filesystem error count: " << filesystem_error_count);
+                YLOGINFO("Filesystem error count: " << filesystem_error_count);
             }else{
                 throw std::runtime_error("Exceeded maximum permissable filesystem error count. Cannot continue.");
             }
@@ -337,7 +337,7 @@ bool PollDirectories(Drover &DICOM_data,
             {
                 const auto now = std::chrono::system_clock::now();
                 const std::time_t t_now = std::chrono::system_clock::to_time_t(now);
-                FUNCINFO("Poll results: "
+                YLOGINFO("Poll results: "
                      << "(" << std::put_time(std::localtime(&t_now), "%Y%m%d-%H%M%S") << ") "
                      << "cache contains " << total_count << " entries -- "
                      << pending_count << " pending, "
@@ -433,7 +433,7 @@ bool PollDirectories(Drover &DICOM_data,
 
         // Process files in batches, one batch at a time (sequentially).
         for(const auto& batch : to_process){
-            FUNCINFO("Processing a batch with " << batch.size() << " files");
+            YLOGINFO("Processing a batch with " << batch.size() << " files");
 
             // Load the files to a placeholder Drover class.
             Drover DD_work;
@@ -447,7 +447,7 @@ bool PollDirectories(Drover &DICOM_data,
                 }
             }
             if( !Operations.empty() ){
-                FUNCWARN("Loaded one or more operations. Note that loaded operations will be ignored");
+                YLOGWARN("Loaded one or more operations. Note that loaded operations will be ignored");
             }
 
             // Merge the loaded files into the current Drover class.

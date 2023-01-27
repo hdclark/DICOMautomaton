@@ -10,6 +10,7 @@
 #include "In_Image_Plane_Sharpen.h"
 #include "YgorImages.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
 template <class T> class contour_collection;
@@ -25,7 +26,7 @@ bool InPlaneImageSharpen(
     try{
         user_data_s = std::any_cast<InPlaneImageSharpenUserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
 

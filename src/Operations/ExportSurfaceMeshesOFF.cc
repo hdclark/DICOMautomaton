@@ -20,6 +20,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorMathIOOFF.h"
@@ -113,7 +114,7 @@ bool ExportSurfaceMeshesOFF(Drover &DICOM_data,
         if(!WriteFVSMeshToOFF( (*smp_it)->meshes, FO )){
             throw std::runtime_error("Unable to write surface mesh in OFF format. Cannot continue.");
         }
-        FUNCINFO("Surface mesh written to '" << FN << "'");
+        YLOGINFO("Surface mesh written to '" << FN << "'");
     }
 
     return true;

@@ -13,6 +13,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 
 OperationDoc OpArgDocDumpAnEncompassedPoint(){
@@ -32,7 +33,7 @@ bool DumpAnEncompassedPoint(Drover &DICOM_data,
     const auto apoint = DICOM_data.image_data.front()->imagecoll.images.front().center();
     auto encompassing_images = DICOM_data.image_data.front()->imagecoll.get_images_which_encompass_point(apoint);
 
-    FUNCINFO("Found " << encompassing_images.size() << " images which encompass the point " << apoint);
+    YLOGINFO("Found " << encompassing_images.size() << " images which encompass the point " << apoint);
 
     return true;
 }

@@ -21,6 +21,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -78,7 +79,7 @@ bool Repeat(Drover &DICOM_data,
     //-----------------------------------------------------------------------------------------------------------------
     if(N < 0) throw std::invalid_argument("N must be positive");
 
-    FUNCINFO("Repeating " << OptArgs.getChildren().size() << " immediate children operations " << N << " times");
+    YLOGINFO("Repeating " << OptArgs.getChildren().size() << " immediate children operations " << N << " times");
 
     for(long int i = 0; i < N; ++i){
         if(!Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, OptArgs.getChildren())){

@@ -26,6 +26,7 @@
 
 #include "YgorFilesDirs.h" //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMisc.h"      //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorMath.h"      //Needed for samples_1D.
 #include "YgorString.h"    //Needed for GetFirstRegex(...)
 
@@ -86,7 +87,7 @@ Launch_SCDI(samples_1D<double> &AIF, samples_1D<double> &VIF, std::vector<sample
     const float sum_of_vif = std::accumulate(resampled_vif.begin(), resampled_vif.end(), 0.0f);
     std::vector<float> sum_of_c;
     for(auto c : resampled_c) sum_of_c.push_back(std::accumulate(c.begin(), c.end(), 0.0f));
-    // FUNCINFO("sum of aif " << sum_of_aif << " sum of vif " << sum_of_vif << " sum of c " << sum_of_c);
+    // YLOGINFO("sum of aif " << sum_of_aif << " sum of vif " << sum_of_vif << " sum of c " << sum_of_c);
 
     // Linear approximation at large t
     std::vector<samples_1D<float>> linear_c_vals;

@@ -23,6 +23,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -75,19 +76,19 @@ bool Time(Drover &DICOM_data,
     };
 
     const auto start = std::chrono::system_clock::now();
-    FUNCINFO("Start time: " << time_str(std::chrono::system_clock::to_time_t(start)));
+    YLOGINFO("Start time: " << time_str(std::chrono::system_clock::to_time_t(start)));
 
     const bool res = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, OptArgs.getChildren());
 
     const auto end = std::chrono::system_clock::now();
-    FUNCINFO("Stop time: " << time_str(std::chrono::system_clock::to_time_t(end)));
+    YLOGINFO("Stop time: " << time_str(std::chrono::system_clock::to_time_t(end)));
 
     const std::chrono::duration<double> diff = (end - start);
 
     std::stringstream ss;
     ss << std::fixed << std::setprecision(6) << diff.count();
     const auto diff_str = ss.str();
-    FUNCINFO("Elapsed time: " << diff_str << " seconds");
+    YLOGINFO("Elapsed time: " << diff_str << " seconds");
 
     if(!res){
         throw std::runtime_error("Child operation failed");

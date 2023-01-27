@@ -12,6 +12,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 
 
 //Computes a DCE C(t) contrast enhancement map using S0 and T1 maps. Gets called once per frame, which 
@@ -51,7 +52,7 @@ bool DCEMRICMap(planar_image_collection<float,double>::images_list_it_t  local_i
     //Verify that flip angle and repetition time data are present.
     auto FlipAngleOpt = local_img_it->GetMetadataValueAs<double>("FlipAngle"); //Units: degrees.
     auto RepTimeOpt   = local_img_it->GetMetadataValueAs<double>("RepetitionTime"); //Units: msec.
-    if(!FlipAngleOpt || !RepTimeOpt) FUNCERR("Missing needed info for C map computation. Cannot continue");
+    if(!FlipAngleOpt || !RepTimeOpt) YLOGERR("Missing needed info for C map computation. Cannot continue");
     const auto pi = std::acos(-1.0);
     const auto RepTime = RepTimeOpt.value();
     const auto FlipAngle = FlipAngleOpt.value();
@@ -98,7 +99,7 @@ bool DCEMRICMap(planar_image_collection<float,double>::images_list_it_t  local_i
                     local_img_it->reference(row, col, chan) = std::numeric_limits<float>::quiet_NaN();
                 }
 /*
-FUNCERR("Need to double check that you can delete the extra 1000.0x scaling factor in this C computation!");
+YLOGERR("Need to double check that you can delete the extra 1000.0x scaling factor in this C computation!");
                 double C = 1000.0*(1.0/0.0045)*((1.0/T1prime) - (1.0/T1val));
                 //double C = (1.0/4.5)*((1.0/T1prime) - (1.0/T1val));
 

@@ -17,6 +17,7 @@
 #include "CT_Liver_Perfusion_First_Run.h"
 #include "YgorImages.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 
 OperationDoc OpArgDocCT_Liver_Perfusion_First_Run(){

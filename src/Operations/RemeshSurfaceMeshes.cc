@@ -29,6 +29,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorMathIOOFF.h"
@@ -123,7 +124,7 @@ bool RemeshSurfaceMeshes(Drover &DICOM_data,
         (*smp_it)->meshes.metadata = orig_metadata;
 
         ++completed;
-        FUNCINFO("Completed " << completed << " of " << sm_count
+        YLOGINFO("Completed " << completed << " of " << sm_count
               << " --> " << static_cast<int>(1000.0*(completed)/sm_count)/10.0 << "% done");
     }
 

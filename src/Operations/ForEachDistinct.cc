@@ -24,6 +24,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -116,7 +117,7 @@ bool ForEachDistinct(Drover &DICOM_data,
         auto pd = Partition_Drover(DICOM_data, KeysCommon );
 
         // Invoke children operations over each valid partition.
-        FUNCINFO("Performing children operation(s) over " << pd.partitions.size() << " partitions");
+        YLOGINFO("Performing children operation(s) over " << pd.partitions.size() << " partitions");
         for(auto & d : pd.partitions){
             if(!Operation_Dispatcher(d, InvocationMetadata, FilenameLex, OptArgs.getChildren())){
                 throw std::runtime_error("Child analysis failed. Cannot continue");
@@ -124,7 +125,7 @@ bool ForEachDistinct(Drover &DICOM_data,
         }
 
         if(IncludeNA && pd.na_partition){
-            FUNCINFO("Performing children operation(s) for 'N/A' partition");
+            YLOGINFO("Performing children operation(s) for 'N/A' partition");
             if(!Operation_Dispatcher(pd.na_partition.value(), InvocationMetadata, FilenameLex, OptArgs.getChildren())){
                 throw std::runtime_error("Child analysis failed. Cannot continue");
             }

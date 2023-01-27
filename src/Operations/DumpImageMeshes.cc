@@ -127,7 +127,7 @@ bool DumpImageMeshes(Drover &DICOM_data,
 
             const auto DumpFileName = Get_Unique_Sequential_Filename(OutBase, 6, ".obj");
             const auto MTLFileName  = Get_Unique_Sequential_Filename(OutBase, 6, ".mtl");
-            FUNCINFO("Using OBJ filename '" 
+            YLOGINFO("Using OBJ filename '" 
                      << DumpFileName 
                      << "' and MTL filename '"
                      << MTLFileName

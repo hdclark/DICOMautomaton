@@ -17,6 +17,7 @@
 #include <Explicator.h>
 
 #include <YgorMisc.h>
+#include "YgorLog.h"
 #include <YgorString.h>
 
 #include "Structs.h"
@@ -563,7 +564,7 @@ bool Operation_Dispatcher( Drover &DICOM_data,
             const auto user_op_name = optargs.getName();
             const auto canonical_op_name = op_name_X(user_op_name);
             if( op_name_X.last_best_score < 1.0 ){
-                FUNCWARN("Selecting operation '" << canonical_op_name << "' because '" << user_op_name << "' not understood");
+                YLOGWARN("Selecting operation '" << canonical_op_name << "' because '" << user_op_name << "' not understood");
             }
 
             bool WasFound = false;
@@ -585,7 +586,7 @@ bool Operation_Dispatcher( Drover &DICOM_data,
                         return;
                     });
 
-                    FUNCINFO("Performing operation '" << op_func.first << "' now..");
+                    YLOGINFO("Performing operation '" << op_func.first << "' now..");
                     const bool res = op_func.second.second(DICOM_data,
                                                            optargs,
                                                            InvocationMetadata,
@@ -598,7 +599,7 @@ bool Operation_Dispatcher( Drover &DICOM_data,
             if(!WasFound) throw std::invalid_argument("No operation matched '" + optargs.getName() + "'");
         }
     }catch(const std::exception &e){
-        FUNCWARN("Analysis failed: '" << e.what() << "'. Aborting remaining analyses");
+        YLOGWARN("Analysis failed: '" << e.what() << "'. Aborting remaining analyses");
         return false;
     }
 

@@ -21,6 +21,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -178,7 +179,7 @@ bool GenerateWarp(Drover &DICOM_data,
     if(user_transform_strs.empty()){
         throw std::invalid_argument("No transformations specified. Refusing to continue.");
     }
-    FUNCINFO("Processing " << user_transform_strs.size() << " transformations");
+    YLOGINFO("Processing " << user_transform_strs.size() << " transformations");
 
     affine_transform<double> final_affine;
     for(const auto& trans_str : user_transform_strs){
@@ -254,7 +255,7 @@ bool GenerateWarp(Drover &DICOM_data,
 
     }
 
-    //FUNCINFO("final_affine = ");
+    //YLOGINFO("final_affine = ");
     //final_affine.write_to(std::cout);
 
     DICOM_data.trans_data.emplace_back( std::make_shared<Transform3>( ) );

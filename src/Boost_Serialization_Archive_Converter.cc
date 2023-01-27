@@ -16,6 +16,7 @@
 #include "Structs.h"
 #include "YgorArguments.h"    //Needed for ArgumentHandler class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 //#include "YgorMath.h"         //Needed for vec3 class.
 //#include "YgorImagesIO.h"
 
@@ -80,11 +81,11 @@ int main(int argc, char* argv[]){
     arger.description = "A program for converting Boost.Serialization archives types which DICOMautomaton can read.";
 
     arger.default_callback = [](int, const std::string &optarg) -> void {
-      FUNCERR("Unrecognized option with argument: '" << optarg << "'");
+      YLOGERR("Unrecognized option with argument: '" << optarg << "'");
       return; 
     };
     arger.optionless_callback = [](const std::string &optarg) -> void {
-      FUNCERR("Unrecognized option with argument: '" << optarg << "'");
+      YLOGERR("Unrecognized option with argument: '" << optarg << "'");
       return; 
     };
 
@@ -125,7 +126,7 @@ int main(int argc, char* argv[]){
         wasOK = std::filesystem::exists(FilenameIn);
         if(!wasOK) throw std::runtime_error("File does not exist or is not reachable.");
     }catch(const std::filesystem::filesystem_error &e){ 
-        FUNCERR("Unable to open input file: " << e.what());
+        YLOGERR("Unable to open input file: " << e.what());
         return 1;
     }
 
@@ -134,7 +135,7 @@ int main(int argc, char* argv[]){
         FilenameOut = std::filesystem::canonical(FilenameOut);
         wasOK = std::filesystem::exists(FilenameOut);
         if(wasOK){
-            FUNCERR("Specified output file " << FilenameOut << " exists. Refusing to overwrite");
+            YLOGERR("Specified output file " << FilenameOut << " exists. Refusing to overwrite");
             return 1;
         }
     }catch(const std::filesystem::filesystem_error &){ }
@@ -143,21 +144,21 @@ int main(int argc, char* argv[]){
     //Parse into a Drover.
     Drover A;
     if(!Common_Boost_Deserialize_Drover(A,FilenameIn)){
-        FUNCERR("Unable to parse input file");
+        YLOGERR("Unable to parse input file");
     }
 
     //If it was a Drover, we made it this far. Write in the desired format.
     for(const auto &op_func : drover_serial_func_name_mapping){
         if(boost::iequals(op_func.first,ConvertTo)){
             if(!op_func.second(A,FilenameOut)){
-                FUNCERR("Unable to write output file");
+                YLOGERR("Unable to write output file");
             }else{
-                FUNCINFO("Success");
+                YLOGINFO("Success");
                 return 0;
             }
         }
     }
 
-    FUNCERR("Conversion failed: output format not recognized");
+    YLOGERR("Conversion failed: output format not recognized");
     return 1;
 }

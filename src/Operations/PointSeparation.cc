@@ -18,6 +18,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorFilesDirs.h"
 
@@ -164,12 +165,12 @@ bool PointSeparation(Drover &DICOM_data,
     // Summarize the findings.
     const auto hausdorff_dist = std::sqrt(sq_hausdorff);
 
-    FUNCINFO("Minimum separation: " << std::sqrt(sq_separation_min));
-    FUNCINFO("Maximum separation: " << std::sqrt(sq_separation_max));
-    FUNCINFO("Hausdorff separation: " << hausdorff_dist);
+    YLOGINFO("Minimum separation: " << std::sqrt(sq_separation_min));
+    YLOGINFO("Maximum separation: " << std::sqrt(sq_separation_max));
+    YLOGINFO("Hausdorff separation: " << hausdorff_dist);
 
     //Report the findings. 
-    FUNCINFO("Attempting to claim a mutex");
+    YLOGINFO("Attempting to claim a mutex");
 
     {
         //File-based locking is used so this program can be run over many patients concurrently.

@@ -14,6 +14,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
 
@@ -44,7 +45,7 @@ bool AccumulatePixelDistributions(planar_image_collection<float,double> &imageco
     try{
         user_data_s = std::any_cast<AccumulatePixelDistributionsUserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
 
@@ -55,7 +56,7 @@ bool AccumulatePixelDistributions(planar_image_collection<float,double> &imageco
     // NOTE: We only bother to grab individual contours here. You could alter this if you wanted 
     //       each contour_collection's contours to have an identifying colour.
     if(ccsl.empty()){
-        FUNCWARN("Missing needed contour information. Cannot continue with computation");
+        YLOGWARN("Missing needed contour information. Cannot continue with computation");
         return false;
     }
 
@@ -63,7 +64,7 @@ bool AccumulatePixelDistributions(planar_image_collection<float,double> &imageco
     // pruned after images have been successfully operated on.
     auto all_images = imagecoll.get_all_images();
     while(!all_images.empty()){
-        FUNCINFO("Images still to be processed: " << all_images.size());
+        YLOGINFO("Images still to be processed: " << all_images.size());
 
         // Find the images which spatially overlap with this image.
         auto curr_img_it = all_images.front();
@@ -113,7 +114,7 @@ bool AccumulatePixelDistributions(planar_image_collection<float,double> &imageco
     
                 const auto ROIName =  contour.GetMetadataValueAs<std::string>("ROIName");
                 if(!ROIName){
-                    FUNCWARN("Missing necessary tags for reporting analysis results. Cannot continue");
+                    YLOGWARN("Missing necessary tags for reporting analysis results. Cannot continue");
                     return false;
                 }
                 
@@ -189,7 +190,7 @@ bool AccumulatePixelDistributions(planar_image_collection<float,double> &imageco
                         }else{
                             //for(auto chan = 0; chan < first_img_it->channels; ++chan){
                             //    const auto curr_val = working.value(row, col, chan);
-                            //    if(curr_val != 0) FUNCERR("There are overlapping ROI bboxes. This code currently cannot handle this. "
+                            //    if(curr_val != 0) YLOGERR("There are overlapping ROI bboxes. This code currently cannot handle this. "
                             //                              "You will need to run the functor individually on the overlapping ROIs.");
                             //    working.reference(row, col, chan) = static_cast<float>(10);
                             //}

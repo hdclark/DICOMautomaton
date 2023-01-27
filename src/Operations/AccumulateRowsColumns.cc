@@ -23,6 +23,7 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 
 
@@ -139,7 +140,7 @@ bool AccumulateRowsColumns(Drover &DICOM_data,
                 YgorMathPlottingGnuplot::Plot<double>(row_sums, "Row sums", "DICOM position", "Pixel intensity");
                 YgorMathPlottingGnuplot::Plot<double>(col_sums, "Column sums", "DICOM position", "Pixel intensity");
             }catch(const std::exception &e){
-                FUNCWARN("Failed to plot: " << e.what());
+                YLOGWARN("Failed to plot: " << e.what());
             }
         }
     }

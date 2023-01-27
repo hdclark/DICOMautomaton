@@ -19,6 +19,7 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathIOOFF.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for SplitStringToVector, Canonicalize_String2, SplitVector functions.
 
 #include "Structs.h"
@@ -44,7 +45,7 @@ bool Load_Points_From_OFF_Files( Drover &DICOM_data,
 
     auto bfit = Filenames.begin();
     while(bfit != Filenames.end()){
-        FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
+        YLOGINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
         const auto Filename = *bfit;
 
@@ -85,11 +86,11 @@ bool Load_Points_From_OFF_Files( Drover &DICOM_data,
             generic_metadata["NormalizedROIName"] = "unspecified"; 
             DICOM_data.point_data.back()->pset.metadata.merge(generic_metadata);
 
-            FUNCINFO("Loaded point cloud with " << N_points << " points");
+            YLOGINFO("Loaded point cloud with " << N_points << " points");
             bfit = Filenames.erase( bfit ); 
             continue;
         }catch(const std::exception &e){
-            FUNCINFO("Unable to load as OFF point cloud file");
+            YLOGINFO("Unable to load as OFF point cloud file");
             DICOM_data.point_data.pop_back();
         };
 
@@ -120,7 +121,7 @@ bool Load_Mesh_From_OFF_Files( Drover &DICOM_data,
 
     auto bfit = Filenames.begin();
     while(bfit != Filenames.end()){
-        FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
+        YLOGINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
         const auto Filename = *bfit;
 
@@ -163,13 +164,13 @@ bool Load_Mesh_From_OFF_Files( Drover &DICOM_data,
             generic_metadata["NormalizedROIName"] = "unspecified"; 
             DICOM_data.smesh_data.back()->meshes.metadata.merge(generic_metadata);
 
-            FUNCINFO("Loaded surface mesh with " 
+            YLOGINFO("Loaded surface mesh with " 
                      << N_verts << " vertices and "
                      << N_faces << " faces");
             bfit = Filenames.erase( bfit ); 
             continue;
         }catch(const std::exception &e){
-            FUNCINFO("Unable to load as OFF mesh file");
+            YLOGINFO("Unable to load as OFF mesh file");
             DICOM_data.smesh_data.pop_back();
         };
 

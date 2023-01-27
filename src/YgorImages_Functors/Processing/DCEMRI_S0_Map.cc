@@ -11,6 +11,7 @@
 #include "../ConvenienceRoutines.h"
 #include "YgorImages.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 
 template <class T> class contour_collection;
 
@@ -23,7 +24,7 @@ bool DCEMRIS0Map(planar_image_collection<float,double>::images_list_it_t first_i
 
     //Verify there are merely two images selected.
     if(selected_img_its.size() != 2){
-        FUNCWARN("This routine assumes two images will be combined to produce a S0 map. "
+        YLOGWARN("This routine assumes two images will be combined to produce a S0 map. "
                  "The operation_functor was handed " << selected_img_its.size() << " images. Cannot continue");
         return false;
     }
@@ -36,8 +37,8 @@ bool DCEMRIS0Map(planar_image_collection<float,double>::images_list_it_t first_i
     auto R_FlipAngle = R_img_it->GetMetadataValueAs<double>("FlipAngle"); //Units: degrees.
     auto L_RepTime   = L_img_it->GetMetadataValueAs<double>("RepetitionTime"); //Units: msec.
     auto R_RepTime   = R_img_it->GetMetadataValueAs<double>("RepetitionTime"); //Units: msec.
-    if(!L_FlipAngle || !R_FlipAngle || !L_RepTime || !R_RepTime) FUNCERR("Missing needed info for S0 map. Cannot continue");
-    if(RELATIVE_DIFF(L_RepTime.value(), R_RepTime.value()) > 1E-3) FUNCERR("Encountered differing Repitition Times. Cannot continue");
+    if(!L_FlipAngle || !R_FlipAngle || !L_RepTime || !R_RepTime) YLOGERR("Missing needed info for S0 map. Cannot continue");
+    if(RELATIVE_DIFF(L_RepTime.value(), R_RepTime.value()) > 1E-3) YLOGERR("Encountered differing Repitition Times. Cannot continue");
 
     const auto pi = std::acos(-1.0);
     const auto RepTime = L_RepTime.value(); // or R_RepTime. They are ~equivalent.

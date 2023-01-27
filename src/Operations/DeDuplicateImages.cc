@@ -11,6 +11,7 @@
 #include <string>    
 
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"
 
 #include "../Structs.h"
@@ -92,7 +93,7 @@ bool DeDuplicateImages(Drover &DICOM_data,
                                             + std::abs(rmm_B.Current_Max() - rmm_B.Current_Min());
             const auto vox_range_dice = vox_range_dice_numer + vox_range_dice_denom;
 
-FUNCINFO("About to compare image arrays: "
+YLOGINFO("About to compare image arrays: "
       << " d_center = " << d_center
       << " d_volume = " << d_volume
       << " vox_range_dice = " << vox_range_dice );
@@ -101,7 +102,7 @@ FUNCINFO("About to compare image arrays: "
             if( (d_center <= d_center_threshold)
             &&  (d_volume <= d_volume_threshold)
             &&  (vox_range_overlap_dice_threshold <= vox_range_dice) ){
-                FUNCINFO("Duplicate image array identified");
+                YLOGINFO("Duplicate image array identified");
                 IA_duplicates.push_back( *iapB_it_it );
                 iapB_it_it = IAs.erase( iapB_it_it );
             }else{

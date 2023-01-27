@@ -30,6 +30,7 @@
 #include "YgorImagesIO.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 
 
@@ -266,7 +267,7 @@ bool GridBasedRayCastDoseAccumulate(Drover &DICOM_data,
     //Compute the number of images to make into the grid: number of unique contour planes + 2.
     // The extra two will contain some surface voxels.
     if(NumberOfImages <= 0) NumberOfImages = (ucp.size() + 2);
-    FUNCINFO("Number of images: " << NumberOfImages);
+    YLOGINFO("Number of images: " << NumberOfImages);
 
     //Find grid alignment vectors.
     //
@@ -302,7 +303,7 @@ bool GridBasedRayCastDoseAccumulate(Drover &DICOM_data,
         // which will stick out beyond the contour planes. (The margin is added at the top and the bottom.)
         z_margin = sep_per_plane * 1.5;
     }else{
-        FUNCWARN("Only a single contour plane was detected. Guessing its thickness.."); 
+        YLOGWARN("Only a single contour plane was detected. Guessing its thickness.."); 
         z_margin = 5.0;
     }
 
@@ -505,7 +506,7 @@ bool GridBasedRayCastDoseAccumulate(Drover &DICOM_data,
                 {
                     std::lock_guard<std::mutex> lock(printer);
                     ++completed;
-                    FUNCINFO("Completed " << completed << " of " << SourceDetectorRows 
+                    YLOGINFO("Completed " << completed << " of " << SourceDetectorRows 
                           << " --> " << static_cast<int>(1000.0*(completed)/SourceDetectorRows)/10.0 << "% done");
                 }
             });

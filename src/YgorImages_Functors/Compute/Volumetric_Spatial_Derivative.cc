@@ -14,6 +14,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
 #include "YgorClustering.hpp"
@@ -46,17 +47,17 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
     try{
         user_data_s = std::any_cast<ComputeVolumetricSpatialDerivativeUserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
 
     if( ccsl.empty() ){
-        FUNCWARN("Missing needed contour information. Cannot continue with computation");
+        YLOGWARN("Missing needed contour information. Cannot continue with computation");
         return false;
     }
 
     if(imagecoll.images.empty()){
-        FUNCWARN("No images available for computation. Nothing to do.");
+        YLOGWARN("No images available for computation. Nothing to do.");
         return false;
     }
 
@@ -89,7 +90,7 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
             selected_imgs.push_back( std::ref(img) );
         }
         if(!Images_Form_Rectilinear_Grid(selected_imgs)){
-            FUNCWARN("Images do not form a rectilinear grid. Cannot continue");
+            YLOGWARN("Images do not form a rectilinear grid. Cannot continue");
             return false;
         }
 

@@ -38,6 +38,7 @@
 
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 #include "../Thread_Pool.h"
@@ -93,10 +94,10 @@ interactive_query(std::vector<user_query_packet_t> qv){
                     std::string cmd = ExpandMacros(proto_cmd, key_vals, "$");
 
                     // Query the user.
-                    FUNCINFO("About to perform pshell command: '" << cmd << "'");
+                    YLOGINFO("About to perform pshell command: '" << cmd << "'");
                     auto res = Execute_Command_In_Pipe(cmd);
                     res = escape_for_quotes(res); // Trim newlines and unprintable characters.
-                    FUNCINFO("Received user input: '" << res << "'");
+                    YLOGINFO("Received user input: '" << res << "'");
 
                     // Ensure the input fits the required data type.
                     if(uq.val_type == user_input_t::string){
@@ -120,10 +121,10 @@ interactive_query(std::vector<user_query_packet_t> qv){
                     std::string cmd = ExpandMacros(proto_cmd, key_vals, "@");
 
                     // Query the user.
-                    FUNCINFO("About to perform zenity command: '" << cmd << "'");
+                    YLOGINFO("About to perform zenity command: '" << cmd << "'");
                     auto res = Execute_Command_In_Pipe(cmd);
                     res = escape_for_quotes(res); // Trim newlines and unprintable characters.
-                    FUNCINFO("Received user input: '" << res << "'");
+                    YLOGINFO("Received user input: '" << res << "'");
 
                     // Ensure the input fits the required data type.
                     if(uq.val_type == user_input_t::string){
@@ -140,7 +141,7 @@ interactive_query(std::vector<user_query_packet_t> qv){
                 }
 
             }catch(const std::exception &e){
-                FUNCWARN("User input failed: '" << e.what() << "'");
+                YLOGWARN("User input failed: '" << e.what() << "'");
             }
         }
 

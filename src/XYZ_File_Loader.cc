@@ -19,6 +19,7 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathIOXYZ.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for SplitStringToVector, Canonicalize_String2, SplitVector functions.
 
 #include "Structs.h"
@@ -66,7 +67,7 @@ bool Load_From_XYZ_Files( Drover &DICOM_data,
 
     auto bfit = Filenames.begin();
     while(bfit != Filenames.end()){
-        FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
+        YLOGINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
         const auto Filename = *bfit;
 
@@ -94,11 +95,11 @@ bool Load_From_XYZ_Files( Drover &DICOM_data,
             l_meta["Filename"] = Filename.string();
             inject_metadata(DICOM_data.point_data.back()->pset.metadata, std::move(l_meta));
 
-            FUNCINFO("Loaded point cloud with " << N_points << " points");
+            YLOGINFO("Loaded point cloud with " << N_points << " points");
             bfit = Filenames.erase( bfit ); 
             continue;
         }catch(const std::exception &e){
-            FUNCINFO("Unable to load as XYZ point cloud file");
+            YLOGINFO("Unable to load as XYZ point cloud file");
             DICOM_data.point_data.pop_back();
         };
 

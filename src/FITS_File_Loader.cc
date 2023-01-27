@@ -24,6 +24,7 @@
 #include "YgorImagesIO.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 template <typename... T_list, typename F>
 constexpr void for_types(F&& f){
@@ -52,7 +53,7 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
 
     auto bfit = Filenames.begin();
     while(bfit != Filenames.end()){
-        FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
+        YLOGINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
         const auto Filename = *bfit;
 
@@ -108,7 +109,7 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
                     fimg_ptr->metadata["Filename"] = Filename.string();
                     l_meta = coalesce_metadata_for_basic_image(l_meta, meta_evolve::iterate); // Evolve for next image.
 
-                    FUNCINFO("Loaded FITS image with dimensions " 
+                    YLOGINFO("Loaded FITS image with dimensions " 
                              << fimg_ptr->rows << " x " << fimg_ptr->columns
                              << " and " << fimg_ptr->channels << " channels");
 
@@ -124,7 +125,7 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
                 } else if constexpr (std::is_same<T, uint8_t>::value){    t = "uint8_t";
                 } else if constexpr (std::is_same<T, double>::value){     t = "double";
                 }
-                FUNCINFO("Unable to load as FITS file with " << t << ",double types: '" << e.what() << "'");
+                YLOGINFO("Unable to load as FITS file with " << t << ",double types: '" << e.what() << "'");
             };
             return;
         });

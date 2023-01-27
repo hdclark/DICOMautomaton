@@ -62,7 +62,7 @@ bool Transaction(Drover &DICOM_data,
 
     auto children = OptArgs.getChildren();
     if(children.empty()){
-        FUNCWARN("No children operations specified, forgoing transaction");
+        YLOGWARN("No children operations specified, forgoing transaction");
     }else{
 
         // Copy Drover and other relevant internal state.
@@ -72,10 +72,10 @@ bool Transaction(Drover &DICOM_data,
         // Perform children operations.
         const bool res = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, children);
         if(res){
-            FUNCINFO("Transaction succeeding. Committing state");
+            YLOGINFO("Transaction succeeding. Committing state");
             
         }else{
-            FUNCWARN("Transaction failed. Reverting state");
+            YLOGWARN("Transaction failed. Reverting state");
             DICOM_data = orig_DICOM_data;
             InvocationMetadata = orig_InvocationMetadata;
             return false;

@@ -1,5 +1,6 @@
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorMath.h"         //Needed for samples_1D.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "CPD_Nonrigid.h"
@@ -252,7 +253,7 @@ void GetNLargestEigenvalues(const Eigen::MatrixXf & m,
     double ev;
     Eigen::MatrixXf working_m = m.replicate(1, 1);
     Eigen::VectorXf working_v = Eigen::VectorXf::Random(size);
-    FUNCINFO(num_eig)
+    YLOGINFO(num_eig)
     for(int i = 0; i < num_eig; i++) {
         working_v = Eigen::VectorXf::Random(size);
         ev = PowerIteration(working_m, working_v, power_iter, power_tol);
@@ -420,7 +421,7 @@ AlignViaNonRigidCPD(CPDParams & params,
             std::string video /*= "False"*/,
             std::string xyz_outfile /*= "output"*/ ) { 
     
-    FUNCINFO("Performing nonrigid CPD");
+    YLOGINFO("Performing nonrigid CPD");
 
     std::string temp_xyz_outfile;
     point_set<double> mutable_moving = moving;
@@ -469,7 +470,7 @@ AlignViaNonRigidCPD(CPDParams & params,
         // GetNLargestEigenvalues(transform.G, vector_matrix, value_matrix, num_eig, N_stat_points, params.power_iter, params.power_tol);
         high_resolution_clock::time_point stop = high_resolution_clock::now();
         duration<double>  time_span = duration_cast<duration<double>>(stop - start);
-        FUNCINFO("Excecution took time: " << time_span.count())
+        YLOGINFO("Excecution took time: " << time_span.count())
     }
     Eigen::MatrixXf postProbX;
     Eigen::VectorXf postProbOne, postProbTransOne;
@@ -482,7 +483,7 @@ AlignViaNonRigidCPD(CPDParams & params,
     high_resolution_clock::time_point start = high_resolution_clock::now();
     std::ofstream os(xyz_outfile + "_stats.csv");
     for (int i = 0; i < params.iterations; i++) {
-        FUNCINFO("Iteration: " << i)
+        YLOGINFO("Iteration: " << i)
         high_resolution_clock::time_point start = high_resolution_clock::now();
         // eventually put this inside the else statement after changing the objective function
         // auto P = E_Step_NR(X, Y, transform.G, transform.W, sigma_squared, params.distribution_weight);
@@ -527,20 +528,20 @@ AlignViaNonRigidCPD(CPDParams & params,
         T = transform.apply_to(Y);
         sigma_squared = SigmaSquared(X, postProbOne, postProbTransOne, postProbX, T);
 
-        FUNCINFO("Sigma Squared: " << sigma_squared);
+        YLOGINFO("Sigma Squared: " << sigma_squared);
 
         if (isnan(sigma_squared)) {
-            FUNCINFO("FINAL SIMILARITY: " << similarity);
+            YLOGINFO("FINAL SIMILARITY: " << similarity);
             break;
         }
 
         similarity = GetSimilarity_NR(X, Y, transform.G, transform.W);
-        FUNCINFO("Similarity: " << similarity);
+        YLOGINFO("Similarity: " << similarity);
 
         // prev_objective = objective;
         double objective_tolerance = abs((L - L_old) / L);
         //objective = GetObjective_NR(X, Y, P, transform.G, transform.W, sigma_squared);
-        FUNCINFO("Objective: " << objective_tolerance);
+        YLOGINFO("Objective: " << objective_tolerance);
 
         if (video == "True") {
             if (iter_interval > 0 && i % iter_interval == 0) {
@@ -549,18 +550,18 @@ AlignViaNonRigidCPD(CPDParams & params,
                 mutable_moving = moving;
                 transform.apply_to(mutable_moving);
                 if(!WritePointSetToXYZ(mutable_moving, PFO))
-                    FUNCERR("Error writing point set to " << xyz_outfile);
+                    YLOGERR("Error writing point set to " << xyz_outfile);
             }
         }
 
         if (objective_tolerance < params.similarity_threshold || isnan(objective_tolerance) || isnan(sigma_squared)) {
-            FUNCINFO("FINAL SIMILARITY: " << similarity);
+            YLOGINFO("FINAL SIMILARITY: " << similarity);
             break;
         }
 
         high_resolution_clock::time_point stop = high_resolution_clock::now();
         duration<double>  time_span = duration_cast<duration<double>>(stop - start);
-        FUNCINFO("Excecution took time: " << time_span.count())
+        YLOGINFO("Excecution took time: " << time_span.count())
         os << i+1 << "," << time_span.count() << "," << similarity << "," << temp_xyz_outfile << "\n";
     }
     return transform;

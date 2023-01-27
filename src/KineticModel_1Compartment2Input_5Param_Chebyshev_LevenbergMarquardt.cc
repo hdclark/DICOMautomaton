@@ -24,6 +24,7 @@
 #include "KineticModel_1Compartment2Input_5Param_Chebyshev_LevenbergMarquardt.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 
 
 static
@@ -317,7 +318,7 @@ static
 double 
 chebyshev_3param_func_to_min(unsigned, const double *, double *, void *){
 
-    FUNCERR("Not yet implemented");
+    YLOGERR("Not yet implemented");
     return 0.0;
 
 / *
@@ -364,7 +365,7 @@ chebyshev_3param_func_to_min(unsigned, const double *, double *, void *){
 struct KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters
 Optimize_LevenbergMarquardt_3Param(KineticModel_1Compartment2Input_5Param_Chebyshev_Parameters state){
 
-    FUNCERR("Not yet implemented");
+    YLOGERR("Not yet implemented");
     return state;
 
 / *
@@ -419,51 +420,51 @@ Optimize_LevenbergMarquardt_3Param(KineticModel_1Compartment2Input_5Param_Chebys
         //nlopt_set_upper_bounds(opt, u_bnds);
                         
         if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
-            FUNCERR("NLOpt unable to set initial step sizes");
+            YLOGERR("NLOpt unable to set initial step sizes");
         }
         if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, chebyshev_3param_func_to_min, reinterpret_cast<void*>(&state))){
-            FUNCERR("NLOpt unable to set objective function for minimization");
+            YLOGERR("NLOpt unable to set objective function for minimization");
         }
         //if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-4)){
-        //    FUNCERR("NLOpt unable to set xtol_rel stopping condition");
+        //    YLOGERR("NLOpt unable to set xtol_rel stopping condition");
         //}
         if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, xtol_abs_thresholds)){
-            FUNCERR("NLOpt unable to set xtol_abs stopping condition");
+            YLOGERR("NLOpt unable to set xtol_abs stopping condition");
         }
         if(NLOPT_SUCCESS != nlopt_set_ftol_rel(opt, 1.0E-7)){
-            FUNCERR("NLOpt unable to set ftol_rel stopping condition");
+            YLOGERR("NLOpt unable to set ftol_rel stopping condition");
         }
         if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 30.0)){ // In seconds.
-            FUNCERR("NLOpt unable to set maxtime stopping condition");
+            YLOGERR("NLOpt unable to set maxtime stopping condition");
         }
         if(NLOPT_SUCCESS != nlopt_set_maxeval(opt, 5'000'000)){ // Maximum # of objective func evaluations.
-            FUNCERR("NLOpt unable to set maxeval stopping condition");
+            YLOGERR("NLOpt unable to set maxeval stopping condition");
         }
         if(NLOPT_SUCCESS != nlopt_set_vector_storage(opt, 400)){ // Amount of memory to use (MB).
-            FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
+            YLOGERR("NLOpt unable to tell NLOpt to use more scratch space");
         }
 
         const auto opt_status = nlopt_optimize(opt, params, &func_min);
 
         if(opt_status < 0){
             state.FittingSuccess = false;
-            if(opt_status == NLOPT_FAILURE){                FUNCWARN("NLOpt fail: generic failure");
-            }else if(opt_status == NLOPT_INVALID_ARGS){     FUNCERR("NLOpt fail: invalid arguments");
-            }else if(opt_status == NLOPT_OUT_OF_MEMORY){    FUNCWARN("NLOpt fail: out of memory");
-            }else if(opt_status == NLOPT_ROUNDOFF_LIMITED){ FUNCWARN("NLOpt fail: roundoff limited");
-            }else if(opt_status == NLOPT_FORCED_STOP){      FUNCWARN("NLOpt fail: forced termination");
-            }else{ FUNCERR("NLOpt fail: unrecognized error code"); }
+            if(opt_status == NLOPT_FAILURE){                YLOGWARN("NLOpt fail: generic failure");
+            }else if(opt_status == NLOPT_INVALID_ARGS){     YLOGERR("NLOpt fail: invalid arguments");
+            }else if(opt_status == NLOPT_OUT_OF_MEMORY){    YLOGWARN("NLOpt fail: out of memory");
+            }else if(opt_status == NLOPT_ROUNDOFF_LIMITED){ YLOGWARN("NLOpt fail: roundoff limited");
+            }else if(opt_status == NLOPT_FORCED_STOP){      YLOGWARN("NLOpt fail: forced termination");
+            }else{ YLOGERR("NLOpt fail: unrecognized error code"); }
             // See http://ab-initio.mit.edu/wiki/index.php/NLopt_Reference for error code info.
         }else{
             state.FittingSuccess = true;
             if(true){
-                if(opt_status == NLOPT_SUCCESS){                FUNCINFO("NLOpt: success");
-                }else if(opt_status == NLOPT_STOPVAL_REACHED){  FUNCINFO("NLOpt: stopval reached");
-                }else if(opt_status == NLOPT_FTOL_REACHED){     FUNCINFO("NLOpt: ftol reached");
-                }else if(opt_status == NLOPT_XTOL_REACHED){     FUNCINFO("NLOpt: xtol reached");
-                }else if(opt_status == NLOPT_MAXEVAL_REACHED){  FUNCINFO("NLOpt: maxeval count reached");
-                }else if(opt_status == NLOPT_MAXTIME_REACHED){  FUNCINFO("NLOpt: maxtime reached");
-                }else{ FUNCERR("NLOpt fail: unrecognized success code"); }
+                if(opt_status == NLOPT_SUCCESS){                YLOGINFO("NLOpt: success");
+                }else if(opt_status == NLOPT_STOPVAL_REACHED){  YLOGINFO("NLOpt: stopval reached");
+                }else if(opt_status == NLOPT_FTOL_REACHED){     YLOGINFO("NLOpt: ftol reached");
+                }else if(opt_status == NLOPT_XTOL_REACHED){     YLOGINFO("NLOpt: xtol reached");
+                }else if(opt_status == NLOPT_MAXEVAL_REACHED){  YLOGINFO("NLOpt: maxeval count reached");
+                }else if(opt_status == NLOPT_MAXTIME_REACHED){  YLOGINFO("NLOpt: maxtime reached");
+                }else{ YLOGERR("NLOpt fail: unrecognized success code"); }
             }
         }
 
@@ -494,51 +495,51 @@ Optimize_LevenbergMarquardt_3Param(KineticModel_1Compartment2Input_5Param_Chebys
         //nlopt_set_upper_bounds(opt, u_bnds);
                         
         if(NLOPT_SUCCESS != nlopt_set_initial_step(opt, initstpsz)){
-            FUNCERR("NLOpt unable to set initial step sizes");
+            YLOGERR("NLOpt unable to set initial step sizes");
         }
         if(NLOPT_SUCCESS != nlopt_set_min_objective(opt, chebyshev_3param_func_to_min, reinterpret_cast<void*>(&state))){
-            FUNCERR("NLOpt unable to set objective function for minimization");
+            YLOGERR("NLOpt unable to set objective function for minimization");
         }
         //if(NLOPT_SUCCESS != nlopt_set_xtol_rel(opt, 1.0E-4)){
-        //    FUNCERR("NLOpt unable to set xtol_rel stopping condition");
+        //    YLOGERR("NLOpt unable to set xtol_rel stopping condition");
         //}
         //if(NLOPT_SUCCESS != nlopt_set_xtol_abs(opt, xtol_abs_thresholds)){
-        //    FUNCERR("NLOpt unable to set xtol_abs stopping condition");
+        //    YLOGERR("NLOpt unable to set xtol_abs stopping condition");
         //}
         if(NLOPT_SUCCESS != nlopt_set_ftol_rel(opt, 1.0E-7)){
-            FUNCERR("NLOpt unable to set ftol_rel stopping condition");
+            YLOGERR("NLOpt unable to set ftol_rel stopping condition");
         }
         if(NLOPT_SUCCESS != nlopt_set_maxtime(opt, 30.0)){ // In seconds.
-            FUNCERR("NLOpt unable to set maxtime stopping condition");
+            YLOGERR("NLOpt unable to set maxtime stopping condition");
         }
         if(NLOPT_SUCCESS != nlopt_set_maxeval(opt, 5'000'000)){ // Maximum # of objective func evaluations.
-            FUNCERR("NLOpt unable to set maxeval stopping condition");
+            YLOGERR("NLOpt unable to set maxeval stopping condition");
         }
         if(NLOPT_SUCCESS != nlopt_set_vector_storage(opt, 400)){ // Amount of memory to use (MB).
-            FUNCERR("NLOpt unable to tell NLOpt to use more scratch space");
+            YLOGERR("NLOpt unable to tell NLOpt to use more scratch space");
         }
 
         const auto opt_status = nlopt_optimize(opt, params, &func_min);
 
         if(opt_status < 0){
             state.FittingSuccess = false;
-            if(opt_status == NLOPT_FAILURE){                FUNCWARN("NLOpt fail: generic failure");
-            }else if(opt_status == NLOPT_INVALID_ARGS){     FUNCERR("NLOpt fail: invalid arguments");
-            }else if(opt_status == NLOPT_OUT_OF_MEMORY){    FUNCWARN("NLOpt fail: out of memory");
-            }else if(opt_status == NLOPT_ROUNDOFF_LIMITED){ FUNCWARN("NLOpt fail: roundoff limited");
-            }else if(opt_status == NLOPT_FORCED_STOP){      FUNCWARN("NLOpt fail: forced termination");
-            }else{ FUNCERR("NLOpt fail: unrecognized error code"); }
+            if(opt_status == NLOPT_FAILURE){                YLOGWARN("NLOpt fail: generic failure");
+            }else if(opt_status == NLOPT_INVALID_ARGS){     YLOGERR("NLOpt fail: invalid arguments");
+            }else if(opt_status == NLOPT_OUT_OF_MEMORY){    YLOGWARN("NLOpt fail: out of memory");
+            }else if(opt_status == NLOPT_ROUNDOFF_LIMITED){ YLOGWARN("NLOpt fail: roundoff limited");
+            }else if(opt_status == NLOPT_FORCED_STOP){      YLOGWARN("NLOpt fail: forced termination");
+            }else{ YLOGERR("NLOpt fail: unrecognized error code"); }
             // See http://ab-initio.mit.edu/wiki/index.php/NLopt_Reference for error code info.
         }else{
             state.FittingSuccess = true;
             if(true){
-                if(opt_status == NLOPT_SUCCESS){                FUNCINFO("NLOpt: success");
-                }else if(opt_status == NLOPT_STOPVAL_REACHED){  FUNCINFO("NLOpt: stopval reached");
-                }else if(opt_status == NLOPT_FTOL_REACHED){     FUNCINFO("NLOpt: ftol reached");
-                }else if(opt_status == NLOPT_XTOL_REACHED){     FUNCINFO("NLOpt: xtol reached");
-                }else if(opt_status == NLOPT_MAXEVAL_REACHED){  FUNCINFO("NLOpt: maxeval count reached");
-                }else if(opt_status == NLOPT_MAXTIME_REACHED){  FUNCINFO("NLOpt: maxtime reached");
-                }else{ FUNCERR("NLOpt fail: unrecognized success code"); }
+                if(opt_status == NLOPT_SUCCESS){                YLOGINFO("NLOpt: success");
+                }else if(opt_status == NLOPT_STOPVAL_REACHED){  YLOGINFO("NLOpt: stopval reached");
+                }else if(opt_status == NLOPT_FTOL_REACHED){     YLOGINFO("NLOpt: ftol reached");
+                }else if(opt_status == NLOPT_XTOL_REACHED){     YLOGINFO("NLOpt: xtol reached");
+                }else if(opt_status == NLOPT_MAXEVAL_REACHED){  YLOGINFO("NLOpt: maxeval count reached");
+                }else if(opt_status == NLOPT_MAXTIME_REACHED){  YLOGINFO("NLOpt: maxtime reached");
+                }else{ YLOGERR("NLOpt fail: unrecognized success code"); }
             }
         }
 

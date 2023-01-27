@@ -259,7 +259,7 @@ bool VoxelRANSAC(Drover &DICOM_data,
 
         // --------------------------------
         // Perform RANSAC.
-        FUNCINFO("Number of voxels being used for RANSAC: " << BeforeCount);
+        YLOGINFO("Number of voxels being used for RANSAC: " << BeforeCount);
 
 /*
         const vec3<double> z_unit(0.0, 0.0, 1.0);
@@ -525,7 +525,7 @@ std::array<SpatialType, SpatialDimensionCount> Coordinates;
             }
         }
 
-        FUNCINFO("The number of unit vectors to analyze: " << unit_vecs.size());
+        YLOGINFO("The number of unit vectors to analyze: " << unit_vecs.size());
 
         // Determine the three most prominent unit vectors.
         // This is accomplished via PCA.
@@ -554,7 +554,7 @@ std::array<SpatialType, SpatialDimensionCount> Coordinates;
         const vec3<double> grid_u_b( evecs(0,1), evecs(1,1), evecs(2,1) );
         const vec3<double> grid_u_c( evecs(0,2), evecs(1,2), evecs(2,2) );
 
-        FUNCINFO(" grid units:  " << grid_u_a << ", " << grid_u_b << ", " << grid_u_c );
+        YLOGINFO(" grid units:  " << grid_u_a << ", " << grid_u_b << ", " << grid_u_c );
 
 
 
@@ -565,7 +565,7 @@ std::array<SpatialType, SpatialDimensionCount> Coordinates;
         // --------------------------------
         // 
 
-        //FUNCINFO("Number of voxels with valid cluster IDs: " << AfterCount 
+        //YLOGINFO("Number of voxels with valid cluster IDs: " << AfterCount 
         //    << " (" << (1.0 / 100.0) * static_cast<long int>( 10000.0 * AfterCount / BeforeCount ) << "%)");
 
     }

@@ -8,6 +8,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
 
@@ -36,7 +37,7 @@ bool TimeCourseSlopeDifference(planar_image_collection<float,double>::images_lis
     //
     // NOTE: We only bother to grab individual contours here. You could alter this if you wanted 
     //       each contour_collection's contours to have an identifying colour.
-    if(ccsl.empty()) FUNCERR("Missing contour info needed for voxel colouring. Cannot continue");
+    if(ccsl.empty()) YLOGERR("Missing contour info needed for voxel colouring. Cannot continue");
     using contour_iter = std::list<contour_of_points<double> >::iterator;
     std::list<contour_iter> rois;
     for(auto &ccs : ccsl){
@@ -128,7 +129,7 @@ bool TimeCourseSlopeDifference(planar_image_collection<float,double>::images_lis
                                 //channel_time_course.push_back(dt.value(), 0.0, avg_val, avg_val_sigma, InhibitSort);
                                 channel_time_course.push_back(dt.value(), 0.0, avg_val, 0.0, InhibitSort);
                             }else{
-                                FUNCERR("Image is missing time metadata. Bailing");
+                                YLOGERR("Image is missing time metadata. Bailing");
                             }
                         }
                         channel_time_course.stable_sort();

@@ -11,6 +11,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 #include "../Structs.h"
 #include "../Alignment_Rigid.h"
@@ -94,16 +95,16 @@ bool DroverDebug(Drover &DICOM_data,
 
     //Image data.
     do{
-        FUNCINFO("There are " << DICOM_data.image_data.size() << " Image_Arrays loaded");
+        YLOGINFO("There are " << DICOM_data.image_data.size() << " Image_Arrays loaded");
         if(verbosity == verbosity_t::quiet) break;
 
         size_t i_arr = 0;
         for(auto &iap : DICOM_data.image_data){
             if(iap == nullptr){
-                FUNCINFO("  Image_Array " << i_arr << " is not valid");
+                YLOGINFO("  Image_Array " << i_arr << " is not valid");
 
             }else{
-                FUNCINFO("  Image_Array " << i_arr << " has " <<
+                YLOGINFO("  Image_Array " << i_arr << " has " <<
                          iap->imagecoll.images.size() << " image slices");
                 if(verbosity == verbosity_t::medium) continue;
 
@@ -112,25 +113,25 @@ bool DroverDebug(Drover &DICOM_data,
                     const auto ModalityOpt = img.GetMetadataValueAs<std::string>("Modality");
                     const auto mm = img.minmax();
 
-                    FUNCINFO("    Image " << i_num << " has" <<
+                    YLOGINFO("    Image " << i_num << " has" <<
                              " Modality = " << ModalityOpt.value_or("(unspecified)") );
-                    FUNCINFO("    Image " << i_num << " has" <<
+                    YLOGINFO("    Image " << i_num << " has" <<
                              " pixel value range = [" << mm.first << "," << mm.second << "]");
-                    FUNCINFO("    Image " << i_num << " has" <<
+                    YLOGINFO("    Image " << i_num << " has" <<
                              " has pxl_dx, pxl_dy, pxl_dz = " <<
                                  img.pxl_dx << ", " <<
                                  img.pxl_dy << ", " <<
                                  img.pxl_dz);
-                    FUNCINFO("    Image " << i_num << " has" <<
+                    YLOGINFO("    Image " << i_num << " has" <<
                              " anchor, offset = " <<
                                  img.anchor << ", " <<
                                  img.offset);
-                    FUNCINFO("    Image " << i_num << " has" <<
+                    YLOGINFO("    Image " << i_num << " has" <<
                              " row_unit, col_unit = " <<
                                  img.row_unit << ", " <<
                                  img.col_unit);
                     if(IncludeMetadata){
-                        FUNCINFO("    Image " << i_num << " metadata:");
+                        YLOGINFO("    Image " << i_num << " metadata:");
                         dump_metadata(std::cout, "        ", img.metadata);
                     }
                     ++i_num;
@@ -143,17 +144,17 @@ bool DroverDebug(Drover &DICOM_data,
     //Contour data.
     do{
         if(DICOM_data.contour_data == nullptr){
-            FUNCINFO("There are 0 contour_collections loaded");
+            YLOGINFO("There are 0 contour_collections loaded");
             break;
         }
-        FUNCINFO("There are " <<
+        YLOGINFO("There are " <<
                  DICOM_data.contour_data->ccs.size() <<
                  " contour_collections loaded");
         if(verbosity == verbosity_t::quiet) break;
 
         size_t c_dat = 0;
         for(auto & cc : DICOM_data.contour_data->ccs){
-            FUNCINFO("  contour_collection " <<
+            YLOGINFO("  contour_collection " <<
                      c_dat <<
                      " has " <<
                      cc.contours.size() <<
@@ -162,19 +163,19 @@ bool DroverDebug(Drover &DICOM_data,
 
             size_t c_num = 0;
             for(auto & c : cc.contours){
-                FUNCINFO("    contour " <<
+                YLOGINFO("    contour " <<
                          c_num <<
                          " has " <<
                          c.points.size() <<
                          " vertices");
                 if(!c.points.empty()){
-                    FUNCINFO("      contour " <<
+                    YLOGINFO("      contour " <<
                          c_num <<
                          " has average point " <<
                          c.Average_Point());
                 }
                 if(IncludeMetadata){
-                    FUNCINFO("      contour " << c_num << " metadata:");
+                    YLOGINFO("      contour " << c_num << " metadata:");
                     dump_metadata(std::cout, "          ", c.metadata);
                 }
                 ++c_num;
@@ -185,20 +186,20 @@ bool DroverDebug(Drover &DICOM_data,
 
     //Point data.
     do{
-        FUNCINFO("There are " << DICOM_data.point_data.size() << " Point_Clouds loaded");
+        YLOGINFO("There are " << DICOM_data.point_data.size() << " Point_Clouds loaded");
         if(verbosity == verbosity_t::quiet) break;
 
         size_t p_cnt = 0;
         for(auto &pc : DICOM_data.point_data){
             if(pc == nullptr){
-                FUNCINFO("  Point_Cloud " << p_cnt << " is not valid");
+                YLOGINFO("  Point_Cloud " << p_cnt << " is not valid");
 
             }else{
-                FUNCINFO("  Point_Cloud " << p_cnt << " has " <<
+                YLOGINFO("  Point_Cloud " << p_cnt << " has " <<
                          pc->pset.points.size() << " points");
                 if(verbosity == verbosity_t::medium) continue;
                 if(IncludeMetadata){
-                    FUNCINFO("    Point_Cloud " << p_cnt << " metadata:");
+                    YLOGINFO("    Point_Cloud " << p_cnt << " metadata:");
                     dump_metadata(std::cout, "        ", pc->pset.metadata);
                 }
             }
@@ -208,21 +209,21 @@ bool DroverDebug(Drover &DICOM_data,
 
     //Surface mesh data.
     do{
-        FUNCINFO("There are " << DICOM_data.smesh_data.size() << " Surface_Meshes loaded");
+        YLOGINFO("There are " << DICOM_data.smesh_data.size() << " Surface_Meshes loaded");
         if(verbosity == verbosity_t::quiet) break;
 
         size_t m_cnt = 0;
         for(auto &sm : DICOM_data.smesh_data){
             if(sm == nullptr){
-                FUNCINFO("  Surface_Mesh " << m_cnt << " is not valid");
+                YLOGINFO("  Surface_Mesh " << m_cnt << " is not valid");
 
             }else{
-                FUNCINFO("  Surface_Mesh " << m_cnt << " has " << 
+                YLOGINFO("  Surface_Mesh " << m_cnt << " has " << 
                          sm->meshes.vertices.size() << " vertices and " <<
                          sm->meshes.faces.size() << " faces");
                 if(verbosity == verbosity_t::medium) continue;
                 if(IncludeMetadata){
-                    FUNCINFO("    Surface_Mesh " << m_cnt << " metadata:");
+                    YLOGINFO("    Surface_Mesh " << m_cnt << " metadata:");
                     dump_metadata(std::cout, "        ", sm->meshes.metadata);
                 }
             }
@@ -232,29 +233,29 @@ bool DroverDebug(Drover &DICOM_data,
 
     //Treatment plan data.
     do{
-        FUNCINFO("There are " << DICOM_data.rtplan_data.size() << " RTPlans loaded");
+        YLOGINFO("There are " << DICOM_data.rtplan_data.size() << " RTPlans loaded");
         if(verbosity == verbosity_t::quiet) break;
 
         size_t tp_cnt = 0;
         for(auto &tp : DICOM_data.rtplan_data){
             if(tp == nullptr){
-                FUNCINFO("  RTPlan " << tp_cnt << " is not valid");
+                YLOGINFO("  RTPlan " << tp_cnt << " is not valid");
 
             }else{
-                FUNCINFO("  RTPlan " << tp_cnt << " has " <<
+                YLOGINFO("  RTPlan " << tp_cnt << " has " <<
                          tp->dynamic_states.size() << " beams");
                 if(verbosity == verbosity_t::medium) continue;
                 if(IncludeMetadata){
-                    FUNCINFO("  RTPlan " << tp_cnt << " metadata:");
+                    YLOGINFO("  RTPlan " << tp_cnt << " metadata:");
                     dump_metadata(std::cout, "      ", tp->metadata);
                 }
 
                 size_t b_cnt = 0;
                 for(const auto &ds : tp->dynamic_states){
-                    FUNCINFO("    Beam " << b_cnt << " has " <<
+                    YLOGINFO("    Beam " << b_cnt << " has " <<
                              ds.static_states.size() << " control points");
                     if(IncludeMetadata){
-                        FUNCINFO("      Beam " << b_cnt << " metadata:");
+                        YLOGINFO("      Beam " << b_cnt << " metadata:");
                         dump_metadata(std::cout, "          ", ds.metadata);
                     }
                     ++b_cnt;
@@ -266,21 +267,21 @@ bool DroverDebug(Drover &DICOM_data,
 
     //Line sample data.
     do{
-        FUNCINFO("There are " << DICOM_data.lsamp_data.size() << " Line_Samples loaded");
+        YLOGINFO("There are " << DICOM_data.lsamp_data.size() << " Line_Samples loaded");
         if(verbosity == verbosity_t::quiet) break;
 
         size_t l_cnt = 0;
         for(auto &lsp : DICOM_data.lsamp_data){
             if(lsp == nullptr){
-                FUNCINFO("  Line_Sample " << l_cnt << " is not valid");
+                YLOGINFO("  Line_Sample " << l_cnt << " is not valid");
 
             }else{
-                FUNCINFO("  Line_Sample " << l_cnt << " has " << 
+                YLOGINFO("  Line_Sample " << l_cnt << " has " << 
                          lsp->line.samples.size() << " datum and " <<
                          lsp->line.metadata.size() << " metadata keys");
                 if(verbosity == verbosity_t::medium) continue;
                 if(IncludeMetadata){
-                    FUNCINFO("    Line_Sample " << l_cnt << " metadata:");
+                    YLOGINFO("    Line_Sample " << l_cnt << " metadata:");
                     dump_metadata(std::cout, "        ", lsp->line.metadata);
                 }
             }
@@ -290,17 +291,17 @@ bool DroverDebug(Drover &DICOM_data,
 
     //Transformation data.
     do{
-        FUNCINFO("There are " << DICOM_data.trans_data.size() << " Transform3s loaded");
+        YLOGINFO("There are " << DICOM_data.trans_data.size() << " Transform3s loaded");
         if(verbosity == verbosity_t::quiet) break;
 
-        FUNCINFO("  The Transform3 class is " << sizeof(Transform3) << " bytes");
+        YLOGINFO("  The Transform3 class is " << sizeof(Transform3) << " bytes");
 
         size_t t_cnt = 0;
         for(auto &t3p : DICOM_data.trans_data){
 
             if( (t3p == nullptr)
             ||  std::holds_alternative<std::monostate>(t3p->transform) ){
-                FUNCINFO("  Transform3 " << t_cnt << " is not valid");
+                YLOGINFO("  Transform3 " << t_cnt << " is not valid");
 
             }else{
                 const std::string desc = std::visit([&](auto &&t) -> std::string {
@@ -319,13 +320,13 @@ bool DroverDebug(Drover &DICOM_data,
                     return "";
                 }, t3p->transform);
 
-                FUNCINFO("  Transform3 " << t_cnt << " holds " << desc);
-                FUNCINFO("  Transform3 " << t_cnt << " has " << 
+                YLOGINFO("  Transform3 " << t_cnt << " holds " << desc);
+                YLOGINFO("  Transform3 " << t_cnt << " has " << 
                          t3p->metadata.size() << " metadata keys");
 
                 if(verbosity == verbosity_t::medium) continue;
                 if(IncludeMetadata){
-                    FUNCINFO("    Transform3 " << t_cnt << " metadata:");
+                    YLOGINFO("    Transform3 " << t_cnt << " metadata:");
                     dump_metadata(std::cout, "        ", t3p->metadata);
                 }
             }
@@ -335,21 +336,21 @@ bool DroverDebug(Drover &DICOM_data,
 
     //Table data.
     do{
-        FUNCINFO("There are " << DICOM_data.table_data.size() << " Sparse_Tables loaded");
+        YLOGINFO("There are " << DICOM_data.table_data.size() << " Sparse_Tables loaded");
         if(verbosity == verbosity_t::quiet) break;
 
         size_t t_cnt = 0;
         for(auto &tp : DICOM_data.table_data){
             if(tp == nullptr){
-                FUNCINFO("  Sparse_Table " << t_cnt << " is not valid");
+                YLOGINFO("  Sparse_Table " << t_cnt << " is not valid");
 
             }else{
-                FUNCINFO("  Sparse_Table " << t_cnt << " has " << 
+                YLOGINFO("  Sparse_Table " << t_cnt << " has " << 
                          tp->table.data.size() << " rows and " <<
                          tp->table.metadata.size() << " metadata keys");
                 if(verbosity == verbosity_t::medium) continue;
                 if(IncludeMetadata){
-                    FUNCINFO("    Sparse_Table " << t_cnt << " metadata:");
+                    YLOGINFO("    Sparse_Table " << t_cnt << " metadata:");
                     dump_metadata(std::cout, "        ", tp->table.metadata);
                 }
             }
@@ -359,7 +360,7 @@ bool DroverDebug(Drover &DICOM_data,
 
     //InvocationMetadata.
     do{
-        FUNCINFO("There are " << InvocationMetadata.size() << " metadata parameters defined");
+        YLOGINFO("There are " << InvocationMetadata.size() << " metadata parameters defined");
         if(verbosity == verbosity_t::quiet) break;
         if(verbosity == verbosity_t::medium) break;
 

@@ -60,7 +60,7 @@ bool DeleteContours(Drover &DICOM_data,
     auto cc_all = All_CCs( DICOM_data );
     auto cc_ROIs = Whitelist( cc_all, { { "ROIName", ROILabelRegex },
                                         { "NormalizedROIName", NormalizedROILabelRegex } } );
-    FUNCINFO("Selected " << cc_ROIs.size() << " contours");
+    YLOGINFO("Selected " << cc_ROIs.size() << " contours");
 
     for(auto &cc_refw : cc_ROIs){
         bool found = false; // Stop searching after removing it because the reference becomes invalid.

@@ -83,7 +83,7 @@ bool ConvertWarpToMeshes(Drover &DICOM_data,
 
     auto T3s_all = All_T3s( DICOM_data );
     auto T3s = Whitelist( T3s_all, TFormSelectionStr );
-    FUNCINFO(T3s.size() << " transformations selected");
+    YLOGINFO(T3s.size() << " transformations selected");
 
     for(auto & t3p_it : T3s){
         std::visit([&](auto && t){
@@ -93,17 +93,17 @@ bool ConvertWarpToMeshes(Drover &DICOM_data,
 
             // Affine transformations.
             }else if constexpr (std::is_same_v<V, affine_transform<double>>){
-                FUNCINFO("Exporting affine transformation now");
+                YLOGINFO("Exporting affine transformation now");
                 std::runtime_error("Not yet implemented");
 
             // Thin-plate spline transformations.
             }else if constexpr (std::is_same_v<V, thin_plate_spline>){
-                FUNCINFO("Exporting thin-plate spline transformation now");
+                YLOGINFO("Exporting thin-plate spline transformation now");
                 std::runtime_error("Not yet implemented");
 
             // Vector deformation fields.
             }else if constexpr (std::is_same_v<V, deformation_field>){
-                FUNCINFO("Exporting vector deformation field now");
+                YLOGINFO("Exporting vector deformation field now");
 
                 // Determine the average transformation vector.
                 vec3<double> avg(0.0, 0.0, 0.0);
@@ -160,7 +160,7 @@ bool ConvertWarpToMeshes(Drover &DICOM_data,
                             auto axis_2 = (img.col_unit * 5.0 + img.row_unit * 1.0 + ortho_unit * 0.1).unit();
                             auto axis_3 = (img.col_unit * 1.0 - img.row_unit * 5.0 - ortho_unit * 0.1).unit();
                             if(!axis_1.GramSchmidt_orthogonalize(axis_2, axis_3)){
-                                FUNCWARN("Encountered degeneracy. Skipping element");
+                                YLOGWARN("Encountered degeneracy. Skipping element");
                                 continue;
                             }
                             axis_1 = axis_1.unit();

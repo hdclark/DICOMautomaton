@@ -17,6 +17,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
 #include "YgorClustering.hpp"
@@ -46,7 +47,7 @@ bool ComputeDetectGeometryClusteredRANSAC(planar_image_collection<float,double> 
     try{
         user_data_s = std::any_cast<DetectGeometryClusteredRANSACUserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
 
@@ -54,7 +55,7 @@ bool ComputeDetectGeometryClusteredRANSAC(planar_image_collection<float,double> 
     // pruned after images have been successfully operated on.
     auto all_images = imagecoll.get_all_images();
     while(!all_images.empty()){
-        FUNCINFO("Images still to be processed: " << all_images.size());
+        YLOGINFO("Images still to be processed: " << all_images.size());
 
         // Find the images which fit with this image.
         auto curr_img_it = all_images.front();
@@ -123,7 +124,7 @@ bool ComputeDetectGeometryClusteredRANSAC(planar_image_collection<float,double> 
                 } //Loop over cols
             } //Loop over rows
         } // Loop over images.
-        FUNCINFO("Number of voxels being clustered: " << BeforeCount);
+        YLOGINFO("Number of voxels being clustered: " << BeforeCount);
 
         //const size_t MinPts = 6; // 2 * dimensionality.
         const size_t MinPts = 6; // 2 * dimensionality.
@@ -161,7 +162,7 @@ bool ComputeDetectGeometryClusteredRANSAC(planar_image_collection<float,double> 
                 }
             }
         }
-        FUNCINFO("Number of voxels with valid cluster IDs: " << AfterCount 
+        YLOGINFO("Number of voxels with valid cluster IDs: " << AfterCount 
             << " (" << (1.0 / 100.0) * static_cast<long int>( 10000.0 * AfterCount / BeforeCount ) << "%)");
 
 
@@ -177,7 +178,7 @@ bool ComputeDetectGeometryClusteredRANSAC(planar_image_collection<float,double> 
                 }
             }
         }
-        FUNCINFO("Number of unique clusters: " << Segregated.size());
+        YLOGINFO("Number of unique clusters: " << Segregated.size());
 
 
         // ----- Fit the clusters -----
@@ -227,16 +228,16 @@ bool ComputeDetectGeometryClusteredRANSAC(planar_image_collection<float,double> 
 
                     // Fit a sphere.
                     const auto asphere = Sphere_Orthogonal_Regression( sampled, max_iters, centre_stopping_tol, radius_stopping_tol );
-                    FUNCINFO("The fitted sphere for cluster " << ClusterID << " has"
+                    YLOGINFO("The fitted sphere for cluster " << ClusterID << " has"
                           << " centre = " << asphere.C_0 << " and radius = " << asphere.r_0);
 
 
                     const auto aplane = Plane_Orthogonal_Regression( sampled );
-                    FUNCINFO("The fitted plane for cluster " << ClusterID << " has"
+                    YLOGINFO("The fitted plane for cluster " << ClusterID << " has"
                           << " anchor = " << aplane.R_0 << " and normal = " << aplane.N_0);
 
                 }catch(const std::exception &e){
-                    FUNCWARN("Fitting of cluster " << ClusterID << " failed to converge. Ignoring it");
+                    YLOGWARN("Fitting of cluster " << ClusterID << " failed to converge. Ignoring it");
                 };
             }
         }

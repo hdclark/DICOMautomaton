@@ -23,6 +23,7 @@
 #include <optional>
 
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathIOOBJ.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
@@ -79,7 +80,7 @@ Estimate_Contour_Correspondence(
         //
         // Note: This effectively ignores contour orientation altogether.
         }else{
-            FUNCWARN("Ignoring adjacent contours with opposite orientations. Recursing..");
+            YLOGWARN("Ignoring adjacent contours with opposite orientations. Recursing..");
             std::reverse( std::begin(contour_B.points), std::end(contour_B.points) );
             auto faces = Estimate_Contour_Correspondence(A, std::ref(contour_B) );
 
@@ -152,7 +153,7 @@ Estimate_Contour_Correspondence(
                 min_sqd_i_j = sqd_i_j;
             }
         }
-        //FUNCINFO("Shortest distance is between " << *p_i << " and " << *p_j);
+        //YLOGINFO("Shortest distance is between " << *p_i << " and " << *p_j);
     }
 
     // Estimates the radius of the circumsphere (i.e., the smallest sphere that intersects all vertices) that bounds the
@@ -212,8 +213,8 @@ Estimate_Contour_Correspondence(
     };
     const auto total_wperimeter_A = weighted_perimeter(contour_A);
     const auto total_wperimeter_B = weighted_perimeter(contour_B);
-    FUNCINFO("total_wperimeter_A = " << total_wperimeter_A);
-    FUNCINFO("total_wperimeter_B = " << total_wperimeter_B);
+    YLOGINFO("total_wperimeter_A = " << total_wperimeter_A);
+    YLOGINFO("total_wperimeter_B = " << total_wperimeter_B);
 */
 
     // Walk the contours, creating a sort of triangle strip.
@@ -513,7 +514,7 @@ Estimate_Contour_Correspondence(
         const bool A_is_valid = std::isfinite(criteria_w_i_next);
         const bool B_is_valid = std::isfinite(criteria_w_j_next);
         if(!A_is_valid && !B_is_valid){
-FUNCWARN("Terminated meshing early. Mesh may be incomplete.");
+YLOGWARN("Terminated meshing early. Mesh may be incomplete.");
 //            throw std::logic_error("Terminated meshing early. Cannot continue.");
             // Note: Could be due to:
             //       - Non-finite vertex in input.
@@ -530,7 +531,7 @@ FUNCWARN("Terminated meshing early. Mesh may be incomplete.");
             accept_j_next();
         }
     }
-    //FUNCINFO("Completed meshing with N_faces = " << faces.size() << " where N_A + N_B = " << (N_A + N_B));
+    //YLOGINFO("Completed meshing with N_faces = " << faces.size() << " where N_A + N_B = " << (N_A + N_B));
 
 
 /*
@@ -598,7 +599,7 @@ Minimally_Amalgamate_Contours(
     std::list< contour_of_points<double> > reversed_cops_storage;
     for(auto crw_it = std::begin(B); crw_it != std::end(B); ){
         if(!has_consistent_orientation(*crw_it)){
-            FUNCWARN("Found contour with inconsistent orientation. Making a reversed copy. This may discard information");
+            YLOGWARN("Found contour with inconsistent orientation. Making a reversed copy. This may discard information");
             reversed_cops_storage.emplace_back( crw_it->get() );
             reversed_cops_storage.back().points.reverse();
             (*crw_it) = std::ref(reversed_cops_storage.back());

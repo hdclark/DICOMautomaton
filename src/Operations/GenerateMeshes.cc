@@ -21,6 +21,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -101,10 +102,10 @@ bool GenerateMeshes(Drover &DICOM_data,
 
     // Ensure the BB and SDF can be evaluated without throwing.
     auto bb = root->evaluate_aa_bbox();
-    FUNCINFO("axis-aligned bounding box min: " << bb.min);
-    FUNCINFO("axis-aligned bounding box max: " << bb.max);
+    YLOGINFO("axis-aligned bounding box min: " << bb.min);
+    YLOGINFO("axis-aligned bounding box max: " << bb.max);
     const auto sdf_at_origin = root->evaluate_sdf( vec3<double>(0,0,0) );
-    FUNCINFO("sdf at origin: " << sdf_at_origin );
+    YLOGINFO("sdf at origin: " << sdf_at_origin );
 
     dcma_surface_meshes::Parameters meshing_params;
     const double inclusion_threshold = 0.0;

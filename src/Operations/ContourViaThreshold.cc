@@ -21,6 +21,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -254,7 +255,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
                 if(Upper_is_Ptile) cu = Stats::Percentile(pixel_vals, Upper / 100.0);
             }
         }
-        FUNCINFO("Using thresholds " << cl << " and " << cu);
+        YLOGINFO("Using thresholds " << cl << " and " << cu);
         if( !std::isfinite(cl) 
         &&  !std::isfinite(cu)){
             throw std::invalid_argument("Both thresholds are not finite. Refusing to continue.");
@@ -421,7 +422,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
                         DICOM_data.contour_data->ccs.back().contours.splice(DICOM_data.contour_data->ccs.back().contours.end(), copl);
 
                         ++completed;
-                        FUNCINFO("Completed " << completed << " of " << img_count
+                        YLOGINFO("Completed " << completed << " of " << img_count
                               << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "% done");
                     }
 
@@ -818,7 +819,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
                         DICOM_data.contour_data->ccs.back().contours.splice(DICOM_data.contour_data->ccs.back().contours.end(), copl);
 
                         ++completed;
-                        FUNCINFO("Completed " << completed << " of " << img_count
+                        YLOGINFO("Completed " << completed << " of " << img_count
                               << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "% done");
                     }
 #ifdef DCMA_USE_CGAL
@@ -886,7 +887,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
                     auto meshing_params = dcma_surface_meshes::Parameters();
                     meshing_params.MutateOpts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
                     meshing_params.MutateOpts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
-                    FUNCWARN("Ignoring contour orientations; assuming ROI polyhderon is simple");
+                    YLOGWARN("Ignoring contour orientations; assuming ROI polyhderon is simple");
                     auto surface_mesh = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( 
                                                                     grid_imgs,
                                                                     inclusion_threshold, 
@@ -935,7 +936,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
                                                                             lcc.contours);
 
                         ++completed;
-                        FUNCINFO("Completed " << completed << " of " << img_count
+                        YLOGINFO("Completed " << completed << " of " << img_count
                               << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "% done");
                     }
 #endif //DCMA_USE_CGAL

@@ -209,7 +209,7 @@ bool GroupImages(Drover &DICOM_data,
                 // this is an OK assumption, since in many cases there will be ~50-100 in each partition in order to get
                 // reasonable spatial resolution. However, this can obviously fail in some cases.
 
-                FUNCINFO("AutoSelectKeysCommon: key '" << p1.first << "' with "
+                YLOGINFO("AutoSelectKeysCommon: key '" << p1.first << "' with "
                     << p1.second.occurrences.size() << " distinct values (min image count: "
                     << rmm.Current_Min() << ", max image count: " << rmm.Current_Max()
                     << ") is an auto-partition candidate");
@@ -241,10 +241,10 @@ bool GroupImages(Drover &DICOM_data,
             }
         }
         if(std::isfinite(best_score)){
-            FUNCWARN("AutoSelectKeysCommon: selecting key '" << best_key << "' based on entropic criteria");
+            YLOGWARN("AutoSelectKeysCommon: selecting key '" << best_key << "' based on entropic criteria");
             KeysCommon.emplace_back(best_key);
         }else{
-            FUNCWARN("AutoSelectKeysCommon: no remaining candidate keys. Automatic selection failed");
+            YLOGWARN("AutoSelectKeysCommon: no remaining candidate keys. Automatic selection failed");
         }
     }
 

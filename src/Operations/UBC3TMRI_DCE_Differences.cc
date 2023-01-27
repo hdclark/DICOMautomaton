@@ -19,6 +19,7 @@
 #include "UBC3TMRI_DCE_Differences.h"
 #include "YgorImages.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 template <class T> class contour_collection;
 

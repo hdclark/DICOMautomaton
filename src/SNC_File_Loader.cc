@@ -25,6 +25,7 @@
 #include "YgorString.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 #include "Metadata.h"
 #include "Structs.h"
@@ -78,7 +79,7 @@ read_snc_file( std::istream &is, planar_image_collection<float,double> &imgs ){
         if(line.at(0UL) == '*'){
             if(tokens.size() < 2UL){
                 // Metadata should be like '*key:\tvalue' or '*key\tvalue1\tvalue2\tvalue3\t...'
-                FUNCWARN("Encountered unrecognized metadata format");
+                YLOGWARN("Encountered unrecognized metadata format");
                 return false;
             }
             
@@ -97,14 +98,14 @@ read_snc_file( std::istream &is, planar_image_collection<float,double> &imgs ){
             // Handle the metadata.
             if(tokens.size() == 2UL){
                 const auto val = tokens.at(1);
-                if(debug) FUNCINFO("Storing metadata: '" << key << "' = '" << val << "'");
+                if(debug) YLOGINFO("Storing metadata: '" << key << "' = '" << val << "'");
 
                 if(key == "Hole Value"){
                     missing_data_val = val;
 
                 }else if(key == "Coordinate Units"){
                     if(val != "mm"){
-                        FUNCWARN("Unrecognized spatial units");
+                        YLOGWARN("Unrecognized spatial units");
                         return false;
                     }
 
@@ -116,7 +117,7 @@ read_snc_file( std::istream &is, planar_image_collection<float,double> &imgs ){
                         pixel_dose_scale = 1.0;
                         metadata["DoseUnits"] = "GY";
                     }else{
-                        FUNCWARN("Unrecognized pixel dose units");
+                        YLOGWARN("Unrecognized pixel dose units");
                         return false;
                     }
                     
@@ -131,11 +132,11 @@ read_snc_file( std::istream &is, planar_image_collection<float,double> &imgs ){
                     for(auto it = std::next(std::begin(tokens)); it != end; ++it){
                         col_positions.push_back( std::stod(*it) );
                     }
-                    if(debug) FUNCINFO("Loaded Y\\X array with " << col_positions.size() << " entries");
+                    if(debug) YLOGINFO("Loaded Y\\X array with " << col_positions.size() << " entries");
 
                 }else{
-                    if(debug) FUNCINFO("key = '" << key << "'");
-                    FUNCWARN("Encountered unknown multi-val metadata");
+                    if(debug) YLOGINFO("key = '" << key << "'");
+                    YLOGWARN("Encountered unknown multi-val metadata");
                     return false;
                 }
             }
@@ -143,7 +144,7 @@ read_snc_file( std::istream &is, planar_image_collection<float,double> &imgs ){
         // Treat the line as an image.
         }else{
             if(tokens.size() < 2UL){
-                FUNCWARN("Encountered line with insufficient pixel data");
+                YLOGWARN("Encountered line with insufficient pixel data");
                 return false;
             }
             row_positions.push_back( std::stod(tokens.at(0)) );
@@ -158,20 +159,20 @@ read_snc_file( std::istream &is, planar_image_collection<float,double> &imgs ){
 
     // Validation.
     if(!pixel_dose_scale){
-        FUNCWARN("Missing pixel dose units");
+        YLOGWARN("Missing pixel dose units");
         return false;
     }
 
     // Ensure we have pixel data.
     if( pixels.empty() ){
-        FUNCWARN("Missing pixel information");
+        YLOGWARN("Missing pixel information");
         return false;
     }
 
     // Ensure we have pixel location information.
     if( col_positions.empty()
     ||  row_positions.empty() ){
-        FUNCWARN("Missing pixel position information");
+        YLOGWARN("Missing pixel position information");
         return false;
     }
 
@@ -186,26 +187,26 @@ read_snc_file( std::istream &is, planar_image_collection<float,double> &imgs ){
     if( (pxl_dx <= 0.0)
     ||  (pxl_dy <= 0.0)
     ||  (pxl_dz <= 0.0) ){
-        FUNCWARN("Image orientation not as expected");
+        YLOGWARN("Image orientation not as expected");
         return false;
     }
-    if(debug) FUNCINFO("pxl_dx, dy, dz = " << pxl_dx << ", " << pxl_dy << ", " << pxl_dz);
+    if(debug) YLOGINFO("pxl_dx, dy, dz = " << pxl_dx << ", " << pxl_dy << ", " << pxl_dz);
     metadata["PixelSpacing"] = std::to_string(pxl_dx) + R"***(\)***" + std::to_string(pxl_dy);
 
     const vec3<double> zero3(0.0, 0.0, 0.0);
     const vec3<double> anchor = zero3;
     const vec3<double> offset( row_positions.back(), col_positions.front(), 0.0 );
-    if(debug) FUNCINFO("offset = " << offset);
+    if(debug) YLOGINFO("offset = " << offset);
 
     const auto image_height = static_cast<long int>(row_positions.size());
     const auto image_width  = static_cast<long int>(col_positions.size());
     const auto image_chnls  = static_cast<long int>(1);
     if(!isininc(1,image_width,10'000)){
-        FUNCWARN("Unexpected image width");
+        YLOGWARN("Unexpected image width");
         return false;
     }
     if(!isininc(1,image_height,10'000)){
-        FUNCWARN("Unexpected image height");
+        YLOGWARN("Unexpected image height");
         return false;
     }
 
@@ -234,13 +235,13 @@ write_snc_file( std::ostream &os, const planar_image<float,double> &img ){
     if( (img.columns < 3L)
     ||  (img.rows < 3L)
     ||  (img.channels != 1L) ){
-        FUNCWARN("Unable to write image to file: insufficient pixel data");
+        YLOGWARN("Unable to write image to file: insufficient pixel data");
         return false;
     }
 
     const double pixel_dose_scale = 100.0; // scale from Gy to cGy.
     if("GY" != get_as<std::string>(img.metadata, "DoseUnits").value_or("")){
-        FUNCWARN("Image contains unknown DoseUnits. Refusing to continue");
+        YLOGWARN("Image contains unknown DoseUnits. Refusing to continue");
         return false;
     }
 
@@ -295,7 +296,7 @@ bool Load_From_SNC_Files( Drover &DICOM_data,
     //DICOM_data.image_data.emplace_back( std::make_shared<Image_Array>() );
     auto bfit = Filenames.begin();
     while(bfit != Filenames.end()){
-        FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
+        YLOGINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
         const auto Filename = *bfit;
 
@@ -316,7 +317,7 @@ bool Load_From_SNC_Files( Drover &DICOM_data,
             bfit = Filenames.erase( bfit ); 
             continue;
         }catch(const std::exception &e){
-            FUNCINFO("Unable to load as SNC file: '" << e.what() << "'");
+            YLOGINFO("Unable to load as SNC file: '" << e.what() << "'");
         };
 
         //Skip the file. It might be destined for some other loader.

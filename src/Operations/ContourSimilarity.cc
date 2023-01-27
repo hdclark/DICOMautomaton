@@ -18,6 +18,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorFilesDirs.h"
 
@@ -140,8 +141,8 @@ bool ContourSimilarity(Drover &DICOM_data,
                                            { cc_A.front(), cc_B.front() }, &ud )){
         throw std::runtime_error("Unable to compute contour similarity metrics. Cannot continue.");
     }
-    FUNCINFO("Dice coefficient(A,B) = " << ud.Dice_Coefficient());
-    FUNCINFO("Jaccard coefficient(A,B) = " << ud.Jaccard_Coefficient());
+    YLOGINFO("Dice coefficient(A,B) = " << ud.Dice_Coefficient());
+    YLOGINFO("Jaccard coefficient(A,B) = " << ud.Jaccard_Coefficient());
 
     // Attempt to identify the patient for reporting purposes.
     std::string patient_ID;
@@ -172,7 +173,7 @@ bool ContourSimilarity(Drover &DICOM_data,
     }
 
     //Report the findings. 
-    FUNCINFO("Attempting to claim a mutex");
+    YLOGINFO("Attempting to claim a mutex");
 
     {
         //File-based locking is used so this program can be run over many patients concurrently.

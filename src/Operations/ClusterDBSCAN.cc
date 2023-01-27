@@ -317,7 +317,7 @@ bool ClusterDBSCAN(Drover &DICOM_data,
 
         // --------------------------------
         // Cluster.
-        FUNCINFO("Number of voxels being clustered: " << BeforeCount);
+        YLOGINFO("Number of voxels being clustered: " << BeforeCount);
 
         DBSCAN<RTree_t,CDat_t>(rtree,Eps,MinPoints);
 
@@ -358,7 +358,7 @@ bool ClusterDBSCAN(Drover &DICOM_data,
                     }
                 }
             }
-            FUNCINFO("Number of voxels with valid cluster IDs: " << AfterCount 
+            YLOGINFO("Number of voxels with valid cluster IDs: " << AfterCount 
                 << " (" << (1.0 / 100.0) * static_cast<long int>( 10000.0 * AfterCount / BeforeCount ) << "%)");
 
         // Reduce the cluster members using component-wise median of the x-, y-, and z-coordinates separately.

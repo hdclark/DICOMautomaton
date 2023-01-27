@@ -56,10 +56,10 @@ bool ConvertImageToWarp(Drover &DICOM_data,
 
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
-    FUNCINFO(IAs.size() << " images selected");
+    YLOGINFO(IAs.size() << " images selected");
 
     for(auto & iap_it : IAs){
-        FUNCINFO("Converting image array to deformation field");
+        YLOGINFO("Converting image array to deformation field");
         planar_image_collection<double,double> pic;
         for(const auto &img : (*iap_it)->imagecoll.images){
             pic.images.emplace_back( planar_image<double,double>().cast_from<float>(img) );

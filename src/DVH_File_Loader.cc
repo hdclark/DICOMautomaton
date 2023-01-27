@@ -21,6 +21,7 @@
 #include "Structs.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for SplitStringToVector, Canonicalize_String2, SplitVector functions.
 
 void Consume_BOM(std::istream &is){
@@ -116,7 +117,7 @@ std::map<std::string, std::string> Read_Header_Block(std::istream &is,
             const auto key = Canonicalize_String2( l.substr(0, first_semicolon), CANONICALIZE::TRIM_ENDS);
             const auto val = Canonicalize_String2( l.substr(first_semicolon+2) , CANONICALIZE::TRIM_ENDS);
             if(!key.empty() && !val.empty()){
-                //FUNCINFO("Parsed key-value = '" << key << "' : '" << val << "'");
+                //YLOGINFO("Parsed key-value = '" << key << "' : '" << val << "'");
                 l_metadata[key] = val; // This intentionally overwrites existing key-values.
                 previous_key = key;
             }
@@ -130,12 +131,12 @@ std::map<std::string, std::string> Read_Header_Block(std::istream &is,
             }
             if(!val.empty()){
                 l_metadata[previous_key] += " "_s + val; // This intentionally overwrites existing key-values.
-                //FUNCINFO("Parsed value continuation = '" << previous_key << "' : '" << l_metadata[previous_key] << "'");
+                //YLOGINFO("Parsed value continuation = '" << previous_key << "' : '" << l_metadata[previous_key] << "'");
             }
 
         }else{
             // Something isn't right. Maybe a multi-line value that contains a ':' ?
-            //FUNCINFO("Ignoring line: '" << l << "'");            
+            //YLOGINFO("Ignoring line: '" << l << "'");            
             throw std::runtime_error("Key-value structure not understood.");
         }
 
@@ -265,7 +266,7 @@ samples_1D<double> Read_Histogram(std::istream &is,
             }else if(tokens[i] == "Relative dose [%]"){
                 // Do nothing.
             }else{
-                //FUNCINFO("Offending column title: '" << tokens[i] << "'");
+                //YLOGINFO("Offending column title: '" << tokens[i] << "'");
                 throw std::runtime_error("Column name not recognized.");
             }
         }
@@ -338,7 +339,7 @@ bool Load_From_DVH_Files( Drover &DICOM_data,
 
     auto bfit = Filenames.begin();
     while(bfit != Filenames.end()){
-        FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
+        YLOGINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
         const auto Filename = *bfit;
 
@@ -366,7 +367,7 @@ bool Load_From_DVH_Files( Drover &DICOM_data,
                 samples_1D<double> histogram = Read_Histogram(FI, roi_level_metadata);
                 histogram.stable_sort();
 
-                FUNCINFO("Loaded histogram with " << histogram.samples.size() << " samples");
+                YLOGINFO("Loaded histogram with " << histogram.samples.size() << " samples");
 
                 lsamp_data.emplace_back( std::make_shared<Line_Sample>() );
                 lsamp_data.back()->line.samples.swap( histogram.samples );
@@ -389,7 +390,7 @@ bool Load_From_DVH_Files( Drover &DICOM_data,
             bfit = Filenames.erase( bfit ); 
             continue;
         }catch(const std::exception &e){
-            FUNCINFO("Unable to load as tabular DVH line sample file: " << e.what());
+            YLOGINFO("Unable to load as tabular DVH line sample file: " << e.what());
         };
 
         //Skip the file. It might be destined for some other loader.

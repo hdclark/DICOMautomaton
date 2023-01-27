@@ -20,6 +20,7 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorStats.h"        //Needed for Median().
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for SplitStringToVector, Canonicalize_String2, SplitVector functions.
 
 #include "Structs.h"
@@ -70,7 +71,7 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
 
     auto bfit = Filenames.begin();
     while(bfit != Filenames.end()){
-        FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
+        YLOGINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
         const auto Filename = *bfit;
 
@@ -193,7 +194,7 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
 
                 // Unexpected scenario.
                 }else{
-                    FUNCWARN("Unable to read 3ddose file.");
+                    YLOGWARN("Unable to read 3ddose file.");
                     return false;
                 }
 
@@ -372,7 +373,7 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
             DICOM_data.Ensure_Contour_Data_Allocated();
             //--------------------------------------------------------
 
-            FUNCINFO("Loaded 3ddose file with dimensions " 
+            YLOGINFO("Loaded 3ddose file with dimensions " 
                      << N_x << " x " 
                      << N_y << " x " 
                      << N_z );
@@ -382,7 +383,7 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
             bfit = Filenames.erase( bfit ); 
             continue;
         }catch(const std::exception &e){
-            FUNCINFO("Unable to load as 3ddose file");
+            YLOGINFO("Unable to load as 3ddose file");
         };
 
         //Skip the file. It might be destined for some other loader.

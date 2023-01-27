@@ -14,6 +14,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
 #include "YgorClustering.hpp"
@@ -46,12 +47,12 @@ bool ComputeVolumetricSpatialBlur(planar_image_collection<float,double> &imageco
     try{
         user_data_s = std::any_cast<ComputeVolumetricSpatialBlurUserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
 
     if( ccsl.empty() ){
-        FUNCWARN("Missing needed contour information. Cannot continue with computation");
+        YLOGWARN("Missing needed contour information. Cannot continue with computation");
         return false;
     }
 
@@ -100,7 +101,7 @@ bool ComputeVolumetricSpatialBlur(planar_image_collection<float,double> &imageco
 
         // row-direction.
         {
-            FUNCINFO("Convolving row-aligned direction now..");
+            YLOGINFO("Convolving row-aligned direction now..");
             ComputeVolumetricNeighbourhoodSamplerUserData ud;
             ud.channel = user_data_s->channel;
             ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
@@ -124,7 +125,7 @@ bool ComputeVolumetricSpatialBlur(planar_image_collection<float,double> &imageco
 
         // column-direction.
         {
-            FUNCINFO("Convolving column-aligned direction now..");
+            YLOGINFO("Convolving column-aligned direction now..");
             ComputeVolumetricNeighbourhoodSamplerUserData ud;
             ud.channel = user_data_s->channel;
             ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
@@ -147,7 +148,7 @@ bool ComputeVolumetricSpatialBlur(planar_image_collection<float,double> &imageco
 
         // ortho-direction.
         {
-            FUNCINFO("Convolving ortho-aligned direction now..");
+            YLOGINFO("Convolving ortho-aligned direction now..");
             ComputeVolumetricNeighbourhoodSamplerUserData ud;
             ud.channel = user_data_s->channel;
             ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;

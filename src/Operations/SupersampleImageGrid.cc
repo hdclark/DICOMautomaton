@@ -145,7 +145,7 @@ bool SupersampleImageGrid(Drover &DICOM_data,
 
         for(auto & iap_it : IAs){
             if((*iap_it)->imagecoll.images.empty()){
-                FUNCWARN("Skipping empty image array");
+                YLOGWARN("Skipping empty image array");
                 continue;
             }
 

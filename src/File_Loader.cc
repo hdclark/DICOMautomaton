@@ -17,6 +17,7 @@
 
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 #include "Structs.h"
@@ -68,7 +69,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".tar", ".gz", ".tar.gz", ".tgz"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_TAR_Files( DICOM_data, InvocationMetadata, FilenameLex, Operations, p )){
-                FUNCWARN("Failed to load TAR file");
+                YLOGWARN("Failed to load TAR file");
                 return false;
             }
             return true;
@@ -78,7 +79,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".gz", ".tar", ".tar.gz", ".tgz", ".xml", ".xml.gz", ".txt", ".txt.gz"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_Boost_Serialization_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
-                FUNCWARN("Failed to load Boost.Serialization archive");
+                YLOGWARN("Failed to load Boost.Serialization archive");
                 return false;
             }
             return true;
@@ -88,7 +89,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".dcm"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_DICOM_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
-                FUNCWARN("Failed to load DICOM file");
+                YLOGWARN("Failed to load DICOM file");
                 return false;
             }
             return true;
@@ -98,7 +99,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".xim"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_XIM_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
-                FUNCWARN("Failed to load XIM file");
+                YLOGWARN("Failed to load XIM file");
                 return false;
             }
             return true;
@@ -108,7 +109,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".snc"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_SNC_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
-                FUNCWARN("Failed to load ASCII SNC file");
+                YLOGWARN("Failed to load ASCII SNC file");
                 return false;
             }
             return true;
@@ -118,7 +119,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".ply"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_PLY_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
-                FUNCWARN("Failed to load ASCII/binary PLY mesh or point cloud file");
+                YLOGWARN("Failed to load ASCII/binary PLY mesh or point cloud file");
                 return false;
             }
             return true;
@@ -130,7 +131,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".stl"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_Mesh_From_ASCII_STL_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
-                FUNCWARN("Failed to load ASCII STL mesh file");
+                YLOGWARN("Failed to load ASCII STL mesh file");
                 return false;
             }
             return true;
@@ -140,7 +141,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".stl"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_Mesh_From_Binary_STL_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
-                FUNCWARN("Failed to load binary STL mesh file");
+                YLOGWARN("Failed to load binary STL mesh file");
                 return false;
             }
             return true;
@@ -150,7 +151,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".dat", ".txt"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_Contour_Collection_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
-                FUNCWARN("Failed to load contour collection file");
+                YLOGWARN("Failed to load contour collection file");
                 return false;
             }
             return true;
@@ -160,7 +161,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".dvh", ".txt", ".dat"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_DVH_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
-                FUNCWARN("Failed to load DVH file");
+                YLOGWARN("Failed to load DVH file");
                 return false;
             }
             return true;
@@ -170,7 +171,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".dcma", ".dsc", ".dscr", ".scr", ".txt"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_Script_Files( Operations, p )){
-                FUNCWARN("Failed to load script file");
+                YLOGWARN("Failed to load script file");
                 return false;
             }
             return true;
@@ -180,7 +181,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".fit", ".fits"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_FITS_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
-                FUNCWARN("Failed to load FITS file");
+                YLOGWARN("Failed to load FITS file");
                 return false;
             }
             return true;
@@ -190,7 +191,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".3ddose"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_3ddose_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
-                FUNCWARN("Failed to load 3ddose file");
+                YLOGWARN("Failed to load 3ddose file");
                 return false;
             }
             return true;
@@ -202,7 +203,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".off"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_Points_From_OFF_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
-                FUNCWARN("Failed to load OFF point cloud file");
+                YLOGWARN("Failed to load OFF point cloud file");
                 return false;
             }
             return true;
@@ -212,7 +213,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".off"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_Mesh_From_OFF_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
-                FUNCWARN("Failed to load OFF mesh file");
+                YLOGWARN("Failed to load OFF mesh file");
                 return false;
             }
             return true;
@@ -224,7 +225,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".obj"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_Points_From_OBJ_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
-                FUNCWARN("Failed to load OBJ point cloud file");
+                YLOGWARN("Failed to load OBJ point cloud file");
                 return false;
             }
             return true;
@@ -234,7 +235,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".obj"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_Mesh_From_OBJ_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
-                FUNCWARN("Failed to load OBJ mesh file");
+                YLOGWARN("Failed to load OBJ mesh file");
                 return false;
             }
             return true;
@@ -246,7 +247,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".xyz", ".txt"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_XYZ_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
-                FUNCWARN("Failed to load XYZ file");
+                YLOGWARN("Failed to load XYZ file");
                 return false;
             }
             return true;
@@ -258,7 +259,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".trans", ".txt"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_Transforms_From_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
-                FUNCWARN("Failed to load transformation file");
+                YLOGWARN("Failed to load transformation file");
                 return false;
             }
             return true;
@@ -270,7 +271,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".lsamp", ".lsamps", ".txt"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_Line_Sample_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
-                FUNCWARN("Failed to load line sample file");
+                YLOGWARN("Failed to load line sample file");
                 return false;
             }
             return true;
@@ -282,7 +283,7 @@ Load_Files( Drover &DICOM_data,
         loaders.emplace_back(file_loader_t{{".csv", ".tsv"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
             && !Load_From_CSV_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
-                FUNCWARN("Failed to load CSV/TSV file");
+                YLOGWARN("Failed to load CSV/TSV file");
                 return false;
             }
             return true;
@@ -340,11 +341,11 @@ Load_Files( Drover &DICOM_data,
                     ||  has_recognized_extension(p)){
                         l_Paths.push_back(p);
                     }else{
-                        FUNCWARN("Ignoring file '" << p.string() << "' because extension is not recognized. Specify explicitly to attempt loading");
+                        YLOGWARN("Ignoring file '" << p.string() << "' because extension is not recognized. Specify explicitly to attempt loading");
                     }
                 }
             }catch(const std::filesystem::filesystem_error &e){
-                FUNCWARN(e.what());
+                YLOGWARN(e.what());
                 contained_unresolvable = true;
             }
         }
@@ -366,7 +367,7 @@ Load_Files( Drover &DICOM_data,
         // Warn if the file extension is not recognized.
         for(const auto &p : l_Paths){
             if(!has_recognized_extension(p)){
-                FUNCWARN("Unrecognized file extension '" << ext << "'. Attempting to load because it was explicitly specified");
+                YLOGWARN("Unrecognized file extension '" << ext << "'. Attempting to load because it was explicitly specified");
             }
         }
                                                   
@@ -417,7 +418,7 @@ Load_Files( Drover &DICOM_data,
             if(l_Paths.empty()) break;
             std::stringstream ss;
             for(const auto &e : l.exts) ss << (ss.str().empty() ? "" : ", ") << "'" << e << "'";
-            FUNCINFO("Trying loader for extensions: " << ss.str() << " for file(s) with extension '" << ext << "'");
+            YLOGINFO("Trying loader for extensions: " << ss.str() << " for file(s) with extension '" << ext << "'");
             if(!l_Paths.empty() && !l.f(l_Paths)){
                 return false;
             }
@@ -428,7 +429,7 @@ Load_Files( Drover &DICOM_data,
     }
 
     if(!Paths.empty()){
-        for(const auto &p : Paths) FUNCWARN("Unloaded file: '" << p.string() << "'");
+        for(const auto &p : Paths) YLOGWARN("Unloaded file: '" << p.string() << "'");
     }
 
     return (Paths.empty() && !contained_unresolvable);

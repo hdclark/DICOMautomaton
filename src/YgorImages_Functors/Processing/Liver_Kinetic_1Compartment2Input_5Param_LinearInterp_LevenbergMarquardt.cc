@@ -35,6 +35,7 @@
 #include "YgorMath.h"
 #include "YgorMathChebyshev.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
 static std::mutex out_img_mutex;
@@ -65,7 +66,7 @@ KineticModel_Liver_1C2I_5Param_LinearInterp(planar_image_collection<float,double
     try{
         user_data_s = std::any_cast<KineticModel_Liver_1C2I_5Param_LinearInterp_UserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
 
@@ -155,7 +156,7 @@ KineticModel_Liver_1C2I_5Param_LinearInterp(planar_image_collection<float,double
     //       each contour_collection's contours to have an identifying colour.
     //if(cc_ROIs.empty()){
     if(cc_ROIs.size() != 1){
-        FUNCWARN("Missing needed contour information. Cannot continue with computation");
+        YLOGWARN("Missing needed contour information. Cannot continue with computation");
         return false;
     }
 
@@ -187,7 +188,7 @@ KineticModel_Liver_1C2I_5Param_LinearInterp(planar_image_collection<float,double
 
             const auto ROIName =  contour.GetMetadataValueAs<std::string>("ROIName");
             if(!ROIName){
-                FUNCWARN("Missing necessary tags for reporting analysis results. Cannot continue");
+                YLOGWARN("Missing necessary tags for reporting analysis results. Cannot continue");
                 return false;
             }
             
@@ -231,7 +232,7 @@ KineticModel_Liver_1C2I_5Param_LinearInterp(planar_image_collection<float,double
                     }else{
                         //for(auto chan = 0; chan < first_img_it->channels; ++chan){
                         //    const auto curr_val = working.value(row, col, chan);
-                        //    if(curr_val != 0) FUNCERR("There are overlapping ROI bboxes. This code currently cannot handle this. "
+                        //    if(curr_val != 0) YLOGERR("There are overlapping ROI bboxes. This code currently cannot handle this. "
                         //                              "You will need to run the functor individually on the overlapping ROIs.");
                         //    working.reference(row, col, chan) = static_cast<float>(10);
                         //}
@@ -257,7 +258,7 @@ KineticModel_Liver_1C2I_5Param_LinearInterp(planar_image_collection<float,double
 
             const auto ROIName =  contour.GetMetadataValueAs<std::string>("ROIName");
             if(!ROIName){
-                FUNCWARN("Missing necessary tags for reporting analysis results. Cannot continue");
+                YLOGWARN("Missing necessary tags for reporting analysis results. Cannot continue");
                 return false;
             }
  
@@ -301,7 +302,7 @@ KineticModel_Liver_1C2I_5Param_LinearInterp(planar_image_collection<float,double
                                 auto expected_dt_f = static_cast<double>(elapsed_dt) * (Expected_Operation_Count/Actual_Operation_Count);
                                 auto expected_dt = static_cast<long int>(expected_dt_f);
                                 boost::posix_time::ptime predicted_dt( start_t + boost::posix_time::milliseconds(expected_dt) );
-                                FUNCINFO("Progress: " 
+                                YLOGINFO("Progress: " 
                                     << Actual_Operation_Count << "/" << Expected_Operation_Count << " = " 
                                     << static_cast<double>(static_cast<size_t>(1000.0*Actual_Operation_Count/Expected_Operation_Count))/10.0 
                                     << "%. Expected finish time: " << predicted_dt);
@@ -335,7 +336,7 @@ KineticModel_Liver_1C2I_5Param_LinearInterp(planar_image_collection<float,double
                                     }
                                 }
                                 auto dt = img_it->GetMetadataValueAs<double>("dt");
-                                if(!dt) FUNCERR("Image is missing time metadata. Bailing");
+                                if(!dt) YLOGERR("Image is missing time metadata. Bailing");
 
                                 const auto avg_val = Stats::Mean(in_pixs);
                                 if(in_pixs.size() < min_datum) continue; //If contours are too narrow so that there is too few datum for meaningful results.
@@ -388,7 +389,7 @@ KineticModel_Liver_1C2I_5Param_LinearInterp(planar_image_collection<float,double
                             const double k1V  = after_state.k1V;
                             const double tauV = after_state.tauV;
                             const double k2   = after_state.k2;
-                            if(true) FUNCINFO("k1A,tauA,k1V,tauV,k2,RSS = " << k1A << ", " << tauA << ", " 
+                            if(true) YLOGINFO("k1A,tauA,k1V,tauV,k2,RSS = " << k1A << ", " << tauA << ", " 
                                               << k1V << ", " << tauV << ", " << k2 << ", " << RSS);
 
                             //const auto LiverPerfusion = (k1A + k1V);
@@ -447,7 +448,7 @@ KineticModel_Liver_1C2I_5Param_LinearInterp(planar_image_collection<float,double
                     }else{
                         //for(auto chan = 0; chan < first_img_it->channels; ++chan){
                         //    const auto curr_val = working.value(row, col, chan);
-                        //    if(curr_val != 0) FUNCERR("There are overlapping ROI bboxes. This code currently cannot handle this. "
+                        //    if(curr_val != 0) YLOGERR("There are overlapping ROI bboxes. This code currently cannot handle this. "
                         //                              "You will need to run the functor individually on the overlapping ROIs.");
                         //    working.reference(row, col, chan) = static_cast<float>(10);
                         //}
@@ -457,7 +458,7 @@ KineticModel_Liver_1C2I_5Param_LinearInterp(planar_image_collection<float,double
         } //Loop over ROIs.
     } //Loop over contour_collections.
 
-    FUNCWARN("Minimization failure count: " << Minimization_Failure_Count);
+    YLOGWARN("Minimization failure count: " << Minimization_Failure_Count);
 
 
     //Serialize the state so we have enough info to apply the model later. But remove the per-voxel information (which

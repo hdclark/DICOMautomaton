@@ -24,6 +24,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorMathIOOFF.h"
@@ -106,11 +107,11 @@ bool ConvertMeshesToContours(Drover &DICOM_data,
     auto SMs_all = All_SMs( DICOM_data );
     auto SMs = Whitelist( SMs_all, MeshSelectionStr );
     const auto sm_count = SMs.size();
-    FUNCINFO("Selected " << sm_count << " meshes");
+    YLOGINFO("Selected " << sm_count << " meshes");
 
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
-    FUNCINFO("Selected " << IAs.size() << " images");
+    YLOGINFO("Selected " << IAs.size() << " images");
 
     long int completed = 0;
     long int N_new_contours = 0;
@@ -159,10 +160,10 @@ bool ConvertMeshesToContours(Drover &DICOM_data,
         }
 
         ++completed;
-        FUNCINFO("Completed " << completed << " of " << sm_count
+        YLOGINFO("Completed " << completed << " of " << sm_count
               << " --> " << static_cast<int>(1000.0*(completed)/sm_count)/10.0 << "% done");
     }
-    FUNCINFO("Sliced " << N_new_contours << " new contours");
+    YLOGINFO("Sliced " << N_new_contours << " new contours");
 
     return true;
 }

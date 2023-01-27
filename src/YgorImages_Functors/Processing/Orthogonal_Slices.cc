@@ -18,6 +18,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 
 
 bool OrthogonalSlices(planar_image_collection<float,double>::images_list_it_t first_img_it,
@@ -124,7 +125,7 @@ bool OrthogonalSlices(planar_image_collection<float,double>::images_list_it_t fi
             out_imgs.front().get().images.back().fill_pixels(std::numeric_limits<float>::quiet_NaN());
           
             const auto count = Intersection_Copy( out_imgs.front().get().images.back(), selected_img_its );
-            if(count == 0) FUNCWARN("Produced image with zero intersections. Bounds were not specified properly."
+            if(count == 0) YLOGWARN("Produced image with zero intersections. Bounds were not specified properly."
                                     " This is not an error, but a wasteful extra image has been created");
 
             out_imgs.front().get().images.back().metadata = common_metadata;
@@ -160,7 +161,7 @@ bool OrthogonalSlices(planar_image_collection<float,double>::images_list_it_t fi
             out_imgs.back().get().images.back().fill_pixels(std::numeric_limits<float>::quiet_NaN());
           
             const auto count = Intersection_Copy( out_imgs.back().get().images.back(), selected_img_its );
-            if(count == 0) FUNCWARN("Produced image with zero intersections. Bounds were not specified properly."
+            if(count == 0) YLOGWARN("Produced image with zero intersections. Bounds were not specified properly."
                                     " This is not an error, but a wasteful extra image has been created");
 
             out_imgs.back().get().images.back().metadata = common_metadata;

@@ -165,7 +165,7 @@ bool DecomposeImagesSVD(Drover &DICOM_data,
         }
     }
 
-    FUNCINFO("Performing SVD decomposition on " << N_rows << "x" << N_cols << " matrix now");
+    YLOGINFO("Performing SVD decomposition on " << N_rows << "x" << N_cols << " matrix now");
 
     // For the future:
     //using SVD_t = Eigen::BDCSVD<Eigen::MatrixXd, Eigen::ComputeThinU | Eigen::ComputeThinV>;
@@ -187,11 +187,11 @@ bool DecomposeImagesSVD(Drover &DICOM_data,
     const Eigen::VectorXd &S = SVD.singularValues();
     const Eigen::MatrixXd &V = SVD.matrixV();
 
-    FUNCINFO("SVD rank: " << SVD.rank());
-    FUNCINFO("SVD # of non-zero singular values: " << SVD.nonzeroSingularValues());
-    FUNCINFO("Decomposition matrix U has dimensions " << U.rows() << "x" << U.cols());
-    FUNCINFO("Decomposition matrix V has dimensions " << V.rows() << "x" << V.cols());
-    FUNCINFO("Decomposition vector S has length " << S.size());
+    YLOGINFO("SVD rank: " << SVD.rank());
+    YLOGINFO("SVD # of non-zero singular values: " << SVD.nonzeroSingularValues());
+    YLOGINFO("Decomposition matrix U has dimensions " << U.rows() << "x" << U.cols());
+    YLOGINFO("Decomposition matrix V has dimensions " << V.rows() << "x" << V.cols());
+    YLOGINFO("Decomposition vector S has length " << S.size());
 
     // Create a new image array with the basis images.
     auto out = std::make_unique<Image_Array>();

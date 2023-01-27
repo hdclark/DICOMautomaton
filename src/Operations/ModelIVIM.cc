@@ -256,8 +256,8 @@ bool ModelIVIM(Drover &DICOM_data,
     const auto bvalue_max_i = std::distance( std::begin(bvalues), std::max_element( std::begin(bvalues), std::end(bvalues) ) );
     const auto nan = std::numeric_limits<double>::quiet_NaN();
 
-    FUNCINFO("Detected minimum bvalue is b(" << bvalue_min_i << ") = " << bvalues.at( bvalue_min_i ));
-    FUNCINFO("Detected maximum bvalue is b(" << bvalue_max_i << ") = " << bvalues.at( bvalue_max_i ));
+    YLOGINFO("Detected minimum bvalue is b(" << bvalue_min_i << ") = " << bvalues.at( bvalue_min_i ));
+    YLOGINFO("Detected maximum bvalue is b(" << bvalue_max_i << ") = " << bvalues.at( bvalue_max_i ));
     if( bvalues.at( bvalue_min_i ) == bvalues.at( bvalue_max_i ) ){
         throw std::runtime_error("Insufficient number of distinct b-value images to perform modeling");
     }

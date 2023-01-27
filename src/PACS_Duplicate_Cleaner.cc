@@ -29,6 +29,7 @@
 #include "YgorArguments.h"
 #include "YgorFilesDirs.h"
 #include "YgorMisc.h"           //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 int main(int argc, char **argv){
     //std::string db_params("dbname=pacs user=hal host=localhost port=63443");
@@ -59,11 +60,11 @@ int main(int argc, char **argv){
     //----
 
     arger.default_callback = [](int, const std::string &optarg) -> void {
-        FUNCERR("Unrecognized option with argument: '" << optarg << "'");
+        YLOGERR("Unrecognized option with argument: '" << optarg << "'");
     };
     arger.optionless_callback = [&](const std::string &optarg) -> void {
         if(!DICOMFile.empty()){
-            FUNCERR("This program can only handle a single file at a time."
+            YLOGERR("This program can only handle a single file at a time."
                     " Earlier file: '" << DICOMFile << "'. This file: '" << optarg << "'");
         }
         DICOMFile = optarg;
@@ -81,7 +82,7 @@ int main(int argc, char **argv){
                                      "(req'd) The DICOM file to use.",
                                      [&](const std::string &optarg) -> void {
         if(!DICOMFile.empty()){
-            FUNCERR("This program can only handle a single file at a time."
+            YLOGERR("This program can only handle a single file at a time."
                     " Earlier file: '" << DICOMFile << "'. This file: '" << optarg << "'");
         }
         DICOMFile = optarg;
@@ -99,7 +100,7 @@ int main(int argc, char **argv){
     //---------------------------------------------------------------------------------------------------------
     //--------------------------------------- Requirement Verification ----------------------------------------
     //---------------------------------------------------------------------------------------------------------
-    if(DICOMFile.empty()) FUNCERR("Cannot read DICOM file '" << DICOMFile << "'. Cannot continue");
+    if(DICOMFile.empty()) YLOGERR("Cannot read DICOM file '" << DICOMFile << "'. Cannot continue");
 
     //---------------------------------------------------------------------------------------------------------
     //----------------------------------------- Data Loading & Prep -------------------------------------------
@@ -119,7 +120,7 @@ int main(int argc, char **argv){
 
         if(PatientID.empty() || StudyInstanceUID.empty()  || StudyDate.empty()    || StudyTime.empty() 
         || SeriesInstanceUID.empty() || SeriesNumber.empty() || SOPInstanceUID.empty() ){
-            FUNCERR("File '" << DICOMFile << "' is absent, missing information, or not a DICOM file.");
+            YLOGERR("File '" << DICOMFile << "' is absent, missing information, or not a DICOM file.");
         }
     }
 
@@ -147,7 +148,7 @@ int main(int argc, char **argv){
 
         r = txn.exec(tb1.str());
         if(r.empty()){
-            if(verbose) FUNCINFO("File '" << DICOMFile << "' is NOT in the DB");
+            if(verbose) YLOGINFO("File '" << DICOMFile << "' is NOT in the DB");
             return 0;
         }
 
@@ -155,7 +156,7 @@ int main(int argc, char **argv){
         //Also ensure that the basic DICOM unique identifiers match the DB record.
 
         if(r.size() != 1){
-            FUNCERR("Multiple StoreFullPathName found for file '" << DICOMFile << "'. There should be 0 or 1");
+            YLOGERR("Multiple StoreFullPathName found for file '" << DICOMFile << "'. There should be 0 or 1");
         }
         const auto StoreFullPathName = (r[0]["StoreFullPathName"].is_null()) ? "" :
                                                                                r[0]["StoreFullPathName"].as<std::string>();
@@ -165,24 +166,24 @@ int main(int argc, char **argv){
         || (mmap["StudyInstanceUID"]  != pmmap["StudyInstanceUID"])
         || (mmap["SeriesInstanceUID"] != pmmap["SeriesInstanceUID"])
         || (mmap["SOPInstanceUID"]    != pmmap["SOPInstanceUID"]) ){
-            FUNCERR("PACS DB file '" << StoreFullPathName << "' does not match the DB record! Aborting");
+            YLOGERR("PACS DB file '" << StoreFullPathName << "' does not match the DB record! Aborting");
         }
 
         //---------------------------------- Ensure existing file is accessible ----------------------------------
 
         if(dryrun){
-            FUNCINFO("File '" << DICOMFile << "' is a duplicate (not removed due to dry-run)");
+            YLOGINFO("File '" << DICOMFile << "' is a duplicate (not removed due to dry-run)");
         }else{
             //Remove the file.
             if(RemoveFile(DICOMFile)){
-                if(verbose) FUNCINFO("Deleted file '" << DICOMFile << "' which duplicated PACS DB file '" << StoreFullPathName << "'");
+                if(verbose) YLOGINFO("Deleted file '" << DICOMFile << "' which duplicated PACS DB file '" << StoreFullPathName << "'");
             }else{
-                FUNCERR("Unable to delete file '" << DICOMFile << "' which duplicates PACS DB file '" << StoreFullPathName << "'");
+                YLOGERR("Unable to delete file '" << DICOMFile << "' which duplicates PACS DB file '" << StoreFullPathName << "'");
             }
         }
 
     }catch(const std::exception &e){
-        FUNCERR("Unable to query database:\n" << e.what() << "\nCannot continue");
+        YLOGERR("Unable to query database:\n" << e.what() << "\nCannot continue");
     }
 
     return 0;

@@ -14,6 +14,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
 #include "YgorClustering.hpp"
@@ -43,17 +44,17 @@ bool ComputeVolumetricCorrelationDetector(planar_image_collection<float,double> 
     try{
         user_data_s = std::any_cast<ComputeVolumetricCorrelationDetectorUserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
 
     if( ccsl.empty() ){
-        FUNCWARN("Missing needed contour information. Cannot continue with computation");
+        YLOGWARN("Missing needed contour information. Cannot continue with computation");
         return false;
     }
 
     if(imagecoll.images.empty()){
-        FUNCWARN("No images available for computation. Nothing to do.");
+        YLOGWARN("No images available for computation. Nothing to do.");
         return false;
     }
 
@@ -169,7 +170,7 @@ if((pos - vec3<double>(0.08, 88.71, 57.85)).length() < 0.45){
         return (high - low);
     }; 
 
-    FUNCINFO("Proceeding with each voxel sampling " << ud.voxel_triplets.size() << " neighbouring voxels");
+    YLOGINFO("Proceeding with each voxel sampling " << ud.voxel_triplets.size() << " neighbouring voxels");
 
     // Invoke the volumetric sampling routine to compute the above functors.
     if(!imagecoll.Compute_Images( ComputeVolumetricNeighbourhoodSampler, 

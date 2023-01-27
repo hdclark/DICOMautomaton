@@ -12,6 +12,7 @@
 
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 #include "Explicator.h"       //Needed for Explicator class.
 

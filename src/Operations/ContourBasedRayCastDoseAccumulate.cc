@@ -24,6 +24,7 @@
 #include "YgorImagesIO.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 
 
@@ -385,7 +386,7 @@ bool ContourBasedRayCastDoseAccumulate(Drover &DICOM_data,
     // The top image can be the length image.
     const auto sq_radius = std::pow(CylinderRadius, 2.0);
     for(long int row = 0; row < Rows; ++row){
-        FUNCINFO("Working on row " << (row+1) << " of " << Rows 
+        YLOGINFO("Working on row " << (row+1) << " of " << Rows 
                   << " --> " << static_cast<int>(1000.0*(row+1)/Rows)/10.0 << "% done");
         for(long int col = 0; col < Columns; ++col){
             double accumulated_length = 0.0;      //Length of ray travel within the 'surface'.

@@ -18,6 +18,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 
 
 bool ComputeGenerateSurfaceMask(planar_image_collection<float,double> &imagecoll,
@@ -54,13 +55,13 @@ bool ComputeGenerateSurfaceMask(planar_image_collection<float,double> &imagecoll
     try{
         user_data_s = std::any_cast<GenerateSurfaceMaskUserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
 
     //Check that there are contours to operate on.
     if(ccsl.empty()){
-        FUNCWARN("Missing needed contour information. Cannot continue with computation");
+        YLOGWARN("Missing needed contour information. Cannot continue with computation");
         return false;
     }
 
@@ -68,7 +69,7 @@ bool ComputeGenerateSurfaceMask(planar_image_collection<float,double> &imagecoll
     // pruned after images have been successfully operated on.
     auto all_images = imagecoll.get_all_images();
     while(!all_images.empty()){
-        FUNCINFO("Images still to be processed: " << all_images.size());
+        YLOGINFO("Images still to be processed: " << all_images.size());
 
         // Find the images which spatially overlap with this image.
         auto curr_img_it = all_images.front();

@@ -29,6 +29,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 
 
@@ -143,7 +144,7 @@ bool DumpPerROIParams_KineticModel_1Compartment2Input_5Param(
         }else if(std::regex_match(desc, k2_regex   )){ imgcoll_k2   = img_coll;
         }else{ 
             //We assume anything else is the ROI. Permits arbitrary pre-processing.
-            FUNCWARN("Assuming ROI image_collection has description '" << desc << "'");
+            YLOGWARN("Assuming ROI image_collection has description '" << desc << "'");
             imgcoll_ROI = img_coll;
         }
     }
@@ -185,7 +186,7 @@ bool DumpPerROIParams_KineticModel_1Compartment2Input_5Param(
     //
     auto all_k1A_images = imgcoll_k1A->get_all_images();
     while(!all_k1A_images.empty()){
-        FUNCINFO("Images still to be processed: " << all_k1A_images.size());
+        YLOGINFO("Images still to be processed: " << all_k1A_images.size());
 
         //Find the images which spatially overlap with this image.
         auto curr_k1A_img_it = all_k1A_images.front();
@@ -442,7 +443,7 @@ bool DumpPerROIParams_KineticModel_1Compartment2Input_5Param(
                         }else{
                             //for(auto chan = 0; chan < first_img_it->channels; ++chan){
                             //    const auto curr_val = working.value(row, col, chan);
-                            //    if(curr_val != 0) FUNCERR("There are overlapping ROI bboxes. This code currently cannot handle this. "
+                            //    if(curr_val != 0) YLOGERR("There are overlapping ROI bboxes. This code currently cannot handle this. "
                             //                              "You will need to run the functor individually on the overlapping ROIs.");
                             //    working.reference(row, col, chan) = static_cast<float>(10);
                             //}

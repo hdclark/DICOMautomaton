@@ -13,6 +13,7 @@
 #include <vector>
 
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorStats.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
@@ -44,12 +45,12 @@ using namespace ::apache::thrift::server;
 class ReceiverHandler : virtual public ::dcma::rpc::ReceiverIf {
   public:
     ReceiverHandler() {
-        FUNCINFO("Initialization code goes here");
+        YLOGINFO("Initialization code goes here");
     }
 
     void GetSupportedOperations(std::vector<::dcma::rpc::KnownOperation> & _return,
                                 const ::dcma::rpc::OperationsQuery& query) {
-        FUNCINFO("GetSupportedOperations implementation goes here");
+        YLOGINFO("GetSupportedOperations implementation goes here");
 
         // Simple test.
         {
@@ -87,7 +88,7 @@ class ReceiverHandler : virtual public ::dcma::rpc::ReceiverIf {
 
     void LoadFiles(::dcma::rpc::LoadFilesResponse& _return,
                    const std::vector<::dcma::rpc::LoadFilesQuery> & server_filenames) {
-        FUNCINFO("LoadFiles implementation goes here");
+        YLOGINFO("LoadFiles implementation goes here");
     }
 };
 

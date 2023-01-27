@@ -12,6 +12,7 @@
 #include "DumpFilesPartitionedByTime.h"
 #include "YgorImages.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 
 OperationDoc OpArgDocDumpFilesPartitionedByTime(){
@@ -35,7 +36,7 @@ bool DumpFilesPartitionedByTime(Drover &DICOM_data,
     for(auto &img_arr : DICOM_data.image_data){
         for(auto &img : img_arr->imagecoll.images){
             if(!img.MetadataKeyPresent("dt")){
-                FUNCWARN("Time key is not present for file '" << img.metadata["StoreFullPathName"] << "'. Omitting it");
+                YLOGWARN("Time key is not present for file '" << img.metadata["StoreFullPathName"] << "'. Omitting it");
                 continue;
             }
             partitions.insert( std::make_pair( img.metadata["dt"],

@@ -19,6 +19,7 @@
 #include "DCEMRI_Nonparametric_CE.h"
 #include "YgorImages.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 
 OperationDoc OpArgDocDCEMRI_Nonparametric_CE(){
@@ -63,7 +64,7 @@ bool DCEMRI_Nonparametric_CE(Drover &DICOM_data,
 
     //Complain if there are several images, but continue on using only the first volume.
     if(orig_img_arrays.size() != 1){
-        FUNCWARN("Several image volumes detected."
+        YLOGWARN("Several image volumes detected."
                  " Proceeding to generate non-parametric DCE contrast enhancement with the first only.");
     }
     orig_img_arrays.resize(1); // NOTE: Later assumptions are made about image ordering!
@@ -71,12 +72,12 @@ bool DCEMRI_Nonparametric_CE(Drover &DICOM_data,
     //Figure out how much time elapsed before contrast injection began.
     double ContrastInjectionLeadTime = 35.0; //Seconds. 
     if(l_InvocationMetadata.count("ContrastInjectionLeadTime") == 0){
-        FUNCWARN("Unable to locate 'ContrastInjectionLeadTime' invocation metadata key. Assuming the default lead time " 
+        YLOGWARN("Unable to locate 'ContrastInjectionLeadTime' invocation metadata key. Assuming the default lead time " 
                  << ContrastInjectionLeadTime << "s is appropriate");
     }else{
         ContrastInjectionLeadTime = std::stod( l_InvocationMetadata["ContrastInjectionLeadTime"] );
         if(ContrastInjectionLeadTime < 0.0) throw std::runtime_error("Non-sensical 'ContrastInjectionLeadTime' found.");
-        FUNCINFO("Found 'ContrastInjectionLeadTime' invocation metadata key. Using value " << ContrastInjectionLeadTime << "s"); 
+        YLOGINFO("Found 'ContrastInjectionLeadTime' invocation metadata key. Using value " << ContrastInjectionLeadTime << "s"); 
     }
 
     //Spatially blur the images. This may help if the measurements are noisy.

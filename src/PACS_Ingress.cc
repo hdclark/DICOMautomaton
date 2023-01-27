@@ -26,6 +26,7 @@
 #include "YgorArguments.h"
 #include "YgorFilesDirs.h"
 #include "YgorMisc.h"           //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"         //Needed for stringtoX(), X_to_string().
 
 int main(int argc, char **argv){
@@ -55,11 +56,11 @@ int main(int argc, char **argv){
     //----
 
     arger.default_callback = [](int, const std::string &optarg) -> void {
-        FUNCERR("Unrecognized option with argument: '" << optarg << "'");
+        YLOGERR("Unrecognized option with argument: '" << optarg << "'");
     };
     arger.optionless_callback = [&](const std::string &optarg) -> void {
         if(!DICOMFile.empty()){
-            FUNCERR("This program can only handle a single file at a time."
+            YLOGERR("This program can only handle a single file at a time."
                     " Earlier file: '" << DICOMFile << "'. This file: '" << optarg << "'");
         }
         DICOMFile = optarg;
@@ -70,7 +71,7 @@ int main(int argc, char **argv){
     arger.push_back( std::make_tuple(1, 'f', "dicom-file", true, "/tmp/a",
                                      "(req'd) The DICOM file to use.",
                                      [&](const std::string &optarg) -> void {
-        if(!DICOMFile.empty()) FUNCERR("This program can only handle a single file at a time");
+        if(!DICOMFile.empty()) YLOGERR("This program can only handle a single file at a time");
         DICOMFile = optarg;
         return;
     }));
@@ -89,7 +90,7 @@ int main(int argc, char **argv){
     arger.push_back( std::make_tuple(1, 'g', "gdcmdump-file", true, "/tmp/a.dcm.gdcmdump",
                                      "File containing output from `gdcmdump`.",
                                      [&](const std::string &optarg) -> void {
-        if(!Does_File_Exist_And_Can_Be_Read(optarg)) FUNCERR("Cannot read file '" << optarg << "'");
+        if(!Does_File_Exist_And_Can_Be_Read(optarg)) YLOGERR("Cannot read file '" << optarg << "'");
         GDCMDump = LoadFileToString(optarg);
         return;
     }));
@@ -108,7 +109,7 @@ int main(int argc, char **argv){
     arger.push_back( std::make_tuple(1, 'b', "store-base", true, DICOMFileSystemStoreBase,
                                      "The root of the DB file storage directory.",
                                      [&](const std::string &optarg) -> void {
-        if(!Does_Dir_Exist_And_Can_Be_Read(optarg)) FUNCERR("Cannot access root directory '" << optarg << "'");
+        if(!Does_Dir_Exist_And_Can_Be_Read(optarg)) YLOGERR("Cannot access root directory '" << optarg << "'");
         DICOMFileSystemStoreBase = optarg;
         return;
     }));
@@ -118,10 +119,10 @@ int main(int argc, char **argv){
     //---------------------------------------------------------------------------------------------------------
     //--------------------------------------- Requirement Verification ----------------------------------------
     //---------------------------------------------------------------------------------------------------------
-    if(DICOMFile.empty()) FUNCERR("Cannot read DICOM file '" << DICOMFile << "'. Cannot continue");
-    if(Project.empty())   FUNCERR("The 'project' string is mandatory. Cannot continue");
-    if(Comments.empty())  FUNCERR("The 'comments' string is mandatory. Cannot continue");
-    if(GDCMDump.empty())  FUNCERR("The 'gdcmdump' string is strongly suggested. Refusing to continue");
+    if(DICOMFile.empty()) YLOGERR("Cannot read DICOM file '" << DICOMFile << "'. Cannot continue");
+    if(Project.empty())   YLOGERR("The 'project' string is mandatory. Cannot continue");
+    if(Comments.empty())  YLOGERR("The 'comments' string is mandatory. Cannot continue");
+    if(GDCMDump.empty())  YLOGERR("The 'gdcmdump' string is strongly suggested. Refusing to continue");
 
     //---------------------------------------------------------------------------------------------------------
     //----------------------------------------- Data Loading & Prep -------------------------------------------
@@ -140,7 +141,7 @@ int main(int argc, char **argv){
 
     if(StudyInstanceUID.empty()  || StudyDate.empty()    || StudyTime.empty() 
     || SeriesInstanceUID.empty() || SeriesNumber.empty() || SOPInstanceUID.empty() ){
-        FUNCERR("File is '" << DICOMFile << "' missing information and cannot be imported into the database");
+        YLOGERR("File is '" << DICOMFile << "' missing information and cannot be imported into the database");
     }
 
     const auto TopDirName = Detox_String(StudyDate) + "-"_s
@@ -189,7 +190,7 @@ int main(int argc, char **argv){
 
         r = txn.exec(tb1.str());
         if(!r.empty()){
-            FUNCWARN("Conflicting file already present. Treating as a duplicate and NOT ingressing");
+            YLOGWARN("Conflicting file already present. Treating as a duplicate and NOT ingressing");
             return 0;
         }
 
@@ -197,21 +198,21 @@ int main(int argc, char **argv){
         if(!dryrun){
             //Ensure the destination location can be created and the file copied.
             if(!Does_Dir_Exist_And_Can_Be_Read(NewFullDir) && !Create_Dir_and_Necessary_Parents(NewFullDir)){
-                FUNCERR("Unable to create directory '" << NewFullDir << "'. Cannot continue");
+                YLOGERR("Unable to create directory '" << NewFullDir << "'. Cannot continue");
             }
 
             //if(!TouchFile(StoreFullPathName)){
-            //    FUNCERR("Unable to touch file '" << StoreFullPathName << "'. Cannot continue");
+            //    YLOGERR("Unable to touch file '" << StoreFullPathName << "'. Cannot continue");
             //}
 
             //Copy the file.
             if(!CopyFile(DICOMFile, StoreFullPathName)){
-                FUNCERR("Unable to copy file '" << DICOMFile << "' to filesystem store destination '" << StoreFullPathName << "'");
+                YLOGERR("Unable to copy file '" << DICOMFile << "' to filesystem store destination '" << StoreFullPathName << "'");
             }
 
             //Write the GDCMDump file into the store.
             if(!WriteStringToFile(GDCMDump, StoreGDCMDumpFileName)){
-                FUNCERR("Unable to write GDCMDump file '" << StoreGDCMDumpFileName << "' into the filesystem store");
+                YLOGERR("Unable to write GDCMDump file '" << StoreGDCMDumpFileName << "' into the filesystem store");
             }
 
             //Set the permissions ...
@@ -228,7 +229,7 @@ int main(int argc, char **argv){
         tb1 << "RETURNING pacsid;                                 ";
 
         r = txn.exec(tb1.str());
-        if(r.affected_rows() != 1) FUNCERR("Unable to create new pacsid. Cannot continue");
+        if(r.affected_rows() != 1) YLOGERR("Unable to create new pacsid. Cannot continue");
         const auto pacsid = r[0]["pacsid"].as<long int>(); 
 
         //------------------------------- Push the metadata to the database -----------------------------------
@@ -267,20 +268,20 @@ int main(int argc, char **argv){
             //Remove directory ... IFF nothing else is in it... TODO FIXME.
             // ...
 
-            FUNCERR("DB insertion affected " << r.affected_rows() << " rows. Since != 1 the insertion was aborted");
+            YLOGERR("DB insertion affected " << r.affected_rows() << " rows. Since != 1 the insertion was aborted");
         }else{
-            if(verbose) FUNCINFO("Success! PACS id=" << pacsid << " and StoreFullPathName='" << StoreFullPathName << "'");
+            if(verbose) YLOGINFO("Success! PACS id=" << pacsid << " and StoreFullPathName='" << StoreFullPathName << "'");
         }
 
         if(dryrun){
-            if(verbose) FUNCINFO("Dry run successful. No errors encountered");
+            if(verbose) YLOGINFO("Dry run successful. No errors encountered");
             return 0;
         }else{
             txn.commit(); 
         }
 
     }catch(const std::exception &e){
-        FUNCERR("Unable to push to database:\n" << e.what() << "\n" << "Cannot continue");
+        YLOGERR("Unable to push to database:\n" << e.what() << "\n" << "Cannot continue");
     }
 
     return 0;

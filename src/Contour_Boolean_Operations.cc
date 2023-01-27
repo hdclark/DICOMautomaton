@@ -22,6 +22,7 @@
 #include <CGAL/connect_holes.h>
 
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorMath.h"
 
 #include "Contour_Boolean_Operations.h"

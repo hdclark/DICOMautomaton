@@ -20,6 +20,7 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathIOPLY.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for SplitStringToVector, Canonicalize_String2, SplitVector functions.
 
 #include "Structs.h"
@@ -50,7 +51,7 @@ bool Load_From_PLY_Files( Drover &DICOM_data,
 
     auto bfit = Filenames.begin();
     while(bfit != Filenames.end()){
-        FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
+        YLOGINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
         const auto Filename = *bfit;
 
@@ -94,7 +95,7 @@ bool Load_From_PLY_Files( Drover &DICOM_data,
 
                 DICOM_data.smesh_data.back()->meshes.metadata.merge(generic_metadata);
 
-                FUNCINFO("Loaded surface mesh with " 
+                YLOGINFO("Loaded surface mesh with " 
                          << N_verts << " vertices and "
                          << N_faces << " faces");
 
@@ -113,13 +114,13 @@ bool Load_From_PLY_Files( Drover &DICOM_data,
 
                 DICOM_data.point_data.back()->pset.metadata.merge(generic_metadata);
 
-                FUNCINFO("Loaded point cloud with " << N_verts << " poinnts");
+                YLOGINFO("Loaded point cloud with " << N_verts << " poinnts");
             }
 
             bfit = Filenames.erase( bfit ); 
             continue;
         }catch(const std::exception &e){
-            FUNCINFO("Unable to load as PLY mesh or point cloud file");
+            YLOGINFO("Unable to load as PLY mesh or point cloud file");
             DICOM_data.smesh_data.pop_back();
         };
 

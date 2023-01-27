@@ -20,6 +20,7 @@
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorImages.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
@@ -94,7 +95,7 @@ bool DumpRTPlanMetadataOccurrencesToFile(Drover &DICOM_data,
     }
 
     //Report the findings. 
-    FUNCINFO("Attempting to claim a mutex");
+    YLOGINFO("Attempting to claim a mutex");
     {
         //File-based locking is used so this program can be run over many patients concurrently.
         //

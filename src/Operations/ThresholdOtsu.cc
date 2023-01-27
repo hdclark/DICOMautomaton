@@ -20,6 +20,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -283,7 +284,7 @@ bool ThresholdOtsu(Drover &DICOM_data,
         // Compute the Otsu threshold.
         const auto f_threshold = hist.Find_Otsu_Binarization_Threshold();
 
-        FUNCINFO("Otsu threshold found to be " << f_threshold);
+        YLOGINFO("Otsu threshold found to be " << f_threshold);
 
         // ==========================================================
 

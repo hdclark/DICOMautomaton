@@ -22,6 +22,7 @@
 #include "YgorArguments.h"    //Needed for ArgumentHandler class.
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 #include "Structs.h"
@@ -320,14 +321,14 @@ try{
     // See https://docs.appimage.org/packaging-guide/environment-variables.html#type-2-appimage-runtime (20210801).
     if(nullptr != std::getenv("APPIMAGE")){
         if(const char *owd = std::getenv("OWD"); nullptr != owd){
-            FUNCWARN("Detected AppImageKit packaging. Resetting current working directory via OWD environment variable");
+            YLOGWARN("Detected AppImageKit packaging. Resetting current working directory via OWD environment variable");
             std::filesystem::current_path( std::filesystem::path( std::string(owd) ) );
         }
 
 #if defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)
         if(nullptr == std::getenv("LIBGL_ALWAYS_SOFTWARE")){
             if(0 == setenv("LIBGL_ALWAYS_SOFTWARE", "1", 1)){
-                FUNCWARN("Forcing OpenGL software emulation to improve portability. To disable this, set the environment variable LIBGL_ALWAYS_SOFTWARE=0");
+                YLOGWARN("Forcing OpenGL software emulation to improve portability. To disable this, set the environment variable LIBGL_ALWAYS_SOFTWARE=0");
             }
         }
 #endif // defined(_POSIX_C_SOURCE) && (_POSIX_C_SOURCE >= 200112L)
@@ -338,10 +339,10 @@ try{
         std::filesystem::current_path();
     }catch(const std::exception &){
         if(const char *pwd = std::getenv("PWD"); nullptr != pwd){
-            FUNCWARN("Current working directory not set. Resetting via PWD environment variable");
+            YLOGWARN("Current working directory not set. Resetting via PWD environment variable");
             std::filesystem::current_path( std::filesystem::path( std::string(pwd) ) );
         }else{
-            FUNCWARN("Current working directory not set. Resetting to temporary path");
+            YLOGWARN("Current working directory not set. Resetting to temporary path");
             std::filesystem::current_path( std::filesystem::temp_directory_path() );
         }
     }
@@ -357,13 +358,13 @@ try{
     if(FilenameLex.empty()){
         FilenameLex = Locate_Lexicon_File();
         if(FilenameLex.empty()){
-            FUNCINFO("No lexicon was explicitly provided. Using located file '" << FilenameLex << "' as lexicon");
+            YLOGINFO("No lexicon was explicitly provided. Using located file '" << FilenameLex << "' as lexicon");
         }
     }
     if(FilenameLex.empty()){
-        FUNCINFO("No lexicon provided or located. Attempting to write a default lexicon");
+        YLOGINFO("No lexicon provided or located. Attempting to write a default lexicon");
         FilenameLex = Create_Default_Lexicon_File();
-        FUNCINFO("Using file '" << FilenameLex << "' as lexicon");
+        YLOGINFO("Using file '" << FilenameLex << "' as lexicon");
     }
 
     //================================================= Data Loading =================================================
@@ -386,7 +387,7 @@ try{
             // If file loading failed, then the loader successfully rejected bad data. Terminate to indicate this success.
             return 0;
 #else
-            //FUNCERR("Unable to load file " << StandaloneFilesDirsReachable.front() << ". Refusing to continue");
+            //YLOGERR("Unable to load file " << StandaloneFilesDirsReachable.front() << ". Refusing to continue");
             throw std::runtime_error("File loading unsuccessful. Refusing to continue"); // TODO: provide better diagnostic here.
 #endif // DCMA_FUZZ_TESTING
         }
@@ -401,7 +402,7 @@ try{
 
     // Default to an interactive viewer that is known to handle missing data.
     if( Operations.empty() ){
-        FUNCWARN("No operations specified: defaulting to operation 'SDL_Viewer'");
+        YLOGWARN("No operations specified: defaulting to operation 'SDL_Viewer'");
         Operations.emplace_back("SDL_Viewer");
 
     // Otherwise, if there are operations but no files, then require the user to specify they are generating virtual
@@ -429,10 +430,10 @@ try{
 #if defined(__MINGW64__) || defined(__MINGW32__)
     // Add a delay on Windows so we can inspect debug info.
     // Note: this will be replaced when logging is improved.
-    FUNCWARN(e.what());
+    YLOGWARN(e.what());
     std::this_thread::sleep_for(std::chrono::seconds(15));
 #endif
-    FUNCERR(e.what());
+    YLOGERR(e.what());
 }
     return 0;
 }

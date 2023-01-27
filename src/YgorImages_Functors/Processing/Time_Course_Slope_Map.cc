@@ -11,6 +11,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 
@@ -35,7 +36,7 @@ bool TimeCourseSlopeMap(planar_image_collection<float,double>::images_list_it_t 
 
     //Verify there are at least two images from which to extract a time course.
     if(selected_img_its.size() < 2){
-        FUNCWARN("Not enough images to perform linear regression. Need at least two images. "
+        YLOGWARN("Not enough images to perform linear regression. Need at least two images. "
                  "Producing a blank image and continuing.");
         return false;
     }
@@ -73,7 +74,7 @@ bool TimeCourseSlopeMap(planar_image_collection<float,double>::images_list_it_t 
                         //channel_time_course.push_back(dt.value(), 0.0, avg_val, avg_val_sigma, InhibitSort);
                         channel_time_course.push_back(dt.value(), 0.0, avg_val, 0.0, InhibitSort);
                     }else{
-                        FUNCERR("Image is missing time metadata. Bailing");
+                        YLOGERR("Image is missing time metadata. Bailing");
                     }
                 }
                 channel_time_course.stable_sort();
@@ -92,7 +93,7 @@ bool TimeCourseSlopeMap(planar_image_collection<float,double>::images_list_it_t 
 
                         //const float newval = (res.slope > 0) ? 200 : 100; //Sign of the slope, pos or neg.
 
-FUNCERR("Need to figure out if the numerical rebasing/positive shift is needed here. Probably not, but maybe for presicion?");
+YLOGERR("Need to figure out if the numerical rebasing/positive shift is needed here. Probably not, but maybe for presicion?");
                         const auto scaled = (1E5) * res.slope + (1E6);
                         const auto trunc = std::max(0.0, scaled);
                         const auto newval = static_cast<float>(std::round(trunc));

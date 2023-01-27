@@ -51,7 +51,7 @@ bool ConvertWarpToImage(Drover &DICOM_data,
 
     auto T3s_all = All_T3s( DICOM_data );
     auto T3s = Whitelist( T3s_all, TFormSelectionStr );
-    FUNCINFO(T3s.size() << " transformations selected");
+    YLOGINFO(T3s.size() << " transformations selected");
 
     for(auto & t3p_it : T3s){
         std::visit([&](auto && t){
@@ -61,17 +61,17 @@ bool ConvertWarpToImage(Drover &DICOM_data,
 
             // Affine transformations.
             }else if constexpr (std::is_same_v<V, affine_transform<double>>){
-                FUNCINFO("Converting affine transformation now");
+                YLOGINFO("Converting affine transformation now");
                 std::runtime_error("Not yet implemented");
 
             // Thin-plate spline transformations.
             }else if constexpr (std::is_same_v<V, thin_plate_spline>){
-                FUNCINFO("Converting thin-plate spline transformation now");
+                YLOGINFO("Converting thin-plate spline transformation now");
                 std::runtime_error("Not yet implemented");
 
             // Vector deformation fields.
             }else if constexpr (std::is_same_v<V, deformation_field>){
-                FUNCINFO("Converting vector deformation field now");
+                YLOGINFO("Converting vector deformation field now");
 
                 auto out = std::make_unique<Image_Array>();
                 auto l_meta = coalesce_metadata_for_basic_mr_image({});

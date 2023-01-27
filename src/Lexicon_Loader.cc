@@ -8,6 +8,7 @@
 #include "Explicator.h"       //Needed for Explicator class.
 
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for SplitStringToVector, Canonicalize_String2, SplitVector functions.
 #include "YgorFilesDirs.h"
 

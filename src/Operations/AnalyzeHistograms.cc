@@ -35,6 +35,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
@@ -213,7 +214,7 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                                    { "AbscissaScaling", ".*None.*" },
                                    { "OrdinateScaling", ".*None.*" } } );
     
-    FUNCINFO("Selected " << LSs.size() << " line samples for analysis");
+    YLOGINFO("Selected " << LSs.size() << " line samples for analysis");
 
     for(auto & lsp_it : LSs){
         //const auto Modality = (*lsp_it)->line.metadata["Modality"];
@@ -325,7 +326,7 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                      std::regex_match(ac, q) ){
 
                 const auto p = Get_All_Regex(ac, q);
-                //for(const auto &x : p) FUNCINFO("    Parsed parameter: '" << x << "'");                
+                //for(const auto &x : p) YLOGINFO("    Parsed parameter: '" << x << "'");                
                 if(p.size() != 4) throw std::runtime_error("Unable to parse constraint (C).");
                 const auto mmm = p.at(0);
                 //const auto ineq = p.at(1);
@@ -381,7 +382,7 @@ bool AnalyzeHistograms(Drover &DICOM_data,
 
                 const auto p = Get_All_Regex(ac, q);
                 if(p.size() != 6) throw std::runtime_error("Unable to parse constraint (E).");
-                //for(const auto &x : p) FUNCINFO("    Parsed parameter: '" << x << "'");                
+                //for(const auto &x : p) YLOGINFO("    Parsed parameter: '" << x << "'");                
 
                 const auto HC = p.at(0); // hot or cold.
                 const auto V_lhs = std::stod(p.at(1)); // inner volume number.
@@ -476,7 +477,7 @@ bool AnalyzeHistograms(Drover &DICOM_data,
 
                 const auto p = Get_All_Regex(ac, q);
                 if(p.size() != 5) throw std::runtime_error("Unable to parse constraint (E).");
-                //for(const auto &x : p) FUNCINFO("    Parsed parameter: '" << x << "'");                
+                //for(const auto &x : p) YLOGINFO("    Parsed parameter: '" << x << "'");                
 
                 const auto D_lhs = std::stod(p.at(0)); // inner dose number.
                 const auto LHS_unit = p.at(1); // Gy or %.
@@ -531,7 +532,7 @@ bool AnalyzeHistograms(Drover &DICOM_data,
 
             // If the constraint did not match any known format.
             }else{
-                FUNCWARN("Constraint '" << ac << "' did not match any known format");
+                YLOGWARN("Constraint '" << ac << "' did not match any known format");
              
                 // Also acknowledge in-band that the constraint did not match any implemented form.
                 emit_boilerplate();
@@ -551,7 +552,7 @@ bool AnalyzeHistograms(Drover &DICOM_data,
     } // Loop over line samples.
 
     //Print the report.
-    //FUNCINFO("Report will contain: " << report.str());
+    //YLOGINFO("Report will contain: " << report.str());
 
     //Write the report to file.
     if(!LSs.empty()){

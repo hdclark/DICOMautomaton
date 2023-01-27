@@ -18,6 +18,7 @@
 
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for SplitStringToVector, Canonicalize_String2, SplitVector functions.
 
 #include "Structs.h"
@@ -149,7 +150,7 @@ bool Load_From_Contour_Collection_Files( Drover &DICOM_data,
 
     auto bfit = Filenames.begin();
     while(bfit != Filenames.end()){
-        FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
+        YLOGINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
         const auto Filename = *bfit;
 
@@ -191,11 +192,11 @@ bool Load_From_Contour_Collection_Files( Drover &DICOM_data,
             DICOM_data.Ensure_Contour_Data_Allocated();
             DICOM_data.contour_data->ccs.splice( std::end(DICOM_data.contour_data->ccs), ccs );
 
-            FUNCINFO("Loaded " << N_ccs << " contour collections with a total of " << N_cs << " contours");
+            YLOGINFO("Loaded " << N_ccs << " contour collections with a total of " << N_cs << " contours");
             bfit = Filenames.erase( bfit ); 
             continue;
         }catch(const std::exception &e){
-            FUNCINFO("Unable to load as plaintext contour collection file: '" << e.what() << "'");
+            YLOGINFO("Unable to load as plaintext contour collection file: '" << e.what() << "'");
         };
 
         //Skip the file. It might be destined for some other loader.

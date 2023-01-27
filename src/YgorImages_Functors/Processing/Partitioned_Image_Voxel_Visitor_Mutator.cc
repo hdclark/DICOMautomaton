@@ -8,6 +8,7 @@
 #include "Partitioned_Image_Voxel_Visitor_Mutator.h"
 #include "YgorImages.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 
 template <class T> class contour_collection;
 
@@ -30,7 +31,7 @@ bool PartitionedImageVoxelVisitorMutator(planar_image_collection<float,double>::
     try{
         user_data_s = std::any_cast<PartitionedImageVoxelVisitorMutatorUserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
     

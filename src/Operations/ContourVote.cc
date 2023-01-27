@@ -17,6 +17,7 @@
 #include "Explicator.h"       //Needed for Explicator class.
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 
 
@@ -177,7 +178,7 @@ bool ContourVote(Drover &DICOM_data,
                    return !(std::regex_match(ROIName,roinormalizedregex));
     });
     if(cop_ROIs.empty()){
-        FUNCWARN("No contours participated, so no contours won");
+        YLOGWARN("No contours participated, so no contours won");
     }
         
     if(!std::isnan( Area )){

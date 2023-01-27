@@ -57,6 +57,7 @@
 
 
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathIOOFF.h"    //Needed for WritePointsToOFF(...)
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
@@ -542,11 +543,11 @@ bool SurfaceBasedRayCastDoseAccumulate(Drover &DICOM_data,
     meshing_params.GridColumns = 128;
     meshing_params.MutateOpts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
     meshing_params.MutateOpts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
-    FUNCWARN("Ignoring contour orientations; assuming ROI polyhderon is simple");
+    YLOGWARN("Ignoring contour orientations; assuming ROI polyhderon is simple");
     auto surface_mesh = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_ROIs, meshing_params );
     auto polyhedron = dcma_surface_meshes::FVSMeshToPolyhedron( surface_mesh );
 
-    FUNCINFO("The polyhedron surface has " << polyhedron.size_of_vertices() << " vertices"
+    YLOGINFO("The polyhedron surface has " << polyhedron.size_of_vertices() << " vertices"
              " and " << polyhedron.size_of_facets() << " faces");
 
     if(!ROISurfaceMeshFileName.empty()){
@@ -561,7 +562,7 @@ bool SurfaceBasedRayCastDoseAccumulate(Drover &DICOM_data,
         //const long int MeshSimplificationEdgeCountLimit = 7500;
         //polyhedron_processing::Simplify(polyhedron, MeshSimplificationEdgeCountLimit);
     }
-    FUNCINFO("The subdivided triangulated polyhedron has " << polyhedron.size_of_vertices() << " vertices"
+    YLOGINFO("The subdivided triangulated polyhedron has " << polyhedron.size_of_vertices() << " vertices"
              " and " << polyhedron.size_of_facets() << " faces");
     if(!SubdividedROISurfaceMeshFileName.empty()){
         std::ofstream out(SubdividedROISurfaceMeshFileName);
@@ -578,11 +579,11 @@ bool SurfaceBasedRayCastDoseAccumulate(Drover &DICOM_data,
     meshing_params.GridColumns = 128;
     meshing_params.MutateOpts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
     meshing_params.MutateOpts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
-    FUNCWARN("Ignoring contour orientations; assuming ROI polyhderon is simple");
+    YLOGWARN("Ignoring contour orientations; assuming ROI polyhderon is simple");
     auto ref_surface_mesh = dcma_surface_meshes::Estimate_Surface_Mesh_Marching_Cubes( cc_Refs, meshing_params );
     auto ref_polyhedron = dcma_surface_meshes::FVSMeshToPolyhedron( ref_surface_mesh );
 
-    FUNCINFO("The reference polyhedron surface has " << ref_polyhedron.size_of_vertices() << " vertices"
+    YLOGINFO("The reference polyhedron surface has " << ref_polyhedron.size_of_vertices() << " vertices"
              " and " << ref_polyhedron.size_of_facets() << " faces");
 
     if(!ROISurfaceMeshFileName.empty()){
@@ -597,7 +598,7 @@ bool SurfaceBasedRayCastDoseAccumulate(Drover &DICOM_data,
         //const long int MeshSimplificationEdgeCountLimit = 7500;
         //polyhedron_processing::Simplify(ref_polyhedron, MeshSimplificationEdgeCountLimit);
     }
-    FUNCINFO("The subdivided triangulated reference polyhedron has " << ref_polyhedron.size_of_vertices() << " vertices"
+    YLOGINFO("The subdivided triangulated reference polyhedron has " << ref_polyhedron.size_of_vertices() << " vertices"
              " and " << ref_polyhedron.size_of_facets() << " faces");
     if(!SubdividedRefSurfaceMeshFileName.empty()){
         std::ofstream out(SubdividedRefSurfaceMeshFileName);
@@ -639,7 +640,7 @@ bool SurfaceBasedRayCastDoseAccumulate(Drover &DICOM_data,
         // which will stick out beyond the contour planes. (The margin is added at the top and the bottom.)
         z_margin = sep_per_plane * 1.5;
     }else{
-        FUNCWARN("Only a single contour plane was detected. Guessing its thickness.."); 
+        YLOGWARN("Only a single contour plane was detected. Guessing its thickness.."); 
         z_margin = 5.0;
     }
 
@@ -853,7 +854,7 @@ bool SurfaceBasedRayCastDoseAccumulate(Drover &DICOM_data,
                 {
                     std::lock_guard<std::mutex> lock(printer);
                     ++completed;
-                    FUNCINFO("Completed " << completed << " of " << SourceDetectorRows 
+                    YLOGINFO("Completed " << completed << " of " << SourceDetectorRows 
                           << " --> " << static_cast<int>(1000.0*(completed)/SourceDetectorRows)/10.0 << "% done");
                 }
             });

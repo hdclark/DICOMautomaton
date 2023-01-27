@@ -15,6 +15,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"
 
 
@@ -45,7 +46,7 @@ bool DCEMRIT1MapV2(planar_image_collection<float,double>::images_list_it_t  loca
     // NOTE: This does not imply the images are valid or have distinct flip angles!
     const auto N = external_imgs.size();
     if(N < 2){
-        FUNCWARN("This routine require two or more images with distinct flip angles to produce an T1 map. "
+        YLOGWARN("This routine require two or more images with distinct flip angles to produce an T1 map. "
                  "The operation_functor was handed " << external_imgs.size() << " images. Cannot continue");
         return false;
     }
@@ -63,7 +64,7 @@ bool DCEMRIT1MapV2(planar_image_collection<float,double>::images_list_it_t  loca
         //Push back all overlapping images. If there is more than one we could either disregard all but 
         // the first or whine to the user that there should not be duplicates. The latter is safer. 
         auto overlapping_imgs_list = imgs.get().get_images_which_encompass_all_points(points);
-        if(overlapping_imgs_list.size() != 1) FUNCERR("There should be exactly one spatially overlapping image"
+        if(overlapping_imgs_list.size() != 1) YLOGERR("There should be exactly one spatially overlapping image"
                                                       " in the provided variable FlipAngle image sets. You'll"
                                                       " need to average spatially-overlapping images before"
                                                       " running this routine");
@@ -78,11 +79,11 @@ bool DCEMRIT1MapV2(planar_image_collection<float,double>::images_list_it_t  loca
     std::vector<double> RepTime;
     for(auto img_it : overlapping_imgs){
         auto FA = img_it->GetMetadataValueAs<double>("FlipAngle"); //Units: degrees.
-        if(!FA) FUNCERR("Image is missing 'FlipAngle', which is needed to compute T1. Cannot continue");
+        if(!FA) YLOGERR("Image is missing 'FlipAngle', which is needed to compute T1. Cannot continue");
         auto l_FA = FA.value() * pi/180.0;
         for(auto PrevFlipAngle : FlipAngle){
             if(RELATIVE_DIFF(PrevFlipAngle, l_FA) <= (1.0*pi/180.0)){
-                FUNCERR("Encountered 'FlipAngle's that differ by less than one degree. "
+                YLOGERR("Encountered 'FlipAngle's that differ by less than one degree. "
                         " The computation will most likely be invalid due to numerical issues.");
                 // NOTE: It is actually OK to continue if you need to, but be aware that numerical issues are likely
                 //       to happen unless (1) the input data is low-noise, or (2) you have a lot of data at other
@@ -93,11 +94,11 @@ bool DCEMRIT1MapV2(planar_image_collection<float,double>::images_list_it_t  loca
         FlipAngle.push_back(l_FA);
 
         auto RT = img_it->GetMetadataValueAs<double>("RepetitionTime"); //Units: msec.
-        if(!RT) FUNCERR("Image is missing 'RepetitionTime', which is needed to compute T1. Cannot continue");
+        if(!RT) YLOGERR("Image is missing 'RepetitionTime', which is needed to compute T1. Cannot continue");
         auto l_RT = RT.value() * (1E-3); //Stored in seconds, not milliseconds.
         for(auto PrevRepTime : RepTime){
             if(RELATIVE_DIFF(PrevRepTime, l_RT) > (1E-6)){
-                FUNCERR("Encountered 'RepititionTime's that differ by more than one microsecond. Cannot continue");
+                YLOGERR("Encountered 'RepititionTime's that differ by more than one microsecond. Cannot continue");
                 // NOTE: Of the routines that follow, only the most brain-dead (numerical optimization) can handle 
                 //       this situation. Enable iff you must!
             }

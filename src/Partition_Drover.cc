@@ -43,7 +43,7 @@ Partition_Drover( Drover& DICOM_data,
                         break;
                     }else if(1 < distinct_vals.size()){
                         // Strictly require all sub-object metadata in each object to be consistent.
-                        FUNCWARN("Refusing to partition heterogeneous element '" << container_type << "' which contains " << distinct_vals.size() << " distinct key-values");
+                        YLOGWARN("Refusing to partition heterogeneous element '" << container_type << "' which contains " << distinct_vals.size() << " distinct key-values");
                         break;
                     }else{
                         value_signature.insert(*std::begin(distinct_vals));

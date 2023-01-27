@@ -36,6 +36,7 @@
 #include "YgorMathBSpline.h"   //Needed for basis_spline class.
 #include "YgorMathChebyshev.h" //Needed for cheby_approx class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
@@ -388,22 +389,22 @@ bool CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(Drover &DICOM_data,
     //Look for relevant invocation metadata.
     double ContrastInjectionLeadTime = 6.0; //Seconds. 
     if(l_InvocationMetadata.count("ContrastInjectionLeadTime") == 0){
-        FUNCWARN("Unable to locate 'ContrastInjectionLeadTime' invocation metadata key. Assuming the default lead time "
+        YLOGWARN("Unable to locate 'ContrastInjectionLeadTime' invocation metadata key. Assuming the default lead time "
                  << ContrastInjectionLeadTime << "s is appropriate");
     }else{
         ContrastInjectionLeadTime = std::stod( l_InvocationMetadata["ContrastInjectionLeadTime"] );
         if(ContrastInjectionLeadTime < 0.0) throw std::runtime_error("Non-sensical 'ContrastInjectionLeadTime' found.");
-        FUNCINFO("Found 'ContrastInjectionLeadTime' invocation metadata key. Using value " << ContrastInjectionLeadTime << "s");
+        YLOGINFO("Found 'ContrastInjectionLeadTime' invocation metadata key. Using value " << ContrastInjectionLeadTime << "s");
     }
 
     double ContrastInjectionWashoutTime = 60.0; //Seconds.
     if(l_InvocationMetadata.count("ContrastInjectionWashoutTime") == 0){
-        FUNCWARN("Unable to locate 'ContrastInjectionWashoutTime' invocation metadata key. Assuming the default lead time "
+        YLOGWARN("Unable to locate 'ContrastInjectionWashoutTime' invocation metadata key. Assuming the default lead time "
                  << ContrastInjectionWashoutTime << "s is appropriate");
     }else{
         ContrastInjectionWashoutTime = std::stod( l_InvocationMetadata["ContrastInjectionWashoutTime"] );
         if(ContrastInjectionWashoutTime < 0.0) throw std::runtime_error("Non-sensical 'ContrastInjectionWashoutTime' found.");
-        FUNCINFO("Found 'ContrastInjectionWashoutTime' invocation metadata key. Using value " << ContrastInjectionWashoutTime << "s");
+        YLOGINFO("Found 'ContrastInjectionWashoutTime' invocation metadata key. Using value " << ContrastInjectionWashoutTime << "s");
     }
 
     //Whitelist contours. Also rename the remaining into either "AIF" or "VIF".

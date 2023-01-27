@@ -24,6 +24,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorPlot.h"
 #include "YgorStats.h"
 #include "YgorString.h"
@@ -227,7 +228,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Height_Along_Given_Plane_
             ++cc2_it;
             if(!(cc2_it != this->ccs.end())) continue; //Done!
             if(cc1_it->ROI_number != cc2_it->ROI_number){
-                FUNCERR("This routine requires that distinct contour_collections have distinct ROI numbers");
+                YLOGERR("This routine requires that distinct contour_collections have distinct ROI numbers");
             }
         }
     }
@@ -1086,38 +1087,38 @@ void Drover::Bounded_Dose_General( std::list<double> *pixel_doses,
     //----------------------------------------- Sanity/Safety Checks ----------------------------------------
     if((pixel_doses == nullptr) && (mean_doses == nullptr) && (min_max_doses == nullptr) 
     && (pos_doses   == nullptr) && (bulk_doses == nullptr) && (cent_moms     == nullptr) ){
-        FUNCWARN("No valid output pointers provided. Nothing will be computed");
+        YLOGWARN("No valid output pointers provided. Nothing will be computed");
         return;
     }
     if(!d.Has_Contour_Data() || !d.Has_Image_Data()){
-        FUNCERR("Attempted to use bounded dose routine, but we do not have contours and/or dose");
+        YLOGERR("Attempted to use bounded dose routine, but we do not have contours and/or dose");
     }
     if((pixel_doses != nullptr) && !pixel_doses->empty()){
-        FUNCWARN("Requesting to push pixel doses to a non-empty container. Assuming this was intentional");
+        YLOGWARN("Requesting to push pixel doses to a non-empty container. Assuming this was intentional");
         //This might be intentional if, say, we want to group together lots of pixel doses from several subsegments by
         // picking and choosing (i.e. the hard way - do it the easy way by selecting subsegments into a collection and
         // then collect bulk_doses into nicely-partitioned groups).
     }
     if((mean_doses != nullptr) && !mean_doses->empty()){
-        FUNCWARN("Requesting to push mean doses to a non-empty container. Emptying prior to continuing - this is surely a programming error.");
+        YLOGWARN("Requesting to push mean doses to a non-empty container. Emptying prior to continuing - this is surely a programming error.");
         mean_doses->clear();
     }
     if((bulk_doses != nullptr) && !bulk_doses->empty()){
-        FUNCWARN("Requesting to push bulk pixel doses to a non-empty container. Assuming this was intentional");
+        YLOGWARN("Requesting to push bulk pixel doses to a non-empty container. Assuming this was intentional");
     }
     if((min_max_doses != nullptr) && !min_max_doses->empty()){
-        FUNCWARN("Requesting to push min/max doses to a non-empty container. Emptying prior to continuing - this is surely a programming error.");
+        YLOGWARN("Requesting to push min/max doses to a non-empty container. Emptying prior to continuing - this is surely a programming error.");
         min_max_doses->clear();
     }
     if((pos_doses != nullptr) && !pos_doses->empty()){
-        FUNCWARN("Requesting to push positional doses to a non-empty container. Emptying prior to continuing - this is surely a programming error.");
+        YLOGWARN("Requesting to push positional doses to a non-empty container. Emptying prior to continuing - this is surely a programming error.");
         pos_doses->clear();
     }
     if((pos_doses != nullptr) && !Fselection){
-        FUNCERR("Passed space for positional doses but not given a heuristic function (for determining if two points are equal). This is required!");
+        YLOGERR("Passed space for positional doses but not given a heuristic function (for determining if two points are equal). This is required!");
     }
     if((cent_moms != nullptr) && !cent_moms->empty()){
-        FUNCWARN("Requesting centralized moments with a non-empty container. Emptying prior to continuing - we require the working space");
+        YLOGWARN("Requesting centralized moments with a non-empty container. Emptying prior to continuing - we require the working space");
         //Since we have to normalize them at the end, we have to begin with empty space.
     }
 
@@ -1125,7 +1126,7 @@ void Drover::Bounded_Dose_General( std::list<double> *pixel_doses,
     if((min_max_doses != nullptr) && (d.image_data.size() > 1)){ //Only dose data meld when needed. Moments, for instance, probably don't need to be melded!
         dose_data_to_use = Meld_Image_Data(d.image_data);
         if(dose_data_to_use.size() != 1){
-            FUNCERR("This routine cannot handle multiple dose data which cannot be melded. This has " << dose_data_to_use.size());
+            YLOGERR("This routine cannot handle multiple dose data which cannot be melded. This has " << dose_data_to_use.size());
         }
     }
 
@@ -1209,7 +1210,7 @@ void Drover::Bounded_Dose_General( std::list<double> *pixel_doses,
                         if(point.y > max_y) max_y = point.y;
                     }
                     if((min_x == alrgnum) || (min_y == alrgnum) || (max_x == -alrgnum) || (max_y == -alrgnum)){
-                        FUNCERR("Unable to find a reasonable bounding box around this contour");
+                        YLOGERR("Unable to find a reasonable bounding box around this contour");
                     }
     
                     //Now cycle through every pixel in the plane. This is kind of a shit way to do this, but then again this entire program is basically
@@ -1235,8 +1236,8 @@ void Drover::Bounded_Dose_General( std::list<double> *pixel_doses,
 
                         if(is_in_the_polygon){
                             //-----------------------------------------------------------------------------------------------------------------------
-                            //FUNCINFO("Bounding box (x,y)min (x,y)max = (" << min_x << "," << min_y << ") (" << max_x << "," << max_y << ")");
-                            //FUNCINFO("Point has (X,Y) = " << X << " " << Y);
+                            //YLOGINFO("Bounding box (x,y)min (x,y)max = (" << min_x << "," << min_y << ") (" << max_x << "," << max_y << ")");
+                            //YLOGINFO("Point has (X,Y) = " << X << " " << Y);
 
                             //NOTE: Remember: this is some integer representing dose. If we want a clamped [0:1] 
                             // value, we would use the clamped_channel(...) member instead!
@@ -1294,8 +1295,8 @@ void Drover::Bounded_Dose_General( std::list<double> *pixel_doses,
                 const auto ttldose = static_cast<double>(it.second.first);
                 const auto numvxls = static_cast<double>(it.second.second);
 
-                if(ttldose < 0.0) FUNCERR("Total dose was negative (" << ttldose << "). This is not possible");
-                if(numvxls < 0.0) FUNCERR("Total number of voxels was negative (" << numvxls << "). This is not possible");
+                if(ttldose < 0.0) YLOGERR("Total dose was negative (" << ttldose << "). This is not possible");
+                if(numvxls < 0.0) YLOGERR("Total number of voxels was negative (" << numvxls << "). This is not possible");
 
                 (*mean_doses)[cc_iter] += (ttldose/numvxls); //This dose is now in Gy (cGy?)
             }
@@ -1317,7 +1318,7 @@ void Drover::Bounded_Dose_General( std::list<double> *pixel_doses,
                  //Otherwise, we don't know if this is an error or not. Issue a warning but do not 
                  // adjust the values.
                  }else{
-                     FUNCWARN("Contradictory min = " << min << " and max = " << max);
+                     YLOGWARN("Contradictory min = " << min << " and max = " << max);
                  }
              }
          }
@@ -1361,7 +1362,7 @@ drover_bnded_dose_min_mean_max_dose_map_t Drover::Bounded_Dose_Min_Mean_Max() co
     this->Bounded_Dose_General(nullptr,nullptr,&means,&minmaxs,nullptr,nullptr,nullptr);
 
     if(means.size() != minmaxs.size()){
-        FUNCERR("Number of means did not match number of min/maxs. Must have encountered a computational error");
+        YLOGERR("Number of means did not match number of min/maxs. Must have encountered a computational error");
     }
 
     for(auto & it : means){
@@ -1384,7 +1385,7 @@ drover_bnded_dose_min_mean_median_max_dose_map_t Drover::Bounded_Dose_Min_Mean_M
     this->Bounded_Dose_General(nullptr,&bulks,&means,&minmaxs,nullptr,nullptr,nullptr);
 
     if(means.size() != minmaxs.size()){
-        FUNCERR("Number of means did not match number of min/maxs. Must have encountered a computational error");
+        YLOGERR("Number of means did not match number of min/maxs. Must have encountered a computational error");
     }
 
     for(auto & it : means){
@@ -1413,7 +1414,7 @@ drover_bnded_dose_stat_moments_map_t Drover::Bounded_Dose_Normalized_Cent_Moment
         //auto cc_it = m_it->first;
         //second is also a map --->  std::map<std::array<int,3>,double>.
         const auto m000 = m_it.second[{0,0,0}];
-        if(m000 == 0.0) FUNCERR("Cannot normalize - m000 is zero. Unable to continue");
+        if(m000 == 0.0) YLOGERR("Cannot normalize - m000 is zero. Unable to continue");
 
         auto mm_it = m_it.second.begin();
         while(mm_it != m_it.second.end()){
@@ -1434,7 +1435,7 @@ drover_bnded_dose_stat_moments_map_t Drover::Bounded_Dose_Normalized_Cent_Moment
 Drover Drover::Segment_Contours_Heuristically(const std::function<bool(bnded_dose_pos_dose_tup_t)>& Fselection) const {
     Drover out(*this);
  
-    if(!Fselection) FUNCERR("Passed an unaccessible heuristic function. Unable to continue");
+    if(!Fselection) YLOGERR("Passed an unaccessible heuristic function. Unable to continue");
 
     //First, get the positional dose data (using the copy).
     auto pos_dose = drover_bnded_dose_pos_dose_map_factory();
@@ -1523,8 +1524,8 @@ std::map<double,double>  Drover::Get_DVH() const {
 
     std::list<double> pixel_doses = this->Bounded_Dose_Bulk_Values();
     if(pixel_doses.empty()){
-        //FUNCERR("Unable to compute DVH: There was no data in the pixel_doses structure!");
-        FUNCWARN("Asked to compute DVH when no voxels appear to have any dose. This is physically possible, but please be sure it is what you expected");
+        //YLOGERR("Unable to compute DVH: There was no data in the pixel_doses structure!");
+        YLOGWARN("Asked to compute DVH when no voxels appear to have any dose. This is physically possible, but please be sure it is what you expected");
         //Could be due to:
         // -contours being too small (much smaller than voxel size).
         // -dose and contours not aligning properly. Maybe due to incorrect offsets/rotations/coordinate system?

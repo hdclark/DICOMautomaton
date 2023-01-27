@@ -13,6 +13,7 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 
 OperationDoc OpArgDocBoost_Serialize_Drover(){
@@ -101,7 +102,7 @@ bool Boost_Serialize_Drover(Drover &DICOM_data,
 
     const auto res = Common_Boost_Serialize_Drover(d, apath);
     if(res){
-        FUNCINFO("Dumped serialization to file " << apath);
+        YLOGINFO("Dumped serialization to file " << apath);
     }else{
         throw std::runtime_error("Unable dump serialization to file " + apath.string());
     }

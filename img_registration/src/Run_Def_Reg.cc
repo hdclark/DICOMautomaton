@@ -19,6 +19,7 @@
 #include "YgorArguments.h"    //Needed for ArgumentHandler class.
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorMath.h"         //Needed for various geometry classes (e.g., vec3).
 #include "YgorImages.h"       //Needed for planar_image_collection and planar_image classes.
 #include "YgorImagesIO.h"     //Needed for reading and writing images in FITS format, which preserves embedded metadata and supports 32bit-per-channel intensity.
@@ -66,11 +67,11 @@ int main(int argc, char* argv[]){
     arger.description = "A program for running a deformable registration algorithm.";
 
     arger.default_callback = [](int, const std::string &optarg) -> void {
-      FUNCERR("Unrecognized option with argument: '" << optarg << "'");
+      YLOGERR("Unrecognized option with argument: '" << optarg << "'");
       return; 
     };
     arger.optionless_callback = [&](const std::string &optarg) -> void {
-      FUNCERR("Unrecognized option with argument: '" << optarg << "'");
+      YLOGERR("Unrecognized option with argument: '" << optarg << "'");
       return; 
     };
     arger.push_back( ygor_arg_handlr_t(1, 'm', "moving", true, "moving.fits",
@@ -133,10 +134,10 @@ int main(int argc, char* argv[]){
 
     //============================================= Input Validation ================================================
     if(moving.images.empty()){
-        FUNCERR("Moving image array contains no images. Unable to continue.");
+        YLOGERR("Moving image array contains no images. Unable to continue.");
     }
     if(stationary.images.empty()){
-        FUNCERR("Stationary image array contains no images. Unable to continue.");
+        YLOGERR("Stationary image array contains no images. Unable to continue.");
     }
 
     //============================================ Perform Registration  =============================================
@@ -150,7 +151,7 @@ int main(int argc, char* argv[]){
         std::optional<AlignViaABCTransform> transform_opt = AlignViaABC(params, moving, stationary );
 
         if(transform_opt){
-            FUNCERR("ABC algorithm failed");
+            YLOGERR("ABC algorithm failed");
         }
 
         // If needed (for testing, debugging, ...) try to apply the transform.
@@ -160,12 +161,12 @@ int main(int argc, char* argv[]){
         //transform_opt.value().write_to("transform.txt");
 
     } else {
-        FUNCERR("Specified algorithm specified was invalid. Options are ABC, ...");
+        YLOGERR("Specified algorithm specified was invalid. Options are ABC, ...");
         return 1;
     }
 
     high_resolution_clock::time_point stop = high_resolution_clock::now();
     duration<double> time_span = duration_cast<duration<double>>(stop - start);
-    FUNCINFO("Excecution took time: " << time_span.count())
+    YLOGINFO("Excecution took time: " << time_span.count())
     return 0;
 }

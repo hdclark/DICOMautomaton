@@ -21,6 +21,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorMathIOOFF.h"
@@ -112,7 +113,7 @@ bool ExportContours(Drover &DICOM_data,
     }
     FO.close();
 
-    FUNCINFO("Contours written to '" << FN << "'");
+    YLOGINFO("Contours written to '" << FN << "'");
 
     return true;
 }

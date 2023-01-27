@@ -36,6 +36,7 @@
 #endif
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
@@ -454,7 +455,7 @@ bool AnalyzeLightRadFieldCoincidence(Drover &DICOM_data,
 #else
                 //Peak-based. No functions are fit here -- the field edge peak locations are directly used.
                 {
-                    FUNCWARN("Using inferior peak detection routine due to inaccessible GNU GSL functionality");
+                    YLOGWARN("Using inferior peak detection routine due to inaccessible GNU GSL functionality");
                     const auto peaks = s.Peaks();
                     auto min_dist = std::numeric_limits<double>::infinity();
                     for(const auto &samp : peaks.samples){
@@ -473,7 +474,7 @@ bool AnalyzeLightRadFieldCoincidence(Drover &DICOM_data,
 
 
             //Report the findings. 
-            FUNCINFO("Attempting to claim a mutex");
+            YLOGINFO("Attempting to claim a mutex");
             {
                 //File-based locking is used so this program can be run over many patients concurrently.
                 //
@@ -574,7 +575,7 @@ bool AnalyzeLightRadFieldCoincidence(Drover &DICOM_data,
                 YgorMathPlottingGnuplot::Plot<double>(row_sums, "Field Edges (Along Rows)", "DICOM position", "Pixel intensity");
                 YgorMathPlottingGnuplot::Plot<double>(col_sums, "Field Edges (Along Columns)", "DICOM position", "Pixel intensity");
             }catch(const std::exception &e){
-                FUNCWARN("Failed to plot: " << e.what());
+                YLOGWARN("Failed to plot: " << e.what());
             }
         }
     }

@@ -18,6 +18,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
 #include "YgorClustering.hpp"
@@ -50,12 +51,12 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
     try{
         user_data_s = std::any_cast<ComputeVolumetricNeighbourhoodSamplerUserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
 
     if( ccsl.empty() ){
-        FUNCWARN("Missing needed contour information. Cannot continue with computation");
+        YLOGWARN("Missing needed contour information. Cannot continue with computation");
         return false;
     }
 
@@ -72,7 +73,7 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
     }
 
     if(!Images_Form_Rectilinear_Grid(selected_imgs)){
-        FUNCWARN("Images do not form a rectilinear grid. Cannot continue");
+        YLOGWARN("Images do not form a rectilinear grid. Cannot continue");
         return false;
     }
     const bool is_regular_grid = Images_Form_Regular_Grid(selected_imgs);
@@ -310,7 +311,7 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
             {
                 std::lock_guard<std::mutex> lock(saver_printer);
                 ++completed;
-                FUNCINFO("Completed " << completed << " of " << img_count
+                YLOGINFO("Completed " << completed << " of " << img_count
                       << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "% done");
             }
         }); // thread pool task closure.

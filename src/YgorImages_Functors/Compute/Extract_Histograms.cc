@@ -19,6 +19,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
 #include "YgorClustering.hpp"
@@ -46,7 +47,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
     try{
         user_data_s = std::any_cast<ComputeExtractHistogramsUserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
 
@@ -59,7 +60,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
     user_data_s->mutation_opts.maskmod        = Mutate_Voxels_Opts::MaskMod::Noop;
 
     if( ccsl.empty() ){
-        FUNCWARN("Missing needed contour information. Cannot continue with computation");
+        YLOGWARN("Missing needed contour information. Cannot continue with computation");
         return false;
     }
 
@@ -81,7 +82,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
             if(user_data_s->grouping == ComputeExtractHistogramsUserData::GroupingMethod::Separate){
                 const auto ROIName = contour.GetMetadataValueAs<std::string>("ROIName");
                 if(!ROIName){
-                    FUNCWARN("Found contour missing ROIName metadata element. Using placeholder name");
+                    YLOGWARN("Found contour missing ROIName metadata element. Using placeholder name");
                 }
                 key = ROIName.value_or("unspecified");
             }else if(user_data_s->grouping == ComputeExtractHistogramsUserData::GroupingMethod::Combined){
@@ -163,7 +164,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
                 {
                     std::lock_guard<std::mutex> lock(printer);
                     ++completed;
-                    FUNCINFO("Completed " << completed << " of " << img_count
+                    YLOGINFO("Completed " << completed << " of " << img_count
                           << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "% done");
                 }
 
@@ -189,7 +190,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
         if( !std::isfinite(count_f)
         ||  (1.0E9 < count_f) // approx 10 GB just for the bin values, actual usage would be higher.
         ||  (count_f <= 1.0) ){
-            FUNCWARN("Excessive or invalid number of bins required for key '" << key << "'. Skipping it");
+            YLOGWARN("Excessive or invalid number of bins required for key '" << key << "'. Skipping it");
             to_purge.insert(key);
             continue;
         }
@@ -289,7 +290,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
                 {
                     std::lock_guard<std::mutex> lock(printer);
                     ++completed;
-                    FUNCINFO("Completed " << completed << " of " << img_count
+                    YLOGINFO("Completed " << completed << " of " << img_count
                           << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "% done");
                 }
 
@@ -304,7 +305,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
 
         if( (bin_counts.count(key) != 1)
         ||  (bin_counts[key] < 2) ){
-            FUNCWARN("Computed histogram with few enclosed voxels, or excessively coarse resolution. Skipping");
+            YLOGWARN("Computed histogram with few enclosed voxels, or excessively coarse resolution. Skipping");
             continue;
             //Could be due to:
             // -contours being too small (much smaller than voxel size).
@@ -392,7 +393,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
         //}
     }
 
-    FUNCINFO("Generated " << user_data_s->differential_histograms.size() << " histograms");
+    YLOGINFO("Generated " << user_data_s->differential_histograms.size() << " histograms");
 
     return true;
 }

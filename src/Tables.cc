@@ -10,6 +10,7 @@
 
 #include "YgorString.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 
 #include "Tables.h"
 
@@ -299,7 +300,7 @@ table2::read_csv( std::istream &is ){
     }
     if(use_pseps){
         seps = pseps;
-        FUNCINFO("Detected alternative separators, switching acceptable separators");
+        YLOGINFO("Detected alternative separators, switching acceptable separators");
     }
 
     // -------------------------------------

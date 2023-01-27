@@ -30,6 +30,7 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorFilesDirs.h"
 
@@ -283,7 +284,7 @@ bool AnalyzePicketFence(Drover &DICOM_data,
             const auto mean = animg->block_average( row_c - drow, row_c + drow, col_c - dcol, col_c + dcol, chnl );
             const auto median = animg->block_median( row_c - drow, row_c + drow, col_c - dcol, col_c + dcol, chnl );
             if(mean < median){
-                FUNCINFO("Image was found to be inverted. Pixels were flipped so the peaks are positive");
+                YLOGINFO("Image was found to be inverted. Pixels were flipped so the peaks are positive");
                 animg->apply_to_pixels([](long int, long int, long int, float &val) -> void {
                     val *= -1.0;
                     return;
@@ -637,7 +638,7 @@ bool AnalyzePicketFence(Drover &DICOM_data,
                         auto vicinity = avgd_profile3.Select_Those_Within_Inc(centre - SearchDistance, centre + SearchDistance);
                         const auto ar = Aspect_Ratio(vicinity) * 2.0 * SearchDistance; //Aspect ratio with x rescaled to 1.
 
-                        //FUNCINFO("Aspect ratio = " << ar);
+                        //YLOGINFO("Aspect ratio = " << ar);
                         if(std::isfinite(ar) && (ar > 0.20)){ // A fairly slight aspect ratio threshold is needed.
                             filtered_peaks.push_back( p4 );
                         }
@@ -756,7 +757,7 @@ bool AnalyzePicketFence(Drover &DICOM_data,
                 auto trimmed_junction_lines = PFC.junction_lines;
                 determine_junction_separations(PFC.junction_lines);
                 while( RELATIVE_DIFF(PFC.min_junction_sep, PFC.max_junction_sep) > 0.10 ){
-                    FUNCWARN("Junction separation is not consistent. Pruning the worst junction..");
+                    YLOGWARN("Junction separation is not consistent. Pruning the worst junction..");
 
                     std::map<PF_Context::j_num, double> rdiffs;
                     for(auto &t_j_line_p : trimmed_junction_lines){
@@ -950,8 +951,8 @@ bool AnalyzePicketFence(Drover &DICOM_data,
             }
             PFC.CollimatorCompensation = Stats::Median(j_rot) * 180 / pi;
 
-            FUNCINFO("Detected an uncompensated collimator rotation of " << PFC.CollimatorCompensation << " deg");
-            FUNCINFO("Restarting analysis to incorporate the extra collimator rotation");
+            YLOGINFO("Detected an uncompensated collimator rotation of " << PFC.CollimatorCompensation << " deg");
+            YLOGINFO("Restarting analysis to incorporate the extra collimator rotation");
             Extract_Leaf_Positions();
         }
 
@@ -1015,7 +1016,7 @@ bool AnalyzePicketFence(Drover &DICOM_data,
                 }
 
                 //Report findings about this leaf-pair.
-                FUNCINFO("Attempting to claim a mutex");
+                YLOGINFO("Attempting to claim a mutex");
                 {
                     auto gen_filename = [&]() -> std::string {
                         if(LeafGapsFileName.empty()){
@@ -1080,7 +1081,7 @@ bool AnalyzePicketFence(Drover &DICOM_data,
 
 
         //Report a summary.
-        FUNCINFO("Attempting to claim a mutex");
+        YLOGINFO("Attempting to claim a mutex");
         try{
             auto gen_filename = [&]() -> std::string {
                 if(ResultsSummaryFileName.empty()){
@@ -1126,7 +1127,7 @@ bool AnalyzePicketFence(Drover &DICOM_data,
                          body.str() );
 
         }catch(const std::exception &e){
-            FUNCERR("Unable to write to output file: '" << e.what() << "'");
+            YLOGERR("Unable to write to output file: '" << e.what() << "'");
         }
 
         //---------------------------------------------------------------------------

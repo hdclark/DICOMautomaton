@@ -237,9 +237,9 @@ ComputeIntegralSummations(KineticModel_1Compartment2Input_Reduced3Param_Chebyshe
 
     state->RSS = F;
 
-//FUNCINFO("Evaluating at {tauA, tauV, k2} = {" << tauA << ", " << tauV << ", " << k2 << "} gives {k1A, k1V} = {" << state->k1A << ", " << state->k1V << "} and F = " << F);
+//YLOGINFO("Evaluating at {tauA, tauV, k2} = {" << tauA << ", " << tauV << ", " << k2 << "} gives {k1A, k1V} = {" << state->k1A << ", " << state->k1V << "} and F = " << F);
 
-//FUNCINFO("{dF_dtauA, dF_dtauV, dF_dk2} = " << state->dF_dtauA << ", " << state->dF_dtauV << ", " << state->dF_dk2);
+//YLOGINFO("{dF_dtauA, dF_dtauV, dF_dk2} = " << state->dF_dtauA << ", " << state->dF_dtauV << ", " << state->dF_dk2);
 
     return;
 }

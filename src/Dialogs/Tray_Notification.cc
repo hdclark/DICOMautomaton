@@ -38,6 +38,7 @@
 
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 #include "../Thread_Pool.h"
@@ -81,20 +82,20 @@ tray_notification(const notification_t &n){
     };
     std::set<query_method> qm;
 #if defined(_WIN32) || defined(_WIN64)
-    FUNCINFO("Assuming powershell is available");
+    YLOGINFO("Assuming powershell is available");
     qm.insert( query_method::pshell );
     //if(win_cmd_is_available("powershell")){
-    //    FUNCINFO("powershell is available");
+    //    YLOGINFO("powershell is available");
     //    qm.insert( query_method::pshell );
     //}
 #endif
 #if defined(__linux__)
     if(sh_cmd_is_available("notify-send")){
-        FUNCINFO("notify-send is available");
+        YLOGINFO("notify-send is available");
         qm.insert( query_method::notifysend );
     }
     if(sh_cmd_is_available("zenity")){
-        FUNCINFO("zenity is available");
+        YLOGINFO("zenity is available");
         qm.insert( query_method::zenity );
     }
 #endif
@@ -155,7 +156,7 @@ tray_notification(const notification_t &n){
                     Execute_Command_In_Pipe(cmd);
                     return;
                 };
-                FUNCINFO("About to perform pshell command: '" << cmd << "'");
+                YLOGINFO("About to perform pshell command: '" << cmd << "'");
                 std::thread t(exec_cmd, cmd);
                 t.detach();
                 break;
@@ -176,7 +177,7 @@ tray_notification(const notification_t &n){
                 std::string cmd = ExpandMacros(proto_cmd, key_vals, "@");
 
                 // Notify the user.
-                FUNCINFO("About to perform notify-send command: '" << cmd << "'");
+                YLOGINFO("About to perform notify-send command: '" << cmd << "'");
                 auto res = Execute_Command_In_Pipe(cmd);
                 res = escape_for_quotes(res); // Trim newlines and unprintable characters.
 
@@ -204,14 +205,14 @@ tray_notification(const notification_t &n){
                     Execute_Command_In_Pipe(cmd);
                     return;
                 };
-                FUNCINFO("About to perform zenity command: '" << cmd << "'");
+                YLOGINFO("About to perform zenity command: '" << cmd << "'");
                 std::thread t(exec_cmd, cmd);
                 t.detach();
                 break;
             }
 
         }catch(const std::exception &e){
-            FUNCWARN("User notification failed: '" << e.what() << "'");
+            YLOGWARN("User notification failed: '" << e.what() << "'");
         }
     }
 

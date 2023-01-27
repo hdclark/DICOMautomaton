@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorMath.h"
 #include "YgorImages.h"
 
@@ -39,9 +40,9 @@ int main(int argc, char **argv){
         OperationsQuery q;
         client.GetSupportedOperations(known_ops, q);
 
-        FUNCINFO("Implementation of client goes here");
+        YLOGINFO("Implementation of client goes here");
     }catch( const std::exception &e){
-        FUNCWARN("Client failed: '" << e.what() << "'");
+        YLOGWARN("Client failed: '" << e.what() << "'");
     }
     transport->close();
 

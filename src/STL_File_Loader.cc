@@ -19,6 +19,7 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathIOSTL.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for SplitStringToVector, Canonicalize_String2, SplitVector functions.
 
 #include "Structs.h"
@@ -48,7 +49,7 @@ bool Load_Mesh_From_ASCII_STL_Files( Drover &DICOM_data,
 
         auto bfit = Filenames.begin();
         while(bfit != Filenames.end()){
-            FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
+            YLOGINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
             ++i;
             const auto Filename = *bfit;
 
@@ -91,13 +92,13 @@ bool Load_Mesh_From_ASCII_STL_Files( Drover &DICOM_data,
                 generic_metadata["NormalizedROIName"] = "unspecified"; 
                 DICOM_data.smesh_data.back()->meshes.metadata.merge(generic_metadata);
 
-                FUNCINFO("Loaded surface mesh with " 
+                YLOGINFO("Loaded surface mesh with " 
                          << N_verts << " vertices and "
                          << N_faces << " faces");
                 bfit = Filenames.erase( bfit ); 
                 continue;
             }catch(const std::exception &e){
-                FUNCINFO("Unable to load as ASCII STL mesh file");
+                YLOGINFO("Unable to load as ASCII STL mesh file");
                 DICOM_data.smesh_data.pop_back();
             };
 
@@ -131,7 +132,7 @@ bool Load_Mesh_From_Binary_STL_Files( Drover &DICOM_data,
 
         auto bfit = Filenames.begin();
         while(bfit != Filenames.end()){
-            FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
+            YLOGINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
             ++i;
             const auto Filename = *bfit;
 
@@ -174,13 +175,13 @@ bool Load_Mesh_From_Binary_STL_Files( Drover &DICOM_data,
                 generic_metadata["NormalizedROIName"] = "unspecified"; 
                 DICOM_data.smesh_data.back()->meshes.metadata.merge(generic_metadata);
 
-                FUNCINFO("Loaded surface mesh with " 
+                YLOGINFO("Loaded surface mesh with " 
                          << N_verts << " vertices and "
                          << N_faces << " faces");
                 bfit = Filenames.erase( bfit ); 
                 continue;
             }catch(const std::exception &e){
-                FUNCINFO("Unable to load as binary STL mesh file");
+                YLOGINFO("Unable to load as binary STL mesh file");
                 DICOM_data.smesh_data.pop_back();
             };
 

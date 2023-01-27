@@ -21,6 +21,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -76,7 +77,7 @@ bool LoadFilesInteractively(Drover &DICOM_data,
 
     std::list<std::filesystem::path> Paths;
     for(const auto &f : sf.get_selection()){
-        FUNCINFO("Attempting to load file '" << f << "'");
+        YLOGINFO("Attempting to load file '" << f << "'");
         std::filesystem::path PathShuttle;
         bool wasOK = false;
         try{

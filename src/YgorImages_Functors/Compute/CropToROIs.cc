@@ -14,6 +14,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 
 
 bool ComputeCropToROIs(planar_image_collection<float,double> &imagecoll,
@@ -44,19 +45,19 @@ bool ComputeCropToROIs(planar_image_collection<float,double> &imagecoll,
     try{
         user_data_s = std::any_cast<CropToROIsUserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
 
     //Check that there are contours to operate on.
     if(ccsl.empty()){
-        FUNCWARN("No contours provided. Cannot continue with computation");
+        YLOGWARN("No contours provided. Cannot continue with computation");
         return false;
     }
 
     //Check that there are images to operate on.
     if(imagecoll.images.empty()){
-        FUNCWARN("Missing images. There is nothing to crop");
+        YLOGWARN("Missing images. There is nothing to crop");
         return false;
     }
 

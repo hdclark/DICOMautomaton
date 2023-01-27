@@ -20,6 +20,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorTime.h"         //Needed for time_mark class.
 
@@ -196,7 +197,7 @@ bool DecayDoseOverTimeJones2014(Drover &DICOM_data,
     ud.TemporalGapMonths = 0.0;
     if(std::regex_match(TemporalGapOverride_str,IsPositiveFloat)){
         ud.TemporalGapMonths = std::stod(TemporalGapOverride_str) * 12.0;
-        FUNCINFO("Overriding temporal gap with user-provided value of: " << ud.TemporalGapMonths << " months");
+        YLOGINFO("Overriding temporal gap with user-provided value of: " << ud.TemporalGapMonths << " months");
     }else{
         auto study_dates = img_arr_ptr->imagecoll.get_all_values_for_key("StudyDate");
         for(const auto &adate : study_dates){
@@ -207,7 +208,7 @@ bool DecayDoseOverTimeJones2014(Drover &DICOM_data,
                 time_mark tnow;
                 const auto dt = static_cast<double>(t2.Diff_in_Days(tnow));
                 ud.TemporalGapMonths = dt / 30.4375;
-                FUNCINFO("Based on provided data and current date, assuming temporal gap is: " << ud.TemporalGapMonths);
+                YLOGINFO("Based on provided data and current date, assuming temporal gap is: " << ud.TemporalGapMonths);
                 break;
             }
         }

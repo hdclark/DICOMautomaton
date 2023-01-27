@@ -20,6 +20,7 @@
 #include "Explicator.h"       //Needed for Explicator class.
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 #ifdef DCMA_USE_CGAL
 #else
@@ -208,7 +209,7 @@ bool ContourBooleanOperations(Drover &DICOM_data,
         }
 
         //Perform the operation.
-        //FUNCINFO("About to perform boolean operation. A and B have " << A.size() << " and " << B.size() << " elements, respectively");
+        //YLOGINFO("About to perform boolean operation. A and B have " << A.size() << " and " << B.size() << " elements, respectively");
         auto cc = ContourBoolean(aplane, A, B, op);
 
         //Insert any contours created into a holding contour_collection.
@@ -222,9 +223,9 @@ bool ContourBooleanOperations(Drover &DICOM_data,
     cc_new.Insert_Metadata("MinimumSeparation", std::to_string(est_cont_spacing));
 
     // Insert it into the Contour_Data.
-    FUNCINFO("Boolean operation created " << cc_new.contours.size() << " contours");
+    YLOGINFO("Boolean operation created " << cc_new.contours.size() << " contours");
     if(cc_new.contours.empty()){
-        FUNCWARN("ROI was not added because it is empty");
+        YLOGWARN("ROI was not added because it is empty");
         // Note: While it is valid to have no resulting contours (e.g., the difference operation), having zero contours
         // in the collection is not well-defined in many situations and will potentially cause issues in other operations.
         // So the result is not propagated out at this time.

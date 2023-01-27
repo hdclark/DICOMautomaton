@@ -56,7 +56,7 @@ void serialize(Archive &a, Image_Array &i, const unsigned int version){
     }else if(version == 1){
         a & boost::serialization::make_nvp("imagecoll",i.imagecoll);
     }else{
-        FUNCWARN("Image_Array archives with version " << version << " are not recognized");
+        YLOGWARN("Image_Array archives with version " << version << " are not recognized");
     }
     return;
 }
@@ -67,7 +67,7 @@ void serialize(Archive &a, Point_Cloud &p, const unsigned int version){
     if(version == 0){
         a & boost::serialization::make_nvp("pset",p.pset);
     }else{
-        FUNCWARN("Point_Cloud archives with version " << version << " are not recognized");
+        YLOGWARN("Point_Cloud archives with version " << version << " are not recognized");
     }
     return;
 }
@@ -81,7 +81,7 @@ void serialize(Archive &a, Surface_Mesh &p, const unsigned int version){
         //       that make use of std::any.
         a & boost::serialization::make_nvp("meshes",p.meshes);
     }else{
-        FUNCWARN("Surface_Mesh archives with version " << version << " are not recognized");
+        YLOGWARN("Surface_Mesh archives with version " << version << " are not recognized");
     }
     return;
 }
@@ -123,7 +123,7 @@ void serialize(Archive &a, Static_Machine_State &p, const unsigned int version){
 
           & boost::serialization::make_nvp("metadata",p.metadata);
     }else{
-        FUNCWARN("Static_Machine_State archives with version " << version << " are not recognized");
+        YLOGWARN("Static_Machine_State archives with version " << version << " are not recognized");
     }
     return;
 }
@@ -139,7 +139,7 @@ void serialize(Archive &a, Dynamic_Machine_State &p, const unsigned int version)
 
           & boost::serialization::make_nvp("metadata",p.metadata);
     }else{
-        FUNCWARN("Dynamic_Machine_State archives with version " << version << " are not recognized");
+        YLOGWARN("Dynamic_Machine_State archives with version " << version << " are not recognized");
     }
     return;
 }
@@ -152,7 +152,7 @@ void serialize(Archive &a, RTPlan &p, const unsigned int version){
 
           & boost::serialization::make_nvp("metadata",p.metadata);
     }else{
-        FUNCWARN("RTPlan archives with version " << version << " are not recognized");
+        YLOGWARN("RTPlan archives with version " << version << " are not recognized");
     }
     return;
 }
@@ -163,7 +163,7 @@ void serialize(Archive &a, Line_Sample &l, const unsigned int version){
     if(version == 0){
         a & boost::serialization::make_nvp("line",l.line);
     }else{
-        FUNCWARN("Line_Sample archives with version " << version << " are not recognized");
+        YLOGWARN("Line_Sample archives with version " << version << " are not recognized");
     }
     return;
 }
@@ -172,7 +172,7 @@ void serialize(Archive &a, Line_Sample &l, const unsigned int version){
 template<typename Archive>
 void serialize(Archive &a, Drover &d, const unsigned int version){
     if(version == 0){
-        FUNCERR("Archives with version 0 are no longer supported. Cannot continue");
+        YLOGERR("Archives with version 0 are no longer supported. Cannot continue");
     }else if(version == 1){
         a & boost::serialization::make_nvp("contour_data",d.contour_data)
           & boost::serialization::make_nvp("image_data",d.image_data)
@@ -190,7 +190,7 @@ void serialize(Archive &a, Drover &d, const unsigned int version){
           & boost::serialization::make_nvp("rtplan_data",d.rtplan_data)
           & boost::serialization::make_nvp("lsamp_data",d.lsamp_data);
     }else{
-        FUNCWARN("Drover archives with version " << version << " are not recognized");
+        YLOGWARN("Drover archives with version " << version << " are not recognized");
     }
     return;
 }

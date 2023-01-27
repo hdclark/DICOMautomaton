@@ -22,6 +22,7 @@
 
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorMath.h"         //Needed for samples_1D.
 #include "YgorImages.h"       //Needed for planar_image_collection.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
@@ -75,7 +76,7 @@ AlignViaABC(AlignViaABCParams & params,
             const planar_image_collection<float, double> & stationary ){
 
     if(moving.images.empty() || stationary.images.empty()){
-        FUNCWARN("Unable to perform ABC alignment: an image array is empty");
+        YLOGWARN("Unable to perform ABC alignment: an image array is empty");
         return std::nullopt;
     }
 
@@ -95,7 +96,7 @@ AlignViaABC(AlignViaABCParams & params,
             const long int N_rows  = img.rows;
             const long int N_cols  = img.columns;
             const long int N_chnls = img.channels; // Each voxel can have multiple channels (e.g., r, g, b), but most medical images have a single channel.
-            if(N_chnls) FUNCWARN("Multiple channels detected. Ignoring all but the first channel");
+            if(N_chnls) YLOGWARN("Multiple channels detected. Ignoring all but the first channel");
             const long int channel = 0;
 
             for(long int row = 0; row < N_rows; ++row){
@@ -141,7 +142,7 @@ AlignViaABC(AlignViaABCParams & params,
             }
         }
 
-        FUNCINFO("The Eigen example coefficient sum is " << coeff_sum);
+        YLOGINFO("The Eigen example coefficient sum is " << coeff_sum);
     }
 
 
@@ -158,7 +159,7 @@ AlignViaABC(AlignViaABCParams & params,
     // ...
     // ...
 
-    // Note: if the algorithm fails at some point, emit a warning using FUNCWARN() (see above) and return std::nullopt .
+    // Note: if the algorithm fails at some point, emit a warning using YLOGWARN() (see above) and return std::nullopt .
 
     // -----------------------------------------------
 

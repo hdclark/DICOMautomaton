@@ -10,6 +10,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 
@@ -24,7 +25,7 @@ bool InImagePlaneBilinearSupersample(
     // in-plane bilinear supersampling technique that is completely oblivious to the pixel dimensions.
     // Only nearest-neighbour adjacent pixels are used. "Mirror" boundaries are used.
 
-    if(selected_img_its.size() != 1) FUNCERR("This routine operates on individual images only");
+    if(selected_img_its.size() != 1) YLOGERR("This routine operates on individual images only");
  
     //This routine requires a valid PerROITimeCoursesUserData struct packed into the user_data. Accept the throw
     // if the input is missing or invalid.
@@ -32,7 +33,7 @@ bool InImagePlaneBilinearSupersample(
     try{
         user_data_s = std::any_cast<InImagePlaneBilinearSupersampleUserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
 

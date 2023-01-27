@@ -18,6 +18,7 @@
 
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for SplitStringToVector, Canonicalize_String2, SplitVector functions.
 #include "YgorMathIOOBJ.h"
 
@@ -99,7 +100,7 @@ ReadTransform3(Transform3 &t3,
         return true;
 
     }else{
-        FUNCWARN("Transform variant not understood");
+        YLOGWARN("Transform variant not understood");
     }
     reset();
     return false;
@@ -128,7 +129,7 @@ WriteTransform3(const Transform3 &t3,
 
         // Affine transformations.
         }else if constexpr (std::is_same_v<V, affine_transform<double>>){
-            FUNCINFO("Exporting affine transformation now");
+            YLOGINFO("Exporting affine transformation now");
             os << "TRANSFORM_VARIANT_AFFINE_3" << std::endl;
             if(!(t.write_to(os))){
                 std::runtime_error("Unable to write to file. Cannot continue.");
@@ -136,7 +137,7 @@ WriteTransform3(const Transform3 &t3,
 
         // Thin-plate spline transformations.
         }else if constexpr (std::is_same_v<V, thin_plate_spline>){
-            FUNCINFO("Exporting thin-plate spline transformation now");
+            YLOGINFO("Exporting thin-plate spline transformation now");
             os << "TRANSFORM_VARIANT_THIN_PLATE_SPLINE_3" << std::endl;
             if(!(t.write_to(os))){
                 std::runtime_error("Unable to write to file. Cannot continue.");
@@ -144,7 +145,7 @@ WriteTransform3(const Transform3 &t3,
 
         // Vector deformation fields.
         }else if constexpr (std::is_same_v<V, deformation_field>){
-            FUNCINFO("Exporting vector deformation field now");
+            YLOGINFO("Exporting vector deformation field now");
             os << "TRANSFORM_VARIANT_DEFORMATION_FIELD_3" << std::endl;
             if(!(t.write_to(os))){
                 std::runtime_error("Unable to write to file. Cannot continue.");
@@ -181,7 +182,7 @@ bool Load_Transforms_From_Files( Drover &DICOM_data,
 
     auto bfit = Filenames.begin();
     while(bfit != Filenames.end()){
-        FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
+        YLOGINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
         const auto Filename = *bfit;
 
@@ -197,12 +198,12 @@ bool Load_Transforms_From_Files( Drover &DICOM_data,
             }
             //////////////////////////////////////////////////////////////
 
-            FUNCINFO("Loaded transform");
+            YLOGINFO("Loaded transform");
             bfit = Filenames.erase( bfit ); 
             continue;
 
         }catch(const std::exception &e){
-            FUNCINFO("Unable to load as transform file");
+            YLOGINFO("Unable to load as transform file");
             DICOM_data.trans_data.pop_back();
         };
 

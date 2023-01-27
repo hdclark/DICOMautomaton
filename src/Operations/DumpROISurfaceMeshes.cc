@@ -62,6 +62,7 @@
 
 
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMathChebyshev.h" //Needed for cheby_approx class.
@@ -301,7 +302,7 @@ bool DumpROISurfaceMeshes(Drover &DICOM_data,
             if(!polyhedron_processing::SaveAsOFF(output_mesh, FN)){
                 throw std::runtime_error("Unable to save original mesh as OFF file. Refusing to continue.");
             }
-            FUNCINFO("Original mesh written to '" << FN << "'");
+            YLOGINFO("Original mesh written to '" << FN << "'");
         }
 
         if(Subdivide){
@@ -319,7 +320,7 @@ bool DumpROISurfaceMeshes(Drover &DICOM_data,
             if(!polyhedron_processing::SaveAsOFF(output_mesh, FN)){
                 throw std::runtime_error("Unable to save processed mesh as OFF file. Refusing to continue.");
             }
-            FUNCINFO("Processed mesh written to '" << FN << "'");
+            YLOGINFO("Processed mesh written to '" << FN << "'");
         }
 
     }while(false);

@@ -18,6 +18,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
 #include "YgorClustering.hpp"
@@ -51,24 +52,24 @@ bool ComputeInterpolateImageSlices(planar_image_collection<float,double> &imagec
     try{
         user_data_s = std::any_cast<ComputeInterpolateImageSlicesUserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
 
 /*
     if( ccsl.empty() ){
-        FUNCWARN("Missing needed contour information. Cannot continue with computation");
+        YLOGWARN("Missing needed contour information. Cannot continue with computation");
         return false;
     }
 */
 
     if( external_imgs.empty() ){
-        FUNCWARN("No reference images provided. Cannot continue");
+        YLOGWARN("No reference images provided. Cannot continue");
         return false;
     }
 /*    
     if( external_imgs.size() != 1 ){
-        FUNCWARN("Too many reference images provided. Refusing to continue");
+        YLOGWARN("Too many reference images provided. Refusing to continue");
         return false;
     }
 */
@@ -104,7 +105,7 @@ bool ComputeInterpolateImageSlices(planar_image_collection<float,double> &imagec
     const bool ImagesAreRectilinear = Images_Form_Rectilinear_Grid(all_imgs);
 
     if(reference_imgs.empty()){
-        FUNCWARN("No images are available to interpolate. Cannot continue");
+        YLOGWARN("No images are available to interpolate. Cannot continue");
         return false;
     }
 
@@ -274,7 +275,7 @@ bool ComputeInterpolateImageSlices(planar_image_collection<float,double> &imagec
             {
                 std::lock_guard<std::mutex> lock(saver_printer);
                 ++completed;
-                FUNCINFO("Completed " << completed << " of " << img_count
+                YLOGINFO("Completed " << completed << " of " << img_count
                       << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "% done");
             }
         }); // thread pool task closure.

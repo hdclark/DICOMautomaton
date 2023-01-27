@@ -24,6 +24,7 @@
 #include <optional>
 
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathIOOFF.h"    //Needed for WritePointsToOFF(...)
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
@@ -315,12 +316,12 @@ bool SimulateRadiograph(Drover &DICOM_data,
     rg_up = rg_up.unit();
     rg_left = rg_left.unit();
 
-    FUNCINFO("Proceeding with radiograph into-plane orientation unit vector: " << ray_unit);
-    FUNCINFO("Proceeding with radiograph leftward orientation unit vector: " << rg_left);
-    FUNCINFO("Proceeding with radiograph upward orientation unit vector: " << rg_up);
-    FUNCINFO("Proceeding with ray source at: " << ray_source);
-    FUNCINFO("Proceeding with image centre at: " << img_centre);
-    FUNCINFO("Proceeding with ray source - image centre line: " << source_centre_line);
+    YLOGINFO("Proceeding with radiograph into-plane orientation unit vector: " << ray_unit);
+    YLOGINFO("Proceeding with radiograph leftward orientation unit vector: " << rg_left);
+    YLOGINFO("Proceeding with radiograph upward orientation unit vector: " << rg_up);
+    YLOGINFO("Proceeding with ray source at: " << ray_source);
+    YLOGINFO("Proceeding with image centre at: " << img_centre);
+    YLOGINFO("Proceeding with ray source - image centre line: " << source_centre_line);
 
     // Confirm the bounding planes are all correctly oriented.
     for(const auto & img_bp : img_bps){
@@ -576,7 +577,7 @@ bool SimulateRadiograph(Drover &DICOM_data,
                     // Report progress.
                     std::lock_guard<std::mutex> lock(printer);
                     ++completed;
-                    FUNCINFO("Completed " << completed << " of " << RadiographRows 
+                    YLOGINFO("Completed " << completed << " of " << RadiographRows 
                           << " --> " << static_cast<int>(1000.0*(completed)/RadiographRows)/10.0 << "% done");
                 }
             });

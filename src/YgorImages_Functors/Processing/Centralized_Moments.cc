@@ -20,6 +20,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 
@@ -48,7 +49,7 @@ bool ComputeCentralizedMoments(planar_image_collection<float,double>::images_lis
     //
     // NOTE: We only bother to grab individual contours here. You could alter this if you wanted 
     //       each contour_collection's contours to have an identifying colour.
-    if(ccsl.empty()) FUNCERR("Missing contour info needed for voxel colouring. Cannot continue");
+    if(ccsl.empty()) YLOGERR("Missing contour info needed for voxel colouring. Cannot continue");
 /*
     typedef std::list<contour_of_points<double>>::iterator contour_iter;
     std::list<std::pair<std::reference_wrapper<contour_collection<double>>,contour_iter>> rois;
@@ -87,7 +88,7 @@ bool ComputeCentralizedMoments(planar_image_collection<float,double>::images_lis
             const auto ROIName =  roi.GetMetadataValueAs<std::string>("ROIName");
             const auto FrameOfReferenceUID = roi.GetMetadataValueAs<std::string>("FrameOfReferenceUID");
             if(!StudyInstanceUID || !ROIName || !FrameOfReferenceUID){
-                FUNCWARN("Missing necessary tags for reporting analysis results. Cannot continue");
+                YLOGWARN("Missing necessary tags for reporting analysis results. Cannot continue");
                 return false;
             }
             const analysis_key_t BaseAnalysisKey = { {"StudyInstanceUID", StudyInstanceUID.value()},
@@ -134,7 +135,7 @@ bool ComputeCentralizedMoments(planar_image_collection<float,double>::images_lis
                             //Check if another ROI has already written to this voxel. Bail if so.
                             {
                                 const auto curr_val = working.value(row, col, chan);
-                                if(curr_val != 0) FUNCERR("There are overlapping ROIs. This code currently cannot handle this. "
+                                if(curr_val != 0) YLOGERR("There are overlapping ROIs. This code currently cannot handle this. "
                                                           "You will need to run the functor individually on the overlapping ROIs.");
                             }
     
@@ -206,13 +207,13 @@ static bool Push_Moment_to_Database(analysis_key_t thekey, double themoment){
     json_t *obj = json_object();
     for(const auto& apair : thekey){
         if(0 != json_object_set(obj, apair.first.c_str(), json_string(apair.second.c_str())) ){
-            FUNCERR("Unable to generate JSON from analysis key");
+            YLOGERR("Unable to generate JSON from analysis key");
         }
     }
    
     const char *dumped = json_dumps(obj, JSON_SORT_KEYS | JSON_ENSURE_ASCII | JSON_INDENT(0));
     if(dumped == nullptr){
-        FUNCWARN("Unable to encode JSON to string. Cannot continue");
+        YLOGWARN("Unable to encode JSON to string. Cannot continue");
         json_decref(obj);
         return false;
     }
@@ -240,7 +241,7 @@ static bool Push_Moment_to_Database(analysis_key_t thekey, double themoment){
         txn.commit();
         return true;
     }catch(const std::exception &e){
-        FUNCWARN("Unable to select contours: exception caught: " << e.what());
+        YLOGWARN("Unable to select contours: exception caught: " << e.what());
     }
     return false;
 }
@@ -248,7 +249,7 @@ static bool Push_Moment_to_Database(analysis_key_t thekey, double themoment){
 
 void DumpCentralizedMoments(std::map<std::string,std::string> InvocationMetadata){
     if(!ComputeCentralizedMomentsWasRun){
-        FUNCWARN("Forgoing dumping the centralized moments results; the analysis was not run");
+        YLOGWARN("Forgoing dumping the centralized moments results; the analysis was not run");
         return;
     }
 
@@ -259,10 +260,10 @@ void DumpCentralizedMoments(std::map<std::string,std::string> InvocationMetadata
 #if defined(DCMA_USE_POSTGRES) && defined(DCMA_USE_JANSSON)
         thekey.insert(InvocationMetadata.begin(),InvocationMetadata.end());
         if(!Push_Moment_to_Database(thekey, themoment)){
-            FUNCWARN("Unable to push analysis result to database. Ignoring and continuing");
+            YLOGWARN("Unable to push analysis result to database. Ignoring and continuing");
         }
 #else
-        FUNCWARN("This program was not compiled with PostgreSQL+Jansson support -- unable to write moment to DB");
+        YLOGWARN("This program was not compiled with PostgreSQL+Jansson support -- unable to write moment to DB");
 #endif // DCMA_USE_POSTGRES
     } 
 

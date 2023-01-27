@@ -11,6 +11,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 
 
 bool CTPerfusionSigDiffC( planar_image_collection<float,double>::images_list_it_t  local_img_it,
@@ -28,7 +29,7 @@ bool CTPerfusionSigDiffC( planar_image_collection<float,double>::images_list_it_
 
     //Verify and name the <pre-contrast S(t)> map.
     if(external_imgs.size() != 1){
-        FUNCWARN("This routine must only be passed a single external image. Bailing");
+        YLOGWARN("This routine must only be passed a single external image. Bailing");
         return false;
     }
     planar_image_collection<float,double> &S_baseline_map = external_imgs.front().get();
@@ -44,7 +45,7 @@ bool CTPerfusionSigDiffC( planar_image_collection<float,double>::images_list_it_
     auto S_baseline_imgs = S_baseline_map.get_images_which_encompass_all_points(points);
 
     if(S_baseline_imgs.size() != 1){
-        FUNCWARN("More than one image spatially overlaps with the present image. We can only handle a single image. Bailing");
+        YLOGWARN("More than one image spatially overlaps with the present image. We can only handle a single image. Bailing");
         return false;
     }
     const auto S_baseline_img_it = S_baseline_imgs.front();

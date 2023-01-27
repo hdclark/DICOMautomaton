@@ -2,6 +2,7 @@
 
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorMath.h"         //Needed for samples_1D.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -43,7 +44,7 @@ double Init_Sigma_Squared(const Eigen::MatrixXf & xPoints,
         for (int j = 0; j < mRowsY; j++) {
             const auto yRow = yPoints.row(j).transpose();
             auto rowDiff = xRow - yRow;
-            // FUNCINFO(normSum)
+            // YLOGINFO(normSum)
             normSum += rowDiff.squaredNorm();
         }
     }
@@ -75,8 +76,8 @@ double GetSimilarity(const Eigen::MatrixXf & xPoints,
     }
     sum = sum / (mRowsY * 1.00);
 
-    FUNCINFO(sum);
-    FUNCINFO(mRowsY);
+    YLOGINFO(sum);
+    YLOGINFO(mRowsY);
     return sum;
 }
 

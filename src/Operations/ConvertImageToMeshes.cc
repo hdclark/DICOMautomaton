@@ -19,6 +19,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorMathIOOFF.h"
@@ -324,7 +325,7 @@ bool ConvertImageToMeshes(Drover &DICOM_data,
                 const auto ortho_unit = isvalid ? animg.col_unit.Cross(animg.row_unit).unit() : animg.col_unit;
                 if( !isvalid
                 ||  !ortho_unit.isfinite() ){
-                    FUNCWARN("Skipping image with no spatial extent");
+                    YLOGWARN("Skipping image with no spatial extent");
                     continue;
                 }
 

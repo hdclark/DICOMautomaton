@@ -22,6 +22,7 @@
 
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
@@ -272,13 +273,13 @@ bool SubsegmentContours(Drover &DICOM_data,
     const double ZSelectionUpper = 1.0 - ZSelectionOffsetFromBottom - ZSelectionThickness;
 
     if(!isininc(0.0,XSelectionLower,1.0) || !isininc(0.0,XSelectionUpper,1.0)){
-        FUNCWARN("XSelection is not valid. The selection exceeds [0,1]. Lower and Upper are "
+        YLOGWARN("XSelection is not valid. The selection exceeds [0,1]. Lower and Upper are "
                  << XSelectionLower << " and " << XSelectionUpper << " respectively");
     }else if(!isininc(0.0,YSelectionLower,1.0) || !isininc(0.0,YSelectionUpper,1.0)){
-        FUNCWARN("YSelection is not valid. The selection exceeds [0,1]. Lower and Upper are "
+        YLOGWARN("YSelection is not valid. The selection exceeds [0,1]. Lower and Upper are "
                  << YSelectionLower << " and " << YSelectionUpper << " respectively");
     }else if(!isininc(0.0,ZSelectionLower,1.0) || !isininc(0.0,ZSelectionUpper,1.0)){
-        FUNCWARN("ZSelection is not valid. The selection exceeds [0,1]. Lower and Upper are "
+        YLOGWARN("ZSelection is not valid. The selection exceeds [0,1]. Lower and Upper are "
                  << ZSelectionLower << " and " << ZSelectionUpper << " respectively");
     }
 
@@ -342,9 +343,9 @@ bool SubsegmentContours(Drover &DICOM_data,
     };
     find_coordinate_directions();
 
-    FUNCINFO("Proceeding with x_normal = " << x_normal);
-    FUNCINFO("Proceeding with y_normal = " << y_normal);
-    FUNCINFO("Proceeding with z_normal = " << z_normal);
+    YLOGINFO("Proceeding with x_normal = " << x_normal);
+    YLOGINFO("Proceeding with y_normal = " << y_normal);
+    YLOGINFO("Proceeding with z_normal = " << z_normal);
 
     // This routine returns a pair of planes that approximately encompass the desired interior volume. The ROIs are not
     // altered. The lower plane is the first element of the pair. This routine can be applied to any contour_collection
@@ -369,7 +370,7 @@ bool SubsegmentContours(Drover &DICOM_data,
                                                       &lower_plane,
                                                       &iters_taken,
                                                       &final_area_frac);
-        FUNCINFO("Bisection: planar area fraction"
+        YLOGINFO("Bisection: planar area fraction"
                  << " above LOWER plane with normal: " << planar_normal
                  << " was " << final_area_frac << "."
                  << " Requested: " << SelectionLower << "."
@@ -384,7 +385,7 @@ bool SubsegmentContours(Drover &DICOM_data,
                                                       &upper_plane,
                                                       &iters_taken,
                                                       &final_area_frac);
-        FUNCINFO("Bisection: planar area fraction"
+        YLOGINFO("Bisection: planar area fraction"
                  << " above UPPER plane with normal: " << planar_normal
                  << " was " << final_area_frac << "."
                  << " Requested: " << SelectionUpper << "."
@@ -413,7 +414,7 @@ bool SubsegmentContours(Drover &DICOM_data,
 
         const contour_collection<double> cc_selection( split2.front() );
         if( cc_selection.contours.empty() ){
-            FUNCWARN("Selection contains no contours. Try adjusting your criteria.");
+            YLOGWARN("Selection contains no contours. Try adjusting your criteria.");
         }
         return cc_selection;
     };

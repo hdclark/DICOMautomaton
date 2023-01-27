@@ -37,6 +37,7 @@
 #include "YgorMathBSpline.h" //Needed for basis_spline class.
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
@@ -187,7 +188,7 @@ bool AnalyzeRTPlan(Drover &DICOM_data,
 
                 const auto N_leaves = ss.MLCPositionsX.size();
                 if( (N_leaves == 0) || ((N_leaves % 2) != 0)){
-                    FUNCWARN("Invalid leaf count for beam " << BeamNumber << " ('" << BeamName << "'). Skipping beam");
+                    YLOGWARN("Invalid leaf count for beam " << BeamNumber << " ('" << BeamName << "'). Skipping beam");
                     break;
                 }
 
@@ -236,7 +237,7 @@ bool AnalyzeRTPlan(Drover &DICOM_data,
     } // Loop over treatment plans.
 
     //Print the report.
-    //FUNCINFO("Report will contain: " << report.str());
+    //YLOGINFO("Report will contain: " << report.str());
 
     //Write the report to file.
     if(!TPs.empty()){

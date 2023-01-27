@@ -28,6 +28,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -559,7 +560,7 @@ bool ExtractPointsWarp(Drover &DICOM_data,
             TPSRPMHardContraints.emplace_back( std::make_pair( m_p_i, s_p_i ) );
         }
     }
-    FUNCINFO("Implemented " << TPSRPMHardContraints.size() << " hard constraints");
+    YLOGINFO("Implemented " << TPSRPMHardContraints.size() << " hard constraints");
 #endif // DCMA_USE_EIGEN
 
     auto PCs_all = All_PCs( DICOM_data );
@@ -571,14 +572,14 @@ bool ExtractPointsWarp(Drover &DICOM_data,
     // Iterate over the moving point clouds, aligning each to the reference point cloud.
     auto moving_PCs = Whitelist( PCs_all, MovingPointSelectionStr );
     for(auto & pcp_it : moving_PCs){
-        FUNCINFO("There are " << (*ref_PCs.front())->pset.points.size() << " points in the reference point cloud");
-        FUNCINFO("There are " << (*pcp_it)->pset.points.size() << " points in the moving point cloud");
+        YLOGINFO("There are " << (*ref_PCs.front())->pset.points.size() << " points in the reference point cloud");
+        YLOGINFO("There are " << (*pcp_it)->pset.points.size() << " points in the moving point cloud");
 
         if( std::regex_match(MethodStr, regex_com) ){
             auto t_opt = AlignViaCentroid( (*pcp_it)->pset,
                                            (*ref_PCs.front())->pset );
             if(t_opt){
-                FUNCINFO("Successfully found warp using centre-of-mass alignment");
+                YLOGINFO("Successfully found warp using centre-of-mass alignment");
                 DICOM_data.trans_data.emplace_back( std::make_shared<Transform3>( ) );
                 DICOM_data.trans_data.back()->transform = t_opt.value();
                 DICOM_data.trans_data.back()->metadata["Name"] = "unspecified";
@@ -592,7 +593,7 @@ bool ExtractPointsWarp(Drover &DICOM_data,
             auto t_opt = AlignViaPCA( (*pcp_it)->pset,
                                       (*ref_PCs.front())->pset );
             if(t_opt){
-                FUNCINFO("Successfully found warp using principle component alignment");
+                YLOGINFO("Successfully found warp using principle component alignment");
                 DICOM_data.trans_data.emplace_back( std::make_shared<Transform3>( ) );
                 DICOM_data.trans_data.back()->transform = t_opt.value();
                 DICOM_data.trans_data.back()->metadata["Name"] = "unspecified";
@@ -608,7 +609,7 @@ bool ExtractPointsWarp(Drover &DICOM_data,
                                                 MaxIters,
                                                 RelativeTol );
             if(t_opt){
-                FUNCINFO("Successfully found warp using exhaustive ICP");
+                YLOGINFO("Successfully found warp using exhaustive ICP");
                 DICOM_data.trans_data.emplace_back( std::make_shared<Transform3>( ) );
                 DICOM_data.trans_data.back()->transform = t_opt.value();
                 DICOM_data.trans_data.back()->metadata["Name"] = "unspecified";
@@ -621,7 +622,7 @@ bool ExtractPointsWarp(Drover &DICOM_data,
             AlignViaTPSParams params;
             params.lambda = TPSLambda;
             params.kernel_dimension = TPSKDim;
-            FUNCINFO("Performing TPS alignment using lambda = " << TPSLambda << " and kdim = " << TPSKDim);
+            YLOGINFO("Performing TPS alignment using lambda = " << TPSLambda << " and kdim = " << TPSKDim);
 
             if( std::regex_match(TPSSolverStr, regex_ldlt) ){
                 params.solution_method = AlignViaTPSParams::SolutionMethod::LDLT;
@@ -635,7 +636,7 @@ bool ExtractPointsWarp(Drover &DICOM_data,
                                       (*pcp_it)->pset,
                                       (*ref_PCs.front())->pset );
             if(t_opt){
-                FUNCINFO("Successfully found warp using TPS");
+                YLOGINFO("Successfully found warp using TPS");
                 DICOM_data.trans_data.emplace_back( std::make_shared<Transform3>( ) );
                 DICOM_data.trans_data.back()->transform = t_opt.value();
                 DICOM_data.trans_data.back()->metadata["Name"] = "unspecified";
@@ -673,7 +674,7 @@ params.report_final_correspondence = true;
                 throw std::runtime_error("Solver not understood. Unable to continue.");
             }
 
-            FUNCINFO("Performing TPS alignment using lambda = " << TPSRPMLambdaStart << ","
+            YLOGINFO("Performing TPS alignment using lambda = " << TPSRPMLambdaStart << ","
                      << " zeta = " << TPSRPMZetaStart << ","
                      << " and kdim = " << TPSRPMKDim);
 
@@ -681,7 +682,7 @@ params.report_final_correspondence = true;
                                          (*pcp_it)->pset,
                                          (*ref_PCs.front())->pset );
             if(t_opt){
-                FUNCINFO("Successfully found warp using TPS-RPM");
+                YLOGINFO("Successfully found warp using TPS-RPM");
                 DICOM_data.trans_data.emplace_back( std::make_shared<Transform3>( ) );
                 DICOM_data.trans_data.back()->transform = t_opt.value();
                 DICOM_data.trans_data.back()->metadata["Name"] = "unspecified";

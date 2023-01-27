@@ -2,6 +2,7 @@
 // This little program prints a tag's value formatted as a string.
 
 #include <YgorMisc.h>
+#include "YgorLog.h"
 #include <exception>
 #include <iostream>
 #include <string>
@@ -10,7 +11,7 @@
 
 int main(int argc, char **argv){
     if(argc != 4){
-        FUNCERR(argv[0] << " -- a simple DICOM tag value extractor.\n"
+        YLOGERR(argv[0] << " -- a simple DICOM tag value extractor.\n"
                 " Usage: " << argv[0] << " <filename> <tag_u> <tag_l>\n"
                 " For example, " << argv[0] << " /tmp/file.dcm 0x0008 0x0060\n");
     }

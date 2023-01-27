@@ -13,6 +13,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorPlot.h"
 #include "YgorString.h"      //Needed for GetFirstRegex(...)
 
@@ -36,7 +37,7 @@ bool PixelHistogramAnalysis(planar_image_collection<float,double>::images_list_i
     //
     // NOTE: We only bother to grab individual contours here. You could alter this if you wanted 
     //       each contour_collection's contours to have an identifying colour.
-    if(ccsl.empty()) FUNCERR("Missing contour info needed for voxel colouring. Cannot continue");
+    if(ccsl.empty()) YLOGERR("Missing contour info needed for voxel colouring. Cannot continue");
     using contour_iter = std::list<contour_of_points<double> >::iterator;
     std::list<contour_iter> rois;
 //std::list<contour_of_points<double>> rois;
@@ -110,7 +111,7 @@ bool PixelHistogramAnalysis(planar_image_collection<float,double>::images_list_i
 //Dump lots of files and records.
 void DumpPixelHistogramResults(){
     if(!PixelHistogramAnalysisWasRun){
-        FUNCWARN("Forgoing dumping the pixel histogram analysis results; the analysis was not run");
+        YLOGWARN("Forgoing dumping the pixel histogram analysis results; the analysis was not run");
         return;
     }
 
@@ -123,7 +124,7 @@ void DumpPixelHistogramResults(){
             break;
         }
     } 
-    if(bd.empty()) FUNCERR("Unable to allocate a new directory for kitchen sink analysis output. Cannot continue");
+    if(bd.empty()) YLOGERR("Unable to allocate a new directory for kitchen sink analysis output. Cannot continue");
 
 
     {

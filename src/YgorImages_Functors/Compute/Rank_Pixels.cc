@@ -18,6 +18,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
 #include "YgorClustering.hpp"
@@ -39,7 +40,7 @@ bool ComputeRankPixels(planar_image_collection<float,double> &imagecoll,
     try{
         user_data_s = std::any_cast<RankPixelsUserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
 
@@ -49,7 +50,7 @@ bool ComputeRankPixels(planar_image_collection<float,double> &imagecoll,
     // Construct the pixel ordering. 
     std::vector<double> samples;
     for(auto & img_it : all_imgs){
-        FUNCINFO("Images still to be assessed: " << N_imgs);
+        YLOGINFO("Images still to be assessed: " << N_imgs);
         --N_imgs;
 
         for(auto row = 0; row < img_it->rows; ++row){
@@ -70,7 +71,7 @@ bool ComputeRankPixels(planar_image_collection<float,double> &imagecoll,
 
     // Update the images using the pixel ordering.
     if(N_voxels == 0){
-        FUNCWARN("No voxels were selected to participate in the rank; nothing to do");
+        YLOGWARN("No voxels were selected to participate in the rank; nothing to do");
 
     }else{
         asio_thread_pool tp;
@@ -126,7 +127,7 @@ bool ComputeRankPixels(planar_image_collection<float,double> &imagecoll,
                 {
                     std::lock_guard<std::mutex> lock(saver_printer);
                     ++completed;
-                    FUNCINFO("Completed " << completed << " of " << img_count
+                    YLOGINFO("Completed " << completed << " of " << img_count
                           << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "% done");
                 }
             }); // thread pool task closure.

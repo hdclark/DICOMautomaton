@@ -53,6 +53,7 @@
 #include "YgorMathChebyshev.h" //Needed for cheby_approx class.
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -376,7 +377,7 @@ struct opengl_mesh {
         glEnableVertexAttribArray(2);
         CHECK_FOR_GL_ERRORS();
 
-        FUNCINFO("Registered new OpenGL mesh");
+        YLOGINFO("Registered new OpenGL mesh");
     };
 
     // Draw the mesh in the current OpenGL context.
@@ -825,7 +826,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     // General-purpose Drover processing offloading worker thread.
     work_queue<std::function<void(void)>> wq;
     wq.submit_task([](){
-        FUNCINFO("Worker thread ready");
+        YLOGINFO("Worker thread ready");
         return;
     });
 
@@ -1148,7 +1149,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     }
     if(SDL_GL_SetSwapInterval(-1) != 0){ // Enable adaptive vsync to limit the frame rate.
         if(SDL_GL_SetSwapInterval(1) != 0){ // Enable vsync (non-adaptive).
-            FUNCWARN("Unable to enable vsync. Continuing without it");
+            YLOGWARN("Unable to enable vsync. Continuing without it");
         }
     }
 
@@ -1159,7 +1160,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     try{
         CHECK_FOR_GL_ERRORS(); // Clear any errors encountered during glewInit.
     }catch(const std::exception &e){
-        FUNCINFO("Ignoring glew-related error: " << e.what());
+        YLOGINFO("Ignoring glew-related error: " << e.what());
     }
 
     // Create an ImGui context we can use and associate it with the OpenGL context.
@@ -1201,9 +1202,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                                             [](unsigned char c){ return !std::isdigit(c); } ),
                             std::end(glsl_version) );
 
-        FUNCINFO("Initialized OpenGL '" << gl_version << "' with GLSL '" << glsl_version << "'");
+        YLOGINFO("Initialized OpenGL '" << gl_version << "' with GLSL '" << glsl_version << "'");
     }catch(const std::exception &e){
-        FUNCWARN("Unable to detect OpenGL/GLSL version");
+        YLOGWARN("Unable to detect OpenGL/GLSL version");
     }
 
     // ------------------------------------------ Shaders -------------------------------------------------
@@ -1269,8 +1270,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     std::array<char, 2048> shader_log; // Output from most recent compilation and linking.
 
-    //FUNCINFO("Using default vertex shader source: '" << array_to_string(vert_shader_src) << "'");
-    //FUNCINFO("Using default fragment shader source: '" << array_to_string(frag_shader_src) << "'");
+    //YLOGINFO("Using default vertex shader source: '" << array_to_string(vert_shader_src) << "'");
+    //YLOGINFO("Using default fragment shader source: '" << array_to_string(frag_shader_src) << "'");
 
     // Note: the following will throw if the default shader fails to compile and link.
     auto custom_shader = compile_shader_program(vert_shader_src, frag_shader_src, shader_log);
@@ -1411,7 +1412,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             // Reset any existing contours.
             contouring_imgs.Ensure_Contour_Data_Allocated();
             contouring_imgs.contour_data->ccs.clear();
-            FUNCINFO("Reset contouring state with " << contouring_imgs.image_data.back()->imagecoll.images.size() << " images");
+            YLOGINFO("Reset contouring state with " << contouring_imgs.image_data.back()->imagecoll.images.size() << " images");
 
             return;
     };
@@ -1747,7 +1748,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 std::get<img_array_ptr_it_t>( out ) = cimg_array_ptr_it;
                 std::get<disp_img_it_t>( out ) = encompassing_images.front();
             }catch(const std::exception &e){
-                FUNCWARN("Contouring image not valid: '" << e.what() << "'");
+                YLOGWARN("Contouring image not valid: '" << e.what() << "'");
                 break;
             }
         }while(false);
@@ -2141,7 +2142,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 // Insert the contours into the Drover object.
                 DICOM_data.Ensure_Contour_Data_Allocated();
                 DICOM_data.contour_data->ccs.splice(std::end(DICOM_data.contour_data->ccs),contouring_imgs.contour_data->ccs);
-                FUNCINFO("Drover class imbued with new contour collection");
+                YLOGINFO("Drover class imbued with new contour collection");
 
                 contouring_imgs.contour_data->ccs.clear();
                 contouring_imgs.Ensure_Contour_Data_Allocated();
@@ -2149,7 +2150,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 launch_contour_preprocessor();
 
             }catch(const std::exception &e){
-                FUNCWARN("Unable to save contour collection: '" << e.what() << "'");
+                YLOGWARN("Unable to save contour collection: '" << e.what() << "'");
                 return false;
             }
             return true;
@@ -2318,7 +2319,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         lfs.res = Load_Files(lfs.DICOM_data, lfs.InvocationMetadata, FilenameLex, Operations, paths);
         if(!Operations.empty()){
              lfs.res = false;
-             FUNCWARN("Loaded file contains a script. Currently unable to handle script files here");
+             YLOGWARN("Loaded file contains a script. Currently unable to handle script files here");
         }
 
         // Notify that the files can be inserted into the main Drover.
@@ -2413,7 +2414,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             std::ifstream is(p, std::ios::in);
             if(!is){
                 lss.res = false;
-                FUNCWARN("Unable to access script file '" << p.string() << "'");
+                YLOGWARN("Unable to access script file '" << p.string() << "'");
                 break;
             }
             lss.script_files.emplace_back();
@@ -2472,7 +2473,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             const auto worker = [&,l_script_epoch,op_list](){
                 // Check if this task should be abandoned.
                 if(script_epoch.load() != l_script_epoch){
-                    FUNCINFO("Abandoning run due to potentially conflicting user activity");
+                    YLOGINFO("Abandoning run due to potentially conflicting user activity");
                     return;
                 }
 
@@ -2499,7 +2500,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     // Report the failure to the user.
                     //
                     // TODO: provide graphical feedback!
-                    FUNCWARN("Script execution failed");
+                    YLOGWARN("Script execution failed");
                 }
 
                 // Regenerate all Drover state that may have changed.
@@ -2612,7 +2613,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         try{
             display_parameter_table();
         }catch(const std::exception &e){
-            FUNCWARN("Exception in display_parameter_table(): '" << e.what() << "'");
+            YLOGWARN("Exception in display_parameter_table(): '" << e.what() << "'");
             throw;
         }
 
@@ -2864,7 +2865,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                                 auto N_sfs = static_cast<long int>(script_files.size());
                                 if( N_sfs == 0 ){
-                                    FUNCINFO("No script to append to. Creating new script.");
+                                    YLOGINFO("No script to append to. Creating new script.");
                                     script_files.emplace_back();
                                     script_files.back().altered = true;
                                     append_to_script(script_files.back().content, new_script_content);
@@ -2979,7 +2980,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 if(ImGui::MenuItem(sscript.name.c_str())){
                                     std::list<script_feedback_t> feedback;
                                     if(!execute_script(sscript.text, feedback)){
-                                        FUNCWARN("Script execution failed");
+                                        YLOGWARN("Script execution failed");
                                         // TODO: provide feedback to user here...
                                     }
                                 }
@@ -3047,7 +3048,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             // Break from the main render loop if false is received.
             if(!display_main_menu_bar()) break;
         }catch(const std::exception &e){
-            FUNCWARN("Exception in display_main_menu_bar(): '" << e.what() << "'");
+            YLOGWARN("Exception in display_main_menu_bar(): '" << e.what() << "'");
             throw;
         }
 
@@ -3088,7 +3089,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         custom_shader = std::move(l_custom_shader);
                         shader_log = string_to_array( array_to_string(shader_log) + "\nShader updated" );
                     }catch(const std::exception &e){
-                        FUNCWARN("Shader compilation failed: '" << e.what() << "'");
+                        YLOGWARN("Shader compilation failed: '" << e.what() << "'");
                     };
                 }
 
@@ -3126,7 +3127,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         try{
             display_shader_editor();
         }catch(const std::exception &e){
-            FUNCWARN("Exception in display_shader_editor(): '" << e.what() << "'");
+            YLOGWARN("Exception in display_shader_editor(): '" << e.what() << "'");
             throw;
         }
 
@@ -3209,7 +3210,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 }
                                 ImGui::OpenPopup("Save Script Filename Picker");
                             }catch(const std::exception &e){
-                                FUNCWARN("Unable to access current filesystem path");
+                                YLOGWARN("Unable to access current filesystem path");
                             }
                         }
                     }
@@ -3458,7 +3459,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         try{
             display_script_editor();
         }catch(const std::exception &e){
-            FUNCWARN("Exception in display_script_editor(): '" << e.what() << "'");
+            YLOGWARN("Exception in display_script_editor(): '" << e.what() << "'");
             throw;
         }
 
@@ -3924,7 +3925,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::Text("Note: this functionality is still under active development.");
                     if(ImGui::Button("Save")){ 
                         if(extracted_contours.valid()){
-                            FUNCWARN("Found existing contour save task. Refusing to overwrite");
+                            YLOGWARN("Found existing contour save task. Refusing to overwrite");
 
                         }else{
                             ImGui::OpenPopup("Save Contours");
@@ -3944,7 +3945,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 Operations.back().insert("Lower=0.5");
                                 Operations.back().insert("SimplifyMergeAdjacent=true");
                                 if(!Operation_Dispatcher(l_contouring_imgs, l_InvocationMetadata, l_FilenameLex, Operations)){
-                                    FUNCWARN("ContourViaThreshold failed");
+                                    YLOGWARN("ContourViaThreshold failed");
 
                                     // Signal to NOT replace the Drover class to the receiving thread.
                                     throw std::runtime_error("Unable to extract contours");
@@ -4099,7 +4100,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 edit_existing_contour_selection = {};
                                 ImGui::CloseCurrentPopup();
                             }else{
-                                FUNCWARN("Copying failed");
+                                YLOGWARN("Copying failed");
                             }
                         }
 
@@ -4235,7 +4236,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                     Drover *d = (view_toggles.view_contouring_enabled) ? &contouring_imgs : &DICOM_data;
                     if(!Operation_Dispatcher(*d, InvocationMetadata, FilenameLex, Operations)){
-                        FUNCWARN("Dilation/Erosion failed");
+                        YLOGWARN("Dilation/Erosion failed");
                     }
 
                     if(view_toggles.view_contouring_enabled){
@@ -4287,14 +4288,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                         Operations.back().insert("Lower=0.5");
                         Operations.back().insert("SimplifyMergeAdjacent=true");
                         if(!Operation_Dispatcher(shtl, InvocationMetadata, FilenameLex, Operations)){
-                            FUNCWARN("ContourViaThreshold failed");
+                            YLOGWARN("ContourViaThreshold failed");
                         }
 
                         contouring_imgs.contour_data->ccs.clear();
                         contouring_imgs.Consume( shtl.contour_data );
-//FUNCINFO("Contouring image generated " << contouring_imgs.contour_data->ccs.size() << " contour collections");
+//YLOGINFO("Contouring image generated " << contouring_imgs.contour_data->ccs.size() << " contour collections");
 //if(!contouring_imgs.contour_data->ccs.empty()){
-//    FUNCINFO("    First collection contains " << contouring_imgs.contour_data->ccs.front().contours.size() << " contours");
+//    YLOGINFO("    First collection contains " << contouring_imgs.contour_data->ccs.front().contours.size() << " contours");
 //}
 
 
@@ -4505,7 +4506,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         try{
             display_image_viewer();
         }catch(const std::exception &e){
-            FUNCWARN("Exception in display_image_viewer(): '" << e.what() << "'");
+            YLOGWARN("Exception in display_image_viewer(): '" << e.what() << "'");
             throw;
         }
 
@@ -4561,7 +4562,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     f.InvocationMetadata.merge(InvocationMetadata);
                     InvocationMetadata = f.InvocationMetadata;
                 }else{
-                    FUNCWARN("Unable to load files");
+                    YLOGWARN("Unable to load files");
                     // TODO ... warn about the issue.
                 }
 
@@ -4581,7 +4582,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         try{
             handle_file_loading();
         }catch(const std::exception &e){
-            FUNCWARN("Exception in handle_file_loading(): '" << e.what() << "'");
+            YLOGWARN("Exception in handle_file_loading(): '" << e.what() << "'");
             throw;
         }
 
@@ -4615,7 +4616,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                                      std::end(f.script_files) );
                         active_script_file = static_cast<long int>(script_files.size()) - 1;
                     }else{
-                        FUNCWARN("Unable to load scripts");
+                        YLOGWARN("Unable to load scripts");
                         // TODO ... warn about the issue.
                     }
 
@@ -4626,7 +4627,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         try{
             handle_script_loading();
         }catch(const std::exception &e){
-            FUNCWARN("Exception in handle_script_loading(): '" << e.what() << "'");
+            YLOGWARN("Exception in handle_script_loading(): '" << e.what() << "'");
             throw;
         }
 
@@ -4835,7 +4836,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         try{
             adjust_window_level();
         }catch(const std::exception &e){
-            FUNCWARN("Exception in adjust_window_level(): '" << e.what() << "'");
+            YLOGWARN("Exception in adjust_window_level(): '" << e.what() << "'");
             throw;
         }
 
@@ -4881,7 +4882,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         try{
             adjust_colour_map();
         }catch(const std::exception &e){
-            FUNCWARN("Exception in adjust_colour_map(): '" << e.what() << "'");
+            YLOGWARN("Exception in adjust_colour_map(): '" << e.what() << "'");
             throw;
         }
 
@@ -5061,7 +5062,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         try{
             display_plots();
         }catch(const std::exception &e){
-            FUNCWARN("Exception in display_plots(): '" << e.what() << "'");
+            YLOGWARN("Exception in display_plots(): '" << e.what() << "'");
             throw;
         }
 
@@ -5108,7 +5109,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         try{
             display_row_column_profiles();
         }catch(const std::exception &e){
-            FUNCWARN("Exception in display_row_column_profiles(): '" << e.what() << "'");
+            YLOGWARN("Exception in display_row_column_profiles(): '" << e.what() << "'");
             throw;
         }
 
@@ -5186,7 +5187,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         try{
             display_time_profiles();
         }catch(const std::exception &e){
-            FUNCWARN("Exception in display_time_profiles(): '" << e.what() << "'");
+            YLOGWARN("Exception in display_time_profiles(): '" << e.what() << "'");
             throw;
         }
 
@@ -5382,7 +5383,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         try{
             display_tables();
         }catch(const std::exception &e){
-            FUNCWARN("Exception in display_tables(): '" << e.what() << "'");
+            YLOGWARN("Exception in display_tables(): '" << e.what() << "'");
             throw;
         }
 
@@ -5497,7 +5498,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         try{
             display_rtplans();
         }catch(const std::exception &e){
-            FUNCWARN("Exception in display_rtplans(): '" << e.what() << "'");
+            YLOGWARN("Exception in display_rtplans(): '" << e.what() << "'");
             throw;
         }
 
@@ -5587,7 +5588,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                     tform = AlignViaOrthogonalProcrustes(params, img_features.features_A, img_features.features_B);
 #else
-                    FUNCWARN("Falling back to centroid translation transformation");
+                    YLOGWARN("Falling back to centroid translation transformation");
                     tform = AlignViaCentroid(img_features.features_A, img_features.features_B);
 #endif // DCMA_USE_EIGEN
                     if(!tform){
@@ -5614,7 +5615,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     }
 
                 }catch(const std::exception &e){
-                    FUNCWARN("Unable to create transformation: " << e.what());
+                    YLOGWARN("Unable to create transformation: " << e.what());
                 }
             }
 
@@ -5624,7 +5625,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         try{
             display_feat_sel();
         }catch(const std::exception &e){
-            FUNCWARN("Exception in display_feat_sel(): '" << e.what() << "'");
+            YLOGWARN("Exception in display_feat_sel(): '" << e.what() << "'");
             throw;
         }
 
@@ -5676,7 +5677,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         try{
             display_psets();
         }catch(const std::exception &e){
-            FUNCWARN("Exception in display_psets(): '" << e.what() << "'");
+            YLOGWARN("Exception in display_psets(): '" << e.what() << "'");
             throw;
         }
 
@@ -5729,7 +5730,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         try{
             display_tforms();
         }catch(const std::exception &e){
-            FUNCWARN("Exception in display_tforms(): '" << e.what() << "'");
+            YLOGWARN("Exception in display_tforms(): '" << e.what() << "'");
             throw;
         }
 
@@ -6109,7 +6110,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         try{
             display_image_navigation();
         }catch(const std::exception &e){
-            FUNCWARN("Exception in display_image_navigation(): '" << e.what() << "'");
+            YLOGWARN("Exception in display_image_navigation(): '" << e.what() << "'");
             throw;
         }
 
@@ -6369,7 +6370,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         try{
             display_loading_animation();
         }catch(const std::exception &e){
-            FUNCWARN("Exception in display_loading_animation(): '" << e.what() << "'");
+            YLOGWARN("Exception in display_loading_animation(): '" << e.what() << "'");
             throw;
         }
 

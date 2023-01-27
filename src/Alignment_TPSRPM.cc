@@ -27,6 +27,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -164,7 +165,7 @@ thin_plate_spline::read_from( std::istream &is ){
     is >> N_control_points;
     if( is.fail()
     ||  !isininc(1,N_control_points,1'000'000'000) ){
-        FUNCWARN("Number of control points could not be read, or is invalid.");
+        YLOGWARN("Number of control points could not be read, or is invalid.");
         return false;
     }
     this->control_points.points.resize(N_control_points);
@@ -174,25 +175,25 @@ thin_plate_spline::read_from( std::istream &is ){
             is >> this->control_points.points[i];
         }
     }catch(const std::exception &e){
-        FUNCWARN("Failed to read control points: " << e.what());
+        YLOGWARN("Failed to read control points: " << e.what());
         return false;
     }
 
     is >> this->kernel_dimension;
     if( is.fail()
     ||  !isininc(2,this->kernel_dimension,3) ){
-        FUNCWARN("Kernel dimension could not be read, or is invalid.");
+        YLOGWARN("Kernel dimension could not be read, or is invalid.");
         return false;
     }
 
     if(!(this->W_A.read_from(is))){
-        FUNCWARN("Transformation coefficients could not be read or are invalid.");
+        YLOGWARN("Transformation coefficients could not be read or are invalid.");
         return false;
     }
 
     if( (this->W_A.num_rows() != (N_control_points + 3 + 1))
     ||  (this->W_A.num_cols() != 3) ){
-        FUNCWARN("Transformation coefficient matrix has invalid dimensions.");
+        YLOGWARN("Transformation coefficient matrix has invalid dimensions.");
         return false;
     }
 
@@ -215,7 +216,7 @@ AlignViaTPS(AlignViaTPSParams & params,
     const auto N_move_points = static_cast<long int>(moving.points.size());
     const auto N_stat_points = static_cast<long int>(stationary.points.size());
     if(N_move_points != N_stat_points){
-        FUNCWARN("Unable to perform TPS alignment: point sets have different number of points");
+        YLOGWARN("Unable to perform TPS alignment: point sets have different number of points");
         return std::nullopt;
     }
 
@@ -309,7 +310,7 @@ AlignViaTPS(AlignViaTPSParams & params,
     }
 
     if(!W_A.allFinite()){
-        FUNCWARN("Failed to solve for a finite-valued transform");
+        YLOGWARN("Failed to solve for a finite-valued transform");
         return std::nullopt;
     }
 
@@ -347,7 +348,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     double mean_nn_sq_dist = std::numeric_limits<double>::quiet_NaN();
     double max_sq_dist = 0.0;
     {
-        FUNCINFO("Locating mean nearest-neighbour separation in moving point cloud");
+        YLOGINFO("Locating mean nearest-neighbour separation in moving point cloud");
         Stats::Running_Sum<double> rs;
         {
             //asio_thread_pool tp;
@@ -368,7 +369,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         }
         mean_nn_sq_dist = rs.Current_Sum() / static_cast<double>( N_move_points );
 
-        FUNCINFO("Locating max square-distance between all points");
+        YLOGINFO("Locating max square-distance between all points");
         {
             //asio_thread_pool tp;
             //std::mutex saver_printer;
@@ -405,7 +406,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     ||  (L_2_start < 0.0) ){
         throw std::invalid_argument("Regularization parameters are invalid. Cannot continue.");
     }
-    FUNCINFO("T_start, T_step, and T_end are " << T_start << ", " << params.T_step << ", " << T_end);
+    YLOGINFO("T_start, T_step, and T_end are " << T_start << ", " << params.T_step << ", " << T_end);
 
     // Ensure any forced correpondences are valid and unique.
     {
@@ -448,11 +449,11 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     {
         if( (N_stat_points < N_move_points)
         &&  (params.permit_move_outliers == false) ){
-            FUNCWARN("Sinkhorn normalization is likely to fail since outliers in the larger point cloud are disallowed");
+            YLOGWARN("Sinkhorn normalization is likely to fail since outliers in the larger point cloud are disallowed");
         }
         if( (N_move_points < N_stat_points)
         &&  (params.permit_stat_outliers == false) ){
-            FUNCWARN("Sinkhorn normalization is likely to fail since outliers in the larger point cloud are disallowed");
+            YLOGWARN("Sinkhorn normalization is likely to fail since outliers in the larger point cloud are disallowed");
         }
     }
 
@@ -550,7 +551,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         // Seed the affine transformation with the output from a simpler rigid registration.
         auto t_com = AlignViaCentroid(moving, stationary);
         if(!t_com){
-            FUNCWARN("Unable to compute centroid seed transformation");
+            YLOGWARN("Unable to compute centroid seed transformation");
             return std::nullopt;
         }
 
@@ -788,8 +789,8 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
                 }
                 w_last = w;
 
-                //FUNCINFO("On normalization iteration " << norm_iter << " the mean col sum was " << Stats::Mean(col_sums));
-                //FUNCINFO("On normalization iteration " << norm_iter << " the mean row sum was " << Stats::Mean(row_sums));
+                //YLOGINFO("On normalization iteration " << norm_iter << " the mean col sum was " << Stats::Mean(col_sums));
+                //YLOGINFO("On normalization iteration " << norm_iter << " the mean row sum was " << Stats::Mean(row_sums));
             }
         }
 
@@ -979,7 +980,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         const auto mean_row_min_coeff = M.rowwise().minCoeff().sum() / static_cast<double>( M.rows() );
         const auto mean_row_max_coeff = M.rowwise().maxCoeff().sum() / static_cast<double>( M.rows() );
 
-        FUNCINFO("Optimizer state: T = " << std::setw(12) << T_now 
+        YLOGINFO("Optimizer state: T = " << std::setw(12) << T_now 
                    << ", mean min,max corr coeffs = " << std::setw(12) << mean_row_min_coeff
                    << ", " << std::setw(12) << mean_row_max_coeff );
         return;
@@ -1060,7 +1061,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     {
         const auto E = estimate_bending_energies();
         const double E_sum = E.x + E.y + E.z;
-        FUNCINFO("Final bending energy is propto " << E_sum << " with " << E.x << " from x, " << E.y << " from y, and " << E.z << " from z");
+        YLOGINFO("Final bending energy is propto " << E_sum << " with " << E.x << " from x, " << E.y << " from y, and " << E.z << " from z");
     }
 
 /*

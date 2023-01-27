@@ -37,6 +37,7 @@
 #include "YgorMathChebyshev.h" //Needed for cheby_approx class.
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -177,7 +178,7 @@ bool SFML_Viewer(Drover &DICOM_data,
     &&  !afont.loadFromFile("/usr/share/fonts/truetype/cmu/cmunrm.ttf") // Debian 'fonts-cmu' pkg.
     &&  !afont.loadFromFile("/usr/share/fonts/gnu-free/FreeMono.otf") // Arch Linux 'gnu-free-fonts' pkg.
     &&  !afont.loadFromFile("/usr/share/fonts/truetype/freefont/FreeMono.ttf") ){ // Debian 'fonts-freefont-ttf' pkg.
-        FUNCWARN("Unable to find a suitable font file on host system -- loading embedded minimal font");
+        YLOGWARN("Unable to find a suitable font file on host system -- loading embedded minimal font");
         if(!afont.loadFromMemory(static_cast<void*>(dcma_minimal_ttf), static_cast<size_t>(dcma_minimal_ttf_len))){
             throw std::runtime_error("Unable to load embedded font. Cannot continue");
         }
@@ -720,9 +721,9 @@ bool SFML_Viewer(Drover &DICOM_data,
             const std::filesystem::path out_fname("/tmp/boost_serialized_drover.xml.gz");
             const bool res = Common_Boost_Serialize_Drover(DICOM_data, out_fname);
             if(res){
-                FUNCINFO("Dumped serialization to file " << out_fname.string());
+                YLOGINFO("Dumped serialization to file " << out_fname.string());
             }else{
-                FUNCWARN("Unable dump serialization to file " << out_fname.string());
+                YLOGWARN("Unable dump serialization to file " << out_fname.string());
             }
             return;
     };
@@ -733,7 +734,7 @@ bool SFML_Viewer(Drover &DICOM_data,
 
             if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
                 scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
-                FUNCINFO("Reloaded texture using '" << colour_maps[colour_map].first << "' colour map");
+                YLOGINFO("Reloaded texture using '" << colour_maps[colour_map].first << "' colour map");
             }else{
                 throw std::runtime_error("Unable to reload texture using selected colour map");
             }
@@ -745,7 +746,7 @@ bool SFML_Viewer(Drover &DICOM_data,
 
             if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
                 scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
-                FUNCINFO("Reloaded texture using '" << colour_maps[colour_map].first << "' colour map");
+                YLOGINFO("Reloaded texture using '" << colour_maps[colour_map].first << "' colour map");
             }else{
                 throw std::runtime_error("Unable to reload texture using selected colour map");
             }
@@ -771,7 +772,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                     const auto mouse_pos = mc.mouse_DICOM_pos;
                     tagged_pos = mouse_pos;
                 }else{
-                    FUNCWARN("Unable to place marker: mouse not hovering over an image");
+                    YLOGWARN("Unable to place marker: mouse not hovering over an image");
                 }
             }
             return;
@@ -797,9 +798,9 @@ bool SFML_Viewer(Drover &DICOM_data,
             for(auto & pimg : encompassing_images){
                 const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/spatially_overlapping_dump_",6,".fits");
                 if(WriteToFITS(*pimg,pixel_dump_filename_out)){
-                    FUNCINFO("Dumped pixel data for image " << count << " to file '" << pixel_dump_filename_out << "'");
+                    YLOGINFO("Dumped pixel data for image " << count << " to file '" << pixel_dump_filename_out << "'");
                 }else{
-                    FUNCWARN("Unable to dump pixel data for image " << count << " to file '" << pixel_dump_filename_out << "'");
+                    YLOGWARN("Unable to dump pixel data for image " << count << " to file '" << pixel_dump_filename_out << "'");
                 }
 
             }
@@ -810,9 +811,9 @@ bool SFML_Viewer(Drover &DICOM_data,
     const auto dump_current_image_to_file = [&](){
             const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/display_image_dump_",6,".fits");
             if(WriteToFITS(*disp_img_it,pixel_dump_filename_out)){
-                FUNCINFO("Dumped pixel data for this image to file '" << pixel_dump_filename_out << "'");
+                YLOGINFO("Dumped pixel data for this image to file '" << pixel_dump_filename_out << "'");
             }else{
-                FUNCWARN("Unable to dump pixel data for this image to file '" << pixel_dump_filename_out << "'");
+                YLOGWARN("Unable to dump pixel data for this image to file '" << pixel_dump_filename_out << "'");
             }
             return;
     };
@@ -823,9 +824,9 @@ bool SFML_Viewer(Drover &DICOM_data,
             for(auto &pimg : (*img_array_ptr_it)->imagecoll.images){
                 const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/image_dump_",6,".fits");
                 if(WriteToFITS(pimg,pixel_dump_filename_out)){
-                    FUNCINFO("Dumped pixel data for image " << count << " to file '" << pixel_dump_filename_out << "'");
+                    YLOGINFO("Dumped pixel data for image " << count << " to file '" << pixel_dump_filename_out << "'");
                 }else{
-                    FUNCWARN("Unable to dump pixel data for this image to file '" << pixel_dump_filename_out << "'");
+                    YLOGWARN("Unable to dump pixel data for this image to file '" << pixel_dump_filename_out << "'");
                 }
                 ++count;
             }
@@ -836,13 +837,13 @@ bool SFML_Viewer(Drover &DICOM_data,
     const auto dump_rc_aligned_image_intensity_profiles = [&](char r_or_c){
             auto mc = Convert_Mouse_Coords();
             if(!mc.pixel_image_pos_valid){
-                FUNCWARN("The mouse is not currently hovering over the image. Cannot dump row/column profiles");
+                YLOGWARN("The mouse is not currently hovering over the image. Cannot dump row/column profiles");
                 return;
             }
             const auto row_as_u = mc.pixel_image_pos_row;
             const auto col_as_u = mc.pixel_image_pos_col;
 
-            FUNCINFO("Dumping row and column profiles for row,col = " << row_as_u << "," << col_as_u);
+            YLOGINFO("Dumping row and column profiles for row,col = " << row_as_u << "," << col_as_u);
 
             samples_1D<double> row_profile, col_profile;
             std::stringstream title;
@@ -873,7 +874,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                     YgorMathPlottingGnuplot::Plot<double>({col_shtl}, title.str(), "Pixel Index (column #)", "Pixel Intensity");
                 }
             }catch(const std::exception &e){
-                FUNCWARN("Failed to plot: " << e.what());
+                YLOGWARN("Failed to plot: " << e.what());
             }
             return;
     };
@@ -886,13 +887,13 @@ bool SFML_Viewer(Drover &DICOM_data,
     const auto dump_voxel_time_series = [&](){
             auto mc = Convert_Mouse_Coords();
             if(!mc.voxel_DICOM_pos_valid){
-                FUNCWARN("The mouse is not currently hovering over the image. Cannot dump time course");
+                YLOGWARN("The mouse is not currently hovering over the image. Cannot dump time course");
                 return;
             }
             const auto row_as_u = mc.pixel_image_pos_row;
             const auto col_as_u = mc.pixel_image_pos_col;
             const auto pix_pos = mc.voxel_DICOM_pos;
-            FUNCINFO("Dumping time course for row,col = " << row_as_u << "," << col_as_u);
+            YLOGINFO("Dumping time course for row,col = " << row_as_u << "," << col_as_u);
 
             //Get a list of images which spatially overlap this point. Order should be maintained.
             const auto ortho = disp_img_it->row_unit.Cross( disp_img_it->col_unit ).unit();
@@ -936,7 +937,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> ymp_shtl(shtl, "Buffer A");
                 YgorMathPlottingGnuplot::Plot<double>({ymp_shtl}, title.str(), "Time (s)", "Pixel Intensity");
             }catch(const std::exception &e){
-                FUNCWARN("Failed to plot: " << e.what());
+                YLOGWARN("Failed to plot: " << e.what());
             }
             shtl.Write_To_File(Get_Unique_Sequential_Filename("/tmp/pixel_intensity_time_course_",6,".txt"));
             return;
@@ -948,7 +949,7 @@ bool SFML_Viewer(Drover &DICOM_data,
     const auto show_perfusion_model = [&](){
             auto mc = Convert_Mouse_Coords();
             if(!mc.voxel_DICOM_pos_valid){
-                FUNCWARN("The mouse is not currently hovering over the image. Cannot compute perfusion model");
+                YLOGWARN("The mouse is not currently hovering over the image. Cannot compute perfusion model");
                 return;
             }
             const auto row_as_u = mc.pixel_image_pos_row;
@@ -1117,7 +1118,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 const std::string Title = "Time course: row = " + std::to_string(row_as_u) + ", col = " + std::to_string(col_as_u);
                 PlotTimeCourses(Title, time_courses, {});
             }catch(const std::exception &e){
-                FUNCWARN("Unable to reconstruct model: " << e.what());
+                YLOGWARN("Unable to reconstruct model: " << e.what());
             }
 
             return;
@@ -1135,7 +1136,7 @@ bool SFML_Viewer(Drover &DICOM_data,
     const auto dump_overlapping_voxels = [&](){
             auto mc = Convert_Mouse_Coords();
             if(!mc.voxel_DICOM_pos_valid){
-                FUNCWARN("The mouse is not currently hovering over the image. Cannot dump overlapping pixel values");
+                YLOGWARN("The mouse is not currently hovering over the image. Cannot dump overlapping pixel values");
                 return;
             }
             const auto row_as_u = mc.pixel_image_pos_row;
@@ -1202,7 +1203,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 }
             }
             FO.close();
-            FUNCINFO("Dumped pixel values which coincide with the specified voxel at"
+            YLOGINFO("Dumped pixel values which coincide with the specified voxel at"
                      " row,col = " << row_as_u << "," << col_as_u);
 
             return;
@@ -1239,7 +1240,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 throw std::logic_error("Advancement direction not understood. Cannot continue.");
             }
 
-            FUNCINFO("There are " << (*img_array_ptr_it)->imagecoll.images.size() << " images in this Image_Array");
+            YLOGINFO("There are " << (*img_array_ptr_it)->imagecoll.images.size() << " images in this Image_Array");
 
             disp_img_beg  = (*img_array_ptr_it)->imagecoll.images.begin();
             disp_img_last = std::prev((*img_array_ptr_it)->imagecoll.images.end());
@@ -1256,7 +1257,7 @@ bool SFML_Viewer(Drover &DICOM_data,
 
             if(load_img_texture_sprite(disp_img_it, disp_img_texture_sprite)){
                 scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
-                FUNCINFO("Loaded Image_Array " << std::distance(img_array_ptr_beg,img_array_ptr_it) << ". "
+                YLOGINFO("Loaded Image_Array " << std::distance(img_array_ptr_beg,img_array_ptr_it) << ". "
                          "There are " << (*img_array_ptr_it)->imagecoll.images.size() << " images in this Image_Array");
                 
             }else{ 
@@ -1308,7 +1309,7 @@ bool SFML_Viewer(Drover &DICOM_data,
 
                 //const auto img_number = std::distance((*img_array_ptr_it)->imagecoll.images.begin(), disp_img_it);
                 const auto img_number = std::distance(disp_img_beg, disp_img_it);
-                FUNCINFO("Loaded next texture in unaltered Image_Array order. Displaying image number " << img_number);
+                YLOGINFO("Loaded next texture in unaltered Image_Array order. Displaying image number " << img_number);
                 
             }else{
                 throw std::runtime_error("Unable to load image --> texture --> sprite");
@@ -1360,7 +1361,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                     }catch(const std::exception &e){ };
                 }
                 if(!loaded){
-                    FUNCINFO("Cannot load file '" << fname << "'");
+                    YLOGINFO("Cannot load file '" << fname << "'");
                     break;
                 }
 
@@ -1385,7 +1386,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                     scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
 
                     const auto img_number = std::distance(disp_img_beg, disp_img_it);
-                    FUNCINFO("Loaded next texture in unaltered Image_Array order. Displaying image number " << img_number);
+                    YLOGINFO("Loaded next texture in unaltered Image_Array order. Displaying image number " << img_number);
                     
                 }else{
                     throw std::runtime_error("Unable to load image --> texture --> sprite");
@@ -1418,7 +1419,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
 
                 const auto img_number = std::distance(disp_img_beg, disp_img_it);
-                FUNCINFO("Loaded next texture in unaltered Image_Array order. Displaying image number " << img_number);
+                YLOGINFO("Loaded next texture in unaltered Image_Array order. Displaying image number " << img_number);
                 
             }else{
                 throw std::runtime_error("Unable to load image --> texture --> sprite");
@@ -1447,7 +1448,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 if(*enc_img_it == disp_img_it) break;
             }
             if(enc_img_it == encompassing_images.end()){
-                FUNCWARN("Unable to step over spatially overlapping images. None found");
+                YLOGWARN("Unable to step over spatially overlapping images. None found");
             }else{
                 if(n == 0) return;
                 const auto n_clamped = (n > 0) ? 1 : -1;
@@ -1477,7 +1478,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 scale_sprite_to_fill_screen(window,disp_img_it,disp_img_texture_sprite);
 
                 const auto img_number = std::distance(disp_img_beg, disp_img_it);
-                FUNCINFO("Loaded next/previous spatially-overlapping texture. Displaying image number " << img_number);
+                YLOGINFO("Loaded next/previous spatially-overlapping texture. Displaying image number " << img_number);
 
             }else{
                 throw std::runtime_error("Unable to load image --> texture --> sprite");
@@ -1525,7 +1526,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 }
 
                 //Notify that the file has been created.
-                FUNCINFO("Dumped metadata to file '" << FOname << "'");
+                YLOGINFO("Dumped metadata to file '" << FOname << "'");
 
                 //Try launch a pop-up window with the metadata from the file displayed.
                 std::stringstream ss;
@@ -1533,7 +1534,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 Execute_Command_In_Pipe(ss.str());
 
             }catch(const std::exception &e){ 
-                FUNCWARN("Metadata dump failed: " << e.what());
+                YLOGWARN("Metadata dump failed: " << e.what());
             }
 
             return;
@@ -1545,7 +1546,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 const std::string erase_roi = Detox_String(Execute_Command_In_Pipe(
                         "zenity --question --text='Erase current or previous non-empty contour?' 2>/dev/null && echo 1"));
                 if(erase_roi != "1"){
-                    FUNCINFO("Not erasing contours. Here it is for inspection purposes:" << contour_coll_shtl.write_to_string());
+                    YLOGINFO("Not erasing contours. Here it is for inspection purposes:" << contour_coll_shtl.write_to_string());
                     throw std::runtime_error("Instructed not to erase contour.");
                 }
 
@@ -1555,14 +1556,14 @@ bool SFML_Viewer(Drover &DICOM_data,
 
                 //Erase the last contour.
                 const std::string c_as_str( contour_coll_shtl.contours.back().write_to_string() );                             
-                FUNCINFO("About to erase contour. Here it is for inspection purposes: " << c_as_str);
+                YLOGINFO("About to erase contour. Here it is for inspection purposes: " << c_as_str);
                 contour_coll_shtl.contours.pop_back();
                 
                 //Provide an empty contour for future contouring.
                 contour_coll_shtl.contours.emplace_back();
                 contour_coll_shtl.contours.back().closed = true;
 
-                FUNCINFO("Latest non-empty contour erased");
+                YLOGINFO("Latest non-empty contour erased");
             }catch(const std::exception &){ }
             return;
     };
@@ -1573,7 +1574,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 const std::string erase_roi = Detox_String(Execute_Command_In_Pipe(
                         "zenity --question --text='Erase whole working ROI?' 2>/dev/null && echo 1"));
                 if(erase_roi != "1"){
-                    FUNCINFO("Not erasing contours. Here it is for inspection purposes:" << contour_coll_shtl.write_to_string());
+                    YLOGINFO("Not erasing contours. Here it is for inspection purposes:" << contour_coll_shtl.write_to_string());
                     throw std::runtime_error("Instructed not to clear contour buffer.");
                 }
 
@@ -1582,7 +1583,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 contour_coll_shtl.contours.emplace_back();
                 contour_coll_shtl.contours.back().closed = true;
 
-                FUNCINFO("Contour collection cleared from working buffer");
+                YLOGINFO("Contour collection cleared from working buffer");
             }catch(const std::exception &){ }
             return;
     };
@@ -1593,7 +1594,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 // Ask the user for additional information.
                 const std::string save_roi = Detox_String(Execute_Command_In_Pipe("zenity --question --text='Save ROI?' 2>/dev/null && echo 1"));
                 if(save_roi != "1"){
-                    FUNCINFO("Not saving contours. Here it is for inspection purposes:" << contour_coll_shtl.write_to_string());
+                    YLOGINFO("Not saving contours. Here it is for inspection purposes:" << contour_coll_shtl.write_to_string());
                     throw std::runtime_error("Instructed not to save.");
                 }
 
@@ -1636,9 +1637,9 @@ bool SFML_Viewer(Drover &DICOM_data,
                 contour_coll_shtl.contours.emplace_back();
                 contour_coll_shtl.contours.back().closed = true;
 
-                FUNCINFO("Drover class imbued with new contour collection");
+                YLOGINFO("Drover class imbued with new contour collection");
             }catch(const std::exception &e){
-                FUNCWARN("Unable to save contour collection: '" << e.what() << "'");
+                YLOGWARN("Unable to save contour collection: '" << e.what() << "'");
             }
             return;
     };
@@ -1677,10 +1678,10 @@ bool SFML_Viewer(Drover &DICOM_data,
                        << "SNR=" << PixelMean/PixelStdDev << ", "
                        << "VoxelCount=" << av.second.size() << std::endl;
                 }
-                FUNCINFO("Working contour collection stats:\n\t" << ss.str());
+                YLOGINFO("Working contour collection stats:\n\t" << ss.str());
 
             }catch(const std::exception &e){
-                FUNCWARN("Unable to compute working contour collection stats: '" << e.what() << "'");
+                YLOGWARN("Unable to compute working contour collection stats: '" << e.what() << "'");
             }
             return;
     };
@@ -1691,7 +1692,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 //Parse the new low and high window values from the user's input string.
                 const auto tokens = SplitStringToVector(input, ' ', 'd');
                 if(tokens.size() != 2){
-                    FUNCWARN("Invalid window and level provided");
+                    YLOGWARN("Invalid window and level provided");
                     return false;
                 }
                 const auto new_low = std::stod(tokens.front());
@@ -1707,7 +1708,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                     throw std::runtime_error("Unable to reload image after adjusting window/level");
                 }
             }catch(const std::exception &e){
-                FUNCWARN("Unable to parse window and level: '" << e.what() << "'");
+                YLOGWARN("Unable to parse window and level: '" << e.what() << "'");
                 return false;
             }
             return true;
@@ -1881,7 +1882,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                     launch_input_aux_window();
 
                 }else{
-                    FUNCINFO("Character '" << thechar << "' is not yet bound to any action");
+                    YLOGINFO("Character '" << thechar << "' is not yet bound to any action");
                 }
 
             }else if(window.hasFocus() && (event.type == sf::Event::MouseWheelMoved)){
@@ -1939,7 +1940,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 if(event.mouseButton.button == sf::Mouse::Left){
                     auto mc = Convert_Mouse_Coords();
                     if(!mc.mouse_DICOM_pos_valid){
-                        FUNCWARN("The mouse is not currently hovering over the image. Cannot place contour vertex");
+                        YLOGWARN("The mouse is not currently hovering over the image. Cannot place contour vertex");
                         break;
                     }
                     const auto row_as_u = mc.pixel_image_pos_row;
@@ -1957,7 +1958,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                         contour_coll_shtl.contours.back().points.push_back( mouse_pos );
                         contour_coll_shtl.contours.back().metadata["FrameOfReferenceUID"] = FrameOfReferenceUID.value();
                     }else{
-                        FUNCWARN("Unable to find display image's FrameOfReferenceUID. Cannot insert point in contour");
+                        YLOGWARN("Unable to find display image's FrameOfReferenceUID. Cannot insert point in contour");
 
                     }
                 }
@@ -2014,14 +2015,14 @@ bool SFML_Viewer(Drover &DICOM_data,
                         close_plotwindow();
                         break;
                     }else{
-                        FUNCINFO("Plotting plotwindow: keypress not yet bound to any action");
+                        YLOGINFO("Plotting plotwindow: keypress not yet bound to any action");
                     }
                 }else if(plotwindow.hasFocus() && (event.type == sf::Event::KeyPressed)){
                     if(event.key.code == sf::Keyboard::Escape){
                         close_plotwindow();
                         break;
                     }else{
-                        FUNCINFO("Plotting plotwindow: keypress not yet bound to any action");
+                        YLOGINFO("Plotting plotwindow: keypress not yet bound to any action");
                     }
 
                 }else if(event.type == sf::Event::Resized){
@@ -2415,7 +2416,7 @@ bool SFML_Viewer(Drover &DICOM_data,
             texture.update(window);
             sf::Image screenshot = texture.copyToImage();
             if(!screenshot.saveToFile(fname_sshot)){
-                FUNCWARN("Unable to dump screenshot to file '" << fname_sshot << "'");
+                YLOGWARN("Unable to dump screenshot to file '" << fname_sshot << "'");
             }
 
         }
@@ -2429,7 +2430,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 texture.update(window);
                 sf::Image screenshot = texture.copyToImage();
                 if(!screenshot.saveToFile(fname_sshot)){
-                    FUNCWARN("Unable to dump screenshot to file '" << fname_sshot << "'");
+                    YLOGWARN("Unable to dump screenshot to file '" << fname_sshot << "'");
                 }
 
                 window.close();
@@ -2448,7 +2449,7 @@ bool SFML_Viewer(Drover &DICOM_data,
             // ---- Get time course data for the current pixel, if available ----
             auto mc = Convert_Mouse_Coords();
             if(!mc.voxel_DICOM_pos_valid){
-                FUNCWARN("The mouse is not currently hovering over the image. Cannot place contour vertex");
+                YLOGWARN("The mouse is not currently hovering over the image. Cannot place contour vertex");
                 break;
             }
             const auto row_as_u = mc.pixel_image_pos_row;

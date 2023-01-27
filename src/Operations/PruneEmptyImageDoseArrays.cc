@@ -10,6 +10,7 @@
 #include "../Regex_Selectors.h"
 #include "PruneEmptyImageDoseArrays.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 OperationDoc OpArgDocPruneEmptyImageDoseArrays(){
     OperationDoc out;
@@ -24,7 +25,7 @@ bool PruneEmptyImageDoseArrays(Drover &DICOM_data,
                                  std::map<std::string, std::string>& /*InvocationMetadata*/,
                                  const std::string&){
 
-    FUNCINFO("Pre-prune: there are " << DICOM_data.image_data.size() << " image_arrays");
+    YLOGINFO("Pre-prune: there are " << DICOM_data.image_data.size() << " image_arrays");
 
     DICOM_data.image_data.erase(
         std::remove_if(DICOM_data.image_data.begin(), DICOM_data.image_data.end(), 
@@ -33,7 +34,7 @@ bool PruneEmptyImageDoseArrays(Drover &DICOM_data,
             }),
         DICOM_data.image_data.end());
 
-    FUNCINFO("Post-prune: " << DICOM_data.image_data.size() << " image_arrays remain");
+    YLOGINFO("Post-prune: " << DICOM_data.image_data.size() << " image_arrays remain");
 
     return true;
 }

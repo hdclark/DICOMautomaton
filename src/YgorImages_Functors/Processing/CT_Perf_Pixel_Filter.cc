@@ -8,6 +8,7 @@
 #include "../ConvenienceRoutines.h"
 #include "YgorImages.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
 template <class T> class contour_collection;
@@ -25,7 +26,7 @@ bool CTPerfEnormousPixelFilter(planar_image_collection<float,double>::images_lis
 
     //Ensure only single images are grouped together.
     if(selected_img_its.size() != 1){
-        FUNCWARN("This routine works on single images. It cannot deal with grouped images");
+        YLOGWARN("This routine works on single images. It cannot deal with grouped images");
         return false;
     }
 

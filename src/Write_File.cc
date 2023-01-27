@@ -12,17 +12,18 @@
 
 #include "YgorFilesDirs.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 
 #include "Write_File.h"
 
 interprocess_lock::interprocess_lock(const std::string& n) : mutex(boost::interprocess::open_or_create, n.c_str()), name(n) {
-    FUNCINFO("Attempting to lock named mutex '" << this->name << "'");
+    YLOGINFO("Attempting to lock named mutex '" << this->name << "'");
     boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(this->mutex);
     this->lock.swap(lock);
 }
 
 interprocess_lock::~interprocess_lock(){
-    FUNCINFO("Released lock on named mutex '" << this->name << "'");
+    YLOGINFO("Released lock on named mutex '" << this->name << "'");
 }
 
 std::unique_ptr<interprocess_lock>
@@ -47,7 +48,7 @@ void Append_File( const std::function<std::string(void)>& gen_file_name,
                  
     //File-based locking is used so this program can be run over many patients concurrently.
     // Try open a named mutex. Probably created in /dev/shm/ if you need to clear it manually...
-    FUNCINFO("About to claim mutex '" << mutex_name << "'");
+    YLOGINFO("About to claim mutex '" << mutex_name << "'");
     boost::interprocess::named_mutex mutex(boost::interprocess::open_or_create, mutex_name.c_str());
     boost::interprocess::scoped_lock<boost::interprocess::named_mutex> lock(mutex);
 
@@ -67,7 +68,7 @@ void Append_File( const std::function<std::string(void)>& gen_file_name,
     FO.close();
 
     const std::string msg = (FirstWrite ? "Wrote to new file" : "Appended to existing file");
-    FUNCINFO(msg << " '" << file_name << "'");
+    YLOGINFO(msg << " '" << file_name << "'");
 
     return;
 }

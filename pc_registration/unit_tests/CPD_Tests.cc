@@ -4,6 +4,7 @@
 
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorMath.h"         //Needed for samples_1D.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -570,7 +571,7 @@ TEST_CASE("NLargestEigenvalues") {
 		   9, 5, 2, 3,
 		   7, 3, 3, 9;
 
-	FUNCINFO("HELLO")
+	YLOGINFO("HELLO")
 	Eigen::MatrixXf vector_matrix = Eigen::MatrixXf::Zero(4, 3);
 	Eigen::VectorXf value_matrix = Eigen::VectorXf::Zero(3);
 
@@ -596,7 +597,7 @@ TEST_CASE("NLargestEigenvalues_V2") {
 		    0,  0, 1, 0,
 		    0,  0, 0, 2;
 
-	FUNCINFO("HELLO")
+	YLOGINFO("HELLO")
 	Eigen::MatrixXf vector_matrix = Eigen::MatrixXf::Zero(4, 3);
 	Eigen::VectorXf value_matrix = Eigen::VectorXf::Zero(3);
 

@@ -1,5 +1,6 @@
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorMath.h"         //Needed for samples_1D.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "CPD_Affine.h"
@@ -101,7 +102,7 @@ AlignViaAffineCPD(CPDParams & params,
             std::string video /*= "False"*/,
             std::string xyz_outfile /*= "output"*/){
 
-    FUNCINFO("Performing Affine CPD");
+    YLOGINFO("Performing Affine CPD");
     
     std::string temp_xyz_outfile;
     point_set<double> mutable_moving = moving;
@@ -144,7 +145,7 @@ AlignViaAffineCPD(CPDParams & params,
     high_resolution_clock::time_point start = high_resolution_clock::now();
     std::ofstream os(xyz_outfile + "_stats.csv");
     for (int i = 0; i < params.iterations; i++) {
-        FUNCINFO("Iteration: " << i)
+        YLOGINFO("Iteration: " << i)
         P = E_Step(X, Y, transform.B, \
             transform.t, sigma_squared, params.distribution_weight, 1);
         Ux = CalculateUx(X, P);
@@ -160,15 +161,15 @@ AlignViaAffineCPD(CPDParams & params,
 
         similarity = GetSimilarity(X, Y, transform.B, transform.t, 1);
         objective = GetObjective(X, Y, P, transform.B, transform.t, 1, sigma_squared);
-        FUNCINFO(similarity);
-        FUNCINFO(objective);
+        YLOGINFO(similarity);
+        YLOGINFO(objective);
         
         if (video == "True") {
             if (iter_interval > 0 && i % iter_interval == 0) {
                 temp_xyz_outfile = xyz_outfile + "_iter" + std::to_string(i+1) + "_sim" + std::to_string(similarity) + ".xyz";
                 std::ofstream PFO(temp_xyz_outfile);
                 if(!WritePointSetToXYZ(mutable_moving, PFO))
-                    FUNCERR("Error writing point set to " << xyz_outfile);
+                    YLOGERR("Error writing point set to " << xyz_outfile);
             }
         }
         
@@ -177,7 +178,7 @@ AlignViaAffineCPD(CPDParams & params,
 
         high_resolution_clock::time_point stop = high_resolution_clock::now();
         duration<double>  time_span = duration_cast<duration<double>>(stop - start);
-        FUNCINFO("Excecution took time: " << time_span.count())
+        YLOGINFO("Excecution took time: " << time_span.count())
         os << i+1 << "," << time_span.count() << "," << similarity << "," << temp_xyz_outfile << "\n";
     }
     return transform;

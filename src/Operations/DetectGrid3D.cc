@@ -262,7 +262,7 @@ Insert_Grid_Contours(Drover &DICOM_data,
         const auto dx = std::remainder( (v - corner).Dot(edge1.unit()), edge1.length() );
         const auto dy = std::remainder( (v - corner).Dot(edge2.unit()), edge2.length() );
         const auto dz = std::remainder( (v - corner).Dot(edge3.unit()), edge3.length() );
-        FUNCINFO("dx, dy, dz = " << dx << "  " << dy << "  " << dz);
+        YLOGINFO("dx, dy, dz = " << dx << "  " << dy << "  " << dz);
     }
 
     // The number of lines needed to bound the point cloud.
@@ -750,7 +750,7 @@ Score_Fit( ICP_Context &ICPC,
                      header.str(),
                      body.str() );
 
-        FUNCINFO("Writing file containing:" << std::endl << header.str() << std::endl << body.str() << std::endl);
+        YLOGINFO("Writing file containing:" << std::endl << header.str() << std::endl << body.str() << std::endl);
     }
 
     const auto score = Stats::Mean(dists); // Better scores should be less than worse scores.
@@ -1206,7 +1206,7 @@ bool DetectGrid3D(Drover &DICOM_data,
     
     std::mt19937 re( RandomSeed );
 
-FUNCINFO("Loading point clouds");
+YLOGINFO("Loading point clouds");
 
     auto PCs_all = All_PCs( DICOM_data );
     auto PCs = Whitelist( PCs_all, PointSelectionStr );
@@ -1293,7 +1293,7 @@ if(false){
                 // selected point is in a region with a low density of points. So re-do the loop. However, if multiple
                 // failures occur then we can probably conclude that the grid parameters are inappropriate. For example,
                 // if the GridSeparation is too small then all points will appear to be in regions of low density.
-                FUNCWARN("Too few adjacent points (" << ICPC.cohort.size() << "), rebooting RANSAC loop.");
+                YLOGWARN("Too few adjacent points (" << ICPC.cohort.size() << "), rebooting RANSAC loop.");
                 Handle_RANSAC_Failure(); // Will throw if too many failures encountered.
                 continue;
             }
@@ -1308,7 +1308,7 @@ if(false){
             try{
                 ICP_Fit_Grid(re, CoarseICPMaxLoops, GC, ICPC);
             }catch(const std::exception &e){
-                FUNCWARN("Error encountered during coarse ICP (" << e.what() << "), rebooting RANSAC loop.");
+                YLOGWARN("Error encountered during coarse ICP (" << e.what() << "), rebooting RANSAC loop.");
                 Handle_RANSAC_Failure(); // Will throw if too many failures encountered.
                 continue;
             }
@@ -1324,7 +1324,7 @@ if(false){
             try{
                 ICP_Fit_Grid(re, FineICPMaxLoops, GC, whole_ICPC);
             }catch(const std::exception &e){
-                FUNCWARN("Error encountered during fine ICP (" << e.what() << "), rebooting RANSAC loop.");
+                YLOGWARN("Error encountered during fine ICP (" << e.what() << "), rebooting RANSAC loop.");
                 Handle_RANSAC_Failure(); // Will throw if too many failures encountered.
                 continue;
             }
@@ -1342,21 +1342,21 @@ if(false){
                 ss << "Completed RANSAC loop " << ransac_loop << " of " << RANSACMaxLoops
                    << " --> " << static_cast<int>(1000.0*(ransac_loop)/RANSACMaxLoops)/10.0 << "%."
                    << " Best and current scores are " << best_GC.score << " and " << GC.score;
-                FUNCINFO(ss.str());
+                YLOGINFO(ss.str());
             }
             ++ransac_loop;
         } // RANSAC loop.
 
         // Do something with the results.
         if(true){
-            FUNCINFO("Grid estimate found");
+            YLOGINFO("Grid estimate found");
             Project_Into_Proto_Cube(best_GC, whole_ICPC);
             Find_Corresponding_Points(best_GC, whole_ICPC);
 
 
             const bool verbose = true;
             const auto best_score = Score_Fit(whole_ICPC, gen_filename, verbose);
-            FUNCINFO("Best score: " << best_score);
+            YLOGINFO("Best score: " << best_score);
 
             Write_XYZ("/tmp/original_points.xyz", (*pcp_it)->pset.points);
             Write_PLY("/tmp/original_points.ply", (*pcp_it)->pset.points);
@@ -1527,7 +1527,7 @@ if(false){
                     ++o_it;
                 } // For loop over full cohort.
 
-FUNCINFO("There are " << partitioned.size() << " involved grid unions");
+YLOGINFO("There are " << partitioned.size() << " involved grid unions");
 
                 // Filter out union points with compromised catchment areas (e.g., those unions on the outer boundary).
                 //
@@ -1544,13 +1544,13 @@ for(const auto &apair : partitioned){
                 const auto hist_dists = Bag_of_numbers_to_N_equal_bin_samples_1D_histogram(partition_counts, N_bins, explicitbins);
                 const auto min_thresh = hist_dists.Find_Otsu_Binarization_Threshold();
 
-                FUNCINFO("Ignoring grid unions with fewer than " << min_thresh << " points in their catchment volume");
+                YLOGINFO("Ignoring grid unions with fewer than " << min_thresh << " points in their catchment volume");
                 {
                     long int drop_count = 0;
                     for(const auto &apair : partitioned){
                         if(apair.second.size() < min_thresh) ++drop_count;
                     }
-                    FUNCINFO("Note that " << drop_count << " / " << partitioned.size() << " unions will be ignored");
+                    YLOGINFO("Note that " << drop_count << " / " << partitioned.size() << " unions will be ignored");
                 }
 
                 // Now for each 3D grid intersection fit the associated data, if enough is available.
@@ -1587,7 +1587,7 @@ for(const auto &apair : partitioned){
                     unions_dist_y_vs_dist.push_back( union_dist, grid_mean.y );
                     unions_dist_z_vs_dist.push_back( union_dist, grid_mean.z );
 
-                    FUNCINFO("Grid union " << apair.first[0] << ", "
+                    YLOGINFO("Grid union " << apair.first[0] << ", "
                                            << apair.first[1] << ", "
                                            << apair.first[2] << " "
                                            << "i.e., " <<  grid_union

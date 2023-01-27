@@ -14,6 +14,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 
 
 //User data struct for harvesting data afterward. Note that, because the driver routine calls the supplied functional

@@ -13,6 +13,7 @@
 #include <utility>
 
 #include <YgorMisc.h>
+#include "YgorLog.h"
 #include <YgorString.h>
 
 #include "DCMA_DICOM.h"

@@ -20,6 +20,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorFilesDirs.h"
@@ -313,7 +314,7 @@ bool CountVoxels(Drover &DICOM_data,
     }
 
     //Report a summary.
-    FUNCINFO("Attempting to claim a mutex");
+    YLOGINFO("Attempting to claim a mutex");
     {
         auto gen_filename = [&]() -> std::string {
             if(!ResultsSummaryFileName.empty()){
@@ -357,7 +358,7 @@ bool CountVoxels(Drover &DICOM_data,
                      header.str(),
                      body.str() );
 
-        FUNCINFO("Writing file containing:" << std::endl << header.str() << std::endl << body.str() << std::endl);
+        YLOGINFO("Writing file containing:" << std::endl << header.str() << std::endl << body.str() << std::endl);
     }
 
     return true;

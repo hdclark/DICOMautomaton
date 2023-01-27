@@ -10,6 +10,7 @@
 #include "DecayDoseOverTime.h"
 #include "YgorImages.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 
 template <class T> class contour_collection;
 
@@ -31,14 +32,14 @@ bool DecayDoseOverTime(planar_image_collection<float,double>::images_list_it_t f
     try{
         user_data_s = std::any_cast<DecayDoseOverTimeUserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
 
     if(selected_img_its.size() != 1) throw std::invalid_argument("This routine operates on individual images only");
 
     if(ccsl.empty()){
-        FUNCWARN("Missing needed contour information. Cannot continue with computation");
+        YLOGWARN("Missing needed contour information. Cannot continue with computation");
         return false;
     }
 
@@ -109,14 +110,14 @@ bool DecayDoseOverTime(planar_image_collection<float,double>::images_list_it_t f
 
                 //Debugging/validation:
                 //if( ((row == 0) && (col == 19)) || ( (row == 9) && (col == 9)) ){
-                //    FUNCINFO("BED_abr_tol    = " << BED_abr_tol.val);
-                //    FUNCINFO("r              = " << r);
-                //    FUNCINFO("r_exp          = " << r_exp);
-                //    FUNCINFO("Dincoming      = " << voxel_val);
-                //    FUNCINFO("BED_abr_c1     = " << BED_abr_c1.val);
-                //    FUNCINFO("BED_ratio      = " << BED_ratio);
-                //    FUNCINFO("BED_C1_eff     = " << BED_abr_c1_eff.val);
-                //    FUNCINFO("Doutgoing      = " << D_c1_eff);
+                //    YLOGINFO("BED_abr_tol    = " << BED_abr_tol.val);
+                //    YLOGINFO("r              = " << r);
+                //    YLOGINFO("r_exp          = " << r_exp);
+                //    YLOGINFO("Dincoming      = " << voxel_val);
+                //    YLOGINFO("BED_abr_c1     = " << BED_abr_c1.val);
+                //    YLOGINFO("BED_ratio      = " << BED_ratio);
+                //    YLOGINFO("BED_C1_eff     = " << BED_abr_c1_eff.val);
+                //    YLOGINFO("Doutgoing      = " << D_c1_eff);
                 //}
             }
 

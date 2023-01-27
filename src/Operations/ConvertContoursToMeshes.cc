@@ -17,6 +17,7 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathIOOBJ.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 #include "Explicator.h"
 
@@ -299,7 +300,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
                         const auto m1_area = std::abs( m1_cop_it->get().Get_Signed_Area() );
                         const auto m2_area = std::abs( m2_cop_it->get().Get_Signed_Area() );
                         
-                        FUNCWARN("Found overlapping upper-plane contours, trimmed smallest-area contour");
+                        YLOGWARN("Found overlapping upper-plane contours, trimmed smallest-area contour");
                         if(m1_area < m2_area){
                             m1_cop_it = m_cops.erase(m1_cop_it);
                             m2_cop_it = std::next(m1_cop_it);
@@ -321,7 +322,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
                         const auto l1_area = std::abs( l1_cop_it->get().Get_Signed_Area() );
                         const auto l2_area = std::abs( l2_cop_it->get().Get_Signed_Area() );
                         
-                        FUNCWARN("Found overlapping lower-plane contours, trimmed smallest-area contour");
+                        YLOGWARN("Found overlapping lower-plane contours, trimmed smallest-area contour");
                         if(l1_area < l2_area){
                             l1_cop_it = l_cops.erase(l1_cop_it);
                             l2_cop_it = std::next(l1_cop_it);
@@ -479,7 +480,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
             for(auto &pcs : pairings){
                 const auto N_upper = pcs.upper.size();
                 const auto N_lower = pcs.lower.size();
-                //FUNCINFO("Processing contour map from " << N_upper << " to " << N_lower);
+                //YLOGINFO("Processing contour map from " << N_upper << " to " << N_lower);
 
                 if( (N_upper != 0) && (N_lower == 0) ){
                     for(const auto &cop_refw : pcs.upper) close_hole_in_floor(cop_refw);
@@ -500,7 +501,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
                         amesh.faces.emplace_back( std::vector<uint64_t>{{f_A, f_B, f_C}} );
                     }
                 }else{
-                    //FUNCINFO("Performing N-to-N meshing..");
+                    //YLOGINFO("Performing N-to-N meshing..");
                     auto ofst_upper = m_cp_it->N_0 * contour_sep * -0.49;
                     auto ofst_lower = m_cp_it->N_0 * contour_sep *  0.49;
                     auto amal_upper = Minimally_Amalgamate_Contours(m_cp_it->N_0, ofst_upper, pcs.upper); 
@@ -569,7 +570,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
 //        amesh.vertices.erase( std::unique( std::begin(amesh.vertices), std::end(amesh.vertices) ),
 //                              std::end(amesh.vertices) );
 
-        FUNCINFO("Generating convex hull from " << amesh.vertices.size() << " vertices");
+        YLOGINFO("Generating convex hull from " << amesh.vertices.size() << " vertices");
 
 /*
         // Sort and remove near duplicates by truncating decimal precision.
@@ -592,7 +593,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
                                            } ),
                               std::end(amesh.vertices) );
 
-        FUNCINFO("Deduplicated vertices via truncation to " << amesh.vertices.size() << " vertices");
+        YLOGINFO("Deduplicated vertices via truncation to " << amesh.vertices.size() << " vertices");
 */
 
         // Randomly shuffle vertices to (hopefully) speed up hull extraction.
@@ -635,7 +636,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
             }
         }
 
-        FUNCINFO("Generating contours mesh from " << amesh.vertices.size() << " vertices");
+        YLOGINFO("Generating contours mesh from " << amesh.vertices.size() << " vertices");
 
     }else{
         throw std::invalid_argument("Unrecognized method");

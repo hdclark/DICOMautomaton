@@ -27,6 +27,7 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 //#include "YgorStats.h"        //Needed for Median().
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 #include "Metadata.h"
 #include "Structs.h"
@@ -51,7 +52,7 @@ bool Load_From_CSV_Files( Drover &DICOM_data,
 
     auto bfit = Filenames.begin();
     while(bfit != Filenames.end()){
-        FUNCINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
+        YLOGINFO("Parsing file #" << i+1 << "/" << N << " = " << 100*(i+1)/N << "%");
         ++i;
         const auto Filename = *bfit;
 
@@ -68,12 +69,12 @@ bool Load_From_CSV_Files( Drover &DICOM_data,
             tab_ptr->metadata = l_meta;
             tab_ptr->metadata["Filename"] = Filename.string();
 
-            FUNCINFO("Loaded CSV file with " << tab_ptr->data.size() << " rows"); 
+            YLOGINFO("Loaded CSV file with " << tab_ptr->data.size() << " rows"); 
 
             bfit = Filenames.erase( bfit ); 
             continue;
         }catch(const std::exception &e){
-            FUNCINFO("Unable to load as CSV file: '" << e.what() << "'");
+            YLOGINFO("Unable to load as CSV file: '" << e.what() << "'");
             DICOM_data.table_data.pop_back();
         };
 

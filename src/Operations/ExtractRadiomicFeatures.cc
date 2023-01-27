@@ -30,6 +30,7 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorFilesDirs.h"
 
@@ -198,7 +199,7 @@ bool ExtractRadiomicFeatures(Drover &DICOM_data,
         auto smesh = dcma_surface_meshes::FVSMeshToPolyhedron(fv_mesh);
 
         //if(!polyhedron_processing::SaveAsOFF(smesh, "/tmp/test.off")){
-        //    FUNCERR("Unable to write mesh as OFF file");
+        //    YLOGERR("Unable to write mesh as OFF file");
         //}
 
         //polyhedron_processing::Subdivide(smesh, MeshSubdivisions);

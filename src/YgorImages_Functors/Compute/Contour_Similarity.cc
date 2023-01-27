@@ -11,6 +11,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 
 
 
@@ -39,7 +40,7 @@ bool ComputeContourSimilarity(planar_image_collection<float,double> &imagecoll,
     try{
         user_data_s = std::any_cast<ComputeContourSimilarityUserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
 
@@ -50,7 +51,7 @@ bool ComputeContourSimilarity(planar_image_collection<float,double> &imagecoll,
     // NOTE: We only bother to grab individual contours here. You could alter this if you wanted 
     //       each contour_collection's contours to have an identifying colour.
     if(ccsl.size() != 2){
-        FUNCWARN("This routine requires exactly two contour_collections. Cannot continue with computation");
+        YLOGWARN("This routine requires exactly two contour_collections. Cannot continue with computation");
         return false;
     }
 
@@ -72,7 +73,7 @@ bool ComputeContourSimilarity(planar_image_collection<float,double> &imagecoll,
     // pruned after images have been successfully operated on.
     auto all_images = imagecoll.get_all_images();
     while(!all_images.empty()){
-        FUNCINFO("Images still to be processed: " << all_images.size());
+        YLOGINFO("Images still to be processed: " << all_images.size());
 
         //Find the images which spatially overlap with this image.
         auto curr_img_it = all_images.front();
@@ -117,7 +118,7 @@ bool ComputeContourSimilarity(planar_image_collection<float,double> &imagecoll,
     
                 //const auto ROIName =  roi_it->GetMetadataValueAs<std::string>("ROIName");
                 //if(!ROIName){
-                //    FUNCWARN("Missing necessary tags for reporting analysis results. Cannot continue");
+                //    YLOGWARN("Missing necessary tags for reporting analysis results. Cannot continue");
                 //    return false;
                 //}
                 
@@ -167,7 +168,7 @@ bool ComputeContourSimilarity(planar_image_collection<float,double> &imagecoll,
                         }else{
                             //for(auto chan = 0; chan < first_img_it->channels; ++chan){
                             //    const auto curr_val = working.value(row, col, chan);
-                            //    if(curr_val != 0) FUNCERR("There are overlapping ROI bboxes. This code currently cannot handle this. "
+                            //    if(curr_val != 0) YLOGERR("There are overlapping ROI bboxes. This code currently cannot handle this. "
                             //                              "You will need to run the functor individually on the overlapping ROIs.");
                             //    working.reference(row, col, chan) = static_cast<float>(10);
                             //}

@@ -12,6 +12,7 @@
 #include "BEDConversion.h"
 #include "YgorImages.h"
 #include "YgorMisc.h"
+#include "YgorLog.h"
 
 template <class T> class contour_collection;
 
@@ -32,14 +33,14 @@ bool BEDConversion(planar_image_collection<float,double>::images_list_it_t first
     try{
         user_data_s = std::any_cast<BEDConversionUserData *>(user_data);
     }catch(const std::exception &e){
-        FUNCWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
+        YLOGWARN("Unable to cast user_data to appropriate format. Cannot continue with computation");
         return false;
     }
 
     if(selected_img_its.size() != 1) throw std::invalid_argument("This routine operates on individual images only");
 
     if(ccsl.empty()){
-        FUNCWARN("Missing needed contour information. Cannot continue with computation");
+        YLOGWARN("Missing needed contour information. Cannot continue with computation");
         return false;
     }
 

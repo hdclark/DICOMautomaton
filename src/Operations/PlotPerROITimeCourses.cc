@@ -23,6 +23,7 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
@@ -108,7 +109,7 @@ bool PlotPerROITimeCourses(Drover &DICOM_data,
         try{
             YgorMathPlottingGnuplot::Plot<double>(shuttle, "ROI Time Courses", "Time (s)", "Pixel Intensity");
         }catch(const std::exception &e){
-            FUNCWARN("Unable to plot time courses: " << e.what());
+            YLOGWARN("Unable to plot time courses: " << e.what());
         }
     }
 

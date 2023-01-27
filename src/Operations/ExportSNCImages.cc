@@ -19,6 +19,7 @@
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorImagesIO.h"
@@ -83,12 +84,12 @@ bool ExportSNCImages(Drover &DICOM_data,
 
         for(const auto& img : (*iap_it)->imagecoll.images){
             const auto fname = Get_Unique_Sequential_Filename(FilenameBaseStr + "_", 6, ".snc");
-            FUNCINFO("Exporting image to file '" << fname << "' now..");
+            YLOGINFO("Exporting image to file '" << fname << "' now..");
 
             std::ofstream os(fname, std::ios::out | std::ios::binary);
             if( !os.good()
             ||  !write_snc_file(os, img) ){
-                FUNCWARN("Unable to write to file");
+                YLOGWARN("Unable to write to file");
                 return false;
             }
         }
