@@ -817,11 +817,32 @@ bool SDL_Viewer(Drover &DICOM_data,
                   std::map<std::string, std::string>& InvocationMetadata,
                   const std::string& FilenameLex){
 
+    // Register a callback for capturing (all) logs for the duration of this operation.
+    std::shared_timed_mutex ylogs_mutex;
+    std::vector<std::string> ylogs;
+    ygor::scoped_callback([&ylogs_mutex, &ylogs](ygor::log_message msg){
+        const std::lock_guard<std::shared_timed_mutex> lock(ylogs_mutex);
+
+        std::stringstream ss;
+        const std::time_t t_conv = std::chrono::system_clock::to_time_t(msg.t);
+        ss << "--(" << log_level_to_string(msg.ll) << ")";
+        ss << " " << std::put_time(std::localtime(&t_conv), "%Y%m%d-%H%M%S");
+        ss << " thread 0x" << std::hex << msg.tid << std::dec;
+        ss << " function '" << msg.fn << "'";
+        ss << " file '" << msg.fl << "'";
+        ss << " line " << msg.sl;
+        ss << ": " << msg.msg << ".";
+        ylogs.push_back(ss.str());
+        return;
+    });
+
+
     // --------------------------------------- Operational State ------------------------------------------
     std::shared_timed_mutex drover_mutex;
     const auto mutex_dt = std::chrono::microseconds(5);
 
     const std::chrono::time_point<std::chrono::system_clock> t_start = std::chrono::system_clock::now();
+
 
     // General-purpose Drover processing offloading worker thread.
     work_queue<std::function<void(void)>> wq;
@@ -858,6 +879,8 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_plots_metadata = true;
 
         bool view_parameter_table = false;
+
+        bool view_ylogs = false;
 
         bool view_tables_enabled = true;
         bool view_table_metadata_enabled = false;
@@ -2618,6 +2641,38 @@ bool SDL_Viewer(Drover &DICOM_data,
         }
 
 
+        const auto display_ylogs = [&drover_mutex,
+                                    &mutex_dt,
+                                    &ylogs_mutex,
+                                    &ylogs,
+                                    &InvocationMetadata,
+                                    &display_metadata_table,
+                                    &view_toggles ]() -> void {
+            if( !view_toggles.view_ylogs ) return;
+
+            // Attempt to acquire an exclusive lock.
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            if(!drover_lock) return;
+
+            const std::lock_guard<std::shared_timed_mutex> ylogs_lock(ylogs_mutex);
+            if(ylogs.empty()) return;
+
+            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Logs", &view_toggles.view_ylogs);
+            for(const auto &l : ylogs){
+                ImGui::Text("%s", l.c_str());
+            }
+            ImGui::End();
+            return;
+        };
+        try{
+            display_ylogs();
+        }catch(const std::exception &e){
+            YLOGWARN("Exception in display_ylogs(): '" << e.what() << "'");
+            throw;
+        }
+
+
         // Reload the image texture. Needs to be done by the main thread.
         const auto reload_image_texture = [&drover_mutex,
                                            &recompute_image_iters,
@@ -3010,6 +3065,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         docs_str = ss.str();
                         docs_str += '\0';
                     }
+                    ImGui::MenuItem("Logs", nullptr, &view_toggles.view_ylogs);
                     ImGui::MenuItem("Metrics", nullptr, &view_toggles.view_metrics_window);
                     ImGui::Separator();
 
