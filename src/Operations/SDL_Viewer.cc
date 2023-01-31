@@ -80,6 +80,7 @@
 #include "../Dialogs.h"
 #include "../Alignment_Rigid.h"
 #include "../Documentation.h"
+#include "../Dialogs/Tray_Notification.h"
 
 #ifdef DCMA_USE_CGAL
     #include "../Surface_Meshes.h"
@@ -820,7 +821,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     // Register a callback for capturing (all) logs for the duration of this operation.
     std::shared_timed_mutex ylogs_mutex;
     std::string ylogs;
-    ygor::scoped_callback ylog_copier([&ylogs_mutex, &ylogs](ygor::log_message msg){
+    ygor::scoped_callback ylog_capture([&ylogs_mutex, &ylogs](ygor::log_message msg){
         const std::lock_guard<std::shared_timed_mutex> lock(ylogs_mutex);
 
         std::stringstream ss;
@@ -847,6 +848,22 @@ bool SDL_Viewer(Drover &DICOM_data,
         return;
     });
 
+    // Register a callback for displaying certain logs as tray notifications.
+    std::shared_ptr<ygor::scoped_callback> ylog_relay;
+    ylog_relay = std::make_shared<ygor::scoped_callback>( [](ygor::log_message msg){
+        if(ygor::log_level::warn <= msg.ll){
+            notification_t n;
+            n.urgency = ( ygor::log_level::info == msg.ll ) ? notification_urgency_t::low :
+                        ( ygor::log_level::warn == msg.ll ) ? notification_urgency_t::medium :
+                        ( ygor::log_level::err  == msg.ll ) ? notification_urgency_t::high : notification_urgency_t::medium;
+            n.message = msg.msg;
+            n.duration = static_cast<int32_t>(10000);
+            if(!tray_notification(n)){
+                YLOGINFO("Unable to emit tray notification");
+            }
+        }
+        return;
+    });
 
     // --------------------------------------- Operational State ------------------------------------------
     std::shared_timed_mutex drover_mutex;
