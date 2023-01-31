@@ -833,6 +833,17 @@ bool SDL_Viewer(Drover &DICOM_data,
         ss << " line " << msg.sl;
         ss << ": " << msg.msg << ".";
         ylogs += ss.str() + "\n";
+
+        // Trim earlier messages if the log is holding 'lots' of data.
+        const auto limit = 10UL * 1024UL * 1024UL; // MB.
+        while(limit < ylogs.size()){
+            auto c = ylogs.find('\n', static_cast<std::string::size_type>(limit / 10UL));
+            if(c == std::string::npos){
+                ylogs.clear();
+            }else{
+                ylogs.erase(0, c);
+            }
+        }
         return;
     });
 
@@ -2655,7 +2666,6 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImGui::SetNextWindowSize(ImVec2(900, 300), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(400, 75), ImGuiCond_FirstUseEver);
             ImGui::Begin("Logs", &view_toggles.view_ylogs);
-            ImGui::BeginChild("Logs_scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
 
             const bool clear = ImGui::Button("Clear");
             ImGui::SameLine();
@@ -2668,16 +2678,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
 
             ImGui::Separator();
-            // Directly copyable text. Doesn't scroll well.
-            //const ImGuiInputTextFlags flags = ImGuiInputTextFlags_ReadOnly;
-            //const auto text_area_extent = ImGui::GetContentRegionAvail();
-            //ImGui::InputTextMultiline("#ylogs_text_area",
-            //                          ylogs.data(),
-            //                          ylogs.size(),
-            //                          text_area_extent, flags);
-
-            // Non-copyable text, but integrates with window-based scrolling.
-            // Have to rely on ImGui's copy-to-clipboard routine for log egress (e.g., bug reports).
+            ImGui::BeginChild("Logs_scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
             ImGui::TextUnformatted(ylogs.data(), ylogs.data() + ylogs.size());
 
             if(ImGui::GetScrollMaxY() <= ImGui::GetScrollY()){
