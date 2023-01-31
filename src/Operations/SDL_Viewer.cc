@@ -819,8 +819,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // Register a callback for capturing (all) logs for the duration of this operation.
     std::shared_timed_mutex ylogs_mutex;
-    std::vector<std::string> ylogs;
-    ygor::scoped_callback([&ylogs_mutex, &ylogs](ygor::log_message msg){
+    std::string ylogs;
+    ygor::scoped_callback ylog_copier([&ylogs_mutex, &ylogs](ygor::log_message msg){
         const std::lock_guard<std::shared_timed_mutex> lock(ylogs_mutex);
 
         std::stringstream ss;
@@ -832,7 +832,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         ss << " file '" << msg.fl << "'";
         ss << " line " << msg.sl;
         ss << ": " << msg.msg << ".";
-        ylogs.push_back(ss.str());
+        ylogs += ss.str() + "\n";
         return;
     });
 
@@ -2655,13 +2655,18 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(!drover_lock) return;
 
             const std::lock_guard<std::shared_timed_mutex> ylogs_lock(ylogs_mutex);
-            if(ylogs.empty()) return;
 
-            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
-            ImGui::Begin("Logs", &view_toggles.view_ylogs);
-            for(const auto &l : ylogs){
-                ImGui::Text("%s", l.c_str());
-            }
+            ImGui::SetNextWindowSize(ImVec2(900, 300), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(400, 75), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowContentSize(ImVec2(3500, 0.0f));
+            ImGui::Begin("Logs", &view_toggles.view_ylogs, ImGuiWindowFlags_HorizontalScrollbar);
+
+            const ImGuiInputTextFlags flags = ImGuiInputTextFlags_ReadOnly;
+            const auto text_area_extent = ImGui::GetContentRegionAvail();
+            ImGui::InputTextMultiline("#ylogs_text_area",
+                                      ylogs.data(),
+                                      ylogs.size(),
+                                      text_area_extent, flags);
             ImGui::End();
             return;
         };
