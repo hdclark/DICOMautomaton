@@ -2650,23 +2650,40 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     &view_toggles ]() -> void {
             if( !view_toggles.view_ylogs ) return;
 
-            // Attempt to acquire an exclusive lock.
-            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
-            if(!drover_lock) return;
-
             const std::lock_guard<std::shared_timed_mutex> ylogs_lock(ylogs_mutex);
 
             ImGui::SetNextWindowSize(ImVec2(900, 300), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(400, 75), ImGuiCond_FirstUseEver);
-            ImGui::SetNextWindowContentSize(ImVec2(3500, 0.0f));
-            ImGui::Begin("Logs", &view_toggles.view_ylogs, ImGuiWindowFlags_HorizontalScrollbar);
+            ImGui::Begin("Logs", &view_toggles.view_ylogs);
+            ImGui::BeginChild("Logs_scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
 
-            const ImGuiInputTextFlags flags = ImGuiInputTextFlags_ReadOnly;
-            const auto text_area_extent = ImGui::GetContentRegionAvail();
-            ImGui::InputTextMultiline("#ylogs_text_area",
-                                      ylogs.data(),
-                                      ylogs.size(),
-                                      text_area_extent, flags);
+            const bool clear = ImGui::Button("Clear");
+            ImGui::SameLine();
+            const bool copy = ImGui::Button("Copy to clipboard");
+            if(clear){
+                ylogs.clear();
+            }
+            if(copy){
+                ImGui::LogToClipboard();
+            }
+
+            ImGui::Separator();
+            // Directly copyable text. Doesn't scroll well.
+            //const ImGuiInputTextFlags flags = ImGuiInputTextFlags_ReadOnly;
+            //const auto text_area_extent = ImGui::GetContentRegionAvail();
+            //ImGui::InputTextMultiline("#ylogs_text_area",
+            //                          ylogs.data(),
+            //                          ylogs.size(),
+            //                          text_area_extent, flags);
+
+            // Non-copyable text, but integrates with window-based scrolling.
+            // Have to rely on ImGui's copy-to-clipboard routine for log egress (e.g., bug reports).
+            ImGui::TextUnformatted(ylogs.data(), ylogs.data() + ylogs.size());
+
+            if(ImGui::GetScrollMaxY() <= ImGui::GetScrollY()){
+                ImGui::SetScrollHereY(1.0f);
+            }
+            ImGui::EndChild();
             ImGui::End();
             return;
         };
