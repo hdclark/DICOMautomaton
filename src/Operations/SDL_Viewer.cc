@@ -849,9 +849,11 @@ bool SDL_Viewer(Drover &DICOM_data,
     });
 
     // Register a callback for displaying certain logs as tray notifications.
+    std::atomic<bool> ylog_relay_enabled(true);
     std::shared_ptr<ygor::scoped_callback> ylog_relay;
-    ylog_relay = std::make_shared<ygor::scoped_callback>( [](ygor::log_message msg){
-        if(ygor::log_level::warn <= msg.ll){
+    ylog_relay = std::make_shared<ygor::scoped_callback>( [&ylog_relay_enabled](ygor::log_message msg){
+        if( ylog_relay_enabled.load()
+        &&  (ygor::log_level::warn <= msg.ll)  ){
             notification_t n;
             n.urgency = ( ygor::log_level::info == msg.ll ) ? notification_urgency_t::low :
                         ( ygor::log_level::warn == msg.ll ) ? notification_urgency_t::medium :
@@ -859,7 +861,8 @@ bool SDL_Viewer(Drover &DICOM_data,
             n.message = msg.msg;
             n.duration = static_cast<int32_t>(10000);
             if(!tray_notification(n)){
-                YLOGINFO("Unable to emit tray notification");
+                ylog_relay_enabled = false;
+                YLOGWARN("Unable to emit tray notification, disabling further tray notifications");
             }
         }
         return;
