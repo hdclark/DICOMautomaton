@@ -577,6 +577,7 @@ bool Tetrominoes(Drover &DICOM_data,
                                     img.reference( l_r, l_c, chn ) = (0L <= old_r) ? img.value(old_r, l_c, chn) : Low;
                                 }
                             }
+                            found_complete_row = true;
                             break; // Only process one row at a time to simplify this logic.
                         }
                     }
