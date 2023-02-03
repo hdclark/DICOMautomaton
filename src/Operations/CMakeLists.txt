@@ -173,6 +173,7 @@ add_library(Operations_objs OBJECT
     SupersampleImageGrid.cc
     TabulateImageMetadata.cc
     Terminal_Viewer.cc
+    Tetrominoes.cc
     ThresholdImages.cc
     ThresholdOtsu.cc
     Time.cc

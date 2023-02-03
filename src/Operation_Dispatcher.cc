@@ -194,6 +194,7 @@
 #include "Operations/SupersampleImageGrid.h"
 #include "Operations/TabulateImageMetadata.h"
 #include "Operations/Terminal_Viewer.h"
+#include "Operations/Tetrominoes.h"
 #include "Operations/ThresholdImages.h"
 #include "Operations/ThresholdOtsu.h"
 #include "Operations/Time.h"
@@ -435,6 +436,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["SupersampleImageGrid"] = std::make_pair(OpArgDocSupersampleImageGrid, SupersampleImageGrid);
     out["TabulateImageMetadata"] = std::make_pair(OpArgDocTabulateImageMetadata, TabulateImageMetadata);
     out["Terminal_Viewer"] = std::make_pair(OpArgDocTerminal_Viewer, Terminal_Viewer);
+    out["Tetrominoes"] = std::make_pair(OpArgDocTetrominoes, Tetrominoes);
     out["ThresholdImages"] = std::make_pair(OpArgDocThresholdImages, ThresholdImages);
     out["ThresholdOtsu"] = std::make_pair(OpArgDocThresholdOtsu, ThresholdOtsu);
     out["Time"] = std::make_pair(OpArgDocTime, Time);
