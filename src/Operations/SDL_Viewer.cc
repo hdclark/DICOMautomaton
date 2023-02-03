@@ -934,6 +934,8 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool adjust_colour_map_enabled = false;
 
         bool view_shader_editor_enabled = false;
+
+        bool view_tetrominoes_enabled = false;
     } view_toggles;
 
     // Documentation state.
@@ -1392,6 +1394,12 @@ bool SDL_Viewer(Drover &DICOM_data,
         "overlapping_contours_cancel" };
     size_t contour_overlap_style = 0UL;
     std::future<Drover> extracted_contours;
+
+    // Tetromino state.
+    opengl_texture_handle_t tetromino_texture;
+    Drover tetromino_imgs;
+    std::chrono::time_point<std::chrono::steady_clock> t_tetromino_updated;
+    double dt_tetromino_update = 1500.0; // milliseconds
 
     // Resets the contouring image to match the display image characteristics.
     const auto reset_contouring_state = [&contouring_imgs,
@@ -3165,6 +3173,81 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
             }
             ImGui::End();
+        }
+
+        if( view_toggles.view_tetrominoes_enabled ){
+            if(!tetromino_imgs.Has_Image_Data()){
+                tetromino_imgs.Ensure_Contour_Data_Allocated();
+                tetromino_imgs.image_data.push_back(std::make_unique<Image_Array>());
+                tetromino_imgs.image_data.back()->imagecoll.images.emplace_back();
+                auto *img_ptr = &(tetromino_imgs.image_data.back()->imagecoll.images.back());
+                img_ptr->init_buffer(15L, 10L, 1L);
+                img_ptr->init_spatial(1.0, 1.0, 1.0, zero3, zero3);
+                img_ptr->init_orientation(vec3<double>(0.0, 1.0, 0.0), vec3<double>(1.0, 0.0, 0.0));
+
+                img_ptr->metadata["Description"] = "Tetrominoes";
+                img_ptr->metadata["WindowValidFor"] = "Tetrominoes";
+                img_ptr->metadata["WindowCenter"] = "0.5";
+                img_ptr->metadata["WindowWidth"] = "1.0";
+
+                tetromino_texture = Load_OpenGL_Texture( *img_ptr, {}, {} );
+                t_tetromino_updated = std::chrono::steady_clock::now();
+            }
+
+            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(700, 40), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Tetrominoes", &view_toggles.view_tetrominoes_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
+            ImVec2 window_extent = ImGui::GetContentRegionAvail();
+
+            std::string action = "none";
+            if(ImGui::Button("Left", ImVec2(window_extent.x/6, 0))) action = "translate-left";
+            ImGui::SameLine();
+            if(ImGui::Button("Right", ImVec2(window_extent.x/6, 0))) action = "translate-right";
+            ImGui::SameLine();
+            if(ImGui::Button("Rot Left", ImVec2(window_extent.x/6, 0))) action = "rotate-counter-clockwise";
+            ImGui::SameLine();
+            if(ImGui::Button("Rot Right", ImVec2(window_extent.x/6, 0))) action = "rotate-clockwise";
+            ImGui::SameLine();
+            if(ImGui::Button("Drop", ImVec2(window_extent.x/6, 0))) action = "drop";
+
+            const auto reset = ImGui::Button("Reset", ImVec2(window_extent.x/6, 0));
+
+            ImVec2 image_extent = ImGui::GetContentRegionAvail();
+            image_extent.x = std::max(512.0f, image_extent.x - 5.0f);
+            image_extent.y = tetromino_texture.aspect_ratio * image_extent.x;
+            auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(tetromino_texture.texture_number));
+            ImGui::Image(gl_tex_ptr, image_extent);
+            ImGui::End();
+
+            // Run a simulation with the given action.
+            const auto t_now = std::chrono::steady_clock::now();
+            const auto t_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_tetromino_updated).count();
+            if(reset){
+                Free_OpenGL_Texture(tetromino_texture);
+                tetromino_imgs = Drover();
+
+            }else if( (action != "none")
+                  ||  ( (action == "none") && (dt_tetromino_update <= t_diff) ) ){
+                t_tetromino_updated = t_now;
+
+                metadata_map_t l_InvocationMetadata;
+                std::string l_FilenameLex;
+                std::list<OperationArgPkg> Operations;
+                Operations.emplace_back("Tetrominoes");
+                Operations.back().insert("ImageSelection=last");
+                Operations.back().insert("Channel=0");
+                Operations.back().insert("Low=0.0");
+                Operations.back().insert("High=1.0");
+                Operations.back().insert("Action=" + action);
+                const bool res = Operation_Dispatcher(tetromino_imgs, l_InvocationMetadata, l_FilenameLex, Operations);
+                if( res 
+                &&  tetromino_imgs.Has_Image_Data()){
+                    auto *img_ptr = &(tetromino_imgs.image_data.back()->imagecoll.images.back());
+
+                    Free_OpenGL_Texture(tetromino_texture);
+                    tetromino_texture = Load_OpenGL_Texture( *img_ptr, {}, {} );
+                }
+            }
         }
 
         // Display the shader editor dialog.
@@ -6739,6 +6822,11 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImGui::SameLine();
             if(ImGui::Button("Implot demo")){
                 view_toggles.view_implot_demo = true;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if(ImGui::MenuItem("Tetrominoes")){
+                view_toggles.view_tetrominoes_enabled = true;
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
