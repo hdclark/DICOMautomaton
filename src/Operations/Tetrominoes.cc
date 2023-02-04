@@ -337,11 +337,18 @@ bool Tetrominoes(Drover &DICOM_data,
         return (Threshold < img.value(row, col, chn));
     };
 
-    const auto make_cell_active = [High]( img_t& img,
-                                          long int row,
-                                          long int col,
-                                          long int chn ){
-        img.reference(row, col, chn) = High;
+    const auto make_cell_active = [Threshold,
+                                   High,
+                                   &valid_tets]( img_t& img,
+                                                            long int row,
+                                                            long int col,
+                                                            long int chn,
+                                                            long int tet_shape ){
+
+        const auto N_tets = static_cast<float>(valid_tets.size());
+        const auto dval = (High - Threshold) / (N_tets + 1.0);
+        const auto val = Threshold + dval + (dval * static_cast<float>(tet_shape));
+        img.reference(row, col, chn) = val;
         return;
     };
 
@@ -410,9 +417,10 @@ bool Tetrominoes(Drover &DICOM_data,
     // Coordinate writers.
     const auto make_all_coords_active = [&make_cell_active]( img_t& img,
                                                              long int chn,
+                                                             long int tet_shape,
                                                              const std::array<coord_t,4> &abs_coords ){
         for(const auto &c : abs_coords){
-            make_cell_active(img, c.at(0), c.at(1), chn);
+            make_cell_active(img, c.at(0), c.at(1), chn, tet_shape);
         }
         return;
     };
@@ -461,7 +469,7 @@ bool Tetrominoes(Drover &DICOM_data,
 
         make_all_coords_inactive(img, chn, l_abs_coords);
         if(!coords_all_inactive(img, chn, l_next_abs_coords)){
-            make_all_coords_active(img, chn, l_abs_coords);
+            make_all_coords_active(img, chn, curr_tet_shape, l_abs_coords);
             return false;
         }
 
@@ -469,7 +477,7 @@ bool Tetrominoes(Drover &DICOM_data,
         img.metadata[moving_tet_pos_col_str] = std::to_string(next_tet_pos_col);
         img.metadata[moving_tet_shape_str]   = std::to_string(next_tet_shape);
         img.metadata[moving_tet_orien_str]   = std::to_string(next_tet_orien);
-        make_all_coords_active(img, chn, l_next_abs_coords);
+        make_all_coords_active(img, chn, next_tet_shape, l_next_abs_coords);
         return true;
     };
 
@@ -537,7 +545,7 @@ bool Tetrominoes(Drover &DICOM_data,
                     img.metadata[moving_tet_pos_col_str] = std::to_string(l_pos_col);
                     img.metadata[moving_tet_shape_str]   = std::to_string(l_shape);
                     img.metadata[moving_tet_orien_str]   = std::to_string(l_orien);
-                    make_all_coords_active(img, chn, l_abs_coords);
+                    make_all_coords_active(img, chn, l_shape, l_abs_coords);
                     continue;
                 }
 
@@ -585,7 +593,7 @@ bool Tetrominoes(Drover &DICOM_data,
                         }
                     }
 
-                    make_all_coords_active(img, chn, l_abs_coords);
+                    make_all_coords_active(img, chn, moving_tet_shape.value(), l_abs_coords);
                     if(found_complete_row){
                         auto score = img.GetMetadataValueAs<long int>(tetromino_score_str);
                         score = score.value_or(0L) + 1L;
