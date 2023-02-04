@@ -74,6 +74,7 @@ OperationDoc OpArgDocTetrominoes(){
                                  "rotate-counterclockwise",
                                  "translate-left",
                                  "translate-right",
+                                 "translate-down",
                                  "drop" };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
@@ -122,6 +123,7 @@ bool Tetrominoes(Drover &DICOM_data,
     const auto regex_cntrclock = Compile_Regex("^ro?t?a?t?e?[-_]?[ca][on][ut]?[ni]?t?e?r?[-_]?c?l?o?c?k?w?i?s?e$");
     const auto regex_shift_l   = Compile_Regex("^[ts][rh]?[ai]?[nf]?[st]?l?a?t?e?[-_]?le?f?t?$");
     const auto regex_shift_r   = Compile_Regex("^[ts][rh]?[ai]?[nf]?[st]?l?a?t?e?[-_]?ri?g?h?t?$");
+    const auto regex_shift_d   = Compile_Regex("^[ts][rh]?[ai]?[nf]?[st]?l?a?t?e?[-_]?do?w?n?$");
     const auto regex_drop      = Compile_Regex("^dr?o?p?$");
 
     const bool action_none      = std::regex_match(ActionStr, regex_none);
@@ -129,6 +131,7 @@ bool Tetrominoes(Drover &DICOM_data,
     const bool action_cntrclock = std::regex_match(ActionStr, regex_cntrclock);
     const bool action_shift_l   = std::regex_match(ActionStr, regex_shift_l);
     const bool action_shift_r   = std::regex_match(ActionStr, regex_shift_r);
+    const bool action_shift_d   = std::regex_match(ActionStr, regex_shift_d);
     const bool action_drop      = std::regex_match(ActionStr, regex_drop);
 
     const std::string moving_tet_pos_row_str = "MovingTetrominoPositionRow";
@@ -675,6 +678,19 @@ bool Tetrominoes(Drover &DICOM_data,
                                        moving_tet_orien.value(),
                                        moving_tet_pos_row.value(),
                                        moving_tet_pos_col.value() + 1L );
+
+                }else if(action_shift_d){
+                    implement_tet_move(img, chn,
+                                       // From:
+                                       moving_tet_shape.value(),
+                                       moving_tet_orien.value(),
+                                       moving_tet_pos_row.value(),
+                                       moving_tet_pos_col.value(),
+                                       // To:
+                                       moving_tet_shape.value(),
+                                       moving_tet_orien.value(),
+                                       moving_tet_pos_row.value() + 1L,
+                                       moving_tet_pos_col.value() );
 
                 }else if(action_drop){
                     // Drop the tet until it collides with something. We accept the shortest unimpeded drop.

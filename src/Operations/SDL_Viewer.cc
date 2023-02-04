@@ -529,7 +529,7 @@ compile_shader_program(const std::array<char, 2048> &vert_shader_src,
         auto l_custom_shader = std::make_unique<ogl_shader_program>(array_to_string(vert_shader_src),
                                                                     array_to_string(frag_shader_src),
                                                                     ss);
-        return std::move(l_custom_shader);
+        return l_custom_shader;
     }catch(const std::exception &e){
         shader_log = string_to_array(ss.str());
         throw;
@@ -1399,7 +1399,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     opengl_texture_handle_t tetromino_texture;
     Drover tetromino_imgs;
     std::chrono::time_point<std::chrono::steady_clock> t_tetromino_updated;
-    double dt_tetromino_update = 1500.0; // milliseconds
+    double dt_tetromino_update = 500.0; // milliseconds
 
     // Resets the contouring image to match the display image characteristics.
     const auto reset_contouring_state = [&contouring_imgs,
@@ -1839,11 +1839,9 @@ bool SDL_Viewer(Drover &DICOM_data,
         }
 
         // Assess whether there is image data.
-        bool image_is_valid = false;
         do{
             // See if the current image numbers are valid.
             if( auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters(); img_valid ){
-                image_is_valid = true;
                 break;
             }
 
@@ -1852,7 +1850,6 @@ bool SDL_Viewer(Drover &DICOM_data,
             img_num = 0;
             img_channel = 0;
             if( auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters(); img_valid ){
-                image_is_valid = true;
                 break;
             }
 
@@ -1864,9 +1861,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         }while(false);
 
         // Signal the need to reload the texture.
-        //if( image_is_valid ){
         need_to_reload_opengl_texture.store(true);
-        //}
         return;
     };
 
@@ -3193,31 +3188,40 @@ bool SDL_Viewer(Drover &DICOM_data,
                 tetromino_texture = Load_OpenGL_Texture( *img_ptr, 0L, {}, {} );
                 t_tetromino_updated = std::chrono::steady_clock::now();
             }
+            const auto score = tetromino_imgs.image_data.back()->imagecoll.images.back().GetMetadataValueAs<double>("TetrominoScore").value_or(0.0);
+            const auto speed_multiplier = 40.0; // Speed will have doubled when the score equals this factor.
+            const auto speed = (score + speed_multiplier) / speed_multiplier;
 
-            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+
+            ImGui::SetNextWindowSize(ImVec2(400, 650), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(700, 40), ImGuiCond_FirstUseEver);
             ImGui::Begin("Tetrominoes", &view_toggles.view_tetrominoes_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
             ImVec2 window_extent = ImGui::GetContentRegionAvail();
+            const auto f = ImGui::IsWindowFocused();
 
             std::string action = "none";
-            if(ImGui::Button("Left", ImVec2(window_extent.x/6, 0))) action = "translate-left";
+            if( ImGui::Button("Left", ImVec2(window_extent.x/7, 0))
+            ||  (f && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_LeftArrow))) ) action = "translate-left";
             ImGui::SameLine();
-            if(ImGui::Button("Right", ImVec2(window_extent.x/6, 0))) action = "translate-right";
+            if( ImGui::Button("Right", ImVec2(window_extent.x/7, 0))
+            ||  (f && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_RightArrow))) ) action = "translate-right";
             ImGui::SameLine();
-            if(ImGui::Button("Rot Left", ImVec2(window_extent.x/6, 0))) action = "rotate-counter-clockwise";
+            if( ImGui::Button("Rot Left", ImVec2(window_extent.x/7, 0))
+            ||  (f && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_UpArrow))) ) action = "rotate-counter-clockwise";
             ImGui::SameLine();
-            if(ImGui::Button("Rot Right", ImVec2(window_extent.x/6, 0))) action = "rotate-clockwise";
+            if( ImGui::Button("Rot Right", ImVec2(window_extent.x/7, 0))
+            ||  (f && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Tab))) ) action = "rotate-clockwise";
             ImGui::SameLine();
-            if(ImGui::Button("Drop", ImVec2(window_extent.x/6, 0))) action = "drop";
+            if( ImGui::Button("Down", ImVec2(window_extent.x/7, 0))
+            ||  (f && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_DownArrow))) ) action = "translate-down";
+            ImGui::SameLine();
+            if( ImGui::Button("Drop", ImVec2(window_extent.x/7, 0))
+            ||  (f && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Space))) ) action = "drop";
 
             const auto reset = ImGui::Button("Reset", ImVec2(window_extent.x/6, 0));
-
-            ImVec2 image_extent = ImGui::GetContentRegionAvail();
-            image_extent.x = std::max(512.0f, image_extent.x - 5.0f);
-            image_extent.y = tetromino_texture.aspect_ratio * image_extent.x;
-            auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(tetromino_texture.texture_number));
-            ImGui::Image(gl_tex_ptr, image_extent);
-            ImGui::End();
+            ImGui::SameLine();
+            ImGui::Text("Current Score: %s, Current Speed: %s%%", std::to_string(score).c_str(),
+                                                                  std::to_string(static_cast<long int>(100.0 * speed)).c_str());
 
             // Run a simulation with the given action.
             const auto t_now = std::chrono::steady_clock::now();
@@ -3225,9 +3229,10 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(reset){
                 Free_OpenGL_Texture(tetromino_texture);
                 tetromino_imgs = Drover();
+                t_tetromino_updated = t_now;
 
             }else if( (action != "none")
-                  ||  ( (action == "none") && (dt_tetromino_update <= t_diff) ) ){
+                  ||  ( (action == "none") && (dt_tetromino_update <= (t_diff * speed)) ) ){
                 t_tetromino_updated = t_now;
 
                 metadata_map_t l_InvocationMetadata;
@@ -3246,8 +3251,20 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                     Free_OpenGL_Texture(tetromino_texture);
                     tetromino_texture = Load_OpenGL_Texture( *img_ptr, 0L, {}, {} );
+                }else{
+                    Free_OpenGL_Texture(tetromino_texture);
+                    tetromino_imgs = Drover();
+                    t_tetromino_updated = t_now;
                 }
             }
+
+            // Note: we have to render the image last so the texture number is available during rendering.
+            ImVec2 image_extent = ImGui::GetContentRegionAvail();
+            image_extent.y = std::min(700.0f, image_extent.y - 5.0f);
+            image_extent.x = image_extent.y / tetromino_texture.aspect_ratio;
+            auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(tetromino_texture.texture_number));
+            ImGui::Image(gl_tex_ptr, image_extent);
+            ImGui::End();
         }
 
         // Display the shader editor dialog.
@@ -6824,7 +6841,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
-            if(ImGui::MenuItem("Tetrominoes demo")){
+            if(ImGui::Button("Tetrominoes demo")){
                 view_toggles.view_tetrominoes_enabled = true;
                 ImGui::CloseCurrentPopup();
             }
