@@ -1497,8 +1497,8 @@ bool SDL_Viewer(Drover &DICOM_data,
     std::atomic<bool> need_to_reload_opengl_texture = true;
     const auto Load_OpenGL_Texture = [&colour_maps,
                                       &colour_map,
-                                      &nan_colour,
-                                      &img_channel ]( const planar_image<float,double>& img,
+                                      &nan_colour  ]( const planar_image<float,double>& img,
+                                                      const long int img_channel,
                                                       const std::optional<double>& custom_centre,
                                                       const std::optional<double>& custom_width ) -> opengl_texture_handle_t {
 
@@ -1974,7 +1974,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
         if( img_valid ){ 
             Free_OpenGL_Texture(scale_bar_texture);
-            scale_bar_texture = Load_OpenGL_Texture( scale_bar_img, {}, {} );
+            scale_bar_texture = Load_OpenGL_Texture( scale_bar_img, 0L, {}, {} );
         }
         return;
     };
@@ -2742,7 +2742,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             &&  img_valid ){
                 img_channel = std::clamp<long int>(img_channel, 0, disp_img_it->channels-1);
                 Free_OpenGL_Texture(current_texture);
-                current_texture = Load_OpenGL_Texture(*disp_img_it, custom_centre, custom_width);
+                current_texture = Load_OpenGL_Texture(*disp_img_it, img_channel, custom_centre, custom_width);
             }else{
                 img_channel = -1;
                 img_array_num = -1;
@@ -2764,7 +2764,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::SetNextWindowPos(ImVec2(700, 40), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Contour Mask Debugging", &view_toggles.view_contouring_debug, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
                 Free_OpenGL_Texture(contouring_texture);
-                contouring_texture = Load_OpenGL_Texture( *cimg_it, {}, {} );
+                contouring_texture = Load_OpenGL_Texture( *cimg_it, 0L, {}, {} );
                 auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(contouring_texture.texture_number));
                 ImGui::Image(gl_tex_ptr, ImVec2(600,600), uv_min, uv_max);
                 ImGui::End();
@@ -3190,7 +3190,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 img_ptr->metadata["WindowCenter"] = "0.5";
                 img_ptr->metadata["WindowWidth"] = "1.0";
 
-                tetromino_texture = Load_OpenGL_Texture( *img_ptr, {}, {} );
+                tetromino_texture = Load_OpenGL_Texture( *img_ptr, 0L, {}, {} );
                 t_tetromino_updated = std::chrono::steady_clock::now();
             }
 
@@ -3245,7 +3245,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     auto *img_ptr = &(tetromino_imgs.image_data.back()->imagecoll.images.back());
 
                     Free_OpenGL_Texture(tetromino_texture);
-                    tetromino_texture = Load_OpenGL_Texture( *img_ptr, {}, {} );
+                    tetromino_texture = Load_OpenGL_Texture( *img_ptr, 0L, {}, {} );
                 }
             }
         }
@@ -6814,7 +6814,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                 view_toggles.view_contouring_debug = true;
                 ImGui::CloseCurrentPopup();
             }
-            ImGui::SameLine();
             if(ImGui::Button("Imgui demo")){
                 view_toggles.view_imgui_demo = true;
                 ImGui::CloseCurrentPopup();
@@ -6825,11 +6824,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
-            if(ImGui::MenuItem("Tetrominoes")){
+            if(ImGui::MenuItem("Tetrominoes demo")){
                 view_toggles.view_tetrominoes_enabled = true;
                 ImGui::CloseCurrentPopup();
             }
-            ImGui::SameLine();
             if(ImGui::Button("Close")){
                 ImGui::CloseCurrentPopup();
             }
