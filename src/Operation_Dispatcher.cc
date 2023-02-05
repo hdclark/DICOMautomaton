@@ -169,6 +169,7 @@
 #include "Operations/PlotLineSamples.h"
 #include "Operations/PointSeparation.h"
 #include "Operations/PollDirectories.h"
+#include "Operations/Polyominoes.h"
 #include "Operations/PreFilterEnormousCTValues.h"
 #include "Operations/PruneEmptyImageDoseArrays.h"
 #include "Operations/PurgeContours.h"
@@ -194,7 +195,6 @@
 #include "Operations/SupersampleImageGrid.h"
 #include "Operations/TabulateImageMetadata.h"
 #include "Operations/Terminal_Viewer.h"
-#include "Operations/Tetrominoes.h"
 #include "Operations/ThresholdImages.h"
 #include "Operations/ThresholdOtsu.h"
 #include "Operations/Time.h"
@@ -411,6 +411,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["PlotPerROITimeCourses"] = std::make_pair(OpArgDocPlotPerROITimeCourses, PlotPerROITimeCourses);
     out["PointSeparation"] = std::make_pair(OpArgDocPointSeparation, PointSeparation);
     out["PollDirectories"] = std::make_pair(OpArgDocPollDirectories, PollDirectories);
+    out["Polyominoes"] = std::make_pair(OpArgDocPolyominoes, Polyominoes);
     out["PreFilterEnormousCTValues"] = std::make_pair(OpArgDocPreFilterEnormousCTValues, PreFilterEnormousCTValues);
     out["PruneEmptyImageDoseArrays"] = std::make_pair(OpArgDocPruneEmptyImageDoseArrays, PruneEmptyImageDoseArrays);
     out["PurgeContours"] = std::make_pair(OpArgDocPurgeContours, PurgeContours);
@@ -436,7 +437,6 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["SupersampleImageGrid"] = std::make_pair(OpArgDocSupersampleImageGrid, SupersampleImageGrid);
     out["TabulateImageMetadata"] = std::make_pair(OpArgDocTabulateImageMetadata, TabulateImageMetadata);
     out["Terminal_Viewer"] = std::make_pair(OpArgDocTerminal_Viewer, Terminal_Viewer);
-    out["Tetrominoes"] = std::make_pair(OpArgDocTetrominoes, Tetrominoes);
     out["ThresholdImages"] = std::make_pair(OpArgDocThresholdImages, ThresholdImages);
     out["ThresholdOtsu"] = std::make_pair(OpArgDocThresholdOtsu, ThresholdOtsu);
     out["Time"] = std::make_pair(OpArgDocTime, Time);

@@ -148,6 +148,7 @@ add_library(Operations_objs OBJECT
     PlotPerROITimeCourses.cc
     PointSeparation.cc
     PollDirectories.cc
+    Polyominoes.cc
     PreFilterEnormousCTValues.cc
     PruneEmptyImageDoseArrays.cc
     PurgeContours.cc
@@ -173,7 +174,6 @@ add_library(Operations_objs OBJECT
     SupersampleImageGrid.cc
     TabulateImageMetadata.cc
     Terminal_Viewer.cc
-    Tetrominoes.cc
     ThresholdImages.cc
     ThresholdOtsu.cc
     Time.cc

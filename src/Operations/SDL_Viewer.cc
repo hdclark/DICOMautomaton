@@ -935,7 +935,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         bool view_shader_editor_enabled = false;
 
-        bool view_tetrominoes_enabled = false;
+        bool view_polyominoes_enabled = false;
     } view_toggles;
 
     // Documentation state.
@@ -1395,11 +1395,11 @@ bool SDL_Viewer(Drover &DICOM_data,
     size_t contour_overlap_style = 0UL;
     std::future<Drover> extracted_contours;
 
-    // Tetromino state.
-    opengl_texture_handle_t tetromino_texture;
-    Drover tetromino_imgs;
-    std::chrono::time_point<std::chrono::steady_clock> t_tetromino_updated;
-    double dt_tetromino_update = 500.0; // milliseconds
+    // Polyomino state.
+    opengl_texture_handle_t polyomino_texture;
+    Drover polyomino_imgs;
+    std::chrono::time_point<std::chrono::steady_clock> t_polyomino_updated;
+    double dt_polyomino_update = 500.0; // milliseconds
 
     // Resets the contouring image to match the display image characteristics.
     const auto reset_contouring_state = [&contouring_imgs,
@@ -3170,32 +3170,32 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImGui::End();
         }
 
-        if( view_toggles.view_tetrominoes_enabled ){
-            if(!tetromino_imgs.Has_Image_Data()){
-                tetromino_imgs.Ensure_Contour_Data_Allocated();
-                tetromino_imgs.image_data.push_back(std::make_unique<Image_Array>());
-                tetromino_imgs.image_data.back()->imagecoll.images.emplace_back();
-                auto *img_ptr = &(tetromino_imgs.image_data.back()->imagecoll.images.back());
+        if( view_toggles.view_polyominoes_enabled ){
+            if(!polyomino_imgs.Has_Image_Data()){
+                polyomino_imgs.Ensure_Contour_Data_Allocated();
+                polyomino_imgs.image_data.push_back(std::make_unique<Image_Array>());
+                polyomino_imgs.image_data.back()->imagecoll.images.emplace_back();
+                auto *img_ptr = &(polyomino_imgs.image_data.back()->imagecoll.images.back());
                 img_ptr->init_buffer(15L, 10L, 1L);
                 img_ptr->init_spatial(1.0, 1.0, 1.0, zero3, zero3);
                 img_ptr->init_orientation(vec3<double>(0.0, 1.0, 0.0), vec3<double>(1.0, 0.0, 0.0));
 
-                img_ptr->metadata["Description"] = "Tetrominoes";
-                img_ptr->metadata["WindowValidFor"] = "Tetrominoes";
+                img_ptr->metadata["Description"] = "Polyominoes";
+                img_ptr->metadata["WindowValidFor"] = "Polyominoes";
                 img_ptr->metadata["WindowCenter"] = "0.5";
                 img_ptr->metadata["WindowWidth"] = "1.0";
 
-                tetromino_texture = Load_OpenGL_Texture( *img_ptr, 0L, {}, {} );
-                t_tetromino_updated = std::chrono::steady_clock::now();
+                polyomino_texture = Load_OpenGL_Texture( *img_ptr, 0L, {}, {} );
+                t_polyomino_updated = std::chrono::steady_clock::now();
             }
-            const auto score = tetromino_imgs.image_data.back()->imagecoll.images.back().GetMetadataValueAs<double>("TetrominoScore").value_or(0.0);
+            const auto score = polyomino_imgs.image_data.back()->imagecoll.images.back().GetMetadataValueAs<double>("PolyominoesScore").value_or(0.0);
             const auto speed_multiplier = 50.0; // Speed will have doubled when the score equals this factor.
             const auto speed = (score + speed_multiplier) / speed_multiplier;
 
 
             ImGui::SetNextWindowSize(ImVec2(400, 650), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(700, 40), ImGuiCond_FirstUseEver);
-            ImGui::Begin("Tetrominoes", &view_toggles.view_tetrominoes_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
+            ImGui::Begin("Polyominoes", &view_toggles.view_polyominoes_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
             ImVec2 window_extent = ImGui::GetContentRegionAvail();
             const auto f = ImGui::IsWindowFocused();
 
@@ -3225,44 +3225,44 @@ bool SDL_Viewer(Drover &DICOM_data,
 
             // Run a simulation with the given action.
             const auto t_now = std::chrono::steady_clock::now();
-            const auto t_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_tetromino_updated).count();
+            const auto t_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_polyomino_updated).count();
             if(reset){
-                Free_OpenGL_Texture(tetromino_texture);
-                tetromino_imgs = Drover();
-                t_tetromino_updated = t_now;
+                Free_OpenGL_Texture(polyomino_texture);
+                polyomino_imgs = Drover();
+                t_polyomino_updated = t_now;
 
             }else if( (action != "none")
-                  ||  ( (action == "none") && (dt_tetromino_update <= (t_diff * speed)) ) ){
-                t_tetromino_updated = t_now;
+                  ||  ( (action == "none") && (dt_polyomino_update <= (t_diff * speed)) ) ){
+                t_polyomino_updated = t_now;
 
                 metadata_map_t l_InvocationMetadata;
                 std::string l_FilenameLex;
                 std::list<OperationArgPkg> Operations;
-                Operations.emplace_back("Tetrominoes");
+                Operations.emplace_back("Polyominoes");
                 Operations.back().insert("ImageSelection=last");
                 Operations.back().insert("Channel=0");
                 Operations.back().insert("Low=0.0");
                 Operations.back().insert("High=1.0");
                 Operations.back().insert("Action=" + action);
-                const bool res = Operation_Dispatcher(tetromino_imgs, l_InvocationMetadata, l_FilenameLex, Operations);
+                const bool res = Operation_Dispatcher(polyomino_imgs, l_InvocationMetadata, l_FilenameLex, Operations);
                 if( res 
-                &&  tetromino_imgs.Has_Image_Data()){
-                    auto *img_ptr = &(tetromino_imgs.image_data.back()->imagecoll.images.back());
+                &&  polyomino_imgs.Has_Image_Data()){
+                    auto *img_ptr = &(polyomino_imgs.image_data.back()->imagecoll.images.back());
 
-                    Free_OpenGL_Texture(tetromino_texture);
-                    tetromino_texture = Load_OpenGL_Texture( *img_ptr, 0L, {}, {} );
+                    Free_OpenGL_Texture(polyomino_texture);
+                    polyomino_texture = Load_OpenGL_Texture( *img_ptr, 0L, {}, {} );
                 }else{
-                    Free_OpenGL_Texture(tetromino_texture);
-                    tetromino_imgs = Drover();
-                    t_tetromino_updated = t_now;
+                    Free_OpenGL_Texture(polyomino_texture);
+                    polyomino_imgs = Drover();
+                    t_polyomino_updated = t_now;
                 }
             }
 
             // Note: we have to render the image last so the texture number is available during rendering.
             ImVec2 image_extent = ImGui::GetContentRegionAvail();
             image_extent.y = std::min(700.0f, image_extent.y - 5.0f);
-            image_extent.x = image_extent.y / tetromino_texture.aspect_ratio;
-            auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(tetromino_texture.texture_number));
+            image_extent.x = image_extent.y / polyomino_texture.aspect_ratio;
+            auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(polyomino_texture.texture_number));
             ImGui::Image(gl_tex_ptr, image_extent);
             ImGui::End();
         }
@@ -6841,8 +6841,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
-            if(ImGui::Button("Tetrominoes demo")){
-                view_toggles.view_tetrominoes_enabled = true;
+            if(ImGui::Button("Polyominoes demo")){
+                view_toggles.view_polyominoes_enabled = true;
                 ImGui::CloseCurrentPopup();
             }
             if(ImGui::Button("Close")){
