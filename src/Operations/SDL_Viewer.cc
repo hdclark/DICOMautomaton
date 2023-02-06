@@ -1400,6 +1400,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     Drover polyomino_imgs;
     std::chrono::time_point<std::chrono::steady_clock> t_polyomino_updated;
     double dt_polyomino_update = 500.0; // milliseconds
+    bool polyomino_paused = false;
 
     // Resets the contouring image to match the display image characteristics.
     const auto reset_contouring_state = [&contouring_imgs,
@@ -3218,7 +3219,10 @@ bool SDL_Viewer(Drover &DICOM_data,
             if( ImGui::Button("Drop", ImVec2(window_extent.x/7, 0))
             ||  (f && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Space))) ) action = "drop";
 
+            ImGui::Checkbox("Pause", &polyomino_paused);
+            ImGui::SameLine();
             const auto reset = ImGui::Button("Reset", ImVec2(window_extent.x/6, 0));
+            
             ImGui::SameLine();
             ImGui::Text("Current Score: %s, Current Speed: %s%%", std::to_string(static_cast<long int>(score)).c_str(),
                                                                   std::to_string(static_cast<long int>(100.0 * speed)).c_str());
@@ -3229,6 +3233,10 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(reset){
                 Free_OpenGL_Texture(polyomino_texture);
                 polyomino_imgs = Drover();
+                t_polyomino_updated = t_now;
+
+            }else if( polyomino_paused ){
+                // Do not simulate or change the texture.
                 t_polyomino_updated = t_now;
 
             }else if( (action != "none")
@@ -3252,9 +3260,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     Free_OpenGL_Texture(polyomino_texture);
                     polyomino_texture = Load_OpenGL_Texture( *img_ptr, 0L, {}, {} );
                 }else{
-                    Free_OpenGL_Texture(polyomino_texture);
-                    polyomino_imgs = Drover();
-                    t_polyomino_updated = t_now;
+                    polyomino_paused = true;
                 }
             }
 

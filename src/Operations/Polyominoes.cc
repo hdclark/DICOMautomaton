@@ -652,7 +652,7 @@ bool Polyominoes(Drover &DICOM_data,
     }}
     }};
 
-    if( (valid_ominoes.size() != 4UL)
+    if( (valid_ominoes.size() != 5UL)
 
     ||  (valid_ominoes.at(0).size() != 1UL) // Monominoes.
     ||  (valid_ominoes.at(0).at(0).size() != 1UL)
@@ -691,8 +691,7 @@ bool Polyominoes(Drover &DICOM_data,
     ||  (valid_ominoes.at(4).at(14).size() != 4UL)
     ||  (valid_ominoes.at(4).at(15).size() != 4UL)
     ||  (valid_ominoes.at(4).at(16).size() != 4UL)
-    ||  (valid_ominoes.at(4).at(17).size() != 4UL)
-    ||  (valid_ominoes.at(4).at(18).size() != 4UL) ){
+    ||  (valid_ominoes.at(4).at(17).size() != 4UL) ){
         throw std::logic_error("Unexpected omino storage");
     }
 
