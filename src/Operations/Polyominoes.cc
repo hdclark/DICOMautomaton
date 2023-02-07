@@ -925,8 +925,8 @@ bool Polyominoes(Drover &DICOM_data,
                     const auto N_families = static_cast<long int>(valid_ominoes.size());
                     for(long int family = 0L; family < N_families; ++family){
                         if( (Family <= 0L) 
-                        ||  (4L < Family)
-                        ||  (family == Family) ){
+                        ||  (static_cast<long int>(valid_ominoes.size()) < Family)
+                        ||  (family == (Family - 1L)) ){
                             const auto N_shapes = static_cast<long int>(valid_ominoes.at(family).size());
                             for(long int shape = 0L; shape < N_shapes; ++shape){
                                 poss.emplace_back( family, shape );
