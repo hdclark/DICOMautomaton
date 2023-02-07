@@ -3195,7 +3195,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             const auto speed = (score + speed_multiplier) / speed_multiplier;
 
 
-            ImGui::SetNextWindowSize(ImVec2(482, 1000), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(365, 820), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(1000, 50), ImGuiCond_FirstUseEver);
             ImGui::Begin("Polyominoes", &view_toggles.view_polyominoes_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
             ImVec2 window_extent = ImGui::GetContentRegionAvail();
@@ -3208,10 +3208,10 @@ bool SDL_Viewer(Drover &DICOM_data,
             if( ImGui::Button("Right", ImVec2(window_extent.x/7, 0))
             ||  (f && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_RightArrow))) ) action = "translate-right";
             ImGui::SameLine();
-            if( ImGui::Button("Rot Left", ImVec2(window_extent.x/7, 0))
+            if( ImGui::Button("Rot L", ImVec2(window_extent.x/7, 0))
             ||  (f && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_UpArrow))) ) action = "rotate-counter-clockwise";
             ImGui::SameLine();
-            if( ImGui::Button("Rot Right", ImVec2(window_extent.x/7, 0))
+            if( ImGui::Button("Rot R", ImVec2(window_extent.x/7, 0))
             ||  (f && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Tab))) ) action = "rotate-clockwise";
             ImGui::SameLine();
             if( ImGui::Button("Down", ImVec2(window_extent.x/7, 0))
