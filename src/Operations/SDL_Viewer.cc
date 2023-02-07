@@ -1401,6 +1401,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     std::chrono::time_point<std::chrono::steady_clock> t_polyomino_updated;
     double dt_polyomino_update = 500.0; // milliseconds
     bool polyomino_paused = false;
+    int polyomino_family = 0;
 
     // Resets the contouring image to match the display image characteristics.
     const auto reset_contouring_state = [&contouring_imgs,
@@ -3177,7 +3178,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 polyomino_imgs.image_data.push_back(std::make_unique<Image_Array>());
                 polyomino_imgs.image_data.back()->imagecoll.images.emplace_back();
                 auto *img_ptr = &(polyomino_imgs.image_data.back()->imagecoll.images.back());
-                img_ptr->init_buffer(15L, 10L, 1L);
+                img_ptr->init_buffer(20L, 10L, 1L);
                 img_ptr->init_spatial(1.0, 1.0, 1.0, zero3, zero3);
                 img_ptr->init_orientation(vec3<double>(0.0, 1.0, 0.0), vec3<double>(1.0, 0.0, 0.0));
 
@@ -3194,8 +3195,8 @@ bool SDL_Viewer(Drover &DICOM_data,
             const auto speed = (score + speed_multiplier) / speed_multiplier;
 
 
-            ImGui::SetNextWindowSize(ImVec2(400, 650), ImGuiCond_FirstUseEver);
-            ImGui::SetNextWindowPos(ImVec2(700, 40), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(482, 1000), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(1000, 50), ImGuiCond_FirstUseEver);
             ImGui::Begin("Polyominoes", &view_toggles.view_polyominoes_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
             ImVec2 window_extent = ImGui::GetContentRegionAvail();
             const auto f = ImGui::IsWindowFocused();
@@ -3219,6 +3220,12 @@ bool SDL_Viewer(Drover &DICOM_data,
             if( ImGui::Button("Drop", ImVec2(window_extent.x/7, 0))
             ||  (f && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Space))) ) action = "drop";
 
+            ImGui::SliderInt("Polyomino Family", &polyomino_family, 0, 5);
+            polyomino_family = std::clamp(polyomino_family, 0, 5);
+            if(ImGui::IsItemHovered()){
+                ImGui::SetTooltip("Controls the family or order of new polyominoes, e.g., four for tetrominoes. Zero selects from all available families.");
+            }
+
             ImGui::Checkbox("Pause", &polyomino_paused);
             ImGui::SameLine();
             const auto reset = ImGui::Button("Reset", ImVec2(window_extent.x/6, 0));
@@ -3233,6 +3240,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 Free_OpenGL_Texture(polyomino_texture);
                 polyomino_imgs = Drover();
                 t_polyomino_updated = t_now;
+                polyomino_paused = false;
 
             }else if( polyomino_paused ){
                 // Do not simulate or change the texture.
@@ -3250,6 +3258,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 Operations.back().insert("Channel=0");
                 Operations.back().insert("Low=0.0");
                 Operations.back().insert("High=1.0");
+                Operations.back().insert("Family=" + std::to_string(polyomino_family));
                 Operations.back().insert("Action=" + action);
                 const bool res = Operation_Dispatcher(polyomino_imgs, l_InvocationMetadata, l_FilenameLex, Operations);
                 if( res 
