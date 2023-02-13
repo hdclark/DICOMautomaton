@@ -82,6 +82,7 @@
 #include "../Alignment_Rigid.h"
 #include "../Documentation.h"
 #include "../Dialogs/Tray_Notification.h"
+#include "../Triple_Three.h"
 
 #ifdef DCMA_USE_CGAL
     #include "../Surface_Meshes.h"
@@ -1406,53 +1407,10 @@ bool SDL_Viewer(Drover &DICOM_data,
     int polyomino_family = 0;
 
     // Triple-three state.
-    struct tt_card_t {
-        int32_t stat_up    = 1;
-        int32_t stat_down  = 2;
-        int32_t stat_left  = 3;
-        int32_t stat_right = 4;
-
-        bool used = false;
-        bool owned_by_user = true;
-    };
-    std::array<tt_card_t,10> tt_cards;
-    std::array<int32_t,9> tt_board;
+    tt_game_t tt_game;
+    tt_game.reset();
     std::chrono::time_point<std::chrono::steady_clock> t_tt_updated;
     double dt_tt_update = 3000.0; // milliseconds
-    bool tt_prev_move_was_user = false;
-
-    const auto tt_reset = [&](){
-        std::random_device rdev;
-        std::mt19937 re( rdev() );
-
-        for(size_t i = 0UL; i < tt_cards.size(); ++i){
-            std::uniform_real_distribution<> frd(0.25, 0.75); // Tweak this to alter the distribution.
-            const auto f1 = frd(re);
-            const auto f2 = frd(re);
-            const auto f3 = frd(re);
-            const auto f4 = frd(re);
-            const auto f_sum = f1 + f2 + f3 + f4;
-            const auto max_total = 20.0;
-            const auto max_single = 9;
-
-            tt_cards.at(i).stat_up    = std::clamp( static_cast<int>(std::round( (f1/f_sum) * max_total )), 0, max_single );
-            tt_cards.at(i).stat_down  = std::clamp( static_cast<int>(std::round( (f2/f_sum) * max_total )), 0, max_single );
-            tt_cards.at(i).stat_left  = std::clamp( static_cast<int>(std::round( (f3/f_sum) * max_total )), 0, max_single );
-            tt_cards.at(i).stat_right = std::clamp( static_cast<int>(std::round( (f4/f_sum) * max_total )), 0, max_single );
-            tt_cards.at(i).used = false;
-            tt_cards.at(i).owned_by_user = (i < 5UL) ? false : true;
-        }
-        for(auto &i : tt_board) i = -1;
-
-        const auto t_now = std::chrono::steady_clock::now();
-        t_tt_updated = t_now;
-
-        std::uniform_real_distribution<> frd(0.0, 1.0);
-        const auto f = frd(re);
-        tt_prev_move_was_user = (f < 0.5) ? true : false;
-        return;
-    };
-    tt_reset();
 
     // Resets the contouring image to match the display image characteristics.
     const auto reset_contouring_state = [&contouring_imgs,
@@ -3336,51 +3294,27 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImGui::SetNextWindowSize(ImVec2(450, 650), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(150, 200), ImGuiCond_FirstUseEver);
             ImGui::Begin("Triple-Three", &view_toggles.view_triple_three_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar );
-            const auto is_valid_card_num = [&](int card_num){
-                return (0 <= card_num) && (card_num < 10);
-            };
 
-            const auto is_valid_cell_num = [&](int cell_num){
-                return (0 <= cell_num) && (cell_num < 9);
-            };
-
-            const auto cell_holds_valid_card = [&](int cell_num){
-                const auto i = tt_board.at(cell_num);
-                return (0U <= i) && (i < 10U);
-            };
-
-            const auto tt_compute_score = [&]() -> int32_t {
-                int32_t score = 0;
-                for(auto &i : tt_board){
-                    score += (is_valid_card_num(i) && tt_cards.at(i).owned_by_user) ? 1 : 0;
-                }
-                return score;
-            };
-
-            const auto tt_game_is_complete = [&]() -> bool {
-                for(auto &i : tt_board){
-                    if(!is_valid_card_num(i)) return false;
-                }
-                return true;
-            };
-
-            const auto curr_score = tt_compute_score();
+            const auto curr_score = tt_game.compute_score();
+            const bool game_is_complete = tt_game.is_game_complete();
 
             const auto reset = ImGui::Button("Reset");
             if(reset){
-                tt_reset();
+                tt_game.reset();
+                const auto t_now = std::chrono::steady_clock::now();
+                t_tt_updated = t_now;
             }
             ImGui::SameLine();
             
             {
                 std::stringstream ss;
-                if(tt_game_is_complete()){
+                if(game_is_complete){
                     ss << "Game complete.";
-                    if(4 < curr_score){
+                    if(0 < curr_score){
                         ss << " You win!";
                     }
                 }else{
-                    ss << (tt_prev_move_was_user ? "Computer's" : "Your") << " turn.";
+                    ss << (tt_game.first_players_turn ? "Computer's" : "Your") << " turn.";
                 }
                 ImGui::Text("%s", ss.str().c_str());
             }
@@ -3390,66 +3324,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             const auto block_dims = ImVec2(80, 110);
             int button_id = 0;
 
-            const auto move_card = [&]( size_t card_num,
-                                        int cell_num ){
-                tt_board.at(cell_num) = card_num;
-                tt_card_t &card = tt_cards.at(card_num);
-                card.used = true;
-
-                // Check the surrounding cards to 'flip' them.
-                if( is_valid_cell_num(cell_num - 3)
-                &&  (cell_num != 0)
-                &&  (cell_num != 1)
-                &&  (cell_num != 2)
-                &&  cell_holds_valid_card(cell_num - 3) ){
-                    tt_card_t &l_card = tt_cards.at( tt_board.at(cell_num - 3) );
-                    if(l_card.stat_down < card.stat_up) l_card.owned_by_user = card.owned_by_user;
-                }
-                if( is_valid_cell_num(cell_num - 1)
-                &&  (cell_num != 0)
-                &&  (cell_num != 3)
-                &&  (cell_num != 6)
-                &&  cell_holds_valid_card(cell_num - 1) ){
-                    tt_card_t &l_card = tt_cards.at( tt_board.at(cell_num - 1) );
-                    if(l_card.stat_right < card.stat_left) l_card.owned_by_user = card.owned_by_user;
-                }
-                if( is_valid_cell_num(cell_num + 1)
-                &&  (cell_num != 2)
-                &&  (cell_num != 5)
-                &&  (cell_num != 8)
-                &&  cell_holds_valid_card(cell_num + 1) ){
-                    tt_card_t &l_card = tt_cards.at( tt_board.at(cell_num + 1) );
-                    if(l_card.stat_left < card.stat_right) l_card.owned_by_user = card.owned_by_user;
-                }
-                if( is_valid_cell_num(cell_num + 3)
-                &&  (cell_num != 6)
-                &&  (cell_num != 7)
-                &&  (cell_num != 8)
-                &&  cell_holds_valid_card(cell_num + 3) ){
-                    tt_card_t &l_card = tt_cards.at( tt_board.at(cell_num + 3) );
-                    if(l_card.stat_up < card.stat_down) l_card.owned_by_user = card.owned_by_user;
-                }
-
-                return;
-            };
-
             // Immediately move the next available computer card into the next available space, for now.
-            const auto move_card_computer = [&]() -> void {
-               for(size_t card_num = 0U; card_num < 5U; ++card_num){
-                   const tt_card_t &card = tt_cards.at(card_num);
-                   for(int cell_num = 0; cell_num < 9; ++cell_num){
-                       const auto cell_card_num = tt_board.at(cell_num);
-                       if( !card.used
-                       &&  (card.owned_by_user == false)
-                       &&  !( (0U <= cell_card_num) && (cell_card_num < 10U) ) ){
-                           move_card( card_num, cell_num );
-                           return;
-                       }
-                   }
-               }
-               return;
-            };
-
             const auto draw_empty_cell = [&](){
                 ImGui::PushID(button_id++);
                 ImGui::Dummy(block_dims);
@@ -3463,23 +3338,20 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::Button("", block_dims);
 
                 // Accept a card dragged here.
-                if( !tt_prev_move_was_user
-                &&  is_valid_cell_num(cell_num)
-                &&  !cell_holds_valid_card(cell_num)
+                if( !tt_game.first_players_turn
+                &&  tt_game.is_valid_cell_num(cell_num)
+                &&  !tt_game.cell_holds_valid_card(cell_num)
                 &&  ImGui::BeginDragDropTarget() ){
 
                     if(const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("tt_card_number"); payload != nullptr){
-                        if(payload->DataSize != sizeof(size_t)){
+                        if(payload->DataSize != sizeof(int64_t)){
                             throw std::logic_error("Drag-and-drop payload is not expected size, refusing to continue");
                         }
-                        const size_t card_num = *static_cast<const size_t*>(payload->Data);
-                        move_card(card_num, cell_num);
+                        const int64_t card_num = *static_cast<const int64_t*>(payload->Data);
+                        tt_game.move_card(card_num, cell_num);
 
-                        tt_prev_move_was_user = true;
                         const auto t_now = std::chrono::steady_clock::now();
                         t_tt_updated = t_now;
-
-                        //move_card_computer();
                     }
                     ImGui::EndDragDropTarget();
 
@@ -3489,8 +3361,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                 return;
             };
 
-            const auto draw_card = [&](size_t card_index){
-                const tt_card_t &card = tt_cards.at(card_index);
+            const auto draw_card = [&](int64_t card_index){
+                const tt_card_t &card = tt_game.get_card(card_index);
 
                 ImGui::PushID(button_id++);
 
@@ -3499,19 +3371,19 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                 const auto user_colour = ImColor(0.1f, 0.4f, 0.8f, 1.0f).Value;
                 const auto comp_colour = ImColor(0.8f, 0.4f, 0.1f, 1.0f).Value;
-                ImGui::PushStyleColor(ImGuiCol_Button, (card.owned_by_user ? user_colour : comp_colour));
+                ImGui::PushStyleColor(ImGuiCol_Button, (card.owned_by_first_player ? comp_colour : user_colour));
 
                 //ImGui::Dummy(block_dims);
                 ImGui::Button("", block_dims);
 
                 // Make the card draggable.
-                if( !tt_prev_move_was_user
+                if( !tt_game.first_players_turn
                 &&  (!card.used)
-                &&  (card.owned_by_user)
+                &&  (!card.owned_by_first_player)
                 &&  ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)){
-                    ImGui::SetDragDropPayload("tt_card_number", static_cast<void*>(&card_index), sizeof(size_t));
+                    ImGui::SetDragDropPayload("tt_card_number", static_cast<void*>(&card_index), sizeof(int64_t));
 
-                    // Show a previous of the card being dragged.
+                    // Show a preview of the card being dragged.
                     ImGui::Text("Card");
 
                     ImGui::EndDragDropSource();
@@ -3526,7 +3398,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ss << " " << card.stat_up << " " << "\n";
                 ss << card.stat_left << " " << card.stat_right << "\n";
                 ss << " " << card.stat_down << " " << "\n";
-                ss << " " << " " << " " << (card.owned_by_user ? "U" : "C");
+                ss << " " << " " << " " << (card.owned_by_first_player ? "C" : "U");
                 ImGui::Text("%s", const_cast<char *>(ss.str().c_str()));
                 ImGui::SetCursorPos(pos_prior);
                 ImGui::Dummy(block_dims);
@@ -3539,20 +3411,22 @@ bool SDL_Viewer(Drover &DICOM_data,
             // Perform the computer's move.
             const auto t_now = std::chrono::steady_clock::now();
             const auto t_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_tt_updated).count();
-            if( tt_prev_move_was_user
+            if( !game_is_complete
+            &&  tt_game.first_players_turn
             &&  (dt_tt_update < t_diff) ){
-                move_card_computer();
-                tt_prev_move_was_user = false;
+                tt_game.auto_move_card();
                 t_tt_updated = t_now;
             }
 
-            for(size_t row = 0UL; row < 5UL; ++row){
-                for(size_t col = 0UL; col < 5UL; ++col){
+            // Display the cards on a 5x5 grid. The first column are the computer's hand, the middle 3x3 is the game
+            // board, and the last column are the user's hand. The 3 middle cells along the top and bottom are not used.
+            for(int64_t row = 0; row < 5; ++row){
+                for(int64_t col = 0; col < 5; ++col){
 
                     // Cards held by the computer.
-                    if(col == 0UL){
-                        const size_t card_index = row;
-                        const tt_card_t &card = tt_cards.at(card_index);
+                    if(col == 0){
+                        const auto card_index = row;
+                        const auto &card = tt_game.get_card(card_index);
                         if(card.used){
                             draw_empty_card(-1);
                         }else{
@@ -3560,9 +3434,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                         }
 
                     // Cards held by the user.
-                    }else if(col == 4UL){
-                        const size_t card_index = row + 5UL;
-                        const tt_card_t &card = tt_cards.at(card_index);
+                    }else if(col == 4){
+                        const auto card_index = row + 5;
+                        const auto &card = tt_game.get_card(card_index);
                         if(card.used){
                             draw_empty_card(-1);
                         }else{
@@ -3571,15 +3445,13 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                     // Main board / cards already in-play.
                     }else{
-                        if( (row == 0UL)
-                        ||  (row == 4UL) ){
+                        if( (row == 0)
+                        ||  (row == 4) ){
                             draw_empty_cell();
                         }else{
-                            const auto cell_num = (row - 1UL) * 3UL + (col - 1UL);
-                            const auto card_num = tt_board.at(cell_num);
-                            if( (0 <= card_num) 
-                            &&  (card_num < 10) ){
-                                //const tt_card_t &card = tt_cards.at(card_num);
+                            const auto cell_num = tt_game.get_cell_num(row - 1, col - 1);
+                            const auto card_num = tt_game.board.at(cell_num);
+                            if(tt_game.is_valid_card_num(card_num)){
                                 draw_card(card_num);
                             }else{
                                 draw_empty_card(cell_num);
@@ -3587,7 +3459,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         }
                     }
 
-                    if(col != 4UL){
+                    if(col != 4){
                         ImGui::SameLine();
                     }
                 }
@@ -7181,6 +7053,8 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImGui::SameLine();
             if(ImGui::Button("Triple Three")){
                 view_toggles.view_triple_three_enabled = true;
+                const auto t_now = std::chrono::steady_clock::now();
+                t_tt_updated = t_now;
                 ImGui::CloseCurrentPopup();
             }
 

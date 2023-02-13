@@ -152,6 +152,9 @@ set_target_properties(  Surface_Meshes_obj PROPERTIES POSITION_INDEPENDENT_CODE 
 add_library(            Simple_Meshing_obj OBJECT Simple_Meshing.cc )
 set_target_properties(  Simple_Meshing_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            Triple_Three_obj OBJECT Triple_Three.cc)
+set_target_properties(  Triple_Three_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Write_File_obj OBJECT Write_File.cc)
 set_target_properties(  Write_File_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -392,6 +395,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Script_Loader_obj>
     $<TARGET_OBJECTS:CC_File_Loader_obj>
     $<TARGET_OBJECTS:Standard_Scripts_obj>
+    $<TARGET_OBJECTS:Triple_Three_obj>
     $<TARGET_OBJECTS:Write_File_obj>
     $<TARGET_OBJECTS:Operation_Dispatcher_obj>
     $<TARGET_OBJECTS:Documentation_obj>
@@ -486,6 +490,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Script_Loader_obj>
         $<TARGET_OBJECTS:CC_File_Loader_obj>
         $<TARGET_OBJECTS:Standard_Scripts_obj>
+        $<TARGET_OBJECTS:Triple_Three_obj>
         $<TARGET_OBJECTS:Write_File_obj>
         $<TARGET_OBJECTS:Operation_Dispatcher_obj>
         $<TARGET_OBJECTS:Documentation_obj>
