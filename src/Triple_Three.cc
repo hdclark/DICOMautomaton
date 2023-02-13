@@ -63,6 +63,14 @@ bool tt_game_t::cell_holds_valid_card(int64_t cell_num) const {
           && this->is_valid_card_num( this->board.at(cell_num) );
 }
 
+int64_t tt_game_t::count_empty_cells() const {
+    int64_t count = 0;
+    for(auto &i : this->board){
+        count += this->is_valid_card_num(i) ? 0 : 1;
+    }
+    return count;
+}
+
 int64_t tt_game_t::compute_score() const {
     int64_t score = 0;
     for(auto &i : this->board){
@@ -167,9 +175,17 @@ void tt_game_t::move_card( int64_t card_num, int64_t cell_num ){
 }
 
 void tt_game_t::auto_move_card(){
-    // This routine is meant to simulate a computer player. For the moment, it just moves the next available card into
-    // the next available empty cell.
+    // This routine is meant to simulate a computer player.
+    int64_t max_depth = 3;
+    int64_t max_simulations = 50'000;
+    bool peek_at_other_players_cards = false;
+    perform_move_search_v1(max_depth, max_simulations, peek_at_other_players_cards);
+    return;
+}
 
+
+void tt_game_t::perform_rudimentary_move(){
+    // This routine performs a simplisitic move, the first possible move identified.
     const bool is_first_players_turn = this->first_players_turn;
     const int64_t starting_card_num = is_first_players_turn ? 0 : 5;
 
@@ -184,6 +200,81 @@ void tt_game_t::auto_move_card(){
                 return;
             }
         }
+    }
+    return;
+}
+
+void tt_game_t::perform_move_search_v1( int64_t max_depth,
+                                        int64_t max_simulations,
+                                        bool peek_at_other_cards ){
+    // This routine simulates games (up to a given number of cards played), optionally obscuring the opposing user's
+    // cards. Due to the complexity, this routine uses a simple heuristic for first few cards placed on the board.
+    const bool is_first_players_turn = this->first_players_turn;
+    const int64_t starting_card_num = is_first_players_turn ? 0 : 5;
+    
+    const auto remaining_cells = this->count_empty_cells();
+    if(6 < remaining_cells){
+        // Search for the 'strongest' card to place in a corner.
+        //
+        // Note: considers the card with the minimum exposed stat as the 'strongest.'
+        int64_t current_best_score = 0;
+        int64_t current_best_card = -1;
+        int64_t current_best_cell = 0;
+        const bool tl_empty = !this->cell_holds_valid_card(0);
+        const bool tr_empty = !this->cell_holds_valid_card(2);
+        const bool bl_empty = !this->cell_holds_valid_card(6);
+        const bool br_empty = !this->cell_holds_valid_card(8);
+        for(int64_t card_num = starting_card_num; card_num < (starting_card_num + 5); ++card_num){
+            const auto &card = this->get_card(card_num);
+            if(!card.used){
+                const auto tl = std::min(card.stat_down, card.stat_right);
+                const auto tr = std::min(card.stat_down, card.stat_left);
+                const auto bl = std::min(card.stat_up, card.stat_right);
+                const auto br = std::min(card.stat_up, card.stat_left);
+                if( tl_empty
+                &&  (current_best_score < tl) ){
+                    current_best_score = tl;
+                    current_best_card = card_num;
+                    current_best_cell = 0;
+                }
+                if( tr_empty
+                &&  (current_best_score < tr) ){
+                    current_best_score = tr;
+                    current_best_card = card_num;
+                    current_best_cell = 2;
+                }
+                if( bl_empty
+                &&  (current_best_score < bl) ){
+                    current_best_score = bl;
+                    current_best_card = card_num;
+                    current_best_cell = 6;
+                }
+                if( br_empty
+                &&  (current_best_score < br) ){
+                    current_best_score = br;
+                    current_best_card = card_num;
+                    current_best_cell = 8;
+                }
+            }
+        }
+        if( this->is_valid_card_num(current_best_card)
+        &&  this->is_valid_cell_num(current_best_cell) ){
+            this->move_card(current_best_card, current_best_cell);
+        }else{
+            this->perform_rudimentary_move();
+        }
+
+    }else if(0 == remaining_cells){
+        // Nothing more to do, so do nothing.
+
+    }else if(1 == remaining_cells){
+        // There is only one action possible, so implement it.
+        this->perform_rudimentary_move();
+
+    }else{
+        // For the time being, make a simple move.
+        this->perform_rudimentary_move();
+
     }
     return;
 }
