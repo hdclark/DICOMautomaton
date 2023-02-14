@@ -5,6 +5,10 @@
 #include <algorithm>
 #include <cstdint>
 #include <stdexcept>
+#include <limits>
+
+#include "YgorMisc.h"
+#include "YgorLog.h"
 
 #include "Triple_Three.h"
 
@@ -14,18 +18,18 @@ tt_game_t::tt_game_t(){
 
 void tt_game_t::reset(){
     std::random_device rdev;
-    std::mt19937 re( rdev() );
+    this->rand_gen.seed( rdev() );
 
     // Randomize the cards.
     for(int64_t i = 0; i < static_cast<int64_t>(this->cards.size()); ++i){
         std::uniform_real_distribution<> frd(0.25, 0.75); // Tweak this to alter the distribution.
-        const auto f1 = frd(re);
-        const auto f2 = frd(re);
-        const auto f3 = frd(re);
-        const auto f4 = frd(re);
-        const auto f_sum = f1 + f2 + f3 + f4;
         const auto max_total = 20.0;
         const int64_t max_single = 9;
+        const auto f1 = frd(this->rand_gen);
+        const auto f2 = frd(this->rand_gen);
+        const auto f3 = frd(this->rand_gen);
+        const auto f4 = frd(this->rand_gen);
+        const auto f_sum = f1 + f2 + f3 + f4;
 
         this->cards.at(i).stat_up    = std::clamp( static_cast<int64_t>(std::round( (f1/f_sum) * max_total )), static_cast<int64_t>(0), max_single );
         this->cards.at(i).stat_down  = std::clamp( static_cast<int64_t>(std::round( (f2/f_sum) * max_total )), static_cast<int64_t>(0), max_single );
@@ -40,7 +44,7 @@ void tt_game_t::reset(){
 
     // Randomly select one player to go first.
     std::uniform_real_distribution<> frd(0.0, 1.0);
-    const auto f = frd(re);
+    const auto f = frd(this->rand_gen);
     this->first_players_turn = (f < 0.5) ? true : false;
 
     return;
@@ -93,6 +97,42 @@ int64_t tt_game_t::get_cell_num(int64_t row, int64_t col) const {
 tt_card_t& tt_game_t::get_card(int64_t card_num){
     return this->cards.at(card_num);
 }
+
+const tt_card_t& tt_game_t::get_const_card(int64_t card_num) const {
+    return this->cards.at(card_num);
+}
+
+std::vector<std::pair<int64_t, int64_t>>
+tt_game_t::get_possible_moves( bool shuffle ){
+    const bool is_first_players_turn = this->first_players_turn;
+    const int64_t starting_card_num = is_first_players_turn ? 0 : 5;
+
+    // Enumerate all available single-move combinations.
+    std::vector<std::pair<int64_t, int64_t>> possible_moves; // card_num, cell_num.
+    possible_moves.reserve(9*5); // Maximum possible: 9 grid cells, 5 cards.
+
+    for(int64_t card_num = starting_card_num; card_num < (starting_card_num + 5); ++card_num){
+        const auto &card = this->get_const_card(card_num);
+        for(int64_t cell_num = 0; cell_num < 9; ++cell_num){
+            const auto cells_card_num = this->board.at(cell_num);
+            if( !card.used
+            &&  (card.owned_by_first_player == is_first_players_turn)
+            &&  !this->is_valid_card_num( cells_card_num ) ){
+                possible_moves.emplace_back( card_num, cell_num );
+            }
+        }
+    }
+
+    if(shuffle){
+        // Shuffle the available moves, so we don't always only consider, e.g., the first card for near-top-left moves.
+        std::shuffle( std::begin(possible_moves),
+                      std::end(possible_moves),
+                      this->rand_gen );
+    }
+    return possible_moves;
+}
+
+
 
 void tt_game_t::move_card( int64_t card_num, int64_t cell_num ){
     if( !this->is_valid_card_num(card_num) ){
@@ -176,16 +216,13 @@ void tt_game_t::move_card( int64_t card_num, int64_t cell_num ){
 
 void tt_game_t::auto_move_card(){
     // This routine is meant to simulate a computer player.
-    int64_t max_depth = 3;
-    int64_t max_simulations = 50'000;
-    bool peek_at_other_players_cards = false;
-    perform_move_search_v1(max_depth, max_simulations, peek_at_other_players_cards);
+    this->perform_move_search_v1();
     return;
 }
 
 
 void tt_game_t::perform_rudimentary_move(){
-    // This routine performs a simplisitic move, the first possible move identified.
+    // This routine performs a simplisitic move -- the first possible move, if any.
     const bool is_first_players_turn = this->first_players_turn;
     const int64_t starting_card_num = is_first_players_turn ? 0 : 5;
 
@@ -207,6 +244,7 @@ void tt_game_t::perform_rudimentary_move(){
 void tt_game_t::perform_move_search_v1( int64_t max_depth,
                                         int64_t max_simulations,
                                         bool peek_at_other_cards ){
+
     // This routine simulates games (up to a given number of cards played), optionally obscuring the opposing user's
     // cards. Due to the complexity, this routine uses a simple heuristic for first few cards placed on the board.
     const bool is_first_players_turn = this->first_players_turn;
@@ -214,6 +252,8 @@ void tt_game_t::perform_move_search_v1( int64_t max_depth,
     
     const auto remaining_cells = this->count_empty_cells();
     if(6 < remaining_cells){
+        YLOGINFO("Using 'corners' pruning heuristic to prune search space");
+
         // Search for the 'strongest' card to place in a corner.
         //
         // Note: considers the card with the minimum exposed stat as the 'strongest.'
@@ -268,14 +308,172 @@ void tt_game_t::perform_move_search_v1( int64_t max_depth,
         // Nothing more to do, so do nothing.
 
     }else if(1 == remaining_cells){
-        // There is only one action possible, so implement it.
+        // There is only one cell remaining, so move one card.
+
+        // TODO: make this random? Or maybe still use depth-traversal?
+        this->perform_rudimentary_move();
+
+    }else if(max_depth == 0){
+        // Treat this as an override; do not simulate moves, just return any move quickly.
         this->perform_rudimentary_move();
 
     }else{
-        // For the time being, make a simple move.
-        this->perform_rudimentary_move();
+        YLOGINFO("Using depth-first search heuristic to simulate moves");
+        // Make a working copy to simplify move simulation.
+        auto base_game = *this;
+        const int64_t other_starting_card_num = is_first_players_turn ? 5 : 0;
 
+        // Obscure the opposing player's unused cards for the simulation.
+        if(!peek_at_other_cards){
+            for(int64_t offset = 0; offset < 5; ++offset){
+                const auto &self_card = base_game.get_card(starting_card_num + offset);
+                auto &other_card = base_game.get_card(other_starting_card_num + offset);
+                if(!other_card.used){
+                    // Copy from the current player's card, but rotate the stats in an ergodic way (i.e., the standard
+                    // four-wheel vehicle tire rotation pattern). This isn't needed, but will help avoid some bias.
+                    other_card.stat_up    = self_card.stat_right;
+                    other_card.stat_down  = self_card.stat_up;
+                    other_card.stat_left  = self_card.stat_down;
+                    other_card.stat_right = self_card.stat_left;
+                }
+            }
+        }
+
+        const bool use_score_for_first_player = is_first_players_turn;
+        int64_t l_available_simulations = max_simulations;
+        int64_t games_simulated = 0;
+        double mean_children_score = 0.0;
+        double best_move_score = 0.0;
+        const auto l_move_opt = base_game.score_best_move_v1(max_depth,
+                                                             l_available_simulations,
+                                                             use_score_for_first_player,
+                                                             games_simulated,
+                                                             best_move_score,
+                                                             mean_children_score );
+        if(l_move_opt){
+            const auto l_best_move_score = best_move_score * (is_first_players_turn) ? -1.0 : 1.0;
+            YLOGINFO("Selecting move based on " << games_simulated << " simulations with predicted score " << l_best_move_score );
+            this->move_card( l_move_opt.value().first, l_move_opt.value().second );
+        }else{
+            YLOGWARN("Unable to find move, performing fallback");
+            this->perform_rudimentary_move();
+        }
     }
     return;
+}
+
+
+[[maybe_unused]]
+std::optional<std::pair<int64_t, int64_t>> // card_num, cell_num.
+tt_game_t::score_best_move_v1( int64_t max_depth,
+                               int64_t &available_simulations,
+                               bool use_score_for_first_player,
+                               int64_t &games_simulated,
+                               double &best_move_score,
+                               double &mean_children_score ){
+
+    std::optional<std::pair<int64_t, int64_t>> best_move;
+    if(this->is_game_complete()){
+        // Not possible to make any moves, so nothing to do.
+        return best_move;
+    }
+
+    // Otherwise, we evaluate the moves available.
+    const bool should_shuffle = true;
+    auto possible_moves = this->get_possible_moves( should_shuffle );
+    const auto N_possible_moves = static_cast<int64_t>(possible_moves.size());
+    if(N_possible_moves == 0){
+        throw std::logic_error("No moves available, unable to continue");
+    }
+    const int64_t simulations_allotment = std::max(static_cast<int64_t>(1), available_simulations / N_possible_moves);
+    int64_t surplus_move_simulations = 0;
+
+
+    // For each possibility, try make the move, recurse, and see how the score changes.
+    games_simulated = 0;
+    std::vector<std::pair<int64_t, double>> move_score_changes; // # of simulations, mean score of all games simulated.
+    for(const auto& possible_move : possible_moves){
+        move_score_changes.emplace_back(0, 0.0);
+
+        auto l_game = *this;
+        l_game.move_card( possible_move.first, possible_move.second );
+
+        // Leaf nodes / terminating moves.
+        if( (max_depth <= 0)
+        ||  l_game.is_game_complete() ){
+
+            // Normalize score such the 'best' score is a maximum (as opposed to a minimum).
+            const int64_t curr_score = l_game.compute_score() * (use_score_for_first_player ? -1 : 1);
+            const int64_t l_games_simulated = 1;
+
+            move_score_changes.back().first = l_games_simulated;
+            move_score_changes.back().second = static_cast<double>(curr_score);
+            games_simulated += l_games_simulated;
+            --available_simulations;
+
+        // Parent nodes.
+        }else{
+            // We are doing depth-first search, but have a 'budget' of simulations we can perform. Since we want to
+            // collect statistics on these simulations, and the simulations might terminate early, we have to restrict
+            // the balance of simulations available to each move. This will help ensure each move is represented fairly.
+            // Additionally, since we might not use all simulations (e.g., because the budget its too high for the
+            // number of possible moves), we create a pool of 'surplus' that we can draw on to maximize use of simulations.
+            // So each possible move gets a fixed budget
+            int64_t l_available_simulations = simulations_allotment;
+            l_available_simulations += (0 < surplus_move_simulations) ? surplus_move_simulations : 0;
+            surplus_move_simulations = 0;
+            const int64_t l_initial_available_simulations = l_available_simulations;
+
+            int64_t l_games_simulated = 0;
+            double l_mean_children_score = 0.0;
+            double l_best_move_score = 0.0;
+            // Note: we ignore the best move suggested by children here since these suggestions are predicated on the
+            // above move first. They do not have knowledge of sibling moves, so are not useful.
+            l_game.score_best_move_v1(max_depth - 1,
+                                      l_available_simulations,
+                                      use_score_for_first_player,
+                                      l_games_simulated,
+                                      l_best_move_score,
+                                      l_mean_children_score);
+
+            move_score_changes.back().first = l_games_simulated;
+            move_score_changes.back().second = l_mean_children_score;
+            games_simulated += l_games_simulated;
+
+            const int64_t l_used_simulations = l_initial_available_simulations - l_available_simulations;
+            available_simulations -= l_used_simulations;
+            surplus_move_simulations = (0 < l_available_simulations) ? l_available_simulations : 0;
+        }
+
+        // Stop processing if we've run out of our game simulation 'budget.'
+        // Note that even if we run out, we try to simulate at least one game to give partially useful statistics.
+        // Therefore we only check *after* running at least one child.
+        if(available_simulations <= 0){
+            break;
+        }
+    }
+
+    // Generate statistics from the games.
+    best_move_score = -(std::numeric_limits<double>::infinity());
+    mean_children_score = 0.0;
+    for(size_t i = 0UL; i < move_score_changes.size(); ++i){
+        const auto& pm = possible_moves.at(i);
+        const auto& mc = move_score_changes.at(i);
+
+        const auto& l_games_simulated = mc.first;
+        const auto& l_mean_children_score = mc.second;
+
+        // Compute the mean score from recursive children simulations.
+        const auto weight = static_cast<double>(l_games_simulated) / static_cast<double>(games_simulated);
+        mean_children_score += l_mean_children_score * weight;
+
+        // Identify the best next move.
+        if(best_move_score < l_mean_children_score){
+            best_move_score = l_mean_children_score;
+            best_move = pm;
+        }
+    }
+
+    return best_move;
 }
 
