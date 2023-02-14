@@ -36,7 +36,7 @@ void tt_game_t::reset(){
         this->cards.at(i).stat_left  = std::clamp( static_cast<int64_t>(std::round( (f3/f_sum) * max_total )), static_cast<int64_t>(0), max_single );
         this->cards.at(i).stat_right = std::clamp( static_cast<int64_t>(std::round( (f4/f_sum) * max_total )), static_cast<int64_t>(0), max_single );
         this->cards.at(i).used = false;
-        this->cards.at(i).owned_by_first_player = (i < 5) ? true : false;
+        this->cards.at(i).owned_by_first_player = ((i < 5) ? true : false);
     }
 
     // Reset the board.
@@ -45,7 +45,7 @@ void tt_game_t::reset(){
     // Randomly select one player to go first.
     std::uniform_real_distribution<> frd(0.0, 1.0);
     const auto f = frd(this->rand_gen);
-    this->first_players_turn = (f < 0.5) ? true : false;
+    this->first_players_turn = ((f < 0.5) ? true : false);
 
     return;
 }
@@ -70,7 +70,7 @@ bool tt_game_t::cell_holds_valid_card(int64_t cell_num) const {
 int64_t tt_game_t::count_empty_cells() const {
     int64_t count = 0;
     for(auto &i : this->board){
-        count += this->is_valid_card_num(i) ? 0 : 1;
+        count += (this->is_valid_card_num(i) ? 0 : 1);
     }
     return count;
 }
@@ -78,7 +78,7 @@ int64_t tt_game_t::count_empty_cells() const {
 int64_t tt_game_t::compute_score() const {
     int64_t score = 0;
     for(auto &i : this->board){
-        if(this->is_valid_card_num(i)) score += (this->cards.at(i).owned_by_first_player) ? -1 : 1;
+        if(this->is_valid_card_num(i)) score += ((this->cards.at(i).owned_by_first_player) ? -1 : 1);
     }
     return score;
 }
@@ -105,7 +105,7 @@ const tt_card_t& tt_game_t::get_const_card(int64_t card_num) const {
 std::vector<std::pair<int64_t, int64_t>>
 tt_game_t::get_possible_moves( bool shuffle ){
     const bool is_first_players_turn = this->first_players_turn;
-    const int64_t starting_card_num = is_first_players_turn ? 0 : 5;
+    const int64_t starting_card_num = (is_first_players_turn ? 0 : 5);
 
     // Enumerate all available single-move combinations.
     std::vector<std::pair<int64_t, int64_t>> possible_moves; // card_num, cell_num.
@@ -224,7 +224,7 @@ void tt_game_t::auto_move_card(){
 void tt_game_t::perform_rudimentary_move(){
     // This routine performs a simplisitic move -- the first possible move, if any.
     const bool is_first_players_turn = this->first_players_turn;
-    const int64_t starting_card_num = is_first_players_turn ? 0 : 5;
+    const int64_t starting_card_num = (is_first_players_turn ? 0 : 5);
 
     for(int64_t card_num = starting_card_num; card_num < (starting_card_num + 5); ++card_num){
         const auto &card = this->get_card(card_num);
@@ -248,7 +248,7 @@ void tt_game_t::perform_move_search_v1( int64_t max_depth,
     // This routine simulates games (up to a given number of cards played), optionally obscuring the opposing user's
     // cards. Due to the complexity, this routine uses a simple heuristic for first few cards placed on the board.
     const bool is_first_players_turn = this->first_players_turn;
-    const int64_t starting_card_num = is_first_players_turn ? 0 : 5;
+    const int64_t starting_card_num = (is_first_players_turn ? 0 : 5);
     
     const auto remaining_cells = this->count_empty_cells();
     if(6 < remaining_cells){
@@ -321,7 +321,7 @@ void tt_game_t::perform_move_search_v1( int64_t max_depth,
         YLOGINFO("Using depth-first search heuristic to simulate moves");
         // Make a working copy to simplify move simulation.
         auto base_game = *this;
-        const int64_t other_starting_card_num = is_first_players_turn ? 5 : 0;
+        const int64_t other_starting_card_num = (is_first_players_turn ? 5 : 0);
 
         // Obscure the opposing player's unused cards for the simulation.
         if(!peek_at_other_cards){
@@ -351,7 +351,7 @@ void tt_game_t::perform_move_search_v1( int64_t max_depth,
                                                              best_move_score,
                                                              mean_children_score );
         if(l_move_opt){
-            const auto l_best_move_score = best_move_score * (is_first_players_turn) ? -1.0 : 1.0;
+            const auto l_best_move_score = best_move_score * ((is_first_players_turn) ? -1.0 : 1.0);
             YLOGINFO("Selecting move based on " << games_simulated << " simulations with predicted score " << l_best_move_score );
             this->move_card( l_move_opt.value().first, l_move_opt.value().second );
         }else{
@@ -420,7 +420,7 @@ tt_game_t::score_best_move_v1( int64_t max_depth,
             // number of possible moves), we create a pool of 'surplus' that we can draw on to maximize use of simulations.
             // So each possible move gets a fixed budget
             int64_t l_available_simulations = simulations_allotment;
-            l_available_simulations += (0 < surplus_move_simulations) ? surplus_move_simulations : 0;
+            l_available_simulations += ((0 < surplus_move_simulations) ? surplus_move_simulations : 0);
             surplus_move_simulations = 0;
             const int64_t l_initial_available_simulations = l_available_simulations;
 
@@ -442,7 +442,7 @@ tt_game_t::score_best_move_v1( int64_t max_depth,
 
             const int64_t l_used_simulations = l_initial_available_simulations - l_available_simulations;
             available_simulations -= l_used_simulations;
-            surplus_move_simulations = (0 < l_available_simulations) ? l_available_simulations : 0;
+            surplus_move_simulations = ((0 < l_available_simulations) ? l_available_simulations : 0);
         }
 
         // Stop processing if we've run out of our game simulation 'budget.'
