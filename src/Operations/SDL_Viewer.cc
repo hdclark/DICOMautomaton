@@ -1409,6 +1409,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     // Triple-three state.
     tt_game_t tt_game;
     tt_game.reset();
+    bool tt_hidden = false;
     std::chrono::time_point<std::chrono::steady_clock> t_tt_updated;
     double dt_tt_update = 3000.0; // milliseconds
 
@@ -3295,6 +3296,8 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImGui::SetNextWindowPos(ImVec2(150, 200), ImGuiCond_FirstUseEver);
             ImGui::Begin("Triple-Three", &view_toggles.view_triple_three_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar );
 
+            ImGui::Checkbox("Hide cards", &tt_hidden);
+
             const auto curr_score = tt_game.compute_score();
             const bool game_is_complete = tt_game.is_game_complete();
 
@@ -3312,6 +3315,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ss << "Game complete.";
                     if(0 < curr_score){
                         ss << " You win!";
+                    }else{
+                        ss << " Computer wins.";
                     }
                 }else{
                     ss << (tt_game.first_players_turn ? "Computer's" : "Your") << " turn.";
@@ -3320,6 +3325,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
             ImGui::SameLine();
             ImGui::Text("Current score: %s", std::to_string(curr_score).c_str());
+            ImGui::Separator();
 
             const auto block_dims = ImVec2(80, 110);
             int button_id = 0;
@@ -3361,7 +3367,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                 return;
             };
 
-            const auto draw_card = [&](int64_t card_index){
+            const auto draw_card = [&]( int64_t card_index,
+                                        bool obscure_stats ){
                 const tt_card_t &card = tt_game.get_card(card_index);
 
                 ImGui::PushID(button_id++);
@@ -3395,10 +3402,16 @@ bool SDL_Viewer(Drover &DICOM_data,
                 // Draw a text overlay showing card information.
                 ImGui::SetCursorPos(pos_prior);
                 std::stringstream ss;
-                ss << " " << card.stat_up << " " << "\n";
-                ss << card.stat_left << " " << card.stat_right << "\n";
-                ss << " " << card.stat_down << " " << "\n";
-                ss << " " << " " << " " << (card.owned_by_first_player ? "C" : "U");
+                if(obscure_stats){
+                    ss << " ? \n"
+                       << "? ?\n"
+                       << " ? \n";
+                }else{
+                    ss << " " << card.stat_up << " " << "\n"
+                       << card.stat_left << " " << card.stat_right << "\n"
+                       << " " << card.stat_down << " " << "\n";
+                }
+                ss << "   " << (card.owned_by_first_player ? "C" : "U");
                 ImGui::Text("%s", const_cast<char *>(ss.str().c_str()));
                 ImGui::SetCursorPos(pos_prior);
                 ImGui::Dummy(block_dims);
@@ -3430,7 +3443,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         if(card.used){
                             draw_empty_card(-1);
                         }else{
-                            draw_card(card_index);
+                            draw_card(card_index, tt_hidden);
                         }
 
                     // Cards held by the user.
@@ -3440,7 +3453,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                         if(card.used){
                             draw_empty_card(-1);
                         }else{
-                            draw_card(card_index);
+                            const bool obscure_card = false;
+                            draw_card(card_index, obscure_card);
                         }
 
                     // Main board / cards already in-play.
@@ -3452,7 +3466,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                             const auto cell_num = tt_game.get_cell_num(row - 1, col - 1);
                             const auto card_num = tt_game.board.at(cell_num);
                             if(tt_game.is_valid_card_num(card_num)){
-                                draw_card(card_num);
+                                const bool obscure_card = false;
+                                draw_card(card_num, obscure_card);
                             }else{
                                 draw_empty_card(cell_num);
                             }
