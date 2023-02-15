@@ -42,10 +42,14 @@ struct tt_game_t {
     std::vector<std::pair<int64_t, int64_t>> // card_num, cell_num.
     get_possible_moves( bool shuffle );
 
+    std::optional<std::pair<int64_t, int64_t>> // card_num, cell_num.
+    get_strongest_corner_move();
+
     void move_card( int64_t card_num, int64_t cell_num );
     void auto_move_card(); // Move a card automatically, if possible.
 
     void perform_rudimentary_move(); // Use an extremely simple heuristic.
+    void perform_random_move();
 
     // Use a heuristic based on depth-first search and game outcome averaging.
     void perform_move_search_v1( int64_t max_depth = 3,

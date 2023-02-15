@@ -132,6 +132,62 @@ tt_game_t::get_possible_moves( bool shuffle ){
     return possible_moves;
 }
 
+std::optional<std::pair<int64_t, int64_t>> // card_num, cell_num.
+tt_game_t::get_strongest_corner_move(){
+    // Search for the 'strongest' card to place in a corner.
+    //
+    // Note: considers the card with the minimum exposed stat as the 'strongest.'
+    std::optional<std::pair<int64_t, int64_t>> move;
+
+    const bool is_first_players_turn = this->first_players_turn;
+    const int64_t starting_card_num = (is_first_players_turn ? 0 : 5);
+
+    int64_t current_best_score = 0;
+    int64_t current_best_card = -1;
+    int64_t current_best_cell = 0;
+    const bool tl_empty = !this->cell_holds_valid_card(0);
+    const bool tr_empty = !this->cell_holds_valid_card(2);
+    const bool bl_empty = !this->cell_holds_valid_card(6);
+    const bool br_empty = !this->cell_holds_valid_card(8);
+    for(int64_t card_num = starting_card_num; card_num < (starting_card_num + 5); ++card_num){
+        const auto &card = this->get_card(card_num);
+        if(!card.used){
+            const auto tl = std::min(card.stat_down, card.stat_right);
+            const auto tr = std::min(card.stat_down, card.stat_left);
+            const auto bl = std::min(card.stat_up, card.stat_right);
+            const auto br = std::min(card.stat_up, card.stat_left);
+            if( tl_empty
+            &&  (current_best_score < tl) ){
+                current_best_score = tl;
+                current_best_card = card_num;
+                current_best_cell = 0;
+            }
+            if( tr_empty
+            &&  (current_best_score < tr) ){
+                current_best_score = tr;
+                current_best_card = card_num;
+                current_best_cell = 2;
+            }
+            if( bl_empty
+            &&  (current_best_score < bl) ){
+                current_best_score = bl;
+                current_best_card = card_num;
+                current_best_cell = 6;
+            }
+            if( br_empty
+            &&  (current_best_score < br) ){
+                current_best_score = br;
+                current_best_card = card_num;
+                current_best_cell = 8;
+            }
+        }
+    }
+    if( this->is_valid_card_num(current_best_card)
+    &&  this->is_valid_cell_num(current_best_cell) ){
+        move = std::make_pair(current_best_card, current_best_cell);
+    }
+    return move;
+}
 
 
 void tt_game_t::move_card( int64_t card_num, int64_t cell_num ){
@@ -241,6 +297,15 @@ void tt_game_t::perform_rudimentary_move(){
     return;
 }
 
+void tt_game_t::perform_random_move(){
+    const bool shuffle = true;
+    const auto moves = this->get_possible_moves(shuffle);
+    if(!moves.empty()){
+        this->move_card( moves.front().first, moves.front().second );
+    }
+    return;
+}
+
 void tt_game_t::perform_move_search_v1( int64_t max_depth,
                                         int64_t max_simulations,
                                         bool peek_at_other_cards ){
@@ -252,56 +317,21 @@ void tt_game_t::perform_move_search_v1( int64_t max_depth,
     
     const auto remaining_cells = this->count_empty_cells();
     if(6 < remaining_cells){
-        YLOGINFO("Using 'corners' pruning heuristic to prune search space");
+        std::uniform_real_distribution<> frd(0.0, 1.0);
+        const auto f1 = frd(this->rand_gen);
+        bool move_performed = false;
 
-        // Search for the 'strongest' card to place in a corner.
-        //
-        // Note: considers the card with the minimum exposed stat as the 'strongest.'
-        int64_t current_best_score = 0;
-        int64_t current_best_card = -1;
-        int64_t current_best_cell = 0;
-        const bool tl_empty = !this->cell_holds_valid_card(0);
-        const bool tr_empty = !this->cell_holds_valid_card(2);
-        const bool bl_empty = !this->cell_holds_valid_card(6);
-        const bool br_empty = !this->cell_holds_valid_card(8);
-        for(int64_t card_num = starting_card_num; card_num < (starting_card_num + 5); ++card_num){
-            const auto &card = this->get_card(card_num);
-            if(!card.used){
-                const auto tl = std::min(card.stat_down, card.stat_right);
-                const auto tr = std::min(card.stat_down, card.stat_left);
-                const auto bl = std::min(card.stat_up, card.stat_right);
-                const auto br = std::min(card.stat_up, card.stat_left);
-                if( tl_empty
-                &&  (current_best_score < tl) ){
-                    current_best_score = tl;
-                    current_best_card = card_num;
-                    current_best_cell = 0;
-                }
-                if( tr_empty
-                &&  (current_best_score < tr) ){
-                    current_best_score = tr;
-                    current_best_card = card_num;
-                    current_best_cell = 2;
-                }
-                if( bl_empty
-                &&  (current_best_score < bl) ){
-                    current_best_score = bl;
-                    current_best_card = card_num;
-                    current_best_cell = 6;
-                }
-                if( br_empty
-                &&  (current_best_score < br) ){
-                    current_best_score = br;
-                    current_best_card = card_num;
-                    current_best_cell = 8;
-                }
+        if(f1 < 0.75){
+            if(auto corner_move = this->get_strongest_corner_move(); corner_move){
+                YLOGINFO("Using 'strongest corners' pruning heuristic to prune search space");
+                this->move_card(corner_move.value().first, corner_move.value().second);
+                move_performed = true;
             }
         }
-        if( this->is_valid_card_num(current_best_card)
-        &&  this->is_valid_cell_num(current_best_cell) ){
-            this->move_card(current_best_card, current_best_cell);
-        }else{
-            this->perform_rudimentary_move();
+        if(!move_performed){
+            YLOGINFO("Using 'random' heuristic to prune search space");
+            this->perform_random_move();
+            move_performed = true;
         }
 
     }else if(0 == remaining_cells){
