@@ -3338,9 +3338,28 @@ bool SDL_Viewer(Drover &DICOM_data,
                 return;
             };
 
-            const auto draw_empty_card = [&](int cell_num){
+            const auto draw_empty_card = [&](int cell_num, bool dark){
                 ImGui::PushID(button_id++);
+                int styles_overridden = 0;
+                if(dark){
+                    // Temporarily scale down the alpha component to make these appear darker.
+                    const auto& styles = ImGui::GetStyle();
 
+                    auto button_colour = styles.Colors[ImGuiCol_Button];
+                    button_colour.w *= 0.2;
+                    ImGui::PushStyleColor(ImGuiCol_Button, button_colour);
+                    ++styles_overridden;
+
+                    auto button_hovered_colour = styles.Colors[ImGuiCol_ButtonHovered];
+                    button_hovered_colour.w *= 0.2;
+                    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, button_hovered_colour);
+                    ++styles_overridden;
+
+                    auto button_active_colour = styles.Colors[ImGuiCol_ButtonActive];
+                    button_active_colour.w *= 0.2;
+                    ImGui::PushStyleColor(ImGuiCol_ButtonActive, button_active_colour);
+                    ++styles_overridden;
+                }
                 ImGui::Button("", block_dims);
 
                 // Accept a card dragged here.
@@ -3363,6 +3382,9 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                 }
 
+                if(dark){
+                    ImGui::PopStyleColor(styles_overridden);
+                }
                 ImGui::PopID();
                 return;
             };
@@ -3441,7 +3463,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                         const auto card_index = row;
                         const auto &card = tt_game.get_card(card_index);
                         if(card.used){
-                            draw_empty_card(-1);
+                            const bool dark = true;
+                            draw_empty_card(-1, dark);
                         }else{
                             draw_card(card_index, tt_hidden);
                         }
@@ -3451,7 +3474,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                         const auto card_index = row + 5;
                         const auto &card = tt_game.get_card(card_index);
                         if(card.used){
-                            draw_empty_card(-1);
+                            const bool dark = true;
+                            draw_empty_card(-1, dark);
                         }else{
                             const bool obscure_card = false;
                             draw_card(card_index, obscure_card);
@@ -3469,7 +3493,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 const bool obscure_card = false;
                                 draw_card(card_num, obscure_card);
                             }else{
-                                draw_empty_card(cell_num);
+                                const bool dark = false;
+                                draw_empty_card(cell_num, dark);
                             }
                         }
                     }
