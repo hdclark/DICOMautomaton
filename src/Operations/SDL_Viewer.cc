@@ -3297,6 +3297,11 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImGui::Begin("Triple-Three", &view_toggles.view_triple_three_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar );
 
             ImGui::Checkbox("Hide cards", &tt_hidden);
+            if( ImGui::IsItemHovered() ){
+                ImGui::BeginTooltip();
+                ImGui::Text("Note: the computer never sees your unused cards.");
+                ImGui::EndTooltip();
+            }
 
             const auto curr_score = tt_game.compute_score();
             const bool game_is_complete = tt_game.is_game_complete();
@@ -3346,17 +3351,17 @@ bool SDL_Viewer(Drover &DICOM_data,
                     const auto& styles = ImGui::GetStyle();
 
                     auto button_colour = styles.Colors[ImGuiCol_Button];
-                    button_colour.w *= 0.2;
+                    button_colour.w *= 0.3;
                     ImGui::PushStyleColor(ImGuiCol_Button, button_colour);
                     ++styles_overridden;
 
                     auto button_hovered_colour = styles.Colors[ImGuiCol_ButtonHovered];
-                    button_hovered_colour.w *= 0.2;
+                    button_hovered_colour.w *= 0.3;
                     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, button_hovered_colour);
                     ++styles_overridden;
 
                     auto button_active_colour = styles.Colors[ImGuiCol_ButtonActive];
-                    button_active_colour.w *= 0.2;
+                    button_active_colour.w *= 0.3;
                     ImGui::PushStyleColor(ImGuiCol_ButtonActive, button_active_colour);
                     ++styles_overridden;
                 }
