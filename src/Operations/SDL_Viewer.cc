@@ -1412,6 +1412,10 @@ bool SDL_Viewer(Drover &DICOM_data,
     bool tt_hidden = false;
     std::chrono::time_point<std::chrono::steady_clock> t_tt_updated;
     double dt_tt_update = 3000.0; // milliseconds
+    std::array<int8_t, 9> tt_cell_owner; // Used for card-flip animations.
+    tt_cell_owner.fill(-1);
+    std::array<decltype(t_tt_updated), 9> tt_cell_owner_time; // Used for card-flip animations.
+    float tt_anim_dt = 1000.0f; // ms
 
     // Resets the contouring image to match the display image characteristics.
     const auto reset_contouring_state = [&contouring_imgs,
@@ -3299,7 +3303,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImGui::Checkbox("Hide cards", &tt_hidden);
             if( ImGui::IsItemHovered() ){
                 ImGui::BeginTooltip();
-                ImGui::Text("Note: the computer never sees your unused cards.");
+                ImGui::Text("Note: the computer player never 'sees' your unused cards.");
                 ImGui::EndTooltip();
             }
 
@@ -3311,9 +3315,12 @@ bool SDL_Viewer(Drover &DICOM_data,
                 tt_game.reset();
                 const auto t_now = std::chrono::steady_clock::now();
                 t_tt_updated = t_now;
+                tt_cell_owner.fill(-1);
             }
             ImGui::SameLine();
             
+            ImGui::Text("Current score: %s.", std::to_string(curr_score).c_str());
+            ImGui::SameLine();
             {
                 std::stringstream ss;
                 if(game_is_complete){
@@ -3328,8 +3335,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
                 ImGui::Text("%s", ss.str().c_str());
             }
-            ImGui::SameLine();
-            ImGui::Text("Current score: %s", std::to_string(curr_score).c_str());
             ImGui::Separator();
 
             const auto block_dims = ImVec2(80, 110);
@@ -3394,18 +3399,46 @@ bool SDL_Viewer(Drover &DICOM_data,
                 return;
             };
 
-            const auto draw_card = [&]( int64_t card_index,
+            const auto draw_card = [&]( int64_t cell_num,
+                                        int64_t card_index,
                                         bool obscure_stats ){
+                const auto t_now = std::chrono::steady_clock::now();
                 const tt_card_t &card = tt_game.get_card(card_index);
+
+                // Determine the colour blend for animations.
+                float colour_blend = 0.0; // From computer to user card colours.
+                if(tt_game.is_valid_cell_num(cell_num)){
+                    auto &card_owner = tt_cell_owner.at(cell_num);
+                    auto &card_time = tt_cell_owner_time.at(cell_num);
+                    if(card_owner == -1){
+                        card_time = t_now - std::chrono::hours(1);
+                    }else if( ( (card_owner == 0) && !card.owned_by_first_player )
+                          ||  ( (card_owner == 1) && card.owned_by_first_player ) ){
+                        card_time = t_now;
+                    }
+                    card_owner = (card.owned_by_first_player ? 0 : 1);
+
+                    const auto t_diff = static_cast<float>(std::chrono::duration_cast<std::chrono::milliseconds>(t_now - card_time).count());
+                    const auto dt = std::clamp(t_diff, 0.0f, tt_anim_dt) / tt_anim_dt;
+                    colour_blend = ((card_owner == 0) ? 1.0 - dt : dt);
+                }else{
+                    colour_blend = ( card.owned_by_first_player ? 0.0f : 1.0f );
+                }
+                const auto user_colour = ImColor(0.1f, 0.4f, 0.8f, 1.0f).Value;
+                const auto comp_colour = ImColor(0.8f, 0.4f, 0.1f, 1.0f).Value;
+                ImVec4 card_colour;
+                card_colour.x = std::clamp(comp_colour.x + (user_colour.x - comp_colour.x) * colour_blend, 0.0f, 1.0f);
+                card_colour.y = std::clamp(comp_colour.y + (user_colour.y - comp_colour.y) * colour_blend, 0.0f, 1.0f);
+                card_colour.z = std::clamp(comp_colour.z + (user_colour.z - comp_colour.z) * colour_blend, 0.0f, 1.0f);
+                card_colour.w = std::clamp(comp_colour.w + (user_colour.w - comp_colour.w) * colour_blend, 0.0f, 1.0f);
+
 
                 ImGui::PushID(button_id++);
 
                 // Draw the card.
                 const auto pos_prior = ImGui::GetCursorPos();
 
-                const auto user_colour = ImColor(0.1f, 0.4f, 0.8f, 1.0f).Value;
-                const auto comp_colour = ImColor(0.8f, 0.4f, 0.1f, 1.0f).Value;
-                ImGui::PushStyleColor(ImGuiCol_Button, (card.owned_by_first_player ? comp_colour : user_colour));
+                ImGui::PushStyleColor(ImGuiCol_Button, card_colour);
 
                 //ImGui::Dummy(block_dims);
                 ImGui::Button("", block_dims);
@@ -3471,7 +3504,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                             const bool dark = true;
                             draw_empty_card(-1, dark);
                         }else{
-                            draw_card(card_index, tt_hidden);
+                            const int64_t cell_num = -1;
+                            draw_card(cell_num, card_index, tt_hidden);
                         }
 
                     // Cards held by the user.
@@ -3483,7 +3517,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                             draw_empty_card(-1, dark);
                         }else{
                             const bool obscure_card = false;
-                            draw_card(card_index, obscure_card);
+                            const int64_t cell_num = -1;
+                            draw_card(cell_num, card_index, obscure_card);
                         }
 
                     // Main board / cards already in-play.
@@ -3496,7 +3531,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                             const auto card_num = tt_game.board.at(cell_num);
                             if(tt_game.is_valid_card_num(card_num)){
                                 const bool obscure_card = false;
-                                draw_card(card_num, obscure_card);
+                                draw_card(cell_num, card_num, obscure_card);
                             }else{
                                 const bool dark = false;
                                 draw_empty_card(cell_num, dark);
