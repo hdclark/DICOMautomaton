@@ -37,6 +37,7 @@
 #include "Operations/BuildLexiconInteractively.h"
 #include "Operations/ClusterDBSCAN.h"
 #include "Operations/CombineMeshes.h"
+#include "Operations/CompareMeshes.h"
 #include "Operations/ComparePixels.h"
 #include "Operations/ContourBasedRayCastDoseAccumulate.h"
 #include "Operations/ContourSimilarity.h"
@@ -280,6 +281,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["CellularAutomata"] = std::make_pair(OpArgDocCellularAutomata, CellularAutomata);
     out["ClusterDBSCAN"] = std::make_pair(OpArgDocClusterDBSCAN, ClusterDBSCAN);
     out["CombineMeshes"] = std::make_pair(OpArgDocCombineMeshes, CombineMeshes);
+    out["CompareMeshes"] = std::make_pair(OpArgDocCompareMeshes, CompareMeshes);
     out["ComparePixels"] = std::make_pair(OpArgDocComparePixels, ComparePixels);
     out["ContourBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocContourBasedRayCastDoseAccumulate, ContourBasedRayCastDoseAccumulate);
     out["ContouringAides"] = std::make_pair(OpArgDocContouringAides, ContouringAides);
