@@ -17,7 +17,6 @@ jobs:
       - uses: actions/checkout@v1
       - name: prep
         run: |
-             git config --global --add safe.directory '*'
              cp -R ./docker/builders/mxe /scratch
              cp -R . /dcma
              ./scripts/enable_swapfile.sh
@@ -28,6 +27,7 @@ jobs:
              rsync -avP /out/ ./Windows/
              strip ./Windows/usr/bin/*exe
              strip ./Windows/usr/lib/*a
+             git config --global --add safe.directory '*' || true
       - name: test
         run: |
              export DEBIAN_FRONTEND='noninteractive'
@@ -80,7 +80,6 @@ jobs:
       - uses: actions/checkout@v1
       - name: prep
         run: |
-             git config --global --add safe.directory '*'
              cp -R ./docker/builders/ci /scratch
              cp -R . /dcma
              ./scripts/enable_swapfile.sh
@@ -88,6 +87,7 @@ jobs:
         run: |
              ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
              ./docker/builders/ci/implementation_ci_debian_oldstable.sh
+             git config --global --add safe.directory '*' || true
       - name: test
         run: |
              ./integration_tests/Run.sh -v
@@ -125,7 +125,6 @@ jobs:
       - uses: actions/checkout@v1
       - name: prep
         run: |
-             git config --global --add safe.directory '*'
              cp -R ./docker/builders/ci /scratch
              cp -R . /dcma
              ./scripts/enable_swapfile.sh
@@ -174,7 +173,6 @@ jobs:
       - uses: actions/checkout@v1
       - name: prep
         run: |
-             git config --global --add safe.directory '*'
              cp -R ./docker/builders/ci /scratch
              cp -R . /dcma
              ./scripts/enable_swapfile.sh
@@ -220,7 +218,6 @@ jobs:
       - uses: actions/checkout@v1
       - name: prep
         run: |
-             git config --global --add safe.directory '*'
              cp -R . ~/dcma
              export DEBIAN_FRONTEND="noninteractive"
              sudo apt-get update --yes
@@ -280,7 +277,6 @@ jobs:
       - uses: actions/checkout@v1
       - name: prep
         run: |
-             git config --global --add safe.directory '*'
              cp -R . ~/dcma
              export DEBIAN_FRONTEND="noninteractive"
              sudo apt-get update --yes
@@ -340,7 +336,6 @@ jobs:
       - uses: actions/checkout@v1
       - name: prep
         run: |
-             git config --global --add safe.directory '*'
              cp -R . ~/dcma
              export DEBIAN_FRONTEND="noninteractive"
              sudo apt-get update --yes
