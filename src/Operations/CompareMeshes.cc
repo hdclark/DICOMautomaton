@@ -109,6 +109,44 @@ bool CompareMeshes(Drover &DICOM_data,
         }
         second_max_distance = std::max(min_distance, second_max_distance);
     }
+    
+    mesh1->meshes.convert_to_triangles();
+    mesh2->meshes.convert_to_triangles();
+
+
+    double volume1 = 0;
+    double volume2 = 0;
+
+    decltype(mesh1->meshes.faces)* faces = &(mesh1->meshes.faces);
+    for (auto & fv : *faces){
+
+        const auto P_A = mesh1->meshes.vertices.at( fv[0] );
+        const auto P_B = mesh1->meshes.vertices.at( fv[1] );
+        const auto P_C = mesh1->meshes.vertices.at( fv[2] );
+
+        volume1 += (-P_C.x*P_B.y*P_A.z + P_B.x*P_C.y*P_A.z + 
+                P_C.x*P_A.y*P_B.z - P_A.x*P_C.y*P_B.z - 
+                P_B.x*P_A.y*P_C.z + P_A.x*P_B.y*P_C.z)/(6.0);
+
+        }
+
+    FUNCINFO("vol1 = "<<abs(volume1)<<".")
+
+
+    faces = &(mesh2->meshes.faces);
+    for (auto & fv : *faces){
+
+        const auto P_A = mesh2->meshes.vertices.at( fv[0] );
+        const auto P_B = mesh2->meshes.vertices.at( fv[1] );
+        const auto P_C = mesh2->meshes.vertices.at( fv[2] );
+
+        volume2 += (-P_C.x*P_B.y*P_A.z + P_B.x*P_C.y*P_A.z + 
+                P_C.x*P_A.y*P_B.z - P_A.x*P_C.y*P_B.z - 
+                P_B.x*P_A.y*P_C.z + P_A.x*P_B.y*P_C.z)/(6.0);
+        }
+
+    FUNCINFO("vol2 = "<<abs(volume2)<<".")
+    FUNCINFO("diffVol = "<<abs(abs(volume1)-abs(volume2)))
 
     FUNCINFO("HAUSDORFF DISTANCE: " << max_distance << " or " << second_max_distance);
 
