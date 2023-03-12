@@ -27,6 +27,7 @@ jobs:
              rsync -avP /out/ ./Windows/
              strip ./Windows/usr/bin/*exe
              strip ./Windows/usr/lib/*a
+             git config --global --add safe.directory '*' || true
       - name: test
         run: |
              export DEBIAN_FRONTEND='noninteractive'
@@ -47,7 +48,7 @@ jobs:
              ./integration_tests/Run.sh -v
       - name: create_zip
         run: |
-             export short_sha="$(git rev-parse --short HEAD)"
+             export short_sha="$(git rev-parse --short HEAD || printf 'unknown')"
              export DEBIAN_FRONTEND="noninteractive"
              apt-get update --yes
              apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf zip
@@ -86,6 +87,7 @@ jobs:
         run: |
              ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
              ./docker/builders/ci/implementation_ci_debian_oldstable.sh
+             git config --global --add safe.directory '*' || true
       - name: test
         run: |
              ./integration_tests/Run.sh -v
