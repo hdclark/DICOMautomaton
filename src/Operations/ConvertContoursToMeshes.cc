@@ -202,7 +202,14 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
     if(std::regex_match(MethodStr, direct_regex)){
         // Identify the unique planes.
         //const auto est_cont_normal = cc.contours.front().Estimate_Planar_Normal();
-        const auto est_cont_normal = Average_Contour_Normals(cc_ref);
+        const auto est_cont_normal = [&]() {
+            auto est_cont_normal = Average_Contour_Normals(cc_ref);
+            if(!est_cont_normal.isfinite()) {
+                est_cont_normal = cc_ref.front().get().contours.front().Estimate_Planar_Normal();
+            };
+            return est_cont_normal;
+        }();
+
         const auto contour_sep_eps = 0.005;
         auto ucps = Unique_Contour_Planes(cc_ref, est_cont_normal, contour_sep_eps);
         if(ucps.size() < 2){
