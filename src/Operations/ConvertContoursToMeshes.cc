@@ -271,6 +271,38 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
             return false;
         };
 
+        const auto projected_contours_intersect = [&](const plane<double> &pln_A, cop_refw_t A,
+                                                            const plane<double> &pln_B, cop_refw_t B) -> bool {
+            // Checks whether two contors intersect
+            // if a contour is completely enclosed by another contour, they will not intersect
+            // Given that the contours overlap, if one does not enclose the other, they must intersect.
+            // A countour is enclosed if *all* vertices of a contour lies inside the other polygon.
+            // Should work well for most realistic contours that are highly sampled
+
+            if (!projected_contours_overlap(pln_A, A, pln_B, B)){
+                return false;
+            }
+
+            bool a_in_b = true;
+            bool b_in_a = true;
+
+            for(const auto &p_A : A.get().points){
+                if(!B.get().Is_Point_In_Polygon_Projected_Orthogonally(pln_B, p_A)){
+                    a_in_b = false;
+                    break;
+                }
+            }
+            for(const auto &p_B : B.get().points){
+                if(!A.get().Is_Point_In_Polygon_Projected_Orthogonally(pln_A, p_B)){
+                    b_in_a = false;
+                    break;
+                }
+            }
+
+            return !(a_in_b || b_in_a);
+        };
+
+
         // Cycle over unique planes.
         for(auto m_cp_it = std::cbegin(ucps); m_cp_it != std::cend(ucps); ++m_cp_it){
 
@@ -297,17 +329,17 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
                 throw std::logic_error("Unable to find any contours on contour plane.");
             }
 
-            // Eliminate overlapping contours on both planes.
+            // Eliminate intersecting contours on both planes.
             for(auto m1_cop_it = std::begin(m_cops); m1_cop_it != std::end(m_cops); ){
                 for(auto m2_cop_it = std::next(m1_cop_it); m2_cop_it != std::end(m_cops); ){
-                    if(projected_contours_overlap(*m_cp_it, *m1_cop_it,
-                                                  *m_cp_it, *m2_cop_it)){
+                    if(projected_contours_intersect(*m_cp_it, *m1_cop_it,
+                                                    *m_cp_it, *m2_cop_it)){
 
                         // Cull the smaller contour.
                         const auto m1_area = std::abs( m1_cop_it->get().Get_Signed_Area() );
                         const auto m2_area = std::abs( m2_cop_it->get().Get_Signed_Area() );
                         
-                        YLOGWARN("Found overlapping upper-plane contours, trimmed smallest-area contour");
+                        YLOGWARN("Found intersecting upper-plane contours, trimmed smallest-area contour");
                         if(m1_area < m2_area){
                             m1_cop_it = m_cops.erase(m1_cop_it);
                             m2_cop_it = std::next(m1_cop_it);
@@ -322,14 +354,14 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
             }
             for(auto l1_cop_it = std::begin(l_cops); l1_cop_it != std::end(l_cops); ){
                 for(auto l2_cop_it = std::next(l1_cop_it); l2_cop_it != std::end(l_cops); ){
-                    if(projected_contours_overlap(*l_cp_it, *l1_cop_it,
-                                                  *l_cp_it, *l2_cop_it)){
+                    if(projected_contours_intersect(*l_cp_it, *l1_cop_it,
+                                                    *l_cp_it, *l2_cop_it)){
 
                         // Cull the smaller contour.
                         const auto l1_area = std::abs( l1_cop_it->get().Get_Signed_Area() );
                         const auto l2_area = std::abs( l2_cop_it->get().Get_Signed_Area() );
                         
-                        YLOGWARN("Found overlapping lower-plane contours, trimmed smallest-area contour");
+                        YLOGWARN("Found intersecting lower-plane contours, trimmed smallest-area contour");
                         if(l1_area < l2_area){
                             l1_cop_it = l_cops.erase(l1_cop_it);
                             l2_cop_it = std::next(l1_cop_it);
