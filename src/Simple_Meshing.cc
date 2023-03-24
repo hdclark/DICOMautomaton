@@ -745,3 +745,65 @@ Minimally_Amalgamate_Contours(
     return amal;
 }
 
+contour_of_points<double>
+Minimally_Amalgamate_Contours_N_to_N(
+        const vec3<double> &ortho_unit,
+        const vec3<double> &pseudo_vert_offset,
+        std::list<std::reference_wrapper<contour_of_points<double>>> B ){
+    if(B.empty()) {
+        throw std::invalid_argument("No contours supplied in B. Cannot continue.");
+    }
+    
+    const auto has_consistent_orientation = [&]( std::reference_wrapper<contour_of_points<double>> cop_refw ) -> bool {
+        // Determine if the contour has a consistent orientation as that provided by the user.
+        auto l_ortho_unit = ortho_unit;
+        try{
+            l_ortho_unit = cop_refw.get().Estimate_Planar_Normal();
+        }catch(const std::exception &){}
+        return (0.0 < ortho_unit.Dot(l_ortho_unit));
+    };
+
+    // Confirm all contour orientations are consistent.
+    std::list< contour_of_points<double> > reversed_cops_storage;
+    for(auto crw_it = std::begin(B); crw_it != std::end(B); ){
+        if(!has_consistent_orientation(*crw_it)){
+            YLOGWARN("Found contour with inconsistent orientation. Making a reversed copy. This may discard information");
+            reversed_cops_storage.emplace_back( crw_it->get() );
+            reversed_cops_storage.back().points.reverse();
+            (*crw_it) = std::ref(reversed_cops_storage.back());
+        }
+        ++crw_it;
+    }
+    for(const auto &cop_refw : B){
+        if(cop_refw.get().closed == false){
+            throw std::invalid_argument("Found open contour. Refusing to continue.");
+        }
+    }
+    contour_of_points<double> amal = B.front().get();
+    B.pop_front();
+    if(amal.points.size() < 3) {
+        throw std::invalid_argument("Seed contour in B contains insufficient vertices. Cannot continue.");
+    }
+    
+    std::list<decltype(std::begin(amal.points))> pseudo_verts;
+    const auto is_a_pseudo_vert = [&]( decltype(std::begin(amal.points)) it ) -> bool {
+        for(const auto &pv : pseudo_verts){
+            if( it == pv ) return true;
+        }
+        return false;
+    };
+
+    while(true) {
+        double shortest_criteria = std::numeric_limits<double>::infinity();
+        auto closest_cop = std::begin(B);
+        decltype(std::begin(amal.points)) closest_a_v_it;
+        decltype(std::begin(B.front().get().points)) closest_b_it;
+
+        for(auto b_it = std::begin(B); b_it != std::end(B); ++b_it){
+            auto a_v_it = std::begin(amal.points);
+            if(is_a_pseudo_vert(a_v_it)) {
+                
+            }
+        }
+    }
+}
