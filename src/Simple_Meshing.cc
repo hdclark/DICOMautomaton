@@ -745,7 +745,7 @@ Minimally_Amalgamate_Contours(
     return amal;
 }
 
-contour_of_points<double>
+/*contour_of_points<double>
 Minimally_Amalgamate_Contours_N_to_N(
         const vec3<double> &ortho_unit,
         const vec3<double> &pseudo_vert_offset,
@@ -806,4 +806,4 @@ Minimally_Amalgamate_Contours_N_to_N(
             }
         }
     }
-}
+}*/
