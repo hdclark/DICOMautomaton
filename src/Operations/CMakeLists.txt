@@ -46,6 +46,7 @@ add_library(Operations_objs OBJECT
     CopyTables.cc
     CopyPoints.cc
     CountVoxels.cc
+    CreateCustomContour.cc
     CropImageDoseToROIs.cc
     CropImages.cc
     CropROIDose.cc

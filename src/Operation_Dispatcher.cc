@@ -67,6 +67,7 @@
 #include "Operations/CopyTables.h"
 #include "Operations/CopyPoints.h"
 #include "Operations/CountVoxels.h"
+#include "Operations/CreateCustomContour.h"
 #include "Operations/CropImageDoseToROIs.h"
 #include "Operations/CropImages.h"
 #include "Operations/CropROIDose.h"
@@ -310,6 +311,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["CopyTables"] = std::make_pair(OpArgDocCopyTables, CopyTables);
     out["CopyPoints"] = std::make_pair(OpArgDocCopyPoints, CopyPoints);
     out["CountVoxels"] = std::make_pair(OpArgDocCountVoxels, CountVoxels);
+    out["CreateCustomContour"] = std::make_pair(OpArgDocCreateCustomContour, CreateCustomContour);
     out["CropImageDoseToROIs"] = std::make_pair(OpArgDocCropImageDoseToROIs, CropImageDoseToROIs);
     out["CropImages"] = std::make_pair(OpArgDocCropImages, CropImages);
     out["CropROIDose"] = std::make_pair(OpArgDocCropROIDose, CropROIDose);
