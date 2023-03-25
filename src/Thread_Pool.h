@@ -104,10 +104,15 @@ class work_queue {
     ){}
 
     void submit_task(T f){
-        {
-            std::lock_guard<std::mutex> lock(this->queue_mutex);
-            this->queue.push_back(std::move(f));
-        }
+        std::lock_guard<std::mutex> lock(this->queue_mutex);
+        this->queue.push_back(std::move(f));
+
+        // Note: it's not strictly necessary to lock the mutex before notifying, but it's possible it could lead to a data
+        // race or use-after-free. If nothing else, locking suppresses warnings of a 'possible' data race in thread sanitizers.
+        // See discussion and some links at
+        // https://stackoverflow.com/questions/17101922/do-i-have-to-acquire-lock-before-calling-condition-variable-notify-one
+        // Also note that this can potentially lead to a performance downgrade; in practice, most pthread
+        // implementations will detect and mitigate the issue.
         this->notifier.notify_one();
         return;
     }
@@ -120,8 +125,11 @@ class work_queue {
     }
 
     ~work_queue(){
-        this->should_quit.store(true);
-        this->notifier.notify_one();
+        {
+            std::lock_guard<std::mutex> lock(this->queue_mutex);
+            this->should_quit.store(true);
+            this->notifier.notify_all();
+        }
         this->worker_thread.join();
     }
 };
