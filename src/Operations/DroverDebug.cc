@@ -4,6 +4,7 @@
 #include <fstream>
 #include <list>
 #include <map>
+#include <mutex>
 #include <memory>
 #include <string>
 #include <variant>
@@ -25,6 +26,7 @@
 static void dump_metadata(std::ostream &os,
                           const std::string& indent,
                           const std::map<std::string, std::string>& m){
+    std::lock_guard<std::mutex> lock(ygor::g_term_sync);
     for(const auto &p : m){
         os << indent << "'" << p.first << "' : '" << p.second << "'" << std::endl;
     }
