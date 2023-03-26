@@ -1,6 +1,5 @@
 //CountVoxels.cc - A part of DICOMautomaton 2019. Written by hal clark.
 
-#include <asio.hpp>
 #include <algorithm>
 #include <optional>
 #include <fstream>

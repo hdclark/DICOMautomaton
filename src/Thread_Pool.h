@@ -3,57 +3,17 @@
 #pragma once
 
 #include <mutex>
-#include <shared_mutex>
 #include <condition_variable>
 #include <thread>
 #include <atomic>
-
-#include <asio.hpp>
-#include <boost/thread.hpp> // For class thread_group.
-#include <boost/bind/bind.hpp>
-
-//#include <boost/asio/io_service.hpp>
-//#include <boost/thread/thread.hpp>
+#include <algorithm>
+#include <list>
 
 
-class asio_thread_pool {
-  private:
+// Multi-threaded work queue for offloading processing tasks.
+//
+// Note that if there is a single thread, then work is processed sequentially in FIFO order.
 
-    asio::io_service _io_service;
-    boost::thread_group _thread_pool;
-    using work_t = std::unique_ptr<asio::io_service::work>;
-    work_t _work;
-
-  public:
-
-    //Constructor and destructor.
-    asio_thread_pool(const size_t num_threads = 0) : _io_service(), 
-                                                     _work(new work_t::element_type(_io_service)) {
-        auto n = (num_threads == 0) ? std::thread::hardware_concurrency()
-                                    : num_threads;
-        if(n == 0) n = 2;
-        for(size_t i = 0 ; i < n; ++i){
-            this->_thread_pool.create_thread(
-                boost::bind(&asio::io_service::run, &this->_io_service)
-            );
-        }
-    }
-    ~asio_thread_pool(){
-        this->_work.reset();
-        this->_thread_pool.join_all();
-        this->_io_service.stop();
-    }
-
-    //Work submission routine.
-    template<class T>
-    void submit_task(T atask){
-        this->_io_service.post(atask);
-    }
-}; 
-
-
-
-// Single-threaded work queue for sequential FIFO offloading processing.
 template<class T>
 class work_queue {
 
@@ -61,47 +21,57 @@ class work_queue {
     std::list<T> queue;
     std::mutex queue_mutex;
 
-    std::condition_variable notifier;
+    std::condition_variable new_task_notifier;
     std::atomic<bool> should_quit = false;
-    std::thread worker_thread;
+    std::list<std::thread> worker_threads;
 
   public:
 
-    work_queue() : worker_thread(
-        [this](){
-            // Continually check the queue and wait on the condition variable.
-            bool l_should_quit = false;
-            while(!l_should_quit){
+    work_queue(unsigned int n_workers = std::thread::hardware_concurrency()){
+        std::unique_lock<std::mutex> lock(this->queue_mutex);
 
-                std::unique_lock<std::mutex> lock(this->queue_mutex);
-                while( !(l_should_quit = this->should_quit.load())
-                       && this->queue.empty() ){
+        auto l_n_workers = (n_workers == 0U) ? std::thread::hardware_concurrency()
+                                             : n_workers;
+        l_n_workers = (l_n_workers == 0U) ? 2U : l_n_workers;
 
-                    // Release the lock while waiting, which allows for work to be submitted.
-                    //
-                    // Note: spurious notifications are OK, since the queue will be empty and the worker will return to
-                    // waiting on the condition variable.
-                    this->notifier.wait(lock);
+        for(unsigned int i = 0; i < l_n_workers; ++i){
+            this->worker_threads.emplace_back(
+                [this](){
+                    // Continually check the queue and wait on the condition variable.
+                    bool l_should_quit = false;
+                    while(!l_should_quit){
+
+                        std::unique_lock<std::mutex> lock(this->queue_mutex);
+                        while( !(l_should_quit = this->should_quit.load())
+                               && this->queue.empty() ){
+
+                            // Release the lock while waiting, which allows for work to be submitted.
+                            //
+                            // Note: spurious notifications are OK, since the queue will be empty and the worker will return to
+                            // waiting on the condition variable.
+                            this->new_task_notifier.wait(lock);
+                        }
+
+                        // Assume ownership of only the first item in the queue (FIFO).
+                        std::list<T> l_queue;
+                        if(!this->queue.empty()) l_queue.splice( std::end(l_queue), this->queue, std::begin(this->queue) );
+                        
+                        //// Assume ownership of all available items in the queue.
+                        //std::list<T> l_queue;
+                        //l_queue.swap( this->queue );
+
+                        // Perform the work in FIFO order.
+                        lock.unlock();
+                        for(const auto &user_f : l_queue){
+                            try{
+                                user_f();
+                            }catch(const std::exception &){};
+                        }
+                    }
                 }
-
-                // Assume ownership of only the first item in the queue (FIFO).
-                std::list<T> l_queue;
-                if(!this->queue.empty()) l_queue.splice( std::end(l_queue), this->queue, std::begin(this->queue) );
-                
-                //// Assume ownership of all available items in the queue.
-                //std::list<T> l_queue;
-                //l_queue.swap( this->queue );
-
-                // Perform the work in FIFO order.
-                lock.unlock();
-                for(const auto &user_f : l_queue){
-                    try{
-                        user_f();
-                    }catch(const std::exception &){};
-                }
-            }
+            );
         }
-    ){}
+    }
 
     void submit_task(T f){
         std::lock_guard<std::mutex> lock(this->queue_mutex);
@@ -113,7 +83,7 @@ class work_queue {
         // https://stackoverflow.com/questions/17101922/do-i-have-to-acquire-lock-before-calling-condition-variable-notify-one
         // Also note that this can potentially lead to a performance downgrade; in practice, most pthread
         // implementations will detect and mitigate the issue.
-        this->notifier.notify_one();
+        this->new_task_notifier.notify_one();
         return;
     }
 
@@ -121,16 +91,44 @@ class work_queue {
         std::list<T> out;
         std::lock_guard<std::mutex> lock(this->queue_mutex);
         out.swap( this->queue );
-        return std::move(out);
+        return out;
     }
 
     ~work_queue(){
-        {
-            std::lock_guard<std::mutex> lock(this->queue_mutex);
-            this->should_quit.store(true);
-            this->notifier.notify_all();
+        // We can either cancel outstanding tasks or wait for all queued tasks to be completed.
+        // Since there is a mechanism to clear queued tasks that have not been acquired by worker threads,
+        // it is least-surprising to wait for all queued tasks to be completed before destructing.
+
+        // To wait for tasks to be processed, we will poll until either the task queue is empty, or the signal to quit
+        // is received. Note that tasks may still be being processed when this function returns, however it will be
+        // safe to call the destructor (which will safely wait for tasks by joining the threads).
+        //
+        // TODO: could we instead use a separate condition variable (and mutex?) to receive a signal when tasks are
+        // actually completed? This would avoid (minimize?) polling and also allow tasks to be fully completed
+        // before returning.
+        while(true){
+        //bool l_outstanding = true;
+        //while(l_outstanding){
+            {
+                std::unique_lock<std::mutex> lock(this->queue_mutex);
+                const bool l_should_quit = this->should_quit.load();
+                if( l_should_quit
+                ||  this->queue.empty() ){
+                 
+                    // Cancel any outstanding tasks, wait on the worker threads' current tasks, and then join the
+                    // threads. Any queued tasks will be destroyed.
+                    {
+                        this->should_quit.store(true);
+                        this->new_task_notifier.notify_all();
+                    }
+                    lock.unlock();
+                    for(auto &wt : this->worker_threads) wt.join();
+                    //l_outstanding = false;
+                    break;
+                }
+            }
+            std::this_thread::sleep_for( std::chrono::milliseconds(200) );
         }
-        this->worker_thread.join();
     }
 };
 

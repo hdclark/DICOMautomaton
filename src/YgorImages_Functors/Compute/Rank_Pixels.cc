@@ -74,7 +74,7 @@ bool ComputeRankPixels(planar_image_collection<float,double> &imagecoll,
         YLOGWARN("No voxels were selected to participate in the rank; nothing to do");
 
     }else{
-        asio_thread_pool tp;
+        work_queue<std::function<void(void)>> wq;
         std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
         long int completed = 0;
         const long int img_count = imagecoll.images.size();
@@ -82,7 +82,7 @@ bool ComputeRankPixels(planar_image_collection<float,double> &imagecoll,
         for(auto & img_it : all_imgs){
             std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(*img_it) );
 
-            tp.submit_task([&,img_refw]() -> void {
+            wq.submit_task([&,img_refw]() -> void {
                 //Record the min and max actual pixel values for windowing purposes.
                 Stats::Running_MinMax<float> minmax_pixel;
 

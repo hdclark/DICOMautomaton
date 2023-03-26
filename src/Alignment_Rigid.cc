@@ -1,6 +1,5 @@
 //Alignment_Rigid.cc - A part of DICOMautomaton 2020. Written by hal clark.
 
-#include <asio.hpp>
 #include <algorithm>
 #include <optional>
 #include <fstream>
@@ -539,9 +538,9 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
         const auto N_working_points = working.points.size();
         if(N_working_points != corresp.points.size()) throw std::logic_error("Encountered inconsistent working buffers. Cannot continue.");
         {
-            asio_thread_pool tp;
+            work_queue<std::function<void(void)>> wq;
             for(size_t i = 0; i < N_working_points; ++i){
-                tp.submit_task([&,i]() -> void {
+                wq.submit_task([&,i]() -> void {
                     const auto w_p = working.points[i];
                     double min_sq_dist = std::numeric_limits<double>::infinity();
                     for(const auto &s_p : stationary.points){

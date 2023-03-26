@@ -1,6 +1,5 @@
 //WarpContours.cc - A part of DICOMautomaton 2021. Written by hal clark.
 
-#include <asio.hpp>
 #include <algorithm>
 #include <optional>
 #include <fstream>

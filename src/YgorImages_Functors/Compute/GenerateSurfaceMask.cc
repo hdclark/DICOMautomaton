@@ -1,6 +1,5 @@
 //GenerateSurfaceMask.cc.
 
-#include <asio.hpp>
 #include <exception>
 #include <any>
 #include <functional>
@@ -126,10 +125,10 @@ bool ComputeGenerateSurfaceMask(planar_image_collection<float,double> &imagecoll
 
         //Loop over the pixels of the image.
         {
-            asio_thread_pool tp;
+            work_queue<std::function<void(void)>> wq;
 
             for(auto row = 0; row < img.rows; ++row){
-                tp.submit_task([&,row]() -> void {
+                wq.submit_task([&,row]() -> void {
                     for(auto col = 0; col < img.columns; ++col){
                         const auto point = img.position(row,col);
 

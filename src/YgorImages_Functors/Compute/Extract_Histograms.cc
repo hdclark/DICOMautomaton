@@ -108,7 +108,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
                        voxel_extrema;
 
     { // Scope for thread pool.
-        asio_thread_pool tp;
+        work_queue<std::function<void(void)>> wq;
         std::mutex saver;
         std::mutex printer;
         long int completed = 0;
@@ -116,7 +116,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
 
         for(auto &img : imagecoll.images){
             std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(img) );
-            tp.submit_task([&,img_refw]() -> void {
+            wq.submit_task([&,img_refw]() -> void {
 
                 // Cycle over all the alike-named contour collections.
                 for(auto & named_ccsl : named_ccsls){
@@ -216,7 +216,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
 
     // Visit all voxels to build the histograms.
     {
-        asio_thread_pool tp;
+        work_queue<std::function<void(void)>> wq;
         std::mutex saver;
         std::mutex printer;
         long int completed = 0;
@@ -224,7 +224,7 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
 
         for(auto &img : imagecoll.images){
             std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(img) );
-            tp.submit_task([&,img_refw]() -> void {
+            wq.submit_task([&,img_refw]() -> void {
 
                 const auto pxl_dx = img_refw.get().pxl_dx;
                 const auto pxl_dy = img_refw.get().pxl_dy;

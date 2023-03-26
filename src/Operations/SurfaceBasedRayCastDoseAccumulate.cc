@@ -755,12 +755,12 @@ bool SurfaceBasedRayCastDoseAccumulate(Drover &DICOM_data,
     //Now ready to ray cast. Loop over integer pixel coordinates. Start and finish are image pixels.
     // The top image can be the length image.
     {
-        asio_thread_pool tp;
+        work_queue<std::function<void(void)>> wq;
         std::mutex printer; // Who gets to print to the console and iterate the counter.
         long int completed = 0;
 
         for(long int row = 0; row < SourceDetectorRows; ++row){
-            tp.submit_task([&,row]() -> void {
+            wq.submit_task([&,row]() -> void {
                 for(long int col = 0; col < SourceDetectorColumns; ++col){
 
                     //Construct a line segment between the source and detector. 

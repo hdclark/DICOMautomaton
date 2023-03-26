@@ -1,6 +1,5 @@
 //ExportSurfaceMeshesPLY.cc - A part of DICOMautomaton 2020. Written by hal clark.
 
-#include <asio.hpp>
 #include <algorithm>
 #include <optional>
 #include <fstream>

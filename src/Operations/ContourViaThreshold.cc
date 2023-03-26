@@ -1,6 +1,5 @@
 //ContourViaThreshold.cc - A part of DICOMautomaton 2017. Written by hal clark.
 
-#include <asio.hpp>
 #include <algorithm>
 #include <optional>
 #include <fstream>
@@ -220,7 +219,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
     for(auto & iap_it : IAs){
         const long int img_count = (*iap_it)->imagecoll.images.size();
 
-        asio_thread_pool tp;
+        work_queue<std::function<void(void)>> wq;
         std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
         long int completed = 0;
 
@@ -272,7 +271,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
                 throw std::runtime_error("Image or channel is empty -- cannot contour via thresholds.");
             }
             const auto animg_ptr = &(animg);
-            tp.submit_task([&,cl,cu,animg_ptr,cm]() -> void {
+            wq.submit_task([&,cl,cu,animg_ptr,cm]() -> void {
 
                 // ---------------------------------------------------
                 // The binary inclusivity method.

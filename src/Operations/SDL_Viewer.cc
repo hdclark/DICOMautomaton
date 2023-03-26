@@ -878,7 +878,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
 
     // General-purpose Drover processing offloading worker thread.
-    work_queue<std::function<void(void)>> wq;
+    work_queue<std::function<void(void)>> wq(1U);
     wq.submit_task([](){
         YLOGINFO("Worker thread ready");
         return;

@@ -797,19 +797,19 @@ Marching_Cubes_Implementation(
     // information (e.g., vscor for completely deduplicated submeshes).
     YLOGINFO("Extracting odd-numbered image meshes");
     {
-        asio_thread_pool tp;
+        work_queue<std::function<void(void)>> wq;
         for(long int i = img_num_min; i <= img_num_max; ++i){
             if( i % 2 == 0 ) continue;
-            tp.submit_task( std::bind(work, img_adj.index_to_image(i)) );
+            wq.submit_task( std::bind(work, img_adj.index_to_image(i)) );
         }
     }
 
     YLOGINFO("Extracting even-numbered image meshes");
     {
-        asio_thread_pool tp;
+        work_queue<std::function<void(void)>> wq;
         for(long int i = img_num_min; i <= img_num_max; ++i){
             if( i % 2 == 1 ) continue;
-            tp.submit_task( std::bind(work, img_adj.index_to_image(i)) );
+            wq.submit_task( std::bind(work, img_adj.index_to_image(i)) );
         }
     }
 

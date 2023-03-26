@@ -1,6 +1,5 @@
 //ThresholdImages.cc - A part of DICOMautomaton 2018. Written by hal clark.
 
-#include <asio.hpp>
 #include <algorithm>
 #include <optional>
 #include <fstream>
@@ -150,7 +149,7 @@ bool ThresholdImages(Drover &DICOM_data,
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
-        asio_thread_pool tp;
+        work_queue<std::function<void(void)>> wq;
         std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
         long int completed = 0;
         const long int img_count = (*iap_it)->imagecoll.images.size();
@@ -161,7 +160,7 @@ bool ThresholdImages(Drover &DICOM_data,
             }
             std::reference_wrapper<planar_image<float,double>> img_refw( std::ref(animg) );
 
-            tp.submit_task([&,img_refw]() -> void {
+            wq.submit_task([&,img_refw]() -> void {
                 const auto R = img_refw.get().rows;
                 const auto C = img_refw.get().columns;
 

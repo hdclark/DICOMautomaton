@@ -29,7 +29,6 @@
 
 #include "Explicator.h"       //Needed for Explicator class.
 
-#include <asio.hpp>
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"

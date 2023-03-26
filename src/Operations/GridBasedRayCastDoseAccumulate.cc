@@ -452,14 +452,14 @@ bool GridBasedRayCastDoseAccumulate(Drover &DICOM_data,
     //Now ready to ray cast. Loop over integer pixel coordinates. Start and finish are image pixels.
     // The top image can be the length image.
     {
-        asio_thread_pool tp;
+        work_queue<std::function<void(void)>> wq;
         std::mutex printer; // Who gets to print to the console and iterate the counter.
         long int completed = 0;
 
         const double cleaved_gap_dist = std::abs(ROICleaving.Get_Signed_Distance_To_Point(ROI_centroid));
 
         for(long int row = 0; row < SourceDetectorRows; ++row){
-            tp.submit_task([&,row]() -> void {
+            wq.submit_task([&,row]() -> void {
                 for(long int col = 0; col < SourceDetectorColumns; ++col){
                     double accumulated_length = 0.0;      //Length of ray travel within the 'surface'.
                     double accumulated_doselength = 0.0;

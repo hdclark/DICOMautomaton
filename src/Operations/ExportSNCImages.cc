@@ -1,6 +1,5 @@
 //ExportSNCImages.cc - A part of DICOMautomaton 2022. Written by hal clark.
 
-#include <asio.hpp>
 #include <algorithm>
 #include <optional>
 #include <fstream>

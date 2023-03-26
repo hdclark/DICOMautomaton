@@ -15,7 +15,6 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 
-#include <asio.hpp>
 
 #include "Explicator.h"       //Needed for Explicator class.
 

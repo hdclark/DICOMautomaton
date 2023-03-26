@@ -1,6 +1,5 @@
 //ConvertPixelsToPoints.cc - A part of DICOMautomaton 2019. Written by hal clark.
 
-#include <asio.hpp>
 #include <algorithm>
 #include <optional>
 #include <fstream>
@@ -16,10 +15,6 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "../Thread_Pool.h"
-#include "ConvertPixelsToPoints.h"
 #include "Explicator.h"       //Needed for Explicator class.
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -27,6 +22,11 @@
 #include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "../Thread_Pool.h"
+#include "ConvertPixelsToPoints.h"
 
 
 
@@ -132,7 +132,7 @@ bool ConvertPixelsToPoints(Drover &DICOM_data,
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
-        asio_thread_pool tp;
+        work_queue<std::function<void(void)>> wq;
         std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
         long int completed = 0;
         const long int img_count = (*iap_it)->imagecoll.images.size();
@@ -144,7 +144,7 @@ bool ConvertPixelsToPoints(Drover &DICOM_data,
 
             std::reference_wrapper< const planar_image<float, double>> img_refw( std::ref(img) );
 
-            tp.submit_task([&,img_refw]() -> void {
+            wq.submit_task([&,img_refw]() -> void {
 
                 //Determine the bounds in terms of pixel-value thresholds.
                 auto cl = Lower; // Will be replaced if percentages/percentiles requested.

@@ -5,7 +5,6 @@
     #error "Attempted to compile without CGAL support, which is required."
 #endif
 
-#include <asio.hpp>
 #include <algorithm>
 #include <optional>
 #include <fstream>

@@ -1,6 +1,5 @@
 //Alignment_TPSRPM.cc - A part of DICOMautomaton 2020. Written by hal clark.
 
-#include <asio.hpp>
 #include <algorithm>
 #include <optional>
 #include <fstream>
@@ -15,6 +14,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <iomanip>
 
 #ifdef DCMA_USE_EIGEN    
     #include <eigen3/Eigen/Dense>
@@ -351,9 +351,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         YLOGINFO("Locating mean nearest-neighbour separation in moving point cloud");
         Stats::Running_Sum<double> rs;
         {
-            //asio_thread_pool tp;
             for(long int i = 0; i < N_move_points; ++i){
-                //tp.submit_task([&,i](void) -> void {
                 double min_sq_dist = std::numeric_limits<double>::infinity();
                 for(long int j = 0; j < N_move_points; ++j){
                     if(i == j) continue;
@@ -364,27 +362,22 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
                     throw std::runtime_error("Unable to estimate nearest neighbour distance.");
                 }
                 rs.Digest(min_sq_dist);
-                //}); // thread pool task closure.
             }
         }
         mean_nn_sq_dist = rs.Current_Sum() / static_cast<double>( N_move_points );
 
         YLOGINFO("Locating max square-distance between all points");
         {
-            //asio_thread_pool tp;
-            //std::mutex saver_printer;
             for(long int i = 0; i < (N_move_points + N_stat_points); ++i){
-                //tp.submit_task([&,i](void) -> void {
-                    for(long int j = 0; j < i; ++j){
-                        const auto A = (i < N_move_points) ? moving.points[i] : stationary.points[i - N_move_points];
-                        const auto B = (j < N_move_points) ? moving.points[j] : stationary.points[j - N_move_points];
-                        const auto sq_dist = A.sq_dist(B);
-                        if(max_sq_dist < sq_dist){
-                            //std::lock_guard<std::mutex> lock(saver_printer);
-                            max_sq_dist = sq_dist;
-                        }
+                for(long int j = 0; j < i; ++j){
+                    const auto A = (i < N_move_points) ? moving.points[i] : stationary.points[i - N_move_points];
+                    const auto B = (j < N_move_points) ? moving.points[j] : stationary.points[j - N_move_points];
+                    const auto sq_dist = A.sq_dist(B);
+                    if(max_sq_dist < sq_dist){
+                        //std::lock_guard<std::mutex> lock(saver_printer);
+                        max_sq_dist = sq_dist;
                     }
-                //}); // thread pool task closure.
+                }
             }
         } // Wait until all threads are done.
     }

@@ -90,14 +90,14 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
     mv_opts.maskmod        = Mutate_Voxels_Opts::MaskMod::Noop;
 
 
-    asio_thread_pool tp;
+    work_queue<std::function<void(void)>> wq;
     std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
     long int completed = 0;
     const long int img_count = imagecoll.images.size();
 
     for(auto &img : imagecoll.images){
         std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(img) );
-        tp.submit_task([&,img_refw]() -> void {
+        wq.submit_task([&,img_refw]() -> void {
 
             // Identify the reference image which overlaps the whole image, if any.
             //
