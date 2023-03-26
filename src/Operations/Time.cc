@@ -19,6 +19,7 @@
 #include <filesystem>
 #include <array>
 #include <ctime>
+#include <iomanip>
 
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
