@@ -25,6 +25,8 @@ class work_queue {
     std::atomic<bool> should_quit = false;
     std::list<std::thread> worker_threads;
 
+    std::condition_variable end_task_notifier;
+
   public:
 
     work_queue(unsigned int n_workers = std::thread::hardware_concurrency()){
@@ -45,7 +47,7 @@ class work_queue {
                         while( !(l_should_quit = this->should_quit.load())
                                && this->queue.empty() ){
 
-                            // Release the lock while waiting, which allows for work to be submitted.
+                            // Waiting releases the lock, which allows for work to be submitted.
                             //
                             // Note: spurious notifications are OK, since the queue will be empty and the worker will return to
                             // waiting on the condition variable.
@@ -66,6 +68,10 @@ class work_queue {
                             try{
                                 user_f();
                             }catch(const std::exception &){};
+
+                            lock.lock();
+                            this->end_task_notifier.notify_all();
+                            lock.unlock();
                         }
                     }
                 }
@@ -106,28 +112,25 @@ class work_queue {
         // TODO: could we instead use a separate condition variable (and mutex?) to receive a signal when tasks are
         // actually completed? This would avoid (minimize?) polling and also allow tasks to be fully completed
         // before returning.
-        while(true){
-        //bool l_outstanding = true;
-        //while(l_outstanding){
-            {
-                std::unique_lock<std::mutex> lock(this->queue_mutex);
-                const bool l_should_quit = this->should_quit.load();
-                if( l_should_quit
-                ||  this->queue.empty() ){
-                 
-                    // Cancel any outstanding tasks, wait on the worker threads' current tasks, and then join the
-                    // threads. Any queued tasks will be destroyed.
-                    {
-                        this->should_quit.store(true);
-                        this->new_task_notifier.notify_all();
-                    }
-                    lock.unlock();
-                    for(auto &wt : this->worker_threads) wt.join();
-                    //l_outstanding = false;
-                    break;
-                }
+        bool l_should_quit = false;
+        while(!l_should_quit){
+
+            std::unique_lock<std::mutex> lock(this->queue_mutex);
+            while( !(l_should_quit = this->should_quit.load())
+                   && !this->queue.empty() ){
+
+                // Waiting releases the lock while waiting, which still allows for outstanding work to be completed.
+                //
+                // We also periodically wake up in case there is a signalling race. For longer-running tasks, this will
+                // hopefully be an insignificant amount of extra processing.
+                this->end_task_notifier.wait_for(lock, std::chrono::milliseconds(2000) );
             }
-            std::this_thread::sleep_for( std::chrono::milliseconds(200) );
+
+            this->should_quit.store(true);
+            this->new_task_notifier.notify_all(); // notify threads to wake up and 'notice' they need to terminate.
+            lock.unlock();
+            for(auto &wt : this->worker_threads) wt.join();
+            break;
         }
     }
 };

@@ -15,8 +15,12 @@ if [ ! -d "${REPOROOT}" ] ; then
 fi
 cd "${REPOROOT}"
 
+set -eux
+
 # Move to script location.
 cd "unit_tests/"
+
+trap "{ rm './test_threads_tsan' './test_threads' ; }" EXIT # Clean-up the temp file when we exit.
 
 # Use thread sanitizer.
 g++ --std=c++17 -Wall -I. -I"${REPOROOT}/src" -g -O2 \
@@ -26,19 +30,15 @@ g++ --std=c++17 -Wall -I. -I"${REPOROOT}/src" -g -O2 \
   -pthread \
   -lygor
 
-./test_threads_tsan
+TSAN_OPTIONS='exitcode=1 verbosity=0 log_path=stdout halt_on_error=1' ./test_threads_tsan
 
 # Use Valgrind/drd.
 g++ --std=c++17 -Wall -I. -I"${REPOROOT}/src" -g -O2 \
   Thread_Pool.cc \
-  -fsanitize=thread \
   -o test_threads \
   -pthread \
   -lygor
 
-./test_threads
-
-rm ./test_threads_tsan
-rm ./test_threads
+valgrind --tool=drd ./test_threads
 
 
