@@ -33,12 +33,12 @@ g++ --std=c++17 -Wall -I. -I"${REPOROOT}/src" -g -O2 \
 TSAN_OPTIONS='exitcode=1 verbosity=0 log_path=stdout halt_on_error=1' ./test_threads_tsan
 
 # Use Valgrind/drd.
-g++ --std=c++17 -Wall -I. -I"${REPOROOT}/src" -g -O2 \
+g++ --std=c++17 -Wall -I. -I"${REPOROOT}/src" -g -O1 \
   Thread_Pool.cc \
   -o test_threads \
   -pthread \
   -lygor
 
-valgrind --tool=drd ./test_threads
+valgrind --tool=drd -s ./test_threads
 
 

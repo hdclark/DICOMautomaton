@@ -31,10 +31,19 @@ class work_queue {
 
     work_queue(unsigned int n_workers = std::thread::hardware_concurrency()){
         std::unique_lock<std::mutex> lock(this->queue_mutex);
+        
+        // Exercise the condition variables and mutexes, ensuring they are initialized by the implementation.
+        // This should efectively evaluate to a no-op, but also helps suppress false-positive warning messages in
+        // Valgrind's DRD tool, i.e., 'not a condition variable', and other tools.
+        this->new_task_notifier.notify_all(); // No threads waiting, so nothing to notify.
+        this->end_task_notifier.notify_all(); // No threads waiting, so nothing to notify.
+        this->new_task_notifier.wait_for(lock, std::chrono::nanoseconds(1) ); // No notifiers, so no signal to receive.
+        this->end_task_notifier.wait_for(lock, std::chrono::nanoseconds(1) ); // No notifiers, so no signal to receive.
 
         auto l_n_workers = (n_workers == 0U) ? std::thread::hardware_concurrency()
                                              : n_workers;
         l_n_workers = (l_n_workers == 0U) ? 2U : l_n_workers;
+
 
         for(unsigned int i = 0; i < l_n_workers; ++i){
             this->worker_threads.emplace_back(
@@ -66,7 +75,9 @@ class work_queue {
                         lock.unlock();
                         for(const auto &user_f : l_queue){
                             try{
-                                user_f();
+                                if(user_f){
+                                    user_f();
+                                }
                             }catch(const std::exception &){};
 
                             lock.lock();
@@ -104,14 +115,9 @@ class work_queue {
         // We can either cancel outstanding tasks or wait for all queued tasks to be completed.
         // Since there is a mechanism to clear queued tasks that have not been acquired by worker threads,
         // it is least-surprising to wait for all queued tasks to be completed before destructing.
-
-        // To wait for tasks to be processed, we will poll until either the task queue is empty, or the signal to quit
-        // is received. Note that tasks may still be being processed when this function returns, however it will be
-        // safe to call the destructor (which will safely wait for tasks by joining the threads).
         //
-        // TODO: could we instead use a separate condition variable (and mutex?) to receive a signal when tasks are
-        // actually completed? This would avoid (minimize?) polling and also allow tasks to be fully completed
-        // before returning.
+        // We rely on a condition variable to signal when tasks are completed, but fallback on occasional polling in
+        // case there are any races to avoid waiting forever.
         bool l_should_quit = false;
         while(!l_should_quit){
 
@@ -126,10 +132,12 @@ class work_queue {
                 this->end_task_notifier.wait_for(lock, std::chrono::milliseconds(2000) );
             }
 
-            this->should_quit.store(true);
-            this->new_task_notifier.notify_all(); // notify threads to wake up and 'notice' they need to terminate.
-            lock.unlock();
-            for(auto &wt : this->worker_threads) wt.join();
+            if(!l_should_quit){
+                this->should_quit.store(true);
+                this->new_task_notifier.notify_all(); // notify threads to wake up and 'notice' they need to terminate.
+                lock.unlock();
+                for(auto &wt : this->worker_threads) wt.join();
+            }
             break;
         }
     }
