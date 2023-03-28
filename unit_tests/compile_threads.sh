@@ -20,6 +20,19 @@ set -eux
 # Move to script location.
 cd "unit_tests/"
 
+
+#trap "{ rm './test_futures' ; }" EXIT # Clean-up the temp file when we exit.
+## Use Valgrind/drd.
+#g++ --std=c++17 -Wall -I. -I"${REPOROOT}/src" -g -O1 \
+#  Future_Test.cc \
+#  -o test_futures \
+#  -pthread \
+#  -lygor
+#
+#valgrind --tool=drd -s ./test_futures
+#exit
+
+
 trap "{ rm './test_threads_tsan' './test_threads' ; }" EXIT # Clean-up the temp file when we exit.
 
 # Use thread sanitizer.

@@ -1396,7 +1396,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         "honour_opposite_orientations",
         "overlapping_contours_cancel" };
     size_t contour_overlap_style = 0UL;
-    std::future<Drover> extracted_contours;
+    std::shared_future<Drover> extracted_contours;
 
     // Polyominoes state.
     opengl_texture_handle_t polyomino_texture;
@@ -1423,7 +1423,11 @@ bool SDL_Viewer(Drover &DICOM_data,
             contouring_img_row_col_count = std::clamp(contouring_img_row_col_count, 5, 1024);
 
             // Reset the contouring images.
+            if(!contouring_imgs.Has_Image_Data()){
+                contouring_imgs.image_data.push_back(std::make_unique<Image_Array>());
+            }
             contouring_imgs.image_data.back()->imagecoll.images.clear();
+
             for(const auto& dimg : (*dimg_array_ptr_it)->imagecoll.images){
                 if((dimg.rows < 1) || (dimg.columns < 1)) continue;
 
@@ -2379,7 +2383,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         Drover DICOM_data;
         std::map<std::string,std::string> InvocationMetadata;
     };
-    std::list<std::future<loaded_files_res>> loaded_files;
+    std::list<std::shared_future<loaded_files_res>> loaded_files;
 
     // Load a list of files/directories.
     // Note: This is meant to be called asynchronously.
@@ -2451,7 +2455,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool res;
         std::vector<script_file> script_files;
     };
-    std::future<loaded_scripts_res> loaded_scripts;
+    std::shared_future<loaded_scripts_res> loaded_scripts;
 
     // This is meant to be run asynchronously.
     const auto launch_script_open_dialog = [](std::filesystem::path open_file_root) -> loaded_scripts_res {
@@ -4456,6 +4460,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 try{
                                     contouring_imgs = extracted_contours.get();
                                 }catch(const std::exception &){};
+                                contouring_imgs.Ensure_Contour_Data_Allocated();
                                 extracted_contours = decltype(extracted_contours)();
                             }
                         }
@@ -4492,7 +4497,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         ImGui::SameLine();
                         if(ImGui::Button("Cancel")){
                             ImGui::CloseCurrentPopup();
-                            // Detaching here would be nice, but not currently available for std::future AFAICT.
+                            // Detaching here would be nice, but not currently available for std::shared_future AFAICT.
                             // Otherwise, we have to wait for the task to complete. Maybe transfer to yet another thread
                             // and detach the thread?? TODO.
                             extracted_contours = decltype(extracted_contours)();
