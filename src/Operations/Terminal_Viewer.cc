@@ -781,22 +781,25 @@ bool Terminal_Viewer(Drover &DICOM_data,
         }else{
             ss << "No image data to display." << std::endl;
         }
-
         ss.flush();
-        std::cout << ss.rdbuf();
-        std::cout.flush();
 
-        std::cout << "Action: ";
-        std::cout.flush();
         char k = '\0';
-        if(supports_ansi){
-            k = read_unbuffered_raw_char();
-        }else{
-            if(!std::cin.get(k)){
-                k = '\x1B';
+        {
+            std::lock_guard<std::mutex> lock(ygor::g_term_sync);
+            std::cout << ss.rdbuf();
+            std::cout.flush();
+
+            std::cout << "Action: ";
+            std::cout.flush();
+            if(supports_ansi){
+                k = read_unbuffered_raw_char();
+            }else{
+                if(!std::cin.get(k)){
+                    k = '\x1B';
+                }
             }
+            std::cout << std::endl;
         }
-        std::cout << std::endl;
         if( (k == 'Q') || (k == 'q') || (k == '\x1B') ){ // Exit.
             break;
         }else if( img_valid && (k == 'N') ){

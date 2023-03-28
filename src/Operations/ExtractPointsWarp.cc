@@ -690,9 +690,12 @@ params.report_final_correspondence = true;
 /*
 // Debugging...
 
-std::cout << "Final moving set correspondence:" << std::endl;
-for(const auto &apair : params.final_move_correspondence){
-    std::cout << apair.first << " " << apair.second << std::endl;
+{
+    std::lock_guard<std::mutex> lock(ygor::g_term_sync);
+    std::cout << "Final moving set correspondence:" << std::endl;
+    for(const auto &apair : params.final_move_correspondence){
+        std::cout << apair.first << " " << apair.second << std::endl;
+    }
 }
 
 // Write an OFF file showing how points correspond using straight lines.

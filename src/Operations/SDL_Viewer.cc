@@ -97,6 +97,7 @@
         while(true){ \
             GLenum err = glGetError(); \
             if(err == GL_NO_ERROR) break; \
+            std::lock_guard<std::mutex> lock(ygor::g_term_sync); \
             std::cout << "--(W) In function: " << __PRETTY_FUNCTION__; \
             std::cout << " (line " << __LINE__ << ")"; \
             std::cout << " : " << glewGetErrorString(err); \

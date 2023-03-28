@@ -527,7 +527,10 @@ bool ExtractRadiomicFeatures(Drover &DICOM_data,
     }
 
     //Print the report.
-    //std::cout << report.str();
+    //{
+    //    std::lock_guard<std::mutex> lock(ygor::g_term_sync);
+    //    std::cout << report.str();
+    //}
 
     //Write the report to file.
     {

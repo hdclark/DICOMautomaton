@@ -71,8 +71,11 @@ bool DumpVoxelDoseInfo(Drover &DICOM_data,
         }//Loop over the distinct dose file data.
     }
 
-    std::cout << "Min dose: " << themin << " Gy" << std::endl;
-    std::cout << "Max dose: " << themax << " Gy" << std::endl;
+    {
+        std::lock_guard<std::mutex> lock(ygor::g_term_sync);
+        std::cout << "Min dose: " << themin << " Gy" << std::endl;
+        std::cout << "Max dose: " << themax << " Gy" << std::endl;
+    }
 
     return true;
 }
