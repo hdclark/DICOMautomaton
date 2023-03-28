@@ -450,7 +450,8 @@ Marching_Cubes_Implementation(
     //
     // NOTE: The order of traversal must reflect image adjacency. This requirement could be relaxed if candidate
     //       vertices (below) were indexed, but even this would involve extra memory usage for little gain.
-    const auto work = [&](planar_image_adjacency<float,double>::img_refw_t img_refw) -> void {
+    const auto work = [&,
+                       img_num_min = img_num_min](planar_image_adjacency<float,double>::img_refw_t img_refw) -> void {
         const auto pxl_dx = img_refw.get().pxl_dx;
         const auto pxl_dy = img_refw.get().pxl_dy;
         const auto pxl_dz = img_refw.get().pxl_dz;

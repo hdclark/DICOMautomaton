@@ -1812,19 +1812,22 @@ bool SDL_Viewer(Drover &DICOM_data,
                 const auto centre = disp_img_it->center();
                 const auto A_corners = disp_img_it->corners2D();
                 auto encompassing_images = (*cimg_array_ptr_it)->imagecoll.get_images_which_sandwich_point_within_top_bottom_planes( centre );
-                encompassing_images.remove_if([&](const decltype((*cimg_array_ptr_it)->imagecoll.get_all_images().front()) &img_it){
-                    const auto B_corners = img_it->corners2D();
+                encompassing_images.remove_if(
+                    [&,
+                     disp_img_it = disp_img_it](const decltype((*cimg_array_ptr_it)->imagecoll.get_all_images().front()) &img_it){
+                        const auto B_corners = img_it->corners2D();
 
-                    //Fixed corner-to-corner distance.
-                    double dist = 0.0;
-                    for(auto A_it = std::begin(A_corners), B_it = std::begin(B_corners);
-                        (A_it != std::end(A_corners)) && (B_it != std::end(B_corners)); ){
-                        dist += A_it->sq_dist(*B_it);
-                        ++A_it;
-                        ++B_it;
+                        //Fixed corner-to-corner distance.
+                        double dist = 0.0;
+                        for(auto A_it = std::begin(A_corners), B_it = std::begin(B_corners);
+                            (A_it != std::end(A_corners)) && (B_it != std::end(B_corners)); ){
+                            dist += A_it->sq_dist(*B_it);
+                            ++A_it;
+                            ++B_it;
+                        }
+                        return (std::min(disp_img_it->pxl_dx, disp_img_it->pxl_dy) < dist);
                     }
-                    return (std::min(disp_img_it->pxl_dx, disp_img_it->pxl_dy) < dist);
-                });
+                );
                 if(encompassing_images.size() != 1) break;
 
                 std::get<bool>( out ) = true;
@@ -4109,7 +4112,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                 image_mouse_pos.pixel_scale = static_cast<float>(real_extent.y) / (disp_img_it->pxl_dx * disp_img_it->rows);
 
             }
-            image_mouse_pos.DICOM_to_pixels = [=](const vec3<double> &P) -> ImVec2 {
+            image_mouse_pos.DICOM_to_pixels = [=,
+                                               disp_img_it = disp_img_it](const vec3<double> &P) -> ImVec2 {
                 // Convert from absolute DICOM coordinates to ImGui screen pixel coordinates for the image.
                 // This routine basically just inverts the above transformation.
                 const auto img_rows = current_texture.row_count;
@@ -5735,15 +5739,11 @@ bool SDL_Viewer(Drover &DICOM_data,
                 auto l_min_row = tbl_min_row;
                 auto l_max_row = tbl_max_row;
 
-                const auto limit_rows_cols = [&](){
-                    l_min_col = std::clamp(l_min_col, tbl_min_col, tbl_max_col);
-                    l_max_col = std::clamp(l_max_col, l_min_col, std::min(tbl_max_col, l_min_col + 63));
+                l_min_col = std::clamp(l_min_col, tbl_min_col, tbl_max_col);
+                l_max_col = std::clamp(l_max_col, l_min_col, std::min(tbl_max_col, l_min_col + 63));
 
-                    l_min_row = std::clamp(l_min_row, tbl_min_row, tbl_max_row);
-                    l_max_row = std::clamp(l_max_row, l_min_row, std::min(tbl_max_row, l_min_row + 19'999));
-                    return;
-                };
-                limit_rows_cols();
+                l_min_row = std::clamp(l_min_row, tbl_min_row, tbl_max_row);
+                l_max_row = std::clamp(l_max_row, l_min_row, std::min(tbl_max_row, l_min_row + 19'999));
 
                 if( (l_min_col != tbl_min_col)
                 ||  (l_max_col != tbl_max_col) 
