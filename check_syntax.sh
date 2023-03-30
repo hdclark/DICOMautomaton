@@ -32,7 +32,7 @@ check_cpp_syntax () {
     local f="$*"
     [ -f "$f" ] && {
         set -eux
-        g++ --std=c++17 -fsyntax-only \
+        "${CXX:-g++}" --std=c++17 -fsyntax-only \
           -I'src/imebra20121219/library/imebra/include/' \
           -I"${temp_dir}/" \
           -I"${temp_dir}/src/" \
@@ -92,15 +92,8 @@ cd "${REPOROOT}"
 
 # Check all files in the project.
 #find ./src/ -type f -print0 |
-#    grep -z -E '*[.]cc|*[.]cpp' |
-#    grep -z -i -v '.*imebra.*' |
-#    xargs -0 -I '{}' -P $(nproc || echo 2) -n 1 -r \
-#      g++ --std=c++17 -fsyntax-only '{}'
-
-# Compile, but do not link:
-#      g++ --std=c++17 -c '{}' -o /dev/null 
-
-# Check only modified and untracked files.
+# 
+# Or, check only modified and untracked files.
 git ls-files -z -o -m "$@" |
   grep -z -E '.*[.]h|.*[.]cc|.*[.]cpp' |
     `# Ignore imebra headers. Useful for spelunking and testing... ` \
