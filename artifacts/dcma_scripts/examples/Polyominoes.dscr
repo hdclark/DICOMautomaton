@@ -1,0 +1,61 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# This script demonstrates how to use the Polyominoes operation (non-interactively).
+
+GenerateSyntheticImages(
+    NumberOfImages = '1',
+    NumberOfRows = '20',
+    NumberOfColumns = '15',
+    NumberOfChannels = '1',
+    SliceThickness = '1.0',
+    SpacingBetweenSlices = '1.0',
+    VoxelWidth = '1.0',
+    VoxelHeight = '1.0',
+    ImageAnchor = '0.0, 0.0, 0.0',
+    ImagePosition = '0.0, 0.0, 0.0',
+    ImageOrientationColumn = '1.0, 0.0, 0.0',
+    ImageOrientationRow = '0.0, 1.0, 0.0',
+    InstanceNumber = '1',
+    AcquisitionNumber = '1',
+    VoxelValue = '0.0',
+    StipleValue = 'nan',
+    # Metadata = '',
+){};
+
+Ignore(){
+    Repeat( N = 5 ){
+        Polyominoes( ImageSelection = 'last', Channel = '0', Low = '0.0', High = '1.0',
+            Action = 'shift-left',
+        ){};
+
+        Polyominoes( ImageSelection = 'last', Channel = '0', Low = '0.0', High = '1.0',
+            Action = 'shift-left',
+        ){};
+
+        Polyominoes( ImageSelection = 'last', Channel = '0', Low = '0.0', High = '1.0',
+            Action = 'drop',
+        ){};
+
+        Polyominoes( ImageSelection = 'last', Channel = '0', Low = '0.0', High = '1.0',
+            Action = 'none',
+        ){};
+
+        Polyominoes( ImageSelection = 'last', Channel = '0', Low = '0.0', High = '1.0',
+            Action = 'shift-right',
+        ){};
+
+        Polyominoes( ImageSelection = 'last', Channel = '0', Low = '0.0', High = '1.0',
+            Action = 'shift-right',
+        ){};
+
+        Polyominoes( ImageSelection = 'last', Channel = '0', Low = '0.0', High = '1.0',
+            Action = 'drop',
+        ){};
+
+        Polyominoes( ImageSelection = 'last', Channel = '0', Low = '0.0', High = '1.0',
+            Action = 'none',
+        ){};
+
+    };
+};
+
