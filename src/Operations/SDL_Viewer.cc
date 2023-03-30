@@ -2395,13 +2395,16 @@ bool SDL_Viewer(Drover &DICOM_data,
                              FilenameLex ](std::list<std::filesystem::path> paths) -> loaded_files_res {
 
         loaded_files_res lfs;
+        lfs.res = false;
         lfs.InvocationMetadata = InvocationMetadata;
         std::list<OperationArgPkg> Operations;
-        lfs.res = Load_Files(lfs.DICOM_data, lfs.InvocationMetadata, FilenameLex, Operations, paths);
-        if(!Operations.empty()){
-             lfs.res = false;
-             YLOGWARN("Loaded file contains a script. Currently unable to handle script files here");
-        }
+        try{
+            lfs.res = Load_Files(lfs.DICOM_data, lfs.InvocationMetadata, FilenameLex, Operations, paths);
+            if(!Operations.empty()){
+                 lfs.res = false;
+                 YLOGWARN("Loaded file contains a script. Currently unable to handle script files here");
+            }
+        }catch(const std::exception &){};
 
         // Notify that the files can be inserted into the main Drover.
         return lfs;
@@ -5053,8 +5056,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     f.InvocationMetadata.merge(InvocationMetadata);
                     InvocationMetadata = f.InvocationMetadata;
                 }else{
-                    YLOGWARN("Unable to load files");
-                    // TODO ... warn about the issue.
+                    YLOGWARN("Disregarding files");
                 }
 
                 recompute_image_state();
