@@ -169,10 +169,12 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
         return std::isspace(static_cast<unsigned char>(c.c));
     };
 
+    /*
     const auto trim_all_space = [is_whitespace](std::vector<char_with_context_t> &vc) -> void {
         vc.erase( std::remove_if( std::begin(vc), std::end(vc), is_whitespace ), std::end(vc) );
         return;
     };
+    */
 
     const auto trim_outer_space = [is_whitespace](std::vector<char_with_context_t> &vc) -> void {
         while( !vc.empty() && is_whitespace(vc.back()) ){

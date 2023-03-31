@@ -241,8 +241,8 @@ bool DumpROISurfaceMeshes(Drover &DICOM_data,
    
     long int MeshSubdivisions = 2;
     long int RemeshIterations = 5;
-    //long int RemeshTargetEdgeLength = 2.5; // DICOM units (mm).
-    long int RemeshTargetEdgeLength = 1.5; // DICOM units (mm).
+    //double RemeshTargetEdgeLength = 2.5; // DICOM units (mm).
+    double RemeshTargetEdgeLength = 1.5; // DICOM units (mm).
     //long int MeshSimplificationEdgeCountLimit = 75'000; // For later (volumetric) analysis.
     long int MeshSimplificationEdgeCountLimit = 250'000; // For later rendering.
     //-----------------------------------------------------------------------------------------------------------------

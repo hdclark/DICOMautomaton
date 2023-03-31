@@ -72,6 +72,7 @@ planar_image<float,double> read_xim_file( std::istream &is ){
         }
         return o;
     };
+    /*
     const auto extract_uint8_vec = [](std::istream &is, long int n){
         std::vector<uint8_t> out;
         for(long int i = 0; i < n; ++i){
@@ -82,6 +83,7 @@ planar_image<float,double> read_xim_file( std::istream &is ){
         }
         return out;
     };
+    */
     const auto extract_int32_vec = [](std::istream &is, long int n){
         std::vector<int32_t> out;
         for(long int i = 0; i < n; ++i){
@@ -217,13 +219,13 @@ planar_image<float,double> read_xim_file( std::istream &is ){
 
     if(debug) YLOGINFO("pixel_data.size() = " << pixel_data.size());
     if(debug) YLOGINFO("image_width * image_height = " << image_width * image_height);
-    if( pixel_data.size() != (image_width * image_height) ){
+    if( static_cast<int64_t>(pixel_data.size()) != static_cast<int64_t>(image_width * image_height) ){
         throw std::runtime_error("Expanded pixel data does not match expected image dimensions");
     }
 
     if(debug) YLOGINFO("expanded_pxl_buf_size = " << expanded_pxl_buf_size);
     if(debug) YLOGINFO("pixel_data.size() * bytes_per_pixel = " << pixel_data.size() * bytes_per_pixel);
-    if( expanded_pxl_buf_size != (pixel_data.size() * bytes_per_pixel) ){
+    if( static_cast<int64_t>(expanded_pxl_buf_size) != static_cast<int64_t>(pixel_data.size() * bytes_per_pixel) ){
         throw std::runtime_error("Expanded pixel data does not match expected size reported by file");
     }
 

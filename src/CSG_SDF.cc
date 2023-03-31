@@ -663,7 +663,7 @@ std::shared_ptr<node> build_node(const parsed_function& pf){
     // Convert children first.
     std::vector<std::shared_ptr<node>> children;
     for(const auto &pfc : pf.children){
-        children.emplace_back( std::move(build_node(pfc)) );
+        children.emplace_back( build_node(pfc) );
     }
 
     const auto N_p = static_cast<long int>(pf.parameters.size());

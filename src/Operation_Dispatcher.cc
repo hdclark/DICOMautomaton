@@ -583,7 +583,7 @@ bool Operation_Dispatcher( Drover &DICOM_data,
                     }
 
                     // Perform macro replacement using the parameter table.
-                    optargs.visit_opts([&InvocationMetadata](const std::string &key, std::string &val){
+                    optargs.visit_opts([&InvocationMetadata](const std::string &/*key*/, std::string &val){
                         val = ExpandMacros(val, InvocationMetadata, "$");
                         return;
                     });

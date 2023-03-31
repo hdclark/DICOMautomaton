@@ -48,11 +48,11 @@ void serialize(Archive &a, Contour_Data &c, const unsigned int /*version*/){
 template<typename Archive>
 void serialize(Archive &a, Image_Array &i, const unsigned int version){
     if(version == 0){
-        std::string dummy_filename;
-        unsigned int dummy_bits;
+        std::string placeholder_filename;
+        unsigned int placeholder_bits = 0UL;
         a & boost::serialization::make_nvp("imagecoll",i.imagecoll)
-          & boost::serialization::make_nvp("filename",dummy_filename)
-          & boost::serialization::make_nvp("bits",dummy_bits);
+          & boost::serialization::make_nvp("filename",placeholder_filename)
+          & boost::serialization::make_nvp("bits",placeholder_bits);
     }else if(version == 1){
         a & boost::serialization::make_nvp("imagecoll",i.imagecoll);
     }else{

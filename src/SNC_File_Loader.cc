@@ -230,8 +230,6 @@ read_snc_file( std::istream &is, planar_image_collection<float,double> &imgs ){
 // Returns false if an error is encountered.
 bool
 write_snc_file( std::ostream &os, const planar_image<float,double> &img ){
-    constexpr bool debug = false;
-
     if( (img.columns < 3L)
     ||  (img.rows < 3L)
     ||  (img.channels != 1L) ){

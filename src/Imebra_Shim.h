@@ -1,7 +1,6 @@
 //Imebra_Shim.h.
 
-#ifndef _IMEBRA_SHIM_H_DICOMAUTOMATON
-#define _IMEBRA_SHIM_H_DICOMAUTOMATON
+#pragma once
 
 #include <cstddef>
 #include <list>
@@ -90,4 +89,3 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
                     DCMA_DICOM::Encoding enc = DCMA_DICOM::Encoding::ELE, 
                     ParanoiaLevel Paranoia = ParanoiaLevel::Low );
 
-#endif
