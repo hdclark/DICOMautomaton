@@ -311,7 +311,9 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
 
             // Identify whether there are adjacent planes within the contour spacing on either side.
             auto l_cp_it = std::prev(m_cp_it);
-            //auto h_cp_it = std::next(m_cp_it);
+            auto h_cp_it = std::next(m_cp_it);
+
+            bool cap_roof_of_m_cops = false;
 
             if(l_cp_it == std::cend(ucps)){
                 continue;
@@ -319,10 +321,13 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
                 const auto l_cp_dist = std::abs(m_cp_it->Get_Signed_Distance_To_Point(l_cp_it->R_0));
                 if((1.5 * contour_sep) < l_cp_dist) l_cp_it = std::cend(ucps);
             }
-            //if(h_cp_it != std::cend(ucps)){
-            //    const auto h_cp_dist = std::abs(m_cp_it->Get_Signed_Distance_To_Point(h_cp_it->R_0));
-            //    if((1.5 * contour_sep) < h_cp_dist) h_cp_it = std::cend(ucps);
-            //}
+            if(h_cp_it != std::cend(ucps)){
+                const auto h_cp_dist = std::abs(m_cp_it->Get_Signed_Distance_To_Point(h_cp_it->R_0));
+                if((1.5 * contour_sep) < h_cp_dist) {
+                    h_cp_it = std::cend(ucps);
+                    cap_roof_of_m_cops = true;
+                }
+            }
 
             auto l_cops = locate_contours_on_plane(*l_cp_it);
             if( (l_cops.size() == 0) && (m_cops.size() == 0) ){
@@ -543,22 +548,24 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
                     //YLOGINFO("Performing N-to-N meshing..");
                     auto ofst_upper = m_cp_it->N_0 * contour_sep * -0.49;
                     auto ofst_lower = m_cp_it->N_0 * contour_sep *  0.49;
+            
+                    // will modify contours in m_cops and l_cops, ok if only processing in one direction
                     auto amal_upper = Minimally_Amalgamate_Contours(m_cp_it->N_0, ofst_upper, pcs.upper); 
                     auto amal_lower = Minimally_Amalgamate_Contours(m_cp_it->N_0, ofst_lower, pcs.lower); 
 
-    /*
-    // Leaving this here for future debugging, for which it will no-doubt be needed...
-    {
-        const auto amal_cop_str = amal_upper.write_to_string();
-        const auto fname = Get_Unique_Sequential_Filename("/tmp/amal_upper_", 6, ".txt");
-        OverwriteStringToFile(amal_cop_str, fname);
-    }
-    {
-        const auto amal_cop_str = amal_lower.write_to_string();
-        const auto fname = Get_Unique_Sequential_Filename("/tmp/amal_lower_", 6, ".txt");
-        OverwriteStringToFile(amal_cop_str, fname);
-    }
-    */
+                    /*
+                    // Leaving this here for future debugging, for which it will no-doubt be needed...
+                    {
+                        const auto amal_cop_str = amal_upper.write_to_string();
+                        const auto fname = Get_Unique_Sequential_Filename("/tmp/amal_upper_", 6, ".txt");
+                        OverwriteStringToFile(amal_cop_str, fname);
+                    }
+                    {
+                        const auto amal_cop_str = amal_lower.write_to_string();
+                        const auto fname = Get_Unique_Sequential_Filename("/tmp/amal_lower_", 6, ".txt");
+                        OverwriteStringToFile(amal_cop_str, fname);
+                    }
+                    */
                     auto new_faces = Estimate_Contour_Correspondence(std::ref(amal_upper), std::ref(amal_lower));
 
                     const auto old_face_count = amesh.vertices.size();
@@ -570,6 +577,12 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
                         const auto f_C = static_cast<uint64_t>(fs[2] + old_face_count);
                         amesh.faces.emplace_back( std::vector<uint64_t>{{f_A, f_B, f_C}} );
                     }
+                }                
+            }
+
+            if (cap_roof_of_m_cops) {
+                for (auto &cop : m_cops) {
+                    close_hole_in_roof(cop);
                 }
             }
         }
