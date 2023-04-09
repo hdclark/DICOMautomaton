@@ -15,4 +15,4 @@ bool CreateCustomContour(Drover &DICOM_data,
                     std::map<std::string, std::string>& /*InvocationMetadata*/,
                     const std::string& FilenameLex);
 
-std::vector<double> ValueStringToDoubleList(std::string input);
+std::vector<std::string> SplitString(std::string input, std::string delimiter);

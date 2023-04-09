@@ -646,14 +646,17 @@ Minimally_Amalgamate_Contours(
             auto a_v1_it = std::prev(std::end(amal.points));
             auto a_v2_it = std::begin(amal.points);
 
-            // Disregard this edge if any of the verts are ficticious.
-            if( is_a_pseudo_vert(a_v1_it)
-            ||  is_a_pseudo_vert(a_v2_it) ){
-                continue;
-            }
 
             const auto a_end = std::end(amal.points);
             while(a_v2_it != a_end){
+                // Disregard this edge if any of the verts are ficticious.
+                if( is_a_pseudo_vert(a_v1_it)
+                ||  is_a_pseudo_vert(a_v2_it) ){
+                    YLOGWARN("We are here again!");
+                    a_v1_it = a_v2_it;
+                    ++a_v2_it;
+                    continue;
+                }
                 auto b_v1_it = std::prev(std::end(b_it->get().points));
                 auto b_v2_it = std::begin(b_it->get().points);
                 const auto b_end = std::end(b_it->get().points);
