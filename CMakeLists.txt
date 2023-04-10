@@ -27,6 +27,8 @@ option(WITH_POSTGRES  "Compile assuming PostgreSQL libraries are available."    
 option(WITH_JANSSON   "Compile assuming Jansson is available."                  ON)
 option(WITH_THRIFT    "Compile assuming Apache Thrift is available."            ON)
 
+option(USE_LTO "Use link-time optimization when available." OFF)
+
 option(BUILD_SHARED_LIBS "Build shared-object/dynamicly-loaded binaries."       ON)
 
 
@@ -49,10 +51,19 @@ set(THREADS_PREFER_PTHREAD_FLAG ON)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 set(POSITION_INDEPENDENT_CODE TRUE)
 
-# Set the release type. 
 if(NOT CMAKE_BUILD_TYPE)
     # Default to debug builds.
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "default to debug" FORCE)
+endif()
+
+if(USE_LTO)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT lto_avail OUTPUT lto_msg)
+    if(lto_avail)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    else()
+        message(WARNING "LTO was requested, but is not supported: ${lto_msg}")
+    endif()
 endif()
 
 
@@ -222,8 +233,6 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-variable")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-reserved-identifier")
-    add_compile_options(-flto)
-    add_link_options(-flto)
     #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-ignored-optimization-argument")
 
     if(WITH_IWYU)
