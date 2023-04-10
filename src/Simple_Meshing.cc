@@ -651,8 +651,7 @@ Minimally_Amalgamate_Contours(
             while(a_v2_it != a_end){
                 // Disregard this edge if any of the verts are ficticious.
                 if( is_a_pseudo_vert(a_v1_it)
-                ||  is_a_pseudo_vert(a_v2_it) ){
-                    YLOGWARN("We are here again!");
+                ||  is_a_pseudo_vert(a_v2_it) ){  
                     a_v1_it = a_v2_it;
                     ++a_v2_it;
                     continue;
