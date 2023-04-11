@@ -617,7 +617,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
                             auto [faces, points, amal_upper] = Mesh_With_Convex_Hull_2(pcs.upper, m_cp_it->N_0, ofst_upper);
                             add_faces_and_vertices(faces, points);
                             auto amal_lower = pcs.lower.begin()->get();
-                            auto new_faces = Estimate_Contour_Correspondence(std::ref(amal_upper), std::ref(amal_lower));
+                            auto new_faces = Tile_Contours(std::ref(amal_upper), std::ref(amal_lower));
                             add_faces_to_mesh(std::ref(amal_upper), std::ref(amal_lower), new_faces);
                         } catch (const std::runtime_error& error) {
                             goto generic_n_to_n_meshing;
@@ -647,7 +647,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
                             auto [faces, points, amal_lower] = Mesh_With_Convex_Hull_2(pcs.lower, l_cp_it->N_0, ofst_lower);
                             add_faces_and_vertices(faces, points);
                             auto amal_upper = pcs.upper.begin()->get();
-                            auto new_faces = Estimate_Contour_Correspondence(std::ref(amal_upper), std::ref(amal_lower));
+                            auto new_faces = Tile_Contours(std::ref(amal_upper), std::ref(amal_lower));
                             add_faces_to_mesh(std::ref(amal_upper), std::ref(amal_lower), new_faces);    
                         } catch (const std::runtime_error& error) {
                             goto generic_n_to_n_meshing;
@@ -717,7 +717,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
         OverwriteStringToFile(amal_cop_str, fname);
     }
     */
-                        auto new_faces = Estimate_Contour_Correspondence(std::ref(amal_upper), std::ref(amal_lower));
+                        auto new_faces = Tile_Contours(std::ref(amal_upper), std::ref(amal_lower));
                         add_faces_to_mesh(std::ref(amal_upper), std::ref(amal_lower), new_faces);
                     }
                 }
