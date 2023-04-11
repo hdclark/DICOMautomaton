@@ -16,8 +16,8 @@ shopt -s nocasematch
 
 # The temporary location in which to build.
 #BUILDROOT="/home/hal/Builds/DICOMautomaton/"
-BUILDROOT="/tmp/dcma_build"
-#BUILDROOT="build"
+# BUILDROOT="/tmp/dcma_build"
+BUILDROOT="build"
 
 DISTRIBUTION="auto" # used to tailor the build process for specific distributions/environments.
 
@@ -190,6 +190,7 @@ elif [[ "${DISTRIBUTION}" =~ .*debian.* ]] ; then
           -DWITH_ASAN=OFF \
           -DWITH_TSAN=OFF \
           -DWITH_MSAN=OFF \
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=1 \
           ../
     fi
     JOBS=$(nproc)

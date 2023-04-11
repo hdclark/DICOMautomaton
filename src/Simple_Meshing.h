@@ -20,6 +20,10 @@
 #include <algorithm>
 #include <optional>
 
+std::vector< std::array<size_t, 3> > Tile_Contours(
+        std::reference_wrapper<contour_of_points<double>> A,
+        std::reference_wrapper<contour_of_points<double>> B );
+
 // Low-level routine that joins the vertices of two contours.
 // Returns a list of faces where the vertex indices refer to A followed by B.
 std::vector< std::array<size_t, 3> >
