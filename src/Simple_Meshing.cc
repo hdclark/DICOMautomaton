@@ -364,7 +364,7 @@ std::vector< std::array<size_t, 3> > Tile_Contours(
     iter_A = std::next(iter_A);
 
     size_t m = *begin_A == contour_A.points.back() ? N_A - 1 : N_A;
-    size_t n = *begin_B == contour_B.points.back() ? N_A - 1 : N_A;
+    size_t n = *begin_B == contour_B.points.back() ? N_B - 1 : N_B;
 
     // We repeat over A twice, since to search the graph we need to search repeats
     // Don't loop over all points since last point is repeat of first
