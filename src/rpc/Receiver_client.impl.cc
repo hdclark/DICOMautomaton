@@ -46,6 +46,9 @@ int main(int argc, char **argv){
     }
     transport->close();
 
+    // NOTE: this example is not used in DICOMautomaton, it is only used as a simple compilation test case.
+    // See the implementation linked to the DICOMautomaton RPC operations.
+
     return 0;
 }
 

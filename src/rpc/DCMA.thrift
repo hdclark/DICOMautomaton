@@ -1,4 +1,4 @@
-// RPC.thrift - A part of DICOMautomaton 2022. Written by hal clark.
+// RPC.thrift - A part of DICOMautomaton 2023. Written by hal clark.
 
 namespace cpp dcma.rpc
 namespace py dcma.rpc

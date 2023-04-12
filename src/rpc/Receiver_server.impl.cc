@@ -75,10 +75,12 @@ class ReceiverHandler : virtual public ReceiverIf {
         YLOGINFO("ExecuteScript implementation goes here");
     }
 
+    // NOTE: this example is not used in DICOMautomaton, it is only used as a simple compilation test case.
+    // See the implementation linked to the DICOMautomaton RPC operations.
+
 };
 
-// Example of how to use this class:
-#if defined(DCMA_RPC_THRIFT_ENABLE_DEMO)
+// Simple example of how to use this class:
 int main(int argc, char **argv){
     int port = 9090;
 
@@ -94,5 +96,4 @@ int main(int argc, char **argv){
 
     return 0;
 }
-#endif
 

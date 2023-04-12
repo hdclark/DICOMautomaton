@@ -1,4 +1,4 @@
-//RPCReceive.cc - A part of DICOMautomaton 2022. Written by hal clark.
+//RPCReceive.cc - A part of DICOMautomaton 2023. Written by hal clark.
 
 #include <any>
 #include <optional>
@@ -89,6 +89,12 @@ class ReceiverHandler : virtual public ::dcma::rpc::ReceiverIf {
     void LoadFiles(::dcma::rpc::LoadFilesResponse& _return,
                    const std::vector<::dcma::rpc::LoadFilesQuery> & server_filenames) {
         YLOGINFO("LoadFiles implementation goes here");
+    }
+
+    void ExecuteScript(::dcma::rpc::ExecuteScriptResponse& _return,
+                       const ::dcma::rpc::ExecuteScriptQuery& query,
+                       const std::string& script) {
+        YLOGINFO("ExecuteScript implementation goes here");
     }
 };
 
