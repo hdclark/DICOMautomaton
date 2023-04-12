@@ -75,6 +75,10 @@ class LoadFilesQuery;
 
 class LoadFilesResponse;
 
+class ExecuteScriptQuery;
+
+class ExecuteScriptResponse;
+
 
 class vec3_double : public virtual ::apache::thrift::TBase {
  public:
@@ -1375,6 +1379,120 @@ class LoadFilesResponse : public virtual ::apache::thrift::TBase {
 void swap(LoadFilesResponse &a, LoadFilesResponse &b);
 
 std::ostream& operator<<(std::ostream& out, const LoadFilesResponse& obj);
+
+
+class ExecuteScriptQuery : public virtual ::apache::thrift::TBase {
+ public:
+
+  ExecuteScriptQuery(const ExecuteScriptQuery&);
+  ExecuteScriptQuery& operator=(const ExecuteScriptQuery&);
+  ExecuteScriptQuery() noexcept
+                     : filename_lex() {
+  }
+
+  virtual ~ExecuteScriptQuery() noexcept;
+  Drover drover;
+  metadata_t invocation_metadata;
+  std::string filename_lex;
+
+  void __set_drover(const Drover& val);
+
+  void __set_invocation_metadata(const metadata_t& val);
+
+  void __set_filename_lex(const std::string& val);
+
+  bool operator == (const ExecuteScriptQuery & rhs) const
+  {
+    if (!(drover == rhs.drover))
+      return false;
+    if (!(invocation_metadata == rhs.invocation_metadata))
+      return false;
+    if (!(filename_lex == rhs.filename_lex))
+      return false;
+    return true;
+  }
+  bool operator != (const ExecuteScriptQuery &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const ExecuteScriptQuery & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot) override;
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const override;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(ExecuteScriptQuery &a, ExecuteScriptQuery &b);
+
+std::ostream& operator<<(std::ostream& out, const ExecuteScriptQuery& obj);
+
+typedef struct _ExecuteScriptResponse__isset {
+  _ExecuteScriptResponse__isset() : drover(false), invocation_metadata(false), filename_lex(false) {}
+  bool drover :1;
+  bool invocation_metadata :1;
+  bool filename_lex :1;
+} _ExecuteScriptResponse__isset;
+
+class ExecuteScriptResponse : public virtual ::apache::thrift::TBase {
+ public:
+
+  ExecuteScriptResponse(const ExecuteScriptResponse&);
+  ExecuteScriptResponse& operator=(const ExecuteScriptResponse&);
+  ExecuteScriptResponse() noexcept
+                        : success(0),
+                          filename_lex() {
+  }
+
+  virtual ~ExecuteScriptResponse() noexcept;
+  bool success;
+  Drover drover;
+  metadata_t invocation_metadata;
+  std::string filename_lex;
+
+  _ExecuteScriptResponse__isset __isset;
+
+  void __set_success(const bool val);
+
+  void __set_drover(const Drover& val);
+
+  void __set_invocation_metadata(const metadata_t& val);
+
+  void __set_filename_lex(const std::string& val);
+
+  bool operator == (const ExecuteScriptResponse & rhs) const
+  {
+    if (!(success == rhs.success))
+      return false;
+    if (__isset.drover != rhs.__isset.drover)
+      return false;
+    else if (__isset.drover && !(drover == rhs.drover))
+      return false;
+    if (__isset.invocation_metadata != rhs.__isset.invocation_metadata)
+      return false;
+    else if (__isset.invocation_metadata && !(invocation_metadata == rhs.invocation_metadata))
+      return false;
+    if (__isset.filename_lex != rhs.__isset.filename_lex)
+      return false;
+    else if (__isset.filename_lex && !(filename_lex == rhs.filename_lex))
+      return false;
+    return true;
+  }
+  bool operator != (const ExecuteScriptResponse &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const ExecuteScriptResponse & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot) override;
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const override;
+
+  virtual void printTo(std::ostream& out) const;
+};
+
+void swap(ExecuteScriptResponse &a, ExecuteScriptResponse &b);
+
+std::ostream& operator<<(std::ostream& out, const ExecuteScriptResponse& obj);
 
 }} // namespace
 

@@ -24,6 +24,7 @@ class ReceiverIf {
   virtual ~ReceiverIf() {}
   virtual void GetSupportedOperations(std::vector<KnownOperation> & _return, const OperationsQuery& query) = 0;
   virtual void LoadFiles(LoadFilesResponse& _return, const std::vector<LoadFilesQuery> & server_filenames) = 0;
+  virtual void ExecuteScript(ExecuteScriptResponse& _return, const ExecuteScriptQuery& query, const std::string& script) = 0;
 };
 
 class ReceiverIfFactory {
@@ -57,6 +58,9 @@ class ReceiverNull : virtual public ReceiverIf {
     return;
   }
   void LoadFiles(LoadFilesResponse& /* _return */, const std::vector<LoadFilesQuery> & /* server_filenames */) override {
+    return;
+  }
+  void ExecuteScript(ExecuteScriptResponse& /* _return */, const ExecuteScriptQuery& /* query */, const std::string& /* script */) override {
     return;
   }
 };
@@ -269,6 +273,118 @@ class Receiver_LoadFiles_presult {
 
 };
 
+typedef struct _Receiver_ExecuteScript_args__isset {
+  _Receiver_ExecuteScript_args__isset() : query(false), script(false) {}
+  bool query :1;
+  bool script :1;
+} _Receiver_ExecuteScript_args__isset;
+
+class Receiver_ExecuteScript_args {
+ public:
+
+  Receiver_ExecuteScript_args(const Receiver_ExecuteScript_args&);
+  Receiver_ExecuteScript_args& operator=(const Receiver_ExecuteScript_args&);
+  Receiver_ExecuteScript_args() noexcept
+                              : script() {
+  }
+
+  virtual ~Receiver_ExecuteScript_args() noexcept;
+  ExecuteScriptQuery query;
+  std::string script;
+
+  _Receiver_ExecuteScript_args__isset __isset;
+
+  void __set_query(const ExecuteScriptQuery& val);
+
+  void __set_script(const std::string& val);
+
+  bool operator == (const Receiver_ExecuteScript_args & rhs) const
+  {
+    if (!(query == rhs.query))
+      return false;
+    if (!(script == rhs.script))
+      return false;
+    return true;
+  }
+  bool operator != (const Receiver_ExecuteScript_args &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const Receiver_ExecuteScript_args & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+
+class Receiver_ExecuteScript_pargs {
+ public:
+
+
+  virtual ~Receiver_ExecuteScript_pargs() noexcept;
+  const ExecuteScriptQuery* query;
+  const std::string* script;
+
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _Receiver_ExecuteScript_result__isset {
+  _Receiver_ExecuteScript_result__isset() : success(false) {}
+  bool success :1;
+} _Receiver_ExecuteScript_result__isset;
+
+class Receiver_ExecuteScript_result {
+ public:
+
+  Receiver_ExecuteScript_result(const Receiver_ExecuteScript_result&);
+  Receiver_ExecuteScript_result& operator=(const Receiver_ExecuteScript_result&);
+  Receiver_ExecuteScript_result() noexcept {
+  }
+
+  virtual ~Receiver_ExecuteScript_result() noexcept;
+  ExecuteScriptResponse success;
+
+  _Receiver_ExecuteScript_result__isset __isset;
+
+  void __set_success(const ExecuteScriptResponse& val);
+
+  bool operator == (const Receiver_ExecuteScript_result & rhs) const
+  {
+    if (!(success == rhs.success))
+      return false;
+    return true;
+  }
+  bool operator != (const Receiver_ExecuteScript_result &rhs) const {
+    return !(*this == rhs);
+  }
+
+  bool operator < (const Receiver_ExecuteScript_result & ) const;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+  uint32_t write(::apache::thrift::protocol::TProtocol* oprot) const;
+
+};
+
+typedef struct _Receiver_ExecuteScript_presult__isset {
+  _Receiver_ExecuteScript_presult__isset() : success(false) {}
+  bool success :1;
+} _Receiver_ExecuteScript_presult__isset;
+
+class Receiver_ExecuteScript_presult {
+ public:
+
+
+  virtual ~Receiver_ExecuteScript_presult() noexcept;
+  ExecuteScriptResponse* success;
+
+  _Receiver_ExecuteScript_presult__isset __isset;
+
+  uint32_t read(::apache::thrift::protocol::TProtocol* iprot);
+
+};
+
 class ReceiverClient : virtual public ReceiverIf {
  public:
   ReceiverClient(std::shared_ptr< ::apache::thrift::protocol::TProtocol> prot) {
@@ -300,6 +416,9 @@ class ReceiverClient : virtual public ReceiverIf {
   void LoadFiles(LoadFilesResponse& _return, const std::vector<LoadFilesQuery> & server_filenames) override;
   void send_LoadFiles(const std::vector<LoadFilesQuery> & server_filenames);
   void recv_LoadFiles(LoadFilesResponse& _return);
+  void ExecuteScript(ExecuteScriptResponse& _return, const ExecuteScriptQuery& query, const std::string& script) override;
+  void send_ExecuteScript(const ExecuteScriptQuery& query, const std::string& script);
+  void recv_ExecuteScript(ExecuteScriptResponse& _return);
  protected:
   std::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   std::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;
@@ -317,11 +436,13 @@ class ReceiverProcessor : public ::apache::thrift::TDispatchProcessor {
   ProcessMap processMap_;
   void process_GetSupportedOperations(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
   void process_LoadFiles(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
+  void process_ExecuteScript(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext);
  public:
   ReceiverProcessor(::std::shared_ptr<ReceiverIf> iface) :
     iface_(iface) {
     processMap_["GetSupportedOperations"] = &ReceiverProcessor::process_GetSupportedOperations;
     processMap_["LoadFiles"] = &ReceiverProcessor::process_LoadFiles;
+    processMap_["ExecuteScript"] = &ReceiverProcessor::process_ExecuteScript;
   }
 
   virtual ~ReceiverProcessor() {}
@@ -370,6 +491,16 @@ class ReceiverMultiface : virtual public ReceiverIf {
     return;
   }
 
+  void ExecuteScript(ExecuteScriptResponse& _return, const ExecuteScriptQuery& query, const std::string& script) override {
+    size_t sz = ifaces_.size();
+    size_t i = 0;
+    for (; i < (sz - 1); ++i) {
+      ifaces_[i]->ExecuteScript(_return, query, script);
+    }
+    ifaces_[i]->ExecuteScript(_return, query, script);
+    return;
+  }
+
 };
 
 // The 'concurrent' client is a thread safe client that correctly handles
@@ -408,6 +539,9 @@ class ReceiverConcurrentClient : virtual public ReceiverIf {
   void LoadFiles(LoadFilesResponse& _return, const std::vector<LoadFilesQuery> & server_filenames) override;
   int32_t send_LoadFiles(const std::vector<LoadFilesQuery> & server_filenames);
   void recv_LoadFiles(LoadFilesResponse& _return, const int32_t seqid);
+  void ExecuteScript(ExecuteScriptResponse& _return, const ExecuteScriptQuery& query, const std::string& script) override;
+  int32_t send_ExecuteScript(const ExecuteScriptQuery& query, const std::string& script);
+  void recv_ExecuteScript(ExecuteScriptResponse& _return, const int32_t seqid);
  protected:
   std::shared_ptr< ::apache::thrift::protocol::TProtocol> piprot_;
   std::shared_ptr< ::apache::thrift::protocol::TProtocol> poprot_;

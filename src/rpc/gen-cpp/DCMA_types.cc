@@ -4504,4 +4504,351 @@ void LoadFilesResponse::printTo(std::ostream& out) const {
   out << ")";
 }
 
+
+ExecuteScriptQuery::~ExecuteScriptQuery() noexcept {
+}
+
+
+void ExecuteScriptQuery::__set_drover(const Drover& val) {
+  this->drover = val;
+}
+
+void ExecuteScriptQuery::__set_invocation_metadata(const metadata_t& val) {
+  this->invocation_metadata = val;
+}
+
+void ExecuteScriptQuery::__set_filename_lex(const std::string& val) {
+  this->filename_lex = val;
+}
+std::ostream& operator<<(std::ostream& out, const ExecuteScriptQuery& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
+uint32_t ExecuteScriptQuery::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+  bool isset_drover = false;
+  bool isset_invocation_metadata = false;
+  bool isset_filename_lex = false;
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->drover.read(iprot);
+          isset_drover = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_MAP) {
+          {
+            this->invocation_metadata.clear();
+            uint32_t _size290;
+            ::apache::thrift::protocol::TType _ktype291;
+            ::apache::thrift::protocol::TType _vtype292;
+            xfer += iprot->readMapBegin(_ktype291, _vtype292, _size290);
+            uint32_t _i294;
+            for (_i294 = 0; _i294 < _size290; ++_i294)
+            {
+              std::string _key295;
+              xfer += iprot->readString(_key295);
+              std::string& _val296 = this->invocation_metadata[_key295];
+              xfer += iprot->readString(_val296);
+            }
+            xfer += iprot->readMapEnd();
+          }
+          isset_invocation_metadata = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 3:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->filename_lex);
+          isset_filename_lex = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  if (!isset_drover)
+    throw TProtocolException(TProtocolException::INVALID_DATA);
+  if (!isset_invocation_metadata)
+    throw TProtocolException(TProtocolException::INVALID_DATA);
+  if (!isset_filename_lex)
+    throw TProtocolException(TProtocolException::INVALID_DATA);
+  return xfer;
+}
+
+uint32_t ExecuteScriptQuery::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  ::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("ExecuteScriptQuery");
+
+  xfer += oprot->writeFieldBegin("drover", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->drover.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("invocation_metadata", ::apache::thrift::protocol::T_MAP, 2);
+  {
+    xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->invocation_metadata.size()));
+    std::map<std::string, std::string> ::const_iterator _iter297;
+    for (_iter297 = this->invocation_metadata.begin(); _iter297 != this->invocation_metadata.end(); ++_iter297)
+    {
+      xfer += oprot->writeString(_iter297->first);
+      xfer += oprot->writeString(_iter297->second);
+    }
+    xfer += oprot->writeMapEnd();
+  }
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("filename_lex", ::apache::thrift::protocol::T_STRING, 3);
+  xfer += oprot->writeString(this->filename_lex);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(ExecuteScriptQuery &a, ExecuteScriptQuery &b) {
+  using ::std::swap;
+  swap(a.drover, b.drover);
+  swap(a.invocation_metadata, b.invocation_metadata);
+  swap(a.filename_lex, b.filename_lex);
+}
+
+ExecuteScriptQuery::ExecuteScriptQuery(const ExecuteScriptQuery& other298) {
+  drover = other298.drover;
+  invocation_metadata = other298.invocation_metadata;
+  filename_lex = other298.filename_lex;
+}
+ExecuteScriptQuery& ExecuteScriptQuery::operator=(const ExecuteScriptQuery& other299) {
+  drover = other299.drover;
+  invocation_metadata = other299.invocation_metadata;
+  filename_lex = other299.filename_lex;
+  return *this;
+}
+void ExecuteScriptQuery::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "ExecuteScriptQuery(";
+  out << "drover=" << to_string(drover);
+  out << ", " << "invocation_metadata=" << to_string(invocation_metadata);
+  out << ", " << "filename_lex=" << to_string(filename_lex);
+  out << ")";
+}
+
+
+ExecuteScriptResponse::~ExecuteScriptResponse() noexcept {
+}
+
+
+void ExecuteScriptResponse::__set_success(const bool val) {
+  this->success = val;
+}
+
+void ExecuteScriptResponse::__set_drover(const Drover& val) {
+  this->drover = val;
+__isset.drover = true;
+}
+
+void ExecuteScriptResponse::__set_invocation_metadata(const metadata_t& val) {
+  this->invocation_metadata = val;
+__isset.invocation_metadata = true;
+}
+
+void ExecuteScriptResponse::__set_filename_lex(const std::string& val) {
+  this->filename_lex = val;
+__isset.filename_lex = true;
+}
+std::ostream& operator<<(std::ostream& out, const ExecuteScriptResponse& obj)
+{
+  obj.printTo(out);
+  return out;
+}
+
+
+uint32_t ExecuteScriptResponse::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+  bool isset_success = false;
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_BOOL) {
+          xfer += iprot->readBool(this->success);
+          isset_success = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->drover.read(iprot);
+          this->__isset.drover = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 3:
+        if (ftype == ::apache::thrift::protocol::T_MAP) {
+          {
+            this->invocation_metadata.clear();
+            uint32_t _size300;
+            ::apache::thrift::protocol::TType _ktype301;
+            ::apache::thrift::protocol::TType _vtype302;
+            xfer += iprot->readMapBegin(_ktype301, _vtype302, _size300);
+            uint32_t _i304;
+            for (_i304 = 0; _i304 < _size300; ++_i304)
+            {
+              std::string _key305;
+              xfer += iprot->readString(_key305);
+              std::string& _val306 = this->invocation_metadata[_key305];
+              xfer += iprot->readString(_val306);
+            }
+            xfer += iprot->readMapEnd();
+          }
+          this->__isset.invocation_metadata = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 4:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->filename_lex);
+          this->__isset.filename_lex = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  if (!isset_success)
+    throw TProtocolException(TProtocolException::INVALID_DATA);
+  return xfer;
+}
+
+uint32_t ExecuteScriptResponse::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  ::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("ExecuteScriptResponse");
+
+  xfer += oprot->writeFieldBegin("success", ::apache::thrift::protocol::T_BOOL, 1);
+  xfer += oprot->writeBool(this->success);
+  xfer += oprot->writeFieldEnd();
+
+  if (this->__isset.drover) {
+    xfer += oprot->writeFieldBegin("drover", ::apache::thrift::protocol::T_STRUCT, 2);
+    xfer += this->drover.write(oprot);
+    xfer += oprot->writeFieldEnd();
+  }
+  if (this->__isset.invocation_metadata) {
+    xfer += oprot->writeFieldBegin("invocation_metadata", ::apache::thrift::protocol::T_MAP, 3);
+    {
+      xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->invocation_metadata.size()));
+      std::map<std::string, std::string> ::const_iterator _iter307;
+      for (_iter307 = this->invocation_metadata.begin(); _iter307 != this->invocation_metadata.end(); ++_iter307)
+      {
+        xfer += oprot->writeString(_iter307->first);
+        xfer += oprot->writeString(_iter307->second);
+      }
+      xfer += oprot->writeMapEnd();
+    }
+    xfer += oprot->writeFieldEnd();
+  }
+  if (this->__isset.filename_lex) {
+    xfer += oprot->writeFieldBegin("filename_lex", ::apache::thrift::protocol::T_STRING, 4);
+    xfer += oprot->writeString(this->filename_lex);
+    xfer += oprot->writeFieldEnd();
+  }
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+void swap(ExecuteScriptResponse &a, ExecuteScriptResponse &b) {
+  using ::std::swap;
+  swap(a.success, b.success);
+  swap(a.drover, b.drover);
+  swap(a.invocation_metadata, b.invocation_metadata);
+  swap(a.filename_lex, b.filename_lex);
+  swap(a.__isset, b.__isset);
+}
+
+ExecuteScriptResponse::ExecuteScriptResponse(const ExecuteScriptResponse& other308) {
+  success = other308.success;
+  drover = other308.drover;
+  invocation_metadata = other308.invocation_metadata;
+  filename_lex = other308.filename_lex;
+  __isset = other308.__isset;
+}
+ExecuteScriptResponse& ExecuteScriptResponse::operator=(const ExecuteScriptResponse& other309) {
+  success = other309.success;
+  drover = other309.drover;
+  invocation_metadata = other309.invocation_metadata;
+  filename_lex = other309.filename_lex;
+  __isset = other309.__isset;
+  return *this;
+}
+void ExecuteScriptResponse::printTo(std::ostream& out) const {
+  using ::apache::thrift::to_string;
+  out << "ExecuteScriptResponse(";
+  out << "success=" << to_string(success);
+  out << ", " << "drover="; (__isset.drover ? (out << to_string(drover)) : (out << "<null>"));
+  out << ", " << "invocation_metadata="; (__isset.invocation_metadata ? (out << to_string(invocation_metadata)) : (out << "<null>"));
+  out << ", " << "filename_lex="; (__isset.filename_lex ? (out << to_string(filename_lex)) : (out << "<null>"));
+  out << ")";
+}
+
 }} // namespace

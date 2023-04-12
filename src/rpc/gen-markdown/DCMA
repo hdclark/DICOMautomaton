@@ -7,7 +7,7 @@
 |DCMA|[Receiver](#service-receiver)|[metadata_t](#typedef-metadata_t)||
 ||	[ &bull; GetSupportedOperations](#function-receivergetsupportedoperations)|[vec3_double](#struct-vec3_double)||
 ||	[ &bull; LoadFiles](#function-receiverloadfiles)|[contour_of_points_double](#struct-contour_of_points_double)||
-|||[contour_collection_double](#struct-contour_collection_double)||
+||	[ &bull; ExecuteScript](#function-receiverexecutescript)|[contour_collection_double](#struct-contour_collection_double)||
 |||[point_set_double](#struct-point_set_double)||
 |||[sample4_double](#struct-sample4_double)||
 |||[samples_1D_double](#struct-samples_1d_double)||
@@ -31,6 +31,8 @@
 |||[KnownOperation](#struct-knownoperation)||
 |||[LoadFilesQuery](#struct-loadfilesquery)||
 |||[LoadFilesResponse](#struct-loadfilesresponse)||
+|||[ExecuteScriptQuery](#struct-executescriptquery)||
+|||[ExecuteScriptResponse](#struct-executescriptresponse)||
 
 
 ***
@@ -285,6 +287,25 @@ _Base type_: **map&lt;```string```, ```string```&gt;**
 |1|success|```bool```||required||
 |2|drover|[```Drover```](#struct-drover)||optional||
 
+### Struct: ExecuteScriptQuery
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|drover|[```Drover```](#struct-drover)||required||
+|2|invocation_metadata|[```metadata_t```](#typedef-metadata_t)||required||
+|3|filename_lex|```string```||required||
+
+### Struct: ExecuteScriptResponse
+
+
+| Key | Field | Type | Description | Requiredness | Default value |
+| --- | --- | --- | --- | --- | --- |
+|1|success|```bool```||required||
+|2|drover|[```Drover```](#struct-drover)||optional||
+|3|invocation_metadata|[```metadata_t```](#typedef-metadata_t)||optional||
+|4|filename_lex|```string```||optional||
+
 ***
 ## Services
 
@@ -302,6 +323,14 @@ list&lt;[```KnownOperation```](#struct-knownoperation)&gt;
 
 [```LoadFilesResponse```](#struct-loadfilesresponse)
  _LoadFiles_(list&lt;[```LoadFilesQuery```](#struct-loadfilesquery)&gt; server_filenames)
+
+
+#### Function: Receiver.ExecuteScript
+
+
+[```ExecuteScriptResponse```](#struct-executescriptresponse)
+ _ExecuteScript_([```ExecuteScriptQuery```](#struct-executescriptquery) query,
+```string``` script)
 
 
 

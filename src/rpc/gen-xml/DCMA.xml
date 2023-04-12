@@ -201,6 +201,17 @@
       <field name="success" field-id="1" required="required" type="bool" />
       <field name="drover" field-id="2" required="optional" type="id" type-module="DCMA" type-id="Drover" />
     </struct>
+    <struct name="ExecuteScriptQuery">
+      <field name="drover" field-id="1" required="required" type="id" type-module="DCMA" type-id="Drover" />
+      <field name="invocation_metadata" field-id="2" required="required" type="id" type-module="DCMA" type-id="metadata_t" />
+      <field name="filename_lex" field-id="3" required="required" type="string" />
+    </struct>
+    <struct name="ExecuteScriptResponse">
+      <field name="success" field-id="1" required="required" type="bool" />
+      <field name="drover" field-id="2" required="optional" type="id" type-module="DCMA" type-id="Drover" />
+      <field name="invocation_metadata" field-id="3" required="optional" type="id" type-module="DCMA" type-id="metadata_t" />
+      <field name="filename_lex" field-id="4" required="optional" type="string" />
+    </struct>
     <service name="Receiver" targetNamespace="http://thrift.apache.org/xml/ns/DCMA/Receiver" xmlns:tns="http://thrift.apache.org/xml/ns/DCMA/Receiver">
       <method name="GetSupportedOperations">
         <returns type="list">
@@ -213,6 +224,11 @@
         <arg name="server_filenames" field-id="1" type="list">
           <elemType type="id" type-module="DCMA" type-id="LoadFilesQuery" />
         </arg>
+      </method>
+      <method name="ExecuteScript">
+        <returns type="id" type-module="DCMA" type-id="ExecuteScriptResponse" />
+        <arg name="query" field-id="1" type="id" type-module="DCMA" type-id="ExecuteScriptQuery" />
+        <arg name="script" field-id="2" type="string" />
       </method>
     </service>
   </document>

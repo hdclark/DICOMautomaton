@@ -70,23 +70,29 @@ class ReceiverHandler : virtual public ReceiverIf {
     void LoadFiles(LoadFilesResponse& _return, const std::vector<LoadFilesQuery> & server_filenames) {
         YLOGINFO("LoadFiles implementation goes here");
     }
+
+    void ExecuteScript(ExecuteScriptResponse& _return, const ExecuteScriptQuery& query, const std::string& script) {
+        YLOGINFO("ExecuteScript implementation goes here");
+    }
+
 };
 
 // Example of how to use this class:
-//
-//int main(int argc, char **argv){
-//    int port = 9090;
-//
-//    auto handler = std::make_shared<ReceiverHandler>();
-//    auto processor = std::make_shared<ReceiverProcessor>(handler);
-//
-//    auto transport_server = std::make_shared<TServerSocket>( port );
-//    auto transport_factory = std::make_shared<TBufferedTransportFactory>();
-//    auto protocol_factory = std::make_shared<TBinaryProtocolFactory>();
-//
-//    TSimpleServer server(processor, transport_server, transport_factory, protocol_factory);
-//    server.serve();
-//
-//    return 0;
-//}
+#if defined(DCMA_RPC_THRIFT_ENABLE_DEMO)
+int main(int argc, char **argv){
+    int port = 9090;
+
+    auto handler = std::make_shared<ReceiverHandler>();
+    auto processor = std::make_shared<ReceiverProcessor>(handler);
+
+    auto transport_server = std::make_shared<TServerSocket>( port );
+    auto transport_factory = std::make_shared<TBufferedTransportFactory>();
+    auto protocol_factory = std::make_shared<TBinaryProtocolFactory>();
+
+    TSimpleServer server(processor, transport_server, transport_factory, protocol_factory);
+    server.serve();
+
+    return 0;
+}
+#endif
 

@@ -74,6 +74,38 @@ function ReceiverClient:recv_LoadFiles(server_filenames)
   end
   error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
 end
+
+function ReceiverClient:ExecuteScript(query, script)
+  self:send_ExecuteScript(query, script)
+  return self:recv_ExecuteScript(query, script)
+end
+
+function ReceiverClient:send_ExecuteScript(query, script)
+  self.oprot:writeMessageBegin('ExecuteScript', TMessageType.CALL, self._seqid)
+  local args = ExecuteScript_args:new{}
+  args.query = query
+  args.script = script
+  args:write(self.oprot)
+  self.oprot:writeMessageEnd()
+  self.oprot.trans:flush()
+end
+
+function ReceiverClient:recv_ExecuteScript(query, script)
+  local fname, mtype, rseqid = self.iprot:readMessageBegin()
+  if mtype == TMessageType.EXCEPTION then
+    local x = TApplicationException:new{}
+    x:read(self.iprot)
+    self.iprot:readMessageEnd()
+    error(x)
+  end
+  local result = ExecuteScript_result:new{}
+  result:read(self.iprot)
+  self.iprot:readMessageEnd()
+  if result.success ~= nil then
+    return result.success
+  end
+  error(TApplicationException:new{errorCode = TApplicationException.MISSING_RESULT})
+end
 ReceiverIface = __TObject:new{
   __type = 'ReceiverIface'
 }
@@ -145,6 +177,26 @@ function ReceiverProcessor:process_LoadFiles(seqid, iprot, oprot, server_ctx)
   return status, res
 end
 
+function ReceiverProcessor:process_ExecuteScript(seqid, iprot, oprot, server_ctx)
+  local args = ExecuteScript_args:new{}
+  local reply_type = TMessageType.REPLY
+  args:read(iprot)
+  iprot:readMessageEnd()
+  local result = ExecuteScript_result:new{}
+  local status, res = pcall(self.handler.ExecuteScript, self.handler, args.query, args.script)
+  if not status then
+    reply_type = TMessageType.EXCEPTION
+    result = TApplicationException:new{message = res}
+  else
+    result.success = res
+  end
+  oprot:writeMessageBegin('ExecuteScript', reply_type, seqid)
+  result:write(oprot)
+  oprot:writeMessageEnd()
+  oprot.trans:flush()
+  return status, res
+end
+
 -- HELPER FUNCTIONS AND STRUCTURES
 
 GetSupportedOperations_args = __TObject:new{
@@ -196,11 +248,11 @@ function GetSupportedOperations_result:read(iprot)
     elseif fid == 0 then
       if ftype == TType.LIST then
         self.success = {}
-        local _etype241, _size238 = iprot:readListBegin()
-        for _i=1,_size238 do
-          local _elem242 = KnownOperation:new{}
-          _elem242:read(iprot)
-          table.insert(self.success, _elem242)
+        local _etype257, _size254 = iprot:readListBegin()
+        for _i=1,_size254 do
+          local _elem258 = KnownOperation:new{}
+          _elem258:read(iprot)
+          table.insert(self.success, _elem258)
         end
         iprot:readListEnd()
       else
@@ -219,8 +271,8 @@ function GetSupportedOperations_result:write(oprot)
   if self.success ~= nil then
     oprot:writeFieldBegin('success', TType.LIST, 0)
     oprot:writeListBegin(TType.STRUCT, #self.success)
-    for _,iter243 in ipairs(self.success) do
-      iter243:write(oprot)
+    for _,iter259 in ipairs(self.success) do
+      iter259:write(oprot)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -242,11 +294,11 @@ function LoadFiles_args:read(iprot)
     elseif fid == 1 then
       if ftype == TType.LIST then
         self.server_filenames = {}
-        local _etype247, _size244 = iprot:readListBegin()
-        for _i=1,_size244 do
-          local _elem248 = LoadFilesQuery:new{}
-          _elem248:read(iprot)
-          table.insert(self.server_filenames, _elem248)
+        local _etype263, _size260 = iprot:readListBegin()
+        for _i=1,_size260 do
+          local _elem264 = LoadFilesQuery:new{}
+          _elem264:read(iprot)
+          table.insert(self.server_filenames, _elem264)
         end
         iprot:readListEnd()
       else
@@ -265,8 +317,8 @@ function LoadFiles_args:write(oprot)
   if self.server_filenames ~= nil then
     oprot:writeFieldBegin('server_filenames', TType.LIST, 1)
     oprot:writeListBegin(TType.STRUCT, #self.server_filenames)
-    for _,iter249 in ipairs(self.server_filenames) do
-      iter249:write(oprot)
+    for _,iter265 in ipairs(self.server_filenames) do
+      iter265:write(oprot)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -302,6 +354,90 @@ end
 
 function LoadFiles_result:write(oprot)
   oprot:writeStructBegin('LoadFiles_result')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.STRUCT, 0)
+    self.success:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+ExecuteScript_args = __TObject:new{
+  query,
+  script
+}
+
+function ExecuteScript_args:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.STRUCT then
+        self.query = ExecuteScriptQuery:new{}
+        self.query:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.STRING then
+        self.script = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function ExecuteScript_args:write(oprot)
+  oprot:writeStructBegin('ExecuteScript_args')
+  if self.query ~= nil then
+    oprot:writeFieldBegin('query', TType.STRUCT, 1)
+    self.query:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  if self.script ~= nil then
+    oprot:writeFieldBegin('script', TType.STRING, 2)
+    oprot:writeString(self.script)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+ExecuteScript_result = __TObject:new{
+  success
+}
+
+function ExecuteScript_result:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 0 then
+      if ftype == TType.STRUCT then
+        self.success = ExecuteScriptResponse:new{}
+        self.success:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function ExecuteScript_result:write(oprot)
+  oprot:writeStructBegin('ExecuteScript_result')
   if self.success ~= nil then
     oprot:writeFieldBegin('success', TType.STRUCT, 0)
     self.success:write(oprot)

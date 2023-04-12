@@ -56,12 +56,17 @@ node [fillcolor=beige];
 LoadFilesQuery [label="struct LoadFilesQuery|<field_server_filename>server_filename :: string"];
 node [fillcolor=beige];
 LoadFilesResponse [label="struct LoadFilesResponse|<field_success>success :: bool|<field_drover>drover :: Drover"];
+node [fillcolor=beige];
+ExecuteScriptQuery [label="struct ExecuteScriptQuery|<field_drover>drover :: Drover|<field_invocation_metadata>invocation_metadata :: metadata_t|<field_filename_lex>filename_lex :: string"];
+node [fillcolor=beige];
+ExecuteScriptResponse [label="struct ExecuteScriptResponse|<field_success>success :: bool|<field_drover>drover :: Drover|<field_invocation_metadata>invocation_metadata :: metadata_t|<field_filename_lex>filename_lex :: string"];
 subgraph cluster_Receiver {
 node [fillcolor=bisque];
 style=dashed;
 label = "Receiver service";
 function_ReceiverGetSupportedOperations[label="<return_type>function GetSupportedOperations :: list\<KnownOperation\>|<param_query>query :: OperationsQuery"];
 function_ReceiverLoadFiles[label="<return_type>function LoadFiles :: LoadFilesResponse|<param_server_filenames>server_filenames :: list\<LoadFilesQuery\>"];
+function_ReceiverExecuteScript[label="<return_type>function ExecuteScript :: ExecuteScriptResponse|<param_query>query :: ExecuteScriptQuery|<param_script>script :: string"];
  }
 contour_of_points_double:field_points -> vec3_double
 contour_of_points_double:field_metadata -> metadata_t
@@ -101,8 +106,14 @@ Drover:field_lsamp_data -> Line_Sample
 Drover:field_trans_data -> Transform3
 Drover:field_table_data -> Sparse_Table
 LoadFilesResponse:field_drover -> Drover
+ExecuteScriptQuery:field_drover -> Drover
+ExecuteScriptQuery:field_invocation_metadata -> metadata_t
+ExecuteScriptResponse:field_drover -> Drover
+ExecuteScriptResponse:field_invocation_metadata -> metadata_t
 function_ReceiverGetSupportedOperations:return_type -> KnownOperation
 function_ReceiverGetSupportedOperations:param_query -> OperationsQuery
 function_ReceiverLoadFiles:return_type -> LoadFilesResponse
 function_ReceiverLoadFiles:param_server_filenames -> LoadFilesQuery
+function_ReceiverExecuteScript:return_type -> ExecuteScriptResponse
+function_ReceiverExecuteScript:param_query -> ExecuteScriptQuery
 }

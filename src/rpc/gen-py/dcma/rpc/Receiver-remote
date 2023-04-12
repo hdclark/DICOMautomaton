@@ -26,6 +26,7 @@ if len(sys.argv) <= 1 or sys.argv[1] == '--help':
     print('Functions:')
     print('   GetSupportedOperations(OperationsQuery query)')
     print('  LoadFilesResponse LoadFiles( server_filenames)')
+    print('  ExecuteScriptResponse ExecuteScript(ExecuteScriptQuery query, string script)')
     print('')
     sys.exit(0)
 
@@ -116,6 +117,12 @@ elif cmd == 'LoadFiles':
         print('LoadFiles requires 1 args')
         sys.exit(1)
     pp.pprint(client.LoadFiles(eval(args[0]),))
+
+elif cmd == 'ExecuteScript':
+    if len(args) != 2:
+        print('ExecuteScript requires 2 args')
+        sys.exit(1)
+    pp.pprint(client.ExecuteScript(eval(args[0]), args[1],))
 
 else:
     print('Unrecognized method %s' % cmd)

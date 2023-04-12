@@ -10,6 +10,7 @@
 <tr>
 <td>DCMA</td><td><a href="#Svc_Receiver">Receiver</a><br/>
 <ul>
+<li><a href="#Fn_Receiver_ExecuteScript">ExecuteScript</a></li>
 <li><a href="#Fn_Receiver_GetSupportedOperations">GetSupportedOperations</a></li>
 <li><a href="#Fn_Receiver_LoadFiles">LoadFiles</a></li>
 </ul>
@@ -17,6 +18,8 @@
 <td><a href="#Struct_Contour_Data">Contour_Data</a><br/>
 <a href="#Struct_Drover">Drover</a><br/>
 <a href="#Struct_Dynamic_Machine_State">Dynamic_Machine_State</a><br/>
+<a href="#Struct_ExecuteScriptQuery">ExecuteScriptQuery</a><br/>
+<a href="#Struct_ExecuteScriptResponse">ExecuteScriptResponse</a><br/>
 <a href="#Struct_Image_Array">Image_Array</a><br/>
 <a href="#Struct_KnownOperation">KnownOperation</a><br/>
 <a href="#Struct_Line_Sample">Line_Sample</a><br/>
@@ -185,10 +188,24 @@
 <table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
 <tr><td>1</td><td>success</td><td><code>bool</code></td><td></td><td>required</td><td></td></tr>
 <tr><td>2</td><td>drover</td><td><code><a href="#Struct_Drover">Drover</a></code></td><td></td><td>optional</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_ExecuteScriptQuery">Struct: ExecuteScriptQuery</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>drover</td><td><code><a href="#Struct_Drover">Drover</a></code></td><td></td><td>required</td><td></td></tr>
+<tr><td>2</td><td>invocation_metadata</td><td><code><a href="#Typedef_metadata_t">metadata_t</a></code></td><td></td><td>required</td><td></td></tr>
+<tr><td>3</td><td>filename_lex</td><td><code>string</code></td><td></td><td>required</td><td></td></tr>
+</tbody></table><br/></div><div class="definition"><h3 id="Struct_ExecuteScriptResponse">Struct: ExecuteScriptResponse</h3>
+<table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>success</td><td><code>bool</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>2</td><td>drover</td><td><code><a href="#Struct_Drover">Drover</a></code></td><td></td><td>optional</td><td></td></tr>
+<tr><td>3</td><td>invocation_metadata</td><td><code><a href="#Typedef_metadata_t">metadata_t</a></code></td><td></td><td>optional</td><td></td></tr>
+<tr><td>4</td><td>filename_lex</td><td><code>string</code></td><td></td><td>optional</td><td></td></tr>
 </tbody></table><br/></div><hr/><h2 id="Services">Services</h2>
 <h3 id="Svc_Receiver">Service: Receiver</h3>
 <div class="definition"><h4 id="Fn_Receiver_GetSupportedOperations">Function: Receiver.GetSupportedOperations</h4>
 <pre><code>list&lt;<code><a href="#Struct_KnownOperation">KnownOperation</a></code>&gt;</code> GetSupportedOperations(<code><a href="#Struct_OperationsQuery">OperationsQuery</a></code> query)
 </pre></div><div class="definition"><h4 id="Fn_Receiver_LoadFiles">Function: Receiver.LoadFiles</h4>
 <pre><code><a href="#Struct_LoadFilesResponse">LoadFilesResponse</a></code> LoadFiles(<code>list&lt;<code><a href="#Struct_LoadFilesQuery">LoadFilesQuery</a></code>&gt;</code> server_filenames)
+</pre></div><div class="definition"><h4 id="Fn_Receiver_ExecuteScript">Function: Receiver.ExecuteScript</h4>
+<pre><code><a href="#Struct_ExecuteScriptResponse">ExecuteScriptResponse</a></code> ExecuteScript(<code><a href="#Struct_ExecuteScriptQuery">ExecuteScriptQuery</a></code> query,
+                                    <code>string</code> script)
 </pre></div></div></body></html>

@@ -35,6 +35,15 @@ class Iface(object):
         """
         pass
 
+    def ExecuteScript(self, query, script):
+        """
+        Parameters:
+         - query
+         - script
+
+        """
+        pass
+
 
 class Client(Iface):
     def __init__(self, iprot, oprot=None):
@@ -107,6 +116,40 @@ class Client(Iface):
             return result.success
         raise TApplicationException(TApplicationException.MISSING_RESULT, "LoadFiles failed: unknown result")
 
+    def ExecuteScript(self, query, script):
+        """
+        Parameters:
+         - query
+         - script
+
+        """
+        self.send_ExecuteScript(query, script)
+        return self.recv_ExecuteScript()
+
+    def send_ExecuteScript(self, query, script):
+        self._oprot.writeMessageBegin('ExecuteScript', TMessageType.CALL, self._seqid)
+        args = ExecuteScript_args()
+        args.query = query
+        args.script = script
+        args.write(self._oprot)
+        self._oprot.writeMessageEnd()
+        self._oprot.trans.flush()
+
+    def recv_ExecuteScript(self):
+        iprot = self._iprot
+        (fname, mtype, rseqid) = iprot.readMessageBegin()
+        if mtype == TMessageType.EXCEPTION:
+            x = TApplicationException()
+            x.read(iprot)
+            iprot.readMessageEnd()
+            raise x
+        result = ExecuteScript_result()
+        result.read(iprot)
+        iprot.readMessageEnd()
+        if result.success is not None:
+            return result.success
+        raise TApplicationException(TApplicationException.MISSING_RESULT, "ExecuteScript failed: unknown result")
+
 
 class Processor(Iface, TProcessor):
     def __init__(self, handler):
@@ -114,6 +157,7 @@ class Processor(Iface, TProcessor):
         self._processMap = {}
         self._processMap["GetSupportedOperations"] = Processor.process_GetSupportedOperations
         self._processMap["LoadFiles"] = Processor.process_LoadFiles
+        self._processMap["ExecuteScript"] = Processor.process_ExecuteScript
         self._on_message_begin = None
 
     def on_message_begin(self, func):
@@ -178,6 +222,29 @@ class Processor(Iface, TProcessor):
             msg_type = TMessageType.EXCEPTION
             result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
         oprot.writeMessageBegin("LoadFiles", msg_type, seqid)
+        result.write(oprot)
+        oprot.writeMessageEnd()
+        oprot.trans.flush()
+
+    def process_ExecuteScript(self, seqid, iprot, oprot):
+        args = ExecuteScript_args()
+        args.read(iprot)
+        iprot.readMessageEnd()
+        result = ExecuteScript_result()
+        try:
+            result.success = self._handler.ExecuteScript(args.query, args.script)
+            msg_type = TMessageType.REPLY
+        except TTransport.TTransportException:
+            raise
+        except TApplicationException as ex:
+            logging.exception('TApplication exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = ex
+        except Exception:
+            logging.exception('Unexpected exception in handler')
+            msg_type = TMessageType.EXCEPTION
+            result = TApplicationException(TApplicationException.INTERNAL_ERROR, 'Internal error')
+        oprot.writeMessageBegin("ExecuteScript", msg_type, seqid)
         result.write(oprot)
         oprot.writeMessageEnd()
         oprot.trans.flush()
@@ -271,11 +338,11 @@ class GetSupportedOperations_result(object):
             if fid == 0:
                 if ftype == TType.LIST:
                     self.success = []
-                    (_etype278, _size275) = iprot.readListBegin()
-                    for _i279 in range(_size275):
-                        _elem280 = KnownOperation()
-                        _elem280.read(iprot)
-                        self.success.append(_elem280)
+                    (_etype296, _size293) = iprot.readListBegin()
+                    for _i297 in range(_size293):
+                        _elem298 = KnownOperation()
+                        _elem298.read(iprot)
+                        self.success.append(_elem298)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
@@ -292,8 +359,8 @@ class GetSupportedOperations_result(object):
         if self.success is not None:
             oprot.writeFieldBegin('success', TType.LIST, 0)
             oprot.writeListBegin(TType.STRUCT, len(self.success))
-            for iter281 in self.success:
-                iter281.write(oprot)
+            for iter299 in self.success:
+                iter299.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -341,11 +408,11 @@ class LoadFiles_args(object):
             if fid == 1:
                 if ftype == TType.LIST:
                     self.server_filenames = []
-                    (_etype285, _size282) = iprot.readListBegin()
-                    for _i286 in range(_size282):
-                        _elem287 = LoadFilesQuery()
-                        _elem287.read(iprot)
-                        self.server_filenames.append(_elem287)
+                    (_etype303, _size300) = iprot.readListBegin()
+                    for _i304 in range(_size300):
+                        _elem305 = LoadFilesQuery()
+                        _elem305.read(iprot)
+                        self.server_filenames.append(_elem305)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
@@ -362,8 +429,8 @@ class LoadFiles_args(object):
         if self.server_filenames is not None:
             oprot.writeFieldBegin('server_filenames', TType.LIST, 1)
             oprot.writeListBegin(TType.STRUCT, len(self.server_filenames))
-            for iter288 in self.server_filenames:
-                iter288.write(oprot)
+            for iter306 in self.server_filenames:
+                iter306.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -448,6 +515,143 @@ class LoadFiles_result(object):
 all_structs.append(LoadFiles_result)
 LoadFiles_result.thrift_spec = (
     (0, TType.STRUCT, 'success', [LoadFilesResponse, None], None, ),  # 0
+)
+
+
+class ExecuteScript_args(object):
+    """
+    Attributes:
+     - query
+     - script
+
+    """
+
+
+    def __init__(self, query=None, script=None,):
+        self.query = query
+        self.script = script
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRUCT:
+                    self.query = ExecuteScriptQuery()
+                    self.query.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRING:
+                    self.script = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('ExecuteScript_args')
+        if self.query is not None:
+            oprot.writeFieldBegin('query', TType.STRUCT, 1)
+            self.query.write(oprot)
+            oprot.writeFieldEnd()
+        if self.script is not None:
+            oprot.writeFieldBegin('script', TType.STRING, 2)
+            oprot.writeString(self.script.encode('utf-8') if sys.version_info[0] == 2 else self.script)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(ExecuteScript_args)
+ExecuteScript_args.thrift_spec = (
+    None,  # 0
+    (1, TType.STRUCT, 'query', [ExecuteScriptQuery, None], None, ),  # 1
+    (2, TType.STRING, 'script', 'UTF8', None, ),  # 2
+)
+
+
+class ExecuteScript_result(object):
+    """
+    Attributes:
+     - success
+
+    """
+
+
+    def __init__(self, success=None,):
+        self.success = success
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 0:
+                if ftype == TType.STRUCT:
+                    self.success = ExecuteScriptResponse()
+                    self.success.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('ExecuteScript_result')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.STRUCT, 0)
+            self.success.write(oprot)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+all_structs.append(ExecuteScript_result)
+ExecuteScript_result.thrift_spec = (
+    (0, TType.STRUCT, 'success', [ExecuteScriptResponse, None], None, ),  # 0
 )
 fix_spec(all_structs)
 del all_structs

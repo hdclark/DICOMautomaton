@@ -30,6 +30,11 @@ class ReceiverHandler : virtual public ReceiverIf {
     printf("LoadFiles\n");
   }
 
+  void ExecuteScript(ExecuteScriptResponse& _return, const ExecuteScriptQuery& query, const std::string& script) {
+    // Your implementation goes here
+    printf("ExecuteScript\n");
+  }
+
 };
 
 int main(int argc, char **argv) {

@@ -117,14 +117,14 @@ uint32_t Receiver_GetSupportedOperations_result::read(::apache::thrift::protocol
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->success.clear();
-            uint32_t _size290;
-            ::apache::thrift::protocol::TType _etype293;
-            xfer += iprot->readListBegin(_etype293, _size290);
-            this->success.resize(_size290);
-            uint32_t _i294;
-            for (_i294 = 0; _i294 < _size290; ++_i294)
+            uint32_t _size310;
+            ::apache::thrift::protocol::TType _etype313;
+            xfer += iprot->readListBegin(_etype313, _size310);
+            this->success.resize(_size310);
+            uint32_t _i314;
+            for (_i314 = 0; _i314 < _size310; ++_i314)
             {
-              xfer += this->success[_i294].read(iprot);
+              xfer += this->success[_i314].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -155,10 +155,10 @@ uint32_t Receiver_GetSupportedOperations_result::write(::apache::thrift::protoco
     xfer += oprot->writeFieldBegin("success", ::apache::thrift::protocol::T_LIST, 0);
     {
       xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->success.size()));
-      std::vector<KnownOperation> ::const_iterator _iter295;
-      for (_iter295 = this->success.begin(); _iter295 != this->success.end(); ++_iter295)
+      std::vector<KnownOperation> ::const_iterator _iter315;
+      for (_iter315 = this->success.begin(); _iter315 != this->success.end(); ++_iter315)
       {
-        xfer += (*_iter295).write(oprot);
+        xfer += (*_iter315).write(oprot);
       }
       xfer += oprot->writeListEnd();
     }
@@ -199,14 +199,14 @@ uint32_t Receiver_GetSupportedOperations_presult::read(::apache::thrift::protoco
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             (*(this->success)).clear();
-            uint32_t _size296;
-            ::apache::thrift::protocol::TType _etype299;
-            xfer += iprot->readListBegin(_etype299, _size296);
-            (*(this->success)).resize(_size296);
-            uint32_t _i300;
-            for (_i300 = 0; _i300 < _size296; ++_i300)
+            uint32_t _size316;
+            ::apache::thrift::protocol::TType _etype319;
+            xfer += iprot->readListBegin(_etype319, _size316);
+            (*(this->success)).resize(_size316);
+            uint32_t _i320;
+            for (_i320 = 0; _i320 < _size316; ++_i320)
             {
-              xfer += (*(this->success))[_i300].read(iprot);
+              xfer += (*(this->success))[_i320].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -257,14 +257,14 @@ uint32_t Receiver_LoadFiles_args::read(::apache::thrift::protocol::TProtocol* ip
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->server_filenames.clear();
-            uint32_t _size301;
-            ::apache::thrift::protocol::TType _etype304;
-            xfer += iprot->readListBegin(_etype304, _size301);
-            this->server_filenames.resize(_size301);
-            uint32_t _i305;
-            for (_i305 = 0; _i305 < _size301; ++_i305)
+            uint32_t _size321;
+            ::apache::thrift::protocol::TType _etype324;
+            xfer += iprot->readListBegin(_etype324, _size321);
+            this->server_filenames.resize(_size321);
+            uint32_t _i325;
+            for (_i325 = 0; _i325 < _size321; ++_i325)
             {
-              xfer += this->server_filenames[_i305].read(iprot);
+              xfer += this->server_filenames[_i325].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -293,10 +293,10 @@ uint32_t Receiver_LoadFiles_args::write(::apache::thrift::protocol::TProtocol* o
   xfer += oprot->writeFieldBegin("server_filenames", ::apache::thrift::protocol::T_LIST, 1);
   {
     xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->server_filenames.size()));
-    std::vector<LoadFilesQuery> ::const_iterator _iter306;
-    for (_iter306 = this->server_filenames.begin(); _iter306 != this->server_filenames.end(); ++_iter306)
+    std::vector<LoadFilesQuery> ::const_iterator _iter326;
+    for (_iter326 = this->server_filenames.begin(); _iter326 != this->server_filenames.end(); ++_iter326)
     {
-      xfer += (*_iter306).write(oprot);
+      xfer += (*_iter326).write(oprot);
     }
     xfer += oprot->writeListEnd();
   }
@@ -320,10 +320,10 @@ uint32_t Receiver_LoadFiles_pargs::write(::apache::thrift::protocol::TProtocol* 
   xfer += oprot->writeFieldBegin("server_filenames", ::apache::thrift::protocol::T_LIST, 1);
   {
     xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>((*(this->server_filenames)).size()));
-    std::vector<LoadFilesQuery> ::const_iterator _iter307;
-    for (_iter307 = (*(this->server_filenames)).begin(); _iter307 != (*(this->server_filenames)).end(); ++_iter307)
+    std::vector<LoadFilesQuery> ::const_iterator _iter327;
+    for (_iter327 = (*(this->server_filenames)).begin(); _iter327 != (*(this->server_filenames)).end(); ++_iter327)
     {
-      xfer += (*_iter307).write(oprot);
+      xfer += (*_iter327).write(oprot);
     }
     xfer += oprot->writeListEnd();
   }
@@ -402,6 +402,209 @@ Receiver_LoadFiles_presult::~Receiver_LoadFiles_presult() noexcept {
 
 
 uint32_t Receiver_LoadFiles_presult::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 0:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += (*(this->success)).read(iprot);
+          this->__isset.success = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+
+Receiver_ExecuteScript_args::~Receiver_ExecuteScript_args() noexcept {
+}
+
+
+uint32_t Receiver_ExecuteScript_args::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->query.read(iprot);
+          this->__isset.query = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->script);
+          this->__isset.script = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t Receiver_ExecuteScript_args::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  ::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("Receiver_ExecuteScript_args");
+
+  xfer += oprot->writeFieldBegin("query", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += this->query.write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("script", ::apache::thrift::protocol::T_STRING, 2);
+  xfer += oprot->writeString(this->script);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+
+Receiver_ExecuteScript_pargs::~Receiver_ExecuteScript_pargs() noexcept {
+}
+
+
+uint32_t Receiver_ExecuteScript_pargs::write(::apache::thrift::protocol::TProtocol* oprot) const {
+  uint32_t xfer = 0;
+  ::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
+  xfer += oprot->writeStructBegin("Receiver_ExecuteScript_pargs");
+
+  xfer += oprot->writeFieldBegin("query", ::apache::thrift::protocol::T_STRUCT, 1);
+  xfer += (*(this->query)).write(oprot);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("script", ::apache::thrift::protocol::T_STRING, 2);
+  xfer += oprot->writeString((*(this->script)));
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+
+Receiver_ExecuteScript_result::~Receiver_ExecuteScript_result() noexcept {
+}
+
+
+uint32_t Receiver_ExecuteScript_result::read(::apache::thrift::protocol::TProtocol* iprot) {
+
+  ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
+  uint32_t xfer = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TType ftype;
+  int16_t fid;
+
+  xfer += iprot->readStructBegin(fname);
+
+  using ::apache::thrift::protocol::TProtocolException;
+
+
+  while (true)
+  {
+    xfer += iprot->readFieldBegin(fname, ftype, fid);
+    if (ftype == ::apache::thrift::protocol::T_STOP) {
+      break;
+    }
+    switch (fid)
+    {
+      case 0:
+        if (ftype == ::apache::thrift::protocol::T_STRUCT) {
+          xfer += this->success.read(iprot);
+          this->__isset.success = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
+    xfer += iprot->readFieldEnd();
+  }
+
+  xfer += iprot->readStructEnd();
+
+  return xfer;
+}
+
+uint32_t Receiver_ExecuteScript_result::write(::apache::thrift::protocol::TProtocol* oprot) const {
+
+  uint32_t xfer = 0;
+
+  xfer += oprot->writeStructBegin("Receiver_ExecuteScript_result");
+
+  if (this->__isset.success) {
+    xfer += oprot->writeFieldBegin("success", ::apache::thrift::protocol::T_STRUCT, 0);
+    xfer += this->success.write(oprot);
+    xfer += oprot->writeFieldEnd();
+  }
+  xfer += oprot->writeFieldStop();
+  xfer += oprot->writeStructEnd();
+  return xfer;
+}
+
+
+Receiver_ExecuteScript_presult::~Receiver_ExecuteScript_presult() noexcept {
+}
+
+
+uint32_t Receiver_ExecuteScript_presult::read(::apache::thrift::protocol::TProtocol* iprot) {
 
   ::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);
   uint32_t xfer = 0;
@@ -558,6 +761,65 @@ void ReceiverClient::recv_LoadFiles(LoadFilesResponse& _return)
   throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "LoadFiles failed: unknown result");
 }
 
+void ReceiverClient::ExecuteScript(ExecuteScriptResponse& _return, const ExecuteScriptQuery& query, const std::string& script)
+{
+  send_ExecuteScript(query, script);
+  recv_ExecuteScript(_return);
+}
+
+void ReceiverClient::send_ExecuteScript(const ExecuteScriptQuery& query, const std::string& script)
+{
+  int32_t cseqid = 0;
+  oprot_->writeMessageBegin("ExecuteScript", ::apache::thrift::protocol::T_CALL, cseqid);
+
+  Receiver_ExecuteScript_pargs args;
+  args.query = &query;
+  args.script = &script;
+  args.write(oprot_);
+
+  oprot_->writeMessageEnd();
+  oprot_->getTransport()->writeEnd();
+  oprot_->getTransport()->flush();
+}
+
+void ReceiverClient::recv_ExecuteScript(ExecuteScriptResponse& _return)
+{
+
+  int32_t rseqid = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TMessageType mtype;
+
+  iprot_->readMessageBegin(fname, mtype, rseqid);
+  if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
+    ::apache::thrift::TApplicationException x;
+    x.read(iprot_);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+    throw x;
+  }
+  if (mtype != ::apache::thrift::protocol::T_REPLY) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  if (fname.compare("ExecuteScript") != 0) {
+    iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+    iprot_->readMessageEnd();
+    iprot_->getTransport()->readEnd();
+  }
+  Receiver_ExecuteScript_presult result;
+  result.success = &_return;
+  result.read(iprot_);
+  iprot_->readMessageEnd();
+  iprot_->getTransport()->readEnd();
+
+  if (result.__isset.success) {
+    // _return pointer has now been filled
+    return;
+  }
+  throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "ExecuteScript failed: unknown result");
+}
+
 bool ReceiverProcessor::dispatchCall(::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, const std::string& fname, int32_t seqid, void* callContext) {
   ProcessMap::iterator pfn;
   pfn = processMap_.find(fname);
@@ -682,6 +944,60 @@ void ReceiverProcessor::process_LoadFiles(int32_t seqid, ::apache::thrift::proto
 
   if (this->eventHandler_.get() != nullptr) {
     this->eventHandler_->postWrite(ctx, "Receiver.LoadFiles", bytes);
+  }
+}
+
+void ReceiverProcessor::process_ExecuteScript(int32_t seqid, ::apache::thrift::protocol::TProtocol* iprot, ::apache::thrift::protocol::TProtocol* oprot, void* callContext)
+{
+  void* ctx = nullptr;
+  if (this->eventHandler_.get() != nullptr) {
+    ctx = this->eventHandler_->getContext("Receiver.ExecuteScript", callContext);
+  }
+  ::apache::thrift::TProcessorContextFreer freer(this->eventHandler_.get(), ctx, "Receiver.ExecuteScript");
+
+  if (this->eventHandler_.get() != nullptr) {
+    this->eventHandler_->preRead(ctx, "Receiver.ExecuteScript");
+  }
+
+  Receiver_ExecuteScript_args args;
+  args.read(iprot);
+  iprot->readMessageEnd();
+  uint32_t bytes = iprot->getTransport()->readEnd();
+
+  if (this->eventHandler_.get() != nullptr) {
+    this->eventHandler_->postRead(ctx, "Receiver.ExecuteScript", bytes);
+  }
+
+  Receiver_ExecuteScript_result result;
+  try {
+    iface_->ExecuteScript(result.success, args.query, args.script);
+    result.__isset.success = true;
+  } catch (const std::exception& e) {
+    if (this->eventHandler_.get() != nullptr) {
+      this->eventHandler_->handlerError(ctx, "Receiver.ExecuteScript");
+    }
+
+    ::apache::thrift::TApplicationException x(e.what());
+    oprot->writeMessageBegin("ExecuteScript", ::apache::thrift::protocol::T_EXCEPTION, seqid);
+    x.write(oprot);
+    oprot->writeMessageEnd();
+    oprot->getTransport()->writeEnd();
+    oprot->getTransport()->flush();
+    return;
+  }
+
+  if (this->eventHandler_.get() != nullptr) {
+    this->eventHandler_->preWrite(ctx, "Receiver.ExecuteScript");
+  }
+
+  oprot->writeMessageBegin("ExecuteScript", ::apache::thrift::protocol::T_REPLY, seqid);
+  result.write(oprot);
+  oprot->writeMessageEnd();
+  bytes = oprot->getTransport()->writeEnd();
+  oprot->getTransport()->flush();
+
+  if (this->eventHandler_.get() != nullptr) {
+    this->eventHandler_->postWrite(ctx, "Receiver.ExecuteScript", bytes);
   }
 }
 
@@ -851,6 +1167,91 @@ void ReceiverConcurrentClient::recv_LoadFiles(LoadFilesResponse& _return, const 
       }
       // in a bad state, don't commit
       throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "LoadFiles failed: unknown result");
+    }
+    // seqid != rseqid
+    this->sync_->updatePending(fname, mtype, rseqid);
+
+    // this will temporarily unlock the readMutex, and let other clients get work done
+    this->sync_->waitForWork(seqid);
+  } // end while(true)
+}
+
+void ReceiverConcurrentClient::ExecuteScript(ExecuteScriptResponse& _return, const ExecuteScriptQuery& query, const std::string& script)
+{
+  int32_t seqid = send_ExecuteScript(query, script);
+  recv_ExecuteScript(_return, seqid);
+}
+
+int32_t ReceiverConcurrentClient::send_ExecuteScript(const ExecuteScriptQuery& query, const std::string& script)
+{
+  int32_t cseqid = this->sync_->generateSeqId();
+  ::apache::thrift::async::TConcurrentSendSentry sentry(this->sync_.get());
+  oprot_->writeMessageBegin("ExecuteScript", ::apache::thrift::protocol::T_CALL, cseqid);
+
+  Receiver_ExecuteScript_pargs args;
+  args.query = &query;
+  args.script = &script;
+  args.write(oprot_);
+
+  oprot_->writeMessageEnd();
+  oprot_->getTransport()->writeEnd();
+  oprot_->getTransport()->flush();
+
+  sentry.commit();
+  return cseqid;
+}
+
+void ReceiverConcurrentClient::recv_ExecuteScript(ExecuteScriptResponse& _return, const int32_t seqid)
+{
+
+  int32_t rseqid = 0;
+  std::string fname;
+  ::apache::thrift::protocol::TMessageType mtype;
+
+  // the read mutex gets dropped and reacquired as part of waitForWork()
+  // The destructor of this sentry wakes up other clients
+  ::apache::thrift::async::TConcurrentRecvSentry sentry(this->sync_.get(), seqid);
+
+  while(true) {
+    if(!this->sync_->getPending(fname, mtype, rseqid)) {
+      iprot_->readMessageBegin(fname, mtype, rseqid);
+    }
+    if(seqid == rseqid) {
+      if (mtype == ::apache::thrift::protocol::T_EXCEPTION) {
+        ::apache::thrift::TApplicationException x;
+        x.read(iprot_);
+        iprot_->readMessageEnd();
+        iprot_->getTransport()->readEnd();
+        sentry.commit();
+        throw x;
+      }
+      if (mtype != ::apache::thrift::protocol::T_REPLY) {
+        iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+        iprot_->readMessageEnd();
+        iprot_->getTransport()->readEnd();
+      }
+      if (fname.compare("ExecuteScript") != 0) {
+        iprot_->skip(::apache::thrift::protocol::T_STRUCT);
+        iprot_->readMessageEnd();
+        iprot_->getTransport()->readEnd();
+
+        // in a bad state, don't commit
+        using ::apache::thrift::protocol::TProtocolException;
+        throw TProtocolException(TProtocolException::INVALID_DATA);
+      }
+      Receiver_ExecuteScript_presult result;
+      result.success = &_return;
+      result.read(iprot_);
+      iprot_->readMessageEnd();
+      iprot_->getTransport()->readEnd();
+
+      if (result.__isset.success) {
+        // _return pointer has now been filled
+        sentry.commit();
+        return;
+      }
+      // in a bad state, don't commit
+      throw ::apache::thrift::TApplicationException(::apache::thrift::TApplicationException::MISSING_RESULT, "ExecuteScript failed: unknown result");
     }
     // seqid != rseqid
     this->sync_->updatePending(fname, mtype, rseqid);

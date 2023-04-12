@@ -4,7 +4,7 @@
 |DCMA|[Receiver](DCMA#service-receiver)|[metadata_t](DCMA#typedef-metadata_t)||
 ||	[ &bull; GetSupportedOperations](DCMA#function-receivergetsupportedoperations)|[vec3_double](DCMA#struct-vec3_double)||
 ||	[ &bull; LoadFiles](DCMA#function-receiverloadfiles)|[contour_of_points_double](DCMA#struct-contour_of_points_double)||
-|||[contour_collection_double](DCMA#struct-contour_collection_double)||
+||	[ &bull; ExecuteScript](DCMA#function-receiverexecutescript)|[contour_collection_double](DCMA#struct-contour_collection_double)||
 |||[point_set_double](DCMA#struct-point_set_double)||
 |||[sample4_double](DCMA#struct-sample4_double)||
 |||[samples_1D_double](DCMA#struct-samples_1d_double)||
@@ -28,5 +28,7 @@
 |||[KnownOperation](DCMA#struct-knownoperation)||
 |||[LoadFilesQuery](DCMA#struct-loadfilesquery)||
 |||[LoadFilesResponse](DCMA#struct-loadfilesresponse)||
+|||[ExecuteScriptQuery](DCMA#struct-executescriptquery)||
+|||[ExecuteScriptResponse](DCMA#struct-executescriptresponse)||
 
 

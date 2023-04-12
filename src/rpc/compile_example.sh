@@ -4,6 +4,7 @@ set -eux
 
 printf 'Compiling example now...\n'
 g++ --std=c++17 \
+  -DDCMA_RPC_THRIFT_ENABLE_DEMO=1 \
   ../Structs.cc \
   ../Alignment*cc \
   ../Tables.cc \
@@ -26,6 +27,7 @@ g++ --std=c++17 \
 
 
 g++ --std=c++17 \
+  -DDCMA_RPC_THRIFT_ENABLE_DEMO=1 \
   ../Structs.cc \
   ../Alignment*cc \
   ../Tables.cc \

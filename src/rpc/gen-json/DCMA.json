@@ -981,6 +981,80 @@
           "required": "optional"
         }
       ]
+    },
+    {
+      "name": "ExecuteScriptQuery",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "drover",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "Drover"
+          },
+          "required": "required"
+        },
+        {
+          "key": 2,
+          "name": "invocation_metadata",
+          "typeId": "map",
+          "type": {
+            "typeId": "map",
+            "keyTypeId": "string",
+            "valueTypeId": "string"
+          },
+          "required": "required"
+        },
+        {
+          "key": 3,
+          "name": "filename_lex",
+          "typeId": "string",
+          "required": "required"
+        }
+      ]
+    },
+    {
+      "name": "ExecuteScriptResponse",
+      "isException": false,
+      "isUnion": false,
+      "fields": [
+        {
+          "key": 1,
+          "name": "success",
+          "typeId": "bool",
+          "required": "required"
+        },
+        {
+          "key": 2,
+          "name": "drover",
+          "typeId": "struct",
+          "type": {
+            "typeId": "struct",
+            "class": "Drover"
+          },
+          "required": "optional"
+        },
+        {
+          "key": 3,
+          "name": "invocation_metadata",
+          "typeId": "map",
+          "type": {
+            "typeId": "map",
+            "keyTypeId": "string",
+            "valueTypeId": "string"
+          },
+          "required": "optional"
+        },
+        {
+          "key": 4,
+          "name": "filename_lex",
+          "typeId": "string",
+          "required": "optional"
+        }
+      ]
     }
   ],
   "constants": [
@@ -1037,6 +1111,35 @@
                   "class": "LoadFilesQuery"
                 }
               },
+              "required": "req_out"
+            }
+          ],
+          "exceptions": [
+          ]
+        },
+        {
+          "name": "ExecuteScript",
+          "returnTypeId": "struct",
+          "returnType": {
+            "typeId": "struct",
+            "class": "ExecuteScriptResponse"
+          },
+          "oneway": false,
+          "arguments": [
+            {
+              "key": 1,
+              "name": "query",
+              "typeId": "struct",
+              "type": {
+                "typeId": "struct",
+                "class": "ExecuteScriptQuery"
+              },
+              "required": "req_out"
+            },
+            {
+              "key": 2,
+              "name": "script",
+              "typeId": "string",
               "required": "req_out"
             }
           ],

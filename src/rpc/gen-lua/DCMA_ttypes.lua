@@ -2034,3 +2034,159 @@ function LoadFilesResponse:write(oprot)
   oprot:writeFieldStop()
   oprot:writeStructEnd()
 end
+
+ExecuteScriptQuery = __TObject:new{
+  drover,
+  invocation_metadata,
+  filename_lex
+}
+
+function ExecuteScriptQuery:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.STRUCT then
+        self.drover = Drover:new{}
+        self.drover:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.MAP then
+        self.invocation_metadata = {}
+        local _ktype239, _vtype240, _size238 = iprot:readMapBegin() 
+        for _i=1,_size238 do
+          local _key242 = iprot:readString()
+          local _val243 = iprot:readString()
+          self.invocation_metadata[_key242] = _val243
+        end
+        iprot:readMapEnd()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 3 then
+      if ftype == TType.STRING then
+        self.filename_lex = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function ExecuteScriptQuery:write(oprot)
+  oprot:writeStructBegin('ExecuteScriptQuery')
+  if self.drover ~= nil then
+    oprot:writeFieldBegin('drover', TType.STRUCT, 1)
+    self.drover:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  if self.invocation_metadata ~= nil then
+    oprot:writeFieldBegin('invocation_metadata', TType.MAP, 2)
+    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.invocation_metadata))
+    for kiter244,viter245 in pairs(self.invocation_metadata) do
+      oprot:writeString(kiter244)
+      oprot:writeString(viter245)
+    end
+    oprot:writeMapEnd()
+    oprot:writeFieldEnd()
+  end
+  if self.filename_lex ~= nil then
+    oprot:writeFieldBegin('filename_lex', TType.STRING, 3)
+    oprot:writeString(self.filename_lex)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end
+
+ExecuteScriptResponse = __TObject:new{
+  success,
+  drover,
+  invocation_metadata,
+  filename_lex
+}
+
+function ExecuteScriptResponse:read(iprot)
+  iprot:readStructBegin()
+  while true do
+    local fname, ftype, fid = iprot:readFieldBegin()
+    if ftype == TType.STOP then
+      break
+    elseif fid == 1 then
+      if ftype == TType.BOOL then
+        self.success = iprot:readBool()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.STRUCT then
+        self.drover = Drover:new{}
+        self.drover:read(iprot)
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 3 then
+      if ftype == TType.MAP then
+        self.invocation_metadata = {}
+        local _ktype247, _vtype248, _size246 = iprot:readMapBegin() 
+        for _i=1,_size246 do
+          local _key250 = iprot:readString()
+          local _val251 = iprot:readString()
+          self.invocation_metadata[_key250] = _val251
+        end
+        iprot:readMapEnd()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 4 then
+      if ftype == TType.STRING then
+        self.filename_lex = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
+    else
+      iprot:skip(ftype)
+    end
+    iprot:readFieldEnd()
+  end
+  iprot:readStructEnd()
+end
+
+function ExecuteScriptResponse:write(oprot)
+  oprot:writeStructBegin('ExecuteScriptResponse')
+  if self.success ~= nil then
+    oprot:writeFieldBegin('success', TType.BOOL, 1)
+    oprot:writeBool(self.success)
+    oprot:writeFieldEnd()
+  end
+  if self.drover ~= nil then
+    oprot:writeFieldBegin('drover', TType.STRUCT, 2)
+    self.drover:write(oprot)
+    oprot:writeFieldEnd()
+  end
+  if self.invocation_metadata ~= nil then
+    oprot:writeFieldBegin('invocation_metadata', TType.MAP, 3)
+    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.invocation_metadata))
+    for kiter252,viter253 in pairs(self.invocation_metadata) do
+      oprot:writeString(kiter252)
+      oprot:writeString(viter253)
+    end
+    oprot:writeMapEnd()
+    oprot:writeFieldEnd()
+  end
+  if self.filename_lex ~= nil then
+    oprot:writeFieldBegin('filename_lex', TType.STRING, 4)
+    oprot:writeString(self.filename_lex)
+    oprot:writeFieldEnd()
+  end
+  oprot:writeFieldStop()
+  oprot:writeStructEnd()
+end

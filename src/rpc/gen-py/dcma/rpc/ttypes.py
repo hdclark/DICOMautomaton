@@ -2602,6 +2602,205 @@ class LoadFilesResponse(object):
 
     def __ne__(self, other):
         return not (self == other)
+
+
+class ExecuteScriptQuery(object):
+    """
+    Attributes:
+     - drover
+     - invocation_metadata
+     - filename_lex
+
+    """
+
+
+    def __init__(self, drover=None, invocation_metadata=None, filename_lex=None,):
+        self.drover = drover
+        self.invocation_metadata = invocation_metadata
+        self.filename_lex = filename_lex
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.STRUCT:
+                    self.drover = Drover()
+                    self.drover.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.MAP:
+                    self.invocation_metadata = {}
+                    (_ktype276, _vtype277, _size275) = iprot.readMapBegin()
+                    for _i279 in range(_size275):
+                        _key280 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        _val281 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        self.invocation_metadata[_key280] = _val281
+                    iprot.readMapEnd()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.filename_lex = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('ExecuteScriptQuery')
+        if self.drover is not None:
+            oprot.writeFieldBegin('drover', TType.STRUCT, 1)
+            self.drover.write(oprot)
+            oprot.writeFieldEnd()
+        if self.invocation_metadata is not None:
+            oprot.writeFieldBegin('invocation_metadata', TType.MAP, 2)
+            oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.invocation_metadata))
+            for kiter282, viter283 in self.invocation_metadata.items():
+                oprot.writeString(kiter282.encode('utf-8') if sys.version_info[0] == 2 else kiter282)
+                oprot.writeString(viter283.encode('utf-8') if sys.version_info[0] == 2 else viter283)
+            oprot.writeMapEnd()
+            oprot.writeFieldEnd()
+        if self.filename_lex is not None:
+            oprot.writeFieldBegin('filename_lex', TType.STRING, 3)
+            oprot.writeString(self.filename_lex.encode('utf-8') if sys.version_info[0] == 2 else self.filename_lex)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        if self.drover is None:
+            raise TProtocolException(message='Required field drover is unset!')
+        if self.invocation_metadata is None:
+            raise TProtocolException(message='Required field invocation_metadata is unset!')
+        if self.filename_lex is None:
+            raise TProtocolException(message='Required field filename_lex is unset!')
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
+
+
+class ExecuteScriptResponse(object):
+    """
+    Attributes:
+     - success
+     - drover
+     - invocation_metadata
+     - filename_lex
+
+    """
+
+
+    def __init__(self, success=None, drover=None, invocation_metadata=None, filename_lex=None,):
+        self.success = success
+        self.drover = drover
+        self.invocation_metadata = invocation_metadata
+        self.filename_lex = filename_lex
+
+    def read(self, iprot):
+        if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
+            iprot._fast_decode(self, iprot, [self.__class__, self.thrift_spec])
+            return
+        iprot.readStructBegin()
+        while True:
+            (fname, ftype, fid) = iprot.readFieldBegin()
+            if ftype == TType.STOP:
+                break
+            if fid == 1:
+                if ftype == TType.BOOL:
+                    self.success = iprot.readBool()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.STRUCT:
+                    self.drover = Drover()
+                    self.drover.read(iprot)
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.MAP:
+                    self.invocation_metadata = {}
+                    (_ktype285, _vtype286, _size284) = iprot.readMapBegin()
+                    for _i288 in range(_size284):
+                        _key289 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        _val290 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        self.invocation_metadata[_key289] = _val290
+                    iprot.readMapEnd()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 4:
+                if ftype == TType.STRING:
+                    self.filename_lex = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
+            else:
+                iprot.skip(ftype)
+            iprot.readFieldEnd()
+        iprot.readStructEnd()
+
+    def write(self, oprot):
+        if oprot._fast_encode is not None and self.thrift_spec is not None:
+            oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
+            return
+        oprot.writeStructBegin('ExecuteScriptResponse')
+        if self.success is not None:
+            oprot.writeFieldBegin('success', TType.BOOL, 1)
+            oprot.writeBool(self.success)
+            oprot.writeFieldEnd()
+        if self.drover is not None:
+            oprot.writeFieldBegin('drover', TType.STRUCT, 2)
+            self.drover.write(oprot)
+            oprot.writeFieldEnd()
+        if self.invocation_metadata is not None:
+            oprot.writeFieldBegin('invocation_metadata', TType.MAP, 3)
+            oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.invocation_metadata))
+            for kiter291, viter292 in self.invocation_metadata.items():
+                oprot.writeString(kiter291.encode('utf-8') if sys.version_info[0] == 2 else kiter291)
+                oprot.writeString(viter292.encode('utf-8') if sys.version_info[0] == 2 else viter292)
+            oprot.writeMapEnd()
+            oprot.writeFieldEnd()
+        if self.filename_lex is not None:
+            oprot.writeFieldBegin('filename_lex', TType.STRING, 4)
+            oprot.writeString(self.filename_lex.encode('utf-8') if sys.version_info[0] == 2 else self.filename_lex)
+            oprot.writeFieldEnd()
+        oprot.writeFieldStop()
+        oprot.writeStructEnd()
+
+    def validate(self):
+        if self.success is None:
+            raise TProtocolException(message='Required field success is unset!')
+        return
+
+    def __repr__(self):
+        L = ['%s=%r' % (key, value)
+             for key, value in self.__dict__.items()]
+        return '%s(%s)' % (self.__class__.__name__, ', '.join(L))
+
+    def __eq__(self, other):
+        return isinstance(other, self.__class__) and self.__dict__ == other.__dict__
+
+    def __ne__(self, other):
+        return not (self == other)
 all_structs.append(vec3_double)
 vec3_double.thrift_spec = (
     None,  # 0
@@ -2785,6 +2984,21 @@ LoadFilesResponse.thrift_spec = (
     None,  # 0
     (1, TType.BOOL, 'success', None, None, ),  # 1
     (2, TType.STRUCT, 'drover', [Drover, None], None, ),  # 2
+)
+all_structs.append(ExecuteScriptQuery)
+ExecuteScriptQuery.thrift_spec = (
+    None,  # 0
+    (1, TType.STRUCT, 'drover', [Drover, None], None, ),  # 1
+    (2, TType.MAP, 'invocation_metadata', (TType.STRING, 'UTF8', TType.STRING, 'UTF8', False), None, ),  # 2
+    (3, TType.STRING, 'filename_lex', 'UTF8', None, ),  # 3
+)
+all_structs.append(ExecuteScriptResponse)
+ExecuteScriptResponse.thrift_spec = (
+    None,  # 0
+    (1, TType.BOOL, 'success', None, None, ),  # 1
+    (2, TType.STRUCT, 'drover', [Drover, None], None, ),  # 2
+    (3, TType.MAP, 'invocation_metadata', (TType.STRING, 'UTF8', TType.STRING, 'UTF8', False), None, ),  # 3
+    (4, TType.STRING, 'filename_lex', 'UTF8', None, ),  # 4
 )
 fix_spec(all_structs)
 del all_structs

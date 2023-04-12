@@ -179,6 +179,7 @@ struct Drover {
 }
 
 
+
 // --------------------------------------------------------------------
 // DICOMautomaton RPC methods.
 // --------------------------------------------------------------------
@@ -198,6 +199,20 @@ struct LoadFilesResponse {
     2: optional Drover drover;
 }
 
+
+struct ExecuteScriptQuery{
+    1: required Drover drover;
+    2: required metadata_t invocation_metadata;
+    3: required string filename_lex;
+}
+struct ExecuteScriptResponse {
+    1: required bool success;
+    2: optional Drover drover;
+    3: optional metadata_t invocation_metadata;
+    4: optional string filename_lex;
+}
+
+
 service Receiver {
     // Level 1 interface: high-level 'config-query' interface.
     //
@@ -212,6 +227,11 @@ service Receiver {
     // Load files into a Drover RPC-proxy object.
     LoadFilesResponse
     LoadFiles(1: list<LoadFilesQuery> server_filenames);
+
+    // Transfer a Drover object, execute a script, and receive the Drover back.
+    ExecuteScriptResponse
+    ExecuteScript(1: ExecuteScriptQuery query,
+                  2: string script);
 
     // Level 3 interface: Drover operations.
     //
