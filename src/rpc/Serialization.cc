@@ -36,34 +36,6 @@
 
 #include "Serialization.h"
 
-/*
-struct point_set_double {
-    1: required list<vec3_double> points;
-    2: required list<vec3_double> normals;
-    3: required list<i64> colours; // NOTE: should be uint32 with 8-bit packed RGBA.
-    4: required metadata_t metadata;
-}
-struct sample4_double { // NOTE: wrapper for std::array<double,4>.
-    1: required double x;
-    2: required double sigma_x;
-    3: required double f;
-    4: required double sigma_f;
-}
-struct samples_1D_double {
-    1: required list<sample4_double> samples;
-    2: required bool uncertainties_known_to_be_independent_and_random;
-    3: required metadata_t metadata;
-}
-struct fv_surface_mesh_double_int64 { // NOTE: uint64_t not supported, so using int64_t.
-    1: required list<vec3_double> vertices;
-    2: required list<vec3_double> vertex_normals;
-    3: required list<i64> vertex_colours; // NOTE: should be uint32 with 8-bit packed RGBA.
-    4: required list<list<i64>> faces; // NOTE: should be uint64_t rather than int64_t.
-    5: required list<list<i64>> involved_faces; // NOTE: should be uint64_t rather than int64_t.
-    6: required metadata_t metadata;
-}
-*/
-
 // --------------------------------------------------------------------
 // Ygor classes -- YgorMath.h.
 // --------------------------------------------------------------------
@@ -115,8 +87,61 @@ void Deserialize( const dcma::rpc::contour_collection_double &in, contour_collec
     }
 }
 
-//void Serialize( const point_set<double> &in, dcma::rpc::point_set_double &out );
-//void Deserialize( const dcma::rpc::point_set_double &in, point_set<double> &out );
+/*
+struct sample4_double { // NOTE: wrapper for std::array<double,4>.
+    1: required double x;
+    2: required double sigma_x;
+    3: required double f;
+    4: required double sigma_f;
+}
+struct samples_1D_double {
+    1: required list<sample4_double> samples;
+    2: required bool uncertainties_known_to_be_independent_and_random;
+    3: required metadata_t metadata;
+}
+struct fv_surface_mesh_double_int64 { // NOTE: uint64_t not supported, so using int64_t.
+    1: required list<vec3_double> vertices;
+    2: required list<vec3_double> vertex_normals;
+    3: required list<i64> vertex_colours; // NOTE: should be uint32 with 8-bit packed RGBA.
+    4: required list<list<i64>> faces; // NOTE: should be uint64_t rather than int64_t.
+    5: required list<list<i64>> involved_faces; // NOTE: should be uint64_t rather than int64_t.
+    6: required metadata_t metadata;
+}
+*/
+
+
+void Serialize( const point_set<double> &in, dcma::rpc::point_set_double &out ){
+    static_assert( sizeof(decltype(in)) == (   sizeof(decltype(in.points))  
+                                             + sizeof(decltype(in.normals)) 
+                                             + sizeof(decltype(in.colours)) 
+                                             + sizeof(decltype(in.metadata)) ), "Class layout is unexpected. Were members added?" );
+    for(const auto& p : in.points){
+        out.points.emplace_back();
+        Serialize(p, out.points.back());
+    }
+    for(const auto& n : in.normals){
+        out.normals.emplace_back();
+        Serialize(n, out.normals.back());
+    }
+    for(const auto& c : in.colours){
+        out.colours.emplace_back(c);
+    }
+    Serialize(in.metadata, out.metadata);
+}
+void Deserialize( const dcma::rpc::point_set_double &in, point_set<double> &out ){
+    for(const auto& p : in.points){
+        out.points.emplace_back();
+        Deserialize(p, out.points.back());
+    }
+    for(const auto& n : in.normals){
+        out.normals.emplace_back();
+        Deserialize(n, out.normals.back());
+    }
+    for(const auto& c : in.colours){
+        out.colours.emplace_back(c);
+    }
+    Deserialize(in.metadata, out.metadata);
+}
 //
 //void Serialize( const std::array<double,4> &in, dcma::rpc::sample4_double &out );
 //void Deserialize( const dcma::rpc::sample4_double &in, std::array<double,4> &out );
