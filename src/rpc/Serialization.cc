@@ -47,6 +47,9 @@ void Deserialize( const dcma::rpc::metadata_t &in, metadata_map_t &out ){
 }
 
 void Serialize( const vec3<double> &in, dcma::rpc::vec3_double &out ){
+    static_assert( sizeof(decltype(in)) == (   sizeof(decltype(in.x))  
+                                             + sizeof(decltype(in.y)) 
+                                             + sizeof(decltype(in.z)) ), "Class layout is unexpected. Were members added?" );
     out.x = in.x;
     out.y = in.y;
     out.z = in.z;
@@ -58,6 +61,9 @@ void Deserialize( const dcma::rpc::vec3_double &in, vec3<double> &out ){
 }
 
 void Serialize( const contour_of_points<double> &in, dcma::rpc::contour_of_points_double &out ){
+    static_assert( sizeof(decltype(in)) == (   sizeof(decltype(in.points))  
+                                             + std::max(sizeof(decltype(in.closed)), alignof(decltype(in))) // Account for padding.
+                                             + sizeof(decltype(in.metadata)) ), "Class layout is unexpected. Were members added?" );
     for(const auto& p : in.points){
         out.points.emplace_back();
         Serialize(p, out.points.back());
@@ -75,6 +81,7 @@ void Deserialize( const dcma::rpc::contour_of_points_double &in, contour_of_poin
 }
 
 void Serialize( const contour_collection<double> &in, dcma::rpc::contour_collection_double &out ){
+    static_assert( sizeof(decltype(in)) == ( sizeof(decltype(in.contours)) ), "Class layout is unexpected. Were members added?" );
     for(const auto& c : in.contours){
         out.contours.emplace_back();
         Serialize(c, out.contours.back());
@@ -174,6 +181,7 @@ void Deserialize( const dcma::rpc::point_set_double &in, point_set<double> &out 
 // DICOMautomaton classes -- Structs.h.
 // --------------------------------------------------------------------
 void Serialize( const Contour_Data &in, dcma::rpc::Contour_Data &out ){
+    static_assert( sizeof(decltype(in)) == ( sizeof(decltype(in.ccs)) ), "Class layout is unexpected. Were members added?" );
     for(const auto& cc : in.ccs){
         out.ccs.emplace_back();
         Serialize(cc, out.ccs.back());
@@ -214,6 +222,14 @@ void Deserialize( const dcma::rpc::Contour_Data &in, Contour_Data &out ){
 //void Deserialize( const dcma::rpc::Sparse_Table &in, Sparse_Table &out );
 
 void Serialize( const Drover &in, dcma::rpc::Drover &out ){
+    static_assert( sizeof(decltype(in)) == (   sizeof(decltype(in.contour_data))  
+                                             + sizeof(decltype(in.image_data)) 
+                                             + sizeof(decltype(in.point_data)) 
+                                             + sizeof(decltype(in.smesh_data)) 
+                                             + sizeof(decltype(in.rtplan_data)) 
+                                             + sizeof(decltype(in.lsamp_data)) 
+                                             + sizeof(decltype(in.trans_data)) 
+                                             + sizeof(decltype(in.table_data)) ), "Class layout is unexpected. Were members added?" );
     // For a pointer contour_data member.
     if(in.Has_Contour_Data() && !in.contour_data->ccs.empty()){
         out.__set_contour_data( {} ); // Field is optional, so ensure it is marked as set.
