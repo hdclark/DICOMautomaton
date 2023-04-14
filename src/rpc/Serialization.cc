@@ -36,9 +36,74 @@
 
 #include "Serialization.h"
 
+
+// Misc helpers.
+#define SERIALIZE_CONTAINER(x_in, x_out) {      \
+            for(const auto& y : x_in){          \
+                x_out.emplace_back();           \
+                Serialize(y, x_out.back());     \
+            }                                   \
+        }
+
+#define DESERIALIZE_CONTAINER(x_in, x_out) {    \
+            for(const auto& y : x_in){          \
+                x_out.emplace_back();           \
+                Deserialize(y, x_out.back());   \
+            }                                   \
+        }
+
+static void Serialize( const bool &in, bool &out ){
+    out = in;
+}
+static void Deserialize( const bool &in, bool &out ){
+    out = in;
+}
+
+static void Serialize( const uint32_t &in, int64_t &out ){
+    // Warning: conversion from uint32_t to int64_t. (Thrift does not have uint32_t.)
+    out = static_cast<int64_t>(in);
+}
+static void Deserialize( const int64_t &in, uint32_t &out ){
+    // Warning: conversion from int64_t to uint32_t. (Thrift does not have uint32_t.)
+    out = static_cast<uint32_t>(in);
+}
+
+static void Serialize( const uint64_t &in, int64_t &out ){
+    // Warning: conversion from uint64_t to int64_t. (Thrift does not have uint64_t.)
+    out = static_cast<int64_t>(in);
+}
+static void Deserialize( const int64_t &in, uint64_t &out ){
+    // Warning: conversion from int64_t to uint64_t. (Thrift does not have uint64_t.)
+    out = static_cast<uint64_t>(in);
+}
+
+static void Serialize( const int64_t &in, int64_t &out ){
+    out = in;
+}
+static void Deserialize( const int64_t &in, int64_t &out ){
+    out = in;
+}
+
+static void Serialize( const double &in, double &out ){
+    out = in;
+}
+static void Deserialize( const double &in, double &out ){
+    out = in;
+}
+
+static void Serialize( const float &in, double &out ){
+    // Warning: conversion from float to double. (Thrift does not have float.)
+    out = static_cast<double>(in);
+}
+static void Deserialize( const double &in, float &out ){
+    // Warning: conversion from double to float. (Thrift does not have float.)
+    out = static_cast<float>(in);
+}
+
 // --------------------------------------------------------------------
 // Ygor classes -- YgorMath.h.
 // --------------------------------------------------------------------
+// metadata_map_t
 void Serialize( const metadata_map_t &in, dcma::rpc::metadata_t &out ){
     out = in;
 }
@@ -46,128 +111,193 @@ void Deserialize( const dcma::rpc::metadata_t &in, metadata_map_t &out ){
     out = in;
 }
 
+// vec3<double>
 void Serialize( const vec3<double> &in, dcma::rpc::vec3_double &out ){
-    static_assert( sizeof(decltype(in)) == (   sizeof(decltype(in.x))  
-                                             + sizeof(decltype(in.y)) 
-                                             + sizeof(decltype(in.z)) ), "Class layout is unexpected. Were members added?" );
-    out.x = in.x;
-    out.y = in.y;
-    out.z = in.z;
+    static_assert( (   sizeof(decltype(in.x))  
+                     + sizeof(decltype(in.y)) 
+                     + sizeof(decltype(in.z)) ) == sizeof(decltype(in)),
+                   "Class layout is unexpected. Were members added?" );
+    Serialize(in.x, out.x);
+    Serialize(in.y, out.y);
+    Serialize(in.z, out.z);
 }
 void Deserialize( const dcma::rpc::vec3_double &in, vec3<double> &out ){
-    out.x = in.x;
-    out.y = in.y;
-    out.z = in.z;
+    Deserialize(in.x, out.x);
+    Deserialize(in.y, out.y);
+    Deserialize(in.z, out.z);
 }
 
+// contour_of_points<double>
 void Serialize( const contour_of_points<double> &in, dcma::rpc::contour_of_points_double &out ){
-    static_assert( sizeof(decltype(in)) == (   sizeof(decltype(in.points))  
-                                             + std::max(sizeof(decltype(in.closed)), alignof(decltype(in))) // Account for padding.
-                                             + sizeof(decltype(in.metadata)) ), "Class layout is unexpected. Were members added?" );
-    for(const auto& p : in.points){
-        out.points.emplace_back();
-        Serialize(p, out.points.back());
-    }
-    out.closed = in.closed;
+    // Note: due to padding, the following may not be able to detect if the contour_of_points class has members added.
+    static_assert( (   sizeof(decltype(in.points))  
+                     + std::max(sizeof(decltype(in.closed)), alignof(decltype(in))) // Account for padding.
+                     + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
+                   "Class layout is unexpected. Were members added?" );
+    SERIALIZE_CONTAINER(in.points, out.points);
+    Serialize(in.closed, out.closed);
     Serialize(in.metadata, out.metadata);
 }
 void Deserialize( const dcma::rpc::contour_of_points_double &in, contour_of_points<double> &out ){
-    for(const auto& p : in.points){
-        out.points.emplace_back();
-        Deserialize(p, out.points.back());
-    }
-    out.closed = in.closed;
+    DESERIALIZE_CONTAINER(in.points, out.points);
+    Deserialize(in.closed, out.closed);
     Deserialize(in.metadata, out.metadata);
 }
 
+// contour_collection<double>
 void Serialize( const contour_collection<double> &in, dcma::rpc::contour_collection_double &out ){
-    static_assert( sizeof(decltype(in)) == ( sizeof(decltype(in.contours)) ), "Class layout is unexpected. Were members added?" );
-    for(const auto& c : in.contours){
-        out.contours.emplace_back();
-        Serialize(c, out.contours.back());
-    }
+    static_assert( sizeof(decltype(in.contours)) == sizeof(decltype(in)),
+                   "Class layout is unexpected. Were members added?" );
+    SERIALIZE_CONTAINER(in.contours, out.contours);
 }
 void Deserialize( const dcma::rpc::contour_collection_double &in, contour_collection<double> &out ){
-    for(const auto& c : in.contours){
-        out.contours.emplace_back();
-        Deserialize(c, out.contours.back());
-    }
+    DESERIALIZE_CONTAINER(in.contours, out.contours);
 }
 
-/*
-struct sample4_double { // NOTE: wrapper for std::array<double,4>.
-    1: required double x;
-    2: required double sigma_x;
-    3: required double f;
-    4: required double sigma_f;
-}
-struct samples_1D_double {
-    1: required list<sample4_double> samples;
-    2: required bool uncertainties_known_to_be_independent_and_random;
-    3: required metadata_t metadata;
-}
-struct fv_surface_mesh_double_int64 { // NOTE: uint64_t not supported, so using int64_t.
-    1: required list<vec3_double> vertices;
-    2: required list<vec3_double> vertex_normals;
-    3: required list<i64> vertex_colours; // NOTE: should be uint32 with 8-bit packed RGBA.
-    4: required list<list<i64>> faces; // NOTE: should be uint64_t rather than int64_t.
-    5: required list<list<i64>> involved_faces; // NOTE: should be uint64_t rather than int64_t.
-    6: required metadata_t metadata;
-}
-*/
-
-
+// point_set<double>
 void Serialize( const point_set<double> &in, dcma::rpc::point_set_double &out ){
-    static_assert( sizeof(decltype(in)) == (   sizeof(decltype(in.points))  
-                                             + sizeof(decltype(in.normals)) 
-                                             + sizeof(decltype(in.colours)) 
-                                             + sizeof(decltype(in.metadata)) ), "Class layout is unexpected. Were members added?" );
-    for(const auto& p : in.points){
-        out.points.emplace_back();
-        Serialize(p, out.points.back());
-    }
-    for(const auto& n : in.normals){
-        out.normals.emplace_back();
-        Serialize(n, out.normals.back());
-    }
-    for(const auto& c : in.colours){
-        out.colours.emplace_back(c);
-    }
+    static_assert( (   sizeof(decltype(in.points))  
+                     + sizeof(decltype(in.normals)) 
+                     + sizeof(decltype(in.colours)) 
+                     + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
+                   "Class layout is unexpected. Were members added?" );
+    SERIALIZE_CONTAINER(in.points, out.points);
+    SERIALIZE_CONTAINER(in.normals, out.normals);
+    SERIALIZE_CONTAINER(in.colours, out.colours);
     Serialize(in.metadata, out.metadata);
 }
 void Deserialize( const dcma::rpc::point_set_double &in, point_set<double> &out ){
-    for(const auto& p : in.points){
-        out.points.emplace_back();
-        Deserialize(p, out.points.back());
+    DESERIALIZE_CONTAINER(in.points, out.points);
+    DESERIALIZE_CONTAINER(in.normals, out.normals);
+    DESERIALIZE_CONTAINER(in.colours, out.colours);
+    Deserialize(in.metadata, out.metadata);
+}
+
+// std::array<double,4>
+void Serialize( const std::array<double,4> &in, dcma::rpc::sample4_double &out ){
+    Serialize(in[0], out.x);
+    Serialize(in[1], out.sigma_x);
+    Serialize(in[2], out.f);
+    Serialize(in[3], out.sigma_f);
+}
+void Deserialize( const dcma::rpc::sample4_double &in, std::array<double,4> &out ){
+    Deserialize(in.x,       out[0]);
+    Deserialize(in.sigma_x, out[1]);
+    Deserialize(in.f,       out[2]);
+    Deserialize(in.sigma_f, out[3]);
+}
+
+// samples_1D<double>
+void Serialize( const samples_1D<double> &in, dcma::rpc::samples_1D_double &out ){
+    // Note: due to padding, the following may not be able to detect if the contour_of_points class has members added.
+    static_assert( (   sizeof(decltype(in.samples))  
+                     + std::max(sizeof(decltype(in.uncertainties_known_to_be_independent_and_random)), alignof(decltype(in))) // Account for padding.
+                     + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
+                   "Class layout is unexpected. Were members added?" );
+    SERIALIZE_CONTAINER(in.samples, out.samples);
+    Serialize(in.uncertainties_known_to_be_independent_and_random, out.uncertainties_known_to_be_independent_and_random);
+    Serialize(in.metadata, out.metadata);
+}
+void Deserialize( const dcma::rpc::samples_1D_double &in, samples_1D<double> &out ){
+    DESERIALIZE_CONTAINER(in.samples, out.samples);
+    Deserialize(in.uncertainties_known_to_be_independent_and_random, out.uncertainties_known_to_be_independent_and_random);
+    Deserialize(in.metadata, out.metadata);
+}
+
+// fv_surface_mesh<double,uint64_t>
+void Serialize( const fv_surface_mesh<double,uint64_t> &in, dcma::rpc::fv_surface_mesh_double_int64 &out ){
+    static_assert( (   sizeof(decltype(in.vertices))  
+                     + sizeof(decltype(in.vertex_normals))
+                     + sizeof(decltype(in.vertex_colours))
+                     + sizeof(decltype(in.faces))
+                     + sizeof(decltype(in.involved_faces))
+                     + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
+                   "Class layout is unexpected. Were members added?" );
+
+    SERIALIZE_CONTAINER(in.vertices, out.vertices);
+    SERIALIZE_CONTAINER(in.vertex_normals, out.vertex_normals);
+    SERIALIZE_CONTAINER(in.vertex_colours, out.vertex_colours);
+    for(const auto& f : in.faces){
+        out.faces.emplace_back();
+        SERIALIZE_CONTAINER(f, out.faces.back());
     }
-    for(const auto& n : in.normals){
-        out.normals.emplace_back();
-        Deserialize(n, out.normals.back());
+    for(const auto& f : in.involved_faces){
+        out.involved_faces.emplace_back();
+        SERIALIZE_CONTAINER(f, out.involved_faces.back());
     }
-    for(const auto& c : in.colours){
-        out.colours.emplace_back(c);
+    Serialize(in.metadata, out.metadata);
+}
+void Deserialize( const dcma::rpc::fv_surface_mesh_double_int64 &in, fv_surface_mesh<double,uint64_t> &out ){
+    DESERIALIZE_CONTAINER(in.vertices, out.vertices);
+    DESERIALIZE_CONTAINER(in.vertex_normals, out.vertex_normals);
+    DESERIALIZE_CONTAINER(in.vertex_colours, out.vertex_colours);
+    for(const auto& f : in.faces){
+        out.faces.emplace_back();
+        DESERIALIZE_CONTAINER(f, out.faces.back());
+    }
+    for(const auto& f : in.involved_faces){
+        out.involved_faces.emplace_back();
+        DESERIALIZE_CONTAINER(f, out.involved_faces.back());
     }
     Deserialize(in.metadata, out.metadata);
 }
-//
-//void Serialize( const std::array<double,4> &in, dcma::rpc::sample4_double &out );
-//void Deserialize( const dcma::rpc::sample4_double &in, std::array<double,4> &out );
-//
-//void Serialize( const samples_1D<double> &in, dcma::rpc::samples_1D_double &out );
-//void Deserialize( const dcma::rpc::samples_1D_double &in, samples_1D<double> &out );
-//
-//void Serialize( const fv_surface_mesh<double,uint64_t> &in, dcma::rpc::fv_surface_mesh_double_int64 &out );
-//void Deserialize( const dcma::rpc::fv_surface_mesh_double_int64 &in, fv_surface_mesh<double,uint64_t> &out );
-//
-//// --------------------------------------------------------------------
-//// Ygor classes -- YgorImages.h.
-//// --------------------------------------------------------------------
-//void Serialize( const planar_image<float,double> &in, dcma::rpc::planar_image_double_double &out );
-//void Deserialize( const dcma::rpc::planar_image_double_double &in, planar_image<float,double> &out );
-//
-//void Serialize( const planar_image_collection<float,double> &in, dcma::rpc::planar_image_collection_double_double &out );
-//void Deserialize( const dcma::rpc::planar_image_collection_double_double &in, planar_image_collection<float,double> &out );
-//
+
+// --------------------------------------------------------------------
+// Ygor classes -- YgorImages.h.
+// --------------------------------------------------------------------
+// planar_image<float,double>
+void Serialize( const planar_image<float,double> &in, dcma::rpc::planar_image_double_double &out ){
+    static_assert( (   sizeof(decltype(in.data))  
+                     + sizeof(decltype(in.rows))
+                     + sizeof(decltype(in.columns))
+                     + sizeof(decltype(in.channels))
+                     + sizeof(decltype(in.pxl_dx))
+                     + sizeof(decltype(in.pxl_dy))
+                     + sizeof(decltype(in.pxl_dz))
+                     + sizeof(decltype(in.anchor))
+                     + sizeof(decltype(in.offset))
+                     + sizeof(decltype(in.row_unit))
+                     + sizeof(decltype(in.col_unit))
+                     + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
+                   "Class layout is unexpected. Were members added?" );
+    SERIALIZE_CONTAINER(in.data, out.data);
+    Serialize(in.rows, out.rows);
+    Serialize(in.columns, out.columns);
+    Serialize(in.channels, out.channels);
+    Serialize(in.pxl_dx, out.pxl_dx);
+    Serialize(in.pxl_dy, out.pxl_dy);
+    Serialize(in.pxl_dz, out.pxl_dz);
+    Serialize(in.anchor, out.anchor);
+    Serialize(in.offset, out.offset);
+    Serialize(in.row_unit, out.row_unit);
+    Serialize(in.col_unit, out.col_unit);
+    Serialize(in.metadata, out.metadata);
+}
+void Deserialize( const dcma::rpc::planar_image_double_double &in, planar_image<float,double> &out ){
+    DESERIALIZE_CONTAINER(in.data, out.data);
+    Deserialize(in.rows, out.rows);
+    Deserialize(in.columns, out.columns);
+    Deserialize(in.channels, out.channels);
+    Deserialize(in.pxl_dx, out.pxl_dx);
+    Deserialize(in.pxl_dy, out.pxl_dy);
+    Deserialize(in.pxl_dz, out.pxl_dz);
+    Deserialize(in.anchor, out.anchor);
+    Deserialize(in.offset, out.offset);
+    Deserialize(in.row_unit, out.row_unit);
+    Deserialize(in.col_unit, out.col_unit);
+    Deserialize(in.metadata, out.metadata);
+}
+
+// planar_image_collection<float,double>
+void Serialize( const planar_image_collection<float,double> &in, dcma::rpc::planar_image_collection_double_double &out ){
+    static_assert( sizeof(decltype(in.images)) == sizeof(decltype(in)),
+                   "Class layout is unexpected. Were members added?" );
+    SERIALIZE_CONTAINER(in.images, out.images);
+}
+void Deserialize( const dcma::rpc::planar_image_collection_double_double &in, planar_image_collection<float,double> &out ){
+    DESERIALIZE_CONTAINER(in.images, out.images);
+}
+
 //// --------------------------------------------------------------------
 //// DICOMautomaton classes -- Tables.h.
 //// --------------------------------------------------------------------
@@ -180,19 +310,24 @@ void Deserialize( const dcma::rpc::point_set_double &in, point_set<double> &out 
 // --------------------------------------------------------------------
 // DICOMautomaton classes -- Structs.h.
 // --------------------------------------------------------------------
+// Contour_Data
 void Serialize( const Contour_Data &in, dcma::rpc::Contour_Data &out ){
-    static_assert( sizeof(decltype(in)) == ( sizeof(decltype(in.ccs)) ), "Class layout is unexpected. Were members added?" );
-    for(const auto& cc : in.ccs){
-        out.ccs.emplace_back();
-        Serialize(cc, out.ccs.back());
-    }
+    static_assert( sizeof(decltype(in.ccs)) == sizeof(decltype(in)),
+                   "Class layout is unexpected. Were members added?" );
+    SERIALIZE_CONTAINER(in.ccs, out.ccs);
 }
 void Deserialize( const dcma::rpc::Contour_Data &in, Contour_Data &out ){
-    for(const auto& cc : in.ccs){
-        out.ccs.emplace_back();
-        Deserialize(cc, out.ccs.back());
-    }
+    DESERIALIZE_CONTAINER(in.ccs, out.ccs);
 }
+
+// Image_Array
+// Point_Cloud
+// Surface_Mesh
+// Static_Machine_State
+// Dynamic_Machine_State
+// RTPlan
+// Transform3
+// Sparse_Table
 
 //void Serialize( const Image_Array &in, dcma::rpc::Image_Array &out );
 //void Deserialize( const dcma::rpc::Image_Array &in, Image_Array &out );
@@ -221,15 +356,17 @@ void Deserialize( const dcma::rpc::Contour_Data &in, Contour_Data &out ){
 //void Serialize( const Sparse_Table &in, dcma::rpc::Sparse_Table &out );
 //void Deserialize( const dcma::rpc::Sparse_Table &in, Sparse_Table &out );
 
+// Drover
 void Serialize( const Drover &in, dcma::rpc::Drover &out ){
-    static_assert( sizeof(decltype(in)) == (   sizeof(decltype(in.contour_data))  
-                                             + sizeof(decltype(in.image_data)) 
-                                             + sizeof(decltype(in.point_data)) 
-                                             + sizeof(decltype(in.smesh_data)) 
-                                             + sizeof(decltype(in.rtplan_data)) 
-                                             + sizeof(decltype(in.lsamp_data)) 
-                                             + sizeof(decltype(in.trans_data)) 
-                                             + sizeof(decltype(in.table_data)) ), "Class layout is unexpected. Were members added?" );
+    static_assert( (   sizeof(decltype(in.contour_data))  
+                     + sizeof(decltype(in.image_data)) 
+                     + sizeof(decltype(in.point_data)) 
+                     + sizeof(decltype(in.smesh_data)) 
+                     + sizeof(decltype(in.rtplan_data)) 
+                     + sizeof(decltype(in.lsamp_data)) 
+                     + sizeof(decltype(in.trans_data)) 
+                     + sizeof(decltype(in.table_data)) ) == sizeof(decltype(in)),
+                   "Class layout is unexpected. Were members added?" );
     // For a pointer contour_data member.
     if(in.Has_Contour_Data() && !in.contour_data->ccs.empty()){
         out.__set_contour_data( {} ); // Field is optional, so ensure it is marked as set.
@@ -291,4 +428,8 @@ void Deserialize( const dcma::rpc::Drover &in, Drover &out ){
     //}
 }
 
+
+#undef SERIALIZE_CONTAINER
+
+#undef DESERIALIZE_CONTAINER
 
