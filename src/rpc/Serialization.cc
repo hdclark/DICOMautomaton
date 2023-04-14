@@ -93,6 +93,15 @@ static void Deserialize( const int64_t &in, int32_t &out ){
     out = static_cast<int32_t>(in);
 }
 
+static void SerializeLI( const long int &in, int64_t &out ){
+    // Warning: conversion from long int (i.e., int32_t or int64_t) to int64_t.
+    out = static_cast<int64_t>(in);
+}
+static void DeserializeLI( const int64_t &in, long int &out ){
+    // Warning: conversion from int64_t to long int (i.e., int32_t or int64_t).
+    out = static_cast<long int>(in);
+}
+
 static void Serialize( const int64_t &in, int64_t &out ){
     out = in;
 }
@@ -283,9 +292,9 @@ void Serialize( const planar_image<float,double> &in, dcma::rpc::planar_image_do
                      + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
     SERIALIZE_CONTAINER(in.data, out.data);
-    Serialize(in.rows, out.rows);
-    Serialize(in.columns, out.columns);
-    Serialize(in.channels, out.channels);
+    SerializeLI(in.rows, out.rows);
+    SerializeLI(in.columns, out.columns);
+    SerializeLI(in.channels, out.channels);
     Serialize(in.pxl_dx, out.pxl_dx);
     Serialize(in.pxl_dy, out.pxl_dy);
     Serialize(in.pxl_dz, out.pxl_dz);
@@ -297,9 +306,9 @@ void Serialize( const planar_image<float,double> &in, dcma::rpc::planar_image_do
 }
 void Deserialize( const dcma::rpc::planar_image_double_double &in, planar_image<float,double> &out ){
     DESERIALIZE_CONTAINER(in.data, out.data);
-    Deserialize(in.rows, out.rows);
-    Deserialize(in.columns, out.columns);
-    Deserialize(in.channels, out.channels);
+    DeserializeLI(in.rows, out.rows);
+    DeserializeLI(in.columns, out.columns);
+    DeserializeLI(in.channels, out.channels);
     Deserialize(in.pxl_dx, out.pxl_dx);
     Deserialize(in.pxl_dy, out.pxl_dy);
     Deserialize(in.pxl_dz, out.pxl_dz);
