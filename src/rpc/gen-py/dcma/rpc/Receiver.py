@@ -338,11 +338,11 @@ class GetSupportedOperations_result(object):
             if fid == 0:
                 if ftype == TType.LIST:
                     self.success = []
-                    (_etype296, _size293) = iprot.readListBegin()
-                    for _i297 in range(_size293):
-                        _elem298 = KnownOperation()
-                        _elem298.read(iprot)
-                        self.success.append(_elem298)
+                    (_etype312, _size309) = iprot.readListBegin()
+                    for _i313 in range(_size309):
+                        _elem314 = KnownOperation()
+                        _elem314.read(iprot)
+                        self.success.append(_elem314)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
@@ -359,8 +359,8 @@ class GetSupportedOperations_result(object):
         if self.success is not None:
             oprot.writeFieldBegin('success', TType.LIST, 0)
             oprot.writeListBegin(TType.STRUCT, len(self.success))
-            for iter299 in self.success:
-                iter299.write(oprot)
+            for iter315 in self.success:
+                iter315.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -408,11 +408,11 @@ class LoadFiles_args(object):
             if fid == 1:
                 if ftype == TType.LIST:
                     self.server_filenames = []
-                    (_etype303, _size300) = iprot.readListBegin()
-                    for _i304 in range(_size300):
-                        _elem305 = LoadFilesQuery()
-                        _elem305.read(iprot)
-                        self.server_filenames.append(_elem305)
+                    (_etype319, _size316) = iprot.readListBegin()
+                    for _i320 in range(_size316):
+                        _elem321 = LoadFilesQuery()
+                        _elem321.read(iprot)
+                        self.server_filenames.append(_elem321)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
@@ -429,8 +429,8 @@ class LoadFiles_args(object):
         if self.server_filenames is not None:
             oprot.writeFieldBegin('server_filenames', TType.LIST, 1)
             oprot.writeListBegin(TType.STRUCT, len(self.server_filenames))
-            for iter306 in self.server_filenames:
-                iter306.write(oprot)
+            for iter322 in self.server_filenames:
+                iter322.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()

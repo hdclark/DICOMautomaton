@@ -1909,6 +1909,18 @@ void planar_image_collection_double_double::printTo(std::ostream& out) const {
 cell_string::~cell_string() noexcept {
 }
 
+
+void cell_string::__set_row(const int64_t val) {
+  this->row = val;
+}
+
+void cell_string::__set_col(const int64_t val) {
+  this->col = val;
+}
+
+void cell_string::__set_val(const std::string& val) {
+  this->val = val;
+}
 std::ostream& operator<<(std::ostream& out, const cell_string& obj)
 {
   obj.printTo(out);
@@ -1928,6 +1940,9 @@ uint32_t cell_string::read(::apache::thrift::protocol::TProtocol* iprot) {
 
   using ::apache::thrift::protocol::TProtocolException;
 
+  bool isset_row = false;
+  bool isset_col = false;
+  bool isset_val = false;
 
   while (true)
   {
@@ -1935,12 +1950,47 @@ uint32_t cell_string::read(::apache::thrift::protocol::TProtocol* iprot) {
     if (ftype == ::apache::thrift::protocol::T_STOP) {
       break;
     }
-    xfer += iprot->skip(ftype);
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_I64) {
+          xfer += iprot->readI64(this->row);
+          isset_row = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_I64) {
+          xfer += iprot->readI64(this->col);
+          isset_col = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 3:
+        if (ftype == ::apache::thrift::protocol::T_STRING) {
+          xfer += iprot->readString(this->val);
+          isset_val = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
     xfer += iprot->readFieldEnd();
   }
 
   xfer += iprot->readStructEnd();
 
+  if (!isset_row)
+    throw TProtocolException(TProtocolException::INVALID_DATA);
+  if (!isset_col)
+    throw TProtocolException(TProtocolException::INVALID_DATA);
+  if (!isset_val)
+    throw TProtocolException(TProtocolException::INVALID_DATA);
   return xfer;
 }
 
@@ -1949,6 +1999,18 @@ uint32_t cell_string::write(::apache::thrift::protocol::TProtocol* oprot) const 
   ::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
   xfer += oprot->writeStructBegin("cell_string");
 
+  xfer += oprot->writeFieldBegin("row", ::apache::thrift::protocol::T_I64, 1);
+  xfer += oprot->writeI64(this->row);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("col", ::apache::thrift::protocol::T_I64, 2);
+  xfer += oprot->writeI64(this->col);
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("val", ::apache::thrift::protocol::T_STRING, 3);
+  xfer += oprot->writeString(this->val);
+  xfer += oprot->writeFieldEnd();
+
   xfer += oprot->writeFieldStop();
   xfer += oprot->writeStructEnd();
   return xfer;
@@ -1956,20 +2018,28 @@ uint32_t cell_string::write(::apache::thrift::protocol::TProtocol* oprot) const 
 
 void swap(cell_string &a, cell_string &b) {
   using ::std::swap;
-  (void) a;
-  (void) b;
+  swap(a.row, b.row);
+  swap(a.col, b.col);
+  swap(a.val, b.val);
 }
 
-cell_string::cell_string(const cell_string& other148) noexcept {
-  (void) other148;
+cell_string::cell_string(const cell_string& other148) {
+  row = other148.row;
+  col = other148.col;
+  val = other148.val;
 }
-cell_string& cell_string::operator=(const cell_string& other149) noexcept {
-  (void) other149;
+cell_string& cell_string::operator=(const cell_string& other149) {
+  row = other149.row;
+  col = other149.col;
+  val = other149.val;
   return *this;
 }
 void cell_string::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "cell_string(";
+  out << "row=" << to_string(row);
+  out << ", " << "col=" << to_string(col);
+  out << ", " << "val=" << to_string(val);
   out << ")";
 }
 
@@ -1977,6 +2047,14 @@ void cell_string::printTo(std::ostream& out) const {
 table2::~table2() noexcept {
 }
 
+
+void table2::__set_data(const std::vector<cell_string> & val) {
+  this->data = val;
+}
+
+void table2::__set_metadata(const metadata_t& val) {
+  this->metadata = val;
+}
 std::ostream& operator<<(std::ostream& out, const table2& obj)
 {
   obj.printTo(out);
@@ -1996,6 +2074,8 @@ uint32_t table2::read(::apache::thrift::protocol::TProtocol* iprot) {
 
   using ::apache::thrift::protocol::TProtocolException;
 
+  bool isset_data = false;
+  bool isset_metadata = false;
 
   while (true)
   {
@@ -2003,12 +2083,64 @@ uint32_t table2::read(::apache::thrift::protocol::TProtocol* iprot) {
     if (ftype == ::apache::thrift::protocol::T_STOP) {
       break;
     }
-    xfer += iprot->skip(ftype);
+    switch (fid)
+    {
+      case 1:
+        if (ftype == ::apache::thrift::protocol::T_LIST) {
+          {
+            this->data.clear();
+            uint32_t _size150;
+            ::apache::thrift::protocol::TType _etype153;
+            xfer += iprot->readListBegin(_etype153, _size150);
+            this->data.resize(_size150);
+            uint32_t _i154;
+            for (_i154 = 0; _i154 < _size150; ++_i154)
+            {
+              xfer += this->data[_i154].read(iprot);
+            }
+            xfer += iprot->readListEnd();
+          }
+          isset_data = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      case 2:
+        if (ftype == ::apache::thrift::protocol::T_MAP) {
+          {
+            this->metadata.clear();
+            uint32_t _size155;
+            ::apache::thrift::protocol::TType _ktype156;
+            ::apache::thrift::protocol::TType _vtype157;
+            xfer += iprot->readMapBegin(_ktype156, _vtype157, _size155);
+            uint32_t _i159;
+            for (_i159 = 0; _i159 < _size155; ++_i159)
+            {
+              std::string _key160;
+              xfer += iprot->readString(_key160);
+              std::string& _val161 = this->metadata[_key160];
+              xfer += iprot->readString(_val161);
+            }
+            xfer += iprot->readMapEnd();
+          }
+          isset_metadata = true;
+        } else {
+          xfer += iprot->skip(ftype);
+        }
+        break;
+      default:
+        xfer += iprot->skip(ftype);
+        break;
+    }
     xfer += iprot->readFieldEnd();
   }
 
   xfer += iprot->readStructEnd();
 
+  if (!isset_data)
+    throw TProtocolException(TProtocolException::INVALID_DATA);
+  if (!isset_metadata)
+    throw TProtocolException(TProtocolException::INVALID_DATA);
   return xfer;
 }
 
@@ -2017,6 +2149,31 @@ uint32_t table2::write(::apache::thrift::protocol::TProtocol* oprot) const {
   ::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);
   xfer += oprot->writeStructBegin("table2");
 
+  xfer += oprot->writeFieldBegin("data", ::apache::thrift::protocol::T_LIST, 1);
+  {
+    xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->data.size()));
+    std::vector<cell_string> ::const_iterator _iter162;
+    for (_iter162 = this->data.begin(); _iter162 != this->data.end(); ++_iter162)
+    {
+      xfer += (*_iter162).write(oprot);
+    }
+    xfer += oprot->writeListEnd();
+  }
+  xfer += oprot->writeFieldEnd();
+
+  xfer += oprot->writeFieldBegin("metadata", ::apache::thrift::protocol::T_MAP, 2);
+  {
+    xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->metadata.size()));
+    std::map<std::string, std::string> ::const_iterator _iter163;
+    for (_iter163 = this->metadata.begin(); _iter163 != this->metadata.end(); ++_iter163)
+    {
+      xfer += oprot->writeString(_iter163->first);
+      xfer += oprot->writeString(_iter163->second);
+    }
+    xfer += oprot->writeMapEnd();
+  }
+  xfer += oprot->writeFieldEnd();
+
   xfer += oprot->writeFieldStop();
   xfer += oprot->writeStructEnd();
   return xfer;
@@ -2024,20 +2181,24 @@ uint32_t table2::write(::apache::thrift::protocol::TProtocol* oprot) const {
 
 void swap(table2 &a, table2 &b) {
   using ::std::swap;
-  (void) a;
-  (void) b;
+  swap(a.data, b.data);
+  swap(a.metadata, b.metadata);
 }
 
-table2::table2(const table2& other150) noexcept {
-  (void) other150;
+table2::table2(const table2& other164) {
+  data = other164.data;
+  metadata = other164.metadata;
 }
-table2& table2::operator=(const table2& other151) noexcept {
-  (void) other151;
+table2& table2::operator=(const table2& other165) {
+  data = other165.data;
+  metadata = other165.metadata;
   return *this;
 }
 void table2::printTo(std::ostream& out) const {
   using ::apache::thrift::to_string;
   out << "table2(";
+  out << "data=" << to_string(data);
+  out << ", " << "metadata=" << to_string(metadata);
   out << ")";
 }
 
@@ -2082,14 +2243,14 @@ uint32_t Contour_Data::read(::apache::thrift::protocol::TProtocol* iprot) {
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->ccs.clear();
-            uint32_t _size152;
-            ::apache::thrift::protocol::TType _etype155;
-            xfer += iprot->readListBegin(_etype155, _size152);
-            this->ccs.resize(_size152);
-            uint32_t _i156;
-            for (_i156 = 0; _i156 < _size152; ++_i156)
+            uint32_t _size166;
+            ::apache::thrift::protocol::TType _etype169;
+            xfer += iprot->readListBegin(_etype169, _size166);
+            this->ccs.resize(_size166);
+            uint32_t _i170;
+            for (_i170 = 0; _i170 < _size166; ++_i170)
             {
-              xfer += this->ccs[_i156].read(iprot);
+              xfer += this->ccs[_i170].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -2120,10 +2281,10 @@ uint32_t Contour_Data::write(::apache::thrift::protocol::TProtocol* oprot) const
   xfer += oprot->writeFieldBegin("ccs", ::apache::thrift::protocol::T_LIST, 1);
   {
     xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->ccs.size()));
-    std::vector<contour_collection_double> ::const_iterator _iter157;
-    for (_iter157 = this->ccs.begin(); _iter157 != this->ccs.end(); ++_iter157)
+    std::vector<contour_collection_double> ::const_iterator _iter171;
+    for (_iter171 = this->ccs.begin(); _iter171 != this->ccs.end(); ++_iter171)
     {
-      xfer += (*_iter157).write(oprot);
+      xfer += (*_iter171).write(oprot);
     }
     xfer += oprot->writeListEnd();
   }
@@ -2139,11 +2300,11 @@ void swap(Contour_Data &a, Contour_Data &b) {
   swap(a.ccs, b.ccs);
 }
 
-Contour_Data::Contour_Data(const Contour_Data& other158) {
-  ccs = other158.ccs;
+Contour_Data::Contour_Data(const Contour_Data& other172) {
+  ccs = other172.ccs;
 }
-Contour_Data& Contour_Data::operator=(const Contour_Data& other159) {
-  ccs = other159.ccs;
+Contour_Data& Contour_Data::operator=(const Contour_Data& other173) {
+  ccs = other173.ccs;
   return *this;
 }
 void Contour_Data::printTo(std::ostream& out) const {
@@ -2251,13 +2412,13 @@ void swap(Image_Array &a, Image_Array &b) {
   swap(a.filename, b.filename);
 }
 
-Image_Array::Image_Array(const Image_Array& other160) {
-  imagecoll = other160.imagecoll;
-  filename = other160.filename;
+Image_Array::Image_Array(const Image_Array& other174) {
+  imagecoll = other174.imagecoll;
+  filename = other174.filename;
 }
-Image_Array& Image_Array::operator=(const Image_Array& other161) {
-  imagecoll = other161.imagecoll;
-  filename = other161.filename;
+Image_Array& Image_Array::operator=(const Image_Array& other175) {
+  imagecoll = other175.imagecoll;
+  filename = other175.filename;
   return *this;
 }
 void Image_Array::printTo(std::ostream& out) const {
@@ -2346,11 +2507,11 @@ void swap(Point_Cloud &a, Point_Cloud &b) {
   swap(a.pset, b.pset);
 }
 
-Point_Cloud::Point_Cloud(const Point_Cloud& other162) {
-  pset = other162.pset;
+Point_Cloud::Point_Cloud(const Point_Cloud& other176) {
+  pset = other176.pset;
 }
-Point_Cloud& Point_Cloud::operator=(const Point_Cloud& other163) {
-  pset = other163.pset;
+Point_Cloud& Point_Cloud::operator=(const Point_Cloud& other177) {
+  pset = other177.pset;
   return *this;
 }
 void Point_Cloud::printTo(std::ostream& out) const {
@@ -2438,11 +2599,11 @@ void swap(Surface_Mesh &a, Surface_Mesh &b) {
   swap(a.meshes, b.meshes);
 }
 
-Surface_Mesh::Surface_Mesh(const Surface_Mesh& other164) {
-  meshes = other164.meshes;
+Surface_Mesh::Surface_Mesh(const Surface_Mesh& other178) {
+  meshes = other178.meshes;
 }
-Surface_Mesh& Surface_Mesh::operator=(const Surface_Mesh& other165) {
-  meshes = other165.meshes;
+Surface_Mesh& Surface_Mesh::operator=(const Surface_Mesh& other179) {
+  meshes = other179.meshes;
   return *this;
 }
 void Surface_Mesh::printTo(std::ostream& out) const {
@@ -2742,14 +2903,14 @@ uint32_t Static_Machine_State::read(::apache::thrift::protocol::TProtocol* iprot
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->JawPositionsX.clear();
-            uint32_t _size166;
-            ::apache::thrift::protocol::TType _etype169;
-            xfer += iprot->readListBegin(_etype169, _size166);
-            this->JawPositionsX.resize(_size166);
-            uint32_t _i170;
-            for (_i170 = 0; _i170 < _size166; ++_i170)
+            uint32_t _size180;
+            ::apache::thrift::protocol::TType _etype183;
+            xfer += iprot->readListBegin(_etype183, _size180);
+            this->JawPositionsX.resize(_size180);
+            uint32_t _i184;
+            for (_i184 = 0; _i184 < _size180; ++_i184)
             {
-              xfer += iprot->readDouble(this->JawPositionsX[_i170]);
+              xfer += iprot->readDouble(this->JawPositionsX[_i184]);
             }
             xfer += iprot->readListEnd();
           }
@@ -2762,14 +2923,14 @@ uint32_t Static_Machine_State::read(::apache::thrift::protocol::TProtocol* iprot
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->JawPositionsY.clear();
-            uint32_t _size171;
-            ::apache::thrift::protocol::TType _etype174;
-            xfer += iprot->readListBegin(_etype174, _size171);
-            this->JawPositionsY.resize(_size171);
-            uint32_t _i175;
-            for (_i175 = 0; _i175 < _size171; ++_i175)
+            uint32_t _size185;
+            ::apache::thrift::protocol::TType _etype188;
+            xfer += iprot->readListBegin(_etype188, _size185);
+            this->JawPositionsY.resize(_size185);
+            uint32_t _i189;
+            for (_i189 = 0; _i189 < _size185; ++_i189)
             {
-              xfer += iprot->readDouble(this->JawPositionsY[_i175]);
+              xfer += iprot->readDouble(this->JawPositionsY[_i189]);
             }
             xfer += iprot->readListEnd();
           }
@@ -2782,14 +2943,14 @@ uint32_t Static_Machine_State::read(::apache::thrift::protocol::TProtocol* iprot
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->MLCPositionsX.clear();
-            uint32_t _size176;
-            ::apache::thrift::protocol::TType _etype179;
-            xfer += iprot->readListBegin(_etype179, _size176);
-            this->MLCPositionsX.resize(_size176);
-            uint32_t _i180;
-            for (_i180 = 0; _i180 < _size176; ++_i180)
+            uint32_t _size190;
+            ::apache::thrift::protocol::TType _etype193;
+            xfer += iprot->readListBegin(_etype193, _size190);
+            this->MLCPositionsX.resize(_size190);
+            uint32_t _i194;
+            for (_i194 = 0; _i194 < _size190; ++_i194)
             {
-              xfer += iprot->readDouble(this->MLCPositionsX[_i180]);
+              xfer += iprot->readDouble(this->MLCPositionsX[_i194]);
             }
             xfer += iprot->readListEnd();
           }
@@ -2802,17 +2963,17 @@ uint32_t Static_Machine_State::read(::apache::thrift::protocol::TProtocol* iprot
         if (ftype == ::apache::thrift::protocol::T_MAP) {
           {
             this->metadata.clear();
-            uint32_t _size181;
-            ::apache::thrift::protocol::TType _ktype182;
-            ::apache::thrift::protocol::TType _vtype183;
-            xfer += iprot->readMapBegin(_ktype182, _vtype183, _size181);
-            uint32_t _i185;
-            for (_i185 = 0; _i185 < _size181; ++_i185)
+            uint32_t _size195;
+            ::apache::thrift::protocol::TType _ktype196;
+            ::apache::thrift::protocol::TType _vtype197;
+            xfer += iprot->readMapBegin(_ktype196, _vtype197, _size195);
+            uint32_t _i199;
+            for (_i199 = 0; _i199 < _size195; ++_i199)
             {
-              std::string _key186;
-              xfer += iprot->readString(_key186);
-              std::string& _val187 = this->metadata[_key186];
-              xfer += iprot->readString(_val187);
+              std::string _key200;
+              xfer += iprot->readString(_key200);
+              std::string& _val201 = this->metadata[_key200];
+              xfer += iprot->readString(_val201);
             }
             xfer += iprot->readMapEnd();
           }
@@ -2957,10 +3118,10 @@ uint32_t Static_Machine_State::write(::apache::thrift::protocol::TProtocol* opro
   xfer += oprot->writeFieldBegin("JawPositionsX", ::apache::thrift::protocol::T_LIST, 19);
   {
     xfer += oprot->writeListBegin(::apache::thrift::protocol::T_DOUBLE, static_cast<uint32_t>(this->JawPositionsX.size()));
-    std::vector<double> ::const_iterator _iter188;
-    for (_iter188 = this->JawPositionsX.begin(); _iter188 != this->JawPositionsX.end(); ++_iter188)
+    std::vector<double> ::const_iterator _iter202;
+    for (_iter202 = this->JawPositionsX.begin(); _iter202 != this->JawPositionsX.end(); ++_iter202)
     {
-      xfer += oprot->writeDouble((*_iter188));
+      xfer += oprot->writeDouble((*_iter202));
     }
     xfer += oprot->writeListEnd();
   }
@@ -2969,10 +3130,10 @@ uint32_t Static_Machine_State::write(::apache::thrift::protocol::TProtocol* opro
   xfer += oprot->writeFieldBegin("JawPositionsY", ::apache::thrift::protocol::T_LIST, 20);
   {
     xfer += oprot->writeListBegin(::apache::thrift::protocol::T_DOUBLE, static_cast<uint32_t>(this->JawPositionsY.size()));
-    std::vector<double> ::const_iterator _iter189;
-    for (_iter189 = this->JawPositionsY.begin(); _iter189 != this->JawPositionsY.end(); ++_iter189)
+    std::vector<double> ::const_iterator _iter203;
+    for (_iter203 = this->JawPositionsY.begin(); _iter203 != this->JawPositionsY.end(); ++_iter203)
     {
-      xfer += oprot->writeDouble((*_iter189));
+      xfer += oprot->writeDouble((*_iter203));
     }
     xfer += oprot->writeListEnd();
   }
@@ -2981,10 +3142,10 @@ uint32_t Static_Machine_State::write(::apache::thrift::protocol::TProtocol* opro
   xfer += oprot->writeFieldBegin("MLCPositionsX", ::apache::thrift::protocol::T_LIST, 21);
   {
     xfer += oprot->writeListBegin(::apache::thrift::protocol::T_DOUBLE, static_cast<uint32_t>(this->MLCPositionsX.size()));
-    std::vector<double> ::const_iterator _iter190;
-    for (_iter190 = this->MLCPositionsX.begin(); _iter190 != this->MLCPositionsX.end(); ++_iter190)
+    std::vector<double> ::const_iterator _iter204;
+    for (_iter204 = this->MLCPositionsX.begin(); _iter204 != this->MLCPositionsX.end(); ++_iter204)
     {
-      xfer += oprot->writeDouble((*_iter190));
+      xfer += oprot->writeDouble((*_iter204));
     }
     xfer += oprot->writeListEnd();
   }
@@ -2993,11 +3154,11 @@ uint32_t Static_Machine_State::write(::apache::thrift::protocol::TProtocol* opro
   xfer += oprot->writeFieldBegin("metadata", ::apache::thrift::protocol::T_MAP, 22);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->metadata.size()));
-    std::map<std::string, std::string> ::const_iterator _iter191;
-    for (_iter191 = this->metadata.begin(); _iter191 != this->metadata.end(); ++_iter191)
+    std::map<std::string, std::string> ::const_iterator _iter205;
+    for (_iter205 = this->metadata.begin(); _iter205 != this->metadata.end(); ++_iter205)
     {
-      xfer += oprot->writeString(_iter191->first);
-      xfer += oprot->writeString(_iter191->second);
+      xfer += oprot->writeString(_iter205->first);
+      xfer += oprot->writeString(_iter205->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -3034,53 +3195,53 @@ void swap(Static_Machine_State &a, Static_Machine_State &b) {
   swap(a.metadata, b.metadata);
 }
 
-Static_Machine_State::Static_Machine_State(const Static_Machine_State& other192) {
-  CumulativeMetersetWeight = other192.CumulativeMetersetWeight;
-  ControlPointIndex = other192.ControlPointIndex;
-  GantryAngle = other192.GantryAngle;
-  GantryRotationDirection = other192.GantryRotationDirection;
-  BeamLimitingDeviceAngle = other192.BeamLimitingDeviceAngle;
-  BeamLimitingDeviceRotationDirection = other192.BeamLimitingDeviceRotationDirection;
-  PatientSupportAngle = other192.PatientSupportAngle;
-  PatientSupportRotationDirection = other192.PatientSupportRotationDirection;
-  TableTopEccentricAngle = other192.TableTopEccentricAngle;
-  TableTopEccentricRotationDirection = other192.TableTopEccentricRotationDirection;
-  TableTopVerticalPosition = other192.TableTopVerticalPosition;
-  TableTopLongitudinalPosition = other192.TableTopLongitudinalPosition;
-  TableTopLateralPosition = other192.TableTopLateralPosition;
-  TableTopPitchAngle = other192.TableTopPitchAngle;
-  TableTopPitchRotationDirection = other192.TableTopPitchRotationDirection;
-  TableTopRollAngle = other192.TableTopRollAngle;
-  TableTopRollRotationDirection = other192.TableTopRollRotationDirection;
-  IsocentrePosition = other192.IsocentrePosition;
-  JawPositionsX = other192.JawPositionsX;
-  JawPositionsY = other192.JawPositionsY;
-  MLCPositionsX = other192.MLCPositionsX;
-  metadata = other192.metadata;
+Static_Machine_State::Static_Machine_State(const Static_Machine_State& other206) {
+  CumulativeMetersetWeight = other206.CumulativeMetersetWeight;
+  ControlPointIndex = other206.ControlPointIndex;
+  GantryAngle = other206.GantryAngle;
+  GantryRotationDirection = other206.GantryRotationDirection;
+  BeamLimitingDeviceAngle = other206.BeamLimitingDeviceAngle;
+  BeamLimitingDeviceRotationDirection = other206.BeamLimitingDeviceRotationDirection;
+  PatientSupportAngle = other206.PatientSupportAngle;
+  PatientSupportRotationDirection = other206.PatientSupportRotationDirection;
+  TableTopEccentricAngle = other206.TableTopEccentricAngle;
+  TableTopEccentricRotationDirection = other206.TableTopEccentricRotationDirection;
+  TableTopVerticalPosition = other206.TableTopVerticalPosition;
+  TableTopLongitudinalPosition = other206.TableTopLongitudinalPosition;
+  TableTopLateralPosition = other206.TableTopLateralPosition;
+  TableTopPitchAngle = other206.TableTopPitchAngle;
+  TableTopPitchRotationDirection = other206.TableTopPitchRotationDirection;
+  TableTopRollAngle = other206.TableTopRollAngle;
+  TableTopRollRotationDirection = other206.TableTopRollRotationDirection;
+  IsocentrePosition = other206.IsocentrePosition;
+  JawPositionsX = other206.JawPositionsX;
+  JawPositionsY = other206.JawPositionsY;
+  MLCPositionsX = other206.MLCPositionsX;
+  metadata = other206.metadata;
 }
-Static_Machine_State& Static_Machine_State::operator=(const Static_Machine_State& other193) {
-  CumulativeMetersetWeight = other193.CumulativeMetersetWeight;
-  ControlPointIndex = other193.ControlPointIndex;
-  GantryAngle = other193.GantryAngle;
-  GantryRotationDirection = other193.GantryRotationDirection;
-  BeamLimitingDeviceAngle = other193.BeamLimitingDeviceAngle;
-  BeamLimitingDeviceRotationDirection = other193.BeamLimitingDeviceRotationDirection;
-  PatientSupportAngle = other193.PatientSupportAngle;
-  PatientSupportRotationDirection = other193.PatientSupportRotationDirection;
-  TableTopEccentricAngle = other193.TableTopEccentricAngle;
-  TableTopEccentricRotationDirection = other193.TableTopEccentricRotationDirection;
-  TableTopVerticalPosition = other193.TableTopVerticalPosition;
-  TableTopLongitudinalPosition = other193.TableTopLongitudinalPosition;
-  TableTopLateralPosition = other193.TableTopLateralPosition;
-  TableTopPitchAngle = other193.TableTopPitchAngle;
-  TableTopPitchRotationDirection = other193.TableTopPitchRotationDirection;
-  TableTopRollAngle = other193.TableTopRollAngle;
-  TableTopRollRotationDirection = other193.TableTopRollRotationDirection;
-  IsocentrePosition = other193.IsocentrePosition;
-  JawPositionsX = other193.JawPositionsX;
-  JawPositionsY = other193.JawPositionsY;
-  MLCPositionsX = other193.MLCPositionsX;
-  metadata = other193.metadata;
+Static_Machine_State& Static_Machine_State::operator=(const Static_Machine_State& other207) {
+  CumulativeMetersetWeight = other207.CumulativeMetersetWeight;
+  ControlPointIndex = other207.ControlPointIndex;
+  GantryAngle = other207.GantryAngle;
+  GantryRotationDirection = other207.GantryRotationDirection;
+  BeamLimitingDeviceAngle = other207.BeamLimitingDeviceAngle;
+  BeamLimitingDeviceRotationDirection = other207.BeamLimitingDeviceRotationDirection;
+  PatientSupportAngle = other207.PatientSupportAngle;
+  PatientSupportRotationDirection = other207.PatientSupportRotationDirection;
+  TableTopEccentricAngle = other207.TableTopEccentricAngle;
+  TableTopEccentricRotationDirection = other207.TableTopEccentricRotationDirection;
+  TableTopVerticalPosition = other207.TableTopVerticalPosition;
+  TableTopLongitudinalPosition = other207.TableTopLongitudinalPosition;
+  TableTopLateralPosition = other207.TableTopLateralPosition;
+  TableTopPitchAngle = other207.TableTopPitchAngle;
+  TableTopPitchRotationDirection = other207.TableTopPitchRotationDirection;
+  TableTopRollAngle = other207.TableTopRollAngle;
+  TableTopRollRotationDirection = other207.TableTopRollRotationDirection;
+  IsocentrePosition = other207.IsocentrePosition;
+  JawPositionsX = other207.JawPositionsX;
+  JawPositionsY = other207.JawPositionsY;
+  MLCPositionsX = other207.MLCPositionsX;
+  metadata = other207.metadata;
   return *this;
 }
 void Static_Machine_State::printTo(std::ostream& out) const {
@@ -3183,14 +3344,14 @@ uint32_t Dynamic_Machine_State::read(::apache::thrift::protocol::TProtocol* ipro
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->static_states.clear();
-            uint32_t _size194;
-            ::apache::thrift::protocol::TType _etype197;
-            xfer += iprot->readListBegin(_etype197, _size194);
-            this->static_states.resize(_size194);
-            uint32_t _i198;
-            for (_i198 = 0; _i198 < _size194; ++_i198)
+            uint32_t _size208;
+            ::apache::thrift::protocol::TType _etype211;
+            xfer += iprot->readListBegin(_etype211, _size208);
+            this->static_states.resize(_size208);
+            uint32_t _i212;
+            for (_i212 = 0; _i212 < _size208; ++_i212)
             {
-              xfer += this->static_states[_i198].read(iprot);
+              xfer += this->static_states[_i212].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -3203,17 +3364,17 @@ uint32_t Dynamic_Machine_State::read(::apache::thrift::protocol::TProtocol* ipro
         if (ftype == ::apache::thrift::protocol::T_MAP) {
           {
             this->metadata.clear();
-            uint32_t _size199;
-            ::apache::thrift::protocol::TType _ktype200;
-            ::apache::thrift::protocol::TType _vtype201;
-            xfer += iprot->readMapBegin(_ktype200, _vtype201, _size199);
-            uint32_t _i203;
-            for (_i203 = 0; _i203 < _size199; ++_i203)
+            uint32_t _size213;
+            ::apache::thrift::protocol::TType _ktype214;
+            ::apache::thrift::protocol::TType _vtype215;
+            xfer += iprot->readMapBegin(_ktype214, _vtype215, _size213);
+            uint32_t _i217;
+            for (_i217 = 0; _i217 < _size213; ++_i217)
             {
-              std::string _key204;
-              xfer += iprot->readString(_key204);
-              std::string& _val205 = this->metadata[_key204];
-              xfer += iprot->readString(_val205);
+              std::string _key218;
+              xfer += iprot->readString(_key218);
+              std::string& _val219 = this->metadata[_key218];
+              xfer += iprot->readString(_val219);
             }
             xfer += iprot->readMapEnd();
           }
@@ -3258,10 +3419,10 @@ uint32_t Dynamic_Machine_State::write(::apache::thrift::protocol::TProtocol* opr
   xfer += oprot->writeFieldBegin("static_states", ::apache::thrift::protocol::T_LIST, 3);
   {
     xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->static_states.size()));
-    std::vector<Static_Machine_State> ::const_iterator _iter206;
-    for (_iter206 = this->static_states.begin(); _iter206 != this->static_states.end(); ++_iter206)
+    std::vector<Static_Machine_State> ::const_iterator _iter220;
+    for (_iter220 = this->static_states.begin(); _iter220 != this->static_states.end(); ++_iter220)
     {
-      xfer += (*_iter206).write(oprot);
+      xfer += (*_iter220).write(oprot);
     }
     xfer += oprot->writeListEnd();
   }
@@ -3270,11 +3431,11 @@ uint32_t Dynamic_Machine_State::write(::apache::thrift::protocol::TProtocol* opr
   xfer += oprot->writeFieldBegin("metadata", ::apache::thrift::protocol::T_MAP, 4);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->metadata.size()));
-    std::map<std::string, std::string> ::const_iterator _iter207;
-    for (_iter207 = this->metadata.begin(); _iter207 != this->metadata.end(); ++_iter207)
+    std::map<std::string, std::string> ::const_iterator _iter221;
+    for (_iter221 = this->metadata.begin(); _iter221 != this->metadata.end(); ++_iter221)
     {
-      xfer += oprot->writeString(_iter207->first);
-      xfer += oprot->writeString(_iter207->second);
+      xfer += oprot->writeString(_iter221->first);
+      xfer += oprot->writeString(_iter221->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -3293,17 +3454,17 @@ void swap(Dynamic_Machine_State &a, Dynamic_Machine_State &b) {
   swap(a.metadata, b.metadata);
 }
 
-Dynamic_Machine_State::Dynamic_Machine_State(const Dynamic_Machine_State& other208) {
-  BeamNumber = other208.BeamNumber;
-  FinalCumulativeMetersetWeight = other208.FinalCumulativeMetersetWeight;
-  static_states = other208.static_states;
-  metadata = other208.metadata;
+Dynamic_Machine_State::Dynamic_Machine_State(const Dynamic_Machine_State& other222) {
+  BeamNumber = other222.BeamNumber;
+  FinalCumulativeMetersetWeight = other222.FinalCumulativeMetersetWeight;
+  static_states = other222.static_states;
+  metadata = other222.metadata;
 }
-Dynamic_Machine_State& Dynamic_Machine_State::operator=(const Dynamic_Machine_State& other209) {
-  BeamNumber = other209.BeamNumber;
-  FinalCumulativeMetersetWeight = other209.FinalCumulativeMetersetWeight;
-  static_states = other209.static_states;
-  metadata = other209.metadata;
+Dynamic_Machine_State& Dynamic_Machine_State::operator=(const Dynamic_Machine_State& other223) {
+  BeamNumber = other223.BeamNumber;
+  FinalCumulativeMetersetWeight = other223.FinalCumulativeMetersetWeight;
+  static_states = other223.static_states;
+  metadata = other223.metadata;
   return *this;
 }
 void Dynamic_Machine_State::printTo(std::ostream& out) const {
@@ -3362,14 +3523,14 @@ uint32_t RTPlan::read(::apache::thrift::protocol::TProtocol* iprot) {
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->dynamic_states.clear();
-            uint32_t _size210;
-            ::apache::thrift::protocol::TType _etype213;
-            xfer += iprot->readListBegin(_etype213, _size210);
-            this->dynamic_states.resize(_size210);
-            uint32_t _i214;
-            for (_i214 = 0; _i214 < _size210; ++_i214)
+            uint32_t _size224;
+            ::apache::thrift::protocol::TType _etype227;
+            xfer += iprot->readListBegin(_etype227, _size224);
+            this->dynamic_states.resize(_size224);
+            uint32_t _i228;
+            for (_i228 = 0; _i228 < _size224; ++_i228)
             {
-              xfer += this->dynamic_states[_i214].read(iprot);
+              xfer += this->dynamic_states[_i228].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -3382,17 +3543,17 @@ uint32_t RTPlan::read(::apache::thrift::protocol::TProtocol* iprot) {
         if (ftype == ::apache::thrift::protocol::T_MAP) {
           {
             this->metadata.clear();
-            uint32_t _size215;
-            ::apache::thrift::protocol::TType _ktype216;
-            ::apache::thrift::protocol::TType _vtype217;
-            xfer += iprot->readMapBegin(_ktype216, _vtype217, _size215);
-            uint32_t _i219;
-            for (_i219 = 0; _i219 < _size215; ++_i219)
+            uint32_t _size229;
+            ::apache::thrift::protocol::TType _ktype230;
+            ::apache::thrift::protocol::TType _vtype231;
+            xfer += iprot->readMapBegin(_ktype230, _vtype231, _size229);
+            uint32_t _i233;
+            for (_i233 = 0; _i233 < _size229; ++_i233)
             {
-              std::string _key220;
-              xfer += iprot->readString(_key220);
-              std::string& _val221 = this->metadata[_key220];
-              xfer += iprot->readString(_val221);
+              std::string _key234;
+              xfer += iprot->readString(_key234);
+              std::string& _val235 = this->metadata[_key234];
+              xfer += iprot->readString(_val235);
             }
             xfer += iprot->readMapEnd();
           }
@@ -3425,10 +3586,10 @@ uint32_t RTPlan::write(::apache::thrift::protocol::TProtocol* oprot) const {
   xfer += oprot->writeFieldBegin("dynamic_states", ::apache::thrift::protocol::T_LIST, 1);
   {
     xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->dynamic_states.size()));
-    std::vector<Dynamic_Machine_State> ::const_iterator _iter222;
-    for (_iter222 = this->dynamic_states.begin(); _iter222 != this->dynamic_states.end(); ++_iter222)
+    std::vector<Dynamic_Machine_State> ::const_iterator _iter236;
+    for (_iter236 = this->dynamic_states.begin(); _iter236 != this->dynamic_states.end(); ++_iter236)
     {
-      xfer += (*_iter222).write(oprot);
+      xfer += (*_iter236).write(oprot);
     }
     xfer += oprot->writeListEnd();
   }
@@ -3437,11 +3598,11 @@ uint32_t RTPlan::write(::apache::thrift::protocol::TProtocol* oprot) const {
   xfer += oprot->writeFieldBegin("metadata", ::apache::thrift::protocol::T_MAP, 2);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->metadata.size()));
-    std::map<std::string, std::string> ::const_iterator _iter223;
-    for (_iter223 = this->metadata.begin(); _iter223 != this->metadata.end(); ++_iter223)
+    std::map<std::string, std::string> ::const_iterator _iter237;
+    for (_iter237 = this->metadata.begin(); _iter237 != this->metadata.end(); ++_iter237)
     {
-      xfer += oprot->writeString(_iter223->first);
-      xfer += oprot->writeString(_iter223->second);
+      xfer += oprot->writeString(_iter237->first);
+      xfer += oprot->writeString(_iter237->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -3458,13 +3619,13 @@ void swap(RTPlan &a, RTPlan &b) {
   swap(a.metadata, b.metadata);
 }
 
-RTPlan::RTPlan(const RTPlan& other224) {
-  dynamic_states = other224.dynamic_states;
-  metadata = other224.metadata;
+RTPlan::RTPlan(const RTPlan& other238) {
+  dynamic_states = other238.dynamic_states;
+  metadata = other238.metadata;
 }
-RTPlan& RTPlan::operator=(const RTPlan& other225) {
-  dynamic_states = other225.dynamic_states;
-  metadata = other225.metadata;
+RTPlan& RTPlan::operator=(const RTPlan& other239) {
+  dynamic_states = other239.dynamic_states;
+  metadata = other239.metadata;
   return *this;
 }
 void RTPlan::printTo(std::ostream& out) const {
@@ -3553,11 +3714,11 @@ void swap(Line_Sample &a, Line_Sample &b) {
   swap(a.line, b.line);
 }
 
-Line_Sample::Line_Sample(const Line_Sample& other226) {
-  line = other226.line;
+Line_Sample::Line_Sample(const Line_Sample& other240) {
+  line = other240.line;
 }
-Line_Sample& Line_Sample::operator=(const Line_Sample& other227) {
-  line = other227.line;
+Line_Sample& Line_Sample::operator=(const Line_Sample& other241) {
+  line = other241.line;
   return *this;
 }
 void Line_Sample::printTo(std::ostream& out) const {
@@ -3622,11 +3783,11 @@ void swap(Transform3 &a, Transform3 &b) {
   (void) b;
 }
 
-Transform3::Transform3(const Transform3& other228) noexcept {
-  (void) other228;
+Transform3::Transform3(const Transform3& other242) noexcept {
+  (void) other242;
 }
-Transform3& Transform3::operator=(const Transform3& other229) noexcept {
-  (void) other229;
+Transform3& Transform3::operator=(const Transform3& other243) noexcept {
+  (void) other243;
   return *this;
 }
 void Transform3::printTo(std::ostream& out) const {
@@ -3713,11 +3874,11 @@ void swap(Sparse_Table &a, Sparse_Table &b) {
   swap(a.table, b.table);
 }
 
-Sparse_Table::Sparse_Table(const Sparse_Table& other230) noexcept {
-  table = other230.table;
+Sparse_Table::Sparse_Table(const Sparse_Table& other244) {
+  table = other244.table;
 }
-Sparse_Table& Sparse_Table::operator=(const Sparse_Table& other231) noexcept {
-  table = other231.table;
+Sparse_Table& Sparse_Table::operator=(const Sparse_Table& other245) {
+  table = other245.table;
   return *this;
 }
 void Sparse_Table::printTo(std::ostream& out) const {
@@ -3803,14 +3964,14 @@ uint32_t Drover::read(::apache::thrift::protocol::TProtocol* iprot) {
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->contour_data.clear();
-            uint32_t _size232;
-            ::apache::thrift::protocol::TType _etype235;
-            xfer += iprot->readListBegin(_etype235, _size232);
-            this->contour_data.resize(_size232);
-            uint32_t _i236;
-            for (_i236 = 0; _i236 < _size232; ++_i236)
+            uint32_t _size246;
+            ::apache::thrift::protocol::TType _etype249;
+            xfer += iprot->readListBegin(_etype249, _size246);
+            this->contour_data.resize(_size246);
+            uint32_t _i250;
+            for (_i250 = 0; _i250 < _size246; ++_i250)
             {
-              xfer += this->contour_data[_i236].read(iprot);
+              xfer += this->contour_data[_i250].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -3823,14 +3984,14 @@ uint32_t Drover::read(::apache::thrift::protocol::TProtocol* iprot) {
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->image_data.clear();
-            uint32_t _size237;
-            ::apache::thrift::protocol::TType _etype240;
-            xfer += iprot->readListBegin(_etype240, _size237);
-            this->image_data.resize(_size237);
-            uint32_t _i241;
-            for (_i241 = 0; _i241 < _size237; ++_i241)
+            uint32_t _size251;
+            ::apache::thrift::protocol::TType _etype254;
+            xfer += iprot->readListBegin(_etype254, _size251);
+            this->image_data.resize(_size251);
+            uint32_t _i255;
+            for (_i255 = 0; _i255 < _size251; ++_i255)
             {
-              xfer += this->image_data[_i241].read(iprot);
+              xfer += this->image_data[_i255].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -3843,14 +4004,14 @@ uint32_t Drover::read(::apache::thrift::protocol::TProtocol* iprot) {
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->point_data.clear();
-            uint32_t _size242;
-            ::apache::thrift::protocol::TType _etype245;
-            xfer += iprot->readListBegin(_etype245, _size242);
-            this->point_data.resize(_size242);
-            uint32_t _i246;
-            for (_i246 = 0; _i246 < _size242; ++_i246)
+            uint32_t _size256;
+            ::apache::thrift::protocol::TType _etype259;
+            xfer += iprot->readListBegin(_etype259, _size256);
+            this->point_data.resize(_size256);
+            uint32_t _i260;
+            for (_i260 = 0; _i260 < _size256; ++_i260)
             {
-              xfer += this->point_data[_i246].read(iprot);
+              xfer += this->point_data[_i260].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -3863,14 +4024,14 @@ uint32_t Drover::read(::apache::thrift::protocol::TProtocol* iprot) {
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->smesh_data.clear();
-            uint32_t _size247;
-            ::apache::thrift::protocol::TType _etype250;
-            xfer += iprot->readListBegin(_etype250, _size247);
-            this->smesh_data.resize(_size247);
-            uint32_t _i251;
-            for (_i251 = 0; _i251 < _size247; ++_i251)
+            uint32_t _size261;
+            ::apache::thrift::protocol::TType _etype264;
+            xfer += iprot->readListBegin(_etype264, _size261);
+            this->smesh_data.resize(_size261);
+            uint32_t _i265;
+            for (_i265 = 0; _i265 < _size261; ++_i265)
             {
-              xfer += this->smesh_data[_i251].read(iprot);
+              xfer += this->smesh_data[_i265].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -3883,14 +4044,14 @@ uint32_t Drover::read(::apache::thrift::protocol::TProtocol* iprot) {
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->rtplan_data.clear();
-            uint32_t _size252;
-            ::apache::thrift::protocol::TType _etype255;
-            xfer += iprot->readListBegin(_etype255, _size252);
-            this->rtplan_data.resize(_size252);
-            uint32_t _i256;
-            for (_i256 = 0; _i256 < _size252; ++_i256)
+            uint32_t _size266;
+            ::apache::thrift::protocol::TType _etype269;
+            xfer += iprot->readListBegin(_etype269, _size266);
+            this->rtplan_data.resize(_size266);
+            uint32_t _i270;
+            for (_i270 = 0; _i270 < _size266; ++_i270)
             {
-              xfer += this->rtplan_data[_i256].read(iprot);
+              xfer += this->rtplan_data[_i270].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -3903,14 +4064,14 @@ uint32_t Drover::read(::apache::thrift::protocol::TProtocol* iprot) {
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->lsamp_data.clear();
-            uint32_t _size257;
-            ::apache::thrift::protocol::TType _etype260;
-            xfer += iprot->readListBegin(_etype260, _size257);
-            this->lsamp_data.resize(_size257);
-            uint32_t _i261;
-            for (_i261 = 0; _i261 < _size257; ++_i261)
+            uint32_t _size271;
+            ::apache::thrift::protocol::TType _etype274;
+            xfer += iprot->readListBegin(_etype274, _size271);
+            this->lsamp_data.resize(_size271);
+            uint32_t _i275;
+            for (_i275 = 0; _i275 < _size271; ++_i275)
             {
-              xfer += this->lsamp_data[_i261].read(iprot);
+              xfer += this->lsamp_data[_i275].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -3923,14 +4084,14 @@ uint32_t Drover::read(::apache::thrift::protocol::TProtocol* iprot) {
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->trans_data.clear();
-            uint32_t _size262;
-            ::apache::thrift::protocol::TType _etype265;
-            xfer += iprot->readListBegin(_etype265, _size262);
-            this->trans_data.resize(_size262);
-            uint32_t _i266;
-            for (_i266 = 0; _i266 < _size262; ++_i266)
+            uint32_t _size276;
+            ::apache::thrift::protocol::TType _etype279;
+            xfer += iprot->readListBegin(_etype279, _size276);
+            this->trans_data.resize(_size276);
+            uint32_t _i280;
+            for (_i280 = 0; _i280 < _size276; ++_i280)
             {
-              xfer += this->trans_data[_i266].read(iprot);
+              xfer += this->trans_data[_i280].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -3943,14 +4104,14 @@ uint32_t Drover::read(::apache::thrift::protocol::TProtocol* iprot) {
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->table_data.clear();
-            uint32_t _size267;
-            ::apache::thrift::protocol::TType _etype270;
-            xfer += iprot->readListBegin(_etype270, _size267);
-            this->table_data.resize(_size267);
-            uint32_t _i271;
-            for (_i271 = 0; _i271 < _size267; ++_i271)
+            uint32_t _size281;
+            ::apache::thrift::protocol::TType _etype284;
+            xfer += iprot->readListBegin(_etype284, _size281);
+            this->table_data.resize(_size281);
+            uint32_t _i285;
+            for (_i285 = 0; _i285 < _size281; ++_i285)
             {
-              xfer += this->table_data[_i271].read(iprot);
+              xfer += this->table_data[_i285].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -3980,10 +4141,10 @@ uint32_t Drover::write(::apache::thrift::protocol::TProtocol* oprot) const {
     xfer += oprot->writeFieldBegin("contour_data", ::apache::thrift::protocol::T_LIST, 1);
     {
       xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->contour_data.size()));
-      std::vector<Contour_Data> ::const_iterator _iter272;
-      for (_iter272 = this->contour_data.begin(); _iter272 != this->contour_data.end(); ++_iter272)
+      std::vector<Contour_Data> ::const_iterator _iter286;
+      for (_iter286 = this->contour_data.begin(); _iter286 != this->contour_data.end(); ++_iter286)
       {
-        xfer += (*_iter272).write(oprot);
+        xfer += (*_iter286).write(oprot);
       }
       xfer += oprot->writeListEnd();
     }
@@ -3993,10 +4154,10 @@ uint32_t Drover::write(::apache::thrift::protocol::TProtocol* oprot) const {
     xfer += oprot->writeFieldBegin("image_data", ::apache::thrift::protocol::T_LIST, 2);
     {
       xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->image_data.size()));
-      std::vector<Image_Array> ::const_iterator _iter273;
-      for (_iter273 = this->image_data.begin(); _iter273 != this->image_data.end(); ++_iter273)
+      std::vector<Image_Array> ::const_iterator _iter287;
+      for (_iter287 = this->image_data.begin(); _iter287 != this->image_data.end(); ++_iter287)
       {
-        xfer += (*_iter273).write(oprot);
+        xfer += (*_iter287).write(oprot);
       }
       xfer += oprot->writeListEnd();
     }
@@ -4006,10 +4167,10 @@ uint32_t Drover::write(::apache::thrift::protocol::TProtocol* oprot) const {
     xfer += oprot->writeFieldBegin("point_data", ::apache::thrift::protocol::T_LIST, 3);
     {
       xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->point_data.size()));
-      std::vector<Point_Cloud> ::const_iterator _iter274;
-      for (_iter274 = this->point_data.begin(); _iter274 != this->point_data.end(); ++_iter274)
+      std::vector<Point_Cloud> ::const_iterator _iter288;
+      for (_iter288 = this->point_data.begin(); _iter288 != this->point_data.end(); ++_iter288)
       {
-        xfer += (*_iter274).write(oprot);
+        xfer += (*_iter288).write(oprot);
       }
       xfer += oprot->writeListEnd();
     }
@@ -4019,10 +4180,10 @@ uint32_t Drover::write(::apache::thrift::protocol::TProtocol* oprot) const {
     xfer += oprot->writeFieldBegin("smesh_data", ::apache::thrift::protocol::T_LIST, 4);
     {
       xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->smesh_data.size()));
-      std::vector<Surface_Mesh> ::const_iterator _iter275;
-      for (_iter275 = this->smesh_data.begin(); _iter275 != this->smesh_data.end(); ++_iter275)
+      std::vector<Surface_Mesh> ::const_iterator _iter289;
+      for (_iter289 = this->smesh_data.begin(); _iter289 != this->smesh_data.end(); ++_iter289)
       {
-        xfer += (*_iter275).write(oprot);
+        xfer += (*_iter289).write(oprot);
       }
       xfer += oprot->writeListEnd();
     }
@@ -4032,10 +4193,10 @@ uint32_t Drover::write(::apache::thrift::protocol::TProtocol* oprot) const {
     xfer += oprot->writeFieldBegin("rtplan_data", ::apache::thrift::protocol::T_LIST, 5);
     {
       xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->rtplan_data.size()));
-      std::vector<RTPlan> ::const_iterator _iter276;
-      for (_iter276 = this->rtplan_data.begin(); _iter276 != this->rtplan_data.end(); ++_iter276)
+      std::vector<RTPlan> ::const_iterator _iter290;
+      for (_iter290 = this->rtplan_data.begin(); _iter290 != this->rtplan_data.end(); ++_iter290)
       {
-        xfer += (*_iter276).write(oprot);
+        xfer += (*_iter290).write(oprot);
       }
       xfer += oprot->writeListEnd();
     }
@@ -4045,10 +4206,10 @@ uint32_t Drover::write(::apache::thrift::protocol::TProtocol* oprot) const {
     xfer += oprot->writeFieldBegin("lsamp_data", ::apache::thrift::protocol::T_LIST, 6);
     {
       xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->lsamp_data.size()));
-      std::vector<Line_Sample> ::const_iterator _iter277;
-      for (_iter277 = this->lsamp_data.begin(); _iter277 != this->lsamp_data.end(); ++_iter277)
+      std::vector<Line_Sample> ::const_iterator _iter291;
+      for (_iter291 = this->lsamp_data.begin(); _iter291 != this->lsamp_data.end(); ++_iter291)
       {
-        xfer += (*_iter277).write(oprot);
+        xfer += (*_iter291).write(oprot);
       }
       xfer += oprot->writeListEnd();
     }
@@ -4058,10 +4219,10 @@ uint32_t Drover::write(::apache::thrift::protocol::TProtocol* oprot) const {
     xfer += oprot->writeFieldBegin("trans_data", ::apache::thrift::protocol::T_LIST, 7);
     {
       xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->trans_data.size()));
-      std::vector<Transform3> ::const_iterator _iter278;
-      for (_iter278 = this->trans_data.begin(); _iter278 != this->trans_data.end(); ++_iter278)
+      std::vector<Transform3> ::const_iterator _iter292;
+      for (_iter292 = this->trans_data.begin(); _iter292 != this->trans_data.end(); ++_iter292)
       {
-        xfer += (*_iter278).write(oprot);
+        xfer += (*_iter292).write(oprot);
       }
       xfer += oprot->writeListEnd();
     }
@@ -4071,10 +4232,10 @@ uint32_t Drover::write(::apache::thrift::protocol::TProtocol* oprot) const {
     xfer += oprot->writeFieldBegin("table_data", ::apache::thrift::protocol::T_LIST, 8);
     {
       xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->table_data.size()));
-      std::vector<Sparse_Table> ::const_iterator _iter279;
-      for (_iter279 = this->table_data.begin(); _iter279 != this->table_data.end(); ++_iter279)
+      std::vector<Sparse_Table> ::const_iterator _iter293;
+      for (_iter293 = this->table_data.begin(); _iter293 != this->table_data.end(); ++_iter293)
       {
-        xfer += (*_iter279).write(oprot);
+        xfer += (*_iter293).write(oprot);
       }
       xfer += oprot->writeListEnd();
     }
@@ -4098,27 +4259,27 @@ void swap(Drover &a, Drover &b) {
   swap(a.__isset, b.__isset);
 }
 
-Drover::Drover(const Drover& other280) {
-  contour_data = other280.contour_data;
-  image_data = other280.image_data;
-  point_data = other280.point_data;
-  smesh_data = other280.smesh_data;
-  rtplan_data = other280.rtplan_data;
-  lsamp_data = other280.lsamp_data;
-  trans_data = other280.trans_data;
-  table_data = other280.table_data;
-  __isset = other280.__isset;
+Drover::Drover(const Drover& other294) {
+  contour_data = other294.contour_data;
+  image_data = other294.image_data;
+  point_data = other294.point_data;
+  smesh_data = other294.smesh_data;
+  rtplan_data = other294.rtplan_data;
+  lsamp_data = other294.lsamp_data;
+  trans_data = other294.trans_data;
+  table_data = other294.table_data;
+  __isset = other294.__isset;
 }
-Drover& Drover::operator=(const Drover& other281) {
-  contour_data = other281.contour_data;
-  image_data = other281.image_data;
-  point_data = other281.point_data;
-  smesh_data = other281.smesh_data;
-  rtplan_data = other281.rtplan_data;
-  lsamp_data = other281.lsamp_data;
-  trans_data = other281.trans_data;
-  table_data = other281.table_data;
-  __isset = other281.__isset;
+Drover& Drover::operator=(const Drover& other295) {
+  contour_data = other295.contour_data;
+  image_data = other295.image_data;
+  point_data = other295.point_data;
+  smesh_data = other295.smesh_data;
+  rtplan_data = other295.rtplan_data;
+  lsamp_data = other295.lsamp_data;
+  trans_data = other295.trans_data;
+  table_data = other295.table_data;
+  __isset = other295.__isset;
   return *this;
 }
 void Drover::printTo(std::ostream& out) const {
@@ -4190,11 +4351,11 @@ void swap(OperationsQuery &a, OperationsQuery &b) {
   (void) b;
 }
 
-OperationsQuery::OperationsQuery(const OperationsQuery& other282) noexcept {
-  (void) other282;
+OperationsQuery::OperationsQuery(const OperationsQuery& other296) noexcept {
+  (void) other296;
 }
-OperationsQuery& OperationsQuery::operator=(const OperationsQuery& other283) noexcept {
-  (void) other283;
+OperationsQuery& OperationsQuery::operator=(const OperationsQuery& other297) noexcept {
+  (void) other297;
   return *this;
 }
 void OperationsQuery::printTo(std::ostream& out) const {
@@ -4281,11 +4442,11 @@ void swap(KnownOperation &a, KnownOperation &b) {
   swap(a.name, b.name);
 }
 
-KnownOperation::KnownOperation(const KnownOperation& other284) {
-  name = other284.name;
+KnownOperation::KnownOperation(const KnownOperation& other298) {
+  name = other298.name;
 }
-KnownOperation& KnownOperation::operator=(const KnownOperation& other285) {
-  name = other285.name;
+KnownOperation& KnownOperation::operator=(const KnownOperation& other299) {
+  name = other299.name;
   return *this;
 }
 void KnownOperation::printTo(std::ostream& out) const {
@@ -4373,11 +4534,11 @@ void swap(LoadFilesQuery &a, LoadFilesQuery &b) {
   swap(a.server_filename, b.server_filename);
 }
 
-LoadFilesQuery::LoadFilesQuery(const LoadFilesQuery& other286) {
-  server_filename = other286.server_filename;
+LoadFilesQuery::LoadFilesQuery(const LoadFilesQuery& other300) {
+  server_filename = other300.server_filename;
 }
-LoadFilesQuery& LoadFilesQuery::operator=(const LoadFilesQuery& other287) {
-  server_filename = other287.server_filename;
+LoadFilesQuery& LoadFilesQuery::operator=(const LoadFilesQuery& other301) {
+  server_filename = other301.server_filename;
   return *this;
 }
 void LoadFilesQuery::printTo(std::ostream& out) const {
@@ -4485,15 +4646,15 @@ void swap(LoadFilesResponse &a, LoadFilesResponse &b) {
   swap(a.__isset, b.__isset);
 }
 
-LoadFilesResponse::LoadFilesResponse(const LoadFilesResponse& other288) {
-  success = other288.success;
-  drover = other288.drover;
-  __isset = other288.__isset;
+LoadFilesResponse::LoadFilesResponse(const LoadFilesResponse& other302) {
+  success = other302.success;
+  drover = other302.drover;
+  __isset = other302.__isset;
 }
-LoadFilesResponse& LoadFilesResponse::operator=(const LoadFilesResponse& other289) {
-  success = other289.success;
-  drover = other289.drover;
-  __isset = other289.__isset;
+LoadFilesResponse& LoadFilesResponse::operator=(const LoadFilesResponse& other303) {
+  success = other303.success;
+  drover = other303.drover;
+  __isset = other303.__isset;
   return *this;
 }
 void LoadFilesResponse::printTo(std::ostream& out) const {
@@ -4563,17 +4724,17 @@ uint32_t ExecuteScriptQuery::read(::apache::thrift::protocol::TProtocol* iprot) 
         if (ftype == ::apache::thrift::protocol::T_MAP) {
           {
             this->invocation_metadata.clear();
-            uint32_t _size290;
-            ::apache::thrift::protocol::TType _ktype291;
-            ::apache::thrift::protocol::TType _vtype292;
-            xfer += iprot->readMapBegin(_ktype291, _vtype292, _size290);
-            uint32_t _i294;
-            for (_i294 = 0; _i294 < _size290; ++_i294)
+            uint32_t _size304;
+            ::apache::thrift::protocol::TType _ktype305;
+            ::apache::thrift::protocol::TType _vtype306;
+            xfer += iprot->readMapBegin(_ktype305, _vtype306, _size304);
+            uint32_t _i308;
+            for (_i308 = 0; _i308 < _size304; ++_i308)
             {
-              std::string _key295;
-              xfer += iprot->readString(_key295);
-              std::string& _val296 = this->invocation_metadata[_key295];
-              xfer += iprot->readString(_val296);
+              std::string _key309;
+              xfer += iprot->readString(_key309);
+              std::string& _val310 = this->invocation_metadata[_key309];
+              xfer += iprot->readString(_val310);
             }
             xfer += iprot->readMapEnd();
           }
@@ -4620,11 +4781,11 @@ uint32_t ExecuteScriptQuery::write(::apache::thrift::protocol::TProtocol* oprot)
   xfer += oprot->writeFieldBegin("invocation_metadata", ::apache::thrift::protocol::T_MAP, 2);
   {
     xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->invocation_metadata.size()));
-    std::map<std::string, std::string> ::const_iterator _iter297;
-    for (_iter297 = this->invocation_metadata.begin(); _iter297 != this->invocation_metadata.end(); ++_iter297)
+    std::map<std::string, std::string> ::const_iterator _iter311;
+    for (_iter311 = this->invocation_metadata.begin(); _iter311 != this->invocation_metadata.end(); ++_iter311)
     {
-      xfer += oprot->writeString(_iter297->first);
-      xfer += oprot->writeString(_iter297->second);
+      xfer += oprot->writeString(_iter311->first);
+      xfer += oprot->writeString(_iter311->second);
     }
     xfer += oprot->writeMapEnd();
   }
@@ -4646,15 +4807,15 @@ void swap(ExecuteScriptQuery &a, ExecuteScriptQuery &b) {
   swap(a.filename_lex, b.filename_lex);
 }
 
-ExecuteScriptQuery::ExecuteScriptQuery(const ExecuteScriptQuery& other298) {
-  drover = other298.drover;
-  invocation_metadata = other298.invocation_metadata;
-  filename_lex = other298.filename_lex;
+ExecuteScriptQuery::ExecuteScriptQuery(const ExecuteScriptQuery& other312) {
+  drover = other312.drover;
+  invocation_metadata = other312.invocation_metadata;
+  filename_lex = other312.filename_lex;
 }
-ExecuteScriptQuery& ExecuteScriptQuery::operator=(const ExecuteScriptQuery& other299) {
-  drover = other299.drover;
-  invocation_metadata = other299.invocation_metadata;
-  filename_lex = other299.filename_lex;
+ExecuteScriptQuery& ExecuteScriptQuery::operator=(const ExecuteScriptQuery& other313) {
+  drover = other313.drover;
+  invocation_metadata = other313.invocation_metadata;
+  filename_lex = other313.filename_lex;
   return *this;
 }
 void ExecuteScriptQuery::printTo(std::ostream& out) const {
@@ -4738,17 +4899,17 @@ uint32_t ExecuteScriptResponse::read(::apache::thrift::protocol::TProtocol* ipro
         if (ftype == ::apache::thrift::protocol::T_MAP) {
           {
             this->invocation_metadata.clear();
-            uint32_t _size300;
-            ::apache::thrift::protocol::TType _ktype301;
-            ::apache::thrift::protocol::TType _vtype302;
-            xfer += iprot->readMapBegin(_ktype301, _vtype302, _size300);
-            uint32_t _i304;
-            for (_i304 = 0; _i304 < _size300; ++_i304)
+            uint32_t _size314;
+            ::apache::thrift::protocol::TType _ktype315;
+            ::apache::thrift::protocol::TType _vtype316;
+            xfer += iprot->readMapBegin(_ktype315, _vtype316, _size314);
+            uint32_t _i318;
+            for (_i318 = 0; _i318 < _size314; ++_i318)
             {
-              std::string _key305;
-              xfer += iprot->readString(_key305);
-              std::string& _val306 = this->invocation_metadata[_key305];
-              xfer += iprot->readString(_val306);
+              std::string _key319;
+              xfer += iprot->readString(_key319);
+              std::string& _val320 = this->invocation_metadata[_key319];
+              xfer += iprot->readString(_val320);
             }
             xfer += iprot->readMapEnd();
           }
@@ -4797,11 +4958,11 @@ uint32_t ExecuteScriptResponse::write(::apache::thrift::protocol::TProtocol* opr
     xfer += oprot->writeFieldBegin("invocation_metadata", ::apache::thrift::protocol::T_MAP, 3);
     {
       xfer += oprot->writeMapBegin(::apache::thrift::protocol::T_STRING, ::apache::thrift::protocol::T_STRING, static_cast<uint32_t>(this->invocation_metadata.size()));
-      std::map<std::string, std::string> ::const_iterator _iter307;
-      for (_iter307 = this->invocation_metadata.begin(); _iter307 != this->invocation_metadata.end(); ++_iter307)
+      std::map<std::string, std::string> ::const_iterator _iter321;
+      for (_iter321 = this->invocation_metadata.begin(); _iter321 != this->invocation_metadata.end(); ++_iter321)
       {
-        xfer += oprot->writeString(_iter307->first);
-        xfer += oprot->writeString(_iter307->second);
+        xfer += oprot->writeString(_iter321->first);
+        xfer += oprot->writeString(_iter321->second);
       }
       xfer += oprot->writeMapEnd();
     }
@@ -4826,19 +4987,19 @@ void swap(ExecuteScriptResponse &a, ExecuteScriptResponse &b) {
   swap(a.__isset, b.__isset);
 }
 
-ExecuteScriptResponse::ExecuteScriptResponse(const ExecuteScriptResponse& other308) {
-  success = other308.success;
-  drover = other308.drover;
-  invocation_metadata = other308.invocation_metadata;
-  filename_lex = other308.filename_lex;
-  __isset = other308.__isset;
+ExecuteScriptResponse::ExecuteScriptResponse(const ExecuteScriptResponse& other322) {
+  success = other322.success;
+  drover = other322.drover;
+  invocation_metadata = other322.invocation_metadata;
+  filename_lex = other322.filename_lex;
+  __isset = other322.__isset;
 }
-ExecuteScriptResponse& ExecuteScriptResponse::operator=(const ExecuteScriptResponse& other309) {
-  success = other309.success;
-  drover = other309.drover;
-  invocation_metadata = other309.invocation_metadata;
-  filename_lex = other309.filename_lex;
-  __isset = other309.__isset;
+ExecuteScriptResponse& ExecuteScriptResponse::operator=(const ExecuteScriptResponse& other323) {
+  success = other323.success;
+  drover = other323.drover;
+  invocation_metadata = other323.invocation_metadata;
+  filename_lex = other323.filename_lex;
+  __isset = other323.__isset;
   return *this;
 }
 void ExecuteScriptResponse::printTo(std::ostream& out) const {

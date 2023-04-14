@@ -59,6 +59,13 @@ static void Deserialize( const bool &in, bool &out ){
     out = in;
 }
 
+static void Serialize( const std::string &in, std::string &out ){
+    out = in;
+}
+static void Deserialize( const std::string &in, std::string &out ){
+    out = in;
+}
+
 static void Serialize( const uint32_t &in, int64_t &out ){
     // Warning: conversion from uint32_t to int64_t. (Thrift does not have uint32_t.)
     out = static_cast<int64_t>(in);
@@ -265,7 +272,7 @@ void Serialize( const planar_image<float,double> &in, dcma::rpc::planar_image_do
                                                   + sizeof(decltype(in.channels))
                                                 :   sizeof(decltype(in.rows))
                                                   + sizeof(decltype(in.columns))
-                                                  + sizeof(decltype(in.channels) * 2))
+                                                  + sizeof(decltype(in.channels)) * 2)
                      + sizeof(decltype(in.pxl_dx))
                      + sizeof(decltype(in.pxl_dy))
                      + sizeof(decltype(in.pxl_dz))
@@ -313,14 +320,48 @@ void Deserialize( const dcma::rpc::planar_image_collection_double_double &in, pl
     DESERIALIZE_CONTAINER(in.images, out.images);
 }
 
-//// --------------------------------------------------------------------
-//// DICOMautomaton classes -- Tables.h.
-//// --------------------------------------------------------------------
-//void Serialize( const tables::cell<std::string> &in, dcma::rpc::cell_string &out );
-//void Deserialize( const dcma::rpc::cell_string &in, tables::cell<std::string> &out );
-//
-//void Serialize( const tables::table2 &in, dcma::rpc::table2 &out );
-//void Deserialize( const dcma::rpc::table2 &in, tables::table2 &out );
+// --------------------------------------------------------------------
+// DICOMautomaton classes -- Tables.h.
+// --------------------------------------------------------------------
+// tables::cell<std::string>
+// and
+// tables::table2
+void Serialize( const tables::table2 &in, dcma::rpc::table2 &out ){
+    // Note: cells have private rows and columns that need to be provided at the time of construction. To simplify
+    // access, we serialize and deserialize them inline here.
+    //
+    // tables::cell<std::string>
+    static_assert( (   sizeof(decltype(tables::cell<std::string>().get_row()))
+                     + sizeof(decltype(tables::cell<std::string>().get_col()))
+                     + sizeof(decltype(tables::cell<std::string>().val)) ) == sizeof(tables::cell<std::string>),
+                   "Class layout is unexpected. Were members added?" );
+    // tables::table2
+    static_assert( (   sizeof(decltype(in.data))  
+                     + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
+                   "Class layout is unexpected. Were members added?" );
+
+    for(const auto &c : in.data){
+        out.data.emplace_back();
+        Serialize(c.get_row(), out.data.back().row);
+        Serialize(c.get_col(), out.data.back().col);
+        Serialize(c.val,       out.data.back().val);
+    }
+    Serialize(in.metadata, out.metadata);
+}
+void Deserialize( const dcma::rpc::table2 &in, tables::table2 &out ){
+    for(const auto &c : in.data){
+        int64_t l_row;
+        int64_t l_col;
+        std::string l_val;
+
+        Deserialize( c.row, l_row );
+        Deserialize( c.col, l_col );
+        Deserialize( c.val, l_val );
+
+        out.inject( l_row, l_col, l_val );
+    }
+    Deserialize(in.metadata, out.metadata);
+}
 
 // --------------------------------------------------------------------
 // DICOMautomaton classes -- Structs.h.

@@ -883,7 +883,9 @@ function planar_image_collection_double_double:write(oprot)
 end
 
 cell_string = __TObject:new{
-
+  row,
+  col,
+  val
 }
 
 function cell_string:read(iprot)
@@ -892,6 +894,24 @@ function cell_string:read(iprot)
     local fname, ftype, fid = iprot:readFieldBegin()
     if ftype == TType.STOP then
       break
+    elseif fid == 1 then
+      if ftype == TType.I64 then
+        self.row = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.I64 then
+        self.col = iprot:readI64()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 3 then
+      if ftype == TType.STRING then
+        self.val = iprot:readString()
+      else
+        iprot:skip(ftype)
+      end
     else
       iprot:skip(ftype)
     end
@@ -902,12 +922,28 @@ end
 
 function cell_string:write(oprot)
   oprot:writeStructBegin('cell_string')
+  if self.row ~= nil then
+    oprot:writeFieldBegin('row', TType.I64, 1)
+    oprot:writeI64(self.row)
+    oprot:writeFieldEnd()
+  end
+  if self.col ~= nil then
+    oprot:writeFieldBegin('col', TType.I64, 2)
+    oprot:writeI64(self.col)
+    oprot:writeFieldEnd()
+  end
+  if self.val ~= nil then
+    oprot:writeFieldBegin('val', TType.STRING, 3)
+    oprot:writeString(self.val)
+    oprot:writeFieldEnd()
+  end
   oprot:writeFieldStop()
   oprot:writeStructEnd()
 end
 
 table2 = __TObject:new{
-
+  data,
+  metadata
 }
 
 function table2:read(iprot)
@@ -916,6 +952,32 @@ function table2:read(iprot)
     local fname, ftype, fid = iprot:readFieldBegin()
     if ftype == TType.STOP then
       break
+    elseif fid == 1 then
+      if ftype == TType.LIST then
+        self.data = {}
+        local _etype133, _size130 = iprot:readListBegin()
+        for _i=1,_size130 do
+          local _elem134 = cell_string:new{}
+          _elem134:read(iprot)
+          table.insert(self.data, _elem134)
+        end
+        iprot:readListEnd()
+      else
+        iprot:skip(ftype)
+      end
+    elseif fid == 2 then
+      if ftype == TType.MAP then
+        self.metadata = {}
+        local _ktype136, _vtype137, _size135 = iprot:readMapBegin() 
+        for _i=1,_size135 do
+          local _key139 = iprot:readString()
+          local _val140 = iprot:readString()
+          self.metadata[_key139] = _val140
+        end
+        iprot:readMapEnd()
+      else
+        iprot:skip(ftype)
+      end
     else
       iprot:skip(ftype)
     end
@@ -926,6 +988,25 @@ end
 
 function table2:write(oprot)
   oprot:writeStructBegin('table2')
+  if self.data ~= nil then
+    oprot:writeFieldBegin('data', TType.LIST, 1)
+    oprot:writeListBegin(TType.STRUCT, #self.data)
+    for _,iter141 in ipairs(self.data) do
+      iter141:write(oprot)
+    end
+    oprot:writeListEnd()
+    oprot:writeFieldEnd()
+  end
+  if self.metadata ~= nil then
+    oprot:writeFieldBegin('metadata', TType.MAP, 2)
+    oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.metadata))
+    for kiter142,viter143 in pairs(self.metadata) do
+      oprot:writeString(kiter142)
+      oprot:writeString(viter143)
+    end
+    oprot:writeMapEnd()
+    oprot:writeFieldEnd()
+  end
   oprot:writeFieldStop()
   oprot:writeStructEnd()
 end
@@ -943,11 +1024,11 @@ function Contour_Data:read(iprot)
     elseif fid == 1 then
       if ftype == TType.LIST then
         self.ccs = {}
-        local _etype133, _size130 = iprot:readListBegin()
-        for _i=1,_size130 do
-          local _elem134 = contour_collection_double:new{}
-          _elem134:read(iprot)
-          table.insert(self.ccs, _elem134)
+        local _etype147, _size144 = iprot:readListBegin()
+        for _i=1,_size144 do
+          local _elem148 = contour_collection_double:new{}
+          _elem148:read(iprot)
+          table.insert(self.ccs, _elem148)
         end
         iprot:readListEnd()
       else
@@ -966,8 +1047,8 @@ function Contour_Data:write(oprot)
   if self.ccs ~= nil then
     oprot:writeFieldBegin('ccs', TType.LIST, 1)
     oprot:writeListBegin(TType.STRUCT, #self.ccs)
-    for _,iter135 in ipairs(self.ccs) do
-      iter135:write(oprot)
+    for _,iter149 in ipairs(self.ccs) do
+      iter149:write(oprot)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -1239,10 +1320,10 @@ function Static_Machine_State:read(iprot)
     elseif fid == 19 then
       if ftype == TType.LIST then
         self.JawPositionsX = {}
-        local _etype139, _size136 = iprot:readListBegin()
-        for _i=1,_size136 do
-          local _elem140 = iprot:readDouble()
-          table.insert(self.JawPositionsX, _elem140)
+        local _etype153, _size150 = iprot:readListBegin()
+        for _i=1,_size150 do
+          local _elem154 = iprot:readDouble()
+          table.insert(self.JawPositionsX, _elem154)
         end
         iprot:readListEnd()
       else
@@ -1251,10 +1332,10 @@ function Static_Machine_State:read(iprot)
     elseif fid == 20 then
       if ftype == TType.LIST then
         self.JawPositionsY = {}
-        local _etype144, _size141 = iprot:readListBegin()
-        for _i=1,_size141 do
-          local _elem145 = iprot:readDouble()
-          table.insert(self.JawPositionsY, _elem145)
+        local _etype158, _size155 = iprot:readListBegin()
+        for _i=1,_size155 do
+          local _elem159 = iprot:readDouble()
+          table.insert(self.JawPositionsY, _elem159)
         end
         iprot:readListEnd()
       else
@@ -1263,10 +1344,10 @@ function Static_Machine_State:read(iprot)
     elseif fid == 21 then
       if ftype == TType.LIST then
         self.MLCPositionsX = {}
-        local _etype149, _size146 = iprot:readListBegin()
-        for _i=1,_size146 do
-          local _elem150 = iprot:readDouble()
-          table.insert(self.MLCPositionsX, _elem150)
+        local _etype163, _size160 = iprot:readListBegin()
+        for _i=1,_size160 do
+          local _elem164 = iprot:readDouble()
+          table.insert(self.MLCPositionsX, _elem164)
         end
         iprot:readListEnd()
       else
@@ -1275,11 +1356,11 @@ function Static_Machine_State:read(iprot)
     elseif fid == 22 then
       if ftype == TType.MAP then
         self.metadata = {}
-        local _ktype152, _vtype153, _size151 = iprot:readMapBegin() 
-        for _i=1,_size151 do
-          local _key155 = iprot:readString()
-          local _val156 = iprot:readString()
-          self.metadata[_key155] = _val156
+        local _ktype166, _vtype167, _size165 = iprot:readMapBegin() 
+        for _i=1,_size165 do
+          local _key169 = iprot:readString()
+          local _val170 = iprot:readString()
+          self.metadata[_key169] = _val170
         end
         iprot:readMapEnd()
       else
@@ -1388,8 +1469,8 @@ function Static_Machine_State:write(oprot)
   if self.JawPositionsX ~= nil then
     oprot:writeFieldBegin('JawPositionsX', TType.LIST, 19)
     oprot:writeListBegin(TType.DOUBLE, #self.JawPositionsX)
-    for _,iter157 in ipairs(self.JawPositionsX) do
-      oprot:writeDouble(iter157)
+    for _,iter171 in ipairs(self.JawPositionsX) do
+      oprot:writeDouble(iter171)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -1397,8 +1478,8 @@ function Static_Machine_State:write(oprot)
   if self.JawPositionsY ~= nil then
     oprot:writeFieldBegin('JawPositionsY', TType.LIST, 20)
     oprot:writeListBegin(TType.DOUBLE, #self.JawPositionsY)
-    for _,iter158 in ipairs(self.JawPositionsY) do
-      oprot:writeDouble(iter158)
+    for _,iter172 in ipairs(self.JawPositionsY) do
+      oprot:writeDouble(iter172)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -1406,8 +1487,8 @@ function Static_Machine_State:write(oprot)
   if self.MLCPositionsX ~= nil then
     oprot:writeFieldBegin('MLCPositionsX', TType.LIST, 21)
     oprot:writeListBegin(TType.DOUBLE, #self.MLCPositionsX)
-    for _,iter159 in ipairs(self.MLCPositionsX) do
-      oprot:writeDouble(iter159)
+    for _,iter173 in ipairs(self.MLCPositionsX) do
+      oprot:writeDouble(iter173)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -1415,9 +1496,9 @@ function Static_Machine_State:write(oprot)
   if self.metadata ~= nil then
     oprot:writeFieldBegin('metadata', TType.MAP, 22)
     oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.metadata))
-    for kiter160,viter161 in pairs(self.metadata) do
-      oprot:writeString(kiter160)
-      oprot:writeString(viter161)
+    for kiter174,viter175 in pairs(self.metadata) do
+      oprot:writeString(kiter174)
+      oprot:writeString(viter175)
     end
     oprot:writeMapEnd()
     oprot:writeFieldEnd()
@@ -1454,11 +1535,11 @@ function Dynamic_Machine_State:read(iprot)
     elseif fid == 3 then
       if ftype == TType.LIST then
         self.static_states = {}
-        local _etype165, _size162 = iprot:readListBegin()
-        for _i=1,_size162 do
-          local _elem166 = Static_Machine_State:new{}
-          _elem166:read(iprot)
-          table.insert(self.static_states, _elem166)
+        local _etype179, _size176 = iprot:readListBegin()
+        for _i=1,_size176 do
+          local _elem180 = Static_Machine_State:new{}
+          _elem180:read(iprot)
+          table.insert(self.static_states, _elem180)
         end
         iprot:readListEnd()
       else
@@ -1467,11 +1548,11 @@ function Dynamic_Machine_State:read(iprot)
     elseif fid == 4 then
       if ftype == TType.MAP then
         self.metadata = {}
-        local _ktype168, _vtype169, _size167 = iprot:readMapBegin() 
-        for _i=1,_size167 do
-          local _key171 = iprot:readString()
-          local _val172 = iprot:readString()
-          self.metadata[_key171] = _val172
+        local _ktype182, _vtype183, _size181 = iprot:readMapBegin() 
+        for _i=1,_size181 do
+          local _key185 = iprot:readString()
+          local _val186 = iprot:readString()
+          self.metadata[_key185] = _val186
         end
         iprot:readMapEnd()
       else
@@ -1500,8 +1581,8 @@ function Dynamic_Machine_State:write(oprot)
   if self.static_states ~= nil then
     oprot:writeFieldBegin('static_states', TType.LIST, 3)
     oprot:writeListBegin(TType.STRUCT, #self.static_states)
-    for _,iter173 in ipairs(self.static_states) do
-      iter173:write(oprot)
+    for _,iter187 in ipairs(self.static_states) do
+      iter187:write(oprot)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -1509,9 +1590,9 @@ function Dynamic_Machine_State:write(oprot)
   if self.metadata ~= nil then
     oprot:writeFieldBegin('metadata', TType.MAP, 4)
     oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.metadata))
-    for kiter174,viter175 in pairs(self.metadata) do
-      oprot:writeString(kiter174)
-      oprot:writeString(viter175)
+    for kiter188,viter189 in pairs(self.metadata) do
+      oprot:writeString(kiter188)
+      oprot:writeString(viter189)
     end
     oprot:writeMapEnd()
     oprot:writeFieldEnd()
@@ -1534,11 +1615,11 @@ function RTPlan:read(iprot)
     elseif fid == 1 then
       if ftype == TType.LIST then
         self.dynamic_states = {}
-        local _etype179, _size176 = iprot:readListBegin()
-        for _i=1,_size176 do
-          local _elem180 = Dynamic_Machine_State:new{}
-          _elem180:read(iprot)
-          table.insert(self.dynamic_states, _elem180)
+        local _etype193, _size190 = iprot:readListBegin()
+        for _i=1,_size190 do
+          local _elem194 = Dynamic_Machine_State:new{}
+          _elem194:read(iprot)
+          table.insert(self.dynamic_states, _elem194)
         end
         iprot:readListEnd()
       else
@@ -1547,11 +1628,11 @@ function RTPlan:read(iprot)
     elseif fid == 2 then
       if ftype == TType.MAP then
         self.metadata = {}
-        local _ktype182, _vtype183, _size181 = iprot:readMapBegin() 
-        for _i=1,_size181 do
-          local _key185 = iprot:readString()
-          local _val186 = iprot:readString()
-          self.metadata[_key185] = _val186
+        local _ktype196, _vtype197, _size195 = iprot:readMapBegin() 
+        for _i=1,_size195 do
+          local _key199 = iprot:readString()
+          local _val200 = iprot:readString()
+          self.metadata[_key199] = _val200
         end
         iprot:readMapEnd()
       else
@@ -1570,8 +1651,8 @@ function RTPlan:write(oprot)
   if self.dynamic_states ~= nil then
     oprot:writeFieldBegin('dynamic_states', TType.LIST, 1)
     oprot:writeListBegin(TType.STRUCT, #self.dynamic_states)
-    for _,iter187 in ipairs(self.dynamic_states) do
-      iter187:write(oprot)
+    for _,iter201 in ipairs(self.dynamic_states) do
+      iter201:write(oprot)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -1579,9 +1660,9 @@ function RTPlan:write(oprot)
   if self.metadata ~= nil then
     oprot:writeFieldBegin('metadata', TType.MAP, 2)
     oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.metadata))
-    for kiter188,viter189 in pairs(self.metadata) do
-      oprot:writeString(kiter188)
-      oprot:writeString(viter189)
+    for kiter202,viter203 in pairs(self.metadata) do
+      oprot:writeString(kiter202)
+      oprot:writeString(viter203)
     end
     oprot:writeMapEnd()
     oprot:writeFieldEnd()
@@ -1706,11 +1787,11 @@ function Drover:read(iprot)
     elseif fid == 1 then
       if ftype == TType.LIST then
         self.contour_data = {}
-        local _etype193, _size190 = iprot:readListBegin()
-        for _i=1,_size190 do
-          local _elem194 = Contour_Data:new{}
-          _elem194:read(iprot)
-          table.insert(self.contour_data, _elem194)
+        local _etype207, _size204 = iprot:readListBegin()
+        for _i=1,_size204 do
+          local _elem208 = Contour_Data:new{}
+          _elem208:read(iprot)
+          table.insert(self.contour_data, _elem208)
         end
         iprot:readListEnd()
       else
@@ -1719,11 +1800,11 @@ function Drover:read(iprot)
     elseif fid == 2 then
       if ftype == TType.LIST then
         self.image_data = {}
-        local _etype198, _size195 = iprot:readListBegin()
-        for _i=1,_size195 do
-          local _elem199 = Image_Array:new{}
-          _elem199:read(iprot)
-          table.insert(self.image_data, _elem199)
+        local _etype212, _size209 = iprot:readListBegin()
+        for _i=1,_size209 do
+          local _elem213 = Image_Array:new{}
+          _elem213:read(iprot)
+          table.insert(self.image_data, _elem213)
         end
         iprot:readListEnd()
       else
@@ -1732,11 +1813,11 @@ function Drover:read(iprot)
     elseif fid == 3 then
       if ftype == TType.LIST then
         self.point_data = {}
-        local _etype203, _size200 = iprot:readListBegin()
-        for _i=1,_size200 do
-          local _elem204 = Point_Cloud:new{}
-          _elem204:read(iprot)
-          table.insert(self.point_data, _elem204)
+        local _etype217, _size214 = iprot:readListBegin()
+        for _i=1,_size214 do
+          local _elem218 = Point_Cloud:new{}
+          _elem218:read(iprot)
+          table.insert(self.point_data, _elem218)
         end
         iprot:readListEnd()
       else
@@ -1745,11 +1826,11 @@ function Drover:read(iprot)
     elseif fid == 4 then
       if ftype == TType.LIST then
         self.smesh_data = {}
-        local _etype208, _size205 = iprot:readListBegin()
-        for _i=1,_size205 do
-          local _elem209 = Surface_Mesh:new{}
-          _elem209:read(iprot)
-          table.insert(self.smesh_data, _elem209)
+        local _etype222, _size219 = iprot:readListBegin()
+        for _i=1,_size219 do
+          local _elem223 = Surface_Mesh:new{}
+          _elem223:read(iprot)
+          table.insert(self.smesh_data, _elem223)
         end
         iprot:readListEnd()
       else
@@ -1758,11 +1839,11 @@ function Drover:read(iprot)
     elseif fid == 5 then
       if ftype == TType.LIST then
         self.rtplan_data = {}
-        local _etype213, _size210 = iprot:readListBegin()
-        for _i=1,_size210 do
-          local _elem214 = RTPlan:new{}
-          _elem214:read(iprot)
-          table.insert(self.rtplan_data, _elem214)
+        local _etype227, _size224 = iprot:readListBegin()
+        for _i=1,_size224 do
+          local _elem228 = RTPlan:new{}
+          _elem228:read(iprot)
+          table.insert(self.rtplan_data, _elem228)
         end
         iprot:readListEnd()
       else
@@ -1771,11 +1852,11 @@ function Drover:read(iprot)
     elseif fid == 6 then
       if ftype == TType.LIST then
         self.lsamp_data = {}
-        local _etype218, _size215 = iprot:readListBegin()
-        for _i=1,_size215 do
-          local _elem219 = Line_Sample:new{}
-          _elem219:read(iprot)
-          table.insert(self.lsamp_data, _elem219)
+        local _etype232, _size229 = iprot:readListBegin()
+        for _i=1,_size229 do
+          local _elem233 = Line_Sample:new{}
+          _elem233:read(iprot)
+          table.insert(self.lsamp_data, _elem233)
         end
         iprot:readListEnd()
       else
@@ -1784,11 +1865,11 @@ function Drover:read(iprot)
     elseif fid == 7 then
       if ftype == TType.LIST then
         self.trans_data = {}
-        local _etype223, _size220 = iprot:readListBegin()
-        for _i=1,_size220 do
-          local _elem224 = Transform3:new{}
-          _elem224:read(iprot)
-          table.insert(self.trans_data, _elem224)
+        local _etype237, _size234 = iprot:readListBegin()
+        for _i=1,_size234 do
+          local _elem238 = Transform3:new{}
+          _elem238:read(iprot)
+          table.insert(self.trans_data, _elem238)
         end
         iprot:readListEnd()
       else
@@ -1797,11 +1878,11 @@ function Drover:read(iprot)
     elseif fid == 8 then
       if ftype == TType.LIST then
         self.table_data = {}
-        local _etype228, _size225 = iprot:readListBegin()
-        for _i=1,_size225 do
-          local _elem229 = Sparse_Table:new{}
-          _elem229:read(iprot)
-          table.insert(self.table_data, _elem229)
+        local _etype242, _size239 = iprot:readListBegin()
+        for _i=1,_size239 do
+          local _elem243 = Sparse_Table:new{}
+          _elem243:read(iprot)
+          table.insert(self.table_data, _elem243)
         end
         iprot:readListEnd()
       else
@@ -1820,8 +1901,8 @@ function Drover:write(oprot)
   if self.contour_data ~= nil then
     oprot:writeFieldBegin('contour_data', TType.LIST, 1)
     oprot:writeListBegin(TType.STRUCT, #self.contour_data)
-    for _,iter230 in ipairs(self.contour_data) do
-      iter230:write(oprot)
+    for _,iter244 in ipairs(self.contour_data) do
+      iter244:write(oprot)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -1829,8 +1910,8 @@ function Drover:write(oprot)
   if self.image_data ~= nil then
     oprot:writeFieldBegin('image_data', TType.LIST, 2)
     oprot:writeListBegin(TType.STRUCT, #self.image_data)
-    for _,iter231 in ipairs(self.image_data) do
-      iter231:write(oprot)
+    for _,iter245 in ipairs(self.image_data) do
+      iter245:write(oprot)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -1838,8 +1919,8 @@ function Drover:write(oprot)
   if self.point_data ~= nil then
     oprot:writeFieldBegin('point_data', TType.LIST, 3)
     oprot:writeListBegin(TType.STRUCT, #self.point_data)
-    for _,iter232 in ipairs(self.point_data) do
-      iter232:write(oprot)
+    for _,iter246 in ipairs(self.point_data) do
+      iter246:write(oprot)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -1847,8 +1928,8 @@ function Drover:write(oprot)
   if self.smesh_data ~= nil then
     oprot:writeFieldBegin('smesh_data', TType.LIST, 4)
     oprot:writeListBegin(TType.STRUCT, #self.smesh_data)
-    for _,iter233 in ipairs(self.smesh_data) do
-      iter233:write(oprot)
+    for _,iter247 in ipairs(self.smesh_data) do
+      iter247:write(oprot)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -1856,8 +1937,8 @@ function Drover:write(oprot)
   if self.rtplan_data ~= nil then
     oprot:writeFieldBegin('rtplan_data', TType.LIST, 5)
     oprot:writeListBegin(TType.STRUCT, #self.rtplan_data)
-    for _,iter234 in ipairs(self.rtplan_data) do
-      iter234:write(oprot)
+    for _,iter248 in ipairs(self.rtplan_data) do
+      iter248:write(oprot)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -1865,8 +1946,8 @@ function Drover:write(oprot)
   if self.lsamp_data ~= nil then
     oprot:writeFieldBegin('lsamp_data', TType.LIST, 6)
     oprot:writeListBegin(TType.STRUCT, #self.lsamp_data)
-    for _,iter235 in ipairs(self.lsamp_data) do
-      iter235:write(oprot)
+    for _,iter249 in ipairs(self.lsamp_data) do
+      iter249:write(oprot)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -1874,8 +1955,8 @@ function Drover:write(oprot)
   if self.trans_data ~= nil then
     oprot:writeFieldBegin('trans_data', TType.LIST, 7)
     oprot:writeListBegin(TType.STRUCT, #self.trans_data)
-    for _,iter236 in ipairs(self.trans_data) do
-      iter236:write(oprot)
+    for _,iter250 in ipairs(self.trans_data) do
+      iter250:write(oprot)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -1883,8 +1964,8 @@ function Drover:write(oprot)
   if self.table_data ~= nil then
     oprot:writeFieldBegin('table_data', TType.LIST, 8)
     oprot:writeListBegin(TType.STRUCT, #self.table_data)
-    for _,iter237 in ipairs(self.table_data) do
-      iter237:write(oprot)
+    for _,iter251 in ipairs(self.table_data) do
+      iter251:write(oprot)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -2057,11 +2138,11 @@ function ExecuteScriptQuery:read(iprot)
     elseif fid == 2 then
       if ftype == TType.MAP then
         self.invocation_metadata = {}
-        local _ktype239, _vtype240, _size238 = iprot:readMapBegin() 
-        for _i=1,_size238 do
-          local _key242 = iprot:readString()
-          local _val243 = iprot:readString()
-          self.invocation_metadata[_key242] = _val243
+        local _ktype253, _vtype254, _size252 = iprot:readMapBegin() 
+        for _i=1,_size252 do
+          local _key256 = iprot:readString()
+          local _val257 = iprot:readString()
+          self.invocation_metadata[_key256] = _val257
         end
         iprot:readMapEnd()
       else
@@ -2091,9 +2172,9 @@ function ExecuteScriptQuery:write(oprot)
   if self.invocation_metadata ~= nil then
     oprot:writeFieldBegin('invocation_metadata', TType.MAP, 2)
     oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.invocation_metadata))
-    for kiter244,viter245 in pairs(self.invocation_metadata) do
-      oprot:writeString(kiter244)
-      oprot:writeString(viter245)
+    for kiter258,viter259 in pairs(self.invocation_metadata) do
+      oprot:writeString(kiter258)
+      oprot:writeString(viter259)
     end
     oprot:writeMapEnd()
     oprot:writeFieldEnd()
@@ -2136,11 +2217,11 @@ function ExecuteScriptResponse:read(iprot)
     elseif fid == 3 then
       if ftype == TType.MAP then
         self.invocation_metadata = {}
-        local _ktype247, _vtype248, _size246 = iprot:readMapBegin() 
-        for _i=1,_size246 do
-          local _key250 = iprot:readString()
-          local _val251 = iprot:readString()
-          self.invocation_metadata[_key250] = _val251
+        local _ktype261, _vtype262, _size260 = iprot:readMapBegin() 
+        for _i=1,_size260 do
+          local _key264 = iprot:readString()
+          local _val265 = iprot:readString()
+          self.invocation_metadata[_key264] = _val265
         end
         iprot:readMapEnd()
       else
@@ -2175,9 +2256,9 @@ function ExecuteScriptResponse:write(oprot)
   if self.invocation_metadata ~= nil then
     oprot:writeFieldBegin('invocation_metadata', TType.MAP, 3)
     oprot:writeMapBegin(TType.STRING, TType.STRING, ttable_size(self.invocation_metadata))
-    for kiter252,viter253 in pairs(self.invocation_metadata) do
-      oprot:writeString(kiter252)
-      oprot:writeString(viter253)
+    for kiter266,viter267 in pairs(self.invocation_metadata) do
+      oprot:writeString(kiter266)
+      oprot:writeString(viter267)
     end
     oprot:writeMapEnd()
     oprot:writeFieldEnd()

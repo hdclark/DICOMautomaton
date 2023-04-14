@@ -562,15 +562,33 @@ std::ostream& operator<<(std::ostream& out, const planar_image_collection_double
 class cell_string : public virtual ::apache::thrift::TBase {
  public:
 
-  cell_string(const cell_string&) noexcept;
-  cell_string& operator=(const cell_string&) noexcept;
-  cell_string() noexcept {
+  cell_string(const cell_string&);
+  cell_string& operator=(const cell_string&);
+  cell_string() noexcept
+              : row(0),
+                col(0),
+                val() {
   }
 
   virtual ~cell_string() noexcept;
+  int64_t row;
+  int64_t col;
+  std::string val;
 
-  bool operator == (const cell_string & /* rhs */) const
+  void __set_row(const int64_t val);
+
+  void __set_col(const int64_t val);
+
+  void __set_val(const std::string& val);
+
+  bool operator == (const cell_string & rhs) const
   {
+    if (!(row == rhs.row))
+      return false;
+    if (!(col == rhs.col))
+      return false;
+    if (!(val == rhs.val))
+      return false;
     return true;
   }
   bool operator != (const cell_string &rhs) const {
@@ -593,15 +611,25 @@ std::ostream& operator<<(std::ostream& out, const cell_string& obj);
 class table2 : public virtual ::apache::thrift::TBase {
  public:
 
-  table2(const table2&) noexcept;
-  table2& operator=(const table2&) noexcept;
+  table2(const table2&);
+  table2& operator=(const table2&);
   table2() noexcept {
   }
 
   virtual ~table2() noexcept;
+  std::vector<cell_string>  data;
+  metadata_t metadata;
 
-  bool operator == (const table2 & /* rhs */) const
+  void __set_data(const std::vector<cell_string> & val);
+
+  void __set_metadata(const metadata_t& val);
+
+  bool operator == (const table2 & rhs) const
   {
+    if (!(data == rhs.data))
+      return false;
+    if (!(metadata == rhs.metadata))
+      return false;
     return true;
   }
   bool operator != (const table2 &rhs) const {
@@ -1093,8 +1121,8 @@ std::ostream& operator<<(std::ostream& out, const Transform3& obj);
 class Sparse_Table : public virtual ::apache::thrift::TBase {
  public:
 
-  Sparse_Table(const Sparse_Table&) noexcept;
-  Sparse_Table& operator=(const Sparse_Table&) noexcept;
+  Sparse_Table(const Sparse_Table&);
+  Sparse_Table& operator=(const Sparse_Table&);
   Sparse_Table() noexcept {
   }
 

@@ -23,9 +23,9 @@ planar_image_double_double [label="struct planar_image_double_double|<field_data
 node [fillcolor=beige];
 planar_image_collection_double_double [label="struct planar_image_collection_double_double|<field_images>images :: list\<planar_image_double_double\>"];
 node [fillcolor=beige];
-cell_string [label="struct cell_string"];
+cell_string [label="struct cell_string|<field_row>row :: i64|<field_col>col :: i64|<field_val>val :: string"];
 node [fillcolor=beige];
-table2 [label="struct table2"];
+table2 [label="struct table2|<field_data>data :: list\<cell_string\>|<field_metadata>metadata :: metadata_t"];
 node [fillcolor=beige];
 Contour_Data [label="struct Contour_Data|<field_ccs>ccs :: list\<contour_collection_double\>"];
 node [fillcolor=beige];
@@ -85,6 +85,8 @@ planar_image_double_double:field_row_unit -> vec3_double
 planar_image_double_double:field_col_unit -> vec3_double
 planar_image_double_double:field_metadata -> metadata_t
 planar_image_collection_double_double:field_images -> planar_image_double_double
+table2:field_data -> cell_string
+table2:field_metadata -> metadata_t
 Contour_Data:field_ccs -> contour_collection_double
 Image_Array:field_imagecoll -> planar_image_collection_double_double
 Point_Cloud:field_pset -> point_set_double

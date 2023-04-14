@@ -143,12 +143,17 @@ _Base type_: **map&lt;```string```, ```string```&gt;**
 
 | Key | Field | Type | Description | Requiredness | Default value |
 | --- | --- | --- | --- | --- | --- |
+|1|row|```i64```||required||
+|2|col|```i64```||required||
+|3|val|```string```||required||
 
 ### Struct: table2
 
 
 | Key | Field | Type | Description | Requiredness | Default value |
 | --- | --- | --- | --- | --- | --- |
+|1|data|list&lt;[```cell_string```](#struct-cell_string)&gt;||required||
+|2|metadata|[```metadata_t```](#typedef-metadata_t)||required||
 
 ### Struct: Contour_Data
 

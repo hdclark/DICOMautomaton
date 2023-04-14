@@ -96,8 +96,17 @@
         <elemType type="id" type-module="DCMA" type-id="planar_image_double_double" />
       </field>
     </struct>
-    <struct name="cell_string" />
-    <struct name="table2" />
+    <struct name="cell_string">
+      <field name="row" field-id="1" required="required" type="i64" />
+      <field name="col" field-id="2" required="required" type="i64" />
+      <field name="val" field-id="3" required="required" type="string" />
+    </struct>
+    <struct name="table2">
+      <field name="data" field-id="1" required="required" type="list">
+        <elemType type="id" type-module="DCMA" type-id="cell_string" />
+      </field>
+      <field name="metadata" field-id="2" required="required" type="id" type-module="DCMA" type-id="metadata_t" />
+    </struct>
     <struct name="Contour_Data">
       <field name="ccs" field-id="1" required="required" type="list">
         <elemType type="id" type-module="DCMA" type-id="contour_collection_double" />

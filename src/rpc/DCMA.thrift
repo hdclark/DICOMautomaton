@@ -73,19 +73,13 @@ struct planar_image_collection_double_double {
 // DICOMautomaton classes -- Tables.h.
 // --------------------------------------------------------------------
 struct cell_string {
-    // TODO:
-    //class cell<T> {
-    //    private:
-    //        int64_t row;
-    //        int64_t col;
-    //
-    //    public:
-    //        T val;
+    1: required i64 row;
+    2: required i64 col;
+    3: required string val;
 }
 struct table2 {
-    // TODO:
-    //std::set< cell<std::string> > data;
-    //std::map<std::string, std::string> metadata;
+    1: required list<cell_string> data;  // cells should have a unique (row,col) tuple.
+    2: required metadata_t metadata;
 }
 
 // --------------------------------------------------------------------

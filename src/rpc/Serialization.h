@@ -79,9 +79,6 @@ void Deserialize( const dcma::rpc::planar_image_collection_double_double &in, pl
 // --------------------------------------------------------------------
 // DICOMautomaton classes -- Tables.h.
 // --------------------------------------------------------------------
-void Serialize( const tables::cell<std::string> &in, dcma::rpc::cell_string &out );
-void Deserialize( const dcma::rpc::cell_string &in, tables::cell<std::string> &out );
-
 void Serialize( const tables::table2 &in, dcma::rpc::table2 &out );
 void Deserialize( const dcma::rpc::table2 &in, tables::table2 &out );
 
@@ -136,4 +133,10 @@ void Deserialize( const dcma::rpc::Drover &in, Drover &out );
 //
 //void Serialize( const LoadFilesResponse &in, dcma::rpc::LoadFilesResponse &out );
 //void Deserialize( const dcma::rpc::LoadFilesResponse &in, LoadFilesResponse &out );
+//
+//void Serialize( const ExecuteScriptQuery &in, dcma::rpc::ExecuteScriptQuery &out );
+//void Deserialize( const dcma::rpc::ExecuteScriptQuery &in, ExecuteScriptQuery &out );
+//
+//void Serialize( const ExecuteScriptResponse &in, dcma::rpc::ExecuteScriptResponse &out );
+//void Deserialize( const dcma::rpc::ExecuteScriptResponse &in, ExecuteScriptResponse &out );
 

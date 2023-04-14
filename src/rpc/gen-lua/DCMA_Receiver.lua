@@ -248,11 +248,11 @@ function GetSupportedOperations_result:read(iprot)
     elseif fid == 0 then
       if ftype == TType.LIST then
         self.success = {}
-        local _etype257, _size254 = iprot:readListBegin()
-        for _i=1,_size254 do
-          local _elem258 = KnownOperation:new{}
-          _elem258:read(iprot)
-          table.insert(self.success, _elem258)
+        local _etype271, _size268 = iprot:readListBegin()
+        for _i=1,_size268 do
+          local _elem272 = KnownOperation:new{}
+          _elem272:read(iprot)
+          table.insert(self.success, _elem272)
         end
         iprot:readListEnd()
       else
@@ -271,8 +271,8 @@ function GetSupportedOperations_result:write(oprot)
   if self.success ~= nil then
     oprot:writeFieldBegin('success', TType.LIST, 0)
     oprot:writeListBegin(TType.STRUCT, #self.success)
-    for _,iter259 in ipairs(self.success) do
-      iter259:write(oprot)
+    for _,iter273 in ipairs(self.success) do
+      iter273:write(oprot)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()
@@ -294,11 +294,11 @@ function LoadFiles_args:read(iprot)
     elseif fid == 1 then
       if ftype == TType.LIST then
         self.server_filenames = {}
-        local _etype263, _size260 = iprot:readListBegin()
-        for _i=1,_size260 do
-          local _elem264 = LoadFilesQuery:new{}
-          _elem264:read(iprot)
-          table.insert(self.server_filenames, _elem264)
+        local _etype277, _size274 = iprot:readListBegin()
+        for _i=1,_size274 do
+          local _elem278 = LoadFilesQuery:new{}
+          _elem278:read(iprot)
+          table.insert(self.server_filenames, _elem278)
         end
         iprot:readListEnd()
       else
@@ -317,8 +317,8 @@ function LoadFiles_args:write(oprot)
   if self.server_filenames ~= nil then
     oprot:writeFieldBegin('server_filenames', TType.LIST, 1)
     oprot:writeListBegin(TType.STRUCT, #self.server_filenames)
-    for _,iter265 in ipairs(self.server_filenames) do
-      iter265:write(oprot)
+    for _,iter279 in ipairs(self.server_filenames) do
+      iter279:write(oprot)
     end
     oprot:writeListEnd()
     oprot:writeFieldEnd()

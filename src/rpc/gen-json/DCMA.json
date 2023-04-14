@@ -443,6 +443,24 @@
       "isException": false,
       "isUnion": false,
       "fields": [
+        {
+          "key": 1,
+          "name": "row",
+          "typeId": "i64",
+          "required": "required"
+        },
+        {
+          "key": 2,
+          "name": "col",
+          "typeId": "i64",
+          "required": "required"
+        },
+        {
+          "key": 3,
+          "name": "val",
+          "typeId": "string",
+          "required": "required"
+        }
       ]
     },
     {
@@ -450,6 +468,31 @@
       "isException": false,
       "isUnion": false,
       "fields": [
+        {
+          "key": 1,
+          "name": "data",
+          "typeId": "list",
+          "type": {
+            "typeId": "list",
+            "elemTypeId": "struct",
+            "elemType": {
+              "typeId": "struct",
+              "class": "cell_string"
+            }
+          },
+          "required": "required"
+        },
+        {
+          "key": 2,
+          "name": "metadata",
+          "typeId": "map",
+          "type": {
+            "typeId": "map",
+            "keyTypeId": "string",
+            "valueTypeId": "string"
+          },
+          "required": "required"
+        }
       ]
     },
     {

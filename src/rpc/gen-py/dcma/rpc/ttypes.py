@@ -1094,7 +1094,19 @@ class planar_image_collection_double_double(object):
 
 
 class cell_string(object):
+    """
+    Attributes:
+     - row
+     - col
+     - val
 
+    """
+
+
+    def __init__(self, row=None, col=None, val=None,):
+        self.row = row
+        self.col = col
+        self.val = val
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -1105,6 +1117,21 @@ class cell_string(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
+            if fid == 1:
+                if ftype == TType.I64:
+                    self.row = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.I64:
+                    self.col = iprot.readI64()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 3:
+                if ftype == TType.STRING:
+                    self.val = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                else:
+                    iprot.skip(ftype)
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -1115,10 +1142,28 @@ class cell_string(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('cell_string')
+        if self.row is not None:
+            oprot.writeFieldBegin('row', TType.I64, 1)
+            oprot.writeI64(self.row)
+            oprot.writeFieldEnd()
+        if self.col is not None:
+            oprot.writeFieldBegin('col', TType.I64, 2)
+            oprot.writeI64(self.col)
+            oprot.writeFieldEnd()
+        if self.val is not None:
+            oprot.writeFieldBegin('val', TType.STRING, 3)
+            oprot.writeString(self.val.encode('utf-8') if sys.version_info[0] == 2 else self.val)
+            oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
 
     def validate(self):
+        if self.row is None:
+            raise TProtocolException(message='Required field row is unset!')
+        if self.col is None:
+            raise TProtocolException(message='Required field col is unset!')
+        if self.val is None:
+            raise TProtocolException(message='Required field val is unset!')
         return
 
     def __repr__(self):
@@ -1134,7 +1179,17 @@ class cell_string(object):
 
 
 class table2(object):
+    """
+    Attributes:
+     - data
+     - metadata
 
+    """
+
+
+    def __init__(self, data=None, metadata=None,):
+        self.data = data
+        self.metadata = metadata
 
     def read(self, iprot):
         if iprot._fast_decode is not None and isinstance(iprot.trans, TTransport.CReadableTransport) and self.thrift_spec is not None:
@@ -1145,6 +1200,28 @@ class table2(object):
             (fname, ftype, fid) = iprot.readFieldBegin()
             if ftype == TType.STOP:
                 break
+            if fid == 1:
+                if ftype == TType.LIST:
+                    self.data = []
+                    (_etype153, _size150) = iprot.readListBegin()
+                    for _i154 in range(_size150):
+                        _elem155 = cell_string()
+                        _elem155.read(iprot)
+                        self.data.append(_elem155)
+                    iprot.readListEnd()
+                else:
+                    iprot.skip(ftype)
+            elif fid == 2:
+                if ftype == TType.MAP:
+                    self.metadata = {}
+                    (_ktype157, _vtype158, _size156) = iprot.readMapBegin()
+                    for _i160 in range(_size156):
+                        _key161 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        _val162 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        self.metadata[_key161] = _val162
+                    iprot.readMapEnd()
+                else:
+                    iprot.skip(ftype)
             else:
                 iprot.skip(ftype)
             iprot.readFieldEnd()
@@ -1155,10 +1232,29 @@ class table2(object):
             oprot.trans.write(oprot._fast_encode(self, [self.__class__, self.thrift_spec]))
             return
         oprot.writeStructBegin('table2')
+        if self.data is not None:
+            oprot.writeFieldBegin('data', TType.LIST, 1)
+            oprot.writeListBegin(TType.STRUCT, len(self.data))
+            for iter163 in self.data:
+                iter163.write(oprot)
+            oprot.writeListEnd()
+            oprot.writeFieldEnd()
+        if self.metadata is not None:
+            oprot.writeFieldBegin('metadata', TType.MAP, 2)
+            oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.metadata))
+            for kiter164, viter165 in self.metadata.items():
+                oprot.writeString(kiter164.encode('utf-8') if sys.version_info[0] == 2 else kiter164)
+                oprot.writeString(viter165.encode('utf-8') if sys.version_info[0] == 2 else viter165)
+            oprot.writeMapEnd()
+            oprot.writeFieldEnd()
         oprot.writeFieldStop()
         oprot.writeStructEnd()
 
     def validate(self):
+        if self.data is None:
+            raise TProtocolException(message='Required field data is unset!')
+        if self.metadata is None:
+            raise TProtocolException(message='Required field metadata is unset!')
         return
 
     def __repr__(self):
@@ -1196,11 +1292,11 @@ class Contour_Data(object):
             if fid == 1:
                 if ftype == TType.LIST:
                     self.ccs = []
-                    (_etype153, _size150) = iprot.readListBegin()
-                    for _i154 in range(_size150):
-                        _elem155 = contour_collection_double()
-                        _elem155.read(iprot)
-                        self.ccs.append(_elem155)
+                    (_etype169, _size166) = iprot.readListBegin()
+                    for _i170 in range(_size166):
+                        _elem171 = contour_collection_double()
+                        _elem171.read(iprot)
+                        self.ccs.append(_elem171)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
@@ -1217,8 +1313,8 @@ class Contour_Data(object):
         if self.ccs is not None:
             oprot.writeFieldBegin('ccs', TType.LIST, 1)
             oprot.writeListBegin(TType.STRUCT, len(self.ccs))
-            for iter156 in self.ccs:
-                iter156.write(oprot)
+            for iter172 in self.ccs:
+                iter172.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1590,41 +1686,41 @@ class Static_Machine_State(object):
             elif fid == 19:
                 if ftype == TType.LIST:
                     self.JawPositionsX = []
-                    (_etype160, _size157) = iprot.readListBegin()
-                    for _i161 in range(_size157):
-                        _elem162 = iprot.readDouble()
-                        self.JawPositionsX.append(_elem162)
+                    (_etype176, _size173) = iprot.readListBegin()
+                    for _i177 in range(_size173):
+                        _elem178 = iprot.readDouble()
+                        self.JawPositionsX.append(_elem178)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 20:
                 if ftype == TType.LIST:
                     self.JawPositionsY = []
-                    (_etype166, _size163) = iprot.readListBegin()
-                    for _i167 in range(_size163):
-                        _elem168 = iprot.readDouble()
-                        self.JawPositionsY.append(_elem168)
+                    (_etype182, _size179) = iprot.readListBegin()
+                    for _i183 in range(_size179):
+                        _elem184 = iprot.readDouble()
+                        self.JawPositionsY.append(_elem184)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 21:
                 if ftype == TType.LIST:
                     self.MLCPositionsX = []
-                    (_etype172, _size169) = iprot.readListBegin()
-                    for _i173 in range(_size169):
-                        _elem174 = iprot.readDouble()
-                        self.MLCPositionsX.append(_elem174)
+                    (_etype188, _size185) = iprot.readListBegin()
+                    for _i189 in range(_size185):
+                        _elem190 = iprot.readDouble()
+                        self.MLCPositionsX.append(_elem190)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 22:
                 if ftype == TType.MAP:
                     self.metadata = {}
-                    (_ktype176, _vtype177, _size175) = iprot.readMapBegin()
-                    for _i179 in range(_size175):
-                        _key180 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
-                        _val181 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
-                        self.metadata[_key180] = _val181
+                    (_ktype192, _vtype193, _size191) = iprot.readMapBegin()
+                    for _i195 in range(_size191):
+                        _key196 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        _val197 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        self.metadata[_key196] = _val197
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -1713,30 +1809,30 @@ class Static_Machine_State(object):
         if self.JawPositionsX is not None:
             oprot.writeFieldBegin('JawPositionsX', TType.LIST, 19)
             oprot.writeListBegin(TType.DOUBLE, len(self.JawPositionsX))
-            for iter182 in self.JawPositionsX:
-                oprot.writeDouble(iter182)
+            for iter198 in self.JawPositionsX:
+                oprot.writeDouble(iter198)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.JawPositionsY is not None:
             oprot.writeFieldBegin('JawPositionsY', TType.LIST, 20)
             oprot.writeListBegin(TType.DOUBLE, len(self.JawPositionsY))
-            for iter183 in self.JawPositionsY:
-                oprot.writeDouble(iter183)
+            for iter199 in self.JawPositionsY:
+                oprot.writeDouble(iter199)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.MLCPositionsX is not None:
             oprot.writeFieldBegin('MLCPositionsX', TType.LIST, 21)
             oprot.writeListBegin(TType.DOUBLE, len(self.MLCPositionsX))
-            for iter184 in self.MLCPositionsX:
-                oprot.writeDouble(iter184)
+            for iter200 in self.MLCPositionsX:
+                oprot.writeDouble(iter200)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.metadata is not None:
             oprot.writeFieldBegin('metadata', TType.MAP, 22)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.metadata))
-            for kiter185, viter186 in self.metadata.items():
-                oprot.writeString(kiter185.encode('utf-8') if sys.version_info[0] == 2 else kiter185)
-                oprot.writeString(viter186.encode('utf-8') if sys.version_info[0] == 2 else viter186)
+            for kiter201, viter202 in self.metadata.items():
+                oprot.writeString(kiter201.encode('utf-8') if sys.version_info[0] == 2 else kiter201)
+                oprot.writeString(viter202.encode('utf-8') if sys.version_info[0] == 2 else viter202)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1840,22 +1936,22 @@ class Dynamic_Machine_State(object):
             elif fid == 3:
                 if ftype == TType.LIST:
                     self.static_states = []
-                    (_etype190, _size187) = iprot.readListBegin()
-                    for _i191 in range(_size187):
-                        _elem192 = Static_Machine_State()
-                        _elem192.read(iprot)
-                        self.static_states.append(_elem192)
+                    (_etype206, _size203) = iprot.readListBegin()
+                    for _i207 in range(_size203):
+                        _elem208 = Static_Machine_State()
+                        _elem208.read(iprot)
+                        self.static_states.append(_elem208)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 4:
                 if ftype == TType.MAP:
                     self.metadata = {}
-                    (_ktype194, _vtype195, _size193) = iprot.readMapBegin()
-                    for _i197 in range(_size193):
-                        _key198 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
-                        _val199 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
-                        self.metadata[_key198] = _val199
+                    (_ktype210, _vtype211, _size209) = iprot.readMapBegin()
+                    for _i213 in range(_size209):
+                        _key214 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        _val215 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        self.metadata[_key214] = _val215
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -1880,16 +1976,16 @@ class Dynamic_Machine_State(object):
         if self.static_states is not None:
             oprot.writeFieldBegin('static_states', TType.LIST, 3)
             oprot.writeListBegin(TType.STRUCT, len(self.static_states))
-            for iter200 in self.static_states:
-                iter200.write(oprot)
+            for iter216 in self.static_states:
+                iter216.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.metadata is not None:
             oprot.writeFieldBegin('metadata', TType.MAP, 4)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.metadata))
-            for kiter201, viter202 in self.metadata.items():
-                oprot.writeString(kiter201.encode('utf-8') if sys.version_info[0] == 2 else kiter201)
-                oprot.writeString(viter202.encode('utf-8') if sys.version_info[0] == 2 else viter202)
+            for kiter217, viter218 in self.metadata.items():
+                oprot.writeString(kiter217.encode('utf-8') if sys.version_info[0] == 2 else kiter217)
+                oprot.writeString(viter218.encode('utf-8') if sys.version_info[0] == 2 else viter218)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -1943,22 +2039,22 @@ class RTPlan(object):
             if fid == 1:
                 if ftype == TType.LIST:
                     self.dynamic_states = []
-                    (_etype206, _size203) = iprot.readListBegin()
-                    for _i207 in range(_size203):
-                        _elem208 = Dynamic_Machine_State()
-                        _elem208.read(iprot)
-                        self.dynamic_states.append(_elem208)
+                    (_etype222, _size219) = iprot.readListBegin()
+                    for _i223 in range(_size219):
+                        _elem224 = Dynamic_Machine_State()
+                        _elem224.read(iprot)
+                        self.dynamic_states.append(_elem224)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 2:
                 if ftype == TType.MAP:
                     self.metadata = {}
-                    (_ktype210, _vtype211, _size209) = iprot.readMapBegin()
-                    for _i213 in range(_size209):
-                        _key214 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
-                        _val215 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
-                        self.metadata[_key214] = _val215
+                    (_ktype226, _vtype227, _size225) = iprot.readMapBegin()
+                    for _i229 in range(_size225):
+                        _key230 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        _val231 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        self.metadata[_key230] = _val231
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -1975,16 +2071,16 @@ class RTPlan(object):
         if self.dynamic_states is not None:
             oprot.writeFieldBegin('dynamic_states', TType.LIST, 1)
             oprot.writeListBegin(TType.STRUCT, len(self.dynamic_states))
-            for iter216 in self.dynamic_states:
-                iter216.write(oprot)
+            for iter232 in self.dynamic_states:
+                iter232.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.metadata is not None:
             oprot.writeFieldBegin('metadata', TType.MAP, 2)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.metadata))
-            for kiter217, viter218 in self.metadata.items():
-                oprot.writeString(kiter217.encode('utf-8') if sys.version_info[0] == 2 else kiter217)
-                oprot.writeString(viter218.encode('utf-8') if sys.version_info[0] == 2 else viter218)
+            for kiter233, viter234 in self.metadata.items():
+                oprot.writeString(kiter233.encode('utf-8') if sys.version_info[0] == 2 else kiter233)
+                oprot.writeString(viter234.encode('utf-8') if sys.version_info[0] == 2 else viter234)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -2206,88 +2302,88 @@ class Drover(object):
             if fid == 1:
                 if ftype == TType.LIST:
                     self.contour_data = []
-                    (_etype222, _size219) = iprot.readListBegin()
-                    for _i223 in range(_size219):
-                        _elem224 = Contour_Data()
-                        _elem224.read(iprot)
-                        self.contour_data.append(_elem224)
+                    (_etype238, _size235) = iprot.readListBegin()
+                    for _i239 in range(_size235):
+                        _elem240 = Contour_Data()
+                        _elem240.read(iprot)
+                        self.contour_data.append(_elem240)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 2:
                 if ftype == TType.LIST:
                     self.image_data = []
-                    (_etype228, _size225) = iprot.readListBegin()
-                    for _i229 in range(_size225):
-                        _elem230 = Image_Array()
-                        _elem230.read(iprot)
-                        self.image_data.append(_elem230)
+                    (_etype244, _size241) = iprot.readListBegin()
+                    for _i245 in range(_size241):
+                        _elem246 = Image_Array()
+                        _elem246.read(iprot)
+                        self.image_data.append(_elem246)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 3:
                 if ftype == TType.LIST:
                     self.point_data = []
-                    (_etype234, _size231) = iprot.readListBegin()
-                    for _i235 in range(_size231):
-                        _elem236 = Point_Cloud()
-                        _elem236.read(iprot)
-                        self.point_data.append(_elem236)
+                    (_etype250, _size247) = iprot.readListBegin()
+                    for _i251 in range(_size247):
+                        _elem252 = Point_Cloud()
+                        _elem252.read(iprot)
+                        self.point_data.append(_elem252)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 4:
                 if ftype == TType.LIST:
                     self.smesh_data = []
-                    (_etype240, _size237) = iprot.readListBegin()
-                    for _i241 in range(_size237):
-                        _elem242 = Surface_Mesh()
-                        _elem242.read(iprot)
-                        self.smesh_data.append(_elem242)
+                    (_etype256, _size253) = iprot.readListBegin()
+                    for _i257 in range(_size253):
+                        _elem258 = Surface_Mesh()
+                        _elem258.read(iprot)
+                        self.smesh_data.append(_elem258)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 5:
                 if ftype == TType.LIST:
                     self.rtplan_data = []
-                    (_etype246, _size243) = iprot.readListBegin()
-                    for _i247 in range(_size243):
-                        _elem248 = RTPlan()
-                        _elem248.read(iprot)
-                        self.rtplan_data.append(_elem248)
+                    (_etype262, _size259) = iprot.readListBegin()
+                    for _i263 in range(_size259):
+                        _elem264 = RTPlan()
+                        _elem264.read(iprot)
+                        self.rtplan_data.append(_elem264)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 6:
                 if ftype == TType.LIST:
                     self.lsamp_data = []
-                    (_etype252, _size249) = iprot.readListBegin()
-                    for _i253 in range(_size249):
-                        _elem254 = Line_Sample()
-                        _elem254.read(iprot)
-                        self.lsamp_data.append(_elem254)
+                    (_etype268, _size265) = iprot.readListBegin()
+                    for _i269 in range(_size265):
+                        _elem270 = Line_Sample()
+                        _elem270.read(iprot)
+                        self.lsamp_data.append(_elem270)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 7:
                 if ftype == TType.LIST:
                     self.trans_data = []
-                    (_etype258, _size255) = iprot.readListBegin()
-                    for _i259 in range(_size255):
-                        _elem260 = Transform3()
-                        _elem260.read(iprot)
-                        self.trans_data.append(_elem260)
+                    (_etype274, _size271) = iprot.readListBegin()
+                    for _i275 in range(_size271):
+                        _elem276 = Transform3()
+                        _elem276.read(iprot)
+                        self.trans_data.append(_elem276)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
             elif fid == 8:
                 if ftype == TType.LIST:
                     self.table_data = []
-                    (_etype264, _size261) = iprot.readListBegin()
-                    for _i265 in range(_size261):
-                        _elem266 = Sparse_Table()
-                        _elem266.read(iprot)
-                        self.table_data.append(_elem266)
+                    (_etype280, _size277) = iprot.readListBegin()
+                    for _i281 in range(_size277):
+                        _elem282 = Sparse_Table()
+                        _elem282.read(iprot)
+                        self.table_data.append(_elem282)
                     iprot.readListEnd()
                 else:
                     iprot.skip(ftype)
@@ -2304,57 +2400,57 @@ class Drover(object):
         if self.contour_data is not None:
             oprot.writeFieldBegin('contour_data', TType.LIST, 1)
             oprot.writeListBegin(TType.STRUCT, len(self.contour_data))
-            for iter267 in self.contour_data:
-                iter267.write(oprot)
+            for iter283 in self.contour_data:
+                iter283.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.image_data is not None:
             oprot.writeFieldBegin('image_data', TType.LIST, 2)
             oprot.writeListBegin(TType.STRUCT, len(self.image_data))
-            for iter268 in self.image_data:
-                iter268.write(oprot)
+            for iter284 in self.image_data:
+                iter284.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.point_data is not None:
             oprot.writeFieldBegin('point_data', TType.LIST, 3)
             oprot.writeListBegin(TType.STRUCT, len(self.point_data))
-            for iter269 in self.point_data:
-                iter269.write(oprot)
+            for iter285 in self.point_data:
+                iter285.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.smesh_data is not None:
             oprot.writeFieldBegin('smesh_data', TType.LIST, 4)
             oprot.writeListBegin(TType.STRUCT, len(self.smesh_data))
-            for iter270 in self.smesh_data:
-                iter270.write(oprot)
+            for iter286 in self.smesh_data:
+                iter286.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.rtplan_data is not None:
             oprot.writeFieldBegin('rtplan_data', TType.LIST, 5)
             oprot.writeListBegin(TType.STRUCT, len(self.rtplan_data))
-            for iter271 in self.rtplan_data:
-                iter271.write(oprot)
+            for iter287 in self.rtplan_data:
+                iter287.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.lsamp_data is not None:
             oprot.writeFieldBegin('lsamp_data', TType.LIST, 6)
             oprot.writeListBegin(TType.STRUCT, len(self.lsamp_data))
-            for iter272 in self.lsamp_data:
-                iter272.write(oprot)
+            for iter288 in self.lsamp_data:
+                iter288.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.trans_data is not None:
             oprot.writeFieldBegin('trans_data', TType.LIST, 7)
             oprot.writeListBegin(TType.STRUCT, len(self.trans_data))
-            for iter273 in self.trans_data:
-                iter273.write(oprot)
+            for iter289 in self.trans_data:
+                iter289.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         if self.table_data is not None:
             oprot.writeFieldBegin('table_data', TType.LIST, 8)
             oprot.writeListBegin(TType.STRUCT, len(self.table_data))
-            for iter274 in self.table_data:
-                iter274.write(oprot)
+            for iter290 in self.table_data:
+                iter290.write(oprot)
             oprot.writeListEnd()
             oprot.writeFieldEnd()
         oprot.writeFieldStop()
@@ -2637,11 +2733,11 @@ class ExecuteScriptQuery(object):
             elif fid == 2:
                 if ftype == TType.MAP:
                     self.invocation_metadata = {}
-                    (_ktype276, _vtype277, _size275) = iprot.readMapBegin()
-                    for _i279 in range(_size275):
-                        _key280 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
-                        _val281 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
-                        self.invocation_metadata[_key280] = _val281
+                    (_ktype292, _vtype293, _size291) = iprot.readMapBegin()
+                    for _i295 in range(_size291):
+                        _key296 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        _val297 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        self.invocation_metadata[_key296] = _val297
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -2667,9 +2763,9 @@ class ExecuteScriptQuery(object):
         if self.invocation_metadata is not None:
             oprot.writeFieldBegin('invocation_metadata', TType.MAP, 2)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.invocation_metadata))
-            for kiter282, viter283 in self.invocation_metadata.items():
-                oprot.writeString(kiter282.encode('utf-8') if sys.version_info[0] == 2 else kiter282)
-                oprot.writeString(viter283.encode('utf-8') if sys.version_info[0] == 2 else viter283)
+            for kiter298, viter299 in self.invocation_metadata.items():
+                oprot.writeString(kiter298.encode('utf-8') if sys.version_info[0] == 2 else kiter298)
+                oprot.writeString(viter299.encode('utf-8') if sys.version_info[0] == 2 else viter299)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         if self.filename_lex is not None:
@@ -2740,11 +2836,11 @@ class ExecuteScriptResponse(object):
             elif fid == 3:
                 if ftype == TType.MAP:
                     self.invocation_metadata = {}
-                    (_ktype285, _vtype286, _size284) = iprot.readMapBegin()
-                    for _i288 in range(_size284):
-                        _key289 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
-                        _val290 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
-                        self.invocation_metadata[_key289] = _val290
+                    (_ktype301, _vtype302, _size300) = iprot.readMapBegin()
+                    for _i304 in range(_size300):
+                        _key305 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        _val306 = iprot.readString().decode('utf-8', errors='replace') if sys.version_info[0] == 2 else iprot.readString()
+                        self.invocation_metadata[_key305] = _val306
                     iprot.readMapEnd()
                 else:
                     iprot.skip(ftype)
@@ -2774,9 +2870,9 @@ class ExecuteScriptResponse(object):
         if self.invocation_metadata is not None:
             oprot.writeFieldBegin('invocation_metadata', TType.MAP, 3)
             oprot.writeMapBegin(TType.STRING, TType.STRING, len(self.invocation_metadata))
-            for kiter291, viter292 in self.invocation_metadata.items():
-                oprot.writeString(kiter291.encode('utf-8') if sys.version_info[0] == 2 else kiter291)
-                oprot.writeString(viter292.encode('utf-8') if sys.version_info[0] == 2 else viter292)
+            for kiter307, viter308 in self.invocation_metadata.items():
+                oprot.writeString(kiter307.encode('utf-8') if sys.version_info[0] == 2 else kiter307)
+                oprot.writeString(viter308.encode('utf-8') if sys.version_info[0] == 2 else viter308)
             oprot.writeMapEnd()
             oprot.writeFieldEnd()
         if self.filename_lex is not None:
@@ -2876,9 +2972,16 @@ planar_image_collection_double_double.thrift_spec = (
 )
 all_structs.append(cell_string)
 cell_string.thrift_spec = (
+    None,  # 0
+    (1, TType.I64, 'row', None, None, ),  # 1
+    (2, TType.I64, 'col', None, None, ),  # 2
+    (3, TType.STRING, 'val', 'UTF8', None, ),  # 3
 )
 all_structs.append(table2)
 table2.thrift_spec = (
+    None,  # 0
+    (1, TType.LIST, 'data', (TType.STRUCT, [cell_string, None], False), None, ),  # 1
+    (2, TType.MAP, 'metadata', (TType.STRING, 'UTF8', TType.STRING, 'UTF8', False), None, ),  # 2
 )
 all_structs.append(Contour_Data)
 Contour_Data.thrift_spec = (

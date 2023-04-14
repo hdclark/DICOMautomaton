@@ -117,14 +117,14 @@ uint32_t Receiver_GetSupportedOperations_result::read(::apache::thrift::protocol
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->success.clear();
-            uint32_t _size310;
-            ::apache::thrift::protocol::TType _etype313;
-            xfer += iprot->readListBegin(_etype313, _size310);
-            this->success.resize(_size310);
-            uint32_t _i314;
-            for (_i314 = 0; _i314 < _size310; ++_i314)
+            uint32_t _size324;
+            ::apache::thrift::protocol::TType _etype327;
+            xfer += iprot->readListBegin(_etype327, _size324);
+            this->success.resize(_size324);
+            uint32_t _i328;
+            for (_i328 = 0; _i328 < _size324; ++_i328)
             {
-              xfer += this->success[_i314].read(iprot);
+              xfer += this->success[_i328].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -155,10 +155,10 @@ uint32_t Receiver_GetSupportedOperations_result::write(::apache::thrift::protoco
     xfer += oprot->writeFieldBegin("success", ::apache::thrift::protocol::T_LIST, 0);
     {
       xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->success.size()));
-      std::vector<KnownOperation> ::const_iterator _iter315;
-      for (_iter315 = this->success.begin(); _iter315 != this->success.end(); ++_iter315)
+      std::vector<KnownOperation> ::const_iterator _iter329;
+      for (_iter329 = this->success.begin(); _iter329 != this->success.end(); ++_iter329)
       {
-        xfer += (*_iter315).write(oprot);
+        xfer += (*_iter329).write(oprot);
       }
       xfer += oprot->writeListEnd();
     }
@@ -199,14 +199,14 @@ uint32_t Receiver_GetSupportedOperations_presult::read(::apache::thrift::protoco
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             (*(this->success)).clear();
-            uint32_t _size316;
-            ::apache::thrift::protocol::TType _etype319;
-            xfer += iprot->readListBegin(_etype319, _size316);
-            (*(this->success)).resize(_size316);
-            uint32_t _i320;
-            for (_i320 = 0; _i320 < _size316; ++_i320)
+            uint32_t _size330;
+            ::apache::thrift::protocol::TType _etype333;
+            xfer += iprot->readListBegin(_etype333, _size330);
+            (*(this->success)).resize(_size330);
+            uint32_t _i334;
+            for (_i334 = 0; _i334 < _size330; ++_i334)
             {
-              xfer += (*(this->success))[_i320].read(iprot);
+              xfer += (*(this->success))[_i334].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -257,14 +257,14 @@ uint32_t Receiver_LoadFiles_args::read(::apache::thrift::protocol::TProtocol* ip
         if (ftype == ::apache::thrift::protocol::T_LIST) {
           {
             this->server_filenames.clear();
-            uint32_t _size321;
-            ::apache::thrift::protocol::TType _etype324;
-            xfer += iprot->readListBegin(_etype324, _size321);
-            this->server_filenames.resize(_size321);
-            uint32_t _i325;
-            for (_i325 = 0; _i325 < _size321; ++_i325)
+            uint32_t _size335;
+            ::apache::thrift::protocol::TType _etype338;
+            xfer += iprot->readListBegin(_etype338, _size335);
+            this->server_filenames.resize(_size335);
+            uint32_t _i339;
+            for (_i339 = 0; _i339 < _size335; ++_i339)
             {
-              xfer += this->server_filenames[_i325].read(iprot);
+              xfer += this->server_filenames[_i339].read(iprot);
             }
             xfer += iprot->readListEnd();
           }
@@ -293,10 +293,10 @@ uint32_t Receiver_LoadFiles_args::write(::apache::thrift::protocol::TProtocol* o
   xfer += oprot->writeFieldBegin("server_filenames", ::apache::thrift::protocol::T_LIST, 1);
   {
     xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>(this->server_filenames.size()));
-    std::vector<LoadFilesQuery> ::const_iterator _iter326;
-    for (_iter326 = this->server_filenames.begin(); _iter326 != this->server_filenames.end(); ++_iter326)
+    std::vector<LoadFilesQuery> ::const_iterator _iter340;
+    for (_iter340 = this->server_filenames.begin(); _iter340 != this->server_filenames.end(); ++_iter340)
     {
-      xfer += (*_iter326).write(oprot);
+      xfer += (*_iter340).write(oprot);
     }
     xfer += oprot->writeListEnd();
   }
@@ -320,10 +320,10 @@ uint32_t Receiver_LoadFiles_pargs::write(::apache::thrift::protocol::TProtocol* 
   xfer += oprot->writeFieldBegin("server_filenames", ::apache::thrift::protocol::T_LIST, 1);
   {
     xfer += oprot->writeListBegin(::apache::thrift::protocol::T_STRUCT, static_cast<uint32_t>((*(this->server_filenames)).size()));
-    std::vector<LoadFilesQuery> ::const_iterator _iter327;
-    for (_iter327 = (*(this->server_filenames)).begin(); _iter327 != (*(this->server_filenames)).end(); ++_iter327)
+    std::vector<LoadFilesQuery> ::const_iterator _iter341;
+    for (_iter341 = (*(this->server_filenames)).begin(); _iter341 != (*(this->server_filenames)).end(); ++_iter341)
     {
-      xfer += (*_iter327).write(oprot);
+      xfer += (*_iter341).write(oprot);
     }
     xfer += oprot->writeListEnd();
   }

@@ -109,8 +109,13 @@
 <tr><td>1</td><td>images</td><td><code>list&lt;<code><a href="#Struct_planar_image_double_double">planar_image_double_double</a></code>&gt;</code></td><td></td><td>required</td><td></td></tr>
 </tbody></table><br/></div><div class="definition"><h3 id="Struct_cell_string">Struct: cell_string</h3>
 <table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>row</td><td><code>i64</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>2</td><td>col</td><td><code>i64</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>3</td><td>val</td><td><code>string</code></td><td></td><td>required</td><td></td></tr>
 </tbody></table><br/></div><div class="definition"><h3 id="Struct_table2">Struct: table2</h3>
 <table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
+<tr><td>1</td><td>data</td><td><code>list&lt;<code><a href="#Struct_cell_string">cell_string</a></code>&gt;</code></td><td></td><td>required</td><td></td></tr>
+<tr><td>2</td><td>metadata</td><td><code><a href="#Typedef_metadata_t">metadata_t</a></code></td><td></td><td>required</td><td></td></tr>
 </tbody></table><br/></div><div class="definition"><h3 id="Struct_Contour_Data">Struct: Contour_Data</h3>
 <table class="table-bordered table-striped table-condensed"><thead><tr><th>Key</th><th>Field</th><th>Type</th><th>Description</th><th>Requiredness</th><th>Default value</th></tr></thead><tbody>
 <tr><td>1</td><td>ccs</td><td><code>list&lt;<code><a href="#Struct_contour_collection_double">contour_collection_double</a></code>&gt;</code></td><td></td><td>required</td><td></td></tr>
