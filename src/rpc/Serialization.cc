@@ -77,6 +77,15 @@ static void Deserialize( const int64_t &in, uint64_t &out ){
     out = static_cast<uint64_t>(in);
 }
 
+static void Serialize( const int32_t &in, int64_t &out ){
+    // Warning: conversion from int32_t to int64_t which in needed when long int = int32_t.
+    out = static_cast<int64_t>(in);
+}
+static void Deserialize( const int64_t &in, int32_t &out ){
+    // Warning: conversion from int64_t to int32_t which in needed when long int = int32_t.
+    out = static_cast<int32_t>(in);
+}
+
 static void Serialize( const int64_t &in, int64_t &out ){
     out = in;
 }
@@ -248,9 +257,15 @@ void Deserialize( const dcma::rpc::fv_surface_mesh_double_int64 &in, fv_surface_
 // planar_image<float,double>
 void Serialize( const planar_image<float,double> &in, dcma::rpc::planar_image_double_double &out ){
     static_assert( (   sizeof(decltype(in.data))  
-                     + sizeof(decltype(in.rows))
-                     + sizeof(decltype(in.columns))
-                     + sizeof(decltype(in.channels))
+                     // Handle platform differences with long int = int64_t or int32_t.
+                     // Members rows, columns, and channels will either be 8 bytes each and packed sequentially into
+                     // 24 bytes, or will be 4 bytes each and packed into 16 bytes with 4 bytes of padding.
+                     + ((sizeof(long int) == 8) ?   sizeof(decltype(in.rows))
+                                                  + sizeof(decltype(in.columns))
+                                                  + sizeof(decltype(in.channels))
+                                                :   sizeof(decltype(in.rows))
+                                                  + sizeof(decltype(in.columns))
+                                                  + sizeof(decltype(in.channels) * 2))
                      + sizeof(decltype(in.pxl_dx))
                      + sizeof(decltype(in.pxl_dy))
                      + sizeof(decltype(in.pxl_dz))
