@@ -386,40 +386,182 @@ void Deserialize( const dcma::rpc::Contour_Data &in, Contour_Data &out ){
 }
 
 // Image_Array
-// Point_Cloud
-// Surface_Mesh
-// Static_Machine_State
-// Dynamic_Machine_State
-// RTPlan
-// Transform3
-// Sparse_Table
+void Serialize( const Image_Array &in, dcma::rpc::Image_Array &out ){
+    static_assert( (   sizeof(decltype(in.imagecoll))
+                     + sizeof(decltype(in.filename)) ) == sizeof(decltype(in)),
+                   "Class layout is unexpected. Were members added?" );
+    Serialize(in.imagecoll, out.imagecoll);
+    Serialize(in.filename, out.filename);
+}
+void Deserialize( const dcma::rpc::Image_Array &in, Image_Array &out ){
+    Deserialize(in.imagecoll, out.imagecoll);
+    Deserialize(in.filename, out.filename);
+}
 
-//void Serialize( const Image_Array &in, dcma::rpc::Image_Array &out );
-//void Deserialize( const dcma::rpc::Image_Array &in, Image_Array &out );
-//
-//void Serialize( const Point_Cloud &in, dcma::rpc::Point_Cloud &out );
-//void Deserialize( const dcma::rpc::Point_Cloud &in, Point_Cloud &out );
-//
-//void Serialize( const Surface_Mesh &in, dcma::rpc::Surface_Mesh &out );
-//void Deserialize( const dcma::rpc::Surface_Mesh &in, Surface_Mesh &out );
-//
-//void Serialize( const Static_Machine_State &in, dcma::rpc::Static_Machine_State &out );
-//void Deserialize( const dcma::rpc::Static_Machine_State &in, Static_Machine_State &out );
-//
-//void Serialize( const Dynamic_Machine_State &in, dcma::rpc::Dynamic_Machine_State &out );
-//void Deserialize( const dcma::rpc::Dynamic_Machine_State &in, Dynamic_Machine_State &out );
-//
-//void Serialize( const RTPlan &in, dcma::rpc::RTPlan &out );
-//void Deserialize( const dcma::rpc::RTPlan &in, RTPlan &out );
-//
-//void Serialize( const Line_Sample &in, dcma::rpc::Line_Sample &out );
-//void Deserialize( const dcma::rpc::Line_Sample &in, Line_Sample &out );
-//
-//void Serialize( const Transform3 &in, dcma::rpc::Transform3 &out );
-//void Deserialize( const dcma::rpc::Transform3 &in, Transform3 &out );
-//
-//void Serialize( const Sparse_Table &in, dcma::rpc::Sparse_Table &out );
-//void Deserialize( const dcma::rpc::Sparse_Table &in, Sparse_Table &out );
+// Point_Cloud
+void Serialize( const Point_Cloud &in, dcma::rpc::Point_Cloud &out ){
+    static_assert( sizeof(decltype(in.pset)) == sizeof(decltype(in)),
+                   "Class layout is unexpected. Were members added?" );
+    Serialize(in.pset, out.pset);
+}
+void Deserialize( const dcma::rpc::Point_Cloud &in, Point_Cloud &out ){
+    Deserialize(in.pset, out.pset);
+}
+
+// Surface_Mesh
+void Serialize( const Surface_Mesh &in, dcma::rpc::Surface_Mesh &out ){
+    static_assert( (   sizeof(decltype(in.meshes))  
+                     + sizeof(decltype(in.vertex_attributes))
+                     + sizeof(decltype(in.face_attributes)) ) == sizeof(decltype(in)),
+                   "Class layout is unexpected. Were members added?" );
+    Serialize(in.meshes, out.meshes);
+
+    // TODO.
+    if(!in.vertex_attributes.empty()){
+        YLOGWARN("Attempting to serialize mesh with vertex attributes; attributes will be omitted");
+    }
+    if(!in.face_attributes.empty()){
+        YLOGWARN("Attempting to serialize mesh with face attributes; attributes will be omitted");
+    }
+}
+void Deserialize( const dcma::rpc::Surface_Mesh &in, Surface_Mesh &out ){
+    Deserialize(in.meshes, out.meshes);
+}
+
+// Static_Machine_State
+void Serialize( const Static_Machine_State &in, dcma::rpc::Static_Machine_State &out ){
+    static_assert( (   sizeof(decltype(in.CumulativeMetersetWeight))  
+                     + sizeof(decltype(in.ControlPointIndex))
+                     + sizeof(decltype(in.GantryAngle))
+                     + sizeof(decltype(in.GantryRotationDirection))
+                     + sizeof(decltype(in.BeamLimitingDeviceAngle))
+                     + sizeof(decltype(in.BeamLimitingDeviceRotationDirection))
+                     + sizeof(decltype(in.PatientSupportAngle))
+                     + sizeof(decltype(in.PatientSupportRotationDirection))
+                     + sizeof(decltype(in.TableTopEccentricAngle))
+                     + sizeof(decltype(in.TableTopEccentricRotationDirection))
+                     + sizeof(decltype(in.TableTopVerticalPosition))
+                     + sizeof(decltype(in.TableTopLongitudinalPosition))
+                     + sizeof(decltype(in.TableTopLateralPosition))
+                     + sizeof(decltype(in.TableTopPitchAngle))
+                     + sizeof(decltype(in.TableTopPitchRotationDirection))
+                     + sizeof(decltype(in.TableTopRollAngle))
+                     + sizeof(decltype(in.TableTopRollRotationDirection))
+                     + sizeof(decltype(in.IsocentrePosition))
+                     + sizeof(decltype(in.JawPositionsX))
+                     + sizeof(decltype(in.JawPositionsY))
+                     + sizeof(decltype(in.MLCPositionsX))
+                     + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
+                   "Class layout is unexpected. Were members added?" );
+    Serialize(in.CumulativeMetersetWeight, out.CumulativeMetersetWeight);
+    Serialize(in.ControlPointIndex, out.ControlPointIndex);
+    Serialize(in.GantryAngle, out.GantryAngle);
+    Serialize(in.GantryRotationDirection, out.GantryRotationDirection);
+    Serialize(in.BeamLimitingDeviceAngle, out.BeamLimitingDeviceAngle);
+    Serialize(in.BeamLimitingDeviceRotationDirection, out.BeamLimitingDeviceRotationDirection);
+    Serialize(in.PatientSupportAngle, out.PatientSupportAngle);
+    Serialize(in.PatientSupportRotationDirection, out.PatientSupportRotationDirection);
+    Serialize(in.TableTopEccentricAngle, out.TableTopEccentricAngle);
+    Serialize(in.TableTopEccentricRotationDirection, out.TableTopEccentricRotationDirection);
+    Serialize(in.TableTopVerticalPosition, out.TableTopVerticalPosition);
+    Serialize(in.TableTopLongitudinalPosition, out.TableTopLongitudinalPosition);
+    Serialize(in.TableTopLateralPosition, out.TableTopLateralPosition);
+    Serialize(in.TableTopPitchAngle, out.TableTopPitchAngle);
+    Serialize(in.TableTopPitchRotationDirection, out.TableTopPitchRotationDirection);
+    Serialize(in.TableTopRollAngle, out.TableTopRollAngle);
+    Serialize(in.TableTopRollRotationDirection, out.TableTopRollRotationDirection);
+    Serialize(in.IsocentrePosition, out.IsocentrePosition);
+    SERIALIZE_CONTAINER(in.JawPositionsX, out.JawPositionsX);
+    SERIALIZE_CONTAINER(in.JawPositionsY, out.JawPositionsY);
+    SERIALIZE_CONTAINER(in.MLCPositionsX, out.MLCPositionsX);
+    Serialize(in.metadata, out.metadata);
+}
+void Deserialize( const dcma::rpc::Static_Machine_State &in, Static_Machine_State &out ){
+    Deserialize(in.CumulativeMetersetWeight, out.CumulativeMetersetWeight);
+    Deserialize(in.ControlPointIndex, out.ControlPointIndex);
+    Deserialize(in.GantryAngle, out.GantryAngle);
+    Deserialize(in.GantryRotationDirection, out.GantryRotationDirection);
+    Deserialize(in.BeamLimitingDeviceAngle, out.BeamLimitingDeviceAngle);
+    Deserialize(in.BeamLimitingDeviceRotationDirection, out.BeamLimitingDeviceRotationDirection);
+    Deserialize(in.PatientSupportAngle, out.PatientSupportAngle);
+    Deserialize(in.PatientSupportRotationDirection, out.PatientSupportRotationDirection);
+    Deserialize(in.TableTopEccentricAngle, out.TableTopEccentricAngle);
+    Deserialize(in.TableTopEccentricRotationDirection, out.TableTopEccentricRotationDirection);
+    Deserialize(in.TableTopVerticalPosition, out.TableTopVerticalPosition);
+    Deserialize(in.TableTopLongitudinalPosition, out.TableTopLongitudinalPosition);
+    Deserialize(in.TableTopLateralPosition, out.TableTopLateralPosition);
+    Deserialize(in.TableTopPitchAngle, out.TableTopPitchAngle);
+    Deserialize(in.TableTopPitchRotationDirection, out.TableTopPitchRotationDirection);
+    Deserialize(in.TableTopRollAngle, out.TableTopRollAngle);
+    Deserialize(in.TableTopRollRotationDirection, out.TableTopRollRotationDirection);
+    Deserialize(in.IsocentrePosition, out.IsocentrePosition);
+    DESERIALIZE_CONTAINER(in.JawPositionsX, out.JawPositionsX);
+    DESERIALIZE_CONTAINER(in.JawPositionsY, out.JawPositionsY);
+    DESERIALIZE_CONTAINER(in.MLCPositionsX, out.MLCPositionsX);
+    Deserialize(in.metadata, out.metadata);
+}
+
+// Dynamic_Machine_State
+void Serialize( const Dynamic_Machine_State &in, dcma::rpc::Dynamic_Machine_State &out ){
+    static_assert( (   sizeof(decltype(in.BeamNumber))  
+                     + sizeof(decltype(in.FinalCumulativeMetersetWeight))
+                     + sizeof(decltype(in.static_states))
+                     + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
+                   "Class layout is unexpected. Were members added?" );
+    Serialize(in.BeamNumber, out.BeamNumber);
+    Serialize(in.FinalCumulativeMetersetWeight, out.FinalCumulativeMetersetWeight);
+    SERIALIZE_CONTAINER(in.static_states, out.static_states);
+    Serialize(in.metadata, out.metadata);
+}
+void Deserialize( const dcma::rpc::Dynamic_Machine_State &in, Dynamic_Machine_State &out ){
+    Deserialize(in.BeamNumber, out.BeamNumber);
+    Deserialize(in.FinalCumulativeMetersetWeight, out.FinalCumulativeMetersetWeight);
+    DESERIALIZE_CONTAINER(in.static_states, out.static_states);
+    Deserialize(in.metadata, out.metadata);
+}
+
+// RTPlan
+void Serialize( const RTPlan &in, dcma::rpc::RTPlan &out ){
+    static_assert( (   sizeof(decltype(in.dynamic_states))  
+                     + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
+                   "Class layout is unexpected. Were members added?" );
+    SERIALIZE_CONTAINER(in.dynamic_states, out.dynamic_states);
+    Serialize(in.metadata, out.metadata);
+}
+void Deserialize( const dcma::rpc::RTPlan &in, RTPlan &out ){
+    DESERIALIZE_CONTAINER(in.dynamic_states, out.dynamic_states);
+    Deserialize(in.metadata, out.metadata);
+}
+
+// Line_Sample
+void Serialize( const Line_Sample &in, dcma::rpc::Line_Sample &out ){
+    static_assert( sizeof(decltype(in.line)) == sizeof(decltype(in)),
+                   "Class layout is unexpected. Were members added?" );
+    Serialize(in.line, out.line);
+}
+void Deserialize( const dcma::rpc::Line_Sample &in, Line_Sample &out ){
+    Deserialize(in.line, out.line);
+}
+
+// Transform3
+void Serialize( const Transform3 &in, dcma::rpc::Transform3 &out ){
+    // TODO.
+    throw std::runtime_error("Transform data is not yet supported. Refusing to continue");
+}
+void Deserialize( const dcma::rpc::Transform3 &in, Transform3 &out ){
+    // TODO.
+    throw std::runtime_error("Transform data is not yet supported. Refusing to continue");
+}
+
+// Sparse_Table
+void Serialize( const Sparse_Table &in, dcma::rpc::Sparse_Table &out ){
+    static_assert( sizeof(decltype(in.table)) == sizeof(decltype(in)),
+                   "Class layout is unexpected. Were members added?" );
+    Serialize(in.table, out.table);
+}
+void Deserialize( const dcma::rpc::Sparse_Table &in, Sparse_Table &out ){
+    Deserialize(in.table, out.table);
+}
 
 // Drover
 void Serialize( const Drover &in, dcma::rpc::Drover &out ){
@@ -432,13 +574,14 @@ void Serialize( const Drover &in, dcma::rpc::Drover &out ){
                      + sizeof(decltype(in.trans_data)) 
                      + sizeof(decltype(in.table_data)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+
     // For a pointer contour_data member.
     if(in.Has_Contour_Data() && !in.contour_data->ccs.empty()){
         out.__set_contour_data( {} ); // Field is optional, so ensure it is marked as set.
         out.contour_data.emplace_back();
         Serialize(*(in.contour_data), out.contour_data.back());
     }
-    
+    //
     // For a list-of-pointers contour_data member.
     //if(in.Has_Contour_Data() && !in.contour_data->ccs.empty()){
     //    std::vector<dcma::rpc::Contour_Data> rpc_cd;
@@ -449,32 +592,72 @@ void Serialize( const Drover &in, dcma::rpc::Drover &out ){
     //    out.__set_contour_data( rpc_cd ); // Field is optional, so ensure it is marked as set.
     //}
 
-//struct Drover {
-//    1: optional list<Contour_Data> contour_data;
-//    2: optional list<Image_Array>  image_data;
-//    3: optional list<Point_Cloud>  point_data;
-//    4: optional list<Surface_Mesh> smesh_data;
-//    5: optional list<RTPlan>       rtplan_data;
-//    6: optional list<Line_Sample>  lsamp_data;
-//    7: optional list<Transform3>   trans_data;
-//    8: optional list<Sparse_Table> table_data;
-//}
+    if(in.Has_Image_Data()){
+        std::vector<dcma::rpc::Image_Array> shtl;
+        for(const auto& ptr : in.image_data){
+            shtl.emplace_back();
+            Serialize(*ptr, shtl.back());
+        }
+        out.__set_image_data( shtl ); // Field is optional, so ensure it is marked as set.
+    }
 
-//    Note: for Drover, or any other optional fields.
-//    
-//        Set via:
-//        out.__set_x(in.x);
-//        out.__set_y(in.y);
-//        out.__set_z(in.z);
-//    
-//        Check if set via:
-//        if(in.__isset.x) out.x = in.x;
+    if(in.Has_Point_Data()){
+        std::vector<dcma::rpc::Point_Cloud> shtl;
+        for(const auto& ptr : in.point_data){
+            shtl.emplace_back();
+            Serialize(*ptr, shtl.back());
+        }
+        out.__set_point_data( shtl ); // Field is optional, so ensure it is marked as set.
+    }
+
+    if(in.Has_Mesh_Data()){
+        std::vector<dcma::rpc::Surface_Mesh> shtl;
+        for(const auto& ptr : in.smesh_data){
+            shtl.emplace_back();
+            Serialize(*ptr, shtl.back());
+        }
+        out.__set_smesh_data( shtl ); // Field is optional, so ensure it is marked as set.
+    }
+
+    if(in.Has_RTPlan_Data()){
+        std::vector<dcma::rpc::RTPlan> shtl;
+        for(const auto& ptr : in.rtplan_data){
+            shtl.emplace_back();
+            Serialize(*ptr, shtl.back());
+        }
+        out.__set_rtplan_data( shtl ); // Field is optional, so ensure it is marked as set.
+    }
+
+    if(in.Has_LSamp_Data()){
+        std::vector<dcma::rpc::Line_Sample> shtl;
+        for(const auto& ptr : in.lsamp_data){
+            shtl.emplace_back();
+            Serialize(*ptr, shtl.back());
+        }
+        out.__set_lsamp_data( shtl ); // Field is optional, so ensure it is marked as set.
+    }
+
+    if(in.Has_Tran3_Data()){
+        throw std::runtime_error("Transform data is not yet supported. Refusing to continue");
+
+        std::vector<dcma::rpc::Transform3> shtl;
+        for(const auto& ptr : in.trans_data){
+            shtl.emplace_back();
+            Serialize(*ptr, shtl.back());
+        }
+        out.__set_trans_data( shtl ); // Field is optional, so ensure it is marked as set.
+    }
+
+    if(in.Has_Table_Data()){
+        std::vector<dcma::rpc::Sparse_Table> shtl;
+        for(const auto& ptr : in.table_data){
+            shtl.emplace_back();
+            Serialize(*ptr, shtl.back());
+        }
+        out.__set_table_data( shtl ); // Field is optional, so ensure it is marked as set.
+    }
 }
 void Deserialize( const dcma::rpc::Drover &in, Drover &out ){
-    // NOTE: the Drover class contains many optional fields. Each needs to be confirmed to be available before
-    // deserializing.
-    //
-    // For a pointer contour_data member.
     if(in.__isset.contour_data){
         // Currently, the Drover class allows a single pointer Contour_Data item, so we have to pack all inner contours
         // into the same object.
@@ -482,15 +665,67 @@ void Deserialize( const dcma::rpc::Drover &in, Drover &out ){
         for(const auto &rpc_cd : in.contour_data){
             Contour_Data shtl;
             Deserialize(rpc_cd, shtl);
-
             out.contour_data->ccs.splice( std::end(out.contour_data->ccs), shtl.ccs);
         }
     }
-    //if(in.Has_Contour_Data() && !in.contour_data->ccs.empty()){
-    //    out.__set_contour_data( {} ); // Field is optional, so ensure it is marked as set.
-    //    out.contour_data.emplace_back();
-    //    Serialize(*(in.contour_data), out.contour_data.back());
-    //}
+
+    if(in.__isset.image_data){
+        for(const auto& x : in.image_data){
+            auto ptr = std::make_shared<Image_Array>();
+            Deserialize(x, *ptr);
+            out.image_data.emplace_back(ptr);
+        }
+    }
+
+    if(in.__isset.point_data){
+        for(const auto& x : in.point_data){
+            auto ptr = std::make_shared<Point_Cloud>();
+            Deserialize(x, *ptr);
+            out.point_data.emplace_back(ptr);
+        }
+    }
+
+    if(in.__isset.smesh_data){
+        for(const auto& x : in.smesh_data){
+            auto ptr = std::make_shared<Surface_Mesh>();
+            Deserialize(x, *ptr);
+            out.smesh_data.emplace_back(ptr);
+        }
+    }
+
+    if(in.__isset.rtplan_data){
+        for(const auto& x : in.rtplan_data){
+            auto ptr = std::make_shared<RTPlan>();
+            Deserialize(x, *ptr);
+            out.rtplan_data.emplace_back(ptr);
+        }
+    }
+
+    if(in.__isset.lsamp_data){
+        for(const auto& x : in.lsamp_data){
+            auto ptr = std::make_shared<Line_Sample>();
+            Deserialize(x, *ptr);
+            out.lsamp_data.emplace_back(ptr);
+        }
+    }
+
+    if(in.__isset.trans_data){
+        throw std::runtime_error("Transform data is not yet supported. Refusing to continue");
+
+        for(const auto& x : in.trans_data){
+            auto ptr = std::make_shared<Transform3>();
+            Deserialize(x, *ptr);
+            out.trans_data.emplace_back(ptr);
+        }
+    }
+
+    if(in.__isset.table_data){
+        for(const auto& x : in.table_data){
+            auto ptr = std::make_shared<Sparse_Table>();
+            Deserialize(x, *ptr);
+            out.table_data.emplace_back(ptr);
+        }
+    }
 }
 
 
