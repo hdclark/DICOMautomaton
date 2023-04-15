@@ -454,7 +454,7 @@ void Serialize( const Static_Machine_State &in, dcma::rpc::Static_Machine_State 
                      + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
     Serialize(in.CumulativeMetersetWeight, out.CumulativeMetersetWeight);
-    Serialize(in.ControlPointIndex, out.ControlPointIndex);
+    SerializeLI(in.ControlPointIndex, out.ControlPointIndex);
     Serialize(in.GantryAngle, out.GantryAngle);
     Serialize(in.GantryRotationDirection, out.GantryRotationDirection);
     Serialize(in.BeamLimitingDeviceAngle, out.BeamLimitingDeviceAngle);
@@ -478,7 +478,7 @@ void Serialize( const Static_Machine_State &in, dcma::rpc::Static_Machine_State 
 }
 void Deserialize( const dcma::rpc::Static_Machine_State &in, Static_Machine_State &out ){
     Deserialize(in.CumulativeMetersetWeight, out.CumulativeMetersetWeight);
-    Deserialize(in.ControlPointIndex, out.ControlPointIndex);
+    DeserializeLI(in.ControlPointIndex, out.ControlPointIndex);
     Deserialize(in.GantryAngle, out.GantryAngle);
     Deserialize(in.GantryRotationDirection, out.GantryRotationDirection);
     Deserialize(in.BeamLimitingDeviceAngle, out.BeamLimitingDeviceAngle);
@@ -508,13 +508,13 @@ void Serialize( const Dynamic_Machine_State &in, dcma::rpc::Dynamic_Machine_Stat
                      + sizeof(decltype(in.static_states))
                      + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
-    Serialize(in.BeamNumber, out.BeamNumber);
+    SerializeLI(in.BeamNumber, out.BeamNumber);
     Serialize(in.FinalCumulativeMetersetWeight, out.FinalCumulativeMetersetWeight);
     SERIALIZE_CONTAINER(in.static_states, out.static_states);
     Serialize(in.metadata, out.metadata);
 }
 void Deserialize( const dcma::rpc::Dynamic_Machine_State &in, Dynamic_Machine_State &out ){
-    Deserialize(in.BeamNumber, out.BeamNumber);
+    DeserializeLI(in.BeamNumber, out.BeamNumber);
     Deserialize(in.FinalCumulativeMetersetWeight, out.FinalCumulativeMetersetWeight);
     DESERIALIZE_CONTAINER(in.static_states, out.static_states);
     Deserialize(in.metadata, out.metadata);
