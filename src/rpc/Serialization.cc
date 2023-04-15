@@ -431,7 +431,8 @@ void Deserialize( const dcma::rpc::Surface_Mesh &in, Surface_Mesh &out ){
 // Static_Machine_State
 void Serialize( const Static_Machine_State &in, dcma::rpc::Static_Machine_State &out ){
     static_assert( (   sizeof(decltype(in.CumulativeMetersetWeight))  
-                     + sizeof(decltype(in.ControlPointIndex))
+                     + ((sizeof(long int) == 8) ?   sizeof(decltype(in.ControlPointIndex))
+                                                :   sizeof(decltype(in.ControlPointIndex)) * 2)
                      + sizeof(decltype(in.GantryAngle))
                      + sizeof(decltype(in.GantryRotationDirection))
                      + sizeof(decltype(in.BeamLimitingDeviceAngle))
@@ -503,7 +504,8 @@ void Deserialize( const dcma::rpc::Static_Machine_State &in, Static_Machine_Stat
 
 // Dynamic_Machine_State
 void Serialize( const Dynamic_Machine_State &in, dcma::rpc::Dynamic_Machine_State &out ){
-    static_assert( (   sizeof(decltype(in.BeamNumber))  
+    static_assert( (   ((sizeof(long int) == 8) ?  sizeof(decltype(in.BeamNumber))
+                                                :  sizeof(decltype(in.BeamNumber)) * 2)
                      + sizeof(decltype(in.FinalCumulativeMetersetWeight))
                      + sizeof(decltype(in.static_states))
                      + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
