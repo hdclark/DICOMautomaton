@@ -2942,7 +2942,7 @@ void Write_Dose_Array(const std::shared_ptr<Image_Array>& IA, const std::filesys
     }
     if( max_dose < 0.0f ) throw std::invalid_argument("No voxels were found to export. Cannot continue.");
     const double full_dose_scaling = max_dose / static_cast<double>(std::numeric_limits<uint32_t>::max());
-    const double dose_scaling = std::max(full_dose_scaling, 1.0E-5); //Because excess bits might get truncated!
+    const double dose_scaling = std::max<double>(full_dose_scaling, 1.0E-5); //Because excess bits might get truncated!
 
     const auto pxl_dx = IA->imagecoll.images.front().pxl_dx;
     const auto pxl_dy = IA->imagecoll.images.front().pxl_dy;

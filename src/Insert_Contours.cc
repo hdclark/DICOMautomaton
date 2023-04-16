@@ -40,7 +40,7 @@ void Inject_Thin_Line_Contour( const planar_image<float,double> &animg,
                                double c_thickness ){ // The contour thickness.
 
     if(!std::isfinite(c_thickness)){
-        c_thickness = (1E-4) * std::min(animg.pxl_dx, animg.pxl_dy); // Small relative to the image features.
+        c_thickness = (1E-4) * std::min<double>(animg.pxl_dx, animg.pxl_dy); // Small relative to the image features.
     }
 
     // Enclose the image with a sphere (i.e., a convenient geometrical shape for computing intersections).
@@ -119,7 +119,7 @@ void Inject_Point_Contour( const planar_image<float,double> &animg,
 
     // Split the intersection points by a small amount, to give the line a small width.
     if(!std::isfinite(radius)){
-        radius = std::max(animg.pxl_dx, animg.pxl_dy); // Something reasonable relative to the image features.
+        radius = std::max<double>(animg.pxl_dx, animg.pxl_dy); // Something reasonable relative to the image features.
     }
     if(num_verts < 3) throw std::logic_error("This routine requires >=3 vertices for approximations."); 
 

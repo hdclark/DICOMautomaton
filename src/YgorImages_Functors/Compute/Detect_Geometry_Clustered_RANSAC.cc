@@ -216,7 +216,7 @@ bool ComputeDetectGeometryClusteredRANSAC(planar_image_collection<float,double> 
                     const unsigned int random_seed = 17317;
                     
                     // Randomly sample the positions (if there are many points) to reduce the fitting difficulty.
-                    const size_t N_sample = std::min(positions.size(), max_N_sample);
+                    const size_t N_sample = std::min<size_t>(positions.size(), max_N_sample);
                     std::vector<vec3<double>> sampled;
                     if(N_sample == positions.size()){ // Avoid sampling if everything will be used.
                         sampled = positions;

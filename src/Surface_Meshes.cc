@@ -470,10 +470,10 @@ Marching_Cubes_Implementation(
         // needles and surface crossovers. However, merely setting the tolerance to zero will likely cause meshing to
         // fail outright.
         constexpr auto machine_eps = std::numeric_limits<double>::epsilon();
-        const auto dvec3_tol = std::max(
-                                   std::min( { pxl_dx, pxl_dy, pxl_dz } ) * 1E-4,
+        const auto dvec3_tol = std::max<double>(
+                                   std::min<double>( { pxl_dx, pxl_dy, pxl_dz } ) * 1E-4,
                                    std::sqrt(machine_eps) * 100.0 ); // Guard against pxl_dz = 0.
-        final_merge_tol = std::min(final_merge_tol, dvec3_tol);
+        final_merge_tol = std::min<double>(final_merge_tol, dvec3_tol);
 
         // List of Marching Cube voxel corner positions relative to image voxel centre.
         //
@@ -1177,8 +1177,8 @@ Estimate_Surface_Mesh_Marching_Cubes(
     //
     // NOTE: Could also use (median? maximum?) distance from centroid to vertex.
     //       These should always be 1-2 voxels from the image edge, and are really unrelated from the z-margin. TODO.
-    double x_margin = std::max(2.0, z_margin);
-    double y_margin = std::max(2.0, z_margin);
+    double x_margin = std::max<double>(2.0, z_margin);
+    double y_margin = std::max<double>(2.0, z_margin);
 
     // Generate a grid volume bounding the ROI(s).
     const int64_t NumberOfChannels = 1;

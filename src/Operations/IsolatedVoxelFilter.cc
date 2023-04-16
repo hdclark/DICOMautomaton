@@ -195,7 +195,7 @@ bool IsolatedVoxelFilter(Drover &DICOM_data,
 
                           //Then clamp the voxel value.
                           std::sort(std::begin(shtl), std::end(shtl));
-                          const auto clamped = std::clamp(v, shtl.front(), shtl.back());
+                          const auto clamped = std::clamp<double>(v, shtl.front(), shtl.back());
                           return clamped;
                       };
 */
@@ -436,7 +436,7 @@ bool IsolatedVoxelFilter(Drover &DICOM_data,
                     std::sort(std::begin(shtl), std::end(shtl));
                     const auto low = shtl.front();
                     const auto high = shtl.back();
-                    const auto clamped = std::clamp(v, low, high);
+                    const auto clamped = std::clamp<float>(v, low, high);
 
                     const bool connected = isininc(low, v, high);
                     const bool isolated = !connected;

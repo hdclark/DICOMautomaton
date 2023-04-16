@@ -245,7 +245,7 @@ bool AnalyzePicketFence(Drover &DICOM_data,
         const auto SADToSID = RTImageSID / SAD; // Factor for scaling distance on SAD plane to distance on image panel plane.
 
         const auto corner_R = animg->position(0, 0); // A fixed point from which the profiles will be relative to. Better to use Isocentre instead! TODO
-        const auto sample_spacing = std::max(animg->pxl_dx, animg->pxl_dy); // The sampling frequency for profiles.
+        const auto sample_spacing = std::max<double>(animg->pxl_dx, animg->pxl_dy); // The sampling frequency for profiles.
 
         const auto NaN = std::numeric_limits<double>::quiet_NaN();
         const auto NaN_vec = vec3<double>(NaN, NaN, NaN);
@@ -1000,12 +1000,12 @@ bool AnalyzePicketFence(Drover &DICOM_data,
                 std::adjacent_difference(peak_offsets.begin(), peak_offsets.end(),
                                          std::back_inserter(adjacent_peak_diffs));
 
-                const auto max_abs_sep = std::max( std::abs(Stats::Min(peak_offsets)),
-                                                   std::abs(Stats::Max(peak_offsets)) );
+                const auto max_abs_sep = std::max<double>( std::abs(Stats::Min(peak_offsets)),
+                                                           std::abs(Stats::Max(peak_offsets)) );
                 const auto mean_abs_sep = Stats::Mean(peak_offsets);
 
-                const auto max_adj_diff = std::max( std::abs(Stats::Min(adjacent_peak_diffs)),
-                                                    std::abs(Stats::Max(adjacent_peak_diffs)) );
+                const auto max_adj_diff = std::max<double>( std::abs(Stats::Min(adjacent_peak_diffs)),
+                                                            std::abs(Stats::Max(adjacent_peak_diffs)) );
                 const auto mean_adj_diff = Stats::Mean(adjacent_peak_diffs);
                 
                 const auto within_abs_sep  = (max_abs_sep < (ThresholdDistance * SADToSID));
@@ -1188,7 +1188,7 @@ bool AnalyzePicketFence(Drover &DICOM_data,
             contour_metadata["ROIName"] = PeakROILabel;
             contour_metadata["NormalizedROIName"] = NormalizedPeakROILabel;
             contour_metadata["OutlineColour"] = PeakLineColour;
-            const auto radius = 2.0 * std::max(animg->pxl_dx, animg->pxl_dy); // Something reasonable relative to the image features.
+            const auto radius = 2.0 * std::max<double>(animg->pxl_dx, animg->pxl_dy); // Something reasonable relative to the image features.
             const int64_t num_verts = 4; // Squares.
 
             for(const auto &l_int_p : PFC.actual_jl_int){

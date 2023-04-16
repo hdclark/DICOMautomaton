@@ -33,13 +33,13 @@ aa_bbox::aa_bbox(){
 };
 
 void aa_bbox::digest(const vec3<double>& r){
-    this->min.x = std::min( this->min.x, r.x );
-    this->min.y = std::min( this->min.y, r.y );
-    this->min.z = std::min( this->min.z, r.z );
+    this->min.x = std::min<double>( this->min.x, r.x );
+    this->min.y = std::min<double>( this->min.y, r.y );
+    this->min.z = std::min<double>( this->min.z, r.z );
 
-    this->max.x = std::max( this->max.x, r.x );
-    this->max.y = std::max( this->max.y, r.y );
-    this->max.z = std::max( this->max.z, r.z );
+    this->max.x = std::max<double>( this->max.x, r.x );
+    this->max.y = std::max<double>( this->max.y, r.y );
+    this->max.z = std::max<double>( this->max.z, r.z );
 };
 
 
@@ -68,10 +68,10 @@ double aa_box::evaluate_sdf(const vec3<double>& pos) const {
     const auto positive_octant_pos = vec3<double>(std::abs(pos.x), std::abs(pos.y), std::abs(pos.z));
     const auto positive_octant_rad = vec3<double>(std::abs(radii.x), std::abs(radii.y), std::abs(radii.z));
     const auto dL = positive_octant_pos - positive_octant_rad;
-    const auto sdf = vec3<double>(std::max(dL.x, 0.0),
-                                  std::max(dL.y, 0.0),
-                                  std::max(dL.z, 0.0)).length()
-                   + std::min( std::max({dL.x, dL.y, dL.z}), 0.0 );
+    const auto sdf = vec3<double>(std::max<double>(dL.x, 0.0),
+                                  std::max<double>(dL.y, 0.0),
+                                  std::max<double>(dL.z, 0.0)).length()
+                   + std::min<double>( std::max<double>({dL.x, dL.y, dL.z}), 0.0 );
     return sdf;
 }
 
@@ -116,9 +116,9 @@ double poly_chain::evaluate_sdf(const vec3<double>& pos) const {
     for( ; B_it != end; ++A_it, ++B_it){
         const auto dPA = pos - *A_it;
         const auto dBA = *B_it - *A_it;
-        const auto t = std::clamp( dPA.Dot(dBA) / dBA.Dot(dBA), 0.0, 1.0 );
+        const auto t = std::clamp<double>( dPA.Dot(dBA) / dBA.Dot(dBA), 0.0, 1.0 );
         const auto sdf = (dPA - dBA * t).length() - this->radius;
-        min_sdf = std::min( min_sdf, sdf );
+        min_sdf = std::min<double>( min_sdf, sdf );
     }
 
     if(!std::isfinite(min_sdf)){
@@ -202,12 +202,12 @@ aa_bbox rotate::evaluate_aa_bbox() const {
     this->rot.apply_to(c6);
     this->rot.apply_to(c7);
     this->rot.apply_to(c8);
-    bb.min.x = std::min({ c1.x, c2.x, c3.x, c4.x, c5.x, c6.x, c7.x, c8.x });
-    bb.min.y = std::min({ c1.y, c2.y, c3.y, c4.y, c5.y, c6.y, c7.y, c8.y });
-    bb.min.z = std::min({ c1.z, c2.z, c3.z, c4.z, c5.z, c6.z, c7.z, c8.z });
-    bb.max.x = std::max({ c1.x, c2.x, c3.x, c4.x, c5.x, c6.x, c7.x, c8.x });
-    bb.max.y = std::max({ c1.y, c2.y, c3.y, c4.y, c5.y, c6.y, c7.y, c8.y });
-    bb.max.z = std::max({ c1.z, c2.z, c3.z, c4.z, c5.z, c6.z, c7.z, c8.z });
+    bb.min.x = std::min<double>({ c1.x, c2.x, c3.x, c4.x, c5.x, c6.x, c7.x, c8.x });
+    bb.min.y = std::min<double>({ c1.y, c2.y, c3.y, c4.y, c5.y, c6.y, c7.y, c8.y });
+    bb.min.z = std::min<double>({ c1.z, c2.z, c3.z, c4.z, c5.z, c6.z, c7.z, c8.z });
+    bb.max.x = std::max<double>({ c1.x, c2.x, c3.x, c4.x, c5.x, c6.x, c7.x, c8.x });
+    bb.max.y = std::max<double>({ c1.y, c2.y, c3.y, c4.y, c5.y, c6.y, c7.y, c8.y });
+    bb.max.z = std::max<double>({ c1.z, c2.z, c3.z, c4.z, c5.z, c6.z, c7.z, c8.z });
     return bb;
 }
 
@@ -262,7 +262,7 @@ double subtract::evaluate_sdf(const vec3<double> &pos) const {
     // Difference -- can be APPROXIMATED by taking the maximum of children SDF, but negating one of them.
     const auto cA_sdf = this->children[0]->evaluate_sdf(pos);
     const auto cB_sdf = this->children[1]->evaluate_sdf(pos);
-    const auto sdf = std::max( cA_sdf, -cB_sdf );
+    const auto sdf = std::max<double>( cA_sdf, -cB_sdf );
     return sdf;
 }
 
@@ -335,7 +335,7 @@ double chamfer_join::evaluate_sdf(const vec3<double> &pos) const {
     const auto end = std::end(sdfs);
     for(auto c1_it = std::begin(sdfs); c1_it != end; ++c1_it){
         for(auto c2_it = std::next(c1_it); c2_it != end; ++c2_it){
-            const auto l_min = std::min({ *c1_it, *c2_it, (*c1_it + *c2_it - this->thickness)*std::sqrt(0.5) });
+            const auto l_min = std::min<double>({ *c1_it, *c2_it, (*c1_it + *c2_it - this->thickness)*std::sqrt(0.5) });
             if(l_min < min_sdf) min_sdf = l_min;
         }
     }
@@ -360,7 +360,7 @@ double chamfer_subtract::evaluate_sdf(const vec3<double> &pos) const {
     // Difference -- can be APPROXIMATED by taking the maximum of children SDF, but negating one of them.
     const auto cA_sdf = this->children[0]->evaluate_sdf(pos);
     const auto cB_sdf = this->children[1]->evaluate_sdf(pos);
-    const auto sdf = std::max({ cA_sdf, -cB_sdf, (cA_sdf - cB_sdf + this->thickness)*std::sqrt(0.5) });
+    const auto sdf = std::max<double>({ cA_sdf, -cB_sdf, (cA_sdf - cB_sdf + this->thickness)*std::sqrt(0.5) });
     return sdf;
 }
 
@@ -392,7 +392,7 @@ double chamfer_intersect::evaluate_sdf(const vec3<double> &pos) const {
     const auto end = std::end(sdfs);
     for(auto c1_it = std::begin(sdfs); c1_it != end; ++c1_it){
         for(auto c2_it = std::next(c1_it); c2_it != end; ++c2_it){
-            const auto l_max = std::max({ *c1_it, *c2_it, (*c1_it + *c2_it + this->thickness)*std::sqrt(0.5) });
+            const auto l_max = std::max<double>({ *c1_it, *c2_it, (*c1_it + *c2_it + this->thickness)*std::sqrt(0.5) });
             if(max_sdf < l_max) max_sdf = l_max;
         }
     }
@@ -480,8 +480,8 @@ double extrude::evaluate_sdf(const vec3<double> &pos) const {
     const auto pos_plane_sdist = this->cut_plane.Get_Signed_Distance_To_Point(pos);
     const auto c_sdf = this->children[0]->evaluate_sdf( proj_pos );
     const auto dz = std::abs(pos_plane_sdist) - this->distance;
-    const auto sdf = std::min(0.0, std::max(dz, c_sdf))
-                   + std::hypot( std::max(0.0, dz), std::max(0.0, c_sdf) );
+    const auto sdf = std::min<double>(0.0, std::max<double>(dz, c_sdf))
+                   + std::hypot( std::max<double>(0.0, dz), std::max<double>(0.0, c_sdf) );
     return sdf;
 }
 

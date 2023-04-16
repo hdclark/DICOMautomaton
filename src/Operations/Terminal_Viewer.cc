@@ -379,10 +379,10 @@ void draw_image( std::ostream &os,
     planar_image<float, double> scaled_img;
     const auto aspect = (img.pxl_dx * img.rows) / (img.pxl_dy * img.columns);
     auto new_cols = nearest_even_number(max_square_size);
-    auto new_rows = static_cast<int64_t>( std::clamp( 2.0 * std::floor( aspect * new_cols * 0.5), 1.0, 5.0 * new_cols) );
+    auto new_rows = static_cast<int64_t>( std::clamp<double>( 2.0 * std::floor( aspect * new_cols * 0.5), 1.0, 5.0 * new_cols) );
     if(new_cols < new_rows){
         new_rows = max_square_size;
-        new_cols = static_cast<int64_t>( std::clamp( 2.0 * std::floor( (1.0 / aspect) * new_rows * 0.5), 1.0, 5.0 * new_rows) );
+        new_cols = static_cast<int64_t>( std::clamp<double>( 2.0 * std::floor( (1.0 / aspect) * new_rows * 0.5), 1.0, 5.0 * new_rows) );
     }
     if( (max_square_size < new_rows)
     ||  (max_square_size < new_cols) ){
@@ -397,27 +397,27 @@ void draw_image( std::ostream &os,
         const auto r_f = (static_cast<double>(row) / static_cast<double>(new_rows)) * img.rows;
         const auto c_f = (static_cast<double>(col) / static_cast<double>(new_cols)) * img.columns;
         val = img.bilinearly_interpolate_in_pixel_number_space(
-                  std::clamp(r_f, 0.0, static_cast<double>(img.rows)-1.0),
-                  std::clamp(c_f, 0.0, static_cast<double>(img.columns)-1.0),
+                  std::clamp<double>(r_f, 0.0, static_cast<double>(img.rows)-1.0),
+                  std::clamp<double>(c_f, 0.0, static_cast<double>(img.columns)-1.0),
                   chnl );
     });
 
     const auto map_to_24bit_colour = [](const ClampedColourRGB &rgb){
-        const auto r = std::clamp(static_cast<int>( std::round(0.0 + (255.0 - 0.0) * rgb.R) ), 0, 255);
-        const auto g = std::clamp(static_cast<int>( std::round(0.0 + (255.0 - 0.0) * rgb.G) ), 0, 255);
-        const auto b = std::clamp(static_cast<int>( std::round(0.0 + (255.0 - 0.0) * rgb.B) ), 0, 255);
+        const auto r = std::clamp<int>(static_cast<int>( std::round(0.0 + (255.0 - 0.0) * rgb.R) ), 0, 255);
+        const auto g = std::clamp<int>(static_cast<int>( std::round(0.0 + (255.0 - 0.0) * rgb.G) ), 0, 255);
+        const auto b = std::clamp<int>(static_cast<int>( std::round(0.0 + (255.0 - 0.0) * rgb.B) ), 0, 255);
         return std::make_tuple(r, g, b);
     };
     const auto map_to_6bit_colour_code = [](const ClampedColourRGB &rgb){
         // 6-bit colour embedded within 8-bit ANSI codes. Note that this colour code is specific to ANSI terminals.
-        const auto r = std::clamp(static_cast<int>( std::round(0.0 + (5.0 - 0.0) * rgb.R) ), 0, 5);
-        const auto g = std::clamp(static_cast<int>( std::round(0.0 + (5.0 - 0.0) * rgb.G) ), 0, 5);
-        const auto b = std::clamp(static_cast<int>( std::round(0.0 + (5.0 - 0.0) * rgb.B) ), 0, 5);
+        const auto r = std::clamp<int>(static_cast<int>( std::round(0.0 + (5.0 - 0.0) * rgb.R) ), 0, 5);
+        const auto g = std::clamp<int>(static_cast<int>( std::round(0.0 + (5.0 - 0.0) * rgb.G) ), 0, 5);
+        const auto b = std::clamp<int>(static_cast<int>( std::round(0.0 + (5.0 - 0.0) * rgb.B) ), 0, 5);
         return (6 * 6 * r + 6 * g + b + 16);
     };
     const auto map_to_24step_colour_code = [](float intensity){
         // 24-step grayscale embedded within 8-bit ANSI codes. Note that this colour code is specific to ANSI terminals.
-        const auto g = std::clamp(static_cast<int>( std::round(232.0 + (255.0 - 232.0) * intensity) ), 232, 255);
+        const auto g = std::clamp<int>(static_cast<int>( std::round(232.0 + (255.0 - 232.0) * intensity) ), 232, 255);
         return g;
     };
     const auto linear_glpyh_map = [](float intensity, const std::vector<std::string> &glyphs){

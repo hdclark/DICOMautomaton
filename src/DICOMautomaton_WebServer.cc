@@ -857,7 +857,7 @@ void BaseWebServerApplication::appendOperationParamsColumn(){
                 // Instead of a freeform lineedit widget, provide a spinner.
                 auto spinner = table->elementAt(table_row,cols)->addWidget(std::make_unique<Wt::WSelectionBox>());
                 spinner->setSelectionMode(Wt::SelectionMode::Extended);
-                spinner->setVerticalSize(std::min(15,static_cast<int>(ROI_labels.size())));
+                spinner->setVerticalSize(std::min<int>(15,static_cast<int>(ROI_labels.size())));
                 spinner->disable();
                 for(const auto &l : ROI_labels) spinner->addItem(l);
                 if(!ROI_labels.empty()) spinner->enable();

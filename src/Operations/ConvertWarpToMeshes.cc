@@ -136,7 +136,7 @@ bool ConvertWarpToMeshes(Drover &DICOM_data,
                     const auto N_chns = img.channels;
                     if(N_chns != 3L) throw std::runtime_error("Vector deformation grid does not have three channels");
 
-                    const auto pxl_l = std::max( 0.15 * std::min({ img.pxl_dx, img.pxl_dy, img.pxl_dz }), 1.0E-3 );
+                    const auto pxl_l = std::max<double>( 0.15 * std::min<double>({ img.pxl_dx, img.pxl_dy, img.pxl_dz }), 1.0E-3 );
                     const auto ortho_unit = img.col_unit.Cross(img.row_unit).unit();
 
                     for(int64_t row = 0; row < img.rows; ++row){

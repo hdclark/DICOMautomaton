@@ -225,11 +225,11 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
                     const auto dy_u = static_cast<int64_t>( std::floor( user_data_s->maximum_distance / pxl_dy ) );
                     const auto dz_u = static_cast<int64_t>( std::floor( user_data_s->maximum_distance / pxl_dz ) );
 
-                    const int64_t l_row_min = std::max( R_row - dx_u, 0L );
-                    const int64_t l_row_max = std::min( R_row + dx_u, ref_img_refw.get().rows - 1L );
+                    const int64_t l_row_min = std::max<int64_t>( R_row - dx_u, 0L );
+                    const int64_t l_row_max = std::min<int64_t>( R_row + dx_u, ref_img_refw.get().rows - 1L );
 
-                    const int64_t l_col_min = std::max( R_col - dy_u, 0L );
-                    const int64_t l_col_max = std::min( R_col + dy_u, ref_img_refw.get().columns - 1L );
+                    const int64_t l_col_min = std::max<int64_t>( R_col - dy_u, 0L );
+                    const int64_t l_col_max = std::min<int64_t>( R_col + dy_u, ref_img_refw.get().columns - 1L );
 
                     const int64_t l_img_min = (R_num - dz_u);
                     const int64_t l_img_max = (R_num + dz_u);

@@ -163,7 +163,7 @@ bool ExtractRadiomicFeatures(Drover &DICOM_data,
             if(!std::isfinite(LongestPerimeter)){
                 LongestPerimeter = pl;
             }else{
-                LongestPerimeter = std::max(LongestPerimeter, pl);
+                LongestPerimeter = std::max<double>(LongestPerimeter, pl);
             }
         }
         contours_header << ",TotalPerimeter";

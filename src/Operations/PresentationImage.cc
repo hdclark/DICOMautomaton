@@ -195,7 +195,7 @@ bool PresentationImage(Drover &DICOM_data,
             const auto new_low  = std::stod(low_str);
             const auto new_high = std::stod(high_str);
             const auto new_fullwidth = std::abs(new_high - new_low);
-            const auto new_centre = std::min(new_low, new_high) + 0.5 * new_fullwidth;
+            const auto new_centre = std::min<double>(new_low, new_high) + 0.5 * new_fullwidth;
             custom_width.emplace(new_fullwidth);
             custom_centre.emplace(new_centre);
         }catch(const std::exception &e){
@@ -391,7 +391,7 @@ bool PresentationImage(Drover &DICOM_data,
                     if(!std::isfinite(val)){
                         animage.setPixel(i,j,NaN_Color);
                     }else{
-                        const auto rescaled_value = std::clamp(val * rescale_m + rescale_b, 0.0f, 1.0f);
+                        const auto rescaled_value = std::clamp<float>(val * rescale_m + rescale_b, 0.0f, 1.0f);
 
                         const auto res = colour_maps[colour_map].second(rescaled_value);
                         const double x_R = res.R;
@@ -448,8 +448,8 @@ bool PresentationImage(Drover &DICOM_data,
         float h_scale = 1.0;
         h_scale = static_cast<float>(win_bb.height) / img_bb.height;
         w_scale = static_cast<float>(win_bb.width) / img_bb.width;
-        h_scale = std::min(h_scale,w_scale);
-        w_scale = std::min(h_scale,w_scale);
+        h_scale = std::min<float>(h_scale,w_scale);
+        w_scale = std::min<float>(h_scale,w_scale);
 
         //Actually scale the image.
         asprite.second.scale(w_scale,h_scale);

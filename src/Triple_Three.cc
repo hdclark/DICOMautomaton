@@ -31,10 +31,10 @@ void tt_game_t::reset(){
         const auto f4 = frd(this->rand_gen);
         const auto f_sum = f1 + f2 + f3 + f4;
 
-        this->cards.at(i).stat_up    = std::clamp( static_cast<int64_t>(std::round( (f1/f_sum) * max_total )), static_cast<int64_t>(0), max_single );
-        this->cards.at(i).stat_down  = std::clamp( static_cast<int64_t>(std::round( (f2/f_sum) * max_total )), static_cast<int64_t>(0), max_single );
-        this->cards.at(i).stat_left  = std::clamp( static_cast<int64_t>(std::round( (f3/f_sum) * max_total )), static_cast<int64_t>(0), max_single );
-        this->cards.at(i).stat_right = std::clamp( static_cast<int64_t>(std::round( (f4/f_sum) * max_total )), static_cast<int64_t>(0), max_single );
+        this->cards.at(i).stat_up    = std::clamp<int64_t>( static_cast<int64_t>(std::round( (f1/f_sum) * max_total )), static_cast<int64_t>(0), max_single );
+        this->cards.at(i).stat_down  = std::clamp<int64_t>( static_cast<int64_t>(std::round( (f2/f_sum) * max_total )), static_cast<int64_t>(0), max_single );
+        this->cards.at(i).stat_left  = std::clamp<int64_t>( static_cast<int64_t>(std::round( (f3/f_sum) * max_total )), static_cast<int64_t>(0), max_single );
+        this->cards.at(i).stat_right = std::clamp<int64_t>( static_cast<int64_t>(std::round( (f4/f_sum) * max_total )), static_cast<int64_t>(0), max_single );
         this->cards.at(i).used = false;
         this->cards.at(i).owned_by_first_player = ((i < 5) ? true : false);
     }
@@ -152,10 +152,10 @@ tt_game_t::get_strongest_corner_move(){
     for(int64_t card_num = starting_card_num; card_num < (starting_card_num + 5); ++card_num){
         const auto &card = this->get_card(card_num);
         if(!card.used){
-            const auto tl = std::min(card.stat_down, card.stat_right);
-            const auto tr = std::min(card.stat_down, card.stat_left);
-            const auto bl = std::min(card.stat_up, card.stat_right);
-            const auto br = std::min(card.stat_up, card.stat_left);
+            const auto tl = std::min<int64_t>(card.stat_down, card.stat_right);
+            const auto tr = std::min<int64_t>(card.stat_down, card.stat_left);
+            const auto bl = std::min<int64_t>(card.stat_up, card.stat_right);
+            const auto br = std::min<int64_t>(card.stat_up, card.stat_left);
             if( tl_empty
             &&  (current_best_score < tl) ){
                 current_best_score = tl;
@@ -415,7 +415,7 @@ tt_game_t::score_best_move_v1( int64_t max_depth,
     if(N_possible_moves == 0){
         throw std::logic_error("No moves available, unable to continue");
     }
-    const int64_t simulations_allotment = std::max(static_cast<int64_t>(1), available_simulations / N_possible_moves);
+    const int64_t simulations_allotment = std::max<int64_t>(static_cast<int64_t>(1), available_simulations / N_possible_moves);
     int64_t surplus_move_simulations = 0;
 
 

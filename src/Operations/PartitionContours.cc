@@ -433,12 +433,12 @@ bool PartitionContours(Drover &DICOM_data,
 
                 // The bisection routine requires for input the fractional area above the plane. We convert from (thickness,offset)
                 // units to the fractional area above the plane for both upper and lower extents.
-                const double XSelectionLower = std::clamp(1.0 - XSelectionOffsetFromBottom, 0.0, 1.0);
-                const double YSelectionLower = std::clamp(1.0 - YSelectionOffsetFromBottom, 0.0, 1.0);
-                const double ZSelectionLower = std::clamp(1.0 - ZSelectionOffsetFromBottom, 0.0, 1.0);
-                const double XSelectionUpper = std::clamp(1.0 - XSelectionOffsetFromBottom - XSelectionThickness, 0.0, 1.0);
-                const double YSelectionUpper = std::clamp(1.0 - YSelectionOffsetFromBottom - YSelectionThickness, 0.0, 1.0);
-                const double ZSelectionUpper = std::clamp(1.0 - ZSelectionOffsetFromBottom - ZSelectionThickness, 0.0, 1.0);
+                const double XSelectionLower = std::clamp<double>(1.0 - XSelectionOffsetFromBottom, 0.0, 1.0);
+                const double YSelectionLower = std::clamp<double>(1.0 - YSelectionOffsetFromBottom, 0.0, 1.0);
+                const double ZSelectionLower = std::clamp<double>(1.0 - ZSelectionOffsetFromBottom, 0.0, 1.0);
+                const double XSelectionUpper = std::clamp<double>(1.0 - XSelectionOffsetFromBottom - XSelectionThickness, 0.0, 1.0);
+                const double YSelectionUpper = std::clamp<double>(1.0 - YSelectionOffsetFromBottom - YSelectionThickness, 0.0, 1.0);
+                const double ZSelectionUpper = std::clamp<double>(1.0 - ZSelectionOffsetFromBottom - ZSelectionThickness, 0.0, 1.0);
 
                 // Perform the sub-segmentation.
                 std::list<contour_collection<double>> cc_selection;

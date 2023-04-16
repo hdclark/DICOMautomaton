@@ -82,7 +82,7 @@ bool ComputeInterpolateImageSlices(planar_image_collection<float,double> &imagec
     const auto machine_eps = std::sqrt(std::numeric_limits<double>::epsilon());
 
     const auto relative_diff = [](const double &A, const double &B) -> double {
-        const auto max_abs = std::max( std::abs(A), std::abs(B) );
+        const auto max_abs = std::max<double>( std::abs(A), std::abs(B) );
         const auto machine_eps = std::sqrt(std::numeric_limits<double>::epsilon());
         return (max_abs < machine_eps) ? 0.0 
                                        : std::abs(A-B) / max_abs;

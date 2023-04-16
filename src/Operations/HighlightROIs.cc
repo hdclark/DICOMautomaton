@@ -263,12 +263,12 @@ bool HighlightROIs(Drover &DICOM_data,
                 const double dist_v = itA->distance(*itB);
                 if(dist_v < machine_eps) continue;
 
-                const box3 bb( point3( std::min(itA->x - bb_margin, itB->x - bb_margin),
-                                       std::min(itA->y - bb_margin, itB->y - bb_margin),
-                                       std::min(itA->z - bb_margin, itB->z - bb_margin) ),
-                               point3( std::max(itA->x + bb_margin, itB->x + bb_margin),
-                                       std::max(itA->y + bb_margin, itB->y + bb_margin),
-                                       std::max(itA->z + bb_margin, itB->z + bb_margin) ) );
+                const box3 bb( point3( std::min<double>(itA->x - bb_margin, itB->x - bb_margin),
+                                       std::min<double>(itA->y - bb_margin, itB->y - bb_margin),
+                                       std::min<double>(itA->z - bb_margin, itB->z - bb_margin) ),
+                               point3( std::max<double>(itA->x + bb_margin, itB->x + bb_margin),
+                                       std::max<double>(itA->y + bb_margin, itB->y + bb_margin),
+                                       std::max<double>(itA->z + bb_margin, itB->z + bb_margin) ) );
 
                 // Compute axis-aligned bounding box.
                 rtree.insert(std::make_pair(bb, std::make_pair( *itA, *itB )));
@@ -338,12 +338,12 @@ bool HighlightROIs(Drover &DICOM_data,
         std::vector<double> newvals_d;
 
         const auto find_intersections = [&](){
-            const box3 bb( point3( std::min({ pos_r0c0.x, pos_rmc0.x, pos_r0cm.x, pos_rmcm.x }),
-                                   std::min({ pos_r0c0.y, pos_rmc0.y, pos_r0cm.y, pos_rmcm.y }),
-                                   std::min({ pos_r0c0.z, pos_rmc0.z, pos_r0cm.z, pos_rmcm.z }) - 0.1 * img_refw.get().pxl_dz),
-                           point3( std::max({ pos_r0c0.x, pos_rmc0.x, pos_r0cm.x, pos_rmcm.x }),
-                                   std::max({ pos_r0c0.y, pos_rmc0.y, pos_r0cm.y, pos_rmcm.y }),
-                                   std::max({ pos_r0c0.z, pos_rmc0.z, pos_r0cm.z, pos_rmcm.z }) + 0.1 * img_refw.get().pxl_dz) );
+            const box3 bb( point3( std::min<double>({ pos_r0c0.x, pos_rmc0.x, pos_r0cm.x, pos_rmcm.x }),
+                                   std::min<double>({ pos_r0c0.y, pos_rmc0.y, pos_r0cm.y, pos_rmcm.y }),
+                                   std::min<double>({ pos_r0c0.z, pos_rmc0.z, pos_r0cm.z, pos_rmcm.z }) - 0.1 * img_refw.get().pxl_dz),
+                           point3( std::max<double>({ pos_r0c0.x, pos_rmc0.x, pos_r0cm.x, pos_rmcm.x }),
+                                   std::max<double>({ pos_r0c0.y, pos_rmc0.y, pos_r0cm.y, pos_rmcm.y }),
+                                   std::max<double>({ pos_r0c0.z, pos_rmc0.z, pos_r0cm.z, pos_rmcm.z }) + 0.1 * img_refw.get().pxl_dz) );
             std::vector<value> nearby;
             rtree.query(bgi::intersects(bb), std::back_inserter(nearby));
 
@@ -473,7 +473,8 @@ bool HighlightROIs(Drover &DICOM_data,
         // Note: this step is NOT needed, and can result in lower accuracy, but will guarantee outputs are bounded
         // within a specific range.
         if(ClampResult){
-            newval = std::clamp(newval, std::min(ExteriorVal,InteriorVal), std::max(ExteriorVal,InteriorVal));
+            newval = std::clamp<double>(newval, std::min<double>(ExteriorVal,InteriorVal),
+                                                std::max<double>(ExteriorVal,InteriorVal));
         }
         val = newval;
         return;

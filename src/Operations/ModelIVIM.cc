@@ -830,7 +830,7 @@ double GetADCls(const std::vector<float> &bvalues, const std::vector<float> &val
         sum_denominator += std::pow((b-b_avg), 2.0);
     }
 
-    const double ADC = std::max(- sum_numerator / sum_denominator, 0.0);
+    const double ADC = std::max<double>(- sum_numerator / sum_denominator, 0.0);
     return ADC;
 }
 

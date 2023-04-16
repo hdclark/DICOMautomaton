@@ -85,10 +85,10 @@ bool DeDuplicateImages(Drover &DICOM_data,
             const auto d_center = (center_A - center_B).length();
             const auto d_volume = std::abs(volume_A - volume_B);
 
-            //const auto vox_lowest_min  = std::min(rmm_A.Current_Min(), rmm_B.Current_Min());
-            const auto vox_highest_min = std::max(rmm_A.Current_Min(), rmm_B.Current_Min());
-            const auto vox_lowest_max  = std::min(rmm_A.Current_Max(), rmm_B.Current_Max());
-            //const auto vox_highest_max = std::max(rmm_A.Current_Max(), rmm_B.Current_Max());
+            //const auto vox_lowest_min  = std::min<double>(rmm_A.Current_Min(), rmm_B.Current_Min());
+            const auto vox_highest_min = std::max<float>(rmm_A.Current_Min(), rmm_B.Current_Min());
+            const auto vox_lowest_max  = std::min<float>(rmm_A.Current_Max(), rmm_B.Current_Max());
+            //const auto vox_highest_max = std::max<double>(rmm_A.Current_Max(), rmm_B.Current_Max());
             const auto vox_range_dice_numer = 2.0 * std::abs(vox_lowest_max - vox_highest_min);
             const auto vox_range_dice_denom = std::abs(rmm_A.Current_Max() - rmm_A.Current_Min()) 
                                             + std::abs(rmm_B.Current_Max() - rmm_B.Current_Min());

@@ -121,12 +121,12 @@ CustomImGuiWidget_LoadingBar(const std::chrono::time_point<std::chrono::system_c
     auto drawList = ImGui::GetWindowDrawList();
     const auto orig_screen_pos = ImGui::GetCursorScreenPos();
     const auto avail_space = ImGui::GetContentRegionAvail();
-    const auto rect_width = std::clamp(ImGui::GetFontSize(), 1.0f, 100.0f);
-    const auto rect_height = std::clamp(ImGui::GetTextLineHeight(), 1.0f, 100.0f);
+    const auto rect_width = std::clamp<float>(ImGui::GetFontSize(), 1.0f, 100.0f);
+    const auto rect_height = std::clamp<float>(ImGui::GetTextLineHeight(), 1.0f, 100.0f);
     const auto rect_height_offset = (ImGui::GetTextLineHeightWithSpacing() / rect_height) * 0.5f;
     const auto rect_width_offset = rect_height_offset;
     const auto rect_space = rect_width * 0.25f;
-    const auto num_rects_f = std::clamp( (avail_space.x - ImGui::GetCursorPosX() * 2.0f + rect_space) / (rect_width + rect_space), 3.0f, 50.0f );
+    const auto num_rects_f = std::clamp<float>( (avail_space.x - ImGui::GetCursorPosX() * 2.0f + rect_space) / (rect_width + rect_space), 3.0f, 50.0f );
     const auto wave_speed = 125.0f;
 
     if( std::isfinite(rect_width)
@@ -151,7 +151,7 @@ CustomImGuiWidget_LoadingBar(const std::chrono::time_point<std::chrono::system_c
             br_pos.y = tl_pos.y + rect_height;
 
             const auto intensity = std::cos(2.0f*pi*(wave_speed * t - x_offset)/wave_period);
-            const auto clamped = std::clamp(intensity, 0.2, 1.0);
+            const auto clamped = std::clamp<double>(intensity, 0.2, 1.0);
             ImU32 col = ImGui::GetColorU32( ImVec4(clamped, clamped * 0.5f, clamped * 0.1f, 1.0f ) );
 
             drawList->AddRectFilled( tl_pos, br_pos, col );
@@ -191,10 +191,10 @@ get_pixelspace_axis_aligned_bounding_box(const planar_image<float, double> &img,
         //if(bbox_max.z < (proj3 + extra_space)) bbox_max.z = (proj3 + extra_space);
     }
 
-    auto row_min = std::clamp(static_cast<int64_t>(std::floor(bbox_min.x/img.pxl_dx)), 0L, img.rows-1);
-    auto row_max = std::clamp(static_cast<int64_t>(std::ceil(bbox_max.x/img.pxl_dx)), 0L, img.rows-1);
-    auto col_min = std::clamp(static_cast<int64_t>(std::floor(bbox_min.y/img.pxl_dy)), 0L, img.columns-1);
-    auto col_max = std::clamp(static_cast<int64_t>(std::ceil(bbox_max.y/img.pxl_dy)), 0L, img.columns-1);
+    auto row_min = std::clamp<int64_t>(static_cast<int64_t>(std::floor(bbox_min.x/img.pxl_dx)), 0, img.rows-1);
+    auto row_max = std::clamp<int64_t>(static_cast<int64_t>(std::ceil(bbox_max.x/img.pxl_dx)), 0, img.rows-1);
+    auto col_min = std::clamp<int64_t>(static_cast<int64_t>(std::floor(bbox_min.y/img.pxl_dy)), 0, img.columns-1);
+    auto col_max = std::clamp<int64_t>(static_cast<int64_t>(std::ceil(bbox_max.y/img.pxl_dy)), 0, img.columns-1);
     return std::make_tuple( row_min, row_max, col_min, col_max );
 }
 
@@ -244,7 +244,7 @@ struct opengl_mesh {
         const auto x_range = x_max - x_min;
         const auto y_range = y_max - y_min;
         const auto z_range = z_max - z_min;
-        const auto max_range = std::max({x_range, y_range, z_range});
+        const auto max_range = std::max<double>({x_range, y_range, z_range});
         x_min = (x_max + x_min) * 0.5 - max_range * 0.5;
         x_max = (x_max + x_min) * 0.5 + max_range * 0.5;
         y_min = (y_max + y_min) * 0.5 - max_range * 0.5;
@@ -705,7 +705,7 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                         //if(buffer_space < dR) continue;
                     }
 
-                    cit->reference( r, c, channel ) = std::clamp(f(pos, dR, cit->value(r, c, channel)), intensity_min, intensity_max);
+                    cit->reference( r, c, channel ) = std::clamp<float>(f(pos, dR, cit->value(r, c, channel)), intensity_min, intensity_max);
                 }
             }
         }
@@ -1421,7 +1421,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     // Resets the contouring image to match the display image characteristics.
     const auto reset_contouring_state = [&contouring_imgs,
                                          &contouring_img_row_col_count]( img_array_ptr_it_t  dimg_array_ptr_it ) -> void {
-            contouring_img_row_col_count = std::clamp(contouring_img_row_col_count, 5, 1024);
+            contouring_img_row_col_count = std::clamp<int>(contouring_img_row_col_count, 5, 1024);
 
             // Reset the contouring images.
             if(!contouring_imgs.Has_Image_Data()){
@@ -1467,7 +1467,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         ++A_it;
                         ++B_it;
                     }
-                    return (std::min(dimg.pxl_dx, dimg.pxl_dy) < dist);
+                    return (std::min<double>(dimg.pxl_dx, dimg.pxl_dy) < dist);
                 });
                 if(!encompassing_images.empty()) continue;
 
@@ -1681,7 +1681,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                             animage.push_back( nan_colour[1] );
                             animage.push_back( nan_colour[2] );
                         }else{
-                            const auto rescaled_value = std::clamp(val * rescale_m + rescale_b, 0.0f, 1.0f);
+                            const auto rescaled_value = std::clamp<float>(val * rescale_m + rescale_b, 0.0f, 1.0f);
                             const auto res = colour_maps[colour_map].second(rescaled_value);
                             const double x_R = res.R;
                             const double x_G = res.G;
@@ -1825,7 +1825,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                             ++A_it;
                             ++B_it;
                         }
-                        return (std::min(disp_img_it->pxl_dx, disp_img_it->pxl_dy) < dist);
+                        return (std::min<double>(disp_img_it->pxl_dx, disp_img_it->pxl_dy) < dist);
                     }
                 );
                 if(encompassing_images.size() != 1) break;
@@ -3246,7 +3246,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             ||  (f && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Space))) ) action = "drop";
 
             ImGui::SliderInt("Polyomino Family", &polyomino_family, 0, 5);
-            polyomino_family = std::clamp(polyomino_family, 0, 5);
+            polyomino_family = std::clamp<int>(polyomino_family, 0, 5);
             if(ImGui::IsItemHovered()){
                 ImGui::SetTooltip("Controls the family or order of new polyominoes, e.g., four for tetrominoes. Zero selects from all available families.");
             }
@@ -3299,7 +3299,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
             // Note: we have to render the image last so the texture number is available during rendering.
             ImVec2 image_extent = ImGui::GetContentRegionAvail();
-            image_extent.y = std::min(700.0f, image_extent.y - 5.0f);
+            image_extent.y = std::min<float>(700.0f, image_extent.y - 5.0f);
             image_extent.x = image_extent.y / polyomino_texture.aspect_ratio;
             auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(polyomino_texture.texture_number));
             ImGui::Image(gl_tex_ptr, image_extent);
@@ -3430,7 +3430,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     card_owner = (card.owned_by_first_player ? 0 : 1);
 
                     const auto t_diff = static_cast<float>(std::chrono::duration_cast<std::chrono::milliseconds>(t_now - card_time).count());
-                    const auto dt = std::clamp(t_diff, 0.0f, tt_anim_dt) / tt_anim_dt;
+                    const auto dt = std::clamp<float>(t_diff, 0.0f, tt_anim_dt) / tt_anim_dt;
                     colour_blend = ((card_owner == 0) ? 1.0 - dt : dt);
                 }else{
                     colour_blend = ( card.owned_by_first_player ? 0.0f : 1.0f );
@@ -3438,10 +3438,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                 const auto user_colour = ImColor(0.1f, 0.4f, 0.8f, 1.0f).Value;
                 const auto comp_colour = ImColor(0.8f, 0.4f, 0.1f, 1.0f).Value;
                 ImVec4 card_colour;
-                card_colour.x = std::clamp(comp_colour.x + (user_colour.x - comp_colour.x) * colour_blend, 0.0f, 1.0f);
-                card_colour.y = std::clamp(comp_colour.y + (user_colour.y - comp_colour.y) * colour_blend, 0.0f, 1.0f);
-                card_colour.z = std::clamp(comp_colour.z + (user_colour.z - comp_colour.z) * colour_blend, 0.0f, 1.0f);
-                card_colour.w = std::clamp(comp_colour.w + (user_colour.w - comp_colour.w) * colour_blend, 0.0f, 1.0f);
+                card_colour.x = std::clamp<float>(comp_colour.x + (user_colour.x - comp_colour.x) * colour_blend, 0.0f, 1.0f);
+                card_colour.y = std::clamp<float>(comp_colour.y + (user_colour.y - comp_colour.y) * colour_blend, 0.0f, 1.0f);
+                card_colour.z = std::clamp<float>(comp_colour.z + (user_colour.z - comp_colour.z) * colour_blend, 0.0f, 1.0f);
+                card_colour.w = std::clamp<float>(comp_colour.w + (user_colour.w - comp_colour.w) * colour_blend, 0.0f, 1.0f);
 
 
                 ImGui::PushID(button_id++);
@@ -3908,7 +3908,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                             auto drawList = ImGui::GetWindowDrawList();
 
                             const auto text_ln = static_cast<int>(std::floor(vert_scroll / text_vert_spacing));
-                            const auto text_ln_max = std::max(0, text_ln + static_cast<int>(std::floor((vert_scroll + edit_box_extent.y) / text_vert_spacing)));
+                            const auto text_ln_max = std::max<int>(0, text_ln + static_cast<int>(std::floor((vert_scroll + edit_box_extent.y) / text_vert_spacing)));
                             const auto line_vert_shift = (vert_scroll / text_vert_spacing) - static_cast<float>(text_ln);
 
                             for(int l = text_ln; l < text_ln_max; ++l){ 
@@ -4051,7 +4051,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             // Note: unhappy with this. Can cause feedback loop and flicker/jumpiness when resizing. Works OK for now
             // though. TODO.
             ImVec2 image_extent = ImGui::GetContentRegionAvail();
-            image_extent.x = std::max(512.0f, image_extent.x - 5.0f);
+            image_extent.x = std::max<float>(512.0f, image_extent.x - 5.0f);
             // Ensure images have the same aspect ratio as the true image.
             image_extent.y = current_texture.aspect_ratio * image_extent.x;
             auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(current_texture.texture_number));
@@ -4101,10 +4101,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                 const auto img_cols = current_texture.col_count;
                 const auto img_rows_f = static_cast<float>(img_rows);
                 const auto img_cols_f = static_cast<float>(img_cols);
-                image_mouse_pos.region_x = std::clamp((io.MousePos.x - real_pos.x) / real_extent.x, 0.0f, 1.0f);
-                image_mouse_pos.region_y = std::clamp((io.MousePos.y - real_pos.y) / real_extent.y, 0.0f, 1.0f);
-                image_mouse_pos.r = std::clamp( static_cast<int64_t>( std::floor( image_mouse_pos.region_y * img_rows_f ) ), 0L, (img_rows-1) );
-                image_mouse_pos.c = std::clamp( static_cast<int64_t>( std::floor( image_mouse_pos.region_x * img_cols_f ) ), 0L, (img_cols-1) );
+                image_mouse_pos.region_x = std::clamp<float>((io.MousePos.x - real_pos.x) / real_extent.x, 0.0f, 1.0f);
+                image_mouse_pos.region_y = std::clamp<float>((io.MousePos.y - real_pos.y) / real_extent.y, 0.0f, 1.0f);
+                image_mouse_pos.r = std::clamp<int64_t>( static_cast<int64_t>( std::floor( image_mouse_pos.region_y * img_rows_f ) ), 0L, (img_rows-1) );
+                image_mouse_pos.c = std::clamp<int64_t>( static_cast<int64_t>( std::floor( image_mouse_pos.region_x * img_cols_f ) ), 0L, (img_cols-1) );
                 image_mouse_pos.zero_pos = disp_img_it->position(0L, 0L);
                 image_mouse_pos.dicom_pos = image_mouse_pos.zero_pos 
                                             + disp_img_it->row_unit * image_mouse_pos.region_y * disp_img_it->pxl_dx * img_rows_f
@@ -4578,7 +4578,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                             Operations.back().insert("InteriorVal=1.0");
                             Operations.back().insert("ExteriorOverwrite=true");
                             Operations.back().insert("InteriorOverwrite=true");
-                            contour_overlap_style = std::clamp(contour_overlap_style, static_cast<size_t>(0UL), contour_overlap_styles.size());
+                            contour_overlap_style = std::clamp<size_t>(contour_overlap_style, static_cast<size_t>(0UL), contour_overlap_styles.size());
                             Operations.back().insert("ContourOverlap="_s + contour_overlap_styles[contour_overlap_style]);
                             Operations.back().insert("ROILabelRegex=.*");
                             Operations.back().insert("ImageSelection=last");
@@ -5723,7 +5723,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 int scroll_tables = table_display.table_num;
                 const int N_tables = DICOM_data.table_data.size();
                 ImGui::SliderInt("Table", &scroll_tables, 0, N_tables - 1);
-                const int64_t new_table_num = std::clamp(scroll_tables, 0, N_tables - 1);
+                const int64_t new_table_num = std::clamp<int>(scroll_tables, 0, N_tables - 1);
                 if(new_table_num != table_display.table_num){
                     table_display.table_num = new_table_num;
                 }
@@ -5741,11 +5741,11 @@ bool SDL_Viewer(Drover &DICOM_data,
                 auto l_min_row = tbl_min_row;
                 auto l_max_row = tbl_max_row;
 
-                l_min_col = std::clamp(l_min_col, tbl_min_col, tbl_max_col);
-                l_max_col = std::clamp(l_max_col, l_min_col, std::min(tbl_max_col, l_min_col + 63));
+                l_min_col = std::clamp<int64_t>(l_min_col, tbl_min_col, tbl_max_col);
+                l_max_col = std::clamp<int64_t>(l_max_col, l_min_col, std::min<int64_t>(tbl_max_col, l_min_col + 63));
 
-                l_min_row = std::clamp(l_min_row, tbl_min_row, tbl_max_row);
-                l_max_row = std::clamp(l_max_row, l_min_row, std::min(tbl_max_row, l_min_row + 19'999));
+                l_min_row = std::clamp<int64_t>(l_min_row, tbl_min_row, tbl_max_row);
+                l_max_row = std::clamp<int64_t>(l_max_row, l_min_row, std::min<int64_t>(tbl_max_row, l_min_row + 19'999));
 
                 if( (l_min_col != tbl_min_col)
                 ||  (l_max_col != tbl_max_col) 
@@ -5799,9 +5799,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                     tables::visitor_func_t f_size = [&](int64_t row, int64_t col, std::string& v) -> tables::action {
                         if( (l_min_col <= col) && (col <= l_max_col)
                         &&  (l_min_row <= row) && (row <= l_max_row) ){
-                            const auto truncated_v = v.substr(std::size_t{0}, std::min(v.size(), buf.size()));
+                            const auto truncated_v = v.substr(std::size_t{0}, std::min<size_t>(v.size(), buf.size()));
                             const auto w = ImGui::CalcTextSize(v.c_str()).x * 1.02f + TEXT_BASE_WIDTH * 5.0f;
-                            col_width[col] = std::max(col_width[col], w);
+                            col_width[col] = std::max<float>(col_width[col], w);
                         }
                         return tables::action::automatic; // Retain only non-empty cells.
                     };
@@ -5903,7 +5903,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 int scroll_rtplans = rtplan_num;
                 const int N_rtplans = DICOM_data.rtplan_data.size();
                 ImGui::SliderInt("Plan", &scroll_rtplans, 0, N_rtplans - 1);
-                const int64_t new_rtplan_num = std::clamp(scroll_rtplans, 0, N_rtplans - 1);
+                const int64_t new_rtplan_num = std::clamp<int>(scroll_rtplans, 0, N_rtplans - 1);
                 if(new_rtplan_num != rtplan_num){
                     rtplan_num = new_rtplan_num;
                 }
@@ -5928,7 +5928,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     int scroll_dynstate = rtplan_dynstate_num;
                     const int N_dynstates = (*rtplan_ptr_it)->dynamic_states.size();
                     ImGui::SliderInt("Beam", &scroll_dynstate, 0, N_dynstates - 1);
-                    const int64_t new_dynstate_num = std::clamp(scroll_dynstate, 0, N_dynstates - 1);
+                    const int64_t new_dynstate_num = std::clamp<int>(scroll_dynstate, 0, N_dynstates - 1);
                     if(new_dynstate_num != rtplan_dynstate_num){
                         rtplan_dynstate_num = new_dynstate_num;
                     }
@@ -5955,7 +5955,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         int scroll_statstate = rtplan_statstate_num;
                         const int N_statstates = dynstate_ptr->static_states.size();
                         ImGui::SliderInt("Control point", &scroll_statstate, 0, N_statstates - 1);
-                        const int64_t new_statstate_num = std::clamp(scroll_statstate, 0, N_statstates - 1);
+                        const int64_t new_statstate_num = std::clamp<int>(scroll_statstate, 0, N_statstates - 1);
                         if(new_statstate_num != rtplan_statstate_num){
                             rtplan_statstate_num = new_statstate_num;
                         }
@@ -6143,7 +6143,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 int scroll_psets = pset_num;
                 const int N_psets = DICOM_data.point_data.size();
                 ImGui::SliderInt("Set", &scroll_psets, 0, N_psets - 1);
-                const int64_t new_pset_num = std::clamp(scroll_psets, 0, N_psets - 1);
+                const int64_t new_pset_num = std::clamp<int>(scroll_psets, 0, N_psets - 1);
                 if(new_pset_num != pset_num){
                     pset_num = new_pset_num;
                 }
@@ -6196,7 +6196,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 int scroll_tforms = tform_num;
                 const int N_tforms = DICOM_data.trans_data.size();
                 ImGui::SliderInt("Transform", &scroll_tforms, 0, N_tforms - 1);
-                const int64_t new_tform_num = std::clamp(scroll_tforms, 0, N_tforms - 1);
+                const int64_t new_tform_num = std::clamp<int>(scroll_tforms, 0, N_tforms - 1);
                 if(new_tform_num != tform_num){
                     tform_num = new_tform_num;
                 }
@@ -6324,12 +6324,12 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::Separator();
                 ImGui::Text("Magnification");
                 ImGui::DragFloat("Zoom level", &zoom, 0.01f, 1.0f, 100.0f, "%.03f");
-                zoom = std::clamp(zoom, 1.0f, 1000.0f);
+                zoom = std::clamp<float>(zoom, 1.0f, 1000.0f);
                 const float uv_width = 1.0f / zoom;
                 ImGui::DragFloat("Pan horizontal", &pan.x, 0.01f, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f, "%.03f");
                 ImGui::DragFloat("Pan vertical",   &pan.y, 0.01f, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f, "%.03f");
-                pan.x = std::clamp(pan.x, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f);
-                pan.y = std::clamp(pan.y, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f);
+                pan.x = std::clamp<float>(pan.x, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f);
+                pan.y = std::clamp<float>(pan.y, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f);
                 uv_min.x = pan.x - uv_width * 0.5f;
                 uv_min.y = pan.y - uv_width * 0.5f;
                 uv_max.x = pan.x + uv_width * 0.5f;
@@ -6353,10 +6353,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if(false){
                     }else if(io.KeyCtrl && (0 < io.MouseWheel)){
                         zoom += std::log(zoom + 0.25f);
-                        zoom = std::clamp( zoom, 1.0f, 100.0f );
+                        zoom = std::clamp<float>( zoom, 1.0f, 100.0f );
                     }else if(io.KeyCtrl && (io.MouseWheel < 0)){
                         zoom -= std::log(zoom + 0.25f);
-                        zoom = std::clamp( zoom, 1.0f, 100.0f );
+                        zoom = std::clamp<float>( zoom, 1.0f, 100.0f );
 
                     }else if( (2 < IM_ARRAYSIZE(io.MouseDown))
                           &&  (0.0f <= io.MouseDownDuration[2]) ){
@@ -6364,9 +6364,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                         pan.y -= static_cast<float>( io.MouseDelta.y ) / 600.0f;
                           
                     }else if(io.KeyShift && (0 < io.MouseWheel)){
-                        scroll_arrays = std::clamp((scroll_arrays + N_arrays + d_h) % N_arrays, 0, N_arrays - 1);
+                        scroll_arrays = std::clamp<int>((scroll_arrays + N_arrays + d_h) % N_arrays, 0, N_arrays - 1);
                     }else if(io.KeyShift && (io.MouseWheel < 0)){
-                        scroll_arrays = std::clamp((scroll_arrays + N_arrays + d_l) % N_arrays, 0, N_arrays - 1);
+                        scroll_arrays = std::clamp<int>((scroll_arrays + N_arrays + d_l) % N_arrays, 0, N_arrays - 1);
 
                     }else if( (   (view_toggles.view_contouring_enabled && cimg_valid)
                                || (view_toggles.view_drawing_enabled && img_valid) )
@@ -6545,14 +6545,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                         }
 
                     }else if(0 < io.MouseWheel){
-                        scroll_images = std::clamp((scroll_images + N_images + d_h) % N_images, 0, N_images - 1);
+                        scroll_images = std::clamp<int>((scroll_images + N_images + d_h) % N_images, 0, N_images - 1);
                     }else if(io.MouseWheel < 0){
-                        scroll_images = std::clamp((scroll_images + N_images + d_l) % N_images, 0, N_images - 1);
+                        scroll_images = std::clamp<int>((scroll_images + N_images + d_l) % N_images, 0, N_images - 1);
 
                     }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_PageUp) ) ){
-                        scroll_images = std::clamp((scroll_images + 50 * N_images + 10) % N_images, 0, N_images - 1);
+                        scroll_images = std::clamp<int>((scroll_images + 50 * N_images + 10) % N_images, 0, N_images - 1);
                     }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_PageDown) ) ){
-                        scroll_images = std::clamp((scroll_images + 50 * N_images - 10) % N_images, 0, N_images - 1);
+                        scroll_images = std::clamp<int>((scroll_images + 50 * N_images - 10) % N_images, 0, N_images - 1);
 
                     }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Home) ) ){
                         scroll_images = N_images - 1;
@@ -6697,7 +6697,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             ||  !DICOM_data.Has_Mesh_Data() ) return;
 
             const auto N_meshes = static_cast<int64_t>(DICOM_data.smesh_data.size());
-            const auto new_mesh_num = std::clamp(mesh_num, 0L, N_meshes - 1L);
+            const auto new_mesh_num = std::clamp<int64_t>(mesh_num, 0L, N_meshes - 1L);
             if(new_mesh_num != mesh_num){
                 mesh_num = new_mesh_num;
                 need_to_reload_opengl_mesh = true;
@@ -6765,7 +6765,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     auto scroll_meshes = static_cast<int>(mesh_num);
                     ImGui::SliderInt("Mesh", &scroll_meshes, 0, N_meshes - 1);
                     if(static_cast<int64_t>(scroll_meshes) != mesh_num){
-                        mesh_num = std::clamp(static_cast<int64_t>(scroll_meshes), 0L, N_meshes - 1L);
+                        mesh_num = std::clamp<int64_t>(static_cast<int64_t>(scroll_meshes), 0L, N_meshes - 1L);
                         reload_opengl_mesh();
                     }
 

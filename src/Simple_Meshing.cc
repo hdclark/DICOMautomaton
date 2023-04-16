@@ -272,8 +272,8 @@ Estimate_Contour_Correspondence(
             //const auto angle_a = (OK) ? (*p_i_next - *p_i).angle(*p_j - *p_i, &OK) : inf;
             //const auto angle_b = (OK) ? (*p_i - *p_i_next).angle(*p_j - *p_i_next, &OK) : inf;
             //const auto angle_c = (OK) ? (*p_i - *p_j).angle(*p_i_next - *p_j, &OK) : inf;
-            //const auto angle_max = std::max( {angle_a, angle_b, angle_c} );
-            //const auto angle_min = std::min( {angle_a, angle_b, angle_c} );
+            //const auto angle_max = std::max<double>( {angle_a, angle_b, angle_c} );
+            //const auto angle_min = std::min<double>( {angle_a, angle_b, angle_c} );
             //if(OK){
             //    criteria_w_i_next = angle_max;
             //    //criteria_w_i_next = angle_max - angle_min;
@@ -382,8 +382,8 @@ Estimate_Contour_Correspondence(
             //const auto angle_a = (OK) ? (*p_j_next - *p_j).angle(*p_i - *p_j, &OK) : inf;
             //const auto angle_b = (OK) ? (*p_j - *p_j_next).angle(*p_i - *p_j_next, &OK) : inf;
             //const auto angle_c = (OK) ? (*p_j - *p_i).angle(*p_j_next - *p_i, &OK) : inf;
-            //const auto angle_max = std::max( {angle_a, angle_b, angle_c} );
-            //const auto angle_min = std::min( {angle_a, angle_b, angle_c} );
+            //const auto angle_max = std::max<double>( {angle_a, angle_b, angle_c} );
+            //const auto angle_min = std::min<double>( {angle_a, angle_b, angle_c} );
             //if(OK){
             //    criteria_w_j_next = angle_max;
             //    //criteria_w_j_next = angle_max - angle_min;

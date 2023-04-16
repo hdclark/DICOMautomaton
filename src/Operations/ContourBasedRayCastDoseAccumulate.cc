@@ -401,7 +401,7 @@ bool ContourBasedRayCastDoseAccumulate(Drover &DICOM_data,
 
             //Go until we get within certain distance or overshoot and the ray wants to backtrack.
             while(    (ray_dir.Dot( (terminus - ray_pos).unit() ) > 0.8 ) // Ray orientation is still downward-facing.
-                   && (ray_pos.distance(terminus) > std::max(RaydL, grid_margin)) ){ // Still far away from detector.
+                   && (ray_pos.distance(terminus) > std::max<double>(RaydL, grid_margin)) ){ // Still far away from detector.
 
                 ray_pos += ray_dir * RaydL;
                 const auto midpoint = ray_pos - (ray_dir * RaydL * 0.5);

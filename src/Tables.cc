@@ -126,8 +126,8 @@ table2::min_max_col() const {
 
     for(const auto& c : this->data){
         const auto col = c.get_col();
-        max = std::max(max, col);
-        min = std::min(min, col);
+        max = std::max<int64_t>(max, col);
+        min = std::min<int64_t>(min, col);
     }
     if(max < min){
         throw std::runtime_error("No data available, min and max columns are not defined");
@@ -143,7 +143,7 @@ table2::standard_min_max_row() const {
         return { zero, ten };
     }
     auto [min_row, max_row] = this->min_max_row();
-    return { std::min( zero, min_row ), std::max( ten, max_row + 5 ) };
+    return { std::min<int64_t>( zero, min_row ), std::max<int64_t>( ten, max_row + 5 ) };
 }
 
 std::pair<int64_t, int64_t>
@@ -154,7 +154,7 @@ table2::standard_min_max_col() const {
         return { zero, five };
     }
     auto [min_col, max_col] = this->min_max_col();
-    return { std::min( zero, min_col ), std::max( five, max_col + 2 ) };
+    return { std::min<int64_t>( zero, min_col ), std::max<int64_t>( five, max_col + 2 ) };
 }
 
 std::optional<std::string>
@@ -193,7 +193,7 @@ int64_t
 table2::next_empty_col() const {
     int64_t out = 0;
     for(const auto& c : this->data){
-        out = std::max(out, c.get_col() + 1);
+        out = std::max<int64_t>(out, c.get_col() + 1);
     }
     return out;
 }

@@ -95,7 +95,7 @@ bool TimeCourseSlopeMap(planar_image_collection<float,double>::images_list_it_t 
 
 YLOGERR("Need to figure out if the numerical rebasing/positive shift is needed here. Probably not, but maybe for presicion?");
                         const auto scaled = (1E5) * res.slope + (1E6);
-                        const auto trunc = std::max(0.0, scaled);
+                        const auto trunc = std::max<double>(0.0, scaled);
                         const auto newval = static_cast<float>(std::round(trunc));
 
                         working.reference(row, col, chan) = newval;

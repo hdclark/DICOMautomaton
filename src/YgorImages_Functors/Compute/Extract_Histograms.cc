@@ -268,9 +268,9 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
                         &&  (voxel_val <= user_data_s->upper_threshold) ){
 
                             const auto d_low = voxel_val - voxel_min;
-                            const auto bin_N = std::clamp( static_cast<size_t>( std::floor(d_low/bin_width) ),
-                                                           static_cast<size_t>(0),
-                                                           static_cast<size_t>(bin_count-1) );
+                            const auto bin_N = std::clamp<size_t>( static_cast<size_t>( std::floor(d_low/bin_width) ),
+                                                                   static_cast<size_t>(0),
+                                                                   static_cast<size_t>(bin_count-1) );
                             //raw_diff_hist.at(bin_N)[2] += pxl_vol;
                             shuttle.push_back(bin_N);
                             if(N_shuttle == shuttle.size()) add_counts();

@@ -81,7 +81,7 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
     const auto machine_eps = std::sqrt(std::numeric_limits<double>::epsilon());
 
     const auto relative_diff = [](const double &A, const double &B) -> double {
-        const auto max_abs = std::max( std::abs(A), std::abs(B) );
+        const auto max_abs = std::max<double>( std::abs(A), std::abs(B) );
         const auto machine_eps = std::sqrt(std::numeric_limits<double>::epsilon());
         return (max_abs < machine_eps) ? 0.0 
                                        : std::abs(A-B) / max_abs;
@@ -235,7 +235,7 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                     const auto pxl_dx = l_int_img_ptr->pxl_dx;
                     const auto pxl_dy = l_int_img_ptr->pxl_dy;
                     const auto pxl_dz = l_int_img_ptr->pxl_dz;
-                    const auto pxl_dl = std::max( std::min({ pxl_dx, pxl_dy, pxl_dz }), 10.0 * machine_eps );
+                    const auto pxl_dl = std::max<double>( std::min<double>({ pxl_dx, pxl_dy, pxl_dz }), 10.0 * machine_eps );
 
                     // The max distance separating adjacent next-next-nearest neighbouring (i.e., 3D diagonally-adjacent) voxels. 
                     const auto max_interp_dist = std::hypot( pxl_dx, pxl_dy, pxl_dz ); 
@@ -513,8 +513,8 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                                                         if( !(isininc(0.0, x_a, 1.0)) && !(isininc(0.0, x_b, 1.0)) ){
                                                             // This is probably a numerical error. Accept values slightly
                                                             // beyond the limits.
-                                                            const auto x_a_c = std::clamp(x_a, 0.0, 1.0);
-                                                            const auto x_b_c = std::clamp(x_b, 0.0, 1.0);
+                                                            const auto x_a_c = std::clamp<double>(x_a, 0.0, 1.0);
+                                                            const auto x_b_c = std::clamp<double>(x_b, 0.0, 1.0);
                                                             x = (std::abs(x_a - x_a_c) < std::abs(x_b - x_b_c)) ? x_a_c : x_b_c;
                                                         }
 

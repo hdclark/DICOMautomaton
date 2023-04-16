@@ -139,7 +139,7 @@ void Deserialize( const dcma::rpc::vec3_double &in, vec3<double> &out ){
 void Serialize( const contour_of_points<double> &in, dcma::rpc::contour_of_points_double &out ){
     // Note: due to padding, the following may not be able to detect if the contour_of_points class has members added.
     static_assert( (   sizeof(decltype(in.points))  
-                     + std::max(sizeof(decltype(in.closed)), alignof(decltype(in))) // Account for padding.
+                     + std::max<size_t>(sizeof(decltype(in.closed)), alignof(decltype(in))) // Account for padding.
                      + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
     SERIALIZE_CONTAINER(in.points, out.points);
@@ -199,7 +199,7 @@ void Deserialize( const dcma::rpc::sample4_double &in, std::array<double,4> &out
 void Serialize( const samples_1D<double> &in, dcma::rpc::samples_1D_double &out ){
     // Note: due to padding, the following may not be able to detect if the contour_of_points class has members added.
     static_assert( (   sizeof(decltype(in.samples))  
-                     + std::max(sizeof(decltype(in.uncertainties_known_to_be_independent_and_random)), alignof(decltype(in))) // Account for padding.
+                     + std::max<size_t>(sizeof(decltype(in.uncertainties_known_to_be_independent_and_random)), alignof(decltype(in))) // Account for padding.
                      + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
     SERIALIZE_CONTAINER(in.samples, out.samples);
