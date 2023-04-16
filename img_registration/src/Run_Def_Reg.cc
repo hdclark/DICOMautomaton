@@ -11,10 +11,10 @@
 #include <string>    
 #include <vector>
 #include <filesystem>
-
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
 #include <chrono>
+#include <cstdint>
 
 #include "YgorArguments.h"    //Needed for ArgumentHandler class.
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
@@ -50,7 +50,7 @@ int main(int argc, char* argv[]){
     // See below for description of these parameters. You can also put them in the AlignViaABCParams structure to more
     // easily pass them into your algorithm.
     std::string type = "ABC";
-    long int iters = 1;
+    int64_t iters = 1;
     double tune = 0.0;
 
     

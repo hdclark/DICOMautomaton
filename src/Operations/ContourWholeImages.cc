@@ -10,13 +10,16 @@
 #include <regex>
 #include <stdexcept>
 #include <string>    
+#include <cstdint>
+
+#include "Explicator.h"       //Needed for Explicator class.
+
+#include "YgorImages.h"
+#include "YgorMath.h"         //Needed for vec3 class.
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "ContourWholeImages.h"
-#include "Explicator.h"       //Needed for Explicator class.
-#include "YgorImages.h"
-#include "YgorMath.h"         //Needed for vec3 class.
 
 
 
@@ -75,7 +78,7 @@ bool ContourWholeImages(Drover &DICOM_data,
 
     Explicator X(FilenameLex);
     const auto NormalizedROILabel = X(ROILabel);
-    const long int ROINumber = 10001; // TODO: find highest existing and ++ it.
+    const int64_t ROINumber = 10001; // TODO: find highest existing and ++ it.
     DICOM_data.Ensure_Contour_Data_Allocated();
 
     //Iterate over each requested image_array. Each image is processed independently, so a thread pool is used.

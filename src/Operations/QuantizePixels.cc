@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <string>    
 #include <vector>
+#include <cstdint>
 
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -172,7 +173,7 @@ bool QuantizePixels(Drover &DICOM_data,
         }
 
         if( std::regex_match(MethodStr, regex_round) ){
-            ud.f_bounded = [&](long int, long int, long int chan,
+            ud.f_bounded = [&](int64_t, int64_t, int64_t chan,
                                std::reference_wrapper<planar_image<float,double>>,
                                std::reference_wrapper<planar_image<float,double>>,
                                float &val) {

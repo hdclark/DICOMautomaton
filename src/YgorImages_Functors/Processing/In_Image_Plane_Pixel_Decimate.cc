@@ -4,6 +4,7 @@
 #include <map>
 #include <stdexcept>
 #include <string>
+#include <cstdint>
 
 #include "../ConvenienceRoutines.h"
 #include "In_Image_Plane_Pixel_Decimate.h"
@@ -19,7 +20,7 @@ bool InImagePlanePixelDecimate(
                     std::list<planar_image_collection<float,double>::images_list_it_t> selected_img_its,
                     std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
                     std::list<std::reference_wrapper<contour_collection<double>>>, 
-                    long int ScaleFactorR, long int ScaleFactorC,
+                    int64_t ScaleFactorR, int64_t ScaleFactorC,
                     std::any ){
 
     //This routine reduces the number of pixels in an image by computing some sort of aggregate of a
@@ -46,8 +47,8 @@ bool InImagePlanePixelDecimate(
     // there will be a strip of pixels on the boundary that are effectively not averaged.
     //
 
-    const auto NumberOfRowsRequired = static_cast<long int>( std::ceil( 1.0 * first_img_it->rows / ScaleFactorR )  );
-    const auto NumberOfColsRequired = static_cast<long int>( std::ceil( 1.0 * first_img_it->columns / ScaleFactorC ) );
+    const auto NumberOfRowsRequired = static_cast<int64_t>( std::ceil( 1.0 * first_img_it->rows / ScaleFactorR )  );
+    const auto NumberOfColsRequired = static_cast<int64_t>( std::ceil( 1.0 * first_img_it->columns / ScaleFactorC ) );
 
     if((NumberOfRowsRequired * ScaleFactorR) != first_img_it->rows){
         YLOGWARN("ScaleFactorR should be a clean divisor of the image size to avoid boundary effect: Rows = " +
@@ -86,10 +87,10 @@ bool InImagePlanePixelDecimate(
     for(auto row = 0; row < working.rows; ++row){
         for(auto col = 0; col < working.columns; ++col){
             for(auto chan = 0; chan < working.channels; ++chan){
-                const long int old_row_min = row * ScaleFactorR;
-                const long int old_row_max = old_row_min + ScaleFactorR - 1;
-                const long int old_col_min = col * ScaleFactorC;
-                const long int old_col_max = old_col_min + ScaleFactorC - 1;
+                const int64_t old_row_min = row * ScaleFactorR;
+                const int64_t old_row_max = old_row_min + ScaleFactorR - 1;
+                const int64_t old_col_min = col * ScaleFactorC;
+                const int64_t old_col_max = old_col_min + ScaleFactorC - 1;
 
                 const auto newval = first_img_it->block_average(old_row_min, old_row_max, old_col_min, old_col_max, chan);
 

@@ -14,6 +14,7 @@
 #include <vector>
 #include <numeric>
 #include <ctime>
+#include <cstdint>
 
 #include <cstdlib> //Needed for exit() calls.
 #include <utility> //Needed for std::pair.
@@ -55,7 +56,7 @@ Launch_SCDI(samples_1D<double> &AIF, samples_1D<double> &VIF, std::vector<sample
         const auto extrema_x = cropped.Get_Extreme_Datum_x();
 
         std::vector<float> resampled;
-        long int N = 0;
+        int64_t N = 0;
 
         while(true) {
             const double t = 0.0 + static_cast<double>(N) * dt;
@@ -99,7 +100,7 @@ Launch_SCDI(samples_1D<double> &AIF, samples_1D<double> &VIF, std::vector<sample
         linear_c_vals.push_back(c);
     }
 
-    const auto c_size       = static_cast<long int>(resampled_c.front().size()); // all c vectors are the same size
+    const auto c_size = static_cast<int64_t>(resampled_c.front().size()); // all c vectors are the same size
     const auto slope_window = 100L;
 
     for(auto i = (c_size - slope_window); i < c_size; i++) {

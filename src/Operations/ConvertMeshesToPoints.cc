@@ -14,6 +14,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <cstdint>
 
 #include "Explicator.h"       //Needed for Explicator class.
 
@@ -136,7 +137,7 @@ bool ConvertMeshesToPoints(Drover &DICOM_data,
     //Construct a destination for the point clouds.
     DICOM_data.point_data.emplace_back( std::make_unique<Point_Cloud>() );
 
-    long int completed = 0;
+    int64_t completed = 0;
     for(auto & smp_it : SMs){
 
         if( std::regex_match(MethodStr, regex_vertices) ){

@@ -14,6 +14,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <cstdint>
 
 #include "Explicator.h"       //Needed for Explicator class.
 
@@ -217,11 +218,11 @@ bool ContourViaThreshold(Drover &DICOM_data,
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
-        const long int img_count = (*iap_it)->imagecoll.images.size();
+        const int64_t img_count = (*iap_it)->imagecoll.images.size();
 
         work_queue<std::function<void(void)>> wq;
         std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
-        long int completed = 0;
+        int64_t completed = 0;
 
         //Determine the bounds in terms of pixel-value thresholds.
         auto cl = Lower; // Will be replaced if percentages/percentiles requested.
@@ -231,7 +232,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
             if(Lower_is_Percent || Upper_is_Percent){
                 Stats::Running_MinMax<float> rmm;
                 for(const auto &animg : (*iap_it)->imagecoll.images){
-                    animg.apply_to_pixels([&rmm,Channel](long int, long int, long int chnl, float val) -> void {
+                    animg.apply_to_pixels([&rmm,Channel](int64_t, int64_t, int64_t chnl, float val) -> void {
                          if(Channel == chnl) rmm.Digest(val);
                          return;
                     });
@@ -245,7 +246,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
                 std::vector<float> pixel_vals;
                 //pixel_vals.reserve(animg.rows * animg.columns * animg.channels * img_count);
                 for(const auto &animg : (*iap_it)->imagecoll.images){
-                    animg.apply_to_pixels([&pixel_vals,Channel](long int, long int, long int chnl, float val) -> void {
+                    animg.apply_to_pixels([&pixel_vals,Channel](int64_t, int64_t, int64_t chnl, float val) -> void {
                          if(Channel == chnl) pixel_vals.push_back(val);
                          return;
                     });
@@ -293,10 +294,10 @@ bool ContourViaThreshold(Drover &DICOM_data,
                     enum row_modif { r_neg = 0, r_pos = 1 }; // Modifiers which translate (in the img plane) +-1/2 of pxl_dx.
                     enum col_modif { c_neg = 0, c_pos = 1 }; // Modifiers which translate (in the img plane) +-1/2 of pxl_dy.
 
-                    const auto vert_index = [C](long int vert_row, long int vert_col) -> long int {
+                    const auto vert_index = [C](int64_t vert_row, int64_t vert_col) -> int64_t {
                         return (C+1)*vert_row + vert_col;
                     };
-                    const auto vert_mapping = [vert_index](long int r, long int c, row_modif rm, col_modif cm ) -> long int {
+                    const auto vert_mapping = [vert_index](int64_t r, int64_t c, row_modif rm, col_modif cm ) -> int64_t {
                         const auto vert_row = r + rm;
                         const auto vert_col = c + cm;
                         return vert_index(vert_row,vert_col);
@@ -312,7 +313,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
                     }
 
                     //Construct a container for storing half-edges.
-                    std::map<long int, std::set<long int>> half_edges;
+                    std::map<int64_t, std::set<int64_t>> half_edges;
 
                     //Iterate over each pixel. If the oracle tells us the pixel is within the ROI, add four half-edges
                     // around the pixel's perimeter.
@@ -443,7 +444,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
                         inclusion_threshold = width * 0.5;
                         exterior_value = inclusion_threshold + 1.0;
                         below_is_interior = true;
-                        mask.apply_to_pixels([Channel,midpoint](long int, long int, long int chnl, float &val) -> void {
+                        mask.apply_to_pixels([Channel,midpoint](int64_t, int64_t, int64_t chnl, float &val) -> void {
                                 if(Channel == chnl){
                                     val = std::abs(val - midpoint);
                                 }
@@ -515,12 +516,12 @@ bool ContourViaThreshold(Drover &DICOM_data,
 
                     //std::vector< std::pair<node,node> > nodes((R-1)*(C-1), std::make_pair(empty_node,empty_node));
                     std::vector< std::pair<node,node> > nodes((R+1)*(C+1), std::make_pair(empty_node,empty_node));
-                    const auto index = [C](long int r, long int c) -> long int {
+                    const auto index = [C](int64_t r, int64_t c) -> int64_t {
                         return ( (C+1) * r + c);
                     };
 
                     // Override the normal voxel intensity and position getters to handle the 2 additional rows and columns.
-                    const auto get_value = [mask,R,C,exterior_value,Channel](long int r, long int c) -> float {
+                    const auto get_value = [mask,R,C,exterior_value,Channel](int64_t r, int64_t c) -> float {
                         float out;
                         if( (r == 0) || (r == (R+1))
                         ||  (c == 0) || (c == (C+1)) ){
@@ -530,15 +531,15 @@ bool ContourViaThreshold(Drover &DICOM_data,
                         }
                         return out;
                     };
-                    const auto get_position = [&mask,R,C,exterior_value,Channel](long int r, long int c){
+                    const auto get_position = [&mask,R,C,exterior_value,Channel](int64_t r, int64_t c){
                         return (  mask.anchor
                                 + mask.offset
                                 + mask.row_unit*(mask.pxl_dx*static_cast<double>(r-1))
                                 + mask.col_unit*(mask.pxl_dy*static_cast<double>(c-1)) );
                     };
 
-                    for(long int r = 0; r < (R+1); ++r){
-                        for(long int c = 0; c < (C+1); ++c){
+                    for(int64_t r = 0; r < (R+1); ++r){
+                        for(int64_t c = 0; c < (C+1); ++c){
                             const auto tl = get_value(r  , c  );
                             const auto tr = get_value(r  , c+1);
                             const auto br = get_value(r+1, c+1);
@@ -658,8 +659,8 @@ bool ContourViaThreshold(Drover &DICOM_data,
 
                     //Walk all available half-edges forming contour perimeters.
                     std::list<contour_of_points<double>> copl;
-                    for(long int r = 0; r < (R+1); ++r){
-                        for(long int c = 0; c < (C+1); ++c){
+                    for(int64_t r = 0; r < (R+1); ++r){
+                        for(int64_t c = 0; c < (C+1); ++c){
                             const auto i = index(r, c);
                             for(auto n1_ptr : { &(nodes.at(i).first), &(nodes.at(i).second) }){
                             
@@ -668,8 +669,8 @@ bool ContourViaThreshold(Drover &DICOM_data,
                                 ||  (n1_ptr->tail_vert_pos == 0) ){
                                     continue;
                                 }
-                                long int curr_r = r;
-                                long int curr_c = c;
+                                int64_t curr_r = r;
+                                int64_t curr_c = c;
 
                                 // Determine which node to look for next.
                                 const auto find_next_node = [&](const node& n_curr){
@@ -841,7 +842,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
                         inclusion_threshold = width * 0.5;
                         exterior_value = inclusion_threshold + 1.0;
                         below_is_interior = true;
-                        mask.apply_to_pixels([Channel,midpoint](long int, long int, long int chnl, float &val) -> void {
+                        mask.apply_to_pixels([Channel,midpoint](int64_t, int64_t, int64_t chnl, float &val) -> void {
                                 if(Channel == chnl){
                                     val = std::abs(val - midpoint);
                                 }

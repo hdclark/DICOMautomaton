@@ -5,6 +5,7 @@
 #include <functional>
 #include <list>
 #include <string>
+#include <cstdint>
 
 
 template <class T, class R> class planar_image_collection;
@@ -25,7 +26,7 @@ struct ComputeInterpolateImageSlicesUserData {
     // The channel to consider. 
     //
     // Note: Channel numbers in the images that will be edited and reference images must match.
-    long int channel = 0;
+    int64_t channel = 0;
 
 
     // -----------------------------

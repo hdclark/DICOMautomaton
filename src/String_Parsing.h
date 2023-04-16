@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <optional>
+#include <cstdint>
 
 #include "YgorString.h"
 #include "YgorMath.h"
@@ -48,7 +49,7 @@ std::vector<parsed_function>
 parse_functions(const std::string &,
                 char escape_char = '\\',
                 char func_sep_char = ';',
-                long int parse_depth = 0);
+                int64_t parse_depth = 0);
 
 std::vector<parsed_function>
 retain_only_numeric_parameters(std::vector<parsed_function>);

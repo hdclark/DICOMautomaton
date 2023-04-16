@@ -10,15 +10,18 @@
 #include <regex>
 #include <stdexcept>
 #include <string>    
+#include <cstdint>
+
+#include "YgorImages.h"
+#include "YgorMath.h"         //Needed for vec3 class.
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
+
 #include "ApplyCalibrationCurve.h"
-#include "YgorImages.h"
-#include "YgorMath.h"         //Needed for vec3 class.
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
 
@@ -190,7 +193,7 @@ bool ApplyCalibrationCurve(Drover &DICOM_data,
             throw std::invalid_argument("Inclusivity argument '"_s + InclusivityStr + "' is not valid");
         }
 
-        ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int chan,
+        ud.f_bounded = [&](int64_t /*row*/, int64_t /*col*/, int64_t chan,
                            std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                            std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                            float &voxel_val) {

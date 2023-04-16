@@ -10,6 +10,7 @@
 #include <regex>
 #include <stdexcept>
 #include <string>    
+#include <cstdint>
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
@@ -252,20 +253,20 @@ bool ReduceNeighbourhood(Drover &DICOM_data,
     // Note that this routine includes the self voxel (0,0,0). This is done for consistency.
     //
     const auto make_fixed_neighbourhood_spherical = [](double max_radius){ // in pixel coordinates.
-        std::vector<std::array<long int,3>> voxel_triplets;
+        std::vector<std::array<int64_t,3>> voxel_triplets;
 
-        const auto max_px_coord = static_cast<long int>(std::ceil(max_radius));
+        const auto max_px_coord = static_cast<int64_t>(std::ceil(max_radius));
         const auto machine_eps = 2.0 * std::sqrt(std::numeric_limits<double>::epsilon());
         const vec3<double> zero(0.0, 0.0, 0.0);
-        for(long int i = -max_px_coord; i <= max_px_coord; ++i){
-            for(long int j = -max_px_coord; j <= max_px_coord; ++j){
-                for(long int k = -max_px_coord; k <= max_px_coord; ++k){
+        for(int64_t i = -max_px_coord; i <= max_px_coord; ++i){
+            for(int64_t j = -max_px_coord; j <= max_px_coord; ++j){
+                for(int64_t k = -max_px_coord; k <= max_px_coord; ++k){
                     const vec3<double> R( static_cast<double>(i),
                                           static_cast<double>(j),
                                           static_cast<double>(k) );
                     const auto dist = (R - zero).length();
                     if(dist <= (max_radius + machine_eps)){
-                        voxel_triplets.emplace_back( std::array<long int, 3>{i, j, k} );
+                        voxel_triplets.emplace_back( std::array<int64_t, 3>{i, j, k} );
                     }
                 }
             }
@@ -296,35 +297,35 @@ bool ReduceNeighbourhood(Drover &DICOM_data,
             ud.description += " (3x3x3 pixel cube)";
             ud.voxel_triplets = { { 
 
-                std::array<long int, 3>{ -1, -1, -1 },
-                std::array<long int, 3>{ -1, -1,  0 },
-                std::array<long int, 3>{ -1, -1,  1 },
-                std::array<long int, 3>{ -1,  0, -1 },
-                std::array<long int, 3>{ -1,  0,  0 },
-                std::array<long int, 3>{ -1,  0,  1 },
-                std::array<long int, 3>{ -1,  1, -1 },
-                std::array<long int, 3>{ -1,  1,  0 },
-                std::array<long int, 3>{ -1,  1,  1 },
+                std::array<int64_t, 3>{ -1, -1, -1 },
+                std::array<int64_t, 3>{ -1, -1,  0 },
+                std::array<int64_t, 3>{ -1, -1,  1 },
+                std::array<int64_t, 3>{ -1,  0, -1 },
+                std::array<int64_t, 3>{ -1,  0,  0 },
+                std::array<int64_t, 3>{ -1,  0,  1 },
+                std::array<int64_t, 3>{ -1,  1, -1 },
+                std::array<int64_t, 3>{ -1,  1,  0 },
+                std::array<int64_t, 3>{ -1,  1,  1 },
 
-                std::array<long int, 3>{  0, -1, -1 },
-                std::array<long int, 3>{  0, -1,  0 },
-                std::array<long int, 3>{  0, -1,  1 },
-                std::array<long int, 3>{  0,  0, -1 },
-                std::array<long int, 3>{  0,  0,  0 },  // Note: this sampler includes the self voxel for consistency with other neighbourhoods.
-                std::array<long int, 3>{  0,  0,  1 },
-                std::array<long int, 3>{  0,  1, -1 },
-                std::array<long int, 3>{  0,  1,  0 },
-                std::array<long int, 3>{  0,  1,  1 },
+                std::array<int64_t, 3>{  0, -1, -1 },
+                std::array<int64_t, 3>{  0, -1,  0 },
+                std::array<int64_t, 3>{  0, -1,  1 },
+                std::array<int64_t, 3>{  0,  0, -1 },
+                std::array<int64_t, 3>{  0,  0,  0 },  // Note: this sampler includes the self voxel for consistency with other neighbourhoods.
+                std::array<int64_t, 3>{  0,  0,  1 },
+                std::array<int64_t, 3>{  0,  1, -1 },
+                std::array<int64_t, 3>{  0,  1,  0 },
+                std::array<int64_t, 3>{  0,  1,  1 },
 
-                std::array<long int, 3>{  1, -1, -1 },
-                std::array<long int, 3>{  1, -1,  0 },
-                std::array<long int, 3>{  1, -1,  1 },
-                std::array<long int, 3>{  1,  0, -1 },
-                std::array<long int, 3>{  1,  0,  0 },
-                std::array<long int, 3>{  1,  0,  1 },
-                std::array<long int, 3>{  1,  1, -1 },
-                std::array<long int, 3>{  1,  1,  0 },
-                std::array<long int, 3>{  1,  1,  1 }
+                std::array<int64_t, 3>{  1, -1, -1 },
+                std::array<int64_t, 3>{  1, -1,  0 },
+                std::array<int64_t, 3>{  1, -1,  1 },
+                std::array<int64_t, 3>{  1,  0, -1 },
+                std::array<int64_t, 3>{  1,  0,  0 },
+                std::array<int64_t, 3>{  1,  0,  1 },
+                std::array<int64_t, 3>{  1,  1, -1 },
+                std::array<int64_t, 3>{  1,  1,  0 },
+                std::array<int64_t, 3>{  1,  1,  1 }
                 
             } };
 
@@ -334,135 +335,135 @@ bool ReduceNeighbourhood(Drover &DICOM_data,
             ud.description += " (5x5x5 pixel cube)";
             ud.voxel_triplets = { { 
 
-                std::array<long int, 3>{ -2, -2, -2 },
-                std::array<long int, 3>{ -2, -2, -1 },
-                std::array<long int, 3>{ -2, -2,  0 },
-                std::array<long int, 3>{ -2, -2,  1 },
-                std::array<long int, 3>{ -2, -2,  2 },
-                std::array<long int, 3>{ -2, -1, -2 },
-                std::array<long int, 3>{ -2, -1, -1 },
-                std::array<long int, 3>{ -2, -1,  0 },
-                std::array<long int, 3>{ -2, -1,  1 },
-                std::array<long int, 3>{ -2, -1,  2 },
-                std::array<long int, 3>{ -2,  0, -2 },
-                std::array<long int, 3>{ -2,  0, -1 },
-                std::array<long int, 3>{ -2,  0,  0 },
-                std::array<long int, 3>{ -2,  0,  1 },
-                std::array<long int, 3>{ -2,  0,  2 },
-                std::array<long int, 3>{ -2,  1, -2 },
-                std::array<long int, 3>{ -2,  1, -1 },
-                std::array<long int, 3>{ -2,  1,  0 },
-                std::array<long int, 3>{ -2,  1,  1 },
-                std::array<long int, 3>{ -2,  1,  2 },
-                std::array<long int, 3>{ -2,  2, -2 },
-                std::array<long int, 3>{ -2,  2, -1 },
-                std::array<long int, 3>{ -2,  2,  0 },
-                std::array<long int, 3>{ -2,  2,  1 },
-                std::array<long int, 3>{ -2,  2,  2 },
+                std::array<int64_t, 3>{ -2, -2, -2 },
+                std::array<int64_t, 3>{ -2, -2, -1 },
+                std::array<int64_t, 3>{ -2, -2,  0 },
+                std::array<int64_t, 3>{ -2, -2,  1 },
+                std::array<int64_t, 3>{ -2, -2,  2 },
+                std::array<int64_t, 3>{ -2, -1, -2 },
+                std::array<int64_t, 3>{ -2, -1, -1 },
+                std::array<int64_t, 3>{ -2, -1,  0 },
+                std::array<int64_t, 3>{ -2, -1,  1 },
+                std::array<int64_t, 3>{ -2, -1,  2 },
+                std::array<int64_t, 3>{ -2,  0, -2 },
+                std::array<int64_t, 3>{ -2,  0, -1 },
+                std::array<int64_t, 3>{ -2,  0,  0 },
+                std::array<int64_t, 3>{ -2,  0,  1 },
+                std::array<int64_t, 3>{ -2,  0,  2 },
+                std::array<int64_t, 3>{ -2,  1, -2 },
+                std::array<int64_t, 3>{ -2,  1, -1 },
+                std::array<int64_t, 3>{ -2,  1,  0 },
+                std::array<int64_t, 3>{ -2,  1,  1 },
+                std::array<int64_t, 3>{ -2,  1,  2 },
+                std::array<int64_t, 3>{ -2,  2, -2 },
+                std::array<int64_t, 3>{ -2,  2, -1 },
+                std::array<int64_t, 3>{ -2,  2,  0 },
+                std::array<int64_t, 3>{ -2,  2,  1 },
+                std::array<int64_t, 3>{ -2,  2,  2 },
 
-                std::array<long int, 3>{ -1, -2, -2 },
-                std::array<long int, 3>{ -1, -2, -1 },
-                std::array<long int, 3>{ -1, -2,  0 },
-                std::array<long int, 3>{ -1, -2,  1 },
-                std::array<long int, 3>{ -1, -2,  2 },
-                std::array<long int, 3>{ -1, -1, -2 },
-                std::array<long int, 3>{ -1, -1, -1 },
-                std::array<long int, 3>{ -1, -1,  0 },
-                std::array<long int, 3>{ -1, -1,  1 },
-                std::array<long int, 3>{ -1, -1,  2 },
-                std::array<long int, 3>{ -1,  0, -2 },
-                std::array<long int, 3>{ -1,  0, -1 },
-                std::array<long int, 3>{ -1,  0,  0 },
-                std::array<long int, 3>{ -1,  0,  1 },
-                std::array<long int, 3>{ -1,  0,  2 },
-                std::array<long int, 3>{ -1,  1, -2 },
-                std::array<long int, 3>{ -1,  1, -1 },
-                std::array<long int, 3>{ -1,  1,  0 },
-                std::array<long int, 3>{ -1,  1,  1 },
-                std::array<long int, 3>{ -1,  1,  2 },
-                std::array<long int, 3>{ -1,  2, -2 },
-                std::array<long int, 3>{ -1,  2, -1 },
-                std::array<long int, 3>{ -1,  2,  0 },
-                std::array<long int, 3>{ -1,  2,  1 },
-                std::array<long int, 3>{ -1,  2,  2 },
+                std::array<int64_t, 3>{ -1, -2, -2 },
+                std::array<int64_t, 3>{ -1, -2, -1 },
+                std::array<int64_t, 3>{ -1, -2,  0 },
+                std::array<int64_t, 3>{ -1, -2,  1 },
+                std::array<int64_t, 3>{ -1, -2,  2 },
+                std::array<int64_t, 3>{ -1, -1, -2 },
+                std::array<int64_t, 3>{ -1, -1, -1 },
+                std::array<int64_t, 3>{ -1, -1,  0 },
+                std::array<int64_t, 3>{ -1, -1,  1 },
+                std::array<int64_t, 3>{ -1, -1,  2 },
+                std::array<int64_t, 3>{ -1,  0, -2 },
+                std::array<int64_t, 3>{ -1,  0, -1 },
+                std::array<int64_t, 3>{ -1,  0,  0 },
+                std::array<int64_t, 3>{ -1,  0,  1 },
+                std::array<int64_t, 3>{ -1,  0,  2 },
+                std::array<int64_t, 3>{ -1,  1, -2 },
+                std::array<int64_t, 3>{ -1,  1, -1 },
+                std::array<int64_t, 3>{ -1,  1,  0 },
+                std::array<int64_t, 3>{ -1,  1,  1 },
+                std::array<int64_t, 3>{ -1,  1,  2 },
+                std::array<int64_t, 3>{ -1,  2, -2 },
+                std::array<int64_t, 3>{ -1,  2, -1 },
+                std::array<int64_t, 3>{ -1,  2,  0 },
+                std::array<int64_t, 3>{ -1,  2,  1 },
+                std::array<int64_t, 3>{ -1,  2,  2 },
 
-                std::array<long int, 3>{  0, -2, -2 },
-                std::array<long int, 3>{  0, -2, -1 },
-                std::array<long int, 3>{  0, -2,  0 },
-                std::array<long int, 3>{  0, -2,  1 },
-                std::array<long int, 3>{  0, -2,  2 },
-                std::array<long int, 3>{  0, -1, -2 },
-                std::array<long int, 3>{  0, -1, -1 },
-                std::array<long int, 3>{  0, -1,  0 },
-                std::array<long int, 3>{  0, -1,  1 },
-                std::array<long int, 3>{  0, -1,  2 },
-                std::array<long int, 3>{  0,  0, -2 },
-                std::array<long int, 3>{  0,  0, -1 },
-                std::array<long int, 3>{  0,  0,  0 }, // Note: this sampler includes the self voxel for consistency with other neighbourhoods.
-                std::array<long int, 3>{  0,  0,  1 },
-                std::array<long int, 3>{  0,  0,  2 },
-                std::array<long int, 3>{  0,  1, -2 },
-                std::array<long int, 3>{  0,  1, -1 },
-                std::array<long int, 3>{  0,  1,  0 },
-                std::array<long int, 3>{  0,  1,  1 },
-                std::array<long int, 3>{  0,  1,  2 },
-                std::array<long int, 3>{  0,  2, -2 },
-                std::array<long int, 3>{  0,  2, -1 },
-                std::array<long int, 3>{  0,  2,  0 },
-                std::array<long int, 3>{  0,  2,  1 },
-                std::array<long int, 3>{  0,  2,  2 },
+                std::array<int64_t, 3>{  0, -2, -2 },
+                std::array<int64_t, 3>{  0, -2, -1 },
+                std::array<int64_t, 3>{  0, -2,  0 },
+                std::array<int64_t, 3>{  0, -2,  1 },
+                std::array<int64_t, 3>{  0, -2,  2 },
+                std::array<int64_t, 3>{  0, -1, -2 },
+                std::array<int64_t, 3>{  0, -1, -1 },
+                std::array<int64_t, 3>{  0, -1,  0 },
+                std::array<int64_t, 3>{  0, -1,  1 },
+                std::array<int64_t, 3>{  0, -1,  2 },
+                std::array<int64_t, 3>{  0,  0, -2 },
+                std::array<int64_t, 3>{  0,  0, -1 },
+                std::array<int64_t, 3>{  0,  0,  0 }, // Note: this sampler includes the self voxel for consistency with other neighbourhoods.
+                std::array<int64_t, 3>{  0,  0,  1 },
+                std::array<int64_t, 3>{  0,  0,  2 },
+                std::array<int64_t, 3>{  0,  1, -2 },
+                std::array<int64_t, 3>{  0,  1, -1 },
+                std::array<int64_t, 3>{  0,  1,  0 },
+                std::array<int64_t, 3>{  0,  1,  1 },
+                std::array<int64_t, 3>{  0,  1,  2 },
+                std::array<int64_t, 3>{  0,  2, -2 },
+                std::array<int64_t, 3>{  0,  2, -1 },
+                std::array<int64_t, 3>{  0,  2,  0 },
+                std::array<int64_t, 3>{  0,  2,  1 },
+                std::array<int64_t, 3>{  0,  2,  2 },
 
-                std::array<long int, 3>{  1, -2, -2 },
-                std::array<long int, 3>{  1, -2, -1 },
-                std::array<long int, 3>{  1, -2,  0 },
-                std::array<long int, 3>{  1, -2,  1 },
-                std::array<long int, 3>{  1, -2,  2 },
-                std::array<long int, 3>{  1, -1, -2 },
-                std::array<long int, 3>{  1, -1, -1 },
-                std::array<long int, 3>{  1, -1,  0 },
-                std::array<long int, 3>{  1, -1,  1 },
-                std::array<long int, 3>{  1, -1,  2 },
-                std::array<long int, 3>{  1,  0, -2 },
-                std::array<long int, 3>{  1,  0, -1 },
-                std::array<long int, 3>{  1,  0,  0 },
-                std::array<long int, 3>{  1,  0,  1 },
-                std::array<long int, 3>{  1,  0,  2 },
-                std::array<long int, 3>{  1,  1, -2 },
-                std::array<long int, 3>{  1,  1, -1 },
-                std::array<long int, 3>{  1,  1,  0 },
-                std::array<long int, 3>{  1,  1,  1 },
-                std::array<long int, 3>{  1,  1,  2 },
-                std::array<long int, 3>{  1,  2, -2 },
-                std::array<long int, 3>{  1,  2, -1 },
-                std::array<long int, 3>{  1,  2,  0 },
-                std::array<long int, 3>{  1,  2,  1 },
-                std::array<long int, 3>{  1,  2,  2 },
+                std::array<int64_t, 3>{  1, -2, -2 },
+                std::array<int64_t, 3>{  1, -2, -1 },
+                std::array<int64_t, 3>{  1, -2,  0 },
+                std::array<int64_t, 3>{  1, -2,  1 },
+                std::array<int64_t, 3>{  1, -2,  2 },
+                std::array<int64_t, 3>{  1, -1, -2 },
+                std::array<int64_t, 3>{  1, -1, -1 },
+                std::array<int64_t, 3>{  1, -1,  0 },
+                std::array<int64_t, 3>{  1, -1,  1 },
+                std::array<int64_t, 3>{  1, -1,  2 },
+                std::array<int64_t, 3>{  1,  0, -2 },
+                std::array<int64_t, 3>{  1,  0, -1 },
+                std::array<int64_t, 3>{  1,  0,  0 },
+                std::array<int64_t, 3>{  1,  0,  1 },
+                std::array<int64_t, 3>{  1,  0,  2 },
+                std::array<int64_t, 3>{  1,  1, -2 },
+                std::array<int64_t, 3>{  1,  1, -1 },
+                std::array<int64_t, 3>{  1,  1,  0 },
+                std::array<int64_t, 3>{  1,  1,  1 },
+                std::array<int64_t, 3>{  1,  1,  2 },
+                std::array<int64_t, 3>{  1,  2, -2 },
+                std::array<int64_t, 3>{  1,  2, -1 },
+                std::array<int64_t, 3>{  1,  2,  0 },
+                std::array<int64_t, 3>{  1,  2,  1 },
+                std::array<int64_t, 3>{  1,  2,  2 },
 
-                std::array<long int, 3>{  2, -2, -2 },
-                std::array<long int, 3>{  2, -2, -1 },
-                std::array<long int, 3>{  2, -2,  0 },
-                std::array<long int, 3>{  2, -2,  1 },
-                std::array<long int, 3>{  2, -2,  2 },
-                std::array<long int, 3>{  2, -1, -2 },
-                std::array<long int, 3>{  2, -1, -1 },
-                std::array<long int, 3>{  2, -1,  0 },
-                std::array<long int, 3>{  2, -1,  1 },
-                std::array<long int, 3>{  2, -1,  2 },
-                std::array<long int, 3>{  2,  0, -2 },
-                std::array<long int, 3>{  2,  0, -1 },
-                std::array<long int, 3>{  2,  0,  0 },
-                std::array<long int, 3>{  2,  0,  1 },
-                std::array<long int, 3>{  2,  0,  2 },
-                std::array<long int, 3>{  2,  1, -2 },
-                std::array<long int, 3>{  2,  1, -1 },
-                std::array<long int, 3>{  2,  1,  0 },
-                std::array<long int, 3>{  2,  1,  1 },
-                std::array<long int, 3>{  2,  1,  2 },
-                std::array<long int, 3>{  2,  2, -2 },
-                std::array<long int, 3>{  2,  2, -1 },
-                std::array<long int, 3>{  2,  2,  0 },
-                std::array<long int, 3>{  2,  2,  1 },
-                std::array<long int, 3>{  2,  2,  2 }
+                std::array<int64_t, 3>{  2, -2, -2 },
+                std::array<int64_t, 3>{  2, -2, -1 },
+                std::array<int64_t, 3>{  2, -2,  0 },
+                std::array<int64_t, 3>{  2, -2,  1 },
+                std::array<int64_t, 3>{  2, -2,  2 },
+                std::array<int64_t, 3>{  2, -1, -2 },
+                std::array<int64_t, 3>{  2, -1, -1 },
+                std::array<int64_t, 3>{  2, -1,  0 },
+                std::array<int64_t, 3>{  2, -1,  1 },
+                std::array<int64_t, 3>{  2, -1,  2 },
+                std::array<int64_t, 3>{  2,  0, -2 },
+                std::array<int64_t, 3>{  2,  0, -1 },
+                std::array<int64_t, 3>{  2,  0,  0 },
+                std::array<int64_t, 3>{  2,  0,  1 },
+                std::array<int64_t, 3>{  2,  0,  2 },
+                std::array<int64_t, 3>{  2,  1, -2 },
+                std::array<int64_t, 3>{  2,  1, -1 },
+                std::array<int64_t, 3>{  2,  1,  0 },
+                std::array<int64_t, 3>{  2,  1,  1 },
+                std::array<int64_t, 3>{  2,  1,  2 },
+                std::array<int64_t, 3>{  2,  2, -2 },
+                std::array<int64_t, 3>{  2,  2, -1 },
+                std::array<int64_t, 3>{  2,  2,  0 },
+                std::array<int64_t, 3>{  2,  2,  1 },
+                std::array<int64_t, 3>{  2,  2,  2 }
 
             } };
 
@@ -581,7 +582,7 @@ bool ReduceNeighbourhood(Drover &DICOM_data,
                                   auto f_beg = shtl.begin();
                                   auto f_end = std::remove_if(f_beg, shtl.end(),
                                       [](const float &x) -> bool { return std::isnan(x); });
-                                  const auto N_remain = static_cast<long int>( std::distance(f_beg, f_end) );
+                                  const auto N_remain = static_cast<int64_t>( std::distance(f_beg, f_end) );
                                   if( N_remain == 0 ){
                                       f = nan;
                                   }else{
@@ -593,9 +594,9 @@ bool ReduceNeighbourhood(Drover &DICOM_data,
                                       if(lhs_it == rhs_it){
                                           f = nan;
                                       }else{
-                                          const auto N_lhs = static_cast<long int>( std::distance(f_beg, lhs_it) );
+                                          const auto N_lhs = static_cast<int64_t>( std::distance(f_beg, lhs_it) );
                                           // Correct for rhs being +1 past the RHS.
-                                          const auto N_rhs = static_cast<long int>( std::distance(f_beg, rhs_it) ) - 1;
+                                          const auto N_rhs = static_cast<int64_t>( std::distance(f_beg, rhs_it) ) - 1;
                                           f = 0.5 * static_cast<float>(N_rhs + N_lhs) / (static_cast<float>(N_remain) - 1.0);
                                       }
                                   }

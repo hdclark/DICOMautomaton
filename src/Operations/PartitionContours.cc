@@ -17,6 +17,7 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 #include <numeric>
+#include <cstdint>
 
 #include "Explicator.h"       //Needed for Explicator class.
 
@@ -403,9 +404,9 @@ bool PartitionContours(Drover &DICOM_data,
     // Ensure the contours have some place to be stored.
     DICOM_data.Ensure_Contour_Data_Allocated();
 
-    std::list<long int> X_parts(XPartitions+1);
-    std::list<long int> Y_parts(YPartitions+1);
-    std::list<long int> Z_parts(ZPartitions+1);
+    std::list<int64_t> X_parts(XPartitions+1);
+    std::list<int64_t> Y_parts(YPartitions+1);
+    std::list<int64_t> Z_parts(ZPartitions+1);
     std::iota(std::begin(X_parts), std::end(X_parts), 0);
     std::iota(std::begin(Y_parts), std::end(Y_parts), 0);
     std::iota(std::begin(Z_parts), std::end(Z_parts), 0);
@@ -414,13 +415,13 @@ bool PartitionContours(Drover &DICOM_data,
     if(ReverseZTraversalOrder) std::reverse(std::begin(Z_parts), std::end(Z_parts));
 
     // Loop over all compartments (= # of partitions + 1 along each axis).
-    long int subsegment_count = -1;
+    int64_t subsegment_count = -1;
     for(const auto &X_part : X_parts){
         for(const auto &Y_part : Y_parts){
             for(const auto &Z_part : Z_parts){
-    //for(long int X_part = 0; X_part <= XPartitions; ++X_part){
-    //    for(long int Y_part = 0; Y_part <= YPartitions; ++Y_part){
-    //        for(long int Z_part = 0; Z_part <= ZPartitions; ++Z_part){
+    //for(int64_t X_part = 0; X_part <= XPartitions; ++X_part){
+    //    for(int64_t Y_part = 0; Y_part <= YPartitions; ++Y_part){
+    //        for(int64_t Z_part = 0; Z_part <= ZPartitions; ++Z_part){
                 ++subsegment_count; // Increment after every partition so contour numbers are always synchronized.
 
                 const double XSelectionThickness        = (XPartitions == 0) ? 1.0 : (1.0 / (1.0 + static_cast<double>(XPartitions)));

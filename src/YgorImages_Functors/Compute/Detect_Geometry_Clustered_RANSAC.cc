@@ -10,6 +10,7 @@
 #include <random>
 #include <ostream>
 #include <stdexcept>
+#include <cstdint>
 
 #include "../Grouping/Misc_Functors.h"
 #include "../ConvenienceRoutines.h"
@@ -96,7 +97,7 @@ bool ComputeDetectGeometryClusteredRANSAC(planar_image_collection<float,double> 
         constexpr size_t MaxElementsInANode = 6; // 16, 32, 128, 256, ... ?
         using RTreeParameter_t = boost::geometry::index::rstar<MaxElementsInANode>;
 
-        typedef std::pair< planar_image<float,double>*, long int > UserData_t;
+        typedef std::pair< planar_image<float,double>*, int64_t > UserData_t;
         typedef ClusteringDatum<3, double, // Spatial dimensions.
                                 0, double, // Attribute dimensions (not used).
                                 uint32_t,  // Cluster ID type.
@@ -106,7 +107,7 @@ bool ComputeDetectGeometryClusteredRANSAC(planar_image_collection<float,double> 
 
         RTree_t rtree;
 
-        long int BeforeCount = 0;
+        int64_t BeforeCount = 0;
         for(auto & img_it : selected_imgs){
             for(auto row = 0; row < img_it->rows; ++row){
                 for(auto col = 0; col < img_it->columns; ++col){
@@ -136,7 +137,7 @@ bool ComputeDetectGeometryClusteredRANSAC(planar_image_collection<float,double> 
         Stats::Running_MinMax<float> minmax_pixel;
 
         std::set<typename CDat_t::ClusterIDType_> unique_cluster_ids;
-        long int AfterCount = 0;
+        int64_t AfterCount = 0;
         {
             constexpr auto RTreeSpatialQueryGetAll = [](const CDat_t &) -> bool { return true; };
             RTree_t::const_query_iterator it;
@@ -163,7 +164,7 @@ bool ComputeDetectGeometryClusteredRANSAC(planar_image_collection<float,double> 
             }
         }
         YLOGINFO("Number of voxels with valid cluster IDs: " << AfterCount 
-            << " (" << (1.0 / 100.0) * static_cast<long int>( 10000.0 * AfterCount / BeforeCount ) << "%)");
+            << " (" << (1.0 / 100.0) * static_cast<int64_t>( 10000.0 * AfterCount / BeforeCount ) << "%)");
 
 
         //Segregate the data based on ClusterID.
@@ -208,7 +209,7 @@ bool ComputeDetectGeometryClusteredRANSAC(planar_image_collection<float,double> 
 // cluster is fitted to a sphere/plane. The clustered RANSAC algorithm will randomly sample inter and intra-cluster
 // (the latter with a higher cost) to locate shapes.
 
-                    const long int max_iters = 2500;
+                    const int64_t max_iters = 2500;
                     const double centre_stopping_tol = 0.05; // DICOM units (mm).
                     const double radius_stopping_tol = 0.05; // DICOM units (mm).
                     const size_t max_N_sample = 5000;

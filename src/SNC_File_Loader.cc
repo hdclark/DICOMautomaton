@@ -17,6 +17,7 @@
 #include <stdexcept>
 #include <filesystem>
 #include <cstdlib>            //Needed for exit() calls.
+#include <cstdint>
 
 #include "YgorIO.h"
 #include "YgorTime.h"
@@ -198,9 +199,9 @@ read_snc_file( std::istream &is, planar_image_collection<float,double> &imgs ){
     const vec3<double> offset( row_positions.back(), col_positions.front(), 0.0 );
     if(debug) YLOGINFO("offset = " << offset);
 
-    const auto image_height = static_cast<long int>(row_positions.size());
-    const auto image_width  = static_cast<long int>(col_positions.size());
-    const auto image_chnls  = static_cast<long int>(1);
+    const auto image_height = static_cast<int64_t>(row_positions.size());
+    const auto image_width  = static_cast<int64_t>(col_positions.size());
+    const auto image_chnls  = static_cast<int64_t>(1);
     if(!isininc(1,image_width,10'000)){
         YLOGWARN("Unexpected image width");
         return false;
@@ -216,8 +217,8 @@ read_snc_file( std::istream &is, planar_image_collection<float,double> &imgs ){
     imgs.images.back().init_buffer(image_height, image_width, image_chnls);
     imgs.images.back().metadata = metadata;
 
-    for(long int row = 0L; row < image_height; ++row){
-        for(long int col = 0L; col < image_width; ++col){
+    for(int64_t row = 0L; row < image_height; ++row){
+        for(int64_t col = 0L; col < image_width; ++col){
             imgs.images.back().reference(row, col, 0L) = static_cast<float>( pixels.at(image_height-row-1UL).at(col) );
         }
     }
@@ -255,17 +256,17 @@ write_snc_file( std::ostream &os, const planar_image<float,double> &img ){
     os << "*Hole Value:\tNone" << std::endl;
 
     os << "*Y\\X";
-    for(long int col = 0L; col < img.columns; ++col){
+    for(int64_t col = 0L; col < img.columns; ++col){
         const auto pos = img.position(0L, col);
         os << "\t" << pos.y;
     }
     os << std::endl;
 
     // Pixel data.
-    for(long int row = 0L; row < img.rows; ++row){
+    for(int64_t row = 0L; row < img.rows; ++row){
         const auto flipped_pos = img.position(img.rows - row - 1L, 0L);
         os << flipped_pos.x;
-        for(long int col = 0L; col < img.columns; ++col){
+        for(int64_t col = 0L; col < img.columns; ++col){
             const auto pxl_dose = img.value(img.rows - row - 1L, col, 0L);
             os << "\t" << (pxl_dose * pixel_dose_scale);
         }

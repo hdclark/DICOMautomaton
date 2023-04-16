@@ -15,6 +15,7 @@
 #include <vector>
 #include <variant>
 #include <any>
+#include <cstdint>
 
 #include "Tables.h"
 
@@ -180,7 +181,7 @@ class Static_Machine_State {
     public:
 
         double CumulativeMetersetWeight             = std::numeric_limits<double>::quiet_NaN();
-        long int ControlPointIndex                  = std::numeric_limits<long int>::lowest();
+        int64_t ControlPointIndex                   = std::numeric_limits<int64_t>::lowest();
 
         double GantryAngle                          = std::numeric_limits<double>::quiet_NaN();
         double GantryRotationDirection              = std::numeric_limits<double>::quiet_NaN();
@@ -208,16 +209,16 @@ class Static_Machine_State {
                                                                     std::numeric_limits<double>::quiet_NaN(),
                                                                     std::numeric_limits<double>::quiet_NaN() );
 
-        //long int JawPairsX = 0;                  // (300a,00b8) CS [ASYMX]
+        //int64_t JawPairsX = 0;                   // (300a,00b8) CS [ASYMX]
         std::vector<double> JawPositionsX;       // (300a,00bc) IS [1] 
 
-        //long int JawPairsY = 0;                  // (300a,00b8) CS [ASYMY]
+        //int64_t JawPairsY = 0;                   // (300a,00b8) CS [ASYMY]
         std::vector<double> JawPositionsY;       // (300a,00bc) IS [1] 
 
-        //long int MLCPairsX = 0;                  // (300a,00b8) CS [MLCX]
+        //int64_t MLCPairsX = 0;                   // (300a,00b8) CS [MLCX]
         std::vector<double> MLCPositionsX;       // (300a,00bc) IS [60]
 
-        //long int MLCPairsY = 0;                  // (300a,00b8) CS [MLCY]
+        //int64_t MLCPairsY = 0;                   // (300a,00b8) CS [MLCY]
         //std::vector<double> MLCPositionsY;       // (300a,00bc) IS [60]
         
         std::map< std::string, std::string > metadata; //User-defined metadata.
@@ -236,7 +237,7 @@ class Static_Machine_State {
 class Dynamic_Machine_State {
     public:
 
-        long int BeamNumber = -1;
+        int64_t BeamNumber = -1;
 
         double FinalCumulativeMetersetWeight = std::numeric_limits<double>::quiet_NaN();
 
@@ -412,9 +413,9 @@ typedef std::map<bnded_dose_map_key_t,std::pair<double,double>,                 
 typedef std::map<bnded_dose_map_key_t,std::tuple<double,double,double>,         bnded_dose_map_cmp_func_t>  drover_bnded_dose_min_mean_max_dose_map_t;
 typedef std::map<bnded_dose_map_key_t,std::tuple<double,double,double,double>,  bnded_dose_map_cmp_func_t>  drover_bnded_dose_min_mean_median_max_dose_map_t;
 
-typedef std::tuple<vec3<double>,vec3<double>,vec3<double>,double,long int,long int> bnded_dose_pos_dose_tup_t;
-typedef std::map<bnded_dose_map_key_t,std::list<bnded_dose_pos_dose_tup_t>,         bnded_dose_map_cmp_func_t>  drover_bnded_dose_pos_dose_map_t; 
-typedef std::map<bnded_dose_map_key_t,std::map<std::array<int,3>,double>,           bnded_dose_map_cmp_func_t>  drover_bnded_dose_stat_moments_map_t;
+typedef std::tuple<vec3<double>,vec3<double>,vec3<double>,double,int64_t,int64_t> bnded_dose_pos_dose_tup_t;
+typedef std::map<bnded_dose_map_key_t,std::list<bnded_dose_pos_dose_tup_t>,       bnded_dose_map_cmp_func_t>  drover_bnded_dose_pos_dose_map_t; 
+typedef std::map<bnded_dose_map_key_t,std::map<std::array<int,3>,double>,         bnded_dose_map_cmp_func_t>  drover_bnded_dose_stat_moments_map_t;
 
 drover_bnded_dose_mean_dose_map_t                drover_bnded_dose_mean_dose_map_factory();
 drover_bnded_dose_centroid_map_t                 drover_bnded_dose_centroid_map_factory();

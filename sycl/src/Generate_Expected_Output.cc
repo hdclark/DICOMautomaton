@@ -11,10 +11,11 @@
 #include <string>
 #include <vector>
 #include <random>
-
-#include <boost/filesystem.hpp>
 #include <cstdlib> //Needed for exit() calls.
 #include <utility> //Needed for std::pair.
+#include <cstdint>
+
+#include <boost/filesystem.hpp>
 
 #include "YgorArguments.h" //Needed for ArgumentHandler class.
 #include "YgorFilesDirs.h" //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
@@ -39,7 +40,7 @@ make_output_c(const samples_1D<double>& AIF, const samples_1D<double>& VIF, doub
     if(AIF.samples.size() != VIF.samples.size()) {
         throw std::invalid_argument("This routine requires AIF and VIF to be sampled at the same times.");
     }
-    const auto N_samples = static_cast<long int>(AIF.samples.size());
+    const auto N_samples = static_cast<int64_t>(AIF.samples.size());
 
     if(N_samples < 2) {
         throw std::invalid_argument("The AIF and VIF do not contain enough data.");
@@ -48,7 +49,7 @@ make_output_c(const samples_1D<double>& AIF, const samples_1D<double>& VIF, doub
     samples_1D<double> C;
     const bool inhibit_sort = true;
     const auto eps          = std::sqrt(std::numeric_limits<double>::epsilon());
-    for(long int i = 0; i < N_samples; ++i) {
+    for(int64_t i = 0; i < N_samples; ++i) {
         if(i == 0) {
             C.push_back(0.0, 0.0, inhibit_sort);
         } else {
@@ -129,7 +130,7 @@ main(int argc, char *argv[]) {
         const auto extrema_x = cropped.Get_Extreme_Datum_x();
 
         samples_1D<double> resampled;
-        long int N = 0;
+        int64_t N = 0;
 
         while(true) {
             const double t = 0.0 + static_cast<double>(N) * dt;

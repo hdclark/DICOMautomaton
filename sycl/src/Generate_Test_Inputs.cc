@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include <random>
+#include <cstdint>
 
 #include <cstdlib> //Needed for exit() calls.
 #include <utility> //Needed for std::pair.
@@ -36,7 +37,7 @@ make_test_SCDI_C(const samples_1D<double>& AIF, const samples_1D<double>& VIF, d
     if(AIF.samples.size() != VIF.samples.size()) {
         throw std::invalid_argument("This routine requires AIF and VIF to be sampled at the same times.");
     }
-    const auto N_samples = static_cast<long int>(AIF.samples.size());
+    const auto N_samples = static_cast<int64_t>(AIF.samples.size());
 
     if(N_samples < 2) {
         throw std::invalid_argument("The AIF and VIF do not contain enough data.");
@@ -45,7 +46,7 @@ make_test_SCDI_C(const samples_1D<double>& AIF, const samples_1D<double>& VIF, d
     samples_1D<double> C;
     const bool inhibit_sort = true;
     const auto eps          = std::sqrt(std::numeric_limits<double>::epsilon());
-    for(long int i = 0; i < N_samples; ++i) {
+    for(int64_t i = 0; i < N_samples; ++i) {
         if(i == 0) {
             C.push_back(0.0, 0.0, inhibit_sort);
         } else {
@@ -86,7 +87,7 @@ main(int, char**) {
     // Sampling parameters.
     const double dt          = 1.2; // seconds.
     const double t_start     = 0.0; // seconds.
-    const long int N_samples = 100; // number of CT/MR images taken serially.
+    const int64_t N_samples = 100;  // number of CT/MR images taken serially.
 
     std::random_device rdev;
     std::mt19937 re(rdev());
@@ -102,7 +103,7 @@ main(int, char**) {
     samples_1D<double> VIF_noise;
 
     const bool inhibit_sort = true;
-    for(long int i = 0; i < N_samples; ++i) {
+    for(int64_t i = 0; i < N_samples; ++i) {
         const auto t = t_start + dt * static_cast<double>(i);
         if((i == 0) || (i == 1)) {
             AIF.push_back(t, 0.0, inhibit_sort);

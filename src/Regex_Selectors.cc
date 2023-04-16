@@ -10,6 +10,7 @@
 #include <regex>
 #include <optional>
 #include <utility>
+#include <cstdint>
 
 #include "YgorString.h"
 #include "YgorMath.h"
@@ -336,8 +337,8 @@ Whitelist_Core( L lops,
                 const auto N = std::stol(GetFirstRegex(Specifier, num_extractor));
 
                 const auto eval = [&](size_t count) -> bool {
-                    const bool is_moret = (N < static_cast<long int>(count));
-                    const bool is_fewt  = (static_cast<long int>(count) < N);
+                    const bool is_moret = (N < static_cast<int64_t>(count));
+                    const bool is_fewt  = (static_cast<int64_t>(count) < N);
                     return (selector_moret) ? is_moret :
                            (selector_fewt)  ? is_fewt :
                            (selector_i_moret) ? !is_moret :

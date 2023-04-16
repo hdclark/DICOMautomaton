@@ -4,6 +4,7 @@
 #include <vector>
 #include <string>
 #include <optional>
+#include <cstdint>
 
 #include "YgorString.h"
 #include "YgorMath.h"
@@ -69,7 +70,7 @@ std::vector<parsed_function>
 parse_functions(const std::string &in, 
                 char escape_char,
                 char func_sep_char,
-                long int parse_depth){
+                int64_t parse_depth){
 
     std::vector<parsed_function> out;
     const bool debug = false;

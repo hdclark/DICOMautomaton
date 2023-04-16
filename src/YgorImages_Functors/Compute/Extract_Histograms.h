@@ -7,6 +7,7 @@
 #include <list>
 #include <map>
 #include <string>
+#include <cstdint>
 
 #include "YgorImages.h"
 #include "YgorMath.h"
@@ -46,7 +47,7 @@ struct ComputeExtractHistogramsUserData {
     // Note: Channel numbers in the images that will be edited and reference images must match.
     //       Negative values will use all channels.
     //
-    long int channel = -1;
+    int64_t channel = -1;
 
     // -----------------------------
     // How contours with differing names should be handled.

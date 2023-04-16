@@ -16,6 +16,7 @@
 #include <mutex>
 #include <limits>
 #include <cmath>
+#include <cstdint>
 
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
@@ -151,8 +152,8 @@ bool MinkowskiSum3D(Drover &DICOM_data,
     const std::string NewROIName("New ROI");
     const std::string NewNormalizedROIName("New ROI");
 
-    const long int MeshSubdivisions = 2;
-    const long int MeshSimplificationEdgeCountLimit = 7500;
+    const int64_t MeshSubdivisions = 2;
+    const int64_t MeshSimplificationEdgeCountLimit = 7500;
     //-----------------------------------------------------------------------------------------------------------------
 
 

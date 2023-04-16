@@ -1,16 +1,17 @@
-#include <math.h>
-#include <stdlib.h>
+
+#include <cmath>
+#include <cstdlib>
+#include <cstdint>
+#include <limits>
+#include <algorithm>
 
 // #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 // #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
- #include "YgorLog.h"
+#include "YgorLog.h"
 // #include "YgorMath.h"         //Needed for samples_1D.
 // #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 #include "IFGT.h"
-#include <limits>
-#include <algorithm> // dunno if its in docker
-#include <cmath>
 
 /*
     int dim;
@@ -439,14 +440,14 @@ Cluster k_center_clustering(const Eigen::MatrixXf & points, int num_clusters) {
     double dist = 0;
     k_centers.row(0) = points.row(0);
 
-    for(long int i = 0; i < num_clusters; ++i) { 
+    for(int64_t i = 0; i < num_clusters; ++i) { 
         
         k_centers.row(i) = points.row(index_of_largest);
 
         largest_distance = 0;
         index_of_largest = 0;
 
-        for(long int j = 0; j < points.rows(); ++j) {
+        for(int64_t j = 0; j < points.rows(); ++j) {
             dist = (points.row(j) - k_centers.row(i)).norm();
             if (dist < distances(j) || distances(j) == -1) {
                 distances(j) = dist;
@@ -459,7 +460,7 @@ Cluster k_center_clustering(const Eigen::MatrixXf & points, int num_clusters) {
             }
         }
     }
-    for(long int i = 0; i < points.rows(); ++i) {
+    for(int64_t i = 0; i < points.rows(); ++i) {
         if(distances(i) > radii(assignments(i))) {
             radii(assignments(i)) = distances(i);
         }
@@ -488,8 +489,8 @@ std::pair<double, double> calc_max_range(const Eigen::MatrixXf & target_pts,
     double max = std::numeric_limits<double>::min();
     
     // target points
-    for(long int i = 0; i < target_pts.rows(); ++i) {
-        for(long int j = 0; j < target_pts.cols(); ++j) {
+    for(int64_t i = 0; i < target_pts.rows(); ++i) {
+        for(int64_t j = 0; j < target_pts.cols(); ++j) {
             if(target_pts(i,j) < min) {
                 min = target_pts(i,j);
             }
@@ -499,8 +500,8 @@ std::pair<double, double> calc_max_range(const Eigen::MatrixXf & target_pts,
         }
     }
     // source points
-    for(long int i = 0; i < source_pts.rows(); ++i) {
-        for(long int j = 0; j < source_pts.cols(); ++j) {
+    for(int64_t i = 0; i < source_pts.rows(); ++i) {
+        for(int64_t j = 0; j < source_pts.cols(); ++j) {
             if(source_pts(i,j) < min) {
                 min = source_pts(i,j);
             }

@@ -10,6 +10,7 @@
 #include <vector>
 //#include <cfenv>              //Needed for std::feclearexcept(FE_ALL_EXCEPT).
 #include <initializer_list>
+#include <cstdint>
 
 #include <filesystem>
 //#include <cstdlib>            //Needed for exit() calls.
@@ -44,7 +45,7 @@
 using loader_func_t = std::function<bool(std::list<std::filesystem::path>&)>;
 struct file_loader_t {
     std::list<std::string> exts;
-    long int priority;
+    int64_t priority;
     loader_func_t f;
 };
 
@@ -63,7 +64,7 @@ Load_Files( Drover &DICOM_data,
     const auto get_default_loaders = [&](){
         std::list<file_loader_t> loaders;
 
-        long int priority = 0;
+        int64_t priority = 0;
 
         //Standalone file loading: TAR files.
         loaders.emplace_back(file_loader_t{{".tar", ".gz", ".tar.gz", ".tgz"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {

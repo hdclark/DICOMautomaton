@@ -2,6 +2,7 @@
 #include <limits>
 #include <utility>
 #include <iostream>
+#include <cstdint>
 
 #include "YgorMath.h"
 
@@ -32,12 +33,12 @@ TEST_CASE( "thin_plate_spline class" ){
     }
 
     SUBCASE("constructors"){
-        long int kdim2 = 2;
+        int64_t kdim2 = 2;
         thin_plate_spline tps_A(ps_A, kdim2);
         REQUIRE( tps_A.control_points.points == ps_A.points );
         REQUIRE( tps_A.kernel_dimension == kdim2 );
 
-        long int kdim3 = 3;
+        int64_t kdim3 = 3;
         thin_plate_spline tps_B(ps_B, kdim3);
         REQUIRE( tps_B.control_points.points == ps_B.points );
         REQUIRE( tps_B.kernel_dimension == kdim3 );

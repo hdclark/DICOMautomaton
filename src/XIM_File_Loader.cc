@@ -17,6 +17,7 @@
 #include <stdexcept>
 #include <filesystem>
 #include <cstdlib>            //Needed for exit() calls.
+#include <cstdint>
 
 #include "YgorIO.h"
 #include "YgorTime.h"
@@ -73,9 +74,9 @@ planar_image<float,double> read_xim_file( std::istream &is ){
         return o;
     };
     /*
-    const auto extract_uint8_vec = [](std::istream &is, long int n){
+    const auto extract_uint8_vec = [](std::istream &is, int64_t n){
         std::vector<uint8_t> out;
-        for(long int i = 0; i < n; ++i){
+        for(int64_t i = 0; i < n; ++i){
             out.emplace_back();
             if(!ygor::io::read_binary<decltype(out.back()), YgorEndianness::Little>(is, out.back())){
                 throw std::invalid_argument("Unable to read uint8");
@@ -84,9 +85,9 @@ planar_image<float,double> read_xim_file( std::istream &is ){
         return out;
     };
     */
-    const auto extract_int32_vec = [](std::istream &is, long int n){
+    const auto extract_int32_vec = [](std::istream &is, int64_t n){
         std::vector<int32_t> out;
-        for(long int i = 0; i < n; ++i){
+        for(int64_t i = 0; i < n; ++i){
             out.emplace_back();
             if(!ygor::io::read_binary<decltype(out.back()), YgorEndianness::Little>(is, out.back())){
                 throw std::invalid_argument("Unable to read int32");
@@ -94,9 +95,9 @@ planar_image<float,double> read_xim_file( std::istream &is ){
         }
         return out;
     };
-    const auto extract_string = [](std::istream &is, long int n){
+    const auto extract_string = [](std::istream &is, int64_t n){
         std::string out;
-        for(long int i = 0; i < n; ++i){
+        for(int64_t i = 0; i < n; ++i){
             char c = '\0';
             if(!ygor::io::read_binary<decltype(c), YgorEndianness::Little>(is, c)){
                 throw std::invalid_argument("Unable to read char");
@@ -164,7 +165,7 @@ planar_image<float,double> read_xim_file( std::istream &is ){
     // The number of bytes to read for each pixel are encoded in 2-bits. We have to read as 8-bit and unpack them.
     std::vector<uint8_t> lut_vec;
     lut_vec.reserve(4 * lut_byte_length);
-    for(long int i = 0; i < lut_byte_length; ++i){
+    for(int64_t i = 0; i < lut_byte_length; ++i){
         const auto raw = extract_uint8(is);
         lut_vec.emplace_back( (raw & 0b00000011) >> 0 );
         lut_vec.emplace_back( (raw & 0b00001100) >> 2 );
@@ -172,7 +173,7 @@ planar_image<float,double> read_xim_file( std::istream &is ){
         lut_vec.emplace_back( (raw & 0b11000000) >> 6 );
     }
     const auto pxl_buf_size = extract_int32(is); // number of bytes holding compressed pixel data.
-    long int num_bytes_read = 4 * (image_width + 1L);
+    int64_t num_bytes_read = 4 * (image_width + 1L);
 
     if(debug) YLOGINFO("LUT vector length = " << lut_vec.size());
 
@@ -181,8 +182,8 @@ planar_image<float,double> read_xim_file( std::istream &is ){
     auto pixel_data = extract_int32_vec(is, image_width + 1L);
     pixel_data.reserve(image_width * image_height);
 
-    long int lut_num = 0;
-    for(long int pix_num = image_width + 2L; pix_num <= (image_width * image_height); ++pix_num){
+    int64_t lut_num = 0;
+    for(int64_t pix_num = image_width + 2L; pix_num <= (image_width * image_height); ++pix_num){
         const auto lut_curr = lut_vec.at(lut_num);
         int32_t diff = 0;
         if(lut_curr == 0){
@@ -266,7 +267,7 @@ planar_image<float,double> read_xim_file( std::istream &is ){
             if( (val_length % 8) != 0){
                 throw std::runtime_error("unexpected byte length for 'double' encoded metadata value array"); 
             }
-            for(long int j = 0; (j * 8) < val_length; ++j){
+            for(int64_t j = 0; (j * 8) < val_length; ++j){
                 if(!val.empty()) val += ", ";
                 val += std::to_string( extract_double(is) );
             }
@@ -276,7 +277,7 @@ planar_image<float,double> read_xim_file( std::istream &is ){
             if( (val_length % 4) != 0){
                 throw std::runtime_error("unexpected byte length for 'int32' encoded metadata value array"); 
             }
-            for(long int j = 0; (j * 4) < val_length; ++j){
+            for(int64_t j = 0; (j * 4) < val_length; ++j){
                 if(!val.empty()) val += ", ";
                 val += std::to_string( extract_int32(is) );
             }
@@ -351,8 +352,8 @@ planar_image<float,double> read_xim_file( std::istream &is ){
     img.init_spatial(pxl_dx, pxl_dy, 1.0, anchor, offset);
     img.init_buffer(image_height, image_width, 1);
 
-    for(long int row = 0; row < image_height; ++row){
-        for(long int col = 0; col < image_width; ++col){
+    for(int64_t row = 0; row < image_height; ++row){
+        for(int64_t col = 0; col < image_width; ++col){
             img.reference(row, col, 0) = static_cast<float>( pixel_data.at(row * image_width + col ) );
         }
     }

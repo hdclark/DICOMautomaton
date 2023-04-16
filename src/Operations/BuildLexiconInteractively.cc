@@ -12,15 +12,18 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <cstdint>
 
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "BuildLexiconInteractively.h"
 #include "Explicator.h"       //Needed for Explicator class.
+
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorLog.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "BuildLexiconInteractively.h"
 
 
 OperationDoc OpArgDocBuildLexiconInteractively(){
@@ -211,9 +214,9 @@ bool BuildLexiconInteractively(Drover &DICOM_data,
         ss << " 3>&1 1>&2 2>&3"; //Swap stdout and stderr for easier access to 
 
         const auto ResponseStr = Execute_Command_In_Pipe(ss.str());
-        const long int Response = std::stol(ResponseStr);
+        const int64_t Response = std::stol(ResponseStr);
 
-        if((Response <= 0) || (Response > static_cast<long int>(candidates.size()))) continue;
+        if((Response <= 0) || (Response > static_cast<int64_t>(candidates.size()))) continue;
 
         dLexicon.emplace_back( std::make_pair( CleanLabel, candidates[Response-1] ) );
         cc_labels.erase( candidates[Response-1] );

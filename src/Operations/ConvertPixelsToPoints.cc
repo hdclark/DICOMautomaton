@@ -14,6 +14,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <cstdint>
 
 #include "Explicator.h"       //Needed for Explicator class.
 #include "YgorImages.h"
@@ -134,8 +135,8 @@ bool ConvertPixelsToPoints(Drover &DICOM_data,
     for(auto & iap_it : IAs){
         work_queue<std::function<void(void)>> wq;
         std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
-        long int completed = 0;
-        const long int img_count = (*iap_it)->imagecoll.images.size();
+        int64_t completed = 0;
+        const int64_t img_count = (*iap_it)->imagecoll.images.size();
 
         for(const auto &img : (*iap_it)->imagecoll.images){
             if( (img.rows < 1) || (img.columns < 1) || (Channel >= img.channels) ){
@@ -153,7 +154,7 @@ bool ConvertPixelsToPoints(Drover &DICOM_data,
                     //Percentage-based.
                     if(Lower_is_Percent || Upper_is_Percent){
                         Stats::Running_MinMax<float> rmm;
-                        img_refw.get().apply_to_pixels([&rmm,Channel](long int, long int, long int chnl, float val) -> void {
+                        img_refw.get().apply_to_pixels([&rmm,Channel](int64_t, int64_t, int64_t chnl, float val) -> void {
                              if(Channel == chnl) rmm.Digest(val);
                              return;
                         });
@@ -165,7 +166,7 @@ bool ConvertPixelsToPoints(Drover &DICOM_data,
                     if(Lower_is_Ptile || Upper_is_Ptile){
                         std::vector<float> pixel_vals;
                         pixel_vals.reserve(img_refw.get().rows * img_refw.get().columns * img_refw.get().channels);
-                        img_refw.get().apply_to_pixels([&pixel_vals,Channel](long int, long int, long int chnl, float val) -> void {
+                        img_refw.get().apply_to_pixels([&pixel_vals,Channel](int64_t, int64_t, int64_t chnl, float val) -> void {
                              if(Channel == chnl) pixel_vals.push_back(val);
                              return;
                         });
@@ -181,7 +182,7 @@ bool ConvertPixelsToPoints(Drover &DICOM_data,
                 };
 
                 //Perform the conversion.
-                img_refw.get().apply_to_pixels([&,Channel](long int row, long int col, long int chnl, float val) -> void {
+                img_refw.get().apply_to_pixels([&,Channel](int64_t row, int64_t col, int64_t chnl, float val) -> void {
                     if((chnl == Channel) && pixel_oracle(val)){
                         const auto pos = img_refw.get().position(row, col);
                          

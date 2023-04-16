@@ -14,13 +14,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
-
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "../Thread_Pool.h"
-
-#include "../Alignment_Rigid.h"
-#include "../Alignment_TPSRPM.h"
+#include <cstdint>
 
 #include "Explicator.h"       //Needed for Explicator class.
 
@@ -30,6 +24,13 @@
 #include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "../Thread_Pool.h"
+
+#include "../Alignment_Rigid.h"
+#include "../Alignment_TPSRPM.h"
 
 #include "ExtractPointsWarp.h"
 
@@ -536,12 +537,12 @@ bool ExtractPointsWarp(Drover &DICOM_data,
     const auto TPSRPMPermitMovingOutliers = std::regex_match(TPSRPMPermitMovingOutliersStr, regex_true);
     const auto TPSRPMPermitStationaryOutliers = std::regex_match(TPSRPMPermitStationaryOutliersStr, regex_true);
 
-    std::vector<std::pair<long int, long int>> TPSRPMHardContraints;
+    std::vector<std::pair<int64_t, int64_t>> TPSRPMHardContraints;
     {
         auto split = SplitStringToVector(TPSRPMHardContraintsStr, ',', 'd');
         split = SplitVector(split, ';', 'd');
 
-        std::vector<long int> numbers;
+        std::vector<int64_t> numbers;
         for(const auto &w : split){
            try{
                const auto x = std::stol(w);
@@ -754,9 +755,9 @@ params.report_final_correspondence = true;
 
 
 // Write a series of XYZ files animating how points move along straight correspondence lines.
-long int num_steps = 100;
+int64_t num_steps = 100;
 std::string base = "correspondence_interpolation_";
-for(long int step = 0; step <= num_steps; ++step){
+for(int64_t step = 0; step <= num_steps; ++step){
 
     const auto fname = Get_Unique_Sequential_Filename(base, 6, ".xyz");
     std::ofstream FO(fname);

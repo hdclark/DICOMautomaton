@@ -18,9 +18,11 @@
 #include <iostream>
 #include <list>
 #include <map>
-#include <pqxx/pqxx> //PostgreSQL C++ interface.
 #include <string>
 #include <tuple>
+#include <cstdint>
+
+#include <pqxx/pqxx> //PostgreSQL C++ interface.
 
 #include "Imebra_Shim.h"     //Wrapper for Imebra library. Black-boxed to speed up compilation.
 #include "YgorArguments.h"
@@ -230,7 +232,7 @@ int main(int argc, char **argv){
 
         r = txn.exec(tb1.str());
         if(r.affected_rows() != 1) YLOGERR("Unable to create new pacsid. Cannot continue");
-        const auto pacsid = r[0]["pacsid"].as<long int>(); 
+        const auto pacsid = r[0]["pacsid"].as<int64_t>(); 
 
         //------------------------------- Push the metadata to the database -----------------------------------
         tb1.str(""); //Clear stringstream.

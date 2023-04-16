@@ -9,19 +9,21 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <filesystem>
+#include <cstdint>
 
 #include <boost/interprocess/creation_tags.hpp>
 #include <boost/interprocess/sync/named_mutex.hpp>
 #include <boost/interprocess/sync/scoped_lock.hpp>
 
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "DumpRTPlanMetadataOccurrencesToFile.h"
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorImages.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorLog.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "DumpRTPlanMetadataOccurrencesToFile.h"
 
 
 OperationDoc OpArgDocDumpRTPlanMetadataOccurrencesToFile(){
@@ -75,7 +77,7 @@ bool DumpRTPlanMetadataOccurrencesToFile(Drover &DICOM_data,
     //-----------------------------------------------------------------------------------------------------------------
 
     //A superset of all metadata names and also an occurence tally.
-    std::map<std::string, std::map<std::string,long int>> sset; // [metadata_name][metadata_value] = count.
+    std::map<std::string, std::map<std::string,int64_t>> sset; // [metadata_name][metadata_value] = count.
 
     auto TPs_all = All_TPs( DICOM_data );
     auto TPs = Whitelist( TPs_all, RTPlanSelectionStr );

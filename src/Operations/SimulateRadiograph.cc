@@ -17,7 +17,7 @@
 #include <limits>
 #include <cmath>
 #include <regex>
-
+#include <cstdint>
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
 #include <algorithm>
@@ -287,9 +287,9 @@ bool SimulateRadiograph(Drover &DICOM_data,
     const auto grid_zero = img_adj.index_to_image(0).get().position(0,0); // Centre of the (0,0,0) voxel.
     const auto img_bps = img_adj.bounding_volume_planes;
 
-    const auto N_rows = static_cast<long int>(img_arr_ptr->imagecoll.images.front().rows);
-    const auto N_cols = static_cast<long int>(img_arr_ptr->imagecoll.images.front().columns);
-    const auto N_imgs = static_cast<long int>(img_adj.int_to_img.size());
+    const auto N_rows = static_cast<int64_t>(img_arr_ptr->imagecoll.images.front().rows);
+    const auto N_cols = static_cast<int64_t>(img_arr_ptr->imagecoll.images.front().columns);
+    const auto N_imgs = static_cast<int64_t>(img_adj.int_to_img.size());
 
     // Determine an appropriate radiograph orientation.
     const auto img_centre = img_arr_ptr->imagecoll.center(); // TODO: For TBI, should be at the t0 point (i.e., at the level of the lung).
@@ -337,7 +337,7 @@ bool SimulateRadiograph(Drover &DICOM_data,
     // Pre-compute whether the ray source position is bounded within the image volume.
     bool ray_source_is_within_image_volume = false;
     {
-        long int N_bounds = 0;
+        int64_t N_bounds = 0;
         for(const auto & img_bp : img_bps){
             N_bounds += (img_bp.Is_Point_Above_Plane(ray_source)) ? 1L : 0L;
         }
@@ -404,11 +404,11 @@ bool SimulateRadiograph(Drover &DICOM_data,
     {
         work_queue<std::function<void(void)>> wq;
         std::mutex printer; // Who gets to print to the console and iterate the counter.
-        long int completed = 0;
+        int64_t completed = 0;
 
-        for(long int RadiographRow = 0; RadiographRow < RadiographRows; ++RadiographRow){
+        for(int64_t RadiographRow = 0; RadiographRow < RadiographRows; ++RadiographRow){
             wq.submit_task([&,RadiographRow]() -> void {
-                for(long int RadiographCol = 0; RadiographCol < RadiographColumns; ++RadiographCol){
+                for(int64_t RadiographCol = 0; RadiographCol < RadiographColumns; ++RadiographCol){
 
                     // Construct a line segment between the source and detector. 
                     const auto ray_terminus = DetectImg->position(RadiographRow, RadiographCol);
@@ -465,9 +465,9 @@ bool SimulateRadiograph(Drover &DICOM_data,
 
                     // Determine whether moving from tail to head along the ray will increase or decrease the
                     // row/col/img coordinates. Note that the direction will never change.
-                    const long int incr_row = (row_unit.Dot(ray_direction) < 0.0) ? -1L : 1L;
-                    const long int incr_col = (col_unit.Dot(ray_direction) < 0.0) ? -1L : 1L;
-                    const long int incr_img = (img_unit.Dot(ray_direction) < 0.0) ? -1L : 1L;
+                    const int64_t incr_row = (row_unit.Dot(ray_direction) < 0.0) ? -1L : 1L;
+                    const int64_t incr_col = (col_unit.Dot(ray_direction) < 0.0) ? -1L : 1L;
+                    const int64_t incr_img = (img_unit.Dot(ray_direction) < 0.0) ? -1L : 1L;
 
                     // Determine the amount the ray will traverse due to incrementing i, j, or k individually.
                     const auto true_ray_pos_dR_incr_row = ray_direction * (std::abs(row_unit.Dot(ray_direction)) * pxl_dx);
@@ -487,13 +487,13 @@ bool SimulateRadiograph(Drover &DICOM_data,
                     // Note that these coordinates will not necessarily intersect any real voxels. They are defined only
                     // by the (infinite) regular grid that coincides with the real voxels.
                     const auto ray_start_grid_offset = ray_start - grid_zero;
-                    const auto ray_start_row_index = static_cast<long int>( std::round( ray_start_grid_offset.Dot(row_unit)/pxl_dx ) );
-                    const auto ray_start_col_index = static_cast<long int>( std::round( ray_start_grid_offset.Dot(col_unit)/pxl_dy ) );
-                    const auto ray_start_img_index = static_cast<long int>( std::round( ray_start_grid_offset.Dot(img_unit)/pxl_dz ) );
+                    const auto ray_start_row_index = static_cast<int64_t>( std::round( ray_start_grid_offset.Dot(row_unit)/pxl_dx ) );
+                    const auto ray_start_col_index = static_cast<int64_t>( std::round( ray_start_grid_offset.Dot(col_unit)/pxl_dy ) );
+                    const auto ray_start_img_index = static_cast<int64_t>( std::round( ray_start_grid_offset.Dot(img_unit)/pxl_dz ) );
 
-                    long int ray_i = ray_start_row_index;
-                    long int ray_j = ray_start_col_index;
-                    long int ray_k = ray_start_img_index;
+                    int64_t ray_i = ray_start_row_index;
+                    int64_t ray_j = ray_start_col_index;
+                    int64_t ray_k = ray_start_img_index;
 
                     vec3<double> true_ray_pos = ray_start;
                     vec3<double> blocky_ray_pos = grid_zero + row_unit * (static_cast<double>(ray_i) * pxl_dx)
@@ -593,8 +593,8 @@ bool SimulateRadiograph(Drover &DICOM_data,
 
     }else if(imgmodel_is_exp){
         // Implement a generic radiograph image with exponential attenuation.
-        for(long int row = 0; row < RadiographRows; ++row){
-            for(long int col = 0; col < RadiographColumns; ++col){
+        for(int64_t row = 0; row < RadiographRows; ++row){
+            for(int64_t col = 0; col < RadiographColumns; ++col){
                 const auto alp = DetectImg->reference(row, col, 0);
                 const auto att = 1.0 - std::exp(-alp * AttenuationScale);
                 DetectImg->reference(row, col, 0) = att;

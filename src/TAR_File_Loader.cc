@@ -13,18 +13,13 @@
 #include <stdexcept>
 #include <string>    
 #include <filesystem>
-
-
 #include <filesystem>
+#include <cstdlib>            //Needed for exit() calls.
+
 #include <boost/iostreams/filter/gzip.hpp>
 //#include <boost/iostreams/filter/zlib.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filtering_streambuf.hpp>
-
-#include <cstdlib>            //Needed for exit() calls.
-
-#include "Structs.h"
-#include "File_Loader.h"
 
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
@@ -32,6 +27,9 @@
 #include "YgorString.h"       //Needed for SplitStringToVector, Canonicalize_String2, SplitVector functions.
 #include "YgorFilesDirs.h"
 #include "YgorTAR.h"
+
+#include "Structs.h"
+#include "File_Loader.h"
 
 
 
@@ -58,16 +56,16 @@ bool Load_From_TAR_Files( Drover &DICOM_data,
         // Encapsulated file handler.
         //
         // This routine merely writes the file to a temporary and invokes the generic file loader routine.
-        long int N_encapsulated_files = 0;
-        long int N_successfully_loaded = 0;
+        int64_t N_encapsulated_files = 0;
+        int64_t N_successfully_loaded = 0;
 
         const auto file_handler = [&]( std::istream &is,
                                        std::string fname,
-                                       long int /*fsize*/,
+                                       int64_t /*fsize*/,
                                        std::string /*fmode*/,
                                        std::string /*fuser*/,
                                        std::string /*fgroup*/,
-                                       long int /*ftime*/,
+                                       int64_t /*ftime*/,
                                        std::string /*o_name*/,
                                        std::string /*g_name*/,
                                        std::string /*fprefix*/) -> void {

@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <map>
 #include <string>
 
@@ -16,5 +17,5 @@ PlotTimeCourses(const std::string& title,
                          const std::map<std::string, cheby_approx<double>> &cheby_time_courses,
                          const std::string& xlabel = "Time (s)",
                          const std::string& ylabel = "Pixel Intensity",
-                         long int cheby_samples = 250);
+                         int64_t cheby_samples = 250);
 

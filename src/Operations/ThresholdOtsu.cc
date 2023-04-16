@@ -14,6 +14,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <cstdint>
 
 #include "Explicator.h"       //Needed for Explicator class.
 #include "YgorImages.h"
@@ -245,9 +246,9 @@ bool ThresholdOtsu(Drover &DICOM_data,
 
             ud.f_unbounded = f_noop;
             ud.f_visitor = f_noop;
-            ud.f_bounded = [&]( long int /*row*/,
-                                long int /*col*/,
-                                long int chan,
+            ud.f_bounded = [&]( int64_t /*row*/,
+                                int64_t /*col*/,
+                                int64_t chan,
                                 std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                                 std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                 float &voxel_val ) -> void {
@@ -323,9 +324,9 @@ bool ThresholdOtsu(Drover &DICOM_data,
 
             ud.f_unbounded = f_noop;
             ud.f_visitor = f_noop;
-            ud.f_bounded = [&]( long int /*row*/,
-                                long int /*col*/,
-                                long int chan,
+            ud.f_bounded = [&]( int64_t /*row*/,
+                                int64_t /*col*/,
+                                int64_t chan,
                                 std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                                 std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                 float &voxel_val ) -> void {

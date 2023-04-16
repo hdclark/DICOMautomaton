@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <cstdlib>            //Needed for exit() calls.
+#include <cstdint>
 #include <optional>
 #include <functional>
 #include <list>
@@ -221,7 +222,7 @@ bool ContourVote(Drover &DICOM_data,
     //Create a new contour collection from the winning contours.
     contour_collection<double> cc_new;
     for(auto & cop : cop_ROIs){
-        if(static_cast<long int>(cc_new.contours.size()) >= WinnerCount) break;
+        if(static_cast<int64_t>(cc_new.contours.size()) >= WinnerCount) break;
         cc_new.contours.emplace_back(cop.get());
     }
 

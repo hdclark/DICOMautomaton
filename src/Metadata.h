@@ -10,6 +10,7 @@
 #include <initializer_list>
 #include <functional>
 #include <regex>
+#include <cstdint>
 
 #include "YgorString.h"
 #include "YgorMath.h"
@@ -28,9 +29,9 @@ std::set<std::string> Extract_Distinct_Values(ptr p, const std::string &key);
 
 // -------------------------------- Generic helpers ---------------------------------------
 //Generic helper functions.
-std::string Generate_Random_UID(long int len);
+std::string Generate_Random_UID(int64_t len);
 
-std::string Generate_Random_Int_Str(long int low, long int high);
+std::string Generate_Random_Int_Str(int64_t low, int64_t high);
 
 
 // Insert a *new* key-value pair. Will not overwrite an existing key-value pair if the key is already present.

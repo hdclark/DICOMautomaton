@@ -14,6 +14,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <cstdint>
 
 #include "Explicator.h"       //Needed for Explicator class.
 #include "YgorImages.h"
@@ -307,27 +308,27 @@ bool DrawGeometry(Drover &DICOM_data,
             // Ensure the image will be tiled with grid lines by ensuring the maximum spatial extent will be covered no
             // matter how the grid is oriented.
             const auto img_halfspan = (img_centre - img_origin).length();
-            const auto N_lines = static_cast<long int>(std::ceil(img_halfspan / grid_sep));
+            const auto N_lines = static_cast<int64_t>(std::ceil(img_halfspan / grid_sep));
 
             // Create the grid lines.
-            for(long int y = -N_lines; y <= N_lines; ++y){
-                for(long int z = -N_lines; z <= N_lines; ++z){
+            for(int64_t y = -N_lines; y <= N_lines; ++y){
+                for(int64_t z = -N_lines; z <= N_lines; ++z){
                     const auto A = grid_origin + (unit_y * grid_sep * (y * 1.0))
                                                + (unit_z * grid_sep * (z * 1.0));
                     const auto B = A + unit_x;
                     grid_lines.emplace_back(A, B);
                 }
             }
-            for(long int x = -N_lines; x <= N_lines; ++x){
-                for(long int y = -N_lines; y <= N_lines; ++y){
+            for(int64_t x = -N_lines; x <= N_lines; ++x){
+                for(int64_t y = -N_lines; y <= N_lines; ++y){
                     const auto A = grid_origin + (unit_x * grid_sep * (x * 1.0))
                                                + (unit_y * grid_sep * (y * 1.0));
                     const auto B = A + unit_z;
                     grid_lines.emplace_back(A, B);
                 }
             }
-            for(long int x = -N_lines; x <= N_lines; ++x){
-                for(long int z = -N_lines; z <= N_lines; ++z){
+            for(int64_t x = -N_lines; x <= N_lines; ++x){
+                for(int64_t z = -N_lines; z <= N_lines; ++z){
                     const auto A = grid_origin + (unit_x * grid_sep * (x * 1.0))
                                                + (unit_z * grid_sep * (z * 1.0));
                     const auto B = A + unit_y;
@@ -440,9 +441,9 @@ bool DrawGeometry(Drover &DICOM_data,
 
         // Grid pattern.
         if(shape_is_grid){
-            f_overwrite = [&]( long int row,
-                               long int col,
-                               long int chan,
+            f_overwrite = [&]( int64_t row,
+                               int64_t col,
+                               int64_t chan,
                                std::reference_wrapper<planar_image<float,double>> img_refw,
                                std::reference_wrapper<planar_image<float,double>>,
                                float &voxel_val ) -> void {
@@ -464,9 +465,9 @@ bool DrawGeometry(Drover &DICOM_data,
 
         // Cube pattern.
         if(shape_is_wcube){
-            f_overwrite = [&]( long int row,
-                               long int col,
-                               long int chan,
+            f_overwrite = [&]( int64_t row,
+                               int64_t col,
+                               int64_t chan,
                                std::reference_wrapper<planar_image<float,double>> img_refw,
                                std::reference_wrapper<planar_image<float,double>>,
                                float &voxel_val ) -> void {
@@ -487,9 +488,9 @@ bool DrawGeometry(Drover &DICOM_data,
 
         // Sphere pattern.
         if(shape_is_ssph){
-            f_overwrite = [&]( long int row,
-                               long int col,
-                               long int chan,
+            f_overwrite = [&]( int64_t row,
+                               int64_t col,
+                               int64_t chan,
                                std::reference_wrapper<planar_image<float,double>> img_refw,
                                std::reference_wrapper<planar_image<float,double>>,
                                float &voxel_val ) -> void {

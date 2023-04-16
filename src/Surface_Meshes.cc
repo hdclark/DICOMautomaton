@@ -13,6 +13,7 @@
 #include <mutex>
 #include <limits>
 #include <cmath>
+#include <cstdint>
 
 #include <utility>            //Needed for std::pair.
 #include <algorithm>
@@ -429,21 +430,21 @@ Marching_Cubes_Implementation(
         std::vector<std::vector<uint64_t>> fsrel; // which img num vert num is relative to.
         std::vector<uint64_t> vscor; // lower bound index of the local verts that correspond to a given voxel.
     };
-    std::map<long int, per_img_fv_mesh_t> per_img_fv_mesh;
+    std::map<int64_t, per_img_fv_mesh_t> per_img_fv_mesh;
 
     // Prime the map.
     const auto [img_num_min, img_num_max] = img_adj.get_min_max_indices();
-    for(long int i = img_num_min; i <= img_num_max; ++i){
+    for(int64_t i = img_num_min; i <= img_num_max; ++i){
         per_img_fv_mesh[i - img_num_min].vscor.emplace_back(0);
     }
-    const auto vscor_index = [](long int N_rows, long int N_cols, 
-                                long int drow, long int dcol) -> long int {
+    const auto vscor_index = [](int64_t N_rows, int64_t N_cols, 
+                                int64_t drow, int64_t dcol) -> int64_t {
         return N_cols * drow + dcol; // 2D index.
     };
 
     std::mutex saver_printer; // Thread synchro lock for saving shared data, logging, and counter iterating.
-    long int completed = 0;
-    const long int img_count = grid_imgs.size();
+    int64_t completed = 0;
+    const int64_t img_count = grid_imgs.size();
     auto final_merge_tol = std::numeric_limits<double>::infinity();
 
     // Iterate over all voxels, traversing the images in order of adjacency for consistency.
@@ -516,7 +517,7 @@ Marching_Cubes_Implementation(
         const auto img_is_adj = img_adj.index_present(img_num_p1);
         const auto img_p1 = (img_is_adj) ? img_adj.index_to_image(img_num_p1) : img_refw;
 
-        const auto shifted_img_num = static_cast<long int>(img_num - img_num_min); // Used for per-img mesh lookups.
+        const auto shifted_img_num = static_cast<int64_t>(img_num - img_num_min); // Used for per-img mesh lookups.
 
         per_img_fv_mesh_t* m_mini_mesh_ptr = &(per_img_fv_mesh[shifted_img_num]); // 'Middle' (current) image plane.
         per_img_fv_mesh_t* l_mini_mesh_ptr = nullptr; // 'Lower' adjacent image plane.
@@ -540,7 +541,7 @@ Marching_Cubes_Implementation(
 
         // Generate a generic list of vertex index offsets to check for vertex deduplication.
         // This list will be offset by the current voxel coordinates and unreachable neighbours will be pruned.
-        std::set<long int> vscor_to_check;
+        std::set<int64_t> vscor_to_check;
         {
             vscor_to_check.insert(vscor_index(N_rows, N_cols, -1, -1));
             vscor_to_check.insert(vscor_index(N_rows, N_cols, -1,  0));
@@ -554,14 +555,14 @@ Marching_Cubes_Implementation(
         }
 
         // Tailor the generic list of vertex index offset to check to the current position, discarding irrelevant items.
-        const auto customize_vscor_to_check = [&vscor_index]( long int row, long int col,
-                                                  long int N_rows, long int N_cols,
-                                                  const std::set<long int> &vscor_to_check,
+        const auto customize_vscor_to_check = [&vscor_index]( int64_t row, int64_t col,
+                                                  int64_t N_rows, int64_t N_cols,
+                                                  const std::set<int64_t> &vscor_to_check,
                                                   const per_img_fv_mesh_t* per_img_fv_mesh_ptr ){
             std::set<size_t> verts_to_check;
             if(per_img_fv_mesh_ptr != nullptr){
                 // Now for each i in vscor_to_check, insert per_img_fv_mesh_ptr->vscor[i] ... per_img_fv_mesh_ptr->vscor[i+1] into verts_to_check (iff it currently exists!)
-                const auto N_vscor = static_cast<long int>(per_img_fv_mesh_ptr->vscor.size());
+                const auto N_vscor = static_cast<int64_t>(per_img_fv_mesh_ptr->vscor.size());
                 for(const auto &i : vscor_to_check){
                     const auto i_offset = vscor_index(N_rows, N_cols, row, col);
                     const auto i_total = i_offset + i;
@@ -577,8 +578,8 @@ Marching_Cubes_Implementation(
             return verts_to_check;
         };
 
-        for(long int row = 0; row < N_rows; ++row){
-            for(long int col = 0; col < N_cols; ++col){
+        for(int64_t row = 0; row < N_rows; ++row){
+            for(int64_t col = 0; col < N_cols; ++col){
                 const auto pos = img_refw.get().position(row, col);
 
                 // Sample voxel corner values.
@@ -799,7 +800,7 @@ Marching_Cubes_Implementation(
     YLOGINFO("Extracting odd-numbered image meshes");
     {
         work_queue<std::function<void(void)>> wq;
-        for(long int i = img_num_min; i <= img_num_max; ++i){
+        for(int64_t i = img_num_min; i <= img_num_max; ++i){
             if( i % 2 == 0 ) continue;
             wq.submit_task( std::bind(work, img_adj.index_to_image(i)) );
         }
@@ -808,7 +809,7 @@ Marching_Cubes_Implementation(
     YLOGINFO("Extracting even-numbered image meshes");
     {
         work_queue<std::function<void(void)>> wq;
-        for(long int i = img_num_min; i <= img_num_max; ++i){
+        for(int64_t i = img_num_min; i <= img_num_max; ++i){
             if( i % 2 == 1 ) continue;
             wq.submit_task( std::bind(work, img_adj.index_to_image(i)) );
         }
@@ -816,7 +817,7 @@ Marching_Cubes_Implementation(
 
     YLOGINFO("Joining mesh partitions..");
     // Count the (non-self-inclusive) running total number of vertices contained within each sub-mesh.
-    std::vector<long int> verts_offset;
+    std::vector<int64_t> verts_offset;
     verts_offset.push_back( 0 );
     for(const auto& [img_num, l_mini_mesh] : per_img_fv_mesh){
         const auto l_N_verts = l_mini_mesh.verts.size();
@@ -1180,7 +1181,7 @@ Estimate_Surface_Mesh_Marching_Cubes(
     double y_margin = std::max(2.0, z_margin);
 
     // Generate a grid volume bounding the ROI(s).
-    const long int NumberOfChannels = 1;
+    const int64_t NumberOfChannels = 1;
     const double PixelFill = ExteriorVal; //std::numeric_limits<double>::quiet_NaN();
     const bool OnlyExtremeSlices = false;
     auto grid_image_collection = Contiguously_Grid_Volume<float,double>(
@@ -1209,13 +1210,13 @@ Estimate_Surface_Mesh_Marching_Cubes(
 
         ud.description = "ROI Inclusivity";
 
-        ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/,
+        ud.f_bounded = [&](int64_t /*row*/, int64_t /*col*/, int64_t /*chan*/,
                                           std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                                           std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                           float &voxel_val) {
             voxel_val = InteriorVal;
         };
-        //ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/,
+        //ud.f_unbounded = [&](int64_t /*row*/, int64_t /*col*/, int64_t /*chan*/,
         //                                    std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
         //                                    std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
         //                                    float &voxel_val) {
@@ -1277,10 +1278,10 @@ Estimate_Surface_Mesh_Marching_Cubes(
     const double margin_y = min_res_y;
     const double margin_z = min_res_z;
 
-    const auto N_rows = static_cast<long int>(std::ceil((bb.max.x - bb.min.x)/min_res_x));
-    const auto N_cols = static_cast<long int>(std::ceil((bb.max.y - bb.min.y)/min_res_y));
-    const auto N_imgs = static_cast<long int>(std::ceil((bb.max.z - bb.min.z)/min_res_z));
-    const auto N_chns = static_cast<long int>(1);
+    const auto N_rows = static_cast<int64_t>(std::ceil((bb.max.x - bb.min.x)/min_res_x));
+    const auto N_cols = static_cast<int64_t>(std::ceil((bb.max.y - bb.min.y)/min_res_y));
+    const auto N_imgs = static_cast<int64_t>(std::ceil((bb.max.z - bb.min.z)/min_res_z));
+    const auto N_chns = static_cast<int64_t>(1);
 
     const vec3<double> row_unit(1.0, 0.0, 0.0);
     const vec3<double> col_unit(0.0, 1.0, 0.0);
@@ -1519,7 +1520,7 @@ Polyhedron Estimate_Surface_Mesh(
     double y_margin = z_margin;
 
     // Generate a grid volume bounding the ROI(s).
-    const long int NumberOfChannels = 1;
+    const int64_t NumberOfChannels = 1;
     const double PixelFill = std::numeric_limits<double>::quiet_NaN();
     const bool OnlyExtremeSlices = false;
     auto grid_image_collection = Contiguously_Grid_Volume<float,double>(
@@ -1556,13 +1557,13 @@ Polyhedron Estimate_Surface_Mesh(
         */
         ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
 
-        ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/,
+        ud.f_bounded = [&](int64_t /*row*/, int64_t /*col*/, int64_t /*chan*/,
                            std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                            std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                            float &voxel_val) {
             voxel_val = InteriorVal;
         };
-        ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/,
+        ud.f_unbounded = [&](int64_t /*row*/, int64_t /*col*/, int64_t /*chan*/,
                              std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                              std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                              float &voxel_val) {
@@ -1605,7 +1606,7 @@ Polyhedron Estimate_Surface_Mesh(
     }
 
     // Threshold the surface mask.
-    grid_arr_ptr->imagecoll.apply_to_pixels([=](long int, long int, long int, float &val) -> void {
+    grid_arr_ptr->imagecoll.apply_to_pixels([=](int64_t, int64_t, int64_t, float &val) -> void {
             if(!isininc(void_mask_val, val, surface_mask_val)){
                 val = void_mask_val;
                 return;
@@ -1630,7 +1631,7 @@ Polyhedron Estimate_Surface_Mesh(
         const vec3<double> P(static_cast<double>(CGAL::to_double(p.x())), 
                              static_cast<double>(CGAL::to_double(p.y())),
                              static_cast<double>(CGAL::to_double(p.z())) );
-        const long int channel = 0;
+        const int64_t channel = 0;
         const double out_of_bounds = ExteriorVal;
 
         return static_cast<FT>( grid_image_collection.trilinearly_interpolate(P, channel, out_of_bounds) );
@@ -2064,14 +2065,14 @@ Regular_Icosahedron(double radius){
 
 void
 Subdivide(Polyhedron &mesh,
-          long int iters){
+          int64_t iters){
 
     if(!mesh.is_pure_triangle()) throw std::runtime_error("Mesh is not purely triangular.");
     if(!mesh.is_valid()) throw std::runtime_error("Mesh is not combinatorially valid.");
     //if(!mesh.is_closed()) throw std::runtime_error("Mesh is not closed; it has a boundary")
 
     YLOGINFO("About to perform mesh subdivision. If this fails, the mesh topology is probably incompatible");
-    for(long int i = 0; i < iters; ++i){
+    for(int64_t i = 0; i < iters; ++i){
         // Note: the following takes a parameter indicating the number of interations to perform, but seems to ignore
         // it. (Perhaps the interface has changed?)
         CGAL::Subdivision_method_3::Loop_subdivision(mesh);
@@ -2086,7 +2087,7 @@ Subdivide(Polyhedron &mesh,
 void
 Remesh(Polyhedron &mesh,
        double target_edge_length,
-       long int iters){
+       int64_t iters){
 
     // This function remeshes a given mesh to improve the triangle quality. From the CGAL documentation:
     //    "The incremental triangle-based isotropic remeshing algorithm introduced by Botsch et al [2], [4] is implemented
@@ -2121,7 +2122,7 @@ Remesh(Polyhedron &mesh,
 
 void
 Simplify(Polyhedron &mesh,
-         long int edge_count_limit){
+         int64_t edge_count_limit){
 
     // The required parameter is the upper limit to the number of faces remaining after mesh simplification.
     // For a genus 0 surface mesh (i.e., topologically euivalent to a sphere without holes like a torus)

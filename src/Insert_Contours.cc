@@ -8,6 +8,7 @@
 #include <stdexcept>
 #include <utility>
 #include <vector>
+#include <cstdint>
 
 #include "Insert_Contours.h"
 #include "YgorImages.h"
@@ -107,7 +108,7 @@ void Inject_Point_Contour( const planar_image<float,double> &animg,
                            contour_collection<double> &dest, // Where to put the contours.
                            const std::map<std::string, std::string>& metadata,
                            double radius,
-                           long int num_verts){
+                           int64_t num_verts){
 
     // Project the points onto the (central) plane of the image.
     const auto img_plane = animg.image_plane();
@@ -126,7 +127,7 @@ void Inject_Point_Contour( const planar_image<float,double> &animg,
     const auto pi = std::acos(-1.0);
     contour_of_points<double> c;
     c.closed = true;
-    for(long int n = 0; n < num_verts; ++n){
+    for(int64_t n = 0; n < num_verts; ++n){
         const auto angle = 2.0 * pi * static_cast<double>(n) / static_cast<double>(num_verts);
         c.points.emplace_back( proj + row_unit * std::cos(angle) * radius
                                     + col_unit * std::sin(angle) * radius );

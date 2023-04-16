@@ -10,6 +10,11 @@
 #include <regex>
 #include <stdexcept>
 #include <string>    
+#include <cstdint>
+
+#include "YgorImages.h"
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
+#include "YgorStats.h"       //Needed for Stats:: namespace.
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
@@ -17,9 +22,6 @@
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
 #include "IsolatedVoxelFilter.h"
-#include "YgorImages.h"
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
-#include "YgorStats.h"       //Needed for Stats:: namespace.
 
 
 OperationDoc OpArgDocIsolatedVoxelFilter(){
@@ -250,85 +252,85 @@ bool IsolatedVoxelFilter(Drover &DICOM_data,
                 throw std::logic_error("Replacement strategy incompatible with including self voxel. Refusing to continue.");
             }
             ud.voxel_triplets = {{ 
-                  std::array<long int, 3>{  0,  0,  0 }
+                  std::array<int64_t, 3>{  0,  0,  0 }
             }};
         }
 
         if(false){
             ud.voxel_triplets = {{ 
-                  std::array<long int, 3>{  0,  0, -1 }, 
-                  std::array<long int, 3>{ -1,  0,  0 }, 
-                  std::array<long int, 3>{  0, -1,  0 }, 
-                  std::array<long int, 3>{  0,  1,  0 }, 
-                  std::array<long int, 3>{  1,  0,  0 }, 
-                  std::array<long int, 3>{  0,  0,  1 }
+                  std::array<int64_t, 3>{  0,  0, -1 }, 
+                  std::array<int64_t, 3>{ -1,  0,  0 }, 
+                  std::array<int64_t, 3>{  0, -1,  0 }, 
+                  std::array<int64_t, 3>{  0,  1,  0 }, 
+                  std::array<int64_t, 3>{  1,  0,  0 }, 
+                  std::array<int64_t, 3>{  0,  0,  1 }
             }};
         }
 
         if(false){
             ud.voxel_triplets = {{ 
-                  std::array<long int, 3>{ -1,  0, -1 },
-                  std::array<long int, 3>{  0, -1, -1 },
-                  std::array<long int, 3>{  0,  1, -1 },
-                  std::array<long int, 3>{  1,  0, -1 },
+                  std::array<int64_t, 3>{ -1,  0, -1 },
+                  std::array<int64_t, 3>{  0, -1, -1 },
+                  std::array<int64_t, 3>{  0,  1, -1 },
+                  std::array<int64_t, 3>{  1,  0, -1 },
 
-                  std::array<long int, 3>{ -1, -1,  0 },
-                  std::array<long int, 3>{ -1,  1,  0 },
-                  std::array<long int, 3>{  1, -1,  0 },
-                  std::array<long int, 3>{  1,  1,  0 },
+                  std::array<int64_t, 3>{ -1, -1,  0 },
+                  std::array<int64_t, 3>{ -1,  1,  0 },
+                  std::array<int64_t, 3>{  1, -1,  0 },
+                  std::array<int64_t, 3>{  1,  1,  0 },
 
-                  std::array<long int, 3>{ -1,  0,  1 },
-                  std::array<long int, 3>{  0, -1,  1 },
-                  std::array<long int, 3>{  0,  1,  1 },
-                  std::array<long int, 3>{  1,  0,  1 }
+                  std::array<int64_t, 3>{ -1,  0,  1 },
+                  std::array<int64_t, 3>{  0, -1,  1 },
+                  std::array<int64_t, 3>{  0,  1,  1 },
+                  std::array<int64_t, 3>{  1,  0,  1 }
             }};
         }
 
         if(false){
             ud.voxel_triplets = {{ 
-                  std::array<long int, 3>{ -1, -1, -1 },
-                  std::array<long int, 3>{ -1,  1, -1 },
-                  std::array<long int, 3>{  1, -1, -1 },
-                  std::array<long int, 3>{  1,  1, -1 },
-                  std::array<long int, 3>{ -1, -1,  1 },
-                  std::array<long int, 3>{ -1,  1,  1 },
-                  std::array<long int, 3>{  1, -1,  1 },
-                  std::array<long int, 3>{  1,  1,  1 } 
+                  std::array<int64_t, 3>{ -1, -1, -1 },
+                  std::array<int64_t, 3>{ -1,  1, -1 },
+                  std::array<int64_t, 3>{  1, -1, -1 },
+                  std::array<int64_t, 3>{  1,  1, -1 },
+                  std::array<int64_t, 3>{ -1, -1,  1 },
+                  std::array<int64_t, 3>{ -1,  1,  1 },
+                  std::array<int64_t, 3>{  1, -1,  1 },
+                  std::array<int64_t, 3>{  1,  1,  1 } 
             }};
         }
 
-        // All of std::array<long int, 3>the above combined into one...
+        // All of std::array<int64_t, 3>the above combined into one...
         if(true){
             ud.voxel_triplets = {{ 
-                  std::array<long int, 3>{ -1, -1, -1 },
-                  std::array<long int, 3>{ -1,  0, -1 },
-                  std::array<long int, 3>{ -1,  1, -1 },
-                  std::array<long int, 3>{  0, -1, -1 },
-                  std::array<long int, 3>{  0,  0, -1 },
-                  std::array<long int, 3>{  0,  1, -1 },
-                  std::array<long int, 3>{  1, -1, -1 },
-                  std::array<long int, 3>{  1,  0, -1 },
-                  std::array<long int, 3>{  1,  1, -1 },
+                  std::array<int64_t, 3>{ -1, -1, -1 },
+                  std::array<int64_t, 3>{ -1,  0, -1 },
+                  std::array<int64_t, 3>{ -1,  1, -1 },
+                  std::array<int64_t, 3>{  0, -1, -1 },
+                  std::array<int64_t, 3>{  0,  0, -1 },
+                  std::array<int64_t, 3>{  0,  1, -1 },
+                  std::array<int64_t, 3>{  1, -1, -1 },
+                  std::array<int64_t, 3>{  1,  0, -1 },
+                  std::array<int64_t, 3>{  1,  1, -1 },
 
-                  std::array<long int, 3>{ -1, -1,  0 },
-                  std::array<long int, 3>{ -1,  0,  0 },
-                  std::array<long int, 3>{ -1,  1,  0 },
-                  std::array<long int, 3>{  0, -1,  0 },
-                  //std::array<long int, 3>{  0,  0,  0 },
-                  std::array<long int, 3>{  0,  1,  0 },
-                  std::array<long int, 3>{  1, -1,  0 },
-                  std::array<long int, 3>{  1,  0,  0 },
-                  std::array<long int, 3>{  1,  1,  0 },
+                  std::array<int64_t, 3>{ -1, -1,  0 },
+                  std::array<int64_t, 3>{ -1,  0,  0 },
+                  std::array<int64_t, 3>{ -1,  1,  0 },
+                  std::array<int64_t, 3>{  0, -1,  0 },
+                  //std::array<int64_t, 3>{  0,  0,  0 },
+                  std::array<int64_t, 3>{  0,  1,  0 },
+                  std::array<int64_t, 3>{  1, -1,  0 },
+                  std::array<int64_t, 3>{  1,  0,  0 },
+                  std::array<int64_t, 3>{  1,  1,  0 },
 
-                  std::array<long int, 3>{ -1, -1,  1 },
-                  std::array<long int, 3>{ -1,  0,  1 },
-                  std::array<long int, 3>{ -1,  1,  1 },
-                  std::array<long int, 3>{  0, -1,  1 },
-                  std::array<long int, 3>{  0,  0,  1 },
-                  std::array<long int, 3>{  0,  1,  1 },
-                  std::array<long int, 3>{  1, -1,  1 },
-                  std::array<long int, 3>{  1,  0,  1 },
-                  std::array<long int, 3>{  1,  1,  1 } 
+                  std::array<int64_t, 3>{ -1, -1,  1 },
+                  std::array<int64_t, 3>{ -1,  0,  1 },
+                  std::array<int64_t, 3>{ -1,  1,  1 },
+                  std::array<int64_t, 3>{  0, -1,  1 },
+                  std::array<int64_t, 3>{  0,  0,  1 },
+                  std::array<int64_t, 3>{  0,  1,  1 },
+                  std::array<int64_t, 3>{  1, -1,  1 },
+                  std::array<int64_t, 3>{  1,  0,  1 },
+                  std::array<int64_t, 3>{  1,  1,  1 } 
             }};
         }
         //const auto neighbour_count = ud.voxel_triplets.size();
@@ -338,7 +340,7 @@ bool IsolatedVoxelFilter(Drover &DICOM_data,
         ||  replacement_is_median
         ||  replacement_is_value  ){
             ud.f_reduce = [=](float v, std::vector<float> &shtl, vec3<double>) -> float {
-                    long int agree = 0; // The number of neighbouring voxels that are in agreement.
+                    int64_t agree = 0; // The number of neighbouring voxels that are in agreement.
                     for(const auto &n : shtl){
                         if(std::isfinite(v)){
                             // Agreement based on numerical value.

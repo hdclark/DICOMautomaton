@@ -20,6 +20,7 @@
 #include <utility>
 #include <filesystem>
 #include <numeric>
+#include <cstdint>
 
 #ifdef DCMA_USE_CGAL
 #else
@@ -273,9 +274,9 @@ bool ExtractRadiomicFeatures(Drover &DICOM_data,
         Mutate_Voxels_Functor<float,double> f_noop;
         ud.f_unbounded = f_noop;
         ud.f_visitor = f_noop;
-        ud.f_bounded = [&](long int /*row*/, 
-                           long int /*col*/, 
-                           long int /*chan*/, 
+        ud.f_bounded = [&](int64_t /*row*/, 
+                           int64_t /*col*/, 
+                           int64_t /*chan*/, 
                            std::reference_wrapper<planar_image<float,double>> /*img_refw*/, 
                            std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/, 
                            float &voxel_val) {
@@ -283,7 +284,7 @@ bool ExtractRadiomicFeatures(Drover &DICOM_data,
             voxel_vals.emplace_back(voxel_val);
 
             // Append the value rounded to the nearest integer to the voxel store.
-            //voxel_vals.emplace_back( static_cast<long int>( std::round(voxel_val) ) );
+            //voxel_vals.emplace_back( static_cast<int64_t>( std::round(voxel_val) ) );
             return;
         };
 

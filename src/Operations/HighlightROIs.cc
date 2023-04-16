@@ -10,9 +10,15 @@
 #include <regex>
 #include <stdexcept>
 #include <string>    
+#include <cstdint>
 
 #include <boost/geometry.hpp>
 #include <boost/geometry/index/rtree.hpp>
+
+#include "YgorImages.h"
+#include "YgorMath.h"         //Needed for vec3 class.
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
+#include "YgorStats.h"
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
@@ -20,11 +26,6 @@
 #include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
 
 #include "HighlightROIs.h"
-
-#include "YgorImages.h"
-#include "YgorMath.h"         //Needed for vec3 class.
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
-#include "YgorStats.h"
 
 
 
@@ -276,9 +277,9 @@ bool HighlightROIs(Drover &DICOM_data,
     }
 
     const auto f_receding_squares = [&](bool is_interior,
-                                        long int r,
-                                        long int c,
-                                        long int channel,
+                                        int64_t r,
+                                        int64_t c,
+                                        int64_t channel,
                                         std::reference_wrapper<planar_image<float,double>> img_refw,
                                         std::reference_wrapper<planar_image<float,double>> mask_img_refw,
                                         float &val ) -> void {
@@ -529,7 +530,7 @@ bool HighlightROIs(Drover &DICOM_data,
 
         if(std::regex_match(MethodStr, regex_binary)){
             if(ShouldOverwriteInterior){
-                ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int chan,
+                ud.f_bounded = [&](int64_t /*row*/, int64_t /*col*/, int64_t chan,
                                    std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                                    std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                    float &voxel_val) {
@@ -539,7 +540,7 @@ bool HighlightROIs(Drover &DICOM_data,
                 };
             }
             if(ShouldOverwriteExterior){
-                ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int chan,
+                ud.f_unbounded = [&](int64_t /*row*/, int64_t /*col*/, int64_t chan,
                                      std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                                      std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                      float &voxel_val) {

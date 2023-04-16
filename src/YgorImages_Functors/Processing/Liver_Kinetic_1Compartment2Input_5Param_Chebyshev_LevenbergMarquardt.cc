@@ -2,8 +2,6 @@
 
 #ifdef DCMA_USE_GNU_GSL
 
-#include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/iterator/iterator_traits.hpp>
 #include <cstddef>
 #include <array>
 #include <exception>
@@ -22,6 +20,17 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <cstdint>
+
+#include <boost/date_time/posix_time/posix_time.hpp>
+#include <boost/iterator/iterator_traits.hpp>
+
+#include "YgorImages.h"
+#include "YgorMath.h"
+#include "YgorMathChebyshev.h"
+#include "YgorMisc.h"
+#include "YgorLog.h"
+#include "YgorStats.h"       //Needed for Stats:: namespace.
 
 #include "../../Common_Boost_Serialization.h"
 #include "../../Common_Plotting.h"
@@ -31,12 +40,6 @@
 #include "Liver_Kinetic_1Compartment2Input_5Param_Chebyshev_Common.h"
 #include "Liver_Kinetic_1Compartment2Input_5Param_Chebyshev_LevenbergMarquardt.h"
 #include "Liver_Kinetic_Common.h"
-#include "YgorImages.h"
-#include "YgorMath.h"
-#include "YgorMathChebyshev.h"
-#include "YgorMisc.h"
-#include "YgorLog.h"
-#include "YgorStats.h"       //Needed for Stats:: namespace.
 
 static std::mutex out_img_mutex;
 
@@ -77,7 +80,7 @@ KineticModel_Liver_1C2I_5Param_Chebyshev_LevenbergMarquardt(planar_image_collect
     }
 
     //Figure out which pixels, if any, need to be plotted after modeling.
-    std::set<std::pair<long int, long int>> PixelsToPlot;
+    std::set<std::pair<int64_t, int64_t>> PixelsToPlot;
     {
         auto inimg_metadata = first_img_it->metadata;
         for(const auto &critstruct : user_data_s->pixels_to_plot){
@@ -306,7 +309,7 @@ KineticModel_Liver_1C2I_5Param_Chebyshev_LevenbergMarquardt(planar_image_collect
                                 boost::posix_time::ptime current_t = boost::posix_time::microsec_clock::local_time();
                                 auto elapsed_dt = (current_t - start_t).total_milliseconds();
                                 auto expected_dt_f = static_cast<double>(elapsed_dt) * (Expected_Operation_Count/Actual_Operation_Count);
-                                auto expected_dt = static_cast<long int>(expected_dt_f);
+                                auto expected_dt = static_cast<int64_t>(expected_dt_f);
                                 boost::posix_time::ptime predicted_dt( start_t + boost::posix_time::milliseconds(expected_dt) );
                                 YLOGINFO("Progress: " 
                                     << Actual_Operation_Count << "/" << Expected_Operation_Count << " = " 

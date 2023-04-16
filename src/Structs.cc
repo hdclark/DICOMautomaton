@@ -247,7 +247,7 @@ std::unique_ptr<Contour_Data>  Contour_Data::Split_Per_Height_Along_Given_Plane_
             if(!(used_contours.find(c1_it) != used_contours.end())) continue;
 
             vec3<double> Rave;
-            long int numb_of_contours = 0;
+            int64_t numb_of_contours = 0;
 
             const double height1 = c1_it->Average_Point().Dot(vec3<double>(0.0,0.0,1.0));
 
@@ -613,7 +613,7 @@ Static_Machine_State::GetMetadataValueAs(const std::string& key) const {
     return std::make_optional(stringtoX<U>(metadata_cit->second));
 }
 template std::optional<uint32_t   > Static_Machine_State::GetMetadataValueAs(const std::string &) const;
-template std::optional<long int   > Static_Machine_State::GetMetadataValueAs(const std::string &) const;
+template std::optional<int64_t    > Static_Machine_State::GetMetadataValueAs(const std::string &) const;
 template std::optional<float      > Static_Machine_State::GetMetadataValueAs(const std::string &) const;
 template std::optional<double     > Static_Machine_State::GetMetadataValueAs(const std::string &) const;
 template std::optional<std::string> Static_Machine_State::GetMetadataValueAs(const std::string &) const;
@@ -819,7 +819,7 @@ Dynamic_Machine_State::interpolate(double CumulativeMetersetWeight) const {
     // Blend the measurements.
     out = *lb_it; // Allocates vectors appropriately. Also provides metadata.
     out.CumulativeMetersetWeight = CumulativeMetersetWeight;
-    out.ControlPointIndex = std::numeric_limits<long int>::lowest();
+    out.ControlPointIndex = std::numeric_limits<int64_t>::lowest();
 
     out.GantryAngle = lb_it->GantryAngle * x + ub_it->GantryAngle * (1.0 - x);
     out.GantryRotationDirection = lb_it->GantryRotationDirection * x + ub_it->GantryRotationDirection * (1.0 - x);
@@ -871,7 +871,7 @@ Dynamic_Machine_State::GetMetadataValueAs(const std::string& key) const {
     return std::make_optional(stringtoX<U>(metadata_cit->second));
 }
 template std::optional<uint32_t   > Dynamic_Machine_State::GetMetadataValueAs(const std::string &) const;
-template std::optional<long int   > Dynamic_Machine_State::GetMetadataValueAs(const std::string &) const;
+template std::optional<int64_t    > Dynamic_Machine_State::GetMetadataValueAs(const std::string &) const;
 template std::optional<float      > Dynamic_Machine_State::GetMetadataValueAs(const std::string &) const;
 template std::optional<double     > Dynamic_Machine_State::GetMetadataValueAs(const std::string &) const;
 template std::optional<std::string> Dynamic_Machine_State::GetMetadataValueAs(const std::string &) const;
@@ -905,7 +905,7 @@ RTPlan::GetMetadataValueAs(const std::string& key) const {
     return std::make_optional(stringtoX<U>(metadata_cit->second));
 }
 template std::optional<uint32_t   > RTPlan::GetMetadataValueAs(const std::string &) const;
-template std::optional<long int   > RTPlan::GetMetadataValueAs(const std::string &) const;
+template std::optional<int64_t    > RTPlan::GetMetadataValueAs(const std::string &) const;
 template std::optional<float      > RTPlan::GetMetadataValueAs(const std::string &) const;
 template std::optional<double     > RTPlan::GetMetadataValueAs(const std::string &) const;
 template std::optional<std::string> RTPlan::GetMetadataValueAs(const std::string &) const;
@@ -975,7 +975,7 @@ Transform3::GetMetadataValueAs(const std::string& key) const {
     return std::make_optional(stringtoX<U>(metadata_cit->second));
 }
 template std::optional<uint32_t   > Transform3::GetMetadataValueAs(const std::string &) const;
-template std::optional<long int   > Transform3::GetMetadataValueAs(const std::string &) const;
+template std::optional<int64_t    > Transform3::GetMetadataValueAs(const std::string &) const;
 template std::optional<float      > Transform3::GetMetadataValueAs(const std::string &) const;
 template std::optional<double     > Transform3::GetMetadataValueAs(const std::string &) const;
 template std::optional<std::string> Transform3::GetMetadataValueAs(const std::string &) const;
@@ -1078,7 +1078,7 @@ void Drover::Bounded_Dose_General( std::list<double> *pixel_doses,
     //
     //Output options:
     //  std::list<double> *pixel_doses;            <-- Holds the each voxel's dose. Discards spatial info about voxels.
-    //  std::map<long int,double> *mean_doses;     <-- Holds the mean dose for each ROI contour number within the contour data.
+    //  std::map<int64_t,double> *mean_doses;      <-- Holds the mean dose for each ROI contour number within the contour data.
     //  ....many more implemented...   They should be fairly self-describing...
     //
     // Pass a pointer to the desired container to compute the desired quantities.
@@ -1215,7 +1215,7 @@ void Drover::Bounded_Dose_General( std::list<double> *pixel_doses,
     
                     //Now cycle through every pixel in the plane. This is kind of a shit way to do this, but then again this entire program is basically
                     // a shit way to do it. I would like to have had more time to properly fix/plan/think about what I've got here...  -h
-                    for(long int i=0; i<image.rows; ++i)  for(long int j=0; j<image.columns; ++j){
+                    for(int64_t i=0; i<image.rows; ++i)  for(int64_t j=0; j<image.columns; ++j){
                         const auto pos = image.position(i,j);
                         const float X = pos.x, Y = pos.y;
     
@@ -1785,7 +1785,7 @@ void Drover::Plot_Dose_And_Contours() const {
     //The aim of this program is to plot contours and dose in the same display. It is probably best
     // for debugging. Use the overlaydosedata program to display data using OpenGL.
     Plotter3 a_plot;
-    a_plot.Set_Global_Title("Dose and Contours.");//: Object with address " + Xtostring<long int>((size_t)((void *)(this))));
+    a_plot.Set_Global_Title("Dose and Contours.");//: Object with address " + Xtostring<int64_t>((size_t)((void *)(this))));
     vec3<double> r;
 
     auto d = Isolate_Dose_Data(*this);
@@ -1821,7 +1821,7 @@ void Drover::Plot_Dose_And_Contours() const {
 
 void Drover::Plot_Image_Outlines() const {
     Plotter3 a_plot;
-    a_plot.Set_Global_Title("Dose and Contours.");//: Object with address " + Xtostring<long int>((size_t)((void *)(this))));
+    a_plot.Set_Global_Title("Dose and Contours.");//: Object with address " + Xtostring<int64_t>((size_t)((void *)(this))));
     vec3<double> r;
 
     if(this->Has_Image_Data()){

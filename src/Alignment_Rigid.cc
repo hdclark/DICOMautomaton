@@ -14,6 +14,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <cstdint>
 
 #ifdef DCMA_USE_EIGEN    
     #include <eigen3/Eigen/Dense>
@@ -492,7 +493,7 @@ AlignViaOrthogonalProcrustes(AlignViaOrthogonalProcrustesParams & params,
 std::optional<affine_transform<double>>
 AlignViaExhaustiveICP( const point_set<double> & moving,
                        const point_set<double> & stationary,
-                       long int max_icp_iters,
+                       int64_t max_icp_iters,
                        double f_rel_tol ){
 
     // The WIP transformation.
@@ -525,7 +526,7 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
     //t = AlignViaCentroid(moving, stationary).value();
 
     double f_prev = std::numeric_limits<double>::quiet_NaN();
-    for(long int icp_iter = 0; icp_iter < max_icp_iters; ++icp_iter){
+    for(int64_t icp_iter = 0; icp_iter < max_icp_iters; ++icp_iter){
         // Copy the original points.
         working.points = moving.points;
 

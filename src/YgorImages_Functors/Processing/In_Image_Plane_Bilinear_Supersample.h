@@ -5,6 +5,7 @@
 #include <any>
 #include <functional>
 #include <list>
+#include <cstdint>
 
 #include "YgorImages.h"
 
@@ -13,8 +14,8 @@ template <class T> class contour_collection;
 struct InImagePlaneBilinearSupersampleUserData {
     // These factors determine the number of rows and columns in the outgoing image. Must be positive integers.
     // There will be (RowScaleFactor) times as many rows outgoing as there are incoming, etc..
-    long int RowScaleFactor    = 2;
-    long int ColumnScaleFactor = 2;
+    int64_t RowScaleFactor    = 2;
+    int64_t ColumnScaleFactor = 2;
 };
 
 bool InImagePlaneBilinearSupersample(planar_image_collection<float,double>::images_list_it_t first_img_it,

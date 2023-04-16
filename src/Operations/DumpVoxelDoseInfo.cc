@@ -6,13 +6,15 @@
 #include <map>
 #include <memory>
 #include <string>    
+#include <cstdint>
+
+#include "YgorImages.h"
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 #include "../Dose_Meld.h"
 #include "../Structs.h"
 #include "DumpVoxelDoseInfo.h"
-#include "YgorImages.h"
-#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-#include "YgorLog.h"
 
 
 OperationDoc OpArgDocDumpVoxelDoseInfo(){
@@ -58,7 +60,7 @@ bool DumpVoxelDoseInfo(Drover &DICOM_data,
             //Loop through all dose frames (slices).
             for(auto & image : dd->imagecoll.images){
                 //Now cycle through every pixel in the plane.
-                for(long int i=0; i<image.rows; ++i)  for(long int j=0; j<image.columns; ++j){
+                for(int64_t i=0; i<image.rows; ++i)  for(int64_t j=0; j<image.columns; ++j){
                     //Greyscale or R channel. We assume the channels satisfy: R = G = B.
                     const auto pointval = image.value(i,j,0); 
                     const auto pointdose = static_cast<double>(pointval); 

@@ -4,6 +4,7 @@
 
 #include <string>
 #include <utility>
+#include <cstdint>
 
 #include "CSG_SDF.h"
 
@@ -23,10 +24,10 @@ namespace dcma_surface_meshes {
     } ReproductionQuality;
 
     struct Parameters {
-        long int NumberOfImages = -1; // If not sensible, defaults to ~number of unique contour planes.
+        int64_t NumberOfImages = -1; // If not sensible, defaults to ~number of unique contour planes.
 
-        long int GridRows = 512;  // As of writing, the procedure limiting ramping this up is inclusivity testing.
-        long int GridColumns = 512;
+        int64_t GridRows = 512;  // As of writing, the procedure limiting ramping this up is inclusivity testing.
+        int64_t GridColumns = 512;
 
         Mutate_Voxels_Opts MutateOpts; // Controls how contours are interpretted.
 
@@ -105,16 +106,16 @@ namespace polyhedron_processing {
 
     void
     Subdivide(Polyhedron &mesh,
-              long int iters = 3);
+              int64_t iters = 3);
 
     void
     Remesh(Polyhedron &mesh,
               double target_edge_length = 1.0,
-              long int iters = 3);
+              int64_t iters = 3);
 
     void
     Simplify(Polyhedron &mesh,
-             long int edge_count_limit);
+             int64_t edge_count_limit);
 
     bool
     SaveAsOFF(Polyhedron &mesh,

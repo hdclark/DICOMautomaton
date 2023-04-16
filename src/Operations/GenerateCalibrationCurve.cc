@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <string>    
 #include <mutex>
+#include <cstdint>
 
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -216,7 +217,7 @@ bool GenerateCalibrationCurve(Drover &DICOM_data,
             throw std::invalid_argument("Inclusivity argument '"_s + InclusivityStr + "' is not valid");
         }
 
-        ud.f_bounded = [&](long int row, long int col, long int chan,
+        ud.f_bounded = [&](int64_t row, int64_t col, int64_t chan,
                            std::reference_wrapper<planar_image<float,double>> img_refw,
                            std::reference_wrapper<planar_image<float,double>>,
                            float &voxel_val) {

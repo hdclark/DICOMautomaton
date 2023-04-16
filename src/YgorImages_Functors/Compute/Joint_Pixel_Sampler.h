@@ -7,6 +7,7 @@
 #include <list>
 #include <string>
 #include <vector>
+#include <cstdint>
 
 #include "YgorMath.h"
 
@@ -20,7 +21,7 @@ struct ComputeJointPixelSamplerUserData {
     //
     // Note: Channel numbers in the images that will be edited and reference images must match.
     //       Negative values will use all channels.
-    long int channel = -1;
+    int64_t channel = -1;
 
     // -----------------------------
     // Parameters for pixel thresholds.

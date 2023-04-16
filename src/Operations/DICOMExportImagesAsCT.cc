@@ -9,6 +9,7 @@
 #include <regex>
 #include <stdexcept>
 #include <string>    
+#include <cstdint>
 
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
@@ -96,11 +97,11 @@ bool DICOMExportImagesAsCT(Drover &DICOM_data,
     }
 
     auto make_sequential_filename = [=]() -> std::string {
-        const auto pad_left_zeros = [](std::string in, long int desired_length) -> std::string {
-            while(static_cast<long int>(in.length()) < desired_length) in = "0"_s + in;
+        const auto pad_left_zeros = [](std::string in, int64_t desired_length) -> std::string {
+            while(static_cast<int64_t>(in.length()) < desired_length) in = "0"_s + in;
             return in;
         };
-        static long int n = 0; // Internal counter, incremented once per invocation.
+        static int64_t n = 0; // Internal counter, incremented once per invocation.
 
         std::string prefix = "CT_";
         std::string middle = std::to_string(n);
@@ -134,9 +135,9 @@ bool DICOMExportImagesAsCT(Drover &DICOM_data,
  
             // This closure is invoked once per CT file. We simply add each to the TAR file.
             auto file_handler = [&](std::istream &is,
-                                    long int filesize) -> void {
+                                    int64_t filesize) -> void {
                 const auto fname = make_sequential_filename();
-                const auto fsize = static_cast<long int>(filesize);
+                const auto fsize = static_cast<int64_t>(filesize);
                 ustar.add_file(is, fname, fsize);
                 return;
             };

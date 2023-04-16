@@ -10,6 +10,7 @@
 #include <regex>
 #include <stdexcept>
 #include <string>    
+#include <cstdint>
 
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
@@ -213,7 +214,7 @@ bool NormalizePixels(Drover &DICOM_data,
         }
 
         if(op_is_clmp){
-            ud.f_bounded = [Channel](long int, long int, long int chan,
+            ud.f_bounded = [Channel](int64_t, int64_t, int64_t chan,
                                      std::reference_wrapper<planar_image<float,double>>,
                                      std::reference_wrapper<planar_image<float,double>>,
                                      float &val) {
@@ -230,7 +231,7 @@ bool NormalizePixels(Drover &DICOM_data,
             // Determine the min and max voxel intensities.
             Stats::Running_MinMax<float> minmax;
 
-            ud.f_bounded = [&](long int, long int, long int chan,
+            ud.f_bounded = [&](int64_t, int64_t, int64_t chan,
                                std::reference_wrapper<planar_image<float,double>>,
                                std::reference_wrapper<planar_image<float,double>>,
                                float &val) {
@@ -248,7 +249,7 @@ bool NormalizePixels(Drover &DICOM_data,
             const auto max = minmax.Current_Max();
 
             // Prepare another functor for adjusting the voxel intensities..
-            ud.f_bounded = [Channel,min,max,op_is_st01,op_is_st11](long int, long int, long int chan,
+            ud.f_bounded = [Channel,min,max,op_is_st01,op_is_st11](int64_t, int64_t, int64_t chan,
                                                                    std::reference_wrapper<planar_image<float,double>>,
                                                                    std::reference_wrapper<planar_image<float,double>>,
                                                                    float &val) {
@@ -268,8 +269,8 @@ bool NormalizePixels(Drover &DICOM_data,
             
             // Calculate the sum of all voxels.
             double total_sum = 0.0;
-            long int total_count = 0;
-            ud.f_bounded = [&](long int, long int, long int chan,
+            int64_t total_count = 0;
+            ud.f_bounded = [&](int64_t, int64_t, int64_t chan,
                                std::reference_wrapper<planar_image<float,double>>,
                                std::reference_wrapper<planar_image<float,double>>,
                                float &val) {
@@ -287,7 +288,7 @@ bool NormalizePixels(Drover &DICOM_data,
             const auto per_voxel_sum = total_sum / static_cast<double>(total_count);
 
             // Prepare another functor for applying the shift.
-            ud.f_bounded = [Channel,per_voxel_sum](long int, long int, long int chan,
+            ud.f_bounded = [Channel,per_voxel_sum](int64_t, int64_t, int64_t chan,
                                                    std::reference_wrapper<planar_image<float,double>>,
                                                    std::reference_wrapper<planar_image<float,double>>,
                                                    float &val) {
@@ -320,7 +321,7 @@ bool NormalizePixels(Drover &DICOM_data,
                 throw std::runtime_error("Expected units 'BQML' but encountered '"_s + units.value() + "'");
             }
 
-            ud.f_bounded = [Channel,units,mass,rnd](long int, long int, long int chan,
+            ud.f_bounded = [Channel,units,mass,rnd](int64_t, int64_t, int64_t chan,
                                                    std::reference_wrapper<planar_image<float,double>>,
                                                    std::reference_wrapper<planar_image<float,double>>,
                                                    float &val) {

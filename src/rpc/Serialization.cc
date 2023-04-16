@@ -17,6 +17,7 @@
 #include <vector>
 #include <variant>
 #include <any>
+#include <cstdint>
 
 #include "YgorMisc.h"
 #include "YgorLog.h"
@@ -82,24 +83,6 @@ static void Serialize( const uint64_t &in, int64_t &out ){
 static void Deserialize( const int64_t &in, uint64_t &out ){
     // Warning: conversion from int64_t to uint64_t. (Thrift does not have uint64_t.)
     out = static_cast<uint64_t>(in);
-}
-
-static void Serialize( const int32_t &in, int64_t &out ){
-    // Warning: conversion from int32_t to int64_t which in needed when long int = int32_t.
-    out = static_cast<int64_t>(in);
-}
-static void Deserialize( const int64_t &in, int32_t &out ){
-    // Warning: conversion from int64_t to int32_t which in needed when long int = int32_t.
-    out = static_cast<int32_t>(in);
-}
-
-static void SerializeLI( const long int &in, int64_t &out ){
-    // Warning: conversion from long int (i.e., int32_t or int64_t) to int64_t.
-    out = static_cast<int64_t>(in);
-}
-static void DeserializeLI( const int64_t &in, long int &out ){
-    // Warning: conversion from int64_t to long int (i.e., int32_t or int64_t).
-    out = static_cast<long int>(in);
 }
 
 static void Serialize( const int64_t &in, int64_t &out ){
@@ -273,15 +256,9 @@ void Deserialize( const dcma::rpc::fv_surface_mesh_double_int64 &in, fv_surface_
 // planar_image<float,double>
 void Serialize( const planar_image<float,double> &in, dcma::rpc::planar_image_double_double &out ){
     static_assert( (   sizeof(decltype(in.data))  
-                     // Handle platform differences with long int = int64_t or int32_t.
-                     // Members rows, columns, and channels will either be 8 bytes each and packed sequentially into
-                     // 24 bytes, or will be 4 bytes each and packed into 16 bytes with 4 bytes of padding.
-                     + ((sizeof(long int) == 8) ?   sizeof(decltype(in.rows))
-                                                  + sizeof(decltype(in.columns))
-                                                  + sizeof(decltype(in.channels))
-                                                :   sizeof(decltype(in.rows))
-                                                  + sizeof(decltype(in.columns))
-                                                  + sizeof(decltype(in.channels)) * 2)
+                     + sizeof(decltype(in.rows))
+                     + sizeof(decltype(in.columns))
+                     + sizeof(decltype(in.channels))
                      + sizeof(decltype(in.pxl_dx))
                      + sizeof(decltype(in.pxl_dy))
                      + sizeof(decltype(in.pxl_dz))
@@ -292,9 +269,9 @@ void Serialize( const planar_image<float,double> &in, dcma::rpc::planar_image_do
                      + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
     SERIALIZE_CONTAINER(in.data, out.data);
-    SerializeLI(in.rows, out.rows);
-    SerializeLI(in.columns, out.columns);
-    SerializeLI(in.channels, out.channels);
+    Serialize(in.rows, out.rows);
+    Serialize(in.columns, out.columns);
+    Serialize(in.channels, out.channels);
     Serialize(in.pxl_dx, out.pxl_dx);
     Serialize(in.pxl_dy, out.pxl_dy);
     Serialize(in.pxl_dz, out.pxl_dz);
@@ -306,9 +283,9 @@ void Serialize( const planar_image<float,double> &in, dcma::rpc::planar_image_do
 }
 void Deserialize( const dcma::rpc::planar_image_double_double &in, planar_image<float,double> &out ){
     DESERIALIZE_CONTAINER(in.data, out.data);
-    DeserializeLI(in.rows, out.rows);
-    DeserializeLI(in.columns, out.columns);
-    DeserializeLI(in.channels, out.channels);
+    Deserialize(in.rows, out.rows);
+    Deserialize(in.columns, out.columns);
+    Deserialize(in.channels, out.channels);
     Deserialize(in.pxl_dx, out.pxl_dx);
     Deserialize(in.pxl_dy, out.pxl_dy);
     Deserialize(in.pxl_dz, out.pxl_dz);
@@ -431,8 +408,7 @@ void Deserialize( const dcma::rpc::Surface_Mesh &in, Surface_Mesh &out ){
 // Static_Machine_State
 void Serialize( const Static_Machine_State &in, dcma::rpc::Static_Machine_State &out ){
     static_assert( (   sizeof(decltype(in.CumulativeMetersetWeight))  
-                     + ((sizeof(long int) == 8) ?   sizeof(decltype(in.ControlPointIndex))
-                                                :   sizeof(decltype(in.ControlPointIndex)) * 2)
+                     + sizeof(decltype(in.ControlPointIndex))
                      + sizeof(decltype(in.GantryAngle))
                      + sizeof(decltype(in.GantryRotationDirection))
                      + sizeof(decltype(in.BeamLimitingDeviceAngle))
@@ -455,7 +431,7 @@ void Serialize( const Static_Machine_State &in, dcma::rpc::Static_Machine_State 
                      + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
     Serialize(in.CumulativeMetersetWeight, out.CumulativeMetersetWeight);
-    SerializeLI(in.ControlPointIndex, out.ControlPointIndex);
+    Serialize(in.ControlPointIndex, out.ControlPointIndex);
     Serialize(in.GantryAngle, out.GantryAngle);
     Serialize(in.GantryRotationDirection, out.GantryRotationDirection);
     Serialize(in.BeamLimitingDeviceAngle, out.BeamLimitingDeviceAngle);
@@ -479,7 +455,7 @@ void Serialize( const Static_Machine_State &in, dcma::rpc::Static_Machine_State 
 }
 void Deserialize( const dcma::rpc::Static_Machine_State &in, Static_Machine_State &out ){
     Deserialize(in.CumulativeMetersetWeight, out.CumulativeMetersetWeight);
-    DeserializeLI(in.ControlPointIndex, out.ControlPointIndex);
+    Deserialize(in.ControlPointIndex, out.ControlPointIndex);
     Deserialize(in.GantryAngle, out.GantryAngle);
     Deserialize(in.GantryRotationDirection, out.GantryRotationDirection);
     Deserialize(in.BeamLimitingDeviceAngle, out.BeamLimitingDeviceAngle);
@@ -504,19 +480,18 @@ void Deserialize( const dcma::rpc::Static_Machine_State &in, Static_Machine_Stat
 
 // Dynamic_Machine_State
 void Serialize( const Dynamic_Machine_State &in, dcma::rpc::Dynamic_Machine_State &out ){
-    static_assert( (   ((sizeof(long int) == 8) ?  sizeof(decltype(in.BeamNumber))
-                                                :  sizeof(decltype(in.BeamNumber)) * 2)
+    static_assert( (   sizeof(decltype(in.BeamNumber))
                      + sizeof(decltype(in.FinalCumulativeMetersetWeight))
                      + sizeof(decltype(in.static_states))
                      + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
-    SerializeLI(in.BeamNumber, out.BeamNumber);
+    Serialize(in.BeamNumber, out.BeamNumber);
     Serialize(in.FinalCumulativeMetersetWeight, out.FinalCumulativeMetersetWeight);
     SERIALIZE_CONTAINER(in.static_states, out.static_states);
     Serialize(in.metadata, out.metadata);
 }
 void Deserialize( const dcma::rpc::Dynamic_Machine_State &in, Dynamic_Machine_State &out ){
-    DeserializeLI(in.BeamNumber, out.BeamNumber);
+    Deserialize(in.BeamNumber, out.BeamNumber);
     Deserialize(in.FinalCumulativeMetersetWeight, out.FinalCumulativeMetersetWeight);
     DESERIALIZE_CONTAINER(in.static_states, out.static_states);
     Deserialize(in.metadata, out.metadata);

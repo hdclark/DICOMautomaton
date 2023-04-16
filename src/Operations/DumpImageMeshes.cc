@@ -13,14 +13,16 @@
 #include <string>    
 #include <vector>
 #include <filesystem>
+#include <cstdint>
+
+#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
+#include "YgorMath.h"         //Needed for vec3 class.
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../Colour_Maps.h"
 #include "DumpImageMeshes.h"
-#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
-#include "YgorMath.h"         //Needed for vec3 class.
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
 
@@ -137,7 +139,7 @@ bool DumpImageMeshes(Drover &DICOM_data,
             const auto mm = img.minmax();
 
             //Generate a Wavefront materials file to colour the contours differently.
-            std::map<long int, std::string> mats; // List of materials defined.
+            std::map<int64_t, std::string> mats; // List of materials defined.
             {
                 std::ofstream FO(MTLFileName, std::fstream::out);
 
@@ -160,7 +162,7 @@ bool DumpImageMeshes(Drover &DICOM_data,
 
                 //write_mat("Red", vec3<double>(R, G, B), vec3<double>(R, G, B), vec3<double>(R, G, B), 10.0, 0.9);
                 // Create a colour for each histogram bin.
-                for(long int i = 0; i <= HistogramBins; ++i){
+                for(int64_t i = 0; i <= HistogramBins; ++i){
                     const auto c = ColourMap_MorelandBlackBody( static_cast<double>(i)/static_cast<double>(HistogramBins) );
                     const auto name = "colour"_s + std::to_string(i);
                     mats[i] = name;
@@ -197,7 +199,7 @@ bool DumpImageMeshes(Drover &DICOM_data,
 
                 // Get voxel position, including virtual voxels that do not exist so we can determine where the voxel
                 // boundaries are. This routine will happily accept out-of-bounds and negative voxel coordinates.
-                std::function<vec3<double>(long int, long int)> get_virtual_position;
+                std::function<vec3<double>(int64_t, int64_t)> get_virtual_position;
                 double scale = 1.0; // Scale spatial characteristics iff normalizing.
                 if(ShouldNormalize){
                     // Note: width and height extended by 1 to account for true image extent.
@@ -207,7 +209,7 @@ bool DumpImageMeshes(Drover &DICOM_data,
                                                      : 100.0 / width;
                     if(!std::isfinite(scale)) throw std::logic_error("Computed scale factor is invalid. Cannot continue.");
 
-                    get_virtual_position = [&,width,height](long int row, long int col){
+                    get_virtual_position = [&,width,height](int64_t row, int64_t col){
                         // Transform the image spatial characteristics to lie in the plane intersecting (0,0,0) and
                         // orthogonal to (0,0,1), with row and unit vectors (1,0,0) and (0,1,0), respectively, and
                         // uniformly scaled such that the entire image fits within a bounding square of size 100x100.
@@ -219,7 +221,7 @@ bool DumpImageMeshes(Drover &DICOM_data,
                         return vec3<double>( r, c, 0.0 );
                     };
                 }else{
-                    get_virtual_position = [&](long int row, long int col){
+                    get_virtual_position = [&](int64_t row, int64_t col){
                         // Use the image spatial characteristics as-is.
                         return (  img.anchor
                                 + img.offset
@@ -229,14 +231,14 @@ bool DumpImageMeshes(Drover &DICOM_data,
                 }
 
                 // Get voxel binned intensity, returning 0 when out of bounds.
-                const auto get_virtual_intensity = [&](long int row, long int col) -> long int {
+                const auto get_virtual_intensity = [&](int64_t row, int64_t col) -> int64_t {
                     if( (row < 0) || (img.rows <= row)
-                    ||  (col < 0) || (img.columns <= col) ) return static_cast<long int>(0);
+                    ||  (col < 0) || (img.columns <= col) ) return static_cast<int64_t>(0);
 
-                    const long int chan = 0;
+                    const int64_t chan = 0;
                     const auto val = img.value(row, col, chan);
                     const auto clamped = (val - mm.first)/(mm.second - mm.first);
-                    const auto v_binned = static_cast<long int>( std::round(clamped * HistogramBins) );
+                    const auto v_binned = static_cast<int64_t>( std::round(clamped * HistogramBins) );
                     return v_binned;
                 };
 
@@ -253,10 +255,10 @@ bool DumpImageMeshes(Drover &DICOM_data,
                 FO << std::endl;
 
                 const auto ortho_unit = img.col_unit.Cross( img.row_unit ).unit();
-                long int gvc = 1; // Global vertex counter. Used to track vert number because they have whole-file scope.
+                int64_t gvc = 1; // Global vertex counter. Used to track vert number because they have whole-file scope.
                                   // Indices start at 1.
-                for(long int row = 0; row <= img.rows; ++row){
-                    for(long int col = 0; col <= img.columns; ++col){
+                for(int64_t row = 0; row <= img.rows; ++row){
+                    for(int64_t col = 0; col <= img.columns; ++col){
 
                         const auto pos_r0c0 = get_virtual_position(row, col);
                         const auto pos_rpcp = (pos_r0c0 + get_virtual_position(row+1, col+1)) * 0.5;

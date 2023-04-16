@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <thread>
 #include <sstream>
+#include <cstdint>
 
 #include "../DCMA_Definitions.h"
 
@@ -360,28 +361,28 @@ static bool terminal_supports_ansi(terminal_colour_mode_t colour_mode){
 
 void draw_image( std::ostream &os,
                  const planar_image<float, double> &img, 
-                 const long int term_draw_pow_row,
-                 const long int term_draw_pos_col,
-                 const long int max_square_size,
+                 const int64_t term_draw_pow_row,
+                 const int64_t term_draw_pos_col,
+                 const int64_t max_square_size,
                  const std::function<ClampedColourRGB(double)> &colour_map,
                  terminal_colour_mode_t colour_mode ){
 
     const bool supports_ansi = terminal_supports_ansi(colour_mode);
 
     // Rescale to help mitigate edge-cases and account (partially) for aspect ratio correction.
-    const auto nearest_even_number = [](long int i){
-        return  static_cast<long int>( 2.0 * std::round(0.5 * static_cast<double>(i)) );
+    const auto nearest_even_number = [](int64_t i){
+        return  static_cast<int64_t>( 2.0 * std::round(0.5 * static_cast<double>(i)) );
     };
     const auto [min, max] = img.minmax();
-    const long int channel = 0;
+    const int64_t channel = 0;
 
     planar_image<float, double> scaled_img;
     const auto aspect = (img.pxl_dx * img.rows) / (img.pxl_dy * img.columns);
     auto new_cols = nearest_even_number(max_square_size);
-    auto new_rows = static_cast<long int>( std::clamp( 2.0 * std::floor( aspect * new_cols * 0.5), 1.0, 5.0 * new_cols) );
+    auto new_rows = static_cast<int64_t>( std::clamp( 2.0 * std::floor( aspect * new_cols * 0.5), 1.0, 5.0 * new_cols) );
     if(new_cols < new_rows){
         new_rows = max_square_size;
-        new_cols = static_cast<long int>( std::clamp( 2.0 * std::floor( (1.0 / aspect) * new_rows * 0.5), 1.0, 5.0 * new_rows) );
+        new_cols = static_cast<int64_t>( std::clamp( 2.0 * std::floor( (1.0 / aspect) * new_rows * 0.5), 1.0, 5.0 * new_rows) );
     }
     if( (max_square_size < new_rows)
     ||  (max_square_size < new_cols) ){
@@ -392,7 +393,7 @@ void draw_image( std::ostream &os,
     scaled_img.init_spatial(1.0, 1.0, 0.0, vec3<double>(0.0, 0.0, 0.0), vec3<double>(0.0, 0.0, 0.0));
     scaled_img.init_orientation(vec3<double>(0.0, 1.0, 0.0), vec3<double>(1.0, 0.0, 0.0));
 
-    scaled_img.apply_to_pixels([&](long int row, long int col, long int chnl, float &val){
+    scaled_img.apply_to_pixels([&](int64_t row, int64_t col, int64_t chnl, float &val){
         const auto r_f = (static_cast<double>(row) / static_cast<double>(new_rows)) * img.rows;
         const auto c_f = (static_cast<double>(col) / static_cast<double>(new_cols)) * img.columns;
         val = img.bilinearly_interpolate_in_pixel_number_space(
@@ -515,13 +516,13 @@ void draw_image( std::ostream &os,
         move_cursor_to(os, term_draw_pow_row, term_draw_pos_col); // Move to reference position.
     }
 
-    for(long int r = 0; r < scaled_img.rows; r += 2){
+    for(int64_t r = 0; r < scaled_img.rows; r += 2){
         if(supports_ansi){
             move_cursor_to(os, term_draw_pow_row + r/2, term_draw_pos_col);
         }else{
             os << std::string(term_draw_pos_col, ' ');
         }
-        for(long int c = 0; c < scaled_img.columns; c++){
+        for(int64_t c = 0; c < scaled_img.columns; c++){
             const auto upper_val = scaled_img.value(r, c, channel);
             const auto upper_intensity = (min < max) ? (upper_val - min) / (max - min) : 1.0;
 
@@ -655,9 +656,9 @@ bool Terminal_Viewer(Drover &DICOM_data,
     img.fill_pixels(0.0);
     {
         float curr = 0.0;
-        for(long int r = 0; r < img.rows; ++r){
-            for(long int c = 0; c < img.columns; ++c){
-                for(long int h = 0; h < img.channels; ++h){
+        for(int64_t r = 0; r < img.rows; ++r){
+            for(int64_t c = 0; c < img.columns; ++c){
+                for(int64_t h = 0; h < img.channels; ++h){
                     img.reference(r, c, h) = curr;
                     curr += 1.0;
                 }
@@ -665,13 +666,13 @@ bool Terminal_Viewer(Drover &DICOM_data,
         }
     }
 
-    long int random_seed = 123456;
+    int64_t random_seed = 123456;
     std::mt19937 re( random_seed );
     std::uniform_real_distribution<> rd(0.0, 1.0); //Random distribution.
     {
-        for(long int r = 0; r < img.rows; ++r){
-            for(long int c = 0; c < img.columns; ++c){
-                for(long int h = 0; h < img.channels; ++h){
+        for(int64_t r = 0; r < img.rows; ++r){
+            for(int64_t c = 0; c < img.columns; ++c){
+                for(int64_t h = 0; h < img.channels; ++h){
                     img.reference(r, c, h) = rd(re);
                 }
             }
@@ -680,9 +681,9 @@ bool Terminal_Viewer(Drover &DICOM_data,
 */
 
     // Image viewer state.
-    long int img_array_num = -1; // The image array currently displayed.
-    long int img_num = -1; // The image currently displayed.
-    long int img_channel = -1; // Which channel to display.
+    int64_t img_array_num = -1; // The image array currently displayed.
+    int64_t img_num = -1; // The image currently displayed.
+    int64_t img_channel = -1; // Which channel to display.
     using img_array_ptr_it_t = decltype(DICOM_data.image_data.begin());
     using disp_img_it_t = decltype(DICOM_data.image_data.front()->imagecoll.images.begin());
 
@@ -719,8 +720,8 @@ bool Terminal_Viewer(Drover &DICOM_data,
     // Advance to the specified Image_Array. Also resets necessary display image iterators.
     const auto advance_to_image_array = [ &DICOM_data,
                                           &img_array_num,
-                                          &img_num ](const long int n){
-            const long int N_arrays = DICOM_data.image_data.size();
+                                          &img_num ](const int64_t n){
+            const int64_t N_arrays = DICOM_data.image_data.size();
             if((n < 0) || (N_arrays <= n)){
                 throw std::invalid_argument("Unwilling to move to specified Image_Array. It does not exist.");
             }
@@ -733,7 +734,7 @@ bool Terminal_Viewer(Drover &DICOM_data,
             //
             // TODO: It's debatable whether this is even useful. Better to move to same DICOM position, I think.
             auto img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
-            const long int N_images = (*img_array_ptr_it)->imagecoll.images.size();
+            const int64_t N_images = (*img_array_ptr_it)->imagecoll.images.size();
             if(N_images == 0){
                 throw std::invalid_argument("Image_Array contains no images. Refusing to continue");
             }
@@ -745,9 +746,9 @@ bool Terminal_Viewer(Drover &DICOM_data,
     // Advance to the specified image in the current Image_Array.
     const auto advance_to_image = [ &DICOM_data,
                                     &img_array_num,
-                                    &img_num ](const long int n){
+                                    &img_num ](const int64_t n){
             auto img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
-            const long int N_images = (*img_array_ptr_it)->imagecoll.images.size();
+            const int64_t N_images = (*img_array_ptr_it)->imagecoll.images.size();
 
             if((n < 0) || (N_images <= n)){
                 throw std::invalid_argument("Unwilling to move to specified image. It does not exist.");

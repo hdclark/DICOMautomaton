@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <optional>
 #include <iosfwd>
 
@@ -15,7 +16,7 @@
 class thin_plate_spline {
     public:
         point_set<double> control_points;
-        long int kernel_dimension;
+        int64_t kernel_dimension;
         num_array<double> W_A;
 
         // Constructor.
@@ -23,7 +24,7 @@ class thin_plate_spline {
         thin_plate_spline() = delete;
         thin_plate_spline(std::istream &is); // Defers to read_from(), but throws on errors.
         thin_plate_spline(const point_set<double> &ps,     // Requires moving points, not stationary points.
-                          long int kernel_dimension = 2L); // 2 seems to work best, even in 3D.
+                          int64_t kernel_dimension = 2L);  // 2 seems to work best, even in 3D.
 
         // Member functions.
         double eval_kernel(const double &dist) const;
@@ -49,7 +50,7 @@ class thin_plate_spline {
 struct AlignViaTPSParams {
     // Dimensionality of the kernel. It *should* match the dimensionality of the points (i.e., 3), but doesn't need to.
     // 2 seems to work best.
-    long int kernel_dimension = 2;
+    int64_t kernel_dimension = 2;
 
     // Regularization parameter. Controls the smoothness of the fitted thin plate spline function.
     // Setting to zero will ensure that all points are interpolated exactly (up to numerical imprecision). Setting
@@ -86,7 +87,7 @@ struct AlignViaTPSRPMParams {
     //
     // Dimensionality of the kernel. It *should* match the dimensionality of the points (i.e., 3), but doesn't need to.
     // 2 seems to work best.
-    long int kernel_dimension = 2;
+    int64_t kernel_dimension = 2;
 
     // Annealing parameters.
     //
@@ -98,12 +99,12 @@ struct AlignViaTPSRPMParams {
     double T_step        = 0.93; // Should be [0.9:0.99] or so. Larger number = slower annealing.
 
     // The number of iterations (i.e., update correspondence, update TPS function cycles) to perform at each T.
-    long int N_iters_at_fixed_T = 5; // Lower = faster, but possibly less accurate.
+    int64_t N_iters_at_fixed_T = 5; // Lower = faster, but possibly less accurate.
 
     // The number of iterations to perform in the softassign correspondence update step. May need to be higher if any
     // forced correspondences are used. Note that this number is worst-case; if tolerance is reached earlier then the
     // Sinkhorn procedure completes early.
-    long int N_Sinkhorn_iters = 5000; // Lower = faster, but possibly less accurate.
+    int64_t N_Sinkhorn_iters = 5000; // Lower = faster, but possibly less accurate.
 
     // The tolerable worst deviation from row- and column-sum normalization conditions. If this tolerance is reached,
     // the Sinkhorn procedure is completed early. Conversely, if this tolerance is NOT reached after the allowed
@@ -168,7 +169,7 @@ struct AlignViaTPSRPMParams {
     //
     // Note that use of forced correspondence may cause the softassign procedure to fail to converge, or converge
     // slowly. Adjusting the number of iterations used in the Sinkhorn procedure may be required.
-    std::vector< std::pair<long int, long int> > forced_correspondence;
+    std::vector< std::pair<int64_t, int64_t> > forced_correspondence;
 
     // The final correspondence, interpretted as a binary correspondence by (effectively) taking T -> 0. These
     // correspondences refer to the mapping from a moving set point index (the first index) to a stationary set point
@@ -179,8 +180,8 @@ struct AlignViaTPSRPMParams {
     // information can be useful for double-sided outlier detection, evaluating the registration, evaluating whether the
     // softassign procedure has appropriately coalesced, predicting how the inverse transformation will behave, etc.
     bool report_final_correspondence = false;
-    std::vector< std::pair<long int, long int> > final_move_correspondence; // moving point index -> stat point index.
-    std::vector< std::pair<long int, long int> > final_stat_correspondence; // ALSO moving point index -> stat point index.
+    std::vector< std::pair<int64_t, int64_t> > final_move_correspondence; // moving point index -> stat point index.
+    std::vector< std::pair<int64_t, int64_t> > final_stat_correspondence; // ALSO moving point index -> stat point index.
 
 };
 

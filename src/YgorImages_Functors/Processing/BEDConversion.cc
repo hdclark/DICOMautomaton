@@ -6,6 +6,7 @@
 #include <map>
 #include <stdexcept>
 #include <string>
+#include <cstdint>
 
 #include "../../BED_Conversion.h"
 #include "../ConvenienceRoutines.h"
@@ -64,7 +65,7 @@ bool BEDConversion(planar_image_collection<float,double>::images_list_it_t first
             throw std::invalid_argument("AlphaBetaRatioLate not specified or invalid.");
         }
 
-        f_bounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/,
+        f_bounded = [=](int64_t /*row*/, int64_t /*col*/, int64_t /*channel*/,
                         std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                         std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                         float &voxel_val) {
@@ -76,7 +77,7 @@ bool BEDConversion(planar_image_collection<float,double>::images_list_it_t first
             return;
         };
 
-        f_unbounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/,
+        f_unbounded = [=](int64_t /*row*/, int64_t /*col*/, int64_t /*channel*/,
                           std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                           std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                           float &voxel_val) {
@@ -105,7 +106,7 @@ bool BEDConversion(planar_image_collection<float,double>::images_list_it_t first
             throw std::invalid_argument("AlphaBetaRatioLate not specified or invalid.");
         }
 
-        f_bounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/,
+        f_bounded = [=](int64_t /*row*/, int64_t /*col*/, int64_t /*channel*/,
                         std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                         std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                         float &voxel_val) {
@@ -119,7 +120,7 @@ bool BEDConversion(planar_image_collection<float,double>::images_list_it_t first
             return;
         };
 
-        f_unbounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/,
+        f_unbounded = [=](int64_t /*row*/, int64_t /*col*/, int64_t /*channel*/,
                           std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                           std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                           float &voxel_val) {
@@ -170,7 +171,7 @@ bool BEDConversion(planar_image_collection<float,double>::images_list_it_t first
             EQD_n = EQD_D / user_data_s->TargetDosePerFraction;
         }
 
-        f_bounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/,
+        f_bounded = [=](int64_t /*row*/, int64_t /*col*/, int64_t /*channel*/,
                         std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                         std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                         float &voxel_val) {
@@ -184,7 +185,7 @@ bool BEDConversion(planar_image_collection<float,double>::images_list_it_t first
             return;
         };
 
-        f_unbounded = [=](long int /*row*/, long int /*col*/, long int /*channel*/,
+        f_unbounded = [=](int64_t /*row*/, int64_t /*col*/, int64_t /*channel*/,
                           std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                           std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                           float &voxel_val) {

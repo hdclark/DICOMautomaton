@@ -5,6 +5,7 @@
 #include <functional>
 #include <limits>
 #include <list>
+#include <cstdint>
 
 #include "YgorMath.h"
 
@@ -24,7 +25,7 @@ struct DetectGeometryClusteredRANSACUserData {
     double radius = 1.0;
 
     // Number of spheres to locate.
-    long int count = 1;
+    int64_t count = 1;
 
     // Spheres detected.
     std::list< sphere<double> > spheres;

@@ -35,7 +35,7 @@
 #include <initializer_list>
 #include <thread>
 #include <random>
-
+#include <cstdint>
 #include <filesystem>
 
 
@@ -60,8 +60,8 @@ int main(){
     std::shared_future<Drover> extracted_contours;
     //std::list< std::future<Drover> > old_futures;
 
-    long int N_tests = 0;
-    long int frame_count = 0;
+    int64_t N_tests = 0;
+    int64_t frame_count = 0;
     while(true){
         ++frame_count;
 

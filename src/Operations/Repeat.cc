@@ -14,6 +14,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <cstdint>
 
 #include <filesystem>
 
@@ -80,7 +81,7 @@ bool Repeat(Drover &DICOM_data,
 
     YLOGINFO("Repeating " << OptArgs.getChildren().size() << " immediate children operations " << N << " times");
 
-    for(long int i = 0; i < N; ++i){
+    for(int64_t i = 0; i < N; ++i){
         if(!Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, OptArgs.getChildren())){
             throw std::runtime_error("Child operation failed");
         }

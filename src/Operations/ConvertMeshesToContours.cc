@@ -14,8 +14,10 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <cstdint>
 
 #include "Explicator.h"       //Needed for Explicator class.
+
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
@@ -103,7 +105,7 @@ bool ConvertMeshesToContours(Drover &DICOM_data,
     DICOM_data.contour_data->ccs.emplace_back();
 
     const double MinimumSeparation = 1.0; // TODO: is there a routine to do this? (YES: Unique_Contour_Planes()...)
-    const long int ROINumber = 10000; // TODO: fix this.
+    const int64_t ROINumber = 10000; // TODO: fix this.
 
     auto SMs_all = All_SMs( DICOM_data );
     auto SMs = Whitelist( SMs_all, MeshSelectionStr );
@@ -114,8 +116,8 @@ bool ConvertMeshesToContours(Drover &DICOM_data,
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     YLOGINFO("Selected " << IAs.size() << " images");
 
-    long int completed = 0;
-    long int N_new_contours = 0;
+    int64_t completed = 0;
+    int64_t N_new_contours = 0;
     for(auto & smp_it : SMs){
         // Convert to a CGAL mesh.
         std::stringstream ss;

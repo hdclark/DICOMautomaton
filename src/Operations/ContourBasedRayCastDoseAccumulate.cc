@@ -14,17 +14,20 @@
 #include <stdexcept>
 #include <string>    
 #include <vector>
+#include <cstdint>
 
-#include "../Dose_Meld.h"
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "ContourBasedRayCastDoseAccumulate.h"
 #include "Explicator.h"       //Needed for Explicator class.
+
 #include "YgorImages.h"
 #include "YgorImagesIO.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorLog.h"
+
+#include "../Dose_Meld.h"
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "ContourBasedRayCastDoseAccumulate.h"
 
 
 
@@ -385,10 +388,10 @@ bool ContourBasedRayCastDoseAccumulate(Drover &DICOM_data,
     //Now ready to ray cast. Loop over integer pixel coordinates. Start and finish are image pixels.
     // The top image can be the length image.
     const auto sq_radius = std::pow(CylinderRadius, 2.0);
-    for(long int row = 0; row < Rows; ++row){
+    for(int64_t row = 0; row < Rows; ++row){
         YLOGINFO("Working on row " << (row+1) << " of " << Rows 
                   << " --> " << static_cast<int>(1000.0*(row+1)/Rows)/10.0 << "% done");
-        for(long int col = 0; col < Columns; ++col){
+        for(int64_t col = 0; col < Columns; ++col){
             double accumulated_length = 0.0;      //Length of ray travel within the 'surface'.
             double accumulated_doselength = 0.0;
 

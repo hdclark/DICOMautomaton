@@ -1,13 +1,18 @@
+
+#include <iostream>
+#include <cmath>
+#include <chrono>
+#include <cstdint>
+
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorLog.h"
 #include "YgorMath.h"         //Needed for samples_1D.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
-#include "CPD_Affine.h"
 #include "YgorMathIOXYZ.h"    //Needed for ReadPointSetFromXYZ.
-#include <iostream>
-#include <cmath>
-#include <chrono>
+
+#include "CPD_Affine.h"
+
 using namespace std::chrono;
 
 AffineCPDTransform::AffineCPDTransform(int dimensionality) {
@@ -17,10 +22,10 @@ AffineCPDTransform::AffineCPDTransform(int dimensionality) {
 }
 
 void AffineCPDTransform::apply_to(point_set<double> &ps) {
-    auto N_points = static_cast<long int>(ps.points.size());
+    auto N_points = static_cast<int64_t>(ps.points.size());
     Eigen::MatrixXf Y = Eigen::MatrixXf::Zero(N_points, this->dim); 
     // Fill the X vector with the corresponding points.
-    for(long int j = 0; j < N_points; ++j) { // column
+    for(int64_t j = 0; j < N_points; ++j) { // column
         auto P = ps.points[j];
         Y(j, 0) = P.x;
         Y(j, 1) = P.y;
@@ -28,7 +33,7 @@ void AffineCPDTransform::apply_to(point_set<double> &ps) {
     }
     auto Y_hat = Y*this->B.transpose() + \
         Eigen::MatrixXf::Constant(N_points, 1, 1)*this->t.transpose();
-    for(long int j = 0; j < N_points; ++j) { // column
+    for(int64_t j = 0; j < N_points; ++j) { // column
         ps.points[j].x = Y_hat(j, 0);
         ps.points[j].y = Y_hat(j, 1);
         ps.points[j].z = Y_hat(j, 2);
@@ -107,8 +112,8 @@ AlignViaAffineCPD(CPDParams & params,
     std::string temp_xyz_outfile;
     point_set<double> mutable_moving = moving;
 
-    const auto N_move_points = static_cast<long int>(moving.points.size());
-    const auto N_stat_points = static_cast<long int>(stationary.points.size());
+    const auto N_move_points = static_cast<int64_t>(moving.points.size());
+    const auto N_stat_points = static_cast<int64_t>(stationary.points.size());
 
     // Prepare working buffers.
     //
@@ -118,7 +123,7 @@ AlignViaAffineCPD(CPDParams & params,
     Eigen::MatrixXf Y = Eigen::MatrixXf::Zero(N_stat_points, params.dimensionality); 
 
     // Fill the X vector with the corresponding points.
-    for(long int j = 0; j < N_stat_points; ++j){ // column
+    for(int64_t j = 0; j < N_stat_points; ++j){ // column
         const auto P_stationary = stationary.points[j];
         X(j, 0) = P_stationary.x;
         X(j, 1) = P_stationary.y;
@@ -126,7 +131,7 @@ AlignViaAffineCPD(CPDParams & params,
     }
 
     // Fill the Y vector with the corresponding points.
-    for(long int j = 0; j < N_move_points; ++j){ // column
+    for(int64_t j = 0; j < N_move_points; ++j){ // column
         const auto P_moving = moving.points[j];
         Y(j, 0) = P_moving.x;
         Y(j, 1) = P_moving.y;

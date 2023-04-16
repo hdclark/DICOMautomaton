@@ -13,9 +13,9 @@
 #include <string>
 #include <vector>
 #include <numeric>
-
 #include <cstdlib> //Needed for exit() calls.
 #include <utility> //Needed for std::pair.
+#include <cstdint>
 
 #include <boost/filesystem.hpp> // Needed for Boost filesystem access.
 
@@ -54,7 +54,7 @@ Launch_SCSI(samples_1D<double> &AIF, std::vector<samples_1D<double>> &C) {
         const auto extrema_x = cropped.Get_Extreme_Datum_x();
 
         std::vector<float> resampled;
-        long int N = 0;
+        int64_t N = 0;
 
         while(true) {
             const double t = 0.0 + static_cast<double>(N) * dt;

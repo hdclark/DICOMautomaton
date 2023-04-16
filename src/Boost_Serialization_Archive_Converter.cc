@@ -3,7 +3,6 @@
 // This program can be used to convert Boost.Serialization archives between a variety of formats.
 //
 
-#include <boost/algorithm/string/predicate.hpp>
 #include <filesystem>
 #include <fstream>
 #include <functional>
@@ -13,19 +12,16 @@
 #include <string>    
 #include <utility>
 
-#include "Structs.h"
+#include <boost/algorithm/string/predicate.hpp>
+
 #include "YgorArguments.h"    //Needed for ArgumentHandler class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorLog.h"
 //#include "YgorMath.h"         //Needed for vec3 class.
 //#include "YgorImagesIO.h"
 
+#include "Structs.h"
 #include "Common_Boost_Serialization.h"
-
-
-
-
-
 
 
 int main(int argc, char* argv[]){

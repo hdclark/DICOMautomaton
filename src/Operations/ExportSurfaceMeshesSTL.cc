@@ -15,6 +15,7 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 #include <filesystem>
+#include <cstdint>
 
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -118,7 +119,7 @@ bool ExportSurfaceMeshesSTL(Drover &DICOM_data,
     }
 
     const std::string required_file_extension = ".stl";
-    const long int n_of_digit_pads = 6;
+    const int64_t n_of_digit_pads = 6;
 
     // Prepare filename and prototype in case multiple files need to be written.
     if(FilenameStr.empty()){

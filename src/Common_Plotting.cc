@@ -2,6 +2,7 @@
 
 #include <unistd.h>           //fork().
 #include <cstdlib>            //exit(), EXIT_SUCCESS.
+#include <cstdint>
 #include <exception>
 #include <fstream>
 #include <map>
@@ -25,7 +26,7 @@ PlotTimeCourses(const std::string& title,
                          const std::map<std::string, cheby_approx<double>> &cheby_time_courses,
                          const std::string& xlabel,
                          const std::string& ylabel,
-                         long int cheby_samples){
+                         int64_t cheby_samples){
     // NOTE: This routine is spotty. It doesn't always work, and seems to have a hard time opening a display window when a
     //       large data set is loaded. Files therefore get written for backup access.
     //
@@ -56,7 +57,7 @@ PlotTimeCourses(const std::string& title,
 
             samples_1D<double> lTimeCourseSamples1D;
             const bool inhibitsort = true;
-            for(long int i = 0; i < cheby_samples; ++i){
+            for(int64_t i = 0; i < cheby_samples; ++i){
                 double t = domain.first + dx * static_cast<double>(i);
                 lTimeCourseSamples1D.push_back(t, 0.0, lTimeCourse.Sample(t), 0.0, inhibitsort);
             }
@@ -69,8 +70,8 @@ PlotTimeCourses(const std::string& title,
         }
 
         //Plot the data.
-        long int max_attempts = 20;
-        for(long int attempt = 1; attempt <= max_attempts; ++attempt){
+        int64_t max_attempts = 20;
+        for(int64_t attempt = 1; attempt <= max_attempts; ++attempt){
             try{
                 YgorMathPlottingGnuplot::Plot<double>(shuttle, title, xlabel, ylabel);
                 break;

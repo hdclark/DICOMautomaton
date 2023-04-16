@@ -9,6 +9,7 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <cstdint>
 
 #include "YgorImages.h"
 #include "YgorMath.h"
@@ -47,14 +48,14 @@ struct ComputeVolumetricNeighbourhoodSamplerUserData {
     //
     // Note: The shuttle of voxel values passed to the reduction functor will be ordered to correspond with the triplet
     //       order. If the specified voxel is not available (e.g., on borders), a NaN will be emitted in its place.
-    std::vector<std::array<long int, 3>> voxel_triplets;
+    std::vector<std::array<int64_t, 3>> voxel_triplets;
 
     // -----------------------------
     // The channel to consider. 
     //
     // Note: Channel numbers in the images that will be edited and reference images must match.
     //       Negative values will use all channels.
-    long int channel = -1;
+    int64_t channel = -1;
 
     // -----------------------------
     // Reduction functor for bounded voxels.

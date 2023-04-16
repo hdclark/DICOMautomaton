@@ -14,6 +14,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <cstdint>
 
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -184,7 +185,7 @@ bool ConvertImageToMeshes(Drover &DICOM_data,
                 if(Lower_is_Percent || Upper_is_Percent){
                     Stats::Running_MinMax<float> rmm;
                     for(const auto &animg : (*iap_it)->imagecoll.images){
-                        animg.apply_to_pixels([&rmm,Channel](long int, long int, long int chnl, float val) -> void {
+                        animg.apply_to_pixels([&rmm,Channel](int64_t, int64_t, int64_t chnl, float val) -> void {
                              if(Channel == chnl) rmm.Digest(val);
                              return;
                         });
@@ -198,7 +199,7 @@ bool ConvertImageToMeshes(Drover &DICOM_data,
                     std::vector<float> pixel_vals;
                     //pixel_vals.reserve(animg.rows * animg.columns * animg.channels * img_count);
                     for(const auto &animg : (*iap_it)->imagecoll.images){
-                        animg.apply_to_pixels([&pixel_vals,Channel](long int, long int, long int chnl, float val) -> void {
+                        animg.apply_to_pixels([&pixel_vals,Channel](int64_t, int64_t, int64_t chnl, float val) -> void {
                              if(Channel == chnl) pixel_vals.push_back(val);
                              return;
                         });
@@ -238,9 +239,9 @@ bool ConvertImageToMeshes(Drover &DICOM_data,
                     masks.back().apply_to_pixels([pixel_oracle,
                                                   Channel,
                                                   interior_value,
-                                                  exterior_value](long int, 
-                                                                  long int,
-                                                                  long int chnl,
+                                                  exterior_value](int64_t, 
+                                                                  int64_t,
+                                                                  int64_t chnl,
                                                                   float &val) -> void {
                             if(Channel == chnl){
                                 val = (pixel_oracle(val) ? interior_value : exterior_value);
@@ -258,7 +259,7 @@ bool ConvertImageToMeshes(Drover &DICOM_data,
                         inclusion_threshold = width * 0.5;
                         exterior_value = inclusion_threshold + 1.0;
                         below_is_interior = true;
-                        masks.back().apply_to_pixels([Channel,midpoint](long int, long int, long int chnl, float &val) -> void {
+                        masks.back().apply_to_pixels([Channel,midpoint](int64_t, int64_t, int64_t chnl, float &val) -> void {
                                 if(Channel == chnl){
                                     val = std::abs(val - midpoint);
                                 }

@@ -84,9 +84,9 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
             }
 
             bool dims_known = false;
-            long int N_x = -1;
-            long int N_y = -1;
-            long int N_z = -1;
+            int64_t N_x = -1;
+            int64_t N_y = -1;
+            int64_t N_z = -1;
 
             std::vector<double> spatial_x;
             std::vector<double> spatial_y;
@@ -98,15 +98,15 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
             try{
                 double shtl;
                 FI >> N_x >> N_y >> N_z;
-                for(long int i = 0; i <= N_x; ++i){ // Intentionally reads N_x+1 values.
+                for(int64_t i = 0; i <= N_x; ++i){ // Intentionally reads N_x+1 values.
                     FI >> shtl;
                     spatial_x.emplace_back(shtl);
                 }
-                for(long int i = 0; i <= N_x; ++i){ // Intentionally reads N_y+1 values.
+                for(int64_t i = 0; i <= N_x; ++i){ // Intentionally reads N_y+1 values.
                     FI >> shtl;
                     spatial_x.emplace_back(shtl);
                 }
-                for(long int i = 0; i <= N_x; ++i){ // Intentionally reads N_z+1 values.
+                for(int64_t i = 0; i <= N_x; ++i){ // Intentionally reads N_z+1 values.
                     FI >> shtl;
                     spatial_x.emplace_back(shtl);
                 }
@@ -141,9 +141,9 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
                 if(!dims_known){
                     if(numbers.size() != 3) throw std::runtime_error("Dimensions not understood.");
 
-                    N_x = static_cast<long int>(numbers.at(0));
-                    N_y = static_cast<long int>(numbers.at(1));
-                    N_z = static_cast<long int>(numbers.at(2));
+                    N_x = static_cast<int64_t>(numbers.at(0));
+                    N_y = static_cast<int64_t>(numbers.at(1));
+                    N_z = static_cast<int64_t>(numbers.at(2));
                     if((N_x <= 0) || (N_y <= 0) || (N_z <= 0)){
                         throw std::runtime_error("Dimensions invalid.");
                     }
@@ -152,7 +152,7 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
 
                 // Attempt to parse spatial information.
                 }else if( dims_known 
-                      && (static_cast<long int>(spatial_x.size()) != (N_x + 1)) ){
+                      && (static_cast<int64_t>(spatial_x.size()) != (N_x + 1)) ){
 
                     for(const auto &n : numbers){
                         if(!std::isfinite(n)) continue;
@@ -160,8 +160,8 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
                     spatial_x.insert( std::end(spatial_x), std::begin(numbers), std::end(numbers) );
 
                 }else if( dims_known 
-                      && (static_cast<long int>(spatial_x.size()) == (N_x + 1))
-                      && (static_cast<long int>(spatial_y.size()) != (N_y + 1)) ){
+                      && (static_cast<int64_t>(spatial_x.size()) == (N_x + 1))
+                      && (static_cast<int64_t>(spatial_y.size()) != (N_y + 1)) ){
 
                     for(const auto &n : numbers){
                         if(!std::isfinite(n)) continue;
@@ -169,9 +169,9 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
                     spatial_y.insert( std::end(spatial_y), std::begin(numbers), std::end(numbers) );
 
                 }else if( dims_known 
-                      && (static_cast<long int>(spatial_x.size()) == (N_x + 1))
-                      && (static_cast<long int>(spatial_y.size()) == (N_y + 1))
-                      && (static_cast<long int>(spatial_z.size()) != (N_z + 1)) ){
+                      && (static_cast<int64_t>(spatial_x.size()) == (N_x + 1))
+                      && (static_cast<int64_t>(spatial_y.size()) == (N_y + 1))
+                      && (static_cast<int64_t>(spatial_z.size()) != (N_z + 1)) ){
 
                     for(const auto &n : numbers){
                         if(!std::isfinite(n)) continue;
@@ -182,9 +182,9 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
                 //
                 // If the final number of voxels differs from the stated dimensions, then this file is not valid.
                 }else if( dims_known 
-                      && (static_cast<long int>(spatial_x.size()) == (N_x + 1))
-                      && (static_cast<long int>(spatial_y.size()) == (N_y + 1))
-                      && (static_cast<long int>(spatial_z.size()) == (N_z + 1)) ){
+                      && (static_cast<int64_t>(spatial_x.size()) == (N_x + 1))
+                      && (static_cast<int64_t>(spatial_y.size()) == (N_y + 1))
+                      && (static_cast<int64_t>(spatial_z.size()) == (N_z + 1)) ){
                     for(const auto &n : numbers){
                         if(!std::isfinite(n)) continue;
                     }
@@ -202,11 +202,11 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
             FI.close();
 
             // Validate that the file has been fully read.
-            if( (static_cast<long int>(doses.size()) != (N_x * N_y * N_z))   // Dose data only.
-            &&  (static_cast<long int>(doses.size()) != (N_x * N_y * N_z * 2L)) ){  // Dose data and uncertainties.
+            if( (static_cast<int64_t>(doses.size()) != (N_x * N_y * N_z))   // Dose data only.
+            &&  (static_cast<int64_t>(doses.size()) != (N_x * N_y * N_z * 2L)) ){  // Dose data and uncertainties.
                 throw std::runtime_error("Unable to read file.");
             }
-            if( static_cast<long int>(doses.size()) == (N_x * N_y * N_z * 2L) ){
+            if( static_cast<int64_t>(doses.size()) == (N_x * N_y * N_z * 2L) ){
                 doses.resize( static_cast<size_t>(N_x * N_y * N_z) );
             }
 
@@ -297,7 +297,7 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
             const std::string Modality = "RTDOSE";
 
             loaded_imgs_storage.emplace_back();
-            for(long int img_index = 0; img_index < NumberOfImages; ++img_index){
+            for(int64_t img_index = 0; img_index < NumberOfImages; ++img_index){
                 const std::string SOPInstanceUID = Generate_Random_String_of_Length(6);
 
                 auto out = std::make_unique<Image_Array>();
@@ -344,8 +344,8 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
                 out->imagecoll.images.back().init_buffer(NumberOfRows, NumberOfColumns, NumberOfChannels);
                 out->imagecoll.images.back().init_spatial(VoxelWidth, VoxelHeight, SliceThickness, ImageAnchor, ImagePosition);
 
-                for(long int y = 0; y < N_y; ++y){
-                    for(long int x = 0; x < N_x; ++x){
+                for(int64_t y = 0; y < N_y; ++y){
+                    for(int64_t x = 0; x < N_x; ++x){
                         const auto index = (N_x * N_y * img_index) + (N_x * y) + x;
 
                         out->imagecoll.images.back().reference(y, x, 0L) = doses.at(index);

@@ -19,6 +19,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <cstdint>
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
@@ -81,7 +82,7 @@ bool SubdivideSurfaceMeshes(Drover &DICOM_data,
     auto SMs_all = All_SMs( DICOM_data );
     auto SMs = Whitelist( SMs_all, MeshSelectionStr );
 
-    long int completed = 0;
+    int64_t completed = 0;
     const auto sm_count = SMs.size();
     for(auto & smp_it : SMs){
 

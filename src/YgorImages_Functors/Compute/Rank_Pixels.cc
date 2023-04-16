@@ -10,6 +10,7 @@
 #include <random>
 #include <ostream>
 #include <stdexcept>
+#include <cstdint>
 
 #include "../../Thread_Pool.h"
 #include "../Grouping/Misc_Functors.h"
@@ -76,8 +77,8 @@ bool ComputeRankPixels(planar_image_collection<float,double> &imagecoll,
     }else{
         work_queue<std::function<void(void)>> wq;
         std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
-        long int completed = 0;
-        const long int img_count = imagecoll.images.size();
+        int64_t completed = 0;
+        const int64_t img_count = imagecoll.images.size();
 
         for(auto & img_it : all_imgs){
             std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(*img_it) );

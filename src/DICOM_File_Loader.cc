@@ -9,6 +9,7 @@
 #include <map>
 #include <memory>
 #include <string>    
+#include <cstdint>
 //#include <cfenv>              //Needed for std::feclearexcept(FE_ALL_EXCEPT).
 
 #include <boost/algorithm/string/predicate.hpp>
@@ -242,7 +243,7 @@ if(std::get_if<std::monostate>(&(t->transform)) != nullptr) YLOGWARN("(std::get_
     //Sort the images in some reasonable way (opposed to the order they were located on disk -- arbitrary).
     if(true){
         for(auto & img_arr_ptr : DICOM_data.image_data){
-            img_arr_ptr->imagecoll.Stable_Sort_on_Metadata_Keys_Value_Numeric<long int>("InstanceNumber");
+            img_arr_ptr->imagecoll.Stable_Sort_on_Metadata_Keys_Value_Numeric<int64_t>("InstanceNumber");
             img_arr_ptr->imagecoll.Stable_Sort_on_Metadata_Keys_Value_Numeric<double>("SliceLocation");
             //img_arr_ptr->imagecoll.Stable_Sort_on_Metadata_Keys_Value_Numeric<double>("dt");
 

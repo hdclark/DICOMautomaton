@@ -3,8 +3,9 @@
 #pragma once
 
 #include <filesystem>
-#include <boost/filesystem/fstream.hpp>
 #include <string>    
+
+#include <boost/filesystem/fstream.hpp>
 
 #ifdef DCMA_USE_GNU_GSL
     #include "KineticModel_1Compartment2Input_5Param_Chebyshev_Common.h"

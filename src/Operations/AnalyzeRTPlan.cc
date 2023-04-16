@@ -1,12 +1,10 @@
 //AnalyzeRTPlan.cc - A part of DICOMautomaton 2018. Written by hal clark.
 
-#include <boost/interprocess/creation_tags.hpp>
-#include <boost/interprocess/sync/named_mutex.hpp>
-#include <boost/interprocess/sync/scoped_lock.hpp>
 #include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdlib>            //Needed for exit() calls.
+#include <cstdint>
 #include <exception>
 #include <optional>
 #include <fstream>
@@ -23,6 +21,10 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 #include <filesystem>
+
+#include <boost/interprocess/creation_tags.hpp>
+#include <boost/interprocess/sync/named_mutex.hpp>
+#include <boost/interprocess/sync/scoped_lock.hpp>
 
 #include "../Insert_Contours.h"
 #include "../Structs.h"
@@ -182,7 +184,7 @@ bool AnalyzeRTPlan(Drover &DICOM_data,
             const auto BeamNameOpt = ds.GetMetadataValueAs<std::string>("BeamName");
             const auto BeamName = BeamNameOpt.value_or("unknown");
 
-            long int control_point_num = 0;
+            int64_t control_point_num = 0;
             for(const auto &ss : ds.static_states){
                 double total_leaf_opening = 0.0;
 

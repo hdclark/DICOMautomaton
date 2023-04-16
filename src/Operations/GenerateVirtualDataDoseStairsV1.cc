@@ -7,15 +7,18 @@
 #include <memory>
 #include <stdexcept>
 #include <string>    
+#include <cstdint>
+
+#include "Explicator.h"       //Needed for Explicator class.
+
+#include "YgorImages.h"
+#include "YgorMath.h"         //Needed for vec3 class.
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 #include "../Imebra_Shim.h"
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
-#include "Explicator.h"       //Needed for Explicator class.
 #include "GenerateVirtualDataDoseStairsV1.h"
-#include "YgorImages.h"
-#include "YgorMath.h"         //Needed for vec3 class.
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
 OperationDoc OpArgDocGenerateVirtualDataDoseStairsV1(){
@@ -41,9 +44,9 @@ bool GenerateVirtualDataDoseStairsV1(Drover &DICOM_data,
     const float Dmax = 70.0; //Gray.
 
     // The test images are divided into sections.
-    long int Rows = 20;
-    long int Columns = 20;
-    long int Channels = 1;
+    int64_t Rows = 20;
+    int64_t Columns = 20;
+    int64_t Channels = 1;
 
     const double SliceThickness = 1.0;
     const double SliceLocation  = 1.0;
@@ -56,10 +59,10 @@ bool GenerateVirtualDataDoseStairsV1(Drover &DICOM_data,
     const double ImagePixeldx = 1.0; //Spacing between adjacent columns.
     const double ImageThickness = 1.0;
 
-    //long int InstanceNumber = 1; //Gets bumped for each image.
-    long int SliceNumber    = 1; //Gets bumped at each temporal bump.
-    long int ImageIndex     = 1; //For PET series. Not sure when to bump...
-    //const long int AcquisitionNumber = 1;
+    //int64_t InstanceNumber = 1; //Gets bumped for each image.
+    int64_t SliceNumber    = 1; //Gets bumped at each temporal bump.
+    int64_t ImageIndex     = 1; //For PET series. Not sure when to bump...
+    //const int64_t AcquisitionNumber = 1;
 
     // Temporal metadata.
     const std::string ContentDate = "20160706";
@@ -79,7 +82,7 @@ bool GenerateVirtualDataDoseStairsV1(Drover &DICOM_data,
     // --- The virtual 'signal' image series ---
     loaded_imgs_storage.emplace_back();
     SliceNumber = 1;
-    for(long int time_index = 0; time_index < 1; ++time_index, ++SliceNumber){
+    for(int64_t time_index = 0; time_index < 1; ++time_index, ++SliceNumber){
         const std::string SOPInstanceUID = Generate_Random_UID(60);
 
         auto out = std::make_unique<Image_Array>();
@@ -129,9 +132,9 @@ bool GenerateVirtualDataDoseStairsV1(Drover &DICOM_data,
         out->imagecoll.images.back().init_buffer(Rows, Columns, Channels);
         out->imagecoll.images.back().init_spatial(ImagePixeldx,ImagePixeldy,ImageThickness, ImageAnchor, ImagePosition);
 
-        for(long int row = 0; row < Rows; ++row){
-            for(long int col = 0; col < Columns; ++col){
-                for(long int chnl = 0; chnl < Channels; ++chnl){
+        for(int64_t row = 0; row < Rows; ++row){
+            for(int64_t col = 0; col < Columns; ++col){
+                for(int64_t chnl = 0; chnl < Channels; ++chnl){
                     auto OutgoingPixelValue = static_cast<float>(col + row * Columns + chnl * Columns * Rows); 
                     OutgoingPixelValue *= Dmax / (Rows*Columns*Channels - 1); // Rescale to [0,Dmax].
                     out->imagecoll.images.back().reference(row,col,chnl) = OutgoingPixelValue;
@@ -157,10 +160,10 @@ bool GenerateVirtualDataDoseStairsV1(Drover &DICOM_data,
 
 
     //Create contours.
-    long int ROINumberNidus = 1;
+    int64_t ROINumberNidus = 1;
     {
         const std::string ROIName = "Body";
-        const long int ROINumber = ROINumberNidus++;
+        const int64_t ROINumber = ROINumberNidus++;
 
         auto output = std::make_unique<Contour_Data>();
 

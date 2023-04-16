@@ -101,7 +101,7 @@ tray_notification(const notification_t &n){
 #endif
 
 
-    long int tries = 0;
+    int64_t tries = 0;
     while(tries++ < 3){
         try{
 

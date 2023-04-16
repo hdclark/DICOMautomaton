@@ -3,6 +3,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <list>
 #include <map>
 #include <memory>
@@ -37,7 +38,7 @@ metadata_map_t get_metadata_top_level_tags(const std::filesystem::path &filename
 
 
 //------------------ Contours ---------------------
-bimap<std::string,long int> get_ROI_tags_and_numbers(const std::filesystem::path &filename);
+bimap<std::string,int64_t> get_ROI_tags_and_numbers(const std::filesystem::path &filename);
 
 std::unique_ptr<Contour_Data>  get_Contour_Data(const std::filesystem::path &filename);
 
@@ -80,12 +81,12 @@ void Write_Dose_Array(const std::shared_ptr<Image_Array>& IA,
 // Note: callback will be called once for each CT-modality DICOM file.
 void Write_CT_Images(const std::shared_ptr<Image_Array>& IA, 
                      const std::function<void(std::istream &is,
-                                        long int filesize)>& file_handler,
+                                        int64_t filesize)>& file_handler,
                      ParanoiaLevel Paranoia = ParanoiaLevel::Low);
 
 void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>> CC,
                     const std::function<void(std::istream &is,
-                                       long int filesize)>& file_handler,
+                                       int64_t filesize)>& file_handler,
                     DCMA_DICOM::Encoding enc = DCMA_DICOM::Encoding::ELE, 
                     ParanoiaLevel Paranoia = ParanoiaLevel::Low );
 

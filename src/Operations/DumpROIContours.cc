@@ -12,6 +12,7 @@
 #include <string>    
 #include <vector>
 #include <filesystem>
+#include <cstdint>
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
@@ -173,10 +174,10 @@ bool DumpROIContours(Drover &DICOM_data,
         FO << "mtllib " << SplitStringToVector(MTLFileName, '/', 'd').back() << std::endl;
         FO << std::endl;
  
-        long int gvc = 0; // Global vertex count. Used to track vert number because they have whole-file scope.
-        long int family = 0;
+        int64_t gvc = 0; // Global vertex count. Used to track vert number because they have whole-file scope.
+        int64_t family = 0;
         for(auto &cc_ref : cc_ROIs){
-            long int contour = 0;
+            int64_t contour = 0;
             for(auto &c : cc_ref.get().contours){
                 const auto N = c.points.size();
                 if(N < 3) continue;
@@ -213,7 +214,7 @@ bool DumpROIContours(Drover &DICOM_data,
                 //       duplicate vertex.
                 // 
                 FO << "f";
-                for(unsigned long int i = 1; i <= N; ++i) FO << " " << (gvc+i);
+                for(uint64_t i = 1; i <= N; ++i) FO << " " << (gvc+i);
                 //if(c.closed) FO << " " << (gvc+1);
                 FO << std::endl; 
                 FO << std::endl; 

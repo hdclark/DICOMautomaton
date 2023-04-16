@@ -11,6 +11,7 @@
 #include <ostream>
 #include <stdexcept>
 #include <mutex>
+#include <cstdint>
 
 #include "../../Thread_Pool.h"
 #include "../Grouping/Misc_Functors.h"
@@ -94,8 +95,8 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
 
     work_queue<std::function<void(void)>> wq;
     std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
-    long int completed = 0;
-    const long int img_count = imagecoll.images.size();
+    int64_t completed = 0;
+    const int64_t img_count = imagecoll.images.size();
 
     for(auto &img : imagecoll.images){
         std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(img) );
@@ -150,9 +151,9 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
                 YLOGWARN("Reference images do not all exact-overlap; using per-image sampling");
             }
 
-            auto f_bounded = [&](long int E_row,  // "edit-image" row.
-                                 long int E_col,  // "edit-image" column.
-                                 long int channel, 
+            auto f_bounded = [&](int64_t E_row,  // "edit-image" row.
+                                 int64_t E_col,  // "edit-image" column.
+                                 int64_t channel, 
                                  std::reference_wrapper<planar_image<float,double>> img_refw, 
                                  std::reference_wrapper<planar_image<float,double>>, 
                                  float &voxel_val) {

@@ -10,6 +10,7 @@
 #include <utility>
 #include <random>
 #include <chrono>
+#include <cstdint>
 
 #include "YgorString.h"
 #include "YgorMath.h"
@@ -121,7 +122,7 @@ std::pair<std::string,std::string> get_date_time(){
     return {date_now, time_now};
 }
 
-std::string Generate_Random_UID(long int len){
+std::string Generate_Random_UID(int64_t len){
     std::string out;
     const std::string alphanum(R"***(.0123456789)***");
     std::default_random_engine gen;
@@ -137,18 +138,18 @@ std::string Generate_Random_UID(long int len){
     std::uniform_int_distribution<int> dist(0,alphanum.length()-1);
     out = "1.2.840.66.1.";
     char last = '.';
-    while(static_cast<long int>(out.size()) != len){
+    while(static_cast<int64_t>(out.size()) != len){
         const auto achar = alphanum[dist(gen)];
         if((achar == '0') && (last == '.')) continue; // Zeros are not significant.
         if((achar == '.') && (achar == last)) continue; // Do not double separators.
-        if((achar == '.') && (static_cast<long int>(out.size()+1) == len)) continue; // Do not stop on a separator.
+        if((achar == '.') && (static_cast<int64_t>(out.size()+1) == len)) continue; // Do not stop on a separator.
         out += achar;
         last = achar;
     }
     return out;
 }
 
-std::string Generate_Random_Int_Str(long int L, long int H){
+std::string Generate_Random_Int_Str(int64_t L, int64_t H){
     std::string out;
     std::default_random_engine gen;
 
@@ -160,7 +161,7 @@ std::string Generate_Random_Int_Str(long int L, long int H){
         gen.seed(timeseed); //Seed with time. 
     }
 
-    std::uniform_int_distribution<long int> dist(L,H);
+    std::uniform_int_distribution<int64_t> dist(L,H);
     return std::to_string(dist(gen));
 }
 
@@ -183,12 +184,12 @@ get_as(const metadata_map_t &map,
         return std::make_optional(stringtoX<T>(metadata_cit->second));
     }
 }
-//template std::optional<uint8_t    > get_as(const metadata_map_t &, const std::string &);
-//template std::optional<uint16_t   > get_as(const metadata_map_t &, const std::string &);
+template std::optional<uint8_t    > get_as(const metadata_map_t &, const std::string &);
+template std::optional<uint16_t   > get_as(const metadata_map_t &, const std::string &);
 template std::optional<uint32_t   > get_as(const metadata_map_t &, const std::string &);
 template std::optional<uint64_t   > get_as(const metadata_map_t &, const std::string &);
-//template std::optional<int8_t     > get_as(const metadata_map_t &, const std::string &);
-//template std::optional<int16_t    > get_as(const metadata_map_t &, const std::string &);
+template std::optional<int8_t     > get_as(const metadata_map_t &, const std::string &);
+template std::optional<int16_t    > get_as(const metadata_map_t &, const std::string &);
 template std::optional<int32_t    > get_as(const metadata_map_t &, const std::string &);
 template std::optional<int64_t    > get_as(const metadata_map_t &, const std::string &);
 template std::optional<float      > get_as(const metadata_map_t &, const std::string &);
@@ -209,12 +210,12 @@ apply_as(metadata_map_t &map,
     }
     return val;
 }
-//template std::optional<uint8_t    > apply_as(metadata_map_t &, const std::string &, const std::function<uint8_t    (uint8_t    )> &);
-//template std::optional<uint16_t   > apply_as(metadata_map_t &, const std::string &, const std::function<uint16_t   (uint16_t   )> &);
+template std::optional<uint8_t    > apply_as(metadata_map_t &, const std::string &, const std::function<uint8_t    (uint8_t    )> &);
+template std::optional<uint16_t   > apply_as(metadata_map_t &, const std::string &, const std::function<uint16_t   (uint16_t   )> &);
 template std::optional<uint32_t   > apply_as(metadata_map_t &, const std::string &, const std::function<uint32_t   (uint32_t   )> &);
 template std::optional<uint64_t   > apply_as(metadata_map_t &, const std::string &, const std::function<uint64_t   (uint64_t   )> &);
-//template std::optional<int8_t     > apply_as(metadata_map_t &, const std::string &, const std::function<int8_t    (int8_t      )> &);
-//template std::optional<int16_t    > apply_as(metadata_map_t &, const std::string &, const std::function<int16_t    (int16_t    )> &);
+template std::optional<int8_t     > apply_as(metadata_map_t &, const std::string &, const std::function<int8_t     (int8_t      )> &);
+template std::optional<int16_t    > apply_as(metadata_map_t &, const std::string &, const std::function<int16_t    (int16_t    )> &);
 template std::optional<int32_t    > apply_as(metadata_map_t &, const std::string &, const std::function<int32_t    (int32_t    )> &);
 template std::optional<int64_t    > apply_as(metadata_map_t &, const std::string &, const std::function<int64_t    (int64_t    )> &);
 template std::optional<float      > apply_as(metadata_map_t &, const std::string &, const std::function<float      (float      )> &);
@@ -258,7 +259,7 @@ void recursively_expand_macros(metadata_map_t &working,
     // Continually attempt replacements until no changes occur. This will cover recursive changes (up to a
     // point) which adds some extra capabilities.
     auto prev_hash = hash_std_map(working);
-    long int i = 0;
+    int64_t i = 0;
     while(true){
         // Expand macros against the reference metadata, if any are present.
         for(auto &kv : working){

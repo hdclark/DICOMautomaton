@@ -14,7 +14,7 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
-
+#include <cstdint>
 #include <filesystem>
 
 #include "YgorImages.h"
@@ -88,7 +88,7 @@ bool While(Drover &DICOM_data,
     child_body.splice( std::end(child_body), children );
 
     bool condition = false;
-    long int i = 0;
+    int64_t i = 0;
     while(true){
         if( (0 <= N) && (N <= i++) ) return false;
 

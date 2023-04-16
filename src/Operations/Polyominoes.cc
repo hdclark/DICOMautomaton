@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <string>    
 #include <random>
+#include <cstdint>
 
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
@@ -167,16 +168,16 @@ bool Polyominoes(Drover &DICOM_data,
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
 
     using img_t = planar_image<float, double>;
-    using coord_t = std::array<long int, 2>;
+    using coord_t = std::array<int64_t, 2>;
 
-    const auto select_channels = [](const img_t& img, long int x){
+    const auto select_channels = [](const img_t& img, int64_t x){
         // Given a selection request, return the intersection of requested and available channels.
         // Negative selection implies selecting all available channels.
         // Positive selection implies selecting the single channel (zero-based).
         // Throws when requesting a channel that does not exist.
-        std::set<long int> channels;
+        std::set<int64_t> channels;
         if(x < 0){
-            for(long int i = 0; i < img.channels; ++i) channels.insert(i);
+            for(int64_t i = 0; i < img.channels; ++i) channels.insert(i);
         }else if(x < img.channels){
             channels.insert(x);
         }else{
@@ -696,33 +697,33 @@ bool Polyominoes(Drover &DICOM_data,
     }
 
     // Confirm poly shape and orientation are plausible.
-    const auto poly_desc_bounded = [&valid_ominoes]( long int poly_family,
-                                                     long int poly_shape,
-                                                     long int poly_orien ) -> bool {
+    const auto poly_desc_bounded = [&valid_ominoes]( int64_t poly_family,
+                                                     int64_t poly_shape,
+                                                     int64_t poly_orien ) -> bool {
         return (0L <= poly_family)
             && (0L <= poly_shape)
             && (0L <= poly_orien)
-            && (poly_family < static_cast<long int>(valid_ominoes.size()))
-            && (poly_shape < static_cast<long int>(valid_ominoes.at(poly_family).size()))
-            && (poly_orien < static_cast<long int>(valid_ominoes.at(poly_family).at(poly_shape).size()));
+            && (poly_family < static_cast<int64_t>(valid_ominoes.size()))
+            && (poly_shape < static_cast<int64_t>(valid_ominoes.at(poly_family).size()))
+            && (poly_orien < static_cast<int64_t>(valid_ominoes.at(poly_family).at(poly_shape).size()));
     };
 
     // Cell value primitives.
     const auto cell_is_active = [Threshold]( const img_t& img,
-                                             long int row,
-                                             long int col,
-                                             long int chn ) -> bool {
+                                             int64_t row,
+                                             int64_t col,
+                                             int64_t chn ) -> bool {
         return (Threshold < img.value(row, col, chn));
     };
 
     const auto make_cell_active = [Threshold,
                                    High,
                                    &valid_ominoes]( img_t& img,
-                                                    long int row,
-                                                    long int col,
-                                                    long int chn,
-                                                    long int poly_family,
-                                                    long int poly_shape ){
+                                                    int64_t row,
+                                                    int64_t col,
+                                                    int64_t chn,
+                                                    int64_t poly_family,
+                                                    int64_t poly_shape ){
 
         const auto N_polys = static_cast<float>(valid_ominoes.at(poly_family).size());
         const auto dval = (High - Threshold) / (N_polys + 1.0);
@@ -732,15 +733,15 @@ bool Polyominoes(Drover &DICOM_data,
     };
 
     const auto make_cell_inactive = [Low]( img_t& img,
-                                           long int row,
-                                           long int col,
-                                           long int chn ){
+                                           int64_t row,
+                                           int64_t col,
+                                           int64_t chn ){
         img.reference(row, col, chn) = Low;
         return;
     };
 
     // Determines the lowest-valued row. Useful for placing new polys (need to figure out offset).
-    const auto min_row_coord = []( const std::vector<coord_t> &c ) -> long int {
+    const auto min_row_coord = []( const std::vector<coord_t> &c ) -> int64_t {
         const auto it = std::min_element( std::begin(c), std::end(c),
                                           [](const coord_t &l, const coord_t &r){
                                               return (l.at(0) < r.at(0));
@@ -751,11 +752,11 @@ bool Polyominoes(Drover &DICOM_data,
     // Convert from position coordinates, the poly family, shape, and orientation to absolute image pixel coordinates
     // using an image.
     const auto resolve_abs_coords = [&valid_ominoes]( const img_t& img,
-                                                      long int poly_family,
-                                                      long int poly_shape,
-                                                      long int poly_orien,
-                                                      long int poly_pos_row,
-                                                      long int poly_pos_col ) -> std::vector<coord_t> {
+                                                      int64_t poly_family,
+                                                      int64_t poly_shape,
+                                                      int64_t poly_orien,
+                                                      int64_t poly_pos_row,
+                                                      int64_t poly_pos_col ) -> std::vector<coord_t> {
         auto l_coords = valid_ominoes.at(poly_family).at(poly_shape).at(poly_orien);
         for(auto &c : l_coords){
             c.at(0) += poly_pos_row; // Shift from relative to get absolute.
@@ -777,7 +778,7 @@ bool Polyominoes(Drover &DICOM_data,
     };
 
     const auto coords_all_active = [&cell_is_active]( const img_t& img,
-                                                      long int chn,
+                                                      int64_t chn,
                                                       const std::vector<coord_t> &abs_coords ) -> bool {
         for(const auto &c : abs_coords){
             if(!cell_is_active(img, c.at(0), c.at(1), chn)){
@@ -788,7 +789,7 @@ bool Polyominoes(Drover &DICOM_data,
     };
 
     const auto coords_all_inactive = [&cell_is_active]( const img_t& img,
-                                                        long int chn,
+                                                        int64_t chn,
                                                         const std::vector<coord_t> &abs_coords ) -> bool {
         for(const auto &c : abs_coords){
             if(cell_is_active(img, c.at(0), c.at(1), chn)){
@@ -800,9 +801,9 @@ bool Polyominoes(Drover &DICOM_data,
 
     // Coordinate writers.
     const auto make_all_coords_active = [&make_cell_active]( img_t& img,
-                                                             long int chn,
-                                                             long int poly_family,
-                                                             long int poly_shape,
+                                                             int64_t chn,
+                                                             int64_t poly_family,
+                                                             int64_t poly_shape,
                                                              const std::vector<coord_t> &abs_coords ){
         for(const auto &c : abs_coords){
             make_cell_active(img, c.at(0), c.at(1), chn, poly_family, poly_shape);
@@ -811,7 +812,7 @@ bool Polyominoes(Drover &DICOM_data,
     };
 
     const auto make_all_coords_inactive = [&make_cell_inactive]( img_t& img,
-                                                                 long int chn,
+                                                                 int64_t chn,
                                                                  const std::vector<coord_t> &abs_coords ){
         for(const auto &c : abs_coords){
             make_cell_inactive(img, c.at(0), c.at(1), chn);
@@ -821,19 +822,19 @@ bool Polyominoes(Drover &DICOM_data,
 
     // Implement a change in the moving poly from one placement to another.
     const auto implement_poly_move = [&]( img_t& img,
-                                          long int chn,
+                                          int64_t chn,
 
-                                          long int curr_poly_family,
-                                          long int curr_poly_shape,
-                                          long int curr_poly_orien,
-                                          long int curr_poly_pos_row,
-                                          long int curr_poly_pos_col,
+                                          int64_t curr_poly_family,
+                                          int64_t curr_poly_shape,
+                                          int64_t curr_poly_orien,
+                                          int64_t curr_poly_pos_row,
+                                          int64_t curr_poly_pos_col,
 
-                                          long int next_poly_family,
-                                          long int next_poly_shape,
-                                          long int next_poly_orien,
-                                          long int next_poly_pos_row,
-                                          long int next_poly_pos_col ) -> bool {
+                                          int64_t next_poly_family,
+                                          int64_t next_poly_shape,
+                                          int64_t next_poly_orien,
+                                          int64_t next_poly_pos_row,
+                                          int64_t next_poly_pos_col ) -> bool {
 
         // Confirm current placement.
         const auto l_abs_coords = resolve_abs_coords(img, curr_poly_family,
@@ -879,11 +880,11 @@ bool Polyominoes(Drover &DICOM_data,
                 //
                 // Note: depending on the 'rules', it might be impossible to differentiate the moving poly from
                 // stationary cells without this metadata.
-                auto moving_poly_pos_row = img.GetMetadataValueAs<long int>(moving_poly_pos_row_str);
-                auto moving_poly_pos_col = img.GetMetadataValueAs<long int>(moving_poly_pos_col_str);
-                auto moving_poly_family  = img.GetMetadataValueAs<long int>(moving_poly_family_str);
-                auto moving_poly_shape   = img.GetMetadataValueAs<long int>(moving_poly_shape_str);
-                auto moving_poly_orien   = img.GetMetadataValueAs<long int>(moving_poly_orien_str);
+                auto moving_poly_pos_row = img.GetMetadataValueAs<int64_t>(moving_poly_pos_row_str);
+                auto moving_poly_pos_col = img.GetMetadataValueAs<int64_t>(moving_poly_pos_col_str);
+                auto moving_poly_family  = img.GetMetadataValueAs<int64_t>(moving_poly_family_str);
+                auto moving_poly_shape   = img.GetMetadataValueAs<int64_t>(moving_poly_shape_str);
+                auto moving_poly_orien   = img.GetMetadataValueAs<int64_t>(moving_poly_orien_str);
 
                 // If there is a poly in the metadata, merely confirm the metadata is accurate.
                 if( moving_poly_pos_row
@@ -921,14 +922,14 @@ bool Polyominoes(Drover &DICOM_data,
                     // Create a new omino randomly, drawing from the specified family and shape uniformly.
                     // Do not consider orientation, since some shapes will be over-represented;
                     // ominoes can always be rotated by the user, but cannot be transformed/transmuted.
-                    std::vector< std::pair<long int, long int> > poss;
-                    const auto N_families = static_cast<long int>(valid_ominoes.size());
-                    for(long int family = 0L; family < N_families; ++family){
+                    std::vector< std::pair<int64_t, int64_t> > poss;
+                    const auto N_families = static_cast<int64_t>(valid_ominoes.size());
+                    for(int64_t family = 0L; family < N_families; ++family){
                         if( (Family <= 0L) 
-                        ||  (static_cast<long int>(valid_ominoes.size()) < Family)
+                        ||  (static_cast<int64_t>(valid_ominoes.size()) < Family)
                         ||  (family == (Family - 1L)) ){
-                            const auto N_shapes = static_cast<long int>(valid_ominoes.at(family).size());
-                            for(long int shape = 0L; shape < N_shapes; ++shape){
+                            const auto N_shapes = static_cast<int64_t>(valid_ominoes.at(family).size());
+                            for(int64_t shape = 0L; shape < N_shapes; ++shape){
                                 poss.emplace_back( family, shape );
                             }
                         }
@@ -936,10 +937,10 @@ bool Polyominoes(Drover &DICOM_data,
                     if(poss.empty()){
                         throw std::runtime_error("No valid ominoes to draw from, unable to continue");
                     }
-                    const auto index = std::uniform_int_distribution<long int>(0UL, poss.size()-1UL)(re);
+                    const auto index = std::uniform_int_distribution<int64_t>(0UL, poss.size()-1UL)(re);
                     const auto l_family = poss.at(index).first;
                     const auto l_shape = poss.at(index).second;
-                    const auto l_orien = std::uniform_int_distribution<long int>(0L, valid_ominoes.at(l_family).at(l_shape).size()-1L)(re);
+                    const auto l_orien = std::uniform_int_distribution<int64_t>(0L, valid_ominoes.at(l_family).at(l_shape).size()-1L)(re);
                     const auto row_offset = min_row_coord(valid_ominoes.at(l_family).at(l_shape).at(l_orien)) * -1L;
                     const auto l_pos_row = row_offset;
                     const auto l_pos_col = (img.columns / 2L) - 1L;
@@ -986,7 +987,7 @@ bool Polyominoes(Drover &DICOM_data,
                     make_all_coords_inactive(img, chn, l_abs_coords);
 
                     // Search for completed rows.
-                    std::vector<long int> count(img.rows, 0L);
+                    std::vector<int64_t> count(img.rows, 0L);
                     for(auto r = 0L; r < img.rows; ++r){
                         for(auto c = 0L; c < img.columns; ++c){
                             count[r] += cell_is_active(img, r, c, chn) ? 1L : 0L;
@@ -1011,7 +1012,7 @@ bool Polyominoes(Drover &DICOM_data,
 
                     make_all_coords_active(img, chn, moving_poly_family.value(), moving_poly_shape.value(), l_abs_coords);
                     if(found_complete_row){
-                        auto score = img.GetMetadataValueAs<long int>(omino_score_str);
+                        auto score = img.GetMetadataValueAs<int64_t>(omino_score_str);
                         score = score.value_or(0L) + 1L;
                         img.metadata[omino_score_str] = std::to_string(score.value());
                         continue;
@@ -1051,9 +1052,9 @@ bool Polyominoes(Drover &DICOM_data,
                     }
 
                 }else if(action_clockwise){
-                    const auto N_oriens = static_cast<long int>(valid_ominoes.at(moving_poly_family.value())
-                                                                             .at(moving_poly_shape.value())
-                                                                             .size());
+                    const auto N_oriens = static_cast<int64_t>(valid_ominoes.at(moving_poly_family.value())
+                                                                            .at(moving_poly_shape.value())
+                                                                            .size());
                     const auto new_orien = (moving_poly_orien.value() + 1L) % N_oriens;
                     implement_poly_move(img, chn,
                                         // From:
@@ -1070,9 +1071,9 @@ bool Polyominoes(Drover &DICOM_data,
                                         moving_poly_pos_col.value() );
 
                 }else if(action_cntrclock){
-                    const auto N_oriens = static_cast<long int>(valid_ominoes.at(moving_poly_family.value())
-                                                                             .at(moving_poly_shape.value())
-                                                                             .size());
+                    const auto N_oriens = static_cast<int64_t>(valid_ominoes.at(moving_poly_family.value())
+                                                                            .at(moving_poly_shape.value())
+                                                                            .size());
                     const auto new_orien = (moving_poly_orien.value() + N_oriens - 1L) % N_oriens;
                     implement_poly_move(img, chn,
                                         // From:

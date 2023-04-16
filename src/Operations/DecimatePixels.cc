@@ -6,6 +6,7 @@
 #include <map>
 #include <memory>
 #include <string>    
+#include <cstdint>
 
 #include "../Structs.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
@@ -51,8 +52,8 @@ bool DecimatePixels(Drover &DICOM_data,
                       const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-    const long int DecimateR = std::stol( OptArgs.getValueStr("OutSizeR").value() );
-    const long int DecimateC = std::stol( OptArgs.getValueStr("OutSizeC").value() );
+    const int64_t DecimateR = std::stol( OptArgs.getValueStr("OutSizeR").value() );
+    const int64_t DecimateC = std::stol( OptArgs.getValueStr("OutSizeC").value() );
     //-----------------------------------------------------------------------------------------------------------------
 
     //Decimate the number of pixels for modeling purposes.

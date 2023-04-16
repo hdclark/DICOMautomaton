@@ -10,6 +10,7 @@
 #include <random>
 #include <ostream>
 #include <stdexcept>
+#include <cstdint>
 
 #include "YgorImages.h"
 #include "YgorMath.h"
@@ -106,13 +107,13 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
     ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
 
     if(user_data_s->order == VolumetricSpatialDerivativeEstimator::first){
-        ud.voxel_triplets = {{ std::array<long int, 3>{  0,  0,  0 },    // 0
-                               std::array<long int, 3>{ -1,  0,  0 },    // 1
-                               std::array<long int, 3>{  1,  0,  0 },    // 2
-                               std::array<long int, 3>{  0, -1,  0 },    // 3
-                               std::array<long int, 3>{  0,  1,  0 },    // 4
-                               std::array<long int, 3>{  0,  0, -1 },    // 5
-                               std::array<long int, 3>{  0,  0,  1 } }}; // 6
+        ud.voxel_triplets = {{ std::array<int64_t, 3>{  0,  0,  0 },    // 0
+                               std::array<int64_t, 3>{ -1,  0,  0 },    // 1
+                               std::array<int64_t, 3>{  1,  0,  0 },    // 2
+                               std::array<int64_t, 3>{  0, -1,  0 },    // 3
+                               std::array<int64_t, 3>{  0,  1,  0 },    // 4
+                               std::array<int64_t, 3>{  0,  0, -1 },    // 5
+                               std::array<int64_t, 3>{  0,  0,  1 } }}; // 6
         if(user_data_s->method == VolumetricSpatialDerivativeMethod::row_aligned){
             ud.f_reduce = [](float, std::vector<float> &shtl, vec3<double>) -> float {
                               const auto col_m = std::isfinite(shtl[3]) ? shtl[3] : shtl[0];
@@ -178,7 +179,7 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
                         unit.y *= pxl_dy;
                         unit.z *= pxl_dz;
 
-                        const long int channel = (user_data_s->channel < 0) ? 0 : user_data_s->channel;
+                        const int64_t channel = (user_data_s->channel < 0) ? 0 : user_data_s->channel;
                         const auto n_magn_m = img_adj_ptr->trilinearly_interpolate(pos - unit, channel);
                         const auto n_magn_p = img_adj_ptr->trilinearly_interpolate(pos + unit, channel);
 
@@ -199,35 +200,35 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
         }
 
     }else if(user_data_s->order == VolumetricSpatialDerivativeEstimator::Sobel_3x3x3){
-        ud.voxel_triplets = {{ std::array<long int, 3>{ -1, -1, -1 },    //  0
-                               std::array<long int, 3>{ -1,  0, -1 },    //  1
-                               std::array<long int, 3>{ -1,  1, -1 },    //  2
-                               std::array<long int, 3>{  0, -1, -1 },    //  3
-                               std::array<long int, 3>{  0,  0, -1 },    //  4
-                               std::array<long int, 3>{  0,  1, -1 },    //  5
-                               std::array<long int, 3>{  1, -1, -1 },    //  6
-                               std::array<long int, 3>{  1,  0, -1 },    //  7
-                               std::array<long int, 3>{  1,  1, -1 },    //  8
+        ud.voxel_triplets = {{ std::array<int64_t, 3>{ -1, -1, -1 },    //  0
+                               std::array<int64_t, 3>{ -1,  0, -1 },    //  1
+                               std::array<int64_t, 3>{ -1,  1, -1 },    //  2
+                               std::array<int64_t, 3>{  0, -1, -1 },    //  3
+                               std::array<int64_t, 3>{  0,  0, -1 },    //  4
+                               std::array<int64_t, 3>{  0,  1, -1 },    //  5
+                               std::array<int64_t, 3>{  1, -1, -1 },    //  6
+                               std::array<int64_t, 3>{  1,  0, -1 },    //  7
+                               std::array<int64_t, 3>{  1,  1, -1 },    //  8
 
-                               std::array<long int, 3>{ -1, -1,  0 },    //  9
-                               std::array<long int, 3>{ -1,  0,  0 },    // 10
-                               std::array<long int, 3>{ -1,  1,  0 },    // 11
-                               std::array<long int, 3>{  0, -1,  0 },    // 12
-                               std::array<long int, 3>{  0,  0,  0 },    // 13
-                               std::array<long int, 3>{  0,  1,  0 },    // 14
-                               std::array<long int, 3>{  1, -1,  0 },    // 15
-                               std::array<long int, 3>{  1,  0,  0 },    // 16
-                               std::array<long int, 3>{  1,  1,  0 },    // 17
+                               std::array<int64_t, 3>{ -1, -1,  0 },    //  9
+                               std::array<int64_t, 3>{ -1,  0,  0 },    // 10
+                               std::array<int64_t, 3>{ -1,  1,  0 },    // 11
+                               std::array<int64_t, 3>{  0, -1,  0 },    // 12
+                               std::array<int64_t, 3>{  0,  0,  0 },    // 13
+                               std::array<int64_t, 3>{  0,  1,  0 },    // 14
+                               std::array<int64_t, 3>{  1, -1,  0 },    // 15
+                               std::array<int64_t, 3>{  1,  0,  0 },    // 16
+                               std::array<int64_t, 3>{  1,  1,  0 },    // 17
 
-                               std::array<long int, 3>{ -1, -1,  1 },    // 18
-                               std::array<long int, 3>{ -1,  0,  1 },    // 19
-                               std::array<long int, 3>{ -1,  1,  1 },    // 20
-                               std::array<long int, 3>{  0, -1,  1 },    // 21
-                               std::array<long int, 3>{  0,  0,  1 },    // 22
-                               std::array<long int, 3>{  0,  1,  1 },    // 23
-                               std::array<long int, 3>{  1, -1,  1 },    // 24
-                               std::array<long int, 3>{  1,  0,  1 },    // 25
-                               std::array<long int, 3>{  1,  1,  1 } }}; // 26
+                               std::array<int64_t, 3>{ -1, -1,  1 },    // 18
+                               std::array<int64_t, 3>{ -1,  0,  1 },    // 19
+                               std::array<int64_t, 3>{ -1,  1,  1 },    // 20
+                               std::array<int64_t, 3>{  0, -1,  1 },    // 21
+                               std::array<int64_t, 3>{  0,  0,  1 },    // 22
+                               std::array<int64_t, 3>{  0,  1,  1 },    // 23
+                               std::array<int64_t, 3>{  1, -1,  1 },    // 24
+                               std::array<int64_t, 3>{  1,  0,  1 },    // 25
+                               std::array<int64_t, 3>{  1,  1,  1 } }}; // 26
 
         // Note: The convolution kernel used here was adapted from
         // https://en.wikipedia.org/wiki/Sobel_operator#Extension_to_other_dimensions (accessed 20190226).
@@ -462,7 +463,7 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
                         unit.y *= pxl_dy;
                         unit.z *= pxl_dz;
 
-                        const long int channel = (user_data_s->channel < 0) ? 0 : user_data_s->channel;
+                        const int64_t channel = (user_data_s->channel < 0) ? 0 : user_data_s->channel;
                         const auto n_magn_m = img_adj_ptr->trilinearly_interpolate(pos - unit, channel);
                         const auto n_magn_p = img_adj_ptr->trilinearly_interpolate(pos + unit, channel);
 

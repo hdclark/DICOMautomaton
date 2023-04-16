@@ -11,6 +11,13 @@
 #include <regex>
 #include <stdexcept>
 #include <string>    
+#include <cstdint>
+
+#include "YgorClustering.hpp"
+
+#include "YgorImages.h"
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
+#include "YgorStats.h"       //Needed for Stats:: namespace.
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
@@ -18,12 +25,8 @@
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
 #include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
-#include "ClusterDBSCAN.h"
-#include "YgorImages.h"
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
-#include "YgorStats.h"       //Needed for Stats:: namespace.
 
-#include "YgorClustering.hpp"
+#include "ClusterDBSCAN.h"
 
 
 OperationDoc OpArgDocClusterDBSCAN(){
@@ -239,7 +242,7 @@ bool ClusterDBSCAN(Drover &DICOM_data,
     constexpr size_t MaxElementsInANode = 6; // 16, 32, 128, 256, ... ?
     using RTreeParameter_t = boost::geometry::index::rstar<MaxElementsInANode>;
 
-    using UserData_t = std::pair< planar_image<float,double>*, long int >;
+    using UserData_t = std::pair< planar_image<float,double>*, int64_t >;
     using CDat_t = ClusteringDatum<3, double, // Spatial dimensions.
                             0, double, // Attribute dimensions (not used).
                             uint64_t,  // Cluster ID type.
@@ -284,8 +287,8 @@ bool ClusterDBSCAN(Drover &DICOM_data,
             throw std::invalid_argument("Inclusivity argument '"_s + InclusivityStr + "' is not valid");
         }
 
-        long int BeforeCount = 0;
-        ud.f_bounded = [&](long int row, long int col, long int chan,
+        int64_t BeforeCount = 0;
+        ud.f_bounded = [&](int64_t row, int64_t col, int64_t chan,
                            std::reference_wrapper<planar_image<float,double>> img_refw,
                            std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                            float &voxel_val) {
@@ -323,7 +326,7 @@ bool ClusterDBSCAN(Drover &DICOM_data,
 
         // --------------------------------
         // Determine which clusters are too large.
-        std::map<typename CDat_t::ClusterIDType_, long int> cluster_member_count;
+        std::map<typename CDat_t::ClusterIDType_, int64_t> cluster_member_count;
         {
             constexpr auto RTreeSpatialQueryGetAll = [](const CDat_t &) -> bool { return true; };
             RTree_t::const_query_iterator it;
@@ -339,7 +342,7 @@ bool ClusterDBSCAN(Drover &DICOM_data,
         // --------------------------------
         // Overwrite voxel values for clustered voxels.
         if( std::regex_match(ReductionStr, regex_none) ){
-            long int AfterCount = 0;
+            int64_t AfterCount = 0;
             {
                 constexpr auto RTreeSpatialQueryGetAll = [](const CDat_t &) -> bool { return true; };
                 RTree_t::const_query_iterator it;
@@ -359,7 +362,7 @@ bool ClusterDBSCAN(Drover &DICOM_data,
                 }
             }
             YLOGINFO("Number of voxels with valid cluster IDs: " << AfterCount 
-                << " (" << (1.0 / 100.0) * static_cast<long int>( 10000.0 * AfterCount / BeforeCount ) << "%)");
+                << " (" << (1.0 / 100.0) * static_cast<int64_t>( 10000.0 * AfterCount / BeforeCount ) << "%)");
 
         // Reduce the cluster members using component-wise median of the x-, y-, and z-coordinates separately.
         }else if( std::regex_match(ReductionStr, regex_median) ){

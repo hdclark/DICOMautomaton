@@ -11,6 +11,7 @@
 #include <regex>
 #include <stdexcept>
 #include <string>    
+#include <cstdint>
 
 /*
 #include <boost/geometry.hpp>
@@ -234,7 +235,7 @@ bool VoxelRANSAC(Drover &DICOM_data,
             throw std::invalid_argument("Inclusivity argument '"_s + InclusivityStr + "' is not valid");
         }
 
-        ud.f_bounded = [&](long int row, long int col, long int chan,
+        ud.f_bounded = [&](int64_t row, int64_t col, int64_t chan,
                            std::reference_wrapper<planar_image<float,double>> img_refw,
                            std::reference_wrapper<planar_image<float,double>>,
                            float &voxel_val) {
@@ -255,7 +256,7 @@ bool VoxelRANSAC(Drover &DICOM_data,
                                                           {}, cc_ROIs, &ud )){
             throw std::runtime_error("Unable to locate voxels to be used for RANSAC.");
         }
-        const long int BeforeCount = p.size();
+        const int64_t BeforeCount = p.size();
 
         // --------------------------------
         // Perform RANSAC.
@@ -319,15 +320,15 @@ bool VoxelRANSAC(Drover &DICOM_data,
         plane<double> best_y_plane;
         plane<double> best_z_plane;
 
-        long int random_seed = 11;
+        int64_t random_seed = 11;
         std::mt19937 re( random_seed );
 
-        long int rounds_max = 50'000;
+        int64_t rounds_max = 50'000;
         double tolerance_dist = 3.0; // in mm.
 
-        long int failures = 0;
+        int64_t failures = 0;
 
-        for(long int round = 0; round < rounds_max; ++round){
+        for(int64_t round = 0; round < rounds_max; ++round){
             try{
         
                 // 1: Select randomly the minimum number of points required to determine the model parameters.
@@ -464,7 +465,7 @@ std::array<SpatialType, SpatialDimensionCount> Coordinates;
         constexpr size_t MaxElementsInANode = 6; // 16, 32, 128, 256, ... ?
         using RTreeParameter_t = boost::geometry::index::rstar<MaxElementsInANode>;
 
-        using UserData_t = uint8_t; //std::pair< planar_image<float,double>*, long int >;
+        using UserData_t = uint8_t; //std::pair< planar_image<float,double>*, int64_t >;
         using CDat_t = ClusteringDatum<3, double, // Spatial dimensions.
                                        0, double, // Attribute dimensions (not used).
                                        uint8_t,  // Cluster ID type.
@@ -485,7 +486,7 @@ std::array<SpatialType, SpatialDimensionCount> Coordinates;
             ClusterIDUniques.insert( it->CID );
         });
 */
-        long int random_seed = 11;
+        int64_t random_seed = 11;
         std::mt19937 re( random_seed );
 
         std::vector<vec3<double>> samples;
@@ -493,11 +494,11 @@ std::array<SpatialType, SpatialDimensionCount> Coordinates;
 
         // Query the local neighbourhood for the nearest N vertices. Remember that the self will be present and we
         // cannot derive any useful orientation from it. 
-        const long int N_neighbours = 6; // legitimate neighbours.
+        const int64_t N_neighbours = 6; // legitimate neighbours.
         const double min_separation = 0.1; // minimal distance needed between vertices to consider a pair (in DICOM units; mm).
         std::vector<vec3<double>> unit_vecs;
         for(const auto &v : samples){
-            long int actual_neighbours = 0;
+            int64_t actual_neighbours = 0;
             constexpr auto RTreeSpatialQueryGetAll = [](const CDat_t &) -> bool { return true; };
             RTree_t::const_query_iterator it;
             it = rtree.qbegin(boost::geometry::index::satisfies( RTreeSpatialQueryGetAll ));
@@ -566,7 +567,7 @@ std::array<SpatialType, SpatialDimensionCount> Coordinates;
         // 
 
         //YLOGINFO("Number of voxels with valid cluster IDs: " << AfterCount 
-        //    << " (" << (1.0 / 100.0) * static_cast<long int>( 10000.0 * AfterCount / BeforeCount ) << "%)");
+        //    << " (" << (1.0 / 100.0) * static_cast<int64_t>( 10000.0 * AfterCount / BeforeCount ) << "%)");
 
     }
 

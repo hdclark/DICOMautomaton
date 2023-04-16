@@ -12,6 +12,7 @@
 #include <string>    
 #include <optional> 
 #include <vector>
+#include <cstdint>
 
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
@@ -93,14 +94,14 @@ AlignViaABC(AlignViaABCParams & params,
         // const == read-only, so this will allow us to modify the images and voxels.
         planar_image_collection<float, double> copy_of_moving(moving);
         for(auto &img : copy_of_moving.images){
-            const long int N_rows  = img.rows;
-            const long int N_cols  = img.columns;
-            const long int N_chnls = img.channels; // Each voxel can have multiple channels (e.g., r, g, b), but most medical images have a single channel.
+            const int64_t N_rows  = img.rows;
+            const int64_t N_cols  = img.columns;
+            const int64_t N_chnls = img.channels; // Each voxel can have multiple channels (e.g., r, g, b), but most medical images have a single channel.
             if(N_chnls) YLOGWARN("Multiple channels detected. Ignoring all but the first channel");
-            const long int channel = 0;
+            const int64_t channel = 0;
 
-            for(long int row = 0; row < N_rows; ++row){
-                for(long int col = 0; col < N_cols; ++col){
+            for(int64_t row = 0; row < N_rows; ++row){
+                for(int64_t col = 0; col < N_cols; ++col){
 
                     // Position of the voxel.
                     //

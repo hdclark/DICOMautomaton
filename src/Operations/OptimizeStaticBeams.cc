@@ -21,6 +21,7 @@
 #include <utility>
 #include <random>
 #include <filesystem>
+#include <cstdint>
 
 #ifdef DCMA_USE_NLOPT
 #include <nlopt.hpp>
@@ -298,7 +299,7 @@ bool OptimizeStaticBeams(Drover &DICOM_data,
         Mutate_Voxels_Functor<float,double> f_noop;
         ud.f_unbounded = f_noop;
         ud.f_visitor = f_noop;
-        ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*chan*/,
+        ud.f_bounded = [&](int64_t /*row*/, int64_t /*col*/, int64_t /*chan*/,
                            std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                            std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                            float &voxel_val) {
@@ -336,22 +337,22 @@ bool OptimizeStaticBeams(Drover &DICOM_data,
     //Reduce the number of voxels by randomly trimming until a small, *hopefully* representative collection remain.
     //
     // TODO: Use a more consistent and intellingent sampling routine to ensure representative coverage of the ROI.
-    const long int N_voxels_max = MaxVoxelSamples;
-    const long int random_seed = 123456;
+    const int64_t N_voxels_max = MaxVoxelSamples;
+    const int64_t random_seed = 123456;
     std::mt19937 re_orig( random_seed );
     {
         for(auto &vec : voxels){
             auto re = re_orig;
             std::shuffle(vec.begin(), vec.end(), re);
         }
-        if(static_cast<long int>(voxels.front().size()) > N_voxels_max){
+        if(static_cast<int64_t>(voxels.front().size()) > N_voxels_max){
             for(auto &vec : voxels){
                 vec.resize( N_voxels_max );
             }
         }
     }
 
-    const auto N_beams = static_cast<long int>(voxels.size());
+    const auto N_beams = static_cast<int64_t>(voxels.size());
     const auto N_voxels = voxels.front().size();
 
     std::stringstream ss;
@@ -366,7 +367,7 @@ bool OptimizeStaticBeams(Drover &DICOM_data,
         //
         // Note: This requires consistent voxel ordering!
         std::fill(working.begin(), working.end(), 0.0);
-        for(long int beam = 0; beam < N_beams; ++beam){
+        for(int64_t beam = 0; beam < N_beams; ++beam){
             const auto weight = weights[beam];
             std::transform( working.begin(), working.end(),
                             voxels[beam].begin(), 

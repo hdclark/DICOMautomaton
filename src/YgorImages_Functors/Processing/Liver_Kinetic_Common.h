@@ -5,12 +5,13 @@
 
 #include <map>
 #include <cmath>
+#include <cstdint>
 
 
 struct KineticModel_PixelSelectionCriteria {
     std::map<std::string,std::regex> metadata_criteria;
-    long int row = -1;
-    long int column = -1;
+    int64_t row = -1;
+    int64_t column = -1;
 
 };
 

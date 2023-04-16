@@ -7,17 +7,18 @@
 #include <memory>
 #include <stdexcept>
 #include <string>    
-
-#include "../Imebra_Shim.h"
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "../Metadata.h"
+#include <cstdint>
 
 #include "Explicator.h"       //Needed for Explicator class.
 
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+
+#include "../Imebra_Shim.h"
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "../Metadata.h"
 
 #include "GenerateSyntheticImages.h"
 
@@ -305,7 +306,7 @@ bool GenerateSyntheticImages(Drover &DICOM_data,
 
     // --- The virtual 'signal' image series ---
     loaded_imgs_storage.emplace_back();
-    for(long int img_index = 0; img_index < NumberOfImages; ++img_index){
+    for(int64_t img_index = 0; img_index < NumberOfImages; ++img_index){
         const auto SOPInstanceUID = Generate_Random_UID(60);
 
         auto out = std::make_unique<Image_Array>();
@@ -365,10 +366,10 @@ bool GenerateSyntheticImages(Drover &DICOM_data,
         out->imagecoll.images.back().fill_pixels(VoxelValue);
 
         if(std::isfinite(StipleValue)){
-            for(long int row = 0; row < NumberOfRows; ++row){
-                for(long int col = 0; col < NumberOfColumns; ++col){
+            for(int64_t row = 0; row < NumberOfRows; ++row){
+                for(int64_t col = 0; col < NumberOfColumns; ++col){
                     //const auto R = out->imagecoll.images.back().position(row,col);
-                    for(long int chnl = 0; chnl < NumberOfChannels; ++chnl){
+                    for(int64_t chnl = 0; chnl < NumberOfChannels; ++chnl){
                         const auto stipled = ( (img_index + row + col + chnl) % 2) == 0;
                         const auto val = (stipled) ? StipleValue : VoxelValue;
                         out->imagecoll.images.back().reference(row,col,chnl) = val;

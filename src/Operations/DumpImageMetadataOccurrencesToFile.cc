@@ -1,6 +1,7 @@
 //DumpImageMetadataOccurrencesToFile.cc - A part of DICOMautomaton 2015, 2016. Written by hal clark.
 
 #include <cstdlib>            //Needed for exit() calls.
+#include <cstdint>
 #include <fstream>
 #include <iterator>
 #include <list>
@@ -75,7 +76,7 @@ bool DumpImageMetadataOccurrencesToFile(Drover &DICOM_data,
     //-----------------------------------------------------------------------------------------------------------------
 
     //A superset of all metadata names and also an occurence tally.
-    std::map<std::string, std::map<std::string,long int>> sset; // [metadata_name][metadata_value] = count.
+    std::map<std::string, std::map<std::string,int64_t>> sset; // [metadata_name][metadata_value] = count.
 
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );

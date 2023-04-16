@@ -6,6 +6,7 @@
 #include <list>
 #include <map>
 #include <string>
+#include <cstdint>
 
 #include "YgorMath.h"
 #include "YgorMisc.h"
@@ -59,4 +60,4 @@ void Inject_Point_Contour( const planar_image<float,double> &animg,
                            contour_collection<double> &dest, // Where to put the contours.
                            const std::map<std::string, std::string>& metadata,
                            double radius = std::numeric_limits<double>::quiet_NaN(),
-                           long int num_verts = 5);
+                           int64_t num_verts = 5);

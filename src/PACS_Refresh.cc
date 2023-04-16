@@ -15,8 +15,10 @@
 #include <functional>
 #include <list>
 #include <map>
-#include <pqxx/pqxx>         //PostgreSQL C++ interface.
 #include <string>    
+#include <cstdint>
+
+#include <pqxx/pqxx>         //PostgreSQL C++ interface.
 
 #include "Imebra_Shim.h"     //Wrapper for Imebra library. Black-boxed to speed up compilation.
 #include "YgorArguments.h"   //Needed for ArgumentHandler class.
@@ -31,7 +33,7 @@ int main(int argc, char* argv[]){
     //std::string db_params("dbname=pacs user=hal host=localhost port=63443");
     std::string db_params("dbname=pacs user=hal host=localhost port=5432");
 
-    long int NumberOfDaysRecent = 7; //Only update records imported within the specified days.
+    int64_t NumberOfDaysRecent = 7; //Only update records imported within the specified days.
 
 //---------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------ Option parsing -----------------------------------------------------
@@ -55,8 +57,8 @@ int main(int argc, char* argv[]){
     arger.push_back( ygor_arg_handlr_t(1, 'd', "days-back", true, Xtostring(NumberOfDaysRecent), 
       "The number of days back for which the import was considered 'recent'. (Only recent records are updated.)",
       [&](const std::string &optarg) -> void {
-        if(!Is_String_An_X<long int>(optarg)) YLOGERR("'" << optarg << "' is not a valid number of days");
-        NumberOfDaysRecent = fabs(stringtoX<long int>(optarg));
+        if(!Is_String_An_X<int64_t>(optarg)) YLOGERR("'" << optarg << "' is not a valid number of days");
+        NumberOfDaysRecent = fabs(stringtoX<int64_t>(optarg));
         return;
       })
     );
@@ -97,7 +99,7 @@ int main(int argc, char* argv[]){
         //Process each record, parsing the file, saving metadata, and walking over the columns to see if they are null.
         for(pqxx::result::size_type i = 0; i != r1.size(); ++i){
             //Get the returned pacsid.
-            const auto pacsid = r1[i]["pacsid"].as<long int>();
+            const auto pacsid = r1[i]["pacsid"].as<int64_t>();
 
             //Get the store filename and check if the file has been validated.
             const auto storefullpathname = r1[i]["StoreFullPathName"].as<std::string>();
@@ -124,7 +126,7 @@ int main(int argc, char* argv[]){
                 return ss.str();
             };
             const auto check_update_ok = [&](const std::string &colname) -> void {
-                if((r3.size() != 1) || (r3[0]["pacsid"].as<long int>() != pacsid)){
+                if((r3.size() != 1) || (r3[0]["pacsid"].as<int64_t>() != pacsid)){
                     YLOGERR("Update of column name '" << colname << "' failed. Refusing to continue");
                 }
                 return;

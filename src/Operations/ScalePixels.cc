@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <string>    
 #include <vector>
+#include <cstdint>
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
@@ -168,7 +169,7 @@ bool ScalePixels(Drover &DICOM_data,
             throw std::invalid_argument("Inclusivity argument '"_s + InclusivityStr + "' is not valid");
         }
 
-        ud.f_bounded = [&](long int, long int, long int chan,
+        ud.f_bounded = [&](int64_t, int64_t, int64_t chan,
                            std::reference_wrapper<planar_image<float,double>>,
                            std::reference_wrapper<planar_image<float,double>>,
                            float &val) {

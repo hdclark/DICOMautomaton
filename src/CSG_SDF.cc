@@ -13,6 +13,7 @@
 #include <utility>
 #include <random>
 #include <chrono>
+#include <cstdint>
 
 #include "YgorString.h"
 #include "YgorMath.h"
@@ -666,7 +667,7 @@ std::shared_ptr<node> build_node(const parsed_function& pf){
         children.emplace_back( build_node(pfc) );
     }
 
-    const auto N_p = static_cast<long int>(pf.parameters.size());
+    const auto N_p = static_cast<int64_t>(pf.parameters.size());
 
     // Shapes.
     const auto r_sphere            = Compile_Regex("^sphere$");

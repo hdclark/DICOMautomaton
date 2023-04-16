@@ -1,8 +1,5 @@
 //EvaluateDoseVolumeStats.cc - A part of DICOMautomaton 2017. Written by hal clark.
 
-#include <boost/interprocess/creation_tags.hpp>
-#include <boost/interprocess/sync/named_mutex.hpp>
-#include <boost/interprocess/sync/scoped_lock.hpp>
 #include <cmath>
 #include <exception>
 #include <any>
@@ -19,18 +16,25 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 #include <filesystem>
+#include <cstdint>
 
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "../YgorImages_Functors/Compute/AccumulatePixelDistributions.h"
-#include "EvaluateDoseVolumeStats.h"
+#include <boost/interprocess/creation_tags.hpp>
+#include <boost/interprocess/sync/named_mutex.hpp>
+#include <boost/interprocess/sync/scoped_lock.hpp>
+
 #include "Explicator.h"       //Needed for Explicator class.
+
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
+
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "../YgorImages_Functors/Compute/AccumulatePixelDistributions.h"
+#include "EvaluateDoseVolumeStats.h"
 
 
 
@@ -212,7 +216,7 @@ bool EvaluateDoseVolumeStats(Drover &DICOM_data,
 
 
     const auto Dpres95 = 0.95 * PTVPrescriptionDose;
-    long int N_Body_over_Dpres95 = 0; //We assume all body ROIs are part of a single object.
+    int64_t N_Body_over_Dpres95 = 0; //We assume all body ROIs are part of a single object.
 
     //Evalute the models.
     {
@@ -227,7 +231,7 @@ bool EvaluateDoseVolumeStats(Drover &DICOM_data,
     std::map<std::string, double> HI; // Heterogeneity index.
     std::map<std::string, double> CN; // Conformity number.
 
-    std::map<std::string, long int> N_PTV_over_Dpres95; //We assume all PTV ROIs are distinct.
+    std::map<std::string, int64_t> N_PTV_over_Dpres95; //We assume all PTV ROIs are distinct.
     {
         for(const auto &av : ud_PTV.accumulated_voxels){
             const auto lROIname = av.first;
@@ -238,7 +242,7 @@ bool EvaluateDoseVolumeStats(Drover &DICOM_data,
 
             HI[lROIname] = (D_02 - D_98)/D_50;
 
-            long int N_over_Dpres95 = 0;
+            int64_t N_over_Dpres95 = 0;
             for(const auto &D_voxel : av.second){
                 if(D_voxel > Dpres95) ++N_over_Dpres95;
             }

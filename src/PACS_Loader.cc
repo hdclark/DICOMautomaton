@@ -8,7 +8,6 @@
     #error "Attempted to compile without PostgreSQL support, which is required."
 #endif
 
-#include <boost/algorithm/string/predicate.hpp>
 #include <exception>
 #include <fstream>
 #include <list>
@@ -17,11 +16,13 @@
 #include <set> 
 #include <string>    
 #include <filesystem>
-//#include <cfenv>              //Needed for std::feclearexcept(FE_ALL_EXCEPT).
-
 #include <algorithm>
-#include <pqxx/pqxx>          //PostgreSQL C++ interface.
 #include <utility>            //Needed for std::pair.
+#include <cstdint>
+
+#include <boost/algorithm/string/predicate.hpp>
+
+#include <pqxx/pqxx>          //PostgreSQL C++ interface.
 
 #include "Explicator.h"       //Needed for Explicator class.
 #include "Imebra_Shim.h"      //Wrapper for Imebra library. Black-boxed to speed up compilation.
@@ -107,7 +108,7 @@ bool Load_From_PACS_DB( Drover &DICOM_data,
                 YLOGINFO("Parsing file #" << i+1 << "/" << r1.size() << " = " << 100*(i+1)/r1.size() << "%");
 
                 //Get the returned pacsid.
-                //const auto pacsid = r1[i]["pacsid"].as<long int>();
+                //const auto pacsid = r1[i]["pacsid"].as<int64_t>();
                 const auto StoreFullPathName = (r1[i]["StoreFullPathName"].is_null()) ? 
                                                "" : r1[i]["StoreFullPathName"].as<std::string>();
 

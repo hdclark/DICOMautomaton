@@ -17,7 +17,7 @@
 #include <limits>
 #include <cmath>
 #include <filesystem>
-
+#include <cstdint>
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
 #include <algorithm>
@@ -239,12 +239,12 @@ bool DumpROISurfaceMeshes(Drover &DICOM_data,
     bool Simplify = false;
     bool Remesh = true;
    
-    long int MeshSubdivisions = 2;
-    long int RemeshIterations = 5;
+    int64_t MeshSubdivisions = 2;
+    int64_t RemeshIterations = 5;
     //double RemeshTargetEdgeLength = 2.5; // DICOM units (mm).
     double RemeshTargetEdgeLength = 1.5; // DICOM units (mm).
-    //long int MeshSimplificationEdgeCountLimit = 75'000; // For later (volumetric) analysis.
-    long int MeshSimplificationEdgeCountLimit = 250'000; // For later rendering.
+    //int64_t MeshSimplificationEdgeCountLimit = 75'000; // For later (volumetric) analysis.
+    int64_t MeshSimplificationEdgeCountLimit = 250'000; // For later rendering.
     //-----------------------------------------------------------------------------------------------------------------
 
     const auto regex_centre = Compile_Regex("^cent.*");

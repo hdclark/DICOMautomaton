@@ -8,6 +8,7 @@
 #include <cstdlib>            //Needed for exit() calls.
 #include <cstdio>
 #include <cstddef>
+#include <cstdint>
 #include <exception>
 #include <any>
 #include <optional>
@@ -65,7 +66,7 @@ interactive_query(std::vector<user_query_packet_t> qv){
     for(auto &uq : qv){
         if(uq.answered) continue;
 
-        long int tries = 0;
+        int64_t tries = 0;
         while(tries++ < 3){
             try{
 

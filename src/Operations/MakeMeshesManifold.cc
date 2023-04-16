@@ -14,12 +14,10 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <cstdint>
 
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "../Thread_Pool.h"
-#include "MakeMeshesManifold.h"
 #include "Explicator.h"       //Needed for Explicator class.
+
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
@@ -27,6 +25,11 @@
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 #include "YgorMathIOOFF.h"
+
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "../Thread_Pool.h"
+#include "MakeMeshesManifold.h"
 
 #ifdef DCMA_USE_CGAL
 #else
@@ -88,7 +91,7 @@ bool MakeMeshesManifold(Drover &DICOM_data,
     auto SMs_all = All_SMs( DICOM_data );
     auto SMs = Whitelist( SMs_all, MeshSelectionStr );
 
-    long int completed = 0;
+    int64_t completed = 0;
     const auto sm_count = SMs.size();
     for(auto & smp_it : SMs){
 

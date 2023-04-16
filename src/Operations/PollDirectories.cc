@@ -14,6 +14,7 @@
 #include <chrono>
 #include <unordered_set>
 #include <iomanip>            //Needed for std::put_time(...)
+#include <cstdint>
 
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -142,8 +143,8 @@ bool PollDirectories(Drover &DICOM_data,
     const auto GroupByStr = OptArgs.getValueStr("GroupBy").value();
     const auto IgnoreExistingStr = OptArgs.getValueStr("IgnoreExisting").value();
 
-    long int filesystem_error_count = 0;
-    const long int max_filesystem_error_count = 20;
+    int64_t filesystem_error_count = 0;
+    const int64_t max_filesystem_error_count = 20;
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_true       = Compile_Regex("^tr?u?e?$");
     const auto regex_separate   = Compile_Regex("^se?p?a?r?a?t?e?$");

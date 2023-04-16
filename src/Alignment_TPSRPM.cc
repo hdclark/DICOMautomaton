@@ -15,6 +15,7 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 #include <iomanip>
+#include <cstdint>
 
 #ifdef DCMA_USE_EIGEN    
     #include <eigen3/Eigen/Dense>
@@ -45,7 +46,7 @@ thin_plate_spline::thin_plate_spline(std::istream &is){
 }
 
 thin_plate_spline::thin_plate_spline(const point_set<double> &ps,
-                                     long int k_dim){
+                                     int64_t k_dim){
     const auto N = ps.points.size();
     this->control_points = ps;
     this->kernel_dimension = k_dim;
@@ -84,7 +85,7 @@ thin_plate_spline::eval_kernel(const double &dist) const {
 
 vec3<double> 
 thin_plate_spline::transform(const vec3<double> &v) const {
-    const auto N = static_cast<long int>(this->control_points.points.size());
+    const auto N = static_cast<int64_t>(this->control_points.points.size());
     Stats::Running_Sum<double> x;
     Stats::Running_Sum<double> y;
     Stats::Running_Sum<double> z;
@@ -106,7 +107,7 @@ thin_plate_spline::transform(const vec3<double> &v) const {
     z.Digest(W_A.read_coeff(N + 3, 2) * v.z);
 
     // Warp component.
-    for(long int i = 0; i < N; ++i){
+    for(int64_t i = 0; i < N; ++i){
         const auto P_i = this->control_points.points[i];
         const auto dist = P_i.distance(v);
         const auto ki = this->eval_kernel(dist);
@@ -161,7 +162,7 @@ thin_plate_spline::write_to( std::ostream &os ) const {
 
 bool
 thin_plate_spline::read_from( std::istream &is ){
-    long int N_control_points = 0;
+    int64_t N_control_points = 0;
     is >> N_control_points;
     if( is.fail()
     ||  !isininc(1,N_control_points,1'000'000'000) ){
@@ -171,7 +172,7 @@ thin_plate_spline::read_from( std::istream &is ){
     this->control_points.points.resize(N_control_points);
 
     try{
-        for(long int i = 0; i < N_control_points; ++i){
+        for(int64_t i = 0; i < N_control_points; ++i){
             is >> this->control_points.points[i];
         }
     }catch(const std::exception &e){
@@ -213,8 +214,8 @@ AlignViaTPS(AlignViaTPSParams & params,
             const point_set<double> & moving,
             const point_set<double> & stationary ){
 
-    const auto N_move_points = static_cast<long int>(moving.points.size());
-    const auto N_stat_points = static_cast<long int>(stationary.points.size());
+    const auto N_move_points = static_cast<int64_t>(moving.points.size());
+    const auto N_stat_points = static_cast<int64_t>(stationary.points.size());
     if(N_move_points != N_stat_points){
         YLOGWARN("Unable to perform TPS alignment: point sets have different number of points");
         return std::nullopt;
@@ -233,7 +234,7 @@ AlignViaTPS(AlignViaTPSParams & params,
     //
     // Will contain the 'warp' component (W) and an affine component (A) coefficients.
     // Note that, to avoid a later copy, these coefficients are directly mapped to the transform buffer.
-    if(static_cast<long int>(t.W_A.size()) != (N_move_points + 4) * 3){
+    if(static_cast<int64_t>(t.W_A.size()) != (N_move_points + 4) * 3){
         throw std::logic_error("TPS coefficients allocated with incorrect size. Refusing to continue.");
     }
     Eigen::Map<Eigen::Matrix< double,
@@ -251,11 +252,11 @@ AlignViaTPS(AlignViaTPSParams & params,
     // L matrix: "K" kernel part.
     //
     // Note: "K"s diagonals are later adjusted using the regularization parameter. They are set to zero initially.
-    //for(long int i = 0; i < N_move_points; ++i) L(i, i) = params.lambda;
-    for(long int i = 0; i < (N_move_points + 4); ++i) L(i, i) = params.lambda;
-    for(long int i = 0; i < N_move_points; ++i){
+    //for(int64_t i = 0; i < N_move_points; ++i) L(i, i) = params.lambda;
+    for(int64_t i = 0; i < (N_move_points + 4); ++i) L(i, i) = params.lambda;
+    for(int64_t i = 0; i < N_move_points; ++i){
         const auto P_i = moving.points[i];
-        for(long int j = i + 1; j < N_move_points; ++j){
+        for(int64_t j = i + 1; j < N_move_points; ++j){
             const auto P_j = moving.points[j];
             const auto dist = P_i.distance(P_j);
             const auto kij = t.eval_kernel(dist);
@@ -265,7 +266,7 @@ AlignViaTPS(AlignViaTPSParams & params,
     }
 
     // L matrix: "P" and "PT" parts.
-    for(long int i = 0; i < N_move_points; ++i){
+    for(int64_t i = 0; i < N_move_points; ++i){
         const auto P_moving = moving.points[i];
         L(i, N_move_points + 0) = 1.0;
         L(i, N_move_points + 1) = P_moving.x;
@@ -279,7 +280,7 @@ AlignViaTPS(AlignViaTPSParams & params,
     }
 
     // Fill the Y vector with the corresponding points.
-    for(long int j = 0; j < N_stat_points; ++j){ // column
+    for(int64_t j = 0; j < N_stat_points; ++j){ // column
         const auto P_stationary = stationary.points[j];
         Y(j, 0) = P_stationary.x;
         Y(j, 1) = P_stationary.y;
@@ -330,8 +331,8 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
                const point_set<double> & moving,
                const point_set<double> & stationary ){
 
-    const auto N_move_points = static_cast<long int>(moving.points.size());
-    const auto N_stat_points = static_cast<long int>(stationary.points.size());
+    const auto N_move_points = static_cast<int64_t>(moving.points.size());
+    const auto N_stat_points = static_cast<int64_t>(stationary.points.size());
 
     thin_plate_spline t(moving, params.kernel_dimension);
 
@@ -351,9 +352,9 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         YLOGINFO("Locating mean nearest-neighbour separation in moving point cloud");
         Stats::Running_Sum<double> rs;
         {
-            for(long int i = 0; i < N_move_points; ++i){
+            for(int64_t i = 0; i < N_move_points; ++i){
                 double min_sq_dist = std::numeric_limits<double>::infinity();
-                for(long int j = 0; j < N_move_points; ++j){
+                for(int64_t j = 0; j < N_move_points; ++j){
                     if(i == j) continue;
                     const auto sq_dist = (moving.points[i]).sq_dist( moving.points[j] );
                     if(sq_dist < min_sq_dist) min_sq_dist = sq_dist;
@@ -368,8 +369,8 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
 
         YLOGINFO("Locating max square-distance between all points");
         {
-            for(long int i = 0; i < (N_move_points + N_stat_points); ++i){
-                for(long int j = 0; j < i; ++j){
+            for(int64_t i = 0; i < (N_move_points + N_stat_points); ++i){
+                for(int64_t j = 0; j < i; ++j){
                     const auto A = (i < N_move_points) ? moving.points[i] : stationary.points[i - N_move_points];
                     const auto B = (j < N_move_points) ? moving.points[j] : stationary.points[j - N_move_points];
                     const auto sq_dist = A.sq_dist(B);
@@ -403,8 +404,8 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
 
     // Ensure any forced correpondences are valid and unique.
     {
-        std::set<long int> s_m;
-        std::set<long int> s_s;
+        std::set<int64_t> s_m;
+        std::set<int64_t> s_s;
         for(const auto &apair : params.forced_correspondence){
             const auto i_m = apair.first;
             const auto j_s = apair.second;
@@ -474,7 +475,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     // Note: To avoid a later copy, these coefficients are directly mapped to the transform buffer.
     //
     // Note: These are the parameters that get updated during the transformation update phase.
-    if(static_cast<long int>(t.W_A.size()) != (N_move_points + 4) * 3){
+    if(static_cast<int64_t>(t.W_A.size()) != (N_move_points + 4) * 3){
         throw std::logic_error("TPS coefficients allocated with incorrect size. Refusing to continue.");
     }
     Eigen::Map<Eigen::Matrix< double,
@@ -498,10 +499,10 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     // L matrix: "K" kernel part.
     //
     // Note: "K"s diagonals are later adjusted using the regularization parameter. They are set to zero initially.
-    for(long int i = 0; i < N_move_points; ++i) L(i, i) = 0.0;
-    for(long int i = 0; i < N_move_points; ++i){
+    for(int64_t i = 0; i < N_move_points; ++i) L(i, i) = 0.0;
+    for(int64_t i = 0; i < N_move_points; ++i){
         const auto P_i = moving.points[i];
-        for(long int j = i + 1; j < N_move_points; ++j){
+        for(int64_t j = i + 1; j < N_move_points; ++j){
             const auto P_j = moving.points[j];
             const auto dist = P_i.distance(P_j);
             const auto kij = t.eval_kernel(dist);
@@ -511,7 +512,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     }
 
     // L matrix: "P" and "PT" parts.
-    for(long int i = 0; i < N_move_points; ++i){
+    for(int64_t i = 0; i < N_move_points; ++i){
         const auto P_moving = moving.points[i];
         L(i, N_move_points + 0) = 1.0;
         L(i, N_move_points + 1) = P_moving.x;
@@ -563,18 +564,18 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     }
 
     // Prime the correspondence matrix with uniform correspondence terms.
-    for(long int i = 0; i < N_move_points; ++i){ // row
-        for(long int j = 0; j < N_stat_points; ++j){ // column
+    for(int64_t i = 0; i < N_move_points; ++i){ // row
+        for(int64_t j = 0; j < N_stat_points; ++j){ // column
             M(i, j) = 1.0 / static_cast<double>(N_move_points);
         }
     }
     {
         const auto i = N_move_points; // row
-        for(long int j = 0; j < N_stat_points; ++j){ // column
+        for(int64_t j = 0; j < N_stat_points; ++j){ // column
             M(i, j) = 0.01 / static_cast<double>(N_move_points);
         }
     }
-    for(long int i = 0; i < N_move_points; ++i){ // row
+    for(int64_t i = 0; i < N_move_points; ++i){ // row
         const auto j = N_stat_points; // column
         M(i, j) = 0.01 / static_cast<double>(N_move_points);
     }
@@ -596,12 +597,12 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
 
             // Zero-out rows and columns.
             if( i_is_valid ){
-                for(long int j = 0; j < (N_stat_points + 1); ++j){ // column
+                for(int64_t j = 0; j < (N_stat_points + 1); ++j){ // column
                     M(i_m, j) = 0.0;
                 }
             }
             if( j_is_valid ){
-                for(long int i = 0; i < (N_move_points + 1); ++i){ // row
+                for(int64_t i = 0; i < (N_move_points + 1); ++i){ // row
                     M(i, j_s) = 0.0;
                 }
             }
@@ -626,12 +627,12 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         // Note: In some cases this causes the Sinkhorn tehnique to fail. Suppressing, but not altogether disallowing
         //       outlier coefficients does *not* seem to salvage the Sinkhorn method in these cases.
         if(!params.permit_move_outliers){
-            for(long int i = 0; i < N_move_points; ++i){ // row
+            for(int64_t i = 0; i < N_move_points; ++i){ // row
                 M(i, N_stat_points) = 0.0;
             }
         }
         if(!params.permit_stat_outliers){
-            for(long int j = 0; j < N_stat_points; ++j){ // column
+            for(int64_t j = 0; j < N_stat_points; ++j){ // column
                 M(N_move_points, j) = 0.0;
             }
         }
@@ -644,11 +645,11 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     // bottom-right coefficient).
     const auto worst_row_col_sum_deviation = [&]() -> double {
         double w = 0.0;
-        for(long int i = 0; i < N_move_points; ++i){
+        for(int64_t i = 0; i < N_move_points; ++i){
             const auto ds = std::abs(M.row(i).sum() - 1.0);
             if( w < ds ) w = ds;
         }
-        for(long int j = 0; j < N_stat_points; ++j){
+        for(int64_t j = 0; j < N_stat_points; ++j){
             const auto ds = std::abs(M.col(j).sum() - 1.0);
             if( w < ds ) w = ds;
         }
@@ -666,13 +667,13 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         Stats::Running_Sum<double> com_moved_x;
         Stats::Running_Sum<double> com_moved_y;
         Stats::Running_Sum<double> com_moved_z;
-        for(long int i = 0; i < N_move_points; ++i){ // row
+        for(int64_t i = 0; i < N_move_points; ++i){ // row
             const auto P_moving = moving.points[i];
             const auto P_moved = t.transform(P_moving); // Transform the point.
             com_moved_x.Digest(P_moved.x);
             com_moved_y.Digest(P_moved.y);
             com_moved_z.Digest(P_moved.z);
-            for(long int j = 0; j < N_stat_points; ++j){ // column
+            for(int64_t j = 0; j < N_stat_points; ++j){ // column
                 const auto P_stationary = stationary.points[j];
                 const auto dP = P_stationary - P_moved;
                 M(i, j) = (1.0 / T_now)
@@ -688,7 +689,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         {
             const auto i = N_move_points; // row
             const auto& P_moving = com_moved;
-            for(long int j = 0; j < N_stat_points; ++j){ // column
+            for(int64_t j = 0; j < N_stat_points; ++j){ // column
                 const auto P_stationary = stationary.points[j];
                 const auto dP = P_stationary - P_moving; // Note: intentionally not transformed.
                 M(i, j) = (1.0 / T_start)
@@ -697,7 +698,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         }
 
         // Stationary outlier coefficients.
-        for(long int i = 0; i < N_move_points; ++i){ // row
+        for(int64_t i = 0; i < N_move_points; ++i){ // row
             const auto P_moving = moving.points[i];
             const auto P_moved = t.transform(P_moving); // Transform the point.
             const auto j = N_stat_points; // column
@@ -720,12 +721,12 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         {
             double w_last = -1.0; // Used to detect if the method stalls.
             const auto machine_eps = 100.0 * std::sqrt( std::numeric_limits<double>::epsilon() );
-            for(long int norm_iter = 0; norm_iter < params.N_Sinkhorn_iters; ++norm_iter){
+            for(int64_t norm_iter = 0; norm_iter < params.N_Sinkhorn_iters; ++norm_iter){
 
                 // Tally the current row sums and re-scale the correspondence coefficients.
-                for(long int i = 0; i < N_move_points; ++i){ // row
+                for(int64_t i = 0; i < N_move_points; ++i){ // row
                     Stats::Running_Sum<double> rs;
-                    for(long int j = 0; j < (N_stat_points+1); ++j){ // column
+                    for(int64_t j = 0; j < (N_stat_points+1); ++j){ // column
                         rs.Digest( M(i,j) );
                     }
                     const auto s = rs.Current_Sum();
@@ -740,15 +741,15 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
                         //row_sums[i] += 1.0;
                         //M(i,N_stat_points) += 1.0;
                     }
-                    for(long int j = 0; j < (N_stat_points+1); ++j){ // column, intentionally ignoring the outlier coeff.
+                    for(int64_t j = 0; j < (N_stat_points+1); ++j){ // column, intentionally ignoring the outlier coeff.
                         M(i,j) /= s;
                     }
                 }
 
                 // Tally the current column sums and re-scale the correspondence coefficients.
-                for(long int j = 0; j < N_stat_points; ++j){ // column
+                for(int64_t j = 0; j < N_stat_points; ++j){ // column
                     Stats::Running_Sum<double> rs;
-                    for(long int i = 0; i < (N_move_points+1); ++i){ // row
+                    for(int64_t i = 0; i < (N_move_points+1); ++i){ // row
                         rs.Digest( M(i,j) );
                     }
                     const auto s = rs.Current_Sum();
@@ -763,7 +764,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
                         //col_sums[j] += 1.0;
                         //M(N_move_points,j) += 1.0;
                     }
-                    for(long int i = 0; i < (N_move_points+1); ++i){ // row, intentionally ignoring the outlier coeff.
+                    for(int64_t i = 0; i < (N_move_points+1); ++i){ // row, intentionally ignoring the outlier coeff.
                         M(i,j) /= s;
                     }
                 }
@@ -807,10 +808,10 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
 
     // Estimates how the correspondence matrix will binarize when T -> 0.
     const auto update_final_correspondence = [&]() -> void {
-        for(long int i = 0; i < N_move_points; ++i){ // row
+        for(int64_t i = 0; i < N_move_points; ++i){ // row
             double max_coeff = -(std::numeric_limits<double>::infinity());
-            long int max_j = -1;
-            for(long int j = 0; j < (N_stat_points + 1); ++j){ // column
+            int64_t max_j = -1;
+            for(int64_t j = 0; j < (N_stat_points + 1); ++j){ // column
                 const auto m = M(i,j);
                 if(max_coeff < m){
                     max_coeff = m;
@@ -823,10 +824,10 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             params.final_move_correspondence.emplace_back( std::make_pair(i, max_j) );
         }
 
-        for(long int j = 0; j < N_stat_points; ++j){ // column
+        for(int64_t j = 0; j < N_stat_points; ++j){ // column
             double max_coeff = -(std::numeric_limits<double>::infinity());
-            long int max_i = -1;
-            for(long int i = 0; i < (N_move_points + 1); ++i){ // row
+            int64_t max_i = -1;
+            for(int64_t i = 0; i < (N_move_points + 1); ++i){ // row
                 const auto m = M(i,j);
                 if(max_coeff < m){
                     max_coeff = m;
@@ -848,14 +849,14 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     const auto update_transformation = [&](double lambda) -> void {
 
         // Fill the Y vector with the corresponding points.
-        for(long int i = 0; i < N_move_points; ++i){
+        for(int64_t i = 0; i < N_move_points; ++i){
             double col_sum_inv = std::numeric_limits<double>::quiet_NaN();
             if(params.double_sided_outliers){
                 // This column sum is only needed for the 'double-sided outlier handling' approach described by Yang et al (2011).
                 //
                 // Note: The 'gutter' term is intentionally omitted here.
                 Stats::Running_Sum<double> col_sum_rs;
-                for(long int j = 0; j < N_stat_points; ++j){ // column
+                for(int64_t j = 0; j < N_stat_points; ++j){ // column
                     col_sum_rs.Digest( M(i,j) );
                 }
                 col_sum_inv = 1.0 / col_sum_rs.Current_Sum();
@@ -871,7 +872,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             Stats::Running_Sum<double> c_x;
             Stats::Running_Sum<double> c_y;
             Stats::Running_Sum<double> c_z;
-            for(long int j = 0; j < N_stat_points; ++j){ // column
+            for(int64_t j = 0; j < N_stat_points; ++j){ // column
                 const auto P_stationary = stationary.points[j];
 
                 double weight = std::numeric_limits<double>::quiet_NaN();
@@ -1011,7 +1012,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         const auto fname = Get_Unique_Sequential_Filename(base, 6, ".xyz");
 
         std::ofstream of(fname);
-        for(long int i = 0; i < N_move_points; ++i){
+        for(int64_t i = 0; i < N_move_points; ++i){
             const auto P_moving = moving.points[i];
             const auto P_moved = t.transform(P_moving);
             of << P_moved.x << " " << P_moved.y << " " << P_moved.z << std::endl;
@@ -1029,7 +1030,7 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         // setting it "close to zero."
         const double L_2 = T_now * L_2_start;
 
-        for(long int iter_at_fixed_T = 0; iter_at_fixed_T < params.N_iters_at_fixed_T; ++iter_at_fixed_T){
+        for(int64_t iter_at_fixed_T = 0; iter_at_fixed_T < params.N_iters_at_fixed_T; ++iter_at_fixed_T){
 
             // Update correspondence matrix.
             //

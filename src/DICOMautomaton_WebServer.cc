@@ -76,7 +76,7 @@ std::string CreateUniqueDirectoryTimestamped(const std::string& prefix, const st
     std::string out;
 
     // Create a private working directory somewhere.
-    long int i = 0;
+    int64_t i = 0;
     while(out.empty()){
         if(i++ > 5000) throw std::runtime_error("Unable to create unique directory. Do you have adequate permissions?");
 

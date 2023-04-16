@@ -7,15 +7,18 @@
 #include <memory>
 #include <stdexcept>
 #include <string>    
+#include <cstdint>
+
+#include "Explicator.h"       //Needed for Explicator class.
+
+#include "YgorImages.h"
+#include "YgorMath.h"         //Needed for vec3 class.
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 #include "../Imebra_Shim.h"
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
-#include "Explicator.h"       //Needed for Explicator class.
 #include "GenerateVirtualDataImageSphereV1.h"
-#include "YgorImages.h"
-#include "YgorMath.h"         //Needed for vec3 class.
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
 OperationDoc OpArgDocGenerateVirtualDataImageSphereV1(){
@@ -40,10 +43,10 @@ bool GenerateVirtualDataImageSphereV1(Drover &DICOM_data,
     //std::shared_ptr<Contour_Data> loaded_contour_data_storage = std::make_shared<Contour_Data>();
 
     // The test images are divided into sections.
-    const long int Images   = 100;
-    const long int Rows     = 100;
-    const long int Columns  = 100;
-    const long int Channels = 1;
+    const int64_t Images   = 100;
+    const int64_t Rows     = 100;
+    const int64_t Columns  = 100;
+    const int64_t Channels = 1;
 
     const double SpacingBetweenSlices = 1.0;
     const vec3<double> ImageAnchor(0.0, 0.0, 0.0);
@@ -58,8 +61,8 @@ bool GenerateVirtualDataImageSphereV1(Drover &DICOM_data,
     const vec3<double> SphereCentre(150.0, 150.0, 150.0);
     const double SphereRadius = 25.0;
 
-    long int InstanceNumber = 1; //Gets bumped for each image.
-    //const long int AcquisitionNumber = 1;
+    int64_t InstanceNumber = 1; //Gets bumped for each image.
+    //const int64_t AcquisitionNumber = 1;
 
     // Temporal metadata.
     const std::string ContentDate = "20190226";
@@ -77,7 +80,7 @@ bool GenerateVirtualDataImageSphereV1(Drover &DICOM_data,
 
     // --- The virtual 'signal' image series ---
     loaded_imgs_storage.emplace_back();
-    for(long int img_index = 0; img_index < Images; ++img_index){
+    for(int64_t img_index = 0; img_index < Images; ++img_index){
         const std::string SOPInstanceUID = Generate_Random_UID(60);
 
         auto out = std::make_unique<Image_Array>();
@@ -124,11 +127,11 @@ bool GenerateVirtualDataImageSphereV1(Drover &DICOM_data,
         out->imagecoll.images.back().init_buffer(Rows, Columns, Channels);
         out->imagecoll.images.back().init_spatial(ImagePixeldx, ImagePixeldy, SliceThickness, ImageAnchor, ImagePosition);
 
-        for(long int row = 0; row < Rows; ++row){
-            for(long int col = 0; col < Columns; ++col){
+        for(int64_t row = 0; row < Rows; ++row){
+            for(int64_t col = 0; col < Columns; ++col){
                 const auto R = out->imagecoll.images.back().position(row,col);
                 const auto dist = R.distance(SphereCentre);
-                for(long int chnl = 0; chnl < Channels; ++chnl){
+                for(int64_t chnl = 0; chnl < Channels; ++chnl){
                     const auto val = (dist < SphereRadius) ? 1.0 : 0.0;
                     out->imagecoll.images.back().reference(row,col,chnl) = val;
                 } //Loop over channels.

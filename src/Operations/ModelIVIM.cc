@@ -13,6 +13,7 @@
 #include <mutex>
 #include <cmath>
 #include <algorithm>
+#include <cstdint>
 
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
@@ -313,9 +314,9 @@ bool ModelIVIM(Drover &DICOM_data,
             for(auto &img : imgarr_ptr->images){
                 img.init_buffer( img.rows, img.columns, 3 ); // for f, D, pseudoD.
             }
-            const long int chan_f  = 0;
-            const long int chan_D  = 1;
-            const long int chan_pD = 2;
+            const int64_t chan_f  = 0;
+            const int64_t chan_D  = 1;
+            const int64_t chan_pD = 2;
 
             ud.description = "f, D, pseudoD (Kurtosis Model fit)";
             ud.f_reduce = [bvalues,
@@ -360,9 +361,9 @@ bool ModelIVIM(Drover &DICOM_data,
             for(auto &img : imgarr_ptr->images){
                 img.init_buffer( img.rows, img.columns, 3 ); // for f, D, pseudoD.
             }
-            const long int chan_f  = 0;
-            const long int chan_D  = 1;
-            const long int chan_pD = 2;
+            const int64_t chan_f  = 0;
+            const int64_t chan_D  = 1;
+            const int64_t chan_pD = 2;
 
 
             ud.description = "f, D, pseudoD (Bi-exponential segmented fit)";

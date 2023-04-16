@@ -12,6 +12,7 @@
 #include <stdexcept>
 #include <string>
 #include <utility>
+#include <cstdint>
 
 //#include "../Grouping/Misc_Functors.h"
 #include "Orthogonal_Slices.h"
@@ -98,9 +99,9 @@ bool OrthogonalSlices(planar_image_collection<float,double>::images_list_it_t fi
 
     const auto& new_row_unit = old_orto_unit;
     const auto new_pxl_dx = first_img_it->pxl_dz;
-    const auto numb_of_rows = static_cast<long int>( std::ceil(N) );
+    const auto numb_of_rows = static_cast<int64_t>( std::ceil(N) );
     const auto numb_of_chns = first_img_it->channels;
-    const long int img_skip = 50;  //Reduces output. Keep every Nth image; 1: keep all, 2: keep every other, etc..
+    const int64_t img_skip = 50;  //Reduces output. Keep every Nth image; 1: keep all, 2: keep every other, etc..
 
     // ---- First set: 'row' aligned orthogonal images ----
     {

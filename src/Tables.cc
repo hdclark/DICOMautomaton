@@ -7,6 +7,7 @@
 #include <istream>
 #include <ostream>
 #include <iomanip>
+#include <cstdint>
 
 #include "YgorString.h"
 #include "YgorMisc.h"
@@ -281,11 +282,11 @@ table2::read_csv( std::istream &is ){
     std::stringstream ss;
 
     // --- Automatic separator detection ---
-    const long int autodetect_separator_rows = 10;
+    const int64_t autodetect_separator_rows = 10;
 
     // Buffer the input stream into a stringstream, checking for the presence of priority separators.
     bool use_pseps = false;
-    for(long int i = 0; i < autodetect_separator_rows; ++i){
+    for(int64_t i = 0; i < autodetect_separator_rows; ++i){
         std::string line;
         if(std::getline(is, line)){
             // Avoid newline at end, which can appear as an extra empty row later.

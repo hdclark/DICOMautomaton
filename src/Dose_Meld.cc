@@ -15,7 +15,7 @@
 #include <list>
 #include <memory>
 #include <string>
-//#include <cstdint>   //For int64_t.
+#include <cstdint>
 //#include <utility>   //For std::pair.
 //#include <algorithm> //std::min_element/max_element.
 //#include <tuple>
@@ -156,9 +156,9 @@ std::unique_ptr<Image_Array> Meld_Equal_Geom_Image_Data(const std::shared_ptr<Im
         const auto rows     = i0_it->rows;
         const auto columns  = i0_it->columns;
         const auto channels = i0_it->channels;
-        for(long int r = 0; r < rows; ++r){
-            for(long int c = 0; c < columns; ++c){
-                for(long int l = 0; l < channels; ++l){
+        for(int64_t r = 0; r < rows; ++r){
+            for(int64_t c = 0; c < columns; ++c){
+                for(int64_t l = 0; l < channels; ++l){
                     //Get the (floating-point) dose from each image.
                     const double dose = static_cast<double>(i1_it->value(r,c,l)) 
                                       + static_cast<double>(i2_it->value(r,c,l));
@@ -253,9 +253,9 @@ std::unique_ptr<Image_Array> Meld_Unequal_Geom_Image_Data(std::shared_ptr<Image_
         const auto rows     = i0_it->rows;
         const auto columns  = i0_it->columns;
         const auto channels = i0_it->channels;
-        for(long int r = 0; r < rows; ++r){
-            for(long int c = 0; c < columns; ++c){
-                for(long int l = 0; l < channels; ++l){
+        for(int64_t r = 0; r < rows; ++r){
+            for(int64_t c = 0; c < columns; ++c){
+                for(int64_t l = 0; l < channels; ++l){
                     //Clear the value in the channel.
                     const auto zero = static_cast<decltype(i0_it->value(r,c,l))>(0);
                     i0_it->reference(r,c,l) = zero;

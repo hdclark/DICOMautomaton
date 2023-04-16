@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <tuple>
 #include <utility>
+#include <cstdint>
 
 #include "../../Thread_Pool.h"
 #include "../Grouping/Misc_Functors.h"
@@ -157,13 +158,13 @@ bool ComputeGenerateSurfaceMask(planar_image_collection<float,double> &imagecoll
 
                         //Create a lambda routine that takes an image and checks in-plane if any neighbours are (!is_in_an_roi).
                         auto check_inclusion = [&](const planar_image<float,double> &limg,
-                                                   long int boxr ) -> bool {
+                                                   int64_t boxr ) -> bool {
 
                                 //Project the original image's position onto the plane of this image, so we know where the central
                                 // neighbour point is.
                                 const auto limg_plane = limg.image_plane();
                                 const auto lpoint = limg_plane.Project_Onto_Plane_Orthogonally(point);
-                                const long int lindx = limg.index(lpoint, 0);
+                                const int64_t lindx = limg.index(lpoint, 0);
                                 const auto rcc = limg.row_column_channel_from_index(lindx);
                                 const auto lrow = std::get<0>(rcc);
                                 const auto lcol = std::get<1>(rcc);

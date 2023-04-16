@@ -116,7 +116,7 @@ bool SFML_Viewer(Drover &DICOM_data,
     const auto TrueRegex = Compile_Regex("^tr?u?e?$");
 
     const auto SingleScreenshot = std::regex_match(SingleScreenshotStr, TrueRegex);
-    long int SingleScreenshotCounter = 3; // Used to count down frames before taking the snapshot.
+    int64_t SingleScreenshotCounter = 3; // Used to count down frames before taking the snapshot.
 
     Explicator X(FilenameLex);
 
@@ -513,8 +513,8 @@ bool SFML_Viewer(Drover &DICOM_data,
     struct Mouse_Positions {
         // SFML-provided window pixel position.
         bool window_pos_valid = false;
-        long int window_pos_row;
-        long int window_pos_col;
+        int64_t window_pos_row;
+        int64_t window_pos_col;
 
         // OpenGL (2D) 'world' coordinates.
         bool world_pos_valid = false;
@@ -529,8 +529,8 @@ bool SFML_Viewer(Drover &DICOM_data,
         // Image positions in the image coordinate system (as pixel row and column numbers), iff the mouse is hovering
         // over an image. These are useful for querying voxel values.
         bool pixel_image_pos_valid = false;
-        long int pixel_image_pos_row;
-        long int pixel_image_pos_col;
+        int64_t pixel_image_pos_row;
+        int64_t pixel_image_pos_col;
 
         // DICOM position of the mouse, assuming the mouse lies in the image plane.
         bool mouse_DICOM_pos_valid = false;
@@ -794,7 +794,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                                                               pix_pos - ortho * disp_img_it->pxl_dz * 0.25 };
             auto encompassing_images = (*img_array_ptr_it)->imagecoll.get_images_which_encompass_all_points(points);
 
-            long int count = 0;
+            int64_t count = 0;
             for(auto & pimg : encompassing_images){
                 const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/spatially_overlapping_dump_",6,".fits");
                 if(WriteToFITS(*pimg,pixel_dump_filename_out)){
@@ -820,7 +820,7 @@ bool SFML_Viewer(Drover &DICOM_data,
 
     //Dump all images in the current array to file.
     const auto dump_current_image_array_to_files = [&](){
-            long int count = 0;
+            int64_t count = 0;
             for(auto &pimg : (*img_array_ptr_it)->imagecoll.images){
                 const auto pixel_dump_filename_out = Get_Unique_Sequential_Filename("/tmp/image_dump_",6,".fits");
                 if(WriteToFITS(pimg,pixel_dump_filename_out)){
@@ -1024,8 +1024,8 @@ bool SFML_Viewer(Drover &DICOM_data,
                                 if(indx < 0) continue;
                             
                                 auto rcc = enc_img_it->row_column_channel_from_index(indx);
-                                const long int l_row = std::get<0>(rcc);
-                                const long int l_col = std::get<1>(rcc);
+                                const int64_t l_row = std::get<0>(rcc);
+                                const int64_t l_col = std::get<1>(rcc);
                                 if(l_chnl != std::get<2>(rcc)) continue;
 
                                 pix_val = enc_img_it->value(l_row, l_col, l_chnl);
@@ -1072,7 +1072,7 @@ bool SFML_Viewer(Drover &DICOM_data,
 
                 //Now plot the time courses, evaluate the model, and plot the model.
                 {
-                    const long int samples = 200;
+                    const int64_t samples = 200;
                     double tmin = std::numeric_limits<double>::infinity();
                     double tmax = -tmin;
                     for(const auto &p : time_courses){
@@ -1087,7 +1087,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                     const double dt = (tmax - tmin) / static_cast<double>(samples);
 
                     samples_1D<double> fitted_model;
-                    for(long int i = 0; i < samples; ++i){
+                    for(int64_t i = 0; i < samples; ++i){
                         const double t = tmin + dt * i;
                         if(HaveModel == Have_1Compartment2Input_5Param_LinearInterp_Model){
                             KineticModel_1Compartment2Input_5Param_LinearInterp_Results eval_res;
@@ -1167,7 +1167,7 @@ bool SFML_Viewer(Drover &DICOM_data,
                 for(const auto &enc_img_it : encompassing_images){
                     //Find the pixel of interest.
                     for(auto l_chnl = 0; l_chnl < enc_img_it->channels; ++l_chnl){
-                        long int l_row, l_col;
+                        int64_t l_row, l_col;
                         double pix_val;
                         try{
                             const auto indx = enc_img_it->index(pix_pos, l_chnl);
@@ -1212,7 +1212,7 @@ bool SFML_Viewer(Drover &DICOM_data,
     //Advance to the next/previous Image_Array. Also reset necessary display image iterators.
     //
     // Note: 'N' for next, 'P' for previous.
-    const auto advance_to_next_prev_image_array = [&](const long int n){
+    const auto advance_to_next_prev_image_array = [&](const int64_t n){
             //Save the current image position. We will attempt to find the same spot after switching arrays.
             const auto disp_img_pos = static_cast<size_t>( std::distance(disp_img_beg, disp_img_it) );
 
@@ -1277,7 +1277,7 @@ bool SFML_Viewer(Drover &DICOM_data,
     //Advance to the next/previous display image in the current Image_Array.
     //
     // Note: 'n' can be positive or negative.
-    const auto advance_to_next_prev_image = [&](const long int n){
+    const auto advance_to_next_prev_image = [&](const int64_t n){
             if(n == 0) return;
             const auto n_clamped = (n > 0) ? 1 : -1;
 
@@ -1368,12 +1368,12 @@ bool SFML_Viewer(Drover &DICOM_data,
                 //Sample the image by ignoring aspect ratio and scaling dimensions to fit.
                 const auto r_scale = static_cast<double>(casted_img.rows)    / static_cast<double>(disp_img_it->rows);
                 const auto c_scale = static_cast<double>(casted_img.columns) / static_cast<double>(disp_img_it->columns);
-                for(long int ch = 0; ch < disp_img_it->channels; ++ch){
-                    for(long int r = 0; r < disp_img_it->rows; ++r){
-                        for(long int c = 0; c < disp_img_it->columns; ++c){
+                for(int64_t ch = 0; ch < disp_img_it->channels; ++ch){
+                    for(int64_t r = 0; r < disp_img_it->rows; ++r){
+                        for(int64_t c = 0; c < disp_img_it->columns; ++c){
                             const auto clamped_r = static_cast<double>(r) * r_scale;
                             const auto clamped_c = static_cast<double>(c) * c_scale;
-                            const long int clamped_ch = (ch >= casted_img.channels) ? 0 : ch;
+                            const int64_t clamped_ch = (ch >= casted_img.channels) ? 0 : ch;
 
                             disp_img_it->reference(r,c,ch) = 
                                 casted_img.bilinearly_interpolate_in_pixel_number_space(clamped_r, clamped_c, clamped_ch);
@@ -1407,9 +1407,9 @@ bool SFML_Viewer(Drover &DICOM_data,
             std::cout << "Please enter the intensity to flood with: " << std::endl;
             std::cin >> intensity;
 
-            for(long int ch = 0; ch < disp_img_it->channels; ++ch){
-                for(long int r = 0; r < disp_img_it->rows; ++r){
-                    for(long int c = 0; c < disp_img_it->columns; ++c){
+            for(int64_t ch = 0; ch < disp_img_it->channels; ++ch){
+                for(int64_t r = 0; r < disp_img_it->rows; ++r){
+                    for(int64_t c = 0; c < disp_img_it->columns; ++c){
                         disp_img_it->reference(r,c,ch) = intensity;
                     }
                 }
@@ -1433,7 +1433,7 @@ bool SFML_Viewer(Drover &DICOM_data,
     };
 
     //Step to the next/previous image which spatially overlaps with the current display image.
-    const auto advance_to_next_prev_overlapping_image = [&](const long int n){
+    const auto advance_to_next_prev_overlapping_image = [&](const int64_t n){
             const auto disp_img_pos = disp_img_it->center();
 
             //Get a list of images which spatially overlap this point. Order should be maintained.

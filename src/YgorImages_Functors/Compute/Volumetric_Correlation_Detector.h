@@ -4,6 +4,7 @@
 #include <any>
 #include <functional>
 #include <list>
+#include <cstdint>
 
 
 template <class T, class R> class planar_image_collection;
@@ -43,7 +44,7 @@ struct ComputeVolumetricCorrelationDetectorUserData {
     float high = 0.95; // 95th percentile.
 
     // The channel to analyze. If negative, all channels are analyzed.
-    long int channel = -1;
+    int64_t channel = -1;
 
 };
 

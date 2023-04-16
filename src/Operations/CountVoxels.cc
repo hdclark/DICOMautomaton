@@ -15,6 +15,7 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 #include <filesystem>
+#include <cstdint>
 
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -202,9 +203,9 @@ bool CountVoxels(Drover &DICOM_data,
     }
 
     std::mutex locker;
-    long int count_inside = 0;
-    long int count_outside = 0;
-    long int count_nan = 0;
+    int64_t count_inside = 0;
+    int64_t count_outside = 0;
+    int64_t count_nan = 0;
     std::optional<std::string> PatientID;
 
     auto IAs_all = All_IAs( DICOM_data );
@@ -220,7 +221,7 @@ bool CountVoxels(Drover &DICOM_data,
             if(Lower_is_Percent || Upper_is_Percent){
                 Stats::Running_MinMax<float> rmm;
                 for(const auto &animg : (*iap_it)->imagecoll.images){
-                    animg.apply_to_pixels([&rmm,Channel](long int, long int, long int chnl, float val) -> void {
+                    animg.apply_to_pixels([&rmm,Channel](int64_t, int64_t, int64_t chnl, float val) -> void {
                          if((Channel < 0) || (Channel == chnl)) rmm.Digest(val);
                          return;
                     });
@@ -234,7 +235,7 @@ bool CountVoxels(Drover &DICOM_data,
                 std::vector<float> pixel_vals;
                 //pixel_vals.reserve(animg.rows * animg.columns * animg.channels * img_count);
                 for(const auto &animg : (*iap_it)->imagecoll.images){
-                    animg.apply_to_pixels([&pixel_vals,Channel](long int, long int, long int chnl, float val) -> void {
+                    animg.apply_to_pixels([&pixel_vals,Channel](int64_t, int64_t, int64_t chnl, float val) -> void {
                          if((Channel < 0) || (Channel == chnl)) pixel_vals.push_back(val);
                          return;
                     });
@@ -288,7 +289,7 @@ bool CountVoxels(Drover &DICOM_data,
             throw std::invalid_argument("Inclusivity argument '"_s + InclusivityStr + "' is not valid");
         }
 
-        ud.f_bounded = [&](long int, long int, long int chan,
+        ud.f_bounded = [&](int64_t, int64_t, int64_t chan,
                            std::reference_wrapper<planar_image<float,double>>,
                            std::reference_wrapper<planar_image<float,double>>,
                            float &val) {

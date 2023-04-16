@@ -11,16 +11,17 @@
 #include <stdexcept>
 #include <numeric>        //Needed for std::inner_product().
 #include <string>    
+#include <cstdint>
+
+#include "YgorImages.h"
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
+#include "YgorStats.h"       //Needed for Stats:: namespace.
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
-
-#include "YgorImages.h"
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
-#include "YgorStats.h"       //Needed for Stats:: namespace.
 
 #include "ConvolveImages.h"
 
@@ -189,24 +190,24 @@ bool ConvolveImages(Drover &DICOM_data,
             //
             // Note: The following vectors will be kept synchronized. This will obviate the need to perform any
             // correspondence look-ups later.
-            std::vector<std::array<long int, 3>> triplets;
+            std::vector<std::array<int64_t, 3>> triplets;
             std::vector<float> k_values;
 
             const auto first_img_num = 0L;
             const auto first_img_refw = img_adj.index_to_image(first_img_num);
-            const long int k_rows = first_img_refw.get().rows;
-            const long int k_columns = first_img_refw.get().columns;
-            const auto k_imgs = static_cast<long int>(img_adj.int_to_img.size());
-            //std::map<long int, img_ptr_t> int_to_img;
+            const int64_t k_rows = first_img_refw.get().rows;
+            const int64_t k_columns = first_img_refw.get().columns;
+            const auto k_imgs = static_cast<int64_t>(img_adj.int_to_img.size());
+            //std::map<int64_t, img_ptr_t> int_to_img;
 
             const auto d_r = k_rows / 2;   // Offsets to (approximately) centre the kernel.
             const auto d_c = k_columns / 2;
             const auto d_i = k_imgs / 2;
 
-            for(long int r = 0; r < k_rows; ++r){
-                for(long int c = 0; c < k_columns; ++c){
-                    for(long int i = 0; i < k_imgs; ++i){
-                        std::array<long int, 3> t = { r - d_r,
+            for(int64_t r = 0; r < k_rows; ++r){
+                for(int64_t c = 0; c < k_columns; ++c){
+                    for(int64_t i = 0; i < k_imgs; ++i){
+                        std::array<int64_t, 3> t = { r - d_r,
                                                       c - d_c,
                                                       i - d_i };
                         triplets.emplace_back( t );

@@ -14,6 +14,7 @@
 #include <string>    
 #include <algorithm>    
 #include <filesystem>
+#include <cstdint>
 
 /*
 #include <boost/geometry.hpp>
@@ -266,23 +267,23 @@ Insert_Grid_Contours(Drover &DICOM_data,
     }
 
     // The number of lines needed to bound the point cloud.
-    const auto N_lines_1 = static_cast<long int>( (mm_x.Current_Max() - mm_x.Current_Min()) / edge1.length() );
-    const auto N_lines_2 = static_cast<long int>( (mm_y.Current_Max() - mm_y.Current_Min()) / edge2.length() );
-    const auto N_lines_3 = static_cast<long int>( (mm_z.Current_Max() - mm_z.Current_Min()) / edge3.length() );
+    const auto N_lines_1 = static_cast<int64_t>( (mm_x.Current_Max() - mm_x.Current_Min()) / edge1.length() );
+    const auto N_lines_2 = static_cast<int64_t>( (mm_y.Current_Max() - mm_y.Current_Min()) / edge2.length() );
+    const auto N_lines_3 = static_cast<int64_t>( (mm_z.Current_Max() - mm_z.Current_Min()) / edge3.length() );
 
     // Create planes for every grid line.
     //
     // Note: one extra grid line will flank the point cloud on all sides. 
     std::vector<plane<double>> planes;
-    for(long int i = -2; i < (2+N_lines_1); ++i){
+    for(int64_t i = -2; i < (2+N_lines_1); ++i){
         const auto l_corner = v + (edge1 * (i * 1.0));
         planes.emplace_back(edge1, l_corner);
     }
-    for(long int i = -2; i < (2+N_lines_2); ++i){
+    for(int64_t i = -2; i < (2+N_lines_2); ++i){
         const auto l_corner = v + (edge2 * (i * 1.0));
         planes.emplace_back(edge2, l_corner);
     }
-    for(long int i = -2; i < (2+N_lines_3); ++i){
+    for(int64_t i = -2; i < (2+N_lines_3); ++i){
         const auto l_corner = v + (edge3 * (i * 1.0));
         planes.emplace_back(edge3, l_corner);
     }
@@ -906,7 +907,7 @@ return;
 static
 void
 ICP_Fit_Grid( std::mt19937 re, 
-              long int icp_max_loops,
+              int64_t icp_max_loops,
               Grid_Context &GC,
               ICP_Context &ICPC ){
 
@@ -919,7 +920,7 @@ ICP_Fit_Grid( std::mt19937 re,
 
 static int icp_invoke = 0;
 
-    for(long int loop = 1; loop <= icp_max_loops; ++loop){
+    for(int64_t loop = 1; loop <= icp_max_loops; ++loop){
 //        std::cout << "====================================== " << "Loop: " << loop << std::endl;
 
         // Nominate a random point to be the rotation centre.
@@ -927,7 +928,7 @@ static int icp_invoke = 0;
         // Note: This *might* be wasteful, but it will also help protect against picking an irrelevant point and being
         // stuck with it for the entire ICP procedure. TODO: try commenting out this code to always use the ransac point
         // as the rotation centre.
-        std::uniform_int_distribution<long int> rd(0, ICPC.cohort.size());
+        std::uniform_int_distribution<int64_t> rd(0, ICPC.cohort.size());
         const auto N_select = rd(re);
         ICPC.rot_centre = (*std::next( std::begin(ICPC.cohort), N_select ));
 
@@ -1219,7 +1220,7 @@ YLOGINFO("Loading point clouds");
 // Trim the point clouds randomly.
 if(false){
   const double fraction = 0.004 * 0.05 * 8.447 * 4.0; //05 * 0.08617;
-  long int random_seed = 123456;
+  int64_t random_seed = 123456;
   std::mt19937 re( random_seed );
 
   std::shuffle(std::begin((*pcp_it)->pset.points),
@@ -1255,8 +1256,8 @@ if(false){
         // but it will also minimize the likelihood that valid cases will erroneously be rejected.
         //
         // The routine below can be called only a certain number of times before throwing.
-        long int RANSACFails = 0;
-        const long int PermittedRANSACFails = std::max(100L, static_cast<long int>((*pcp_it)->pset.points.size() * 2));
+        int64_t RANSACFails = 0;
+        const int64_t PermittedRANSACFails = std::max<int64_t>(100L, static_cast<int64_t>((*pcp_it)->pset.points.size() * 2));
         auto Handle_RANSAC_Failure = [&]() -> void {
             ++RANSACFails;
             if(RANSACFails > PermittedRANSACFails){
@@ -1269,11 +1270,11 @@ if(false){
         };
 
         // Perform a RANSAC analysis by only analyzing the vicinity of a randomly selected point.
-        long int ransac_loop = 0;
+        int64_t ransac_loop = 0;
         std::mutex saver_printer;
         while(ransac_loop < RANSACMaxLoops){
             // Randomly select a point from the cloud.
-            std::uniform_int_distribution<long int> rd(0, (*pcp_it)->pset.points.size());
+            std::uniform_int_distribution<int64_t> rd(0, (*pcp_it)->pset.points.size());
             const auto N = rd(re);
             ICPC.ransac_centre = (* std::next( std::begin((*pcp_it)->pset.points), N ));
 
@@ -1434,7 +1435,7 @@ if(false){
                     ++o_it;
                 }
 
-                const long int N_bins = 100;
+                const int64_t N_bins = 100;
                 const bool explicitbins = false;
                 const auto hist_dists  = Bag_of_numbers_to_N_equal_bin_samples_1D_histogram(dists, N_bins, explicitbins);
                 const auto hist_dist_x = Bag_of_numbers_to_N_equal_bin_samples_1D_histogram(dists_x, N_bins, explicitbins);
@@ -1453,7 +1454,7 @@ if(false){
 
             // Estimate the shift along each 3D cylinder union.
             {
-                using triplet_t = std::array<long int, 3>; // Index of grid intersections.
+                using triplet_t = std::array<int64_t, 3>; // Index of grid intersections.
 
                 std::map<triplet_t, std::vector<vec3<double>>> partitioned; // Points assigned to nearest grid intersection.
                 std::map<triplet_t, vec3<double>> grid_unions; // The 3D grid cylinder unions with associated data.
@@ -1510,11 +1511,11 @@ if(false){
                     const auto R_owner = (P_owner - GC.current_grid_anchor);
 
                     // Vector within the unit cube, described in the grid axes basis.
-                    auto index_x = static_cast<long int>( std::round( R_owner.Dot(best_GC.current_grid_x) / best_GC.grid_sep ) );
-                    auto index_y = static_cast<long int>( std::round( R_owner.Dot(best_GC.current_grid_y) / best_GC.grid_sep ) );
-                    auto index_z = static_cast<long int>( std::round( R_owner.Dot(best_GC.current_grid_z) / best_GC.grid_sep ) );
+                    auto index_x = static_cast<int64_t>( std::round( R_owner.Dot(best_GC.current_grid_x) / best_GC.grid_sep ) );
+                    auto index_y = static_cast<int64_t>( std::round( R_owner.Dot(best_GC.current_grid_y) / best_GC.grid_sep ) );
+                    auto index_z = static_cast<int64_t>( std::round( R_owner.Dot(best_GC.current_grid_z) / best_GC.grid_sep ) );
             /*
-                    auto C_x = static_cast<long int>( (R_owner.Dot(best_GC.current_grid_x) + best_GC.grid_sep * 0.5) / best_GC.grid_sep );
+                    auto C_x = static_cast<int64_t>( (R_owner.Dot(best_GC.current_grid_x) + best_GC.grid_sep * 0.5) / best_GC.grid_sep );
                     auto C_y = std::fmod( R_owner.Dot(best_GC.current_grid_y), best_GC.grid_sep );
                     auto C_z = std::fmod( R_owner.Dot(best_GC.current_grid_z), best_GC.grid_sep );
             */
@@ -1539,14 +1540,14 @@ for(const auto &apair : partitioned){
                     partition_counts.push_back( static_cast<double>( apair.second.size() ) );
                 }
 
-                const long int N_bins = 100;
+                const int64_t N_bins = 100;
                 const bool explicitbins = false;
                 const auto hist_dists = Bag_of_numbers_to_N_equal_bin_samples_1D_histogram(partition_counts, N_bins, explicitbins);
                 const auto min_thresh = hist_dists.Find_Otsu_Binarization_Threshold();
 
                 YLOGINFO("Ignoring grid unions with fewer than " << min_thresh << " points in their catchment volume");
                 {
-                    long int drop_count = 0;
+                    int64_t drop_count = 0;
                     for(const auto &apair : partitioned){
                         if(apair.second.size() < min_thresh) ++drop_count;
                     }

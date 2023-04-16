@@ -10,6 +10,7 @@
 #include <random>
 #include <ostream>
 #include <stdexcept>
+#include <cstdint>
 
 #include "../../Thread_Pool.h"
 #include "../Grouping/Misc_Functors.h"
@@ -92,8 +93,8 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
 
     work_queue<std::function<void(void)>> wq;
     std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
-    long int completed = 0;
-    const long int img_count = imagecoll.images.size();
+    int64_t completed = 0;
+    const int64_t img_count = imagecoll.images.size();
 
     for(auto &img : imagecoll.images){
         std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(img) );
@@ -116,13 +117,13 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
 
             const auto img_rows = ref_img_refw.get().rows;
             const auto img_cols = ref_img_refw.get().columns;
-            const auto img_imgs = static_cast<long int>(img_adj.int_to_img.size());
+            const auto img_imgs = static_cast<int64_t>(img_adj.int_to_img.size());
 
             std::vector<float> shtl;
             shtl.reserve(100); // An arbitrary guess.
 
             auto f_bounded = [&, img_rows, img_cols, img_imgs, ref_img_refw](
-                                 long int E_row, long int E_col, long int channel,
+                                 int64_t E_row, int64_t E_col, int64_t channel,
                                  std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                                  std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                  float &voxel_val) {
@@ -158,20 +159,20 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
 
                     // Create a growing 3D 'wavefront' in which the outer shell of a rectangular bunch of adjacent
                     // voxels is evaluated compared to the edit image's voxel value.
-                    long int w = 0; // Neighbour voxel wavefront epoch number.
+                    int64_t w = 0; // Neighbour voxel wavefront epoch number.
                     while(true){
                         double nearest_dist = std::numeric_limits<double>::infinity(); // Nearest of any voxel considered.
 
                         // Evaluate all voxels on this wavefront before proceeding.
-                        for(long int k = -w; k < (w+1); ++k){
+                        for(int64_t k = -w; k < (w+1); ++k){
                             const auto l_num = R_num + k; // Adjacent image number.
                             if(!img_adj.index_present(l_num)) continue; // This adjacent image does not exist.
                             auto adj_img_refw = img_adj.index_to_image(l_num);
 
-                            for(long int i = -w; i < (w+1); ++i){ 
+                            for(int64_t i = -w; i < (w+1); ++i){ 
                                 const auto l_row = R_row + i;
                                 if(!isininc(0, l_row, adj_img_refw.get().rows-1)) continue; // Wavefront surface not valid.
-                                for(long int j = -w; j < (w+1); ++j){
+                                for(int64_t j = -w; j < (w+1); ++j){
                                     const auto l_col = R_col + j;
                                     if(!isininc(0, l_col, adj_img_refw.get().columns-1)) continue; // Wavefront surface not valid.
 
@@ -220,25 +221,25 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
                     // Determine the extent of the cubic neighbourhood.
                     //
                     // Note: The neighbouring voxel CENTRE must be within the user-provided maximum distance.
-                    const auto dx_u = static_cast<long int>( std::floor( user_data_s->maximum_distance / pxl_dx ) );
-                    const auto dy_u = static_cast<long int>( std::floor( user_data_s->maximum_distance / pxl_dy ) );
-                    const auto dz_u = static_cast<long int>( std::floor( user_data_s->maximum_distance / pxl_dz ) );
+                    const auto dx_u = static_cast<int64_t>( std::floor( user_data_s->maximum_distance / pxl_dx ) );
+                    const auto dy_u = static_cast<int64_t>( std::floor( user_data_s->maximum_distance / pxl_dy ) );
+                    const auto dz_u = static_cast<int64_t>( std::floor( user_data_s->maximum_distance / pxl_dz ) );
 
-                    const long int l_row_min = std::max( R_row - dx_u, 0L );
-                    const long int l_row_max = std::min( R_row + dx_u, ref_img_refw.get().rows - 1L );
+                    const int64_t l_row_min = std::max( R_row - dx_u, 0L );
+                    const int64_t l_row_max = std::min( R_row + dx_u, ref_img_refw.get().rows - 1L );
 
-                    const long int l_col_min = std::max( R_col - dy_u, 0L );
-                    const long int l_col_max = std::min( R_col + dy_u, ref_img_refw.get().columns - 1L );
+                    const int64_t l_col_min = std::max( R_col - dy_u, 0L );
+                    const int64_t l_col_max = std::min( R_col + dy_u, ref_img_refw.get().columns - 1L );
 
-                    const long int l_img_min = (R_num - dz_u);
-                    const long int l_img_max = (R_num + dz_u);
+                    const int64_t l_img_min = (R_num - dz_u);
+                    const int64_t l_img_max = (R_num + dz_u);
 
-                    for(long int l_img = l_img_min; l_img <= l_img_max; ++l_img){
+                    for(int64_t l_img = l_img_min; l_img <= l_img_max; ++l_img){
                         if(!img_adj.index_present(l_img)) continue; // This adjacent image does not exist.
                         auto adj_img_refw = img_adj.index_to_image(l_img);
 
-                        for(long int l_row = l_row_min; l_row <= l_row_max; ++l_row){
-                            for(long int l_col = l_col_min; l_col <= l_col_max; ++l_col){
+                        for(int64_t l_row = l_row_min; l_row <= l_row_max; ++l_row){
+                            for(int64_t l_col = l_col_min; l_col <= l_col_max; ++l_col){
                                 const auto adj_vox_val = adj_img_refw.get().value(l_row, l_col, channel);
                                 shtl.emplace_back( adj_vox_val ) ;
                             }

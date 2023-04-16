@@ -10,6 +10,7 @@
 #include <random>
 #include <ostream>
 #include <stdexcept>
+#include <cstdint>
 
 #include "YgorImages.h"
 #include "YgorMath.h"
@@ -74,18 +75,18 @@ bool ComputeVolumetricCorrelationDetector(planar_image_collection<float,double> 
     // penalize or reward the difference in intensity (aka the 'score multiplier').
     ud.voxel_triplets.clear();
 
-    long int random_seed = 123456;
+    int64_t random_seed = 123456;
     std::mt19937 re( random_seed );
     std::uniform_real_distribution<> rd(0.0, 1.0);
     const auto pi = std::acos(-1.0);
 
     const auto sample_at_radius = [&](double radius, // In DICOM coordinates (mm).
-                                      long int count ) -> void {
+                                      int64_t count ) -> void {
 
         // This routine samples the surface of a sphere such that samples will (approximately) be spread out evenly.
         //
         const vec3<double> N_z(0.0, 0.0, 1.0);
-        for(long int i = 0; i < count; ++i){
+        for(int64_t i = 0; i < count; ++i){
             const auto theta = std::acos(2.0 * rd(re) - 1.0);
             const auto phi = 2.0 * pi * rd(re);
 
@@ -95,19 +96,19 @@ bool ComputeVolumetricCorrelationDetector(planar_image_collection<float,double> 
             const auto R = rot_B * radius; // Vector to the sampled point.
 
             // Convert the sampled point to pixel offset coordinates.
-            const auto dx_i = static_cast<long int>( std::round(R.x / pxl_dx) );
-            const auto dy_i = static_cast<long int>( std::round(R.y / pxl_dy) );
-            const auto dz_i = static_cast<long int>( std::round(R.z / pxl_dz) );
+            const auto dx_i = static_cast<int64_t>( std::round(R.x / pxl_dx) );
+            const auto dy_i = static_cast<int64_t>( std::round(R.y / pxl_dy) );
+            const auto dz_i = static_cast<int64_t>( std::round(R.z / pxl_dz) );
 
             // Insert the sampling triplet.
-            ud.voxel_triplets.emplace_back( std::array<long int, 3>{dx_i, dy_i, dz_i} );
+            ud.voxel_triplets.emplace_back( std::array<int64_t, 3>{dx_i, dy_i, dz_i} );
         }
         return;
     };
 
-    const auto samples_needed_for_areal_density = [&](double radius, double sa) -> long int {
+    const auto samples_needed_for_areal_density = [&](double radius, double sa) -> int64_t {
         // Estimates the number of samples needed to maintain the given level of surface area density (approximately).
-        return static_cast<long int>( std::round( 4.0*pi*std::pow(radius,2.0) / sa ) );
+        return static_cast<int64_t>( std::round( 4.0*pi*std::pow(radius,2.0) / sa ) );
     };
 
     // Large sampling radii.

@@ -4,6 +4,7 @@
 
 #include <optional>
 #include <limits>
+#include <cstdint>
 
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorLog.h"
@@ -95,7 +96,7 @@ AlignViaOrthogonalProcrustes(AlignViaOrthogonalProcrustesParams & params,
 std::optional<affine_transform<double>>
 AlignViaExhaustiveICP( const point_set<double> & moving,
                        const point_set<double> & stationary,
-                       long int max_icp_iters = 100,
+                       int64_t max_icp_iters = 100,
                        double f_rel_tol = std::numeric_limits<double>::quiet_NaN() );
 #endif // DCMA_USE_EIGEN
 

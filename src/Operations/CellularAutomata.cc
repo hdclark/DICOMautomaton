@@ -10,6 +10,11 @@
 #include <regex>
 #include <stdexcept>
 #include <string>    
+#include <cstdint>
+
+#include "YgorImages.h"
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
+#include "YgorStats.h"       //Needed for Stats:: namespace.
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
@@ -17,9 +22,6 @@
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
 #include "CellularAutomata.h"
-#include "YgorImages.h"
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
-#include "YgorStats.h"       //Needed for Stats:: namespace.
 
 
 OperationDoc OpArgDocCellularAutomata(){
@@ -170,20 +172,20 @@ bool CellularAutomata(Drover &DICOM_data,
             ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::SelectionPeriodic;
             ud.voxel_triplets = { { 
                 // The 2D "Moore" neighbourhood, i.e., includes both nearest and next-nearest neighbours (diagonals).
-                std::array<long int, 3>{ -1, -1,  0 },
-                std::array<long int, 3>{ -1,  0,  0 },
-                std::array<long int, 3>{ -1,  1,  0 },
+                std::array<int64_t, 3>{ -1, -1,  0 },
+                std::array<int64_t, 3>{ -1,  0,  0 },
+                std::array<int64_t, 3>{ -1,  1,  0 },
 
-                std::array<long int, 3>{  0, -1,  0 },
-                std::array<long int, 3>{  0,  1,  0 },
+                std::array<int64_t, 3>{  0, -1,  0 },
+                std::array<int64_t, 3>{  0,  1,  0 },
 
-                std::array<long int, 3>{  1, -1,  0 },
-                std::array<long int, 3>{  1,  0,  0 },
-                std::array<long int, 3>{  1,  1,  0 },
+                std::array<int64_t, 3>{  1, -1,  0 },
+                std::array<int64_t, 3>{  1,  0,  0 },
+                std::array<int64_t, 3>{  1,  1,  0 },
             } };
             ud.f_reduce = [Low, High, Threshold](float v, std::vector<float> &shtl, vec3<double>) -> float {
-                long int alive = 0;
-                long int dead = 0;
+                int64_t alive = 0;
+                int64_t dead = 0;
                 for(const auto& nv : shtl){
                     if(!std::isfinite(nv)){
                         throw std::runtime_error("Encountered non-finite cell. Refusing to continue");
@@ -222,38 +224,38 @@ bool CellularAutomata(Drover &DICOM_data,
             }else if( std::regex_match(MethodStr, regex_gravity_d) ){
                 ud.description = "Gravity (down)";
                 ud.voxel_triplets = { { 
-                    std::array<long int, 3>{ -1,  0,  0 },
-                    std::array<long int, 3>{  1,  0,  0 },
+                    std::array<int64_t, 3>{ -1,  0,  0 },
+                    std::array<int64_t, 3>{  1,  0,  0 },
                 } };
             }else if( std::regex_match(MethodStr, regex_gravity_u) ){
                 ud.description = "Gravity (up)";
                 ud.voxel_triplets = { { 
-                    std::array<long int, 3>{  1,  0,  0 },
-                    std::array<long int, 3>{ -1,  0,  0 },
+                    std::array<int64_t, 3>{  1,  0,  0 },
+                    std::array<int64_t, 3>{ -1,  0,  0 },
                 } };
             }else if( std::regex_match(MethodStr, regex_gravity_l) ){
                 ud.description = "Gravity (left)";
                 ud.voxel_triplets = { { 
-                    std::array<long int, 3>{  0,  1,  0 },
-                    std::array<long int, 3>{  0, -1,  0 },
+                    std::array<int64_t, 3>{  0,  1,  0 },
+                    std::array<int64_t, 3>{  0, -1,  0 },
                 } };
             }else if( std::regex_match(MethodStr, regex_gravity_r) ){
                 ud.description = "Gravity (right)";
                 ud.voxel_triplets = { { 
-                    std::array<long int, 3>{  0, -1,  0 },
-                    std::array<long int, 3>{  0,  1,  0 },
+                    std::array<int64_t, 3>{  0, -1,  0 },
+                    std::array<int64_t, 3>{  0,  1,  0 },
                 } };
             }else if( std::regex_match(MethodStr, regex_gravity_i) ){
                 ud.description = "Gravity (into plane)";
                 ud.voxel_triplets = { { 
-                    std::array<long int, 3>{  0,  0, -1 },
-                    std::array<long int, 3>{  0,  0,  1 },
+                    std::array<int64_t, 3>{  0,  0, -1 },
+                    std::array<int64_t, 3>{  0,  0,  1 },
                 } };
             }else if( std::regex_match(MethodStr, regex_gravity_o) ){
                 ud.description = "Gravity (out of plane)";
                 ud.voxel_triplets = { { 
-                    std::array<long int, 3>{  0,  0,  1 },
-                    std::array<long int, 3>{  0,  0, -1 },
+                    std::array<int64_t, 3>{  0,  0,  1 },
+                    std::array<int64_t, 3>{  0,  0, -1 },
                 } };
             }
             ud.f_reduce = [](float m, std::vector<float> &shtl, vec3<double>) -> float {
@@ -272,7 +274,7 @@ bool CellularAutomata(Drover &DICOM_data,
             throw std::invalid_argument("Method not understood");
         }
 
-        for(long int i = 0; i < Iterations; ++i){
+        for(int64_t i = 0; i < Iterations; ++i){
             if(!(*iap_it)->imagecoll.Compute_Images( ComputeVolumetricNeighbourhoodSampler, 
                                                      {}, cc_ROIs, &ud )){
                 throw std::runtime_error("Unable to iterate cellular automata.");

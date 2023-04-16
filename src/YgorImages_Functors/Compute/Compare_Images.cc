@@ -10,18 +10,20 @@
 #include <random>
 #include <ostream>
 #include <stdexcept>
+#include <cstdint>
 
-#include "../../Thread_Pool.h"
-#include "../Grouping/Misc_Functors.h"
-#include "../ConvenienceRoutines.h"
-#include "Compare_Images.h"
+#include "YgorClustering.hpp"
+
 #include "YgorImages.h"
 #include "YgorMath.h"
 #include "YgorMisc.h"
 #include "YgorLog.h"
 #include "YgorStats.h"       //Needed for Stats:: namespace.
 
-#include "YgorClustering.hpp"
+#include "../../Thread_Pool.h"
+#include "../Grouping/Misc_Functors.h"
+#include "../ConvenienceRoutines.h"
+#include "Compare_Images.h"
 
 
 bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
@@ -112,7 +114,7 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
 
     }else if(user_data_s->discrepancy_type == ComputeCompareImagesUserData::DiscrepancyType::PinnedToMax){
         Stats::Running_MinMax<float> rmm;
-        auto find_max = [&rmm,ud_channel](long int, long int, long int chnl, float val) -> void {
+        auto find_max = [&rmm,ud_channel](int64_t, int64_t, int64_t chnl, float val) -> void {
             if(chnl == ud_channel){
                 rmm.Digest(val);
             }
@@ -145,8 +147,8 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
 
     work_queue<std::function<void(void)>> wq;
     std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
-    long int completed = 0;
-    const long int img_count = imagecoll.images.size();
+    int64_t completed = 0;
+    const int64_t img_count = imagecoll.images.size();
 
     for(auto &img : imagecoll.images){
         std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(img) );
@@ -169,7 +171,7 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
             if(overlapping_img_refws.empty()) YLOGWARN("No wholly overlapping reference images found, using slower per-voxel sampling");
 
 
-            auto f_bounded = [&,img_refw](long int E_row, long int E_col, long int channel,
+            auto f_bounded = [&,img_refw](int64_t E_row, int64_t E_col, int64_t channel,
                                           std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                                           std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                           float &voxel_val) {
@@ -269,24 +271,24 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
 
                         // Create a growing 3D 'wavefront' in which the outer shell of a rectangular bunch of adjacent
                         // voxels is evaluated compared to the edit image's voxel value.
-                        long int w = 0;                  // Neighbour voxel wavefront epoch number.
+                        int64_t w = 0;                   // Neighbour voxel wavefront epoch number.
                         bool encountered_lower = false;  // Whether a voxel lower than required was found.
                         bool encountered_higher = false; // Whether a voxel higher than required was found.
                         while(true){
                             double nearest_dist = std::numeric_limits<double>::infinity(); // Nearest of any voxel considered in this wavefront.
 
                             // Evaluate all voxels on this wavefront before proceeding.
-                            for(long int k = -w; k < (w+1); ++k){
+                            for(int64_t k = -w; k < (w+1); ++k){
                                 const auto l_num = R_num + k; // Adjacent image number.
                                 if(!img_adj.index_present(l_num)) continue; // This adjacent image does not exist.
                                 auto adj_img_ptr = std::addressof( img_adj.index_to_image(l_num).get() );
 
 // TODO: try generate either the full range (-w...w) or merely endpoints (-w,w) based on whether |k|=w.                                
-                                for(long int i = -w; i < (w+1); ++i){ 
+                                for(int64_t i = -w; i < (w+1); ++i){ 
                                     const auto l_row = R_row + i;
                                     if(!isininc(0, l_row, adj_img_ptr->rows-1)) continue; // Wavefront surface not valid.
 // TODO: try generate either the full range (-w...w) or merely endpoints (-w,w) based on whether |k|=w.                                
-                                    for(long int j = -w; j < (w+1); ++j){
+                                    for(int64_t j = -w; j < (w+1); ++j){
                                         const auto l_col = R_col + j;
                                         if(!isininc(0, l_col, adj_img_ptr->columns-1)) continue; // Wavefront surface not valid.
 
@@ -365,7 +367,7 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                                             ||  (user_data_s->interpolation_method == ComputeCompareImagesUserData::InterpolationMethod::NNN) ){
 
                                                 // In pixel coordinates, these points are all a distance of sqrt(1)=1 from the centre voxel.
-                                                std::array<std::array<long int, 3>, 6> nn_triplets = {{
+                                                std::array<std::array<int64_t, 3>, 6> nn_triplets = {{
                                                         { -1,  0,  0 },
                                                         {  1,  0,  0 },
                                                         {  0, -1,  0 },
@@ -441,7 +443,7 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                                                 //
                                                 // As you can see, the corners can be summed to give the diagonals; they could also be decomposed
                                                 // this way, but it seemed easier to just write them all out.
-                                                std::array<std::array<std::array<long int, 3>, 3>, 12> nnn_triplets = {{
+                                                std::array<std::array<std::array<int64_t, 3>, 3>, 12> nnn_triplets = {{
                                                         {{ { -1,  0, -1 },   {  0,  0, -1 },  { -1,  0,  0 } }},
                                                         {{ {  0, -1, -1 },   {  0,  0, -1 },  {  0, -1,  0 } }},
                                                         {{ {  0,  1, -1 },   {  0,  0, -1 },  {  0,  1,  0 } }},

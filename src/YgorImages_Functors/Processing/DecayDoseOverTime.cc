@@ -4,6 +4,7 @@
 #include <functional>
 #include <list>
 #include <stdexcept>
+#include <cstdint>
 
 #include "../../BED_Conversion.h"
 #include "../ConvenienceRoutines.h"
@@ -74,7 +75,7 @@ bool DecayDoseOverTime(planar_image_collection<float,double>::images_list_it_t f
     ebv_opts.adjacency      = Mutate_Voxels_Opts::Adjacency::SingleVoxel;
     ebv_opts.maskmod        = Mutate_Voxels_Opts::MaskMod::Noop;
 
-    auto f_bounded = [=](long int row, long int col, long int channel,
+    auto f_bounded = [=](int64_t row, int64_t col, int64_t channel,
                          std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                          std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                          float &voxel_val) {

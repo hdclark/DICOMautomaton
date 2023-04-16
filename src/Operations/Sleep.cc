@@ -19,6 +19,7 @@
 #include <filesystem>
 #include <array>
 #include <thread>
+#include <cstdint>
 
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -80,7 +81,7 @@ bool Sleep(Drover&,
 
     bool res = true;
     if( isininc(0.0f, Duration, 60.0f * 60.0f * 24.0f) ){
-        const auto in_ms = static_cast<long int>( std::round(1000.0 * Duration) );
+        const auto in_ms = static_cast<int64_t>( std::round(1000.0 * Duration) );
         const auto d = std::chrono::milliseconds(in_ms);
         std::this_thread::sleep_for(d);
 

@@ -135,11 +135,11 @@ CustomImGuiWidget_LoadingBar(const std::chrono::time_point<std::chrono::system_c
     &&  std::isfinite(rect_width_offset)
     &&  std::isfinite(rect_space)
     &&  std::isfinite(num_rects_f)  ){
-        const long int num_rects = static_cast<long int>(std::floor(num_rects_f));
+        const int64_t num_rects = static_cast<int64_t>(std::floor(num_rects_f));
         const auto wave_period = rect_width + rect_space * 20.0f * 5.0f; // 'tuned' for 20 rectangles.
         const auto pi = std::acos(-1.0);
 
-        for(long int i = 1; i <= num_rects; i += 1){
+        for(int64_t i = 1; i <= num_rects; i += 1){
             const auto x_offset = (rect_width * i) + (rect_space * (i - 1));
 
             ImVec2 tl_pos;
@@ -165,7 +165,7 @@ CustomImGuiWidget_LoadingBar(const std::chrono::time_point<std::chrono::system_c
 }
 
 // Compute an axis-aligned bounding box in pixel coordinates.
-std::tuple<long int, long int, long int, long int>
+std::tuple<int64_t, int64_t, int64_t, int64_t>
 get_pixelspace_axis_aligned_bounding_box(const planar_image<float, double> &img,
                                          const std::vector<vec3<double>> &points,
                                          double extra_space){
@@ -191,10 +191,10 @@ get_pixelspace_axis_aligned_bounding_box(const planar_image<float, double> &img,
         //if(bbox_max.z < (proj3 + extra_space)) bbox_max.z = (proj3 + extra_space);
     }
 
-    auto row_min = std::clamp(static_cast<long int>(std::floor(bbox_min.x/img.pxl_dx)), 0L, img.rows-1);
-    auto row_max = std::clamp(static_cast<long int>(std::ceil(bbox_max.x/img.pxl_dx)), 0L, img.rows-1);
-    auto col_min = std::clamp(static_cast<long int>(std::floor(bbox_min.y/img.pxl_dy)), 0L, img.columns-1);
-    auto col_max = std::clamp(static_cast<long int>(std::ceil(bbox_max.y/img.pxl_dy)), 0L, img.columns-1);
+    auto row_min = std::clamp(static_cast<int64_t>(std::floor(bbox_min.x/img.pxl_dx)), 0L, img.rows-1);
+    auto row_max = std::clamp(static_cast<int64_t>(std::ceil(bbox_max.x/img.pxl_dx)), 0L, img.rows-1);
+    auto col_min = std::clamp(static_cast<int64_t>(std::floor(bbox_min.y/img.pxl_dy)), 0L, img.columns-1);
+    auto col_max = std::clamp(static_cast<int64_t>(std::ceil(bbox_max.y/img.pxl_dy)), 0L, img.columns-1);
     return std::make_tuple( row_min, row_max, col_min, col_max );
 }
 
@@ -216,7 +216,7 @@ struct opengl_mesh {
         this->N_vertices = static_cast<GLsizei>(meshes.vertices.size());
         this->N_triangles = 0;
         for(const auto& f : meshes.faces){
-            long int l_N_indices = f.size();
+            int64_t l_N_indices = f.size();
             if(l_N_indices < 3) continue; // Ignore faces that cannot be broken into triangles.
             this->N_triangles += static_cast<GLsizei>(l_N_indices - 2);
         }
@@ -276,7 +276,7 @@ struct opengl_mesh {
         std::vector<unsigned int> indices;
         indices.reserve(3 * this->N_triangles);
         for(const auto& f : meshes.faces){
-            long int l_N_indices = f.size();
+            int64_t l_N_indices = f.size();
             if(l_N_indices < 3) continue; // Ignore faces that cannot be broken into triangles.
 
             const auto it_1 = std::cbegin(f);
@@ -449,7 +449,7 @@ class ogl_shader_program {
                 glGetShaderiv(vert_handle, GL_INFO_LOG_LENGTH, &log_length);
                 if(1 < log_length){
                     std::string buf;
-                    buf.resize((long int)(log_length + 1), '\0');
+                    buf.resize((int64_t)(log_length + 1), '\0');
                     glGetShaderInfoLog(vert_handle, log_length, NULL, static_cast<GLchar*>(&(buf[0])) );
                     os << "Vertex shader compilation log:\n" << buf;
                 }
@@ -470,7 +470,7 @@ class ogl_shader_program {
                 glGetShaderiv(frag_handle, GL_INFO_LOG_LENGTH, &log_length);
                 if(1 < log_length){
                     std::string buf;
-                    buf.resize((long int)(log_length + 1), '\0');
+                    buf.resize((int64_t)(log_length + 1), '\0');
                     glGetShaderInfoLog(frag_handle, log_length, NULL, static_cast<GLchar*>(&(buf[0])) );
                     os << "Fragment shader compilation log:\n" << buf;
                 }
@@ -491,7 +491,7 @@ class ogl_shader_program {
                 glGetProgramiv(custom_gl_program, GL_INFO_LOG_LENGTH, &log_length);
                 if(1 < log_length){
                     std::string buf;
-                    buf.resize((long int)(log_length + 1), '\0');
+                    buf.resize((int64_t)(log_length + 1), '\0');
                     glGetProgramInfoLog(custom_gl_program, log_length, NULL, static_cast<GLchar*>(&(buf[0])) );
                     os << "Shader link log:\n" << buf;
                 }
@@ -568,7 +568,7 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                       brush_t brush,
                       float radius,
                       float intensity,
-                      long int channel,
+                      int64_t channel,
                       float intensity_min = std::numeric_limits<float>::infinity() * -1.0,
                       float intensity_max = std::numeric_limits<float>::infinity() ){
 
@@ -659,8 +659,8 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
             //
             // Process relevant images.
             const auto [row_min, row_max, col_min, col_max] = get_pixelspace_axis_aligned_bounding_box(*cit, verts, buffer_space);
-            for(long int r = row_min; r <= row_max; ++r){
-                for(long int c = col_min; c <= col_max; ++c){
+            for(int64_t r = row_min; r <= row_max; ++r){
+                for(int64_t c = col_min; c <= col_max; ++c){
                     const auto pos = cit->position(r,c);
                     vec3<double> closest;
                     {
@@ -946,7 +946,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     std::string docs_str;
 
     // Plot viewer state.
-    std::map<long int, bool> lsamps_visible;
+    std::map<int64_t, bool> lsamps_visible;
     enum class plot_norm_t {
         none,
         max,
@@ -955,9 +955,9 @@ bool SDL_Viewer(Drover &DICOM_data,
     float plot_thickness = 1.0;
 
     // Image viewer state.
-    long int img_array_num = -1; // The image array currently displayed.
-    long int img_num = -1; // The image currently displayed.
-    long int img_channel = -1; // Which channel to display.
+    int64_t img_array_num = -1; // The image array currently displayed.
+    int64_t img_num = -1; // The image currently displayed.
+    int64_t img_channel = -1; // Which channel to display.
     using img_array_ptr_it_t = decltype(DICOM_data.image_data.begin());
     using disp_img_it_t = decltype(DICOM_data.image_data.front()->imagecoll.images.begin());
     bool img_precess = false;
@@ -1017,7 +1017,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     auto line_numbers_warn_colour   = ImVec4(0.7f, 0.5f, 0.1f, 0.8f);
     auto line_numbers_error_colour  = ImVec4(1.0f, 0.1f, 0.1f, 0.8f);
     
-    const auto get_unique_colour = [](long int i){
+    const auto get_unique_colour = [](int64_t i){
         const std::vector<vec3<double>> colours = {
             vec3<double>(1.000,0.702,0.000),   // "vivid_yellow".
             vec3<double>(0.502,0.243,0.459),   // "strong_purple".
@@ -1046,7 +1046,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     // Meshes.
     using disp_mesh_it_t = decltype(DICOM_data.smesh_data.begin());
     std::unique_ptr<opengl_mesh> oglm_ptr;
-    long int mesh_num = -1;
+    int64_t mesh_num = -1;
     std::atomic<bool> need_to_reload_opengl_mesh = true;
 
     struct mesh_display_transform_t {
@@ -1078,7 +1078,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     // Tables.
     using disp_table_it_t = decltype(DICOM_data.table_data.begin());
     struct table_display_t {
-        long int table_num = -1;
+        int64_t table_num = -1;
         bool use_keyword_highlighting = true;
         std::map<std::string, ImVec4> colours = { { std::string("pass"),  ImVec4(0.175f, 0.500f, 0.000f, 1.00f) },
                                                   { std::string("true"),  ImVec4(0.175f, 0.500f, 0.000f, 1.00f) },
@@ -1091,17 +1091,17 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // RT Plans.
     using disp_rtplan_it_t = decltype(DICOM_data.rtplan_data.begin());
-    long int rtplan_num = -1;
-    long int rtplan_dynstate_num = -1;
-    long int rtplan_statstate_num = -1;
+    int64_t rtplan_num = -1;
+    int64_t rtplan_dynstate_num = -1;
+    int64_t rtplan_statstate_num = -1;
 
     // Point Sets / Point Clouds.
     using disp_pset_it_t = decltype(DICOM_data.point_data.begin());
-    long int pset_num = -1;
+    int64_t pset_num = -1;
 
     // Transforms.
     using disp_tform_it_t = decltype(DICOM_data.trans_data.begin());
-    long int tform_num = -1;
+    int64_t tform_num = -1;
 
 
     // Image feature extraction.
@@ -1130,8 +1130,8 @@ bool SDL_Viewer(Drover &DICOM_data,
         float region_x;   // [0,1] clamped position of mouse on image.
         float region_y;
 
-        long int r; // Row and column number of current mouse position.
-        long int c;
+        int64_t r; // Row and column number of current mouse position.
+        int64_t c;
 
         vec3<double> zero_pos;  // Position of (0,0) voxel in DICOM coordinate system.
         vec3<double> dicom_pos; // Position of mouse in DICOM coordinate system.
@@ -1341,8 +1341,8 @@ bool SDL_Viewer(Drover &DICOM_data,
     // Create an OpenGL texture from an image.
     struct opengl_texture_handle_t {
         GLuint texture_number = 0;
-        long int col_count = 0L;
-        long int row_count = 0L;
+        int64_t col_count = 0L;
+        int64_t row_count = 0L;
         float aspect_ratio = 1.0; // In image pixel space.
         bool texture_exists = false;
 
@@ -1366,7 +1366,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     scale_bar_img.init_buffer(1L, 100L, 1L);
     scale_bar_img.init_spatial(1.0, 1.0, 1.0, zero3, zero3);
     scale_bar_img.init_orientation(vec3<double>(0.0, 1.0, 0.0), vec3<double>(1.0, 0.0, 0.0));
-    for(long int c = 0; c < scale_bar_img.columns; ++c){
+    for(int64_t c = 0; c < scale_bar_img.columns; ++c){
         scale_bar_img.reference(0,c,0) = static_cast<float>(c) / static_cast<float>(scale_bar_img.columns-1);
     }
     opengl_texture_handle_t scale_bar_texture;
@@ -1519,7 +1519,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     const auto Load_OpenGL_Texture = [&colour_maps,
                                       &colour_map,
                                       &nan_colour  ]( const planar_image<float,double>& img,
-                                                      const long int img_channel,
+                                                      const int64_t img_channel,
                                                       const std::optional<double>& custom_centre,
                                                       const std::optional<double>& custom_width ) -> opengl_texture_handle_t {
 
@@ -1624,9 +1624,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                 //       around, ensuring there is minimal precision loss).
                 using pixel_value_t = decltype(img.value(0, 0, 0));
                 Stats::Running_MinMax<pixel_value_t> rmm;
-                img.apply_to_pixels([&rmm,&img_channel](long int /*row*/,
-                                                        long int /*col*/,
-                                                        long int chnl,
+                img.apply_to_pixels([&rmm,&img_channel](int64_t /*row*/,
+                                                        int64_t /*col*/,
+                                                        int64_t chnl,
                                                         pixel_value_t val) -> void {
                     if( (img_channel < 0)
                     ||  (chnl == img_channel) ) rmm.Digest(val);
@@ -1766,7 +1766,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                           &recompute_image_iters ](){
         std::tuple<bool, img_array_ptr_it_t, disp_img_it_t > out;
         std::get<bool>( out ) = false;
-        const long int cimg_array_num = 0; // (Currently only support one image array, but would be useful to support multiple...)
+        const int64_t cimg_array_num = 0; // (Currently only support one image array, but would be useful to support multiple...)
 
         // Set the current image array and image iters and load the texture.
         const auto has_cimages = contouring_imgs.Has_Image_Data();
@@ -2000,7 +2000,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // Contour preprocessing. Expensive pre-processing steps are performed asynchronously in another thread.
     struct preprocessed_contour {
-        long int epoch;
+        int64_t epoch;
         ImU32 colour;
         std::string ROIName;
         std::string NormalizedROIName;
@@ -2011,7 +2011,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     using preprocessed_contours_t = std::list<preprocessed_contour>;
     preprocessed_contours_t preprocessed_contours;
     std::map<std::string, ImVec4> contour_colours;
-    std::atomic<long int> preprocessed_contour_epoch = 0L;
+    std::atomic<int64_t> preprocessed_contour_epoch = 0L;
     std::shared_mutex preprocessed_contour_mutex;
     bool contour_colour_from_orientation = false;
 
@@ -2026,7 +2026,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                        &neg_contour_colour,
                                        &pos_contour_colour,
                                        &get_unique_colour,
-                                       &contour_colour_from_orientation ](long int epoch) -> void {
+                                       &contour_colour_from_orientation ](int64_t epoch) -> void {
         preprocessed_contours_t out;
 
         decltype(contour_colours) contour_colours_l;
@@ -2038,7 +2038,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         }
         std::set<std::string> encountered;
 
-        long int n = contour_colours_l.size();
+        int64_t n = contour_colours_l.size();
 
         //Draw any contours that lie in the plane of the current image. Also draw contour names if the cursor is 'within' them.
         {
@@ -2241,8 +2241,8 @@ bool SDL_Viewer(Drover &DICOM_data,
     // Advance to the specified Image_Array. Also resets necessary display image iterators.
     const auto advance_to_image_array = [ &DICOM_data,
                                           &img_array_num,
-                                          &img_num ](const long int n){
-            const long int N_arrays = DICOM_data.image_data.size();
+                                          &img_num ](const int64_t n){
+            const int64_t N_arrays = DICOM_data.image_data.size();
             if((n < 0) || (N_arrays <= n)){
                 throw std::invalid_argument("Unwilling to move to specified Image_Array. It does not exist.");
             }
@@ -2255,7 +2255,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             //
             // TODO: It's debatable whether this is even useful. Better to move to same DICOM position, I think.
             auto img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
-            const long int N_images = (*img_array_ptr_it)->imagecoll.images.size();
+            const int64_t N_images = (*img_array_ptr_it)->imagecoll.images.size();
             if(N_images == 0){
                 throw std::invalid_argument("Image_Array contains no images. Refusing to continue");
             }
@@ -2267,9 +2267,9 @@ bool SDL_Viewer(Drover &DICOM_data,
     // Advance to the specified image in the current Image_Array.
     const auto advance_to_image = [ &DICOM_data,
                                     &img_array_num,
-                                    &img_num ](const long int n){
+                                    &img_num ](const int64_t n){
             auto img_array_ptr_it = std::next(DICOM_data.image_data.begin(), img_array_num);
-            const long int N_images = (*img_array_ptr_it)->imagecoll.images.size();
+            const int64_t N_images = (*img_array_ptr_it)->imagecoll.images.size();
 
             if((n < 0) || (N_images <= n)){
                 throw std::invalid_argument("Unwilling to move to specified image. It does not exist.");
@@ -2448,9 +2448,9 @@ bool SDL_Viewer(Drover &DICOM_data,
         std::list<script_feedback_t> feedback; // Compilation/validation messages.
     };
     std::vector<script_file> script_files;
-    long int active_script_file = -1;
+    int64_t active_script_file = -1L;
     std::shared_mutex script_mutex;
-    std::atomic<long int> script_epoch = 0L;
+    std::atomic<int64_t> script_epoch = 0L;
     const std::string new_script_content = "#!/usr/bin/env -S dicomautomaton_dispatcher -v\n\n";
 
     const auto append_to_script = [](std::vector<char> &content, const std::string &s) -> void {
@@ -2621,7 +2621,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     }
 
 
-    long int frame_count = 0;
+    int64_t frame_count = 0;
     while(true){
         ++frame_count;
         image_mouse_pos_opt = {};
@@ -2762,7 +2762,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
             if( view_toggles.view_images_enabled
             &&  img_valid ){
-                img_channel = std::clamp<long int>(img_channel, 0, disp_img_it->channels-1);
+                img_channel = std::clamp<int64_t>(img_channel, 0, disp_img_it->channels-1);
                 Free_OpenGL_Texture(current_texture);
                 current_texture = Load_OpenGL_Texture(*disp_img_it, img_channel, custom_centre, custom_width);
             }else{
@@ -2991,7 +2991,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                             if(ImGui::MenuItem(nss.str().c_str())){
                                 std::unique_lock<std::shared_mutex> script_lock(script_mutex);
 
-                                auto N_sfs = static_cast<long int>(script_files.size());
+                                auto N_sfs = static_cast<int64_t>(script_files.size());
                                 if( N_sfs == 0 ){
                                     YLOGINFO("No script to append to. Creating new script.");
                                     script_files.emplace_back();
@@ -2999,7 +2999,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     append_to_script(script_files.back().content, new_script_content);
                                     script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
                                     active_script_file = N_sfs;
-                                    N_sfs = static_cast<long int>(script_files.size());
+                                    N_sfs = static_cast<int64_t>(script_files.size());
                                 }
                                 if( !script_files.empty()
                                 &&  isininc(0, active_script_file, N_sfs-1)){
@@ -3074,7 +3074,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 for(const auto &sscript : standard_scripts_with_category(cat)){
                                     if(ImGui::MenuItem(sscript.name.c_str())){
                                         std::unique_lock<std::shared_mutex> script_lock(script_mutex);
-                                        auto N_sfs = static_cast<long int>(script_files.size());
+                                        auto N_sfs = static_cast<int64_t>(script_files.size());
                                         script_files.emplace_back();
                                         script_files.back().altered = false;
                                         script_files.back().path = sscript.name;
@@ -3255,8 +3255,8 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImGui::SameLine();
             const auto reset = ImGui::Button("Reset", ImVec2(window_extent.x/6, 0));
             
-            ImGui::Text("Current Score: %s, Current Speed: %s%%", std::to_string(static_cast<long int>(score)).c_str(),
-                                                                  std::to_string(static_cast<long int>(100.0 * speed)).c_str());
+            ImGui::Text("Current Score: %s, Current Speed: %s%%", std::to_string(static_cast<int64_t>(score)).c_str(),
+                                                                  std::to_string(static_cast<int64_t>(100.0 * speed)).c_str());
 
             // Run a simulation with the given action.
             const auto t_now = std::chrono::steady_clock::now();
@@ -3667,14 +3667,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                 if(ImGui::Begin("Script Editor", &view_toggles.view_script_editor_enabled )){
                     ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
-                    auto N_sfs = static_cast<long int>(script_files.size());
+                    auto N_sfs = static_cast<int64_t>(script_files.size());
                     if(ImGui::Button("New", ImVec2(window_extent.x/5, 0))){ 
                         script_files.emplace_back();
                         script_files.back().altered = true;
                         append_to_script(script_files.back().content, new_script_content);
                         script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
                         active_script_file = N_sfs;
-                        N_sfs = static_cast<long int>(script_files.size());
+                        N_sfs = static_cast<int64_t>(script_files.size());
                     }
                     ImGui::SameLine();
                     if(ImGui::Button("Open", ImVec2(window_extent.x/5, 0))){ 
@@ -3822,7 +3822,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                     // 'Tabs' for file selection.
                     auto &style = ImGui::GetStyle();
-                    for(long int i = 0; i < N_sfs; ++i){
+                    for(int64_t i = 0; i < N_sfs; ++i){
                         auto fname = script_files.at(i).path.filename().string();
                         if(fname.empty()) fname = "(unnamed)";
                         if(script_files.at(i).altered) fname += "**";
@@ -4103,8 +4103,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                 const auto img_cols_f = static_cast<float>(img_cols);
                 image_mouse_pos.region_x = std::clamp((io.MousePos.x - real_pos.x) / real_extent.x, 0.0f, 1.0f);
                 image_mouse_pos.region_y = std::clamp((io.MousePos.y - real_pos.y) / real_extent.y, 0.0f, 1.0f);
-                image_mouse_pos.r = std::clamp( static_cast<long int>( std::floor( image_mouse_pos.region_y * img_rows_f ) ), 0L, (img_rows-1) );
-                image_mouse_pos.c = std::clamp( static_cast<long int>( std::floor( image_mouse_pos.region_x * img_cols_f ) ), 0L, (img_cols-1) );
+                image_mouse_pos.r = std::clamp( static_cast<int64_t>( std::floor( image_mouse_pos.region_y * img_rows_f ) ), 0L, (img_rows-1) );
+                image_mouse_pos.c = std::clamp( static_cast<int64_t>( std::floor( image_mouse_pos.region_x * img_cols_f ) ), 0L, (img_cols-1) );
                 image_mouse_pos.zero_pos = disp_img_it->position(0L, 0L);
                 image_mouse_pos.dicom_pos = image_mouse_pos.zero_pos 
                                             + disp_img_it->row_unit * image_mouse_pos.region_y * disp_img_it->pxl_dx * img_rows_f
@@ -4346,7 +4346,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     const auto pset_val_opt = get_as<std::string>(pset->metadata, img_features.metadata_key);
                     if(pset_val_opt != img_val_opt) continue;
 
-                    long int feature_num = 0;
+                    int64_t feature_num = 0;
                     int32_t colour_num = 0;
                     for(const auto &p : pset->points){
                         const auto c_rgb = Colour_cycle_max_contrast_20(colour_num);
@@ -4880,7 +4880,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     }catch(const std::exception &){}
                 }else{
                     std::stringstream ss;
-                    for(long int chan = 0; chan < disp_img_it->channels; ++chan){
+                    for(int64_t chan = 0; chan < disp_img_it->channels; ++chan){
                         ss << disp_img_it->value(image_mouse_pos.r, image_mouse_pos.c, chan) << " ";
                     }
                     ImGui::Text("Voxel intensities: %s", ss.str().c_str());
@@ -4954,7 +4954,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 common_metadata = coalesce_metadata_for_lsamp(common_metadata);
 
                 //Cycle over the images, dumping the ordinate (pixel values) vs abscissa (time) derived from metadata.
-                long int n_current_img = 0;
+                int64_t n_current_img = 0;
                 for(const auto &enc_img_it : selected_imgs){
                     const auto l_meta_key = enc_img_it->GetMetadataValueAs<double>(abscissa_key);
                     if(l_meta_key.has_value() != meta_key.has_value()) continue;
@@ -5107,7 +5107,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if(f.res){
                         script_files.insert( std::end(script_files), std::begin(f.script_files),
                                                                      std::end(f.script_files) );
-                        active_script_file = static_cast<long int>(script_files.size()) - 1;
+                        active_script_file = static_cast<int64_t>(script_files.size()) - 1;
                     }else{
                         YLOGWARN("Unable to load scripts");
                         // TODO ... warn about the issue.
@@ -5644,7 +5644,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                          ImPlotFlags_AntiAliased,
                                          ImPlotAxisFlags_AutoFit,
                                          ImPlotAxisFlags_AutoFit )) {
-                        long int i = 0;
+                        int64_t i = 0;
                         for(auto &tp : { time_profile }){
                             const int offset = 0;
                             const int stride = sizeof( decltype( tp.samples[0] ) );
@@ -5723,7 +5723,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 int scroll_tables = table_display.table_num;
                 const int N_tables = DICOM_data.table_data.size();
                 ImGui::SliderInt("Table", &scroll_tables, 0, N_tables - 1);
-                const long int new_table_num = std::clamp(scroll_tables, 0, N_tables - 1);
+                const int64_t new_table_num = std::clamp(scroll_tables, 0, N_tables - 1);
                 if(new_table_num != table_display.table_num){
                     table_display.table_num = new_table_num;
                 }
@@ -5782,7 +5782,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                      //ImVec2(TEXT_BASE_WIDTH * 50, 0.0f) )){
 
                     // Number the columns.
-                    for(long int c = l_min_col; c <= l_max_col; ++c){
+                    for(int64_t c = l_min_col; c <= l_max_col; ++c){
                         ImGui::TableSetupColumn(std::to_string(c).c_str());
                     }
                     ImGui::TableHeadersRow();
@@ -5903,7 +5903,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 int scroll_rtplans = rtplan_num;
                 const int N_rtplans = DICOM_data.rtplan_data.size();
                 ImGui::SliderInt("Plan", &scroll_rtplans, 0, N_rtplans - 1);
-                const long int new_rtplan_num = std::clamp(scroll_rtplans, 0, N_rtplans - 1);
+                const int64_t new_rtplan_num = std::clamp(scroll_rtplans, 0, N_rtplans - 1);
                 if(new_rtplan_num != rtplan_num){
                     rtplan_num = new_rtplan_num;
                 }
@@ -5928,7 +5928,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     int scroll_dynstate = rtplan_dynstate_num;
                     const int N_dynstates = (*rtplan_ptr_it)->dynamic_states.size();
                     ImGui::SliderInt("Beam", &scroll_dynstate, 0, N_dynstates - 1);
-                    const long int new_dynstate_num = std::clamp(scroll_dynstate, 0, N_dynstates - 1);
+                    const int64_t new_dynstate_num = std::clamp(scroll_dynstate, 0, N_dynstates - 1);
                     if(new_dynstate_num != rtplan_dynstate_num){
                         rtplan_dynstate_num = new_dynstate_num;
                     }
@@ -5955,7 +5955,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         int scroll_statstate = rtplan_statstate_num;
                         const int N_statstates = dynstate_ptr->static_states.size();
                         ImGui::SliderInt("Control point", &scroll_statstate, 0, N_statstates - 1);
-                        const long int new_statstate_num = std::clamp(scroll_statstate, 0, N_statstates - 1);
+                        const int64_t new_statstate_num = std::clamp(scroll_statstate, 0, N_statstates - 1);
                         if(new_statstate_num != rtplan_statstate_num){
                             rtplan_statstate_num = new_statstate_num;
                         }
@@ -6143,7 +6143,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 int scroll_psets = pset_num;
                 const int N_psets = DICOM_data.point_data.size();
                 ImGui::SliderInt("Set", &scroll_psets, 0, N_psets - 1);
-                const long int new_pset_num = std::clamp(scroll_psets, 0, N_psets - 1);
+                const int64_t new_pset_num = std::clamp(scroll_psets, 0, N_psets - 1);
                 if(new_pset_num != pset_num){
                     pset_num = new_pset_num;
                 }
@@ -6196,7 +6196,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 int scroll_tforms = tform_num;
                 const int N_tforms = DICOM_data.trans_data.size();
                 ImGui::SliderInt("Transform", &scroll_tforms, 0, N_tforms - 1);
-                const long int new_tform_num = std::clamp(scroll_tforms, 0, N_tforms - 1);
+                const int64_t new_tform_num = std::clamp(scroll_tforms, 0, N_tforms - 1);
                 if(new_tform_num != tform_num){
                     tform_num = new_tform_num;
                 }
@@ -6444,7 +6444,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         const float intensity = contouring_intensity * ((mouse_button_0) ? 1.0f : -1.0f);
                         const float intensity_min = (view_toggles.view_contouring_enabled) ?  0.0f : -inf;
                         const float intensity_max = (view_toggles.view_contouring_enabled) ?  1.0f :  inf;
-                        const long int channel = 0;
+                        const int64_t channel = 0;
                         draw_with_brush( cimg_its, lss, contouring_brush, radius, intensity, channel, intensity_min, intensity_max );
 
                         // Update mouse position for next time, if applicable.
@@ -6563,9 +6563,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
             }
 
-            long int new_img_array_num = scroll_arrays;
-            long int new_img_num = scroll_images;
-            long int new_img_chnl = scroll_channel;
+            int64_t new_img_array_num = scroll_arrays;
+            int64_t new_img_num = scroll_images;
+            int64_t new_img_chnl = scroll_channel;
 
             // Scroll through images.
             if( new_img_array_num != img_array_num ){
@@ -6587,7 +6587,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
             }else if( (new_img_chnl != img_channel)
                   &&  (0 < disp_img_it->channels) ){
-                img_channel = std::clamp<long int>(new_img_chnl, 0L, disp_img_it->channels - 1L);
+                img_channel = std::clamp<int64_t>(new_img_chnl, 0L, disp_img_it->channels - 1L);
                 recompute_image_state();
                 auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
                 if( !img_valid ) throw std::runtime_error("Advanced to inaccessible image channel");
@@ -6696,7 +6696,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             if( !view_toggles.view_meshes_enabled
             ||  !DICOM_data.Has_Mesh_Data() ) return;
 
-            const auto N_meshes = static_cast<long int>(DICOM_data.smesh_data.size());
+            const auto N_meshes = static_cast<int64_t>(DICOM_data.smesh_data.size());
             const auto new_mesh_num = std::clamp(mesh_num, 0L, N_meshes - 1L);
             if(new_mesh_num != mesh_num){
                 mesh_num = new_mesh_num;
@@ -6764,8 +6764,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                     auto scroll_meshes = static_cast<int>(mesh_num);
                     ImGui::SliderInt("Mesh", &scroll_meshes, 0, N_meshes - 1);
-                    if(static_cast<long int>(scroll_meshes) != mesh_num){
-                        mesh_num = std::clamp(static_cast<long int>(scroll_meshes), 0L, N_meshes - 1L);
+                    if(static_cast<int64_t>(scroll_meshes) != mesh_num){
+                        mesh_num = std::clamp(static_cast<int64_t>(scroll_meshes), 0L, N_meshes - 1L);
                         reload_opengl_mesh();
                     }
 
@@ -7009,8 +7009,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                     throw std::logic_error("Expected 4x4 matrix");
                 }
                 num_array<float> out(3, 3, 0.0f);
-                for(long int r = 0; r < 3; ++r){
-                    for(long int c = 0; c < 3; ++c){
+                for(int64_t r = 0; r < 3; ++r){
+                    for(int64_t c = 0; c < 3; ++c){
                         out.coeff(r,c) = mvp.read_coeff(r,c);
                     }
                 }

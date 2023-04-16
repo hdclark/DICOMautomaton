@@ -15,6 +15,16 @@
 #include <regex>
 #include <stdexcept>
 #include <string>    
+#include <cstdint>
+
+#include "Explicator.h"       //Needed for Explicator class.
+
+#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
+#include "YgorImages.h"
+#include "YgorImagesIO.h"
+#include "YgorMath.h"         //Needed for vec3 class.
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 #include "../Dose_Meld.h"
 #include "../Structs.h"
@@ -23,14 +33,7 @@
 #include "../YgorImages_Functors/Compute/GenerateSurfaceMask.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Processing/In_Image_Plane_Bicubic_Supersample.h"
-#include "Explicator.h"       //Needed for Explicator class.
 #include "GridBasedRayCastDoseAccumulate.h"
-#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
-#include "YgorImages.h"
-#include "YgorImagesIO.h"
-#include "YgorMath.h"         //Needed for vec3 class.
-#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-#include "YgorLog.h"
 
 
 
@@ -362,7 +365,7 @@ bool GridBasedRayCastDoseAccumulate(Drover &DICOM_data,
     }
 
     // Threshold the surface mask.
-    grid_arr_ptr->imagecoll.apply_to_pixels([=](long int, long int, long int, float &val) -> void {
+    grid_arr_ptr->imagecoll.apply_to_pixels([=](int64_t, int64_t, int64_t, float &val) -> void {
             if(!isininc(void_mask_val, val, surface_mask_val)){
                 val = void_mask_val;
                 return;
@@ -454,13 +457,13 @@ bool GridBasedRayCastDoseAccumulate(Drover &DICOM_data,
     {
         work_queue<std::function<void(void)>> wq;
         std::mutex printer; // Who gets to print to the console and iterate the counter.
-        long int completed = 0;
+        int64_t completed = 0;
 
         const double cleaved_gap_dist = std::abs(ROICleaving.Get_Signed_Distance_To_Point(ROI_centroid));
 
-        for(long int row = 0; row < SourceDetectorRows; ++row){
+        for(int64_t row = 0; row < SourceDetectorRows; ++row){
             wq.submit_task([&,row]() -> void {
-                for(long int col = 0; col < SourceDetectorColumns; ++col){
+                for(int64_t col = 0; col < SourceDetectorColumns; ++col){
                     double accumulated_length = 0.0;      //Length of ray travel within the 'surface'.
                     double accumulated_doselength = 0.0;
                     vec3<double> ray_pos = SourceImg->position(row, col);

@@ -7,6 +7,7 @@
 #include <list>
 #include <set>
 #include <filesystem>
+#include <cstdint>
 
 #include "Structs.h"
 
@@ -19,9 +20,9 @@ enum class script_feedback_severity_t {
 
 struct script_feedback_t {
     script_feedback_severity_t severity = script_feedback_severity_t::info;
-    long int offset = -1;      // Offset character count from beginning of stream.
-    long int line = -1;        // Line number.
-    long int line_offset = -1; // Offset character count from beginning of line.
+    int64_t offset = -1;      // Offset character count from beginning of stream.
+    int64_t line = -1;        // Line number.
+    int64_t line_offset = -1; // Offset character count from beginning of line.
     std::string message;
 };
 

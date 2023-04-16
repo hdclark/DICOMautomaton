@@ -9,6 +9,7 @@
 #include <regex>
 #include <stdexcept>
 #include <string>    
+#include <cstdint>
 
 #include "YgorMisc.h"
 #include "YgorLog.h"
@@ -54,7 +55,7 @@ bool DeDuplicateImages(Drover &DICOM_data,
 
     const auto voxel_intensity_min_max = [](std::shared_ptr<Image_Array> ia){
         Stats::Running_MinMax<float> rmm;
-        const auto tally_mm = [&rmm](long int, long int, long int, float val) -> void {
+        const auto tally_mm = [&rmm](int64_t, int64_t, int64_t, float val) -> void {
             rmm.Digest(val);
             return;
         };

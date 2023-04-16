@@ -10,6 +10,7 @@
 #include <regex>
 #include <stdexcept>
 #include <string>    
+#include <cstdint>
 
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
@@ -80,10 +81,10 @@ bool DecomposeImagesSVD(Drover &DICOM_data,
 
     //-----------------------------------------------------------------------------------------------------------------
 
-    long int rows = -1L;
-    long int cols = -1L;
-    long int chns = -1L;
-    long int imgs =  0L;
+    int64_t rows = -1L;
+    int64_t cols = -1L;
+    int64_t chns = -1L;
+    int64_t imgs =  0L;
 
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
@@ -114,21 +115,21 @@ bool DecomposeImagesSVD(Drover &DICOM_data,
         throw std::invalid_argument("Requested channel does not exist");
     }
 
-    std::set<long int> Channels;
+    std::set<int64_t> Channels;
     if(Channel < 0){
-        for(long int i = 0; i < chns; ++i) Channels.insert(i);
+        for(int64_t i = 0; i < chns; ++i) Channels.insert(i);
     }else{
         Channels.insert(Channel);
     }
 
     // Compute the average for every voxel.
-    const long int N_cols = imgs;
-    const long int N_rows = rows * cols * Channels.size();
+    const int64_t N_cols = imgs;
+    const int64_t N_rows = rows * cols * Channels.size();
 
     planar_image<float, double> avg;
     avg.init_buffer(rows, cols, chns);
-    for(long int r = 0; r < rows; ++r){
-        for(long int c = 0; c < cols; ++c){
+    for(int64_t r = 0; r < rows; ++r){
+        for(int64_t c = 0; c < cols; ++c){
             for(const auto &h : Channels){
 
                 Stats::Running_Sum<double> rs;
@@ -145,16 +146,16 @@ bool DecomposeImagesSVD(Drover &DICOM_data,
     // Pack the matrix for SVD decomposition.
     Eigen::MatrixXd X(N_rows, N_cols);
     {
-        long int i = 0;
+        int64_t i = 0;
         for(const auto & iap_it : IAs){
             for(const auto & img : (*iap_it)->imagecoll.images){
-                for(long int n = 0L; n < N_rows; ++n){
+                for(int64_t n = 0L; n < N_rows; ++n){
                     X(n, i) = img.value(n) - avg.value(n);
                 }
 
-                //long int n = 0;
-                //for(long int r = 0; r < rows; ++r){
-                //    for(long int c = 0; c < cols; ++c){
+                //int64_t n = 0;
+                //for(int64_t r = 0; r < rows; ++r){
+                //    for(int64_t c = 0; c < cols; ++c){
                 //        for(const auto &h : Channels){
                 //            X(n++, i) = img.value(r, c, h) - avg.value(r, c, h);
                 //        }
@@ -199,15 +200,15 @@ bool DecomposeImagesSVD(Drover &DICOM_data,
     const vec3<double> ImageOrientationColumn(1.0, 0.0, 0.0);
     const vec3<double> ImageAnchor(0.0, 0.0, 0.0);
     const vec3<double> ImagePosition(0.0, 0.0, 0.0);
-    const long int NumberOfRows = rows;
-    const long int NumberOfColumns = cols;
-    const long int NumberOfChannels = Channels.size();
+    const int64_t NumberOfRows = rows;
+    const int64_t NumberOfColumns = cols;
+    const int64_t NumberOfChannels = Channels.size();
     const double VoxelWidth = 1.0;
     const double VoxelHeight = 1.0;
     const double SliceThickness = 1.0;
     {
-        const long int U_cols = U.cols();
-        for(long int i = 0L; i < U_cols; ++i){
+        const int64_t U_cols = U.cols();
+        for(int64_t i = 0L; i < U_cols; ++i){
             out->imagecoll.images.emplace_back();
             auto *img = &(out->imagecoll.images.back());
 
@@ -220,7 +221,7 @@ bool DecomposeImagesSVD(Drover &DICOM_data,
             img->init_buffer(NumberOfRows, NumberOfColumns, NumberOfChannels);
             img->init_spatial(VoxelWidth, VoxelHeight, SliceThickness, ImageAnchor, ImagePosition);
 
-            for(long int n = 0L; n < N_rows; ++n){
+            for(int64_t n = 0L; n < N_rows; ++n){
                 img->reference(n) = U(n, i);
             }
         }

@@ -17,6 +17,7 @@
 
 #include <filesystem>
 #include <cstdlib>            //Needed for exit() calls.
+#include <cstdint>
 #include <utility>            //Needed for std::pair.
 
 #include "YgorArguments.h"    //Needed for ArgumentHandler class.
@@ -63,7 +64,7 @@ try{
 
     //Operations to perform on the data.
     std::list<OperationArgPkg> Operations;
-    long int OperationDepth = 0;
+    int64_t OperationDepth = 0;
 
     //A explicit declaration that the user will generate data in an operation.
     bool GeneratingVirtualData = false;
@@ -222,7 +223,7 @@ try{
         }else{
           if(Operations.empty()) throw std::invalid_argument("Unable to parse operation: no parent node found");
           OperationArgPkg *o = &( Operations.back() );
-          for(long int i = 1; i < OperationDepth; ++i){
+          for(int64_t i = 1; i < OperationDepth; ++i){
             o = o->lastChild();
             if(o == nullptr) throw std::invalid_argument("Unable to parse operation: no child node found");
           }
@@ -250,7 +251,7 @@ try{
           if(Operations.empty()) throw std::invalid_argument("Unable to append parameter: no parent node found");
           OperationArgPkg *o = &( Operations.back() );
 
-          for(long int i = 0; i < OperationDepth; ++i){
+          for(int64_t i = 0; i < OperationDepth; ++i){
             o = o->lastChild();
             if(o == nullptr) throw std::invalid_argument("Unable to append parameter: no child node found");
           }

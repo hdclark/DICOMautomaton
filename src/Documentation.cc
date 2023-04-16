@@ -1,9 +1,5 @@
 //Documentation.cc - A part of DICOMautomaton 2019. Written by hal clark.
 
-#include <YgorMisc.h>
-#include "YgorLog.h"
-#include <YgorString.h>
-#include <boost/algorithm/string/predicate.hpp>
 #include <exception>
 #include <functional>
 #include <list>
@@ -13,13 +9,20 @@
 #include <string>    
 #include <type_traits>
 #include <utility>
+#include <cstdint>
+
+#include <boost/algorithm/string/predicate.hpp>
+
+#include <YgorMisc.h>
+#include <YgorLog.h>
+#include <YgorString.h>
 
 #include "Operation_Dispatcher.h"
 #include "Structs.h"
 
 static
 void reflow_and_emit_paragraph(std::ostream &os, 
-                               long int width, 
+                               int64_t width, 
                                const std::string& prefix_first_line,      // for lists: "  - ".
                                const std::string& prefix_remaining_lines, // for lists: "    ".
                                const std::string& first_line,             // break the line early after this text.
@@ -28,13 +31,13 @@ void reflow_and_emit_paragraph(std::ostream &os,
         throw std::logic_error("Prefixes differ in size. Refusing to continue.");
     }
     std::string pref = prefix_first_line;
-    const long int reflow_width = (width - prefix_first_line.size());
+    const int64_t reflow_width = (width - prefix_first_line.size());
 
     if(!first_line.empty()){
         auto lines = Reflow_Text_to_Fit_Width_Left_Just(first_line, reflow_width - 2); // Leave room for line break.
 
-        long int N_lines = lines.size();
-        long int N_line = 0;
+        int64_t N_lines = lines.size();
+        int64_t N_line = 0;
         for(auto & aline : lines){
             os << pref << aline;
             if(++N_line == N_lines){
@@ -66,7 +69,7 @@ void Emit_Documentation(std::ostream &os){
     const std::string bulletb("  ");
     const std::string nobullet;
     const std::string nolinebreak;
-    const long int max_width = 120;
+    const int64_t max_width = 120;
 
     os << "---" << std::endl;
     os << "title: DICOMautomaton Reference Manual" << std::endl;

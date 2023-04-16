@@ -13,6 +13,7 @@
 #include <utility>            //Needed for std::pair.
 #include <vector>
 #include <filesystem>
+#include <cstdint>
 
 #include "../Structs.h"
 #include "DumpROIData.h"
@@ -37,8 +38,8 @@ bool DumpROIData(Drover &DICOM_data,
     typedef std::tuple<std::string,std::string,std::string> key_t; //PatientID, ROIName, NormalizedROIName.
 
     //Individual contour information.
-    std::map<key_t,long int> ContourCounts;
-    std::map<key_t,long int> VertexCounts;
+    std::map<key_t,int64_t> ContourCounts;
+    std::map<key_t,int64_t> VertexCounts;
     std::map<key_t,double> MinimumSeparation; // Almost always the 'thickness' of contours.
     std::map<key_t,double> SlabVolume;
     std::map<key_t,double> TotalPerimeter; // Total perimeter of all contours.

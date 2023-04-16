@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <string>    
+#include <cstdint>
 
 #include "YgorStats.h"
 
@@ -115,8 +116,8 @@ bool ConvertWarpToMeshes(Drover &DICOM_data,
                     for(const auto &img : t.get_imagecoll_crefw().get().images){
                         const auto N_chns = img.channels;
                         if(N_chns != 3L) throw std::runtime_error("Vector deformation grid does not have three channels");
-                        for(long int row = 0; row < img.rows; ++row){
-                            for(long int col = 0; col < img.columns; ++col){
+                        for(int64_t row = 0; row < img.rows; ++row){
+                            for(int64_t col = 0; col < img.columns; ++col){
                                 sum_x.Digest(img.value(row, col, 0));
                                 sum_y.Digest(img.value(row, col, 1));
                                 sum_z.Digest(img.value(row, col, 2));
@@ -130,7 +131,7 @@ bool ConvertWarpToMeshes(Drover &DICOM_data,
                 }
 
                 auto out = std::make_unique<Surface_Mesh>();
-                long int voxel = 0;
+                int64_t voxel = 0;
                 for(const auto &img : t.get_imagecoll_crefw().get().images){
                     const auto N_chns = img.channels;
                     if(N_chns != 3L) throw std::runtime_error("Vector deformation grid does not have three channels");
@@ -138,8 +139,8 @@ bool ConvertWarpToMeshes(Drover &DICOM_data,
                     const auto pxl_l = std::max( 0.15 * std::min({ img.pxl_dx, img.pxl_dy, img.pxl_dz }), 1.0E-3 );
                     const auto ortho_unit = img.col_unit.Cross(img.row_unit).unit();
 
-                    for(long int row = 0; row < img.rows; ++row){
-                        for(long int col = 0; col < img.columns; ++col){
+                    for(int64_t row = 0; row < img.rows; ++row){
+                        for(int64_t col = 0; col < img.columns; ++col){
                             if( (0 < VoxelCadence)
                             &&  ((voxel++ % VoxelCadence) != 0) ) continue;
 

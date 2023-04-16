@@ -16,6 +16,16 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <cstdint>
+
+#include "YgorAlgorithms.h"   //Needed for For_Each_In_Parallel<..>(...)
+#include "YgorImages.h"
+#include "YgorMath.h"         //Needed for vec3 class.
+#include "YgorMathBSpline.h"   //Needed for basis_spline class.
+#include "YgorMathChebyshev.h" //Needed for cheby_approx class.
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
+#include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 #include "../Common_Plotting.h"
 #include "../Structs.h"
@@ -30,14 +40,6 @@
 #include "../YgorImages_Functors/Processing/Min_Pixel_Value.h"
 #include "../YgorImages_Functors/Transform/CT_Perfusion_Signal_Diff.h"
 #include "CT_Liver_Perfusion_Pharmaco_1Compartment2Input_Reduced3Param.h"
-#include "YgorAlgorithms.h"   //Needed for For_Each_In_Parallel<..>(...)
-#include "YgorImages.h"
-#include "YgorMath.h"         //Needed for vec3 class.
-#include "YgorMathBSpline.h"   //Needed for basis_spline class.
-#include "YgorMathChebyshev.h" //Needed for cheby_approx class.
-#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-#include "YgorLog.h"
-#include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 
 OperationDoc OpArgDocCT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(){
@@ -266,12 +268,12 @@ bool CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(Drover &DICOM_data,
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto AIFROIName = OptArgs.getValueStr("AIFROINameRegex").value();
-    const long int ExponentialKernelCoeffTruncation = std::stol( OptArgs.getValueStr("ExponentialKernelCoeffTruncation").value() );
+    const int64_t ExponentialKernelCoeffTruncation = std::stol( OptArgs.getValueStr("ExponentialKernelCoeffTruncation").value() );
     const auto FastChebyshevMultiplicationStr = OptArgs.getValueStr("FastChebyshevMultiplication").value();
     const auto PlotAIFVIF = OptArgs.getValueStr("PlotAIFVIF").value();
     const auto PlotPixelModel = OptArgs.getValueStr("PlotPixelModel").value();
-    const long int PreDecimateR = std::stol( OptArgs.getValueStr("PreDecimateOutSizeR").value() );
-    const long int PreDecimateC = std::stol( OptArgs.getValueStr("PreDecimateOutSizeC").value() );
+    const int64_t PreDecimateR = std::stol( OptArgs.getValueStr("PreDecimateOutSizeR").value() );
+    const int64_t PreDecimateC = std::stol( OptArgs.getValueStr("PreDecimateOutSizeC").value() );
     const auto TargetROIName = OptArgs.getValueStr("TargetROINameRegex").value();
     const auto UseBasisSplineInterpolationStr = OptArgs.getValueStr("UseBasisSplineInterpolation").value();
     const auto BasisSplineCoefficientsStr = OptArgs.getValueStr("BasisSplineCoefficients").value();
@@ -699,7 +701,7 @@ bool CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param(Drover &DICOM_data,
     //Ensure the images are properly spatially ordered.
     if(true){
         for(auto & img_array : DICOM_data.image_data){
-            //img_array->imagecoll.Stable_Sort_on_Metadata_Keys_Value_Numeric<long int>("InstanceNumber");
+            //img_array->imagecoll.Stable_Sort_on_Metadata_Keys_Value_Numeric<int64_t>("InstanceNumber");
             img_array->imagecoll.Stable_Sort_on_Metadata_Keys_Value_Numeric<double>("SliceLocation");
             img_array->imagecoll.Stable_Sort_on_Metadata_Keys_Value_Numeric<double>("dt");
         }

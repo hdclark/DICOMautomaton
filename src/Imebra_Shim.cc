@@ -351,15 +351,15 @@ convert_first_to_string(const std::vector<std::string> &in){
 }
 
 static
-std::optional<long int>
+std::optional<int64_t>
 convert_first_to_long_int(const std::vector<std::string> &in){
     if(!in.empty()){
         try{
             const auto res = std::stol(in.front());
-            return std::optional<long int>(res);
+            return std::optional<int64_t>(res);
         }catch(const std::exception &){}
     }
-    return std::optional<long int>();
+    return std::optional<int64_t>();
 }
 
 static
@@ -698,13 +698,13 @@ ds_insert(puntoexe::ptr<puntoexe::imebra::dataSet> &ds,
             ( d_t == "OF") ||   //"Other" floating-point.
             ( d_t == "OD")   ){ //"Other" floating-point double.
                 ds->setString(pn.group, pn.order, pn.tag, pn.element++, val, "DS"); //Try keep it as a string.
-        }else if( ( d_t == "SL" ) ||   //Signed long int (32bit).
-                  ( d_t == "SS" )   ){ //Signed short int (16bit).
+        }else if( ( d_t == "SL" ) ||   //Signed 'long int' (32bit, using Windows convention).
+                  ( d_t == "SS" )   ){ //Signed 'short int' (16bit).
             const auto conv = static_cast<int32_t>(std::stol(val));
             ds->setSignedLong(pn.group, pn.order, pn.tag, pn.element++, conv, d_t);
 
-        }else if( ( d_t == "UL" ) ||   //Unsigned long int (32bit).
-                  ( d_t == "US" )   ){ //Unsigned short int (16bit).
+        }else if( ( d_t == "UL" ) ||   //Unsigned 'long int' (32bit, using Windows convention).
+                  ( d_t == "US" )   ){ //Unsigned 'short int' (16bit).
             const auto conv = static_cast<uint32_t>(std::stoul(val));
             ds->setUnsignedLong(pn.group, pn.order, pn.tag, pn.element++, conv, d_t);
 
@@ -1535,7 +1535,7 @@ get_metadata_top_level_tags(const std::filesystem::path &filename){
 
 //Returns a bimap with the (raw) ROI tags and their corresponding ROI numbers. The ROI numbers are
 // arbitrary identifiers used within the DICOM file to identify contours more conveniently.
-bimap<std::string,long int> get_ROI_tags_and_numbers(const std::filesystem::path &FilenameIn){
+bimap<std::string,int64_t> get_ROI_tags_and_numbers(const std::filesystem::path &FilenameIn){
     using namespace puntoexe;
     ptr<puntoexe::stream> readStream(new puntoexe::stream);
     readStream->openFile(FilenameIn.c_str(), std::ios::in);
@@ -1546,8 +1546,8 @@ bimap<std::string,long int> get_ROI_tags_and_numbers(const std::filesystem::path
 
     size_t i=0, j;
     std::string ROI_name;
-    long int ROI_number;
-    bimap<std::string,long int> the_pairs;
+    int64_t ROI_number;
+    bimap<std::string,int64_t> the_pairs;
  
     do{
          //See gdcmdump output of an RS file  OR  Dicom documentation for these
@@ -1560,7 +1560,7 @@ bimap<std::string,long int> get_ROI_tags_and_numbers(const std::filesystem::path
             j=0;
             do{
                 ROI_name   = SecondDataSet->getString(0x3006, 0, 0x0026, j);
-                ROI_number = static_cast<long int>(SecondDataSet->getSignedLong(0x3006, 0, 0x0022, j));
+                ROI_number = static_cast<int64_t>(SecondDataSet->getSignedLong(0x3006, 0, 0x0022, j));
                 if(ROI_name.size()){
                     the_pairs[ROI_number] = ROI_name;
                 }
@@ -1577,7 +1577,7 @@ bimap<std::string,long int> get_ROI_tags_and_numbers(const std::filesystem::path
 //Returns contour data from a DICOM RTSTRUCT file sorted into ROI-specific collections.
 std::unique_ptr<Contour_Data> get_Contour_Data(const std::filesystem::path &filename){
     auto output = std::make_unique<Contour_Data>();
-    bimap<std::string,long int> tags_names_and_numbers = get_ROI_tags_and_numbers(filename);
+    bimap<std::string,int64_t> tags_names_and_numbers = get_ROI_tags_and_numbers(filename);
 
     auto FileMetadata = get_metadata_top_level_tags(filename);
 
@@ -1589,11 +1589,11 @@ std::unique_ptr<Contour_Data> get_Contour_Data(const std::filesystem::path &file
     ptr<imebra::dataSet> SecondDataSet, ThirdDataSet;
 
     //Collect the data into a container of contours with meta info. It may be unordered (within the file).
-    std::map<std::tuple<std::string,long int>, contour_collection<double>> mapcache;
+    std::map<std::tuple<std::string,int64_t>, contour_collection<double>> mapcache;
     for(size_t i=0; (SecondDataSet = TopDataSet->getSequenceItem(0x3006, 0, 0x0039, i)) != nullptr; ++i){
-        long int Last_ROI_Numb = 0;
+        int64_t Last_ROI_Numb = 0;
         for(size_t j=0; (ThirdDataSet = SecondDataSet->getSequenceItem(0x3006, 0, 0x0040, j)) != nullptr; ++j){
-            auto ROI_number = static_cast<long int>(SecondDataSet->getSignedLong(0x3006, 0, 0x0084, j));
+            auto ROI_number = static_cast<int64_t>(SecondDataSet->getSignedLong(0x3006, 0, 0x0084, j));
             if(ROI_number == 0){
                 ROI_number = Last_ROI_Numb;
             }else{
@@ -1610,8 +1610,8 @@ std::unique_ptr<Contour_Data> get_Contour_Data(const std::filesystem::path &file
                 shtl.closed = true;
 
                 //This is the number of coordinates we will get (ie. the number of doubles).
-                const long int numb_of_coordinates = the_data_handler->getSize();
-                for(long int N = 0; N < numb_of_coordinates; N += 3){
+                const int64_t numb_of_coordinates = the_data_handler->getSize();
+                for(int64_t N = 0; N < numb_of_coordinates; N += 3){
                     const double x = the_data_handler->getDouble(N + 0);
                     const double y = the_data_handler->getDouble(N + 1);
                     const double z = the_data_handler->getDouble(N + 2);
@@ -2093,7 +2093,7 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
         presImage->getSize(&sizeX, &sizeY);
         //----------------------------------------------------------------------------------------------------
 
-        if((static_cast<long int>(sizeX) != image_cols) || (static_cast<long int>(sizeY) != image_rows)){
+        if((static_cast<int64_t>(sizeX) != image_cols) || (static_cast<int64_t>(sizeY) != image_rows)){
             YLOGWARN("sizeX = " << sizeX << ", sizeY = " << sizeY << " and image_cols = " << image_cols << ", image_rows = " << image_rows);
             throw std::domain_error("The number of rows and columns in the image data differ when comparing sizeX/Y and img_rows/cols. Please verify");
             //If this issue arises, I have likely confused definition of X and Y. The DICOM standard specifically calls (0028,0010) 
@@ -2103,7 +2103,7 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
         out->imagecoll.images.back().metadata = l_meta;
         out->imagecoll.images.back().init_orientation(image_orien_r,image_orien_c);
 
-        const auto img_chnls = static_cast<long int>(channelsNumber);
+        const auto img_chnls = static_cast<int64_t>(channelsNumber);
         out->imagecoll.images.back().init_buffer(image_rows, image_cols, img_chnls); //Underlying type specifies per-pixel space allocated.
 
         const auto img_pxldz = image_thickness;
@@ -2121,9 +2121,9 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
         //Write the data to our allocated memory. We do it pixel-by-pixel because the 'PixelRepresentation' could mean
         // the pixel locality is laid out in various ways (two ways?). This approach abstracts the issue away.
         imbxUint32 data_index = 0;
-        for(long int row = 0; row < image_rows; ++row){
-            for(long int col = 0; col < image_cols; ++col){
-                for(long int chnl = 0; chnl < img_chnls; ++chnl){
+        for(int64_t row = 0; row < image_rows; ++row){
+            for(int64_t col = 0; col < image_cols; ++col){
+                for(int64_t chnl = 0; chnl < img_chnls; ++chnl){
                     //Let Imebra work out the conversion by asking for a double. Hope it can be narrowed if necessary!
                     const auto DoubleChannelValue = myHandler->getDouble(data_index);
                     const auto OutgoingPixelValue = static_cast<float>(DoubleChannelValue);
@@ -2217,36 +2217,36 @@ std::unique_ptr<Image_Array>  Load_Dose_Array(const std::filesystem::path &Filen
 
     //Determine how many frames there are in the pixel data. A CT scan may just be a 2d jpeg or something, 
     // but dose pixel data is 3d data composed of 'frames' of stacked 2d data.
-    const auto frame_count = static_cast<unsigned long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0008, 0));
+    const auto frame_count = static_cast<uint64_t>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0008, 0));
     if(frame_count == 0) throw std::domain_error("No frames were found in file '"_s + FilenameIn.string() + "'. Is it a valid dose file?");
 
     //This is a redirection to another tag. I've never seen it be anything but (0x3004,0x000c).
-    const auto frame_inc_pntrU  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0009, 0));
-    const auto frame_inc_pntrL  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0009, 1));
-    if((frame_inc_pntrU != static_cast<long int>(0x3004)) || (frame_inc_pntrL != static_cast<long int>(0x000c)) ){
+    const auto frame_inc_pntrU  = static_cast<int64_t>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0009, 0));
+    const auto frame_inc_pntrL  = static_cast<int64_t>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0009, 1));
+    if((frame_inc_pntrU != static_cast<int64_t>(0x3004)) || (frame_inc_pntrL != static_cast<int64_t>(0x000c)) ){
         YLOGWARN(" frame increment pointer U,L = " << frame_inc_pntrU << "," << frame_inc_pntrL);
         throw std::domain_error("Dose file contains a frame increment pointer which we have not encountered before."
                                 " Please ensure we can handle it properly");
     }
 
     std::list<double> gfov;
-    for(unsigned long int i=0; i<frame_count; ++i){
+    for(uint64_t i=0; i<frame_count; ++i){
         const auto val = static_cast<double>(TopDataSet->getDouble(0x3004, 0, 0x000c, i));
         gfov.push_back(val);
     }
 
     const double image_thickness = (gfov.size() > 1) ? ( *(++gfov.begin()) - *(gfov.begin()) ) : 1.0; //*NOT* the image separation!
 
-    const auto image_rows  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0010, 0));
-    const auto image_cols  = static_cast<long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0011, 0));
+    const auto image_rows  = static_cast<int64_t>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0010, 0));
+    const auto image_cols  = static_cast<int64_t>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0011, 0));
     const auto image_pxldy = static_cast<double>(TopDataSet->getDouble(0x0028, 0, 0x0030, 0)); //Spacing between adjacent rows.
     const auto image_pxldx = static_cast<double>(TopDataSet->getDouble(0x0028, 0, 0x0030, 1)); //Spacing between adjacent columns.
-    const auto image_bits  = static_cast<unsigned long int>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0101, 0));
+    const auto image_bits  = static_cast<uint64_t>(TopDataSet->getUnsignedLong(0x0028, 0, 0x0101, 0));
     const auto grid_scale  = static_cast<double>(TopDataSet->getDouble(0x3004, 0, 0x000e, 0));
 
     //Grab the image data for each individual frame.
     auto gfov_it = gfov.begin();
-    for(unsigned long int curr_frame = 0; (curr_frame < frame_count) && (gfov_it != gfov.end()); ++curr_frame, ++gfov_it){
+    for(uint64_t curr_frame = 0; (curr_frame < frame_count) && (gfov_it != gfov.end()); ++curr_frame, ++gfov_it){
         out->imagecoll.images.emplace_back();
 
         //--------------------------------------------------------------------------------------------------
@@ -2292,7 +2292,7 @@ std::unique_ptr<Image_Array>  Load_Dose_Array(const std::filesystem::path &Filen
         presImage->getSize(&sizeX, &sizeY);
         //----------------------------------------------------------------------------------------------------
 
-        if((static_cast<long int>(sizeX) != image_cols) || (static_cast<long int>(sizeY) != image_rows)){
+        if((static_cast<int64_t>(sizeX) != image_cols) || (static_cast<int64_t>(sizeY) != image_rows)){
             YLOGWARN("sizeX = " << sizeX << ", sizeY = " << sizeY << " and image_cols = " << image_cols << ", image_rows = " << image_rows);
             throw std::domain_error("The number of rows and columns in the image data differ when comparing sizeX/Y and img_rows/cols. Please verify");
             //If this issue arises, I have likely confused definition of X and Y. The DICOM standard specifically calls (0028,0010) 
@@ -2302,7 +2302,7 @@ std::unique_ptr<Image_Array>  Load_Dose_Array(const std::filesystem::path &Filen
         out->imagecoll.images.back().metadata = metadata;
         out->imagecoll.images.back().init_orientation(image_orien_r,image_orien_c);
 
-        const auto img_chnls = static_cast<long int>(channelsNumber);
+        const auto img_chnls = static_cast<int64_t>(channelsNumber);
         out->imagecoll.images.back().init_buffer(image_rows, image_cols, img_chnls);
 
         const auto img_pxldz = image_thickness;
@@ -2327,9 +2327,9 @@ std::unique_ptr<Image_Array>  Load_Dose_Array(const std::filesystem::path &Filen
 
         //Write the data to our allocated memory.
         imbxUint32 data_index = 0;
-        for(long int row = 0; row < image_rows; ++row){
-            for(long int col = 0; col < image_cols; ++col){
-                for(long int chnl = 0; chnl < img_chnls; ++chnl){
+        for(int64_t row = 0; row < image_rows; ++row){
+            for(int64_t col = 0; col < image_cols; ++col){
+                for(int64_t chnl = 0; chnl < img_chnls; ++chnl){
                     const auto DoubleChannelValue = myHandler->getDouble(data_index);
                     const float OutgoingPixelValue = static_cast<float>(DoubleChannelValue) 
                                                      * static_cast<float>(grid_scale);
@@ -2930,9 +2930,9 @@ void Write_Dose_Array(const std::shared_ptr<Image_Array>& IA, const std::filesys
 
     auto max_dose = -std::numeric_limits<float>::infinity();
     for(const auto &p_img : IA->imagecoll.images){
-        const long int channel = 0; // Ignore other channels for now. TODO.
-        for(long int r = 0; r < row_count; r++){
-            for(long int c = 0; c < col_count; c++){
+        const int64_t channel = 0; // Ignore other channels for now. TODO.
+        for(int64_t r = 0; r < row_count; r++){
+            for(int64_t c = 0; c < col_count; c++){
                 const auto val = p_img.value(r, c, channel);
                 if(!std::isfinite(val)) throw std::domain_error("Found non-finite dose. Refusing to export.");
                 if(val < 0.0f ) throw std::domain_error("Found a voxel with negative dose. Refusing to continue.");
@@ -3241,9 +3241,9 @@ void Write_Dose_Array(const std::shared_ptr<Image_Array>& IA, const std::filesys
     for(const auto &p_img : IA->imagecoll.images){
 
         //Convert each pixel to the required format, scaling by the dose factor as needed.
-        const long int channel = 0; // Ignore other channels for now. TODO.
-        for(long int r = 0; r < row_count; r++){
-            for(long int c = 0; c < col_count; c++){
+        const int64_t channel = 0; // Ignore other channels for now. TODO.
+        for(int64_t r = 0; r < row_count; r++){
+            for(int64_t c = 0; c < col_count; c++){
                 const auto val = p_img.value(r, c, channel);
                 const auto scaled = std::round( std::abs(val/dose_scaling) );
                 auto as_uint = static_cast<uint32_t>(scaled);
@@ -3280,7 +3280,7 @@ void Write_Dose_Array(const std::shared_ptr<Image_Array>& IA, const std::filesys
 //
 void Write_CT_Images(const std::shared_ptr<Image_Array>& IA, 
                      const std::function<void(std::istream &is,
-                                        long int filesize)>& file_handler,
+                                        int64_t filesize)>& file_handler,
                      ParanoiaLevel Paranoia){
     if( (IA == nullptr) 
     ||  IA->imagecoll.images.empty()){
@@ -3335,7 +3335,7 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
     // TODO: Sample any existing UID (ReferencedFrameOfReferenceUID or FrameOfReferenceUID). 
     // Probably OK to use only the first in this case though...
 
-    long int InstanceNumber = -1;
+    int64_t InstanceNumber = -1;
     for(const auto &animg : IA->imagecoll.images){
         if( (animg.rows <= 0) || (animg.columns <= 0) || (animg.channels <= 0) ){
             continue;
@@ -3560,9 +3560,9 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
 
         {
             std::stringstream ss_pixels;
-            for(long int row = 0; row != animg.rows; ++row){
-                for(long int col = 0; col != animg.columns; ++col){
-                    for(long int chnl = 0; chnl != animg.channels; ++chnl){
+            for(int64_t row = 0; row != animg.rows; ++row){
+                for(int64_t col = 0; col != animg.columns; ++col){
+                    for(int64_t chnl = 0; chnl != animg.channels; ++chnl){
                         const auto f_val = animg.value(row, col, chnl );
                         const auto i_val = compressor.compress(f_val);
                         ss_pixels.write( reinterpret_cast<const char *>(&i_val), sizeof(i_val) );
@@ -3603,7 +3603,7 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
             if(!ss) throw std::runtime_error("Stream not in good state after emitting DICOM file");
             if(bytes_reqd <= 0) throw std::runtime_error("Not enough DICOM data available for valid file");
 
-            const auto fsize = static_cast<long int>(bytes_reqd);
+            const auto fsize = static_cast<int64_t>(bytes_reqd);
             file_handler(ss, fsize);
         }
     }
@@ -3616,7 +3616,7 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
 //
 void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>> CC,
                     const std::function<void(std::istream &is,
-                                       long int filesize)>& file_handler,
+                                       int64_t filesize)>& file_handler,
                     DCMA_DICOM::Encoding enc,
                     ParanoiaLevel Paranoia){
     if( CC.empty() ){
@@ -3949,7 +3949,7 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
         if(!ss) throw std::runtime_error("Stream not in good state after emitting DICOM file");
         if(bytes_reqd <= 0) throw std::runtime_error("Not enough DICOM data available for valid file");
 
-        const auto fsize = static_cast<long int>(bytes_reqd);
+        const auto fsize = static_cast<int64_t>(bytes_reqd);
         file_handler(ss, fsize);
     }
 

@@ -17,7 +17,7 @@
 #include <limits>
 #include <cmath>
 #include <regex>
-
+#include <cstdint>
 #include <cstdlib>            //Needed for exit() calls.
 #include <utility>            //Needed for std::pair.
 #include <algorithm>
@@ -559,7 +559,7 @@ bool SurfaceBasedRayCastDoseAccumulate(Drover &DICOM_data,
 
     {
         polyhedron_processing::Subdivide(polyhedron, MeshingSubdivisionIterations);
-        //const long int MeshSimplificationEdgeCountLimit = 7500;
+        //const int64_t MeshSimplificationEdgeCountLimit = 7500;
         //polyhedron_processing::Simplify(polyhedron, MeshSimplificationEdgeCountLimit);
     }
     YLOGINFO("The subdivided triangulated polyhedron has " << polyhedron.size_of_vertices() << " vertices"
@@ -595,7 +595,7 @@ bool SurfaceBasedRayCastDoseAccumulate(Drover &DICOM_data,
 
     {
         polyhedron_processing::Subdivide(ref_polyhedron, MeshingSubdivisionIterations);
-        //const long int MeshSimplificationEdgeCountLimit = 7500;
+        //const int64_t MeshSimplificationEdgeCountLimit = 7500;
         //polyhedron_processing::Simplify(ref_polyhedron, MeshSimplificationEdgeCountLimit);
     }
     YLOGINFO("The subdivided triangulated reference polyhedron has " << ref_polyhedron.size_of_vertices() << " vertices"
@@ -757,15 +757,15 @@ bool SurfaceBasedRayCastDoseAccumulate(Drover &DICOM_data,
     {
         work_queue<std::function<void(void)>> wq;
         std::mutex printer; // Who gets to print to the console and iterate the counter.
-        long int completed = 0;
+        int64_t completed = 0;
 
-        for(long int row = 0; row < SourceDetectorRows; ++row){
+        for(int64_t row = 0; row < SourceDetectorRows; ++row){
             wq.submit_task([&,row]() -> void {
-                for(long int col = 0; col < SourceDetectorColumns; ++col){
+                for(int64_t col = 0; col < SourceDetectorColumns; ++col){
 
                     //Construct a line segment between the source and detector. 
-                    long int accumulated_counts = 0;      //The number of ray-surface intersections.
-                    long int ref_accumulated_counts = 0;  //Whether the ray intersects the reference ROI anywhere..
+                    int64_t accumulated_counts = 0;      //The number of ray-surface intersections.
+                    int64_t ref_accumulated_counts = 0;  //Whether the ray intersects the reference ROI anywhere..
                     double accumulated_totaldose = 0.0;   //The total accumulated dose from all intersections.
                     const vec3<double> ray_start = SourceImg->position(row, col); // The naive starting position, without boosting.
                     const vec3<double> ray_end = DetectImg->position(row, col);

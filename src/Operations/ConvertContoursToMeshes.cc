@@ -13,6 +13,7 @@
 #include <stdexcept>
 #include <string>    
 #include <random>
+#include <cstdint>
 
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathIOOBJ.h"
@@ -360,7 +361,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
                     return true;
                 };
 
-                const auto add_pair = [&](long u, long int l) -> void {
+                const auto add_pair = [&](long u, int64_t l) -> void {
                     // Add a new pairing.
                     pairs.emplace_back();
                     if(0 <= u) pairs.back().upper.insert( static_cast<size_t>(u) );
@@ -392,9 +393,9 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
 
                 // Search for overlap on the adjacent plane bi-directionally.
                 {
-                    long int N_m = 0;
+                    int64_t N_m = 0;
                     for(auto m_cop_it = std::begin(m_cops); m_cop_it != std::end(m_cops); ++m_cop_it, ++N_m){
-                        long int N_l = 0;
+                        int64_t N_l = 0;
                         bool is_solitary = true;
                         for(auto l_cop_it = std::begin(l_cops); l_cop_it != std::end(l_cops); ++l_cop_it, ++N_l){
                             if(projected_contours_overlap(*m_cp_it, *m_cop_it,
@@ -407,9 +408,9 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
                     }
                 }
                 {
-                    long int N_l = 0;
+                    int64_t N_l = 0;
                     for(auto l_cop_it = std::begin(l_cops); l_cop_it != std::end(l_cops); ++l_cop_it, ++N_l){
-                        long int N_m = 0;
+                        int64_t N_m = 0;
                         bool is_solitary = true;
                         for(auto m_cop_it = std::begin(m_cops); m_cop_it != std::end(m_cops); ++m_cop_it, ++N_m){
                             if(projected_contours_overlap(*m_cp_it, *m_cop_it,
@@ -575,7 +576,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
 /*
         // Sort and remove near duplicates by truncating decimal precision.
         const auto N_digits = 3;
-        const auto truncate = [](const vec3<double> &v, long int N_digits){
+        const auto truncate = [](const vec3<double> &v, int64_t N_digits){
             const auto pwr = std::pow(10.0, static_cast<double>(N_digits));
             return vec3<double>(  static_cast<double>( static_cast<int64_t>( std::round(v.x * pwr) ) ) / pwr,
                                   static_cast<double>( static_cast<int64_t>( std::round(v.y * pwr) ) ) / pwr,

@@ -10,6 +10,7 @@
 #include <random>
 #include <ostream>
 #include <stdexcept>
+#include <cstdint>
 
 #include "../../Thread_Pool.h"
 #include "../../Metadata.h"
@@ -111,8 +112,8 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
         work_queue<std::function<void(void)>> wq;
         std::mutex saver;
         std::mutex printer;
-        long int completed = 0;
-        const long int img_count = imagecoll.images.size();
+        int64_t completed = 0;
+        const int64_t img_count = imagecoll.images.size();
 
         for(auto &img : imagecoll.images){
             std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(img) );
@@ -123,9 +124,9 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
                     double local_minimum = std::numeric_limits<double>::infinity();
                     double local_maximum = -local_minimum;
 
-                    auto f_bounded = [&](long int /*E_row*/, 
-                                         long int /*E_col*/,
-                                         long int channel,
+                    auto f_bounded = [&](int64_t /*E_row*/, 
+                                         int64_t /*E_col*/,
+                                         int64_t channel,
                                          std::reference_wrapper<planar_image<float,double>> /*l_img_refw*/,
                                          std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                          float &voxel_val) {
@@ -219,8 +220,8 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
         work_queue<std::function<void(void)>> wq;
         std::mutex saver;
         std::mutex printer;
-        long int completed = 0;
-        const long int img_count = imagecoll.images.size();
+        int64_t completed = 0;
+        const int64_t img_count = imagecoll.images.size();
 
         for(auto &img : imagecoll.images){
             std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(img) );
@@ -254,9 +255,9 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
                         return;
                     };
 
-                    auto f_bounded = [&](long int /*E_row*/, 
-                                         long int /*E_col*/,
-                                         long int channel,
+                    auto f_bounded = [&](int64_t /*E_row*/, 
+                                         int64_t /*E_col*/,
+                                         int64_t channel,
                                          std::reference_wrapper<planar_image<float,double>> /*l_img_refw*/,
                                          std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                          float &voxel_val){

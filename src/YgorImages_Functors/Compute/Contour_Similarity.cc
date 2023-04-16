@@ -5,6 +5,7 @@
 #include <list>
 #include <ostream>
 #include <stdexcept>
+#include <cstdint>
 
 #include "../Grouping/Misc_Functors.h"
 #include "Contour_Similarity.h"
@@ -109,7 +110,7 @@ bool ComputeContourSimilarity(planar_image_collection<float,double> &imagecoll,
 
         //Loop over the ccsl, rois, rows, columns, channels, and finally any selected images (if applicable).
         //for(const auto &roi : rois){
-        long int cc_number = 0;
+        int64_t cc_number = 0;
         for(auto &ccs : ccsl){
             ++cc_number; // == 1 (L) or 2 (R).
             for(auto & contour : ccs.get().contours){

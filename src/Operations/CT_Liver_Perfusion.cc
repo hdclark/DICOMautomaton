@@ -12,6 +12,12 @@
 #include <string>    
 #include <utility>            //Needed for std::pair.
 #include <vector>
+#include <cstdint>
+
+#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
+#include "YgorImages.h"
+#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
+#include "YgorLog.h"
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
@@ -27,10 +33,6 @@
 #include "../YgorImages_Functors/Transform/CT_Perfusion_Signal_Diff.h"
 #include "../YgorImages_Functors/Transform/Subtract_Spatially_Overlapping_Images.h"
 #include "CT_Liver_Perfusion.h"
-#include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
-#include "YgorImages.h"
-#include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
-#include "YgorLog.h"
 
 template <class T> class contour_collection;
 
@@ -189,13 +191,13 @@ bool CT_Liver_Perfusion(Drover &DICOM_data,
             roi_highlighted_img_arrays.emplace_back( DICOM_data.image_data.back() );
  
             PartitionedImageVoxelVisitorMutatorUserData ud;
-            ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/,
+            ud.f_bounded = [&](int64_t /*row*/, int64_t /*col*/, int64_t /*channel*/,
                                std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                                std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                float &voxel_val) {
                     voxel_val = 2.0;
             };
-            ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/,
+            ud.f_unbounded = [&](int64_t /*row*/, int64_t /*col*/, int64_t /*channel*/,
                                  std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                                  std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                float &voxel_val) {

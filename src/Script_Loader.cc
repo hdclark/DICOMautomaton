@@ -19,8 +19,8 @@
 #include <stdexcept>
 #include <string>
 #include <filesystem>
-
 #include <cstdlib>            //Needed for exit() calls.
+#include <cstdint>
 
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -44,9 +44,9 @@
 // A parsed character from a stream that is imbued with additional metadata from the stream.
 struct char_with_context_t {
     char c = '\0';
-    long int cc  = -1; // Total character count (offset from beginning of stream/file).
-    long int lc  = -1; // Line count (which line the character is on).
-    long int lcc = -1; // Line character count (offset from beginning of line).
+    int64_t cc  = -1; // Total character count (offset from beginning of stream/file).
+    int64_t lc  = -1; // Line count (which line the character is on).
+    int64_t lcc = -1; // Line character count (offset from beginning of line).
 
     char_with_context_t() = default;
     char_with_context_t(const char_with_context_t &) = default;
@@ -57,7 +57,7 @@ struct char_with_context_t {
     bool operator==(const char_with_context_t &rhs) const {
         return (this->c == rhs.c);
     };
-    void set_missing_lc_lcc(long int l_c, long int l_cc){
+    void set_missing_lc_lcc(int64_t l_c, int64_t l_cc){
         if(this->lc < 0) this->lc = l_c;
         if(this->lcc < 0) this->lcc = l_cc;
         return;
@@ -214,8 +214,8 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
 
     // Split into statements, respecting quotations and escaping.
     if(!contents.empty()){
-        long int lcc = 0; // Line character count.
-        long int lc = 0;  // Line count.
+        int64_t lcc = 0; // Line character count.
+        int64_t lc = 0;  // Line count.
 
         l_statements.emplace_back();
         std::vector<char_with_context_t> shtl;
@@ -585,7 +585,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
     // Note: at the moment, only exact matches are supported. Arithmetic expressions, for example, are not currently
     // supported.
     for(auto &s : l_statements){
-        long int iter = 0;
+        int64_t iter = 0;
         while(true){
             bool replacement_made = false;
             for(const auto &v : l_variables){
@@ -763,7 +763,7 @@ bool Load_DCMA_Script(std::istream &is,
     std::vector<char_with_context_t> contents;
     {
         const auto end_it = std::istreambuf_iterator<char>();
-        long int i = 0;
+        int64_t i = 0;
         for(auto c_it = std::istreambuf_iterator<char>(is); c_it != end_it; ++c_it, ++i){
             contents.emplace_back();
             contents.back().c  = *c_it;

@@ -11,6 +11,7 @@
 #include <regex>
 #include <stdexcept>
 #include <string>    
+#include <cstdint>
 
 #include <boost/geometry.hpp>
 #include <boost/geometry/index/rtree.hpp>
@@ -293,7 +294,7 @@ bool PerturbPixels(Drover &DICOM_data,
         ud.f_unbounded = f_noop;
         ud.f_visitor = f_noop;
 
-        ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int chan,
+        ud.f_bounded = [&](int64_t /*row*/, int64_t /*col*/, int64_t chan,
                            std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                            std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                            float &voxel_val) {

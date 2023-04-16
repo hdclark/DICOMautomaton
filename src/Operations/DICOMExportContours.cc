@@ -9,6 +9,7 @@
 #include <regex>
 #include <stdexcept>
 #include <string>    
+#include <cstdint>
 
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorLog.h"
@@ -156,7 +157,7 @@ bool DICOMExportContours(Drover &DICOM_data,
 
     // This closure is invoked to handle writing the RTSTRUCT file.
     auto file_handler = [FilenameOut,enc,p](std::istream &is,
-                                            long int /*filesize*/) -> void {
+                                            int64_t /*filesize*/) -> void {
         std::ofstream ofs(FilenameOut, std::ios::out | std::ios::binary);
         if(!ofs) throw std::runtime_error("Unable to open file for writing.");
         ofs << is.rdbuf();

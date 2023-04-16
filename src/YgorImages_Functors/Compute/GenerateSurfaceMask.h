@@ -16,7 +16,7 @@ struct GenerateSurfaceMaskUserData {
     float interior_val   = 2.0;
 
 //    bool assume_boundary_is_surface = false; //If the ROI overshoots an image boundary, assume the boundary is the 
-//    long int voxel_neighbour_family = 1; 
+//    int64_t voxel_neighbour_family = 1; 
 };
 
 bool ComputeGenerateSurfaceMask(planar_image_collection<float,double> &,

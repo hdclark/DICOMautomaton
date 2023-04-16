@@ -9,6 +9,7 @@
 #include <map>
 #include <memory>
 #include <stdexcept>
+#include <cstdint>
 
 #include "CropToROIs.h"
 #include "YgorImages.h"
@@ -138,10 +139,10 @@ bool ComputeCropToROIs(planar_image_collection<float,double> &imagecoll,
 
         //Scan inward, assuming row_unit and col_unit align with GridX and GridY. Stop when we first pass out of the
         // cropping planes.
-        long int row_min = 0;
-        long int col_min = 0;
-        long int row_max = (img_it->rows - 1);
-        long int col_max = (img_it->columns - 1);
+        int64_t row_min = 0;
+        int64_t col_min = 0;
+        int64_t row_max = (img_it->rows - 1);
+        int64_t col_max = (img_it->columns - 1);
 
         for( ; row_min <= row_max; ++row_min){
             const auto p = img_it->position(row_min, 0);
@@ -174,9 +175,9 @@ bool ComputeCropToROIs(planar_image_collection<float,double> &imagecoll,
         replacement.init_orientation( img_it->row_unit, img_it->col_unit );
         replacement.metadata = img_it->metadata;
                                   
-        for(long int i = 0; i < (row_max - row_min); ++i){
-            for(long int j = 0; j < (col_max - col_min); ++j){
-                for(long int c = 0; c < img_it->channels; ++c){
+        for(int64_t i = 0; i < (row_max - row_min); ++i){
+            for(int64_t j = 0; j < (col_max - col_min); ++j){
+                for(int64_t c = 0; c < img_it->channels; ++c){
                     replacement.reference(i, j, c) = img_it->value(row_min + i, col_min + j, c);
                 }
             }

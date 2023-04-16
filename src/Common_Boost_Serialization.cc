@@ -1,5 +1,10 @@
 //Common_Boost_Serialization.cc - A part of DICOMautomaton 2016. Written by hal clark.
 
+#include <exception>
+#include <fstream>
+#include <string>    
+#include <utility>
+
 #include <boost/serialization/version.hpp>
 #if __has_include(<boost/serialization/library_version_type.hpp>)
     // Required for Boost 1.74.
@@ -24,10 +29,6 @@
 #include <boost/iostreams/filtering_streambuf.hpp>
 #include <boost/math/special_functions/nonfinite_num_facets.hpp>
 #include <boost/serialization/nvp.hpp>
-#include <exception>
-#include <fstream>
-#include <string>    
-#include <utility>
 
 #include "Common_Boost_Serialization.h"
 //#include "YgorMathChebyshevIOBoostSerialization.h"

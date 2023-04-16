@@ -6,6 +6,7 @@
 #include <functional>
 #include <limits>
 #include <list>
+#include <cstdint>
 
 
 template <class T, class R> class planar_image_collection;
@@ -17,7 +18,7 @@ struct ComputeCompareImagesUserData {
     // The channel to consider. 
     //
     // Note: Channel numbers in the images that will be edited and reference images must match.
-    long int channel = 0;
+    int64_t channel = 0;
 
 
     // -----------------------------
@@ -135,8 +136,8 @@ struct ComputeCompareImagesUserData {
     // Outgoing gamma passing counts.
     //
     // These can be read by the caller after performing a gamma analysis.
-    long int passed = 0;  // The number of voxels that passed (i.e., gamma < 1).
-    long int count = 0;   // The number of voxels that were considered (i.e., within the inclusivity thresholds).
+    int64_t passed = 0;  // The number of voxels that passed (i.e., gamma < 1).
+    int64_t count = 0;   // The number of voxels that were considered (i.e., within the inclusivity thresholds).
 
 };
 

@@ -6,6 +6,7 @@
 #include <array>
 #include <cmath>
 #include <cstdlib>            //Needed for exit() calls.
+#include <cstdint>
 #include <optional>
 #include <fstream>
 #include <functional>
@@ -275,17 +276,17 @@ bool AnalyzePicketFence(Drover &DICOM_data,
         // Flip pixel values if the image is inverted. The junction peaks should be more positive than the baseline.
         {
             // Extract only from the inner portion of the image where there is likely to be background and junctions.
-            const auto row_c = static_cast<long int>(animg->rows / 2);
-            const auto col_c = static_cast<long int>(animg->columns / 2);
-            const auto drow = static_cast<long int>(row_c / 2);
-            const auto dcol = static_cast<long int>(col_c / 2);
-            const auto chnl = static_cast<long int>(0);
+            const auto row_c = static_cast<int64_t>(animg->rows / 2);
+            const auto col_c = static_cast<int64_t>(animg->columns / 2);
+            const auto drow = static_cast<int64_t>(row_c / 2);
+            const auto dcol = static_cast<int64_t>(col_c / 2);
+            const auto chnl = static_cast<int64_t>(0);
 
             const auto mean = animg->block_average( row_c - drow, row_c + drow, col_c - dcol, col_c + dcol, chnl );
             const auto median = animg->block_median( row_c - drow, row_c + drow, col_c - dcol, col_c + dcol, chnl );
             if(mean < median){
                 YLOGINFO("Image was found to be inverted. Pixels were flipped so the peaks are positive");
-                animg->apply_to_pixels([](long int, long int, long int, float &val) -> void {
+                animg->apply_to_pixels([](int64_t, int64_t, int64_t, float &val) -> void {
                     val *= -1.0;
                     return;
                 });
@@ -313,8 +314,8 @@ bool AnalyzePicketFence(Drover &DICOM_data,
 
         // Picket fence context. This holds the mutated state for a picket fence analysis.
         struct PF_Context {
-            using l_num = long int;  // Leaf-pair number. Controlled by the MLC.
-            using j_num = long int;  // Junction number. Detected.
+            using l_num = int64_t;  // Leaf-pair number. Controlled by the MLC.
+            using j_num = int64_t;  // Junction number. Detected.
 
             // Plotting shuttles.
             std::vector< YgorMathPlottingGnuplot::Shuttle<samples_1D<double>> > junction_plot_shtl;
@@ -401,13 +402,13 @@ bool AnalyzePicketFence(Drover &DICOM_data,
                 };
 
                 if( std::regex_match(MLCModel, regex_VHD120) ){
-                    for(long int i = 0; i < 16; ++i){ // The middle 32 leaves.
+                    for(int64_t i = 0; i < 16; ++i){ // The middle 32 leaves.
                         const double x = (2.5 * i + 1.25);
                         const double X = magnify(x);
                         mlc_offsets.emplace_back( X );
                         mlc_offsets.emplace_back(-X );
                     }
-                    for(long int i = 0; i < 14; ++i){ // The peripheral 28 leaves.
+                    for(int64_t i = 0; i < 14; ++i){ // The peripheral 28 leaves.
                         const double x = 40.0 + (5.0 * i + 2.5);
                         const double X = magnify(x);
                         mlc_offsets.emplace_back( X );
@@ -415,13 +416,13 @@ bool AnalyzePicketFence(Drover &DICOM_data,
                     }
 
                 }else if( std::regex_match(MLCModel, regex_VMLC120) ){
-                    for(long int i = 0; i < 20; ++i){ // The middle 40 leaves.
+                    for(int64_t i = 0; i < 20; ++i){ // The middle 40 leaves.
                         const double x = (5.0 * i + 2.5);
                         const double X = magnify(x);
                         mlc_offsets.emplace_back( X );
                         mlc_offsets.emplace_back(-X );
                     }
-                    for(long int i = 0; i < 10; ++i){ // The peripheral 20 leaves.
+                    for(int64_t i = 0; i < 10; ++i){ // The peripheral 20 leaves.
                         const double x = 100.0 + (10.0 * i + 5.0);
                         const double X = magnify(x);
                         mlc_offsets.emplace_back( X );
@@ -429,7 +430,7 @@ bool AnalyzePicketFence(Drover &DICOM_data,
                     }
 
                 }else if( std::regex_match(MLCModel, regex_VMLC80) ){
-                    for(long int i = 0; i < 20; ++i){
+                    for(int64_t i = 0; i < 20; ++i){
                         const double x = (10.0 * i + 5.0);
                         const double X = magnify(x);
                         mlc_offsets.emplace_back( X );
@@ -518,7 +519,7 @@ bool AnalyzePicketFence(Drover &DICOM_data,
 
                     samples_1D<double> profile;
                     const bool inhibit_sort = true;
-                    const long int chan = 0;
+                    const int64_t chan = 0;
                     const auto orig_pxl_dz = animg->pxl_dz;
                     animg->pxl_dz = 1.0; // Ensure there is some image thickness.
                     const std::vector<double> sample_dists { -2.0, -1.5, -0.5, 0.0, 0.5, 1.0, 1.5, 2.0 };
@@ -1188,7 +1189,7 @@ bool AnalyzePicketFence(Drover &DICOM_data,
             contour_metadata["NormalizedROIName"] = NormalizedPeakROILabel;
             contour_metadata["OutlineColour"] = PeakLineColour;
             const auto radius = 2.0 * std::max(animg->pxl_dx, animg->pxl_dy); // Something reasonable relative to the image features.
-            const long int num_verts = 4; // Squares.
+            const int64_t num_verts = 4; // Squares.
 
             for(const auto &l_int_p : PFC.actual_jl_int){
                 const auto leaf_num = l_int_p.first;

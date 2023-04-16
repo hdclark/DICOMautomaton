@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <string>    
 #include <vector>
+#include <cstdint>
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
@@ -217,13 +218,13 @@ bool UBC3TMRI_DCE_Experimental(Drover &DICOM_data,
         std::shared_ptr<Image_Array> img_arr_highlighted_rois( DICOM_data.image_data.back() );
 
         PartitionedImageVoxelVisitorMutatorUserData ud;
-            ud.f_bounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/,
+            ud.f_bounded = [&](int64_t /*row*/, int64_t /*col*/, int64_t /*channel*/,
                                std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                                std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                float &voxel_val) {
                     voxel_val = 2.0;
             };
-            ud.f_unbounded = [&](long int /*row*/, long int /*col*/, long int /*channel*/,
+            ud.f_unbounded = [&](int64_t /*row*/, int64_t /*col*/, int64_t /*channel*/,
                                  std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                                  std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                  float &voxel_val) {
