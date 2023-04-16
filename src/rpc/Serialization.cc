@@ -39,6 +39,10 @@
 
 
 // Misc helpers.
+#define SIZEOF_WITH_PADDING(class_obj, member)  \
+    std::max<size_t>( alignof(class_obj),       \
+                      sizeof(member) )
+
 #define SERIALIZE_CONTAINER(x_in, x_out) {      \
             for(const auto& y : x_in){          \
                 x_out.emplace_back();           \
@@ -255,19 +259,20 @@ void Deserialize( const dcma::rpc::fv_surface_mesh_double_int64 &in, fv_surface_
 // --------------------------------------------------------------------
 // planar_image<float,double>
 void Serialize( const planar_image<float,double> &in, dcma::rpc::planar_image_double_double &out ){
-    static_assert( (   sizeof(decltype(in.data))  
-                     + sizeof(decltype(in.rows))
-                     + sizeof(decltype(in.columns))
-                     + sizeof(decltype(in.channels))
-                     + sizeof(decltype(in.pxl_dx))
-                     + sizeof(decltype(in.pxl_dy))
-                     + sizeof(decltype(in.pxl_dz))
-                     + sizeof(decltype(in.anchor))
-                     + sizeof(decltype(in.offset))
-                     + sizeof(decltype(in.row_unit))
-                     + sizeof(decltype(in.col_unit))
-                     + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
+    static_assert( (   SIZEOF_WITH_PADDING(decltype(in), decltype(in.data))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.rows))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.columns))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.channels))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.pxl_dx))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.pxl_dy))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.pxl_dz))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.anchor))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.offset))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.row_unit))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.col_unit))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.metadata)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+
     SERIALIZE_CONTAINER(in.data, out.data);
     Serialize(in.rows, out.rows);
     Serialize(in.columns, out.columns);
@@ -407,28 +412,28 @@ void Deserialize( const dcma::rpc::Surface_Mesh &in, Surface_Mesh &out ){
 
 // Static_Machine_State
 void Serialize( const Static_Machine_State &in, dcma::rpc::Static_Machine_State &out ){
-    static_assert( (   sizeof(decltype(in.CumulativeMetersetWeight))  
-                     + sizeof(decltype(in.ControlPointIndex))
-                     + sizeof(decltype(in.GantryAngle))
-                     + sizeof(decltype(in.GantryRotationDirection))
-                     + sizeof(decltype(in.BeamLimitingDeviceAngle))
-                     + sizeof(decltype(in.BeamLimitingDeviceRotationDirection))
-                     + sizeof(decltype(in.PatientSupportAngle))
-                     + sizeof(decltype(in.PatientSupportRotationDirection))
-                     + sizeof(decltype(in.TableTopEccentricAngle))
-                     + sizeof(decltype(in.TableTopEccentricRotationDirection))
-                     + sizeof(decltype(in.TableTopVerticalPosition))
-                     + sizeof(decltype(in.TableTopLongitudinalPosition))
-                     + sizeof(decltype(in.TableTopLateralPosition))
-                     + sizeof(decltype(in.TableTopPitchAngle))
-                     + sizeof(decltype(in.TableTopPitchRotationDirection))
-                     + sizeof(decltype(in.TableTopRollAngle))
-                     + sizeof(decltype(in.TableTopRollRotationDirection))
-                     + sizeof(decltype(in.IsocentrePosition))
-                     + sizeof(decltype(in.JawPositionsX))
-                     + sizeof(decltype(in.JawPositionsY))
-                     + sizeof(decltype(in.MLCPositionsX))
-                     + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
+    static_assert( (   SIZEOF_WITH_PADDING(decltype(in), decltype(in.CumulativeMetersetWeight))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.ControlPointIndex))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.GantryAngle))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.GantryRotationDirection))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.BeamLimitingDeviceAngle))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.BeamLimitingDeviceRotationDirection))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.PatientSupportAngle))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.PatientSupportRotationDirection))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.TableTopEccentricAngle))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.TableTopEccentricRotationDirection))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.TableTopVerticalPosition))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.TableTopLongitudinalPosition))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.TableTopLateralPosition))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.TableTopPitchAngle))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.TableTopPitchRotationDirection))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.TableTopRollAngle))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.TableTopRollRotationDirection))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.IsocentrePosition))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.JawPositionsX))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.JawPositionsY))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.MLCPositionsX))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.metadata)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
     Serialize(in.CumulativeMetersetWeight, out.CumulativeMetersetWeight);
     Serialize(in.ControlPointIndex, out.ControlPointIndex);
@@ -480,10 +485,10 @@ void Deserialize( const dcma::rpc::Static_Machine_State &in, Static_Machine_Stat
 
 // Dynamic_Machine_State
 void Serialize( const Dynamic_Machine_State &in, dcma::rpc::Dynamic_Machine_State &out ){
-    static_assert( (   sizeof(decltype(in.BeamNumber))
-                     + sizeof(decltype(in.FinalCumulativeMetersetWeight))
-                     + sizeof(decltype(in.static_states))
-                     + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
+    static_assert( (   SIZEOF_WITH_PADDING(decltype(in), decltype(in.BeamNumber))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.FinalCumulativeMetersetWeight))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.static_states))
+                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.metadata)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
     Serialize(in.BeamNumber, out.BeamNumber);
     Serialize(in.FinalCumulativeMetersetWeight, out.FinalCumulativeMetersetWeight);
@@ -706,7 +711,7 @@ void Deserialize( const dcma::rpc::Drover &in, Drover &out ){
 }
 
 
+#undef SIZEOF_WITH_PADDING
 #undef SERIALIZE_CONTAINER
-
 #undef DESERIALIZE_CONTAINER
 
