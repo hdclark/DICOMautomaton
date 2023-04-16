@@ -39,10 +39,6 @@
 
 
 // Misc helpers.
-#define SIZEOF_WITH_PADDING(class_obj, member)  \
-    std::max<size_t>( alignof(class_obj),       \
-                      sizeof(member) )
-
 #define SERIALIZE_CONTAINER(x_in, x_out) {      \
             for(const auto& y : x_in){          \
                 x_out.emplace_back();           \
@@ -56,6 +52,12 @@
                 Deserialize(y, x_out.back());   \
             }                                   \
         }
+
+#if defined(__x86_64__) || defined(__i386__) || defined(__aarch64__)
+    // I can't figure out a reasonable way to account for padding except for on these systems.
+    // Confirming the classes have not been modified on at least *some* systems is probably enough.
+    #define PERFORM_CLASS_LAYOUT_CHECKS 1
+#endif
 
 static void Serialize( const bool &in, bool &out ){
     out = in;
@@ -125,10 +127,13 @@ void Deserialize( const dcma::rpc::metadata_t &in, metadata_map_t &out ){
 
 // vec3<double>
 void Serialize( const vec3<double> &in, dcma::rpc::vec3_double &out ){
-    static_assert( (   sizeof(decltype(in.x))  
-                     + sizeof(decltype(in.y)) 
+#if defined(PERFORM_CLASS_LAYOUT_CHECKS)
+    static_assert( (   sizeof(decltype(in.x))
+                     + sizeof(decltype(in.y))
                      + sizeof(decltype(in.z)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+#endif // defined(PERFORM_CLASS_LAYOUT_CHECKS)
+
     Serialize(in.x, out.x);
     Serialize(in.y, out.y);
     Serialize(in.z, out.z);
@@ -141,11 +146,14 @@ void Deserialize( const dcma::rpc::vec3_double &in, vec3<double> &out ){
 
 // contour_of_points<double>
 void Serialize( const contour_of_points<double> &in, dcma::rpc::contour_of_points_double &out ){
+#if defined(PERFORM_CLASS_LAYOUT_CHECKS)
     // Note: due to padding, the following may not be able to detect if the contour_of_points class has members added.
-    static_assert( (   sizeof(decltype(in.points))  
+    static_assert( (   sizeof(decltype(in.points))
                      + std::max<size_t>(sizeof(decltype(in.closed)), alignof(decltype(in))) // Account for padding.
                      + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+#endif // defined(PERFORM_CLASS_LAYOUT_CHECKS)
+
     SERIALIZE_CONTAINER(in.points, out.points);
     Serialize(in.closed, out.closed);
     Serialize(in.metadata, out.metadata);
@@ -158,8 +166,11 @@ void Deserialize( const dcma::rpc::contour_of_points_double &in, contour_of_poin
 
 // contour_collection<double>
 void Serialize( const contour_collection<double> &in, dcma::rpc::contour_collection_double &out ){
+#if defined(PERFORM_CLASS_LAYOUT_CHECKS)
     static_assert( sizeof(decltype(in.contours)) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+#endif // defined(PERFORM_CLASS_LAYOUT_CHECKS)
+
     SERIALIZE_CONTAINER(in.contours, out.contours);
 }
 void Deserialize( const dcma::rpc::contour_collection_double &in, contour_collection<double> &out ){
@@ -168,11 +179,14 @@ void Deserialize( const dcma::rpc::contour_collection_double &in, contour_collec
 
 // point_set<double>
 void Serialize( const point_set<double> &in, dcma::rpc::point_set_double &out ){
-    static_assert( (   sizeof(decltype(in.points))  
-                     + sizeof(decltype(in.normals)) 
-                     + sizeof(decltype(in.colours)) 
+#if defined(PERFORM_CLASS_LAYOUT_CHECKS)
+    static_assert( (   sizeof(decltype(in.points))
+                     + sizeof(decltype(in.normals))
+                     + sizeof(decltype(in.colours))
                      + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+#endif // defined(PERFORM_CLASS_LAYOUT_CHECKS)
+
     SERIALIZE_CONTAINER(in.points, out.points);
     SERIALIZE_CONTAINER(in.normals, out.normals);
     SERIALIZE_CONTAINER(in.colours, out.colours);
@@ -201,11 +215,14 @@ void Deserialize( const dcma::rpc::sample4_double &in, std::array<double,4> &out
 
 // samples_1D<double>
 void Serialize( const samples_1D<double> &in, dcma::rpc::samples_1D_double &out ){
+#if defined(PERFORM_CLASS_LAYOUT_CHECKS)
     // Note: due to padding, the following may not be able to detect if the contour_of_points class has members added.
-    static_assert( (   sizeof(decltype(in.samples))  
+    static_assert( (   sizeof(decltype(in.samples))
                      + std::max<size_t>(sizeof(decltype(in.uncertainties_known_to_be_independent_and_random)), alignof(decltype(in))) // Account for padding.
                      + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+#endif // defined(PERFORM_CLASS_LAYOUT_CHECKS)
+
     SERIALIZE_CONTAINER(in.samples, out.samples);
     Serialize(in.uncertainties_known_to_be_independent_and_random, out.uncertainties_known_to_be_independent_and_random);
     Serialize(in.metadata, out.metadata);
@@ -218,13 +235,15 @@ void Deserialize( const dcma::rpc::samples_1D_double &in, samples_1D<double> &ou
 
 // fv_surface_mesh<double,uint64_t>
 void Serialize( const fv_surface_mesh<double,uint64_t> &in, dcma::rpc::fv_surface_mesh_double_int64 &out ){
-    static_assert( (   sizeof(decltype(in.vertices))  
+#if defined(PERFORM_CLASS_LAYOUT_CHECKS)
+    static_assert( (   sizeof(decltype(in.vertices))
                      + sizeof(decltype(in.vertex_normals))
                      + sizeof(decltype(in.vertex_colours))
                      + sizeof(decltype(in.faces))
                      + sizeof(decltype(in.involved_faces))
                      + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+#endif // defined(PERFORM_CLASS_LAYOUT_CHECKS)
 
     SERIALIZE_CONTAINER(in.vertices, out.vertices);
     SERIALIZE_CONTAINER(in.vertex_normals, out.vertex_normals);
@@ -259,19 +278,21 @@ void Deserialize( const dcma::rpc::fv_surface_mesh_double_int64 &in, fv_surface_
 // --------------------------------------------------------------------
 // planar_image<float,double>
 void Serialize( const planar_image<float,double> &in, dcma::rpc::planar_image_double_double &out ){
-    static_assert( (   SIZEOF_WITH_PADDING(decltype(in), decltype(in.data))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.rows))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.columns))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.channels))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.pxl_dx))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.pxl_dy))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.pxl_dz))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.anchor))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.offset))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.row_unit))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.col_unit))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.metadata)) ) == sizeof(decltype(in)),
+#if defined(PERFORM_CLASS_LAYOUT_CHECKS)
+    static_assert( (   sizeof(decltype(in.data))
+                     + sizeof(decltype(in.rows))
+                     + sizeof(decltype(in.columns))
+                     + sizeof(decltype(in.channels))
+                     + sizeof(decltype(in.pxl_dx))
+                     + sizeof(decltype(in.pxl_dy))
+                     + sizeof(decltype(in.pxl_dz))
+                     + sizeof(decltype(in.anchor))
+                     + sizeof(decltype(in.offset))
+                     + sizeof(decltype(in.row_unit))
+                     + sizeof(decltype(in.col_unit))
+                     + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+#endif // defined(PERFORM_CLASS_LAYOUT_CHECKS)
 
     SERIALIZE_CONTAINER(in.data, out.data);
     Serialize(in.rows, out.rows);
@@ -303,8 +324,11 @@ void Deserialize( const dcma::rpc::planar_image_double_double &in, planar_image<
 
 // planar_image_collection<float,double>
 void Serialize( const planar_image_collection<float,double> &in, dcma::rpc::planar_image_collection_double_double &out ){
+#if defined(PERFORM_CLASS_LAYOUT_CHECKS)
     static_assert( sizeof(decltype(in.images)) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+#endif // defined(PERFORM_CLASS_LAYOUT_CHECKS)
+
     SERIALIZE_CONTAINER(in.images, out.images);
 }
 void Deserialize( const dcma::rpc::planar_image_collection_double_double &in, planar_image_collection<float,double> &out ){
@@ -321,15 +345,17 @@ void Serialize( const tables::table2 &in, dcma::rpc::table2 &out ){
     // Note: cells have private rows and columns that need to be provided at the time of construction. To simplify
     // access, we serialize and deserialize them inline here.
     //
+#if defined(PERFORM_CLASS_LAYOUT_CHECKS)
     // tables::cell<std::string>
     static_assert( (   sizeof(decltype(tables::cell<std::string>().get_row()))
                      + sizeof(decltype(tables::cell<std::string>().get_col()))
                      + sizeof(decltype(tables::cell<std::string>().val)) ) == sizeof(tables::cell<std::string>),
                    "Class layout is unexpected. Were members added?" );
     // tables::table2
-    static_assert( (   sizeof(decltype(in.data))  
+    static_assert( (   sizeof(decltype(in.data))
                      + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+#endif // defined(PERFORM_CLASS_LAYOUT_CHECKS)
 
     for(const auto &c : in.data){
         out.data.emplace_back();
@@ -359,8 +385,11 @@ void Deserialize( const dcma::rpc::table2 &in, tables::table2 &out ){
 // --------------------------------------------------------------------
 // Contour_Data
 void Serialize( const Contour_Data &in, dcma::rpc::Contour_Data &out ){
+#if defined(PERFORM_CLASS_LAYOUT_CHECKS)
     static_assert( sizeof(decltype(in.ccs)) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+#endif // defined(PERFORM_CLASS_LAYOUT_CHECKS)
+
     SERIALIZE_CONTAINER(in.ccs, out.ccs);
 }
 void Deserialize( const dcma::rpc::Contour_Data &in, Contour_Data &out ){
@@ -369,9 +398,12 @@ void Deserialize( const dcma::rpc::Contour_Data &in, Contour_Data &out ){
 
 // Image_Array
 void Serialize( const Image_Array &in, dcma::rpc::Image_Array &out ){
+#if defined(PERFORM_CLASS_LAYOUT_CHECKS)
     static_assert( (   sizeof(decltype(in.imagecoll))
                      + sizeof(decltype(in.filename)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+#endif // defined(PERFORM_CLASS_LAYOUT_CHECKS)
+
     Serialize(in.imagecoll, out.imagecoll);
     Serialize(in.filename, out.filename);
 }
@@ -382,8 +414,11 @@ void Deserialize( const dcma::rpc::Image_Array &in, Image_Array &out ){
 
 // Point_Cloud
 void Serialize( const Point_Cloud &in, dcma::rpc::Point_Cloud &out ){
+#if defined(PERFORM_CLASS_LAYOUT_CHECKS)
     static_assert( sizeof(decltype(in.pset)) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+#endif // defined(PERFORM_CLASS_LAYOUT_CHECKS)
+
     Serialize(in.pset, out.pset);
 }
 void Deserialize( const dcma::rpc::Point_Cloud &in, Point_Cloud &out ){
@@ -392,10 +427,13 @@ void Deserialize( const dcma::rpc::Point_Cloud &in, Point_Cloud &out ){
 
 // Surface_Mesh
 void Serialize( const Surface_Mesh &in, dcma::rpc::Surface_Mesh &out ){
-    static_assert( (   sizeof(decltype(in.meshes))  
+#if defined(PERFORM_CLASS_LAYOUT_CHECKS)
+    static_assert( (   sizeof(decltype(in.meshes))
                      + sizeof(decltype(in.vertex_attributes))
                      + sizeof(decltype(in.face_attributes)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+#endif // defined(PERFORM_CLASS_LAYOUT_CHECKS)
+
     Serialize(in.meshes, out.meshes);
 
     // TODO.
@@ -412,29 +450,32 @@ void Deserialize( const dcma::rpc::Surface_Mesh &in, Surface_Mesh &out ){
 
 // Static_Machine_State
 void Serialize( const Static_Machine_State &in, dcma::rpc::Static_Machine_State &out ){
-    static_assert( (   SIZEOF_WITH_PADDING(decltype(in), decltype(in.CumulativeMetersetWeight))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.ControlPointIndex))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.GantryAngle))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.GantryRotationDirection))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.BeamLimitingDeviceAngle))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.BeamLimitingDeviceRotationDirection))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.PatientSupportAngle))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.PatientSupportRotationDirection))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.TableTopEccentricAngle))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.TableTopEccentricRotationDirection))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.TableTopVerticalPosition))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.TableTopLongitudinalPosition))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.TableTopLateralPosition))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.TableTopPitchAngle))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.TableTopPitchRotationDirection))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.TableTopRollAngle))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.TableTopRollRotationDirection))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.IsocentrePosition))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.JawPositionsX))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.JawPositionsY))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.MLCPositionsX))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.metadata)) ) == sizeof(decltype(in)),
+#if defined(PERFORM_CLASS_LAYOUT_CHECKS)
+    static_assert( (   sizeof(decltype(in.CumulativeMetersetWeight))
+                     + sizeof(decltype(in.ControlPointIndex))
+                     + sizeof(decltype(in.GantryAngle))
+                     + sizeof(decltype(in.GantryRotationDirection))
+                     + sizeof(decltype(in.BeamLimitingDeviceAngle))
+                     + sizeof(decltype(in.BeamLimitingDeviceRotationDirection))
+                     + sizeof(decltype(in.PatientSupportAngle))
+                     + sizeof(decltype(in.PatientSupportRotationDirection))
+                     + sizeof(decltype(in.TableTopEccentricAngle))
+                     + sizeof(decltype(in.TableTopEccentricRotationDirection))
+                     + sizeof(decltype(in.TableTopVerticalPosition))
+                     + sizeof(decltype(in.TableTopLongitudinalPosition))
+                     + sizeof(decltype(in.TableTopLateralPosition))
+                     + sizeof(decltype(in.TableTopPitchAngle))
+                     + sizeof(decltype(in.TableTopPitchRotationDirection))
+                     + sizeof(decltype(in.TableTopRollAngle))
+                     + sizeof(decltype(in.TableTopRollRotationDirection))
+                     + sizeof(decltype(in.IsocentrePosition))
+                     + sizeof(decltype(in.JawPositionsX))
+                     + sizeof(decltype(in.JawPositionsY))
+                     + sizeof(decltype(in.MLCPositionsX))
+                     + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+#endif // defined(PERFORM_CLASS_LAYOUT_CHECKS)
+
     Serialize(in.CumulativeMetersetWeight, out.CumulativeMetersetWeight);
     Serialize(in.ControlPointIndex, out.ControlPointIndex);
     Serialize(in.GantryAngle, out.GantryAngle);
@@ -485,11 +526,14 @@ void Deserialize( const dcma::rpc::Static_Machine_State &in, Static_Machine_Stat
 
 // Dynamic_Machine_State
 void Serialize( const Dynamic_Machine_State &in, dcma::rpc::Dynamic_Machine_State &out ){
-    static_assert( (   SIZEOF_WITH_PADDING(decltype(in), decltype(in.BeamNumber))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.FinalCumulativeMetersetWeight))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.static_states))
-                     + SIZEOF_WITH_PADDING(decltype(in), decltype(in.metadata)) ) == sizeof(decltype(in)),
+#if defined(PERFORM_CLASS_LAYOUT_CHECKS)
+    static_assert( (   sizeof(decltype(in.BeamNumber))
+                     + sizeof(decltype(in.FinalCumulativeMetersetWeight))
+                     + sizeof(decltype(in.static_states))
+                     + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+#endif // defined(PERFORM_CLASS_LAYOUT_CHECKS)
+
     Serialize(in.BeamNumber, out.BeamNumber);
     Serialize(in.FinalCumulativeMetersetWeight, out.FinalCumulativeMetersetWeight);
     SERIALIZE_CONTAINER(in.static_states, out.static_states);
@@ -504,9 +548,12 @@ void Deserialize( const dcma::rpc::Dynamic_Machine_State &in, Dynamic_Machine_St
 
 // RTPlan
 void Serialize( const RTPlan &in, dcma::rpc::RTPlan &out ){
-    static_assert( (   sizeof(decltype(in.dynamic_states))  
+#if defined(PERFORM_CLASS_LAYOUT_CHECKS)
+    static_assert( (   sizeof(decltype(in.dynamic_states))
                      + sizeof(decltype(in.metadata)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+#endif // defined(PERFORM_CLASS_LAYOUT_CHECKS)
+
     SERIALIZE_CONTAINER(in.dynamic_states, out.dynamic_states);
     Serialize(in.metadata, out.metadata);
 }
@@ -517,8 +564,11 @@ void Deserialize( const dcma::rpc::RTPlan &in, RTPlan &out ){
 
 // Line_Sample
 void Serialize( const Line_Sample &in, dcma::rpc::Line_Sample &out ){
+#if defined(PERFORM_CLASS_LAYOUT_CHECKS)
     static_assert( sizeof(decltype(in.line)) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+#endif // defined(PERFORM_CLASS_LAYOUT_CHECKS)
+
     Serialize(in.line, out.line);
 }
 void Deserialize( const dcma::rpc::Line_Sample &in, Line_Sample &out ){
@@ -537,8 +587,11 @@ void Deserialize( const dcma::rpc::Transform3 &in, Transform3 &out ){
 
 // Sparse_Table
 void Serialize( const Sparse_Table &in, dcma::rpc::Sparse_Table &out ){
+#if defined(PERFORM_CLASS_LAYOUT_CHECKS)
     static_assert( sizeof(decltype(in.table)) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+#endif // defined(PERFORM_CLASS_LAYOUT_CHECKS)
+
     Serialize(in.table, out.table);
 }
 void Deserialize( const dcma::rpc::Sparse_Table &in, Sparse_Table &out ){
@@ -547,15 +600,17 @@ void Deserialize( const dcma::rpc::Sparse_Table &in, Sparse_Table &out ){
 
 // Drover
 void Serialize( const Drover &in, dcma::rpc::Drover &out ){
-    static_assert( (   sizeof(decltype(in.contour_data))  
-                     + sizeof(decltype(in.image_data)) 
-                     + sizeof(decltype(in.point_data)) 
-                     + sizeof(decltype(in.smesh_data)) 
-                     + sizeof(decltype(in.rtplan_data)) 
-                     + sizeof(decltype(in.lsamp_data)) 
-                     + sizeof(decltype(in.trans_data)) 
+#if defined(PERFORM_CLASS_LAYOUT_CHECKS)
+    static_assert( (   sizeof(decltype(in.contour_data))
+                     + sizeof(decltype(in.image_data))
+                     + sizeof(decltype(in.point_data))
+                     + sizeof(decltype(in.smesh_data))
+                     + sizeof(decltype(in.rtplan_data))
+                     + sizeof(decltype(in.lsamp_data))
+                     + sizeof(decltype(in.trans_data))
                      + sizeof(decltype(in.table_data)) ) == sizeof(decltype(in)),
                    "Class layout is unexpected. Were members added?" );
+#endif // defined(PERFORM_CLASS_LAYOUT_CHECKS)
 
     // For a pointer contour_data member.
     if(in.Has_Contour_Data() && !in.contour_data->ccs.empty()){
@@ -710,8 +765,11 @@ void Deserialize( const dcma::rpc::Drover &in, Drover &out ){
     }
 }
 
+#if defined(PERFORM_CLASS_LAYOUT_CHECKS)
+    #undef PERFORM_CLASS_LAYOUT_CHECKS
+#endif
 
-#undef SIZEOF_WITH_PADDING
 #undef SERIALIZE_CONTAINER
+
 #undef DESERIALIZE_CONTAINER
 
