@@ -4461,7 +4461,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                                              l_contouring_imgs = contouring_imgs.Deep_Copy(),
                                              contouring_method ](){
                             try{
+                                YLOGINFO("Starting contour extraction");
                                 auto out = extract_contours(l_contouring_imgs, contouring_method);
+                                YLOGINFO("Completed contour extraction; waiting on lock");
 
                                 std::unique_lock<std::shared_timed_mutex> ec_lock(extracted_contours_mutex);
                                 extracted_contours = out;
