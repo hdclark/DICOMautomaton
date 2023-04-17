@@ -1397,7 +1397,10 @@ bool SDL_Viewer(Drover &DICOM_data,
         "honour_opposite_orientations",
         "overlapping_contours_cancel" };
     size_t contour_overlap_style = 0UL;
-    std::shared_future<Drover> extracted_contours;
+
+    std::shared_timed_mutex extracted_contours_mutex;
+    std::optional<Drover> extracted_contours;
+    std::atomic<int64_t> contour_extraction_underway = 0L;
 
     // Polyominoes state.
     opengl_texture_handle_t polyomino_texture;
@@ -4030,12 +4033,15 @@ bool SDL_Viewer(Drover &DICOM_data,
                                            &contouring_img_row_col_count,
                                            &new_contour_name,
                                            &save_contour_buffer,
-                                           &extracted_contours,
                                            &overwrite_existing_contours,
                                            &edit_existing_contour_selection,
                                            &contour_overlap_styles,
                                            &contour_overlap_style,
                                            &extract_contours,
+                                           &extracted_contours,
+                                           &extracted_contours_mutex,
+                                           &contour_extraction_underway,
+                                           &wq,
 
                                            &recompute_cimage_iters,
                                            &contouring_imgs,
@@ -4444,17 +4450,32 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::Begin("Contouring", &view_toggles.view_contouring_enabled, ImGuiWindowFlags_AlwaysAutoResize);
                     ImGui::Text("Note: this functionality is still under active development.");
                     if(ImGui::Button("Save")){ 
-                        if(extracted_contours.valid()){
-                            YLOGWARN("Found existing contour save task. Refusing to overwrite");
+                        ImGui::OpenPopup("Save Contours");
+                        contour_extraction_underway += 1;
 
-                        }else{
-                            ImGui::OpenPopup("Save Contours");
+                        // Launch a thread to extract contours.
+                        const auto worker = [&extract_contours,
+                                             &extracted_contours_mutex,
+                                             &extracted_contours,
+                                             &contour_extraction_underway,
+                                             l_contouring_imgs = contouring_imgs.Deep_Copy(),
+                                             contouring_method ](){
+                            try{
+                                auto out = extract_contours(l_contouring_imgs, contouring_method);
 
-                            // Launch a thread to extract contours.
-                            extracted_contours = std::async(std::launch::async, extract_contours,
-                                                                                contouring_imgs.Deep_Copy(),
-                                                                                contouring_method );
-                        }
+                                std::unique_lock<std::shared_timed_mutex> ec_lock(extracted_contours_mutex);
+                                extracted_contours = out;
+                            }catch(const std::exception &e){
+                                YLOGWARN("Contour extraction failed: '" << e.what() << "'");
+
+                                std::unique_lock<std::shared_timed_mutex> ec_lock(extracted_contours_mutex);
+                                extracted_contours = {};
+                            }
+
+                            contour_extraction_underway -= 1;
+                            return;
+                        };
+                        wq.submit_task( worker ); // Offload to waiting worker thread.
                     }
                     ImGui::SameLine();
                     if(ImGui::BeginPopupModal("Save Contours", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
@@ -4468,17 +4489,18 @@ bool SDL_Viewer(Drover &DICOM_data,
                         ImGui::Checkbox("Overwrite existing contours", &overwrite_existing_contours);
 
                         // Check if the contouring task is complete. We assume that the work is done and the results
-                        // have replaced the original contouring Drover object if the future is no longer valid.
-                        const bool work_is_done = !extracted_contours.valid();
-                        if( !work_is_done ){
-                            ImGui::TextDisabled("Waiting for contour extraction%s", dots.c_str());
-                            if(std::future_status::ready == extracted_contours.wait_for(std::chrono::microseconds(1))){
-                                try{
-                                    contouring_imgs = extracted_contours.get();
-                                }catch(const std::exception &){};
-                                contouring_imgs.Ensure_Contour_Data_Allocated();
-                                extracted_contours = decltype(extracted_contours)();
+                        // have replaced the original contouring Drover object if there are no available contours.
+                        const bool work_is_done = (contour_extraction_underway.load() == 0L);
+                        if(work_is_done){
+                            std::unique_lock<std::shared_timed_mutex> lock(extracted_contours_mutex,
+                                                                           std::chrono::microseconds(50));
+                            if( lock
+                            && extracted_contours){
+                                contouring_imgs = extracted_contours.value();
+                                extracted_contours = {};
                             }
+                        }else{
+                            ImGui::TextDisabled("Waiting for contour extraction%s", dots.c_str());
                         }
 
                         bool roiname_is_valid = !entered_text.empty();
