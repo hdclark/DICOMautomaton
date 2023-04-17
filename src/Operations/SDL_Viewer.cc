@@ -2605,6 +2605,32 @@ bool SDL_Viewer(Drover &DICOM_data,
         return res;
     };
 
+    // Launch a thread to extract contours.
+    // Note: This is meant to be called asynchronously. It should be provided with deep copies of all objects.
+    const auto extract_contours = [InvocationMetadata,
+                                   FilenameLex]( Drover contouring_imgs,
+                                                 std::string contouring_method ) -> Drover {
+
+        contouring_imgs.Ensure_Contour_Data_Allocated();
+        contouring_imgs.contour_data->ccs.clear();
+
+        std::list<OperationArgPkg> Operations;
+        Operations.emplace_back("ContourViaThreshold");
+        Operations.back().insert("Method="_s + contouring_method);
+        Operations.back().insert("Lower=0.5");
+        Operations.back().insert("SimplifyMergeAdjacent=true");
+
+        auto l_InvocationMetadata = InvocationMetadata;
+
+        if(!Operation_Dispatcher(contouring_imgs, l_InvocationMetadata, FilenameLex, Operations)){
+            YLOGWARN("ContourViaThreshold failed");
+
+            // Signal to NOT replace the Drover class to the receiving thread.
+            throw std::runtime_error("Unable to extract contours");
+        }
+        return contouring_imgs;
+    };
+
     // Contour and image display state.
     std::map<std::string, bool> contour_enabled;
     std::map<std::string, bool> contour_hovered;
@@ -4009,6 +4035,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                            &edit_existing_contour_selection,
                                            &contour_overlap_styles,
                                            &contour_overlap_style,
+                                           &extract_contours,
 
                                            &recompute_cimage_iters,
                                            &contouring_imgs,
@@ -4423,29 +4450,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                         }else{
                             ImGui::OpenPopup("Save Contours");
 
-                            // Launch a thread to operate on a copy of the data.
-                            auto l_work = [l_contouring_imgs = contouring_imgs.Deep_Copy(),
-                                           l_InvocationMetadata = InvocationMetadata,
-                                           l_FilenameLex = FilenameLex,
-                                           l_contouring_method = contouring_method ]() mutable -> Drover {
-                                // Fully extract contours from the mask images.
-                                l_contouring_imgs.Ensure_Contour_Data_Allocated();
-                                l_contouring_imgs.contour_data->ccs.clear();
-
-                                std::list<OperationArgPkg> Operations;
-                                Operations.emplace_back("ContourViaThreshold");
-                                Operations.back().insert("Method="_s + l_contouring_method);
-                                Operations.back().insert("Lower=0.5");
-                                Operations.back().insert("SimplifyMergeAdjacent=true");
-                                if(!Operation_Dispatcher(l_contouring_imgs, l_InvocationMetadata, l_FilenameLex, Operations)){
-                                    YLOGWARN("ContourViaThreshold failed");
-
-                                    // Signal to NOT replace the Drover class to the receiving thread.
-                                    throw std::runtime_error("Unable to extract contours");
-                                }
-                                return l_contouring_imgs;
-                            };
-                            extracted_contours = std::async(std::launch::async, std::move(l_work));
+                            // Launch a thread to extract contours.
+                            extracted_contours = std::async(std::launch::async, extract_contours,
+                                                                                contouring_imgs.Deep_Copy(),
+                                                                                contouring_method );
                         }
                     }
                     ImGui::SameLine();
