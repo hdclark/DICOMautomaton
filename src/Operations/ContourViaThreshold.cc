@@ -272,7 +272,27 @@ bool ContourViaThreshold(Drover &DICOM_data,
                 throw std::runtime_error("Image or channel is empty -- cannot contour via thresholds.");
             }
             const auto animg_ptr = &(animg);
-            wq.submit_task([&,cl,cu,animg_ptr,cm]() -> void {
+            wq.submit_task([cl,
+                            cu,
+                            cm,
+                            animg_ptr,
+                            MethodStr,
+                            binary_regex,
+                            marching_squares_regex,
+                            marching_cubes_regex,
+                            Channel,
+                            SimplifyMergeAdjacent,
+                            ROILabel,
+                            NormalizedROILabel,
+                            Lower,
+                            Upper,
+                            LowerStr,
+                            UpperStr,
+                            MinimumSeparation,
+                            &saver_printer,
+                            &DICOM_data,
+                            &completed,
+                            img_count]() -> void {
 
                 // ---------------------------------------------------
                 // The binary inclusivity method.
@@ -778,6 +798,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
                                 const auto n1_tail_vert_pos = n1_ptr->tail_vert_pos;
                                 const auto n1_head_vert_pos = n1_ptr->head_vert_pos;
                                 node* n_curr_ptr = n1_ptr;
+                                int64_t loop_counter = 0L;
                                 do{
                                     auto n_next_ptr = find_next_node(*n_curr_ptr);
                                     //*n_curr_ptr = empty_node;
@@ -787,6 +808,11 @@ bool ContourViaThreshold(Drover &DICOM_data,
                                     if(n_next_ptr == nullptr) break; // End of the contour, or image boundary.
                                     copl.back().points.push_front( n_next_ptr->tail );
                                     n_curr_ptr = n_next_ptr;
+
+                                    ++loop_counter;
+                                    if( (loop_counter % 100'000L) == 0L ){
+                                        YLOGWARN("Loop A iteration " << loop_counter);
+                                    }
                                 }while(true);
 
                                 // Jump back to the original contour edge, reset it, and walk backwards.
@@ -795,6 +821,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
                                 curr_r = r;
                                 curr_c = c;
                                 n_curr_ptr = n1_ptr;
+                                loop_counter = 0L;
                                 do{
                                     auto n_prev_ptr = find_prev_node(*n_curr_ptr);
                                     //*n_curr_ptr = empty_node;
@@ -804,6 +831,11 @@ bool ContourViaThreshold(Drover &DICOM_data,
                                     if(n_prev_ptr == nullptr) break; // End of the contour, or image boundary.
                                     copl.back().points.push_back( n_prev_ptr->head );
                                     n_curr_ptr = n_prev_ptr;
+
+                                    ++loop_counter;
+                                    if( (loop_counter % 100'000L) == 0L ){
+                                        YLOGWARN("Loop B iteration " << loop_counter);
+                                    }
                                 }while(true);
 
                                 // Nullify the original contour edge so it cannot be used again.
