@@ -271,11 +271,12 @@ bool ContourViaThreshold(Drover &DICOM_data,
             if( (animg.rows < 1) || (animg.columns < 1) || (Channel >= animg.channels) ){
                 throw std::runtime_error("Image or channel is empty -- cannot contour via thresholds.");
             }
+            planar_image<float,double> animg_copy(animg);
             //const auto animg_ptr = &(animg);
             wq.submit_task([cl,
                             cu,
                             cm,
-                            animg,
+                            animg = animg_copy,
                             MethodStr,
                             binary_regex,
                             marching_squares_regex,
