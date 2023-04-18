@@ -220,7 +220,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
     for(auto & iap_it : IAs){
         const int64_t img_count = (*iap_it)->imagecoll.images.size();
 
-        work_queue<std::function<void(void)>> wq;
+        work_queue<std::function<void(void)>> wq(1UL);
         std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
         int64_t completed = 0;
 
