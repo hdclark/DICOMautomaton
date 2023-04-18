@@ -60,7 +60,8 @@ class work_queue {
                             //
                             // Note: spurious notifications are OK, since the queue will be empty and the worker will return to
                             // waiting on the condition variable.
-                            this->new_task_notifier.wait(lock);
+//                            this->new_task_notifier.wait(lock);
+                            this->new_task_notifier.wait_for(lock, std::chrono::seconds(2) ); // No notifiers, so no signal to receive.
                         }
 
                         // Assume ownership of only the first item in the queue (FIFO).
