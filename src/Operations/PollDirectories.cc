@@ -339,7 +339,7 @@ bool PollDirectories(Drover &DICOM_data,
                 const auto now = std::chrono::system_clock::now();
                 const std::time_t t_now = std::chrono::system_clock::to_time_t(now);
                 YLOGINFO("Poll results: "
-                     << "(" << std::put_time(std::localtime(&t_now), "%Y%m%d-%H%M%S") << ") "
+                     << "(" << ygor::get_localtime_str(t_now) << ") "
                      << "cache contains " << total_count << " entries -- "
                      << pending_count << " pending, "
                      << ready_count << " ready, and "

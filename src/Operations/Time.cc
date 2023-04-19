@@ -68,11 +68,7 @@ bool Time(Drover &DICOM_data,
     //-----------------------------------------------------------------------------------------------------------------
     // We're stuck with C-style conversion until C++20.
     const auto time_str = [](std::time_t t){
-        std::array<char, 50> buff;
-        buff.fill('\0');
-
-        ::strftime(buff.data(), buff.size()-1, "%Y-%m-%d %H:%M:%S", localtime(&t));
-        return std::string(buff.data());
+        return ygor::get_localtime_str(t, "%Y-%m-%d %H:%M:%S");
     };
 
     const auto start = std::chrono::system_clock::now();

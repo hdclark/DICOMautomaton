@@ -82,24 +82,13 @@ std::string CreateUniqueDirectoryTimestamped(const std::string& prefix, const st
 
         const auto t_now = std::chrono::system_clock::now();
         auto t_now_coarse = std::chrono::system_clock::to_time_t( t_now );
-
-        char t_now_str[100];
-        tm working; // Working space for thread-safe localtime_r() variant of std::localtime().
-#if !defined(_WIN32) && !defined(_WIN64)
-        if(!std::strftime(t_now_str, sizeof(t_now_str), "%Y%m%d-%H%M%S", ::localtime_r(&t_now_coarse, &working))){
-#else
-        if( (::localtime_s(&working, &t_now_coarse) != 0)
-        ||  (!std::strftime(t_now_str, sizeof(t_now_str), "%Y%m%d-%H%M%S", &working)) ){
-#endif
-            throw std::runtime_error("Unable to get current time.");
-        }
-
+        
         auto since_epoch = t_now.time_since_epoch();
         auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(since_epoch).count();
 
         std::stringstream ss;
         ss << prefix;
-        ss << std::string(t_now_str);
+        ss << ygor::get_localtime_str(t_now_coarse);
         ss << "-";
         ss << std::setfill('0') << std::setw(9) << nanos;
         ss << postfix;

@@ -830,7 +830,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         std::stringstream ss;
         const std::time_t t_conv = std::chrono::system_clock::to_time_t(msg.t);
         ss << "--(" << log_level_to_string(msg.ll) << ")";
-        ss << " " << std::put_time(std::localtime(&t_conv), "%Y%m%d-%H%M%S");
+        ss << " " << ygor::get_localtime_str(t_conv);
         ss << " thread 0x" << std::hex << msg.tid << std::dec;
         ss << " function '" << msg.fn << "'";
         ss << " file '" << msg.fl << "'";
@@ -1262,7 +1262,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                             [](unsigned char c){ return !std::isdigit(c); } ),
                             std::end(glsl_version) );
 
-        YLOGINFO("Initialized OpenGL '" << gl_version << "' with GLSL '" << glsl_version << "'");
+        //YLOGINFO("Initialized OpenGL '" << gl_version << "' with GLSL '" << glsl_version << "'");
+        YLOGINFO("Initialized OpenGL '" << "omitted" << "' with GLSL '" << "omitted" << "'");
     }catch(const std::exception &e){
         YLOGWARN("Unable to detect OpenGL/GLSL version");
     }
