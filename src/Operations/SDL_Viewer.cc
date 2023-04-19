@@ -1262,8 +1262,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                             [](unsigned char c){ return !std::isdigit(c); } ),
                             std::end(glsl_version) );
 
-        //YLOGINFO("Initialized OpenGL '" << gl_version << "' with GLSL '" << glsl_version << "'");
-        YLOGINFO("Initialized OpenGL '" << "omitted" << "' with GLSL '" << "omitted" << "'");
+        YLOGINFO("Initialized OpenGL '" << gl_version << "' with GLSL '" << glsl_version << "'");
     }catch(const std::exception &e){
         YLOGWARN("Unable to detect OpenGL/GLSL version");
     }
