@@ -348,7 +348,7 @@ void dicomCodec::writeTag(ptr<streamWriter> pDestStream, ptr<data> pData, imbxUi
 			///////////////////////////////////////////////////////////
 			if(wordSize > 1)
 			{
-				std::unique_ptr<imbxUint8> pTempBuffer(new imbxUint8[bufferSize]);
+				std::unique_ptr<imbxUint8[]> pTempBuffer(new imbxUint8[bufferSize]);
 				::memcpy(pTempBuffer.get(), pDataHandlerRaw->getMemoryBuffer(), pDataHandlerRaw->getSize());
 				streamController::adjustEndian(pTempBuffer.get(), wordSize, endianType, bufferSize / wordSize);
 				pDestStream->write(pTempBuffer.get(), bufferSize);
