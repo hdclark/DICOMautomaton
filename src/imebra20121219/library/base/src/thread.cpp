@@ -366,15 +366,16 @@ pthread_key_t* thread::getSharedKey()
 
 void* thread::getNextId()
 {
-	static char* m_nextId(nullptr);
+    // Modified 20230420 to remove undefined behaviour associated with incrementing a nullptr. -hc
+	static char m_nextId = (char)0;
 	static criticalSection m_criticalSection;
 
 	lockCriticalSection lockHere(&m_criticalSection);
-	if(++m_nextId == nullptr)
+	if(++m_nextId == (char)0)
 	{
-		m_nextId = (char*)100; // Overflow. Assume that the first created threads live longer
+		m_nextId = (char)100; // Overflow. Assume that the first created threads live longer
 	}
-	return (void*)m_nextId;
+	return (void*)&m_nextId;
 }
 
 #endif
