@@ -215,6 +215,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         # Add gprof profiling flag.
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-check")
     endif()
 
     if(MEMORY_CONSTRAINED_BUILD)
@@ -261,32 +262,29 @@ if(WITH_ASAN  OR  WITH_TSAN  OR  WITH_MSAN)
     add_definitions(-U_FORTIFY_SOURCE)
 endif()
 if(WITH_ASAN)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address") #  <-- includes LSan.
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize-address-use-after-scope")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=pointer-compare")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=pointer-subtract")
+    add_compile_options( -fsanitize=address
+                         -fsanitize=pointer-compare
+                         -fsanitize=pointer-subtract
+                         -fsanitize-address-use-after-scope )
+    add_link_options(-fsanitize=address)
 
-    # Add UBSan checks too, since ASan, LSan, and UBSan are all compatible.
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=undefined")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-sanitize-recover=undefined")
-    # Clang only? Need to confirm ... TODO
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=implicit-conversion")
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=local-bounds")
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=nullability-arg")
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=nullability-assign")
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=nullability-return")
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=unsigned-integer-overflow")
+    add_compile_options( -fsanitize=undefined
+                         -fno-sanitize-recover=undefined )
+    add_link_options(-fsanitize=undefined)
+
 elseif(WITH_TSAN)
     message(WARNING "TSan may not support exceptions (depends on the compiler version and platform).")
     add_compile_options(-fsanitize=thread)
     add_link_options(-fsanitize=thread)
 elseif(WITH_MSAN)
     message(WARNING "MSan may not be available on your system.")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=memory")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIE")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pie")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize-memory-track-origins")
+    add_compile_options( -fsanitize=memory
+                         -fPIE
+                         -pie
+                         -fsanitize-memory-track-origins )
+    add_link_options(-fsanitize=memory)
 endif()
+
 
 
 include(CheckCXXSymbolExists)
