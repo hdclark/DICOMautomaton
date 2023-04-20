@@ -209,7 +209,7 @@ protected:
 	/// \brief Used for buffered IO
 	///
 	///////////////////////////////////////////////////////////
-	std::unique_ptr<imbxUint8> m_dataBuffer;
+	std::unique_ptr<imbxUint8[]> m_dataBuffer;
 
 	/// \brief Byte in the stream that represents the byte 0
 	///         in the stream controller.
