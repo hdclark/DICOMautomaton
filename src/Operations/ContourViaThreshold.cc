@@ -220,7 +220,6 @@ bool ContourViaThreshold(Drover &DICOM_data,
     for(auto & iap_it : IAs){
         const int64_t img_count = (*iap_it)->imagecoll.images.size();
 
-        work_queue<std::function<void(void)>> wq;
         std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
         int64_t completed = 0;
 
@@ -267,6 +266,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
         auto cm = (*iap_it)->imagecoll.get_common_metadata({});
         cm = coalesce_metadata_for_rtstruct(cm);
 
+        work_queue<std::function<void(void)>> wq;
         for(const auto &animg : (*iap_it)->imagecoll.images){
             if( (animg.rows < 1) || (animg.columns < 1) || (Channel >= animg.channels) ){
                 throw std::runtime_error("Image or channel is empty -- cannot contour via thresholds.");
