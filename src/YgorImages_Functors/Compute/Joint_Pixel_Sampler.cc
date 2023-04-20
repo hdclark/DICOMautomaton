@@ -93,11 +93,11 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
 
     std::mutex passing_counter; // Used to tally the gamma passing rate.
 
-    work_queue<std::function<void(void)>> wq;
     std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
     int64_t completed = 0;
     const int64_t img_count = imagecoll.images.size();
 
+    work_queue<std::function<void(void)>> wq;
     for(auto &img : imagecoll.images){
         std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(img) );
 

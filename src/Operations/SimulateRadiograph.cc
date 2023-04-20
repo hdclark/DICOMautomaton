@@ -402,10 +402,10 @@ bool SimulateRadiograph(Drover &DICOM_data,
     //------------------------
     // March rays through the image data.
     {
-        work_queue<std::function<void(void)>> wq;
         std::mutex printer; // Who gets to print to the console and iterate the counter.
         int64_t completed = 0;
 
+        work_queue<std::function<void(void)>> wq;
         for(int64_t RadiographRow = 0; RadiographRow < RadiographRows; ++RadiographRow){
             wq.submit_task([&,RadiographRow]() -> void {
                 for(int64_t RadiographCol = 0; RadiographCol < RadiographColumns; ++RadiographCol){

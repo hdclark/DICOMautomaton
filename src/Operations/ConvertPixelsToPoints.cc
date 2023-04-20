@@ -133,11 +133,11 @@ bool ConvertPixelsToPoints(Drover &DICOM_data,
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
-        work_queue<std::function<void(void)>> wq;
         std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
         int64_t completed = 0;
         const int64_t img_count = (*iap_it)->imagecoll.images.size();
 
+        work_queue<std::function<void(void)>> wq;
         for(const auto &img : (*iap_it)->imagecoll.images){
             if( (img.rows < 1) || (img.columns < 1) || (Channel >= img.channels) ){
                 continue;

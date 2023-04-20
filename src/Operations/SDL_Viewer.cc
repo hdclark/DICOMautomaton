@@ -877,14 +877,6 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     const std::chrono::time_point<std::chrono::system_clock> t_start = std::chrono::system_clock::now();
 
-
-    // General-purpose Drover processing offloading worker thread.
-    work_queue<std::function<void(void)>> wq(1U);
-    wq.submit_task([](){
-        YLOGINFO("Worker thread ready");
-        return;
-    });
-
     Explicator X(FilenameLex);
 
     struct View_Toggles {
@@ -2372,6 +2364,12 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // ------------------------------------------- Main loop ----------------------------------------------
 
+    // General-purpose Drover processing offloading worker thread.
+    work_queue<std::function<void(void)>> wq(1U);
+    wq.submit_task([](){
+        YLOGINFO("Worker thread ready");
+        return;
+    });
 
     // Open file dialog state.
     std::filesystem::path open_file_root = std::filesystem::current_path();

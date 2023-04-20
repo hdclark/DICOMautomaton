@@ -109,12 +109,12 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
                        voxel_extrema;
 
     { // Scope for thread pool.
-        work_queue<std::function<void(void)>> wq;
         std::mutex saver;
         std::mutex printer;
         int64_t completed = 0;
         const int64_t img_count = imagecoll.images.size();
 
+        work_queue<std::function<void(void)>> wq;
         for(auto &img : imagecoll.images){
             std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(img) );
             wq.submit_task([&,img_refw]() -> void {
@@ -217,12 +217,12 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
 
     // Visit all voxels to build the histograms.
     {
-        work_queue<std::function<void(void)>> wq;
         std::mutex saver;
         std::mutex printer;
         int64_t completed = 0;
         const int64_t img_count = imagecoll.images.size();
 
+        work_queue<std::function<void(void)>> wq;
         for(auto &img : imagecoll.images){
             std::reference_wrapper< planar_image<float, double>> img_refw( std::ref(img) );
             wq.submit_task([&,img_refw]() -> void {

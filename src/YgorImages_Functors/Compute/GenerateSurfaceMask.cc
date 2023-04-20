@@ -127,7 +127,6 @@ bool ComputeGenerateSurfaceMask(planar_image_collection<float,double> &imagecoll
         //Loop over the pixels of the image.
         {
             work_queue<std::function<void(void)>> wq;
-
             for(auto row = 0; row < img.rows; ++row){
                 wq.submit_task([&,row]() -> void {
                     for(auto col = 0; col < img.columns; ++col){
