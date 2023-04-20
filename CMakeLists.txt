@@ -263,8 +263,6 @@ if(WITH_ASAN  OR  WITH_TSAN  OR  WITH_MSAN)
 endif()
 if(WITH_ASAN)
     add_compile_options( -fsanitize=address
-                         -fsanitize=pointer-compare
-                         -fsanitize=pointer-subtract
                          -fsanitize-address-use-after-scope )
     add_link_options(-fsanitize=address)
 
