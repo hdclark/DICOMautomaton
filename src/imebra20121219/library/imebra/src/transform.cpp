@@ -82,7 +82,9 @@ void transformHandlers::runTransform(
 	ptr<palette> inputPalette(inputImage->getPalette());
 	std::wstring inputColorSpace(inputImage->getColorSpace());
 	imbxUint32 inputHighBit(inputImage->getHighBit());
-	imbxUint32 inputNumValues((imbxUint32)1 << (inputHighBit + 1));
+	//imbxUint32 inputNumValues((imbxUint32)1 << (inputHighBit + 1));
+    // Avoid undefined behaviour after shifting 32 bits or more. (Effectively flushes the int.)
+	imbxUint32 inputNumValues( (32 <= (inputHighBit + 1)) ? (imbxUint32)0 : ((imbxUint32)1 << (inputHighBit + 1)) );
 	imbxInt32 inputMinValue(0);
 	image::bitDepth inputDepth(inputImage->getDepth());
 	if(inputDepth == image::depthS16 || inputDepth == image::depthS8)
@@ -96,7 +98,9 @@ void transformHandlers::runTransform(
 	ptr<palette> outputPalette(outputImage->getPalette());
 	std::wstring outputColorSpace(outputImage->getColorSpace());
 	imbxUint32 outputHighBit(outputImage->getHighBit());
-	imbxUint32 outputNumValues((imbxUint32)1 << (outputHighBit + 1));
+	//imbxUint32 outputNumValues((imbxUint32)1 << (outputHighBit + 1));
+    // Avoid undefined behaviour after shifting 32 bits or more. (Effectively flushes the int.)
+	imbxUint32 outputNumValues( (32 <= (outputHighBit + 1)) ? (imbxUint32)0 : ((imbxUint32)1 << (outputHighBit + 1)) );
 	imbxInt32 outputMinValue(0);
 	image::bitDepth outputDepth(outputImage->getDepth());
 	if(outputDepth == image::depthS16 || outputDepth == image::depthS8)
