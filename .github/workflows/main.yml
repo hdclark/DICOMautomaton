@@ -8,6 +8,25 @@ on:
   workflow_dispatch:
 
 jobs:
+  static_checks_debian_stable_x86_64:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:stable
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v1
+      - name: prep
+        run: |
+             cp -R . /dcma
+      - name: install_dependencies
+        run: |
+             export DEBIAN_FRONTEND="noninteractive"
+             apt-get update --yes
+             apt-get install --yes --no-install-recommends coreutils binutils findutils grep sed
+      - name: check_for_common_nonthreadsafe_nonreentrant_functions
+        run: |
+             ./scripts/perform_static_checks.sh
+
   build_cross_mxe_x86_64:
     runs-on: ubuntu-latest
     container:
