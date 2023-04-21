@@ -32,6 +32,7 @@ find ./ \
 
 (
   cat "${AMAL_FILE}" | grep --text -E '\<localtime\>[(]''|''\<asctime\>[(]''|''\<ctime\>[(]''|''\<gmtime\>[(]' || true
+  cat "${AMAL_FILE}" | grep --text -E '\<strtok\>[(]' || true
   cat "${AMAL_FILE}" | grep --text -E '\<gamma\>[(]''|''\<lgamma\>[(]''|''\<lgammaf\>[(]''|''\<lgammal\>[(]' || true
   #cat "${AMAL_FILE}" | grep --text -E '\<exit\>[(]' || true
   #cat "${AMAL_FILE}" | grep --text -E '\<rand\>[(]''|''\<srand\>[(]' || true
