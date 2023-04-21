@@ -1221,7 +1221,22 @@ bool SDL_Viewer(Drover &DICOM_data,
     ImPlot::CreateContext();
     [[maybe_unused]] ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
-    io.IniFilename = nullptr;
+    
+    // If the user has an existing imgui config file, then honour it.
+    if(io.IniFilename != nullptr){
+        bool use_imgui_config = false;
+        try{
+            const auto p = std::filesystem::current_path() / io.IniFilename;
+            if(std::filesystem::is_regular_file(p)){
+                use_imgui_config = true;
+                YLOGINFO("Using existing ImGui configuration at '" << p.string() << "'");
+            }
+        }catch(const std::exception &){ }
+
+        if(!use_imgui_config){
+            io.IniFilename = nullptr;
+        }
+    }
 
     ImGui::StyleColorsDark();
 
