@@ -1201,7 +1201,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     }
     if(SDL_GL_SetSwapInterval(-1) != 0){ // Enable adaptive vsync to limit the frame rate.
         if(SDL_GL_SetSwapInterval(1) != 0){ // Enable vsync (non-adaptive).
-            YLOGWARN("Unable to enable vsync. Continuing without it");
+            YLOGINFO("Unable to enable vsync. Continuing without it");
         }
     }
 
