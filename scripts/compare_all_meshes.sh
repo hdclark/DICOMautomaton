@@ -61,7 +61,7 @@ do
   shape=${shapes[$i]}
   res=${resolutions[$i]}
   shape_label=${shape_labels[$i]}
-  # echo "Computing differences for $shape"
+
   OUTPUT="$(dicomautomaton_dispatcher \
     -v \
     -o GenerateMeshes \
@@ -126,8 +126,6 @@ do
 
   printf "| %-20s | %-13.3f | %-13.3f | %-15.3f | %-15.3f | %-10.3f | %-10.3f | %-10.3f | %-10.3f | %-8s | %-8s |\n\n" $shape_label $HD1 $HD2 $SA1 $SA2 $SA_DIFF $V1 $V2 $V_DIFF $MA1 $MA2
 
-
-  # echo "Finished computing differences for $shape"
 done
 
 

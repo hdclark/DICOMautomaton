@@ -92,11 +92,6 @@ bool IsEdgeManifold(const std::shared_ptr<Surface_Mesh> &mesh) {
     std::map<std::set<uint64_t>, int> edge_counts;
     auto mesh_faces = GetCleanFaces(mesh);
     int face_count = 0;
-    // YLOGINFO("Printing vertices for mesh");
-    // for (auto &face : mesh.get()->meshes.faces) {
-    //     YLOGINFO(face_count << " face vertex indices " << face[0] << ", " << face[1] << ", " << face[2] << " with size " << face.size());
-    //     face_count++;
-    // }
 
     face_count = 0;
     for (auto &face : mesh_faces) {
@@ -105,11 +100,7 @@ bool IsEdgeManifold(const std::shared_ptr<Surface_Mesh> &mesh) {
 
         for (auto &edge : edges) {
             edge_counts[edge] += 1;
-            // auto itt = edge.begin();
-            // YLOGINFO("Edge count = " << edge_counts[edge] << " for edge " << *itt << ", " << *(std::next(itt)));
             if (edge_counts[edge] > 2) {
-                // auto it = edge.begin();
-                // YLOGINFO("edge count > 2 for edge " << *it << ", " << *(std::next(it)) << " for face #" << face_count);
                 return false;
             }
         }
@@ -118,7 +109,6 @@ bool IsEdgeManifold(const std::shared_ptr<Surface_Mesh> &mesh) {
 
     for (auto &key_value_pair : edge_counts) {
         if (key_value_pair.second != 2) {
-            // YLOGINFO("edge count is " << key_value_pair.second);
             return false;
         }
     }
@@ -130,10 +120,6 @@ bool IsEdgeManifold(const std::shared_ptr<Surface_Mesh> &mesh) {
 // it is vertex manifold when each vertex's faces form an open or closed fan
 // https://www.mathworks.com/help/lidar/ref/surfacemesh.isvertexmanifold.html
 bool IsVertexManifold(const std::shared_ptr<Surface_Mesh>&mesh) {
-    // for each face, find faces with same edges and add to search
-    // keep searching until you hit a face you look for before (closed) or ended
-    // is there still faces unsearched? 
-
     // store vertex to face hashmap
     // for each vertex, store edge to list of faces
     // start with a face
@@ -246,14 +232,18 @@ bool CompareMeshes(Drover &DICOM_data,
     }
 
     // Calculate centroids by finding the average of all the vertices in the surface mesh
-    //Assumes that contours vertices are distributed evenly on the surface mesh which is not strictly true.
+    // Assumes that contours vertices are distributed evenly on the surface mesh which is not strictly true.
     double sumx = 0, sumy = 0, sumz = 0;
     for (auto& vertex : mesh1->meshes.vertices) {
         sumx += vertex.x;
         sumy += vertex.y;
         sumz += vertex.z;
     }
-    vec3 centroid1 = vec3(sumx/size(mesh1->meshes.vertices) , sumy/size(mesh1->meshes.vertices) , sumz/size(mesh1->meshes.vertices));
+    vec3 centroid1 = vec3(
+        sumx/size(mesh1->meshes.vertices),
+        sumy/size(mesh1->meshes.vertices),
+        sumz/size(mesh1->meshes.vertices)
+    );
 
     sumx = 0, sumy= 0, sumz = 0;
     for (auto& vertex : mesh2->meshes.vertices) {
@@ -265,9 +255,9 @@ bool CompareMeshes(Drover &DICOM_data,
 
     const double centroid_shift = sqrt(pow((centroid2.x-centroid1.x),2) + pow((centroid2.y-centroid1.y),2) + pow((centroid2.y-centroid1.y),2));
     
-    //Converting to a triangular mesh to ensure that each face is made up of 3 vertices for volume calculation
-    //Total volume is calculated by summing the signed volme of the triganular prism made by each face and the origin as the apex.
-    //This method returns a finite volume even if the mesh is open, so watertightness needs to be checked separately.
+    // Converting to a triangular mesh to ensure that each face is made up of 3 vertices for volume calculation
+    // Total volume is calculated by summing the signed volme of the triganular prism made by each face and the origin as the apex.
+    // This method returns a finite volume even if the mesh is open, so watertightness needs to be checked separately.
 
     mesh1->meshes.convert_to_triangles();
     mesh2->meshes.convert_to_triangles();
@@ -306,8 +296,8 @@ bool CompareMeshes(Drover &DICOM_data,
     bool v_manifold_2 = IsVertexManifold(mesh2);
     bool e_manifold_1 = IsEdgeManifold(mesh1);
     bool e_manifold_2 = IsEdgeManifold(mesh2);
-    FUNCINFO("Vertex manifoldness: " << v_manifold_1 << " and " << v_manifold_2);
-    FUNCINFO("Edge manifoldness: " << e_manifold_1 << " and " << e_manifold_2);
+    FUNCINFO("Vertex manifoldness (first vs. second): " << v_manifold_1 << " and " << v_manifold_2);
+    FUNCINFO("Edge manifoldness (first vs. second): " << e_manifold_1 << " and " << e_manifold_2);
 
     bool manifold1 = v_manifold_1 && e_manifold_1;
     bool manifold2 = v_manifold_2 && e_manifold_2;

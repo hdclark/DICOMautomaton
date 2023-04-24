@@ -150,6 +150,7 @@ OperationDoc OpArgDocConvertContoursToMeshes(){
 }
 
 
+
 bool ConvertContoursToMeshes(Drover &DICOM_data,
                                const OperationArgPkg& OptArgs,
                                std::map<std::string, std::string>& /*InvocationMetadata*/,
@@ -471,6 +472,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
 
                 // Convert from integer numbering to direct pairing info.
                 for(const auto &p : pairs){
+
                     pairings.emplace_back();
                     for(const auto &u : p.upper){
                         pairings.back().upper.emplace_back( *std::next( std::begin(m_cops), u ) );
@@ -543,7 +545,6 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
                 std::vector<vec3<double>> &points
                 ) -> void {
                     const auto old_face_count = amesh.vertices.size();
-                    // for(const auto &p : points) amesh.vertices.emplace_back(p);
                     amesh.vertices.insert(amesh.vertices.end(), points.begin(), points.end());
                     for(const auto &fs : new_faces){
                         const auto f_A = static_cast<uint64_t>(fs[0] + old_face_count);
@@ -593,7 +594,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
                     /* auto new_faces = Estimate_Contour_Correspondence(pcs.upper.front(), pcs.lower.front()); */
                     auto new_faces = Tile_Contours(pcs.upper.front(), pcs.lower.front());
                     add_faces_to_mesh(pcs.upper.front(), pcs.lower.front(), new_faces);
-                }else if((N_upper == 2) && (N_lower == 1) ){
+                }else if( (N_upper == 2) && (N_lower == 1) ){
                     //check if the upper plane contains enclosed contours
                         if(contours_are_enclosed(*m_cp_it, pcs.upper.front(), pcs.upper.back())){
                         //get contour areas to determine which contour is enclosed by the other
@@ -633,7 +634,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
                         const auto c2_area = std::abs(contour->get().Get_Signed_Area());
 
                         //cap the smaller contour and tile the larger contour with the lower plane contour
-                        if  (c1_area < c2_area){
+                        if(c1_area < c2_area){
                             close_hole_in_roof(pcs.lower.front());
                             auto new_faces = Tile_Contours(pcs.lower.back(), pcs.upper.front());
                             add_faces_to_mesh(pcs.lower.back(), pcs.upper.front(), new_faces);
@@ -657,7 +658,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
                     //YLOGINFO("Performing N-to-N meshing..");
 
                     //routine for hollow structures with an inner contour and an outer contour on both planes
-                    if((N_upper == 2) && (N_lower == 2)){
+                    if( (N_upper == 2) && (N_lower == 2) ){
                         //check if both planes have enclosed contours
                         if (contours_are_enclosed(*m_cp_it, pcs.upper.front(), pcs.upper.back())
                             && contours_are_enclosed(*l_cp_it, pcs.lower.front(), pcs.lower.back())){
@@ -704,6 +705,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
                         generic_n_to_n_meshing:
                         auto amal_upper = Minimally_Amalgamate_Contours(m_cp_it->N_0, ofst_upper, pcs.upper); 
                         auto amal_lower = Minimally_Amalgamate_Contours(m_cp_it->N_0, ofst_lower, pcs.lower);
+                        
     /*
     // Leaving this here for future debugging, for which it will no-doubt be needed...
     {
