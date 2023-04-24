@@ -146,6 +146,14 @@ OperationDoc OpArgDocConvertContoursToMeshes(){
                                  "contours" };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
+    out.args.emplace_back();
+    out.args.back().name = "Downsample";
+    out.args.back().desc = "Whether to downsample before meshing. Tiling approach is quite computationally"
+                           "expensive so often useful. Each contour will have at most this many points. If"
+                           "0 then no downsampling.";
+    out.args.back().default_val = "0";
+    out.args.back().expected = true;
+
     return out;
 }
 
@@ -163,6 +171,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto MeshLabel = OptArgs.getValueStr("MeshLabel").value();
     const auto MethodStr = OptArgs.getValueStr("Method").value();
+    const auto Downsample = std::stoi(OptArgs.getValueStr("Downsample").value());
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto NormalizedMeshLabel = X(MeshLabel);
@@ -191,6 +200,9 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
         // Contours.
         for(auto &c : cc_refw.get().contours){
             if(c.points.empty()) continue;
+            if(Downsample != 0){
+                c = c.Resample_LTE_Evenly_Along_Perimeter(Downsample);
+            }
             auto cop_base_ptr = reinterpret_cast<contour_of_points<double> *>(&c);
             cops.push_back( std::ref(*cop_base_ptr) );
         }

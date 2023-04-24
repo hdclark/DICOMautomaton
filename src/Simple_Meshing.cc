@@ -399,8 +399,8 @@ std::vector< std::array<size_t, 3> > Tile_Contours(
 
 
     // Even for debugging, don't use this for dense graphs as it will print a lot to stdout
-    if (m < 15 && n < 15)
-        print_path(nodes, optimal_path);
+    /* if (m < 15 && n < 15) */
+    /*     print_path(nodes, optimal_path); */
 
     std::vector<std::array<size_t, 3>> ret;
 
