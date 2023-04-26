@@ -195,6 +195,9 @@ endif()
 add_library (imebrashim 
     Imebra_Shim.cc 
     $<TARGET_OBJECTS:Structs_obj>
+    $<TARGET_OBJECTS:Metadata_obj>
+    $<TARGET_OBJECTS:Dose_Meld_obj>
+    $<TARGET_OBJECTS:Regex_Selectors_obj>
     $<TARGET_OBJECTS:Tables_obj>
     $<TARGET_OBJECTS:Alignment_Rigid_obj>
     $<TARGET_OBJECTS:Alignment_Field_obj>
@@ -285,6 +288,7 @@ target_link_libraries(imebrashim
     mpfr
     gmp
     m
+    "$<$<BOOL:${APPLE}>:iconv>"
     Threads::Threads
 )
 
@@ -296,11 +300,13 @@ add_library(dialogshim
 )
 set_target_properties(dialogshim PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 target_link_libraries(dialogshim
+    ygor 
     "$<$<BOOL:${MINGW}>:ws2_32>"
     "$<$<BOOL:${MINGW}>:wsock32>"
     "$<$<BOOL:${MINGW}>:comctl32>"
     "$<$<BOOL:${MINGW}>:uuid>"
     "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
+    $<TARGET_OBJECTS:String_Parsing_obj>
     mpfr
     gmp
     m
