@@ -176,7 +176,7 @@ add_library(Operations_objs OBJECT
     Terminal_Viewer.cc
     ThresholdImages.cc
     ThresholdOtsu.cc
-    Time.cc
+    Time_op.cc
     Transaction.cc
     TrimROIDose.cc
     True.cc

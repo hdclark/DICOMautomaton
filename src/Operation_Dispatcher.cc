@@ -197,7 +197,7 @@
 #include "Operations/Terminal_Viewer.h"
 #include "Operations/ThresholdImages.h"
 #include "Operations/ThresholdOtsu.h"
-#include "Operations/Time.h"
+#include "Operations/Time_op.h"
 #include "Operations/Transaction.h"
 #include "Operations/TrimROIDose.h"
 #include "Operations/True.h"

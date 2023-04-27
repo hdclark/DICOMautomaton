@@ -1,4 +1,4 @@
-//Time.cc - A part of DICOMautomaton 2022. Written by hal clark.
+//Time_op.cc - A part of DICOMautomaton 2022. Written by hal clark.
 
 #include <algorithm>
 #include <optional>
@@ -38,7 +38,7 @@
 #include "../File_Loader.h"
 #include "../Operation_Dispatcher.h"
 
-#include "Time.h"
+#include "Time_op.h"
 
 
 OperationDoc OpArgDocTime() {
