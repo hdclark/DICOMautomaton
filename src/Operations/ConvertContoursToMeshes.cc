@@ -28,6 +28,7 @@
 
 #include "../Simple_Meshing.h"
 #include "../Surface_Meshes.h"
+#include "../Complex_Branching_Meshing.h"
 
 #include "ConvertContoursToMeshes.h"
 
@@ -146,6 +147,14 @@ OperationDoc OpArgDocConvertContoursToMeshes(){
                                  "contours" };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
+    out.args.emplace_back();
+    out.args.back().name = "Downsample";
+    out.args.back().desc = "Whether to downsample before meshing. Tiling approach is quite computationally"
+                           "expensive so often useful. Each contour will have at most this many points. If"
+                           "0 then no downsampling.";
+    out.args.back().default_val = "0";
+    out.args.back().expected = true;
+
     return out;
 }
 
@@ -163,6 +172,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto MeshLabel = OptArgs.getValueStr("MeshLabel").value();
     const auto MethodStr = OptArgs.getValueStr("Method").value();
+    const auto Downsample = std::stoi(OptArgs.getValueStr("Downsample").value());
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto NormalizedMeshLabel = X(MeshLabel);
@@ -191,6 +201,9 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
         // Contours.
         for(auto &c : cc_refw.get().contours){
             if(c.points.empty()) continue;
+            if(Downsample != 0){
+                c = c.Resample_LTE_Evenly_Along_Perimeter(Downsample);
+            }
             auto cop_base_ptr = reinterpret_cast<contour_of_points<double> *>(&c);
             cops.push_back( std::ref(*cop_base_ptr) );
         }
@@ -203,7 +216,14 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
     if(std::regex_match(MethodStr, direct_regex)){
         // Identify the unique planes.
         //const auto est_cont_normal = cc.contours.front().Estimate_Planar_Normal();
-        const auto est_cont_normal = Average_Contour_Normals(cc_ref);
+        const auto est_cont_normal = [&]() {
+            auto est_cont_normal = Average_Contour_Normals(cc_ref);
+            if(!est_cont_normal.isfinite()) {
+                est_cont_normal = cc_ref.front().get().contours.front().Estimate_Planar_Normal();
+            };
+            return est_cont_normal;
+        }();
+
         const auto contour_sep_eps = 0.005;
         auto ucps = Unique_Contour_Planes(cc_ref, est_cont_normal, contour_sep_eps);
         if(ucps.size() < 2){
@@ -265,6 +285,38 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
             return false;
         };
 
+        const auto projected_contours_intersect = [&](const plane<double> &pln_A, cop_refw_t A,
+                                                            const plane<double> &pln_B, cop_refw_t B) -> bool {
+            // Checks whether two contors intersect
+            // if a contour is completely enclosed by another contour, they will not intersect
+            // Given that the contours overlap, if one does not enclose the other, they must intersect.
+            // A countour is enclosed if *all* vertices of a contour lies inside the other polygon.
+            // Should work well for most realistic contours that are highly sampled
+
+            if (!projected_contours_overlap(pln_A, A, pln_B, B)){
+                return false;
+            }
+
+            bool a_in_b = true;
+            bool b_in_a = true;
+
+            for(const auto &p_A : A.get().points){
+                if(!B.get().Is_Point_In_Polygon_Projected_Orthogonally(pln_B, p_A)){
+                    a_in_b = false;
+                    break;
+                }
+            }
+            for(const auto &p_B : B.get().points){
+                if(!A.get().Is_Point_In_Polygon_Projected_Orthogonally(pln_A, p_B)){
+                    b_in_a = false;
+                    break;
+                }
+            }
+
+            return !(a_in_b || b_in_a);
+        };
+
+
         // Cycle over unique planes.
         for(auto m_cp_it = std::cbegin(ucps); m_cp_it != std::cend(ucps); ++m_cp_it){
 
@@ -273,7 +325,9 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
 
             // Identify whether there are adjacent planes within the contour spacing on either side.
             auto l_cp_it = std::prev(m_cp_it);
-            //auto h_cp_it = std::next(m_cp_it);
+            auto h_cp_it = std::next(m_cp_it);
+
+            bool cap_roof_of_m_cops = false;
 
             if(l_cp_it == std::cend(ucps)){
                 continue;
@@ -281,27 +335,30 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
                 const auto l_cp_dist = std::abs(m_cp_it->Get_Signed_Distance_To_Point(l_cp_it->R_0));
                 if((1.5 * contour_sep) < l_cp_dist) l_cp_it = std::cend(ucps);
             }
-            //if(h_cp_it != std::cend(ucps)){
-            //    const auto h_cp_dist = std::abs(m_cp_it->Get_Signed_Distance_To_Point(h_cp_it->R_0));
-            //    if((1.5 * contour_sep) < h_cp_dist) h_cp_it = std::cend(ucps);
-            //}
+            if(h_cp_it != std::cend(ucps)){
+                const auto h_cp_dist = std::abs(m_cp_it->Get_Signed_Distance_To_Point(h_cp_it->R_0));
+                if((1.5 * contour_sep) < h_cp_dist) {
+                    h_cp_it = std::cend(ucps);
+                    cap_roof_of_m_cops = true;
+                }
+            }
 
             auto l_cops = locate_contours_on_plane(*l_cp_it);
             if( (l_cops.size() == 0) && (m_cops.size() == 0) ){
                 throw std::logic_error("Unable to find any contours on contour plane.");
             }
 
-            // Eliminate overlapping contours on both planes.
+            // Eliminate intersecting contours on both planes.
             for(auto m1_cop_it = std::begin(m_cops); m1_cop_it != std::end(m_cops); ){
                 for(auto m2_cop_it = std::next(m1_cop_it); m2_cop_it != std::end(m_cops); ){
-                    if(projected_contours_overlap(*m_cp_it, *m1_cop_it,
-                                                  *m_cp_it, *m2_cop_it)){
+                    if(projected_contours_intersect(*m_cp_it, *m1_cop_it,
+                                                    *m_cp_it, *m2_cop_it)){
 
                         // Cull the smaller contour.
                         const auto m1_area = std::abs( m1_cop_it->get().Get_Signed_Area() );
                         const auto m2_area = std::abs( m2_cop_it->get().Get_Signed_Area() );
                         
-                        YLOGWARN("Found overlapping upper-plane contours, trimmed smallest-area contour");
+                        YLOGWARN("Found intersecting upper-plane contours, trimmed smallest-area contour");
                         if(m1_area < m2_area){
                             m1_cop_it = m_cops.erase(m1_cop_it);
                             m2_cop_it = std::next(m1_cop_it);
@@ -316,14 +373,14 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
             }
             for(auto l1_cop_it = std::begin(l_cops); l1_cop_it != std::end(l_cops); ){
                 for(auto l2_cop_it = std::next(l1_cop_it); l2_cop_it != std::end(l_cops); ){
-                    if(projected_contours_overlap(*l_cp_it, *l1_cop_it,
-                                                  *l_cp_it, *l2_cop_it)){
+                    if(projected_contours_intersect(*l_cp_it, *l1_cop_it,
+                                                    *l_cp_it, *l2_cop_it)){
 
                         // Cull the smaller contour.
                         const auto l1_area = std::abs( l1_cop_it->get().Get_Signed_Area() );
                         const auto l2_area = std::abs( l2_cop_it->get().Get_Signed_Area() );
                         
-                        YLOGWARN("Found overlapping lower-plane contours, trimmed smallest-area contour");
+                        YLOGWARN("Found intersecting lower-plane contours, trimmed smallest-area contour");
                         if(l1_area < l2_area){
                             l1_cop_it = l_cops.erase(l1_cop_it);
                             l2_cop_it = std::next(l1_cop_it);
@@ -353,6 +410,9 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
                 std::list<pairing_t> pairs;
 
                 const auto set_union_is_empty = [](const std::set<size_t> &A, const std::set<size_t> &B) -> bool {
+                    //if both sets are empty their union is not empty
+                    if (A.empty() && B.empty()) return false;
+
                     for(const auto &a : A){
                         if(B.count(a) != 0){
                             return false;
@@ -477,37 +537,188 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
                 return;
             };
 
-            // Estimate connectivity and append triangles.
-            for(auto &pcs : pairings){
-                const auto N_upper = pcs.upper.size();
-                const auto N_lower = pcs.lower.size();
-                //YLOGINFO("Processing contour map from " << N_upper << " to " << N_lower);
+            const auto contours_are_enclosed = [&](const plane<double> &pln, cop_refw_t A, cop_refw_t B) -> bool {
+                return (projected_contours_overlap(pln, A, pln, B) && !projected_contours_intersect(pln, A, pln, B));
+            };
 
-                if( (N_upper != 0) && (N_lower == 0) ){
-                    for(const auto &cop_refw : pcs.upper) close_hole_in_floor(cop_refw);
-
-                }else if( (N_upper == 0) && (N_lower == 1) ){
-                    for(const auto &cop_refw : pcs.lower) close_hole_in_roof(cop_refw);
-
-                }else if( (N_upper == 1) && (N_lower == 1) ){
-                    auto new_faces = Estimate_Contour_Correspondence(pcs.upper.front(), pcs.lower.front());
-
+            const auto add_faces_to_mesh = [&](cop_refw_t cop_refw_A, cop_refw_t cop_refw_B,std::vector<std::array<size_t, 3UL>> new_faces) -> void{
+                const auto old_face_count = amesh.vertices.size();
+                for(const auto &p : cop_refw_A.get().points) amesh.vertices.emplace_back(p);
+                for(const auto &p : cop_refw_B.get().points) amesh.vertices.emplace_back(p);
+                for(const auto &fs : new_faces){
+                    const auto f_A = static_cast<uint64_t>(fs[0] + old_face_count);
+                    const auto f_B = static_cast<uint64_t>(fs[1] + old_face_count);
+                    const auto f_C = static_cast<uint64_t>(fs[2] + old_face_count);
+                    amesh.faces.emplace_back( std::vector<uint64_t>{{f_A, f_B, f_C}} );
+                }
+            };
+            
+            const auto add_faces_and_vertices = [&](
+                std::vector<std::array<size_t,3>> &new_faces,
+                std::vector<vec3<double>> &points
+                ) -> void {
                     const auto old_face_count = amesh.vertices.size();
-                    for(const auto &p : pcs.upper.front().get().points) amesh.vertices.emplace_back(p);
-                    for(const auto &p : pcs.lower.front().get().points) amesh.vertices.emplace_back(p);
+                    amesh.vertices.insert(amesh.vertices.end(), points.begin(), points.end());
                     for(const auto &fs : new_faces){
                         const auto f_A = static_cast<uint64_t>(fs[0] + old_face_count);
                         const auto f_B = static_cast<uint64_t>(fs[1] + old_face_count);
                         const auto f_C = static_cast<uint64_t>(fs[2] + old_face_count);
                         amesh.faces.emplace_back( std::vector<uint64_t>{{f_A, f_B, f_C}} );
                     }
+            };
+
+            // Estimate connectivity and append triangles.
+            for(auto &pcs : pairings){
+                const auto N_upper = pcs.upper.size();
+                const auto N_lower = pcs.lower.size();
+
+                // useful for addition of midpoints in complex branching
+                auto ofst_upper = m_cp_it->N_0 * contour_sep * -0.49;
+                auto ofst_lower = m_cp_it->N_0 * contour_sep *  0.49;
+                // YLOGINFO("Processing contour map from " << N_upper << " to " << N_lower);
+
+                if( (N_upper != 0) && (N_lower == 0) ){
+                    //If the upper plane contains 2 contours and one is enclosed in the other,
+                    //tile the contours together instead of closing the floor
+                    //this routine is for pipe like structures.
+                    if(N_upper == 2){
+                        if(contours_are_enclosed(*m_cp_it, pcs.upper.front(), pcs.upper.back())){
+                            auto new_faces = Tile_Contours(pcs.upper.front(), pcs.upper.back());
+                            add_faces_to_mesh(pcs.upper.front(), pcs.upper.back(), new_faces);
+                        }
+                    }else{
+                        for(const auto &cop_refw : pcs.upper) close_hole_in_floor(cop_refw);
+                    }
+
+                }else if( (N_upper == 0) && (N_lower != 0) ){
+                    //if the upper plane contains 2 contours and one is enclosed in the other,
+                    //tile the contours together instead of closing the roof
+                    //this routine is for pipe like structures.
+                    if (N_lower == 2){
+                        if(contours_are_enclosed(*l_cp_it, pcs.lower.front(), pcs.lower.back())){
+                            auto new_faces = Tile_Contours(pcs.lower.front(), pcs.lower.back());
+                            add_faces_to_mesh(pcs.lower.front(), pcs.lower.back(), new_faces);
+                        }
+                    }else{
+                        for(const auto &cop_refw : pcs.lower) close_hole_in_roof(cop_refw);
+                    }
+
+                }else if( (N_upper == 1) && (N_lower == 1) ){
+                    /* auto new_faces = Estimate_Contour_Correspondence(pcs.upper.front(), pcs.lower.front()); */
+                    auto new_faces = Tile_Contours(pcs.upper.front(), pcs.lower.front());
+                    add_faces_to_mesh(pcs.upper.front(), pcs.lower.front(), new_faces);
+                }else if( (N_upper == 2) && (N_lower == 1) ){
+                    //check if the upper plane contains enclosed contours
+                        if(contours_are_enclosed(*m_cp_it, pcs.upper.front(), pcs.upper.back())){
+                        //get contour areas to determine which contour is enclosed by the other
+                        auto contour = std::begin(pcs.upper);
+                        const auto c1_area = std::abs(contour->get().Get_Signed_Area());
+                        ++contour;
+                        const auto c2_area = std::abs(contour->get().Get_Signed_Area());
+
+                        //cap the smaller contour and tile the larger contour with the lower plane contour
+                        if  (c1_area < c2_area){
+                            close_hole_in_floor(pcs.upper.front());
+                            auto new_faces = Tile_Contours(pcs.upper.back(), pcs.lower.front());
+                            add_faces_to_mesh(pcs.upper.back(), pcs.lower.front(), new_faces);
+                        }else{
+                            close_hole_in_floor(pcs.upper.back());
+                            auto new_faces = Tile_Contours(pcs.upper.front(), pcs.lower.front());
+                            add_faces_to_mesh(pcs.upper.front(), pcs.lower.front(), new_faces);
+                        }
+                    }else{
+                        try {
+                            auto [faces, points, amal_upper] = Mesh_With_Convex_Hull_2(pcs.upper, m_cp_it->N_0, ofst_upper);
+                            add_faces_and_vertices(faces, points);
+                            auto amal_lower = pcs.lower.begin()->get();
+                            auto new_faces = Tile_Contours(std::ref(amal_upper), std::ref(amal_lower));
+                            add_faces_to_mesh(std::ref(amal_upper), std::ref(amal_lower), new_faces);
+                        } catch (const std::runtime_error& error) {
+                            goto generic_n_to_n_meshing;
+                        }
+                    }
+                }else if( (N_upper == 1) && (N_lower == 2) ){
+                    //check if the lower plane contains enclosed contours
+                    if(contours_are_enclosed(*l_cp_it, pcs.lower.front(), pcs.lower.back())){
+                        //get contour areas to determine which contour is enclosed by the other
+                        auto contour = std::begin(pcs.lower);
+                        const auto c1_area = std::abs(contour->get().Get_Signed_Area());
+                        ++contour;
+                        const auto c2_area = std::abs(contour->get().Get_Signed_Area());
+
+                        //cap the smaller contour and tile the larger contour with the lower plane contour
+                        if(c1_area < c2_area){
+                            close_hole_in_roof(pcs.lower.front());
+                            auto new_faces = Tile_Contours(pcs.lower.back(), pcs.upper.front());
+                            add_faces_to_mesh(pcs.lower.back(), pcs.upper.front(), new_faces);
+                        }else{
+                            close_hole_in_roof(pcs.lower.back());
+                            auto new_faces = Tile_Contours(pcs.lower.front(), pcs.upper.front());
+                            add_faces_to_mesh(pcs.lower.front(), pcs.upper.front(), new_faces);
+                        }
+                    }else{
+                        try {
+                            auto [faces, points, amal_lower] = Mesh_With_Convex_Hull_2(pcs.lower, l_cp_it->N_0, ofst_lower);
+                            add_faces_and_vertices(faces, points);
+                            auto amal_upper = pcs.upper.begin()->get();
+                            auto new_faces = Tile_Contours(std::ref(amal_upper), std::ref(amal_lower));
+                            add_faces_to_mesh(std::ref(amal_upper), std::ref(amal_lower), new_faces);    
+                        } catch (const std::runtime_error& error) {
+                            goto generic_n_to_n_meshing;
+                        }
+                    }
                 }else{
                     //YLOGINFO("Performing N-to-N meshing..");
-                    auto ofst_upper = m_cp_it->N_0 * contour_sep * -0.49;
-                    auto ofst_lower = m_cp_it->N_0 * contour_sep *  0.49;
-                    auto amal_upper = Minimally_Amalgamate_Contours(m_cp_it->N_0, ofst_upper, pcs.upper); 
-                    auto amal_lower = Minimally_Amalgamate_Contours(m_cp_it->N_0, ofst_lower, pcs.lower); 
 
+                    //routine for hollow structures with an inner contour and an outer contour on both planes
+                    if( (N_upper == 2) && (N_lower == 2) ){
+                        //check if both planes have enclosed contours
+                        if (contours_are_enclosed(*m_cp_it, pcs.upper.front(), pcs.upper.back())
+                            && contours_are_enclosed(*l_cp_it, pcs.lower.front(), pcs.lower.back())){
+                            //check areas to determine which the inner and outer contours are on both planes
+
+                            //assume 2nd contour is the inner to begin with
+                            auto upper_inner = pcs.upper.back();
+                            auto upper_outer = pcs.upper.front();
+
+                            auto contour = std::begin(pcs.upper);
+                            auto c1_area = std::abs(contour->get().Get_Signed_Area());
+                            ++contour;
+                            auto c2_area = std::abs(contour->get().Get_Signed_Area());
+
+                            if (c1_area < c2_area){
+                                upper_inner = pcs.upper.front();
+                                upper_outer = pcs.upper.back();
+                            }
+
+                            //do the same for the lower plane
+                            auto lower_inner = pcs.lower.back();
+                            auto lower_outer = pcs.lower.front();
+
+                            contour = std::begin(pcs.lower);
+                            c1_area = std::abs(contour->get().Get_Signed_Area());
+                            ++contour;
+                            c2_area = std::abs(contour->get().Get_Signed_Area());
+
+                            if (c1_area < c2_area){
+                                lower_inner = pcs.lower.front();
+                                lower_outer = pcs.lower.back();
+                            }
+
+                            //connect inner contours together and outer contours together
+                            auto new_faces = Tile_Contours(lower_inner, upper_inner);
+                            add_faces_to_mesh(lower_inner, upper_inner, new_faces);
+                            
+                            new_faces = Tile_Contours(lower_outer, upper_outer);
+                            add_faces_to_mesh(lower_outer, upper_outer, new_faces);
+                            //move to next iteration of for loop since we have tiled it
+                            continue;
+                        }
+                    } else {
+                        generic_n_to_n_meshing:
+                        auto amal_upper = Minimally_Amalgamate_Contours(m_cp_it->N_0, ofst_upper, pcs.upper); 
+                        auto amal_lower = Minimally_Amalgamate_Contours(m_cp_it->N_0, ofst_lower, pcs.lower);
+                        
     /*
     // Leaving this here for future debugging, for which it will no-doubt be needed...
     {
@@ -521,17 +732,15 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
         OverwriteStringToFile(amal_cop_str, fname);
     }
     */
-                    auto new_faces = Estimate_Contour_Correspondence(std::ref(amal_upper), std::ref(amal_lower));
-
-                    const auto old_face_count = amesh.vertices.size();
-                    for(const auto &p : amal_upper.points) amesh.vertices.emplace_back(p);
-                    for(const auto &p : amal_lower.points) amesh.vertices.emplace_back(p);
-                    for(const auto &fs : new_faces){
-                        const auto f_A = static_cast<uint64_t>(fs[0] + old_face_count);
-                        const auto f_B = static_cast<uint64_t>(fs[1] + old_face_count);
-                        const auto f_C = static_cast<uint64_t>(fs[2] + old_face_count);
-                        amesh.faces.emplace_back( std::vector<uint64_t>{{f_A, f_B, f_C}} );
+                        auto new_faces = Tile_Contours(std::ref(amal_upper), std::ref(amal_lower));
+                        add_faces_to_mesh(std::ref(amal_upper), std::ref(amal_lower), new_faces);
                     }
+                }
+            }
+            //caps contours that have no corresponding contours on the lower plane
+            if (cap_roof_of_m_cops) {
+                for (auto &cop : m_cops) {
+                    close_hole_in_roof(cop);
                 }
             }
         }

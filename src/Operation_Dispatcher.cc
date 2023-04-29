@@ -37,6 +37,7 @@
 #include "Operations/BuildLexiconInteractively.h"
 #include "Operations/ClusterDBSCAN.h"
 #include "Operations/CombineMeshes.h"
+#include "Operations/CompareMeshes.h"
 #include "Operations/ComparePixels.h"
 #include "Operations/ContourBasedRayCastDoseAccumulate.h"
 #include "Operations/ContourSimilarity.h"
@@ -66,6 +67,7 @@
 #include "Operations/CopyTables.h"
 #include "Operations/CopyPoints.h"
 #include "Operations/CountVoxels.h"
+#include "Operations/CreateCustomContour.h"
 #include "Operations/CropImageDoseToROIs.h"
 #include "Operations/CropImages.h"
 #include "Operations/CropROIDose.h"
@@ -280,6 +282,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["CellularAutomata"] = std::make_pair(OpArgDocCellularAutomata, CellularAutomata);
     out["ClusterDBSCAN"] = std::make_pair(OpArgDocClusterDBSCAN, ClusterDBSCAN);
     out["CombineMeshes"] = std::make_pair(OpArgDocCombineMeshes, CombineMeshes);
+    out["CompareMeshes"] = std::make_pair(OpArgDocCompareMeshes, CompareMeshes);
     out["ComparePixels"] = std::make_pair(OpArgDocComparePixels, ComparePixels);
     out["ContourBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocContourBasedRayCastDoseAccumulate, ContourBasedRayCastDoseAccumulate);
     out["ContouringAides"] = std::make_pair(OpArgDocContouringAides, ContouringAides);
@@ -308,6 +311,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["CopyTables"] = std::make_pair(OpArgDocCopyTables, CopyTables);
     out["CopyPoints"] = std::make_pair(OpArgDocCopyPoints, CopyPoints);
     out["CountVoxels"] = std::make_pair(OpArgDocCountVoxels, CountVoxels);
+    out["CreateCustomContour"] = std::make_pair(OpArgDocCreateCustomContour, CreateCustomContour);
     out["CropImageDoseToROIs"] = std::make_pair(OpArgDocCropImageDoseToROIs, CropImageDoseToROIs);
     out["CropImages"] = std::make_pair(OpArgDocCropImages, CropImages);
     out["CropROIDose"] = std::make_pair(OpArgDocCropROIDose, CropROIDose);

@@ -149,6 +149,9 @@ set_target_properties(  Standard_Scripts_obj PROPERTIES POSITION_INDEPENDENT_COD
 add_library(            Surface_Meshes_obj OBJECT Surface_Meshes.cc )
 set_target_properties(  Surface_Meshes_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            Complex_Branching_Meshing_obj OBJECT Complex_Branching_Meshing.cc )
+set_target_properties(  Complex_Branching_Meshing_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Simple_Meshing_obj OBJECT Simple_Meshing.cc )
 set_target_properties(  Simple_Meshing_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -368,6 +371,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Insert_Contours_obj>
     $<TARGET_OBJECTS:Surface_Meshes_obj>
     $<TARGET_OBJECTS:Simple_Meshing_obj>
+    $<TARGET_OBJECTS:Complex_Branching_Meshing_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
     $<TARGET_OBJECTS:String_Parsing_obj>
     $<TARGET_OBJECTS:Metadata_obj>
@@ -463,6 +467,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Insert_Contours_obj>
         $<TARGET_OBJECTS:Surface_Meshes_obj>
         $<TARGET_OBJECTS:Simple_Meshing_obj>
+        $<TARGET_OBJECTS:Complex_Branching_Meshing_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
         $<TARGET_OBJECTS:String_Parsing_obj>
         $<TARGET_OBJECTS:Metadata_obj>
