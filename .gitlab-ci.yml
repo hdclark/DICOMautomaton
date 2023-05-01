@@ -92,13 +92,13 @@ build_ci_macos:
     BID: "$CI_COMMIT_SHORT_SHA"
   script:
     - |
-      ./docker/builders/macos/implementation_macos.sh "${HOME}/${BID}"_workroot "${HOME}/${BID}"_installroot
-      ./scripts/gather_macos_dylibs.sh "${HOME}/${BID}"_installroot "${HOME}/${BID}"_artifacts
-      #rm -rf "${HOME}/${BID}"_workroot
-      #rm -rf "${HOME}/${BID}"_installroot
+      ./docker/builders/macos/implementation_macos.sh "${CI_PROJECT_DIR}/${BID}"_workroot "${CI_PROJECT_DIR}/${BID}"_installroot
+      ./scripts/gather_macos_dylibs.sh "${CI_PROJECT_DIR}/${BID}"_installroot "${CI_PROJECT_DIR}/${BID}"_artifacts
+      #rm -rf "${CI_PROJECT_DIR}/${BID}"_workroot
+      #rm -rf "${CI_PROJECT_DIR}/${BID}"_installroot
   artifacts:
     paths:
-      - "${HOME}/${BID}_artifacts"
+      - "${BID}_artifacts"
     expire_in: 72 hours
 
 ## Full Arch Linux build.
