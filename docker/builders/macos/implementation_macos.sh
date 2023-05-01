@@ -5,7 +5,6 @@ set -eux
 
 export WORKROOT="${1:-${HOME}/working/}"             # <---- optional user input #1.
 export INSTALLROOT="${2:-${HOME}/build_artifacts/}"  # <---- optional user input #2.
-mkdir -pv "${INSTALLROOT}"/{include,lib,bin,etc}
 
 export PATH="/usr/local/bin:${PATH}"   # Assumed to contain the homebrew packages.
 export CC='/usr/local/bin/gcc-12'
@@ -13,6 +12,9 @@ export CXX='/usr/local/bin/g++-12'
 export CXXFLAGS="'-I${INSTALLROOT}/include/' -Wno-deprecated -Wno-array-bounds -Wno-unused-parameter -Wno-unused-variable -Wno-deprecated-copy -Wno-maybe-uninitialized -undefined dynamic_lookup"
 export LDFLAGS="'-L${INSTALLROOT}/lib/' -L/usr/local/lib/ -undefined dynamic_lookup"
 export JOBS=2
+
+cd
+mkdir -pv "${INSTALLROOT}"/{include,lib,bin,etc}
 
 #for repo in Explicator ; do
 #for repo in DICOMautomaton ; do

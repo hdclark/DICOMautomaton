@@ -89,10 +89,9 @@ build_ci_macos:
   tags: [dcma, macos]
   needs: []
   variables:
-    BID: "$CI_COMMIT_SHA"
+    BID: "$CI_COMMIT_SHORT_SHA"
   script:
     - |
-      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; printf '\n\n' ; done ) &)
       ./docker/builders/macos/implementation_macos.sh "${BID}"_workroot "${BID}"_installroot
       ./scripts/gather_macos_dylibs.sh "${BID}"_installroot "${BID}"_artifacts
       #rm -rf "${BID}"_installroot
