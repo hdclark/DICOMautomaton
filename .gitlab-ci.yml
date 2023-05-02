@@ -96,8 +96,6 @@ build_ci_macos:
     - |
       ./docker/builders/macos/implementation_macos.sh "${CI_PROJECT_DIR}/${BID}"_workroot "${CI_PROJECT_DIR}/${BID}"_installroot
       ./scripts/gather_macos_dylibs.sh "${CI_PROJECT_DIR}/${BID}"_installroot "${CI_PROJECT_DIR}/${BID}"_artifacts
-      rm -rf "${CI_PROJECT_DIR}/${BID}"_workroot
-      rm -rf "${CI_PROJECT_DIR}/${BID}"_installroot
       rm -rf ci_artifacts && mkdir -pv ci_artifacts && cd ci_artifacts
       mv "${CI_PROJECT_DIR}/${BID}"_artifacts artifacts
       tar --xz -cf DICOMautomaton-latest-macos_x86_64.txz artifacts
@@ -107,10 +105,15 @@ build_ci_macos:
       find ./ -iname '*.txz' -print -execdir bash -c 'shasum -a 256 "$@" > "$@".sha256sum' bash '{}' \;
       cd ..
       rm -rf deploy_key
-      trap "{ rm -rf deploy_key ; }" EXIT
       echo "$HALCLARKCA_DEPLOY_KEY_BASE64" | base64 -d > deploy_key
       chmod 600 deploy_key
       for i in `seq 1 20` ; do sleep 5 ; rsync -avP -e 'ssh -v -i deploy_key -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no' ci_artifacts/ root@halclark.ca:/var/www/html/ci/ && break ; done
+      rm -rf deploy_key
+  after-script:
+    - |
+      rm -rf "${CI_PROJECT_DIR}/${BID}"_workroot
+      rm -rf "${CI_PROJECT_DIR}/${BID}"_installroot
+      rm -rf deploy_key
   artifacts:
     paths:
       - ci_artifacts/DICOMautomaton-latest-macos_x86_64.txz
