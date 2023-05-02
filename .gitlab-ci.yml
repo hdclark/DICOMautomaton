@@ -103,8 +103,7 @@ build_ci_macos:
       mkdir -pv "${CI_PROJECT_DIR}/${BID}"_artifacts
       touch "${CI_PROJECT_DIR}/${BID}"_artifacts/test
       export short_sha="$(git rev-parse --short HEAD || printf 'unknown')"
-      rm -rf ci_artifacts 
-      cd ci_artifacts
+      rm -rf ci_artifacts && mkdir -pv ci_artifacts && cd ci_artifacts
       mv "${CI_PROJECT_DIR}/${BID}"_artifacts artifacts
       tar --xz -cf DICOMautomaton-latest-macos_x86_64.txz artifacts
       rm -rf artifacts/
