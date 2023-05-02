@@ -108,7 +108,7 @@ build_ci_macos:
       cd ..
       rm -rf deploy_key
       trap "{ rm -rf deploy_key ; }" EXIT
-      echo "${HALCLARK_CA_DEPLOY_KEY_BASE64}" | base64 -d > deploy_key
+      echo "$HALCLARKCA_DEPLOY_KEY_BASE64" | base64 -d > deploy_key
       chmod 600 deploy_key
       for i in `seq 1 20` ; do sleep 5 ; rsync -avP -e 'ssh -v -i deploy_key -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no' ci_artifacts/ root@halclark.ca:/var/www/html/ci/ && break ; done
   artifacts:
