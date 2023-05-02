@@ -92,15 +92,35 @@ build_ci_macos:
   interruptible: true
   variables:
     BID: "$CI_COMMIT_SHORT_SHA"
+    SECURE_FILES_DOWNLOAD_PATH: "deploy_key"
   script:
     - |
-      ./docker/builders/macos/implementation_macos.sh "${CI_PROJECT_DIR}/${BID}"_workroot "${CI_PROJECT_DIR}/${BID}"_installroot
-      ./scripts/gather_macos_dylibs.sh "${CI_PROJECT_DIR}/${BID}"_installroot "${CI_PROJECT_DIR}/${BID}"_artifacts
+      #./docker/builders/macos/implementation_macos.sh "${CI_PROJECT_DIR}/${BID}"_workroot "${CI_PROJECT_DIR}/${BID}"_installroot
+      #./scripts/gather_macos_dylibs.sh "${CI_PROJECT_DIR}/${BID}"_installroot "${CI_PROJECT_DIR}/${BID}"_artifacts
       rm -rf "${CI_PROJECT_DIR}/${BID}"_workroot
       rm -rf "${CI_PROJECT_DIR}/${BID}"_installroot
+      mkdir -pv "${CI_PROJECT_DIR}/${BID}"_artifacts
+      touch "${CI_PROJECT_DIR}/${BID}"_artifacts/test
+      export short_sha="$(git rev-parse --short HEAD || printf 'unknown')"
+      rm -rf ci_artifacts 
+      cd ci_artifacts
+      mv "${CI_PROJECT_DIR}/${BID}"_artifacts artifacts
+      tar --xz -cf DICOMautomaton-latest-macos_x86_64.txz artifacts
+      rm -rf artifacts/
+      cp DICOMautomaton-latest-macos_x86_64.txz DICOMautomaton-${short_sha}-macos_x86_64.txz
+      find ./ -iname '*.txz' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
+      cd ..
+      echo "${HALCLARK_CA_DEPLOY_KEY}" > deploy_key
+      ls deploy_key
+      du -sch deploy_key
+      cat deploy_key
+      chmod 600 deploy_key
+      #for i in `seq 1 20` ; do sleep 5 ; rsync -avP -e 'ssh -v -i deploy_key -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no' ci_artifacts/ root@halclark.ca:/var/www/html/ci/ && break ; done
+      exit 1
   artifacts:
     paths:
-      - "${BID}_artifacts"
+      - ci_artifacts/DICOMautomaton-latest-macos_x86_64.txz
+      - ci_artifacts/DICOMautomaton-latest-macos_x86_64.txz.sha256sum
     expire_in: 72 hours
 
 cleanup_ci_macos:
