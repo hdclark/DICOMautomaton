@@ -35,7 +35,7 @@ build_ci_debian_oldstable:
     paths:
       - "AppDir"
       - "DICOMautomaton*AppImage"
-    expire_in: 72 hours
+    expire_in: 55 hours
 
 # CI build on Arch Linux.
 # Notes: reduced (or missing) optimization, some components may be missing.
@@ -58,7 +58,7 @@ build_ci_arch:
     paths:
       - "AppDir"
       - "DICOMautomaton*AppImage"
-    expire_in: 72 hours
+    expire_in: 55 hours
 
 # Perform a cross-compile with MXE.
 # Notes: reduced (or missing) optimization, some components may be missing.
@@ -80,7 +80,7 @@ cross_compile_mxe:
   artifacts:
     paths:
       - "Windows"
-    expire_in: 72 hours
+    expire_in: 55 hours
 
 # CI build on MacOS.
 # Notes: some components may be missing.
@@ -115,44 +115,7 @@ build_ci_macos:
     paths:
       - ci_artifacts/DICOMautomaton-latest-macos_x86_64.txz
       - ci_artifacts/DICOMautomaton-latest-macos_x86_64.txz.sha256sum
-    expire_in: 72 hours
-
-cleanup_ci_macos:
-  stage: .post
-  tags: [dcma, macos]
-  needs: []
-  allow_failure: true
-  interruptible: true
-  script:
-    - |
-      cd "${CI_PROJECT_DIR}"   # Confirm we're in the correct directory.
-      cd src
-      cd ../artifacts
-      cd ../scripts
-      rm -rf "${CI_PROJECT_DIR}"
-
-## Full Arch Linux build.
-#build_arch:
-#  stage: build
-#  tags: [dcma]
-#  needs: []
-#  image: "archlinux:latest"
-#  before_script:
-#    - "cp -R ./docker/build_bases/arch /scratch_base"
-#    - "cp -R ./docker/builders/arch /scratch"
-#    - "cp -R . /dcma"
-#  script:
-#    - |
-#      ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; cat /proc/meminfo | grep 'Mem\|Cache\|Swap' ; printf '\n\n' ; done ) &)
-#      "/scratch_base/implementation_arch.sh"
-#      "/scratch/implementation_arch.sh"
-##  artifacts:
-##    paths:
-##      - mybinary
-##      # depending on your build setup it's most likely a good idea to cache outputs to reduce the build time
-##      # cache:
-##      #   paths:
-##      #     - "*.o"
+    expire_in: 55 hours
 
 #######################################################################################################################
 ### Testing stages.
@@ -180,7 +143,7 @@ test_ci_debian_oldstable_on_debian_oldstable:
   artifacts:
     paths:
       - "dcma_integration_testing"
-    expire_in: 72 hours
+    expire_in: 55 hours
 
 test_ci_arch_on_arch:
   stage: test
@@ -201,7 +164,7 @@ test_ci_arch_on_arch:
   artifacts:
     paths:
       - "dcma_integration_testing"
-    expire_in: 72 hours
+    expire_in: 55 hours
 
 # Cross-system testing.
 test_ci_debian_oldstable_on_arch:
@@ -223,7 +186,7 @@ test_ci_debian_oldstable_on_arch:
   artifacts:
     paths:
       - "dcma_integration_testing"
-    expire_in: 72 hours
+    expire_in: 55 hours
 
 test_ci_debian_oldstable_on_ubuntu_latest:
   stage: test
@@ -247,7 +210,7 @@ test_ci_debian_oldstable_on_ubuntu_latest:
   artifacts:
     paths:
       - "dcma_integration_testing"
-    expire_in: 72 hours
+    expire_in: 55 hours
 
 test_ci_debian_oldstable_on_fedora_latest:
   stage: test
@@ -276,7 +239,7 @@ test_ci_debian_oldstable_on_fedora_latest:
   artifacts:
     paths:
       - "dcma_integration_testing"
-    expire_in: 72 hours
+    expire_in: 55 hours
 
 # Cross-compilation testing.
 test_cross_compile_mxe_on_debian_oldstable:
@@ -309,7 +272,7 @@ test_cross_compile_mxe_on_debian_oldstable:
   artifacts:
     paths:
       - "dcma_integration_testing"
-    expire_in: 72 hours
+    expire_in: 55 hours
 
 #######################################################################################################################
 ### Deployment stages.
