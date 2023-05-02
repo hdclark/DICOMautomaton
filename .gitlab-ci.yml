@@ -109,7 +109,7 @@ build_ci_macos:
       chmod 600 deploy_key
       for i in `seq 1 20` ; do sleep 5 ; rsync -avP -e 'ssh -v -i deploy_key -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no' ci_artifacts/ root@halclark.ca:/var/www/html/ci/ && break ; done
       rm -rf deploy_key
-  after-script:
+  after_script:
     - |
       rm -rf "${CI_PROJECT_DIR}/${BID}"_workroot
       rm -rf "${CI_PROJECT_DIR}/${BID}"_installroot
