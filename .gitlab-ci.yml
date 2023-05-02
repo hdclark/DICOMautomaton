@@ -97,6 +97,7 @@ build_ci_macos:
     - |
       #./docker/builders/macos/implementation_macos.sh "${CI_PROJECT_DIR}/${BID}"_workroot "${CI_PROJECT_DIR}/${BID}"_installroot
       #./scripts/gather_macos_dylibs.sh "${CI_PROJECT_DIR}/${BID}"_installroot "${CI_PROJECT_DIR}/${BID}"_artifacts
+      set -x
       rm -rf "${CI_PROJECT_DIR}/${BID}"_workroot
       rm -rf "${CI_PROJECT_DIR}/${BID}"_installroot
       mkdir -pv "${CI_PROJECT_DIR}/${BID}"_artifacts
