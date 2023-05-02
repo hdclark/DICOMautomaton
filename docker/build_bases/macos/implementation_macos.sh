@@ -19,6 +19,7 @@ export HOMEBREW_NO_ANALYTICS=1
 brew analytics off
 
 brew install \
+  coreutils \
   git \
   cmake \
   make \
