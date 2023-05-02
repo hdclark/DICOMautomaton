@@ -13,24 +13,24 @@ export CXXFLAGS="'-I${INSTALLROOT}/include/' -Wno-deprecated -Wno-array-bounds -
 export LDFLAGS="'-L${INSTALLROOT}/lib/' -L/usr/local/lib/ -undefined dynamic_lookup"
 export JOBS=2
 
+export URLROOT="https://github.com/hdclark"
+[ ! -z "${GITLAB_CI}" ] && export URLROOT="https://gitlab.com/hdeanclark"
+
 cd
 mkdir -pv "${INSTALLROOT}"/{include,lib,bin,etc}
 
-#for repo in Explicator ; do
-#for repo in DICOMautomaton ; do
 for repo in Explicator Ygor YgorClustering DICOMautomaton ; do
     cd
     rm -rf "${WORKROOT}"/"${repo}"
     mkdir -pv "${WORKROOT}"/"${repo}"
-    git clone "https://github.com/hdclark/${repo}" "${WORKROOT}"/"${repo}"
+    git clone --depth 1 "${URLROOT}"/"${repo}" "${WORKROOT}"/"${repo}"
 
     ( cd "${WORKROOT}"/"${repo}" &&
-#      rm -rf build &&
+      rm -rf build &&
       mkdir -pv build && 
       cd build &&
 #        -DCMAKE_INSTALL_PREFIX=/usr/local/ \
 #        -DCMAKE_INSTALL_SYSCONFDIR=/usr/local/etc/ \
-#        -DCMAKE_MACOSX_RPATH='@executable_path/../lib' \
       cmake \
         -DCMAKE_INSTALL_PREFIX="${INSTALLROOT}/" \
         -DCMAKE_INSTALL_SYSCONFDIR="${INSTALLROOT}/etc/" \
@@ -41,8 +41,8 @@ for repo in Explicator Ygor YgorClustering DICOMautomaton ; do
         -DWITH_LINUX_SYS=OFF \
         -DWITH_EIGEN=ON \
         -DWITH_NLOPT=OFF \
-        -DWITH_JANSSON=OFF \
-        -DWITH_GNU_GSL=OFF \
+        -DWITH_JANSSON=ON \
+        -DWITH_GNU_GSL=ON \
         -DWITH_WT=OFF \
         -DWITH_SFML=OFF \
         -DWITH_CGAL=OFF \
