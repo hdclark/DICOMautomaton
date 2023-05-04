@@ -27,7 +27,7 @@ option(WITH_POSTGRES  "Compile assuming PostgreSQL libraries are available."    
 option(WITH_JANSSON   "Compile assuming Jansson is available."                  ON)
 option(WITH_THRIFT    "Compile assuming Apache Thrift is available."            ON)
 
-option(USE_LTO "Use link-time optimization when available." OFF)
+option(WITH_LTO       "Use link-time optimization when available."              OFF)
 
 option(BUILD_SHARED_LIBS "Build shared-object/dynamicly-loaded binaries."       ON)
 
@@ -56,7 +56,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "default to debug" FORCE)
 endif()
 
-if(USE_LTO)
+if(WITH_LTO)
     include(CheckIPOSupported)
     check_ipo_supported(RESULT lto_avail OUTPUT lto_msg)
     if(lto_avail)
@@ -521,6 +521,9 @@ if(WITH_POSTGRES)
 endif()
 if(WITH_JANSSON)
     list(APPEND BUILD_DEPENDENCY_PACKAGES "libjansson-dev")
+endif()
+if(WITH_THRIFT)
+    list(APPEND BUILD_DEPENDENCY_PACKAGES "libthrift-dev")
 endif()
 list(JOIN BUILD_DEPENDENCY_PACKAGES ", " CPACK_DEBIAN_PACKAGE_DEPENDS)
 
