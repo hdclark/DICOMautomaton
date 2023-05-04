@@ -36,10 +36,19 @@ check_cpp_syntax () {
           -I'src/imebra20121219/library/imebra/include/' \
           -I"${temp_dir}/" \
           -I"${temp_dir}/src/" \
-          `# Check if Eigen is available. If so, enable via preprocessor directive.` \
-          ` [ ! -z "$(pkg-config --cflags --libs eigen3)" ] && printf -- '-DDCMA_USE_EIGEN=1' ` \
-          $(pkg-config --cflags --libs sdl2 glew sfml-window sfml-graphics sfml-system libpqxx libpq nlopt gsl eigen3) \
-          -lygor -lboost_serialization -lboost_iostreams -lboost_thread -lboost_system \
+          `# Check if dependencies are available. If so, enable them via preprocessor directives.` \
+          ` pkg-config eigen3  &>/dev/null && printf -- "-DDCMA_USE_EIGEN=1   $(pkg-config --cflags eigen3)" ` \
+          ` pkg-config nlopt   &>/dev/null && printf -- "-DDCMA_USE_NLOPT=1   $(pkg-config --cflags nlopt )" ` \
+          ` pkg-config gsl     &>/dev/null && printf -- "-DDCMA_USE_GNU_GSL=1 $(pkg-config --cflags gsl   )" ` \
+          ` pkg-config thrift  &>/dev/null && printf -- "-DDCMA_USE_THRIFT=1  $(pkg-config --cflags thrift)" ` \
+          ` pkg-config glew sdl2 &>/dev/null && printf -- "-DDCMA_USE_SDL=1   $(pkg-config --cflags glew sdl2  )" ` \
+          ` pkg-config libpq libpqxx &>/dev/null && printf -- "-DDCMA_USE_POSTGRES=1 $(pkg-config --cflags libpq libpqxx )" ` \
+          ` pkg-config glew sfml-window sfml-graphics sfml-system &>/dev/null && printf -- "-DDCMA_USE_SFML=1 $(pkg-config --cflags glew sfml-window sfml-graphics sfml-system)" ` \
+          `# Some dependencies don't use pkg-config, so include them and hope for the best.` \
+          -DDCMA_USE_BOOST=1 \
+          -DDCMA_USE_CGAL=1 \
+          -DDCMA_USE_WT=1 \
+          -DDCMA_USE_JANSSON=1 \
           "$f"
     }
     rm "${temp_dir}/"*h "${temp_dir}"/src/*h
