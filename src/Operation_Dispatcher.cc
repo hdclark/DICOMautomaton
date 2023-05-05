@@ -99,10 +99,10 @@
 #include "Operations/DumpROISNR.h"
 #include "Operations/DumpRTPlanMetadataOccurrencesToFile.h"
 #include "Operations/DumpVoxelDoseInfo.h"
+#include "Operations/EQDXTable.h"
 #include "Operations/EvaluateDoseVolumeStats.h"
 #include "Operations/EvaluateNTCPModels.h"
 #include "Operations/EvaluateTCPModels.h"
-#include "Operations/ValidateRTPlan.h"
 #include "Operations/ExportFITSImages.h"
 #include "Operations/ExportContours.h"
 #include "Operations/ExportLineSamples.h"
@@ -205,6 +205,7 @@
 #include "Operations/UBC3TMRI_DCE_Differences.h"
 #include "Operations/UBC3TMRI_DCE_Experimental.h"
 #include "Operations/UBC3TMRI_IVIM_ADC.h"
+#include "Operations/ValidateRTPlan.h"
 #include "Operations/VolumetricCorrelationDetector.h"
 #include "Operations/VolumetricSpatialBlur.h"
 #include "Operations/VolumetricSpatialDerivative.h"
@@ -341,10 +342,10 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["DumpROISNR"] = std::make_pair(OpArgDocDumpROISNR, DumpROISNR);
     out["DumpRTPlanMetadataOccurrencesToFile"] = std::make_pair(OpArgDocDumpRTPlanMetadataOccurrencesToFile, DumpRTPlanMetadataOccurrencesToFile);
     out["DumpVoxelDoseInfo"] = std::make_pair(OpArgDocDumpVoxelDoseInfo, DumpVoxelDoseInfo);
+    out["EQDXTable"] = std::make_pair(OpArgDocEQDXTable, EQDXTable);
     out["EvaluateDoseVolumeStats"] = std::make_pair(OpArgDocEvaluateDoseVolumeStats, EvaluateDoseVolumeStats);
     out["EvaluateNTCPModels"] = std::make_pair(OpArgDocEvaluateNTCPModels, EvaluateNTCPModels);
     out["EvaluateTCPModels"] = std::make_pair(OpArgDocEvaluateTCPModels, EvaluateTCPModels);
-    out["ValidateRTPlan"] = std::make_pair(OpArgDocValidateRTPlan, ValidateRTPlan);
     out["ExportFITSImages"] = std::make_pair(OpArgDocExportFITSImages, ExportFITSImages);
     out["ExportContours"] = std::make_pair(OpArgDocExportContours, ExportContours);
     out["ExportLineSamples"] = std::make_pair(OpArgDocExportLineSamples, ExportLineSamples);
@@ -447,6 +448,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["UBC3TMRI_DCE_Experimental"] = std::make_pair(OpArgDocUBC3TMRI_DCE_Experimental, UBC3TMRI_DCE_Experimental);
     out["UBC3TMRI_DCE"] = std::make_pair(OpArgDocUBC3TMRI_DCE, UBC3TMRI_DCE);
     out["UBC3TMRI_IVIM_ADC"] = std::make_pair(OpArgDocUBC3TMRI_IVIM_ADC, UBC3TMRI_IVIM_ADC);
+    out["ValidateRTPlan"] = std::make_pair(OpArgDocValidateRTPlan, ValidateRTPlan);
     out["VolumetricCorrelationDetector"] = std::make_pair(OpArgDocVolumetricCorrelationDetector, VolumetricCorrelationDetector);
     out["VolumetricSpatialBlur"] = std::make_pair(OpArgDocVolumetricSpatialBlur, VolumetricSpatialBlur);
     out["VolumetricSpatialDerivative"] = std::make_pair(OpArgDocVolumetricSpatialDerivative, VolumetricSpatialDerivative);

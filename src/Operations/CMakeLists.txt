@@ -78,10 +78,10 @@ add_library(Operations_objs OBJECT
     DumpROISNR.cc
     DumpRTPlanMetadataOccurrencesToFile.cc
     DumpVoxelDoseInfo.cc
+    EQDXTable.cc
     EvaluateDoseVolumeStats.cc
     EvaluateNTCPModels.cc
     EvaluateTCPModels.cc
-    ValidateRTPlan.cc
     ExportFITSImages.cc
     ExportContours.cc
     ExportLineSamples.cc
@@ -184,6 +184,7 @@ add_library(Operations_objs OBJECT
     UBC3TMRI_DCE_Differences.cc
     UBC3TMRI_DCE_Experimental.cc
     UBC3TMRI_IVIM_ADC.cc
+    ValidateRTPlan.cc
     VolumetricCorrelationDetector.cc
     VolumetricSpatialBlur.cc
     VolumetricSpatialDerivative.cc
