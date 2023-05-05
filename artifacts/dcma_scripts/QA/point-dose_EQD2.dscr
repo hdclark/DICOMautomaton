@@ -6,7 +6,7 @@
 ###############################################################################
 
 QueryUserInteractively(
-    Queries = 'real("total_dose", "What dose was or will be delivered?", -1.0)',
+    Queries = 'real("total_dose", "What dose (in Gy) was or will be delivered?", -1.0)',
 ){};
 
 QueryUserInteractively(
