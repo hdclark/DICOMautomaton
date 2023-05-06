@@ -76,7 +76,7 @@ bool DBSCANTimeCourses(planar_image_collection<float,double>::images_list_it_t f
     //Find a timestamp for each file. Attach the data to a ClusteringDatum_t and insert into a tree.
     constexpr size_t MaxElementsInANode = 6; // 16, 32, 128, 256, ... ?
     using RTreeParameter_t = boost::geometry::index::rstar<MaxElementsInANode>;
-    constexpr size_t ClusteringSpatialDimensionCount = 100; // Can this be made dynamic? (Can Eps and MinPts choices cope?)
+    constexpr size_t ClusteringSpatialDimensionCount = 30; // Can this be made dynamic? (Can Eps and MinPts choices cope?)
     typedef std::pair<size_t,size_t> ClusteringDatumUserData; //For storing row and column numbers.
     using ClusterIDRaw_t = uint32_t;
     typedef ClusteringDatum<ClusteringSpatialDimensionCount, double, 0, double, ClusterIDRaw_t, ClusteringDatumUserData> CDat_t;
