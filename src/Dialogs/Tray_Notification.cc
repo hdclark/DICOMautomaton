@@ -89,7 +89,7 @@ tray_notification(const notification_t &n){
     //    qm.insert( query_method::pshell );
     //}
 #endif
-#if defined(__linux__)
+#if defined(__linux__) || ( defined(__APPLE__) && defined(__MACH__) )
     if(sh_cmd_is_available("notify-send")){
         YLOGINFO("notify-send is available");
         qm.insert( query_method::notifysend );

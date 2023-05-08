@@ -54,12 +54,17 @@ interactive_query(std::vector<user_query_packet_t> qv){
     enum class query_method {
         zenity,
         pshell,
+        osascript,
     };
     std::set<query_method> qm;
 #if defined(_WIN32) || defined(_WIN64)
     qm.insert( query_method::pshell );
 #endif
 #if defined(__linux__)
+    qm.insert( query_method::zenity );
+#endif
+#if defined(__APPLE__) && defined(__MACH__)
+    qm.insert( query_method::osascript );
     qm.insert( query_method::zenity );
 #endif
 
@@ -114,11 +119,38 @@ interactive_query(std::vector<user_query_packet_t> qv){
                     break;
                 }
 
+                // MacOS osascript.
+                if(qm.count(query_method::osascript) != 0){
+
+                    // Build the invocation.
+                    const std::string proto_cmd = R"***(: | osascript -e 'set result to text returned of (display dialog "@QUERY" with title "@TITLE" buttons {"Cancel", "OK"} default button "OK" default answer "@DEFAULT")' 2>/dev/null)***";
+                    std::string cmd = ExpandMacros(proto_cmd, key_vals, "@");
+
+                    // Query the user.
+                    YLOGINFO("About to perform osascript command: '" << cmd << "'");
+                    auto res = Execute_Command_In_Pipe(cmd);
+                    res = escape_for_quotes(res); // Trim newlines and unprintable characters.
+                    YLOGINFO("Received user input: '" << res << "'");
+
+                    // Ensure the input fits the required data type.
+                    if(uq.val_type == user_input_t::string){
+                        uq.val = res;
+                    }else if(uq.val_type == user_input_t::real){
+                        uq.val = std::stod(res);
+                    }else if(uq.val_type == user_input_t::integer){
+                        uq.val = static_cast<int64_t>(std::stoll(res));
+                    }
+
+                    // Break out of the while loop on success.
+                    uq.answered = true;
+                    break;
+                }
+
                 // Zenity.
                 if(qm.count(query_method::zenity) != 0){
 
                     // Build the invocation.
-                    const std::string proto_cmd = R"***(zenity --title='@TITLE' --entry --text='@QUERY' --entry-text='@DEFAULT')***";
+                    const std::string proto_cmd = R"***(: | zenity --title='@TITLE' --entry --text='@QUERY' --entry-text='@DEFAULT')***";
                     std::string cmd = ExpandMacros(proto_cmd, key_vals, "@");
 
                     // Query the user.
