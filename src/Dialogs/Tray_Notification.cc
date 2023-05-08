@@ -83,13 +83,11 @@ tray_notification(const notification_t &n){
     };
     std::set<query_method> qm;
 #if defined(_WIN32) || defined(_WIN64)
-    if( win_cmd_is_available("powershell")
-    ||  win_cmd_is_available("powershell.exe") ){
-        YLOGINFO("powershell is available");
-        qm.insert( query_method::pshell );
-    }
-    if( sh_cmd_is_available("zenity")
-    ||  sh_cmd_is_available("zenity.exe")){
+    YLOGINFO("Assuming powershell is available");
+    qm.insert( query_method::pshell );
+
+    if( win_cmd_is_available("zenity")
+    ||  win_cmd_is_available("zenity.exe")){
         YLOGINFO("zenity is available");
         qm.insert( query_method::zenity );
     }
