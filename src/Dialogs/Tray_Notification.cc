@@ -79,17 +79,22 @@ tray_notification(const notification_t &n){
         notifysend,
         zenity,
         pshell,
+        osascript,
     };
     std::set<query_method> qm;
 #if defined(_WIN32) || defined(_WIN64)
-    YLOGINFO("Assuming powershell is available");
-    qm.insert( query_method::pshell );
-    //if(win_cmd_is_available("powershell")){
-    //    YLOGINFO("powershell is available");
-    //    qm.insert( query_method::pshell );
-    //}
+    if( win_cmd_is_available("powershell")
+    ||  win_cmd_is_available("powershell.exe") ){
+        YLOGINFO("powershell is available");
+        qm.insert( query_method::pshell );
+    }
+    if( sh_cmd_is_available("zenity")
+    ||  sh_cmd_is_available("zenity.exe")){
+        YLOGINFO("zenity is available");
+        qm.insert( query_method::zenity );
+    }
 #endif
-#if defined(__linux__) || ( defined(__APPLE__) && defined(__MACH__) )
+#if defined(__linux__)
     if(sh_cmd_is_available("notify-send")){
         YLOGINFO("notify-send is available");
         qm.insert( query_method::notifysend );
@@ -97,6 +102,20 @@ tray_notification(const notification_t &n){
     if(sh_cmd_is_available("zenity")){
         YLOGINFO("zenity is available");
         qm.insert( query_method::zenity );
+    }
+#endif
+#if defined(__APPLE__) && defined(__MACH__)
+    if(sh_cmd_is_available("notify-send")){
+        YLOGINFO("notify-send is available");
+        qm.insert( query_method::notifysend );
+    }
+    if(sh_cmd_is_available("zenity")){
+        YLOGINFO("zenity is available");
+        qm.insert( query_method::zenity );
+    }
+    if(sh_cmd_is_available("osascript")){
+        YLOGINFO("zenity is available");
+        qm.insert( query_method::osascript );
     }
 #endif
 
@@ -160,6 +179,27 @@ tray_notification(const notification_t &n){
                 std::thread t(exec_cmd, cmd);
                 t.detach();
                 break;
+            }
+
+            // osascript.
+            if(qm.count(query_method::osascript) != 0){
+
+                // Build the invocation.
+                std::stringstream ss;
+                ss << R"***(: | osascript -e ')***"
+                   << R"***( display notification "@MESSAGE" )***"
+                   << R"***( with title "DICOMautomaton" )***"
+                   << R"***( subtitle "@TITLE" ' )***"
+                   << R"***( 1>/dev/null 2>/dev/null && echo successful )***";
+                const std::string proto_cmd = ss.str();
+                std::string cmd = ExpandMacros(proto_cmd, key_vals, "@");
+
+                // Notify the user.
+                YLOGINFO("About to perform osascript command: '" << cmd << "'");
+                auto res = Execute_Command_In_Pipe(cmd);
+                res = escape_for_quotes(res); // Trim newlines and unprintable characters.
+
+                if(res == "successful") break;
             }
 
             // Notify-send.
