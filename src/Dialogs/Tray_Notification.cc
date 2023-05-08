@@ -134,14 +134,17 @@ tray_notification(const notification_t &n){
 
             if(n.urgency == notification_urgency_t::low){
                 key_vals["PS_URGENCY"] = escape_for_quotes("Information");
+                key_vals["OA_URGENCY"] = escape_for_quotes("Information");
                 key_vals["NS_URGENCY"] = escape_for_quotes("low");
                 key_vals["Z_URGENCY"]  = escape_for_quotes("info");
             }else if(n.urgency == notification_urgency_t::medium){
                 key_vals["PS_URGENCY"] = escape_for_quotes("Warning");
+                key_vals["OA_URGENCY"] = escape_for_quotes("Warning");
                 key_vals["NS_URGENCY"] = escape_for_quotes("normal");
                 key_vals["Z_URGENCY"]  = escape_for_quotes("warning");
             }else if(n.urgency == notification_urgency_t::high){
                 key_vals["PS_URGENCY"] = escape_for_quotes("Error");
+                key_vals["OA_URGENCY"] = escape_for_quotes("Error");
                 key_vals["NS_URGENCY"] = escape_for_quotes("critical");
                 key_vals["Z_URGENCY"]  = escape_for_quotes("error");
             }else{
@@ -188,8 +191,8 @@ tray_notification(const notification_t &n){
                 std::stringstream ss;
                 ss << R"***(: | osascript -e ')***"
                    << R"***( display notification "@MESSAGE" )***"
-                   << R"***( with title "DICOMautomaton" )***"
-                   << R"***( subtitle "@TITLE" ' )***"
+                   << R"***( with title "@TITLE" )***"
+                   << R"***( subtitle "@OA_URGENCY" ' )***"
                    << R"***( 1>/dev/null 2>/dev/null && echo successful )***";
                 const std::string proto_cmd = ss.str();
                 std::string cmd = ExpandMacros(proto_cmd, key_vals, "@");
