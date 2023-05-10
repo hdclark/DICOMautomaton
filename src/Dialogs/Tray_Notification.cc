@@ -78,14 +78,19 @@ tray_notification(const notification_t &n){
         zenity,
         pshell,
         osascript,
+        winmsg,
     };
     std::set<query_method> qm;
 #if defined(_WIN32) || defined(_WIN64)
-    YLOGINFO("Assuming powershell is available");
-    qm.insert( query_method::pshell );
-
-    if( win_cmd_is_available("zenity")
-    ||  win_cmd_is_available("zenity.exe")){
+    if( win_cmd_is_available("powershell") ){
+        YLOGINFO("powershell is available");
+        qm.insert( query_method::pshell );
+    }
+    if( win_cmd_is_available("msg") ){
+        YLOGINFO("msg is available");
+        qm.insert( query_method::winmsg );
+    }
+    if( win_cmd_is_available("zenity") ){
         YLOGINFO("zenity is available");
         qm.insert( query_method::zenity );
     }
@@ -206,12 +211,19 @@ tray_notification(const notification_t &n){
 
                 // Build the invocation.
                 std::stringstream ss;
-                ss << ": | notify-send "
-                   << "  --app-name='DICOMautomaton' "
-                   << "  --urgency='@NS_URGENCY' "
-                   << "  --expire-time='@DURATION_MS' "
-                   << "  '@TITLE' "
-                   << "  '@MESSAGE' 1>/dev/null 2>/dev/null && echo successful";
+#if defined(__linux__)   ||  ( defined(__APPLE__) && defined(__MACH__) )
+                ss << " : |"; // Disregard stdin.
+#endif
+                ss << " notify-send "
+                   << "   --app-name='DICOMautomaton' "
+                   << "   --urgency='@NS_URGENCY' "
+                   << "   --expire-time='@DURATION_MS' "
+                   << "   '@TITLE' "
+                   << "   '@MESSAGE' ";
+#if defined(__linux__)   ||  ( defined(__APPLE__) && defined(__MACH__) )
+                ss << " 1>/dev/null 2>/dev/null";
+#endif
+                ss << " && echo successful ";
                 const std::string proto_cmd = ss.str();
                 std::string cmd = ExpandMacros(proto_cmd, key_vals, "@");
 
@@ -229,14 +241,20 @@ tray_notification(const notification_t &n){
                 // Build the invocation.
                 //
                 // Note that Zenity blocks for the duration, and also doesn't return a useful return value.
-                // At this point we pragmatically always assume the notification reached the user.
+                // At this point we just assume the notification will reach the user.
                 std::stringstream ss;
-                ss << " : | zenity "
+#if defined(__linux__)   ||  ( defined(__APPLE__) && defined(__MACH__) )
+                ss << " : |"; // Disregard stdin.
+#endif
+                ss << " zenity "
                    << "   --title='@TITLE' "
                    << "   --notification "
                    << "   --timeout='@DURATION_S' "
                    << "   --window-icon='@Z_URGENCY' "
-                   << "   --text='@MESSAGE' 1>/dev/null 2>/dev/null";
+                   << "   --text='@MESSAGE' ";
+#if defined(__linux__)   ||  ( defined(__APPLE__) && defined(__MACH__) )
+                ss << " 1>/dev/null 2>/dev/null";
+#endif
                 const std::string proto_cmd = ss.str();
                 std::string cmd = ExpandMacros(proto_cmd, key_vals, "@");
 
@@ -245,6 +263,31 @@ tray_notification(const notification_t &n){
                     return;
                 };
                 YLOGINFO("About to perform zenity command: '" << cmd << "'");
+                std::thread t(exec_cmd, cmd);
+                t.detach();
+                break;
+            }
+
+            // Windows 'msg' built-in.
+            //
+            // Note: that this built-in is absent on many Windows variants. It is also horrendous, which is why it's the
+            // last option in this list.
+            if(qm.count(query_method::winmsg) != 0){
+                // Build the invocation.
+                std::stringstream ss;
+                ss << R"***(msg)***"
+                   << R"***( %USERNAME% )***"
+                   << R"***( /TIME:@DURATION_S )***"
+                   << R"***( "@TITLE (@PS_URGENCY): @MESSAGE" )***";
+                const std::string proto_cmd = ss.str();
+                std::string cmd = ExpandMacros(proto_cmd, key_vals, "@");
+
+                // Notify the user.
+                const auto exec_cmd = [](std::string cmd){
+                    Execute_Command_In_Pipe(cmd);
+                    return;
+                };
+                YLOGINFO("About to perform msg command: '" << cmd << "'");
                 std::thread t(exec_cmd, cmd);
                 t.detach();
                 break;
