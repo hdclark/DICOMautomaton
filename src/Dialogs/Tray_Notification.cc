@@ -50,9 +50,7 @@ static
 bool win_cmd_is_available(const std::string &name){
     const auto l_name = escape_for_quotes(name);
     std::stringstream ss;
-    ss << R"***((help ")***" << l_name << R"***(" 1> nul 2> nul || exit 0 ))***"
-       << R"***( && where ")***" << l_name << R"***(" 1> nul 2> nul)***"
-       << R"***( && echo cmd_is_available )***";
+    ss << R"***(where /q ")***" << l_name << R"***(" && echo cmd_is_available)***";
     const auto cmd = ss.str();
     auto res = Execute_Command_In_Pipe(cmd);
     res = escape_for_quotes(res); // Trim newlines and unprintable characters.
