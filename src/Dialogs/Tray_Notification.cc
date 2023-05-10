@@ -157,8 +157,9 @@ tray_notification(const notification_t &n){
             if(qm.count(query_method::pshell) != 0){
                 // Build the invocation.
                 std::stringstream ss;
-                ss << R"***(powershell)***"
-                   << R"***( -WindowStyle hidden)***"
+                ss << R"***(start /B /wait)***"
+                   << R"***( powershell)***"
+                   //<< R"***( -WindowStyle hidden)***" // Causes the attached console (and thus some log output) to disappear.
                    << R"***( -ExecutionPolicy bypass)***"
                    << R"***( -NonInteractive)***"
                    << R"***( -Command "& {)***"
