@@ -936,6 +936,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // Documentation state.
     std::string docs_str;
+    std::map<std::string, std::string> docs_ops; // op_name, text documentation.
 
     // Plot viewer state.
     std::map<int64_t, bool> lsamps_visible;
@@ -2838,6 +2839,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         // Display the main menu bar, which should always be visible.
         const auto display_main_menu_bar = [&view_toggles,
                                             &docs_str,
+                                            &docs_ops,
                                             &open_file_root,
                                             &loaded_files,
                                             &launch_file_open_dialog,
@@ -3173,18 +3175,17 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if(ImGui::MenuItem("About", "ctrl+h")){
                         implement_show_help();
                     }
-                    if(ImGui::MenuItem("Documentation", nullptr, &view_toggles.view_documentation_enabled)){
-                        docs_str.clear();
-                        std::stringstream ss;
-                        Emit_Documentation(ss);
-                        docs_str = ss.str();
-                        docs_str += '\0';
-                    }
                     ImGui::MenuItem("Logs", nullptr, &view_toggles.view_ylogs);
                     ImGui::MenuItem("Metrics", nullptr, &view_toggles.view_metrics_window);
                     ImGui::Separator();
 
-                    if(ImGui::BeginMenu("Operations")){
+                    if(ImGui::MenuItem("Reference Manual", nullptr, &view_toggles.view_documentation_enabled)){
+                        docs_str.clear();
+                        std::stringstream ss;
+                        Emit_Documentation(ss);
+                        docs_str = ss.str() + '\0';
+                    }
+                    if(ImGui::BeginMenu("Operation Documentation")){
                         auto known_ops = Known_Operations_and_Aliases();
                         for(auto &anop : known_ops){
                             const auto op_name = anop.first;
@@ -3199,7 +3200,11 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 }
                             }
 
-                            if(ImGui::MenuItem(op_name.c_str())){}
+                            if(ImGui::MenuItem(op_name.c_str())){
+                                std::stringstream ss;
+                                Emit_Op_Documentation(op_name, ss);
+                                docs_ops[op_name] = ss.str() + '\0';
+                            }
                             if(ImGui::IsItemHovered()){
                                 ImGui::SetNextWindowSizeConstraints(ImVec2(400.0, -1), ImVec2(500.0, -1));
                                 ImGui::BeginTooltip();
@@ -3228,15 +3233,42 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImGui::ShowMetricsWindow(&view_toggles.view_metrics_window);
         }
 
+        // Display the full reference manual.
         if( view_toggles.view_documentation_enabled ){
-            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(875, 650), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(150, 150), ImGuiCond_FirstUseEver);
-            if(ImGui::Begin("Documentation", &view_toggles.view_documentation_enabled )){
-                if(!docs_str.empty()){
+            if(ImGui::Begin("Reference Manual", &view_toggles.view_documentation_enabled )){
+                if( !docs_str.empty()
+                &&  view_toggles.view_documentation_enabled ){
                     ImGui::TextUnformatted( &(docs_str.front()), &(docs_str.back()) );
                 }
             }
             ImGui::End();
+        }
+
+        // Display operation-specific documentation windows.
+        for(auto docs_ops_it = std::begin(docs_ops); docs_ops_it != std::end(docs_ops); ){
+            auto& op_name = docs_ops_it->first;
+            auto& op_docs = docs_ops_it->second;
+            const auto window_title = "Operation Documentation: "_s + op_name;
+            bool window_stays_open = true;
+
+
+            ImGui::SetNextWindowSize(ImVec2(875, 650), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(150, 150), ImGuiCond_FirstUseEver);
+            if(ImGui::Begin(window_title.c_str(), &window_stays_open )){
+                if( !op_docs.empty()
+                &&  window_stays_open ){
+                    ImGui::TextUnformatted( &(op_docs.front()), &(op_docs.back()) );
+                }
+            }
+            ImGui::End();
+
+            if(window_stays_open){
+                ++docs_ops_it;
+            }else{
+                docs_ops_it = docs_ops.erase(docs_ops_it);
+            }
         }
 
         if( view_toggles.view_polyominoes_enabled ){

@@ -59,17 +59,133 @@ void reflow_and_emit_paragraph(std::ostream &os,
     return;
 }
 
-
-void Emit_Documentation(std::ostream &os){
-    // This routine contains documentation about DICOMautomaton tools that can be emitted at runtime.
+void Emit_Op_Documentation(const std::string &op_name_or_alias,
+                           std::ostream &os,
+                           const std::string &bulleta,
+                           const std::string &bulletb,
+                           const std::string &nobullet,
+                           const std::string &nolinebreak,
+                           const int64_t max_width ){
+    // This routine emits documentation for a single DICOMautomaton operation at runtime.
     //
     // Currently, pandoc-style markdown is produced.
 
-    const std::string bulleta("- ");
-    const std::string bulletb("  ");
-    const std::string nobullet;
-    const std::string nolinebreak;
-    const int64_t max_width = 120;
+    const auto get_canonical_name = [](const std::string &n){
+        const auto op_name_lex = Operation_Lexicon();
+        std::string out = n;
+        if( auto p_it = op_name_lex.find(n); p_it != std::end(op_name_lex) ){
+            out = p_it->second;
+        }
+        return out;
+    };
+
+    const auto known_ops = Known_Operations_and_Aliases();
+    if( auto p_it = known_ops.find(op_name_or_alias); p_it != std::end(known_ops) ){
+        const auto name = p_it->first;
+
+        reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
+            "## "_s + name
+        );
+
+        auto optdocs = p_it->second.first();
+        reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
+            "### Description"
+        );
+        reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
+            optdocs.desc
+        );
+
+        if(!optdocs.aliases.empty()){
+            reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
+                "### Aliases"
+            );
+
+            const auto canonical_name = get_canonical_name(name);
+            if(name != canonical_name){
+                reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
+                    "This operation is an alias for operation '"_s + canonical_name + "'."
+                );
+            }else{
+                for(const auto &alias : optdocs.aliases){
+                    os << bulleta << "```\"" << alias << "\"```" << std::endl;
+                }
+                os << std::endl;
+            }
+        }
+
+        if(!optdocs.notes.empty()){
+            reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
+                "### Notes"
+            );
+            for(auto &n : optdocs.notes){
+                reflow_and_emit_paragraph(os, max_width, bulleta, bulletb, nolinebreak,
+                    n
+                );
+            }
+        }
+
+        reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
+            "### Parameters"
+        );
+        if(optdocs.args.empty()){
+            reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
+                "No registered options."
+            );
+        }else{
+            for(auto &a : optdocs.args){
+                os << bulleta << a.name << std::endl;
+            }
+            os << std::endl;
+            for(auto &a : optdocs.args){
+                reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
+                    "#### "_s + a.name
+                );
+
+                reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
+                    "##### Description"
+                );
+                reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
+                    a.desc
+                );
+
+                reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
+                    "##### Default"
+                );
+                os << bulleta << "```\"" << a.default_val << "\"```" << std::endl;
+                os << std::endl;
+
+                if(!a.examples.empty()){
+                    if(a.samples == OpArgSamples::Exhaustive){
+                        reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
+                            "##### Supported Options"
+                        );
+                    }else{ // if(a.samples == OpArgSamples::Examples){
+                        reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
+                            "##### Examples"
+                        );
+                    }
+                    for(auto &e : a.examples){
+                        os << bulleta << "```\"" << e << "\"```" << std::endl;
+                    }
+                    os << std::endl;
+                }
+            }
+            os << std::endl;
+        }
+    }
+
+    return;
+}
+
+void Emit_Documentation(std::ostream &os,
+                        const std::string &bulleta,
+                        const std::string &bulletb,
+                        const std::string &nobullet,
+                        const std::string &nolinebreak,
+                        const int64_t max_width ){
+    // This routine contains documentation about DICOMautomaton tools that can be emitted at runtime.
+    //
+    // Currently, pandoc-style markdown is produced.
 
     os << "---" << std::endl;
     os << "title: DICOMautomaton Reference Manual" << std::endl;
@@ -618,10 +734,10 @@ void Emit_Documentation(std::ostream &os){
         "# List of Available Operations"
     );
 
+
     // Print an index of links to each operation.
-    auto known_ops = Known_Operations();
+    const auto op_name_lex = Operation_Lexicon();
     {
-        const auto op_name_lex = Operation_Lexicon();
         for(const auto& n_p : op_name_lex){
             const auto name = n_p.first;
             const auto canonical_name = n_p.second;
@@ -638,6 +754,7 @@ void Emit_Documentation(std::ostream &os){
         "# Operations Reference"
     );
 
+    auto known_ops = Known_Operations();
     bool printed_first = false;
     for(auto &anop : known_ops){
         if(!printed_first){
@@ -648,77 +765,7 @@ void Emit_Documentation(std::ostream &os){
         }
 
         const auto name = anop.first;
-
-        reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-            "## "_s + name
-        );
-        auto optdocs = anop.second.first();
-        reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-            "### Description"
-        );
-        reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-            optdocs.desc
-        );
-
-        if(!optdocs.notes.empty()){
-            reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-                "### Notes"
-            );
-            for(auto &n : optdocs.notes){
-                reflow_and_emit_paragraph(os, max_width, bulleta, bulletb, nolinebreak,
-                    n
-                );
-            }
-        }
-
-        reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-            "### Parameters"
-        );
-        if(optdocs.args.empty()){
-            reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-                "No registered options."
-            );
-        }else{
-            for(auto &a : optdocs.args){
-                os << bulleta << a.name << std::endl;
-            }
-            os << std::endl;
-            for(auto &a : optdocs.args){
-                reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-                    "#### "_s + a.name
-                );
-
-                reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-                    "##### Description"
-                );
-                reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-                    a.desc
-                );
-
-                reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-                    "##### Default"
-                );
-                os << bulleta << "```\"" << a.default_val << "\"```" << std::endl;
-                os << std::endl;
-
-                if(!a.examples.empty()){
-                    if(a.samples == OpArgSamples::Exhaustive){
-                        reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-                            "##### Supported Options"
-                        );
-                    }else{ // if(a.samples == OpArgSamples::Examples){
-                        reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-                            "##### Examples"
-                        );
-                    }
-                    for(auto &e : a.examples){
-                        os << bulleta << "```\"" << e << "\"```" << std::endl;
-                    }
-                    os << std::endl;
-                }
-            }
-            os << std::endl;
-        }
+        Emit_Op_Documentation(name, os, bulleta, bulletb, nobullet, nolinebreak, max_width);
     }
 
     // -----------------------------------------------------
