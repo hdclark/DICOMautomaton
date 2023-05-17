@@ -42,6 +42,88 @@
 #include "Script_Loader.h"
 #include "Contour_Collection_File_Loader.h"
 
+enum class file_magic {
+    unknown,
+    dicom,
+    off,
+    ply
+};
+
+template <int64_t preamble_length, int64_t magic_length> 
+std::optional<std::array<char, magic_length>>
+read_header_bytes( std::ifstream &in,
+                   const std::ifstream::pos_type file_size ){
+
+    std::array<char, magic_length> actual;
+    actual.fill('\0');
+
+    if( (preamble_length + magic_length) > static_cast<int64_t>(file_size) ) return {};
+
+    in.seekg(preamble_length, std::ios::beg); // Seek past the preamble.
+    in.read(actual.data(), magic_length);
+    if(!in) return {};
+    return actual;
+}
+
+static file_magic has_known_magic(const std::filesystem::path &p){
+    file_magic out = file_magic::unknown;
+
+    // Open the file at the end.
+    std::ifstream in(p.string().c_str(), std::ios::in | std::ios::binary | std::ios::ate);
+    if(!in) return out;
+
+    const std::ifstream::pos_type file_size = in.tellg();  // Grab the size of the file.
+
+    // Check for DICOM.
+    if(out == file_magic::unknown){
+        // DICOM files have a 128 byte nominally null-filled block (which *might* be occupied by something other than
+        // null) followed by 'DICM'.
+        constexpr int64_t preamble_length = 128;
+        constexpr int64_t magic_length = 4;
+        auto header_opt = read_header_bytes<preamble_length, magic_length>(in, file_size);
+
+        constexpr std::array<char, magic_length> expected { { 'D', 'I', 'C', 'M' } };
+        if( header_opt
+        &&  (expected == header_opt.value()) ){
+            out = file_magic::dicom;
+        }
+    }
+
+    // Check for OFF.
+    if(out == file_magic::unknown){
+        // OFF files have an optional 'OFF' signature at the beginning of the file.
+        constexpr int64_t preamble_length = 0;
+        constexpr int64_t magic_length = 3;
+        auto header_opt = read_header_bytes<preamble_length, magic_length>(in, file_size);
+
+        constexpr std::array<char, magic_length> expected { { 'O', 'F', 'F' } };
+        if( header_opt
+        &&  (expected == header_opt.value()) ){
+            out = file_magic::off;
+        }
+    }
+
+    // Check for PLY.
+    if(out == file_magic::unknown){
+        // PLY files have an required 'PLY\r' signature at the beginning of the file.
+        // To provide some flexibility, the trailing carriage return is not checked here.
+        constexpr int64_t preamble_length = 0;
+        constexpr int64_t magic_length = 3;
+        auto header_opt = read_header_bytes<preamble_length, magic_length>(in, file_size);
+
+        constexpr std::array<char, magic_length> expected1 { { 'P', 'L', 'Y' } };
+        constexpr std::array<char, magic_length> expected2 { { 'p', 'l', 'y' } };
+        if( header_opt
+        &&  ( (expected1 == header_opt.value()) || (expected2 == header_opt.value()) ) ){
+            out = file_magic::off;
+        }
+    }
+
+    in.close();
+    return out;
+}
+
+
 using loader_func_t = std::function<bool(std::list<std::filesystem::path>&)>;
 struct file_loader_t {
     std::list<std::string> exts;
@@ -294,9 +376,8 @@ Load_Files( Drover &DICOM_data,
         return loaders;
     };
 
-    const auto has_recognized_extension = [=](const std::filesystem::path &p) -> bool {
+    const auto has_recognized_extension = [=](const std::string &ext) -> bool {
         const auto loaders = get_default_loaders();
-        const auto ext = p.extension().string();
         const auto recognized = std::any_of( std::begin(loaders), std::end(loaders),
                                              [ext](const file_loader_t &l){
             return std::any_of( std::begin(l.exts),
@@ -328,21 +409,26 @@ Load_Files( Drover &DICOM_data,
                 const auto l_p = std::filesystem::absolute(p);
                 if( std::filesystem::exists(l_p) ) p = l_p;
 
-                if(! std::filesystem::exists(p) ){
+                if( !std::filesystem::exists(p) ){
                     throw std::runtime_error("Unable to resolve file or directory "_s + p.string() + "'");
-                }
 
-                if( std::filesystem::is_directory(p) ){
+                }else if( std::filesystem::is_directory(p) ){
                     for(const auto &rp : std::filesystem::directory_iterator(p)){
                         recursed_Paths.push_back(rp);
                     }
+
                 }else{
-                    // Only include files with recognized file extensions.
+                    const auto ext = p.extension().string();
                     if( is_orig 
-                    ||  has_recognized_extension(p)){
+                    ||  has_recognized_extension(ext) ){
                         l_Paths.push_back(p);
+
+                    }else if( has_known_magic(p) != file_magic::unknown ){
+                        YLOGINFO("Detected header magic bytes for file '" << p.string() << "'. Specifying file explicitly will speed loading");
+                        l_Paths.push_back(p);
+
                     }else{
-                        YLOGWARN("Ignoring file '" << p.string() << "' because extension is not recognized. Specify explicitly to attempt loading");
+                        YLOGWARN("Ignoring file '" << p.string() << "' because file extension is not recognized. Specify file explicitly to attempt loading");
                     }
                 }
             }catch(const std::filesystem::filesystem_error &e){
@@ -354,9 +440,30 @@ Load_Files( Drover &DICOM_data,
     }
 
     // Partition the paths by file extension.
+    //
+    // If we can detect files in other ways (e.g., magic bytes), then we can override simplistic extension-based
+    // detection here.
     icase_map_t<std::list<std::filesystem::path>> extensions(icase_str_lt);
     for(auto &p : Paths){
-        const auto ext = p.extension().string();
+        auto ext = p.extension().string();
+
+        // If there is no extension, check whether magic bytes are present.
+        //
+        // DICOM files often come in DICOMDIR format, generally without file extensions.
+        if( ext.empty() && (has_known_magic(p) == file_magic::dicom) ){
+            ext = ".dcm";
+        }
+
+        // OFF files have an optional signature.
+        if( ext.empty() && (has_known_magic(p) == file_magic::off) ){
+            ext = ".off";
+        }
+
+        // PLY files have a required signature.
+        if( ext.empty() && (has_known_magic(p) == file_magic::ply) ){
+            ext = ".ply";
+        }
+
         extensions[ext].push_back(p);
     }
     Paths.clear();
@@ -366,9 +473,9 @@ Load_Files( Drover &DICOM_data,
         auto &&l_Paths = ep.second;
         
         // Warn if the file extension is not recognized.
-        for(const auto &p : l_Paths){
-            if(!has_recognized_extension(p)){
-                YLOGWARN("Unrecognized file extension '" << ext << "'. Attempting to load because it was explicitly specified");
+        if(!has_recognized_extension(ext)){
+            for(const auto &p : l_Paths){
+                YLOGINFO("Unrecognized file extension '" << ext << "'. Attempting to load because it was explicitly specified");
             }
         }
                                                   
@@ -384,6 +491,7 @@ Load_Files( Drover &DICOM_data,
         }
 
         // For select 'unique' extensions, exclude all other loaders that are likely to be irrelevant.
+        // This will help prevent files being loaded in the wrong format, and will also reduce debugging messages.
         if( !ext.empty()
         &&  (   icase_str_eq(ext, ".dcm")
              || icase_str_eq(ext, ".xim")
@@ -409,12 +517,12 @@ Load_Files( Drover &DICOM_data,
                                 } );
         }
 
-        // Re-sort using the altered priorities.
+        // Re-sort using the modified priorities.
         loaders.sort( [](const file_loader_t &l, const file_loader_t &r){
             return (l.priority < r.priority);
         });
 
-        // Attempt to load the files.
+        // Attempt to load the files using the remaining loaders in priority order.
         for(const auto &l : loaders){
             if(l_Paths.empty()) break;
             std::stringstream ss;
