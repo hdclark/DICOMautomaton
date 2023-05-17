@@ -83,39 +83,39 @@ tray_notification(const notification_t &n){
     std::set<query_method> qm;
 #if defined(_WIN32) || defined(_WIN64)
     if( win_cmd_is_available("powershell") ){
-        YLOGINFO("powershell is available");
+        YLOGDEBUG("powershell is available");
         qm.insert( query_method::pshell );
     }
     if( win_cmd_is_available("msg") ){
-        YLOGINFO("msg is available");
+        YLOGDEBUG("msg is available");
         qm.insert( query_method::winmsg );
     }
     if( win_cmd_is_available("zenity") ){
-        YLOGINFO("zenity is available");
+        YLOGDEBUG("zenity is available");
         qm.insert( query_method::zenity );
     }
 #endif
 #if defined(__linux__)
     if(sh_cmd_is_available("notify-send")){
-        YLOGINFO("notify-send is available");
+        YLOGDEBUG("notify-send is available");
         qm.insert( query_method::notifysend );
     }
     if(sh_cmd_is_available("zenity")){
-        YLOGINFO("zenity is available");
+        YLOGDEBUG("zenity is available");
         qm.insert( query_method::zenity );
     }
 #endif
 #if defined(__APPLE__) && defined(__MACH__)
     if(sh_cmd_is_available("notify-send")){
-        YLOGINFO("notify-send is available");
+        YLOGDEBUG("notify-send is available");
         qm.insert( query_method::notifysend );
     }
     if(sh_cmd_is_available("zenity")){
-        YLOGINFO("zenity is available");
+        YLOGDEBUG("zenity is available");
         qm.insert( query_method::zenity );
     }
     if(sh_cmd_is_available("osascript")){
-        YLOGINFO("zenity is available");
+        YLOGDEBUG("zenity is available");
         qm.insert( query_method::osascript );
     }
 #endif
@@ -180,7 +180,7 @@ tray_notification(const notification_t &n){
                     Execute_Command_In_Pipe(cmd);
                     return;
                 };
-                YLOGINFO("About to perform pshell command: '" << cmd << "'");
+                YLOGDEBUG("About to perform pshell command: '" << cmd << "'");
                 std::thread t(exec_cmd, cmd);
                 t.detach();
                 break;
@@ -200,7 +200,7 @@ tray_notification(const notification_t &n){
                 std::string cmd = ExpandMacros(proto_cmd, key_vals, "@");
 
                 // Notify the user.
-                YLOGINFO("About to perform osascript command: '" << cmd << "'");
+                YLOGDEBUG("About to perform osascript command: '" << cmd << "'");
                 auto res = Execute_Command_In_Pipe(cmd);
                 res = escape_for_quotes(res); // Trim newlines and unprintable characters.
 
@@ -229,7 +229,7 @@ tray_notification(const notification_t &n){
                 std::string cmd = ExpandMacros(proto_cmd, key_vals, "@");
 
                 // Notify the user.
-                YLOGINFO("About to perform notify-send command: '" << cmd << "'");
+                YLOGDEBUG("About to perform notify-send command: '" << cmd << "'");
                 auto res = Execute_Command_In_Pipe(cmd);
                 res = escape_for_quotes(res); // Trim newlines and unprintable characters.
 
@@ -263,7 +263,7 @@ tray_notification(const notification_t &n){
                     Execute_Command_In_Pipe(cmd);
                     return;
                 };
-                YLOGINFO("About to perform zenity command: '" << cmd << "'");
+                YLOGDEBUG("About to perform zenity command: '" << cmd << "'");
                 std::thread t(exec_cmd, cmd);
                 t.detach();
                 break;
@@ -288,7 +288,7 @@ tray_notification(const notification_t &n){
                     Execute_Command_In_Pipe(cmd);
                     return;
                 };
-                YLOGINFO("About to perform msg command: '" << cmd << "'");
+                YLOGDEBUG("About to perform msg command: '" << cmd << "'");
                 std::thread t(exec_cmd, cmd);
                 t.detach();
                 break;
