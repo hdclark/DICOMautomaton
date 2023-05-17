@@ -201,42 +201,43 @@ endif()
 
 # Add other appropriate CXX flags.
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-var-tracking-assignments")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpedantic")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wdeprecated")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-variable")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-but-set-variable")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-maybe-initialized")
+    add_compile_options( -fdiagnostics-color=always
+                         -fno-var-tracking-assignments
+                         #-ftrivial-auto-var-init=pattern
+                         -Wno-deprecated
+                         -Wall
+                         -Wextra
+                         -Wpedantic
+                         -Wdeprecated
+                         -Wno-unused-variable
+                         -Wno-unused-parameter
+                         -Wno-unused-but-set-variable
+                         -Wno-maybe-initialized )
 
     if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
         # Add gprof profiling flag.
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fstack-check")
+        add_compile_options( -pg
+                             -fno-omit-frame-pointer
+                             -fstack-check )
     endif()
 
     if(MEMORY_CONSTRAINED_BUILD)
         # Trigger garbage collection more frequently.
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --param ggc-min-expand=10")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --param ggc-min-heapsize=32768")
+        add_compile_options( --param ggc-min-expand=10
+                             --param ggc-min-heapsize=32768 )
     endif()
 
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpedantic")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wdeprecated")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-lambda-capture")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-variable")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-parameter")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-reserved-identifier")
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-ignored-optimization-argument")
+    add_compile_options( -fdiagnostics-color=always
+                         -Wall
+                         -Wextra
+                         -Wpedantic
+                         -Wdeprecated
+                         #-Wno-ignored-optimization-argument
+                         -Wno-unused-lambda-capture
+                         -Wno-unused-variable
+                         -Wno-unused-parameter
+                         -Wno-reserved-identifier )
 
     if(WITH_IWYU)
         set(IWYU_INVOCATION iwyu) # Location of the iwyu binary.
@@ -248,18 +249,18 @@ endif()
 
 # Sanitizers.
 if(WITH_ASAN  OR  WITH_TSAN  OR  WITH_MSAN)
-    #set(CMAKE_CXX_FLAGS " ")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-common")
+    add_compile_options( -O2
+                         -g
+                         -fno-omit-frame-pointer
+                         -fno-common )
 
     # Also enable coverage instrumentation, since sanitizers will typically be used for testing.
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
-    # Clang only? Need to confirm ... TODO
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize-coverage=trace-pc-guard")
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-instr-generate")
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fcoverage-mapping")
+    add_compile_options( --coverage
+                         # Clang only? Need to confirm ... TODO
+                         #-fsanitize-coverage=trace-pc-guard
+                         #-fprofile-instr-generate
+                         #-fcoverage-mapping
+    )
 
     add_definitions(-U_FORTIFY_SOURCE)
 endif()
