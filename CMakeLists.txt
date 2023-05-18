@@ -223,8 +223,8 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 
     if(MEMORY_CONSTRAINED_BUILD)
         # Trigger garbage collection more frequently.
-        add_compile_options( "--param ggc-min-expand=10"
-                             "--param ggc-min-heapsize=32768" )
+        add_compile_options( "SHELL:--param ggc-min-expand=10"
+                             "SHELL:--param ggc-min-heapsize=32768" )
     endif()
 
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
