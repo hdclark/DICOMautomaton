@@ -13,6 +13,7 @@
 #include <vector>
 #include <thread>
 #include <chrono>
+#include <tuple>
 //#include <cfenv>              //Needed for std::feclearexcept(FE_ALL_EXCEPT).
 
 #include <filesystem>
@@ -137,6 +138,17 @@ try{
       [&](const std::string &) -> void {
         Emit_Documentation(std::cout);
         std::exit(0);
+        return;
+      })
+    );
+
+    arger.push_back( ygor_arg_handlr_t(0, 'q', "quiet", false, "",
+      "Reduce the default verbosity for all log messages. This option may be provided multiple times."
+      " Note that the minimal log message severity can also be controlled by setting the environment variables"
+      " YLOG_VERBOSITY, YLOG_TERMINAL_VERBOSITY, and YLOG_CALLBACK_VERBOSITY"
+      " to 'debug', 'info', 'warn', or 'error'.",
+      [&](const std::string &) -> void {
+        ygor::g_logger.decrease_verbosity();
         return;
       })
     );
@@ -337,7 +349,7 @@ try{
 
     // Ensure the current path is set to *something*, otherwise std::filesystem::current_path() throws. :(
     try{
-        std::filesystem::current_path();
+        std::ignore = std::filesystem::current_path();
     }catch(const std::exception &){
         if(const char *pwd = std::getenv("PWD"); nullptr != pwd){
             YLOGWARN("Current working directory not set. Resetting via PWD environment variable");
