@@ -16,8 +16,10 @@
 #include <vector>
 #include <filesystem>
 
-#include <unistd.h>           //fork().
-#include <cstdlib>            //quick_exit(), EXIT_SUCCESS.
+#if !defined(_WIN32) && !defined(_WIN64)
+    #include <unistd.h>           //fork().
+    #include <cstdlib>            //quick_exit(), EXIT_SUCCESS.
+#endif
 
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorLog.h"
@@ -56,6 +58,15 @@ OperationDoc OpArgDocFork() {
         " In particular, all selectors in child operations are evaluated lazily, at the moment when the child"
         " operation is invoked."
     );
+    out.notes.emplace_back(
+        "Windows does not provide fork(), so threads are used to (approximately) emulate fork() on Windows."
+        " However, this is not a true fork."
+        " Note that signals, file descriptors, and almost all other state will be shared."
+        " Copy-on-write is used for fork(), but thread-emulated forking requires an up-front copy of all"
+        " application state, so it will be considerably slower than a true fork()."
+        " Also, thread-emulated fork does not create a new process, so when the parent process terminates"
+        " normally any thread-emulated \"forks\" will likely be terminated as well."
+    );
 
     return out;
 }
@@ -67,6 +78,7 @@ bool Fork(Drover &DICOM_data,
     //-----------------------------------------------------------------------------------------------------------------
     auto children = OptArgs.getChildren();
 
+#if !defined(_WIN32) && !defined(_WIN64)
     auto pid = fork();
     if(pid == -1){ // Parent process.
         throw std::runtime_error("Unable to fork");
@@ -78,11 +90,28 @@ bool Fork(Drover &DICOM_data,
         if(!Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, children)){
             YLOGERR("Forked child operations failed");
         }
-        quick_exit(EXIT_SUCCESS);
+        std::quick_exit(EXIT_SUCCESS);
 
     }else{
         throw std::runtime_error("Unrecognized fork status");
     }
+#else
+    auto task = [=]( Drover l_DICOM_data,
+                     std::map<std::string, std::string> l_InvocationMetadata,
+                     std::string l_FilenameLex,
+                     std::list<OperationArgPkg> children ){
+        if(!Operation_Dispatcher(l_DICOM_data, l_InvocationMetadata, l_FilenameLex, children)){
+            // Issue a warning, but carry on since terminating here will also terminate the parent process.
+            YLOGWARN("Forked child operations failed");
+        }
+        return;
+    };
+    std::thread t(task, DICOM_data.Deep_Copy(), 
+                        InvocationMetadata,
+                        FilenameLex,
+                        children );
+    t.detach();
+#endif
 
     return true;
 }
