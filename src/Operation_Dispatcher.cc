@@ -122,6 +122,7 @@
 #include "Operations/False.h"
 #include "Operations/ForEachDistinct.h"
 #include "Operations/ForEachRTPlan.h"
+#include "Operations/Fork.h"
 #include "Operations/FVPicketFence.h"
 #include "Operations/GenerateCalibrationCurve.h"
 #include "Operations/GenerateMeshes.h"
@@ -366,6 +367,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["False"] = std::make_pair(OpArgDocFalse, False);
     out["ForEachDistinct"] = std::make_pair(OpArgDocForEachDistinct, ForEachDistinct);
     out["ForEachRTPlan"] = std::make_pair(OpArgDocForEachRTPlan, ForEachRTPlan);
+    out["Fork"] = std::make_pair(OpArgDocFork, Fork);
     out["FVPicketFence"] = std::make_pair(OpArgDocFVPicketFence, FVPicketFence);
     out["GenerateCalibrationCurve"] = std::make_pair(OpArgDocGenerateCalibrationCurve, GenerateCalibrationCurve);
     out["GenerateMeshes"] = std::make_pair(OpArgDocGenerateMeshes, GenerateMeshes);

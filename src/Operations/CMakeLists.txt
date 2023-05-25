@@ -101,6 +101,7 @@ add_library(Operations_objs OBJECT
     False.cc
     ForEachDistinct.cc
     ForEachRTPlan.cc
+    Fork.cc
     FVPicketFence.cc
     GenerateCalibrationCurve.cc
     GenerateMeshes.cc
