@@ -90,7 +90,11 @@ bool Fork(Drover &DICOM_data,
         if(!Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, children)){
             YLOGERR("Forked child operations failed");
         }
+#if defined(DCMA_CPPSTDLIB_HAS_QUICK_EXIT)
         std::quick_exit(EXIT_SUCCESS);
+#else
+        std::exit(EXIT_SUCCESS);
+#endif
 
     }else{
         throw std::runtime_error("Unrecognized fork status");

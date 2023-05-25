@@ -308,6 +308,12 @@ if(HAS_REGEX_MULTILINE)
     add_definitions(-DDCMA_CPPSTDLIB_HAS_REGEX_MULTILINE=1)
 endif()
 
+# C++11 feature currently missing from macos libc.
+check_cxx_symbol_exists(std::quick_exit "cstdlib" HAS_QUICK_EXIT)
+if(HAS_QUICK_EXIT)
+    add_definitions(-DDCMA_CPPSTDLIB_HAS_QUICK_EXIT=1)
+endif()
+
 ####################################################################################
 #                                    Definitions
 ####################################################################################
