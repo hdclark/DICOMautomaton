@@ -35,7 +35,12 @@ OperationDoc OpArgDocResampleImages(){
         " which can simplify and accelerate other operations.";
 
     out.notes.emplace_back(
-        "No images are overwritten."
+        "No images are overwritten. A resampled image array is created."
+    );
+    out.notes.emplace_back(
+        "The resampling con be confined using a region of interest (via a contour collection) or using"
+        " intensity thresholds. Note that both of these are applied to the *reference* image array"
+        " (i.e., the image array that provides the reference geometry)."
     );
     out.notes.emplace_back(
         "The image array providing voxel values must be rectilinear. (This is a requirement specific to this"
