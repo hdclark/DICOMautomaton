@@ -144,11 +144,11 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
             }
             if(!envel_overlap){
                 std::lock_guard<std::mutex> lock(saver_printer);
-                YLOGWARN("Reference images do not all envelop-overlap; using slow per-voxel sampling");
+                YLOGDEBUG("Reference images do not all envelop-overlap; using slow per-voxel sampling");
             }
             if(envel_overlap && !exact_overlap){
                 std::lock_guard<std::mutex> lock(saver_printer);
-                YLOGWARN("Reference images do not all exact-overlap; using per-image sampling");
+                YLOGDEBUG("Reference images do not all exact-overlap; using per-image sampling");
             }
 
             auto f_bounded = [&](int64_t E_row,  // "edit-image" row.
