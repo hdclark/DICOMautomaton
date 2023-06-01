@@ -15,6 +15,7 @@ add_library(Operations_objs OBJECT
     BoostSerializeDrover.cc
     BuildLexiconInteractively.cc
     ClusterDBSCAN.cc
+    CombineImages.cc
     CombineMeshes.cc
     ComparePixels.cc
     ContourBasedRayCastDoseAccumulate.cc
@@ -83,6 +84,7 @@ add_library(Operations_objs OBJECT
     EvaluateNTCPModels.cc
     EvaluateTCPModels.cc
     ExecuteShell.cc
+    ExplodeImages.cc
     ExportFITSImages.cc
     ExportContours.cc
     ExportLineSamples.cc

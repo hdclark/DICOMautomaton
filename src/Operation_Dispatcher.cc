@@ -36,6 +36,7 @@
 #include "Operations/BoostSerializeDrover.h"
 #include "Operations/BuildLexiconInteractively.h"
 #include "Operations/ClusterDBSCAN.h"
+#include "Operations/CombineImages.h"
 #include "Operations/CombineMeshes.h"
 #include "Operations/ComparePixels.h"
 #include "Operations/ContourBasedRayCastDoseAccumulate.h"
@@ -104,6 +105,7 @@
 #include "Operations/EvaluateNTCPModels.h"
 #include "Operations/EvaluateTCPModels.h"
 #include "Operations/ExecuteShell.h"
+#include "Operations/ExplodeImages.h"
 #include "Operations/ExportFITSImages.h"
 #include "Operations/ExportContours.h"
 #include "Operations/ExportLineSamples.h"
@@ -283,6 +285,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["BuildLexiconInteractively"] = std::make_pair(OpArgDocBuildLexiconInteractively, BuildLexiconInteractively);
     out["CellularAutomata"] = std::make_pair(OpArgDocCellularAutomata, CellularAutomata);
     out["ClusterDBSCAN"] = std::make_pair(OpArgDocClusterDBSCAN, ClusterDBSCAN);
+    out["CombineImages"] = std::make_pair(OpArgDocCombineImages, CombineImages);
     out["CombineMeshes"] = std::make_pair(OpArgDocCombineMeshes, CombineMeshes);
     out["ComparePixels"] = std::make_pair(OpArgDocComparePixels, ComparePixels);
     out["ContourBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocContourBasedRayCastDoseAccumulate, ContourBasedRayCastDoseAccumulate);
@@ -350,6 +353,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["EvaluateNTCPModels"] = std::make_pair(OpArgDocEvaluateNTCPModels, EvaluateNTCPModels);
     out["EvaluateTCPModels"] = std::make_pair(OpArgDocEvaluateTCPModels, EvaluateTCPModels);
     out["ExecuteShell"] = std::make_pair(OpArgDocExecuteShell, ExecuteShell);
+    out["ExplodeImages"] = std::make_pair(OpArgDocExplodeImages, ExplodeImages);
     out["ExportFITSImages"] = std::make_pair(OpArgDocExportFITSImages, ExportFITSImages);
     out["ExportContours"] = std::make_pair(OpArgDocExportContours, ExportContours);
     out["ExportLineSamples"] = std::make_pair(OpArgDocExportLineSamples, ExportLineSamples);
