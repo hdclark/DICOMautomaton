@@ -180,6 +180,7 @@
 #include "Operations/RankPixels.h"
 #include "Operations/ReduceNeighbourhood.h"
 #include "Operations/Repeat.h"
+#include "Operations/ResampleImages.h"
 #include "Operations/RigidWarpImages.h"
 #include "Operations/ScalePixels.h"
 #include "Operations/SelectionIsPresent.h"
@@ -425,6 +426,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["RankPixels"] = std::make_pair(OpArgDocRankPixels, RankPixels);
     out["ReduceNeighbourhood"] = std::make_pair(OpArgDocReduceNeighbourhood, ReduceNeighbourhood);
     out["Repeat"] = std::make_pair(OpArgDocRepeat, Repeat);
+    out["ResampleImages"] = std::make_pair(OpArgDocResampleImages, ResampleImages);
     out["RigidWarpImages"] = std::make_pair(OpArgDocRigidWarpImages, RigidWarpImages);
     out["ScalePixels"] = std::make_pair(OpArgDocScalePixels, ScalePixels);
     out["SelectionIsPresent"] = std::make_pair(OpArgDocSelectionIsPresent, SelectionIsPresent);

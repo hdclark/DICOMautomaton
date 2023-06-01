@@ -27,13 +27,15 @@ OperationDoc OpArgDocSupersampleImageGrid(){
     out.name = "SupersampleImageGrid";
 
     out.desc = 
-        "This operation scales supersamples images so they have more rows and/or columns, but the whole image keeps its"
-        " shape and spatial extent. This operation is typically used for zooming into images or trying to ensure a"
-        " sufficient number of voxels are within small contours.";
+        "This operation supersamples (i.e., scales and resamples) whole image arrays so they have more rows and/or"
+        " columns, but in a way that the supersampled image array retains the shape and spatial extent of the"
+        " original image array."
+        " This operation is typically used for 'zooming' into images, or dividing large voxels"
+        " so that binarization using small contours has reduced spillover.";
         
     out.notes.emplace_back(
-        "Be aware that specifying large multipliers (or even small multipliers on large images) will consume much"
-        " memory. It is best to pre-crop images to a region of interest if possible."
+        "Be aware that specifying large multipliers (or even small multipliers on large images) could consume"
+        " large amounts of memory. It is best to pre-crop images to a given region of interest if possible."
     );
 
     out.args.emplace_back();
