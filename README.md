@@ -192,8 +192,10 @@ formats:
     - XIM (read)
     - CSA DICOM headers (read)
     - SNC (read and write; ASCII; partial)
-    - PNG (write)
-    - JPG (write)
+    - PNG (read and write; partial)
+    - JPG (read and write; partial)
+    - BMP (read; partial)
+    - TGA (read; partial)
   - contours
     - DICOM RTSTRUCT (read and write)
   - surface meshes

@@ -94,6 +94,9 @@ set_target_properties(  File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRU
 add_library(            FITS_File_Loader_obj OBJECT FITS_File_Loader.cc )
 set_target_properties(  FITS_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            STB_File_Loader_obj OBJECT STB_File_Loader.cc )
+set_target_properties(  STB_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            XYZ_File_Loader_obj OBJECT XYZ_File_Loader.cc )
 set_target_properties(  XYZ_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -379,6 +382,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:DICOM_File_Loader_obj>
     $<TARGET_OBJECTS:Lexicon_Loader_obj>
     $<TARGET_OBJECTS:FITS_File_Loader_obj>
+    $<TARGET_OBJECTS:STB_File_Loader_obj>
     $<TARGET_OBJECTS:XYZ_File_Loader_obj>
     $<TARGET_OBJECTS:XIM_File_Loader_obj>
     $<TARGET_OBJECTS:SNC_File_Loader_obj>
@@ -474,6 +478,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:DICOM_File_Loader_obj>
         $<TARGET_OBJECTS:Lexicon_Loader_obj>
         $<TARGET_OBJECTS:FITS_File_Loader_obj>
+        $<TARGET_OBJECTS:STB_File_Loader_obj>
         $<TARGET_OBJECTS:XYZ_File_Loader_obj>
         $<TARGET_OBJECTS:XIM_File_Loader_obj>
         $<TARGET_OBJECTS:SNC_File_Loader_obj>
