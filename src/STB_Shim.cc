@@ -28,6 +28,7 @@
 // potentially separate version wrapped in a namespace to avoid multiple definition issues. Compiling this shim file as
 // a library should also reduce the likelihood of clash.
 namespace dcma_stb {
+    #define STB_IMAGE_STATIC
     #define STB_IMAGE_IMPLEMENTATION
     #include "stbnothings20230607/stb_image.h"
 } // namespace dcma_stb.
