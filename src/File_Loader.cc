@@ -41,7 +41,7 @@
 #include "CSV_File_Loader.h"
 #include "Script_Loader.h"
 #include "Contour_Collection_File_Loader.h"
-#include "STB_File_Loader.h"
+#include "Common_Image_File_Loader.h"
 
 enum class file_magic {
     unknown,
@@ -325,7 +325,7 @@ Load_Files( Drover &DICOM_data,
             return true;
         }});
 
-        //Standalone file loading using the "stb nothings" library.
+        //Standalone file loading for common raster image formats.
         loaders.emplace_back(file_loader_t{{".jpg", ".jpeg",
                                             ".png",
                                             ".bmp",
@@ -333,7 +333,7 @@ Load_Files( Drover &DICOM_data,
                                             ".gif",
                                             ".pnm", ".ppm", ".pgm"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
             if(!p.empty()
-            && !Load_From_STB_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
+            && !Load_From_Common_Image_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
                 YLOGWARN("Failed to load STB file");
                 return false;
             }
