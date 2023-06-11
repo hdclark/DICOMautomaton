@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# This script installs all dependencies needed to build DICOMautomaton starting with a minimal Debian oldstable system.
+# This script installs all dependencies needed to build DICOMautomaton starting with a minimal Debian buster system.
 
 set -eux
 
@@ -65,7 +65,7 @@ until
         xserver-xorg-video-dummy \
         x11-apps \
         ` # Other optional dependencies ` \
-        libnotify \
+        libnotify-dev \
         dunst \
         bash-completion \
         gnuplot \

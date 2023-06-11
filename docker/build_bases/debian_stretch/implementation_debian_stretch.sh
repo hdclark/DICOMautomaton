@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# This script installs all dependencies needed to build DICOMautomaton starting with a minimal Debian oldoldstable system.
+# This script installs all dependencies needed to build DICOMautomaton starting with a minimal Debian stretch system.
 
 #
 # NOTE (20201031): The approach shown below does not work. Specifically, linking so's created with the native toolchain

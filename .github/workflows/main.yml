@@ -90,10 +90,10 @@ jobs:
              chmod 600 deploy_key
              for i in `seq 1 20` ; do sleep 5 ; rsync -avP -e 'ssh -v -i deploy_key -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no' ci_artifacts/ root@halclark.ca:/var/www/html/ci/ && break ; done
 
-  build_debian_oldstable_x86_64:
+  build_debian_buster_x86_64:
     runs-on: ubuntu-latest
     container:
-      image: debian:oldstable
+      image: debian:buster
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v1
@@ -105,7 +105,7 @@ jobs:
       - name: build
         run: |
              ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
-             ./docker/builders/ci/implementation_ci_debian_oldstable.sh
+             ./docker/builders/ci/implementation_ci_debian_buster.sh
              git config --global --add safe.directory '*' || true
       - name: test
         run: |
@@ -135,10 +135,10 @@ jobs:
              chmod 600 deploy_key
              for i in `seq 1 20` ; do sleep 5 ; rsync -avP -e 'ssh -v -i deploy_key -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no' ci_artifacts/ root@halclark.ca:/var/www/html/ci/ && break ; done
 
-  build_debian_oldstable_aarch64:
+  build_debian_buster_aarch64:
     runs-on: ubuntu-latest
     container:
-      image: debian:oldstable
+      image: debian:buster
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v1
@@ -150,10 +150,10 @@ jobs:
       - name: build
         run: |
              ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
-             ./docker/build_bases/debian_oldstable/create_foreign_chroot.sh -d /debian_oldstable_aarch64 -s /run_in_chroot.sh -a arm64
-             cp -R /scratch /debian_oldstable_aarch64/scratch
-             cp -R /dcma /debian_oldstable_aarch64/dcma
-             /run_in_chroot.sh 'cd /dcma && ./docker/builders/ci/implementation_ci_debian_oldstable.sh'
+             ./docker/build_bases/debian_buster/create_foreign_chroot.sh -d /debian_buster_aarch64 -s /run_in_chroot.sh -a arm64
+             cp -R /scratch /debian_buster_aarch64/scratch
+             cp -R /dcma /debian_buster_aarch64/dcma
+             /run_in_chroot.sh 'cd /dcma && ./docker/builders/ci/implementation_ci_debian_buster.sh'
       - name: test
         run: |
              /run_in_chroot.sh 'cd /dcma && ./integration_tests/Run.sh -v'
@@ -165,8 +165,8 @@ jobs:
              apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf
              rm -rf ci_artifacts
              mkdir -pv ci_artifacts
-             cp /debian_oldstable_aarch64/dcma/DICOMautomaton*AppImage ci_artifacts/DICOMautomaton-latest-aarch64.AppImage
-             mv /debian_oldstable_aarch64/dcma/DICOMautomaton*AppImage ci_artifacts/
+             cp /debian_buster_aarch64/dcma/DICOMautomaton*AppImage ci_artifacts/DICOMautomaton-latest-aarch64.AppImage
+             mv /debian_buster_aarch64/dcma/DICOMautomaton*AppImage ci_artifacts/
              find ci_artifacts/ -iname '*AppImage' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
       - name: deploy_to_github
         uses: actions/upload-artifact@v3
@@ -183,10 +183,10 @@ jobs:
              for i in `seq 1 20` ; do sleep 5 ; rsync -avP -e 'ssh -v -i deploy_key -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no' ci_artifacts/ root@halclark.ca:/var/www/html/ci/ && break ; done
 
 
-  build_debian_oldstable_armhf:
+  build_debian_buster_armhf:
     runs-on: ubuntu-latest
     container:
-      image: debian:oldstable
+      image: debian:buster
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v1
@@ -198,10 +198,10 @@ jobs:
       - name: build
         run: |
              ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
-             ./docker/build_bases/debian_oldstable/create_foreign_chroot.sh -d /debian_oldstable_armhf -s /run_in_chroot.sh -a armhf
-             cp -R /scratch /debian_oldstable_armhf/scratch
-             cp -R /dcma /debian_oldstable_armhf/dcma
-             /run_in_chroot.sh 'cd /dcma && ./docker/builders/ci/implementation_ci_debian_oldstable.sh'
+             ./docker/build_bases/debian_buster/create_foreign_chroot.sh -d /debian_buster_armhf -s /run_in_chroot.sh -a armhf
+             cp -R /scratch /debian_buster_armhf/scratch
+             cp -R /dcma /debian_buster_armhf/dcma
+             /run_in_chroot.sh 'cd /dcma && ./docker/builders/ci/implementation_ci_debian_buster.sh'
       - name: test
         run: |
              /run_in_chroot.sh 'cd /dcma && ./integration_tests/Run.sh -v'
@@ -213,8 +213,8 @@ jobs:
              apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf
              rm -rf ci_artifacts
              mkdir -pv ci_artifacts
-             cp /debian_oldstable_armhf/dcma/DICOMautomaton*AppImage ci_artifacts/DICOMautomaton-latest-armhf.AppImage
-             mv /debian_oldstable_armhf/dcma/DICOMautomaton*AppImage ci_artifacts/
+             cp /debian_buster_armhf/dcma/DICOMautomaton*AppImage ci_artifacts/DICOMautomaton-latest-armhf.AppImage
+             mv /debian_buster_armhf/dcma/DICOMautomaton*AppImage ci_artifacts/
              find ci_artifacts/ -iname '*AppImage' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
       - name: deploy_to_github
         uses: actions/upload-artifact@v3

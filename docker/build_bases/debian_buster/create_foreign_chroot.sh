@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# This script installs all dependencies needed to build DICOMautomaton starting with a minimal Debian oldstable system.
+# This script installs all dependencies needed to build DICOMautomaton starting with a minimal Debian buster system.
 set -eux
 shopt -s nocasematch
 
@@ -132,7 +132,7 @@ chmod 777 "${OUT_SCRIPT}"
 
 # Only create the chroot if the run script fails to work. This allows for better re-use of the chroot.
 if ! "${OUT_SCRIPT}" 'true' ; then
-    debootstrap --arch="${DEBIAN_ARCHITECTURE}" --foreign --variant=minbase oldstable "${OUT_DIRECTORY}" 'http://deb.debian.org/debian/'
+    debootstrap --arch="${DEBIAN_ARCHITECTURE}" --foreign --variant=minbase buster "${OUT_DIRECTORY}" 'http://deb.debian.org/debian/'
     #mkdir -pv "${OUT_DIRECTORY}"{/usr/bin,/sbin}
     #cp "$(which qemu-${ARCHITECTURE}-static)" "${OUT_DIRECTORY}/usr/bin"
     #touch "${OUT_DIRECTORY}/sbin/start-stop-daemon"

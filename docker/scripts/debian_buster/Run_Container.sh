@@ -15,6 +15,6 @@ sudo docker run -it --rm -p 8080:80 \
     --network=host \
     -v "${uploads_dir}":/client_uploads/:rw \
     -v "${artifacts_dir}":/home/hal/DICOMautomaton_Webserver_Artifacts/:rw \
-    dicomautomaton_webserver_debian_oldstable:latest
+    dicomautomaton_webserver_debian_buster:latest
 
 #    --entrypoint /bin/bash \

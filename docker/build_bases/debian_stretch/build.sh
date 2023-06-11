@@ -4,7 +4,7 @@ set -e
 
 exit 1
 
-base_name="dcma_build_base_debian_oldoldstable"
+base_name="dcma_build_base_debian_stretch"
 
 commit_id=$(git rev-parse HEAD)
 
@@ -25,6 +25,6 @@ time sudo docker build \
     -t "${base_name}":"built_${build_datetime}" \
     -t "${base_name}":"commit_${commit_id}_${clean_dirty}" \
     -t "${base_name}":latest \
-    -f docker/build_bases/debian_oldoldstable/Dockerfile \
+    -f docker/build_bases/debian_stretch/Dockerfile \
     .
 

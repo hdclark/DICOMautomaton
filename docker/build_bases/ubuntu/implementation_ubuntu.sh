@@ -70,7 +70,7 @@ until \
         libsm-dev \
         libopengl0 \
         ` # Other optional dependencies ` \
-        libnotify \
+        libnotify-dev \
         dunst \
         bash-completion \
         gnuplot \

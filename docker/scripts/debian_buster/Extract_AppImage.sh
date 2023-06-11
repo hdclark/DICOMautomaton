@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-# This script rebuilds DCMA inside the Debian:oldstable-based DCMA Docker image.
+# This script rebuilds DCMA inside the Debian:buster-based DCMA Docker image.
 # It then gathers all dependencies using linuxdeploy and creates an AppImage.
 # Note that the end-user's glibc version must be equivalent or newer than the
-# Docker image glibc. At the moment, Debian:oldoldstable is not new enough to
-# compile C++17, so we are stuck with the glibc in Debian:oldstable.
+# Docker image glibc. At the moment, Debian:stretch is not new enough to
+# compile C++17, so we are stuck with the glibc in Debian:buster.
 
 set -eu
 
@@ -139,7 +139,7 @@ sudo docker run -it --rm \
     -v "$(pwd)":/passage/:rw \
     -v "$create_sh":/start/create.sh:ro \
     -w /passage/ \
-    dicomautomaton_webserver_debian_oldstable:latest \
+    dicomautomaton_webserver_debian_buster:latest \
     /start/create.sh 
 
 sudo chown $(id -u -n):$(id -g -n) *AppImage
