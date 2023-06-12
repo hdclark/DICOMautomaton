@@ -50,6 +50,7 @@ jobs:
       - name: test
         run: |
              export DEBIAN_FRONTEND='noninteractive'
+             sed -i -e 's@stable@bullseye@g' /etc/apt/sources.list
              apt-get update --yes
              apt-get install --yes --no-install-recommends git ca-certificates rsync mesa-utils
              dpkg --add-architecture i386

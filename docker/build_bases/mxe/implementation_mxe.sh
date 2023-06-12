@@ -6,6 +6,8 @@
 set -eux
 
 export DEBIAN_FRONTEND="noninteractive"
+sed -i -e 's@oldstable@buster@g' /etc/apt/sources.list
+sed -i -e 's@stable@bullseye@g' /etc/apt/sources.list
 
 retry_count=0
 retry_limit=5
