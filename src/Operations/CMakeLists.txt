@@ -129,6 +129,7 @@ add_library(Operations_objs OBJECT
     ImageRoutineTests.cc
     ImprintImages.cc
     InterpolateSlices.cc
+    Isolate.cc
     IsolatedVoxelFilter.cc
     LoadFiles.cc
     LoadFilesInteractively.cc

@@ -5,7 +5,6 @@
 #include <string>
 #include <list>
 #include <numeric>
-#include <initializer_list>
 #include <functional>
 #include <regex>
 #include <optional>
@@ -371,8 +370,8 @@ Whitelist_Core( L lops,
 template <class L> // L is a list of list::iterators of shared_ptr<Image_Array or Point_Cloud>.
 L
 Whitelist_Core( L lops,
-           std::initializer_list< std::pair<std::string, 
-                                            std::string> > MetadataKeyValueRegex,
+           std::list< std::pair<std::string, 
+                                std::string> > MetadataKeyValueRegex,
            Regex_Selector_Opts Opts ){
 
     for(const auto& kv_pair : MetadataKeyValueRegex){
@@ -507,8 +506,8 @@ Whitelist( std::list<std::reference_wrapper<contour_collection<double>>> ccs,
 // This is a convenience routine to combine multiple filtering passes into a single logical statement.
 std::list<std::reference_wrapper<contour_collection<double>>>
 Whitelist( std::list<std::reference_wrapper<contour_collection<double>>> ccs,
-           std::initializer_list< std::pair<std::string, 
-                                            std::string> > MetadataKeyValueRegex,
+           std::list< std::pair<std::string, 
+                                std::string> > MetadataKeyValueRegex,
            Regex_Selector_Opts Opts ){
 
     for(const auto& kv_pair : MetadataKeyValueRegex){
@@ -658,8 +657,8 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
 // This is a convenience routine to combine multiple filtering passes into a single logical statement.
 std::list<std::list<std::shared_ptr<Image_Array>>::iterator>
 Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
-           std::initializer_list< std::pair<std::string, 
-                                            std::string> > MetadataKeyValueRegex,
+           std::list< std::pair<std::string, 
+                                std::string> > MetadataKeyValueRegex,
            Regex_Selector_Opts Opts ){
 
     return Whitelist_Core( std::move(ias), MetadataKeyValueRegex, Opts );
@@ -758,8 +757,8 @@ Whitelist( std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> pcs,
 // Note: this routine shares the generic Image_Arrays implementation above.
 std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator>
 Whitelist( std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> pcs,
-           std::initializer_list< std::pair<std::string, 
-                                            std::string> > MetadataKeyValueRegex,
+           std::list< std::pair<std::string, 
+                                std::string> > MetadataKeyValueRegex,
            Regex_Selector_Opts Opts ){
 
     return Whitelist_Core( std::move(pcs), MetadataKeyValueRegex, Opts );
@@ -864,8 +863,8 @@ Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> sms,
 // Note: this routine shares the generic Image_Arrays and Point_Clouds implementation above.
 std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator>
 Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> sms,
-           std::initializer_list< std::pair<std::string, 
-                                            std::string> > MetadataKeyValueRegex,
+           std::list< std::pair<std::string, 
+                                std::string> > MetadataKeyValueRegex,
            Regex_Selector_Opts Opts ){
 
     return Whitelist_Core( std::move(sms), MetadataKeyValueRegex, Opts );
@@ -971,8 +970,8 @@ Whitelist( std::list<std::list<std::shared_ptr<RTPlan>>::iterator> tps,
 // Note: this routine shares the generic Image_Arrays, Point_Clouds, and Surface_Mesh implementation above.
 std::list<std::list<std::shared_ptr<RTPlan>>::iterator>
 Whitelist( std::list<std::list<std::shared_ptr<RTPlan>>::iterator> tps,
-           std::initializer_list< std::pair<std::string, 
-                                            std::string> > MetadataKeyValueRegex,
+           std::list< std::pair<std::string, 
+                                std::string> > MetadataKeyValueRegex,
            Regex_Selector_Opts Opts ){
 
     return Whitelist_Core( std::move(tps), MetadataKeyValueRegex, Opts );
@@ -1073,8 +1072,8 @@ Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
 // Note: this routine shares the generic Image_Arrays implementation above.
 std::list<std::list<std::shared_ptr<Line_Sample>>::iterator>
 Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
-           std::initializer_list< std::pair<std::string, 
-                                            std::string> > MetadataKeyValueRegex,
+           std::list< std::pair<std::string, 
+                                std::string> > MetadataKeyValueRegex,
            Regex_Selector_Opts Opts ){
 
     return Whitelist_Core( std::move(lss), MetadataKeyValueRegex, Opts );
@@ -1171,8 +1170,8 @@ Whitelist( std::list<std::list<std::shared_ptr<Transform3>>::iterator> t3s,
 // Note: this routine shares the generic Image_Arrays implementation above.
 std::list<std::list<std::shared_ptr<Transform3>>::iterator>
 Whitelist( std::list<std::list<std::shared_ptr<Transform3>>::iterator> t3s,
-           std::initializer_list< std::pair<std::string, 
-                                            std::string> > MetadataKeyValueRegex,
+           std::list< std::pair<std::string, 
+                                std::string> > MetadataKeyValueRegex,
            Regex_Selector_Opts Opts ){
 
     return Whitelist_Core( std::move(t3s), MetadataKeyValueRegex, Opts );
@@ -1270,8 +1269,8 @@ Whitelist( std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator> sts,
 // Note: this routine shares the generic Image_Arrays implementation above.
 std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator>
 Whitelist( std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator> sts,
-           std::initializer_list< std::pair<std::string, 
-                                            std::string> > MetadataKeyValueRegex,
+           std::list< std::pair<std::string, 
+                                std::string> > MetadataKeyValueRegex,
            Regex_Selector_Opts Opts ){
 
     return Whitelist_Core( std::move(sts), MetadataKeyValueRegex, Opts );

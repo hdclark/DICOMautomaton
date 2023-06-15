@@ -61,8 +61,8 @@ Whitelist( std::list<std::reference_wrapper<contour_collection<double>>> ccs,
 // This is a convenience routine to combine multiple filtering passes into a single logical statement.
 std::list<std::reference_wrapper<contour_collection<double>>>
 Whitelist( std::list<std::reference_wrapper<contour_collection<double>>> ccs,
-           std::initializer_list< std::pair<std::string,        // MetadataKey
-                                            std::string> > MetadataKeyValueRegex, // MetadataValueRegex
+           std::list< std::pair<std::string,        // MetadataKey
+                                std::string> > MetadataKeyValueRegex, // MetadataValueRegex
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // Utility functions documenting the contour whitelist routines for operations.
@@ -95,8 +95,8 @@ Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
 // This is a convenience routine to combine multiple filtering passes into a single logical statement.
 std::list<std::list<std::shared_ptr<Image_Array>>::iterator>
 Whitelist( std::list<std::list<std::shared_ptr<Image_Array>>::iterator> ias,
-           std::initializer_list< std::pair<std::string,        // MetadataKey
-                                            std::string> > MetadataKeyValueRegex, // MetadataValueRegex
+           std::list< std::pair<std::string,        // MetadataKey
+                                std::string> > MetadataKeyValueRegex, // MetadataValueRegex
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // Utility function documenting the image array whitelist routines for operations.
@@ -128,8 +128,8 @@ Whitelist( std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> pcs,
 // This is a convenience routine to combine multiple filtering passes into a single logical statement.
 std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator>
 Whitelist( std::list<std::list<std::shared_ptr<Point_Cloud>>::iterator> pcs,
-           std::initializer_list< std::pair<std::string,        // MetadataKey
-                                            std::string> > MetadataKeyValueRegex, // MetadataValueRegex
+           std::list< std::pair<std::string,        // MetadataKey
+                                std::string> > MetadataKeyValueRegex, // MetadataValueRegex
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // Utility function documenting the point cloud whitelist routines for operations.
@@ -161,8 +161,8 @@ Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> sms,
 // This is a convenience routine to combine multiple filtering passes into a single logical statement.
 std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator>
 Whitelist( std::list<std::list<std::shared_ptr<Surface_Mesh>>::iterator> sms,
-           std::initializer_list< std::pair<std::string,        // MetadataKey
-                                            std::string> > MetadataKeyValueRegex, // MetadataValueRegex
+           std::list< std::pair<std::string,        // MetadataKey
+                                std::string> > MetadataKeyValueRegex, // MetadataValueRegex
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // Utility function documenting the surface mesh whitelist routines for operations.
@@ -194,8 +194,8 @@ Whitelist( std::list<std::list<std::shared_ptr<RTPlan>>::iterator> tps,
 // This is a convenience routine to combine multiple filtering passes into a single logical statement.
 std::list<std::list<std::shared_ptr<RTPlan>>::iterator>
 Whitelist( std::list<std::list<std::shared_ptr<RTPlan>>::iterator> tps,
-           std::initializer_list< std::pair<std::string,        // MetadataKey
-                                            std::string> > MetadataKeyValueRegex, // MetadataValueRegex
+           std::list< std::pair<std::string,        // MetadataKey
+                                std::string> > MetadataKeyValueRegex, // MetadataValueRegex
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // Utility function documenting the surface mesh whitelist routines for operations.
@@ -226,8 +226,8 @@ Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
 // This is a convenience routine to combine multiple filtering passes into a single logical statement.
 std::list<std::list<std::shared_ptr<Line_Sample>>::iterator>
 Whitelist( std::list<std::list<std::shared_ptr<Line_Sample>>::iterator> lss,
-           std::initializer_list< std::pair<std::string,        // MetadataKey
-                                            std::string> > MetadataKeyValueRegex, // MetadataValueRegex
+           std::list< std::pair<std::string,        // MetadataKey
+                                std::string> > MetadataKeyValueRegex, // MetadataValueRegex
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // Utility function documenting the line sample whitelist routines for operations.
@@ -258,8 +258,8 @@ Whitelist( std::list<std::list<std::shared_ptr<Transform3>>::iterator> lss,
 // This is a convenience routine to combine multiple filtering passes into a single logical statement.
 std::list<std::list<std::shared_ptr<Transform3>>::iterator>
 Whitelist( std::list<std::list<std::shared_ptr<Transform3>>::iterator> lss,
-           std::initializer_list< std::pair<std::string,        // MetadataKey
-                                            std::string> > MetadataKeyValueRegex, // MetadataValueRegex
+           std::list< std::pair<std::string,        // MetadataKey
+                                std::string> > MetadataKeyValueRegex, // MetadataValueRegex
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // Utility function documenting the transform whitelist routines for operations.
@@ -290,8 +290,8 @@ Whitelist( std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator> sts,
 // This is a convenience routine to combine multiple filtering passes into a single logical statement.
 std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator>
 Whitelist( std::list<std::list<std::shared_ptr<Sparse_Table>>::iterator> sts,
-           std::initializer_list< std::pair<std::string,        // MetadataKey
-                                            std::string> > MetadataKeyValueRegex, // MetadataValueRegex
+           std::list< std::pair<std::string,        // MetadataKey
+                                std::string> > MetadataKeyValueRegex, // MetadataValueRegex
            Regex_Selector_Opts Opts = Regex_Selector_Opts() );
 
 // Utility function documenting the line sample whitelist routines for operations.
