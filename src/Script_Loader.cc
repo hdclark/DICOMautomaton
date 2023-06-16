@@ -225,6 +225,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
         bool prev_escape = false;
         bool inside_comment = false;
         for(auto &c : contents){
+YLOGDEBUG("line = " << lc << ", column = " << lcc << ", and char = " << c.c);
             bool this_caused_escape = false;
             bool skip_character = false;
 
@@ -239,22 +240,22 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                   &&  (c == '#') ){
                 skip_character = true;
                 inside_comment = true;
-//YLOGINFO("Opened comment");
+YLOGDEBUG("Opened comment");
 
             // Quotations.
             }else if( !prev_escape
                   &&  !inside_comment
-                  &&  bumpy_stack.empty()
+                  //&&  bumpy_stack.empty()
                   &&  ((c == '\"') || (c == '\'')) ){
                 // Only permit a single quotation type at a time. Nesting not supported for quotes.
                 if( !quote_stack.empty() ){
                     if(quote_stack.back() == c){
                         quote_stack.pop_back();
-//YLOGINFO("Closed quotation");
+YLOGDEBUG("Closed quotation");
                     }
                 }else{
                     quote_stack.push_back(c);
-//YLOGINFO("Opened quotation");
+YLOGDEBUG("Opened quotation");
                 }
 
             // Variable assignment.
@@ -264,7 +265,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                   &&  curve_stack.empty()
                   &&  bumpy_stack.empty()
                   &&  (c == '=') ){
-//YLOGINFO("Pushing back variable name '" << to_str(shtl) << "'");
+YLOGDEBUG("Pushing back variable name '" << to_str(shtl) << "'");
                 if(!l_statements.back().var_name.empty()){
                     report(feedback, script_feedback_severity_t::err, c, "Prior variable name provided");
                     compilation_successful = false;
@@ -281,7 +282,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                   &&  (curve_stack.back() == '(')
                   &&  bumpy_stack.empty()
                   &&  (c == '=') ){
-//YLOGINFO("Pushing back argument key '" << to_str(shtl) << "'");
+YLOGDEBUG("Pushing back argument key '" << to_str(shtl) << "'");
                 l_statements.back().arguments.emplace_back();
                 l_statements.back().arguments.back().first = shtl;
                 shtl.clear();
@@ -300,7 +301,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                 &&  l_statements.back().arguments.back().second.empty() ){
                     l_statements.back().arguments.back().second = shtl;
                     skip_character = true;
-//YLOGINFO("Pushing back argument value '" << to_str(shtl) << "'");
+YLOGDEBUG("Pushing back argument value '" << to_str(shtl) << "'");
                 }else{
                     report(feedback, script_feedback_severity_t::err, c, "Ambiguous ','");
                     compilation_successful = false;
@@ -314,7 +315,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                   &&  quote_stack.empty()
                   &&  bumpy_stack.empty()
                   &&  (c == '(') ){
-//YLOGINFO("Pushing back function name '" << to_str(shtl) << "'");
+YLOGDEBUG("Pushing back function name '" << to_str(shtl) << "'");
                 if(curve_stack.empty()){
                     l_statements.back().func_name = shtl;
                     curve_stack.push_back(c);
@@ -354,7 +355,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                 }else if( (curve_stack.size() == 1)
                       &&  (curve_stack.back() == '(')
                       &&  !l_statements.back().arguments.empty() ){
-//YLOGINFO("Pushing back argument value '" << to_str(shtl) << "'");
+YLOGDEBUG("Pushing back argument value '" << to_str(shtl) << "'");
                     curve_stack.pop_back();
                     skip_character = true;
                     l_statements.back().arguments.back().second = shtl;
@@ -387,7 +388,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
             }else if( !prev_escape && (c == '\n') ){
                 lcc = 0;
                 ++lc;
-//if(inside_comment) YLOGINFO("Closed comment");
+if(inside_comment) YLOGDEBUG("Closed comment");
                 inside_comment = false;
                 skip_character = true;
 
@@ -404,14 +405,14 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                     l_statements.back().var_name = shtl;
 
                 }else if(!l_statements.back().var_name.empty()){
-//YLOGINFO("Pushing back variable equals '" << to_str(shtl) << "'");
+YLOGDEBUG("Pushing back variable equals '" << to_str(shtl) << "'");
                     l_statements.back().payload = shtl;
                 }
 
                 l_statements.emplace_back();
                 shtl.clear();
                 skip_character = true;
-//YLOGINFO("Created statement");
+YLOGDEBUG("Created statement");
 
             // 'Noise' characters.
             }else if( !prev_escape
@@ -440,7 +441,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
 
         if( !shtl.empty()
         &&  !std::all_of(std::begin(shtl), std::end(shtl), is_whitespace) ){
-//YLOGINFO("Trailing input has shtl = '" << to_str(shtl) << "'");
+YLOGDEBUG("Trailing input has shtl = '" << to_str(shtl) << "'");
             report(feedback, script_feedback_severity_t::err, contents.back(),
                    "Trailing input. (Are you missing a semicolon?)");
             compilation_successful = false;
