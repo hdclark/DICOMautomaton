@@ -101,17 +101,17 @@ OperationDoc OpArgDocIsolate() {
         " By default, this operation will provide an empty view."
     );
 
-    //out.args.emplace_back();
-    //out.args.back() = RCWhitelistOpArgDoc();
-    //out.args.back().name = "ROILabelRegex";
-    //out.args.back().default_val = ".*";
-    //out.args.back().expected = false;
+    out.args.emplace_back();
+    out.args.back() = RCWhitelistOpArgDoc();
+    out.args.back().name = "ROILabelRegex";
+    out.args.back().default_val = ".*";
+    out.args.back().expected = false;
 
-    //out.args.emplace_back();
-    //out.args.back() = NCWhitelistOpArgDoc();
-    //out.args.back().name = "NormalizedROILabelRegex";
-    //out.args.back().default_val = ".*";
-    //out.args.back().expected = false;
+    out.args.emplace_back();
+    out.args.back() = NCWhitelistOpArgDoc();
+    out.args.back().name = "NormalizedROILabelRegex";
+    out.args.back().default_val = ".*";
+    out.args.back().expected = false;
 
     out.args.emplace_back();
     out.args.back() = IAWhitelistOpArgDoc();
@@ -163,8 +163,8 @@ bool Isolate(Drover &DICOM_data,
                         std::map<std::string, std::string>& InvocationMetadata,
                         const std::string& FilenameLex){
     //---------------------------------------------- User Parameters --------------------------------------------------
-    //const auto NormalizedROILabelRegexOpt = OptArgs.getValueStr("NormalizedROILabelRegex");
-    //const auto ROILabelRegexOpt = OptArgs.getValueStr("ROILabelRegex");
+    const auto NormalizedROILabelRegexOpt = OptArgs.getValueStr("NormalizedROILabelRegex");
+    const auto ROILabelRegexOpt = OptArgs.getValueStr("ROILabelRegex");
 
     const auto ImageSelectionOpt = OptArgs.getValueStr("ImageSelection");
 
@@ -180,36 +180,35 @@ bool Isolate(Drover &DICOM_data,
 
     const auto RTPlanSelectionOpt = OptArgs.getValueStr("RTPlanSelection");
     //-----------------------------------------------------------------------------------------------------------------
-    DICOM_data.Ensure_Contour_Data_Allocated();
-
-// TODO: can you figure out a way to support *reordering* ?
-// Maybe with some sort of doubly-linked list where each object knows it's neighbours, but then you re-order based on
-// the final Drover object???
 
     // Build the isolated Drover in such a way that the original Drover can be reassembled, even in the presence of
     // additions and deletions.
+    //
+    // ---
+    //
+    // It's important that 'deletion' inside the view is lazy! Due to the likelihood of heap re-use, if an object were
+    // deleted in the view, but then another object of the same type was created, then it's possible (likely, even) that
+    // the address of the new object will be the same as the old object. Since we can only detect object
+    // deletions/additions afterward using the detected presence/absence, deletion followed by addition could cause a
+    // new object to masquerade as an old object.
+    //
+    // I don't think this could directly lead to data loss. At worst, mistaken deletion/addition would only cause
+    // objects to be shuffled in the wrong order. Of course, this could eventually lead to data loss, e.g., deleting the
+    // wrong object as part of a workflow.
+    //
+    // One way around this is to hold "shadow" references to deleted objects so they aren't deallocated until *after* we
+    // detect deletions/additions. This is the approach taken here. (Another option is to hash the data, but this is
+    // slower and could also potentially cause the same issue if an object's content were re-created.)
+    //
+    // ---
+    //
+    // Note that contours are *moved* to the view, then re-inserted at the back afterward. So contours will be
+    // reordered. Currently there is no (obvious) way to share contour_collections since each Drover object holds
+    // exclusive ownership of its contours.
+    //
     Drover isolated;
-    isolated.Ensure_Contour_Data_Allocated();
 
-//    std::list<std::pair<std::string, std::string>> cc_meta_regex;
-//    if(NormalizedROILabelRegexOpt){
-//        cc_meta_regex.emplace_back( std::make_pair<std::string, std::string>("NormalizedROIName", std::string(NormalizedROILabelRegexOpt.value())) );
-//    }
-//    if(ROILabelRegexOpt){
-//        cc_meta_regex.emplace_back( std::make_pair<std::string, std::string>("ROIName", std::string(ROILabelRegexOpt.value())) );
-//    }
-//    if(!cc_meta_regex.empty()){
-//        auto cc_all = All_CCs( DICOM_data );
-//        auto cc_ROIs = Whitelist( cc_all, cc_meta_regex );
-//        YLOGINFO("Selected " << cc_ROIs.size() << " contour collections using ROILabelRegex/NormalizedROILabelRegex selectors");
-//
-//// TODO:
-//// contour collections cannot be shared like other objects, so we need to *move* the selected ccs to the new drover.
-//// std::list<std::reference_wrapper<contour_collection<double>>>
-//// TODO
-////        for(const auto& x_it_ptr : cc_ROIs) isolated.contour_data.push_back( *x_it_ptr );
-//    }
-
+    // Create a proxy object containing references to *only* the selected objects.
     if(ImageSelectionOpt){
         auto IAs_all = All_IAs( DICOM_data );
         auto IAs = Whitelist( IAs_all, ImageSelectionOpt.value() );
@@ -267,23 +266,59 @@ bool Isolate(Drover &DICOM_data,
     }
 
     // Make a copy of the isolated objects which we can later use to track additions and deletions.
-    // NOTE: contours should be removed before this step, then re-added afterward.
+    // These 'shadow' references also defer object deletion.
     Drover isolated_orig(isolated);
+
+    // Imbue the contours directly into the view.
+    DICOM_data.Ensure_Contour_Data_Allocated();
+    isolated.Ensure_Contour_Data_Allocated();
+
+    std::list<std::pair<std::string, std::string>> cc_meta_regex;
+    if(NormalizedROILabelRegexOpt){
+        cc_meta_regex.emplace_back( std::make_pair<std::string, std::string>("NormalizedROIName", std::string(NormalizedROILabelRegexOpt.value())) );
+    }
+    if(ROILabelRegexOpt){
+        cc_meta_regex.emplace_back( std::make_pair<std::string, std::string>("ROIName", std::string(ROILabelRegexOpt.value())) );
+    }
+    if(!cc_meta_regex.empty()){
+        auto cc_all = All_CCs( DICOM_data );
+        auto cc_ROIs = Whitelist( cc_all, cc_meta_regex );
+        YLOGINFO("Selected " << cc_ROIs.size() << " contour collections using ROILabelRegex/NormalizedROILabelRegex selectors");
+
+        for(const auto &cc_refw : cc_ROIs){
+            const auto ptr = std::addressof(cc_refw.get());
+
+            const auto beg = std::begin(DICOM_data.contour_data->ccs);
+            const auto end = std::end(DICOM_data.contour_data->ccs);
+            const auto it = std::find_if( beg, end, 
+                                          [ptr](const auto& cc){
+                                              const auto l_ptr = std::addressof(std::ref(cc).get());
+                                              return (ptr == l_ptr);
+                                          } );
+
+            if(it != end){
+                isolated.contour_data->ccs.splice( std::end(isolated.contour_data->ccs), DICOM_data.contour_data->ccs, it );
+            }else{
+                throw std::runtime_error("Unable to locate referenced contour collection");
+            }
+        }
+    }
 
     // Execute children operations.
     const bool ret = Operation_Dispatcher(isolated, InvocationMetadata, FilenameLex, OptArgs.getChildren());
 
-    
-    // TODO: contours.
-    //implement_additions_and_deletions(DICOM_data.contour_data, isolated_orig.contour_data, isolated.contour_data);
-    implement_additions_and_deletions(DICOM_data.image_data, isolated_orig.image_data, isolated.image_data);
-    implement_additions_and_deletions(DICOM_data.point_data, isolated_orig.point_data, isolated.point_data);
-    implement_additions_and_deletions(DICOM_data.smesh_data, isolated_orig.smesh_data, isolated.smesh_data);
-    implement_additions_and_deletions(DICOM_data.rtplan_data, isolated_orig.rtplan_data, isolated.rtplan_data);
-    implement_additions_and_deletions(DICOM_data.lsamp_data, isolated_orig.lsamp_data, isolated.lsamp_data);
-    implement_additions_and_deletions(DICOM_data.trans_data, isolated_orig.trans_data, isolated.trans_data);
-    implement_additions_and_deletions(DICOM_data.table_data, isolated_orig.table_data, isolated.table_data);
+    // Re-insert the contours into the main Drover object.
+    DICOM_data.Ensure_Contour_Data_Allocated();
+    DICOM_data.contour_data->ccs.splice( std::end(DICOM_data.contour_data->ccs), isolated.contour_data->ccs );
 
+    // Detect and implement object deletion/creation using the shadow reference snapshots.
+    implement_additions_and_deletions(DICOM_data.image_data,  isolated_orig.image_data,  isolated.image_data);
+    implement_additions_and_deletions(DICOM_data.point_data,  isolated_orig.point_data,  isolated.point_data);
+    implement_additions_and_deletions(DICOM_data.smesh_data,  isolated_orig.smesh_data,  isolated.smesh_data);
+    implement_additions_and_deletions(DICOM_data.rtplan_data, isolated_orig.rtplan_data, isolated.rtplan_data);
+    implement_additions_and_deletions(DICOM_data.lsamp_data,  isolated_orig.lsamp_data,  isolated.lsamp_data);
+    implement_additions_and_deletions(DICOM_data.trans_data,  isolated_orig.trans_data,  isolated.trans_data);
+    implement_additions_and_deletions(DICOM_data.table_data,  isolated_orig.table_data,  isolated.table_data);
 
     // Pass along the return the status of the children operations.
     return ret;
