@@ -39,6 +39,7 @@
 #include "Operations/CombineImages.h"
 #include "Operations/CombineMeshes.h"
 #include "Operations/ComparePixels.h"
+#include "Operations/CompileScript.h"
 #include "Operations/ContourBasedRayCastDoseAccumulate.h"
 #include "Operations/ContourSimilarity.h"
 #include "Operations/ContourViaGeometry.h"
@@ -289,6 +290,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["CombineImages"] = std::make_pair(OpArgDocCombineImages, CombineImages);
     out["CombineMeshes"] = std::make_pair(OpArgDocCombineMeshes, CombineMeshes);
     out["ComparePixels"] = std::make_pair(OpArgDocComparePixels, ComparePixels);
+    out["CompileScript"] = std::make_pair(OpArgDocCompileScript, CompileScript);
     out["ContourBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocContourBasedRayCastDoseAccumulate, ContourBasedRayCastDoseAccumulate);
     out["ContouringAides"] = std::make_pair(OpArgDocContouringAides, ContouringAides);
     out["ContourSimilarity"] = std::make_pair(OpArgDocContourSimilarity, ContourSimilarity);

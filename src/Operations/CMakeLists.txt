@@ -18,6 +18,7 @@ add_library(Operations_objs OBJECT
     CombineImages.cc
     CombineMeshes.cc
     ComparePixels.cc
+    CompileScript.cc
     ContourBasedRayCastDoseAccumulate.cc
     ContouringAides.cc
     ContourSimilarity.cc
