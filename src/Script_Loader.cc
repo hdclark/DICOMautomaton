@@ -385,12 +385,12 @@ YLOGDEBUG("Pushing back argument value '" << to_str(shtl) << "'");
             // Line endings.
             }else if( !prev_escape && (c == '\r') ){
                 skip_character = true;
-            }else if( !prev_escape && (c == '\n') ){
+            }else if( c == '\n' ){
                 lcc = 0;
                 ++lc;
 if(inside_comment) YLOGDEBUG("Closed comment");
                 inside_comment = false;
-                skip_character = true;
+                skip_character = prev_escape;
 
             // Statement terminator.
             }else if( !prev_escape 

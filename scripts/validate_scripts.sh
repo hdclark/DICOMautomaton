@@ -33,7 +33,7 @@ find ./artifacts/dcma_scripts/ -type f -iname '*dscr' -print0 |
          printf '=== %s ===\n'  '{}'
          dicomautomaton_dispatcher \
            -v \
-           -o CompileScript:Action=validate:Filename='{}' " bash '{}' > "${fname}" 2>&1
+           -o CompileScript:Action=validate:Filename='{}' || true " bash '{}' > "${fname}" 2>&1
 
 printf 'Outputs written to "%s".\n' "$(pwd)/${fname}"
 
