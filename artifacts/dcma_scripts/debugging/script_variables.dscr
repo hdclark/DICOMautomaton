@@ -120,6 +120,19 @@ noop( x = var200 ){};
 noop(){
     var200 = 789;
     noop( x = var200 );
+
+    noop(){
+        noop(){
+            var200 = 'abc';
+            noop(x = var200 );
+        };
+    };
+    noop(x = var200 );
 };
 noop( x = var200 ){};
+
+# Variables can refer to other variables, but only shallow copies are made.
+var300 = 123;
+var301 = var300;
+noop( x = var301 ){};
 

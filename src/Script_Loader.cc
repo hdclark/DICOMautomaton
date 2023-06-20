@@ -131,7 +131,7 @@ struct script_statement_t {
             && !this->payload.empty()
             &&  this->func_name.empty();
     };
-    bool is_func() const {
+    bool is_func_invocation() const {
         return !this->func_name.empty()
             &&  this->var_name.empty();
     };
@@ -490,7 +490,7 @@ YLOGDEBUG("Trailing input has shtl = '" << to_str(shtl) << "'");
 
     for(auto &s : l_statements){
         // Every statement is either a variable assignment, or a function.
-        if( s.is_var() == s.is_func() ){
+        if( s.is_var() == s.is_func_invocation() ){
             report(feedback, script_feedback_severity_t::err, s.get_valid_cwct(),
                    "Statement is neither a variable assignment, nor a function.");
             compilation_successful = false;
@@ -502,12 +502,12 @@ YLOGDEBUG("Trailing input has shtl = '" << to_str(shtl) << "'");
                    "Variable contains forbidden identifier characters.");
             compilation_successful = false;
         }
-        if( s.is_func() && !contains_valid_identifier(s.func_name) ){
+        if( s.is_func_invocation() && !contains_valid_identifier(s.func_name) ){
             report(feedback, script_feedback_severity_t::err, s.func_name.front(),
                    "Operation contains forbidden identifier characters.");
             compilation_successful = false;
         }
-        if( s.is_func() ){
+        if( s.is_func_invocation() ){
             for(const auto &ap : s.arguments){
                 if(!contains_valid_identifier(ap.first) ){
                     report(feedback, script_feedback_severity_t::err, s.get_valid_cwct(),
@@ -553,7 +553,7 @@ YLOGDEBUG("Trailing input has shtl = '" << to_str(shtl) << "'");
         }
     }
 
-    // Warn when variables supercede prior variable definitions.
+    // Warn when variables redefine prior variable definitions.
     std::vector<script_statement_t> l_variables;
     for(const auto &v : variables){
         if( !v.is_var() ){
@@ -562,21 +562,21 @@ YLOGDEBUG("Trailing input has shtl = '" << to_str(shtl) << "'");
             compilation_successful = false;
         }
 
-        bool is_superceded = false;
+        bool is_redefined = false;
         for(const auto &s : l_statements){
             if( s.is_var()
             &&  v.is_var()
             &&  (to_str(s.var_name) == to_str(v.var_name)) ){
-                report(feedback, script_feedback_severity_t::warn, s.get_valid_cwct(),
-                       "Variable declaration supercedes earlier definition (on line "_s
+                report(feedback, script_feedback_severity_t::info, s.get_valid_cwct(),
+                       "Variable declaration redefines earlier definition (on line "_s
                        + std::to_string(v.get_valid_cwct().lc) + ").");
-                is_superceded = true;
+                is_redefined = true;
             }
         }
 
-        if(!is_superceded) l_variables.emplace_back(v);
+        if(!is_redefined) l_variables.emplace_back(v);
     }
-    // Add local variables in reverse order to later variable assignments supercede earlier assignments.
+    // Add local variables in reverse order so later variable assignments supercede earlier assignments.
     for(auto s_it = std::rbegin(l_statements); s_it != std::rend(l_statements); ++s_it){
         if(s_it->is_var()) l_variables.emplace_back(*s_it);
     }
@@ -589,7 +589,13 @@ YLOGDEBUG("Trailing input has shtl = '" << to_str(shtl) << "'");
         int64_t iter = 0;
         while(true){
             bool replacement_made = false;
+            const auto statement_line_num = s.get_valid_cwct().cc;
+
             for(const auto &v : l_variables){
+                // Ignore variable defintions that occur after this statement.
+                const auto var_line_num = v.get_valid_cwct().cc;
+                if(statement_line_num <= var_line_num) continue;
+
                 const auto var_name = to_str(v.var_name);
                 if(s.is_var()){
                     if(var_name == to_str(s.payload)){
@@ -597,7 +603,7 @@ YLOGDEBUG("Trailing input has shtl = '" << to_str(shtl) << "'");
                         replacement_made = true;
                     }
                 }
-                if(s.is_func()){
+                if(s.is_func_invocation()){
                     if(var_name == to_str(s.func_name)){
                         s.func_name = v.payload;
                         replacement_made = true;
@@ -626,7 +632,7 @@ YLOGDEBUG("Trailing input has shtl = '" << to_str(shtl) << "'");
 
     // Recurse for operations that have payloads, extracting nested statements.
     for(auto &s : l_statements){
-        if(s.is_func() && !s.payload.empty()){
+        if(s.is_func_invocation() && !s.payload.empty()){
             const bool res = Split_into_Statements(s.payload,
                                                    s.child_statements,
                                                    l_variables,
