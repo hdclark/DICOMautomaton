@@ -1393,6 +1393,7 @@ get_metadata_top_level_tags(const std::filesystem::path &filename){
     insert_as_string_if_nonempty(0x0018, 0x0023, "MRAcquisitionType");
     insert_as_string_if_nonempty(0x0018, 0x0080, "RepetitionTime");
     insert_as_string_if_nonempty(0x0018, 0x0081, "EchoTime");
+    insert_as_string_if_nonempty(0x0018, 0x0082, "InversionTime");
     insert_as_string_if_nonempty(0x0018, 0x0091, "EchoTrainLength");
     insert_as_string_if_nonempty(0x0018, 0x0082, "InversionTime");
     insert_as_string_if_nonempty(0x0018, 0x1060, "TriggerTime");
@@ -1422,7 +1423,7 @@ get_metadata_top_level_tags(const std::filesystem::path &filename){
     insert_as_string_if_nonempty(0x0018, 0x1316, "SAR");
     insert_as_string_if_nonempty(0x0018, 0x1318, "dBdt");
 
-    //MR Diffusion Macro Attributes.
+    // MR Diffusion Macro Attributes.
     insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
                                               { { 0x0018, 0x9117, "MRDiffusionSequence" },
                                                 { 0x0018, 0x9087, "DiffusionBValue" } }) );
@@ -1437,16 +1438,15 @@ get_metadata_top_level_tags(const std::filesystem::path &filename){
                                               { { 0x0018, 0x9117, "MRDiffusionSequence" },
                                                 { 0x0018, 0x9147, "DiffusionAnisotropyType" } }) );
 
-    //MR Image and Spectroscopy Instance Macro.
+    // MR Image and Spectroscopy Instance Macro.
     insert_as_string_if_nonempty(0x0018, 0x9073, "AcquisitionDuration");
 
-    //Siemens MR Private Diffusion Module, as detailed in syngo(R) MR E11 conformance statement.
+    // Siemens MR Private Diffusion Module, as detailed in syngo(R) MR E11 conformance statement.
     insert_as_string_if_nonempty(0x0019, 0x0010, "SiemensMRHeader");
     insert_as_string_if_nonempty(0x0019, 0x100c, "DiffusionBValue");
     insert_as_string_if_nonempty(0x0019, 0x100d, "DiffusionDirection");
     insert_as_string_if_nonempty(0x0019, 0x100e, "DiffusionGradientVector");
     insert_as_string_if_nonempty(0x0019, 0x1027, "DiffusionBMatrix");  // multiplicity = 3.
-    insert_as_string_if_nonempty(0x0019, 0x0103, "PixelRepresentation"); // multiplicity = 6.
 
     // PET Image Module.
     insert_as_string_if_nonempty(0x0054, 0x1001, "Units");
@@ -1520,11 +1520,9 @@ get_metadata_top_level_tags(const std::filesystem::path &filename){
     insert_as_string_if_nonempty(0x0018, 0x1153, "ExposureInMicroAmpereSeconds");
     insert_as_string_if_nonempty(0x0018, 0x1151, "XRayTubeCurrent");
 
-
     insert_as_string_if_nonempty(0x0018, 0x1030, "ProtocolName");
 
     insert_as_string_if_nonempty(0x0008, 0x0090, "ReferringPhysicianName");
-
 
     return out;
 }
@@ -3660,6 +3658,23 @@ void Write_MR_Images(const std::shared_ptr<Image_Array>& IA,
         return out;
     };
 
+    DCMA_DICOM::Encoding enc = DCMA_DICOM::Encoding::ELE;
+
+    const auto emit_iff_present = [enc]( DCMA_DICOM::Node &root_node,
+                                         metadata_map_t &cm,
+                                         uint16_t a,
+                                         uint16_t b,
+                                         const std::string &VR,
+                                         const std::string &key ){
+
+        // Only emit the metadata if the tag is both (1) present, and (2) conforms with the provided DICOM VR.
+        if( (cm.count(key) != 0)
+        &&  (DCMA_DICOM::validate_VR_conformance(VR, cm[key], enc)) ){
+            root_node.emplace_child_node({{a, b}, VR, cm[key]});
+        }
+        return;
+    };
+
     //Generate UIDs and IDs that need to be duplicated across all images.
     const auto FrameOfReferenceUID = Generate_Random_UID(60);
     const auto StudyInstanceUID = Generate_Random_UID(31);
@@ -3681,7 +3696,6 @@ void Write_MR_Images(const std::shared_ptr<Image_Array>& IA,
 
         ++InstanceNumber;
 
-        DCMA_DICOM::Encoding enc = DCMA_DICOM::Encoding::ELE;
         DCMA_DICOM::Node root_node;
 
         const auto SOPInstanceUID = Generate_Random_UID(60);
@@ -3924,16 +3938,95 @@ void Write_MR_Images(const std::shared_ptr<Image_Array>& IA,
         // Note: many elements in this module are duplicated in other modules. Omitted here if they appear above.
         //
 
-        root_node.emplace_child_node({{0x0018, 0x0020}, "CS", "RM" }); //ScanningSequence. Using "Research Mode" since unknown, other options: SE, IR, GR, EP
-        root_node.emplace_child_node({{0x0018, 0x0021}, "CS", "NONE" }); //SequenceVariant
-        root_node.emplace_child_node({{0x0018, 0x0022}, "CS", "" }); //ScanOptions
-        root_node.emplace_child_node({{0x0018, 0x0023}, "CS", "" }); //MRAcquisitionType 2D or 3D
-        root_node.emplace_child_node({{0x0018, 0x0024}, "SH", "" }); //SequenceName
-        root_node.emplace_child_node({{0x0018, 0x0080}, "DS", "" }); //RepetitionTime
-        root_node.emplace_child_node({{0x0018, 0x0081}, "DS", "" }); //EchoTime
-        root_node.emplace_child_node({{0x0018, 0x0091}, "IS", "" }); //EchoTrainLength
+        root_node.emplace_child_node({{0x0018, 0x0020}, "CS", fne({ cm["ScanningSequence"], "RM" }) }); // Fallback to Research Mode.
+        root_node.emplace_child_node({{0x0018, 0x0021}, "CS", fne({ cm["SequenceVariant"], "UNSPECIFIED" }) });
+        root_node.emplace_child_node({{0x0018, 0x0022}, "CS", foe({ cm["ScanOptions"] }) });
+        root_node.emplace_child_node({{0x0018, 0x0023}, "CS", foe({ cm["MRAcquisitionType"] }) }); // 2D or 3D.
+        emit_iff_present(root_node, cm, 0x0018, 0x0024, "SH", "SequenceName");
+        root_node.emplace_child_node({{0x0018, 0x0080}, "DS", foe({ cm["RepetitionTime"] }) });
+        root_node.emplace_child_node({{0x0018, 0x0081}, "DS", foe({ cm["EchoTime"] }) });
+        root_node.emplace_child_node({{0x0018, 0x0082}, "DS", foe({ cm["InversionTime"] }) });
+        root_node.emplace_child_node({{0x0018, 0x0091}, "IS", foe({ cm["EchoTrainLength"] }) });
+        root_node.emplace_child_node({{0x0018, 0x1060}, "DS", foe({ cm["TriggerTime"] }) });
+
+        emit_iff_present(root_node, cm, 0x0018, 0x0025, "CS", "AngioFlag");
+        emit_iff_present(root_node, cm, 0x0018, 0x1062, "IS", "NominalInterval");
+        emit_iff_present(root_node, cm, 0x0018, 0x1090, "IS", "CardiacNumberOfImages");
+
+        emit_iff_present(root_node, cm, 0x0018, 0x0083, "DS", "NumberOfAverages");
+        emit_iff_present(root_node, cm, 0x0018, 0x0084, "DS", "ImagingFrequency");
+        emit_iff_present(root_node, cm, 0x0018, 0x0085, "SH", "ImagedNucleus");
+        emit_iff_present(root_node, cm, 0x0018, 0x0086, "IS", "EchoNumbers");
+        emit_iff_present(root_node, cm, 0x0018, 0x0087, "DS", "MagneticFieldStrength");
+
+        emit_iff_present(root_node, cm, 0x0018, 0x0088, "DS", "SpacingBetweenSlices");
+        emit_iff_present(root_node, cm, 0x0018, 0x0089, "IS", "NumberOfPhaseEncodingSteps");
+        emit_iff_present(root_node, cm, 0x0018, 0x0093, "DS", "PercentSampling");
+        emit_iff_present(root_node, cm, 0x0018, 0x0094, "DS", "PercentPhaseFieldOfView");
+        emit_iff_present(root_node, cm, 0x0018, 0x0095, "DS", "PixelBandwidth");
+
+        emit_iff_present(root_node, cm, 0x0018, 0x1250, "SH", "ReceiveCoilName");
+        emit_iff_present(root_node, cm, 0x0018, 0x1251, "SH", "TransmitCoilName");
+        emit_iff_present(root_node, cm, 0x0018, 0x1310, "US", "AcquisitionMatrix");
+        emit_iff_present(root_node, cm, 0x0018, 0x1312, "CS", "InplanePhaseEncodingDirection");
+        emit_iff_present(root_node, cm, 0x0018, 0x1314, "DS", "FlipAngle");
+        emit_iff_present(root_node, cm, 0x0018, 0x1315, "CS", "VariableFlipAngleFlag");
+        emit_iff_present(root_node, cm, 0x0018, 0x1316, "DS", "SAR");
+        emit_iff_present(root_node, cm, 0x0018, 0x1318, "DS", "dBdt");
+
+        emit_iff_present(root_node, cm, 0x0020, 0x0100, "IS", "TemporalPositionIdentifier");
+        emit_iff_present(root_node, cm, 0x0020, 0x0105, "IS", "NumberOfTemporalPositions");
+        emit_iff_present(root_node, cm, 0x0020, 0x0110, "DS", "TemporalResolution");
+
         root_node.emplace_child_node({{0x0028, 0x1052}, "DS", to_DS( rescale_intercept ) }); //RescaleIntercept.
         root_node.emplace_child_node({{0x0028, 0x1053}, "DS", to_DS( rescale_slope ) }); //RescaleSlope.
+
+        // MR diffusion sequence.
+        if( (cm.count("MRDiffusionSequence/DiffusionBValue") != 0)
+        ||  (cm.count("DiffusionBValue") != 0) ){
+            DCMA_DICOM::Node *seq_ptr = root_node.emplace_child_node({{0x0018, 0x9117}, "SQ", ""}); // MRDiffusionSequence.
+//            DCMA_DICOM::Node *m_seq_ptr = seq_ptr->emplace_child_node({{0x0000, 0x0000}, "MULTI", ""});
+
+            seq_ptr->emplace_child_node({{0x0018, 0x9087}, "DS", fne({ cm["MRDiffusionSequence/DiffusionBValue"],
+                                                                       cm["DiffusionBValue"],
+                                                                       "0.0" }) });
+            seq_ptr->emplace_child_node({{0x0018, 0x9075}, "CS", fne({ cm["MRDiffusionSequence/DiffusionDirection"],
+                                                                       cm["DiffusionDirection"],
+                                                                       "UNSPECIFIED" }) });
+            seq_ptr->emplace_child_node({{0x0018, 0x9147}, "CS", fne({ cm["MRDiffusionSequence/DiffusionAnisotropyType"],
+                                                                       cm["DiffusionAnisotropyType"],
+                                                                       "UNSPECIFIED" }) });
+
+            DCMA_DICOM::Node *dir_seq_ptr = seq_ptr->emplace_child_node({{0x0018, 0x9076}, "SQ", ""}); // DiffusionGradientDirectionSequence.
+//            DCMA_DICOM::Node *m_dir_seq_ptr = dir_seq_ptr->emplace_child_node({{0x0000, 0x0000}, "MULTI", ""});
+            dir_seq_ptr->emplace_child_node({{0x0018, 0x9089}, "DS", 
+                  fne({ cm["MRDiffusionSequence/DiffusionGradientDirectionSequence/DiffusionGradientOrientation"],
+                        cm["DiffusionGradientOrientation"],
+                        R"***(0.0\0.0\0.0)***" }) });
+
+            DCMA_DICOM::Node *mat_seq_ptr = seq_ptr->emplace_child_node({{0x0018, 0x9601}, "SQ", ""}); // DiffusionBMatrixSequence.
+//            DCMA_DICOM::Node *m_mat_seq_ptr = mat_seq_ptr->emplace_child_node({{0x0000, 0x0000}, "MULTI", ""});
+            mat_seq_ptr->emplace_child_node({{0x0018, 0x9602}, "DS", 
+                fne({ cm["MRDiffusionSequence/DiffusionBMatrixSequence/DiffusionBValueXX"], cm["DiffusionBValueXX"], "0.0" }) });
+            mat_seq_ptr->emplace_child_node({{0x0018, 0x9603}, "DS", 
+                fne({ cm["MRDiffusionSequence/DiffusionBMatrixSequence/DiffusionBValueXY"], cm["DiffusionBValueXY"], "0.0" }) });
+            mat_seq_ptr->emplace_child_node({{0x0018, 0x9604}, "DS", 
+                fne({ cm["MRDiffusionSequence/DiffusionBMatrixSequence/DiffusionBValueXZ"], cm["DiffusionBValueXZ"], "0.0" }) });
+            mat_seq_ptr->emplace_child_node({{0x0018, 0x9605}, "DS", 
+                fne({ cm["MRDiffusionSequence/DiffusionBMatrixSequence/DiffusionBValueYY"], cm["DiffusionBValueYY"], "0.0" }) });
+            mat_seq_ptr->emplace_child_node({{0x0018, 0x9606}, "DS", 
+                fne({ cm["MRDiffusionSequence/DiffusionBMatrixSequence/DiffusionBValueYZ"], cm["DiffusionBValueYZ"], "0.0" }) });
+            mat_seq_ptr->emplace_child_node({{0x0018, 0x9607}, "DS", 
+                fne({ cm["MRDiffusionSequence/DiffusionBMatrixSequence/DiffusionBValueZZ"], cm["DiffusionBValueZZ"], "0.0" }) });
+        }
+
+        // Siemens MR Private Diffusion Module, as detailed in syngo(R) MR E11 conformance statement.
+        emit_iff_present(root_node, cm, 0x0019, 0x0010, "LO", "SiemensMRHeader");
+        emit_iff_present(root_node, cm, 0x0019, 0x100c, "IS", "DiffusionBValue");
+        emit_iff_present(root_node, cm, 0x0019, 0x100d, "CS", "DiffusionDirection");
+        emit_iff_present(root_node, cm, 0x0019, 0x100e, "DS", "DiffusionGradientVector");
+        emit_iff_present(root_node, cm, 0x0019, 0x1027, "DS", "DiffusionBMatrix");  // multiplicity = 3.
+
 
         //-------------------------------------------------------------------------------------------------
         //VOI LUT Module.

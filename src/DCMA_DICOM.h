@@ -2,7 +2,10 @@
 
 #pragma once
 
+#include <cstdint>
 #include <iosfwd>
+#include <string>
+#include <list>
 #include <functional>
 
 #include <list>
@@ -33,7 +36,7 @@ struct Node {
     // Data members.
     NodeKey key;
 
-    std::string VR;    // DICOM VR type. Controls how the tag is serialized and interpretted.
+    std::string VR;    // DICOM Value Representation type. Controls how the tag is serialized and interpretted.
                        // Note that DICOM tags have a default, but the VR doesn't necessarily need to be the default.
 
     std::string val;   // Payload value for this tag serialized to a string of bytes.
@@ -58,6 +61,11 @@ struct Node {
                         bool is_root_node = true) const; // Write a DICOM file.
 
 };
+
+// Evaluate whether the contents fit the DICOM VR.
+bool validate_VR_conformance( const std::string &VR,
+                              const std::string &val,
+                              DCMA_DICOM::Encoding enc = DCMA_DICOM::Encoding::ELE );
 
 
 } // namespace DCMA_DICOM

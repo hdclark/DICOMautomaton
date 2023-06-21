@@ -4,17 +4,18 @@
 //
 
 
+#include <cstdint>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <list>
-//#include <utility>
 #include <tuple>
 #include <functional>
 #include <utility>
 
-#include <YgorMisc.h>
+#include "YgorMisc.h"
 #include "YgorLog.h"
-#include <YgorString.h>
+#include "YgorString.h"
 
 #include "DCMA_DICOM.h"
 
@@ -642,6 +643,25 @@ uint64_t Node::emit_DICOM(std::ostream &os,
     }
 
     return cumulative_length;
+}
+
+
+bool validate_VR_conformance(const std::string &VR,
+                             const std::string &val,
+                             DCMA_DICOM::Encoding enc ){
+    // In many cases validation can only be done when actually writing the DICOM.
+    // To avoid duplicating the validation checks during emission, we simulate writing a DICOM file with the given
+    // content. This results in a slow runtime, but avoids tricky code duplication.
+    Node root_node;
+    root_node.emplace_child_node({{0x9999, 0x9999}, VR, val});
+
+    bool valid = false;
+    try{
+        std::stringstream ss;
+        root_node.emit_DICOM(ss, enc);
+        if(ss) valid = true;
+    }catch(const std::exception &){};
+    return valid;
 }
 
 } // namespace DCMA_DICOM
