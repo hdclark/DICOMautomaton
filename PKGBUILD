@@ -70,6 +70,11 @@ build() {
       DCMA_VERSION="$(../scripts/extract_dcma_version.sh)"
   fi
 
+  # Work-around for SFML 2.6.0-1.
+  if [ -d '/usr/pkgconfig/' ] ; then
+      export PKG_CONFIG_PATH='/usr/pkgconfig/'
+  fi
+
   # Default build with default compiler flags.
   cmake \
     -DDCMA_VERSION="${DCMA_VERSION}" \
