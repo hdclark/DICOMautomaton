@@ -74,6 +74,7 @@
 #include "Operations/DCEMRI_IAUC.h"
 #include "Operations/DCEMRI_Nonparametric_CE.h"
 #include "Operations/DICOMExportImagesAsCT.h"
+#include "Operations/DICOMExportImagesAsMR.h"
 #include "Operations/DICOMExportImagesAsDose.h"
 #include "Operations/DICOMExportContours.h"
 #include "Operations/DecayDoseOverTimeHalve.h"
@@ -336,6 +337,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["DetectShapes3D"] = std::make_pair(OpArgDocDetectShapes3D, DetectShapes3D);
     out["DICOMExportContours"] = std::make_pair(OpArgDocDICOMExportContours, DICOMExportContours);
     out["DICOMExportImagesAsCT"] = std::make_pair(OpArgDocDICOMExportImagesAsCT, DICOMExportImagesAsCT);
+    out["DICOMExportImagesAsMR"] = std::make_pair(OpArgDocDICOMExportImagesAsMR, DICOMExportImagesAsMR);
     out["DICOMExportImagesAsDose"] = std::make_pair(OpArgDocDICOMExportImagesAsDose, DICOMExportImagesAsDose);
     out["DrawGeometry"] = std::make_pair(OpArgDocDrawGeometry, DrawGeometry);
     out["DroverDebug"] = std::make_pair(OpArgDocDroverDebug, DroverDebug);

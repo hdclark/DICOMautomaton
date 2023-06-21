@@ -54,6 +54,7 @@ add_library(Operations_objs OBJECT
     DCEMRI_Nonparametric_CE.cc
     DICOMExportContours.cc
     DICOMExportImagesAsCT.cc
+    DICOMExportImagesAsMR.cc
     DICOMExportImagesAsDose.cc
     DecayDoseOverTimeHalve.cc
     DecayDoseOverTimeJones2014.cc

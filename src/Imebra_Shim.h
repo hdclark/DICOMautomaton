@@ -84,6 +84,11 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
                                         int64_t filesize)>& file_handler,
                      ParanoiaLevel Paranoia = ParanoiaLevel::Low);
 
+void Write_MR_Images(const std::shared_ptr<Image_Array>& IA,
+                     const std::function<void(std::istream &is,
+                                        int64_t filesize)>& file_handler,
+                     ParanoiaLevel Paranoia = ParanoiaLevel::Low);
+
 void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>> CC,
                     const std::function<void(std::istream &is,
                                        int64_t filesize)>& file_handler,
