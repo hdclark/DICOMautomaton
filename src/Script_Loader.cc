@@ -131,7 +131,7 @@ struct script_statement_t {
             && !this->payload.empty()
             &&  this->func_name.empty();
     };
-    bool is_func() const {
+    bool is_func_invocation() const {
         return !this->func_name.empty()
             &&  this->var_name.empty();
     };
@@ -225,6 +225,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
         bool prev_escape = false;
         bool inside_comment = false;
         for(auto &c : contents){
+YLOGDEBUG("line = " << lc << ", column = " << lcc << ", and char = " << c.c);
             bool this_caused_escape = false;
             bool skip_character = false;
 
@@ -239,22 +240,22 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                   &&  (c == '#') ){
                 skip_character = true;
                 inside_comment = true;
-//YLOGINFO("Opened comment");
+YLOGDEBUG("Opened comment");
 
             // Quotations.
             }else if( !prev_escape
                   &&  !inside_comment
-                  &&  bumpy_stack.empty()
+                  //&&  bumpy_stack.empty()
                   &&  ((c == '\"') || (c == '\'')) ){
                 // Only permit a single quotation type at a time. Nesting not supported for quotes.
                 if( !quote_stack.empty() ){
                     if(quote_stack.back() == c){
                         quote_stack.pop_back();
-//YLOGINFO("Closed quotation");
+YLOGDEBUG("Closed quotation");
                     }
                 }else{
                     quote_stack.push_back(c);
-//YLOGINFO("Opened quotation");
+YLOGDEBUG("Opened quotation");
                 }
 
             // Variable assignment.
@@ -264,7 +265,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                   &&  curve_stack.empty()
                   &&  bumpy_stack.empty()
                   &&  (c == '=') ){
-//YLOGINFO("Pushing back variable name '" << to_str(shtl) << "'");
+YLOGDEBUG("Pushing back variable name '" << to_str(shtl) << "'");
                 if(!l_statements.back().var_name.empty()){
                     report(feedback, script_feedback_severity_t::err, c, "Prior variable name provided");
                     compilation_successful = false;
@@ -281,7 +282,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                   &&  (curve_stack.back() == '(')
                   &&  bumpy_stack.empty()
                   &&  (c == '=') ){
-//YLOGINFO("Pushing back argument key '" << to_str(shtl) << "'");
+YLOGDEBUG("Pushing back argument key '" << to_str(shtl) << "'");
                 l_statements.back().arguments.emplace_back();
                 l_statements.back().arguments.back().first = shtl;
                 shtl.clear();
@@ -300,7 +301,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                 &&  l_statements.back().arguments.back().second.empty() ){
                     l_statements.back().arguments.back().second = shtl;
                     skip_character = true;
-//YLOGINFO("Pushing back argument value '" << to_str(shtl) << "'");
+YLOGDEBUG("Pushing back argument value '" << to_str(shtl) << "'");
                 }else{
                     report(feedback, script_feedback_severity_t::err, c, "Ambiguous ','");
                     compilation_successful = false;
@@ -314,7 +315,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                   &&  quote_stack.empty()
                   &&  bumpy_stack.empty()
                   &&  (c == '(') ){
-//YLOGINFO("Pushing back function name '" << to_str(shtl) << "'");
+YLOGDEBUG("Pushing back function name '" << to_str(shtl) << "'");
                 if(curve_stack.empty()){
                     l_statements.back().func_name = shtl;
                     curve_stack.push_back(c);
@@ -354,7 +355,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                 }else if( (curve_stack.size() == 1)
                       &&  (curve_stack.back() == '(')
                       &&  !l_statements.back().arguments.empty() ){
-//YLOGINFO("Pushing back argument value '" << to_str(shtl) << "'");
+YLOGDEBUG("Pushing back argument value '" << to_str(shtl) << "'");
                     curve_stack.pop_back();
                     skip_character = true;
                     l_statements.back().arguments.back().second = shtl;
@@ -384,12 +385,12 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
             // Line endings.
             }else if( !prev_escape && (c == '\r') ){
                 skip_character = true;
-            }else if( !prev_escape && (c == '\n') ){
+            }else if( c == '\n' ){
                 lcc = 0;
                 ++lc;
-//if(inside_comment) YLOGINFO("Closed comment");
+if(inside_comment) YLOGDEBUG("Closed comment");
                 inside_comment = false;
-                skip_character = true;
+                skip_character = prev_escape;
 
             // Statement terminator.
             }else if( !prev_escape 
@@ -404,14 +405,14 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                     l_statements.back().var_name = shtl;
 
                 }else if(!l_statements.back().var_name.empty()){
-//YLOGINFO("Pushing back variable equals '" << to_str(shtl) << "'");
+YLOGDEBUG("Pushing back variable equals '" << to_str(shtl) << "'");
                     l_statements.back().payload = shtl;
                 }
 
                 l_statements.emplace_back();
                 shtl.clear();
                 skip_character = true;
-//YLOGINFO("Created statement");
+YLOGDEBUG("Created statement");
 
             // 'Noise' characters.
             }else if( !prev_escape
@@ -440,7 +441,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
 
         if( !shtl.empty()
         &&  !std::all_of(std::begin(shtl), std::end(shtl), is_whitespace) ){
-//YLOGINFO("Trailing input has shtl = '" << to_str(shtl) << "'");
+YLOGDEBUG("Trailing input has shtl = '" << to_str(shtl) << "'");
             report(feedback, script_feedback_severity_t::err, contents.back(),
                    "Trailing input. (Are you missing a semicolon?)");
             compilation_successful = false;
@@ -489,7 +490,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
 
     for(auto &s : l_statements){
         // Every statement is either a variable assignment, or a function.
-        if( s.is_var() == s.is_func() ){
+        if( s.is_var() == s.is_func_invocation() ){
             report(feedback, script_feedback_severity_t::err, s.get_valid_cwct(),
                    "Statement is neither a variable assignment, nor a function.");
             compilation_successful = false;
@@ -501,12 +502,12 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                    "Variable contains forbidden identifier characters.");
             compilation_successful = false;
         }
-        if( s.is_func() && !contains_valid_identifier(s.func_name) ){
+        if( s.is_func_invocation() && !contains_valid_identifier(s.func_name) ){
             report(feedback, script_feedback_severity_t::err, s.func_name.front(),
                    "Operation contains forbidden identifier characters.");
             compilation_successful = false;
         }
-        if( s.is_func() ){
+        if( s.is_func_invocation() ){
             for(const auto &ap : s.arguments){
                 if(!contains_valid_identifier(ap.first) ){
                     report(feedback, script_feedback_severity_t::err, s.get_valid_cwct(),
@@ -552,7 +553,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
         }
     }
 
-    // Warn when variables supercede prior variable definitions.
+    // Warn when variables redefine prior variable definitions.
     std::vector<script_statement_t> l_variables;
     for(const auto &v : variables){
         if( !v.is_var() ){
@@ -561,21 +562,21 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
             compilation_successful = false;
         }
 
-        bool is_superceded = false;
+        bool is_redefined = false;
         for(const auto &s : l_statements){
             if( s.is_var()
             &&  v.is_var()
             &&  (to_str(s.var_name) == to_str(v.var_name)) ){
-                report(feedback, script_feedback_severity_t::warn, s.get_valid_cwct(),
-                       "Variable declaration supercedes earlier definition (on line "_s
+                report(feedback, script_feedback_severity_t::info, s.get_valid_cwct(),
+                       "Variable declaration redefines earlier definition (on line "_s
                        + std::to_string(v.get_valid_cwct().lc) + ").");
-                is_superceded = true;
+                is_redefined = true;
             }
         }
 
-        if(!is_superceded) l_variables.emplace_back(v);
+        if(!is_redefined) l_variables.emplace_back(v);
     }
-    // Add local variables in reverse order to later variable assignments supercede earlier assignments.
+    // Add local variables in reverse order so later variable assignments supercede earlier assignments.
     for(auto s_it = std::rbegin(l_statements); s_it != std::rend(l_statements); ++s_it){
         if(s_it->is_var()) l_variables.emplace_back(*s_it);
     }
@@ -588,7 +589,13 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
         int64_t iter = 0;
         while(true){
             bool replacement_made = false;
+            const auto statement_line_num = s.get_valid_cwct().cc;
+
             for(const auto &v : l_variables){
+                // Ignore variable defintions that occur after this statement.
+                const auto var_line_num = v.get_valid_cwct().cc;
+                if(statement_line_num <= var_line_num) continue;
+
                 const auto var_name = to_str(v.var_name);
                 if(s.is_var()){
                     if(var_name == to_str(s.payload)){
@@ -596,7 +603,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
                         replacement_made = true;
                     }
                 }
-                if(s.is_func()){
+                if(s.is_func_invocation()){
                     if(var_name == to_str(s.func_name)){
                         s.func_name = v.payload;
                         replacement_made = true;
@@ -625,7 +632,7 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
 
     // Recurse for operations that have payloads, extracting nested statements.
     for(auto &s : l_statements){
-        if(s.is_func() && !s.payload.empty()){
+        if(s.is_func_invocation() && !s.payload.empty()){
             const bool res = Split_into_Statements(s.payload,
                                                    s.child_statements,
                                                    l_variables,

@@ -39,6 +39,7 @@
 #include "Operations/CombineImages.h"
 #include "Operations/CombineMeshes.h"
 #include "Operations/ComparePixels.h"
+#include "Operations/CompileScript.h"
 #include "Operations/ContourBasedRayCastDoseAccumulate.h"
 #include "Operations/ContourSimilarity.h"
 #include "Operations/ContourViaGeometry.h"
@@ -151,6 +152,7 @@
 #include "Operations/ImageRoutineTests.h"
 #include "Operations/ImprintImages.h"
 #include "Operations/InterpolateSlices.h"
+#include "Operations/Isolate.h"
 #include "Operations/IsolatedVoxelFilter.h"
 #include "Operations/LoadFiles.h"
 #include "Operations/LoadFilesInteractively.h"
@@ -289,6 +291,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["CombineImages"] = std::make_pair(OpArgDocCombineImages, CombineImages);
     out["CombineMeshes"] = std::make_pair(OpArgDocCombineMeshes, CombineMeshes);
     out["ComparePixels"] = std::make_pair(OpArgDocComparePixels, ComparePixels);
+    out["CompileScript"] = std::make_pair(OpArgDocCompileScript, CompileScript);
     out["ContourBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocContourBasedRayCastDoseAccumulate, ContourBasedRayCastDoseAccumulate);
     out["ContouringAides"] = std::make_pair(OpArgDocContouringAides, ContouringAides);
     out["ContourSimilarity"] = std::make_pair(OpArgDocContourSimilarity, ContourSimilarity);
@@ -400,6 +403,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ImageRoutineTests"] = std::make_pair(OpArgDocImageRoutineTests, ImageRoutineTests);
     out["ImprintImages"] = std::make_pair(OpArgDocImprintImages, ImprintImages);
     out["InterpolateSlices"] = std::make_pair(OpArgDocInterpolateSlices, InterpolateSlices);
+    out["Isolate"] = std::make_pair(OpArgDocIsolate, Isolate);
     out["IsolatedVoxelFilter"] = std::make_pair(OpArgDocIsolatedVoxelFilter, IsolatedVoxelFilter);
     out["LoadFiles"] = std::make_pair(OpArgDocLoadFiles, LoadFiles);
     out["LoadFilesInteractively"] = std::make_pair(OpArgDocLoadFilesInteractively, LoadFilesInteractively);

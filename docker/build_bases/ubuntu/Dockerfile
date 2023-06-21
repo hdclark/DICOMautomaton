@@ -1,7 +1,7 @@
 
 # NOTE: This Dockerfile should be interepretted relative to the DICOMautomaton repo root.
 
-FROM debian:oldstable
+FROM ubuntu
 
 LABEL maintainer="http://www.halclark.ca" \
       description="DICOMautomaton Ubuntu build base."

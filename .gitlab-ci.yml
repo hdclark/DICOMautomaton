@@ -14,13 +14,13 @@ stages:
 # These stages test the Docker implementation scripts for installing and building all needed dependencies, building
 # DICOMautomaton, testing the built binaries (within the compilation environment), and then building an AppImage.
 
-# CI build on Debian oldstable.
+# CI build on Debian buster.
 # Notes: reduced (or missing) optimization, some components may be missing.
-build_ci_debian_oldstable:
+build_ci_debian_buster:
   stage: build
   tags: [dcma, docker, linux]
   needs: []
-  image: "debian:oldstable"
+  image: "debian:buster"
   before_script:
     - "cp -R ./docker/builders/ci /scratch"
     - "cp -R . /dcma"
@@ -28,7 +28,7 @@ build_ci_debian_oldstable:
   script:
     - |
       ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; cat /proc/meminfo | grep 'Mem\|Cache\|Swap' ; printf '\n\n' ; done ) &)
-      ./docker/builders/ci/implementation_ci_debian_oldstable.sh
+      ./docker/builders/ci/implementation_ci_debian_buster.sh
       ./integration_tests/Run.sh -v
       ./scripts/extract_system_appimage.sh
   artifacts:
@@ -127,11 +127,11 @@ build_ci_macos:
 # AppImage distribution.
 
 # Same-system testing.
-test_ci_debian_oldstable_on_debian_oldstable:
+test_ci_debian_buster_on_debian_buster:
   stage: test
   tags: [dcma, docker, linux]
-  needs: ["build_ci_debian_oldstable"]
-  image: "debian:oldstable"
+  needs: ["build_ci_debian_buster"]
+  image: "debian:buster"
   script:
     # Provide minimal system libraries.
     - "./scripts/install_AppImage_runtime_dependencies.sh"
@@ -170,10 +170,10 @@ test_ci_arch_on_arch:
     expire_in: 55 hours
 
 # Cross-system testing.
-test_ci_debian_oldstable_on_arch:
+test_ci_debian_buster_on_arch:
   stage: test
   tags: [dcma, docker, linux]
-  needs: ["build_ci_debian_oldstable"]
+  needs: ["build_ci_debian_buster"]
   image: "archlinux:latest"
   script:
     # Provide minimal system libraries.
@@ -191,10 +191,10 @@ test_ci_debian_oldstable_on_arch:
       - "dcma_integration_testing"
     expire_in: 55 hours
 
-test_ci_debian_oldstable_on_ubuntu_latest:
+test_ci_debian_buster_on_ubuntu_latest:
   stage: test
   tags: [dcma, docker, linux]
-  needs: ["build_ci_debian_oldstable"]
+  needs: ["build_ci_debian_buster"]
   image: "ubuntu:latest"
   script:
     # Provide minimal system libraries.
@@ -215,10 +215,10 @@ test_ci_debian_oldstable_on_ubuntu_latest:
       - "dcma_integration_testing"
     expire_in: 55 hours
 
-test_ci_debian_oldstable_on_fedora_latest:
+test_ci_debian_buster_on_fedora_latest:
   stage: test
   tags: [dcma, docker, linux]
-  needs: ["build_ci_debian_oldstable"]
+  needs: ["build_ci_debian_buster"]
   image: "fedora:latest"
   script:
     # Provide minimal system libraries.
@@ -245,11 +245,11 @@ test_ci_debian_oldstable_on_fedora_latest:
     expire_in: 55 hours
 
 # Cross-compilation testing.
-test_cross_compile_mxe_on_debian_oldstable:
+test_cross_compile_mxe_on_debian_buster:
   stage: test
   tags: [dcma, docker, linux]
   needs: ["cross_compile_mxe"]
-  image: "debian:oldstable"
+  image: "debian:buster"
   script:
     # Provide minimal system libraries.
     - "export DEBIAN_FRONTEND='noninteractive'"
@@ -281,9 +281,9 @@ test_cross_compile_mxe_on_debian_oldstable:
 ### Deployment stages.
 #######################################################################################################################
 
-deploy_ci_debian_oldstable:
+deploy_ci_debian_buster:
   stage: deploy
   tags: [dcma, docker, linux]
-  needs: ["test_ci_debian_oldstable_on_debian_oldstable"]
+  needs: ["test_ci_debian_buster_on_debian_buster"]
   script:
     - "echo 'Deployment placeholder successful'"

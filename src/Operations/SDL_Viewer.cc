@@ -951,6 +951,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     int64_t img_array_num = -1; // The image array currently displayed.
     int64_t img_num = -1; // The image currently displayed.
     int64_t img_channel = -1; // Which channel to display.
+    bool img_is_rgb = false; // Treat the image as though it were in RGB format already.
     using img_array_ptr_it_t = decltype(DICOM_data.image_data.begin());
     using disp_img_it_t = decltype(DICOM_data.image_data.front()->imagecoll.images.begin());
     bool img_precess = false;
@@ -1531,6 +1532,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                       &colour_map,
                                       &nan_colour  ]( const planar_image<float,double>& img,
                                                       const int64_t img_channel,
+                                                      const bool img_is_rgb,
                                                       const std::optional<double>& custom_centre,
                                                       const std::optional<double>& custom_width ) -> opengl_texture_handle_t {
 
@@ -1541,7 +1543,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(!isininc(1,img_rows,10000) || !isininc(1,img_cols,10000)){
                 throw std::invalid_argument("Image dimensions are not reasonable. Refusing to continue");
             }
-            if(!isininc(1,img_channel+1,img_chns)){
+            if(!img_is_rgb && !isininc(1,img_channel+1,img_chns)){
                 throw std::invalid_argument("Image does not have selected channel. Refusing to continue");
             }
 
@@ -1560,6 +1562,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             auto custom_win_c  = custom_centre; 
             auto custom_win_fw = custom_width; 
 
+            const auto UseAsRGB = img_is_rgb; // Ignore colour mapping and scaling and render image as-is.
             const auto UseCustomWL = (custom_win_c && custom_win_fw);
             const auto UseImgWL = (UseCustomWL) ? false 
                                                 : (   (img_chns == 1) // Only honour for single-channel images.
@@ -1569,7 +1572,34 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                    && img_win_fw 
                                                    && (img_win_valid.value() == img_desc.value()));
 
-            if( UseCustomWL || UseImgWL ){
+            if( UseAsRGB ){
+                std::vector<int64_t> l_channels {
+                    ( (0 < img_chns) ? 0 : -1 ), // This is to support missing or disordered channels.
+                    ( (1 < img_chns) ? 1 : -1 ),
+                    ( (2 < img_chns) ? 2 : -1 )
+                };
+
+                const auto destmin = static_cast<float>( std::numeric_limits<uint8_t>::lowest() );
+                const auto destmax = static_cast<float>( std::numeric_limits<uint8_t>::max() );
+                const float nan = std::numeric_limits<float>::quiet_NaN();
+
+                for(auto j = 0; j < img_rows; ++j){ 
+                    for(auto i = 0; i < img_cols; ++i){ 
+                        for(const auto& chn : l_channels){
+                            const auto val = (0 <= chn) ? img.value(j,i,chn) : nan;
+
+                            if(std::isfinite(val)){
+                                const auto clamped = std::clamp<float>(std::round(val), destmin, destmax);
+                                const auto casted = static_cast<uint8_t>(clamped);
+                                animage.push_back(std::byte{casted});
+                            }else{
+                                animage.push_back(std::byte{0});
+                            }
+                        }
+                    }
+                }
+
+            }else if( UseCustomWL || UseImgWL ){
                 //Window/linear scaling transformation parameters.
                 //const auto win_r = 0.5*(win_fw.value() - 1.0); //The 'radius' of the range, or half width omitting the centre point.
 
@@ -1857,6 +1887,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                          &img_array_num,
                                          &img_num,
                                          &img_channel,
+                                         &img_is_rgb,
                                          &recompute_image_iters,
                                          &current_texture,
                                          &custom_centre,
@@ -1884,6 +1915,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             img_array_num = 0;
             img_num = 0;
             img_channel = 0;
+            img_is_rgb = false;
             if( auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters(); img_valid ){
                 break;
             }
@@ -1893,6 +1925,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             img_array_num = -1;
             img_num = -1;
             img_channel = -1;
+            img_is_rgb = false;
         }while(false);
 
         // Signal the need to reload the texture.
@@ -2004,7 +2037,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
         if( img_valid ){ 
             Free_OpenGL_Texture(scale_bar_texture);
-            scale_bar_texture = Load_OpenGL_Texture( scale_bar_img, 0L, {}, {} );
+            scale_bar_texture = Load_OpenGL_Texture( scale_bar_img, 0L, false, {}, {} );
         }
         return;
     };
@@ -2799,6 +2832,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                            &img_num,
                                            &img_array_num,
                                            &img_channel,
+                                           &img_is_rgb,
                                            &Free_OpenGL_Texture,
                                            &Load_OpenGL_Texture ]() -> void {
             std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
@@ -2807,11 +2841,12 @@ bool SDL_Viewer(Drover &DICOM_data,
             &&  img_valid ){
                 img_channel = std::clamp<int64_t>(img_channel, 0, disp_img_it->channels-1);
                 Free_OpenGL_Texture(current_texture);
-                current_texture = Load_OpenGL_Texture(*disp_img_it, img_channel, custom_centre, custom_width);
+                current_texture = Load_OpenGL_Texture(*disp_img_it, img_channel, img_is_rgb, custom_centre, custom_width);
             }else{
                 img_channel = -1;
                 img_array_num = -1;
                 img_num = -1;
+                img_is_rgb = false;
                 current_texture = opengl_texture_handle_t();
             }
             return;
@@ -2829,7 +2864,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::SetNextWindowPos(ImVec2(700, 40), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Contour Mask Debugging", &view_toggles.view_contouring_debug, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
                 Free_OpenGL_Texture(contouring_texture);
-                contouring_texture = Load_OpenGL_Texture( *cimg_it, 0L, {}, {} );
+                contouring_texture = Load_OpenGL_Texture( *cimg_it, 0L, false, {}, {} );
                 auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(contouring_texture.texture_number));
                 ImGui::Image(gl_tex_ptr, ImVec2(600,600), uv_min, uv_max);
                 ImGui::End();
@@ -3286,7 +3321,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 img_ptr->metadata["WindowCenter"] = "0.5";
                 img_ptr->metadata["WindowWidth"] = "1.0";
 
-                polyomino_texture = Load_OpenGL_Texture( *img_ptr, 0L, {}, {} );
+                polyomino_texture = Load_OpenGL_Texture( *img_ptr, 0L, false, {}, {} );
                 t_polyomino_updated = std::chrono::steady_clock::now();
             }
             const auto score = polyomino_imgs.image_data.back()->imagecoll.images.back().GetMetadataValueAs<double>("PolyominoesScore").value_or(0.0);
@@ -3365,7 +3400,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     auto *img_ptr = &(polyomino_imgs.image_data.back()->imagecoll.images.back());
 
                     Free_OpenGL_Texture(polyomino_texture);
-                    polyomino_texture = Load_OpenGL_Texture( *img_ptr, 0L, {}, {} );
+                    polyomino_texture = Load_OpenGL_Texture( *img_ptr, 0L, false, {}, {} );
                 }else{
                     polyomino_paused = true;
                 }
@@ -6314,6 +6349,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                &img_precess_period,
                                                &img_precess_last,
                                                &img_channel,
+                                               &img_is_rgb,
 
                                                &zoom,
                                                &pan,
@@ -6361,6 +6397,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             int scroll_arrays = img_array_num;
             int scroll_images = img_num;
             int scroll_channel = img_channel;
+            bool scroll_is_rgb = img_is_rgb;
             {
                 //ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
@@ -6420,7 +6457,13 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                 ImGui::Separator();
                 ImGui::Text("Display");
-                ImGui::SliderInt("Channel", &scroll_channel, 0, static_cast<int>(disp_img_it->channels - 1));
+                const auto N_channels = static_cast<int>(disp_img_it->channels);
+                ImGui::SliderInt("Channel", &scroll_channel, 0, N_channels - 1);
+                if( 3 <= N_channels ){
+                    ImGui::Checkbox("Image represents RGB colour", &scroll_is_rgb);
+                }else{
+                    scroll_is_rgb = false;
+                }
 
                 if(ImGui::IsWindowFocused() || image_mouse_pos_opt.value().image_window_focused){
                     auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
@@ -6643,8 +6686,9 @@ bool SDL_Viewer(Drover &DICOM_data,
             int64_t new_img_array_num = scroll_arrays;
             int64_t new_img_num = scroll_images;
             int64_t new_img_chnl = scroll_channel;
+            bool new_img_is_rgb = scroll_is_rgb;
 
-            // Scroll through images.
+            // Update the image state.
             if( new_img_array_num != img_array_num ){
                 advance_to_image_array(new_img_array_num);
                 recompute_image_state();
@@ -6668,6 +6712,12 @@ bool SDL_Viewer(Drover &DICOM_data,
                 recompute_image_state();
                 auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
                 if( !img_valid ) throw std::runtime_error("Advanced to inaccessible image channel");
+
+            }else if( new_img_is_rgb != img_is_rgb ){
+                img_is_rgb = new_img_is_rgb;
+                recompute_image_state();
+                auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
+                if( !img_valid ) throw std::runtime_error("Unable to render image as RGB format");
             }
 
             ImGui::End();

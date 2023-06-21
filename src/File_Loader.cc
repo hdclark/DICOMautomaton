@@ -41,6 +41,7 @@
 #include "CSV_File_Loader.h"
 #include "Script_Loader.h"
 #include "Contour_Collection_File_Loader.h"
+#include "Common_Image_File_Loader.h"
 
 enum class file_magic {
     unknown,
@@ -324,6 +325,21 @@ Load_Files( Drover &DICOM_data,
             return true;
         }});
 
+        //Standalone file loading for common raster image formats.
+        loaders.emplace_back(file_loader_t{{".jpg", ".jpeg",
+                                            ".png",
+                                            ".bmp",
+                                            ".tga",
+                                            ".gif",
+                                            ".pnm", ".ppm", ".pgm"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
+            if(!p.empty()
+            && !Load_From_Common_Image_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
+                YLOGWARN("Failed to load STB file");
+                return false;
+            }
+            return true;
+        }});
+
         //Standalone file loading: XYZ point cloud files.
         //
         // Note: XYZ can be confused with many other formats, so it should be near the end.
@@ -509,6 +525,10 @@ Load_Files( Drover &DICOM_data,
              || icase_str_eq(ext, ".dscr")
              || icase_str_eq(ext, ".csv")
              || icase_str_eq(ext, ".tsv")
+             || icase_str_eq(ext, ".jpg")
+             || icase_str_eq(ext, ".jpeg")
+             || icase_str_eq(ext, ".png")
+             || icase_str_eq(ext, ".bmp")
              || icase_str_eq(ext, ".lsamps") ) ){
             loaders.remove_if( [ext](const file_loader_t &l){
                                     return std::none_of( std::begin(l.exts),

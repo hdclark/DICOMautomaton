@@ -9,6 +9,6 @@ sudo docker run -it --rm \
     --cpus=4 \
     -v "$(pwd)":/start/:rw \
     -w /start/ \
-    dcma_fuzz_testing_debian_oldstable:latest \
+    dcma_fuzz_testing_debian_buster:latest \
     /bin/bash 
 

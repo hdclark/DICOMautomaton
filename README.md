@@ -21,13 +21,13 @@
 
 - Recent pre-built continuous integration artifacts:
   - [`Arch Linux`](https://gitlab.com/hdeanclark/DICOMautomaton/-/jobs/artifacts/master/download?job=build_ci_arch)
-  - [`Debian OldStable`](https://gitlab.com/hdeanclark/DICOMautomaton/-/jobs/artifacts/master/download?job=build_ci_debian_oldstable)
+  - [`Debian`](https://gitlab.com/hdeanclark/DICOMautomaton/-/jobs/artifacts/master/download?job=build_ci_debian_buster)
   - [`MXE` (i.e., `Windows` executables)](https://gitlab.com/hdeanclark/DICOMautomaton/-/jobs/artifacts/master/download?job=cross_compile_mxe)
   - [`MacOS`](https://gitlab.com/hdeanclark/DICOMautomaton/-/jobs/artifacts/master/download?job=build_ci_macos)
 
 - Recent pre-built `Docker` containers:
   - [![Arch Linux](https://img.shields.io/badge/Latest_Docker_Build_Base-Arch_Linux-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_arch)
-  - [![Debian OldStable](https://img.shields.io/badge/Latest_Docker_Build_Base-Debian_oldstable-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_debian_oldstable)
+  - [![Debian](https://img.shields.io/badge/Latest_Docker_Build_Base-Debian-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_debian_stable)
   - [![Void Linux](https://img.shields.io/badge/Latest_Docker_Build_Base-Void_Linux-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_void)
   - [![MXE](https://img.shields.io/badge/Latest_Docker_Build_Base-MXE-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_mxe)
 
@@ -192,8 +192,10 @@ formats:
     - XIM (read)
     - CSA DICOM headers (read)
     - SNC (read and write; ASCII; partial)
-    - PNG (write)
-    - JPG (write)
+    - PNG (read and write; partial)
+    - JPG (read and write; partial)
+    - BMP (read; partial)
+    - TGA (read; partial)
   - contours
     - DICOM RTSTRUCT (read and write)
   - surface meshes

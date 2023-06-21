@@ -9,7 +9,7 @@
 # At the moment only a minimum set of dependecies are supported.
 # Ideas and suggestions are welcome!
 
-# sudo docker run --rm -it debian:oldstable
+# sudo docker run --rm -it debian:buster
 
 set -eux
 
@@ -27,7 +27,7 @@ export CUSTOM_FLAGS=""
 
 #### Working ####
 
-# Debian oldstable as of 20210914.
+# Debian buster as of 20210914.
 #export TRIPLET='x86_64-linux-gnu.2.28'
 
 # Ancient glibc... Seems to have __cxa_thread_atexit_impl@GLIBC_2.18 whereas 2.17 does not have __cxa_thread_atexit_impl

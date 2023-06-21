@@ -17,28 +17,46 @@ True();
 # 'Noop' is another function. It resolves to 'no-op' or 'no operation'.
 Noop();
 
-# Operations (functions) support parameter passthrough, which makes it easier
-# to compose them. If parameters are not recognized they will be ignored.
-# The following shows how to quote and escape arguments.
-Noop(a = 123,
-     b = "234",
-     c = 3\45,
-     d = "45\6",
-     e = '56\7',
-     f = 'text',
-     g = '\'quoted text\'',
-     h = variable );
-
 # Comments can occur anywhere as long as the '#' is the first non-whitespace
 # character on the line.
-Noop( x = "123",
+Noop( w = "123",
       # This is another comment.
-      y = 456
-){
-    # This is a nested statement. Note that not all operations support
-    # child statements. Many will simply ignore them.
+      x = 456,
+      # The following is not a comment, it is a string containing an '#',
+      y = '#789',
+      # Comments can also trail...
+      z = 0,  # ... and trailing commas in lists are OK.
+);
+
+# Operations (functions) support parameter passthrough, which makes it easier
+# to compose them. If parameters are not recognized by an operation they will
+# be ignored -- the 'no-op' function takes no parameters!
+#
+# The following also shows how to quote and escape arguments.
+Noop(a = 123,
+     b = "234",
+
+     c = "45\6",  # Escaped character inside ""-quotes.
+     d = '56\7',  # Escaped character inside ''-quotes.
+     e = 3\45,    # Won't be escaped. Literally '3\45' is passed to operation.
+     f = '3\\45', # Same, but escaped. '3\45' is passed to operation.
+
+     g = 'text',      # Quoted text.
+     h = simple text, # Un-quoted text; won't handle ',', '#', whitespace, etc.
+     i = '\'quoted text\'', # Escaped quotes will be passed to the operation.
+
+     j = variable, # Assumes the *contents* of the variable.
+     k = literal,  # Literal text, except if a variable 'literal' is defined.
+);
+
+# Operations can be nested. Note that not all operations support nesting.
+Noop(){
+    # This is a nested ('child') statement. The Noop operation does not invoke
+    # child operations, so it will simply ignore anything defined here.
+    #
+    # Nested operations are still parsed though!
     True(z = 789){
-        # The content of 'variable' will now be overridden.
+        # The content of variables can be overridden.
         #
         # Remember, variables are macros, so they are resolved at compile time,
         # not during runtime.
@@ -48,23 +66,31 @@ Noop( x = "123",
     };
 };
 
-# Here is a loop operation. It performs child operations the specified number
-# of times.
+# Variable definitions are confined within the scope they are defined in,
+# so the previous (nested) redefinition of 'variable' is ignored.
+Noop( x = variable ){};
+
+# Here is a looping operation. It supports nested operations, executing them
+# sequentially the specified number of times.
 Repeat( N = 2 ){
 
-    # Create 3 image arrays.
+    # Recurse, creating 3 new image arrays.
     Repeat( N = 3 ){
         GenerateVirtualDataImageSphereV1();
     };
 
-    # Delete 3 image arrays.
+    # Recurse, deleting the previous 3 image arrays.
     Repeat( N = 3 ){
         DeleteImages( ImageSelection = 'last' );
     };
 };
 
-# In order to run DICOMautomaton scripts, they need to be compiled.
-# Press the 'validate' button to compile without running.
-# - This is useful for debugging.
+# In order to run DICOMautomaton scripts, they first need to be compiled.
+#
+# In an interactive session (i.e., script editor in the 'SDL_Viewer') press the
+# 'validate' button to compile without running. This is useful for debugging.
 # Press the 'run' button to compile and run the script.
+#
+# In a non-interactive session, you can invoke the script from the command line.
+# Or, you can validate and optionally compile using the CompileScript operation.
 

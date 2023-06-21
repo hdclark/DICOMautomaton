@@ -94,6 +94,9 @@ set_target_properties(  File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRU
 add_library(            FITS_File_Loader_obj OBJECT FITS_File_Loader.cc )
 set_target_properties(  FITS_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            Common_Image_File_Loader_obj OBJECT Common_Image_File_Loader.cc )
+set_target_properties(  Common_Image_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            XYZ_File_Loader_obj OBJECT XYZ_File_Loader.cc )
 set_target_properties(  XYZ_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -288,7 +291,7 @@ target_link_libraries(imebrashim
     Threads::Threads
 )
 
-# Dialog library (built separately to minimize header/macro clashes).
+# Dialog library, built as a library to minimize header/macro clashes.
 add_library(dialogshim
     Dialogs.cc 
     Dialogs/Text_Query.cc
@@ -300,6 +303,19 @@ target_link_libraries(dialogshim
     "$<$<BOOL:${MINGW}>:wsock32>"
     "$<$<BOOL:${MINGW}>:comctl32>"
     "$<$<BOOL:${MINGW}>:uuid>"
+    "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
+    mpfr
+    gmp
+    m
+    Threads::Threads
+)
+
+# STB nothings library, built as a library to minimize redefinition issues.
+add_library(commonimgshim
+    STB_Shim.cc 
+)
+set_target_properties(commonimgshim PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+target_link_libraries(commonimgshim
     "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
     mpfr
     gmp
@@ -379,6 +395,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:DICOM_File_Loader_obj>
     $<TARGET_OBJECTS:Lexicon_Loader_obj>
     $<TARGET_OBJECTS:FITS_File_Loader_obj>
+    $<TARGET_OBJECTS:Common_Image_File_Loader_obj>
     $<TARGET_OBJECTS:XYZ_File_Loader_obj>
     $<TARGET_OBJECTS:XIM_File_Loader_obj>
     $<TARGET_OBJECTS:SNC_File_Loader_obj>
@@ -412,6 +429,7 @@ add_executable (dicomautomaton_dispatcher
 target_link_libraries (dicomautomaton_dispatcher
     imebrashim
     dialogshim
+    commonimgshim
     $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt>
     $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt>
     $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization>
@@ -423,7 +441,7 @@ target_link_libraries (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_JANSSON}>:jansson>
     "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
     "$<$<BOOL:${WITH_SFML}>:${SFML_LIBRARIES}>"
-    "$<$<BOOL:${WITH_SDL}>:$<IF:$<AND:$<BOOL:${MINGW}>,$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>>,mingw32;SDL2::SDL2main;SDL2::SDL2-static,SDL2::SDL2>>"
+    "$<$<BOOL:${WITH_SDL}>:$<IF:$<AND:$<BOOL:${MINGW}>,$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>>,mingw32;SDL2::SDL2-static,SDL2::SDL2>>"
     "$<$<BOOL:${WITH_SDL}>:${GLEW_LIBRARIES}>"
     "$<$<BOOL:${WITH_SDL}>:${OPENGL_LIBRARIES}>"
     "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
@@ -474,6 +492,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:DICOM_File_Loader_obj>
         $<TARGET_OBJECTS:Lexicon_Loader_obj>
         $<TARGET_OBJECTS:FITS_File_Loader_obj>
+        $<TARGET_OBJECTS:Common_Image_File_Loader_obj>
         $<TARGET_OBJECTS:XYZ_File_Loader_obj>
         $<TARGET_OBJECTS:XIM_File_Loader_obj>
         $<TARGET_OBJECTS:SNC_File_Loader_obj>
@@ -506,6 +525,7 @@ if(WITH_WT)
     target_link_libraries(dicomautomaton_webserver
         imebrashim
         dialogshim
+        commonimgshim
         $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt>
         $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt>
         $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization>
@@ -517,7 +537,7 @@ if(WITH_WT)
         $<$<BOOL:${WITH_JANSSON}>:jansson>
         "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
         "$<$<BOOL:${WITH_SFML}>:${SFML_LIBRARIES}>"
-        "$<$<BOOL:${WITH_SDL}>:$<IF:$<AND:$<BOOL:${MINGW}>,$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>>,mingw32;SDL2::SDL2main;SDL2::SDL2-static,SDL2::SDL2>>"
+        "$<$<BOOL:${WITH_SDL}>:$<IF:$<AND:$<BOOL:${MINGW}>,$<NOT:$<BOOL:${BUILD_SHARED_LIBS}>>>,mingw32;SDL2::SDL2-static,SDL2::SDL2>>"
         "$<$<BOOL:${WITH_SDL}>:${GLEW_LIBRARIES}>"
         "$<$<BOOL:${WITH_SDL}>:${OPENGL_LIBRARIES}>"
         "$<$<BOOL:${WITH_POSTGRES}>:${POSTGRES_LIBRARIES}>"
@@ -653,6 +673,7 @@ install(TARGETS dicomautomaton_dispatcher
                 dicomautomaton_dump
                 imebrashim
                 dialogshim
+                commonimgshim
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

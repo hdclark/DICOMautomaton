@@ -1,13 +1,13 @@
 
 #FROM debian:testing
-FROM debian:oldstable
+FROM debian:buster
 
 LABEL maintainer="http://www.halclark.ca" \
       description="DICOMautomaton Debian fuzz tester."
 
 
 WORKDIR /scratch_base
-COPY docker/build_bases/debian_oldstable /scratch_base
+COPY docker/build_bases/debian_buster /scratch_base
 COPY . /dcma
 
 

@@ -1,0 +1,9 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# This script is used for debugging.
+
+# This script demonstrates variable names with disallowed characters.
+
+disallowed variable name = 123;
+noop(x = disallowed variable name,){};
+
