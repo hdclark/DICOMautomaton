@@ -1,4 +1,4 @@
-//DICOMExportImagesAsMR.cc - A part of DICOMautomaton 2017. Written by hal clark.
+//DICOMExportImagesAsMR.cc - A part of DICOMautomaton 2023. Written by Adam S-L.
 
 #include <exception>
 #include <optional>
