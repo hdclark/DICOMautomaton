@@ -29,7 +29,7 @@ find ./artifacts/dcma_scripts/ -type f -iname '*dscr' -print0 |
   sort -z |
    xargs -0 -I '{}' -P 1 -n 1 -r \
      bash -c "
-         export YLOG_TERMINAL='function+source+filename'
+         export YLOG_TERMINAL='function+source'
          printf '=== %s ===\n'  '{}'
          dicomautomaton_dispatcher \
            -v \
