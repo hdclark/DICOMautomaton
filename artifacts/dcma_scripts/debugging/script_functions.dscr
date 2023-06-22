@@ -1,0 +1,90 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# This script is used for debugging.
+
+# This script tests how functions can be invoked and defined in scripts.
+
+
+# Invoking functions.
+noop();
+
+noop(){};
+
+# Nested functions, i.e., functions with children.
+noop(){
+    noop();
+};
+
+noop(){
+    noop(){};
+};
+
+noop(){
+    noop(){
+        noop();
+    };
+};
+
+noop(){
+    noop(){
+        noop(){};
+    };
+};
+
+
+# Functions with parameters.
+noop( a = 123,
+      b = 456 );
+
+noop( a = 123,
+      b = 456, );
+
+
+# Function definitions.
+let: func1(){};
+
+let: func2(x){
+    noop(a = x); # Note that function parameters can replace either the right-hand side,
+    noop(x = a); # or left-hand side.
+};
+
+let: func3(x, y, z){
+    noop(x = y,
+         z = a);
+};
+
+let: func4(){};
+
+let: func4(){  # Should supercede the previous definition.
+    noop(){};
+};
+
+# Invoking defined functions.
+func1();
+
+func2(x = 'abc');
+
+func3(x = 123,
+      y = 456);
+
+func4();
+
+
+# Function definitions that capture variables from the current or prior scope.
+var1 = 123;
+
+let: func5(x){
+    noop(b = x);
+    noop(c = var1);
+    var1 = 456;
+    noop(d = var1);
+};
+
+var1 = 789;
+
+noop(a = var1);
+
+func2(x = 'abc');
+
+noop(e = var1);
+

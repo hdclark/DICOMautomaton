@@ -90,13 +90,26 @@ std::string to_str(const std::vector<char_with_context_t> &v){
 //        function3(z = 789);
 //    
 //    };
+//
+//    # This is a function definition.
+//    let: function3(x, y){
+//        function1(a = 123,
+//                  b = x,
+//                  c = y);
+//    };
+//
+//    # This invokes the previously defined function.
+//    function3( x = 123,
+//               y = 456 );
+//
 struct script_statement_t {
+    std::vector<char_with_context_t> qualifier; // "let".
     std::vector<char_with_context_t> var_name; // "variable1".
     std::vector<char_with_context_t> func_name; // "function1".
     std::vector< std::pair< std::vector<char_with_context_t>,
                             std::vector<char_with_context_t> > > arguments; // Function arguments (x = y).
     std::vector<char_with_context_t> payload; // Contents of { } for functions, value for variables.
-    std::vector<script_statement_t> child_statements;
+    std::list<script_statement_t> child_statements;
 
     script_statement_t() = default;
     script_statement_t(const script_statement_t &) = default;
@@ -104,6 +117,7 @@ struct script_statement_t {
 
     // Get the first available character. Used to provide a source location for feedback.
     char_with_context_t get_valid_cwct() const {
+        if(!this->qualifier.empty()) return this->qualifier.front();
         if(!this->var_name.empty()) return this->var_name.front();
         if(!this->func_name.empty()) return this->func_name.front();
         for(const auto &ap : this->arguments){
@@ -111,11 +125,12 @@ struct script_statement_t {
             if(!ap.second.empty()) return ap.second.front();
         }
         if(!this->payload.empty()) return this->payload.front();
-        throw std::logic_error("Statement was completely empty. Unable to provide cwct>");
+        throw std::logic_error("Statement was completely empty. Unable to provide cwct.");
         return char_with_context_t();
     };
 
     bool is_completely_empty() const {
+        if(!this->qualifier.empty()) return false;
         if(!this->var_name.empty()) return false;
         if(!this->func_name.empty()) return false;
         for(const auto &ap : this->arguments){
@@ -126,14 +141,21 @@ struct script_statement_t {
         return true;
     };
 
-    bool is_var() const {
-        return !this->var_name.empty()
-            && !this->payload.empty()
-            &&  this->func_name.empty();
+    bool is_var_definition() const {
+        return  this->qualifier.empty()
+            && !this->var_name.empty()
+            &&  this->func_name.empty()
+            && !this->payload.empty();
     };
     bool is_func_invocation() const {
-        return !this->func_name.empty()
-            &&  this->var_name.empty();
+        return  this->qualifier.empty()
+            &&  this->var_name.empty()
+            && !this->func_name.empty();
+    };
+    bool is_func_definition() const {
+        return (to_str(this->qualifier) == "let")
+            &&  this->var_name.empty()
+            && !this->func_name.empty();
     };
 };
 
@@ -158,11 +180,13 @@ void report( std::list<script_feedback_t> &feedback,
 // Split into statements, respecting quotations, parentheses, and escaping.
 bool
 Split_into_Statements( std::vector<char_with_context_t> &contents,
-                       std::vector<script_statement_t> &statements,
-                       const std::vector<script_statement_t> &variables,
-                       std::list<script_feedback_t> &feedback ){
+                       std::list<script_statement_t> &statements,
+                       const std::list<script_statement_t> &variables,
+                       const std::list<script_statement_t> &functions,
+                       std::list<script_feedback_t> &feedback,
+                       int64_t recursion_depth ){
 
-    std::vector<script_statement_t> l_statements;
+    std::list<script_statement_t> l_statements;
     bool compilation_successful = true;
 
     const auto is_whitespace = [](const char_with_context_t &c){
@@ -211,6 +235,15 @@ Split_into_Statements( std::vector<char_with_context_t> &contents,
         return true;
     };
 
+    if(20 < recursion_depth){
+        char_with_context_t c;
+        if(!contents.empty()){
+            c = contents.front();
+        }
+        report(feedback, script_feedback_severity_t::err, c, "Recursion depth reached");
+        compilation_successful = false;
+        return compilation_successful;
+    }
 
     // Split into statements, respecting quotations and escaping.
     if(!contents.empty()){
@@ -274,6 +307,19 @@ YLOGDEBUG("Pushing back variable name '" << to_str(shtl) << "'");
                 shtl.clear();
                 skip_character = true;
 
+            // Qualifier: function definition.
+            }else if( !prev_escape
+                  &&  !inside_comment
+                  &&  quote_stack.empty()
+                  &&  curve_stack.empty()
+                  &&  bumpy_stack.empty()
+                  &&  (c == ':')
+                  &&  l_statements.back().is_completely_empty() ){
+YLOGDEBUG("Pushing back qualifier '" << to_str(shtl) << "'");
+                l_statements.back().qualifier = shtl;
+                shtl.clear();
+                skip_character = true;
+
             // Function argument assignment.
             }else if( !prev_escape
                   &&  !inside_comment
@@ -296,12 +342,25 @@ YLOGDEBUG("Pushing back argument key '" << to_str(shtl) << "'");
                   &&  (curve_stack.back() == '(')
                   &&  bumpy_stack.empty()
                   &&  (c == ',') ){
-                if( !l_statements.back().arguments.empty()
-                &&  !shtl.empty() 
-                &&  l_statements.back().arguments.back().second.empty() ){
+
+                // Function invocation parameter.
+                if(false){
+                }else if( !l_statements.back().arguments.empty()
+                      &&  !shtl.empty() 
+                      &&  l_statements.back().arguments.back().second.empty() 
+                      &&  l_statements.back().qualifier.empty() ){
                     l_statements.back().arguments.back().second = shtl;
                     skip_character = true;
-YLOGDEBUG("Pushing back argument value '" << to_str(shtl) << "'");
+YLOGDEBUG("Pushing back function invocation argument value '" << to_str(shtl) << "'");
+
+                // Function definition parameter.
+                }else if( !shtl.empty()
+                      &&  !l_statements.back().qualifier.empty() ){
+                    skip_character = true;
+YLOGDEBUG("Pushing back function definition argument value '" << to_str(shtl) << "'");
+                    l_statements.back().arguments.emplace_back();
+                    l_statements.back().arguments.back().first = shtl;
+
                 }else{
                     report(feedback, script_feedback_severity_t::err, c, "Ambiguous ','");
                     compilation_successful = false;
@@ -347,8 +406,13 @@ YLOGDEBUG("Pushing back function name '" << to_str(shtl) << "'");
                 if(false){
                 }else if( (curve_stack.size() == 1)
                       &&  (curve_stack.back() == '(')
-                      //&&  l_statements.back().arguments.empty()
                       &&  std::all_of(std::begin(shtl), std::end(shtl), is_whitespace) ){
+                    curve_stack.pop_back();
+                    skip_character = true;
+
+                }else if( (curve_stack.size() == 1)
+                      &&  (curve_stack.back() == '(')
+                      &&  !l_statements.back().qualifier.empty() ){
                     curve_stack.pop_back();
                     skip_character = true;
 
@@ -460,11 +524,14 @@ YLOGDEBUG("Trailing input has shtl = '" << to_str(shtl) << "'");
         report_unmatched(bumpy_stack);
     }
 
+YLOGDEBUG("Parsing at this scope is complete. Cleaning keywords now");
+
     // Trim outermost quotes and whitespace.
     for(auto &s : l_statements){
+        trim_outer_space(s.qualifier);
         trim_outer_space(s.var_name);
-        trim_outer_space(s.payload);
-        unquote(s.payload);
+        //trim_outer_space(s.payload);
+        //unquote(s.payload);
 
         trim_outer_space(s.func_name);
         for(auto &a : s.arguments){
@@ -487,31 +554,40 @@ YLOGDEBUG("Trailing input has shtl = '" << to_str(shtl) << "'");
     ////////////////////////////////////////////////////////////////////
     // Validate statements are reasonable.
     ////////////////////////////////////////////////////////////////////
+YLOGDEBUG("Cleaning at this scope is complete. Validating inputs now");
 
     for(auto &s : l_statements){
         // Every statement is either a variable assignment, or a function.
-        if( s.is_var() == s.is_func_invocation() ){
+        if( ( (s.is_var_definition() ? 1 : 0)
+            + (s.is_func_invocation() ? 1 : 0)
+            + (s.is_func_definition() ? 1 : 0) ) != 1 ){
             report(feedback, script_feedback_severity_t::err, s.get_valid_cwct(),
-                   "Statement is neither a variable assignment, nor a function.");
+                   "Statement is neither a variable assignment, a function invocation, or a function definition.");
             compilation_successful = false;
         }
 
         // Names contain only valid characters.
-        if( s.is_var() && !contains_valid_identifier(s.var_name) ){
+        if( s.is_func_definition() && (to_str(s.qualifier) != "let") ){
+            report(feedback, script_feedback_severity_t::err, s.qualifier.front(),
+                   "Unrecognized qualifier.");
+            compilation_successful = false;
+        }
+        if( s.is_var_definition() && !contains_valid_identifier(s.var_name) ){
             report(feedback, script_feedback_severity_t::err, s.var_name.front(),
                    "Variable contains forbidden identifier characters.");
             compilation_successful = false;
         }
-        if( s.is_func_invocation() && !contains_valid_identifier(s.func_name) ){
+        if( ( s.is_func_invocation() || s.is_func_definition() )
+        &&  !contains_valid_identifier(s.func_name) ){
             report(feedback, script_feedback_severity_t::err, s.func_name.front(),
-                   "Operation contains forbidden identifier characters.");
+                   "Function contains forbidden identifier characters.");
             compilation_successful = false;
         }
-        if( s.is_func_invocation() ){
+        if( s.is_func_invocation() || s.is_func_definition() ){
             for(const auto &ap : s.arguments){
                 if(!contains_valid_identifier(ap.first) ){
                     report(feedback, script_feedback_severity_t::err, s.get_valid_cwct(),
-                           "Operation argument name contains forbidden identifier characters.");
+                           "Function argument name contains forbidden identifier characters.");
                     compilation_successful = false;
                 }
             }
@@ -519,7 +595,7 @@ YLOGDEBUG("Trailing input has shtl = '" << to_str(shtl) << "'");
         }
     }
 
-    // All function arguments are unique and non-empty.
+    // All function arguments (both definition and invocation) are unique and non-empty.
     for(auto &s : l_statements){
         const auto end_it = std::end(s.arguments);
         for(auto a_it = std::begin(s.arguments); a_it != end_it; ++a_it){
@@ -540,11 +616,24 @@ YLOGDEBUG("Trailing input has shtl = '" << to_str(shtl) << "'");
         }
     }
 
-    // All variables (defined in the current scope) are unique and non-empty.
+    // All functions defined in the current scope are unique and non-empty.
     for(auto s1_it = std::begin(l_statements); s1_it != std::end(l_statements); ++s1_it){
         for(auto s2_it = std::next(s1_it); s2_it != std::end(l_statements); ++s2_it){
-            if( s1_it->is_var()
-            &&  s2_it->is_var()
+            if( s1_it->is_func_definition()
+            &&  s2_it->is_func_definition()
+            &&  (to_str(s1_it->func_name) == to_str(s2_it->func_name)) ){
+                report(feedback, script_feedback_severity_t::warn, s2_it->get_valid_cwct(),
+                       "Duplicate function definition (previously assigned on line "_s
+                       + std::to_string(s1_it->get_valid_cwct().lc) + ").");
+            }
+        }
+    }
+
+    // All variables defined in the current scope are unique and non-empty.
+    for(auto s1_it = std::begin(l_statements); s1_it != std::end(l_statements); ++s1_it){
+        for(auto s2_it = std::next(s1_it); s2_it != std::end(l_statements); ++s2_it){
+            if( s1_it->is_var_definition()
+            &&  s2_it->is_var_definition()
             &&  (to_str(s1_it->var_name) == to_str(s2_it->var_name)) ){
                 report(feedback, script_feedback_severity_t::warn, s2_it->get_valid_cwct(),
                        "Duplicate variable assignment (previously assigned on line "_s
@@ -553,10 +642,12 @@ YLOGDEBUG("Trailing input has shtl = '" << to_str(shtl) << "'");
         }
     }
 
+    // ---
+
     // Warn when variables redefine prior variable definitions.
-    std::vector<script_statement_t> l_variables;
+    std::list<script_statement_t> l_variables;
     for(const auto &v : variables){
-        if( !v.is_var() ){
+        if( !v.is_var_definition() ){
             report(feedback, script_feedback_severity_t::err, v.get_valid_cwct(),
                    "Unable to handle as a variable.");
             compilation_successful = false;
@@ -564,8 +655,8 @@ YLOGDEBUG("Trailing input has shtl = '" << to_str(shtl) << "'");
 
         bool is_redefined = false;
         for(const auto &s : l_statements){
-            if( s.is_var()
-            &&  v.is_var()
+            if( s.is_var_definition()
+            &&  v.is_var_definition()
             &&  (to_str(s.var_name) == to_str(v.var_name)) ){
                 report(feedback, script_feedback_severity_t::info, s.get_valid_cwct(),
                        "Variable declaration redefines earlier definition (on line "_s
@@ -578,57 +669,204 @@ YLOGDEBUG("Trailing input has shtl = '" << to_str(shtl) << "'");
     }
     // Add local variables in reverse order so later variable assignments supercede earlier assignments.
     for(auto s_it = std::rbegin(l_statements); s_it != std::rend(l_statements); ++s_it){
-        if(s_it->is_var()) l_variables.emplace_back(*s_it);
+        if(s_it->is_var_definition()) l_variables.emplace_back(*s_it);
     }
+
+    // Remove variable definitions from the statements.
+    l_statements.erase( std::remove_if( std::begin(l_statements), std::end(l_statements),
+                                        [](const script_statement_t &s){ return s.is_var_definition(); } ),
+                        std::end(l_statements) );
+
+    // ---
+
+    // Warn when functions redefine prior function definitions.
+    std::list<script_statement_t> l_functions;
+    for(const auto &f : functions){
+        if( !f.is_func_definition() ){
+            report(feedback, script_feedback_severity_t::err, f.get_valid_cwct(),
+                   "Unable to handle as a function.");
+            compilation_successful = false;
+        }
+
+        bool is_redefined = false;
+        for(const auto &s : l_statements){
+            if( s.is_func_definition()
+            &&  f.is_func_definition()
+            &&  (to_str(s.func_name) == to_str(f.func_name)) ){
+                report(feedback, script_feedback_severity_t::info, s.get_valid_cwct(),
+                       "Function definition redefines earlier definition (on line "_s
+                       + std::to_string(f.get_valid_cwct().lc) + ").");
+                is_redefined = true;
+            }
+        }
+
+        if(!is_redefined) l_functions.emplace_back(f);
+    }
+    // Add local functions in reverse order so later function assignments supercede earlier assignments.
+    for(auto s_it = std::rbegin(l_statements); s_it != std::rend(l_statements); ++s_it){
+        if(s_it->is_func_definition()) l_functions.emplace_back(*s_it);
+    }
+
+    // Remove function definitions from the statements.
+    l_statements.erase( std::remove_if( std::begin(l_statements), std::end(l_statements),
+                                        [](const script_statement_t &s){ return s.is_func_definition(); } ),
+                        std::end(l_statements) );
+
+    // ---
+YLOGDEBUG("Validating inputs at this scope is complete. Performing variable replacements now");
 
     // Perform variable replacements.
     //
     // Note: at the moment, only exact matches are supported. Arithmetic expressions, for example, are not currently
     // supported.
-    for(auto &s : l_statements){
-        int64_t iter = 0;
-        while(true){
-            bool replacement_made = false;
-            const auto statement_line_num = s.get_valid_cwct().cc;
+    const auto replace_variables = [ &feedback,
+                                     &compilation_successful ]( std::list<script_statement_t> &statements,
+                                                                const std::list<script_statement_t> &variables ){
+        for(auto &s : statements){
+            int64_t iter = 0;
+            while(true){
+                bool replacement_made = false;
+                const auto statement_line_num = s.get_valid_cwct().cc;
 
-            for(const auto &v : l_variables){
-                // Ignore variable defintions that occur after this statement.
-                const auto var_line_num = v.get_valid_cwct().cc;
-                if(statement_line_num <= var_line_num) continue;
+                for(const auto &v : variables){
+                    // Ignore variable definitions that occur after this statement.
+                    const auto var_line_num = v.get_valid_cwct().cc;
+                    if(statement_line_num <= var_line_num) continue;
 
-                const auto var_name = to_str(v.var_name);
-                if(s.is_var()){
-                    if(var_name == to_str(s.payload)){
-                        s.payload = v.payload;
-                        replacement_made = true;
+                    const auto var_name = to_str(v.var_name);
+                    if(s.is_var_definition()){
+                        if(var_name == to_str(s.payload)){
+                            s.payload = v.payload;
+                            replacement_made = true;
+                        }
+                    }
+                    if(s.is_func_invocation()){
+                        if(var_name == to_str(s.func_name)){
+                            s.func_name = v.payload;
+                            replacement_made = true;
+                        }
+                        for(auto &a : s.arguments){
+                            if(var_name == to_str(a.first)){
+                                a.first = v.payload;
+                                replacement_made = true;
+                            }
+                            if(var_name == to_str(a.second)){
+                                a.second = v.payload;
+                                replacement_made = true;
+                            }
+                        }
                     }
                 }
-                if(s.is_func_invocation()){
-                    if(var_name == to_str(s.func_name)){
-                        s.func_name = v.payload;
-                        replacement_made = true;
-                    }
-                    for(auto &a : s.arguments){
-                        if(var_name == to_str(a.second)){
-                            a.second = v.payload;
+
+                if( 100L < ++iter ){
+                    report(feedback, script_feedback_severity_t::err, s.get_valid_cwct(),
+                           "Variable replacement exceeded 100 iterations.");
+                    compilation_successful = false;
+                    break;
+                }
+                if(!replacement_made) break;
+            }
+        }
+        return;
+    };
+    replace_variables(l_statements, l_variables);
+
+    // Perform function replacements.
+YLOGDEBUG("Variable replacement at this scope is complete. Performing function replacements now");
+    const auto replace_functions = [ &feedback,
+                                     &compilation_successful,
+                                     recursion_depth ]( std::list<script_statement_t> &statements,
+                                                        const std::list<script_statement_t> &variables,
+                                                        const std::list<script_statement_t> &functions ){
+        for(auto s_it = std::begin(statements); s_it != std::end(statements); ++s_it){
+            int64_t iter = 0;
+            while(true){
+                bool replacement_made = false;
+                const auto statement_line_num = s_it->get_valid_cwct().cc;
+
+                for(const auto &f : functions){
+                    // Ignore function definitions that occur after this statement.
+                    const auto func_line_num = f.get_valid_cwct().cc;
+                    if(statement_line_num <= func_line_num) continue;
+
+                    const auto func_name = to_str(f.func_name);
+                    if(s_it->is_func_invocation()){
+                        if(func_name == to_str(s_it->func_name)){
+
+                            if(!s_it->payload.empty()){
+                                report(feedback, script_feedback_severity_t::warn, s_it->get_valid_cwct(),
+                                       "Invoking function definition; children operations will be ignored.");
+                            }
+
+                            // Convert the arguments into variables that are defined at the head of the invocation.
+                            // They will be applied specifically within the function body, but no where else.
+                            std::list<script_statement_t> l_variables(variables);
+                            std::list<script_statement_t> parameters;
+                            for(const auto &a : s_it->arguments){
+                                parameters.emplace_back();
+                                parameters.back().var_name = a.first;
+                                parameters.back().payload = a.second;
+
+                                // Adjust the effective point of definition so the replacement will be applied within
+                                // the function's scope.
+                                //
+                                // This is a bit of a hack and could potentially lead to confusing warning messages. FIXME - TODO.
+                                //
+                                auto &s_cwct = parameters.back().var_name.front();
+                                const auto s_cwct_c = s_cwct.c;
+                                const auto f_cwct = f.get_valid_cwct();
+                                s_cwct = f_cwct;
+                                s_cwct.c = s_cwct_c;
+                            }
+
+                            // Add local parameters in reverse order so later assignments supercede earlier assignments.
+                            for(auto p_it = std::rbegin(parameters); p_it != std::rend(parameters); ++p_it){
+                                l_variables.emplace_back(*p_it);
+                            }
+
+YLOGDEBUG("Recursively extracting statements for function replacement now");
+                            // Convert the payload into a collection of statements.
+                            std::list<script_statement_t> parsed_statements;
+                            std::vector<char_with_context_t> l_payload(f.payload);
+                            const bool res = Split_into_Statements(l_payload,
+                                                                   parsed_statements,
+                                                                   l_variables,
+                                                                   functions,
+                                                                   feedback,
+                                                                   recursion_depth + 1);
+                            if(!res){
+                                compilation_successful = false;
+                                return;
+                            }
+
+                            // Replace this invocation statement with the parsed statements from the function definition.
+                            auto next_it = std::next(s_it);
+                            statements.splice( next_it, std::move(parsed_statements) );
+                            s_it = statements.erase(s_it);
+
                             replacement_made = true;
                         }
                     }
                 }
+                if( 10L < ++iter ){
+                    report(feedback, script_feedback_severity_t::err, s_it->get_valid_cwct(),
+                           "Function replacement exceeded 10 iterations.");
+                    compilation_successful = false;
+                    break;
+                }
+                if(!replacement_made){
+                    break;
+                }
             }
-            if( 100L < ++iter ){
-                report(feedback, script_feedback_severity_t::err, s.get_valid_cwct(),
-                       "Variable replacement exceeded 100 replacement iterations.");
-                compilation_successful = false;
-                break;
-            }
-            if(!replacement_made) break;
         }
-    }
-    // Remove variables from the statements.
-    l_statements.erase( std::remove_if( std::begin(l_statements), std::end(l_statements),
-                                        [](const script_statement_t &s){ return s.is_var(); } ),
-                        std::end(l_statements) );
+        return;
+    };
+    replace_functions(l_statements, l_variables, l_functions);
+    replace_variables(l_statements, l_variables);
+
+
+    // ---
+YLOGDEBUG("Statement extraction complete at this scope. Recursing");
 
     // Recurse for operations that have payloads, extracting nested statements.
     for(auto &s : l_statements){
@@ -636,7 +874,9 @@ YLOGDEBUG("Trailing input has shtl = '" << to_str(shtl) << "'");
             const bool res = Split_into_Statements(s.payload,
                                                    s.child_statements,
                                                    l_variables,
-                                                   feedback);
+                                                   l_functions,
+                                                   feedback,
+                                                   recursion_depth + 1);
             if(res){
                 s.payload.clear();
             }else{
@@ -652,7 +892,7 @@ YLOGDEBUG("Trailing input has shtl = '" << to_str(shtl) << "'");
 }
 
 bool
-Generate_Operation_List( const std::vector<script_statement_t> &statements,
+Generate_Operation_List( const std::list<script_statement_t> &statements,
                          std::list<OperationArgPkg> &op_list,
                          std::list<script_feedback_t> &feedback ){
 
@@ -779,15 +1019,17 @@ bool Load_DCMA_Script(std::istream &is,
     }
 
     // Decompose the input into statements.
-    std::vector<script_statement_t> statements;
-    std::vector<script_statement_t> variables;
-    if(!Split_into_Statements(contents, statements, variables, feedback)){
+    std::list<script_statement_t> statements;
+    std::list<script_statement_t> variables;
+    std::list<script_statement_t> functions;
+    int64_t recursion_depth = 0;
+    if(!Split_into_Statements(contents, statements, variables, functions, feedback, recursion_depth)){
         return false;
     }
 
     // Recursively print the parsed AST as feedback.
-    std::function<void(const std::vector<script_statement_t> &, std::ostream &, std::string)> recursively_print_statements;
-    recursively_print_statements = [&](const std::vector<script_statement_t> &statements,
+    std::function<void(const std::list<script_statement_t> &, std::ostream &, std::string)> recursively_print_statements;
+    recursively_print_statements = [&](const std::list<script_statement_t> &statements,
                                        std::ostream &os,
                                        std::string spacing) -> void {
         for(const auto &s : statements){
