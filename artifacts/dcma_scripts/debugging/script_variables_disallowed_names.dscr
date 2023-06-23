@@ -4,6 +4,14 @@
 
 # This script demonstrates variable names with disallowed characters.
 
-disallowed variable name = 123;
-noop(x = disallowed variable name,){};
+names_must_only_include_a-z_A-Z_and_1-9_chars = 123;
+
+name with spaces = 123;
+
+  outer_whitespace_is_OK   = 123;
+
+splitting_over_multiple_lines_is_also_OK
+    = 123;
+
+noop(function parameters are the same as variables = 123){};
 

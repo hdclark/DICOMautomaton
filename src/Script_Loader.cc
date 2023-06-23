@@ -1,4 +1,4 @@
-// Script_Loader.cc - A part of DICOMautomaton 2021. Written by hal clark.
+// Script_Loader.cc - A part of DICOMautomaton 2023. Written by hal clark.
 //
 // This program loads DICOMautomaton scripts from ASCII text files.
 //
@@ -21,6 +21,7 @@
 #include <filesystem>
 #include <cstdlib>            //Needed for exit() calls.
 #include <cstdint>
+#include <type_traits>
 
 #include <boost/algorithm/string/predicate.hpp>
 
@@ -40,6 +41,36 @@
 #ifndef DCMA_SCRIPT_INLINES
 #define DCMA_SCRIPT_INLINES
 #endif //DCMA_SCRIPT_INLINES
+
+bool script_feedback_t::operator<(const script_feedback_t &rhs) const {
+    using severity_underlying_t = typename std::underlying_type< const script_feedback_severity_t >::type;
+    const auto l = std::make_tuple(this->offset,
+                                   this->line,
+                                   this->line_offset,
+                                   static_cast< severity_underlying_t >(this->severity),
+                                   this->message);
+    const auto r = std::make_tuple(rhs.offset,
+                                   rhs.line,
+                                   rhs.line_offset,
+                                   static_cast< severity_underlying_t >(rhs.severity),
+                                   rhs.message);
+    return (*this == rhs) ? false : (l < r);
+}
+
+bool script_feedback_t::operator==(const script_feedback_t &rhs) const {
+    using severity_underlying_t = typename std::underlying_type< const script_feedback_severity_t >::type;
+    const auto l = std::make_tuple(this->offset,
+                                   this->line,
+                                   this->line_offset,
+                                   static_cast< severity_underlying_t >(this->severity),
+                                   this->message);
+    const auto r = std::make_tuple(rhs.offset,
+                                   rhs.line,
+                                   rhs.line_offset,
+                                   static_cast< severity_underlying_t >(rhs.severity),
+                                   rhs.message);
+    return (l == r);
+}
 
 // A parsed character from a stream that is imbued with additional metadata from the stream.
 struct char_with_context_t {
@@ -1026,6 +1057,11 @@ bool Load_DCMA_Script(std::istream &is,
     if(!Split_into_Statements(contents, statements, variables, functions, feedback, recursion_depth)){
         return false;
     }
+
+    // Sort and de-deduplicate the feedback, which can be disordered and duplicated due to recursive parsing and
+    // function definition/invocation.
+    feedback.sort();
+    feedback.unique();
 
     // Recursively print the parsed AST as feedback.
     std::function<void(const std::list<script_statement_t> &, std::ostream &, std::string)> recursively_print_statements;

@@ -24,6 +24,9 @@ struct script_feedback_t {
     int64_t line = -1;        // Line number.
     int64_t line_offset = -1; // Offset character count from beginning of line.
     std::string message;
+
+    bool operator<(const script_feedback_t &) const;
+    bool operator==(const script_feedback_t &) const;
 };
 
 // Load a single script.
