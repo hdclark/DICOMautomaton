@@ -797,6 +797,13 @@ YLOGDEBUG("Validating inputs at this scope is complete. Performing variable repl
                     if(statement_line_num <= var_line_num) continue;
 
                     const auto var_name = to_str(v.var_name);
+                    const auto var_val  = to_str(v.payload);
+
+                    if(var_name == var_val){
+                        // Ignore replacements like 'x = x'.
+                        continue;
+                    }
+
                     if(s.is_var_definition()){
                         if(var_name == to_str(s.payload)){
                             s.payload = v.payload;
