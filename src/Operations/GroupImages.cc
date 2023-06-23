@@ -160,7 +160,8 @@ bool GroupImages(Drover &DICOM_data,
     // Parse the chain of metadata keys.
     std::vector<std::string> KeysCommon;
     for(auto a : SplitStringToVector(KeysCommonStr, ';', 'd')){
-        a = Canonicalize_String2(a, CANONICALIZE::TRIM_ENDS | CANONICALIZE::TO_NUMAZ);
+        a = Canonicalize_String2(a, CANONICALIZE::TO_NUMAZ);
+        a = Canonicalize_String2(a, CANONICALIZE::TRIM_ENDS);
         KeysCommon.emplace_back(a);
     }
 
