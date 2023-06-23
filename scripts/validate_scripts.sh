@@ -31,7 +31,7 @@ find ./artifacts/dcma_scripts/ -type f -iname '*dscr' -print0 |
      bash -c "
          export YLOG_TERMINAL='function+source'
          printf '=== %s ===\n'  '{}'
-         dicomautomaton_dispatcher \
+         /home/hal/portable_dcma/DICOMautomaton-x86_64.AppImage \
            -v \
            -o CompileScript:Action=validate:Filename='{}' || true " bash '{}' > "${fname}" 2>&1
 

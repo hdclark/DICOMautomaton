@@ -93,6 +93,12 @@ struct char_with_context_t {
         if(this->lcc < 0) this->lcc = l_cc;
         return;
     }
+    void copy_location(const char_with_context_t &rhs){
+        this->cc  = rhs.cc;
+        this->lc  = rhs.lc;
+        this->lcc = rhs.lcc;
+        return;
+    }
 };
 
 std::string to_str(const std::vector<char_with_context_t> &v){
@@ -387,10 +393,19 @@ YLOGDEBUG("Pushing back function invocation argument value '" << to_str(shtl) <<
                 // Function definition parameter.
                 }else if( !shtl.empty()
                       &&  !l_statements.back().qualifier.empty() ){
-                    skip_character = true;
+
+                    if( l_statements.back().arguments.empty()
+                    ||  l_statements.back().arguments.back().first.empty() ){
+                        // This is a parameter without a value.
+YLOGDEBUG("Pushing back function definition argument '" << to_str(shtl) << "'");
+                        l_statements.back().arguments.emplace_back();
+                        l_statements.back().arguments.back().first = shtl;
+                    }else{
 YLOGDEBUG("Pushing back function definition argument value '" << to_str(shtl) << "'");
-                    l_statements.back().arguments.emplace_back();
-                    l_statements.back().arguments.back().first = shtl;
+                        l_statements.back().arguments.back().second = shtl;
+                    }
+
+                    skip_character = true;
 
                 }else{
                     report(feedback, script_feedback_severity_t::err, c, "Ambiguous ','");
@@ -444,6 +459,18 @@ YLOGDEBUG("Pushing back function name '" << to_str(shtl) << "'");
                 }else if( (curve_stack.size() == 1)
                       &&  (curve_stack.back() == '(')
                       &&  !l_statements.back().qualifier.empty() ){
+
+                    if( l_statements.back().arguments.empty()
+                    ||  l_statements.back().arguments.back().first.empty() ){
+                        // This is a parameter without a value.
+YLOGDEBUG("Pushing back function definition argument '" << to_str(shtl) << "'");
+                        l_statements.back().arguments.emplace_back();
+                        l_statements.back().arguments.back().first = shtl;
+                    }else{
+YLOGDEBUG("Pushing back function definition argument value '" << to_str(shtl) << "'");
+                        l_statements.back().arguments.back().second = shtl;
+                    }
+
                     curve_stack.pop_back();
                     skip_character = true;
 
@@ -451,9 +478,10 @@ YLOGDEBUG("Pushing back function name '" << to_str(shtl) << "'");
                       &&  (curve_stack.back() == '(')
                       &&  !l_statements.back().arguments.empty() ){
 YLOGDEBUG("Pushing back argument value '" << to_str(shtl) << "'");
+                    l_statements.back().arguments.back().second = shtl;
+
                     curve_stack.pop_back();
                     skip_character = true;
-                    l_statements.back().arguments.back().second = shtl;
 
                 }else{
                     report(feedback, script_feedback_severity_t::err, c, "Unmatched ')'"_s);
@@ -711,6 +739,10 @@ YLOGDEBUG("Cleaning at this scope is complete. Validating inputs now");
     // ---
 
     // Warn when functions redefine prior function definitions.
+    //
+    // Note: functions are only compared against DCMA operations at a later compilation stage, so currently we allow
+    // functions to shadow operations. This could be addressed by comparing against the known operations list.
+    // TODO.
     std::list<script_statement_t> l_functions;
     for(const auto &f : functions){
         if( !f.is_func_definition() ){
@@ -832,8 +864,10 @@ YLOGDEBUG("Variable replacement at this scope is complete. Performing function r
                             // Convert the arguments into variables that are defined at the head of the invocation.
                             // They will be applied specifically within the function body, but no where else.
                             std::list<script_statement_t> l_variables(variables);
+
                             std::list<script_statement_t> parameters;
                             for(const auto &a : s_it->arguments){
+YLOGDEBUG("Adding explicit function parameters '" << to_str(a.first) << "' = '" << to_str(a.second) << "'");
                                 parameters.emplace_back();
                                 parameters.back().var_name = a.first;
                                 parameters.back().payload = a.second;
@@ -841,19 +875,33 @@ YLOGDEBUG("Variable replacement at this scope is complete. Performing function r
                                 // Adjust the effective point of definition so the replacement will be applied within
                                 // the function's scope.
                                 //
-                                // This is a bit of a hack and could potentially lead to confusing warning messages. FIXME - TODO.
+                                // This is a bit of a hack and could potentially lead to confusing warning messages, 
+                                // but I'm not sure if there is a better way...
                                 //
                                 auto &s_cwct = parameters.back().var_name.front();
-                                const auto s_cwct_c = s_cwct.c;
-                                const auto f_cwct = f.get_valid_cwct();
-                                s_cwct = f_cwct;
-                                s_cwct.c = s_cwct_c;
+                                s_cwct.copy_location( f.get_valid_cwct() );
                             }
 
                             // Add local parameters in reverse order so later assignments supercede earlier assignments.
                             for(auto p_it = std::rbegin(parameters); p_it != std::rend(parameters); ++p_it){
                                 l_variables.emplace_back(*p_it);
                             }
+
+                            // Add default parameters in reverse order so later assignments supercede earlier assignments.
+                            for(auto a_it = std::rbegin(f.arguments); a_it != std::rend(f.arguments); ++a_it){
+                                if( !a_it->first.empty()
+                                &&  !a_it->second.empty() ){
+
+YLOGDEBUG("Adding default function parameters '" << to_str(a_it->first) << "' = '" << to_str(a_it->second) << "'");
+                                    l_variables.emplace_back();
+                                    l_variables.back().var_name = a_it->first;
+                                    l_variables.back().payload  = a_it->second;
+
+                                    auto &s_cwct = l_variables.back().var_name.front();
+                                    s_cwct.copy_location( f.get_valid_cwct() );
+                                }
+                            }
+
 
 YLOGDEBUG("Recursively extracting statements for function replacement now");
                             // Convert the payload into a collection of statements.

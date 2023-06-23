@@ -84,7 +84,26 @@ var1 = 789;
 
 noop(a = var1);
 
-func2(x = 'abc');
+func5(x = 'abc');
 
 noop(e = var1);
+
+# Function definitions with default parameter values.
+let: func6(x){
+    noop(a = x);
+};
+
+func6(x = 'override');
+
+func6(); # 'a' will be set to a literal 'x'.
+
+# vs 
+
+let: func7(x = 'default'){
+    noop(a = x);
+};
+
+func7(x = 'override');
+
+func7(); # 'a' will be set to a literal 'default'.
 
