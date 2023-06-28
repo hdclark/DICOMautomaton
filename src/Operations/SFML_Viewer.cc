@@ -294,7 +294,12 @@ bool SFML_Viewer(Drover &DICOM_data,
         std::make_pair("LinearRamp", ColourMap_Linear),
 
         std::make_pair("Composite_50_90_107_110", ColourMap_Composite_50_90_107_110),
-        std::make_pair("Composite_50_90_100_107_110", ColourMap_Composite_50_90_100_107_110)
+        std::make_pair("Composite_50_90_100_107_110", ColourMap_Composite_50_90_100_107_110),
+
+        std::make_pair("DICOM_Hot_Iron", ColourMap_DICOM_Hot_Iron),
+        std::make_pair("DICOM_PET", ColourMap_DICOM_PET),
+        std::make_pair("DICOM_Hot_Metal_Blue", ColourMap_DICOM_Hot_Metal_Blue),
+        std::make_pair("DICOM_PET_20_Step", ColourMap_DICOM_PET_20_Step),
     };
     size_t colour_map = 0;
 

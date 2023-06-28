@@ -43,6 +43,11 @@ ClampedColourRGB ColourMap_YgorIncandescent(double y);
 ClampedColourRGB ColourMap_Composite_50_90_107_110(double y);
 ClampedColourRGB ColourMap_Composite_50_90_100_107_110(double y);
 
+ClampedColourRGB ColourMap_DICOM_Hot_Iron(double y);
+ClampedColourRGB ColourMap_DICOM_PET(double y);
+ClampedColourRGB ColourMap_DICOM_Hot_Metal_Blue(double y);
+ClampedColourRGB ColourMap_DICOM_PET_20_Step(double y);
+
 //This function takes a named colour and map it to a colour specified in terms of R,G,B all within [0,1].
 std::optional<ClampedColourRGB> Colour_from_name(const std::string& n);
 
