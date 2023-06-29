@@ -74,7 +74,7 @@ jobs:
              apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf zip
              rm -rf ci_artifacts
              mkdir -pv ci_artifacts
-             find ./Windows/ -type f -iname 'opengl32.dll' -execdir rename 's/opengl32/opengl32_disabled/' '{}' \; || true
+             mv ./Windows/usr/bin/opengl32{,_disabled}.dll || true
              ( cd ./Windows/ && zip -r ../ci_artifacts/DICOMautomaton-latest-x86_64.zip . )
              cp ci_artifacts/DICOMautomaton-latest-x86_64.zip "ci_artifacts/DICOMautomaton-${short_sha}-x86_64.zip"
              find ci_artifacts/ -iname '*.zip' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
