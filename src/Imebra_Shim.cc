@@ -1987,7 +1987,7 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
             // If we found a transformation, forgo skip Imebra and apply it ourselves (below).
             convertedImage = firstImage;
         }else{
-            YLOGWARN("Unable to explicitly locate LUT, attempting automatic conversion");
+            YLOGINFO("Unable to explicitly locate LUT, attempting automatic conversion");
             ptr<imebra::transforms::transform> modVOILUT(new imebra::transforms::modalityVOILUT(TopDataSet));
             convertedImage = modVOILUT->allocateOutputImage(firstImage, width, height);
             modVOILUT->runTransform(firstImage, 0, 0, width, height, convertedImage, 0, 0);
