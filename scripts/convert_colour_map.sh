@@ -23,6 +23,10 @@ done < <(  dos2unix `#   <----------- stdin is read in starting here. ` |
            tr ' ' '\n' |
            grep -E -v '^\s*$' )
 
+# Note: to convert from hex to decimal, add the following conversion either as a
+# pre-processing step, or (probably easier:) by altering the arrays in-place.
+# ... | while read x ; do printf '%d\n' $((16#$x)) ; done > ...
+
 r_arr_length="${#rarr[@]}"
 g_arr_length="${#garr[@]}"
 b_arr_length="${#barr[@]}"
