@@ -46,6 +46,7 @@ jobs:
              rsync -avP /out/ ./Windows/
              strip ./Windows/usr/bin/*exe
              strip ./Windows/usr/lib/*a
+             ( cd ./Windows/usr/bin/ && mv opengl32.dll opengl32_disabled.dll ) || true
              git config --global --add safe.directory '*' || true
       - name: test
         run: |
@@ -74,7 +75,6 @@ jobs:
              apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf zip
              rm -rf ci_artifacts
              mkdir -pv ci_artifacts
-             ( cd ./Windows/usr/bin/ && mv opengl32.dll opengl32_disabled.dll ) || true
              ( cd ./Windows/ && zip -r ../ci_artifacts/DICOMautomaton-latest-x86_64.zip . )
              cp ci_artifacts/DICOMautomaton-latest-x86_64.zip "ci_artifacts/DICOMautomaton-${short_sha}-x86_64.zip"
              find ci_artifacts/ -iname '*.zip' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;

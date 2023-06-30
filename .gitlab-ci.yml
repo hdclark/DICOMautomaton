@@ -77,6 +77,7 @@ cross_compile_mxe:
       rsync -avP /out/ ./Windows/
       strip ./Windows/usr/bin/*exe
       strip ./Windows/usr/lib/*a
+     ( cd ./Windows/usr/bin/ && mv opengl32.dll opengl32_disabled.dll ) || true
   artifacts:
     paths:
       - "Windows"
@@ -263,6 +264,8 @@ test_cross_compile_mxe_on_debian_buster:
     #- "git clone https://github.com/hdclark/DICOMautomaton && cd DICOMautomaton"
     #- "wget 'https://gitlab.com/hdeanclark/DICOMautomaton/builds/artifacts/master/download?job=cross_compile_mxe' -O dcma.zip"
     #- "unzip dcma.zip"
+    # Opt to use the bundled software opengl32.dll, just in case the host doesn't provide any opengl implementation.
+    - "( cd ./Windows/usr/bin/ && mv opengl32_disabled.dll opengl32.dll ) || true"
     # Wrap the Windows binary with wine calls so it is transparent to the caller.
     - "chmod 777 Windows/usr/bin/*"
     - "rsync -a ./Windows/usr/ /usr/"
