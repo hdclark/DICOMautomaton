@@ -5,7 +5,10 @@ if [ -z "${GIT_HASH}" ] ; then
     GIT_HASH="unknown"
 fi
 
-TIMESTAMP="$(date '+%Y%m%_0d')"
+TIMESTAMP="$(date '+%Y%m%d')"
+if [ "${#TIMESTAMP}" != "8" ] ; then
+    TIMESTAMP="$(date '+%Y%m%_0d')"
+fi
 if [ -z "${TIMESTAMP}" ] ; then
     TIMESTAMP="unknown"
 fi
