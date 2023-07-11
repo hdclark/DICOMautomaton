@@ -77,7 +77,7 @@ cross_compile_mxe:
       rsync -avP /out/ ./Windows/
       strip ./Windows/usr/bin/*exe
       strip ./Windows/usr/lib/*a
-     ( cd ./Windows/usr/bin/ && mv opengl32.dll opengl32_disabled.dll ) || true
+      ( cd ./Windows/usr/bin/ && mv opengl32.dll opengl32_disabled.dll ) || true
   artifacts:
     paths:
       - "Windows"
