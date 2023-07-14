@@ -108,6 +108,11 @@
     }
 #endif
 
+struct guide_stage {
+    std::string message;
+};
+
+
 // Draw a loading animation using ImGui primitives.
 //
 // Looks like a wave propagating through a line of squares.
@@ -932,6 +937,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         bool view_polyominoes_enabled = false;
         bool view_triple_three_enabled = false;
+
+        bool view_guides_enabled = true;
     } view_toggles;
 
     // Documentation state.
@@ -1118,6 +1125,19 @@ bool SDL_Viewer(Drover &DICOM_data,
         std::array<float, 4> o_col = { 1.0f, 1.0f, 1.0f, 1.0f }; // Override colour.
         bool use_override_colour = false;
     } img_features;
+
+    // Guide state.
+    std::list<guide_stage> guide_stages;
+    int64_t guide_stage_num = -1;
+
+//    // WIP: placeholder sample guide for testing.
+//    guide_stages.emplace_back();
+//    guide_stages.back().message = "This is the first step.\nThis is a new line.\n\nThis is a new paragraph.\n\nThis is a new paragraph and it is a very long paragraph to test text wrap and how long lines will be split.";
+//    guide_stages.emplace_back();
+//    guide_stages.back().message = "This is the second step.";
+//    guide_stages.emplace_back();
+//    guide_stages.back().message = "This is the third and final step.";
+//    guide_stage_num = 0;
 
     // ------------------------------------------ Viewer State --------------------------------------------
     auto background_colour = ImVec4(0.025f, 0.087f, 0.118f, 1.00f);
@@ -2755,6 +2775,91 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImPlot::ShowDemoWindow(&view_toggles.view_implot_demo);
         }
 
+        const auto display_guide = [&drover_mutex,
+                                    &mutex_dt,
+                                    &guide_stages,
+                                    &guide_stage_num,
+                                    &view_toggles ]() -> void {
+            if( !view_toggles.view_guides_enabled ) return;
+
+            // Attempt to acquire an exclusive lock.
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            if(!drover_lock) return;
+
+            if( guide_stages.empty() ) return;
+
+            const auto reset_guide = [&](){
+                guide_stages.clear();
+                guide_stage_num = -1;
+            };
+
+            const auto first_stage_num = static_cast<int64_t>(0);
+            const auto final_stage_num = static_cast<int64_t>(guide_stages.size() - 1);
+
+            guide_stage_num = std::clamp(guide_stage_num, first_stage_num, final_stage_num);
+            const bool is_first_stage = (guide_stage_num == first_stage_num);
+            const bool is_final_stage = (guide_stage_num == final_stage_num);
+
+            ImGuiWindowFlags window_flags = 0;
+            //window_flags |= ImGuiWindowFlags_NoTitleBar;
+            window_flags |= ImGuiWindowFlags_AlwaysAutoResize;
+            ImGui::SetNextWindowSize(ImVec2(400, 100), ImGuiCond_FirstUseEver);
+            const float padding = 32.0f;
+            ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x - padding, padding), ImGuiCond_Always, ImVec2(1.0f, 0.0f));
+            ImGui::SetNextWindowSizeConstraints(ImVec2(400, 50), ImVec2(600, 200));
+
+            ImGui::Begin("Guide", &view_toggles.view_guides_enabled, window_flags);
+
+            const auto next_button_str = std::string(is_final_stage ? "Finish" : "Continue");
+            ImGui::BeginDisabled(is_first_stage);
+            const bool prev_button = ImGui::Button("Back");
+            ImGui::EndDisabled();
+            //const bool prev_button = is_first_stage ? false : ImGui::Button("Back");
+            //if(!is_first_stage) ImGui::SameLine();
+            ImGui::SameLine();
+            const bool next_button = ImGui::Button(next_button_str.c_str());
+
+            ImGui::SameLine();
+            ImGui::Dummy(ImVec2(20.0f, 0.0f));
+            ImGui::SameLine();
+
+            const std::string counter_str = "Step "_s + std::to_string(guide_stage_num + 1)
+                                          + " / " + std::to_string(final_stage_num + 1);
+            //ImGui::Text("%s", counter_str.c_str());
+            ImGui::TextColored(ImVec4(0.0f, 0.5f, 1.0f, 1.0f), "%s", counter_str.c_str());
+
+            ImGui::Text(" ");
+
+            auto stage_it = std::next( std::begin(guide_stages), guide_stage_num );
+            ImGui::TextWrapped("%s", stage_it->message.c_str());
+
+            ImGui::End();
+
+
+            if( is_final_stage
+            &&  next_button ){
+                reset_guide();
+
+            }else if(next_button){
+                ++guide_stage_num;
+
+            }else if(prev_button){
+                --guide_stage_num;
+
+            }
+
+            if(!view_toggles.view_guides_enabled){
+                reset_guide();
+            }
+
+            return;
+        };
+        try{
+            display_guide();
+        }catch(const std::exception &e){
+            YLOGWARN("Exception in display_guide(): '" << e.what() << "'");
+            throw;
+        }
 
         const auto display_parameter_table = [&drover_mutex,
                                               &mutex_dt,
@@ -3016,6 +3121,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::MenuItem("Script Feedback", nullptr, &view_toggles.view_script_feedback);
                     ImGui::Separator();
                     ImGui::MenuItem("Parameter Table", nullptr, &view_toggles.view_parameter_table);
+                    ImGui::Separator();
+                    ImGui::MenuItem("Guides", nullptr, &view_toggles.view_guides_enabled);
                     ImGui::Separator();
                     ImGui::MenuItem("Shader Editor", nullptr, &view_toggles.view_shader_editor_enabled);
                     ImGui::EndMenu();
