@@ -9,6 +9,15 @@ add_custom_command(
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../"
 )
 
+add_custom_command(
+    OUTPUT  "${CMAKE_CURRENT_BINARY_DIR}/Standard_Guides.cc" # Treated as relative to CMAKE_CURRENT_BINARY_DIR
+    COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/../scripts/generate_standard_guides.sh"
+                "${CMAKE_CURRENT_SOURCE_DIR}/Standard_Guides.cc.in"
+                "${CMAKE_CURRENT_BINARY_DIR}/Standard_Guides.cc"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/Standard_Guides.cc.in"   # Treated as relative to CMAKE_CURRENT_SOURCE_DIR
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../"
+)
+
 add_subdirectory(Operations)
 if(WITH_THRIFT)
     add_subdirectory(rpc)
@@ -148,6 +157,9 @@ set_target_properties(  CC_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE 
 
 add_library(            Standard_Scripts_obj OBJECT Standard_Scripts.cc )
 set_target_properties(  Standard_Scripts_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+add_library(            Standard_Guides_obj OBJECT Standard_Guides.cc )
+set_target_properties(  Standard_Guides_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
 add_library(            Surface_Meshes_obj OBJECT Surface_Meshes.cc )
 set_target_properties(  Surface_Meshes_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -412,6 +424,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Script_Loader_obj>
     $<TARGET_OBJECTS:CC_File_Loader_obj>
     $<TARGET_OBJECTS:Standard_Scripts_obj>
+    $<TARGET_OBJECTS:Standard_Guides_obj>
     $<TARGET_OBJECTS:Triple_Three_obj>
     $<TARGET_OBJECTS:Write_File_obj>
     $<TARGET_OBJECTS:Operation_Dispatcher_obj>
@@ -509,6 +522,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Script_Loader_obj>
         $<TARGET_OBJECTS:CC_File_Loader_obj>
         $<TARGET_OBJECTS:Standard_Scripts_obj>
+        $<TARGET_OBJECTS:Standard_Guides_obj>
         $<TARGET_OBJECTS:Triple_Three_obj>
         $<TARGET_OBJECTS:Write_File_obj>
         $<TARGET_OBJECTS:Operation_Dispatcher_obj>

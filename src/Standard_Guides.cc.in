@@ -1,0 +1,86 @@
+// Standard_Guides.cc - A part of DICOMautomaton 2023. Written by hal clark.
+
+#include <list>
+#include <cmath>
+#include <cctype>
+#include <algorithm>
+#include <cstdint>
+#include <exception>
+#include <set>
+#include <memory>
+#include <stdexcept>
+#include <string>
+#include <filesystem>
+
+#include "YgorDefinitions.h"
+#include "YgorMisc.h"
+#include "YgorString.h"
+
+#include "Structs.h"
+#include "Standard_Guides.h"
+
+
+#ifndef DCMA_GUIDE_INLINES
+#define DCMA_GUIDE_INLINES
+#endif //DCMA_GUIDE_INLINES
+
+std::list<standard_guide_t> standard_guides(){
+    std::list<standard_guide_t> out {
+        // Autopopulated during build.
+        DCMA_GUIDE_INLINES
+    };
+
+    out.remove_if([](const standard_guide_t &s){ return (s.category.empty() || s.name.empty() || s.text.empty()); });
+    out.sort([](const standard_guide_t &L, const standard_guide_t &R){
+        return std::make_tuple(L.category, L.name) < std::make_tuple(R.category, R.name);
+    });
+    return out;
+}
+
+std::list<standard_guide_t> standard_guides_with_category(const std::string &category){
+    auto out = standard_guides();
+    out.remove_if([&](const standard_guide_t &s){ return (s.category != category); });
+    return out;
+}
+
+std::set<std::string> standard_guide_categories(){
+    std::set<std::string> out;
+    for(const auto &s : standard_guides()) out.insert(s.category);
+    return out;
+}
+
+
+std::list<guide_stage_t> parse_guide(const std::string &text){
+    std::list<guide_stage_t> out;
+
+    // Stgaes are separated by '---' tokens.
+    const auto stages = SplitStringToVector(text, "---", 'd');
+    for(const auto& stage : stages){
+        if(stage.empty()) continue;
+        out.emplace_back();
+
+        // Each stage is shown essentially as-is, except we extract base64-encoded images which need to be on a line by
+        // themselves and prefixed with 'base64png:'.
+        const std::string base64("base64png:");
+        const auto paras = SplitStringToVector(stage, "\n", 'd');
+        for(const auto& p : paras){
+            if( (base64.size() < p.size())
+            &&  (base64 == Get_Preceeding_Chars(p, base64.size())) ){
+                out.back().base64_images.emplace_back( p.substr( base64.size() ) );
+
+            }else{
+                out.back().message += (out.back().message.empty() ? "" : "\n") + p;
+            }
+        }
+
+        // Reflow the text to ignore wrapping in the source files.
+        const auto reflowed = Break_Text_Into_Paragraphs(out.back().message);
+        out.back().message.clear();
+        for(const auto& r : reflowed){
+            out.back().message += (out.back().message.empty() ? "" : "\n\n") + r;
+        }
+    }
+
+    return out;
+}
+
