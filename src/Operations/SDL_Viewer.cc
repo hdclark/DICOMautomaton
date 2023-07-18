@@ -57,6 +57,7 @@
 #include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+#include "YgorBase64.h"
 
 #include "Explicator.h"
 
@@ -83,6 +84,7 @@
 #include "../Documentation.h"
 #include "../Dialogs/Tray_Notification.h"
 #include "../Triple_Three.h"
+#include "../STB_Shim.h"
 
 #ifdef DCMA_USE_CGAL
     #include "../Surface_Meshes.h"
@@ -107,10 +109,6 @@
         } \
     }
 #endif
-
-struct guide_stage {
-    std::string message;
-};
 
 
 // Draw a loading animation using ImGui primitives.
@@ -1126,19 +1124,6 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool use_override_colour = false;
     } img_features;
 
-    // Guide state.
-    std::list<guide_stage> guide_stages;
-    int64_t guide_stage_num = -1;
-
-//    // WIP: placeholder sample guide for testing.
-//    guide_stages.emplace_back();
-//    guide_stages.back().message = "This is the first step.\nThis is a new line.\n\nThis is a new paragraph.\n\nThis is a new paragraph and it is a very long paragraph to test text wrap and how long lines will be split.";
-//    guide_stages.emplace_back();
-//    guide_stages.back().message = "This is the second step.";
-//    guide_stages.emplace_back();
-//    guide_stages.back().message = "This is the third and final step.";
-//    guide_stage_num = 0;
-
     // ------------------------------------------ Viewer State --------------------------------------------
     auto background_colour = ImVec4(0.025f, 0.087f, 0.118f, 1.00f);
 
@@ -1454,6 +1439,31 @@ bool SDL_Viewer(Drover &DICOM_data,
     tt_cell_owner.fill(-1);
     std::array<decltype(t_tt_updated), 9> tt_cell_owner_time; // Used for card-flip animations.
     float tt_anim_dt = 1000.0f; // ms
+
+    // Guide state.
+    struct guide_stage {
+        std::string message;
+        std::vector<std::string> base64_images;
+    };
+
+    std::list<guide_stage> guide_stages;
+    int64_t guide_stage_num = -1;
+    std::list<opengl_texture_handle_t> guide_image_textures;
+
+//    // WIP: placeholder sample guide for testing.
+//    guide_stages.emplace_back();
+//    guide_stages.back().message = "This is the first step.\nThis is a new line.\n\nThis is a new paragraph.\n\nThis is a new paragraph and it is a very long paragraph to test text wrap and how long lines will be split.";
+//    guide_stages.emplace_back();
+//    guide_stages.back().message = "This is the second step. It is short.";
+//    guide_stages.emplace_back();
+//    guide_stages.back().message = "This is the third step, which includes an embedded image.";
+//    guide_stages.back().base64_images.push_back("iVBORw0KGgoAAAANSUhEUgAAAMUAAAAdCAYAAAAaVaiyAAAQfUlEQVR4Xu1cZ1iUxxZ+d+ltqQpLERWNiyA2VBBBqgiIUbHEaCyosSZ6NUSjIEXs/dqwoLFe4tWYIMZuIBo1ICoqTVSISFGKwAJSd+/Mt7AuAuvqfa48z2XPn+Wb882ZmXfOO+ec2X1gaekaCiEXOQJyBMQIsOSkkHuDHIGmCMhJIfcIOQLvICAnhdwl5Ah8CCl6WfFgzO0IDXX1TwpcTPdZn3Q8+WDtCwFB6UsIkmMhuHWyxYW3GikoIbp1NW8TtOSkaBPY292g9YQULRGjVVJ4e7pAWUmpTYCSk6JNYG93gzIR4+CCZutulRSf+3i0GUhyUrQZ9O1u4Ppt42UnxUhv9zYDSE6KNoO+3Q0s2D5BdlL4erm1GUByUrQZ9O1uYOE/v5CdFCOGu7YIkKmpKdavX49Xr16BzWZDKBTiwYMHOH36NEpLS8V9XFxc4OPjAxUVFQgEAsTFxeHMmTPM+1T27t2LVatW4cWLF83GkUaKCTaGWDTEHLwO6gi7+gxbbzwX91dXYmPPaEv0N9FCTT2w/EIGLjwuamZfW1URz5c5Io9fLdb5HUtC8ssKpm+4ZzdY6KmhTiBETFohfrjwBPXkbyoBTub4oo8R6usFKKmux6LodKS8qoCyAgtRX9qgr7EWNJUV0GFVXLNxd37Ow9nUAlxsYU6fwhuHmGvhe6fOGHn04UcNd2qyDdws9KAbGivu780zQPiwbmT9wJ0XfMz9JRVvagVSsZKGo3cPA2wZ8ZnYvpaKIpLy+PA+dI9pW+7SBX7WHcFiATf/LsWis+nMPlEx5qgwfe3MtFFVJ8D6uCwcupMrfa07JspOCh9SaLcklBSBgYEYO3YsamtrweFw8PXXX8PW1hZLly5FTU0NHB0dMWrUKOY5Pz8fGhoaCA8PR3Z2No4cOcKYjYiIYNo+lBSW6jWoK3uFRcN640lpPbYmloinGejaGWZK1ZgZeYWQRgsXgybCZtttlFOGSAglRfKiQTDy3yRuVTCzAkuNg94GSlAozETCi1JoKhBSLBuPk6kl2Bufyzh81BdW6BsQCT4xudDdGh4DrPE5cTIFNgsOmqV4VViMG6umwuAdUtBNTFowALYbL6NGVeejnPK/7TTEWJmQwhwjozI+2NS0/saw1RNgsoMldEJ+Z/pzVBTwYJE9PMJOIK2AjwMz3JFVpYy1cX83YNWTYHVQhJWHDTxsezJYiXBsWSd8U4b67GTx/H4LnISf7/2NHzPqMdqqI5YMNoLbqihU1tRh7ywvPCLn8O7bOcz7sbP64Wx8CjbFJDCkMTExRQ5LV+paWTu/lJ0U3sOcWzRmZmbGkGL27NmMnkaBiooKxsmjo6Nx/fp1bN++HTt27MDjx4+ZaEJFTU0NBw4cwJw5c8Dn85lI0UiUdweSmj7VVUNYX49do3h4SjZi653X4u4Pvh0A/wPXcKdSi0ysDr9M+AzHkktwKqW4GSlS/mEHk7U3mq+R9GOErch8rHUyQD1LEYFx+eijz8bp6YNgt+cOCipqsdzBEKYabMy7lMe8SzfUpIMuHi52hH5YbBPbdp20Mb8PB19FZ+PERBt00FRm9Ibk8/WbWgyNSABXSwWbR/SAKUcZyooK+DExBxG3RZG0fJUbgi49gbWhBrobaGB9bCbOkShGZdhn+ghxtwCbeEJhZS2+/TUVz4rfMLpg0j7KqgNyy2pwP7sQNh1U4fuvx4xuCYkaNPJSuZvDx5Jz6ah45wChuk46qjjs1wOTI2OREuoH7eBrTJ8vrPUxwZKD0T8RkhG8bDX42DfdFf12JjTHanBHmGoqMFg1w1FCJwkaHTdhwUBYBP2KchVdBDkaQZNVi6V/iKL/KDMhFg/vC6f99+HYRRd7fC1gteYSWJp6TbCX9sDeNamZutXbJy+PoS3aoqQICgpiooOk0OeSkhKGGIcPH8akSZNQV9fgYORF+vehQ4ewZcsWpKamYt++fUz6RKPHuyJLTbHL2xxPX5VhiwQpXoe4gBd+ES/rRA73T3cjPCupwbY7zUmRvXwoMosqQCNvTHohwq48RW19099GGqgr4da8AZi09yri+WoQVldiia0OVvgNQQlx5NcVVXBfcwolnLff59AQ/ugfg6EXKjpNG2W1R2c8zMhCVBbh64sUpllfUxXXVozFkuN/4FqJJi7490XI8Uu4+bQASqjDleApCLj4jKQlZagId8e4XRcRk5AOc11VXF45GbzNNxlSxS8YBOeQo3haWAl/Rx6meQyE87478LHsgB+GGDMna3VtPU4tGQNVRRZGnEiHF0l7Vg41hWtYFCqqa3FwrjfyapUJ8Z4224+z0/og+Nhl5KiaION7R3BWXmXeCRhkADOOEr69LDoUDBVrkLx8GAzIgUCx+m6gHpaPHtwMK2k6ycFXuJijk1IVZl8gkYCQzteMjdDP+8M98j7Kqok/jekBRwt9dF7/J2b1NcBInh6K6xTRi6uFTHIoLD3/BE+KKqUSRGH3ZNlJMdzdqVVSrFy5ErNmNf3Wee7cuSgqKmJIQVOk6dOnMxFEUmik2LBhAxNB9u/fj7CwsI8mxW5KioIybE54GylKQl3BW3cN+aJDEju9OjWLJrSdpjpcfiael1Wjo5oiDs/zwu38Gqy6Rjy2QWhdEOPfD6diE7EzqRxQUSfOqIZj43ti3IYo5JbX4QdfWwy06ga/o0nifiaUFIsdoBsiOk0b5S5JnVy3XUGJojbTRGuQ3/z7I+r3BOx/yAdHRxcvVjjjdhYhMJsk6ER0Feuw5fpzRCUXo3K1BzgBP6NOmURBEi0LwzxhFB4H7+468O+th1FR6YzjsCpL8HrjGJiujkOIswmycl9i5yNR7eTLrcVsl16EFGnY6NEJea8KsSVJ5DT2mmXYNMkZDnvvNpn3PPtOMGaXY8WVLBh1MMCTpU7QCrrCvPP9IH2Y6Wrgmwuiuo5LfvjwKMAF+uRAYLAax8O4jSclsOpOsLovVdc4OE1/Uhfbk8h/FTdLRb+oEJbkY/HQrhjvaIMqUrfEJWdisl03dNt0C/N6c7DWbwDcSCoXn1+FBUO64ivXfrDfndBkPe8+KO75qpm+1Ujh6ebYojEaKYKDgzFz5kyxnqZINAKcOEEmFB/PpE80Wty9+xZgY2Nj5p0pU6YwdQclSGho6MeTwqczEyk2J7yNAskLSfr072T8lSva6OjJVjhyMwOnntVIBWachQqm2nXFiOOpzHtaJFeOntYfMbcfYhNxShanA9O+aLAprLWFmPHTfUBJBV2UKpEY/iX0JQhASZG8ZAh0gkWnKRVeRw1sHdYJXkdIgduQlh0cZ41X+XlYei6Nsa9Nglt2oDv0Fx1FDSkSGScg6RhLy4DRv1kzDGrLL4ltFq50gcmaOHiaq8F/gAkhhSglInzH61A3mITHItSxIzIK3yAiSVR3eXVWwwIHc/gcT8NmNy5y+LXYEi9KwQZzlbHRtycc9pG1SciJ8TwMMNeHgKXA2DbVVsXzkiq4RvwFJ0MWJg6ywMhjohpgkLE69o6xRJ+diVKxkgVHt2762OrdFTYbyYUFOZAYIamtIIfsESW/ojKm2nfFBDsefEjkG2GmgDDf3iR1i2f0OsIK5K4ZDU7QZXEh3mRhDQ9KEVOaNbdKimGuQ1qyAUqKkJAQzJgxg9HTIpqmSj179sT8+fOhRL4F79evH6ZNm4Z169YhNzeXKcYDAgKQkpKC48ePM3VGZGQkY+dj06c9Pl2YSLEp/u3tUoidNsyMuZjxcxrjiFdm9gcv+AzJR/VhQ0Iqvfh6mM8HdVw+uTmiIZhGhCPjrZCSlYPAG0UMIWL8bRF96wE2/fGWEHSto8yVsHpMPzhEJJKUoA4LB5thrKU2HCMfibGitlO+c4T2StFpSiXAqRPKC/KwJ7WWeQ5074be+goYt5s4uX5D6kU2/Or0XvjjeQVCfhPZszDQRGktG0WE01VrPaH6w0WxzaJgVxivjoW2oAJ3l3nCdX8iHhdUYOZAU0yx1oHTwUfwMRZgjntv+FIyEtk9shs6k3TH+1gqvLn1CPOzJ2lWIipIanXIzxLZeS8R9GdxE6wEOSTVE5BKmTiaobY6srbPgtq07WCbWIJTU4y0sNFwJalaGrmBixzDw7PsHKxO4Iuw8rOFw54EEVZ2RhhrZcBgJU3XuMBj4y1xLz0Tm5OqxGumEZ6Skka/rgYcxMxxwMJDl3GlWB0qNWVICfQit1T3kU5wmNzXCIsHG6PfrqaR712nVt47VXZSeLg4tEoKeuLTVIk6N60VaHSg6ZCCAjlNSFtlZSXc3d0xceJE8ZXs+fPncfToUYYgVA4ePMhEnA8lxfjeXKzz4UFXVQF1pAbgkzA67shdJJLbInV+DiKnO2NgdxNUk9M24OA5nCtQYzZ0m28P5sT47txjDP9MD1tH9SL5NZu5aj1/NwMBJ2+hSqcT5tubYdPInsgrJTlYQxrzyyMStqNTIax4jTXDumKMgw3T72VpBebt+QXpimbMmm4usIcJ2TQjUjDnkNTsz8xifPWvJFyf3R9fHohFdr0WkzbxV3vi3t+FeCMUpUl0E+ecfgRueRY2z/CCtakBaHVTVFGDqSfuIrusFtXrhkNl2QXxnhSHuIEb/juqq6rgafAG4VO8oESK85cl5Fo0IgbPlE0h5BcgzLMHBva0QB6ZT2lxIXhcHXgdTWF03zt3wWTnvozN+PTnWPhTPCo1DJtgJekEtH7JXO4C9eUN5Kyrga9RDdZP94YKwfKvjBzM+PEG3mgaQliaj7UjrDHa3kqEVUk55u87hzQ2V6qOjqerpoSny5xgufJnvGSJ0k0qdIzb35B6jdR6dH83nLmB/fcKwdIgN0zkUHHRKceWGT5QVGCjgOzNN/t/QzKMWvRjsc1902Qnhbvz4FaN5eWJCisqNDIoKytDU1NTfNNE22k9UVZWxugocejtk+Q71AaXy21xDKmFNkkpBLmiNKdR2MaW5HqLkI0AI8xJEzXTWyQ9E5J+iFIfYbHo2o5F2kBsCPPJjQkNy7Uk31ZUAYvbnSEPfU/4uul3JyxVDljkZGTs5JM0hRSRNH2in6yOXUm4FF37CUloF1aViedF+3F5ffArSeMG7bhNxhFdAAie/gWWsgYpbkSkgLI6WAYkYtRUQvjy2dt2MjcWl9zZEz3tw7YYJLYt+UwdHHR9dE4SfcTzrW1IHxvW22QtjTpyAEhiIMZKEuiGuUvOQzx2Q1rIMuGJU0SKB61/WpyXFB2TJmUmgt2lv9hW4zSEpJ3ZN7oHeqZgaYtuz5i1UhwKSX3TuM4G7N5ZQpNH1f3Tm6lbTZ/chtpLsyWzjl7ZNl7LytpJltsnqbYoIRo2Sep7xAmpw32UkFOy0cnfNxchuXdnmfeWfRg6f4KbTPYlrba27vfh8T69LDOXZkMaVrLiKDmH9/X5gPWoHfCXnRSuTnayQPE/eee/JsX/ZFZyo/+PCKhHimpjSWk1Ugyx709yVNEXWJ9a5KT41Ii30/HKC6FxcpnspDA3M0YXc9M2QUtOijaBvd0NqnQvGir3z8pOCvomJYZhR32oqap+UsDkpPikcLe7wVgkQihl3IJKUnNCUDDk/7ig3bmEfMHvQ0BOivchJNe3OwTkpGh3Wy5f8PsQkJPifQjJ9e0OATkp2t2Wyxf8PgT+A/RO5Fx9ylgEAAAAAElFTkSuQmCC");
+//    guide_stages.emplace_back();
+//    guide_stages.back().message = "This is the fourth and final step.";
+//    guide_stage_num = 0;
+//    // NOTE: for testing purposes, we can skip the first guide textures reload step.
+//    // But when we programmatically add guide steps, we should use 'register_guide_textures()' from below.
+
 
     // Resets the contouring image to match the display image characteristics.
     const auto reset_contouring_state = [&contouring_imgs,
@@ -2066,6 +2076,54 @@ bool SDL_Viewer(Drover &DICOM_data,
         }
         return;
     };
+
+    const auto unregister_guide_textures = [ &guide_stages,
+                                             &guide_stage_num,
+                                             &guide_image_textures,
+                                             &Free_OpenGL_Texture ]() -> void {
+        for(auto& t : guide_image_textures){
+            Free_OpenGL_Texture(t);
+        }
+        guide_image_textures.clear();
+        return;
+    };
+
+    const auto register_guide_textures = [ &guide_stages,
+                                           &guide_stage_num,
+                                           &guide_image_textures,
+                                           &unregister_guide_textures,
+                                           &Load_OpenGL_Texture ]() -> void {
+        unregister_guide_textures();
+
+        if( guide_stages.empty() ) return;
+        const auto first_stage_num = static_cast<int64_t>(0);
+        const auto final_stage_num = static_cast<int64_t>(guide_stages.size() - 1);
+        guide_stage_num = std::clamp(guide_stage_num, first_stage_num, final_stage_num);
+
+        auto stage_it = std::next( std::begin(guide_stages), guide_stage_num );
+        for(const auto& base64_img : stage_it->base64_images){
+            const auto img_blob = Base64::Decode(base64_img);
+            const auto pic = ReadImageUsingSTB(img_blob);
+            for(const auto &img : pic.images){
+                const int64_t img_channel = 0L;
+                const bool img_is_rgb = true;
+                guide_image_textures.emplace_back( Load_OpenGL_Texture(img, img_channel, img_is_rgb, {}, {}) );
+            }
+        }
+        return;
+    };
+
+    const auto reset_guide = [ &guide_stages,
+                               &guide_stage_num,
+                               &guide_image_textures,
+                               &unregister_guide_textures ]() -> void {
+        guide_stages.clear();
+        guide_stage_num = -1;
+
+        unregister_guide_textures();
+        return;
+    };
+
 
     // Contour preprocessing. Expensive pre-processing steps are performed asynchronously in another thread.
     struct preprocessed_contour {
@@ -2779,6 +2837,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     &mutex_dt,
                                     &guide_stages,
                                     &guide_stage_num,
+                                    &guide_image_textures,
+                                    &unregister_guide_textures,
+                                    &register_guide_textures,
+                                    &reset_guide,
                                     &view_toggles ]() -> void {
             if( !view_toggles.view_guides_enabled ) return;
 
@@ -2787,11 +2849,6 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(!drover_lock) return;
 
             if( guide_stages.empty() ) return;
-
-            const auto reset_guide = [&](){
-                guide_stages.clear();
-                guide_stage_num = -1;
-            };
 
             const auto first_stage_num = static_cast<int64_t>(0);
             const auto final_stage_num = static_cast<int64_t>(guide_stages.size() - 1);
@@ -2833,23 +2890,39 @@ bool SDL_Viewer(Drover &DICOM_data,
             auto stage_it = std::next( std::begin(guide_stages), guide_stage_num );
             ImGui::TextWrapped("%s", stage_it->message.c_str());
 
+
+            // Only draw images if the texture will still be available during the draw call.
+            // This allows us to immediately de-register textures if we need to.
+            if( !next_button
+            &&  !prev_button
+            &&  view_toggles.view_guides_enabled ){
+                for(auto &t : guide_image_textures){
+                    auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(t.texture_number));
+                    ImGui::Image(gl_tex_ptr,
+                                 ImVec2(static_cast<float>(t.col_count), static_cast<float>(t.row_count)),
+                                 ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f) );
+                }
+            }
+
             ImGui::End();
 
+            if(!view_toggles.view_guides_enabled){
+                reset_guide();
 
-            if( is_final_stage
-            &&  next_button ){
+            }else if( is_final_stage
+                  &&  next_button ){
                 reset_guide();
 
             }else if(next_button){
                 ++guide_stage_num;
+                unregister_guide_textures();
+                register_guide_textures();
 
             }else if(prev_button){
                 --guide_stage_num;
+                unregister_guide_textures();
+                register_guide_textures();
 
-            }
-
-            if(!view_toggles.view_guides_enabled){
-                reset_guide();
             }
 
             return;
@@ -7411,6 +7484,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     Free_OpenGL_Texture(current_texture);
     Free_OpenGL_Texture(contouring_texture);
     Free_OpenGL_Texture(scale_bar_texture);
+    unregister_guide_textures();
 
     // OpenGL and SDL cleanup.
     ImGui_ImplOpenGL3_Shutdown();
