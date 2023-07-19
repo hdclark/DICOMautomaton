@@ -29,11 +29,7 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
-#include "../Write_File.h"
-#include "../File_Loader.h"
 #include "../String_Parsing.h"
-#include "../Operation_Dispatcher.h"
-#include "../Dialogs/Text_Query.h"
 
 #include "ModifyParameters.h"
 

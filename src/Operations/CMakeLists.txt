@@ -35,6 +35,7 @@ add_library(Operations_objs OBJECT
     ConvertMeshesToPoints.cc
     ConvertNaNsToAir.cc
     ConvertNaNsToZeros.cc
+    ConvertParametersToTable.cc
     ConvertPixelsToPoints.cc
     ConvertWarpToImage.cc
     ConvertWarpToMeshes.cc
