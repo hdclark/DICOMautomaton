@@ -165,6 +165,7 @@ add_library(Operations_objs OBJECT
     RankPixels.cc
     ReduceNeighbourhood.cc
     Repeat.cc
+    ReportROIData.cc
     ResampleImages.cc
     RigidWarpImages.cc
     ScalePixels.cc
