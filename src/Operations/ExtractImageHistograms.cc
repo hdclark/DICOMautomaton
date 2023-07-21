@@ -128,27 +128,29 @@ OperationDoc OpArgDocExtractImageHistograms(){
                            " This parameter controls whether contours with different names should be treated"
                            " as though they belong to distinct logical groups ('separate') or whether *all* contours"
                            " should be treated as though they belong to a single logical group ('combined')."
-                           ""
+                           "\n\n"
                            " The 'separate' option works best for exploratory analysis, extracting histograms for many OARs"
                            " at once, or when you know the 'physical' grouping of contours by label reflects a"
                            " consistent logical grouping."
-                           ""
+                           "\n\n"
                            " The 'combined' option works best when the physical and logical groupings are inconsistent."
                            " For example, when you need a combined histograms from multiple contours or organs, or when"
                            " similar structures should be combined (e.g., spinal cord + canal; or distinct left + right"
                            " lateral organs that should be paired, e.g.. 'combined parotids')."
                            " Note that when the 'combined' option is used, the 'GroupLabel' parameter *must* also be"
-                           " provided.";
+                           " provided."
+                           " Also note that 'grouped' can be used as a synonym for 'combined'."
+                           "";
     out.args.back().default_val = "separate";
     out.args.back().expected = true;
-    out.args.back().examples = { "separate", "grouped" };
+    out.args.back().examples = { "separate", "combined", "grouped" };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
 
     out.args.emplace_back();
     out.args.back().name = "GroupLabel";
     out.args.back().desc = "If the 'Grouping' parameter is set to 'combined', the value of the 'GroupLabel' parameter"
-                           " will be used in lieu of any consitituent ROILabel."
+                           " will be used as the histogram's ROILabel in lieu of any consitituent ROILabels."
                            " Note that this parameter *must* be provided when the 'Grouping' parameter is set to"
                            "'combined'.";
     out.args.back().default_val = "";
@@ -238,14 +240,19 @@ bool ExtractImageHistograms(Drover &DICOM_data,
     const auto regex_cancel = Compile_Regex("^ov?e?r?l?a?p?p?i?n?g?_?c?o?n?t?o?u?r?s?_?c?a?n?c?e?l?s?$");
 
     const auto regex_separate = Compile_Regex("^se?p?[ea]?r?a?t?e?$");
+    const auto regex_grouped  = Compile_Regex("^gr?o?u?p?e?d?$");
     const auto regex_combined = Compile_Regex("^co?m?b?i?n?e?d?$");
+
+    const bool should_be_separate =  std::regex_match(GroupingStr, regex_separate);
+    const bool should_be_combined =  std::regex_match(GroupingStr, regex_combined)
+                                  || std::regex_match(GroupingStr, regex_grouped);
 
     Explicator X(FilenameLex);
 
-    if( std::regex_match(GroupingStr, regex_combined) && !GroupLabelOpt ){
+    if( should_be_combined && !GroupLabelOpt ){
         throw std::invalid_argument("A valid 'GroupLabel' must be provided when 'Grouping'='combined'.");
     }
-    const bool override_name = std::regex_match(GroupingStr, regex_combined);
+    const bool override_name = should_be_combined;
 
     if(DICOM_data.image_data.empty()){
         throw std::invalid_argument("This routine requires at least one image array. Cannot continue");
@@ -280,10 +287,12 @@ bool ExtractImageHistograms(Drover &DICOM_data,
         ud.lower_threshold = Lower;
         ud.upper_threshold = Upper;
 
-        if( std::regex_match(GroupingStr, regex_separate) ){
+        if( should_be_separate ){
             ud.grouping = ComputeExtractHistogramsUserData::GroupingMethod::Separate;
-        }else if( std::regex_match(GroupingStr, regex_combined) ){
+        }else if( should_be_combined ){
             ud.grouping = ComputeExtractHistogramsUserData::GroupingMethod::Combined;
+        }else{
+            throw std::invalid_argument("Grouping action not understood");
         }
 
         ud.mutation_opts.editstyle = Mutate_Voxels_Opts::EditStyle::InPlace;
