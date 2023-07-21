@@ -3123,6 +3123,17 @@ bool SDL_Viewer(Drover &DICOM_data,
                         contour_hovered.clear();
                         if(view_toggles.view_contours_enabled) launch_contour_preprocessor();
                     }
+                    if(ImGui::MenuItem("Image Feature Extractor", nullptr, &view_toggles.view_image_feature_extraction)){
+                        view_toggles.view_contouring_enabled = false;
+                        view_toggles.view_drawing_enabled = false;
+                        view_toggles.view_row_column_profiles = false;
+                        //view_toggles.view_image_feature_extraction = false;
+                        view_toggles.view_time_profiles = false;
+
+                        tagged_pos = {};
+
+                    }
+                    ImGui::Separator();
                     if(ImGui::MenuItem("Contouring", nullptr, &view_toggles.view_contouring_enabled)){
                         //view_toggles.view_contouring_enabled = false;
                         view_toggles.view_drawing_enabled = false;
@@ -3142,6 +3153,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                         tagged_pos = {};
                     }
+                    ImGui::Separator();
                     if(ImGui::MenuItem("Row and Column Profiles", nullptr, &view_toggles.view_row_column_profiles)){
                         view_toggles.view_contouring_enabled = false;
                         view_toggles.view_drawing_enabled = false;
@@ -3162,16 +3174,6 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                         time_profile.samples.clear();
                         tagged_pos = {};
-                    }
-                    if(ImGui::MenuItem("Image Feature Extractor", nullptr, &view_toggles.view_image_feature_extraction)){
-                        view_toggles.view_contouring_enabled = false;
-                        view_toggles.view_drawing_enabled = false;
-                        view_toggles.view_row_column_profiles = false;
-                        //view_toggles.view_image_feature_extraction = false;
-                        view_toggles.view_time_profiles = false;
-
-                        tagged_pos = {};
-
                     }
                     ImGui::Separator();
                     ImGui::MenuItem("Meshes", nullptr, &view_toggles.view_meshes_enabled);
