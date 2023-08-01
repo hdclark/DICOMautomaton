@@ -159,6 +159,7 @@ add_library(Operations_objs OBJECT
     Polyominoes.cc
     PreFilterEnormousCTValues.cc
     PruneEmptyImageDoseArrays.cc
+    PromoteMetadata.cc
     PurgeContours.cc
     QuantizePixels.cc
     QueryUserInteractively.cc
