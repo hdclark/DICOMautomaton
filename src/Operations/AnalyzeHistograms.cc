@@ -106,29 +106,29 @@ OperationDoc OpArgDocAnalyzeHistograms(){
     out.args.back().name = "Constraints";
     out.args.back().desc = "Constraint criteria that will be evaluated against the selected line samples."
                            " There three general types of constraints will be recognized."
-                           ""
+                           "\n\n"
                            " First, constraints in the style of 'Dmax < 50.0 Gy'."
                            " The left-hand-size (LHS) can be any of {Dmin, Dmean, Dmax}."
                            " The inequality can be any of {<, lt, <=, lte, >, gt, >=, gte}."
                            " The right-hand-side (RHS) units can be any of {Gy, %} where"
                            " '%' means the RHS number is a percentage of the ReferenceDose."
-                           ""
-                           " Second, constraints in the style of 'D(coldest 500.0 cc) < 50.4 Gy'."
+                           "\n\n"
+                           "Second, constraints in the style of 'D(coldest 500.0 cc) < 50.4 Gy'."
                            " The inner LHS can be any of {coldest, hottest}."
                            " The inner LHS units can be any of {cc, cm3, cm^3, %} where"
                            " '%' means the inner LHS number is a percentage of the total volume."
                            " The inequality can be any of {<, lt, <=, lte, >, gt, >=, gte}."
                            " The RHS units can be any of {Gy, %} where"
                            " '%' means the RHS number is a percentage of the ReferenceDose."
-                           ""
-                           " Third, constraints in the style of 'V(24.5 Gy) < 500.0 cc'."
+                           "\n\n"
+                           "Third, constraints in the style of 'V(24.5 Gy) < 500.0 cc'."
                            " The inner LHS units can be any of {Gy, %} where"
                            " '%' means the inner LHS number is a percentage of the ReferenceDose."
                            " The inequality can be any of {<, lt, <=, lte, >, gt, >=, gte}."
                            " The RHS units can be any of {cc, cm3, cm^3, %} where"
                            " '%' means the inner LHS number is a percentage of the total volume."
-                           ""
-                           " Multiple constraints can be supplied by separating them with ';' delimiters."
+                           "\n\n"
+                           "Multiple constraints can be supplied by separating them with ';' delimiters."
                            " Each will be evaluated separately."
                            " Newlines can also be used, though constraints should all end with a ';'."
                            " Comments can be included by preceeding with a '#', which facilitate supplying"
@@ -502,7 +502,13 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                 }
 
                 // Evaluate the dose in the DVH.
-                double V_eval = DVH_abs_D_abs_V.Interpolate_Linearly( D_abs )[2];
+                double V_eval = nan;
+                if(D_abs <= 0.0){
+                    // Special case where interpolation won't work well (would have to extrapolate).
+                    V_eval = V_total;
+                }else{
+                    V_eval = DVH_abs_D_abs_V.Interpolate_Linearly( D_abs )[2];
+                }
 
                 // Express the LHS evaluated volume in the same units that the RHS has been stated.
                 std::string out_unit;
