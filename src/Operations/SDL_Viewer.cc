@@ -86,10 +86,7 @@
 #include "../Dialogs/Tray_Notification.h"
 #include "../Triple_Three.h"
 #include "../STB_Shim.h"
-
-#ifdef DCMA_USE_CGAL
-    #include "../Surface_Meshes.h"
-#endif // DCMA_USE_CGAL
+#include "../Surface_Meshes.h"
 
 #include "SDL_Viewer.h"
 
@@ -1090,9 +1087,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                   { std::string("fail"),  ImVec4(0.600f, 0.100f, 0.000f, 1.00f) },
                                                   { std::string("false"), ImVec4(0.600f, 0.100f, 0.000f, 1.00f) } };
 
+        ImVec4 selected_colour = ImVec4(0.350f, 0.750f, 0.350f, 1.00f);
         //ImVec4 pass_colour = ImVec4(0.175f, 0.500f, 0.000f, 1.00f);
         //ImVec4 fail_colour = ImVec4(0.600f, 0.100f, 0.000f, 1.00f);
     } table_display;
+    std::set< std::pair<int64_t, int64_t> > table_selection;
+    std::optional< std::pair<int64_t, int64_t> > cell_being_edited;
+    int64_t cell_being_edited_first_frame = 0;
 
     // RT Plans.
     using disp_rtplan_it_t = decltype(DICOM_data.rtplan_data.begin());
@@ -6018,6 +6019,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                                      &table_display,
                                      &recompute_table_iters,
                                      &display_metadata_table,
+                                     &table_selection,
+                                     &cell_being_edited,
+                                     &cell_being_edited_first_frame,
                                      &DICOM_data ]() -> void {
 
             std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
@@ -6034,6 +6038,8 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(ImGui::Button("Create table")){
                 DICOM_data.table_data.emplace_back( std::make_shared<Sparse_Table>() );
                 table_display.table_num = DICOM_data.table_data.size() - 1;
+                table_selection.clear();
+                cell_being_edited = {};
             }
             ImGui::SameLine();
             if(ImGui::Button("Remove table")){
@@ -6041,6 +6047,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                 if(table_is_valid){
                     DICOM_data.table_data.erase( table_ptr_it );
                     table_display.table_num -= 1;
+                    table_selection.clear();
+                    cell_being_edited = {};
                 }
             }
             ImGui::Checkbox("Keyword highlighting", &table_display.use_keyword_highlighting);
@@ -6082,8 +6090,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
 
                 const float TEXT_BASE_WIDTH = ImGui::CalcTextSize("A").x;
-                ImVec2 cell_padding(0.0f, 0.0f);
-                ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, cell_padding);
+                const float TEXT_BASE_HEIGHT = ImGui::CalcTextSize("A").y;
                 if( (tbl_min_col < tbl_max_col)
                 &&  (tbl_min_row < tbl_max_row)
                 &&  (l_min_col < l_max_col)
@@ -6109,15 +6116,17 @@ bool SDL_Viewer(Drover &DICOM_data,
                                      //ImVec2(TEXT_BASE_WIDTH * 50, 0.0f) )){
 
                     // Number the columns.
-                    for(int64_t c = l_min_col; c <= l_max_col; ++c){
-                        ImGui::TableSetupColumn(std::to_string(c).c_str());
+                    {
+                        const std::string indent("  "); // Easier to indent slightly than to centre the headers.
+                        for(int64_t c = l_min_col; c <= l_max_col; ++c){
+                            ImGui::TableSetupColumn((indent + std::to_string(c)).c_str());
+                        }
                     }
+                    ImGui::TableSetupScrollFreeze(0, 1); // Lock the column numbers onto the top when scrolling.
                     ImGui::TableHeadersRow();
 
                     std::array<char, 2048> buf;
                     string_to_array(buf, "");
-
-                    ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
 
                     // Pre-compute the width of the text in each cell to find the max column width.
                     // This allows the user to click anywhere in a (auto-scaled) cell to edit the content, but still
@@ -6127,7 +6136,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         if( (l_min_col <= col) && (col <= l_max_col)
                         &&  (l_min_row <= row) && (row <= l_max_row) ){
                             const auto truncated_v = v.substr(std::size_t{0}, std::min<size_t>(v.size(), buf.size()));
-                            const auto w = ImGui::CalcTextSize(v.c_str()).x * 1.02f + TEXT_BASE_WIDTH * 5.0f;
+                            const auto w = ImGui::CalcTextSize(v.c_str()).x * 1.02f + TEXT_BASE_WIDTH * 3.0f;
                             col_width[col] = std::max<float>(col_width[col], w);
                         }
                         return tables::action::automatic; // Retain only non-empty cells.
@@ -6142,21 +6151,124 @@ bool SDL_Viewer(Drover &DICOM_data,
                             string_to_array(buf, v);
                             const bool buf_holds_full_v = ((v.size() + 1U) < buf.size());
 
-                            // This ID ensures the table can grow and retain the same ID. It splits an int32_t into two
+                            // Intercept [tab] keypresses to initiate editing in the neighbouring cell.
+                            const bool pressing_shift = ImGui::GetIO().KeyShift;
+                            const bool pressing_tab   = ImGui::IsKeyPressed(SDL_SCANCODE_TAB);
+                            const bool pressing_enter = ImGui::IsKeyPressed(SDL_SCANCODE_RETURN);
+                            const bool pressing_ctrl  = ImGui::GetIO().KeyCtrl;
+
+                            // This ID ensures the table can grow with cells retaining their ID's. It splits an int32_t into two
                             // ranges, allowing rows to span [0,100'000] and columns to span [0,max_int32_t/100'000] =
                             // [0,20'000].
                             int cell_ID = (row - l_min_row) + (col - l_min_col) * 100'000;
                             ImGui::PushID(cell_ID);
-                            // Estimate the width of the text via the string content.
-                            //
-                            // Note: this sets the width of the InputText box. not the cell. The cell can be different.
-                            // We leave a gap so it's easier to click on the InputText box, but won't leave large empty
-                            // space when auto-resizing the cell. Being able to set the cell width separately from the
-                            // InputText, or a minimum cell width, would solve this contention.
-                            //ImGui::SetNextItemWidth(-FLT_MIN); // stretch input box to fit cell, complicates stretching.
-                            //ImGui::SetNextItemWidth(TEXT_BASE_WIDTH * 1.02f * (7U + v.size())); // estimate width.
-                            ImGui::SetNextItemWidth( col_width[col] );
-                            const bool key_changed = ImGui::InputText("##datum", buf.data(), buf.size() - 1);
+
+                            const auto cell_rc_coords = std::make_pair(row, col);
+                            const bool is_selected = (table_selection.count( cell_rc_coords ) != 0UL);
+                            const bool is_being_edited = cell_being_edited ? (cell_being_edited.value() == cell_rc_coords) : false;
+                            bool key_changed = false;
+                            if(is_being_edited){
+                                // Draw editable text.
+                                ImGui::SetNextItemWidth( col_width[col] );
+                                if( 0L < cell_being_edited_first_frame ){
+                                    ImGui::SetKeyboardFocusHere();
+                                }
+                                key_changed = ImGui::InputText("##datum", buf.data(), buf.size() - 1);
+
+                                // Check if still editing (focus + active). If not, stop editing in the next frame.
+                                //const bool still_editing = ImGui::IsItemActive() && !ImGui::IsItemDeactivatedAfterEdit();
+                                //const bool still_editing = !ImGui::IsItemDeactivatedAfterEdit();
+                                const bool still_editing = !ImGui::IsItemDeactivated();
+
+                                if(false){
+                                }else if( 0L < cell_being_edited_first_frame ){
+                                    // Debounce, needed because these keypresses can cycle to the next cell.
+                                    //
+                                    // This is integer rather than Boolean because after tabbing between cells imgui
+                                    // needs to move to and render the next cell. The flag indicates the newly focused
+                                    // cell has just been opened for editing, but keyboard focus may have already been
+                                    // stolen this frame. So we need to skip a frame.
+                                    --cell_being_edited_first_frame;
+
+                                }else if( pressing_tab && pressing_shift ){
+                                    cell_being_edited = std::make_pair(row, col - 1L);
+                                    cell_being_edited_first_frame += 2L;
+                                    table_selection.erase(cell_rc_coords);
+
+                                }else if( pressing_tab ){
+                                    cell_being_edited = std::make_pair(row, col + 1L);
+                                    cell_being_edited_first_frame += 2L;
+                                    table_selection.erase(cell_rc_coords);
+
+                                }else if( pressing_enter && pressing_shift ){
+                                    cell_being_edited = std::make_pair(row - 1L, col);
+                                    cell_being_edited_first_frame += 2L;
+                                    table_selection.erase(cell_rc_coords);
+
+                                }else if( pressing_enter ){
+                                    cell_being_edited = std::make_pair(row + 1L, col);
+                                    cell_being_edited_first_frame += 2L;
+                                    table_selection.erase(cell_rc_coords);
+
+                                }else if(!still_editing){
+                                    cell_being_edited = {};
+
+                                }
+
+                            }else{
+                                // Draw selectable text.
+                                const auto selector_flags = ImGuiSelectableFlags_None;
+                                if(ImGui::Selectable(buf.data(), is_selected, selector_flags, ImVec2(col_width[col], 0.0f))){
+                                    if(pressing_shift){
+                                        // Fill-in the outer rectangular selection area.
+                                        table_selection.insert(cell_rc_coords);
+                                        auto c_min = cell_rc_coords;
+                                        auto c_max = cell_rc_coords;
+                                        for(const auto& c : table_selection){ // r, c
+                                            const auto row = c.first;
+                                            const auto col = c.second;
+                                            if(row < c_min.first) c_min.first = row;
+                                            if(c_max.first < row) c_max.first = row;
+                                            if(col < c_min.second) c_min.second = col;
+                                            if(c_max.second < col) c_max.second = col;
+                                        }
+                                        for(int64_t r = c_min.first; r <= c_max.first; ++r){
+                                            for(int64_t c = c_min.second; c <= c_max.second; ++c){
+                                                table_selection.insert( std::make_pair(r, c) );
+                                            }
+                                        }
+
+                                    }else if(is_selected){
+                                        table_selection.erase(cell_rc_coords);
+
+                                    }else{
+                                        if(!pressing_ctrl){
+                                            // Exclusive selection.
+                                            table_selection.clear();
+                                        }
+                                        table_selection.insert(cell_rc_coords);
+                                    }
+                                }
+
+                                // Check if text is hovered, active, and the mouse was double-clicked.
+                                // If so, next frame we will draw it in an editable (non-selectable) box instead.
+                                bool is_double_clicked = false;
+                                for(int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++){
+                                    if(ImGui::IsMouseDoubleClicked(i)){
+                                        is_double_clicked = true;
+                                    }
+                                }
+                                const bool is_now_editing =   ImGui::IsItemActive()
+                                                           && ImGui::IsItemHovered()
+                                                           && ImGui::IsItemClicked()
+                                                           && ImGui::IsItemVisible()
+                                                           && is_double_clicked;
+                                if(is_now_editing){
+                                    cell_being_edited = cell_rc_coords;
+                                    ++cell_being_edited_first_frame;
+                                    table_selection.erase(cell_rc_coords);
+                                }
+                            }
 
                             // Colourize if keywords are present.
                             if(table_display.use_keyword_highlighting){
@@ -6168,6 +6280,11 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 }
                             }
 
+                            // Colourize if selected.
+                            if(is_selected){
+                                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(table_display.selected_colour));
+                            }
+
                             ImGui::PopID();
 
                             if( key_changed 
@@ -6177,11 +6294,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                     };
                     (*table_ptr_it)->table.visit_standard_block(f);
 
-                    ImGui::PopStyleColor();
                     ImGui::EndTable();
                 }
-                ImGui::PopStyleVar();
-
 
                 if( view_toggles.view_table_metadata_enabled ){
                     ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
