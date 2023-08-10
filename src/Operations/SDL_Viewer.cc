@@ -1091,9 +1091,31 @@ bool SDL_Viewer(Drover &DICOM_data,
         //ImVec4 pass_colour = ImVec4(0.175f, 0.500f, 0.000f, 1.00f);
         //ImVec4 fail_colour = ImVec4(0.600f, 0.100f, 0.000f, 1.00f);
     } table_display;
-    std::set< std::pair<int64_t, int64_t> > table_selection;
-    std::optional< std::pair<int64_t, int64_t> > cell_being_edited;
+    using table_cell_coord_t = std::pair<int64_t, int64_t>;
+    using table_cell_bounds_t = std::pair<table_cell_coord_t, table_cell_coord_t>; // row_bounds, col_bounds
+    std::set< table_cell_coord_t > table_selection;
+    std::optional< table_cell_coord_t > cell_being_edited;
     int64_t cell_being_edited_first_frame = 0;
+
+    const auto get_table_selection_bounds = [](const std::set< table_cell_coord_t >& table_selection) -> std::optional<table_cell_bounds_t> {
+        std::optional<table_cell_bounds_t> out;
+        if(!table_selection.empty()){
+            const auto seed_coord = *(std::begin(table_selection));
+            table_cell_coord_t row_bounds = std::make_pair(seed_coord.first, seed_coord.first);
+            table_cell_coord_t col_bounds = std::make_pair(seed_coord.second, seed_coord.second);
+            for(const auto& c : table_selection){ // r, c
+                const auto row = c.first;
+                const auto col = c.second;
+
+                if(row < row_bounds.first) row_bounds.first = row;
+                if(col < col_bounds.first) col_bounds.first = col;
+                if(row_bounds.second < row) row_bounds.second = row;
+                if(col_bounds.second < col) col_bounds.second = col;
+            }
+            out = std::make_pair(row_bounds, col_bounds);
+        }
+        return out;
+    };
 
     // RT Plans.
     using disp_rtplan_it_t = decltype(DICOM_data.rtplan_data.begin());
@@ -6022,6 +6044,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                      &table_selection,
                                      &cell_being_edited,
                                      &cell_being_edited_first_frame,
+                                     &get_table_selection_bounds,
                                      &DICOM_data ]() -> void {
 
             std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
@@ -6035,11 +6058,26 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImGui::SetNextWindowPos(ImVec2(680, 140), ImGuiCond_FirstUseEver);
             ImGui::Begin("Table Selection", &view_toggles.view_tables_enabled);
 
+            // Measure user input.
+            const bool window_is_focused = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
+
+            const bool pressing_shift = ImGui::GetIO().KeyShift;
+            const bool pressing_tab   = ImGui::IsKeyPressed(SDL_SCANCODE_TAB);
+            const bool pressing_enter = ImGui::IsKeyPressed(SDL_SCANCODE_RETURN);
+            const bool pressing_ctrl  = ImGui::GetIO().KeyCtrl;
+            const bool pressing_c     = ImGui::IsKeyPressed(SDL_SCANCODE_C);
+            const bool pressing_x     = ImGui::IsKeyPressed(SDL_SCANCODE_X);
+            const bool pressing_v     = ImGui::IsKeyPressed(SDL_SCANCODE_V);
+
+            bool resize_columns_to_default = false;
+            bool resize_columns_to_fit = false;
+
             if(ImGui::Button("Create table")){
                 DICOM_data.table_data.emplace_back( std::make_shared<Sparse_Table>() );
                 table_display.table_num = DICOM_data.table_data.size() - 1;
                 table_selection.clear();
                 cell_being_edited = {};
+                resize_columns_to_default = true;
             }
             ImGui::SameLine();
             if(ImGui::Button("Remove table")){
@@ -6049,9 +6087,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                     table_display.table_num -= 1;
                     table_selection.clear();
                     cell_being_edited = {};
+                    resize_columns_to_default = true;
                 }
             }
-            ImGui::Checkbox("Keyword highlighting", &table_display.use_keyword_highlighting);
 
             // Scroll through tables.
             if(DICOM_data.Has_Table_Data()){
@@ -6061,8 +6099,22 @@ bool SDL_Viewer(Drover &DICOM_data,
                 const int64_t new_table_num = std::clamp<int>(scroll_tables, 0, N_tables - 1);
                 if(new_table_num != table_display.table_num){
                     table_display.table_num = new_table_num;
+                    resize_columns_to_default = true;
                 }
             }
+
+            ImGui::Separator();
+            {
+                const bool l_resize_columns_to_fit = ImGui::Button("Resize columns to fit contents");
+                ImGui::SameLine();
+                const bool l_resize_columns_to_default = ImGui::Button("Resize columns to default");
+
+                resize_columns_to_fit = resize_columns_to_fit ? true : l_resize_columns_to_fit;
+                resize_columns_to_default = resize_columns_to_default ? true : l_resize_columns_to_default;
+            }
+
+            ImGui::Checkbox("Keyword highlighting", &table_display.use_keyword_highlighting);
+            ImGui::Separator();
 
             // Display the table.
             if( auto [table_is_valid, table_ptr_it] = recompute_table_iters();  table_is_valid ){
@@ -6108,18 +6160,25 @@ bool SDL_Viewer(Drover &DICOM_data,
                                        | ImGuiTableFlags_BordersInnerV
                                        | ImGuiTableFlags_BordersOuterV
                                        | ImGuiTableFlags_SizingFixedFit
-                                       //| ImGuiTableFlags_PadOuterX
                                        //| ImGuiTableFlags_SizingFixedSame
-                                       | ImGuiTableFlags_NoHostExtendX
-                                       | ImGuiTableFlags_NoHostExtendY
+                                       //| ImGuiTableFlags_PadOuterX
+                                       //| ImGuiTableFlags_NoHostExtendX
+                                       //| ImGuiTableFlags_NoHostExtendY
+                                       | ImGuiTableFlags_Hideable
+                                       | ImGuiTableFlags_Reorderable
                                        | ImGuiTableFlags_Resizable )){
-                                     //ImVec2(TEXT_BASE_WIDTH * 50, 0.0f) )){
+                                     //ImVec2(TEXT_BASE_WIDTH * 50, 100.0f) )){
 
                     // Number the columns.
+                    const float default_col_width = 70.0f;
+                    const float min_col_width = TEXT_BASE_WIDTH * 3.0f;
                     {
-                        const std::string indent("  "); // Easier to indent slightly than to centre the headers.
                         for(int64_t c = l_min_col; c <= l_max_col; ++c){
-                            ImGui::TableSetupColumn((indent + std::to_string(c)).c_str());
+                            std::stringstream ss;
+                            ss << std::setw(3) << std::to_string(c);
+                            ImGui::TableSetupColumn(ss.str().c_str(),
+                                                    ImGuiTableColumnFlags_WidthFixed,
+                                                    default_col_width);
                         }
                     }
                     ImGui::TableSetupScrollFreeze(0, 1); // Lock the column numbers onto the top when scrolling.
@@ -6128,20 +6187,34 @@ bool SDL_Viewer(Drover &DICOM_data,
                     std::array<char, 2048> buf;
                     string_to_array(buf, "");
 
-                    // Pre-compute the width of the text in each cell to find the max column width.
-                    // This allows the user to click anywhere in a (auto-scaled) cell to edit the content, but still
-                    // allow the auto-scaler to display the full cell contents.
-                    std::map<int64_t, float> col_width;
-                    tables::visitor_func_t f_size = [&](int64_t row, int64_t col, std::string& v) -> tables::action {
-                        if( (l_min_col <= col) && (col <= l_max_col)
-                        &&  (l_min_row <= row) && (row <= l_max_row) ){
-                            const auto truncated_v = v.substr(std::size_t{0}, std::min<size_t>(v.size(), buf.size()));
-                            const auto w = ImGui::CalcTextSize(v.c_str()).x * 1.02f + TEXT_BASE_WIDTH * 3.0f;
-                            col_width[col] = std::max<float>(col_width[col], w);
+                    // Resize column widths.
+                    if(false){
+                    }else if(resize_columns_to_default){
+                        for(int64_t col = l_min_col; col <= l_max_col; ++col){
+                            ImGui::TableSetColumnWidth(col, default_col_width);
                         }
-                        return tables::action::automatic; // Retain only non-empty cells.
-                    };
-                    (*table_ptr_it)->table.visit_standard_block(f_size);
+
+                    }else if(resize_columns_to_fit){
+                        std::map<int64_t, float> col_width;
+                        tables::visitor_func_t f_size = [&](int64_t row, int64_t col, std::string& v) -> tables::action {
+                            if( (l_min_col <= col) && (col <= l_max_col)
+                            &&  (l_min_row <= row) && (row <= l_max_row) ){
+                                const auto truncated_v = v.substr(std::size_t{0}, std::min<size_t>(v.size(), buf.size()));
+                                //const auto w = ImGui::CalcTextSize(v.c_str()).x * 1.02f + TEXT_BASE_WIDTH * 3.0f;
+                                // Leave a bit of extra space, which makes it easier to locate the cursor when editing.
+                                const auto w = ImGui::CalcTextSize(v.c_str()).x + TEXT_BASE_WIDTH * 2.0f;
+                                col_width[col] = std::max<float>(col_width[col], min_col_width);
+                                col_width[col] = std::max<float>(col_width[col], w);
+                            }
+                            return tables::action::automatic; // Retain only non-empty cells.
+                        };
+                        (*table_ptr_it)->table.visit_standard_block(f_size);
+
+                        for(int64_t col = l_min_col; col <= l_max_col; ++col){
+                            ImGui::TableSetColumnWidth(col, col_width[col]);
+                        }
+                    }
+
 
                     // Visit each cell and render the contents as an InputText widget.
                     tables::visitor_func_t f = [&](int64_t row, int64_t col, std::string& v) -> tables::action {
@@ -6150,12 +6223,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                             ImGui::TableNextColumn();
                             string_to_array(buf, v);
                             const bool buf_holds_full_v = ((v.size() + 1U) < buf.size());
-
-                            // Intercept [tab] keypresses to initiate editing in the neighbouring cell.
-                            const bool pressing_shift = ImGui::GetIO().KeyShift;
-                            const bool pressing_tab   = ImGui::IsKeyPressed(SDL_SCANCODE_TAB);
-                            const bool pressing_enter = ImGui::IsKeyPressed(SDL_SCANCODE_RETURN);
-                            const bool pressing_ctrl  = ImGui::GetIO().KeyCtrl;
 
                             // This ID ensures the table can grow with cells retaining their ID's. It splits an int32_t into two
                             // ranges, allowing rows to span [0,100'000] and columns to span [0,max_int32_t/100'000] =
@@ -6169,15 +6236,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                             bool key_changed = false;
                             if(is_being_edited){
                                 // Draw editable text.
-                                ImGui::SetNextItemWidth( col_width[col] );
                                 if( 0L < cell_being_edited_first_frame ){
                                     ImGui::SetKeyboardFocusHere();
                                 }
+                                const auto available_width = ImGui::GetContentRegionAvail().x;
+                                ImGui::SetNextItemWidth( available_width );
                                 key_changed = ImGui::InputText("##datum", buf.data(), buf.size() - 1);
 
                                 // Check if still editing (focus + active). If not, stop editing in the next frame.
-                                //const bool still_editing = ImGui::IsItemActive() && !ImGui::IsItemDeactivatedAfterEdit();
-                                //const bool still_editing = !ImGui::IsItemDeactivatedAfterEdit();
                                 const bool still_editing = !ImGui::IsItemDeactivated();
 
                                 if(false){
@@ -6218,34 +6284,30 @@ bool SDL_Viewer(Drover &DICOM_data,
                             }else{
                                 // Draw selectable text.
                                 const auto selector_flags = ImGuiSelectableFlags_None;
-                                if(ImGui::Selectable(buf.data(), is_selected, selector_flags, ImVec2(col_width[col], 0.0f))){
-                                    if(pressing_shift){
-                                        // Fill-in the outer rectangular selection area.
+                                const auto available_width = ImGui::GetContentRegionAvail().x;
+                                if(ImGui::Selectable(buf.data(), is_selected, selector_flags, ImVec2(available_width, 0.0f))){
+                                    if(false){
+                                    }else if(pressing_shift){
+                                        // Rectangular selection.
                                         table_selection.insert(cell_rc_coords);
-                                        auto c_min = cell_rc_coords;
-                                        auto c_max = cell_rc_coords;
-                                        for(const auto& c : table_selection){ // r, c
-                                            const auto row = c.first;
-                                            const auto col = c.second;
-                                            if(row < c_min.first) c_min.first = row;
-                                            if(c_max.first < row) c_max.first = row;
-                                            if(col < c_min.second) c_min.second = col;
-                                            if(c_max.second < col) c_max.second = col;
-                                        }
-                                        for(int64_t r = c_min.first; r <= c_max.first; ++r){
-                                            for(int64_t c = c_min.second; c <= c_max.second; ++c){
+                                        const auto [row_bounds, col_bounds] = get_table_selection_bounds(table_selection).value();
+                                        for(int64_t r = row_bounds.first; r <= row_bounds.second; ++r){
+                                            for(int64_t c = col_bounds.first; c <= col_bounds.second; ++c){
                                                 table_selection.insert( std::make_pair(r, c) );
                                             }
                                         }
 
-                                    }else if(is_selected){
-                                        table_selection.erase(cell_rc_coords);
+                                    }else if( pressing_ctrl ){
+                                        // Toggle selection for one cell.
+                                        if(is_selected){
+                                            table_selection.erase(cell_rc_coords);
+                                        }else{
+                                            table_selection.insert(cell_rc_coords);
+                                        }
 
                                     }else{
-                                        if(!pressing_ctrl){
-                                            // Exclusive selection.
-                                            table_selection.clear();
-                                        }
+                                        // Exclusive selection of one cell.
+                                        table_selection.clear();
                                         table_selection.insert(cell_rc_coords);
                                     }
                                 }
@@ -6294,20 +6356,35 @@ bool SDL_Viewer(Drover &DICOM_data,
                     };
                     (*table_ptr_it)->table.visit_standard_block(f);
 
+                    // Check for copy-and-paste.
+                    if(  window_is_focused ){
+                        if( pressing_ctrl
+                        &&  pressing_c
+                        &&  !table_selection.empty() ){
+                            const auto [row_bounds, col_bounds] = get_table_selection_bounds(table_selection).value();
+                            std::ostringstream os;
+                            (*table_ptr_it)->table.write_csv(os, row_bounds, col_bounds);
+                            const auto selection_csv = os.str();
+                            ImGui::SetClipboardText(selection_csv.c_str());
+                            YLOGINFO("Copied rectangular selection to clipboard");
+                        }
+                    }
+
                     ImGui::EndTable();
                 }
 
+                // Display metadata.
                 if( view_toggles.view_table_metadata_enabled ){
                     ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
-                    ImGui::Begin("Image Metadata", &view_toggles.view_table_metadata_enabled);
+                    ImGui::Begin("Table Metadata", &view_toggles.view_table_metadata_enabled);
 
                     display_metadata_table( (*table_ptr_it)->table.metadata );
 
                     ImGui::End();
                 }
-            }
 
-            ImGui::End();
+                ImGui::End();
+            }
             return;
         };
         try{
@@ -6319,14 +6396,14 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         // Display RT plans.
         const auto display_rtplans = [&view_toggles,
-                                     &drover_mutex,
-                                     &mutex_dt,
-                                     &rtplan_num,
-                                     &rtplan_dynstate_num,
-                                     &rtplan_statstate_num,
-                                     &recompute_rtplan_iters,
-                                     &display_metadata_table,
-                                     &DICOM_data ]() -> void {
+                                      &drover_mutex,
+                                      &mutex_dt,
+                                      &rtplan_num,
+                                      &rtplan_dynstate_num,
+                                      &rtplan_statstate_num,
+                                      &recompute_rtplan_iters,
+                                      &display_metadata_table,
+                                      &DICOM_data ]() -> void {
 
             std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
             if(!drover_lock) return;
@@ -6365,6 +6442,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                 if( view_toggles.view_rtplan_metadata_enabled
                 &&  !(*rtplan_ptr_it)->dynamic_states.empty() ){
+
                     // Scroll through dynamic states.
                     int scroll_dynstate = rtplan_dynstate_num;
                     const int N_dynstates = (*rtplan_ptr_it)->dynamic_states.size();
@@ -6417,7 +6495,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                             display_metadata_table( statstate_ptr->metadata );
                             ImGui::End();
                         }
-
                     }
                 }
             }

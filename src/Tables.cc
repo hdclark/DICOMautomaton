@@ -388,9 +388,11 @@ table2::read_csv( std::istream &is ){
 }
 
 void
-table2::write_csv( std::ostream &os ) const {
-    const auto [row_min, row_max] = this->standard_min_max_row();
-    const auto [col_min, col_max] = this->standard_min_max_col();
+table2::write_csv( std::ostream &os,
+                   std::optional<std::pair<int64_t, int64_t>> row_bounds,
+                   std::optional<std::pair<int64_t, int64_t>> col_bounds ) const {
+    const auto [row_min, row_max] = row_bounds.value_or(this->standard_min_max_row());
+    const auto [col_min, col_max] = col_bounds.value_or(this->standard_min_max_col());
     const char quote = '"';
     const char esc = '\\';
     const char sep = ',';
