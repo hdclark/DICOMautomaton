@@ -6114,6 +6114,16 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
 
             ImGui::Checkbox("Keyword highlighting", &table_display.use_keyword_highlighting);
+            if( ImGui::IsItemHovered() ){
+                ImGui::BeginTooltip();
+                std::stringstream ss;
+                ss << "Keywords: ";
+                for(const auto& kvp : table_display.colours){
+                    ss << "'" << kvp.first << "' ";
+                }
+                ImGui::Text("%s", ss.str().c_str());
+                ImGui::EndTooltip();
+            }
             ImGui::Separator();
 
             // Display the table.
@@ -6363,7 +6373,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         &&  !table_selection.empty() ){
                             const auto [row_bounds, col_bounds] = get_table_selection_bounds(table_selection).value();
                             std::ostringstream os;
-                            (*table_ptr_it)->table.write_csv(os, row_bounds, col_bounds);
+                            (*table_ptr_it)->table.write_csv(os, '\t', row_bounds, col_bounds);
                             const auto selection_csv = os.str();
                             ImGui::SetClipboardText(selection_csv.c_str());
                             YLOGINFO("Copied rectangular selection to clipboard");

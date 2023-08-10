@@ -101,6 +101,7 @@ struct table2 {
     // Quotes cells for maxmimum portability. Best to use with binary streams to avoid platform-specific line endings.
     // Throws on error. Disregards all metadata. Defaults to 'standard' bounds (see above).
     void write_csv( std::ostream &os,
+                    char separator = ',', // Also accepts tabs.
                     std::optional<std::pair<int64_t, int64_t>> row_bounds = {},
                     std::optional<std::pair<int64_t, int64_t>> col_bounds = {} ) const;
 
