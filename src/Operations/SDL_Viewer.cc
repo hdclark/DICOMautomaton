@@ -1094,6 +1094,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     using table_cell_coord_t = std::pair<int64_t, int64_t>;
     using table_cell_bounds_t = std::pair<table_cell_coord_t, table_cell_coord_t>; // row_bounds, col_bounds
     std::set< table_cell_coord_t > table_selection;
+    std::optional< table_cell_coord_t > cell_selected;
     std::optional< table_cell_coord_t > cell_being_edited;
     int64_t cell_being_edited_first_frame = 0;
 
@@ -6044,6 +6045,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                      &table_selection,
                                      &cell_being_edited,
                                      &cell_being_edited_first_frame,
+                                     &cell_selected,
                                      &get_table_selection_bounds,
                                      &DICOM_data ]() -> void {
 
@@ -6061,13 +6063,15 @@ bool SDL_Viewer(Drover &DICOM_data,
             // Measure user input.
             const bool window_is_focused = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
 
-            const bool pressing_shift = ImGui::GetIO().KeyShift;
-            const bool pressing_tab   = ImGui::IsKeyPressed(SDL_SCANCODE_TAB);
-            const bool pressing_enter = ImGui::IsKeyPressed(SDL_SCANCODE_RETURN);
-            const bool pressing_ctrl  = ImGui::GetIO().KeyCtrl;
-            const bool pressing_c     = ImGui::IsKeyPressed(SDL_SCANCODE_C);
-            const bool pressing_x     = ImGui::IsKeyPressed(SDL_SCANCODE_X);
-            const bool pressing_v     = ImGui::IsKeyPressed(SDL_SCANCODE_V);
+            const bool pressing_shift     = ImGui::GetIO().KeyShift;
+            const bool pressing_tab       = ImGui::IsKeyPressed(SDL_SCANCODE_TAB);
+            const bool pressing_enter     = ImGui::IsKeyPressed(SDL_SCANCODE_RETURN);
+            const bool pressing_ctrl      = ImGui::GetIO().KeyCtrl;
+            const bool pressing_delete    = ImGui::IsKeyPressed(SDL_SCANCODE_DELETE);
+            const bool pressing_backspace = ImGui::IsKeyPressed(SDL_SCANCODE_BACKSPACE);
+            const bool pressing_c         = ImGui::IsKeyPressed(SDL_SCANCODE_C);
+            const bool pressing_x         = ImGui::IsKeyPressed(SDL_SCANCODE_X);
+            const bool pressing_v         = ImGui::IsKeyPressed(SDL_SCANCODE_V);
 
             bool resize_columns_to_default = false;
             bool resize_columns_to_fit = false;
@@ -6075,8 +6079,11 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(ImGui::Button("Create table")){
                 DICOM_data.table_data.emplace_back( std::make_shared<Sparse_Table>() );
                 table_display.table_num = DICOM_data.table_data.size() - 1;
+
                 table_selection.clear();
                 cell_being_edited = {};
+                cell_being_edited_first_frame = 0L;
+                cell_selected = {};
                 resize_columns_to_default = true;
             }
             ImGui::SameLine();
@@ -6085,8 +6092,11 @@ bool SDL_Viewer(Drover &DICOM_data,
                 if(table_is_valid){
                     DICOM_data.table_data.erase( table_ptr_it );
                     table_display.table_num -= 1;
+
                     table_selection.clear();
                     cell_being_edited = {};
+                    cell_being_edited_first_frame = 0L;
+                    cell_selected = {};
                     resize_columns_to_default = true;
                 }
             }
@@ -6099,6 +6109,11 @@ bool SDL_Viewer(Drover &DICOM_data,
                 const int64_t new_table_num = std::clamp<int>(scroll_tables, 0, N_tables - 1);
                 if(new_table_num != table_display.table_num){
                     table_display.table_num = new_table_num;
+
+                    table_selection.clear();
+                    cell_being_edited = {};
+                    cell_being_edited_first_frame = 0L;
+                    cell_selected = {};
                     resize_columns_to_default = true;
                 }
             }
@@ -6240,8 +6255,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                             int cell_ID = (row - l_min_row) + (col - l_min_col) * 100'000;
                             ImGui::PushID(cell_ID);
 
+                            const auto available_space = ImGui::GetContentRegionAvail();
+                            std::optional<ImVec2> cell_actual_pos_min;
+                            std::optional<ImVec2> cell_actual_pos_max;
+
                             const auto cell_rc_coords = std::make_pair(row, col);
-                            const bool is_selected = (table_selection.count( cell_rc_coords ) != 0UL);
+                            const bool is_selected = cell_selected && (cell_selected.value() == cell_rc_coords);
+                            const bool is_group_selected = (table_selection.count( cell_rc_coords ) != 0UL);
                             const bool is_being_edited = cell_being_edited ? (cell_being_edited.value() == cell_rc_coords) : false;
                             bool key_changed = false;
                             if(is_being_edited){
@@ -6249,12 +6269,17 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 if( 0L < cell_being_edited_first_frame ){
                                     ImGui::SetKeyboardFocusHere();
                                 }
-                                const auto available_width = ImGui::GetContentRegionAvail().x;
-                                ImGui::SetNextItemWidth( available_width );
+                                ImGui::SetNextItemWidth( available_space.x );
                                 key_changed = ImGui::InputText("##datum", buf.data(), buf.size() - 1);
 
                                 // Check if still editing (focus + active). If not, stop editing in the next frame.
                                 const bool still_editing = !ImGui::IsItemDeactivated();
+
+                                if( is_selected
+                                &&  ImGui::IsItemVisible() ){
+                                    cell_actual_pos_min = ImGui::GetItemRectMin();
+                                    cell_actual_pos_max = ImGui::GetItemRectMax();
+                                }
 
                                 if(false){
                                 }else if( 0L < cell_being_edited_first_frame ){
@@ -6269,21 +6294,25 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 }else if( pressing_tab && pressing_shift ){
                                     cell_being_edited = std::make_pair(row, col - 1L);
                                     cell_being_edited_first_frame += 2L;
+                                    cell_selected = cell_being_edited;
                                     table_selection.erase(cell_rc_coords);
 
                                 }else if( pressing_tab ){
                                     cell_being_edited = std::make_pair(row, col + 1L);
                                     cell_being_edited_first_frame += 2L;
+                                    cell_selected = cell_being_edited;
                                     table_selection.erase(cell_rc_coords);
 
                                 }else if( pressing_enter && pressing_shift ){
                                     cell_being_edited = std::make_pair(row - 1L, col);
                                     cell_being_edited_first_frame += 2L;
+                                    cell_selected = cell_being_edited;
                                     table_selection.erase(cell_rc_coords);
 
                                 }else if( pressing_enter ){
                                     cell_being_edited = std::make_pair(row + 1L, col);
                                     cell_being_edited_first_frame += 2L;
+                                    cell_selected = cell_being_edited;
                                     table_selection.erase(cell_rc_coords);
 
                                 }else if(!still_editing){
@@ -6294,8 +6323,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                             }else{
                                 // Draw selectable text.
                                 const auto selector_flags = ImGuiSelectableFlags_None;
-                                const auto available_width = ImGui::GetContentRegionAvail().x;
-                                if(ImGui::Selectable(buf.data(), is_selected, selector_flags, ImVec2(available_width, 0.0f))){
+                                if(ImGui::Selectable(buf.data(), is_group_selected, selector_flags, ImVec2(available_space.x, 0.0f))){
+                                    cell_selected = cell_rc_coords;
+
                                     if(false){
                                     }else if(pressing_shift){
                                         // Rectangular selection.
@@ -6309,7 +6339,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                                     }else if( pressing_ctrl ){
                                         // Toggle selection for one cell.
-                                        if(is_selected){
+                                        if(is_group_selected){
                                             table_selection.erase(cell_rc_coords);
                                         }else{
                                             table_selection.insert(cell_rc_coords);
@@ -6320,6 +6350,12 @@ bool SDL_Viewer(Drover &DICOM_data,
                                         table_selection.clear();
                                         table_selection.insert(cell_rc_coords);
                                     }
+                                }
+
+                                if( is_selected
+                                &&  ImGui::IsItemVisible() ){
+                                    cell_actual_pos_min = ImGui::GetItemRectMin();
+                                    cell_actual_pos_max = ImGui::GetItemRectMax();
                                 }
 
                                 // Check if text is hovered, active, and the mouse was double-clicked.
@@ -6353,8 +6389,15 @@ bool SDL_Viewer(Drover &DICOM_data,
                             }
 
                             // Colourize if selected.
-                            if(is_selected){
+                            if(is_group_selected){
                                 ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(table_display.selected_colour));
+                            }
+                            if( is_selected
+                            &&  cell_actual_pos_min
+                            &&  cell_actual_pos_max ){
+                                ImGui::GetForegroundDrawList()->AddRect(cell_actual_pos_min.value(),
+                                                                        cell_actual_pos_max.value(),
+                                                                        IM_COL32(255, 255, 0, 255));
                             }
 
                             ImGui::PopID();
@@ -6366,17 +6409,52 @@ bool SDL_Viewer(Drover &DICOM_data,
                     };
                     (*table_ptr_it)->table.visit_standard_block(f);
 
-                    // Check for copy-and-paste.
+                    // Check for selection delete, copy-and-paste.
                     if(  window_is_focused ){
-                        if( pressing_ctrl
-                        &&  pressing_c
-                        &&  !table_selection.empty() ){
+                        if(false){
+                        }else if( (pressing_delete || pressing_backspace )
+                              &&  !table_selection.empty() ){
+                            for(const auto& c : table_selection){
+                                 const auto [row, col] = c;
+                                 (*table_ptr_it)->table.remove(row, col);
+                            }
+
+                        }else if( pressing_ctrl
+                              &&  pressing_c
+                              &&  !table_selection.empty() ){
                             const auto [row_bounds, col_bounds] = get_table_selection_bounds(table_selection).value();
                             std::ostringstream os;
                             (*table_ptr_it)->table.write_csv(os, '\t', row_bounds, col_bounds);
                             const auto selection_csv = os.str();
                             ImGui::SetClipboardText(selection_csv.c_str());
                             YLOGINFO("Copied rectangular selection to clipboard");
+
+                        }else if( pressing_ctrl
+                              &&  pressing_v
+                              &&  cell_selected ){
+                            //const std::string txt(ImGui::GetClipboardText());
+                            char *c_txt = SDL_GetClipboardText();
+                            const std::string txt(c_txt);
+                            SDL_free(c_txt);
+                            try{
+                                tables::table2 t;
+                                std::stringstream ss(txt);
+                                t.read_csv( ss );
+                                const auto mmr = t.min_max_row();
+                                const auto mmc = t.min_max_col();
+                                const auto [row_offset, col_offset] = cell_selected.value();
+                                tables::visitor_func_t l_f = [&](int64_t row, int64_t col, std::string& v) -> tables::action {
+                                    (*table_ptr_it)->table.inject(row - mmr.first + row_offset,
+                                                                  col - mmc.first + col_offset, v);
+                                    return tables::action::automatic;
+                                };
+                                //Visit all cells, so we overwrite even if the pasted cell is empty.
+                                t.visit_block(mmr, mmc, l_f);
+                                YLOGINFO("Pasted rectangular region to clipboard");
+
+                            }catch(const std::exception &e){
+                                YLOGWARN("Unable to parse tabular data from clipboard: " << e.what());
+                            }
                         }
                     }
 
