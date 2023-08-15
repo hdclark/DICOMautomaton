@@ -1087,23 +1087,24 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                   { std::string("fail"),  ImVec4(0.600f, 0.100f, 0.000f, 1.00f) },
                                                   { std::string("false"), ImVec4(0.600f, 0.100f, 0.000f, 1.00f) } };
 
-        ImVec4 selected_colour = ImVec4(0.350f, 0.750f, 0.350f, 1.00f);
+        ImVec4 selected_colour = ImVec4(0.260f, 0.590f, 0.980f, 0.750f);
         //ImVec4 pass_colour = ImVec4(0.175f, 0.500f, 0.000f, 1.00f);
         //ImVec4 fail_colour = ImVec4(0.600f, 0.100f, 0.000f, 1.00f);
     } table_display;
-    using table_cell_coord_t = std::pair<int64_t, int64_t>;
-    using table_cell_bounds_t = std::pair<table_cell_coord_t, table_cell_coord_t>; // row_bounds, col_bounds
-    std::set< table_cell_coord_t > table_selection;
-    std::optional< table_cell_coord_t > cell_selected;
-    std::optional< table_cell_coord_t > cell_being_edited;
+    using table_cell_bounds_t = std::pair<tables::cell_coord_t, tables::cell_coord_t>; // row_bounds, col_bounds
+    std::set< tables::cell_coord_t > table_selection;
+    std::optional< tables::cell_coord_t > cell_selected;
+    std::optional< tables::cell_coord_t > cell_being_edited;
     int64_t cell_being_edited_first_frame = 0;
+    std::optional<float> scroll_to_selected_cell_X;
+    std::optional<float> scroll_to_selected_cell_Y;
 
-    const auto get_table_selection_bounds = [](const std::set< table_cell_coord_t >& table_selection) -> std::optional<table_cell_bounds_t> {
+    const auto get_table_selection_bounds = [](const std::set< tables::cell_coord_t >& table_selection) -> std::optional<table_cell_bounds_t> {
         std::optional<table_cell_bounds_t> out;
         if(!table_selection.empty()){
             const auto seed_coord = *(std::begin(table_selection));
-            table_cell_coord_t row_bounds = std::make_pair(seed_coord.first, seed_coord.first);
-            table_cell_coord_t col_bounds = std::make_pair(seed_coord.second, seed_coord.second);
+            tables::cell_coord_t row_bounds = std::make_pair(seed_coord.first, seed_coord.first);
+            tables::cell_coord_t col_bounds = std::make_pair(seed_coord.second, seed_coord.second);
             for(const auto& c : table_selection){ // r, c
                 const auto row = c.first;
                 const auto col = c.second;
@@ -6046,6 +6047,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                      &cell_being_edited,
                                      &cell_being_edited_first_frame,
                                      &cell_selected,
+                                     &scroll_to_selected_cell_X,
+                                     &scroll_to_selected_cell_Y,
                                      &get_table_selection_bounds,
                                      &DICOM_data ]() -> void {
 
@@ -6073,8 +6076,17 @@ bool SDL_Viewer(Drover &DICOM_data,
             const bool pressing_x         = ImGui::IsKeyPressed(SDL_SCANCODE_X);
             const bool pressing_v         = ImGui::IsKeyPressed(SDL_SCANCODE_V);
 
+            const bool pressing_up        = ImGui::IsKeyPressed(SDL_SCANCODE_UP);
+            const bool pressing_down      = ImGui::IsKeyPressed(SDL_SCANCODE_DOWN);
+            const bool pressing_left      = ImGui::IsKeyPressed(SDL_SCANCODE_LEFT);
+            const bool pressing_right     = ImGui::IsKeyPressed(SDL_SCANCODE_RIGHT);
+
             bool resize_columns_to_default = false;
             bool resize_columns_to_fit = false;
+
+            const auto item_inner_spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+            const auto cell_padding = ImGui::GetStyle().CellPadding;
+            const auto frame_padding = ImGui::GetStyle().FramePadding;
 
             if(ImGui::Button("Create table")){
                 DICOM_data.table_data.emplace_back( std::make_shared<Sparse_Table>() );
@@ -6176,6 +6188,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                      (l_max_col - l_min_col) + 1,
                                      ImGuiTableFlags_Borders
                                        | ImGuiTableFlags_NoSavedSettings
+                                       //| ImGuiWindowFlags_NoNavInputs
                                        //| ImGuiTableFlags_ScrollX
                                        //| ImGuiTableFlags_ScrollY
                                        | ImGuiTableFlags_ScrollX
@@ -6193,6 +6206,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                        | ImGuiTableFlags_Reorderable
                                        | ImGuiTableFlags_Resizable )){
                                      //ImVec2(TEXT_BASE_WIDTH * 50, 100.0f) )){
+
+//                    ImGui::PushAllowKeyboardFocus(false);
 
                     // Number the columns.
                     const float default_col_width = 70.0f;
@@ -6225,7 +6240,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                             if( (l_min_col <= col) && (col <= l_max_col)
                             &&  (l_min_row <= row) && (row <= l_max_row) ){
                                 const auto truncated_v = v.substr(std::size_t{0}, std::min<size_t>(v.size(), buf.size()));
-                                //const auto w = ImGui::CalcTextSize(v.c_str()).x * 1.02f + TEXT_BASE_WIDTH * 3.0f;
                                 // Leave a bit of extra space, which makes it easier to locate the cursor when editing.
                                 const auto w = ImGui::CalcTextSize(v.c_str()).x + TEXT_BASE_WIDTH * 2.0f;
                                 col_width[col] = std::max<float>(col_width[col], min_col_width);
@@ -6239,6 +6253,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                             ImGui::TableSetColumnWidth(col, col_width[col]);
                         }
                     }
+//                    ImGui::PopAllowKeyboardFocus();
 
 
                     // Visit each cell and render the contents as an InputText widget.
@@ -6322,8 +6337,24 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                             }else{
                                 // Draw selectable text.
-                                const auto selector_flags = ImGuiSelectableFlags_None;
-                                if(ImGui::Selectable(buf.data(), is_group_selected, selector_flags, ImVec2(available_space.x, 0.0f))){
+                                const auto cell_pos = ImGui::GetCursorPos();
+                                ImGui::Text("%s", buf.data());
+                                const ImVec2 cell_ibutton_pos( cell_pos.x - cell_padding.x,
+                                                               cell_pos.y - cell_padding.y );
+                                //const ImVec2 cell_dummy_size( available_space.x + cell_padding.x * 2.0f,
+                                //                              TEXT_BASE_HEIGHT  + cell_padding.y * 2.0f - frame_padding.y * 2.0f);
+                                const ImVec2 cell_dummy_size( available_space.x,
+                                                              TEXT_BASE_HEIGHT);
+                                const ImVec2 cell_ibutton_size( available_space.x + cell_padding.x * 2.0f,
+                                                                TEXT_BASE_HEIGHT  + cell_padding.y * 2.0f ); // + frame_padding.y );
+                                ImGui::SetCursorPos( cell_pos );
+                                ImGui::Dummy( cell_dummy_size ); // Fill the  space.
+
+                                const auto button_flags = ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight;
+                                ImGui::SetCursorPos( cell_ibutton_pos );
+                                const bool button_clicked = ImGui::InvisibleButton(buf.data(), cell_ibutton_size, button_flags);
+                                ImGui::SetItemAllowOverlap();
+                                if(button_clicked){
                                     cell_selected = cell_rc_coords;
 
                                     if(false){
@@ -6355,7 +6386,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 if( is_selected
                                 &&  ImGui::IsItemVisible() ){
                                     cell_actual_pos_min = ImGui::GetItemRectMin();
-                                    cell_actual_pos_max = ImGui::GetItemRectMax();
+                                    ImVec2 rect_max = ImGui::GetItemRectMax();
+                                    cell_actual_pos_max = ImVec2(rect_max.x, rect_max.y + frame_padding.y);
                                 }
 
                                 // Check if text is hovered, active, and the mouse was double-clicked.
@@ -6395,9 +6427,22 @@ bool SDL_Viewer(Drover &DICOM_data,
                             if( is_selected
                             &&  cell_actual_pos_min
                             &&  cell_actual_pos_max ){
-                                ImGui::GetForegroundDrawList()->AddRect(cell_actual_pos_min.value(),
-                                                                        cell_actual_pos_max.value(),
-                                                                        IM_COL32(255, 255, 0, 255));
+                                auto drawlist = ImGui::GetWindowDrawList();
+                                drawlist->AddRect(cell_actual_pos_min.value(),
+                                                  cell_actual_pos_max.value(),
+                                                  IM_COL32(255, 255, 0, 255));
+                            }
+
+                            // Scroll to the selection cell.
+                            if( is_selected
+                            &&  scroll_to_selected_cell_X ){
+                                //ImGui::SetScrollHereX(scroll_to_selected_cell_X.value());
+                                scroll_to_selected_cell_X = {};
+                            }
+                            if( is_selected
+                            &&  scroll_to_selected_cell_Y ){
+                                //ImGui::SetScrollHereY(scroll_to_selected_cell_Y.value());
+                                scroll_to_selected_cell_Y = {};
                             }
 
                             ImGui::PopID();
@@ -6409,8 +6454,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                     };
                     (*table_ptr_it)->table.visit_standard_block(f);
 
-                    // Check for selection delete, copy-and-paste.
+
+                    // Check for keyboard actions.
                     if(  window_is_focused ){
+                        // Delete the selection.
                         if(false){
                         }else if( (pressing_delete || pressing_backspace )
                               &&  !table_selection.empty() ){
@@ -6419,6 +6466,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                  (*table_ptr_it)->table.remove(row, col);
                             }
 
+                        // Copy the selection.
                         }else if( pressing_ctrl
                               &&  pressing_c
                               &&  !table_selection.empty() ){
@@ -6429,10 +6477,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                             ImGui::SetClipboardText(selection_csv.c_str());
                             YLOGINFO("Copied rectangular selection to clipboard");
 
+                        // Paste the selection.
                         }else if( pressing_ctrl
                               &&  pressing_v
                               &&  cell_selected ){
-                            //const std::string txt(ImGui::GetClipboardText());
                             char *c_txt = SDL_GetClipboardText();
                             const std::string txt(c_txt);
                             SDL_free(c_txt);
@@ -6455,6 +6503,50 @@ bool SDL_Viewer(Drover &DICOM_data,
                             }catch(const std::exception &e){
                                 YLOGWARN("Unable to parse tabular data from clipboard: " << e.what());
                             }
+
+                        // Jump navigation over multiple cells.
+                        }else if( pressing_ctrl
+                              &&  cell_selected
+                              &&  pressing_up ){
+                            cell_selected = (*table_ptr_it)->table.jump_navigate(cell_selected.value(), std::make_pair<int64_t,int64_t>(-1L, 0L));
+                            scroll_to_selected_cell_Y = 0.01f;
+                        }else if( pressing_ctrl
+                              &&  cell_selected
+                              &&  pressing_down ){
+                            cell_selected = (*table_ptr_it)->table.jump_navigate(cell_selected.value(), std::make_pair<int64_t,int64_t>(1L, 0L));
+                            scroll_to_selected_cell_Y = 0.99f;
+                        }else if( pressing_ctrl
+                              &&  cell_selected
+                              &&  pressing_left ){
+                            cell_selected = (*table_ptr_it)->table.jump_navigate(cell_selected.value(), std::make_pair<int64_t,int64_t>(0L, -1L));
+                            scroll_to_selected_cell_X = 0.01f;
+                        }else if( pressing_ctrl
+                              &&  cell_selected
+                              &&  pressing_right ){
+                            cell_selected = (*table_ptr_it)->table.jump_navigate(cell_selected.value(), std::make_pair<int64_t,int64_t>(0L, +1L));
+                            scroll_to_selected_cell_X = 0.99f;
+
+                        // Navigate the selected cell one cell over.
+                        }else if( cell_selected
+                              &&  pressing_up ){
+                            const auto [row, col] = cell_selected.value();
+                            cell_selected = std::make_pair(std::clamp(row - 1L, l_min_row, l_max_row), col);
+                            scroll_to_selected_cell_Y = 0.01f;
+                        }else if( cell_selected
+                              &&  pressing_down ){
+                            const auto [row, col] = cell_selected.value();
+                            cell_selected = std::make_pair(std::clamp(row + 1L, l_min_row, l_max_row), col);
+                            scroll_to_selected_cell_Y = 0.99f;
+                        }else if( cell_selected
+                              &&  pressing_left ){
+                            const auto [row, col] = cell_selected.value();
+                            cell_selected = std::make_pair(row, std::clamp(col - 1L, l_min_col, l_max_col));
+                            scroll_to_selected_cell_X = 0.01f;
+                        }else if( cell_selected
+                              &&  pressing_right ){
+                            const auto [row, col] = cell_selected.value();
+                            cell_selected = std::make_pair(row, std::clamp(col + 1L, l_min_col, l_max_col));
+                            scroll_to_selected_cell_X = 0.99f;
                         }
                     }
 

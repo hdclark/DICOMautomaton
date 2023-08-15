@@ -42,6 +42,8 @@ enum class action {
 
 using visitor_func_t = std::function< action (int64_t r, int64_t c, std::string& v)>;
 
+using cell_coord_t = std::pair<int64_t, int64_t>;
+
 struct table2 {
     //std::set< std::variant<cell<std::string>,
     //                       cell<double>,
@@ -54,19 +56,25 @@ struct table2 {
     table2();
 
     // These functions return the (inclusive) bounds of the content currently in the table.
-    std::pair<int64_t, int64_t> min_max_row() const;
-    std::pair<int64_t, int64_t> min_max_col() const;
+    cell_coord_t min_max_row() const;
+    cell_coord_t min_max_col() const;
 
     // These functions return the (inclusive) bounds spanning
     // [r,c] = [min(0,min_row), min(0,min_col)] to [max(10,max_row+5), max(5,max_col+2)].
     // which helps when the table needs to expand to the bottom-right.
-    std::pair<int64_t, int64_t> standard_min_max_row() const;
-    std::pair<int64_t, int64_t> standard_min_max_col() const;
+    cell_coord_t standard_min_max_row() const;
+    cell_coord_t standard_min_max_col() const;
 
     // These functions locate the next empty row or column to the bottom/right of all existing rows/columns.
     // Note that holes in the interior are ignored. They are useful for appending data.
     int64_t next_empty_row() const;
     int64_t next_empty_col() const;
+
+    // Locate the cell most distant (along the given direction) from the current cell such that all cells between
+    // (inclusive) are contiguously filled.
+    // This can be used to implement [ctrl]+[keyboard arrows] jump navigation.
+    cell_coord_t jump_navigate(cell_coord_t current_pos,
+                               cell_coord_t direction) const;
 
     // Overwrite existing or insert new cell.
     void inject(int64_t row, int64_t col, const std::string& val);
@@ -82,8 +90,8 @@ struct table2 {
 
     // Visits every cell within the bounds (inclusive), even if not active.
     // Whether the cell should be engaged or disengaged after iteration is controlled by the user functor.
-    void visit_block( const std::pair<int64_t, int64_t>& row_bounds,
-                      const std::pair<int64_t, int64_t>& col_bounds,
+    void visit_block( const cell_coord_t& row_bounds,
+                      const cell_coord_t& col_bounds,
                       const visitor_func_t& f );
     
     // Same as previous, but visits the 'standard' block (see above).
@@ -102,8 +110,8 @@ struct table2 {
     // Throws on error. Disregards all metadata. Defaults to 'standard' bounds (see above).
     void write_csv( std::ostream &os,
                     char separator = ',', // Also accepts tabs.
-                    std::optional<std::pair<int64_t, int64_t>> row_bounds = {},
-                    std::optional<std::pair<int64_t, int64_t>> col_bounds = {} ) const;
+                    std::optional<cell_coord_t> row_bounds = {},
+                    std::optional<cell_coord_t> col_bounds = {} ) const;
 
 };
 

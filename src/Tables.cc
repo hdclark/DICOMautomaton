@@ -103,7 +103,7 @@ cell<T>::get_col() const {
 
 table2::table2(){};
 
-std::pair<int64_t, int64_t>
+cell_coord_t
 table2::min_max_row() const {
     int64_t min = std::numeric_limits<int64_t>::max();
     int64_t max = std::numeric_limits<int64_t>::lowest();
@@ -119,7 +119,7 @@ table2::min_max_row() const {
     return {min, max};
 }
 
-std::pair<int64_t, int64_t>
+cell_coord_t
 table2::min_max_col() const {
     int64_t min = std::numeric_limits<int64_t>::max();
     int64_t max = std::numeric_limits<int64_t>::lowest();
@@ -135,7 +135,7 @@ table2::min_max_col() const {
     return {min, max};
 }
 
-std::pair<int64_t, int64_t>
+cell_coord_t
 table2::standard_min_max_row() const {
     const int64_t zero = 0;
     const int64_t ten = 10;
@@ -146,7 +146,7 @@ table2::standard_min_max_row() const {
     return { std::min<int64_t>( zero, min_row ), std::max<int64_t>( ten, max_row + 5 ) };
 }
 
-std::pair<int64_t, int64_t>
+cell_coord_t
 table2::standard_min_max_col() const {
     const int64_t zero = 0;
     const int64_t five = 5;
@@ -198,6 +198,70 @@ table2::next_empty_col() const {
     return out;
 }
 
+cell_coord_t
+table2::jump_navigate(cell_coord_t current_pos,
+                      cell_coord_t direction) const {
+
+    const auto [dir_row, dir_col] = direction;
+    const bool inc_row = (0L < dir_row);
+    const bool dec_row = (dir_row < 0L);
+    const bool inc_col = (0L < dir_col);
+    const bool dec_col = (dir_col < 0L);
+
+    if(!inc_row && !dec_row && !inc_col && !dec_col){
+        // Nothing to do...
+        return current_pos;
+    }
+
+    const auto [row, col] = current_pos;
+    const auto [l_min_row, l_max_row] = this->min_max_row();
+    const auto [l_min_col, l_max_col] = this->min_max_col();
+
+    auto l_row = std::clamp(row, l_min_row, l_max_row);
+    auto l_col = std::clamp(col, l_min_col, l_max_col);
+    //if( (row < l_min_row)
+    //||  (l_max_row < row)
+    //||  (col < l_min_col)
+    //||  (l_max_col < col) ){
+    //    // Starting point is out of bounds, refusing to continue.
+    //    return current_pos;
+    //}
+
+    const auto iterate = [&](int64_t &row, int64_t &col) -> void {
+        if(inc_row){
+            ++row;
+        }else if(dec_row){
+            --row;
+        }
+        if(inc_col){
+            ++col;
+        }else if(dec_col){
+            --col;
+        }
+        return;
+    };
+
+    const auto still_in_bounds = [&](int64_t &row, int64_t &col) -> bool {
+        return (l_min_row <= row)
+           &&  (row <= l_max_row)
+           &&  (l_min_col <= col)
+           &&  (col <= l_max_col);
+    };
+
+    cell_coord_t final_coords {l_row, l_col};
+    while(still_in_bounds(l_row, l_col)){
+        iterate(l_row, l_col);
+        const auto val_opt = this->value(l_row, l_col);
+        if(val_opt){
+            final_coords = std::make_pair(l_row, l_col);
+        }else{
+            break;
+        }
+    }
+
+    return final_coords;
+}
+
 void
 table2::inject(int64_t row, int64_t col, const std::string& val){
     cell<std::string> n(row, col, val);
@@ -217,8 +281,8 @@ table2::remove(int64_t row, int64_t col){
 }
 
 void
-table2::visit_block( const std::pair<int64_t, int64_t>& row_bounds,
-                     const std::pair<int64_t, int64_t>& col_bounds,
+table2::visit_block( const cell_coord_t& row_bounds,
+                     const cell_coord_t& col_bounds,
                      const visitor_func_t& f ){
     if(!f){
         throw std::invalid_argument("Invalid user functor");
@@ -390,8 +454,8 @@ table2::read_csv( std::istream &is ){
 void
 table2::write_csv( std::ostream &os,
                    char separator,
-                   std::optional<std::pair<int64_t, int64_t>> row_bounds,
-                   std::optional<std::pair<int64_t, int64_t>> col_bounds ) const {
+                   std::optional<cell_coord_t> row_bounds,
+                   std::optional<cell_coord_t> col_bounds ) const {
     const auto [row_min, row_max] = row_bounds.value_or(this->standard_min_max_row());
     const auto [col_min, col_max] = col_bounds.value_or(this->standard_min_max_col());
     const char quote = '"';
