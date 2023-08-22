@@ -40,6 +40,7 @@
 #include <filesystem>
 
 #include "../imgui20210904/imgui.h"
+#include "../imgui20210904/imgui_internal.h"
 #include "../imgui20210904/imgui_impl_sdl.h"
 #include "../imgui20210904/imgui_impl_opengl3.h"
 #include "../implot20210904/implot.h"
@@ -1087,7 +1088,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                   { std::string("fail"),  ImVec4(0.600f, 0.100f, 0.000f, 1.00f) },
                                                   { std::string("false"), ImVec4(0.600f, 0.100f, 0.000f, 1.00f) } };
 
-        ImVec4 selected_colour = ImVec4(0.260f, 0.590f, 0.980f, 0.750f);
+        ImVec4 selected_colour = ImVec4(0.260f, 0.590f, 0.980f, 0.50f);
         //ImVec4 pass_colour = ImVec4(0.175f, 0.500f, 0.000f, 1.00f);
         //ImVec4 fail_colour = ImVec4(0.600f, 0.100f, 0.000f, 1.00f);
     } table_display;
@@ -1096,8 +1097,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     std::optional< tables::cell_coord_t > cell_selected;
     std::optional< tables::cell_coord_t > cell_being_edited;
     int64_t cell_being_edited_first_frame = 0;
-    std::optional<float> scroll_to_selected_cell_X;
-    std::optional<float> scroll_to_selected_cell_Y;
+    std::optional<tables::cell_coord_t> set_focus_on_cell;
 
     const auto get_table_selection_bounds = [](const std::set< tables::cell_coord_t >& table_selection) -> std::optional<table_cell_bounds_t> {
         std::optional<table_cell_bounds_t> out;
@@ -6047,8 +6047,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                      &cell_being_edited,
                                      &cell_being_edited_first_frame,
                                      &cell_selected,
-                                     &scroll_to_selected_cell_X,
-                                     &scroll_to_selected_cell_Y,
+                                     &set_focus_on_cell,
                                      &get_table_selection_bounds,
                                      &DICOM_data ]() -> void {
 
@@ -6067,9 +6066,9 @@ bool SDL_Viewer(Drover &DICOM_data,
             const bool window_is_focused = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
 
             const bool pressing_shift     = ImGui::GetIO().KeyShift;
+            const bool pressing_ctrl      = ImGui::GetIO().KeyCtrl;
             const bool pressing_tab       = ImGui::IsKeyPressed(SDL_SCANCODE_TAB);
             const bool pressing_enter     = ImGui::IsKeyPressed(SDL_SCANCODE_RETURN);
-            const bool pressing_ctrl      = ImGui::GetIO().KeyCtrl;
             const bool pressing_delete    = ImGui::IsKeyPressed(SDL_SCANCODE_DELETE);
             const bool pressing_backspace = ImGui::IsKeyPressed(SDL_SCANCODE_BACKSPACE);
             const bool pressing_c         = ImGui::IsKeyPressed(SDL_SCANCODE_C);
@@ -6081,12 +6080,22 @@ bool SDL_Viewer(Drover &DICOM_data,
             const bool pressing_left      = ImGui::IsKeyPressed(SDL_SCANCODE_LEFT);
             const bool pressing_right     = ImGui::IsKeyPressed(SDL_SCANCODE_RIGHT);
 
+            //const bool typed_text         = (ImGui::GetIO().InputQueueCharacters.Size != 0);
+            std::string typed_text;
+            {
+                ImGuiIO& io = ImGui::GetIO();
+                for(int i = 0; i < io.InputQueueCharacters.Size; ++i){
+                    // Note: this conversion assumes the input is utf8. It will discard code points in other encodings.
+                    // Imgui encodes chars, but does not (currently) provide a way to decode them in the public API.
+                    // So we filter out non-utf8 codepoints.
+                    const auto c_wchar = io.InputQueueCharacters[i];
+                    const char c = (' ' <= c_wchar && c_wchar <= 255) ? static_cast<char>(c_wchar) : '?';
+                    typed_text.push_back( c );
+                }
+            }
+
             bool resize_columns_to_default = false;
             bool resize_columns_to_fit = false;
-
-            const auto item_inner_spacing = ImGui::GetStyle().ItemInnerSpacing.x;
-            const auto cell_padding = ImGui::GetStyle().CellPadding;
-            const auto frame_padding = ImGui::GetStyle().FramePadding;
 
             if(ImGui::Button("Create table")){
                 DICOM_data.table_data.emplace_back( std::make_shared<Sparse_Table>() );
@@ -6176,6 +6185,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ||  (l_min_row != tbl_min_row)
                 ||  (l_max_row != tbl_max_row) ){
                     ImGui::Text("Warning: this table is truncated for display purposes");
+                    ImGui::Separator();
                 }
 
                 const float TEXT_BASE_WIDTH = ImGui::CalcTextSize("A").x;
@@ -6189,6 +6199,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                      ImGuiTableFlags_Borders
                                        | ImGuiTableFlags_NoSavedSettings
                                        //| ImGuiWindowFlags_NoNavInputs
+                                       //| ImGuiWindowFlags_NoNav
                                        //| ImGuiTableFlags_ScrollX
                                        //| ImGuiTableFlags_ScrollY
                                        | ImGuiTableFlags_ScrollX
@@ -6206,8 +6217,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                                        | ImGuiTableFlags_Reorderable
                                        | ImGuiTableFlags_Resizable )){
                                      //ImVec2(TEXT_BASE_WIDTH * 50, 100.0f) )){
-
-//                    ImGui::PushAllowKeyboardFocus(false);
 
                     // Number the columns.
                     const float default_col_width = 70.0f;
@@ -6253,13 +6262,25 @@ bool SDL_Viewer(Drover &DICOM_data,
                             ImGui::TableSetColumnWidth(col, col_width[col]);
                         }
                     }
-//                    ImGui::PopAllowKeyboardFocus();
 
+                    // Eliminate the gap between cells to eliminate dead zones in the grid where the mouse cannot click.
+                    // (Some elements like ImGui::Selectable() account for this gap, but ImGui::InvisibleButton()
+                    // currently does not.)
+                    const auto cell_padding = ImGui::GetStyle().CellPadding;
+                    const auto frame_padding = ImGui::GetStyle().FramePadding;
+
+                    // Hide the default keyboard navigation.
+                    // Ideally we would be able to disable it, but the functionality is not exposed to the public API.
+                    const ImVec4 hidden_colour(1.0f, 1.0f, 1.0f, 0.0f);
+                    ImGui::PushStyleColor(ImGuiCol_NavHighlight, hidden_colour);
+                    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, hidden_colour);
+                    ImGui::PushStyleColor(ImGuiCol_HeaderActive, hidden_colour);
 
                     // Visit each cell and render the contents as an InputText widget.
                     tables::visitor_func_t f = [&](int64_t row, int64_t col, std::string& v) -> tables::action {
                         if( (l_min_col <= col) && (col <= l_max_col)
                         &&  (l_min_row <= row) && (row <= l_max_row) ){
+                        //&&  ImGui::TableNextColumn() ){
                             ImGui::TableNextColumn();
                             string_to_array(buf, v);
                             const bool buf_holds_full_v = ((v.size() + 1U) < buf.size());
@@ -6337,24 +6358,11 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                             }else{
                                 // Draw selectable text.
-                                const auto cell_pos = ImGui::GetCursorPos();
-                                ImGui::Text("%s", buf.data());
-                                const ImVec2 cell_ibutton_pos( cell_pos.x - cell_padding.x,
-                                                               cell_pos.y - cell_padding.y );
-                                //const ImVec2 cell_dummy_size( available_space.x + cell_padding.x * 2.0f,
-                                //                              TEXT_BASE_HEIGHT  + cell_padding.y * 2.0f - frame_padding.y * 2.0f);
-                                const ImVec2 cell_dummy_size( available_space.x,
-                                                              TEXT_BASE_HEIGHT);
-                                const ImVec2 cell_ibutton_size( available_space.x + cell_padding.x * 2.0f,
-                                                                TEXT_BASE_HEIGHT  + cell_padding.y * 2.0f ); // + frame_padding.y );
-                                ImGui::SetCursorPos( cell_pos );
-                                ImGui::Dummy( cell_dummy_size ); // Fill the  space.
-
-                                const auto button_flags = ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight;
-                                ImGui::SetCursorPos( cell_ibutton_pos );
-                                const bool button_clicked = ImGui::InvisibleButton(buf.data(), cell_ibutton_size, button_flags);
-                                ImGui::SetItemAllowOverlap();
-                                if(button_clicked){
+                                const ImGuiSelectableFlags selectable_flags = ImGuiSelectableFlags_None;
+                                //const auto col_width = ImGui::TableGetColumnWidth(col - l_min_col);
+                                const ImVec2 selectable_size( 0.0f, TEXT_BASE_HEIGHT + cell_padding.y);
+                                
+                                if(ImGui::Selectable(buf.data(), is_selected, selectable_flags, selectable_size)){
                                     cell_selected = cell_rc_coords;
 
                                     if(false){
@@ -6383,11 +6391,22 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     }
                                 }
 
+                                // Move navigation focus to the highlighted cell iff directed.
+                                if( set_focus_on_cell
+                                &&  (set_focus_on_cell.value() == cell_rc_coords) ){
+                                    ImGui::SetScrollHereX();
+                                    ImGui::SetScrollHereY();
+
+                                    set_focus_on_cell = {};
+                                }
+
+                                // Set bounding box coordinates for the cell.
                                 if( is_selected
                                 &&  ImGui::IsItemVisible() ){
                                     cell_actual_pos_min = ImGui::GetItemRectMin();
                                     ImVec2 rect_max = ImGui::GetItemRectMax();
-                                    cell_actual_pos_max = ImVec2(rect_max.x, rect_max.y + frame_padding.y);
+                                    //cell_actual_pos_max = ImVec2(rect_max.x, rect_max.y + frame_padding.y);
+                                    cell_actual_pos_max = ImVec2(rect_max.x, rect_max.y);
                                 }
 
                                 // Check if text is hovered, active, and the mouse was double-clicked.
@@ -6398,16 +6417,26 @@ bool SDL_Viewer(Drover &DICOM_data,
                                         is_double_clicked = true;
                                     }
                                 }
-                                const bool is_now_editing =   ImGui::IsItemActive()
-                                                           && ImGui::IsItemHovered()
-                                                           && ImGui::IsItemClicked()
-                                                           && ImGui::IsItemVisible()
-                                                           && is_double_clicked;
-                                if(is_now_editing){
+                                const bool is_now_editing_mouse =   ImGui::IsItemActive()
+                                                                 && ImGui::IsItemHovered()
+                                                                 && ImGui::IsItemVisible()
+                                                                 && ImGui::IsItemClicked()
+                                                                 && is_double_clicked;
+                                const bool is_now_editing_keybd =   window_is_focused
+                                                                 && ImGui::IsItemVisible()
+                                                                 && is_selected
+                                                                 && ( !typed_text.empty()
+                                                                      || pressing_enter );
+                                if( is_now_editing_mouse
+                                ||  is_now_editing_keybd ){
                                     cell_being_edited = cell_rc_coords;
                                     ++cell_being_edited_first_frame;
                                     table_selection.erase(cell_rc_coords);
                                 }
+                                //if(is_now_editing_keybd){
+                                //    // Prime the cell with the typed character.
+                                //    v = typed_text;
+                                //}
                             }
 
                             // Colourize if keywords are present.
@@ -6433,18 +6462,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                   IM_COL32(255, 255, 0, 255));
                             }
 
-                            // Scroll to the selection cell.
-                            if( is_selected
-                            &&  scroll_to_selected_cell_X ){
-                                //ImGui::SetScrollHereX(scroll_to_selected_cell_X.value());
-                                scroll_to_selected_cell_X = {};
-                            }
-                            if( is_selected
-                            &&  scroll_to_selected_cell_Y ){
-                                //ImGui::SetScrollHereY(scroll_to_selected_cell_Y.value());
-                                scroll_to_selected_cell_Y = {};
-                            }
-
                             ImGui::PopID();
 
                             if( key_changed 
@@ -6454,6 +6471,27 @@ bool SDL_Viewer(Drover &DICOM_data,
                     };
                     (*table_ptr_it)->table.visit_standard_block(f);
 
+                    ImGui::PopStyleColor(); // ImGuiCol_NavHighlight
+                    ImGui::PopStyleColor(); // ImGuiCol_HeaderHovered
+                    ImGui::PopStyleColor(); // ImGuiCol_HeaderActive
+
+
+                    // Helper function for jump navigation.
+                    const auto insert_cells_between = [&](const tables::cell_coord_t &A,
+                                                          const tables::cell_coord_t &B) -> void {
+                        const auto min_row = std::min(A.first, B.first);
+                        const auto max_row = std::max(A.first, B.first);
+                        const auto min_col = std::min(A.second, B.second);
+                        const auto max_col = std::max(A.second, B.second);
+
+                        for(auto row = min_row; row <= max_row; ++row){
+                            for(auto col = min_col; col <= max_col; ++col){
+                                const auto p = std::make_pair(row, col);
+                                table_selection.insert( p );
+                            }
+                        }
+                        return;
+                    };
 
                     // Check for keyboard actions.
                     if(  window_is_focused ){
@@ -6504,49 +6542,82 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 YLOGWARN("Unable to parse tabular data from clipboard: " << e.what());
                             }
 
-                        // Jump navigation over multiple cells.
+                        // Jump navigation over multiple cells, optionally adding to the selection.
                         }else if( pressing_ctrl
                               &&  cell_selected
                               &&  pressing_up ){
-                            cell_selected = (*table_ptr_it)->table.jump_navigate(cell_selected.value(), std::make_pair<int64_t,int64_t>(-1L, 0L));
-                            scroll_to_selected_cell_Y = 0.01f;
+                            const auto inc = std::make_pair<int64_t,int64_t>(-1L, 0L);
+                            const auto jump = (*table_ptr_it)->table.jump_navigate(cell_selected.value(), inc);
+                            if( pressing_shift ) insert_cells_between(cell_selected.value(), jump);
+                            cell_selected = jump;
+                            set_focus_on_cell = cell_selected;
                         }else if( pressing_ctrl
                               &&  cell_selected
                               &&  pressing_down ){
-                            cell_selected = (*table_ptr_it)->table.jump_navigate(cell_selected.value(), std::make_pair<int64_t,int64_t>(1L, 0L));
-                            scroll_to_selected_cell_Y = 0.99f;
+                            const auto inc = std::make_pair<int64_t,int64_t>(1L, 0L);
+                            const auto jump = (*table_ptr_it)->table.jump_navigate(cell_selected.value(), inc);
+                            if( pressing_shift ) insert_cells_between(cell_selected.value(), jump);
+                            cell_selected = jump;
+                            set_focus_on_cell = cell_selected;
                         }else if( pressing_ctrl
                               &&  cell_selected
                               &&  pressing_left ){
-                            cell_selected = (*table_ptr_it)->table.jump_navigate(cell_selected.value(), std::make_pair<int64_t,int64_t>(0L, -1L));
-                            scroll_to_selected_cell_X = 0.01f;
+                            const auto inc = std::make_pair<int64_t,int64_t>(0L, -1L);
+                            const auto jump = (*table_ptr_it)->table.jump_navigate(cell_selected.value(), inc);
+                            if( pressing_shift ) insert_cells_between(cell_selected.value(), jump);
+                            cell_selected = jump;
+                            set_focus_on_cell = cell_selected;
                         }else if( pressing_ctrl
                               &&  cell_selected
                               &&  pressing_right ){
-                            cell_selected = (*table_ptr_it)->table.jump_navigate(cell_selected.value(), std::make_pair<int64_t,int64_t>(0L, +1L));
-                            scroll_to_selected_cell_X = 0.99f;
+                            const auto inc = std::make_pair<int64_t,int64_t>(0L, 1L);
+                            const auto jump = (*table_ptr_it)->table.jump_navigate(cell_selected.value(), inc);
+                            if( pressing_shift ) insert_cells_between(cell_selected.value(), jump);
+                            cell_selected = jump;
+                            set_focus_on_cell = cell_selected;
 
-                        // Navigate the selected cell one cell over.
+                        // Navigate the selected cell one cell over, optionally adding to the selection.
                         }else if( cell_selected
                               &&  pressing_up ){
                             const auto [row, col] = cell_selected.value();
-                            cell_selected = std::make_pair(std::clamp(row - 1L, l_min_row, l_max_row), col);
-                            scroll_to_selected_cell_Y = 0.01f;
+                            const auto jump = std::make_pair(std::clamp(row - 1L, l_min_row, l_max_row), col);
+                            if( pressing_shift ){
+                                table_selection.insert(cell_selected.value());
+                                table_selection.insert(jump);
+                            }
+                            cell_selected = jump;
+                            set_focus_on_cell = cell_selected;
                         }else if( cell_selected
                               &&  pressing_down ){
                             const auto [row, col] = cell_selected.value();
-                            cell_selected = std::make_pair(std::clamp(row + 1L, l_min_row, l_max_row), col);
-                            scroll_to_selected_cell_Y = 0.99f;
+                            const auto jump = std::make_pair(std::clamp(row + 1L, l_min_row, l_max_row), col);
+                            if( pressing_shift ){
+                                table_selection.insert(cell_selected.value());
+                                table_selection.insert(jump);
+                            }
+                            cell_selected = jump;
+                            set_focus_on_cell = cell_selected;
                         }else if( cell_selected
                               &&  pressing_left ){
                             const auto [row, col] = cell_selected.value();
-                            cell_selected = std::make_pair(row, std::clamp(col - 1L, l_min_col, l_max_col));
-                            scroll_to_selected_cell_X = 0.01f;
+                            const auto jump = std::make_pair(row, std::clamp(col - 1L, l_min_col, l_max_col));
+                            if( pressing_shift ){
+                                table_selection.insert(cell_selected.value());
+                                table_selection.insert(jump);
+                            }
+                            cell_selected = jump;
+                            set_focus_on_cell = cell_selected;
                         }else if( cell_selected
                               &&  pressing_right ){
                             const auto [row, col] = cell_selected.value();
-                            cell_selected = std::make_pair(row, std::clamp(col + 1L, l_min_col, l_max_col));
-                            scroll_to_selected_cell_X = 0.99f;
+                            const auto jump = std::make_pair(row, std::clamp(col + 1L, l_min_col, l_max_col));
+                            if( pressing_shift ){
+                                table_selection.insert(cell_selected.value());
+                                table_selection.insert(jump);
+                            }
+                            cell_selected = jump;
+                            set_focus_on_cell = cell_selected;
+
                         }
                     }
 
