@@ -109,6 +109,12 @@ set_target_properties(  Common_Image_File_Loader_obj PROPERTIES POSITION_INDEPEN
 add_library(            XYZ_File_Loader_obj OBJECT XYZ_File_Loader.cc )
 set_target_properties(  XYZ_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            XML_File_Loader_obj OBJECT XML_File_Loader.cc )
+set_target_properties(  XML_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+add_library(            XML_Tools_obj OBJECT XML_Tools.cc )
+set_target_properties(  XML_Tools_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            CSV_File_Loader_obj OBJECT CSV_File_Loader.cc )
 set_target_properties(  CSV_File_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -409,6 +415,8 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:FITS_File_Loader_obj>
     $<TARGET_OBJECTS:Common_Image_File_Loader_obj>
     $<TARGET_OBJECTS:XYZ_File_Loader_obj>
+    $<TARGET_OBJECTS:XML_File_Loader_obj>
+    $<TARGET_OBJECTS:XML_Tools_obj>
     $<TARGET_OBJECTS:XIM_File_Loader_obj>
     $<TARGET_OBJECTS:SNC_File_Loader_obj>
     $<TARGET_OBJECTS:CSV_File_Loader_obj>
@@ -507,6 +515,8 @@ if(WITH_WT)
         $<TARGET_OBJECTS:FITS_File_Loader_obj>
         $<TARGET_OBJECTS:Common_Image_File_Loader_obj>
         $<TARGET_OBJECTS:XYZ_File_Loader_obj>
+        $<TARGET_OBJECTS:XML_File_Loader_obj>
+        $<TARGET_OBJECTS:XML_Tools_obj>
         $<TARGET_OBJECTS:XIM_File_Loader_obj>
         $<TARGET_OBJECTS:SNC_File_Loader_obj>
         $<TARGET_OBJECTS:CSV_File_Loader_obj>

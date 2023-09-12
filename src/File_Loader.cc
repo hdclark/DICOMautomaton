@@ -27,6 +27,7 @@
 #include "DICOM_File_Loader.h"
 #include "FITS_File_Loader.h"
 #include "XYZ_File_Loader.h"
+#include "XML_File_Loader.h"
 #include "XIM_File_Loader.h"
 #include "SNC_File_Loader.h"
 #include "OFF_File_Loader.h"
@@ -335,6 +336,16 @@ Load_Files( Drover &DICOM_data,
             if(!p.empty()
             && !Load_From_Common_Image_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
                 YLOGWARN("Failed to load STB file");
+                return false;
+            }
+            return true;
+        }});
+
+        //Standalone file loading: XML files.
+        loaders.emplace_back(file_loader_t{{".xml", ".gpx"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
+            if(!p.empty()
+            && !Load_From_XML_Files( DICOM_data, InvocationMetadata, FilenameLex, p )){
+                YLOGWARN("Failed to load XML file");
                 return false;
             }
             return true;

@@ -4676,13 +4676,13 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                     // Check if the mouse if within the contour.
                     float thickness = contour_line_thickness;
-                    if(image_mouse_pos.mouse_hovering_image){
+                    if( image_mouse_pos.mouse_hovering_image
+                    &&  pc.contour.closed ){
                         const auto within_poly = pc.contour.Is_Point_In_Polygon_Projected_Orthogonally(img_plane,image_mouse_pos.dicom_pos);
                         thickness *= ( within_poly ) ? 1.5f : 1.0f;
                         if(within_poly) contour_hovered[pc.ROIName] = true;
                     }
-                    const bool closed = true;
-                    imgs_window_draw_list->PathStroke(pc.colour, closed, thickness);
+                    imgs_window_draw_list->PathStroke(pc.colour, pc.contour.closed, thickness);
                     //AddPolyline(const ImVec2* points, int num_points, ImU32 col, bool closed, float thickness);
                 }
             }
