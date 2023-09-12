@@ -198,6 +198,7 @@ formats:
     - TGA (read; partial)
   - contours
     - DICOM RTSTRUCT (read and write)
+    - GPX (read; partial)
   - surface meshes
     - PLY (read and write; ASCII and binary; partial)
     - OBJ (read and write; partial)

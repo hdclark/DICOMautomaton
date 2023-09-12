@@ -249,6 +249,12 @@ dcma::xml::print_node( std::ostream &os,
 }
 
 /*
+// For testing:
+//
+//   g++ --std=c++17 -O2 -g -fno-omit-frame-pointer  -fno-common -fsanitize=address  -fsanitize-address-use-after-scope -Xfsanitize=address  XML_Tools.cc -o xml_test -lygor
+// 
+//   ASAN_OPTIONS='verbosity=1 coverage=1 coverage_dir="." html_cov_report=1 detect_leaks=1 detect_invalid_pointer_pairs=2' ./xml_test
+
 int main(int argc, char **argv){
 
     std::ifstream ifs("in2.xml");
