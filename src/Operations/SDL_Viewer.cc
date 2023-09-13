@@ -6865,8 +6865,18 @@ bool SDL_Viewer(Drover &DICOM_data,
                 std::swap(img_features.features_A, img_features.features_B);
             }
             ImGui::SameLine();
-            if(ImGui::Button("Delete transformed features")){
-                img_features.features_C = point_set<double>();
+            if(ImGui::Button("Duplicate to empty set")){
+                const bool feats_A_empty = img_features.features_A.points.empty();
+                const bool feats_B_empty = img_features.features_B.points.empty();
+                if( feats_A_empty && feats_B_empty ){
+                    YLOGWARN("Both feature sets are empty");
+                }else if( feats_A_empty ){
+                    img_features.features_A = img_features.features_B;
+                }else if( feats_B_empty ){
+                    img_features.features_B = img_features.features_A;
+                }else{
+                    YLOGWARN("Neither feature set is empty");
+                }
             }
 
             ImGui::Separator();
@@ -6919,6 +6929,11 @@ bool SDL_Viewer(Drover &DICOM_data,
                     YLOGWARN("Unable to create transformation: " << e.what());
                 }
             }
+            ImGui::SameLine();
+            if(ImGui::Button("Delete transformed features")){
+                img_features.features_C = point_set<double>();
+            }
+
 
             ImGui::End();
             return;
@@ -7308,16 +7323,18 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                                   return dicom_pos.distance(p) < img_features.snap_dist;
                                                               });
                                 const auto is_near_existing = (existing != std::end(pset->points));
-                                if(!is_near_existing){
-                                    auto cm = (*img_array_ptr_it)->imagecoll.get_common_metadata({});
-                                    cm = coalesce_metadata_for_basic_pset(cm);
-
-                                    pset->points.emplace_back(dicom_pos);
-                                    pset->metadata = cm;
-                                    if(img_val_opt) pset->metadata[img_features.metadata_key] = img_val_opt.value();
-
+                                if(is_near_existing){
+                                    // Do not add the point, and also do not move to next point set.
                                     break;
                                 }
+
+                                auto cm = (*img_array_ptr_it)->imagecoll.get_common_metadata({});
+                                cm = coalesce_metadata_for_basic_pset(cm);
+
+                                pset->points.emplace_back(dicom_pos);
+                                pset->metadata = cm;
+                                if(img_val_opt) pset->metadata[img_features.metadata_key] = img_val_opt.value();
+                                break;
                             }
 
                         }else{

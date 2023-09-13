@@ -38,6 +38,7 @@
 OperationDoc OpArgDocRigidWarpImages(){
     OperationDoc out;
     out.name = "RigidWarpImages";
+    out.aliases.emplace_back("WarpImagesRigid");
 
     out.desc = 
         "This operation applies a rigid transform object to the specified image arrays, warping"
