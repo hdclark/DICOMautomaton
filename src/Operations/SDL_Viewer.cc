@@ -6814,12 +6814,54 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if(ImGui::Button("Delete features")){
                         (*pset) = point_set<double>();
                     }
+                    ImGui::SameLine();
+                    const std::string override_popup_name = "Edit Features (set " + std::to_string(i) + ")";
+                    if(ImGui::Button("Edit features")){
+                        ImGui::OpenPopup(override_popup_name.c_str());
+                    }
+
+                    if(ImGui::BeginPopupModal(override_popup_name.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+                        int j = 0;
+                        if(ImGui::BeginChild("##feature list", ImVec2(800, 400))){
+                            auto space = ImGui::GetContentRegionAvail();
+                            ImGui::PushItemWidth(space.x*0.25 - 1.0);
+                            for(auto& v : pset->points){
+                                ImGui::PushID(++j);
+                                std::string point_label = "feature " + std::to_string(j) + ":";
+                                ImGui::Text("%s", point_label.c_str());
+                                ImGui::SameLine();
+                                ImGui::InputDouble("##x", &(v.x));
+                                ImGui::SameLine();
+                                ImGui::InputDouble("##y", &(v.y));
+                                ImGui::SameLine();
+                                ImGui::InputDouble("##z", &(v.z));
+                                ImGui::PopID();
+                            }
+                            ImGui::PopItemWidth();
+                        }
+                        ImGui::EndChild(); // NOTE: BeginChild()/ EndChild() are unique. Must always call EndChild()!
+
+                        if(ImGui::Button("Add feature")){
+                            pset->points.push_back( vec3<double>(0.0, 0.0, 0.0) );
+                        }
+                        ImGui::SameLine();
+                        if(ImGui::Button("Delete feature")){
+                            if(!pset->points.empty()){
+                                pset->points.pop_back();
+                            }
+                        }
+                        ImGui::SameLine();
+                        if(ImGui::Button("Done")){
+                            ImGui::CloseCurrentPopup();
+                        }
+                        ImGui::EndPopup();
+                    }
                     ImGui::PopID();
                 }
             }
             ImGui::Separator();
 
-            if(ImGui::Button("Swap features (1 <-> 2)")){
+            if(ImGui::Button("Swap feature sets (1 <-> 2)")){
                 std::swap(img_features.features_A, img_features.features_B);
             }
             ImGui::SameLine();
@@ -6849,6 +6891,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     YLOGWARN("Falling back to centroid translation transformation");
                     tform = AlignViaCentroid(img_features.features_A, img_features.features_B);
 #endif // DCMA_USE_EIGEN
+
                     if(!tform){
                         throw std::runtime_error("(no explanation available)");
                     }
