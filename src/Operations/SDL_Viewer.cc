@@ -1149,6 +1149,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         std::array<float, 4> o_col = { 1.0f, 1.0f, 1.0f, 1.0f }; // Override colour.
         bool use_override_colour = false;
     } img_features;
+    size_t feature_transform_num = 0U;
 
     // ------------------------------------------ Viewer State --------------------------------------------
     auto background_colour = ImVec4(0.025f, 0.087f, 0.118f, 1.00f);
@@ -6766,7 +6767,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                        &mutex_dt,
                                        &display_metadata_table,
                                        &DICOM_data,
-                                       &img_features ]() -> void {
+                                       &img_features,
+                                       &feature_transform_num ]() -> void {
 
             std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
             if(!drover_lock) return;
@@ -6774,7 +6776,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             if( !view_toggles.view_image_feature_extraction ) return;
 
             // Display a selection and navigation window.
-            ImGui::SetNextWindowSize(ImVec2(520, 350), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(450, 375), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(680, 410), ImGuiCond_FirstUseEver);
             ImGui::Begin("Image Feature Selection", &view_toggles.view_image_feature_extraction);
 
@@ -6880,27 +6882,69 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
 
             ImGui::Separator();
-            const bool make_rigid = ImGui::Button("Make rigid transform (1 -> 2)");
+
+            std::vector<std::string> tform_names { 
+#ifdef DCMA_USE_EIGEN
+                "rigid (orthogonal procrustes with isotropic scaling)",
+                "rigid (orthogonal procrustes without isotropic scaling)",
+#endif // DCMA_USE_EIGEN
+                "centroid translation",
+                "PCA", };
+            const size_t N_tforms = tform_names.size();
+            feature_transform_num = std::clamp<size_t>(feature_transform_num, 0U, N_tforms - 1U);
+
+            ImGuiComboFlags flags = 0;
+            if(ImGui::BeginCombo("Registration Method", tform_names.at(feature_transform_num).c_str(), flags)){
+                for(size_t i = 0U; i < N_tforms; i++){
+                    const bool is_selected = (i == feature_transform_num);
+                    if(ImGui::Selectable(tform_names.at(i).c_str(), is_selected)){
+                        feature_transform_num = i;
+                    }
+                    if(is_selected){
+                        ImGui::SetItemDefaultFocus();
+                    }
+                }
+                ImGui::EndCombo();
+            }
+
+            const bool make_tform = ImGui::Button("Generate transform (1 -> 2)");
             if( ImGui::IsItemHovered() 
             &&  (img_features.features_A.points.size() != img_features.features_B.points.size()) ){
                 ImGui::BeginTooltip();
                 ImGui::Text("Not recommended -- features are currently mismatched");
                 ImGui::EndTooltip();
             }
-            if( make_rigid ){
-                const std::string TransformName = "unspecified";
-                std::optional<affine_transform<double>> tform;
+            if( make_tform ){
                 try{
+                    const std::string TransformName = "unspecified";
+                    std::optional<affine_transform<double>> tform;
+                    size_t i = 0U;
+                    if(false){
 #ifdef DCMA_USE_EIGEN
-                    AlignViaOrthogonalProcrustesParams params;
-                    params.permit_mirroring = false;
-                    params.permit_isotropic_scaling = true;
+                    }else if(i++ == feature_transform_num){
+                        AlignViaOrthogonalProcrustesParams params;
+                        params.permit_mirroring = false;
+                        params.permit_isotropic_scaling = true;
 
-                    tform = AlignViaOrthogonalProcrustes(params, img_features.features_A, img_features.features_B);
-#else
-                    YLOGWARN("Falling back to centroid translation transformation");
-                    tform = AlignViaCentroid(img_features.features_A, img_features.features_B);
+                        tform = AlignViaOrthogonalProcrustes(params, img_features.features_A, img_features.features_B);
+
+                    }else if(i++ == feature_transform_num){
+                        AlignViaOrthogonalProcrustesParams params;
+                        params.permit_mirroring = false;
+                        params.permit_isotropic_scaling = false;
+
+                        tform = AlignViaOrthogonalProcrustes(params, img_features.features_A, img_features.features_B);
 #endif // DCMA_USE_EIGEN
+                    }else if(i++ == feature_transform_num){
+                        tform = AlignViaCentroid(img_features.features_A, img_features.features_B);
+
+                    }else if(i++ == feature_transform_num){
+                        tform = AlignViaPCA(img_features.features_A, img_features.features_B);
+
+                    }else{
+                        // This is just to help keep the tform list and implementation synchronized.
+                        YLOGWARN("Registration technique not understood");
+                    }
 
                     if(!tform){
                         throw std::runtime_error("(no explanation available)");
