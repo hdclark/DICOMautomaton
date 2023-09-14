@@ -60,13 +60,21 @@ contains_gpx_gps_coords(dcma::xml::node &root){
         const auto lon_opt = get_as<double>(nc.back().get().metadata, "lon");
 
         if(lat_opt && lon_opt){
+            // Mercator projection.
+            const double pi = 3.141592653;
+            const double R = 6'371'000; // mean radius of Earth, in metres.
+            const double l = lon_opt.value() * (pi / 180.0); // converted from degrees to radians.
+            const double t = lat_opt.value() * (pi / 180.0); // converted from degrees to radians.
+            const double x = R * l;
+            const double y = -R * std::log( std::tan( (pi * 0.25) + (t * 0.5) ) );
+
             if(out.empty()){
                 out.emplace_back();
             }
             if(out.back().contours.empty()){
                 out.back().contours.emplace_back();
             }
-            out.back().contours.back().points.emplace_back( lat_opt.value(), lon_opt.value(), 0.0 );
+            out.back().contours.back().points.emplace_back( x, y, 0.0 );
         }
         return true;
     };
