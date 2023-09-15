@@ -48,14 +48,12 @@ contains_gpx_gps_coords(dcma::xml::node &root){
     std::list<contour_collection<double>> out;
 
     const bool permit_recursive_search = false;
-    std::vector<std::string> names;
-    names.push_back("gpx");
-    names.push_back("trk");
-    names.push_back("trkseg");
-    names.push_back("trkpt");
 
+    // This callback is for individual track points (i.e., vertices).
+    std::vector<std::string> names_trackpoints;
+    names_trackpoints.push_back("trkpt");
 
-    dcma::xml::search_callback_t f_all = [&](const dcma::xml::node_chain_t &nc) -> bool {
+    dcma::xml::search_callback_t f_trkpts = [&](const dcma::xml::node_chain_t &nc) -> bool {
         const auto lat_opt = get_as<double>(nc.back().get().metadata, "lat");
         const auto lon_opt = get_as<double>(nc.back().get().metadata, "lon");
 
@@ -68,17 +66,36 @@ contains_gpx_gps_coords(dcma::xml::node &root){
             const double x = R * l;
             const double y = -R * std::log( std::tan( (pi * 0.25) + (t * 0.5) ) );
 
-            if(out.empty()){
-                out.emplace_back();
-            }
-            if(out.back().contours.empty()){
-                out.back().contours.emplace_back();
-            }
             out.back().contours.back().points.emplace_back( x, y, 0.0 );
         }
         return true;
     };
-    dcma::xml::search_by_names(root, std::begin(names), std::end(names), f_all, permit_recursive_search);
+
+    // This callback is for individual tracks (i.e., a logical string of vertices with a start and end).
+    std::vector<std::string> names_tracks;
+    names_tracks.push_back("gpx");
+    names_tracks.push_back("trk");
+    names_tracks.push_back("trkseg");
+
+    dcma::xml::search_callback_t f_trks = [&](const dcma::xml::node_chain_t &nc) -> bool {
+        // For each track segment, create a new contour and then recursively search for track points (i.e., vertices).
+        if(out.empty()){
+            out.emplace_back();
+        }
+        out.back().contours.emplace_back();
+        dcma::xml::search_by_names(nc.back().get(),
+                                   std::begin(names_trackpoints),
+                                   std::end(names_trackpoints),
+                                   f_trkpts,
+                                   permit_recursive_search);
+        return true;
+    };
+
+    // Perform the search.
+    dcma::xml::search_by_names(root,
+                               std::begin(names_tracks),
+                               std::end(names_tracks),
+                               f_trks, permit_recursive_search);
     return out;
 }
 
