@@ -1535,10 +1535,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                 // rows and columns. This will make it easy to translate contours back and forth.
                 const auto cimg_pxl_dy = dimg.pxl_dy * static_cast<float>(dimg.rows)/static_cast<float>(contouring_img_row_col_count);
                 const auto cimg_pxl_dx = dimg.pxl_dx * static_cast<float>(dimg.columns)/static_cast<float>(contouring_img_row_col_count);
-                const auto cimg_offset = dimg.offset - dimg.row_unit * dimg.pxl_dy * 0.5
-                                                     - dimg.col_unit * dimg.pxl_dx * 0.5
-                                                     + dimg.row_unit * cimg_pxl_dy * 0.5
-                                                     + dimg.col_unit * cimg_pxl_dx * 0.5;
+                const auto cimg_offset = dimg.offset - dimg.row_unit * dimg.pxl_dx * 0.5
+                                                     - dimg.col_unit * dimg.pxl_dy * 0.5
+                                                     + dimg.row_unit * cimg_pxl_dx * 0.5
+                                                     + dimg.col_unit * cimg_pxl_dy * 0.5;
                 cimg_ptr->init_buffer(contouring_img_row_col_count, contouring_img_row_col_count, 1L);
                 cimg_ptr->init_spatial(cimg_pxl_dx, cimg_pxl_dy, dimg.pxl_dz, dimg.anchor, cimg_offset);
                 cimg_ptr->init_orientation(dimg.row_unit, dimg.col_unit);
