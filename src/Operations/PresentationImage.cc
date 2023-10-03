@@ -432,7 +432,7 @@ bool PresentationImage(Drover &DICOM_data,
                                                 disp_img_texture_sprite_t &asprite) -> void {
         //Scale the displayed pixel aspect ratio if the image pxl_dx and pxl_dy differ.
         {
-            const auto ImagePixelAspectRatio = img_it->pxl_dx / img_it->pxl_dy;
+            const auto ImagePixelAspectRatio = img_it->pxl_dy / img_it->pxl_dx;
             asprite.second.setScale(1.0f,ImagePixelAspectRatio);
         }
 
@@ -504,8 +504,8 @@ bool PresentationImage(Drover &DICOM_data,
                         // and SFML 'world' coordinates. We need to map from the DICOM coordinates to screen pixel coords.
 
                         //Get a DICOM-coordinate bounding box for the image.
-                        const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->rows;
-                        const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->columns; 
+                        const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->columns;
+                        const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->rows; 
                         const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
                                                 - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
                                                 - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
@@ -514,8 +514,8 @@ bool PresentationImage(Drover &DICOM_data,
                         
                         //Clamp the point to the bounding box, using the top left as zero.
                         const auto dR = p - img_top_left;
-                        const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_height;
-                        const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_width;
+                        const auto clamped_row = dR.Dot( disp_img_it->col_unit ) / img_dicom_height;
+                        const auto clamped_col = dR.Dot( disp_img_it->row_unit ) / img_dicom_width;
 
                         //Convert to SFML coordinates using the SFML bounding box for the display image.
                         sf::FloatRect DispImgBBox = disp_img_texture_sprite.second.getGlobalBounds(); //Uses top left corner as (0,0).

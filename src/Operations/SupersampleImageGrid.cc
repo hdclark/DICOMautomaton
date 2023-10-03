@@ -114,8 +114,9 @@ bool SupersampleImageGrid(Drover &DICOM_data,
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     
-    if( std::regex_match(SamplingMethodStr, inplane_bilin)
-          ||  std::regex_match(SamplingMethodStr, trilin) ){
+    if(false){
+    }else if( ( std::regex_match(SamplingMethodStr, inplane_bilin) ||  std::regex_match(SamplingMethodStr, trilin) )
+          &&  ( ( 1L < RowScaleFactor ) || ( 1L < ColumnScaleFactor ) ) ){
         for(auto & iap_it : IAs){
             InImagePlaneBilinearSupersampleUserData bilin_ud;
             bilin_ud.RowScaleFactor = RowScaleFactor; 
@@ -127,7 +128,8 @@ bool SupersampleImageGrid(Drover &DICOM_data,
             }
         }
 
-    }else if(std::regex_match(SamplingMethodStr, inplane_bicub)){
+    }else if( std::regex_match(SamplingMethodStr, inplane_bicub)
+          &&  ( ( 1L < RowScaleFactor ) || ( 1L < ColumnScaleFactor ) ) ){
         for(auto & iap_it : IAs){
             InImagePlaneBicubicSupersampleUserData bicub_ud;
             bicub_ud.RowScaleFactor = RowScaleFactor; 
@@ -143,7 +145,8 @@ bool SupersampleImageGrid(Drover &DICOM_data,
         throw std::invalid_argument("Invalid sampling method specified. Cannot continue");
     }
 
-    if( std::regex_match(SamplingMethodStr, trilin) ){
+    if( std::regex_match(SamplingMethodStr, trilin)
+    &&  (1L < SliceScaleFactor) ){
 
         for(auto & iap_it : IAs){
             if((*iap_it)->imagecoll.images.empty()){

@@ -85,11 +85,11 @@ bool AccumulateRowsColumns(Drover &DICOM_data,
                     samples_1D<double> col_profile;
 
                     for(auto row = 0; row < animg.rows; ++row){
-                        const auto pos = animg.position(row,0).Dot(animg.row_unit); //Relative to DICOM origin.
+                        const auto pos = animg.position(row,0).Dot(animg.col_unit); //Relative to DICOM origin.
                         row_profile.push_back({ pos, 0.0, row_sum[row], 0.0 });
                     }
                     for(auto col = 0; col < animg.columns; ++col){
-                        const auto pos = animg.position(0,col).Dot(animg.col_unit); //Relative to DICOM origin.
+                        const auto pos = animg.position(0,col).Dot(animg.row_unit); //Relative to DICOM origin.
                         col_profile.push_back({ pos, 0.0, col_sum[col], 0.0 });
                     }
                     const auto row_area = row_profile.Integrate_Over_Kernel_unit()[0];

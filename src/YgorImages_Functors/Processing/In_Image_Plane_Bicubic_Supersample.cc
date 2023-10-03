@@ -43,17 +43,17 @@ bool InImagePlaneBicubicSupersample(
     const auto RowScaleFactorR = static_cast<double>(RowScaleFactor);
     const auto ColumnScaleFactorR = static_cast<double>(ColumnScaleFactor);
 
-    vec3<double> newOffset = first_img_it->offset;
-    newOffset -= first_img_it->row_unit * first_img_it->pxl_dx * 0.5;
-    newOffset -= first_img_it->col_unit * first_img_it->pxl_dy * 0.5;
-    newOffset += first_img_it->row_unit * first_img_it->pxl_dx * 0.5 / RowScaleFactorR;
-    newOffset += first_img_it->col_unit * first_img_it->pxl_dy * 0.5 / ColumnScaleFactorR;
-
-    const auto new_pxl_dx = first_img_it->pxl_dx / RowScaleFactorR;
-    const auto new_pxl_dy = first_img_it->pxl_dy / ColumnScaleFactorR;
+    const auto new_pxl_dx = first_img_it->pxl_dx / ColumnScaleFactorR;
+    const auto new_pxl_dy = first_img_it->pxl_dy / RowScaleFactorR;
 
     const auto new_rows = first_img_it->rows * RowScaleFactor;
     const auto new_columns = first_img_it->columns * ColumnScaleFactor;
+
+    vec3<double> newOffset = first_img_it->offset;
+    newOffset -= first_img_it->row_unit * first_img_it->pxl_dx * 0.5;
+    newOffset -= first_img_it->col_unit * first_img_it->pxl_dy * 0.5;
+    newOffset += first_img_it->row_unit * new_pxl_dx * 0.5;
+    newOffset += first_img_it->col_unit * new_pxl_dy * 0.5;
 
 
     //Make a destination image that has twice the linear dimensions as the input image.
@@ -73,9 +73,9 @@ bool InImagePlaneBicubicSupersample(
     working.metadata["Rows"] = std::to_string(new_rows);
     working.metadata["Columns"] = std::to_string(new_columns);
 
-    working.metadata["PixelSpacing"] = std::to_string(new_pxl_dx) 
+    working.metadata["PixelSpacing"] = std::to_string(new_pxl_dy) 
                                        + R"***(\)***"_s 
-                                       + std::to_string(new_pxl_dy);
+                                       + std::to_string(new_pxl_dx);
 
     //Paint all pixels black.
     //working.fill_pixels(static_cast<float>(0));

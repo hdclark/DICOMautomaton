@@ -163,10 +163,10 @@ bool AutoCropImages(Drover &DICOM_data,
 
                     cc.contours.emplace_back();
                     cc.contours.back().closed = true;
-                    cc.contours.back().points.emplace_back( Ucol * A.x + Urow * A.y );
-                    cc.contours.back().points.emplace_back( Ucol * C.x + Urow * C.y );
-                    cc.contours.back().points.emplace_back( Ucol * B.x + Urow * B.y );
-                    cc.contours.back().points.emplace_back( Ucol * D.x + Urow * D.y );
+                    cc.contours.back().points.emplace_back( Urow * A.x + Ucol * A.y );
+                    cc.contours.back().points.emplace_back( Urow * C.x + Ucol * C.y );
+                    cc.contours.back().points.emplace_back( Urow * B.x + Ucol * B.y );
+                    cc.contours.back().points.emplace_back( Urow * D.x + Ucol * D.y );
                     cc.contours.back() = cc.contours.back().Project_Onto_Plane_Orthogonally(img_plane); //Ensure orthogonal positioning.
 
                 }catch(const std::exception &e){

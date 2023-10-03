@@ -313,8 +313,8 @@ bool SimulateRadiograph(Drover &DICOM_data,
     if(!ray_unit.GramSchmidt_orthogonalize(rg_up, rg_left)){
         throw std::invalid_argument("Cannot orthogonalize radiograph orientation unit vectors. Cannot continue.");
     }
-    rg_up = rg_up.unit();
-    rg_left = rg_left.unit();
+    rg_up = rg_up.unit() * -1.0;
+    rg_left = rg_left.unit() * -1.0;
 
     YLOGINFO("Proceeding with radiograph into-plane orientation unit vector: " << ray_unit);
     YLOGINFO("Proceeding with radiograph leftward orientation unit vector: " << rg_left);
@@ -374,7 +374,7 @@ bool SimulateRadiograph(Drover &DICOM_data,
              cc_ROIs, 
              grid_x_margin, grid_y_margin, grid_z_margin,
              RadiographRows, RadiographColumns, /*number_of_channels=*/ 1, NumberOfPanelImages, 
-             source_centre_line, (rg_up * -1.0), rg_left,
+             source_centre_line, rg_left, (rg_up * -1.0),
              /*pixel_fill=*/ 0.0, 
              /*only_top_and_bottom=*/ true);
 
@@ -431,17 +431,17 @@ bool SimulateRadiograph(Drover &DICOM_data,
                             // Determine if the intersection point is on a face of the cube.
                             const auto bp_centre = img_bp.Project_Onto_Plane_Orthogonally(img_centre);
                             const auto dP = (P - bp_centre);
-                            const auto dP_row = std::abs(dP.Dot(row_unit));
-                            const auto dP_col = std::abs(dP.Dot(col_unit));
-                            const auto dP_img = std::abs(dP.Dot(img_unit));
+                            const auto dP_x = std::abs(dP.Dot(row_unit));
+                            const auto dP_y = std::abs(dP.Dot(col_unit));
+                            const auto dP_z = std::abs(dP.Dot(img_unit));
 
-                            const auto max_row = (static_cast<double>(N_rows) * pxl_dx * 0.5);
-                            const auto max_col = (static_cast<double>(N_cols) * pxl_dy * 0.5);
-                            const auto max_img = (static_cast<double>(N_imgs) * pxl_dz * 0.5);
+                            const auto max_x = (static_cast<double>(N_cols) * pxl_dx * 0.5);
+                            const auto max_y = (static_cast<double>(N_rows) * pxl_dy * 0.5);
+                            const auto max_z = (static_cast<double>(N_imgs) * pxl_dz * 0.5);
 
-                            if( (dP_row <= max_row)
-                            &&  (dP_col <= max_col)
-                            &&  (dP_img <= max_img) ){
+                            if( (dP_x <= max_x)
+                            &&  (dP_y <= max_y)
+                            &&  (dP_z <= max_z) ){
                                 bp_intersections.emplace_back(P);
                             }
                         }
@@ -465,21 +465,21 @@ bool SimulateRadiograph(Drover &DICOM_data,
 
                     // Determine whether moving from tail to head along the ray will increase or decrease the
                     // row/col/img coordinates. Note that the direction will never change.
-                    const int64_t incr_row = (row_unit.Dot(ray_direction) < 0.0) ? -1L : 1L;
-                    const int64_t incr_col = (col_unit.Dot(ray_direction) < 0.0) ? -1L : 1L;
+                    const int64_t incr_row = (col_unit.Dot(ray_direction) < 0.0) ? -1L : 1L;
+                    const int64_t incr_col = (row_unit.Dot(ray_direction) < 0.0) ? -1L : 1L;
                     const int64_t incr_img = (img_unit.Dot(ray_direction) < 0.0) ? -1L : 1L;
 
                     // Determine the amount the ray will traverse due to incrementing i, j, or k individually.
-                    const auto true_ray_pos_dR_incr_row = ray_direction * (std::abs(row_unit.Dot(ray_direction)) * pxl_dx);
-                    const auto true_ray_pos_dR_incr_col = ray_direction * (std::abs(col_unit.Dot(ray_direction)) * pxl_dy);
+                    const auto true_ray_pos_dR_incr_row = ray_direction * (std::abs(col_unit.Dot(ray_direction)) * pxl_dy);
+                    const auto true_ray_pos_dR_incr_col = ray_direction * (std::abs(row_unit.Dot(ray_direction)) * pxl_dx);
                     const auto true_ray_pos_dR_incr_img = ray_direction * (std::abs(img_unit.Dot(ray_direction)) * pxl_dz);
 
                     const auto true_ray_pos_dR_incr_row_length = true_ray_pos_dR_incr_row.length();
                     const auto true_ray_pos_dR_incr_col_length = true_ray_pos_dR_incr_col.length();
                     const auto true_ray_pos_dR_incr_img_length = true_ray_pos_dR_incr_img.length();
 
-                    const auto blocky_ray_pos_dR_incr_row = row_unit * (pxl_dx * static_cast<double>(incr_row));
-                    const auto blocky_ray_pos_dR_incr_col = col_unit * (pxl_dy * static_cast<double>(incr_col));
+                    const auto blocky_ray_pos_dR_incr_row = col_unit * (pxl_dy * static_cast<double>(incr_row));
+                    const auto blocky_ray_pos_dR_incr_col = row_unit * (pxl_dx * static_cast<double>(incr_col));
                     const auto blocky_ray_pos_dR_incr_img = img_unit * (pxl_dz * static_cast<double>(incr_img));
 
                     // Determine the pseudo integer coordinates for the starting point.
@@ -487,8 +487,8 @@ bool SimulateRadiograph(Drover &DICOM_data,
                     // Note that these coordinates will not necessarily intersect any real voxels. They are defined only
                     // by the (infinite) regular grid that coincides with the real voxels.
                     const auto ray_start_grid_offset = ray_start - grid_zero;
-                    const auto ray_start_row_index = static_cast<int64_t>( std::round( ray_start_grid_offset.Dot(row_unit)/pxl_dx ) );
-                    const auto ray_start_col_index = static_cast<int64_t>( std::round( ray_start_grid_offset.Dot(col_unit)/pxl_dy ) );
+                    const auto ray_start_row_index = static_cast<int64_t>( std::round( ray_start_grid_offset.Dot(col_unit)/pxl_dy ) );
+                    const auto ray_start_col_index = static_cast<int64_t>( std::round( ray_start_grid_offset.Dot(row_unit)/pxl_dx ) );
                     const auto ray_start_img_index = static_cast<int64_t>( std::round( ray_start_grid_offset.Dot(img_unit)/pxl_dz ) );
 
                     int64_t ray_i = ray_start_row_index;
@@ -496,8 +496,8 @@ bool SimulateRadiograph(Drover &DICOM_data,
                     int64_t ray_k = ray_start_img_index;
 
                     vec3<double> true_ray_pos = ray_start;
-                    vec3<double> blocky_ray_pos = grid_zero + row_unit * (static_cast<double>(ray_i) * pxl_dx)
-                                                            + col_unit * (static_cast<double>(ray_j) * pxl_dy)
+                    vec3<double> blocky_ray_pos = grid_zero + col_unit * (static_cast<double>(ray_i) * pxl_dy)
+                                                            + row_unit * (static_cast<double>(ray_j) * pxl_dx)
                                                             + img_unit * (static_cast<double>(ray_k) * pxl_dz);
 
                     // Each time the ray samples the CT number, the ray is simulated to have interacted with the medium

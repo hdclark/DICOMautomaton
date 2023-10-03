@@ -192,7 +192,7 @@ read_snc_file( std::istream &is, planar_image_collection<float,double> &imgs ){
         return false;
     }
     if(debug) YLOGINFO("pxl_dx, dy, dz = " << pxl_dx << ", " << pxl_dy << ", " << pxl_dz);
-    metadata["PixelSpacing"] = std::to_string(pxl_dx) + R"***(\)***" + std::to_string(pxl_dy);
+    metadata["PixelSpacing"] = std::to_string(pxl_dy) + R"***(\)***" + std::to_string(pxl_dx);
 
     const vec3<double> zero3(0.0, 0.0, 0.0);
     const vec3<double> anchor = zero3;

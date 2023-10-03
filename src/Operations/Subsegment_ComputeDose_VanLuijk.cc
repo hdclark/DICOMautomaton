@@ -343,16 +343,16 @@ bool Subsegment_ComputeDose_VanLuijk(Drover &DICOM_data,
 
     // Use the image-axes aligned normals directly. Sub-segmentation might get snagged on voxel rows or columns.
     if(std::regex_match(PlanarOrientation, OrientAxisAligned)){
-        x_normal = row_normal;
-        y_normal = col_normal;
+        x_normal = col_normal;
+        y_normal = row_normal;
         z_normal = ort_normal;
 
     // Try to offset the axes slightly so they don't align perfectly with the voxel grid. (Align along the row and
     // column directions, or align along the diagonals, which can be just as bad.)
     }else if(std::regex_match(PlanarOrientation, OrientStaticObl)){
-        x_normal = (row_normal + col_normal * 0.5).unit();
-        y_normal = (col_normal - row_normal * 0.5).unit();
-        z_normal = (ort_normal - col_normal * 0.5).unit();
+        x_normal = (col_normal - ort_normal * 0.5).unit();
+        y_normal = (row_normal - col_normal * 0.5).unit();
+        z_normal = (ort_normal - row_normal * 0.5).unit();
         z_normal.GramSchmidt_orthogonalize(x_normal, y_normal);
         x_normal = x_normal.unit();
         y_normal = y_normal.unit();

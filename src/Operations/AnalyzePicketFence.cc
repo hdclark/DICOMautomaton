@@ -231,9 +231,7 @@ bool AnalyzePicketFence(Drover &DICOM_data,
         if((*iap_it)->imagecoll.images.empty()) throw std::invalid_argument("Unable to find an image to analyze.");
 
         planar_image<float, double> *animg = &( (*iap_it)->imagecoll.images.front() );
-        //const auto row_unit = animg->row_unit;
-        const auto col_unit = animg->col_unit;
-        //const auto ort_unit = row_unit.Cross(col_unit);
+        const auto row_unit = animg->row_unit;
 
         const auto ImageDate = animg->GetMetadataValueAs<std::string>("AcquisitionDate").value_or("Unknown");
         const auto PatientID = animg->GetMetadataValueAs<std::string>("PatientID").value_or("Unknown");
@@ -382,8 +380,8 @@ bool AnalyzePicketFence(Drover &DICOM_data,
             //       2. the rotation axes is the z axes.
             // This transformation is WRONG, but should work in normal situations (gantry ~0, coll 0 or 90, image panel
             // is parallel to the isocentric plane (i.e., orthogonal to the CAX).
-            PFC.leaf_axis     = col_unit.rotate_around_z(rot_ang);
-            PFC.junction_axis = col_unit.rotate_around_z(rot_ang + 0.5*pi);
+            PFC.leaf_axis     = row_unit.rotate_around_z(rot_ang);
+            PFC.junction_axis = row_unit.rotate_around_z(rot_ang + 0.5*pi);
 
             //---------------------------------------------------------------------------
             //Create lines for leaf pairs computed from knowledge about each machine's MLC geometry.

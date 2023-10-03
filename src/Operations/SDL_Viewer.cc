@@ -193,10 +193,10 @@ get_pixelspace_axis_aligned_bounding_box(const planar_image<float, double> &img,
         //if(bbox_max.z < (proj3 + extra_space)) bbox_max.z = (proj3 + extra_space);
     }
 
-    auto row_min = std::clamp<int64_t>(static_cast<int64_t>(std::floor(bbox_min.x/img.pxl_dx)), 0, img.rows-1);
-    auto row_max = std::clamp<int64_t>(static_cast<int64_t>(std::ceil(bbox_max.x/img.pxl_dx)), 0, img.rows-1);
-    auto col_min = std::clamp<int64_t>(static_cast<int64_t>(std::floor(bbox_min.y/img.pxl_dy)), 0, img.columns-1);
-    auto col_max = std::clamp<int64_t>(static_cast<int64_t>(std::ceil(bbox_max.y/img.pxl_dy)), 0, img.columns-1);
+    auto col_min = std::clamp<int64_t>(static_cast<int64_t>(std::floor(bbox_min.x/img.pxl_dx)), 0, img.columns-1);
+    auto col_max = std::clamp<int64_t>(static_cast<int64_t>(std::ceil(bbox_max.x/img.pxl_dx)), 0, img.columns-1);
+    auto row_min = std::clamp<int64_t>(static_cast<int64_t>(std::floor(bbox_min.y/img.pxl_dy)), 0, img.rows-1);
+    auto row_max = std::clamp<int64_t>(static_cast<int64_t>(std::ceil(bbox_max.y/img.pxl_dy)), 0, img.rows-1);
     return std::make_tuple( row_min, row_max, col_min, col_max );
 }
 
@@ -1389,7 +1389,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         GLuint texture_number = 0;
         int64_t col_count = 0L;
         int64_t row_count = 0L;
-        float aspect_ratio = 1.0; // In image pixel space.
+        float aspect_ratio = 1.0; // In image pixel space: height / width.
         bool texture_exists = false;
 
 /*
@@ -1411,7 +1411,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     planar_image<float,double> scale_bar_img;
     scale_bar_img.init_buffer(1L, 100L, 1L);
     scale_bar_img.init_spatial(1.0, 1.0, 1.0, zero3, zero3);
-    scale_bar_img.init_orientation(vec3<double>(0.0, 1.0, 0.0), vec3<double>(1.0, 0.0, 0.0));
+    scale_bar_img.init_orientation(vec3<double>(1.0, 0.0, 0.0), vec3<double>(0.0, 1.0, 0.0));
     for(int64_t c = 0; c < scale_bar_img.columns; ++c){
         scale_bar_img.reference(0,c,0) = static_cast<float>(c) / static_cast<float>(scale_bar_img.columns-1);
     }
@@ -1533,12 +1533,12 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                 // Make the contouring image spatial extent match the display image, except with a different number of
                 // rows and columns. This will make it easy to translate contours back and forth.
-                const auto cimg_pxl_dx = dimg.pxl_dx * static_cast<float>(dimg.rows)/static_cast<float>(contouring_img_row_col_count);
-                const auto cimg_pxl_dy = dimg.pxl_dy * static_cast<float>(dimg.columns)/static_cast<float>(contouring_img_row_col_count);
-                const auto cimg_offset = dimg.offset - dimg.row_unit * dimg.pxl_dx * 0.5
-                                                     - dimg.col_unit * dimg.pxl_dy * 0.5
-                                                     + dimg.row_unit * cimg_pxl_dx * 0.5
-                                                     + dimg.col_unit * cimg_pxl_dy * 0.5;
+                const auto cimg_pxl_dy = dimg.pxl_dy * static_cast<float>(dimg.rows)/static_cast<float>(contouring_img_row_col_count);
+                const auto cimg_pxl_dx = dimg.pxl_dx * static_cast<float>(dimg.columns)/static_cast<float>(contouring_img_row_col_count);
+                const auto cimg_offset = dimg.offset - dimg.row_unit * dimg.pxl_dy * 0.5
+                                                     - dimg.col_unit * dimg.pxl_dx * 0.5
+                                                     + dimg.row_unit * cimg_pxl_dy * 0.5
+                                                     + dimg.col_unit * cimg_pxl_dx * 0.5;
                 cimg_ptr->init_buffer(contouring_img_row_col_count, contouring_img_row_col_count, 1L);
                 cimg_ptr->init_spatial(cimg_pxl_dx, cimg_pxl_dy, dimg.pxl_dz, dimg.anchor, cimg_offset);
                 cimg_ptr->init_orientation(dimg.row_unit, dimg.col_unit);
@@ -1786,9 +1786,9 @@ bool SDL_Viewer(Drover &DICOM_data,
             opengl_texture_handle_t out;
             out.col_count = img_cols;
             out.row_count = img_rows;
-            out.aspect_ratio = (img.pxl_dx / img.pxl_dy) * (static_cast<float>(img_rows) / static_cast<float>(img_cols));
-            out.aspect_ratio = (img.pxl_dx / img.pxl_dy) * (static_cast<float>(img_rows) / static_cast<float>(img_cols));
-            out.aspect_ratio = std::isfinite(out.aspect_ratio) ? out.aspect_ratio : (img.pxl_dx / img.pxl_dy);
+            out.aspect_ratio = (img.pxl_dy * static_cast<float>(img_rows)) / (img.pxl_dx * static_cast<float>(img_cols));
+            out.aspect_ratio = std::isfinite(out.aspect_ratio) ? out.aspect_ratio : (img.pxl_dy / img.pxl_dx);
+            out.aspect_ratio = std::isfinite(out.aspect_ratio) ? out.aspect_ratio : (static_cast<float>(img_rows) / static_cast<float>(img_cols));
 
             CHECK_FOR_GL_ERRORS();
 
@@ -3555,7 +3555,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 auto *img_ptr = &(polyomino_imgs.image_data.back()->imagecoll.images.back());
                 img_ptr->init_buffer(20L, 10L, 1L);
                 img_ptr->init_spatial(1.0, 1.0, 1.0, zero3, zero3);
-                img_ptr->init_orientation(vec3<double>(0.0, 1.0, 0.0), vec3<double>(1.0, 0.0, 0.0));
+                img_ptr->init_orientation(vec3<double>(1.0, 0.0, 0.0), vec3<double>(0.0, 1.0, 0.0));
 
                 img_ptr->metadata["Description"] = "Polyominoes";
                 img_ptr->metadata["WindowValidFor"] = "Polyominoes";
@@ -4436,8 +4436,8 @@ bool SDL_Viewer(Drover &DICOM_data,
             // and SDL 'world' coordinates. We need to map from the DICOM coordinates to screen pixel coords.
             //
             //Get a DICOM-coordinate bounding box for the image.
-            const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->rows;
-            const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->columns; 
+            const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->columns;
+            const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->rows; 
             const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
                                     - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
                                     - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
@@ -4461,12 +4461,12 @@ bool SDL_Viewer(Drover &DICOM_data,
                 image_mouse_pos.c = std::clamp<int64_t>( static_cast<int64_t>( std::floor( image_mouse_pos.region_x * img_cols_f ) ), 0L, (img_cols-1) );
                 image_mouse_pos.zero_pos = disp_img_it->position(0L, 0L);
                 image_mouse_pos.dicom_pos = image_mouse_pos.zero_pos 
-                                            + disp_img_it->row_unit * image_mouse_pos.region_y * disp_img_it->pxl_dx * img_rows_f
-                                            + disp_img_it->col_unit * image_mouse_pos.region_x * disp_img_it->pxl_dy * img_cols_f
-                                            - disp_img_it->row_unit * 0.5 * disp_img_it->pxl_dx
-                                            - disp_img_it->col_unit * 0.5 * disp_img_it->pxl_dy;
+                                            + (disp_img_it->row_unit * disp_img_it->pxl_dx * img_cols_f) * image_mouse_pos.region_x
+                                            + (disp_img_it->col_unit * disp_img_it->pxl_dy * img_rows_f) * image_mouse_pos.region_y
+                                            - (disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5)
+                                            - (disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5);
                 image_mouse_pos.voxel_pos = disp_img_it->position(image_mouse_pos.r, image_mouse_pos.c);
-                image_mouse_pos.pixel_scale = static_cast<float>(real_extent.y) / (disp_img_it->pxl_dx * disp_img_it->rows);
+                image_mouse_pos.pixel_scale = static_cast<float>(real_extent.y) / (disp_img_it->pxl_dy * disp_img_it->rows);
 
             }
             image_mouse_pos.DICOM_to_pixels = [=,
@@ -4478,8 +4478,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                 const auto img_rows_f = static_cast<float>(img_rows);
                 const auto img_cols_f = static_cast<float>(img_cols);
                 const auto Z = disp_img_it->position(0L, 0L);
-                const auto region_y = (disp_img_it->row_unit.Dot(P - Z) + 0.5 * disp_img_it->pxl_dx)/(disp_img_it->pxl_dx * img_rows_f);
-                const auto region_x = (disp_img_it->col_unit.Dot(P - Z) + 0.5 * disp_img_it->pxl_dy)/(disp_img_it->pxl_dy * img_cols_f);
+                const auto region_x = (disp_img_it->row_unit.Dot(P - Z) + 0.5 * disp_img_it->pxl_dx)/(disp_img_it->pxl_dx * img_cols_f);
+                const auto region_y = (disp_img_it->col_unit.Dot(P - Z) + 0.5 * disp_img_it->pxl_dy)/(disp_img_it->pxl_dy * img_rows_f);
 
                 const auto pixel_x = pos.x + (region_x - uv_min.x) * image_extent.x/(uv_max.x - uv_min.x);
                 const auto pixel_y = pos.y + (region_y - uv_min.y) * image_extent.y/(uv_max.y - uv_min.y);
@@ -4662,8 +4662,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                     for(auto & p : pc.contour.points){
                         //Clamp the point to the bounding box, using the top left as zero.
                         const auto dR = p - img_top_left;
-                        const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_height;
-                        const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_width;
+                        const auto clamped_col = dR.Dot( disp_img_it->row_unit ) / img_dicom_width;
+                        const auto clamped_row = dR.Dot( disp_img_it->col_unit ) / img_dicom_height;
 
                         //Convert to ImGui coordinates using the top-left position of the display image.
                         const auto world_x = real_pos.x + real_extent.x * clamped_col;
@@ -5154,8 +5154,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if( auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
                         cimg_valid
                     &&  (contouring_imgs.Has_Contour_Data()) ){
-                        const auto cimg_dicom_width = cimg_it->pxl_dx * cimg_it->rows;
-                        const auto cimg_dicom_height = cimg_it->pxl_dy * cimg_it->columns; 
+                        const auto cimg_dicom_width = cimg_it->pxl_dx * cimg_it->columns;
+                        const auto cimg_dicom_height = cimg_it->pxl_dy * cimg_it->rows; 
                         //const auto cimg_top_left = cimg_it->anchor + cimg_it->offset
                         //                         - cimg_it->row_unit * cimg_it->pxl_dx * 0.5f
                         //                         - cimg_it->col_unit * cimg_it->pxl_dy * 0.5f;
@@ -5173,8 +5173,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                                     //Clamp the point to the bounding box, using the top left as zero.
                                     const auto dR = p - img_top_left;
-                                    const auto clamped_col = dR.Dot( cimg_it->col_unit ) / cimg_dicom_height;
-                                    const auto clamped_row = dR.Dot( cimg_it->row_unit ) / cimg_dicom_width;
+                                    const auto clamped_col = dR.Dot( cimg_it->row_unit ) / cimg_dicom_width;
+                                    const auto clamped_row = dR.Dot( cimg_it->col_unit ) / cimg_dicom_height;
 
                                     //Convert to ImGui coordinates using the top-left position of the display image.
                                     const auto world_x = real_pos.x + real_extent.x * clamped_col;

@@ -219,7 +219,7 @@ GenerateMeshes(
 GenerateMeshes(
     Resolution = res,
     MeshLabel = 'text',
-    Objects = 'text(1.0, "ABOVE (123)\
+    Objects = 'text(1.0, "ABOVE (123)
 BELOW [456]");',
 ){};
 

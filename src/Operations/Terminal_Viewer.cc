@@ -377,7 +377,7 @@ void draw_image( std::ostream &os,
     const int64_t channel = 0;
 
     planar_image<float, double> scaled_img;
-    const auto aspect = (img.pxl_dx * img.rows) / (img.pxl_dy * img.columns);
+    const auto aspect = (img.pxl_dy * img.rows) / (img.pxl_dx * img.columns);
     auto new_cols = nearest_even_number(max_square_size);
     auto new_rows = static_cast<int64_t>( std::clamp<double>( 2.0 * std::floor( aspect * new_cols * 0.5), 1.0, 5.0 * new_cols) );
     if(new_cols < new_rows){
@@ -391,7 +391,7 @@ void draw_image( std::ostream &os,
 
     scaled_img.init_buffer(new_rows, new_cols, 1);
     scaled_img.init_spatial(1.0, 1.0, 0.0, vec3<double>(0.0, 0.0, 0.0), vec3<double>(0.0, 0.0, 0.0));
-    scaled_img.init_orientation(vec3<double>(0.0, 1.0, 0.0), vec3<double>(1.0, 0.0, 0.0));
+    scaled_img.init_orientation(vec3<double>(1.0, 0.0, 0.0), vec3<double>(0.0, 1.0, 0.0));
 
     scaled_img.apply_to_pixels([&](int64_t row, int64_t col, int64_t chnl, float &val){
         const auto r_f = (static_cast<double>(row) / static_cast<double>(new_rows)) * img.rows;

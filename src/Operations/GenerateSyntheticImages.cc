@@ -80,7 +80,8 @@ OperationDoc OpArgDocGenerateSyntheticImages(){
     out.args.emplace_back();
     out.args.back().name = "VoxelWidth";
     out.args.back().desc = "Voxels will have this (in-plane) width (in DICOM units: mm)."
-                           " This means that row-adjacent voxels centres will be separated by VoxelWidth)."
+                           " This means that the centre of two voxels that are in the same row but adjacent columns"
+                           " will be separated by VoxelWidth."
                            " Each voxel will have dimensions: VoxelWidth x VoxelHeight x SliceThickness.";
     out.args.back().default_val = "1.0";
     out.args.back().expected = true;
@@ -89,7 +90,8 @@ OperationDoc OpArgDocGenerateSyntheticImages(){
     out.args.emplace_back();
     out.args.back().name = "VoxelHeight";
     out.args.back().desc = "Voxels will have this (in-plane) height (in DICOM units: mm)."
-                           " This means that column-adjacent voxels centres will be separated by VoxelHeight)."
+                           " This means that the centre of two voxels that are in the same column but adjacent rows"
+                           " will be separated by VoxelHeight."
                            " Each voxel will have dimensions: VoxelWidth x VoxelHeight x SliceThickness.";
     out.args.back().default_val = "1.0";
     out.args.back().expected = true;
@@ -332,7 +334,7 @@ bool GenerateSyntheticImages(Drover &DICOM_data,
                                                                          + std::to_string(ImageOrientationColumn.x) + "\\"
                                                                          + std::to_string(ImageOrientationColumn.y) + "\\"
                                                                          + std::to_string(ImageOrientationColumn.z);
-        out->imagecoll.images.back().metadata["PixelSpacing"] = std::to_string(VoxelWidth) + "\\" + std::to_string(VoxelHeight);
+        out->imagecoll.images.back().metadata["PixelSpacing"] = std::to_string(VoxelHeight) + "\\" + std::to_string(VoxelWidth);
         out->imagecoll.images.back().metadata["FrameOfReferenceUID"] = FrameOfReferenceUID;
 
         out->imagecoll.images.back().metadata["StudyTime"] = ContentTime;

@@ -698,8 +698,8 @@ bool SurfaceBasedRayCastDoseAccumulate(Drover &DICOM_data,
     if(!SDGridZ.GramSchmidt_orthogonalize(SDGridY, SDGridX)){
         throw std::runtime_error("Unable to find grid orientation vectors.");
     }
-    SDGridX = SDGridX.unit();
-    SDGridY = SDGridY.unit();
+    SDGridX = SDGridY.unit();
+    SDGridY = SDGridX.unit();
 
     //Hope that using a margin twice the grid margin will capture all jutting surface.
     double sdgrid_x_margin = 2.0*x_margin;

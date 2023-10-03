@@ -196,8 +196,8 @@ bool DecomposeImagesSVD(Drover &DICOM_data,
 
     // Create a new image array with the basis images.
     auto out = std::make_unique<Image_Array>();
-    const vec3<double> ImageOrientationRow(0.0, 1.0, 0.0);
-    const vec3<double> ImageOrientationColumn(1.0, 0.0, 0.0);
+    const vec3<double> ImageOrientationRow(1.0, 0.0, 0.0);
+    const vec3<double> ImageOrientationColumn(0.0, 1.0, 0.0);
     const vec3<double> ImageAnchor(0.0, 0.0, 0.0);
     const vec3<double> ImagePosition(0.0, 0.0, 0.0);
     const int64_t NumberOfRows = rows;

@@ -136,30 +136,29 @@ bool CropImages(Drover &DICOM_data,
                 const auto Ucol = animg.col_unit;
                 const auto Dcol = animg.pxl_dy;
 
-
                 vec3<double> dRowL;
                 vec3<double> dRowH;
                 vec3<double> dColL;
                 vec3<double> dColH;
 
-                if(RowsL_is_pixel  ){  dRowL = Urow * Drow * RowsL;
-                }else if(RowsL_is_percent){  dRowL = Urow * Drow * (rows-1) * RowsL / 100.0;
-                }else{                       dRowL = Urow * RowsL;
+                if(RowsL_is_pixel){          dRowL = Ucol * Dcol * RowsL;
+                }else if(RowsL_is_percent){  dRowL = Ucol * Dcol * (rows-1) * RowsL / 100.0;
+                }else{                       dRowL = Ucol * RowsL;
                 }
 
-                if(ColsL_is_pixel  ){  dColL = Ucol * Dcol * ColsL; 
-                }else if(ColsL_is_percent){  dColL = Ucol * Dcol * (cols-1) * ColsL / 100.0;
-                }else{                       dColL = Ucol * ColsL; 
+                if(ColsL_is_pixel){          dColL = Urow * Drow * ColsL; 
+                }else if(ColsL_is_percent){  dColL = Urow * Drow * (cols-1) * ColsL / 100.0;
+                }else{                       dColL = Urow * ColsL; 
                 }
 
-                if(RowsH_is_pixel  ){  dRowH = Urow * -Drow * RowsH;
-                }else if(RowsH_is_percent){  dRowH = Urow * -Drow * (rows-1) * RowsH / 100.0;
-                }else{                       dRowH = Urow * -RowsH;
+                if(RowsH_is_pixel){          dRowH = Ucol * -Dcol * RowsH;
+                }else if(RowsH_is_percent){  dRowH = Ucol * -Dcol * (rows-1) * RowsH / 100.0;
+                }else{                       dRowH = Ucol * -RowsH;
                 }
 
-                if(ColsH_is_pixel  ){  dColH = Ucol * -Dcol * ColsH;
-                }else if(ColsH_is_percent){  dColH = Ucol * -Dcol * (cols-1) * ColsH / 100.0;
-                }else{                       dColH = Ucol * -ColsH;
+                if(ColsH_is_pixel){          dColH = Urow * -Drow * ColsH;
+                }else if(ColsH_is_percent){  dColH = Urow * -Drow * (cols-1) * ColsH / 100.0;
+                }else{                       dColH = Urow * -ColsH;
                 }
 
                 Encircle_Images_with_Contours_Opts opts;

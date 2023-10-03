@@ -248,8 +248,8 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
 
             const auto SliceThickness = pxl_dz;
             const auto SpacingBetweenSlices = pxl_dz;
-            const auto VoxelWidth = pxl_dy;
-            const auto VoxelHeight = pxl_dx;
+            const auto VoxelWidth = pxl_dx;
+            const auto VoxelHeight = pxl_dy;
 
             const auto ImageAnchor = vec3<double>(0.0, 0.0, 0.0);
             auto ImagePosition = vec3<double>( offset_x, offset_y, offset_z );
@@ -322,7 +322,7 @@ bool Load_From_3ddose_Files( Drover &DICOM_data,
                                                                                  + std::to_string(ImageOrientationColumn.x) + "\\"
                                                                                  + std::to_string(ImageOrientationColumn.y) + "\\"
                                                                                  + std::to_string(ImageOrientationColumn.z);
-                out->imagecoll.images.back().metadata["PixelSpacing"] = std::to_string(VoxelWidth) + "\\" + std::to_string(VoxelHeight);
+                out->imagecoll.images.back().metadata["PixelSpacing"] = std::to_string(VoxelHeight) + "\\" + std::to_string(VoxelWidth);
                 //out->imagecoll.images.back().metadata["FrameOfReferenceUID"] = FrameOfReferenceUID;
 
                 //out->imagecoll.images.back().metadata["StudyTime"] = ContentTime;

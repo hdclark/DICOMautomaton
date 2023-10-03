@@ -58,7 +58,8 @@ OperationDoc OpArgDocModifyImageMetadata(){
     out.args.emplace_back();
     out.args.back().name = "VoxelWidth";
     out.args.back().desc = "Voxels will have this (in-plane) width (in DICOM units: mm)."
-                           " This means that row-adjacent voxels centres will be separated by VoxelWidth)."
+                           " This means that the centre of two voxels that are in the same row but adjacent columns"
+                           " will be separated by VoxelWidth."
                            " Each voxel will have dimensions: VoxelWidth x VoxelHeight x SliceThickness.";
     out.args.back().default_val = "1.0";
     out.args.back().expected = false;
@@ -67,7 +68,8 @@ OperationDoc OpArgDocModifyImageMetadata(){
     out.args.emplace_back();
     out.args.back().name = "VoxelHeight";
     out.args.back().desc = "Voxels will have this (in-plane) height (in DICOM units: mm)."
-                           " This means that column-adjacent voxels centres will be separated by VoxelHeight)."
+                           " This means that the centre of two voxels that are in the same column but adjacent rows"
+                           " will be separated by VoxelHeight."
                            " Each voxel will have dimensions: VoxelWidth x VoxelHeight x SliceThickness.";
     out.args.back().default_val = "1.0";
     out.args.back().expected = false;
@@ -196,8 +198,8 @@ bool ModifyImageMetadata(Drover &DICOM_data,
                 const auto VoxelHeight = std::stod(VoxelHeightOpt.value());
 
                 animg.init_spatial(VoxelWidth, VoxelHeight, animg.pxl_dz, animg.anchor, animg.offset);
-                animg.metadata["PixelSpacing"] = std::to_string(VoxelWidth) + "\\" 
-                                               + std::to_string(VoxelHeight);
+                animg.metadata["PixelSpacing"] = std::to_string(VoxelHeight) + "\\" 
+                                               + std::to_string(VoxelWidth);
             }
 
             if(ImageAnchorOpt && ImagePositionOpt){

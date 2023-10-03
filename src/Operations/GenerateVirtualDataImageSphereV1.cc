@@ -106,7 +106,7 @@ bool GenerateVirtualDataImageSphereV1(Drover &DICOM_data,
                                                                          + std::to_string(ImageOrientationColumn.x) + "\\"
                                                                          + std::to_string(ImageOrientationColumn.y) + "\\"
                                                                          + std::to_string(ImageOrientationColumn.z);
-        out->imagecoll.images.back().metadata["PixelSpacing"] = std::to_string(ImagePixeldx) + "\\" + std::to_string(ImagePixeldy);
+        out->imagecoll.images.back().metadata["PixelSpacing"] = std::to_string(ImagePixeldy) + "\\" + std::to_string(ImagePixeldx);
         out->imagecoll.images.back().metadata["FrameOfReferenceUID"] = FrameOfReferenceUID;
 
         out->imagecoll.images.back().metadata["StudyTime"] = ContentTime;

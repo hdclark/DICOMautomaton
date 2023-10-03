@@ -81,7 +81,7 @@ bool Load_From_FITS_Files( Drover &DICOM_data,
                     || !std::isfinite(animg.col_unit.length())
                     || (animg.row_unit.length() < 1E-5) 
                     || (animg.col_unit.length() < 1E-5)  ){
-                        animg.init_orientation( vec3<double>(0.0, 1.0, 0.0), vec3<double>(1.0, 0.0, 0.0) );
+                        animg.init_orientation( vec3<double>(1.0, 0.0, 0.0), vec3<double>(0.0, 1.0, 0.0) );
                     }
                     if(!std::isfinite(animg.rows)
                     || !std::isfinite(animg.columns)

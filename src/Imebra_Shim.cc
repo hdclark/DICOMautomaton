@@ -1792,8 +1792,8 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
 
 
         // Orientation vectors.
-        std::optional<vec3<double>> image_orien_c_opt;
         std::optional<vec3<double>> image_orien_r_opt;
+        std::optional<vec3<double>> image_orien_c_opt;
         const auto image_orien_vec = l_coalesce_as_vector_double(
             { { {0x0020, 0x0037, 0} }, // ImageOrientationPatient
               { {0x3002, 0x0010, 0} }, // RTImageOrientation
@@ -1802,34 +1802,34 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
                 {0x0020, 0x0037, 0} }, //     ImageOrientationPatient
             });
         if(image_orien_vec.size() == 6UL){
-            image_orien_c_opt = vec3<double>( image_orien_vec.at(0),
+            image_orien_r_opt = vec3<double>( image_orien_vec.at(0),
                                               image_orien_vec.at(1),
                                               image_orien_vec.at(2) ).unit();
-            image_orien_r_opt = vec3<double>( image_orien_vec.at(3),
+            image_orien_c_opt = vec3<double>( image_orien_vec.at(3),
                                               image_orien_vec.at(4),
                                               image_orien_vec.at(5) ).unit();
         }
-        if(!image_orien_c_opt || !image_orien_r_opt){
+        if(!image_orien_r_opt || !image_orien_c_opt){
             const auto o = l_coalesce_metadata_as_vector_double({"CSAImage/ImageOrientationPatient"});
             if(o.size() == 6UL){
                 YLOGWARN("Using non-standard CSAImage/ImageOrientationPatient");
-                image_orien_c_opt = vec3<double>( o.at(0), o.at(1), o.at(2) );
-                image_orien_r_opt = vec3<double>( o.at(3), o.at(4), o.at(5) );
+                image_orien_r_opt = vec3<double>( o.at(0), o.at(1), o.at(2) );
+                image_orien_c_opt = vec3<double>( o.at(3), o.at(4), o.at(5) );
             }
         }
-        if(!image_orien_c_opt || !image_orien_r_opt){
+        if(!image_orien_r_opt || !image_orien_c_opt){
             YLOGWARN("Unable to find ImageOrientationPatient, using defaults");
-            image_orien_c_opt = {};
             image_orien_r_opt = {};
+            image_orien_c_opt = {};
         }
-        const auto image_orien_c = image_orien_c_opt.value_or( vec3<double>(1.0, 0.0, 0.0) ).unit();
-        const auto image_orien_r = image_orien_r_opt.value_or( vec3<double>(0.0, 1.0, 0.0) ).unit();
-        insert_if_new(l_meta, "ImageOrientationPatient",   std::to_string(image_orien_c.x) + '\\'
-                                                         + std::to_string(image_orien_c.y) + '\\'
-                                                         + std::to_string(image_orien_c.z) + '\\'
-                                                         + std::to_string(image_orien_r.x) + '\\'
+        const auto image_orien_r = image_orien_r_opt.value_or( vec3<double>(1.0, 0.0, 0.0) ).unit();
+        const auto image_orien_c = image_orien_c_opt.value_or( vec3<double>(0.0, 1.0, 0.0) ).unit();
+        insert_if_new(l_meta, "ImageOrientationPatient",   std::to_string(image_orien_r.x) + '\\'
                                                          + std::to_string(image_orien_r.y) + '\\'
-                                                         + std::to_string(image_orien_r.z) );
+                                                         + std::to_string(image_orien_r.z) + '\\'
+                                                         + std::to_string(image_orien_c.x) + '\\'
+                                                         + std::to_string(image_orien_c.y) + '\\'
+                                                         + std::to_string(image_orien_c.z) );
 
 
         std::optional<double> image_pxldy_opt;
@@ -2099,13 +2099,13 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
         }
 
         out->imagecoll.images.back().metadata = l_meta;
-        out->imagecoll.images.back().init_orientation(image_orien_r,image_orien_c);
+        out->imagecoll.images.back().init_orientation(image_orien_r, image_orien_c);
 
         const auto img_chnls = static_cast<int64_t>(channelsNumber);
         out->imagecoll.images.back().init_buffer(image_rows, image_cols, img_chnls); //Underlying type specifies per-pixel space allocated.
 
         const auto img_pxldz = image_thickness;
-        out->imagecoll.images.back().init_spatial(image_pxldx,image_pxldy,img_pxldz, image_anchor, image_pos);
+        out->imagecoll.images.back().init_spatial(image_pxldx, image_pxldy, img_pxldz, image_anchor, image_pos);
 
         //Sometimes Imebra returns a different number of bits than the DICOM header specifies. Presumably this
         // is for a valid reason (maybe even simplification of implementation, which is fair). Since I convert to
@@ -2200,17 +2200,17 @@ std::unique_ptr<Image_Array>  Load_Dose_Array(const std::filesystem::path &Filen
     const auto image_pos_z = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0032, 2));
     const vec3<double> image_pos(image_pos_x,image_pos_y,image_pos_z); //Only for first image!
 
-    const auto image_orien_c_x = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 0)); 
-    const auto image_orien_c_y = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 1));
-    const auto image_orien_c_z = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 2));
-    const vec3<double> image_orien_c = vec3<double>(image_orien_c_x,image_orien_c_y,image_orien_c_z).unit();
-
-    const auto image_orien_r_x = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 3));
-    const auto image_orien_r_y = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 4));
-    const auto image_orien_r_z = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 5));
+    const auto image_orien_r_x = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 0)); 
+    const auto image_orien_r_y = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 1));
+    const auto image_orien_r_z = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 2));
     const vec3<double> image_orien_r = vec3<double>(image_orien_r_x,image_orien_r_y,image_orien_r_z).unit();
 
-    const vec3<double> image_stack_unit = (image_orien_c.Cross(image_orien_r)).unit(); //Unit vector denoting direction to stack images.
+    const auto image_orien_c_x = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 3));
+    const auto image_orien_c_y = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 4));
+    const auto image_orien_c_z = static_cast<double>(TopDataSet->getDouble(0x0020, 0, 0x0037, 5));
+    const vec3<double> image_orien_c = vec3<double>(image_orien_c_x,image_orien_c_y,image_orien_c_z).unit();
+
+    const vec3<double> image_stack_unit = (image_orien_r.Cross(image_orien_c)).unit(); //Unit vector denoting direction to stack images.
     const vec3<double> image_anchor  = vec3<double>(0.0,0.0,0.0);
 
     //Determine how many frames there are in the pixel data. A CT scan may just be a 2d jpeg or something, 
@@ -2298,7 +2298,7 @@ std::unique_ptr<Image_Array>  Load_Dose_Array(const std::filesystem::path &Filen
         }
 
         out->imagecoll.images.back().metadata = metadata;
-        out->imagecoll.images.back().init_orientation(image_orien_r,image_orien_c);
+        out->imagecoll.images.back().init_orientation(image_orien_r, image_orien_c);
 
         const auto img_chnls = static_cast<int64_t>(channelsNumber);
         out->imagecoll.images.back().init_buffer(image_rows, image_cols, img_chnls);
@@ -2306,7 +2306,7 @@ std::unique_ptr<Image_Array>  Load_Dose_Array(const std::filesystem::path &Filen
         const auto img_pxldz = image_thickness;
         const auto gvof_offset = static_cast<double>(*gfov_it);  //Offset along \hat{z} from 
         const auto img_offset = image_pos + image_stack_unit * gvof_offset;
-        out->imagecoll.images.back().init_spatial(image_pxldx,image_pxldy,img_pxldz, image_anchor, img_offset);
+        out->imagecoll.images.back().init_spatial(image_pxldx, image_pxldy, img_pxldz, image_anchor, img_offset);
 
         out->imagecoll.images.back().metadata["GridFrameOffset"] = std::to_string(gvof_offset);
         out->imagecoll.images.back().metadata["Frame"] = std::to_string(curr_frame);
@@ -2795,16 +2795,16 @@ Load_Transform(const std::filesystem::path &FilenameIn){
             if(ImageOrientationPatient.size() != 6){
                 throw std::runtime_error("Invalid ImageOrientationPatient tag");
             }
-            const auto image_orien_c = vec3<double>(ImageOrientationPatient[0],
+            const auto image_orien_r = vec3<double>(ImageOrientationPatient[0],
                                                     ImageOrientationPatient[1],
                                                     ImageOrientationPatient[2]).unit();
-            const auto image_orien_r = vec3<double>(ImageOrientationPatient[3],
+            const auto image_orien_c = vec3<double>(ImageOrientationPatient[3],
                                                     ImageOrientationPatient[4],
                                                     ImageOrientationPatient[5]).unit();
             const auto image_ortho = image_orien_c.Cross(image_orien_r).unit();
 
-            const auto image_rows = GridDimensions.value_or(zeroL).y;
             const auto image_cols = GridDimensions.value_or(zeroL).x;
+            const auto image_rows = GridDimensions.value_or(zeroL).y;
             const auto image_chns = static_cast<int64_t>(3);
             const auto image_imgs = GridDimensions.value_or(zeroL).z;
 
@@ -2813,9 +2813,9 @@ Load_Transform(const std::filesystem::path &FilenameIn){
                 throw std::runtime_error("Invalid image buffer dimensions");
             }
 
-            const auto image_pxldy = GridResolution.value_or(zero).x;
-            const auto image_pxldx = GridResolution.value_or(zero).y;
-            const auto image_pxldz = GridResolution.value_or(zero).z;
+            const auto image_pxldx = GridResolution.value_or(zero).x; // spatial extent: width
+            const auto image_pxldy = GridResolution.value_or(zero).y; // spatial extent: height
+            const auto image_pxldz = GridResolution.value_or(zero).z; // spatial extent: depth
 
             const auto voxel_volume = image_pxldy * image_pxldx * image_pxldz;
             if(voxel_volume <= 0.0){
@@ -2949,12 +2949,12 @@ void Write_Dose_Array(const std::shared_ptr<Image_Array>& IA, const std::filesys
     const auto row_unit = IA->imagecoll.images.front().row_unit;
     const auto col_unit = IA->imagecoll.images.front().col_unit;
     const auto ortho_unit = col_unit.Cross(row_unit);
-    const auto ImageOrientationPatient = std::to_string(col_unit.x) + R"***(\)***"_s
-                                       + std::to_string(col_unit.y) + R"***(\)***"_s
-                                       + std::to_string(col_unit.z) + R"***(\)***"_s
-                                       + std::to_string(row_unit.x) + R"***(\)***"_s
+    const auto ImageOrientationPatient = std::to_string(row_unit.x) + R"***(\)***"_s
                                        + std::to_string(row_unit.y) + R"***(\)***"_s
-                                       + std::to_string(row_unit.z);
+                                       + std::to_string(row_unit.z) + R"***(\)***"_s
+                                       + std::to_string(col_unit.x) + R"***(\)***"_s
+                                       + std::to_string(col_unit.y) + R"***(\)***"_s
+                                       + std::to_string(col_unit.z);
 
     //Re-order images so they are in spatial order with the 'bottom' defined in terms of row and column units.
     IA->imagecoll.Stable_Sort([&ortho_unit](const planar_image<float,double> &lhs, const planar_image<float,double> &rhs) -> bool {
@@ -3491,14 +3491,14 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
 
         //-------------------------------------------------------------------------------------------------
         //Image Plane Module.
-        root_node.emplace_child_node({{0x0028, 0x0030}, "DS", std::to_string(animg.pxl_dx)  //PixelSpacing.
-                                             + R"***(\)***" + std::to_string(animg.pxl_dy) });
-        root_node.emplace_child_node({{0x0020, 0x0037}, "DS", std::to_string(animg.col_unit.x) //ImageOrientationPatient.
-                                             + R"***(\)***" + std::to_string(animg.col_unit.y) 
-                                             + R"***(\)***" + std::to_string(animg.col_unit.z) 
-                                             + R"***(\)***" + std::to_string(animg.row_unit.x) 
+        root_node.emplace_child_node({{0x0028, 0x0030}, "DS", std::to_string(animg.pxl_dy)  //PixelSpacing.
+                                             + R"***(\)***" + std::to_string(animg.pxl_dx) });
+        root_node.emplace_child_node({{0x0020, 0x0037}, "DS", std::to_string(animg.row_unit.x) //ImageOrientationPatient.
                                              + R"***(\)***" + std::to_string(animg.row_unit.y) 
-                                             + R"***(\)***" + std::to_string(animg.row_unit.z) });
+                                             + R"***(\)***" + std::to_string(animg.row_unit.z) 
+                                             + R"***(\)***" + std::to_string(animg.col_unit.x) 
+                                             + R"***(\)***" + std::to_string(animg.col_unit.y) 
+                                             + R"***(\)***" + std::to_string(animg.col_unit.z) });
         root_node.emplace_child_node({{0x0020, 0x0032}, "DS", std::to_string(animg.position(0,0).x) //ImagePositionPatient.
                                              + R"***(\)***" + std::to_string(animg.position(0,0).y) 
                                              + R"***(\)***" + std::to_string(animg.position(0,0).z) });
@@ -3845,14 +3845,14 @@ void Write_MR_Images(const std::shared_ptr<Image_Array>& IA,
 
         //-------------------------------------------------------------------------------------------------
         //Image Plane Module.
-        root_node.emplace_child_node({{0x0028, 0x0030}, "DS", std::to_string(animg.pxl_dx)  //PixelSpacing.
-                                             + R"***(\)***" + std::to_string(animg.pxl_dy) });
-        root_node.emplace_child_node({{0x0020, 0x0037}, "DS", std::to_string(animg.col_unit.x) //ImageOrientationPatient.
-                                             + R"***(\)***" + std::to_string(animg.col_unit.y)
-                                             + R"***(\)***" + std::to_string(animg.col_unit.z)
-                                             + R"***(\)***" + std::to_string(animg.row_unit.x)
+        root_node.emplace_child_node({{0x0028, 0x0030}, "DS", std::to_string(animg.pxl_dy)  //PixelSpacing.
+                                             + R"***(\)***" + std::to_string(animg.pxl_dx) });
+        root_node.emplace_child_node({{0x0020, 0x0037}, "DS", std::to_string(animg.row_unit.x) //ImageOrientationPatient.
                                              + R"***(\)***" + std::to_string(animg.row_unit.y)
-                                             + R"***(\)***" + std::to_string(animg.row_unit.z) });
+                                             + R"***(\)***" + std::to_string(animg.row_unit.z)
+                                             + R"***(\)***" + std::to_string(animg.col_unit.x)
+                                             + R"***(\)***" + std::to_string(animg.col_unit.y)
+                                             + R"***(\)***" + std::to_string(animg.col_unit.z) });
         root_node.emplace_child_node({{0x0020, 0x0032}, "DS", std::to_string(animg.position(0,0).x) //ImagePositionPatient.
                                              + R"***(\)***" + std::to_string(animg.position(0,0).y)
                                              + R"***(\)***" + std::to_string(animg.position(0,0).z) });

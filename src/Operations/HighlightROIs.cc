@@ -311,10 +311,10 @@ bool HighlightROIs(Drover &DICOM_data,
         // This algorithm uses the left (c-1), top (r-1), and top-left corner (c-1, r-1) pixel neighbours and any
         // contours that pass between them and this voxel (r,c) to determine an appropriate value for this voxel.
         const auto pos_r0c0 = img_refw.get().position(r, c);
-        const auto pos_rmc0 = pos_r0c0 - img_refw.get().row_unit * img_refw.get().pxl_dx; // up.
-        const auto pos_r0cm = pos_r0c0 - img_refw.get().col_unit * img_refw.get().pxl_dy; // left.
-        const auto pos_rmcm = pos_r0c0 - img_refw.get().row_unit * img_refw.get().pxl_dx  // diagonal.
-                                       - img_refw.get().col_unit * img_refw.get().pxl_dy;
+        const auto pos_rmc0 = pos_r0c0 - img_refw.get().col_unit * img_refw.get().pxl_dy; // up.
+        const auto pos_r0cm = pos_r0c0 - img_refw.get().row_unit * img_refw.get().pxl_dx; // left.
+        const auto pos_rmcm = pos_r0c0 - img_refw.get().col_unit * img_refw.get().pxl_dy  // diagonal.
+                                       - img_refw.get().row_unit * img_refw.get().pxl_dx;
 
         const auto I_r0c0 = val;
         const auto I_rmc0 = p_rmc0_exists ? img_refw.get().value(r-1, c  , channel) : just_exterior; // up.
@@ -324,8 +324,8 @@ bool HighlightROIs(Drover &DICOM_data,
         const line<double> l_u(pos_rmc0, pos_r0c0); // up.
         const line<double> l_l(pos_r0cm, pos_r0c0); // left.
         const line<double> l_d(pos_rmcm, pos_r0c0); // diagonal.
-        const auto dist_u = img_refw.get().pxl_dx;
-        const auto dist_l = img_refw.get().pxl_dy;
+        const auto dist_u = img_refw.get().pxl_dy;
+        const auto dist_l = img_refw.get().pxl_dx;
         const auto dist_d = std::hypot(dist_u, dist_l);
         const auto sq_dist_u = std::pow(dist_u, 2.0);
         const auto sq_dist_l = std::pow(dist_l, 2.0);

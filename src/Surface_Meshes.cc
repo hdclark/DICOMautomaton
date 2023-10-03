@@ -1278,8 +1278,8 @@ Estimate_Surface_Mesh_Marching_Cubes(
     const double margin_y = min_res_y;
     const double margin_z = min_res_z;
 
-    const auto N_rows = static_cast<int64_t>(std::ceil((bb.max.x - bb.min.x)/min_res_x));
-    const auto N_cols = static_cast<int64_t>(std::ceil((bb.max.y - bb.min.y)/min_res_y));
+    const auto N_cols = static_cast<int64_t>(std::ceil((bb.max.x - bb.min.x)/min_res_x));
+    const auto N_rows = static_cast<int64_t>(std::ceil((bb.max.y - bb.min.y)/min_res_y));
     const auto N_imgs = static_cast<int64_t>(std::ceil((bb.max.z - bb.min.z)/min_res_z));
     const auto N_chns = static_cast<int64_t>(1);
 

@@ -54,8 +54,8 @@ ReadImageUsingSTB(const std::string &fname){
         const double pxl_dz = 1.0;
         const vec3<double> anchor(0.0, 0.0, 0.0);
         const vec3<double> offset(0.0, 0.0, 0.0);
-        const vec3<double> row_unit(0.0, 1.0, 0.0);
-        const vec3<double> col_unit(1.0, 0.0, 0.0);
+        const vec3<double> row_unit(1.0, 0.0, 0.0);
+        const vec3<double> col_unit(0.0, 1.0, 0.0);
 
         cc.images.emplace_back();
         cc.images.back().init_buffer( rows, cols, chns );
@@ -102,8 +102,8 @@ ReadImageUsingSTB(const std::vector<uint8_t> &blob){
         const double pxl_dz = 1.0;
         const vec3<double> anchor(0.0, 0.0, 0.0);
         const vec3<double> offset(0.0, 0.0, 0.0);
-        const vec3<double> row_unit(0.0, 1.0, 0.0);
-        const vec3<double> col_unit(1.0, 0.0, 0.0);
+        const vec3<double> row_unit(1.0, 0.0, 0.0);
+        const vec3<double> col_unit(0.0, 1.0, 0.0);
 
         cc.images.emplace_back();
         cc.images.back().init_buffer( rows, cols, chns );

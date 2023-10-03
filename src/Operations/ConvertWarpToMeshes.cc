@@ -158,8 +158,8 @@ bool ConvertWarpToMeshes(Drover &DICOM_data,
                             //       It's still possible to encounter degeneracy here though.
                             auto axis_1 = dR.unit();
                             if(!axis_1.isfinite()) axis_1 = ortho_unit;
-                            auto axis_2 = (img.col_unit * 5.0 + img.row_unit * 1.0 + ortho_unit * 0.1).unit();
-                            auto axis_3 = (img.col_unit * 1.0 - img.row_unit * 5.0 - ortho_unit * 0.1).unit();
+                            auto axis_2 = (img.row_unit * 5.0 + img.col_unit * 1.0 + ortho_unit * 0.1).unit();
+                            auto axis_3 = (img.row_unit * 1.0 - img.col_unit * 5.0 - ortho_unit * 0.1).unit();
                             if(!axis_1.GramSchmidt_orthogonalize(axis_2, axis_3)){
                                 YLOGWARN("Encountered degeneracy. Skipping element");
                                 continue;

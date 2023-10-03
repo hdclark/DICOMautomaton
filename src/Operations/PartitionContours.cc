@@ -277,8 +277,8 @@ bool PartitionContours(Drover &DICOM_data,
     }
 
     // Identify a set of three orthogonal planes along which the contours should be cleaved.
-    vec3<double> x_normal(0.0, 1.0, 0.0); // Standard image row_unit.
-    vec3<double> y_normal(1.0, 0.0, 0.0); // Standard image col_unit.
+    vec3<double> x_normal(1.0, 0.0, 0.0); // Standard image row_unit.
+    vec3<double> y_normal(0.0, 1.0, 0.0); // Standard image col_unit.
     vec3<double> z_normal(0.0, 0.0, 1.0); // Standard image ortho unit.
 
     const auto find_coordinate_directions = [&]() -> void {

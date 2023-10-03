@@ -243,12 +243,12 @@ bool AnalyzeLightRadFieldCoincidence(Drover &DICOM_data,
                     //Extract row and column profiles by projecting the accumulated values back.
                     samples_1D<double> row_profile;
                     for(auto row = 0; row < animg.rows; ++row){
-                        const auto pos = animg.position(row,0).Dot(animg.row_unit); //Relative to DICOM origin.
+                        const auto pos = animg.position(row,0).Dot(animg.col_unit); //Relative to DICOM origin.
                         row_profile.push_back({ pos, 0.0, row_sum[row], 0.0 });
                     }
                     samples_1D<double> col_profile;
                     for(auto col = 0; col < animg.columns; ++col){
-                        const auto pos = animg.position(0,col).Dot(animg.col_unit); //Relative to DICOM origin.
+                        const auto pos = animg.position(0,col).Dot(animg.row_unit); //Relative to DICOM origin.
                         col_profile.push_back({ pos, 0.0, col_sum[col], 0.0 });
                     }
 
@@ -525,11 +525,11 @@ bool AnalyzeLightRadFieldCoincidence(Drover &DICOM_data,
                             m["OutlineColour"] = "red";
                         }
                         Inject_Thin_Line_Contour(*largest_img,
-                                                 line<double>(ru*rfe1, ru*rfe1 + cu),
+                                                 line<double>(cu*rfe1, cu*rfe1 + ru),
                                                  DICOM_data.contour_data->ccs.back(),
                                                  m);
                         Inject_Thin_Line_Contour(*largest_img,
-                                                 line<double>(ru*rfe2, ru*rfe2 + cu),
+                                                 line<double>(cu*rfe2, cu*rfe2 + ru),
                                                  DICOM_data.contour_data->ccs.back(),
                                                  m);
                         if(dcfe < ToleranceLevel){
@@ -538,11 +538,11 @@ bool AnalyzeLightRadFieldCoincidence(Drover &DICOM_data,
                             m["OutlineColour"] = "red";
                         }
                         Inject_Thin_Line_Contour(*largest_img,
-                                                 line<double>(cu*cfe1, cu*cfe1 + ru),
+                                                 line<double>(ru*cfe1, ru*cfe1 + cu),
                                                  DICOM_data.contour_data->ccs.back(),
                                                  m);
                         Inject_Thin_Line_Contour(*largest_img,
-                                                 line<double>(cu*cfe2, cu*cfe2 + ru),
+                                                 line<double>(ru*cfe2, ru*cfe2 + cu),
                                                  DICOM_data.contour_data->ccs.back(),
                                                  m);
                     }

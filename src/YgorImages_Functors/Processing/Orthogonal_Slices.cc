@@ -132,8 +132,8 @@ bool OrthogonalSlices(planar_image_collection<float,double>::images_list_it_t fi
             out_imgs.front().get().images.back().metadata = common_metadata;
             out_imgs.front().get().images.back().metadata["Rows"] = std::to_string(numb_of_rows);
             out_imgs.front().get().images.back().metadata["Columns"] = std::to_string(numb_of_cols);
-            out_imgs.front().get().images.back().metadata["PixelSpacing"] = std::to_string(new_pxl_dx) 
-                                                                            + "^" + std::to_string(new_pxl_dy);
+            out_imgs.front().get().images.back().metadata["PixelSpacing"] = std::to_string(new_pxl_dy) 
+                                                                            + "^" + std::to_string(new_pxl_dx);
             out_imgs.front().get().images.back().metadata["SliceThickness"] = std::to_string(new_pxl_dz);
             out_imgs.front().get().images.back().metadata["Description"] = "Ortho Volume Intersection: Row";
         }
@@ -168,8 +168,8 @@ bool OrthogonalSlices(planar_image_collection<float,double>::images_list_it_t fi
             out_imgs.back().get().images.back().metadata = common_metadata;
             out_imgs.back().get().images.back().metadata["Rows"] = std::to_string(numb_of_rows);
             out_imgs.back().get().images.back().metadata["Columns"] = std::to_string(numb_of_cols);
-            out_imgs.back().get().images.back().metadata["PixelSpacing"] = std::to_string(new_pxl_dx) 
-                                                                           + "^" + std::to_string(new_pxl_dy);
+            out_imgs.back().get().images.back().metadata["PixelSpacing"] = std::to_string(new_pxl_dy) 
+                                                                           + "^" + std::to_string(new_pxl_dx);
             out_imgs.back().get().images.back().metadata["SliceThickness"] = std::to_string(new_pxl_dz);
             out_imgs.back().get().images.back().metadata["Description"] = "Ortho Volume Intersection: Column";
 

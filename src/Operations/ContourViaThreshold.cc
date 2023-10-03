@@ -325,11 +325,13 @@ bool ContourViaThreshold(Drover &DICOM_data,
                     };
 
                     //Pin each vertex grid element to the appropriate pixel corner.
-                    const auto corner = animg_ptr->position(0,0) - animg_ptr->row_unit*animg_ptr->pxl_dx*0.5 - animg_ptr->col_unit*animg_ptr->pxl_dy*0.5;
+                    const auto corner = animg_ptr->position(0,0)
+                                      - animg_ptr->row_unit * animg_ptr->pxl_dx * 0.5
+                                      - animg_ptr->col_unit * animg_ptr->pxl_dy * 0.5;
                     for(auto r = 0; r < (R+1); ++r){
                         for(auto c = 0; c < (C+1); ++c){
-                            verts.at(vert_index(r,c)) = corner + animg_ptr->row_unit*animg_ptr->pxl_dx*r
-                                                               + animg_ptr->col_unit*animg_ptr->pxl_dy*c;
+                            verts.at(vert_index(r,c)) = corner + animg_ptr->row_unit * animg_ptr->pxl_dx * c
+                                                               + animg_ptr->col_unit * animg_ptr->pxl_dy * r;
                         }
                     }
 
@@ -555,8 +557,8 @@ bool ContourViaThreshold(Drover &DICOM_data,
                     const auto get_position = [&mask,R,C,exterior_value,Channel](int64_t r, int64_t c){
                         return (  mask.anchor
                                 + mask.offset
-                                + mask.row_unit*(mask.pxl_dx*static_cast<double>(r-1))
-                                + mask.col_unit*(mask.pxl_dy*static_cast<double>(c-1)) );
+                                + mask.row_unit*(mask.pxl_dx*static_cast<double>(c-1))
+                                + mask.col_unit*(mask.pxl_dy*static_cast<double>(r-1)) );
                     };
 
                     for(int64_t r = 0; r < (R+1); ++r){

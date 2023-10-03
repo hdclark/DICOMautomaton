@@ -606,8 +606,8 @@ bool SFML_Viewer(Drover &DICOM_data,
         //const auto img_bottom_left = img_top_left + disp_img_it->col_unit * img_dicom_height;
 
         const auto dicom_pos = img_top_left 
-                             + disp_img_it->row_unit * img_dicom_width  * clamped_row_as_f
-                             + disp_img_it->col_unit * img_dicom_height * clamped_col_as_f;
+                             + disp_img_it->row_unit * img_dicom_width  * clamped_col_as_f
+                             + disp_img_it->col_unit * img_dicom_height * clamped_row_as_f;
         out.voxel_DICOM_pos = dicom_pos;
         out.voxel_DICOM_pos_valid = true;
 
@@ -2283,8 +2283,8 @@ bool SFML_Viewer(Drover &DICOM_data,
                             // and SFML 'world' coordinates. We need to map from the DICOM coordinates to screen pixel coords.
 
                             //Get a DICOM-coordinate bounding box for the image.
-                            const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->rows;
-                            const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->columns; 
+                            const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->columns;
+                            const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->rows; 
                             const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
                                                     - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
                                                     - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
@@ -2293,8 +2293,8 @@ bool SFML_Viewer(Drover &DICOM_data,
                             
                             //Clamp the point to the bounding box, using the top left as zero.
                             const auto dR = p - img_top_left;
-                            const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_height;
-                            const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_width;
+                            const auto clamped_row = dR.Dot( disp_img_it->col_unit ) / img_dicom_height;
+                            const auto clamped_col = dR.Dot( disp_img_it->row_unit ) / img_dicom_width;
 
                             //Convert to SFML coordinates using the SFML bounding box for the display image.
                             sf::FloatRect DispImgBBox = disp_img_texture_sprite.second.getGlobalBounds(); //Uses top left corner as (0,0).
@@ -2316,8 +2316,8 @@ bool SFML_Viewer(Drover &DICOM_data,
                             // we are hovering over.
 
                             //Get a DICOM-coordinate bounding box for the image.
-                            const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->rows;
-                            const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->columns; 
+                            const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->columns;
+                            const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->rows; 
                             const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
                                                     - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
                                                     - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
@@ -2328,8 +2328,8 @@ bool SFML_Viewer(Drover &DICOM_data,
                             const auto clamped_row_as_f = std::fabs(DispImgBBox.top - mouse_world_pos.y)/(DispImgBBox.height);
 
                             const auto dicom_pos = img_top_left 
-                                                 + disp_img_it->row_unit * img_dicom_width  * clamped_row_as_f
-                                                 + disp_img_it->col_unit * img_dicom_height * clamped_col_as_f;
+                                                 + disp_img_it->row_unit * img_dicom_width  * clamped_col_as_f
+                                                 + disp_img_it->col_unit * img_dicom_height * clamped_row_as_f;
 
                             const auto img_plane = disp_img_it->image_plane();
                             if(c.Is_Point_In_Polygon_Projected_Orthogonally(img_plane,dicom_pos)){
@@ -2382,8 +2382,8 @@ bool SFML_Viewer(Drover &DICOM_data,
                         // and SFML 'world' coordinates. We need to map from the DICOM coordinates to screen pixel coords.
 
                         //Get a DICOM-coordinate bounding box for the image.
-                        const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->rows;
-                        const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->columns; 
+                        const auto img_dicom_width = disp_img_it->pxl_dx * disp_img_it->columns;
+                        const auto img_dicom_height = disp_img_it->pxl_dy * disp_img_it->rows; 
                         const auto img_top_left = disp_img_it->anchor + disp_img_it->offset
                                                 - disp_img_it->row_unit * disp_img_it->pxl_dx * 0.5f
                                                 - disp_img_it->col_unit * disp_img_it->pxl_dy * 0.5f;
@@ -2392,8 +2392,8 @@ bool SFML_Viewer(Drover &DICOM_data,
                         
                         //Clamp the point to the bounding box, using the top left as zero.
                         const auto dR = p - img_top_left;
-                        const auto clamped_col = dR.Dot( disp_img_it->col_unit ) / img_dicom_height;
-                        const auto clamped_row = dR.Dot( disp_img_it->row_unit ) / img_dicom_width;
+                        const auto clamped_row = dR.Dot( disp_img_it->col_unit ) / img_dicom_height;
+                        const auto clamped_col = dR.Dot( disp_img_it->row_unit ) / img_dicom_width;
 
                         //Convert to SFML coordinates using the SFML bounding box for the display image.
                         sf::FloatRect DispImgBBox = disp_img_texture_sprite.second.getGlobalBounds(); //Uses top left corner as (0,0).

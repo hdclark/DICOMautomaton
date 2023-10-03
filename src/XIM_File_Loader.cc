@@ -344,7 +344,7 @@ planar_image<float,double> read_xim_file( std::istream &is ){
 
     const auto pxl_dy = get_as<double>(img.metadata, "PixelHeight").value_or(0.1000) * 10.0; // Seems to be in cm.
     const auto pxl_dx = get_as<double>(img.metadata, "PixelWidth").value_or(0.1000) * 10.0; // Seems to be in cm.
-    img.metadata["PixelSpacing"] = std::to_string(pxl_dx) + R"***(\)***" + std::to_string(pxl_dy);
+    img.metadata["PixelSpacing"] = std::to_string(pxl_dy) + R"***(\)***" + std::to_string(pxl_dx);
 
     const vec3<double> row_unit(1,0,0);
     const vec3<double> col_unit(0,-1,0);

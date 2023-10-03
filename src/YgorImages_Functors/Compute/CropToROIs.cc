@@ -63,8 +63,8 @@ bool ComputeCropToROIs(planar_image_collection<float,double> &imagecoll,
     }
 
     //Get orientation normals.
-    const auto GridX = imagecoll.images.front().row_unit;
-    const auto GridY = imagecoll.images.front().col_unit;
+    const auto GridY = imagecoll.images.front().row_unit;
+    const auto GridX = imagecoll.images.front().col_unit;
     const auto GridZ = imagecoll.images.front().image_plane().N_0;
 
     //Generate global bounds for the ROI vertices.

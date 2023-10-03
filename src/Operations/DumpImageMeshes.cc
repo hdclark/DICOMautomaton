@@ -203,8 +203,8 @@ bool DumpImageMeshes(Drover &DICOM_data,
                 double scale = 1.0; // Scale spatial characteristics iff normalizing.
                 if(ShouldNormalize){
                     // Note: width and height extended by 1 to account for true image extent.
-                    const auto width  = img.pxl_dx * static_cast<double>(img.rows + 1);
-                    const auto height = img.pxl_dy * static_cast<double>(img.columns + 1);
+                    const auto width  = img.pxl_dx * static_cast<double>(img.columns + 1);
+                    const auto height = img.pxl_dy * static_cast<double>(img.rows + 1);
                     scale = ((width / height) < 1.0) ? 100.0 / height
                                                      : 100.0 / width;
                     if(!std::isfinite(scale)) throw std::logic_error("Computed scale factor is invalid. Cannot continue.");
@@ -215,8 +215,8 @@ bool DumpImageMeshes(Drover &DICOM_data,
                         // uniformly scaled such that the entire image fits within a bounding square of size 100x100.
                         // The centre of the image should coincide with (0,0,0).
 
-                        const auto c = (img.pxl_dx * (static_cast<double>(row) + 0.5) - (width  * 0.5)) * scale;
-                        const auto r = (img.pxl_dy * (static_cast<double>(col) + 0.5) - (height * 0.5)) * scale;
+                        const auto c = (img.pxl_dx * (static_cast<double>(col) + 0.5) - (width  * 0.5)) * scale;
+                        const auto r = (img.pxl_dy * (static_cast<double>(row) + 0.5) - (height * 0.5)) * scale;
 
                         return vec3<double>( r, c, 0.0 );
                     };
@@ -225,8 +225,8 @@ bool DumpImageMeshes(Drover &DICOM_data,
                         // Use the image spatial characteristics as-is.
                         return (  img.anchor
                                 + img.offset
-                                + img.row_unit*( img.pxl_dx * static_cast<double>(row))
-                                + img.col_unit*( img.pxl_dy * static_cast<double>(col)) );
+                                + img.row_unit*( img.pxl_dx * static_cast<double>(col))
+                                + img.col_unit*( img.pxl_dy * static_cast<double>(row)) );
                     };
                 }
 

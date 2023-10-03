@@ -290,8 +290,8 @@ bool ContourBasedRayCastDoseAccumulate(Drover &DICOM_data,
     if(!GridNormal.GramSchmidt_orthogonalize(GridX, GridY)){
         throw std::runtime_error("Unable to find grid orientation vectors.");
     }
-    GridX = GridX.unit();
-    GridY = GridY.unit();
+    GridX = GridY.unit();
+    GridY = GridX.unit();
 
 
     //Find an appropriate bounding box encompassing the ROI surface.
