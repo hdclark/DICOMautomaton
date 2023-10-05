@@ -934,6 +934,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         bool view_polyominoes_enabled = false;
         bool view_triple_three_enabled = false;
+        bool view_encompass_enabled = false;
 
         bool view_guides_enabled = true;
     } view_toggles;
@@ -1466,6 +1467,121 @@ bool SDL_Viewer(Drover &DICOM_data,
     tt_cell_owner.fill(-1);
     std::array<decltype(t_tt_updated), 9> tt_cell_owner_time; // Used for card-flip animations.
     float tt_anim_dt = 1000.0f; // ms
+
+    // Encompass state.
+    struct en_game_obj_t {
+        vec2<double> pos; // position.
+        vec2<double> vel; // velocity.
+        double rad;       // radius, which also implies mass since we assume constant mass density.
+        bool player_controlled = false;
+    };
+    std::vector< en_game_obj_t > en_game_objs;
+    std::chrono::time_point<std::chrono::steady_clock> t_en_updated;
+
+    struct en_game_t {
+        int64_t N_objs = 100L;
+
+        double min_radius = 3.0;
+        double max_radius = 60.0;
+        double box_width  = 650.0;
+        double box_height = 500.0;
+
+        double max_speed = 30.0;
+    } en_game;
+
+    const auto reset_en_game = [&](){
+        en_game_objs.clear();
+
+        std::random_device rdev;
+        std::mt19937 re( rdev() );
+
+        // First, generate radii according to some distribution.
+        std::vector<double> radii(en_game.N_objs, 1.0);
+        {
+            double dof = 3.0;
+            std::chi_squared_distribution<> rd(dof);
+            for(auto &r : radii){
+                r = rd(re);
+            }
+            std::sort( std::begin(radii), std::end(radii) );
+
+            // Rescale so all are [min_radius, max_radius].
+            const auto curr_min = radii.front();
+            const auto curr_max = radii.back();
+            for(auto &r : radii){
+                const auto clamped = (r - curr_min) / (curr_max - curr_min);
+                r = en_game.min_radius + (en_game.max_radius - en_game.min_radius) * clamped;
+            }
+        }
+
+        // Then generate placements and momentums, starting with the largest objects.
+        std::reverse( std::begin(radii), std::end(radii) );
+
+        const auto intersects_existing = [&]( const vec2<double> &pos, double rad ) -> bool {
+            bool intersection = false;
+            for(const auto& obj : en_game_objs){
+                const auto sep = pos.distance(obj.pos);
+                const auto min = rad + obj.rad;
+                if(sep <= min){
+                    intersection = true;
+                    break;
+                }
+            }
+            return intersection;
+        };
+
+        const auto intersects_wall = [&]( const vec2<double> &pos, double rad ) -> bool {
+            return (pos.x <= (0.0 + rad))
+                || ((en_game.box_width - rad) <= pos.x)
+                || (pos.y <= (0.0 + rad))
+                || ((en_game.box_height - rad) <= pos.y);
+        };
+
+        std::uniform_real_distribution<> rd_x(0.0, en_game.box_width);
+        std::uniform_real_distribution<> rd_y(0.0, en_game.box_height);
+        std::uniform_real_distribution<> rd_v(-0.05 * en_game.max_speed, 0.05 * en_game.max_speed);
+        //auto f_x = std::bind(rd_x,re);
+        //auto f_y = std::bind(rd_y,re);
+        //auto f_v = std::bind(rd_v,re);
+        for(const auto &r : radii){
+            int64_t i = 100L;
+            while(true){
+                const vec2<double> pos( rd_x(re), rd_y(re) );
+                const vec2<double> vel( rd_v(re), rd_v(re) );
+                const auto rad = r;
+//std::cout << "Attempting to place object with pos, vel, rad = " << pos << ", " << vel << ", " << rad << std::endl;
+                if( !intersects_wall(pos, rad)
+                &&  !intersects_existing(pos, rad) ){
+                    en_game_objs.emplace_back();
+//std::cout << "Successfully placed." << std::endl;
+                    en_game_objs.back().pos = pos;
+                    en_game_objs.back().vel = vel;
+                    en_game_objs.back().rad = rad;
+                    en_game_objs.back().player_controlled = false;
+                    break;
+                }
+                if(--i < 0L){
+//std::cout << "Unable to place." << std::endl;
+
+                    YLOGWARN("Unable to place object after 100 attempts. Ignoring object");
+                    break;
+                }
+            }
+        }
+        
+        // Select one object to be under player control.
+        {
+            auto n = static_cast<int64_t>( std::round(static_cast<float>(en_game_objs.size()) * 0.75) );
+            n = std::clamp<int64_t>(n, 0L, en_game_objs.size()-1L);
+            en_game_objs.at(n).player_controlled = true;
+        }
+
+
+        // Reset the update time.
+        const auto t_now = std::chrono::steady_clock::now();
+        t_en_updated = t_now;
+        return;
+    };
 
     // Guide state.
     std::shared_timed_mutex guide_mutex;
@@ -3905,6 +4021,354 @@ bool SDL_Viewer(Drover &DICOM_data,
                     }
                 }
             }
+
+            ImGui::End();
+        }
+
+        if( view_toggles.view_encompass_enabled ){
+            const auto win_width  = static_cast<int>( std::ceil(en_game.box_width) ) + 15;
+            const auto win_height = static_cast<int>( std::ceil(en_game.box_height) ) + 40;
+            ImGui::SetNextWindowSize(ImVec2(win_width, win_height), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(200, 200), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Encompass", &view_toggles.view_encompass_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
+
+            //struct en_game_obj_t {
+            //    vec2<double> pos;
+            //    vec2<double> mom;
+            //    double rad;
+            //}
+            //std::vector< en_game_obj_t > en_game_objs;
+
+            // Display.
+            ImVec2 curr_pos = ImGui::GetCursorScreenPos();
+            //ImVec2 window_extent = ImGui::GetContentRegionAvail();
+            ImDrawList *window_draw_list = ImGui::GetWindowDrawList();
+            const auto f = ImGui::IsWindowFocused();
+
+            {
+                const auto c = ImColor(0.7f, 0.7f, 0.8f, 1.0f);
+                window_draw_list->AddRect(curr_pos, ImVec2( curr_pos.x + en_game.box_width, 
+                                                            curr_pos.y + en_game.box_height ), c);
+            }
+            for(auto &obj : en_game_objs){
+                ImVec2 obj_pos = curr_pos;
+                obj_pos.x = curr_pos.x + obj.pos.x;
+                obj_pos.y = curr_pos.y + obj.pos.y;
+
+                const auto rel_r = std::clamp<double>(obj.rad / 30.0, 0.0, 1.0);
+                auto c = ImColor(rel_r * 1.0f, (1.0f - rel_r) * 1.0f, 0.5f, 1.0f);
+                if(obj.player_controlled){
+                    c = ImColor(1.0f, 1.0f, 0.1f, 1.0f);
+                }
+                window_draw_list->AddCircle(obj_pos, obj.rad, c);
+
+                if( f && obj.player_controlled){
+                    if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_LeftArrow)) ){
+                        obj.vel.x -= 1.0;
+                    }
+                    if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_RightArrow)) ){
+                        obj.vel.x += 1.0;
+                    }
+                    if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_UpArrow)) ){
+                        obj.vel.y -= 1.0;
+                    }
+                    if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_DownArrow)) ){
+                        obj.vel.y += 1.0;
+                    }
+
+                    // Limit the maximum speed.
+                    {
+                        const auto speed = obj.vel.length();
+                        if(en_game.max_speed < speed){
+                            const auto dir = obj.vel.unit();
+                            obj.vel = dir * en_game.max_speed;
+                        }
+                    }
+                }
+            }
+
+            const auto t_now = std::chrono::steady_clock::now();
+            const auto t_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_en_updated).count();
+
+            //const auto intersects_horiz_wall = [&]( const vec2<double> &pos, double rad ) -> bool {
+            //    return (pos.y <= (0.0 + rad))
+            //        || ((en_game.box_height - rad) <= pos.y);
+            //};
+            //const auto intersects_vert_wall = [&]( const vec2<double> &pos, double rad ) -> bool {
+            //    return (pos.x <= (0.0 + rad))
+            //        || ((en_game.box_width - rad) <= pos.x);
+            //};
+
+            const auto intersects_existing = [&]( const vec2<double> &pos, double rad ) -> bool {
+                bool intersection = false;
+                for(const auto& obj : en_game_objs){
+                    const auto sep = pos.distance(obj.pos);
+                    const auto min = rad + obj.rad;
+                    if(sep <= min){
+                        intersection = true;
+                        break;
+                    }
+                }
+                return intersection;
+            };
+
+            const auto intersects_wall = [&]( const vec2<double> &pos, double rad ) -> bool {
+                return (pos.x <= (0.0 + rad))
+                    || ((en_game.box_width - rad) <= pos.x)
+                    || (pos.y <= (0.0 + rad))
+                    || ((en_game.box_height - rad) <= pos.y);
+            };
+
+            const auto obj_intersections = [&](size_t j){
+                std::vector<size_t> ints;
+                const auto& obj_j = en_game_objs[j];
+                for(size_t i = 0UL; i < j; ++i){
+                    const auto& obj_i = en_game_objs[i];
+                    const auto sep = obj_j.pos.distance( obj_i.pos );
+                    const auto min = obj_j.rad + obj_i.rad;
+                    if(sep <= min){
+                        ints.emplace_back(i);
+                    }
+                }
+                return ints;
+            };
+            const auto pi = std::acos(-1.0);
+
+            // Sort so larger objects are last.
+            std::sort( std::begin(en_game_objs), std::end(en_game_objs),
+                       [](const en_game_obj_t &l, const en_game_obj_t &r) -> bool {
+                           return (l.rad > r.rad);
+                       } );
+
+            // Update the system.
+            decltype(en_game_objs) l_en_game_objs;
+            const auto N_objs = en_game_objs.size();
+            for(size_t i = 0UL; i < N_objs; ++i){
+                auto &obj_i = en_game_objs[i];
+                bool should_move_to_cand_pos = true;
+                const auto cand_pos = obj_i.pos + obj_i.vel * (static_cast<double>(t_diff) / 1000.0);
+
+                // Check for intersections with the wall.
+                const bool cand_int_l_wall = (obj_i.pos.x <= (0.0 + obj_i.rad));
+                const bool cand_int_r_wall = ((en_game.box_width - obj_i.rad) <= obj_i.pos.x);
+                const bool cand_int_b_wall = (obj_i.pos.y <= (0.0 + obj_i.rad));
+                const bool cand_int_t_wall = ((en_game.box_height - obj_i.rad) <= obj_i.pos.y);
+
+                if(cand_int_l_wall) obj_i.vel.x =  std::abs(obj_i.vel.x);
+                if(cand_int_r_wall) obj_i.vel.x = -std::abs(obj_i.vel.x);
+                if(cand_int_b_wall) obj_i.vel.y =  std::abs(obj_i.vel.y);
+                if(cand_int_t_wall) obj_i.vel.y = -std::abs(obj_i.vel.y);
+
+                // Check for intersections with any of the other objects with updated positions.
+                //
+                // Because larger objects are first, object intersections here cause the 'i'th object
+                // to transfer mass to the larger object.
+                const auto cand_int_objs  = obj_intersections(i);
+                if(!cand_int_objs.empty()){
+                    for(auto &j : cand_int_objs){
+                        auto& obj_j = en_game_objs[j];
+                        const auto sep = obj_j.pos.distance( obj_i.pos );
+                        const auto min = obj_j.rad + obj_i.rad;
+                        if( (sep < min) 
+                        &&  (obj_i.rad < obj_j.rad) ){
+                            // Attempt to consume enough radius so the objects are no longer overlapping.
+                            double new_i_rad = obj_i.rad - (min - sep);
+                            new_i_rad = std::clamp(new_i_rad, 0.0, 1.0E6);
+
+                            // If the smaller would end up below the minimum radius, then consume the entire object.
+                            if(new_i_rad < en_game.min_radius) new_i_rad = 0.0;
+
+                            // Transfer the area to the larger object.
+                            double new_j_rad = std::sqrt( std::pow(obj_j.rad, 2.0)
+                                                        + std::pow(obj_i.rad, 2.0)
+                                                        - std::pow(new_i_rad, 2.0) );
+                            // If the larger object will grow beyond the bounds, reduce the amount transferred.
+                            const auto max_new_j_rad_wall = std::max<double>( obj_j.rad, 
+                                                               std::min<double>({ obj_j.pos.x,
+                                                                                  obj_j.pos.y,
+                                                                                  en_game.box_width - obj_j.pos.x,
+                                                                                  en_game.box_height - obj_j.pos.y }) );
+                            // Also determine whether expansion is limited by another nearby (larger) object.
+                            auto max_new_j_rad_obj = new_j_rad;
+                            for(size_t k = 0UL; k < j; ++k){
+                                const auto& obj_k = en_game_objs[k];
+                                const auto sep = obj_j.pos.distance( obj_k.pos );
+                                const auto surplus = sep - obj_j.rad;
+                                if(max_new_j_rad_obj < surplus) max_new_j_rad_obj = surplus;
+                            }
+
+                            const bool growth_constrained =    (max_new_j_rad_wall < new_j_rad)
+                                                            || (max_new_j_rad_obj < new_j_rad);
+                            if(growth_constrained){
+                                should_move_to_cand_pos = false;
+
+                                // Instead of kinematics, try 'shedding' the excess mass where it can be placed randomly.
+                                // You can make relatively small objects for this to increase the likelihood of
+                                // successful placement.
+                                const auto can_shed = (sqrt(2.0) * en_game.min_radius) < obj_j.rad;
+                                if(can_shed){
+                                    std::random_device rdev;
+                                    std::mt19937 re( rdev() );
+                                    std::uniform_real_distribution<> rd_t(0.0, pi*2.0);
+                                    {
+                                        int64_t iter = 100L;
+                                        while(true){
+                                            const auto l_dir = vec2<double>(1.0, 0.0).rotate_around_z( rd_t(re) );
+                                            const auto l_rad = en_game.min_radius;
+                                            const auto l_pos = obj_j.pos + l_dir * (obj_j.rad + en_game.min_radius + 1.0);
+                                            const auto l_vel = obj_j.vel + l_dir * en_game.max_speed;
+
+
+                                            if( !intersects_wall(l_pos, l_rad)
+                                            &&  !intersects_existing(l_pos, l_rad) ){
+                                                l_en_game_objs.emplace_back();
+                                                l_en_game_objs.back().pos = l_pos;
+                                                l_en_game_objs.back().vel = l_vel;
+                                                l_en_game_objs.back().rad = l_rad;
+                                                l_en_game_objs.back().player_controlled = false;
+
+                                                const auto l_new_obj_j_rad = std::sqrt( std::pow(obj_j.rad, 2.0) - std::pow(l_rad, 2.0));
+
+                                                const auto orig_area_j = pi * std::pow(obj_j.rad, 2.0);
+                                                const auto new_area_j  = pi * std::pow(l_new_obj_j_rad, 2.0);
+                                                const auto orig_area_shed = 0.0;
+                                                const auto new_area_shed  = pi * std::pow(l_rad, 2.0);
+
+                                                //const auto d_area_i = pi * (std::pow(new_i_rad, 2.0) - std::pow(obj_i.rad, 2.0));
+                                                //const auto d_area_j = pi * (std::pow(new_j_rad, 2.0) - std::pow(obj_j.rad, 2.0));
+                                                //std::cout << "Radius transfer: " << (new_i_rad - obj_i.rad) << " vs " << (new_j_rad - obj_j.rad) << std::endl;
+                                                //std::cout << "  (Transfer of mass: " << d_area_i << " vs " << d_area_j << ")" << std::endl;
+
+                                                obj_j.vel = (obj_j.vel * orig_area_j - obj_i.vel * new_area_shed) / (orig_area_j - new_area_shed);
+                                                obj_j.rad = l_new_obj_j_rad;
+                                                break;
+                                            }
+                                            if(--iter < 0L){
+                                                YLOGWARN("Unable to place shed object after 100 attempts. Ignoring object");
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+
+
+
+/*
+                                // Make the objects bounce apart using 2D hard sphere elastic kinematics.
+                                const auto rel_pos = obj_i.pos - obj_j.pos;
+                                const auto rel_vel = obj_i.vel - obj_j.vel;
+                                const auto inv_mass_i = 1.0; //(1.0 / (pi * std::pow(obj_i.rad, 2.0)));
+                                const auto inv_mass_j = 1.0; //(1.0 / (pi * std::pow(obj_j.rad, 2.0)));
+                                
+                                const auto t_a = rel_pos.Dot(rel_vel);
+                                const auto t_c = rel_vel.Dot(rel_vel);
+                                const auto t_d = rel_pos.Dot(rel_pos);
+
+                                //const auto t_e = t_b - (rel_pos.Dot(rel_pos) - std::pow(obj_i.rad + obj_j.rad, 2.0));
+                                const auto t_e = std::max<double>(0.0, t_a * t_a - t_c * (t_d - std::pow(obj_i.rad + obj_j.rad, 2.0)));
+                                //if(t_e < 0.0) continue;
+                                auto t = -(t_a + std::sqrt(t_e))/t_c;
+                                t = (std::isfinite(t) && (0.0 < t)) ? t : 0.0;
+                                
+                                const auto impulse_dir = (rel_pos + rel_vel * t).unit();
+                                const auto impulse = impulse_dir * 2.0 * impulse_dir.Dot(rel_vel) / (inv_mass_i + inv_mass_j);
+                                const auto new_obj_i_vel = obj_i.vel + impulse * inv_mass_i;
+                                const auto new_obj_j_vel = obj_j.vel - impulse * inv_mass_j;
+
+//std::cout << "Collision detected between " << obj_i.pos << " and " << obj_j.pos
+//          << " with velocities changing from " << obj_i.vel << " to " << new_obj_vel
+//          << " and " << obj_j.vel << " to " << new_obj_j_vel << std::endl;
+
+                                obj_i.vel = new_obj_i_vel;
+                                obj_j.vel = new_obj_j_vel;
+*/
+                            }else{
+                                const auto orig_area_i = pi * std::pow(obj_i.rad, 2.0);
+                                const auto new_area_i  = pi * std::pow(new_i_rad, 2.0);
+                                const auto orig_area_j = pi * std::pow(obj_j.rad, 2.0);
+                                const auto new_area_j  = pi * std::pow(new_j_rad, 2.0);
+
+                                const auto d_area_i = pi * (std::pow(new_i_rad, 2.0) - std::pow(obj_i.rad, 2.0));
+                                const auto d_area_j = pi * (std::pow(new_j_rad, 2.0) - std::pow(obj_j.rad, 2.0));
+                                //std::cout << "Radius transfer: " << (new_i_rad - obj_i.rad) << " vs " << (new_j_rad - obj_j.rad) << std::endl;
+                                //std::cout << "  (Transfer of mass: " << d_area_i << " vs " << d_area_j << ")" << std::endl;
+
+                                obj_i.rad = new_i_rad;
+                                obj_j.rad = new_j_rad;
+
+                                obj_j.vel = (obj_j.vel * orig_area_j + obj_i.vel * d_area_j) / (orig_area_j + d_area_j);
+                            }
+                        }
+                    }
+                }
+                    
+
+/*
+                    // Move this object, and adjust the other object(s) velocities.
+                    for(auto &j : cand_int_objs){
+                        auto& obj_j = en_game_objs[j];
+
+                        // 2D hard sphere elastic kinematics.
+                        const auto rel_pos = obj.pos - obj_j.pos;
+                        const auto rel_vel = obj.vel - obj_j.vel;
+                        const auto inv_mass_a = (1.0 / (pi * std::pow(obj.rad, 2.0)));
+                        const auto inv_mass_b = (1.0 / (pi * std::pow(obj_j.rad, 2.0)));
+                        
+                        const auto t_a = rel_pos.Dot(rel_vel);
+                        const auto t_c = rel_vel.Dot(rel_vel);
+                        const auto t_d = rel_pos.Dot(rel_pos);
+
+                        //const auto t_e = t_b - (rel_pos.Dot(rel_pos) - std::pow(obj.rad + obj_j.rad, 2.0));
+                        const auto t_e = t_a * t_a - t_c * (t_d - std::pow(obj.rad + obj_j.rad, 2.0));
+                        if(t_e < 0.0) continue;
+                        const auto t = -(t_a + std::sqrt(t_e))/t_c;
+                        if( !std::isfinite(t)
+                        ||  (t < 0.0) ) continue;
+                        
+                        const auto impulse_dir = (rel_pos + rel_vel * t).unit();
+                        const auto impulse = impulse_dir * 2.0 * impulse_dir.Dot(rel_vel) / (inv_mass_a + inv_mass_b);
+                        const auto new_obj_vel = obj.vel + impulse * inv_mass_a;
+                        const auto new_obj_j_vel = obj_j.vel - impulse * inv_mass_b;
+
+std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
+          << " with velocities changing from " << obj.vel << " to " << new_obj_vel
+          << " and " << obj_j.vel << " to " << new_obj_j_vel << std::endl;
+
+                        obj.vel = new_obj_vel;
+                        obj_j.vel = new_obj_j_vel;
+                    }
+*/
+
+                // Move to candidate position.
+                if(should_move_to_cand_pos){
+                    obj_i.pos = cand_pos;
+                }
+
+
+                // Limit the maximum speed.
+                {
+                    const auto speed = obj_i.vel.length();
+                    if(en_game.max_speed < speed){
+                        const auto dir = obj_i.vel.unit();
+                        obj_i.vel = dir * en_game.max_speed;
+                    }
+                }
+            }
+            t_en_updated = t_now;
+
+            // Include the newly-created objects.
+            en_game_objs.insert( std::end(en_game_objs),
+                                 std::begin(l_en_game_objs), std::end(l_en_game_objs) );
+            l_en_game_objs.clear();
+
+            // Remove objects with a small radius.
+            en_game_objs.erase( std::remove_if( std::begin(en_game_objs),
+                                                std::end(en_game_objs),
+                                                [&](const en_game_obj_t &obj) -> bool {
+                                                    return (obj.rad < en_game.min_radius);
+                                                }),
+                                std::end(en_game_objs) );
+
 
             ImGui::End();
         }
@@ -8035,6 +8499,12 @@ bool SDL_Viewer(Drover &DICOM_data,
                 view_toggles.view_triple_three_enabled = true;
                 const auto t_now = std::chrono::steady_clock::now();
                 t_tt_updated = t_now;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Encompass")){
+                view_toggles.view_encompass_enabled = true;
+                reset_en_game();
                 ImGui::CloseCurrentPopup();
             }
 
