@@ -1477,6 +1477,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     };
     std::vector< en_game_obj_t > en_game_objs;
     std::chrono::time_point<std::chrono::steady_clock> t_en_updated;
+    std::chrono::time_point<std::chrono::steady_clock> t_en_started;
 
     struct en_game_t {
         int64_t N_objs = 250L;
@@ -1486,7 +1487,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         double box_width  = 1000.0;
         double box_height = 800.0;
 
-        double max_speed = 30.0;
+        double max_speed = 60.0;
     } en_game;
 
     const auto reset_en_game = [&](){
@@ -1580,6 +1581,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         // Reset the update time.
         const auto t_now = std::chrono::steady_clock::now();
         t_en_updated = t_now;
+        t_en_started = t_now;
         return;
     };
 
@@ -4026,6 +4028,8 @@ bool SDL_Viewer(Drover &DICOM_data,
         }
 
         if( view_toggles.view_encompass_enabled ){
+            constexpr auto pi = std::acos(-1.0);
+
             const auto win_width  = static_cast<int>( std::ceil(en_game.box_width) ) + 15;
             const auto win_height = static_cast<int>( std::ceil(en_game.box_height) ) + 40;
             auto flags = ImGuiWindowFlags_AlwaysAutoResize
@@ -4035,65 +4039,6 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImGui::SetNextWindowSize(ImVec2(win_width, win_height), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
             ImGui::Begin("Encompass", &view_toggles.view_encompass_enabled, flags );
-
-            //struct en_game_obj_t {
-            //    vec2<double> pos;
-            //    vec2<double> mom;
-            //    double rad;
-            //}
-            //std::vector< en_game_obj_t > en_game_objs;
-
-            // Display.
-            ImVec2 curr_pos = ImGui::GetCursorScreenPos();
-            //ImVec2 window_extent = ImGui::GetContentRegionAvail();
-            ImDrawList *window_draw_list = ImGui::GetWindowDrawList();
-            const auto f = ImGui::IsWindowFocused();
-
-            {
-                const auto c = ImColor(0.7f, 0.7f, 0.8f, 1.0f);
-                window_draw_list->AddRect(curr_pos, ImVec2( curr_pos.x + en_game.box_width, 
-                                                            curr_pos.y + en_game.box_height ), c);
-            }
-            for(auto &obj : en_game_objs){
-                ImVec2 obj_pos = curr_pos;
-                obj_pos.x = curr_pos.x + obj.pos.x;
-                obj_pos.y = curr_pos.y + obj.pos.y;
-
-                const auto rel_r = std::clamp<double>(obj.rad / 30.0, 0.0, 1.0);
-                auto c = ImColor(rel_r * 1.0f, (1.0f - rel_r) * 1.0f, 0.5f, 1.0f);
-                if(obj.player_controlled){
-                    c = ImColor(1.0f, 1.0f, 0.1f, 1.0f);
-                }
-                window_draw_list->AddCircle(obj_pos, obj.rad, c);
-
-                // Implement player controls.
-                if( f && obj.player_controlled){
-                    if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_LeftArrow)) ){
-                        obj.vel.x -= 1.0;
-                    }
-                    if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_RightArrow)) ){
-                        obj.vel.x += 1.0;
-                    }
-                    if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_UpArrow)) ){
-                        obj.vel.y -= 1.0;
-                    }
-                    if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_DownArrow)) ){
-                        obj.vel.y += 1.0;
-                    }
-
-                    // Limit the maximum speed.
-                    {
-                        const auto speed = obj.vel.length();
-                        if(en_game.max_speed < speed){
-                            const auto dir = obj.vel.unit();
-                            obj.vel = dir * en_game.max_speed;
-                        }
-                    }
-                }
-            }
-
-            const auto t_now = std::chrono::steady_clock::now();
-            const auto t_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_en_updated).count();
 
             //const auto intersects_horiz_wall = [&]( const vec2<double> &pos, double rad ) -> bool {
             //    return (pos.y <= (0.0 + rad))
@@ -4137,7 +4082,147 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
                 return ints;
             };
-            const auto pi = std::acos(-1.0);
+                                    
+            const auto attempt_to_shed = [&]( en_game_obj_t &obj, 
+                                              const vec2<double> &dir,
+                                              double radius,
+                                              decltype(en_game_objs) &l_en_game_objs ) -> bool {
+                bool shed_successfully = false;
+                do{
+                    const auto l_dir = dir.unit();
+                    const auto l_rad = radius;
+
+                    const auto surplus_sq_rad = std::pow(obj.rad, 2.0) - std::pow(l_rad, 2.0);
+                    if(surplus_sq_rad <= std::pow(en_game.min_radius, 2.0)) break;
+
+                    const auto surplus_rad = std::sqrt( surplus_sq_rad );
+                    if(surplus_rad < en_game.min_radius) break;
+                    const auto l_obj_remaining_rad = surplus_rad;
+
+                    // Should ideally do this, but then it will usually collide with the not-yet-shrunk 'obj'.
+                    // So this will need support from the collision check.
+                    //const auto l_pos = obj.pos + l_dir * (l_obj_remaining_rad + l_rad + 1.0);
+                    // instead, we just use the existing not-yet-shrunk radius.
+                    const auto l_pos = obj.pos + l_dir * (obj.rad + l_rad + 1.0);
+                    const auto l_vel = l_dir * en_game.max_speed;
+
+                    if( !intersects_wall(l_pos, l_rad)
+                    &&  !intersects_existing(l_pos, l_rad) ){
+
+                        l_en_game_objs.emplace_back();
+                        l_en_game_objs.back().pos = l_pos;
+                        l_en_game_objs.back().vel = l_vel;
+                        l_en_game_objs.back().rad = l_rad;
+                        l_en_game_objs.back().player_controlled = false;
+
+                        const auto orig_area = pi * std::pow(obj.rad, 2.0);
+                        const auto new_area  = pi * std::pow(l_obj_remaining_rad, 2.0);
+                        const auto orig_area_shed = 0.0;
+                        const auto new_area_shed  = pi * std::pow(l_rad, 2.0);
+
+                        //const auto d_area_i = pi * (std::pow(new_i_rad, 2.0) - std::pow(obj_i.rad, 2.0));
+                        //const auto d_area_j = pi * (std::pow(new_j_rad, 2.0) - std::pow(obj_j.rad, 2.0));
+                        //std::cout << "Radius transfer: " << (new_i_rad - obj_i.rad) << " vs " << (new_j_rad - obj_j.rad) << std::endl;
+                        //std::cout << "  (Transfer of mass: " << d_area_i << " vs " << d_area_j << ")" << std::endl;
+
+                        obj.vel = (obj.vel * orig_area - l_vel * new_area_shed) / (orig_area - new_area_shed);
+                        obj.rad = l_obj_remaining_rad;
+                        shed_successfully = true;
+                    }
+                }while(false);
+                return shed_successfully;
+            };
+
+            // Display.
+            ImVec2 curr_pos = ImGui::GetCursorScreenPos();
+            //ImVec2 window_extent = ImGui::GetContentRegionAvail();
+            ImDrawList *window_draw_list = ImGui::GetWindowDrawList();
+            const auto f = ImGui::IsWindowFocused();
+
+            {
+                const auto c = ImColor(0.7f, 0.7f, 0.8f, 1.0f);
+                window_draw_list->AddRect(curr_pos, ImVec2( curr_pos.x + en_game.box_width, 
+                                                            curr_pos.y + en_game.box_height ), c);
+            }
+
+            const auto t_now = std::chrono::steady_clock::now();
+            const auto t_started_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_en_started).count();
+            const auto t_updated_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_en_updated).count();
+
+            //vec2<double> slosh(0.0, 0.0);
+            //if(60.0 < (t_started_diff * 0.001)){
+            //    slosh = vec2<double>( std::sin( 2.0 * pi * (t_started_diff * 0.001) / 4.214 ),
+            //                          std::sin( 2.0 * pi * (t_started_diff * 0.001) / 3.341 ) ) * en_game.max_speed * 0.001;
+            //}
+
+            decltype(en_game_objs) l_en_game_objs;
+            for(auto &obj : en_game_objs){
+                ImVec2 obj_pos = curr_pos;
+                obj_pos.x = curr_pos.x + obj.pos.x;
+                obj_pos.y = curr_pos.y + obj.pos.y;
+
+                const auto rel_r = std::clamp<double>(obj.rad / 30.0, 0.0, 1.0);
+                auto c = ImColor(rel_r * 1.0f, (1.0f - rel_r) * 1.0f, 0.5f, 1.0f);
+                if(obj.player_controlled){
+                    c = ImColor(1.0f, 1.0f, 0.1f, 1.0f);
+                }
+                window_draw_list->AddCircle(obj_pos, obj.rad, c);
+
+                // Implement player controls.
+                if( f && obj.player_controlled){
+                    if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_LeftArrow)) ){
+                        obj.vel.x -= 1.0;
+                    }
+                    if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_RightArrow)) ){
+                        obj.vel.x += 1.0;
+                    }
+                    if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_UpArrow)) ){
+                        obj.vel.y -= 1.0;
+                    }
+                    if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_DownArrow)) ){
+                        obj.vel.y += 1.0;
+                    }
+                    if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Space)) ){
+                        // Jettison a small object in the direction opposite of travel.
+                        auto l_rad = obj.rad * 0.05;
+                        l_rad = (l_rad < en_game.min_radius) ? en_game.min_radius : l_rad;
+                        auto l_dir = obj.vel * (-1.0);
+                        l_dir = ( 0.0 < l_dir.length() ) ? l_dir : vec2<double>(1.0, 0.0);
+
+                        attempt_to_shed( obj, l_dir, l_rad, l_en_game_objs);
+                    }
+                    if( ImGui::IsKeyPressed(SDL_SCANCODE_S) ){
+                        // Attempt to split into two.
+                        auto l_rad = std::sqrt(0.5) * obj.rad;
+                        auto l_dir = obj.vel * (-1.0);
+                        l_dir = ( 0.0 < l_dir.length() ) ? l_dir : vec2<double>(1.0, 0.0);
+
+                        decltype(en_game_objs) ll_en_game_objs;
+                        attempt_to_shed( obj, l_dir, l_rad, ll_en_game_objs);
+                        for(auto& obj : ll_en_game_objs){
+                            obj.player_controlled = true;
+                        }
+                        l_en_game_objs.insert( std::begin(l_en_game_objs),
+                                               std::begin(ll_en_game_objs), std::end(ll_en_game_objs) );
+                    }
+                }
+
+                //// Implement a slow-moving 'sloshing' motion.
+                //obj.vel += slosh;
+
+                // Limit the maximum speed.
+                {
+                    const auto speed = obj.vel.length();
+                    if(en_game.max_speed < speed){
+                        const auto dir = obj.vel.unit();
+                        obj.vel = dir * en_game.max_speed;
+                    }
+                }
+            }
+            en_game_objs.insert( std::begin(en_game_objs),
+                                 std::begin(l_en_game_objs), std::end(l_en_game_objs) );
+            l_en_game_objs.clear();
+
 
             // Sort so larger objects are first.
             std::sort( std::begin(en_game_objs), std::end(en_game_objs),
@@ -4148,12 +4233,11 @@ bool SDL_Viewer(Drover &DICOM_data,
             std::vector< vec2<double> > transfer_events;
 
             // Update the system.
-            decltype(en_game_objs) l_en_game_objs;
             const auto N_objs = en_game_objs.size();
             for(size_t i = 0UL; i < N_objs; ++i){
                 auto &obj_i = en_game_objs[i];
                 bool should_move_to_cand_pos = true;
-                const auto cand_pos = obj_i.pos + obj_i.vel * (static_cast<double>(t_diff) / 1000.0);
+                const auto cand_pos = obj_i.pos + obj_i.vel * (static_cast<double>(t_updated_diff) / 1000.0);
 
                 // Check for intersections with the wall.
                 const bool cand_int_l_wall = (obj_i.pos.x <= (0.0 + obj_i.rad));
@@ -4212,7 +4296,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 // Instead of kinematics, try 'shedding' the excess mass where it can be placed randomly.
                                 // You can make relatively small objects for this to increase the likelihood of
                                 // successful placement.
-                                const auto can_shed = (sqrt(2.0) * en_game.min_radius) < obj_j.rad;
+                                const auto can_shed = ((sqrt(2.0) * en_game.min_radius) < obj_j.rad);
                                 if(can_shed){
                                     std::random_device rdev;
                                     std::mt19937 re( rdev() );
@@ -4222,41 +4306,18 @@ bool SDL_Viewer(Drover &DICOM_data,
                                         while(true){
                                             const auto l_dir = vec2<double>(1.0, 0.0).rotate_around_z( rd_t(re) );
                                             const auto l_rad = en_game.min_radius;
-                                            const auto l_pos = obj_j.pos + l_dir * (obj_j.rad + en_game.min_radius + 1.0);
-                                            const auto l_vel = obj_j.vel + l_dir * en_game.max_speed;
+                                            const bool shed_successfully = attempt_to_shed( obj_j, l_dir, l_rad, l_en_game_objs);
 
-
-                                            if( !intersects_wall(l_pos, l_rad)
-                                            &&  !intersects_existing(l_pos, l_rad) ){
-                                                l_en_game_objs.emplace_back();
-                                                l_en_game_objs.back().pos = l_pos;
-                                                l_en_game_objs.back().vel = l_vel;
-                                                l_en_game_objs.back().rad = l_rad;
-                                                l_en_game_objs.back().player_controlled = false;
-
-                                                const auto l_new_obj_j_rad = std::sqrt( std::pow(obj_j.rad, 2.0) - std::pow(l_rad, 2.0));
-
-                                                const auto orig_area_j = pi * std::pow(obj_j.rad, 2.0);
-                                                const auto new_area_j  = pi * std::pow(l_new_obj_j_rad, 2.0);
-                                                const auto orig_area_shed = 0.0;
-                                                const auto new_area_shed  = pi * std::pow(l_rad, 2.0);
-
-                                                //const auto d_area_i = pi * (std::pow(new_i_rad, 2.0) - std::pow(obj_i.rad, 2.0));
-                                                //const auto d_area_j = pi * (std::pow(new_j_rad, 2.0) - std::pow(obj_j.rad, 2.0));
-                                                //std::cout << "Radius transfer: " << (new_i_rad - obj_i.rad) << " vs " << (new_j_rad - obj_j.rad) << std::endl;
-                                                //std::cout << "  (Transfer of mass: " << d_area_i << " vs " << d_area_j << ")" << std::endl;
-
-                                                obj_j.vel = (obj_j.vel * orig_area_j - obj_i.vel * new_area_shed) / (orig_area_j - new_area_shed);
-                                                obj_j.rad = l_new_obj_j_rad;
+                                            if( shed_successfully ){
                                                 break;
                                             }
                                             if(--iter < 0L){
-                                                YLOGWARN("Unable to place shed object after 100 attempts. Ignoring object");
+                                                //YLOGWARN("Unable to place shed object after 100 attempts. Ignoring object");
                                                 break;
                                             }
                                         }
                                     }
-
+                                    
                                     // Make the object halt.
                                     obj_j.vel = vec2<double>(0.0, 0.0);
                                 }
