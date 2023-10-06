@@ -4028,7 +4028,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         }
 
         if( view_toggles.view_encompass_enabled ){
-            constexpr auto pi = std::acos(-1.0);
+            const auto pi = std::acos(-1.0);
 
             const auto win_width  = static_cast<int>( std::ceil(en_game.box_width) ) + 15;
             const auto win_height = static_cast<int>( std::ceil(en_game.box_height) ) + 40;
