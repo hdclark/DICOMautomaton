@@ -1479,12 +1479,12 @@ bool SDL_Viewer(Drover &DICOM_data,
     std::chrono::time_point<std::chrono::steady_clock> t_en_updated;
 
     struct en_game_t {
-        int64_t N_objs = 100L;
+        int64_t N_objs = 250L;
 
         double min_radius = 3.0;
         double max_radius = 60.0;
-        double box_width  = 650.0;
-        double box_height = 500.0;
+        double box_width  = 1000.0;
+        double box_height = 800.0;
 
         double max_speed = 30.0;
     } en_game;
@@ -4028,9 +4028,13 @@ bool SDL_Viewer(Drover &DICOM_data,
         if( view_toggles.view_encompass_enabled ){
             const auto win_width  = static_cast<int>( std::ceil(en_game.box_width) ) + 15;
             const auto win_height = static_cast<int>( std::ceil(en_game.box_height) ) + 40;
+            auto flags = ImGuiWindowFlags_AlwaysAutoResize
+                       | ImGuiWindowFlags_NoScrollWithMouse
+                       | ImGuiWindowFlags_NoNavInputs
+                       | ImGuiWindowFlags_NoScrollbar ;
             ImGui::SetNextWindowSize(ImVec2(win_width, win_height), ImGuiCond_FirstUseEver);
-            ImGui::SetNextWindowPos(ImVec2(200, 200), ImGuiCond_FirstUseEver);
-            ImGui::Begin("Encompass", &view_toggles.view_encompass_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
+            ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Encompass", &view_toggles.view_encompass_enabled, flags );
 
             //struct en_game_obj_t {
             //    vec2<double> pos;
@@ -4062,6 +4066,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
                 window_draw_list->AddCircle(obj_pos, obj.rad, c);
 
+                // Implement player controls.
                 if( f && obj.player_controlled){
                     if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_LeftArrow)) ){
                         obj.vel.x -= 1.0;
@@ -4134,11 +4139,13 @@ bool SDL_Viewer(Drover &DICOM_data,
             };
             const auto pi = std::acos(-1.0);
 
-            // Sort so larger objects are last.
+            // Sort so larger objects are first.
             std::sort( std::begin(en_game_objs), std::end(en_game_objs),
                        [](const en_game_obj_t &l, const en_game_obj_t &r) -> bool {
                            return (l.rad > r.rad);
                        } );
+
+            std::vector< vec2<double> > transfer_events;
 
             // Update the system.
             decltype(en_game_objs) l_en_game_objs;
@@ -4170,7 +4177,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         const auto sep = obj_j.pos.distance( obj_i.pos );
                         const auto min = obj_j.rad + obj_i.rad;
                         if( (sep < min) 
-                        &&  (obj_i.rad < obj_j.rad) ){
+                        &&  (obj_i.rad <= obj_j.rad) ){
                             // Attempt to consume enough radius so the objects are no longer overlapping.
                             double new_i_rad = obj_i.rad - (min - sep);
                             new_i_rad = std::clamp(new_i_rad, 0.0, 1.0E6);
@@ -4249,6 +4256,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                                             }
                                         }
                                     }
+
+                                    // Make the object halt.
+                                    obj_j.vel = vec2<double>(0.0, 0.0);
                                 }
 
 
@@ -4283,6 +4293,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 obj_j.vel = new_obj_j_vel;
 */
                             }else{
+                                const auto dir = (obj_j.pos - obj_i.pos).unit();
+                                transfer_events.emplace_back( obj_i.pos + dir * obj_i.rad );
+
                                 const auto orig_area_i = pi * std::pow(obj_i.rad, 2.0);
                                 const auto new_area_i  = pi * std::pow(new_i_rad, 2.0);
                                 const auto orig_area_j = pi * std::pow(obj_j.rad, 2.0);
@@ -4356,8 +4369,18 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             }
             t_en_updated = t_now;
 
+            // Draw the transfer events.
+            for(auto &p : transfer_events){
+                ImVec2 obj_pos = curr_pos;
+                obj_pos.x = curr_pos.x + p.x;
+                obj_pos.y = curr_pos.y + p.y;
+
+                auto c = ImColor(1.0f, 0.0f, 0.0f, 1.0f);
+                window_draw_list->AddCircle(obj_pos, 1.0, c);
+             }
+
             // Include the newly-created objects.
-            en_game_objs.insert( std::end(en_game_objs),
+            en_game_objs.insert( std::begin(en_game_objs),
                                  std::begin(l_en_game_objs), std::end(l_en_game_objs) );
             l_en_game_objs.clear();
 
@@ -4370,6 +4393,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                 std::end(en_game_objs) );
 
 
+            ImGui::Dummy(ImVec2(en_game.box_width, en_game.box_height));
             ImGui::End();
         }
 
