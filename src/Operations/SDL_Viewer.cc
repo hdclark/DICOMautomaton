@@ -4147,7 +4147,13 @@ bool SDL_Viewer(Drover &DICOM_data,
 
             const auto t_now = std::chrono::steady_clock::now();
             const auto t_started_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_en_started).count();
-            const auto t_updated_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_en_updated).count();
+            auto t_updated_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_en_updated).count();
+
+            // Limit individual time steps to around 30 fps otherwise 'infinitesimal' updates to the system will no
+            // longer be small, and the simulation will quickly break down.
+            //
+            // Note that this will cause the simulation to be choppy if the frame rate falls below 30 fps or so.
+            if(30 < t_updated_diff) t_started_diff = 30;
 
             //vec2<double> slosh(0.0, 0.0);
             //if(60.0 < (t_started_diff * 0.001)){
