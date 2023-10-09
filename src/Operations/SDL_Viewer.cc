@@ -4153,7 +4153,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             // longer be small, and the simulation will quickly break down.
             //
             // Note that this will cause the simulation to be choppy if the frame rate falls below 30 fps or so.
-            if(30 < t_updated_diff) t_started_diff = 30;
+            if(30 < t_updated_diff) t_updated_diff = 30;
 
             //vec2<double> slosh(0.0, 0.0);
             //if(60.0 < (t_started_diff * 0.001)){
