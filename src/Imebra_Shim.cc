@@ -1763,7 +1763,7 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
         if(!image_pos_x_opt || !image_pos_y_opt || !image_pos_z_opt){
             const auto xyz = l_coalesce_metadata_as_vector_double({"CSAImage/ImagePositionPatient"});
             if(xyz.size() == 3UL){
-                YLOGWARN("Using non-standard CSAImage/ImagePositionPatient");
+                YLOGINFO("Using non-standard CSAImage/ImagePositionPatient");
                 image_pos_x_opt = xyz.at(0);
                 image_pos_y_opt = xyz.at(1);
                 image_pos_z_opt = xyz.at(2);
@@ -1776,7 +1776,7 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
             image_pos_z_opt = (RadMchnSAD - RTImageSID); // For consistency with XRayImageReceptorTranslation z-coord.
         }
         if(!image_pos_x_opt || !image_pos_y_opt || !image_pos_z_opt){
-            YLOGWARN("Unable to find ImagePositionPatient, using defaults");
+            YLOGINFO("Unable to find ImagePositionPatient, using defaults");
             image_pos_x_opt = {};
             image_pos_y_opt = {};
             image_pos_z_opt = {};
@@ -1812,13 +1812,13 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
         if(!image_orien_r_opt || !image_orien_c_opt){
             const auto o = l_coalesce_metadata_as_vector_double({"CSAImage/ImageOrientationPatient"});
             if(o.size() == 6UL){
-                YLOGWARN("Using non-standard CSAImage/ImageOrientationPatient");
+                YLOGINFO("Using non-standard CSAImage/ImageOrientationPatient");
                 image_orien_r_opt = vec3<double>( o.at(0), o.at(1), o.at(2) );
                 image_orien_c_opt = vec3<double>( o.at(3), o.at(4), o.at(5) );
             }
         }
         if(!image_orien_r_opt || !image_orien_c_opt){
-            YLOGWARN("Unable to find ImageOrientationPatient, using defaults");
+            YLOGINFO("Unable to find ImageOrientationPatient, using defaults");
             image_orien_r_opt = {};
             image_orien_c_opt = {};
         }
@@ -1848,13 +1848,13 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
         if(!image_pxldy_opt || !image_pxldx_opt){
             const auto o = l_coalesce_metadata_as_vector_double({"CSAImage/PixelSpacing"});
             if(o.size() == 2UL){
-                YLOGWARN("Using non-standard CSAImage/PixelSpacing");
+                YLOGINFO("Using non-standard CSAImage/PixelSpacing");
                 image_pxldy_opt = o.at(0);
                 image_pxldx_opt = o.at(1);
             }
         }
         if(!image_pxldy_opt || !image_pxldx_opt){
-            YLOGWARN("Unable to find voxel extent, using defaults");
+            YLOGINFO("Unable to find voxel extent, using defaults");
         }
         const auto image_pxldy = image_pxldy_opt.value_or(1.0);
         const auto image_pxldx = image_pxldx_opt.value_or(1.0);
@@ -1876,7 +1876,7 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
             image_thickness_opt = l_coalesce_metadata_as_double({"CSAImage/SliceThickness"});
         }
         if(!image_thickness_opt){
-            YLOGWARN("Unable to find image thickness, using default");
+            YLOGINFO("Unable to find image thickness, using default");
         }
         const auto image_thickness = image_thickness_opt.value_or(1.0);
         insert_if_new(l_meta, "SliceThickness", std::to_string(image_thickness));
