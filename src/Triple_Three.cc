@@ -22,19 +22,24 @@ void tt_game_t::reset(){
 
     // Randomize the cards.
     for(int64_t i = 0; i < static_cast<int64_t>(this->cards.size()); ++i){
-        std::uniform_real_distribution<> frd(0.25, 0.75); // Tweak this to alter the distribution.
-        const auto max_total = 20.0;
+        // Define a probability-proportional curve.
+        std::array<double, 6> ordinate { 0.0, 0.3, 0.6, 1.0, 0.4, 0.1 };  // Probabilty.
+        std::array<double, 6> abscissa { 1.0, 3.0, 5.0, 6.0, 7.0, 9.0 };  // Card strength number.
+        std::piecewise_linear_distribution<> d { std::begin(abscissa), std::end(abscissa),
+                                                 std::begin(ordinate) };
+        const int64_t min_single = 1;
         const int64_t max_single = 9;
-        const auto f1 = frd(this->rand_gen);
-        const auto f2 = frd(this->rand_gen);
-        const auto f3 = frd(this->rand_gen);
-        const auto f4 = frd(this->rand_gen);
-        const auto f_sum = f1 + f2 + f3 + f4;
 
-        this->cards.at(i).stat_up    = std::clamp<int64_t>( static_cast<int64_t>(std::round( (f1/f_sum) * max_total )), static_cast<int64_t>(0), max_single );
-        this->cards.at(i).stat_down  = std::clamp<int64_t>( static_cast<int64_t>(std::round( (f2/f_sum) * max_total )), static_cast<int64_t>(0), max_single );
-        this->cards.at(i).stat_left  = std::clamp<int64_t>( static_cast<int64_t>(std::round( (f3/f_sum) * max_total )), static_cast<int64_t>(0), max_single );
-        this->cards.at(i).stat_right = std::clamp<int64_t>( static_cast<int64_t>(std::round( (f4/f_sum) * max_total )), static_cast<int64_t>(0), max_single );
+        const auto f1 = d(this->rand_gen);
+        const auto f2 = d(this->rand_gen);
+        const auto f3 = d(this->rand_gen);
+        const auto f4 = d(this->rand_gen);
+
+        this->cards.at(i).stat_up    = std::clamp<int64_t>( static_cast<int64_t>(std::round( f1 )), min_single, max_single );
+        this->cards.at(i).stat_down  = std::clamp<int64_t>( static_cast<int64_t>(std::round( f2 )), min_single, max_single );
+        this->cards.at(i).stat_left  = std::clamp<int64_t>( static_cast<int64_t>(std::round( f3 )), min_single, max_single );
+        this->cards.at(i).stat_right = std::clamp<int64_t>( static_cast<int64_t>(std::round( f4 )), min_single, max_single );
+
         this->cards.at(i).used = false;
         this->cards.at(i).owned_by_first_player = ((i < 5) ? true : false);
     }
