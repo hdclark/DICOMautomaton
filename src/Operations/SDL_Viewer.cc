@@ -8565,11 +8565,16 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             ImGui::Text("%s", version.c_str());
             ImGui::Dummy(ImVec2(100, 25));
 
+            if(ImGui::Button("Close")){
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::Dummy(ImVec2(100, 15));
+
             if(ImGui::Button("View contouring debug window")){
                 view_toggles.view_contouring_debug = true;
                 ImGui::CloseCurrentPopup();
             }
-            ImGui::SameLine(0, 40);
+
             if(ImGui::Button("Imgui demo")){
                 view_toggles.view_imgui_demo = true;
                 ImGui::CloseCurrentPopup();
@@ -8580,7 +8585,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 ImGui::CloseCurrentPopup();
             }
 
-            ImGui::SameLine(0, 40);
             if(ImGui::Button("Polyominoes")){
                 view_toggles.view_polyominoes_enabled = true;
                 ImGui::CloseCurrentPopup();
@@ -8599,10 +8603,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 ImGui::CloseCurrentPopup();
             }
 
-            ImGui::SameLine(0, 40);
-            if(ImGui::Button("Close")){
-                ImGui::CloseCurrentPopup();
-            }
             ImGui::EndPopup();
         }
 
