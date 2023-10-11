@@ -1487,7 +1487,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         double box_width  = 1000.0;
         double box_height = 800.0;
 
-        double max_speed = 60.0;
+        double max_speed = 25.0;
     } en_game;
 
     const auto reset_en_game = [&](){
@@ -4424,6 +4424,55 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     obj_i.pos = cand_pos;
                 }
 
+                // Slowly move toward smaller objects and away from larger objects.
+                if(!obj_i.player_controlled){
+                    const auto max_dist_between = std::hypot(en_game.box_width, en_game.box_height);
+                    const auto time_scale = static_cast<double>(t_updated_diff) / 5000.0;
+                    struct nudge_t {
+                        double intensity = 0.0;
+                        double repulsion_factor = 0.0;
+                        vec2<double> dir = vec2<double>(0.0, 0.0);
+                    };
+                    size_t N_nudges = 3;
+                    std::vector<nudge_t> nudges;
+
+                    for(size_t j = 0UL; j < N_objs; ++j){
+                        if(i == j) continue;
+                        const auto &obj_j = en_game_objs[j];
+
+                        const auto repulsion_factor = (obj_j.rad < obj_i.rad) ? 1.0 : -1.0;
+
+                        const auto rel_pos = (obj_j.pos - obj_i.pos);
+                        auto dir = rel_pos.unit();
+                        const auto dist_between = rel_pos.length() - obj_i.rad - obj_j.rad;
+                        const auto intensity_dist = std::pow( (max_dist_between - dist_between) / max_dist_between, 2.0 );
+
+                        // If 'i' is larger, prefer larger 'prey' even if they are slightly further away.
+                        // If 'j' is larger, run away from the closest object large enough to encompass you.
+                        const bool is_prey = (obj_i.rad < obj_j.rad);
+                        const auto intensity_mass = is_prey ? 1.0
+                                                            : std::pow( obj_j.rad / obj_i.rad, 1.5 );
+                        if(is_prey){
+                            dir = dir.rotate_around_z( pi*0.15 );
+                        }
+                        const auto intensity = intensity_dist * intensity_mass;
+
+                        nudges.emplace_back();
+                        nudges.back().intensity = intensity;
+                        nudges.back().repulsion_factor = repulsion_factor;
+                        nudges.back().dir = dir;
+
+                        std::sort( std::begin(nudges), std::end(nudges),
+                                   [](const nudge_t &l, const nudge_t &r) -> bool {
+                                       return std::abs(l.intensity) > std::abs(r.intensity);
+                                   } );
+
+                        if(N_nudges < nudges.size()) nudges.resize(N_nudges);
+                    }
+                    for(const auto &n : nudges){
+                        obj_i.vel += n.dir * en_game.max_speed * n.repulsion_factor * n.intensity * time_scale;
+                    }
+                }
 
                 // Limit the maximum speed.
                 {
@@ -4444,6 +4493,17 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
 
                 auto c = ImColor(1.0f, 0.0f, 0.0f, 1.0f);
                 window_draw_list->AddCircle(obj_pos, 1.0, c);
+             }
+
+            // Draw the velocity vectors.
+            for(size_t i = 0UL; i < N_objs; ++i){
+                auto &obj_i = en_game_objs[i];
+
+                const auto obj_pos  = ImVec2(curr_pos.x + obj_i.pos.x, curr_pos.y + obj_i.pos.y);
+                const auto vec_term = ImVec2(curr_pos.x + obj_i.pos.x + obj_i.vel.x, curr_pos.y + obj_i.pos.y + obj_i.vel.y);
+                auto c = ImColor(1.0f, 0.0f, 0.0f, 1.0f);
+                window_draw_list->AddLine(obj_pos, vec_term, c);
+                //IMGUI_API void  AddTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col, float thickness = 1.0f);
              }
 
             // Include the newly-created objects.
