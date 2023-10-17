@@ -4256,6 +4256,20 @@ bool SDL_Viewer(Drover &DICOM_data,
                 if(cand_int_b_wall) obj_i.vel.y =  std::abs(obj_i.vel.y);
                 if(cand_int_t_wall) obj_i.vel.y = -std::abs(obj_i.vel.y);
 
+                // Large objects slowly disintegrate, 'leaking' a small amount of area in a mutiny event.
+                if( (i == 0UL)
+                &&  ((10.0 * en_game.min_radius) < obj_i.rad) ){
+                    // TODO: replace this with a probabalistic model (with leaks proportional to object's current area)
+                    // and run the model whenever there are no collisions.
+                    auto l_rad = obj_i.rad * 0.05;
+                    l_rad = (l_rad < en_game.min_radius) ? en_game.min_radius : l_rad;
+                    auto l_dir = obj_i.vel * (-1.0);
+                    l_dir = ( 0.0 < l_dir.length() ) ? l_dir : vec2<double>(-1.0, 0.0);
+
+                    const bool shed = attempt_to_shed( obj_i, l_dir, l_rad, l_en_game_objs);
+                    should_move_to_cand_pos = !shed;
+                }
+
                 // Check for intersections with any of the other objects with updated positions.
                 //
                 // Because larger objects are first, object intersections here cause the 'i'th object
