@@ -8634,11 +8634,19 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             ImGui::OpenPopup("About");
         }
         if(ImGui::BeginPopupModal("About")){
-            const std::string version = "DICOMautomaton SDL_Viewer version "_s + DCMA_VERSION_STR;
-            ImGui::Dummy(ImVec2(100, 25));
-            ImGui::Text("%s", version.c_str());
-            ImGui::Dummy(ImVec2(100, 25));
+            const std::string desc = "DICOMautomaton: a multipurpose tool for medical physics.";
+            ImGui::Dummy(ImVec2(100, 15));
+            ImGui::Text("%s", desc.c_str());
 
+            const std::string version = "Version: "_s + DCMA_VERSION_STR;
+            ImGui::Dummy(ImVec2(100, 15));
+            ImGui::Text("%s", version.c_str());
+
+            const std::string contact = "Please report issues at https://github.com/hdclark/DICOMautomaton"_s;
+            ImGui::Dummy(ImVec2(100, 15));
+            ImGui::Text("%s", contact.c_str());
+
+            ImGui::Dummy(ImVec2(100, 25));
             if(ImGui::Button("Close")){
                 ImGui::CloseCurrentPopup();
             }
