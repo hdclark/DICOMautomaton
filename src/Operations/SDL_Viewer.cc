@@ -4056,6 +4056,10 @@ bool SDL_Viewer(Drover &DICOM_data,
             //        || ((en_game.box_width - rad) <= pos.x);
             //};
 
+            const auto rad_to_area = [&](double rad){
+                return pi * std::pow(rad, 2.0);
+            };
+
             const auto intersects_existing = [&]( const vec2<double> &pos, double rad ) -> bool {
                 bool intersection = false;
                 for(const auto& obj : en_game_objs){
@@ -4214,9 +4218,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                     }
                 }
 
-                //// Implement a slow-moving 'sloshing' motion.
-                //obj.vel += slosh;
-
                 // Limit the maximum speed.
                 {
                     const auto speed = obj.vel.length();
@@ -4229,7 +4230,6 @@ bool SDL_Viewer(Drover &DICOM_data,
             en_game_objs.insert( std::begin(en_game_objs),
                                  std::begin(l_en_game_objs), std::end(l_en_game_objs) );
             l_en_game_objs.clear();
-
 
             // Sort so larger objects are first.
             std::sort( std::begin(en_game_objs), std::end(en_game_objs),
@@ -4277,10 +4277,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                     const auto time_slice = static_cast<double>(t_updated_diff);
                     std::uniform_real_distribution<> rd_t(0.0, period);
                     const bool time_slice_selected = (rd_t(en_game.re) <= time_slice);
-
-                    const auto rad_to_area = [&](double rad){
-                        return pi * std::pow(rad, 2.0);
-                    };
 
                     const auto x = rad_to_area(obj_i.rad);
                     //const auto mid = rad_to_area(20.0 * en_game.min_radius);
