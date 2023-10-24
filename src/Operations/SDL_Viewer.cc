@@ -1480,21 +1480,28 @@ bool SDL_Viewer(Drover &DICOM_data,
     std::chrono::time_point<std::chrono::steady_clock> t_en_started;
 
     struct en_game_t {
-        int64_t N_objs = 250L;
+        int64_t N_objs = 250L;        // Initial configuration target number of objects.
 
-        double min_radius = 3.0;
-        double max_radius = 60.0;
-        double box_width  = 1000.0;
+        double min_radius = 3.0;      // Objects cannot be smaller than this.
+        double max_radius = 60.0;     // Only used for initial configuration.
+
+        double box_width  = 1000.0;   // World bounds.
         double box_height = 800.0;
 
-        double max_speed = 25.0;
+        double max_speed = 25.0;      // The maximum speed an object can attain.
+                                      // It's possible that objects might temporarily be faster, so consider
+                                      // the upper limit to be slightly higher in practice.
+
+        double mutiny_period = 300.0; // Relates to how often some mass 'leaks' spontaneously.
+        double mutiny_slope = 75.0;   // Relates to likelihood of mutiny due to area (logistic slope).
+        double mutiny_mid = 100.0;    // Relates to likelihood of mutiny due to area (logistic midpoint).
+
+        std::mt19937 re;
     } en_game;
+    en_game.re.seed( std::random_device()() );
 
     const auto reset_en_game = [&](){
         en_game_objs.clear();
-
-        std::random_device rdev;
-        std::mt19937 re( rdev() );
 
         // First, generate radii according to some distribution.
         std::vector<double> radii(en_game.N_objs, 1.0);
@@ -1502,7 +1509,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             double dof = 3.0;
             std::chi_squared_distribution<> rd(dof);
             for(auto &r : radii){
-                r = rd(re);
+                r = rd(en_game.re);
             }
             std::sort( std::begin(radii), std::end(radii) );
 
@@ -1547,8 +1554,8 @@ bool SDL_Viewer(Drover &DICOM_data,
         for(const auto &r : radii){
             int64_t i = 100L;
             while(true){
-                const vec2<double> pos( rd_x(re), rd_y(re) );
-                const vec2<double> vel( rd_v(re), rd_v(re) );
+                const vec2<double> pos( rd_x(en_game.re), rd_y(en_game.re) );
+                const vec2<double> vel( rd_v(en_game.re), rd_v(en_game.re) );
                 const auto rad = r;
 //std::cout << "Attempting to place object with pos, vel, rad = " << pos << ", " << vel << ", " << rad << std::endl;
                 if( !intersects_wall(pos, rad)
@@ -4155,12 +4162,6 @@ bool SDL_Viewer(Drover &DICOM_data,
             // Note that this will cause the simulation to be choppy if the frame rate falls below 30 fps or so.
             if(30 < t_updated_diff) t_updated_diff = 30;
 
-            //vec2<double> slosh(0.0, 0.0);
-            //if(60.0 < (t_started_diff * 0.001)){
-            //    slosh = vec2<double>( std::sin( 2.0 * pi * (t_started_diff * 0.001) / 4.214 ),
-            //                          std::sin( 2.0 * pi * (t_started_diff * 0.001) / 3.341 ) ) * en_game.max_speed * 0.001;
-            //}
-
             decltype(en_game_objs) l_en_game_objs;
             for(auto &obj : en_game_objs){
                 ImVec2 obj_pos = curr_pos;
@@ -4256,26 +4257,57 @@ bool SDL_Viewer(Drover &DICOM_data,
                 if(cand_int_b_wall) obj_i.vel.y =  std::abs(obj_i.vel.y);
                 if(cand_int_t_wall) obj_i.vel.y = -std::abs(obj_i.vel.y);
 
-                // Large objects slowly disintegrate, 'leaking' a small amount of area in a mutiny event.
-                if( (i == 0UL)
-                &&  ((10.0 * en_game.min_radius) < obj_i.rad) ){
-                    // TODO: replace this with a probabalistic model (with leaks proportional to object's current area)
-                    // and run the model whenever there are no collisions.
-                    auto l_rad = obj_i.rad * 0.05;
-                    l_rad = (l_rad < en_game.min_radius) ? en_game.min_radius : l_rad;
-                    auto l_dir = obj_i.vel * (-1.0);
-                    l_dir = ( 0.0 < l_dir.length() ) ? l_dir : vec2<double>(-1.0, 0.0);
-
-                    const bool shed = attempt_to_shed( obj_i, l_dir, l_rad, l_en_game_objs);
-                    should_move_to_cand_pos = !shed;
-                }
 
                 // Check for intersections with any of the other objects with updated positions.
                 //
+                // If none, then simulate spontaneous single-object events.
+                const auto cand_int_objs  = obj_intersections(i);
+                if(cand_int_objs.empty()){
+
+                    // Make large objects slowly disintegrate, 'leaking' a small amount of area in a mutiny event.
+                    //
+                    // Leaking is a spontaneous event with an associated probabality. The occurrence and amount of mass
+                    // lost are proportional to object's current area.
+                    //
+                    // Since this will be evaluated each frame, we need to scale the likelihood of each individual
+                    // evaluation so that the joint likelihood is as expected.
+
+                    //const auto period = 100.0; //milliseconds.
+                    const auto period = en_game.mutiny_period;
+                    const auto time_slice = static_cast<double>(t_updated_diff);
+                    std::uniform_real_distribution<> rd_t(0.0, period);
+                    const bool time_slice_selected = (rd_t(en_game.re) <= time_slice);
+
+                    const auto rad_to_area = [&](double rad){
+                        return pi * std::pow(rad, 2.0);
+                    };
+
+                    const auto x = rad_to_area(obj_i.rad);
+                    //const auto mid = rad_to_area(20.0 * en_game.min_radius);
+                    //const auto slope = 1.0 / rad_to_area(5.0 * en_game.min_radius);
+                    const auto mid = rad_to_area(en_game.mutiny_mid);
+                    const auto slope = 1.0 / rad_to_area(en_game.mutiny_slope);
+                    const auto asympt_true = 1.0 / (1.0 + std::exp(-slope * (x - mid))); // logistic function = soft.
+                    std::bernoulli_distribution bd(asympt_true);
+                    const bool spontaneously_activated = bd(en_game.re);
+
+                    const bool try_shed = time_slice_selected && spontaneously_activated;
+
+                    if( ((5.0 * en_game.min_radius) < obj_i.rad)
+                    &&  try_shed ){
+                        const auto l_dir = vec2<double>(1.0, 0.0).rotate_around_z( rd_t(en_game.re) );
+                        auto l_rad = obj_i.rad * 0.05;
+                        l_rad = (l_rad < en_game.min_radius) ? en_game.min_radius : l_rad;
+
+                        const bool shed_successfully = attempt_to_shed( obj_i, l_dir, l_rad, l_en_game_objs);
+                        should_move_to_cand_pos = !shed_successfully;
+                    }
+
+                // If one or more interesctions are expected, implement mass transfer or scatter or something.
+                //
                 // Because larger objects are first, object intersections here cause the 'i'th object
                 // to transfer mass to the larger object.
-                const auto cand_int_objs  = obj_intersections(i);
-                if(!cand_int_objs.empty()){
+                }else{
                     for(auto &j : cand_int_objs){
                         auto& obj_j = en_game_objs[j];
                         const auto sep = obj_j.pos.distance( obj_i.pos );
@@ -4318,13 +4350,11 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 // successful placement.
                                 const auto can_shed = ((sqrt(2.0) * en_game.min_radius) < obj_j.rad);
                                 if(can_shed){
-                                    std::random_device rdev;
-                                    std::mt19937 re( rdev() );
                                     std::uniform_real_distribution<> rd_t(0.0, pi*2.0);
                                     {
                                         int64_t iter = 100L;
                                         while(true){
-                                            const auto l_dir = vec2<double>(1.0, 0.0).rotate_around_z( rd_t(re) );
+                                            const auto l_dir = vec2<double>(1.0, 0.0).rotate_around_z( rd_t(en_game.re) );
                                             const auto l_rad = en_game.min_radius;
                                             const bool shed_successfully = attempt_to_shed( obj_j, l_dir, l_rad, l_en_game_objs);
 
