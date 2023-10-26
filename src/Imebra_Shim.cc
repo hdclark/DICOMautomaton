@@ -1199,6 +1199,8 @@ get_metadata_top_level_tags(const std::filesystem::path &filename){
     insert_as_string_if_nonempty(0x0040, 0x0009, "ScheduledProcedureStepID");
     insert_as_string_if_nonempty(0x0008, 0x1070, "OperatorsName");
 
+    const auto modality = get_as<std::string>(out, "Modality").value_or("");
+
     //Patient Study Module.
     insert_as_string_if_nonempty(0x0010, 0x1010, "PatientsAge");
     insert_as_string_if_nonempty(0x0010, 0x1020, "PatientsSize"); // in m, so actually patient height. :(
@@ -1284,213 +1286,262 @@ get_metadata_top_level_tags(const std::filesystem::path &filename){
     insert_as_string_if_nonempty(0x0028, 0x1053, "RescaleSlope");
     insert_as_string_if_nonempty(0x0028, 0x1054, "RescaleType");
 
-    //RT Dose Module.
-    insert_as_string_if_nonempty(0x0028, 0x0002, "SamplesPerPixel");
-    insert_as_string_if_nonempty(0x0028, 0x0004, "PhotometricInterpretation");
-    insert_as_string_if_nonempty(0x0028, 0x0100, "BitsAllocated");
-    insert_as_string_if_nonempty(0x0028, 0x0101, "BitsStored");
-    insert_as_string_if_nonempty(0x0028, 0x0102, "HighBit");
-    insert_as_string_if_nonempty(0x0028, 0x0103, "PixelRepresentation");
-    insert_as_string_if_nonempty(0x3004, 0x0002, "DoseUnits");
-    insert_as_string_if_nonempty(0x3004, 0x0004, "DoseType");
-    insert_as_string_if_nonempty(0x3004, 0x000a, "DoseSummationType");
-    insert_as_string_if_nonempty(0x3004, 0x000e, "DoseGridScaling");
+    if(modality == "RTDOSE"){
+        //RT Dose Module.
+        insert_as_string_if_nonempty(0x0028, 0x0002, "SamplesPerPixel");
+        insert_as_string_if_nonempty(0x0028, 0x0004, "PhotometricInterpretation");
+        insert_as_string_if_nonempty(0x0028, 0x0100, "BitsAllocated");
+        insert_as_string_if_nonempty(0x0028, 0x0101, "BitsStored");
+        insert_as_string_if_nonempty(0x0028, 0x0102, "HighBit");
+        insert_as_string_if_nonempty(0x0028, 0x0103, "PixelRepresentation");
+        insert_as_string_if_nonempty(0x3004, 0x0002, "DoseUnits");
+        insert_as_string_if_nonempty(0x3004, 0x0004, "DoseType");
+        insert_as_string_if_nonempty(0x3004, 0x000a, "DoseSummationType");
+        insert_as_string_if_nonempty(0x3004, 0x000e, "DoseGridScaling");
 
-    insert_seq_tag_as_string_if_nonempty( 0x300C, 0x0002, "ReferencedRTPlanSequence",
-                                          0x0008, 0x1150, "ReferencedSOPClassUID");
-    insert_seq_tag_as_string_if_nonempty( 0x300C, 0x0002, "ReferencedRTPlanSequence",
-                                          0x0008, 0x1155, "ReferencedSOPInstanceUID");
-    insert_seq_tag_as_string_if_nonempty( 0x300C, 0x0020, "ReferencedFractionGroupSequence",
-                                          0x300C, 0x0022, "ReferencedFractionGroupNumber");
-    insert_seq_tag_as_string_if_nonempty( 0x300C, 0x0004, "ReferencedBeamSequence",
-                                          0x300C, 0x0006, "ReferencedBeamNumber");
+        insert_seq_tag_as_string_if_nonempty( 0x300C, 0x0002, "ReferencedRTPlanSequence",
+                                              0x0008, 0x1150, "ReferencedSOPClassUID");
+        insert_seq_tag_as_string_if_nonempty( 0x300C, 0x0002, "ReferencedRTPlanSequence",
+                                              0x0008, 0x1155, "ReferencedSOPInstanceUID");
+        insert_seq_tag_as_string_if_nonempty( 0x300C, 0x0020, "ReferencedFractionGroupSequence",
+                                              0x300C, 0x0022, "ReferencedFractionGroupNumber");
+        insert_seq_tag_as_string_if_nonempty( 0x300C, 0x0004, "ReferencedBeamSequence",
+                                              0x300C, 0x0006, "ReferencedBeamNumber");
 
-    //insert_as_string_if_nonempty(0x300C, 0x0002, "ReferencedRTPlanSequence");
-    //insert_as_string_if_nonempty(0x0008, 0x1150, "ReferencedSOPClassUID");
-    //insert_as_string_if_nonempty(0x0008, 0x1155, "ReferencedSOPInstanceUID");
-    //insert_as_string_if_nonempty(0x300C, 0x0020, "ReferencedFractionGroupSequence");
-    //insert_as_string_if_nonempty(0x300C, 0x0022, "ReferencedFractionGroupNumber");
-    //insert_as_string_if_nonempty(0x300C, 0x0004, "ReferencedBeamSequence");
-    //insert_as_string_if_nonempty(0x300C, 0x0006, "ReferencedBeamNumber");
-    
-    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
-                                              { { 0x300C, 0x0002, "ReferencedRTPlanSequence" },
-                                                { 0x300C, 0x0020, "ReferencedFractionGroupSequence" },
-                                                { 0x300C, 0x0004, "ReferencedBeamSequence" },
-                                                { 0x300C, 0x0006, "ReferencedBeamNumber" } }) );
-
-    //CT Image Module.
-    insert_as_string_if_nonempty(0x0018, 0x0060, "KVP");
-
-    //RT Image Module.
-    insert_as_string_if_nonempty(0x3002, 0x0002, "RTImageLabel");
-    insert_as_string_if_nonempty(0x3002, 0x0004, "RTImageDescription");
-    insert_as_string_if_nonempty(0x3002, 0x000a, "ReportedValuesOrigin");
-    insert_as_string_if_nonempty(0x3002, 0x000c, "RTImagePlane");
-    insert_as_string_if_nonempty(0x3002, 0x000d, "XRayImageReceptorTranslation");
-    insert_as_string_if_nonempty(0x3002, 0x000e, "XRayImageReceptorAngle");
-    insert_as_string_if_nonempty(0x3002, 0x0010, "RTImageOrientation");
-    insert_as_string_if_nonempty(0x3002, 0x0011, "ImagePlanePixelSpacing");
-    insert_as_string_if_nonempty(0x3002, 0x0012, "RTImagePosition");
-    insert_as_string_if_nonempty(0x3002, 0x0020, "RadiationMachineName");
-    insert_as_string_if_nonempty(0x3002, 0x0022, "RadiationMachineSAD");
-    insert_as_string_if_nonempty(0x3002, 0x0026, "RTImageSID");
-    insert_as_string_if_nonempty(0x3002, 0x0029, "FractionNumber");
-
-    insert_as_string_if_nonempty(0x300a, 0x00b3, "PrimaryDosimeterUnit");
-    insert_as_string_if_nonempty(0x300a, 0x011e, "GantryAngle");
-    insert_as_string_if_nonempty(0x300a, 0x0120, "BeamLimitingDeviceAngle");
-    insert_as_string_if_nonempty(0x300a, 0x0122, "PatientSupportAngle");
-    insert_as_string_if_nonempty(0x300a, 0x0128, "TableTopVerticalPosition");
-    insert_as_string_if_nonempty(0x300a, 0x0129, "TableTopLongitudinalPosition");
-    insert_as_string_if_nonempty(0x300a, 0x012a, "TableTopLateralPosition");
-    insert_as_string_if_nonempty(0x300a, 0x012c, "IsocenterPosition");
-
-    insert_as_string_if_nonempty(0x300c, 0x0006, "ReferencedBeamNumber");
-    insert_as_string_if_nonempty(0x300c, 0x0008, "StartCumulativeMetersetWeight");
-    insert_as_string_if_nonempty(0x300c, 0x0009, "EndCumulativeMetersetWeight");
-    insert_as_string_if_nonempty(0x300c, 0x0022, "ReferencedFractionGroupNumber");
-
-    insert_seq_tag_as_string_if_nonempty( 0x3002, 0x0030, "ExposureSequence",
-                                          0x0018, 0x0060, "KVP");
-    insert_seq_tag_as_string_if_nonempty( 0x3002, 0x0030, "ExposureSequence",
-                                          0x0018, 0x1150, "ExposureTime");
-    insert_seq_tag_as_string_if_nonempty( 0x3002, 0x0030, "ExposureSequence",
-                                          0x3002, 0x0032, "MetersetExposure");
-    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
-                                              { { 0x3002, 0x0030, "ExposureSequence" },
-                                                { 0x300A, 0x00B6, "BeamLimitingDeviceSequence" },
-                                                { 0x300A, 0x00B8, "RTBeamLimitingDeviceType" } }) );
-    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
-                                              { { 0x3002, 0x0030, "ExposureSequence" },
-                                                { 0x300A, 0x00B6, "BeamLimitingDeviceSequence" },
-                                                { 0x300A, 0x00BC, "NumberOfLeafJawPairs" } }) );
-    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
-                                              { { 0x3002, 0x0030, "ExposureSequence" },
-                                                { 0x300A, 0x00B6, "BeamLimitingDeviceSequence" },
-                                                { 0x300A, 0x011C, "LeafJawPositions" } }) );
-
-    // RT Plan Module.
-    insert_as_string_if_nonempty(0x300a, 0x0002, "RTPlanLabel");
-    insert_as_string_if_nonempty(0x300a, 0x0003, "RTPlanName");
-    insert_as_string_if_nonempty(0x300a, 0x0004, "RTPlanDescription");
-    insert_as_string_if_nonempty(0x300a, 0x0006, "RTPlanDate");
-    insert_as_string_if_nonempty(0x300a, 0x0007, "RTPlanTime");
-    insert_as_string_if_nonempty(0x300a, 0x000c, "RTPlanGeometry");
-    insert_as_string_if_nonempty(0x300a, 0x000a, "PlanIntent");
-
-    // RT Plan Approval Module
-    insert_as_string_if_nonempty(0x300e, 0x0002, "ApprovalStatus");
-    insert_as_string_if_nonempty(0x300e, 0x0004, "ReviewDate");
-    insert_as_string_if_nonempty(0x300e, 0x0005, "ReviewTime");
-    insert_as_string_if_nonempty(0x300e, 0x0008, "ReviewerName");
-
-    // MR Image Module
-    insert_as_string_if_nonempty(0x0018, 0x0020, "ScanningSequence");
-    insert_as_string_if_nonempty(0x0018, 0x0021, "SequenceVariant");
-    insert_as_string_if_nonempty(0x0018, 0x0024, "SequenceName");
-    insert_as_string_if_nonempty(0x0018, 0x0022, "ScanOptions");
-    insert_as_string_if_nonempty(0x0018, 0x0023, "MRAcquisitionType");
-    insert_as_string_if_nonempty(0x0018, 0x0080, "RepetitionTime");
-    insert_as_string_if_nonempty(0x0018, 0x0081, "EchoTime");
-    insert_as_string_if_nonempty(0x0018, 0x0082, "InversionTime");
-    insert_as_string_if_nonempty(0x0018, 0x0091, "EchoTrainLength");
-    insert_as_string_if_nonempty(0x0018, 0x0082, "InversionTime");
-    insert_as_string_if_nonempty(0x0018, 0x1060, "TriggerTime");
-
-    insert_as_string_if_nonempty(0x0018, 0x0025, "AngioFlag");
-    insert_as_string_if_nonempty(0x0018, 0x1062, "NominalInterval");
-    insert_as_string_if_nonempty(0x0018, 0x1090, "CardiacNumberOfImages");
-
-    insert_as_string_if_nonempty(0x0018, 0x0083, "NumberOfAverages");
-    insert_as_string_if_nonempty(0x0018, 0x0084, "ImagingFrequency");
-    insert_as_string_if_nonempty(0x0018, 0x0085, "ImagedNucleus");
-    insert_as_string_if_nonempty(0x0018, 0x0086, "EchoNumbers");
-    insert_as_string_if_nonempty(0x0018, 0x0087, "MagneticFieldStrength");
-
-    insert_as_string_if_nonempty(0x0018, 0x0088, "SpacingBetweenSlices");
-    insert_as_string_if_nonempty(0x0018, 0x0089, "NumberOfPhaseEncodingSteps");
-    insert_as_string_if_nonempty(0x0018, 0x0093, "PercentSampling");
-    insert_as_string_if_nonempty(0x0018, 0x0094, "PercentPhaseFieldOfView");
-    insert_as_string_if_nonempty(0x0018, 0x0095, "PixelBandwidth");
-
-    insert_as_string_if_nonempty(0x0018, 0x1250, "ReceiveCoilName");
-    insert_as_string_if_nonempty(0x0018, 0x1251, "TransmitCoilName");
-    insert_as_string_if_nonempty(0x0018, 0x1310, "AcquisitionMatrix");
-    insert_as_string_if_nonempty(0x0018, 0x1312, "InplanePhaseEncodingDirection");
-    insert_as_string_if_nonempty(0x0018, 0x1314, "FlipAngle");
-    insert_as_string_if_nonempty(0x0018, 0x1315, "VariableFlipAngleFlag");
-    insert_as_string_if_nonempty(0x0018, 0x1316, "SAR");
-    insert_as_string_if_nonempty(0x0018, 0x1318, "dBdt");
-
-    // MR Diffusion Macro Attributes.
-    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
-                                              { { 0x0018, 0x9117, "MRDiffusionSequence" },
-                                                { 0x0018, 0x9087, "DiffusionBValue" } }) );
-    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
-                                              { { 0x0018, 0x9117, "MRDiffusionSequence" },
-                                                { 0x0018, 0x9075, "DiffusionDirection" } }) );
-    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
-                                              { { 0x0018, 0x9117, "MRDiffusionSequence" },
-                                                { 0x0018, 0x9076, "DiffusionGradientDirectionSequence" },
-                                                { 0x0018, 0x9089, "DiffusionGradientOrientation" } }) );
-    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
-                                              { { 0x0018, 0x9117, "MRDiffusionSequence" },
-                                                { 0x0018, 0x9147, "DiffusionAnisotropyType" } }) );
-
-    // MR Image and Spectroscopy Instance Macro.
-    insert_as_string_if_nonempty(0x0018, 0x9073, "AcquisitionDuration");
-
-    // Siemens MR Private Diffusion Module, as detailed in syngo(R) MR E11 conformance statement.
-    insert_as_string_if_nonempty(0x0019, 0x0010, "SiemensMRHeader");
-    insert_as_string_if_nonempty(0x0019, 0x100c, "DiffusionBValue");
-    insert_as_string_if_nonempty(0x0019, 0x100d, "DiffusionDirection");
-    insert_as_string_if_nonempty(0x0019, 0x100e, "DiffusionGradientVector");
-    insert_as_string_if_nonempty(0x0019, 0x1027, "DiffusionBMatrix");  // multiplicity = 3.
-
-    // PET Image Module.
-    insert_as_string_if_nonempty(0x0054, 0x1001, "Units");
-
-    // PET Isotope Module.
-    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
-                                              { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
-                                                { 0x0054, 0x0300, "RadionuclideCodeSequence" } }) );
-    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
-                                              { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
-                                                { 0x0018, 0x1070, "RadiopharmaceuticalRoute" } }) );
-    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
-                                              { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
-                                                { 0x0018, 0x1071, "RadiopharmaceuticalVolume" } }) );
-    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
-                                              { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
-                                                { 0x0018, 0x1074, "RadionuclideTotalDose" } }) ); // initially administered, in Bq
-    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
-                                              { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
-                                                { 0x0018, 0x1075, "RadionuclideHalfLife" } }) );
-    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
-                                              { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
-                                                { 0x0018, 0x1077, "RadiopharmaceuticalSpecificActivity" } }) );
-    insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
-                                              { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
-                                                { 0x0018, 0x0031, "Radiopharmaceutical" } }) );
-
-    //Unclassified others...
-    insert_as_string_if_nonempty(0x0029, 0x0010, "SiemensCSAHeaderVersion");
-    insert_as_string_if_nonempty(0x0029, 0x0011, "SiemensMEDCOMHeaderVersion");
-
-    insert_as_string_if_nonempty(0x0029, 0x1008, "CSAImageHeaderType"); // CS type
-    insert_as_string_if_nonempty(0x0029, 0x1009, "CSAImageHeaderVersion"); // LO type
-
-    if(const auto header = extract_as_binary(0x0029, 0x1010); header.size() != 0 ){ // "CSAImageHeaderInfo", OB type
-        const auto parsed = parse_CSA2_binary(header);
-        for(const auto &p : parsed) out["CSAImage/" + p.first] = p.second;
+        //insert_as_string_if_nonempty(0x300C, 0x0002, "ReferencedRTPlanSequence");
+        //insert_as_string_if_nonempty(0x0008, 0x1150, "ReferencedSOPClassUID");
+        //insert_as_string_if_nonempty(0x0008, 0x1155, "ReferencedSOPInstanceUID");
+        //insert_as_string_if_nonempty(0x300C, 0x0020, "ReferencedFractionGroupSequence");
+        //insert_as_string_if_nonempty(0x300C, 0x0022, "ReferencedFractionGroupNumber");
+        //insert_as_string_if_nonempty(0x300C, 0x0004, "ReferencedBeamSequence");
+        //insert_as_string_if_nonempty(0x300C, 0x0006, "ReferencedBeamNumber");
+        
+        insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                                  { { 0x300C, 0x0002, "ReferencedRTPlanSequence" },
+                                                    { 0x300C, 0x0020, "ReferencedFractionGroupSequence" },
+                                                    { 0x300C, 0x0004, "ReferencedBeamSequence" },
+                                                    { 0x300C, 0x0006, "ReferencedBeamNumber" } }) );
     }
 
-    insert_as_string_if_nonempty(0x0029, 0x1018, "CSASeriesHeaderType"); // CS type
-    insert_as_string_if_nonempty(0x0029, 0x1019, "CSASeriesHeaderVersion"); // LO type
-    if(const auto header = extract_as_binary(0x0029, 0x1020); header.size() != 0 ){ // "CSASeriesHeaderInfo", OB type
-        const auto parsed = parse_CSA2_binary(header);
-        for(const auto &p : parsed) out["CSASeries/" + p.first] = p.second;
+    //CT Image Module.
+    if(modality == "CT"){
+        insert_as_string_if_nonempty(0x0018, 0x0060, "KVP");
+        insert_as_string_if_nonempty(0x0018, 0x0090, "DataCollectionDiameter");
+        insert_as_string_if_nonempty(0x0018, 0x1100, "ReconstructionDiameter");
+    }
+
+    // GE private CT tags.
+    do{
+        // Ensure tag 0x0019, 0x0010, "PrivateCreatorIdentification" contains value "GEMS_ACQU_01"
+        // before attempting to read the following tags. See GE document 'DOC2708586 REV 1'.
+        // Note that this key does not have a unique name, so the tag numbers are appended.
+        const auto l_key = "PrivateCreatorIdentification0019,0010";
+        insert_as_string_if_nonempty(0x0019, 0x0010, l_key);
+        const auto l_val = get_as<std::string>(out, l_key).value_or("");
+        if(l_val != "GEMS_ACQU_01") break;
+
+        insert_as_string_if_nonempty(0x0019, 0x1002, "NumberOfCellsInDetector");
+        insert_as_string_if_nonempty(0x0019, 0x1003, "CellNumberAtTheta");
+        insert_as_string_if_nonempty(0x0019, 0x1004, "CellSpacing");
+        insert_as_string_if_nonempty(0x0019, 0x100f, "HorizontalFrameOfReference");
+        insert_as_string_if_nonempty(0x0019, 0x1011, "SeriesContrast");
+        insert_as_string_if_nonempty(0x0019, 0x1018, "FirstScanRAS");
+        insert_as_string_if_nonempty(0x0019, 0x101a, "LastScanRAS");
+        insert_as_string_if_nonempty(0x0019, 0x1023, "TableSpeed");
+        insert_as_string_if_nonempty(0x0019, 0x1024, "MidScanTime");
+        insert_as_string_if_nonempty(0x0019, 0x1025, "MidScanFlag");
+        insert_as_string_if_nonempty(0x0019, 0x1026, "DegreesOfAzimuth");
+        insert_as_string_if_nonempty(0x0019, 0x1027, "GantryPeriod");
+        insert_as_string_if_nonempty(0x0019, 0x102c, "NumberOfTriggers");
+        insert_as_string_if_nonempty(0x0019, 0x102e, "AngleOfFirstView");
+        insert_as_string_if_nonempty(0x0019, 0x102f, "TriggerFrequency");
+        insert_as_string_if_nonempty(0x0019, 0x1039, "ScanFOVType");
+        insert_as_string_if_nonempty(0x0019, 0x1042, "SegmentNumber");
+        insert_as_string_if_nonempty(0x0019, 0x1043, "TotalSegmentsRequested");
+        insert_as_string_if_nonempty(0x0019, 0x1047, "ViewCompressionFactor");
+        insert_as_string_if_nonempty(0x0019, 0x1052, "ReconPostProcessingFlag");
+        insert_as_string_if_nonempty(0x0019, 0x106a, "DependantOnNumberOfViewsProcessed");
+    }while(false);
+
+    if(modality == "RTIMAGE"){
+        //RT Image Module.
+        insert_as_string_if_nonempty(0x3002, 0x0002, "RTImageLabel");
+        insert_as_string_if_nonempty(0x3002, 0x0004, "RTImageDescription");
+        insert_as_string_if_nonempty(0x3002, 0x000a, "ReportedValuesOrigin");
+        insert_as_string_if_nonempty(0x3002, 0x000c, "RTImagePlane");
+        insert_as_string_if_nonempty(0x3002, 0x000d, "XRayImageReceptorTranslation");
+        insert_as_string_if_nonempty(0x3002, 0x000e, "XRayImageReceptorAngle");
+        insert_as_string_if_nonempty(0x3002, 0x0010, "RTImageOrientation");
+        insert_as_string_if_nonempty(0x3002, 0x0011, "ImagePlanePixelSpacing");
+        insert_as_string_if_nonempty(0x3002, 0x0012, "RTImagePosition");
+        insert_as_string_if_nonempty(0x3002, 0x0020, "RadiationMachineName");
+        insert_as_string_if_nonempty(0x3002, 0x0022, "RadiationMachineSAD");
+        insert_as_string_if_nonempty(0x3002, 0x0026, "RTImageSID");
+        insert_as_string_if_nonempty(0x3002, 0x0029, "FractionNumber");
+
+        insert_as_string_if_nonempty(0x300a, 0x00b3, "PrimaryDosimeterUnit");
+        insert_as_string_if_nonempty(0x300a, 0x011e, "GantryAngle");
+        insert_as_string_if_nonempty(0x300a, 0x0120, "BeamLimitingDeviceAngle");
+        insert_as_string_if_nonempty(0x300a, 0x0122, "PatientSupportAngle");
+        insert_as_string_if_nonempty(0x300a, 0x0128, "TableTopVerticalPosition");
+        insert_as_string_if_nonempty(0x300a, 0x0129, "TableTopLongitudinalPosition");
+        insert_as_string_if_nonempty(0x300a, 0x012a, "TableTopLateralPosition");
+        insert_as_string_if_nonempty(0x300a, 0x012c, "IsocenterPosition");
+
+        insert_as_string_if_nonempty(0x300c, 0x0006, "ReferencedBeamNumber");
+        insert_as_string_if_nonempty(0x300c, 0x0008, "StartCumulativeMetersetWeight");
+        insert_as_string_if_nonempty(0x300c, 0x0009, "EndCumulativeMetersetWeight");
+        insert_as_string_if_nonempty(0x300c, 0x0022, "ReferencedFractionGroupNumber");
+
+        insert_seq_tag_as_string_if_nonempty( 0x3002, 0x0030, "ExposureSequence",
+                                              0x0018, 0x0060, "KVP");
+        insert_seq_tag_as_string_if_nonempty( 0x3002, 0x0030, "ExposureSequence",
+                                              0x0018, 0x1150, "ExposureTime");
+        insert_seq_tag_as_string_if_nonempty( 0x3002, 0x0030, "ExposureSequence",
+                                              0x3002, 0x0032, "MetersetExposure");
+        insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                                  { { 0x3002, 0x0030, "ExposureSequence" },
+                                                    { 0x300A, 0x00B6, "BeamLimitingDeviceSequence" },
+                                                    { 0x300A, 0x00B8, "RTBeamLimitingDeviceType" } }) );
+        insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                                  { { 0x3002, 0x0030, "ExposureSequence" },
+                                                    { 0x300A, 0x00B6, "BeamLimitingDeviceSequence" },
+                                                    { 0x300A, 0x00BC, "NumberOfLeafJawPairs" } }) );
+        insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                                  { { 0x3002, 0x0030, "ExposureSequence" },
+                                                    { 0x300A, 0x00B6, "BeamLimitingDeviceSequence" },
+                                                    { 0x300A, 0x011C, "LeafJawPositions" } }) );
+    }
+
+    if(modality == "RTPLAN"){
+        // RT Plan Module.
+        insert_as_string_if_nonempty(0x300a, 0x0002, "RTPlanLabel");
+        insert_as_string_if_nonempty(0x300a, 0x0003, "RTPlanName");
+        insert_as_string_if_nonempty(0x300a, 0x0004, "RTPlanDescription");
+        insert_as_string_if_nonempty(0x300a, 0x0006, "RTPlanDate");
+        insert_as_string_if_nonempty(0x300a, 0x0007, "RTPlanTime");
+        insert_as_string_if_nonempty(0x300a, 0x000c, "RTPlanGeometry");
+        insert_as_string_if_nonempty(0x300a, 0x000a, "PlanIntent");
+
+        // RT Plan Approval Module
+        insert_as_string_if_nonempty(0x300e, 0x0002, "ApprovalStatus");
+        insert_as_string_if_nonempty(0x300e, 0x0004, "ReviewDate");
+        insert_as_string_if_nonempty(0x300e, 0x0005, "ReviewTime");
+        insert_as_string_if_nonempty(0x300e, 0x0008, "ReviewerName");
+    }
+
+    if(modality == "MR"){
+        // MR Image Module
+        insert_as_string_if_nonempty(0x0018, 0x0020, "ScanningSequence");
+        insert_as_string_if_nonempty(0x0018, 0x0021, "SequenceVariant");
+        insert_as_string_if_nonempty(0x0018, 0x0024, "SequenceName");
+        insert_as_string_if_nonempty(0x0018, 0x0022, "ScanOptions");
+        insert_as_string_if_nonempty(0x0018, 0x0023, "MRAcquisitionType");
+        insert_as_string_if_nonempty(0x0018, 0x0080, "RepetitionTime");
+        insert_as_string_if_nonempty(0x0018, 0x0081, "EchoTime");
+        insert_as_string_if_nonempty(0x0018, 0x0082, "InversionTime");
+        insert_as_string_if_nonempty(0x0018, 0x0091, "EchoTrainLength");
+        insert_as_string_if_nonempty(0x0018, 0x0082, "InversionTime");
+        insert_as_string_if_nonempty(0x0018, 0x1060, "TriggerTime");
+
+        insert_as_string_if_nonempty(0x0018, 0x0025, "AngioFlag");
+        insert_as_string_if_nonempty(0x0018, 0x1062, "NominalInterval");
+        insert_as_string_if_nonempty(0x0018, 0x1090, "CardiacNumberOfImages");
+
+        insert_as_string_if_nonempty(0x0018, 0x0083, "NumberOfAverages");
+        insert_as_string_if_nonempty(0x0018, 0x0084, "ImagingFrequency");
+        insert_as_string_if_nonempty(0x0018, 0x0085, "ImagedNucleus");
+        insert_as_string_if_nonempty(0x0018, 0x0086, "EchoNumbers");
+        insert_as_string_if_nonempty(0x0018, 0x0087, "MagneticFieldStrength");
+
+        insert_as_string_if_nonempty(0x0018, 0x0088, "SpacingBetweenSlices");
+        insert_as_string_if_nonempty(0x0018, 0x0089, "NumberOfPhaseEncodingSteps");
+        insert_as_string_if_nonempty(0x0018, 0x0093, "PercentSampling");
+        insert_as_string_if_nonempty(0x0018, 0x0094, "PercentPhaseFieldOfView");
+        insert_as_string_if_nonempty(0x0018, 0x0095, "PixelBandwidth");
+
+        insert_as_string_if_nonempty(0x0018, 0x1250, "ReceiveCoilName");
+        insert_as_string_if_nonempty(0x0018, 0x1251, "TransmitCoilName");
+        insert_as_string_if_nonempty(0x0018, 0x1310, "AcquisitionMatrix");
+        insert_as_string_if_nonempty(0x0018, 0x1312, "InplanePhaseEncodingDirection");
+        insert_as_string_if_nonempty(0x0018, 0x1314, "FlipAngle");
+        insert_as_string_if_nonempty(0x0018, 0x1315, "VariableFlipAngleFlag");
+        insert_as_string_if_nonempty(0x0018, 0x1316, "SAR");
+        insert_as_string_if_nonempty(0x0018, 0x1318, "dBdt");
+
+        // MR Diffusion Macro Attributes.
+        insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                                  { { 0x0018, 0x9117, "MRDiffusionSequence" },
+                                                    { 0x0018, 0x9087, "DiffusionBValue" } }) );
+        insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                                  { { 0x0018, 0x9117, "MRDiffusionSequence" },
+                                                    { 0x0018, 0x9075, "DiffusionDirection" } }) );
+        insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                                  { { 0x0018, 0x9117, "MRDiffusionSequence" },
+                                                    { 0x0018, 0x9076, "DiffusionGradientDirectionSequence" },
+                                                    { 0x0018, 0x9089, "DiffusionGradientOrientation" } }) );
+        insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                                  { { 0x0018, 0x9117, "MRDiffusionSequence" },
+                                                    { 0x0018, 0x9147, "DiffusionAnisotropyType" } }) );
+
+        // MR Image and Spectroscopy Instance Macro.
+        insert_as_string_if_nonempty(0x0018, 0x9073, "AcquisitionDuration");
+
+        // Siemens MR Private Diffusion Module, as detailed in syngo(R) MR E11 conformance statement.
+        insert_as_string_if_nonempty(0x0019, 0x0010, "SiemensMRHeader");
+        insert_as_string_if_nonempty(0x0019, 0x100c, "DiffusionBValue");
+        insert_as_string_if_nonempty(0x0019, 0x100d, "DiffusionDirection");
+        insert_as_string_if_nonempty(0x0019, 0x100e, "DiffusionGradientVector");
+        insert_as_string_if_nonempty(0x0019, 0x1027, "DiffusionBMatrix");  // multiplicity = 3, conflicts with GantryPeriod.
+    }
+
+    if(modality == "PT"){
+        // PET Image Module.
+        insert_as_string_if_nonempty(0x0054, 0x1001, "Units");
+
+        // PET Isotope Module.
+        insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                                  { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
+                                                    { 0x0054, 0x0300, "RadionuclideCodeSequence" } }) );
+        insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                                  { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
+                                                    { 0x0018, 0x1070, "RadiopharmaceuticalRoute" } }) );
+        insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                                  { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
+                                                    { 0x0018, 0x1071, "RadiopharmaceuticalVolume" } }) );
+        insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                                  { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
+                                                    { 0x0018, 0x1074, "RadionuclideTotalDose" } }) ); // initially administered, in Bq
+        insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                                  { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
+                                                    { 0x0018, 0x1075, "RadionuclideHalfLife" } }) );
+        insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                                  { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
+                                                    { 0x0018, 0x1077, "RadiopharmaceuticalSpecificActivity" } }) );
+        insert_seq_vec_tag_as_string_if_nonempty( std::deque<path_node>(
+                                                  { { 0x0054, 0x0016, "RadiopharmaceuticalInformationSequence" },
+                                                    { 0x0018, 0x0031, "Radiopharmaceutical" } }) );
+    }
+
+    //Unclassified others...
+    if(modality == "MR"){
+        insert_as_string_if_nonempty(0x0029, 0x0010, "SiemensCSAHeaderVersion");
+        insert_as_string_if_nonempty(0x0029, 0x0011, "SiemensMEDCOMHeaderVersion");
+
+        insert_as_string_if_nonempty(0x0029, 0x1008, "CSAImageHeaderType"); // CS type
+        insert_as_string_if_nonempty(0x0029, 0x1009, "CSAImageHeaderVersion"); // LO type
+
+        if(const auto header = extract_as_binary(0x0029, 0x1010); header.size() != 0 ){ // "CSAImageHeaderInfo", OB type
+            const auto parsed = parse_CSA2_binary(header);
+            for(const auto &p : parsed) out["CSAImage/" + p.first] = p.second;
+        }
+
+        insert_as_string_if_nonempty(0x0029, 0x1018, "CSASeriesHeaderType"); // CS type
+        insert_as_string_if_nonempty(0x0029, 0x1019, "CSASeriesHeaderVersion"); // LO type
+        if(const auto header = extract_as_binary(0x0029, 0x1020); header.size() != 0 ){ // "CSASeriesHeaderInfo", OB type
+            const auto parsed = parse_CSA2_binary(header);
+            for(const auto &p : parsed) out["CSASeries/" + p.first] = p.second;
+        }
     }
 
     insert_as_string_if_nonempty(0x2001, 0x100a, "SliceNumber");
