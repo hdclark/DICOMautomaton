@@ -149,17 +149,25 @@ bool ContourWholeImages(Drover &DICOM_data,
                 cc.contours.back().metadata = metadata;
                 cc.contours.back().closed = true;
                 const auto pi = std::acos(-1.0);
+                const auto r = diam_opt.value() / 2.0;
                 const auto ortho_unit = animg.col_unit.Cross( animg.row_unit );
 
                 // Select the number of vertices so each vertex is separated at most by a context-relevant spacing.
                 // In this case, we use the smallest in-plane voxel dimension as a relative scale.
                 //
-                // Note that this is *not* the maximum deviation from the FOV circle -- that number is much smaller and
-                // can be found by comparing an arc vs a triangle geometry (using angle 2 pi / target_vert_spacing and
-                // radius or triangle edge diam/2).
-                const double target_vert_spacing = std::min(animg.pxl_dx, animg.pxl_dy) * 2.0; // <-- x2 is arb. to reduce # of verts.
-                auto N_verts = static_cast<int64_t>( std::ceil(2.0 * pi * (diam_opt.value() / 2.0) / target_vert_spacing) );
-                N_verts = std::clamp<int64_t>(N_verts, 50L, 50'000L);
+                // Option #1: direct maximum distance between vertices. 
+                // This provides only an indirect measure of the error.
+                // Note the factor of 2 which is arbitrary and used to reduce the number of vertices.
+                //const double target_vert_spacing = std::min(animg.pxl_dx, animg.pxl_dy) * 2.0; // <-- arb. x2 here.
+                //auto N_verts = static_cast<int64_t>( std::ceil(2.0 * pi * r / target_vert_spacing) );
+                // 
+                // Option #2: limit the deviation between a right-triangle and an arc with the same radius.
+                // This provides a more direct way to gauge the error introduced by approximating the circular ROI.
+                // Note the factor of 50 which implies the worst deviation from a perfect circle will be 1/50 the
+                // smallest voxel dimension.
+                const double max_ortho_discrepancy = std::min(animg.pxl_dx, animg.pxl_dy) / 50.0; // <-- arb. 50x here.
+                auto N_verts = static_cast<int64_t>( std::ceil(pi / std::acos(1.0 - max_ortho_discrepancy / r) ) );
+                N_verts = std::clamp<int64_t>(N_verts, 20L, 50'000L);
 
                 for(size_t i = 0UL; i < N_verts; ++i){
                     const auto angle = 2.0 * pi * static_cast<double>(i) / static_cast<double>(N_verts);
