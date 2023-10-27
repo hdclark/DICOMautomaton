@@ -169,7 +169,7 @@ bool ContourWholeImages(Drover &DICOM_data,
                 auto N_verts = static_cast<int64_t>( std::ceil(pi / std::acos(1.0 - max_ortho_discrepancy / r) ) );
                 N_verts = std::clamp<int64_t>(N_verts, 20L, 50'000L);
 
-                for(size_t i = 0UL; i < N_verts; ++i){
+                for(int64_t i = 0L; i < N_verts; ++i){
                     const auto angle = 2.0 * pi * static_cast<double>(i) / static_cast<double>(N_verts);
                     const auto v = (animg.row_unit * diam_opt.value() * 0.5).rotate_around_unit(ortho_unit, angle);
                     cc.contours.back().points.emplace_back(centre + v);
