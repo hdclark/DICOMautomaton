@@ -37,6 +37,28 @@
 
 #include "Serialization.h"
 
+// Helper functions.
+void Serialize( const bool &in, bool &out );
+void Deserialize( const bool &in, bool &out );
+
+void Serialize( const std::string &in, std::string &out );
+void Deserialize( const std::string &in, std::string &out );
+
+void Serialize( const uint32_t &in, int64_t &out );
+void Deserialize( const int64_t &in, uint32_t &out );
+
+void Serialize( const uint64_t &in, int64_t &out );
+void Deserialize( const int64_t &in, uint64_t &out );
+
+void Serialize( const int64_t &in, int64_t &out );
+void Deserialize( const int64_t &in, int64_t &out );
+
+void Serialize( const double &in, double &out );
+void Deserialize( const double &in, double &out );
+
+void Serialize( const float &in, double &out );
+void Deserialize( const double &in, float &out );
+
 // --------------------------------------------------------------------
 // Ygor classes -- YgorMath.h.
 // --------------------------------------------------------------------

@@ -21,6 +21,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../Metadata.h"
 
 #ifndef DCMA_USE_THRIFT
     #error "Attempted to compile RPC client without Apache Thrift, which is required"
@@ -71,8 +72,8 @@ OperationDoc OpArgDocRPCSend(){
 
 bool RPCSend(Drover &DICOM_data,
              const OperationArgPkg& OptArgs,
-             std::map<std::string, std::string>& /*InvocationMetadata*/,
-             const std::string& /*FilenameLex*/){
+             std::map<std::string, std::string>& InvocationMetadata,
+             const std::string& FilenameLex){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto Port = std::stol( OptArgs.getValueStr("Port").value() );
@@ -91,22 +92,59 @@ bool RPCSend(Drover &DICOM_data,
         transport->open();
 
         // Enumerate the supported operations.
-        std::vector<::dcma::rpc::KnownOperation> known_ops;
-        ::dcma::rpc::OperationsQuery q;
-        client.GetSupportedOperations(known_ops, q);
+        {
+            std::vector<::dcma::rpc::KnownOperation> known_ops;
+            ::dcma::rpc::OperationsQuery q;
+            client.GetSupportedOperations(known_ops, q);
 
-        std::cout << "Known operations: ";
-        for(const auto &op : known_ops){
-            std::cout << "'" << op.name << "' ";
+            std::cout << "Known operations: ";
+            for(const auto &op : known_ops){
+                std::cout << "'" << op.name << "' ";
+            }
+            std::cout << std::endl;
         }
-        std::cout << std::endl;
 
         // Perform a check of the Drover serialization.
-        //
-        // ... TODO ...
+        {
+            ::dcma::rpc::ExecuteScriptQuery q;
+//  struct ExecuteScriptQuery{
+//      1: required Drover drover;
+//      2: required metadata_t invocation_metadata;
+//      3: required string filename_lex;
+//  }
+            Serialize(DICOM_data, q.drover);
+            Serialize(InvocationMetadata, q.invocation_metadata);
+            Serialize(FilenameLex, q.filename_lex);
+            std::string script = "noop();";
 
+            ::dcma::rpc::ExecuteScriptResponse r;
+            client.ExecuteScript(r, q, script);
+//  struct ExecuteScriptResponse {
+//      1: required bool success;
+//      2: optional Drover drover;
+//      3: optional metadata_t invocation_metadata;
+//      4: optional string filename_lex;
+//  }
+            bool script_success = false;
+            Deserialize(r.success, script_success);
+            if(!script_success){
+                YLOGWARN("Remote procedure ExecuteScript was not successful, disregarding output");
+            }else{
+                ::Drover l_DICOM_data;
+                ::metadata_map_t l_InvocationMetadata;
+                std::string l_FilenameLex;
 
-        YLOGINFO("Implementation of client goes here");
+                Deserialize(r.drover, l_DICOM_data);
+                Deserialize(r.invocation_metadata, l_InvocationMetadata);
+                Deserialize(r.filename_lex, l_FilenameLex);
+
+                // Make the actual data swap only after all deserialization is complete to make recovery easier if
+                // deserialization fails.
+                DICOM_data = l_DICOM_data;
+                InvocationMetadata = l_InvocationMetadata;
+                //FilenameLex = l_FilenameLex;
+            }
+        }
 
     }catch( const std::exception &e){
         YLOGWARN("Client failed: '" << e.what() << "'");

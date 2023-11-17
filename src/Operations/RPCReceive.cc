@@ -20,8 +20,10 @@
 #include "YgorImages.h"
 
 #include "../Structs.h"
+#include "../Metadata.h"
 #include "../Regex_Selectors.h"
 #include "../Operation_Dispatcher.h"
+#include "../Script_Loader.h"
 
 #ifndef DCMA_USE_THRIFT
     #error "Attempted to compile RPC server without Apache Thrift, which is required"
@@ -105,21 +107,41 @@ class ReceiverHandler : virtual public ::dcma::rpc::ReceiverIf {
                        const ::dcma::rpc::ExecuteScriptQuery& query,
                        const std::string& script) {
         YLOGINFO("ExecuteScript procedure invoked");
-/*
-struct ExecuteScriptQuery{
-    1: required Drover drover;
-    2: required metadata_t invocation_metadata;
-    3: required string filename_lex;
-}
-struct ExecuteScriptResponse {
-    1: required bool success;
-    2: optional Drover drover;
-    3: optional metadata_t invocation_metadata;
-    4: optional string filename_lex;
-}
-*/
-        a
 
+        // Deserialize the query input.
+        ::Drover l_DICOM_data;
+        ::metadata_map_t l_InvocationMetadata;
+        std::string l_FilenameLex;
+        std::string l_script;
+
+        Deserialize(query.drover, l_DICOM_data);
+        Deserialize(query.invocation_metadata, l_InvocationMetadata);
+        Deserialize(query.filename_lex, l_FilenameLex);
+        Deserialize(script, l_script);
+
+        // Execute the script.
+        std::list<script_feedback_t> feedback;
+        std::stringstream ss( l_script );
+        std::list<OperationArgPkg> op_list;
+        bool l_ret = Load_DCMA_Script( ss, feedback, op_list );
+        if(!l_ret){
+            YLOGWARN("Parsing script failed");
+
+        }else{
+            l_ret = Operation_Dispatcher(l_DICOM_data,
+                                         l_InvocationMetadata,
+                                         l_FilenameLex,
+                                         op_list);
+        }
+        if(!l_ret){
+            YLOGWARN("Script execution failed");
+        }
+
+        // Serialize the outputs.
+        Serialize(l_ret, _return.success);
+        Serialize(l_DICOM_data, _return.drover);
+        Serialize(l_InvocationMetadata, _return.invocation_metadata);
+        Serialize(l_FilenameLex, _return.filename_lex);
     }
 };
 
@@ -147,10 +169,10 @@ OperationDoc OpArgDocRPCReceive(){
 
 
 
-bool RPCReceive(Drover &DICOM_data,
-                     const OperationArgPkg& OptArgs,
-                     std::map<std::string, std::string>& /*InvocationMetadata*/,
-                     const std::string& /*FilenameLex*/){
+bool RPCReceive(Drover & /*DICOM_data*/,
+                const OperationArgPkg& OptArgs,
+                std::map<std::string, std::string>& /*InvocationMetadata*/,
+                const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto Port = std::stol( OptArgs.getValueStr("Port").value() );
