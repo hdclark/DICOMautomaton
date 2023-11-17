@@ -46,12 +46,12 @@ using namespace ::apache::thrift::server;
 class ReceiverHandler : virtual public ::dcma::rpc::ReceiverIf {
   public:
     ReceiverHandler() {
-        YLOGINFO("Initialization code goes here");
+        YLOGINFO("RPC initialization complete");
     }
 
     void GetSupportedOperations(std::vector<::dcma::rpc::KnownOperation> & _return,
                                 const ::dcma::rpc::OperationsQuery& query) {
-        YLOGINFO("GetSupportedOperations implementation goes here");
+        YLOGINFO("GetSupportedOperations procedure invoked");
 
         // Simple test.
         {
@@ -98,13 +98,28 @@ class ReceiverHandler : virtual public ::dcma::rpc::ReceiverIf {
 
     void LoadFiles(::dcma::rpc::LoadFilesResponse& _return,
                    const std::vector<::dcma::rpc::LoadFilesQuery> & server_filenames) {
-        YLOGINFO("LoadFiles implementation goes here");
+        YLOGINFO("LoadFiles procedure invoked");
     }
 
     void ExecuteScript(::dcma::rpc::ExecuteScriptResponse& _return,
                        const ::dcma::rpc::ExecuteScriptQuery& query,
                        const std::string& script) {
-        YLOGINFO("ExecuteScript implementation goes here");
+        YLOGINFO("ExecuteScript procedure invoked");
+/*
+struct ExecuteScriptQuery{
+    1: required Drover drover;
+    2: required metadata_t invocation_metadata;
+    3: required string filename_lex;
+}
+struct ExecuteScriptResponse {
+    1: required bool success;
+    2: optional Drover drover;
+    3: optional metadata_t invocation_metadata;
+    4: optional string filename_lex;
+}
+*/
+        a
+
     }
 };
 
