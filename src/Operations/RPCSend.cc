@@ -53,33 +53,39 @@ OperationDoc OpArgDocRPCSend(){
 
     out.args.emplace_back();
     out.args.back().name = "Port";
-    out.args.back().desc = "The port number to listen on.";
+    out.args.back().desc = "The port number to connect to.";
     out.args.back().default_val = "9090";
     out.args.back().expected = true;
     out.args.back().examples = { "13", "8080", "9090", "16378" };
+
+    out.args.emplace_back();
+    out.args.back().name = "Host";
+    out.args.back().desc = "The remote host name or IP address to connect to.";
+    out.args.back().default_val = "localhost";
+    out.args.back().expected = true;
+    out.args.back().examples = { "localhost", "127.0.0.1" };
 
     return out;
 }
 
 
 bool RPCSend(Drover &DICOM_data,
-                     const OperationArgPkg& OptArgs,
-                     std::map<std::string, std::string>& /*InvocationMetadata*/,
-                     const std::string& /*FilenameLex*/){
+             const OperationArgPkg& OptArgs,
+             std::map<std::string, std::string>& /*InvocationMetadata*/,
+             const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto Port = std::stol( OptArgs.getValueStr("Port").value() );
+    const auto Host = OptArgs.getValueStr("Host").value();
     //-----------------------------------------------------------------------------------------------------------------
 
     std::shared_ptr<TTransport> transport;
     //auto transport = std::make_shared<TTransport>();
-    transport = std::make_shared<TSocket>("localhost", Port);
+    transport = std::make_shared<TSocket>(Host.c_str(), Port);
     transport = std::make_shared<TBufferedTransport>(transport);
 
     auto protocol = std::make_shared<TBinaryProtocol>(transport);
     ::dcma::rpc::ReceiverClient client(protocol);
-
-    //using namespace ::dcma::rpc;
 
     try{
         transport->open();
@@ -96,4 +102,3 @@ bool RPCSend(Drover &DICOM_data,
 
     return true;
 }
-
