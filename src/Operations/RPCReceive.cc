@@ -21,6 +21,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../Operation_Dispatcher.h"
 
 #ifndef DCMA_USE_THRIFT
     #error "Attempted to compile RPC server without Apache Thrift, which is required"
@@ -83,6 +84,15 @@ class ReceiverHandler : virtual public ::dcma::rpc::ReceiverIf {
             Serialize(a, b);
             Deserialize(b, a);
             Serialize(a, b);
+        }
+
+        // Enumerate supported operations.
+        const auto known_ops = Known_Operations_and_Aliases();
+        _return.reserve(known_ops.size());
+        for(const auto& ko_t : known_ops){
+            const auto op_name = ko_t.first;
+            _return.emplace_back();
+            _return.back().name = op_name;
         }
     }
 

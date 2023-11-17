@@ -1,4 +1,4 @@
-//RPCSend.cc - A part of DICOMautomaton 2022. Written by hal clark.
+//RPCSend.cc - A part of DICOMautomaton 2023. Written by hal clark.
 
 #include <any>
 #include <optional>
@@ -90,11 +90,24 @@ bool RPCSend(Drover &DICOM_data,
     try{
         transport->open();
 
+        // Enumerate the supported operations.
         std::vector<::dcma::rpc::KnownOperation> known_ops;
         ::dcma::rpc::OperationsQuery q;
         client.GetSupportedOperations(known_ops, q);
 
+        std::cout << "Known operations: ";
+        for(const auto &op : known_ops){
+            std::cout << "'" << op.name << "' ";
+        }
+        std::cout << std::endl;
+
+        // Perform a check of the Drover serialization.
+        //
+        // ... TODO ...
+
+
         YLOGINFO("Implementation of client goes here");
+
     }catch( const std::exception &e){
         YLOGWARN("Client failed: '" << e.what() << "'");
     }

@@ -208,6 +208,8 @@ struct ExecuteScriptResponse {
 
 
 service Receiver {
+    // NOTE: these methods are currently implemented in the RPCReceive operation.
+    //
     // Level 1 interface: high-level 'config-query' interface.
     //
     // Report available DCMA operations provided this server.
