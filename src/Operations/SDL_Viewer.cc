@@ -7826,14 +7826,14 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 ImGui::SliderInt("Array", &scroll_arrays, 0, N_arrays - 1);
                 if( ImGui::IsItemHovered() ){
                     ImGui::BeginTooltip();
-                    ImGui::Text("Shortcut: shift + mouse wheel");
+                    ImGui::Text("Shortcut: shift + mouse wheel, (up)/(down), shift + n/p, or shift + home/end");
                     ImGui::EndTooltip();
                 }
                 //ImGui::SetNextItemWidth(window_extent.x);
                 ImGui::SliderInt("Image", &scroll_images, 0, N_images - 1);
                 if( ImGui::IsItemHovered() ){
                     ImGui::BeginTooltip();
-                    ImGui::Text("Shortcut: mouse wheel or page-up/page-down");
+                    ImGui::Text("Shortcut: mouse wheel, (left)/(right), n/p, page-up/page-down, or home/end");
                     ImGui::EndTooltip();
                 }
 
@@ -7901,10 +7901,22 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         pan.x -= static_cast<float>( io.MouseDelta.x ) / 600.0f;
                         pan.y -= static_cast<float>( io.MouseDelta.y ) / 600.0f;
                           
-                    }else if(io.KeyShift && (0 < io.MouseWheel)){
+                    }else if( io.KeyShift && (0 < io.MouseWheel) ){
                         scroll_arrays = std::clamp<int>((scroll_arrays + N_arrays + d_h) % N_arrays, 0, N_arrays - 1);
-                    }else if(io.KeyShift && (io.MouseWheel < 0)){
+                    }else if( io.KeyShift && (io.MouseWheel < 0) ){
                         scroll_arrays = std::clamp<int>((scroll_arrays + N_arrays + d_l) % N_arrays, 0, N_arrays - 1);
+
+                    }else if( (io.KeyShift && ImGui::IsKeyPressed( SDL_SCANCODE_N ))
+                          ||  ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_UpArrow )) ){
+                        scroll_arrays = std::clamp<int>((scroll_arrays + 50 * N_arrays + 1) % N_arrays, 0, N_arrays - 1);
+                    }else if( (io.KeyShift && ImGui::IsKeyPressed( SDL_SCANCODE_P ))
+                          ||  ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_DownArrow )) ){
+                        scroll_arrays = std::clamp<int>((scroll_arrays + 50 * N_arrays - 1) % N_arrays, 0, N_arrays - 1);
+
+                    }else if( io.KeyShift && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Home)) ){
+                        scroll_arrays = 0;
+                    }else if( io.KeyShift && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_End)) ){
+                        scroll_arrays = N_arrays - 1;
 
                     }else if( (   (view_toggles.view_contouring_enabled && cimg_valid)
                                || (view_toggles.view_drawing_enabled && img_valid) )
@@ -8084,20 +8096,27 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
 
                         }
 
-                    }else if(0 < io.MouseWheel){
+                    }else if( 0 < io.MouseWheel ){
                         scroll_images = std::clamp<int>((scroll_images + N_images + d_h) % N_images, 0, N_images - 1);
-                    }else if(io.MouseWheel < 0){
+                    }else if( io.MouseWheel < 0 ){
                         scroll_images = std::clamp<int>((scroll_images + N_images + d_l) % N_images, 0, N_images - 1);
 
-                    }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_PageUp) ) ){
-                        scroll_images = std::clamp<int>((scroll_images + 50 * N_images + 10) % N_images, 0, N_images - 1);
+                    }else if( ImGui::IsKeyPressed( SDL_SCANCODE_N)
+                          ||  ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_RightArrow)) ){
+                        scroll_images = std::clamp<int>((scroll_images + N_images + 1) % N_images, 0, N_images - 1);
+                    }else if( ImGui::IsKeyPressed( SDL_SCANCODE_P)
+                          ||  ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_LeftArrow)) ){
+                        scroll_images = std::clamp<int>((scroll_images + N_images - 1) % N_images, 0, N_images - 1);
+
                     }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_PageDown) ) ){
                         scroll_images = std::clamp<int>((scroll_images + 50 * N_images - 10) % N_images, 0, N_images - 1);
+                    }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_PageUp) ) ){
+                        scroll_images = std::clamp<int>((scroll_images + 50 * N_images + 10) % N_images, 0, N_images - 1);
 
                     }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Home) ) ){
-                        scroll_images = N_images - 1;
-                    }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_End) ) ){
                         scroll_images = 0;
+                    }else if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_End) ) ){
+                        scroll_images = N_images - 1;
                     }
                     //ImGui::Text("%.2f secs", io.KeysDownDuration[ (int)(ImGui::GetKeyIndex(ImGuiKey_PageUp)) ]);
                 }
