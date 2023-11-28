@@ -59,57 +59,57 @@
     #define PERFORM_CLASS_LAYOUT_CHECKS 1
 #endif
 
-static void Serialize( const bool &in, bool &out ){
+void Serialize( const bool &in, bool &out ){
     out = in;
 }
-static void Deserialize( const bool &in, bool &out ){
-    out = in;
-}
-
-static void Serialize( const std::string &in, std::string &out ){
-    out = in;
-}
-static void Deserialize( const std::string &in, std::string &out ){
+void Deserialize( const bool &in, bool &out ){
     out = in;
 }
 
-static void Serialize( const uint32_t &in, int64_t &out ){
+void Serialize( const std::string &in, std::string &out ){
+    out = in;
+}
+void Deserialize( const std::string &in, std::string &out ){
+    out = in;
+}
+
+void Serialize( const uint32_t &in, int64_t &out ){
     // Warning: conversion from uint32_t to int64_t. (Thrift does not have uint32_t.)
     out = static_cast<int64_t>(in);
 }
-static void Deserialize( const int64_t &in, uint32_t &out ){
+void Deserialize( const int64_t &in, uint32_t &out ){
     // Warning: conversion from int64_t to uint32_t. (Thrift does not have uint32_t.)
     out = static_cast<uint32_t>(in);
 }
 
-static void Serialize( const uint64_t &in, int64_t &out ){
+void Serialize( const uint64_t &in, int64_t &out ){
     // Warning: conversion from uint64_t to int64_t. (Thrift does not have uint64_t.)
     out = static_cast<int64_t>(in);
 }
-static void Deserialize( const int64_t &in, uint64_t &out ){
+void Deserialize( const int64_t &in, uint64_t &out ){
     // Warning: conversion from int64_t to uint64_t. (Thrift does not have uint64_t.)
     out = static_cast<uint64_t>(in);
 }
 
-static void Serialize( const int64_t &in, int64_t &out ){
+void Serialize( const int64_t &in, int64_t &out ){
     out = in;
 }
-static void Deserialize( const int64_t &in, int64_t &out ){
-    out = in;
-}
-
-static void Serialize( const double &in, double &out ){
-    out = in;
-}
-static void Deserialize( const double &in, double &out ){
+void Deserialize( const int64_t &in, int64_t &out ){
     out = in;
 }
 
-static void Serialize( const float &in, double &out ){
+void Serialize( const double &in, double &out ){
+    out = in;
+}
+void Deserialize( const double &in, double &out ){
+    out = in;
+}
+
+void Serialize( const float &in, double &out ){
     // Warning: conversion from float to double. (Thrift does not have float.)
     out = static_cast<double>(in);
 }
-static void Deserialize( const double &in, float &out ){
+void Deserialize( const double &in, float &out ){
     // Warning: conversion from double to float. (Thrift does not have float.)
     out = static_cast<float>(in);
 }
