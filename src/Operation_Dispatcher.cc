@@ -109,6 +109,7 @@
 #include "Operations/EvaluateTCPModels.h"
 #include "Operations/ExecuteShell.h"
 #include "Operations/ExplodeImages.h"
+#include "Operations/ExportDrover.h"
 #include "Operations/ExportFITSImages.h"
 #include "Operations/ExportContours.h"
 #include "Operations/ExportLineSamples.h"
@@ -520,6 +521,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
 #endif // DCMA_USE_CGAL
 
 #ifdef DCMA_USE_THRIFT
+    out["ExportDrover"] = std::make_pair(OpArgDocExportDrover, ExportDrover);
     out["RPCReceive"] = std::make_pair(OpArgDocRPCReceive, RPCReceive);
     out["RPCSend"] = std::make_pair(OpArgDocRPCSend, RPCSend);
 #endif // DCMA_USE_THRIFT

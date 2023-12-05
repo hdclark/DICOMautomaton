@@ -233,6 +233,7 @@ add_library(Operations_objs OBJECT
     $<$<BOOL:${WITH_CGAL}>:SubdivideSurfaceMeshes.cc>
     $<$<BOOL:${WITH_CGAL}>:SurfaceBasedRayCastDoseAccumulate.cc>
 
+    $<$<BOOL:${WITH_THRIFT}>:ExportDrover.cc>
     $<$<BOOL:${WITH_THRIFT}>:RPCReceive.cc>
     $<$<BOOL:${WITH_THRIFT}>:RPCSend.cc>
 )
