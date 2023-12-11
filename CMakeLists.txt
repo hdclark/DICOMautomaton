@@ -168,7 +168,7 @@ endif()
 
 if(WITH_THRIFT)
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules(THRIFT REQUIRED thrift)
+    pkg_check_modules(THRIFT REQUIRED thrift-z)
     include_directories( ${THRIFT_INCLUDE_DIRS} )
 endif()
 
