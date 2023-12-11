@@ -31,8 +31,8 @@
 #include <thrift/transport/TSimpleFileTransport.h>
 //#include <thrift/transport/TBufferTransports.h>
 #include <thrift/transport/TZlibTransport.h>
-#include <thrift/protocol/TBinaryProtocol.h>
-//#include <thrift/protocol/TCompactProtocol.h>
+//#include <thrift/protocol/TBinaryProtocol.h>
+#include <thrift/protocol/TCompactProtocol.h>
 //#include <thrift/protocol/TJSONProtocol.h>
 //#include <thrift/protocol/TDebugProtocol.h>
 
@@ -80,12 +80,11 @@ bool ExportDrover(Drover &DICOM_data,
 
     const bool permit_read  = true;
     const bool permit_write = true;
-    //std::shared_ptr<TSimpleFileTransport> transport;
     auto f_transport = std::make_shared<TSimpleFileTransport>(Filename.c_str(), permit_read, permit_write);
     auto z_transport = std::make_shared<TZlibTransport>(f_transport);
 
-    auto protocol = std::make_shared<TBinaryProtocol>(z_transport);
-    //auto protocol = std::make_shared<TCompactProtocol>(z_transport);
+    //auto protocol = std::make_shared<TBinaryProtocol>(z_transport);
+    auto protocol = std::make_shared<TCompactProtocol>(z_transport);
     //auto protocol = std::make_shared<TJSONProtocol>(z_transport);
     //auto protocol = std::make_shared<TDebugProtocol>(z_transport);
     ::dcma::rpc::ReceiverClient client(protocol);
@@ -93,7 +92,12 @@ bool ExportDrover(Drover &DICOM_data,
     try{
         ::dcma::rpc::Drover d;
         Serialize(DICOM_data, d);
+
+        z_transport->open();
         d.write(protocol.get());
+        z_transport->flush();
+        z_transport->close();
+
         YLOGINFO("Serialized Drover object to '" << Filename << "'");
 
     }catch( const std::exception &e){

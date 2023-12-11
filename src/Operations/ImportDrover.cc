@@ -31,8 +31,8 @@
 #include <thrift/transport/TSimpleFileTransport.h>
 //#include <thrift/transport/TBufferTransports.h>
 #include <thrift/transport/TZlibTransport.h>
-#include <thrift/protocol/TBinaryProtocol.h>
-//#include <thrift/protocol/TCompactProtocol.h>
+//#include <thrift/protocol/TBinaryProtocol.h>
+#include <thrift/protocol/TCompactProtocol.h>
 //#include <thrift/protocol/TJSONProtocol.h>
 //#include <thrift/protocol/TDebugProtocol.h>
 
@@ -80,19 +80,21 @@ bool ImportDrover(Drover &DICOM_data,
 
     const bool permit_read  = true;
     const bool permit_write = false;
-    //std::shared_ptr<TSimpleFileTransport> transport;
     auto f_transport = std::make_shared<TSimpleFileTransport>(Filename.c_str(), permit_read, permit_write);
     auto z_transport = std::make_shared<TZlibTransport>(f_transport);
 
-    auto protocol = std::make_shared<TBinaryProtocol>(z_transport);
-    //auto protocol = std::make_shared<TCompactProtocol>(z_transport);
+    //auto protocol = std::make_shared<TBinaryProtocol>(z_transport);
+    auto protocol = std::make_shared<TCompactProtocol>(z_transport);
     //auto protocol = std::make_shared<TJSONProtocol>(z_transport);
     //auto protocol = std::make_shared<TDebugProtocol>(z_transport);
     ::dcma::rpc::ReceiverClient client(protocol);
 
     try{
         ::dcma::rpc::Drover d;
+
+        z_transport->open();
         d.read(protocol.get());
+        z_transport->close();
 
         Drover l_DICOM_data;
         Deserialize(d, l_DICOM_data);
