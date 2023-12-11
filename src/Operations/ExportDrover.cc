@@ -32,8 +32,8 @@
 //#include <thrift/transport/TBufferTransports.h>
 #include <thrift/transport/TZlibTransport.h>
 //#include <thrift/protocol/TBinaryProtocol.h>
-#include <thrift/protocol/TCompactProtocol.h>
-//#include <thrift/protocol/TJSONProtocol.h>
+//#include <thrift/protocol/TCompactProtocol.h>
+#include <thrift/protocol/TJSONProtocol.h>
 //#include <thrift/protocol/TDebugProtocol.h>
 
 #include "../rpc/gen-cpp/Receiver.h"
@@ -84,8 +84,8 @@ bool ExportDrover(Drover &DICOM_data,
     auto z_transport = std::make_shared<TZlibTransport>(f_transport);
 
     //auto protocol = std::make_shared<TBinaryProtocol>(z_transport);
-    auto protocol = std::make_shared<TCompactProtocol>(z_transport);
-    //auto protocol = std::make_shared<TJSONProtocol>(z_transport);
+    //auto protocol = std::make_shared<TCompactProtocol>(z_transport);
+    auto protocol = std::make_shared<TJSONProtocol>(z_transport);
     //auto protocol = std::make_shared<TDebugProtocol>(z_transport);
     ::dcma::rpc::ReceiverClient client(protocol);
 
