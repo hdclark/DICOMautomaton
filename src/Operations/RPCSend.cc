@@ -95,7 +95,10 @@ bool RPCSend(Drover &DICOM_data,
         {
             std::vector<::dcma::rpc::KnownOperation> known_ops;
             ::dcma::rpc::OperationsQuery q;
+            YLOGINFO("Enumeration of supported operations underway");
             client.GetSupportedOperations(known_ops, q);
+
+            YLOGINFO("Enumeration of supported operations on remote completed");
 
             std::cout << "Known operations: ";
             for(const auto &op : known_ops){
@@ -112,11 +115,13 @@ bool RPCSend(Drover &DICOM_data,
 //      2: required metadata_t invocation_metadata;
 //      3: required string filename_lex;
 //  }
+            YLOGINFO("Serializing Drover state");
             Serialize(DICOM_data, q.drover);
             Serialize(InvocationMetadata, q.invocation_metadata);
             Serialize(FilenameLex, q.filename_lex);
             std::string script = "noop();";
 
+            YLOGINFO("Issuing remote procedure call");
             ::dcma::rpc::ExecuteScriptResponse r;
             client.ExecuteScript(r, q, script);
 //  struct ExecuteScriptResponse {
@@ -130,6 +135,7 @@ bool RPCSend(Drover &DICOM_data,
             if(!script_success){
                 YLOGWARN("Remote procedure ExecuteScript was not successful, disregarding output");
             }else{
+                YLOGINFO("Remote procedure completed, deserializing response");
                 ::Drover l_DICOM_data;
                 ::metadata_map_t l_InvocationMetadata;
                 std::string l_FilenameLex;

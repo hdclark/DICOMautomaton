@@ -48,7 +48,7 @@ using namespace ::apache::thrift::server;
 class ReceiverHandler : virtual public ::dcma::rpc::ReceiverIf {
   public:
     ReceiverHandler() {
-        YLOGINFO("RPC initialization complete");
+        YLOGINFO("RPC initialization complete, awaiting procedure calls");
     }
 
     void GetSupportedOperations(std::vector<::dcma::rpc::KnownOperation> & _return,
@@ -96,11 +96,13 @@ class ReceiverHandler : virtual public ::dcma::rpc::ReceiverIf {
             _return.emplace_back();
             _return.back().name = op_name;
         }
+        YLOGINFO("GetSupportedOperations procedure completed");
     }
 
     void LoadFiles(::dcma::rpc::LoadFilesResponse& _return,
                    const std::vector<::dcma::rpc::LoadFilesQuery> & server_filenames) {
         YLOGINFO("LoadFiles procedure invoked");
+        YLOGINFO("LoadFiles procedure completed");
     }
 
     void ExecuteScript(::dcma::rpc::ExecuteScriptResponse& _return,
@@ -114,12 +116,14 @@ class ReceiverHandler : virtual public ::dcma::rpc::ReceiverIf {
         std::string l_FilenameLex;
         std::string l_script;
 
+        YLOGINFO("Deserializing state");
         Deserialize(query.drover, l_DICOM_data);
         Deserialize(query.invocation_metadata, l_InvocationMetadata);
         Deserialize(query.filename_lex, l_FilenameLex);
         Deserialize(script, l_script);
 
         // Execute the script.
+        YLOGINFO("Executing script");
         std::list<script_feedback_t> feedback;
         std::stringstream ss( l_script );
         std::list<OperationArgPkg> op_list;
@@ -138,10 +142,12 @@ class ReceiverHandler : virtual public ::dcma::rpc::ReceiverIf {
         }
 
         // Serialize the outputs.
+        YLOGINFO("Serializing state");
         Serialize(l_ret, _return.success);
         Serialize(l_DICOM_data, _return.drover);
         Serialize(l_InvocationMetadata, _return.invocation_metadata);
         Serialize(l_FilenameLex, _return.filename_lex);
+        YLOGINFO("ExecuteScript procedure completed");
     }
 };
 
@@ -187,6 +193,7 @@ bool RPCReceive(Drover & /*DICOM_data*/,
     auto transport_factory = std::make_shared<TBufferedTransportFactory>();
     auto protocol_factory = std::make_shared<TBinaryProtocolFactory>();
 
+    YLOGINFO("Launching RPC server");
     TSimpleServer server(processor, transport_server, transport_factory, protocol_factory);
     server.serve();
 
