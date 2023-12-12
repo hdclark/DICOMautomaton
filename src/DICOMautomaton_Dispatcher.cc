@@ -20,6 +20,7 @@
 #include <cstdlib>            //Needed for exit() calls.
 #include <cstdint>
 #include <utility>            //Needed for std::pair.
+#include <csignal>
 
 #include "YgorArguments.h"    //Needed for ArgumentHandler class.
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
@@ -40,6 +41,12 @@
 //extern const std::string DCMA_VERSION_STR;
 
 int main(int argc, char* argv[]){
+
+    // Ignore SIGPIPE signal, which can cause termination when connected to a socket.
+#if !defined(_WIN32) && !defined(_WIN64)
+    std::signal(SIGPIPE, SIG_IGN);
+#endif
+
 try{
     //This is the main entry-point into various routines. All major options are set here, via command line arguments.
     // Depending on the arguments received, data is loaded through a variety of loaders and sent on to an analysis
