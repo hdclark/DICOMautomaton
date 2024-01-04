@@ -46,20 +46,27 @@ OperationDoc OpArgDocSelectFilename(){
     out.notes.emplace_back(
         "As with any non-atomic filename selection operation where the file is not reserved, there"
         " is a possible race condition between filename selection and file use. This is broadly known"
-        " as the `TOCTOU` or time-of-check, time-of-use race condition. Beware!"
+        " as the 'TOCTOU' or time-of-check, time-of-use race condition. Beware!"
     );
 
     out.desc = 
-        "Allow the user to interactively select/specify a filename, and then insert it into the global parameter table.";
+        "Allow the user to interactively select/specify a filename, and then insert it into the"
+        " global parameter table."
+        "Note that either an existing file can be selected, or a new filename can be specified."
+        "\n\n"
+        "A file with the specified name does not need to exist, and no new file is created by"
+        " this operation."
+        "\n\n"
+        "If a file *does* exist with the specified filename, it will not be modified by this"
+        " operation."
+        "\n\n"
+        "However, subsequent operations may use the filename to create, overwrite,"
+        " or append to such a file."
+        "";
 
     out.args.emplace_back();
     out.args.back().name = "Key";
     out.args.back().desc = "The key used to store the selected/specified filename in the global parameter table."
-                           "\n"
-                           "A file with this name does not need to exist, and no file is created by this operation."
-                           " If a file does exist with the specified filename, it will not be modified by this"
-                           " operation. However, subsequent operations may use the filename to create, overwrite,"
-                           " or append such a file."
                            "";
     out.args.back().default_val = "selected_filename";
     out.args.back().expected = true;
