@@ -42,4 +42,9 @@ bool Load_From_Script_Files( std::list<OperationArgPkg> &Operations,
 void Print_Feedback(std::ostream &os,
                     const std::list<script_feedback_t> &feedback);
 
+// Attempt to load a script from the standard script cache.
+bool Load_Standard_Script( std::list<OperationArgPkg> &Operations,
+                           const std::string &category,
+                           const std::string &name );
+                           
 

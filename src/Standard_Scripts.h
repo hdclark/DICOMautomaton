@@ -22,4 +22,6 @@ std::list<standard_script_t> standard_scripts_with_category(const std::string &c
 
 std::set<std::string> standard_script_categories();
 
+std::list<standard_script_t> get_standard_scripts(const std::string &category,
+                                                  const std::string &name);
 

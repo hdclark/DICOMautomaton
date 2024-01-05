@@ -1,0 +1,13 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# Performs a single iteration of a polyomino game within the SDL_Viewer operation.
+
+Polyominoes(
+    ImageSelection = 'last',
+    Channel = '0',
+    Family = $poly_family,
+    Action = $action,
+    Low = '0.0',
+    High = '1.0',
+){};
+

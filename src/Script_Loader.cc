@@ -35,6 +35,7 @@
 
 #include "Script_Loader.h"
 #include "Structs.h"
+#include "Standard_Scripts.h"
 
 #include "Operation_Dispatcher.h"
 
@@ -1267,5 +1268,28 @@ void Print_Feedback(std::ostream &os,
            << std::endl;
     }
     return;
+}
+
+// Attempt to load a script from the standard script cache.
+bool Load_Standard_Script( std::list<OperationArgPkg> &op_list,
+                           const std::string &category,
+                           const std::string &name ){
+
+    const auto l_scripts = get_standard_scripts(category, name);
+    if(l_scripts.size() != 1UL){
+        YLOGWARN("Standard script '" << category << "/" << name << "' not found. Cannot continue");
+        return false;
+    }
+
+    std::list<script_feedback_t> f;
+    std::stringstream ss( l_scripts.front().text );
+    const auto res = Load_DCMA_Script( ss, f, op_list );
+    if(!res){
+        std::stringstream ss2;
+        Print_Feedback(ss2, f);
+        YLOGWARN("Standard script '" << category << "/" << name << "' loading failed:\n" << ss2.str());
+        return false;
+    }
+    return true;
 }
 

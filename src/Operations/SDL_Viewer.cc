@@ -3750,16 +3750,16 @@ bool SDL_Viewer(Drover &DICOM_data,
                   ||  ( (action == "none") && (dt_polyomino_update <= (t_diff * speed)) ) ){
                 t_polyomino_updated = t_now;
 
-                metadata_map_t l_InvocationMetadata;
-                std::string l_FilenameLex;
+                // Loading the script and parsing into an op_list could be cached. Might speed this up slightly...
                 std::list<OperationArgPkg> Operations;
-                Operations.emplace_back("Polyominoes");
-                Operations.back().insert("ImageSelection=last");
-                Operations.back().insert("Channel=0");
-                Operations.back().insert("Low=0.0");
-                Operations.back().insert("High=1.0");
-                Operations.back().insert("Family=" + std::to_string(polyomino_family));
-                Operations.back().insert("Action=" + action);
+                const bool op_load_res = Load_Standard_Script( Operations, "plumbing", "iterate polyominoes" );
+                if(!op_load_res){
+                    throw std::runtime_error("Unable to load polyominoes script");
+                }
+                metadata_map_t l_InvocationMetadata;
+                l_InvocationMetadata["poly_family"] = std::to_string(polyomino_family);
+                l_InvocationMetadata["action"] = action;
+                std::string l_FilenameLex;
                 const bool res = Operation_Dispatcher(polyomino_imgs, l_InvocationMetadata, l_FilenameLex, Operations);
                 if( res 
                 &&  polyomino_imgs.Has_Image_Data()){

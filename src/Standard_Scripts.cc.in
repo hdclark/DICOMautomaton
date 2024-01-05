@@ -1,4 +1,4 @@
-// Standard_Scripts.cc - A part of DICOMautomaton 2021. Written by hal clark.
+// Standard_Scripts.cc - A part of DICOMautomaton 2021, 2024. Written by hal clark.
 
 #include <list>
 #include <cmath>
@@ -10,6 +10,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <optional>
 #include <filesystem>
 
 #include "Structs.h"
@@ -42,6 +43,13 @@ std::list<standard_script_t> standard_scripts_with_category(const std::string &c
 std::set<std::string> standard_script_categories(){
     std::set<std::string> out;
     for(const auto &s : standard_scripts()) out.insert(s.category);
+    return out;
+}
+
+std::list<standard_script_t> get_standard_scripts(const std::string &category,
+                                                  const std::string &name){
+    auto out = standard_scripts();
+    out.remove_if([&](const standard_script_t &s){ return (s.category != category) || (s.name != name); });
     return out;
 }
 
