@@ -1,0 +1,15 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# This script is used to extract contours from a binary mask.
+# Use in the SDL_Viewer operation contouring mode.
+
+ContourViaThreshold(
+    ROILabel = 'unspecified',
+    Lower = '0.5',
+    Upper = 'inf',
+    Method = $method,
+    SimplifyMergeAdjacent = 'true',
+    #Channel = '0',
+    #ImageSelection = 'last',
+){};
+

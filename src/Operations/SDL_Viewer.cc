@@ -2885,16 +2885,16 @@ bool SDL_Viewer(Drover &DICOM_data,
         contouring_imgs.Ensure_Contour_Data_Allocated();
         contouring_imgs.contour_data->ccs.clear();
 
+
         std::list<OperationArgPkg> Operations;
-        Operations.emplace_back("ContourViaThreshold");
-        Operations.back().insert("Method="_s + contouring_method);
-        Operations.back().insert("Lower=0.5");
-        Operations.back().insert("SimplifyMergeAdjacent=true");
-
+        const bool op_load_res = Load_Standard_Script( Operations, "plumbing", "extract contours from mask" );
+        if(!op_load_res) throw std::runtime_error("Unable to load script");
         auto l_InvocationMetadata = InvocationMetadata;
+        l_InvocationMetadata["method"] = contouring_method;
 
-        if(!Operation_Dispatcher(contouring_imgs, l_InvocationMetadata, FilenameLex, Operations)){
-            YLOGWARN("ContourViaThreshold failed");
+        const auto res = Operation_Dispatcher(contouring_imgs, l_InvocationMetadata, FilenameLex, Operations);
+        if(!res){
+            YLOGWARN("Contour extraction failed");
 
             // Signal to NOT replace the Drover class to the receiving thread.
             throw std::runtime_error("Unable to extract contours");
@@ -5580,24 +5580,19 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             auto cm = shtl.back().get_common_metadata({}, {});
 
                             std::list<OperationArgPkg> Operations;
-                            Operations.emplace_back("HighlightROIs");
-                            Operations.back().insert("Method=receding_squares");
-                            Operations.back().insert("ExteriorVal=0.0");
-                            Operations.back().insert("InteriorVal=1.0");
-                            Operations.back().insert("ExteriorOverwrite=true");
-                            Operations.back().insert("InteriorOverwrite=true");
+                            const bool op_load_res = Load_Standard_Script( Operations, "plumbing", "copy existing contours" );
+                            if(!op_load_res) throw std::runtime_error("Unable to load script");
+                            metadata_map_t l_InvocationMetadata;
                             contour_overlap_style = std::clamp<size_t>(contour_overlap_style, static_cast<size_t>(0UL), contour_overlap_styles.size());
-                            Operations.back().insert("ContourOverlap="_s + contour_overlap_styles[contour_overlap_style]);
-                            Operations.back().insert("ROILabelRegex=.*");
-                            Operations.back().insert("ImageSelection=last");
+                            l_InvocationMetadata["contour_overlap_method"] = contour_overlap_styles[contour_overlap_style];
+
                             contouring_imgs.Ensure_Contour_Data_Allocated();
                             contouring_imgs.contour_data->ccs.swap(shtl);
-                            const bool res = Operation_Dispatcher(contouring_imgs, InvocationMetadata, FilenameLex, Operations);
+                            const bool res = Operation_Dispatcher(contouring_imgs, l_InvocationMetadata, FilenameLex, Operations);
                             contouring_imgs.Ensure_Contour_Data_Allocated();
                             contouring_imgs.contour_data->ccs.swap(shtl);
                             
                             contouring_img_altered = true;
-
                             if(res){
                                 edit_existing_contour_selection = {};
                                 ImGui::CloseCurrentPopup();
@@ -5719,25 +5714,17 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 ImGui::Text("Dilation and Erosion");
                 ImGui::DragFloat("Margin (mm)", &contouring_margin, 0.1f, -10.0f, 10.0f);
                 if(ImGui::Button("Apply Margin")){
+
                     std::list<OperationArgPkg> Operations;
-                    Operations.emplace_back("ContourWholeImages");
-                    Operations.back().insert("ROILabel=___whole_image");
-
-                    Operations.emplace_back("ReduceNeighbourhood");
-                    Operations.back().insert("ImageSelection=last");
-                    Operations.back().insert("ROILabelRegex=___whole_image");
-                    Operations.back().insert("Neighbourhood=spherical");
-                    
-                    const std::string reduction = (0.0 <= contouring_margin) ? "dilate" : "erode";
-                    const std::string distance = std::to_string( std::abs( contouring_margin ) );
-                    Operations.back().insert("Reduction="_s + reduction);
-                    Operations.back().insert("MaxDistance="_s + distance);
-
-                    Operations.emplace_back("DeleteContours");
-                    Operations.back().insert("ROILabelRegex=___whole_image");
+                    const bool op_load_res = Load_Standard_Script( Operations, "plumbing", "dilate erode margin" );
+                    if(!op_load_res) throw std::runtime_error("Unable to load script");
+                    metadata_map_t l_InvocationMetadata;
+                    contour_overlap_style = std::clamp<size_t>(contour_overlap_style, static_cast<size_t>(0UL), contour_overlap_styles.size());
+                    l_InvocationMetadata["reduction"] = (0.0 <= contouring_margin) ? "dilate" : "erode";
+                    l_InvocationMetadata["max_distance"] = std::to_string( std::abs( contouring_margin ) );
 
                     Drover *d = (view_toggles.view_contouring_enabled) ? &contouring_imgs : &DICOM_data;
-                    if(!Operation_Dispatcher(*d, InvocationMetadata, FilenameLex, Operations)){
+                    if(!Operation_Dispatcher(*d, l_InvocationMetadata, FilenameLex, Operations)){
                         YLOGWARN("Dilation/Erosion failed");
                     }
 
@@ -5785,11 +5772,12 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         shtl.image_data.back()->imagecoll.images.back() = *cimg_it;
 
                         std::list<OperationArgPkg> Operations;
-                        Operations.emplace_back("ContourViaThreshold");
-                        Operations.back().insert("Method="_s + contouring_method);
-                        Operations.back().insert("Lower=0.5");
-                        Operations.back().insert("SimplifyMergeAdjacent=true");
-                        if(!Operation_Dispatcher(shtl, InvocationMetadata, FilenameLex, Operations)){
+                        const bool op_load_res = Load_Standard_Script( Operations, "plumbing", "extract contours from mask" );
+                        if(!op_load_res) throw std::runtime_error("Unable to load script");
+                        metadata_map_t l_InvocationMetadata;
+                        l_InvocationMetadata["method"] = contouring_method;
+
+                        if(!Operation_Dispatcher(shtl, l_InvocationMetadata, FilenameLex, Operations)){
                             YLOGWARN("ContourViaThreshold failed");
                         }
 
@@ -5799,7 +5787,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
 //if(!contouring_imgs.contour_data->ccs.empty()){
 //    YLOGINFO("    First collection contains " << contouring_imgs.contour_data->ccs.front().contours.size() << " contours");
 //}
-
 
                         contouring_img_altered = false;
                     }
