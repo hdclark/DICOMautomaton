@@ -1575,6 +1575,18 @@ Drover Drover::Deep_Copy() const {
     return out;
 }
 
+void Drover::Swap(Drover &in){
+    std::swap(this->contour_data, in.contour_data);
+    std::swap(this->image_data, in.image_data);
+    std::swap(this->point_data, in.point_data);
+    std::swap(this->smesh_data, in.smesh_data);
+    std::swap(this->rtplan_data, in.rtplan_data);
+    std::swap(this->lsamp_data, in.lsamp_data);
+    std::swap(this->trans_data, in.trans_data);
+    std::swap(this->table_data, in.table_data);
+    return;
+}
+
 bool Drover::Has_Contour_Data() const {
     return (this->contour_data != nullptr);
 }
@@ -1841,6 +1853,122 @@ void Drover::Plot_Image_Outlines() const {
     return;
 }
 
+//---------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------------- Drover_Cache ------------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------
+Drover_Cache::Drover_Cache(){
+    this->version_nidus = 0L;
+}
+
+// Get a list of all available Drover versions.
+std::list<int64_t>
+Drover_Cache::get_versions(){
+    std::list<int64_t> nums;
+    for(const auto& p : this->drovers){
+        nums.emplace_back( p.first );
+    }
+    return nums;
+}
+
+// Create a new Drover.
+std::pair<int64_t, std::shared_ptr<Drover>>
+Drover_Cache::create_drover(){
+    const auto new_version = this->version_nidus++;
+    this->drovers.emplace_back( std::make_pair(new_version, 
+                                               std::make_shared<Drover>()) );
+    return this->drovers.back();
+}
+
+// Store a reference to the given Drover in the version cache.
+int64_t
+Drover_Cache::store_drover(std::shared_ptr<Drover> in){
+    const auto new_version = this->version_nidus++;
+    this->drovers.emplace_back( std::make_pair(new_version, in) );
+    return new_version;
+}
+
+// Store the given Drover in the version cache.
+int64_t
+Drover_Cache::store_drover(Drover &&in){
+    auto p = this->create_drover();
+    p.second.get()->Swap(in);
+    return p.first;
+}
+
+// Get the Drover corresponding to a specific version.
+//
+// Returns a nullptr if the version is not found.
+std::shared_ptr<Drover>
+Drover_Cache::get(int64_t version_num){
+    std::shared_ptr<Drover> ptr = nullptr;
+    for(const auto& p : this->drovers){
+        if(p.first == version_num){
+            ptr = p.second;
+            break;
+        }
+    }
+    return ptr;
+}
+
+// Get the most recent Drover.
+//
+// Returns a nullptr if there is no available Drover.
+std::shared_ptr<Drover>
+Drover_Cache::get(){
+    std::shared_ptr<Drover> ptr = nullptr;
+    if(!this->drovers.empty()){
+        ptr = this->drovers.back().second;
+    }
+    return ptr;
+}
+
+
+// Get the version number corresponding with the given Drover.
+std::optional<int64_t>
+Drover_Cache::get_version(std::shared_ptr<Drover> in){
+    std::optional<int64_t> v;
+    for(const auto& p : this->drovers){
+        if(p.second == in){
+            v = p.first;
+            break;
+        }
+    }
+    return v;
+}
+
+// Get the most recent Drover's version.
+std::optional<int64_t>
+Drover_Cache::get_version(){
+    std::optional<int64_t> v;
+    if(!this->drovers.empty()){
+        v = this->drovers.back().first;
+    }
+    return v;
+}
+
+// Remove the Drover with the corresponding version number, if it exists.
+void
+Drover_Cache::erase(int64_t version_num){
+    const auto beg = std::begin(this->drovers);
+    const auto end = std::end(this->drovers);
+    auto it = std::find_if( beg, end,
+                            [version_num](const std::pair<int64_t, std::shared_ptr<Drover>> &p){
+                                return (p.first == version_num);
+                            });
+    if(it != end){
+        this->drovers.erase(it);
+    }
+    return;
+}
+
+// Trim old Drovers so that only N or less of them remain.
+void
+Drover_Cache::trim(uint64_t num_remaining_drovers){
+    while(num_remaining_drovers < this->drovers.size()){
+        this->drovers.pop_front();
+    };
+}
+        
 
 //---------------------------------------------------------------------------------------------------------------------------
 //------------------------------------------------------ OperationArgPkg ----------------------------------------------------

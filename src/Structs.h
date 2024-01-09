@@ -470,6 +470,7 @@ class Drover {
         Drover Duplicate(const Contour_Data &in) const; 
         Drover Duplicate(const Drover &in) const;
         Drover Deep_Copy() const; // Make a deep copy of *this.
+        void Swap(Drover &in);
     
         bool Has_Contour_Data() const;
         bool Has_Image_Data() const;
@@ -506,6 +507,73 @@ class Drover {
         void Plot_Image_Outlines() const;
 };
 
+//---------------------------------------------------------------------------------------------------------------------------
+//-------------------------------------------------------- Drover_Cache -----------------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------
+// A class for handling multiple Drover objects. Works best for an ordered set, like successive versions.
+//
+// This class can be used as the basis for emulating reversible computations (e.g., undo, redo) by periodically storing
+// copies.
+
+struct Drover_Cache {
+  private:
+    int64_t version_nidus;
+    std::list< std::pair< int64_t,
+                          std::shared_ptr<Drover> > > drovers;
+
+  public:
+    Drover_Cache();
+
+    // Get a list of all available Drover versions.
+    std::list<int64_t>
+    get_versions();
+
+    // Create a new Drover.
+    std::pair<int64_t, std::shared_ptr<Drover>>
+    create_drover();
+
+    // Store a reference to the given Drover in the version cache.
+    //
+    // The objects version number is returned.
+    int64_t
+    store_drover(std::shared_ptr<Drover> in);
+
+    // Store the given Drover in the version cache.
+    int64_t
+    store_drover(Drover &&in);
+
+    // Get the Drover corresponding to a specific version.
+    //
+    // Returns a nullptr if the version is not found.
+    std::shared_ptr<Drover>
+    get(int64_t version_num);
+
+    // Get the most recent Drover.
+    //
+    // Returns a nullptr if there is no available Drover.
+    std::shared_ptr<Drover>
+    get();
+
+    // Get the version number corresponding with the given Drover.
+    std::optional<int64_t>
+    get_version(std::shared_ptr<Drover> in);
+
+    // Get the most recent Drover's version.
+    std::optional<int64_t>
+    get_version();
+
+    // Remove the Drover with the corresponding version number, if it exists.
+    void
+    erase(int64_t version_num);
+
+    // Trim old Drovers so that only N or less of them remain.
+    void
+    trim(uint64_t num_remaining_drovers);
+};
+
+//---------------------------------------------------------------------------------------------------------------------------
+//------------------------------------------------ Operation Argument Classes -----------------------------------------------
+//---------------------------------------------------------------------------------------------------------------------------
 
 using icase_str_lt_func_t = std::function<bool (const std::string &, const std::string)>;
 

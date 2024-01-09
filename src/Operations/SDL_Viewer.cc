@@ -1431,10 +1431,12 @@ bool SDL_Viewer(Drover &DICOM_data,
     float last_mouse_button_1_down = 1E30;
     std::optional<vec3<double>> last_mouse_button_pos;
 
-    Drover contouring_imgs;
-    contouring_imgs.Ensure_Contour_Data_Allocated();
-    contouring_imgs.image_data.push_back(std::make_unique<Image_Array>());
-    contouring_imgs.image_data.back()->imagecoll.images.emplace_back();
+    Drover_Cache contouring_drover_cache;
+    std::shared_ptr<Drover> cdrover_ptr = contouring_drover_cache.create_drover().second;
+    cdrover_ptr->Ensure_Contour_Data_Allocated();
+    cdrover_ptr->image_data.push_back(std::make_unique<Image_Array>());
+    cdrover_ptr->image_data.back()->imagecoll.images.emplace_back();
+
     std::array<char, 2048> new_contour_name;
     string_to_array(new_contour_name, "");
     bool overwrite_existing_contours = false;
@@ -1600,15 +1602,19 @@ bool SDL_Viewer(Drover &DICOM_data,
 
 
     // Resets the contouring image to match the display image characteristics.
-    const auto reset_contouring_state = [&contouring_imgs,
+    const auto reset_contouring_state = [&cdrover_ptr,
+                                         &contouring_drover_cache,
                                          &contouring_img_row_col_count]( img_array_ptr_it_t  dimg_array_ptr_it ) -> void {
             contouring_img_row_col_count = std::clamp<int>(contouring_img_row_col_count, 5, 1024);
 
+            // Clear all undo history except the current item.
+            contouring_drover_cache.trim(1UL);
+
             // Reset the contouring images.
-            if(!contouring_imgs.Has_Image_Data()){
-                contouring_imgs.image_data.push_back(std::make_unique<Image_Array>());
+            if(!cdrover_ptr->Has_Image_Data()){
+                cdrover_ptr->image_data.push_back(std::make_unique<Image_Array>());
             }
-            contouring_imgs.image_data.back()->imagecoll.images.clear();
+            cdrover_ptr->image_data.back()->imagecoll.images.clear();
 
             for(const auto& dimg : (*dimg_array_ptr_it)->imagecoll.images){
                 if((dimg.rows < 1) || (dimg.columns < 1)) continue;
@@ -1631,13 +1637,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                 //                                         dimg.position(0,dimg.columns-1),
                 //                                         dimg.position(0,dimg.columns-1) + ortho_offset,
                 //                                         dimg.position(0,dimg.columns-1) - ortho_offset };
-                //const auto encompassing_images = contouring_imgs.image_data.back()->imagecoll.get_images_which_encompass_all_points(points);
+                //const auto encompassing_images = cdrover_ptr->image_data.back()->imagecoll.get_images_which_encompass_all_points(points);
                 //if(!encompassing_images.empty()) continue;
 
                 const auto centre = dimg.center();
                 const auto A_corners = dimg.corners2D();
-                auto encompassing_images = contouring_imgs.image_data.back()->imagecoll.get_images_which_sandwich_point_within_top_bottom_planes( centre );
-                encompassing_images.remove_if([&](const decltype(contouring_imgs.image_data.back()->imagecoll.get_all_images().front()) &img_it){
+                auto encompassing_images = cdrover_ptr->image_data.back()->imagecoll.get_images_which_sandwich_point_within_top_bottom_planes( centre );
+                encompassing_images.remove_if([&](const decltype(cdrover_ptr->image_data.back()->imagecoll.get_all_images().front()) &img_it){
                     const auto B_corners = img_it->corners2D();
 
                     //Fixed corner-to-corner distance.
@@ -1653,8 +1659,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                 if(!encompassing_images.empty()) continue;
 
                 // Add this image to the list of spatially-distinct images.
-                contouring_imgs.image_data.back()->imagecoll.images.emplace_back();
-                const auto cimg_ptr = &(contouring_imgs.image_data.back()->imagecoll.images.back());
+                cdrover_ptr->image_data.back()->imagecoll.images.emplace_back();
+                const auto cimg_ptr = &(cdrover_ptr->image_data.back()->imagecoll.images.back());
 
                 // Make the contouring image spatial extent match the display image, except with a different number of
                 // rows and columns. This will make it easy to translate contours back and forth.
@@ -1674,9 +1680,9 @@ bool SDL_Viewer(Drover &DICOM_data,
 
 
             // Reset any existing contours.
-            contouring_imgs.Ensure_Contour_Data_Allocated();
-            contouring_imgs.contour_data->ccs.clear();
-            YLOGINFO("Reset contouring state with " << contouring_imgs.image_data.back()->imagecoll.images.size() << " images");
+            cdrover_ptr->Ensure_Contour_Data_Allocated();
+            cdrover_ptr->contour_data->ccs.clear();
+            YLOGINFO("Reset contouring state with " << cdrover_ptr->image_data.back()->imagecoll.images.size() << " images");
 
             return;
     };
@@ -1972,22 +1978,22 @@ bool SDL_Viewer(Drover &DICOM_data,
     };
 
     // Recompute image array and image iterators for the current contouring image.
-    const auto recompute_cimage_iters = [ &contouring_imgs,
+    const auto recompute_cimage_iters = [ &cdrover_ptr,
                                           &recompute_image_iters ](){
         std::tuple<bool, img_array_ptr_it_t, disp_img_it_t > out;
         std::get<bool>( out ) = false;
-        const int64_t cimg_array_num = 0; // (Currently only support one image array, but would be useful to support multiple...)
+        const int64_t cimg_array_num = 0; // Currently only support one image array per Drover.
 
         // Set the current image array and image iters and load the texture.
-        const auto has_cimages = contouring_imgs.Has_Image_Data();
+        const auto has_cimages = cdrover_ptr->Has_Image_Data();
         auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
         do{ 
             if( !has_cimages ) break;
             if( !img_valid ) break;
-            if(  contouring_imgs.image_data.size() != 1 ) throw std::logic_error("Multiple contouring image arrays not supported");
-            if( !isininc(1, cimg_array_num+1, contouring_imgs.image_data.size()) ) break;
-            auto cimg_array_ptr_it = std::next(contouring_imgs.image_data.begin(), cimg_array_num);
-            if( cimg_array_ptr_it == std::end(contouring_imgs.image_data) ) break;
+            if( cdrover_ptr->image_data.size() != 1 ) throw std::logic_error("Multiple contouring image arrays not supported");
+            if( !isininc(1, cimg_array_num+1, cdrover_ptr->image_data.size()) ) break;
+            auto cimg_array_ptr_it = std::next(cdrover_ptr->image_data.begin(), cimg_array_num);
+            if( cimg_array_ptr_it == std::end(cdrover_ptr->image_data) ) break;
 
             if( (disp_img_it->channels <= 0)
             ||  (disp_img_it->rows <= 0)
@@ -2434,7 +2440,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     const auto save_contour_buffer = [ &DICOM_data,
                                        &drover_mutex,
 
-                                       &contouring_imgs,
+                                       &cdrover_ptr,
                                        &recompute_image_iters,
                                        &X,
                                        &reset_contouring_state,
@@ -2459,13 +2465,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                     throw std::runtime_error("Missing 'StudyInstanceUID' metadata element. Cannot continue.");
                 }
 
-                contouring_imgs.Ensure_Contour_Data_Allocated();
-                for(auto &cc : contouring_imgs.contour_data->ccs){
+                cdrover_ptr->Ensure_Contour_Data_Allocated();
+                for(auto &cc : cdrover_ptr->contour_data->ccs){
                     //Trim empty contours from the shuttle.
                     cc.Purge_Contours_Below_Point_Count_Threshold(3);
                     if(cc.contours.empty()) throw std::runtime_error("Given empty contour collection. Contours need at least 3 vertices each.");
                 }
-                contouring_imgs.Ensure_Contour_Data_Allocated();
+                cdrover_ptr->Ensure_Contour_Data_Allocated();
 
                 if(overwrite_existing_contours){
                     DICOM_data.Ensure_Contour_Data_Allocated();
@@ -2476,7 +2482,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
 
                 // Inject metadata.
-                for(auto &cc : contouring_imgs.contour_data->ccs){
+                for(auto &cc : cdrover_ptr->contour_data->ccs){
                     const double MinimumSeparation = disp_img_it->pxl_dz; // TODO: use more robust method here.
                     for(auto &cop : cc.contours) cop.metadata = cm;
                     cc.Insert_Metadata("ROIName", roi_name);
@@ -2487,11 +2493,11 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                 // Insert the contours into the Drover object.
                 DICOM_data.Ensure_Contour_Data_Allocated();
-                DICOM_data.contour_data->ccs.splice(std::end(DICOM_data.contour_data->ccs),contouring_imgs.contour_data->ccs);
+                DICOM_data.contour_data->ccs.splice(std::end(DICOM_data.contour_data->ccs),cdrover_ptr->contour_data->ccs);
                 YLOGINFO("Drover class imbued with new contour collection");
 
-                contouring_imgs.contour_data->ccs.clear();
-                contouring_imgs.Ensure_Contour_Data_Allocated();
+                cdrover_ptr->contour_data->ccs.clear();
+                cdrover_ptr->Ensure_Contour_Data_Allocated();
                 reset_contouring_state(img_array_ptr_it);
                 launch_contour_preprocessor();
 
@@ -2879,11 +2885,11 @@ bool SDL_Viewer(Drover &DICOM_data,
     // Launch a thread to extract contours.
     // Note: This is meant to be called asynchronously. It should be provided with deep copies of all objects.
     const auto extract_contours = [InvocationMetadata,
-                                   FilenameLex]( Drover contouring_imgs,
+                                   FilenameLex]( Drover contouring_drover,
                                                  std::string contouring_method ) -> Drover {
 
-        contouring_imgs.Ensure_Contour_Data_Allocated();
-        contouring_imgs.contour_data->ccs.clear();
+        contouring_drover.Ensure_Contour_Data_Allocated();
+        contouring_drover.contour_data->ccs.clear();
 
 
         std::list<OperationArgPkg> Operations;
@@ -2892,14 +2898,14 @@ bool SDL_Viewer(Drover &DICOM_data,
         auto l_InvocationMetadata = InvocationMetadata;
         l_InvocationMetadata["method"] = contouring_method;
 
-        const auto res = Operation_Dispatcher(contouring_imgs, l_InvocationMetadata, FilenameLex, Operations);
+        const auto res = Operation_Dispatcher(contouring_drover, l_InvocationMetadata, FilenameLex, Operations);
         if(!res){
             YLOGWARN("Contour extraction failed");
 
             // Signal to NOT replace the Drover class to the receiving thread.
             throw std::runtime_error("Unable to extract contours");
         }
-        return contouring_imgs;
+        return contouring_drover;
     };
 
     // Contour and image display state.
@@ -5020,7 +5026,8 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                            &wq,
 
                                            &recompute_cimage_iters,
-                                           &contouring_imgs,
+                                           &contouring_drover_cache,
+                                           &cdrover_ptr,
                                            &contouring_img_altered,
                                            &last_mouse_button_0_down,
                                            &last_mouse_button_1_down,
@@ -5434,11 +5441,11 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                              &extracted_contours_mutex,
                                              &extracted_contours,
                                              &contour_extraction_underway,
-                                             l_contouring_imgs = contouring_imgs.Deep_Copy(),
+                                             l_cdrover = cdrover_ptr->Deep_Copy(),
                                              contouring_method ](){
                             try{
                                 YLOGINFO("Starting contour extraction");
-                                auto out = extract_contours(l_contouring_imgs, contouring_method);
+                                auto out = extract_contours(l_cdrover, contouring_method);
                                 YLOGINFO("Completed contour extraction; waiting on lock");
 
                                 std::unique_lock<std::shared_timed_mutex> ec_lock(extracted_contours_mutex);
@@ -5474,7 +5481,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                                                            std::chrono::microseconds(50));
                             if( lock
                             && extracted_contours){
-                                contouring_imgs = extracted_contours.value();
+                                *cdrover_ptr = extracted_contours.value();
                                 extracted_contours = {};
                             }
                         }else{
@@ -5572,7 +5579,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
 
                             // Copy the selected contours to a shuttle. We use double-buffering here in case there are
                             // any existing contours.
-                            decltype(contouring_imgs.contour_data->ccs) shtl;
+                            decltype(cdrover_ptr->contour_data->ccs) shtl;
                             shtl.emplace_back();
                             for(const auto& c : edit_existing_contour_selection.value()->contours){
                                 shtl.back().contours.push_back( c );
@@ -5586,11 +5593,11 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             contour_overlap_style = std::clamp<size_t>(contour_overlap_style, static_cast<size_t>(0UL), contour_overlap_styles.size());
                             l_InvocationMetadata["contour_overlap_method"] = contour_overlap_styles[contour_overlap_style];
 
-                            contouring_imgs.Ensure_Contour_Data_Allocated();
-                            contouring_imgs.contour_data->ccs.swap(shtl);
-                            const bool res = Operation_Dispatcher(contouring_imgs, l_InvocationMetadata, FilenameLex, Operations);
-                            contouring_imgs.Ensure_Contour_Data_Allocated();
-                            contouring_imgs.contour_data->ccs.swap(shtl);
+                            cdrover_ptr->Ensure_Contour_Data_Allocated();
+                            cdrover_ptr->contour_data->ccs.swap(shtl);
+                            const bool res = Operation_Dispatcher(*cdrover_ptr, l_InvocationMetadata, FilenameLex, Operations);
+                            cdrover_ptr->Ensure_Contour_Data_Allocated();
+                            cdrover_ptr->contour_data->ccs.swap(shtl);
                             
                             contouring_img_altered = true;
                             if(res){
@@ -5620,8 +5627,8 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                     cimg.fill_pixels(0.0f);
                                 }
                             }
-                            contouring_imgs.Ensure_Contour_Data_Allocated();
-                            contouring_imgs.contour_data->ccs.clear();
+                            cdrover_ptr->Ensure_Contour_Data_Allocated();
+                            cdrover_ptr->contour_data->ccs.clear();
                             contouring_img_altered = true;
                             last_mouse_button_0_down = 1E30;
                             last_mouse_button_1_down = 1E30;
@@ -5632,6 +5639,31 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             ImGui::CloseCurrentPopup();
                         }
                         ImGui::EndPopup();
+                    }
+                }
+
+                // Undo and redo manual control.
+                {
+                    const auto v_list = contouring_drover_cache.get_versions();
+                    const auto v_curr = contouring_drover_cache.get_version(cdrover_ptr);
+                    int pos = 0;
+                    for(const auto &v : v_list){
+                        if(v == v_curr){
+                            break;
+                        }else{
+                            ++pos;
+                        }
+                    }
+
+                    const auto N_versions = static_cast<int>(v_list.size());
+                    ImGui::SliderInt("History", &pos, 0, N_versions - 1);
+                    const auto new_pos = std::clamp<int>(pos, 0, N_versions - 1);
+                    const auto v_new = *(std::next( std::begin(v_list), new_pos ));
+                    if(v_new != v_curr){
+                        auto l_cdrover_ptr = contouring_drover_cache.get(v_new);
+                        cdrover_ptr = (l_cdrover_ptr == nullptr) ? cdrover_ptr : l_cdrover_ptr;
+
+                        contouring_img_altered = true;
                     }
                 }
 
@@ -5723,7 +5755,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     l_InvocationMetadata["reduction"] = (0.0 <= contouring_margin) ? "dilate" : "erode";
                     l_InvocationMetadata["max_distance"] = std::to_string( std::abs( contouring_margin ) );
 
-                    Drover *d = (view_toggles.view_contouring_enabled) ? &contouring_imgs : &DICOM_data;
+                    Drover *d = (view_toggles.view_contouring_enabled) ? cdrover_ptr.get() : &DICOM_data;
                     if(!Operation_Dispatcher(*d, l_InvocationMetadata, FilenameLex, Operations)){
                         YLOGWARN("Dilation/Erosion failed");
                     }
@@ -5758,7 +5790,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     }
 
                     // Regenerate contours from the mask.
-                    contouring_imgs.Ensure_Contour_Data_Allocated();
+                    cdrover_ptr->Ensure_Contour_Data_Allocated();
                     if( auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
                         cimg_valid
                     &&  contouring_img_altered
@@ -5781,21 +5813,21 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             YLOGWARN("ContourViaThreshold failed");
                         }
 
-                        contouring_imgs.contour_data->ccs.clear();
-                        contouring_imgs.Consume( shtl.contour_data );
-//YLOGINFO("Contouring image generated " << contouring_imgs.contour_data->ccs.size() << " contour collections");
-//if(!contouring_imgs.contour_data->ccs.empty()){
-//    YLOGINFO("    First collection contains " << contouring_imgs.contour_data->ccs.front().contours.size() << " contours");
+                        cdrover_ptr->contour_data->ccs.clear();
+                        cdrover_ptr->Consume( shtl.contour_data );
+//YLOGINFO("Contouring image generated " << cdrover_ptr->contour_data->ccs.size() << " contour collections");
+//if(!cdrover_ptr->contour_data->ccs.empty()){
+//    YLOGINFO("    First collection contains " << cdrover_ptr->contour_data->ccs.front().contours.size() << " contours");
 //}
 
                         contouring_img_altered = false;
                     }
 
                     // Draw the WIP contours.
-                    contouring_imgs.Ensure_Contour_Data_Allocated();
+                    cdrover_ptr->Ensure_Contour_Data_Allocated();
                     if( auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
                         cimg_valid
-                    &&  (contouring_imgs.Has_Contour_Data()) ){
+                    &&  (cdrover_ptr->Has_Contour_Data()) ){
                         const auto cimg_dicom_width = cimg_it->pxl_dx * cimg_it->columns;
                         const auto cimg_dicom_height = cimg_it->pxl_dy * cimg_it->rows; 
                         //const auto cimg_top_left = cimg_it->anchor + cimg_it->offset
@@ -5805,7 +5837,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         //const auto cimg_bottom_left = cimg_top_left + cimg_it->col_unit * cimg_dicom_height;
                         //const auto cimg_plane = cimg_it->image_plane();
 
-                        for(const auto &cc : contouring_imgs.contour_data->ccs){
+                        for(const auto &cc : cdrover_ptr->contour_data->ccs){
                             for(const auto &cop : cc.contours){
                                 if( cop.points.empty() ) continue;
                                 if( !cimg_it->sandwiches_point_within_top_bottom_planes( cop.points.front() ) ) continue;
@@ -7764,6 +7796,8 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                                &io,
 
                                                &recompute_cimage_iters,
+                                               &contouring_drover_cache,
+                                               &cdrover_ptr,
                                                &contouring_img_altered,
                                                &contouring_reach,
                                                &contouring_intensity,
@@ -7909,8 +7943,30 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                || (view_toggles.view_drawing_enabled && img_valid) )
                           &&  (0 < IM_ARRAYSIZE(io.MouseDown))
                           &&  (1 < IM_ARRAYSIZE(io.MouseDown))
+                          &&   ( ImGui::IsMouseReleased(0) || ImGui::IsMouseReleased(1) )
+                          &&  image_mouse_pos_opt.value().mouse_hovering_image ){
+
+                        // Store a copy of the current contouring drover in the undo buffer.
+                        YLOGINFO("Copying current contouring Drover state into undo buffer");
+                        auto l_cdrover = cdrover_ptr->Deep_Copy();
+                        contouring_drover_cache.store_drover( std::move(l_cdrover) );
+                        cdrover_ptr = contouring_drover_cache.get();
+
+                        std::tie(cimg_valid, cimg_array_ptr_it, cimg_it) = recompute_cimage_iters();
+                        if(!cimg_valid){
+                            throw std::runtime_error("Copying contouring state into undo buffer failed, result is not valid");
+                        }
+
+                        // Trim old items in the undo buffer.
+                        contouring_drover_cache.trim(20UL);
+                          
+                    }else if( (   (view_toggles.view_contouring_enabled && cimg_valid)
+                               || (view_toggles.view_drawing_enabled && img_valid) )
+                          &&  (0 < IM_ARRAYSIZE(io.MouseDown))
+                          &&  (1 < IM_ARRAYSIZE(io.MouseDown))
                           &&  ((0.0f <= io.MouseDownDuration[0]) || (0.0f <= io.MouseDownDuration[1]))
                           &&  image_mouse_pos_opt.value().mouse_hovering_image ){
+
                         contouring_img_altered = true;
                         need_to_reload_opengl_texture.store(true);
 
