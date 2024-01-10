@@ -7934,10 +7934,14 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     scroll_is_rgb = false;
                 }
 
-                if( ImGui::IsWindowFocused()
-                ||  ImGui::IsWindowHovered()
-                ||  image_mouse_pos_opt.value().image_window_focused
-                ||  image_mouse_pos_opt.value().image_window_hovered ){
+                if( image_mouse_pos_opt.value().image_window_focused
+                // Image navigation window focused, but image viewer window being hovered.
+                ||  (ImGui::IsWindowFocused() && image_mouse_pos_opt.value().image_window_hovered)
+                // Image viewer window being hovered and mouse being clicked.
+                // (The window will not yet be focused, but this is needed for intercepting contouring
+                // and drawing clicks, since the contouring window will be focused.)
+                ||  (image_mouse_pos_opt.value().image_window_hovered && ImGui::IsAnyMouseDown()) ){
+
                     auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
 
                     const int d_l = static_cast<int>( std::floor(io.MouseWheel) );
