@@ -1860,9 +1860,14 @@ Drover_Cache::Drover_Cache(){
     this->version_nidus = 0L;
 }
 
+bool
+Drover_Cache::empty() const {
+    return this->drovers.empty();
+}
+
 // Get a list of all available Drover versions.
 std::list<int64_t>
-Drover_Cache::get_versions(){
+Drover_Cache::get_versions() const {
     std::list<int64_t> nums;
     for(const auto& p : this->drovers){
         nums.emplace_back( p.first );
@@ -1899,7 +1904,7 @@ Drover_Cache::store_drover(Drover &&in){
 //
 // Returns a nullptr if the version is not found.
 std::shared_ptr<Drover>
-Drover_Cache::get(int64_t version_num){
+Drover_Cache::get(int64_t version_num) const {
     std::shared_ptr<Drover> ptr = nullptr;
     for(const auto& p : this->drovers){
         if(p.first == version_num){
@@ -1914,7 +1919,7 @@ Drover_Cache::get(int64_t version_num){
 //
 // Returns a nullptr if there is no available Drover.
 std::shared_ptr<Drover>
-Drover_Cache::get(){
+Drover_Cache::get() const {
     std::shared_ptr<Drover> ptr = nullptr;
     if(!this->drovers.empty()){
         ptr = this->drovers.back().second;
@@ -1925,7 +1930,7 @@ Drover_Cache::get(){
 
 // Get the version number corresponding with the given Drover.
 std::optional<int64_t>
-Drover_Cache::get_version(std::shared_ptr<Drover> in){
+Drover_Cache::get_version(std::shared_ptr<Drover> in) const {
     std::optional<int64_t> v;
     for(const auto& p : this->drovers){
         if(p.second == in){
@@ -1938,7 +1943,7 @@ Drover_Cache::get_version(std::shared_ptr<Drover> in){
 
 // Get the most recent Drover's version.
 std::optional<int64_t>
-Drover_Cache::get_version(){
+Drover_Cache::get_version() const {
     std::optional<int64_t> v;
     if(!this->drovers.empty()){
         v = this->drovers.back().first;

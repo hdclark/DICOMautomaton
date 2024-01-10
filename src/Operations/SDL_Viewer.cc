@@ -1622,8 +1622,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             // Clear all undo history except the current item.
             const auto l_v_opt = contouring_drover_cache.get_version(cdrover_ptr);
             contouring_drover_cache.trim_except(l_v_opt.value_or(0L));
-            const auto v_list = contouring_drover_cache.get_versions();
-            if(v_list.empty()){
+            if(contouring_drover_cache.empty()){
                 YLOGWARN("Contouring drover cache is empty; re-seeding the cache");
                 contouring_drover_cache.create_drover();
                 cdrover_ptr = contouring_drover_cache.get();

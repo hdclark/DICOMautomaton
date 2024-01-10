@@ -524,9 +524,12 @@ struct Drover_Cache {
   public:
     Drover_Cache();
 
+    bool
+    empty() const;
+
     // Get a list of all available Drover versions.
     std::list<int64_t>
-    get_versions();
+    get_versions() const;
 
     // Create a new Drover.
     std::pair<int64_t, std::shared_ptr<Drover>>
@@ -546,21 +549,21 @@ struct Drover_Cache {
     //
     // Returns a nullptr if the version is not found.
     std::shared_ptr<Drover>
-    get(int64_t version_num);
+    get(int64_t version_num) const;
 
     // Get the most recent Drover.
     //
     // Returns a nullptr if there is no available Drover.
     std::shared_ptr<Drover>
-    get();
+    get() const;
 
     // Get the version number corresponding with the given Drover.
     std::optional<int64_t>
-    get_version(std::shared_ptr<Drover> in);
+    get_version(std::shared_ptr<Drover> in) const;
 
     // Get the most recent Drover's version.
     std::optional<int64_t>
-    get_version();
+    get_version() const;
 
     // Remove the Drover with the corresponding version number, if it exists.
     void
