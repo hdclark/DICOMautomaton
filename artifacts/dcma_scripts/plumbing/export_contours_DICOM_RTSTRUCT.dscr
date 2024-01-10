@@ -1,0 +1,34 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# Export all available contours as a DICOM RTSTRUCT file.
+
+SelectFilename(
+    Key = 'selected_filename',
+    Extension = '.dcm',
+){};
+
+# Check if there are contours present, and notify explicitly if not.
+Coalesce(){
+    SelectionIsPresent(
+        ROILabelRegex = '.*',
+    ){};
+
+    Negate(){
+        NotifyUser(
+            Notifications = 'tray("medium", "Contour ROIs not present or selection not valid")',
+        ){};
+    };
+};
+
+DICOMExportContours(
+    Filename = $selected_filename,
+    Encoding = 'explicit',
+    ParanoiaLevel = 'medium',
+    #NormalizedROILabelRegex = '.*',
+    ROILabelRegex = '.*',
+){};
+
+NotifyUser(
+    Notifications = 'tray("low", "File exported as $selected_filename")',
+){};
+

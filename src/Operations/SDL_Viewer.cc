@@ -2926,6 +2926,49 @@ bool SDL_Viewer(Drover &DICOM_data,
         return contouring_drover;
     };
 
+    // Launch a thread to export interactively.
+    const auto export_as_DICOM = [ &drover_mutex,
+                                   &DICOM_data,
+                                   &InvocationMetadata,
+                                   &FilenameLex,
+
+                                   &img_array_num,
+
+                                   //&recompute_image_state,
+                                   //&recompute_image_iters,
+
+                                   &wq ]( std::string plumbing_script_name ) -> void {
+
+        // Submit the work to the worker thread.
+        const auto worker = [&, plumbing_script_name](){
+
+            std::list<OperationArgPkg> Operations;
+            const bool op_load_res = Load_Standard_Script( Operations, "plumbing", plumbing_script_name );
+            if(!op_load_res) throw std::runtime_error("Unable to load script");
+
+            // Probably don't need an exclusive lock here, but doing so just in case the loaded script modifies the
+            // Drover state somehow.
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
+
+            const auto l_img_array_num = img_array_num;
+            auto l_InvocationMetadata = InvocationMetadata;
+
+            // Selector used only for images.
+            l_InvocationMetadata["img_arr_selection"] = "#"_s + std::to_string(l_img_array_num);
+
+            const auto res = Operation_Dispatcher(DICOM_data, l_InvocationMetadata, FilenameLex, Operations);
+            if(!res){
+                YLOGWARN("DICOM export failed");
+            }
+
+            return;
+        };
+        wq.submit_task( worker ); // Offload to waiting worker thread.
+
+        return;
+    };
+
+
     // Contour and image display state.
     std::map<std::string, bool> contour_enabled;
     std::map<std::string, bool> contour_hovered;
@@ -3230,6 +3273,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                             &contouring_img_altered,
                                             &tagged_pos,
 
+                                            &export_as_DICOM,
+
                                             &script_mutex,
                                             &script_files,
                                             &active_script_file,
@@ -3281,6 +3326,28 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if( ImGui::IsItemHovered()){
                         ImGui::BeginTooltip();
                         ImGui::Text("Note: your system might support drag-and-drop for files and directories.");
+                        ImGui::EndTooltip();
+                    }
+                    ImGui::Separator();
+                    if(ImGui::BeginMenu("Export")){
+                        if( ImGui::MenuItem("Images as DICOM CT") ){
+                            export_as_DICOM("export images DICOM CT");
+                        }
+                        if( ImGui::MenuItem("Images as DICOM MR") ){
+                            export_as_DICOM("export images DICOM MR");
+                        }
+                        if( ImGui::MenuItem("Images as DICOM RTDOSE") ){
+                            export_as_DICOM("export images DICOM RTDOSE");
+                        }
+                        ImGui::Separator();
+                        if( ImGui::MenuItem("Contours as DICOM RTSTRUCT") ){
+                            export_as_DICOM("export contours DICOM RTSTRUCT");
+                        }
+                        ImGui::EndMenu();
+                    }
+                    if( ImGui::IsItemHovered()){
+                        ImGui::BeginTooltip();
+                        ImGui::Text("Note: file export can be customized using scripts.");
                         ImGui::EndTooltip();
                     }
                     ImGui::Separator();

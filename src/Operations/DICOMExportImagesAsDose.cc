@@ -91,6 +91,10 @@ bool DICOMExportImagesAsDose(Drover &DICOM_data,
     const auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     IAs = Whitelist(IAs, "Modality", "RTDOSE");
+    if(IAs.empty()){
+        throw std::invalid_argument("No image arrays with RTDOSE modality selected. Cannot continue.");
+    }
+
     if(IAs.size() > 1){
         throw std::invalid_argument("Multiple image arrays were selected. This routine only supports export of a single image array.");
     }
