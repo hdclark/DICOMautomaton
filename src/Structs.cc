@@ -1968,6 +1968,22 @@ Drover_Cache::trim(uint64_t num_remaining_drovers){
         this->drovers.pop_front();
     };
 }
+
+// Trim all Drovers except the one specified.
+void
+Drover_Cache::trim_except(int64_t version_num){
+    decltype(this->drovers) l_drovers;
+    const auto beg = std::begin(this->drovers);
+    const auto end = std::end(this->drovers);
+    for(auto it = beg; it != end; ++it){
+        if(it->first == version_num){
+            l_drovers.splice( std::end(l_drovers), this->drovers, it );
+            break;
+        }
+    }
+    this->drovers.swap(l_drovers);
+    return;
+}
         
 
 //---------------------------------------------------------------------------------------------------------------------------

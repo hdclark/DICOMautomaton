@@ -1620,7 +1620,14 @@ bool SDL_Viewer(Drover &DICOM_data,
             contouring_img_row_col_count = std::clamp<int>(contouring_img_row_col_count, 5, 1024);
 
             // Clear all undo history except the current item.
-            contouring_drover_cache.trim(1UL);
+            const auto l_v_opt = contouring_drover_cache.get_version(cdrover_ptr);
+            contouring_drover_cache.trim_except(l_v_opt.value_or(0L));
+            const auto v_list = contouring_drover_cache.get_versions();
+            if(v_list.empty()){
+                YLOGWARN("Contouring drover cache is empty; re-seeding the cache");
+                contouring_drover_cache.create_drover();
+                cdrover_ptr = contouring_drover_cache.get();
+            }
 
             // Reset the contouring images.
             if(!cdrover_ptr->Has_Image_Data()){

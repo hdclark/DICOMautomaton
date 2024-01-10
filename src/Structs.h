@@ -569,6 +569,10 @@ struct Drover_Cache {
     // Trim old Drovers so that only N or less of them remain.
     void
     trim(uint64_t num_remaining_drovers);
+
+    // Trim all Drovers except the one specified.
+    void
+    trim_except(int64_t version_num);
 };
 
 //---------------------------------------------------------------------------------------------------------------------------
