@@ -1158,6 +1158,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     struct image_mouse_pos_s {
         bool mouse_hovering_image;
         bool image_window_focused;
+        bool image_window_hovered;
 
         float region_x;   // [0,1] clamped position of mouse on image.
         float region_y;
@@ -1600,6 +1601,17 @@ bool SDL_Viewer(Drover &DICOM_data,
     int64_t guide_stage_num = -1;
     std::list<opengl_texture_handle_t> guide_image_textures;
 
+
+
+    // Save a copy of the current cdrover_ptr object's Drover in the cache.
+    const auto create_cdrover_snapshot = [](Drover_Cache &l_contouring_drover_cache,
+                                            std::shared_ptr<Drover> l_cdrover_ptr ){
+        auto l_cdrover_c = l_cdrover_ptr->Deep_Copy();
+        l_contouring_drover_cache.store_drover( std::move(l_cdrover_c) );
+        return l_contouring_drover_cache.get();
+
+        // Note: you will need to regenerate contouring image iterators after calling this!
+    };
 
     // Resets the contouring image to match the display image characteristics.
     const auto reset_contouring_state = [&cdrover_ptr,
@@ -5027,6 +5039,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
 
                                            &recompute_cimage_iters,
                                            &contouring_drover_cache,
+                                           &create_cdrover_snapshot,
                                            &cdrover_ptr,
                                            &contouring_img_altered,
                                            &last_mouse_button_0_down,
@@ -5077,6 +5090,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             image_mouse_pos_s image_mouse_pos;
             image_mouse_pos.mouse_hovering_image = ImGui::IsItemHovered();
             image_mouse_pos.image_window_focused = ImGui::IsWindowFocused();
+            image_mouse_pos.image_window_hovered = ImGui::IsWindowHovered();
 
             ImVec2 real_extent; // The true dimensions of the unclipped image, accounting for zoom and panning.
             real_extent.x = image_extent.x / (uv_max.x - uv_min.x);
@@ -5586,6 +5600,9 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             }
                             auto cm = shtl.back().get_common_metadata({}, {});
 
+                            // Make snapshot of the current state.
+                            cdrover_ptr = create_cdrover_snapshot(contouring_drover_cache, cdrover_ptr);
+
                             std::list<OperationArgPkg> Operations;
                             const bool op_load_res = Load_Standard_Script( Operations, "plumbing", "copy existing contours" );
                             if(!op_load_res) throw std::runtime_error("Unable to load script");
@@ -5621,6 +5638,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         ImGui::Text("Clear contour?");
                         if(ImGui::Button("Clear")){
                             ImGui::CloseCurrentPopup();
+                            cdrover_ptr = create_cdrover_snapshot(contouring_drover_cache, cdrover_ptr);
                             auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
                             if(cimg_valid){
                                 for(auto& cimg : (*cimg_array_ptr_it)->imagecoll.images){
@@ -5643,7 +5661,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 }
 
                 // Undo and redo manual control.
-                {
+                if( view_toggles.view_contouring_enabled ){
                     const auto v_list = contouring_drover_cache.get_versions();
                     const auto v_curr = contouring_drover_cache.get_version(cdrover_ptr);
                     int pos = 0;
@@ -5746,6 +5764,11 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 ImGui::Text("Dilation and Erosion");
                 ImGui::DragFloat("Margin (mm)", &contouring_margin, 0.1f, -10.0f, 10.0f);
                 if(ImGui::Button("Apply Margin")){
+
+                    // Make snapshot of the current state.
+                    if( view_toggles.view_contouring_enabled ){
+                        cdrover_ptr = create_cdrover_snapshot(contouring_drover_cache, cdrover_ptr);
+                    }
 
                     std::list<OperationArgPkg> Operations;
                     const bool op_load_res = Load_Standard_Script( Operations, "plumbing", "dilate erode margin" );
@@ -7798,6 +7821,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                                &recompute_cimage_iters,
                                                &contouring_drover_cache,
                                                &cdrover_ptr,
+                                               &create_cdrover_snapshot,
                                                &contouring_img_altered,
                                                &contouring_reach,
                                                &contouring_intensity,
@@ -7904,7 +7928,10 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     scroll_is_rgb = false;
                 }
 
-                if(ImGui::IsWindowFocused() || image_mouse_pos_opt.value().image_window_focused){
+                if( ImGui::IsWindowFocused()
+                ||  ImGui::IsWindowHovered()
+                ||  image_mouse_pos_opt.value().image_window_focused
+                ||  image_mouse_pos_opt.value().image_window_hovered ){
                     auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
 
                     const int d_l = static_cast<int>( std::floor(io.MouseWheel) );
@@ -7943,35 +7970,14 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                || (view_toggles.view_drawing_enabled && img_valid) )
                           &&  (0 < IM_ARRAYSIZE(io.MouseDown))
                           &&  (1 < IM_ARRAYSIZE(io.MouseDown))
-                          &&   ( ImGui::IsMouseReleased(0) || ImGui::IsMouseReleased(1) )
-                          &&  image_mouse_pos_opt.value().mouse_hovering_image ){
-
-                        // Store a copy of the current contouring drover in the undo buffer.
-                        YLOGINFO("Copying current contouring Drover state into undo buffer");
-                        auto l_cdrover = cdrover_ptr->Deep_Copy();
-                        contouring_drover_cache.store_drover( std::move(l_cdrover) );
-                        cdrover_ptr = contouring_drover_cache.get();
-
-                        std::tie(cimg_valid, cimg_array_ptr_it, cimg_it) = recompute_cimage_iters();
-                        if(!cimg_valid){
-                            throw std::runtime_error("Copying contouring state into undo buffer failed, result is not valid");
-                        }
-
-                        // Trim old items in the undo buffer.
-                        contouring_drover_cache.trim(20UL);
-                          
-                    }else if( (   (view_toggles.view_contouring_enabled && cimg_valid)
-                               || (view_toggles.view_drawing_enabled && img_valid) )
-                          &&  (0 < IM_ARRAYSIZE(io.MouseDown))
-                          &&  (1 < IM_ARRAYSIZE(io.MouseDown))
                           &&  ((0.0f <= io.MouseDownDuration[0]) || (0.0f <= io.MouseDownDuration[1]))
                           &&  image_mouse_pos_opt.value().mouse_hovering_image ){
 
-                        contouring_img_altered = true;
-                        need_to_reload_opengl_texture.store(true);
-
-                        decltype(disp_img_it) l_img_it = (view_toggles.view_contouring_enabled) ? cimg_it : disp_img_it;
-                        decltype(img_array_ptr_it) l_img_array_ptr_it = (view_toggles.view_contouring_enabled) ? cimg_array_ptr_it : img_array_ptr_it;
+                        if(view_toggles.view_contouring_enabled){
+                            contouring_img_altered = true;
+                        }else if(view_toggles.view_drawing_enabled){
+                            need_to_reload_opengl_texture.store(true);
+                        }
 
                         // The mapping between contouring image and display image (which uses physical dimensions) is
                         // based on the relative position along row and column axes.
@@ -7979,11 +7985,28 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         const auto mouse_button_0 = (0.0f <= io.MouseDownDuration[0]);
                         const auto mouse_button_1 = (0.0f <= io.MouseDownDuration[1]);
 
+                        // If the mouse was just clicked down, then make a copy.
+                        if( view_toggles.view_contouring_enabled
+                        &&  ( (0.0f == io.MouseDownDuration[0]) || (0.0f == io.MouseDownDuration[1]) ) ){
+                            YLOGINFO("Copying current contouring Drover state into undo buffer");
+                            cdrover_ptr = create_cdrover_snapshot(contouring_drover_cache, cdrover_ptr);
+                            std::tie(cimg_valid, cimg_array_ptr_it, cimg_it) = recompute_cimage_iters();
+                            if(!cimg_valid){
+                                throw std::runtime_error("Copying contouring state into undo buffer failed, result is not valid");
+                            }
+
+                            // Trim old items in the undo buffer.
+                            contouring_drover_cache.trim(10UL);
+                        }
+
                         const auto mouse_button_0_sticky = mouse_button_0
                             && ( io.KeyShift || (last_mouse_button_0_down < io.MouseDownDuration[0]) );
                         const auto mouse_button_1_sticky = mouse_button_1
                             && ( io.KeyShift || (last_mouse_button_1_down < io.MouseDownDuration[1]) );
                         const auto any_mouse_button_sticky = mouse_button_0_sticky || mouse_button_1_sticky;
+
+                        decltype(disp_img_it) l_img_it = (view_toggles.view_contouring_enabled) ? cimg_it : disp_img_it;
+                        decltype(img_array_ptr_it) l_img_array_ptr_it = (view_toggles.view_contouring_enabled) ? cimg_array_ptr_it : img_array_ptr_it;
 
                         std::vector<line_segment<double>> lss;
                         if( false ){
