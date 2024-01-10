@@ -48,11 +48,15 @@ OperationDoc OpArgDocSelectFilename(){
         " is a possible race condition between filename selection and file use. This is broadly known"
         " as the 'TOCTOU' or time-of-check, time-of-use race condition. Beware!"
     );
+    out.notes.emplace_back(
+        "The specified filename is not validated. However, providing an empty filename will cause a"
+        " false to be returned."
+    );
 
     out.desc = 
         "Allow the user to interactively select/specify a filename, and then insert it into the"
         " global parameter table."
-        "Note that either an existing file can be selected, or a new filename can be specified."
+        " Note that either an existing file can be selected, or a new filename can be specified."
         "\n\n"
         "A file with the specified name does not need to exist, and no new file is created by"
         " this operation."
@@ -77,9 +81,9 @@ OperationDoc OpArgDocSelectFilename(){
     out.args.emplace_back();
     out.args.back().name = "Extension";
     out.args.back().desc = "An extension to impose on the filename. Note that this option will add the extension"
-                           " or override an extension provided by the user."
+                           " or override any extension provided by the user."
                            "\n"
-                           "To permit any extension and disable overriding the extension, leave this option empty."
+                           "To permit any extension and disable overriding the extension, leave this parameter empty."
                            "";
     out.args.back().default_val = "";
     out.args.back().expected = true;
@@ -125,16 +129,21 @@ bool SelectFilename(Drover& /*DICOM_data*/,
     std::string selection = selector_opt.value().get_selection();
     selector_opt.reset();
 
+    bool ret = true;
     if(selection.empty()){
         YLOGINFO("No selection provided, not inserting key '" << KeyStr << "' into parameter table");
+        ret = false;
+
     }else{
         if(!ExtensionStr.empty()){
             selection = std::filesystem::path(selection).replace_extension(ExtensionStr).string();
         }
         InvocationMetadata[KeyStr] = selection;
         YLOGINFO("Adding entry '" << KeyStr << "' = '" << selection << "' to global parameter table");
+
+        ret = true;
     }
 
-    return true;
+    return ret;
 }
 
