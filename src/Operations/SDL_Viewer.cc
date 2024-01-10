@@ -5748,6 +5748,11 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
 
                     const auto N_versions = static_cast<int>(v_list.size());
                     ImGui::SliderInt("History", &pos, 0, N_versions - 1);
+                    if( ImGui::IsItemHovered() ){
+                        ImGui::BeginTooltip();
+                        ImGui::Text("Note: hot keys [ctrl]+[z] and [ctrl]+[y] are supported.");
+                        ImGui::EndTooltip();
+                    }
                     const auto new_pos = std::clamp<int>(pos, 0, N_versions - 1);
                     const auto v_new = *(std::next( std::begin(v_list), new_pos ));
                     if(v_new != v_curr){
@@ -8001,6 +8006,9 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     scroll_is_rgb = false;
                 }
 
+                const bool pressing_ctrl_Z = (io.KeyCtrl && ImGui::IsKeyPressed( SDL_SCANCODE_Z ));
+                const bool pressing_ctrl_Y = (io.KeyCtrl && ImGui::IsKeyPressed( SDL_SCANCODE_Y ));
+
                 if( image_mouse_pos_opt.value().image_window_focused
                 // Image navigation window focused, but image viewer window being hovered.
                 ||  (ImGui::IsWindowFocused() && image_mouse_pos_opt.value().image_window_hovered)
@@ -8042,6 +8050,28 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         scroll_arrays = 0;
                     }else if( io.KeyShift && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_End)) ){
                         scroll_arrays = N_arrays - 1;
+
+                    }else if( (view_toggles.view_contouring_enabled && cimg_valid)
+                          &&  (pressing_ctrl_Z || pressing_ctrl_Y) ){
+                        // Contouring mode: undo and redo.
+                        const auto v_list = contouring_drover_cache.get_versions();
+                        const auto v_curr = contouring_drover_cache.get_version(cdrover_ptr);
+                        const auto beg = std::begin(v_list);
+                        const auto end = std::end(v_list);
+
+                        auto it = std::find(beg, end, v_curr);
+                        if(false){
+                        }else if(pressing_ctrl_Z && (it != end) && (it != beg)){
+                            it = std::next(it, -1);
+                            cdrover_ptr = contouring_drover_cache.get(*it);
+                        }else if(pressing_ctrl_Y && (it != end) && (std::next(it) != end)){
+                            it = std::next(it, 1);
+                            cdrover_ptr = contouring_drover_cache.get(*it);
+                        }
+                        std::tie(cimg_valid, cimg_array_ptr_it, cimg_it) = recompute_cimage_iters();
+                        if(!cimg_valid){
+                            throw std::runtime_error("Contouring undo operation failed, result is not valid");
+                        }
 
                     }else if( (   (view_toggles.view_contouring_enabled && cimg_valid)
                                || (view_toggles.view_drawing_enabled && img_valid) )
