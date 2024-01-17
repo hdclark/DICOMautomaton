@@ -5145,7 +5145,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             ||  !current_texture.texture_exists
             ||  need_to_reload_opengl_texture.load() ) return;
 
-            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSize(ImVec2(650, 670), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(10, 40), ImGuiCond_FirstUseEver);
             ImGui::Begin("Images", &view_toggles.view_images_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar );
             ImGuiIO &io = ImGui::GetIO();
@@ -5153,7 +5153,8 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             // Note: unhappy with this. Can cause feedback loop and flicker/jumpiness when resizing. Works OK for now
             // though. TODO.
             ImVec2 image_extent = ImGui::GetContentRegionAvail();
-            image_extent.x = std::max<float>(512.0f, image_extent.x - 5.0f);
+            const auto window_padding = ImGui::GetStyle().WindowPadding;
+            image_extent.x = std::max<float>(128.0f, image_extent.x); // - 0.5f * window_padding.x);
             // Ensure images have the same aspect ratio as the true image.
             image_extent.y = current_texture.aspect_ratio * image_extent.x;
             auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(current_texture.texture_number));
@@ -7979,10 +7980,25 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 ImGui::Separator();
                 ImGui::Text("Magnification");
                 ImGui::DragFloat("Zoom level", &zoom, 0.01f, 1.0f, 100.0f, "%.03f");
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Note: use [ctrl] and mouse wheel to zoom.");
+                    ImGui::EndTooltip();
+                }
                 zoom = std::clamp<float>(zoom, 1.0f, 1000.0f);
                 const float uv_width = 1.0f / zoom;
                 ImGui::DragFloat("Pan horizontal", &pan.x, 0.01f, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f, "%.03f");
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Note: click and hold the mouse wheel and drag to pan while zoomed.");
+                    ImGui::EndTooltip();
+                }
                 ImGui::DragFloat("Pan vertical",   &pan.y, 0.01f, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f, "%.03f");
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Note: click and hold the mouse wheel and drag to pan while zoomed.");
+                    ImGui::EndTooltip();
+                }
                 pan.x = std::clamp<float>(pan.x, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f);
                 pan.y = std::clamp<float>(pan.y, 0.0f + uv_width * 0.5f, 1.0f - uv_width * 0.5f);
                 uv_min.x = pan.x - uv_width * 0.5f;
