@@ -5616,6 +5616,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             // Otherwise, we have to wait for the task to complete. Maybe transfer to yet another thread
                             // and detach the thread?? TODO.
                             extracted_contours = decltype(extracted_contours)();
+                            contouring_img_altered = true;
                         }
                         ImGui::EndPopup();
                     }
