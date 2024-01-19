@@ -1014,6 +1014,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     auto pos_contour_colour = ImVec4(0.0f, 0.0f, 1.0f, 1.0f);
     auto neg_contour_colour = ImVec4(1.0f, 0.0f, 0.0f, 1.0f);
     auto editing_contour_colour = ImVec4(1.0f, 0.45f, 0.0f, 1.0f);
+    auto adjacent_contour_colour = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
 
     auto line_numbers_normal_colour = ImVec4(1.0f, 1.0f, 1.0f, 0.3f);
     auto line_numbers_debug_colour  = ImVec4(0.4f, 1.0f, 0.4f, 0.8f);
@@ -1426,6 +1427,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     float contouring_reach = 10.0;
     float contouring_margin = 1.0;
     float contouring_intensity = 1.0;
+    bool contouring_show_adjacent = true;
     std::string contouring_method = "marching-squares";
     brush_t contouring_brush = brush_t::rigid_circle;
     float last_mouse_button_0_down = 1E30;
@@ -5098,6 +5100,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                            &contouring_margin,
                                            &contouring_intensity,
                                            &contouring_img_row_col_count,
+                                           &contouring_show_adjacent,
                                            &new_contour_name,
                                            &save_contour_buffer,
                                            &overwrite_existing_contours,
@@ -5123,6 +5126,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                            &editing_contour_colour,
                                            &pos_contour_colour,
                                            &neg_contour_colour,
+                                           &adjacent_contour_colour,
 
                                            &row_profile,
                                            &col_profile,
@@ -5734,9 +5738,14 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
 
                         contouring_img_altered = true;
                     }
+
+                    if(ImGui::Checkbox("Show contours from adjacent slices", &contouring_show_adjacent)){
+                        contouring_img_altered = true;
+                    }
+
+                    ImGui::Separator();
                 }
 
-                ImGui::Separator();
                 ImGui::Text("Brush");
                 ImGui::DragFloat("Radius (mm)", &contouring_reach, 0.1f, 0.5f, 50.0f);
                 if(view_toggles.view_drawing_enabled){
@@ -6051,12 +6060,23 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     &&  contouring_img_altered
                     &&  (frame_count % 5 == 0) ){ // Terrible stop-gap until I can parallelize contour extraction. TODO
 
-                        // Only bother extracting contours for the current image.
+                        // Only bother extracting contours for the current and adjacent images.
+                        const auto beg_it = std::begin((*cimg_array_ptr_it)->imagecoll.images);
+                        const auto end_it = std::end((*cimg_array_ptr_it)->imagecoll.images);
                         Drover shtl;
                         shtl.Ensure_Contour_Data_Allocated();
                         shtl.image_data.push_back(std::make_unique<Image_Array>());
-                        shtl.image_data.back()->imagecoll.images.emplace_back();
-                        shtl.image_data.back()->imagecoll.images.back() = *cimg_it;
+                        //shtl.image_data.back()->imagecoll.images.emplace_back();
+
+                        if( contouring_show_adjacent
+                        &&  (cimg_it != beg_it) ){
+                            shtl.image_data.back()->imagecoll.images.emplace_back( *(std::prev(cimg_it)) );
+                        }
+                        shtl.image_data.back()->imagecoll.images.emplace_back( *cimg_it );
+                        if( contouring_show_adjacent
+                        &&  (std::next(cimg_it) != end_it) ){
+                            shtl.image_data.back()->imagecoll.images.emplace_back( *(std::next(cimg_it)) );
+                        }
 
                         std::list<OperationArgPkg> Operations;
                         const bool op_load_res = Load_Standard_Script( Operations, "plumbing", "extract contours from mask" );
@@ -6095,7 +6115,11 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         for(const auto &cc : cdrover_ptr->contour_data->ccs){
                             for(const auto &cop : cc.contours){
                                 if( cop.points.empty() ) continue;
-                                if( !cimg_it->sandwiches_point_within_top_bottom_planes( cop.points.front() ) ) continue;
+                                //if( !cimg_it->sandwiches_point_within_top_bottom_planes( cop.points.front() ) ) continue;
+                                const bool is_in_plane = cimg_it->sandwiches_point_within_top_bottom_planes(cop.points.front());
+
+                                if( !contouring_show_adjacent
+                                &&  !is_in_plane) continue;
 
                                 imgs_window_draw_list->PathClear();
                                 for(auto & p : cop.points){
@@ -6110,25 +6134,30 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                     const auto world_y = real_pos.y + real_extent.y * clamped_row;
 
                                     ImVec2 v;
-                                    v.x = world_x;
+                                    v.x = world_x + (is_in_plane ? 0.0 : 0.1);
                                     v.y = world_y;
                                     imgs_window_draw_list->PathLineTo( v );
                                 }
 
                                 float thickness = contour_line_thickness;
-
                                 ImU32 colour = ImGui::GetColorU32(editing_contour_colour);
-                                if(contour_colour_from_orientation){
-                                    const auto arb_pos_unit = disp_img_it->row_unit.Cross(disp_img_it->col_unit).unit();
-                                    vec3<double> c_orient;
-                                    try{ // Protect against degenerate contours. (Should we instead ignore them altogether?)
-                                        c_orient = cop.Estimate_Planar_Normal();
-                                    }catch(const std::exception &){
-                                        c_orient = arb_pos_unit;
+
+                                if(is_in_plane){
+                                    if(contour_colour_from_orientation){
+                                        const auto arb_pos_unit = disp_img_it->row_unit.Cross(disp_img_it->col_unit).unit();
+                                        vec3<double> c_orient;
+                                        try{ // Protect against degenerate contours. (Should we instead ignore them altogether?)
+                                            c_orient = cop.Estimate_Planar_Normal();
+                                        }catch(const std::exception &){
+                                            c_orient = arb_pos_unit;
+                                        }
+                                        const auto c_orient_pos = (c_orient.Dot(arb_pos_unit) > 0);
+                                        colour = ( c_orient_pos ? ImGui::GetColorU32(pos_contour_colour)
+                                                                : ImGui::GetColorU32(neg_contour_colour) );
                                     }
-                                    const auto c_orient_pos = (c_orient.Dot(arb_pos_unit) > 0);
-                                    colour = ( c_orient_pos ? ImGui::GetColorU32(pos_contour_colour)
-                                                            : ImGui::GetColorU32(neg_contour_colour) );
+                                }else{
+                                    colour = ImGui::GetColorU32(adjacent_contour_colour);
+                                    //thickness = contour_line_thickness;
                                 }
 
                                 const bool closed = true;
