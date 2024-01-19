@@ -5623,7 +5623,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
 
                         ImGui::OpenPopup("Edit Existing Contours");
                     }
-                    ImGui::SameLine();
                     if(ImGui::BeginPopupModal("Edit Existing Contours", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
                         DICOM_data.Ensure_Contour_Data_Allocated();
 
@@ -5699,33 +5698,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             }
                         }
 
-                        ImGui::SameLine();
-                        if(ImGui::Button("Cancel")){
-                            ImGui::CloseCurrentPopup();
-                        }
-                        ImGui::EndPopup();
-                    }
-                    if(ImGui::Button("Clear")){ 
-                        ImGui::OpenPopup("Contour Clear");
-                    }
-                    if(ImGui::BeginPopupModal("Contour Clear", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
-                        ImGui::Text("Clear contour?");
-                        if(ImGui::Button("Clear")){
-                            ImGui::CloseCurrentPopup();
-                            cdrover_ptr = create_cdrover_snapshot(contouring_drover_cache, cdrover_ptr);
-                            auto [cimg_valid, cimg_array_ptr_it, cimg_it] = recompute_cimage_iters();
-                            if(cimg_valid){
-                                for(auto& cimg : (*cimg_array_ptr_it)->imagecoll.images){
-                                    cimg.fill_pixels(0.0f);
-                                }
-                            }
-                            cdrover_ptr->Ensure_Contour_Data_Allocated();
-                            cdrover_ptr->contour_data->ccs.clear();
-                            contouring_img_altered = true;
-                            last_mouse_button_0_down = 1E30;
-                            last_mouse_button_1_down = 1E30;
-                            last_mouse_button_pos = {};
-                        }
                         ImGui::SameLine();
                         if(ImGui::Button("Cancel")){
                             ImGui::CloseCurrentPopup();
@@ -5867,6 +5839,187 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     }else if(view_toggles.view_drawing_enabled){
                         need_to_reload_opengl_texture.store(true);
                     }
+                }
+
+                ImGui::Separator();
+                ImGui::Text("Clearing");
+                const bool button_clear_one_slice = ImGui::Button("Clear this slice");
+                ImGui::SameLine();
+                const bool button_clear_all_slices = ImGui::Button("Clear all slices");
+
+                if( button_clear_one_slice
+                ||  button_clear_all_slices ){
+
+                    // Make snapshot of the current state.
+                    if( view_toggles.view_contouring_enabled ){
+                        cdrover_ptr = create_cdrover_snapshot(contouring_drover_cache, cdrover_ptr);
+                    }
+                    Drover *d = (view_toggles.view_contouring_enabled) ? cdrover_ptr.get() : &DICOM_data;
+
+                    auto [img_valid, img_array_ptr_it, img_it] = recompute_image_iters();
+                    if( view_toggles.view_contouring_enabled ){
+                        std::tie(img_valid, img_array_ptr_it, img_it) = recompute_cimage_iters();
+                    }
+                    if( img_valid ){
+                        if(false){
+                        }else if(button_clear_one_slice){
+                            img_it->fill_pixels(0.0f);
+                        }else if(button_clear_all_slices){
+                            for(auto & img : (*img_array_ptr_it)->imagecoll.images){
+                                img.fill_pixels(0.0f);
+                            }
+                        }else{
+                            throw std::logic_error("Unaccounted for button clicked");
+                        }
+                    }
+                    if(d != nullptr ){
+                        d->Ensure_Contour_Data_Allocated();
+                        d->contour_data->ccs.clear();
+                    }
+
+                    if(view_toggles.view_contouring_enabled){
+                        contouring_img_altered = true;
+                    }else if(view_toggles.view_drawing_enabled){
+                        need_to_reload_opengl_texture.store(true);
+                    }
+                    last_mouse_button_0_down = 1E30;
+                    last_mouse_button_1_down = 1E30;
+                    last_mouse_button_pos = {};
+                }
+
+                ImGui::Separator();
+                ImGui::Text("Interpolation");
+                const bool button_interpolation_axially = ImGui::Button("Interpolate Axially");
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Interpolate *cleared* slices."
+                                "\n\n"
+                                "Only cleared images will be filled in, and the"
+                                "\n image being viewed must be within the range of cleared images."
+                                "\n\n"
+                                "The cleared images must be bounded by non-cleared images."
+                                "\n\n"
+                                "Note: use *only* if contours/shapes are convex and axially aligned"
+                                "\n (e.g. the ends of a cylinder). Misaligned contours/shapes will"
+                                "\n be improperly interpolated.");
+                    ImGui::EndTooltip();
+                }
+                if(button_interpolation_axially){
+                    // Make snapshot of the current state.
+                    if( view_toggles.view_contouring_enabled ){
+                        cdrover_ptr = create_cdrover_snapshot(contouring_drover_cache, cdrover_ptr);
+                    }
+                    Drover *d = (view_toggles.view_contouring_enabled) ? cdrover_ptr.get() : &DICOM_data;
+
+                    auto [img_valid, img_array_ptr_it, img_it] = recompute_image_iters();
+                    if( view_toggles.view_contouring_enabled ){
+                        std::tie(img_valid, img_array_ptr_it, img_it) = recompute_cimage_iters();
+                    }
+                    if( img_valid ){
+
+                        // Build a spatial index.
+                        {
+                            std::list<planar_image_adjacency<float,double>::img_refw_t> selected_imgs;
+                            for(auto &img : (*img_array_ptr_it)->imagecoll.images){
+                                selected_imgs.push_back( std::ref(img) );
+                            }
+                            if(selected_imgs.empty()){
+                                throw std::invalid_argument("Unable to build spatial index: no images available. Cannot continue");
+                            }
+                            if(!Images_Form_Rectilinear_Grid(selected_imgs)){
+                                throw std::invalid_argument("Unable to build spatial index: images do not form a rectilinear grid. Cannot continue");
+                            }
+                        }
+                        const auto row_unit = (*img_array_ptr_it)->imagecoll.images.front().row_unit.unit();
+                        const auto col_unit = (*img_array_ptr_it)->imagecoll.images.front().col_unit.unit();
+                        const auto img_unit = col_unit.Cross(row_unit).unit();
+
+                        planar_image_adjacency<float,double> img_adj( {}, { { std::ref((*img_array_ptr_it)->imagecoll) } }, img_unit );
+                        if(img_adj.int_to_img.empty()){
+                            throw std::invalid_argument("Unable to build spatial index: mapping is empty. Cannot continue.");
+                        }
+                        //auto beg = std::begin((*img_array_ptr_it)->imagecoll.images);
+                        //auto end = std::end((*img_array_ptr_it)->imagecoll.images);
+                        auto img_refw = typename planar_image_adjacency<float,double>::img_refw_t( std::ref(*img_it) );
+                        const auto img_N = img_adj.image_to_index(img_refw);
+
+                        // Scan outwards to find bounding image slices that have been altered.
+                        std::optional<int64_t> upper_img_N_opt;
+                        std::optional<int64_t> lower_img_N_opt;
+                        std::set<int64_t> gap_imgs;
+
+                        const auto scan_imgs = [&](int64_t increment,
+                                                   std::set<int64_t> &l_empty_imgs){
+
+                            std::optional<int64_t> first_nonempty_img;
+                            for(int64_t i = 0; ; i += increment){
+                                const auto l_img_N = img_N + i;
+                                const bool l_img_valid = img_adj.index_present(l_img_N);
+                                if( !l_img_valid ) break;
+
+                                const auto& img = img_adj.index_to_image(l_img_N);
+                                const auto mm = img.get().minmax();
+                                if( (mm.first < 0.5) &&  (mm.second < 0.5) ){
+                                    l_empty_imgs.insert(l_img_N);
+                                }else{
+                                    first_nonempty_img = l_img_N;
+                                    break;
+                                }
+                            }
+                            return first_nonempty_img;
+                        };
+                        upper_img_N_opt = scan_imgs( 1, gap_imgs);
+                        lower_img_N_opt = scan_imgs(-1, gap_imgs);
+
+                        if(false){
+                        }else if( !upper_img_N_opt || !lower_img_N_opt ){
+                            YLOGWARN("Unable to interpolate: one or both bounding slices were not found");
+                        }else if( (upper_img_N_opt.value() == lower_img_N_opt.value())
+                              ||  gap_imgs.empty() ){
+                            YLOGWARN("Unable to interpolate: no empty slices were found");
+                        }else{
+                            const auto &upper_img = img_adj.index_to_image( upper_img_N_opt.value() ).get();
+                            const auto &lower_img = img_adj.index_to_image( lower_img_N_opt.value() ).get();
+                            for(const auto& gap_img_N : gap_imgs){
+                                auto& gap_img = img_adj.index_to_image( gap_img_N ).get();
+                                const auto rows = gap_img.rows;
+                                const auto cols = gap_img.columns;
+                                const auto chns = gap_img.channels;
+
+                                for(int64_t l_row = 0L; l_row < rows; ++l_row){
+                                    for(int64_t l_col = 0L; l_col < cols; ++l_col){
+                                        const auto upper_pos = upper_img.position(l_row, l_col);
+                                        const auto lower_pos = lower_img.position(l_row, l_col);
+                                        const auto gap_pos   = gap_img.position(l_row, l_col);
+                                        const auto d_gl  = gap_pos.distance(lower_pos);
+                                        const auto d_gu  = gap_pos.distance(upper_pos);
+                                        const auto d_tot = d_gl + d_gu;
+                                        for(int64_t l_chn = 0L; l_chn < chns; ++l_chn){
+                                            const auto upper_val = upper_img.value(l_row, l_col, l_chn);
+                                            const auto lower_val = lower_img.value(l_row, l_col, l_chn);
+
+                                            const auto x = lower_val + (upper_val - lower_val) * (d_gl / d_tot);
+                                            gap_img.reference(l_row, l_col, l_chn) = x;
+                                        }
+                                    }
+                                }
+                            }
+                            YLOGINFO("Interpolated " << gap_imgs.size() << " images axially");
+                        }
+                    }
+                    if(d != nullptr ){
+                        d->Ensure_Contour_Data_Allocated();
+                        d->contour_data->ccs.clear();
+                    }
+
+                    if(view_toggles.view_contouring_enabled){
+                        contouring_img_altered = true;
+                    }else if(view_toggles.view_drawing_enabled){
+                        need_to_reload_opengl_texture.store(true);
+                    }
+                    last_mouse_button_0_down = 1E30;
+                    last_mouse_button_1_down = 1E30;
+                    last_mouse_button_pos = {};
                 }
 
                 if(view_toggles.view_contouring_enabled){
