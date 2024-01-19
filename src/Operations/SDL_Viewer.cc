@@ -5178,6 +5178,14 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             real_pos.y = pos.y - (real_extent.y * uv_min.y);
             ImGui::End(); // "Images".
 
+            // Force focus if there is a mouse wheel scroll while hovering the image viewer.
+            if( image_mouse_pos.image_window_hovered
+            &&  !image_mouse_pos.image_window_focused
+            &&  (io.MouseWheel != 0.0) ){
+                ImGui::SetWindowFocus("Images");
+                image_mouse_pos.image_window_focused = true;
+            }
+
             // Attempt to acquire an exclusive lock.
             std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
             if(!drover_lock) return;
