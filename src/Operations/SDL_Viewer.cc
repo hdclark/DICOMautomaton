@@ -3182,8 +3182,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                  &lexicon_override_buffer,
                                                  &lexicon_exact_match_colour,
                                                  &FilenameLex,
-                                                 &display_metadata_table,
                                                  &X,
+                                                 &wq,
                                                  &view_toggles ]() -> void {
             if( !view_toggles.view_lexicon_customizer ) return;
 
@@ -3217,14 +3217,25 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
 
             ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
             ImGui::Begin("Lexicon Customizer", &view_toggles.view_lexicon_customizer);
             const float sep = 200.0f;
 
             ImGui::Text("Lexicon Filename:");
             ImGui::SameLine(sep*1.0f);
             ImGui::Text("%s", FilenameLex.c_str());
-            ImGui::Separator();
 
+            ImGui::Text("Number of lexicon entries:");
+            ImGui::SameLine(sep*1.0f);
+            ImGui::Text("%s", std::to_string(cleans.size()).c_str());
+
+            ImGui::Text("Number of contour ROIs:");
+            ImGui::SameLine(sep*1.0f);
+            ImGui::Text("%s", std::to_string(cc_all.size()).c_str());
+
+            ImGui::Dummy(ImVec2(sep, 20));
+
+            ImGui::Separator();
             ImGui::Text("ROI Name");
             ImGui::SameLine(sep*1.0f);
             ImGui::Text("Translation");
@@ -3232,6 +3243,9 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImGui::Text("Override");
             ImGui::Separator();
 
+            bool an_exact_match_is_overridden = false;
+            metadata_map_t current;
+            metadata_map_t nonexact_and_overrides;
             int row_number = 0;
             for(const auto &kv : roiname_translations){
                 const auto dirty = kv.first;
@@ -3239,6 +3253,11 @@ bool SDL_Viewer(Drover &DICOM_data,
                 auto predictions = X.Get_Last_Results();
                 if(predictions == nullptr){
                     continue;
+                }
+                current[dirty] = predicted;
+                const bool is_an_exact_match = (predictions->size() == 1UL);
+                if(!is_an_exact_match){
+                    nonexact_and_overrides[dirty] = predicted;
                 }
 
                 ImGui::Text("%s", kv.first.c_str());
@@ -3264,7 +3283,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
 
                 ImGui::SameLine(sep*1.0f);
-                if(predictions->size() == 1UL){
+                if(is_an_exact_match){
                     ImGui::TextColored(lexicon_exact_match_colour, "%s", predicted.c_str());
                 }else{
                     ImGui::Text("%s", predicted.c_str());
@@ -3284,34 +3303,102 @@ bool SDL_Viewer(Drover &DICOM_data,
                 if(edited){
                     array_to_string(lexicon_overrides[dirty], lexicon_override_buffer);
                 }
+                if( !lexicon_overrides[dirty].empty()
+                &&  (predicted != lexicon_overrides[dirty]) ){
+                    ImGui::SameLine(sep*3.05f);
+                    ImGui::Text("*");
+
+                    current[dirty] = lexicon_overrides[dirty];
+                    nonexact_and_overrides[dirty] = lexicon_overrides[dirty];
+
+                    if(is_an_exact_match){
+                        an_exact_match_is_overridden = true;
+                    }
+                }
                 ImGui::PopID();
             }
 
             ImGui::Separator();
 
-// TODO:
 
-            // Button: append overrides to current lexicon.
-            //  - Need to ensure no exact matches are overridden, otherwise there will be a duplicate entry...
-            //  - However, I think later entries will supercede earlier entries. So you can try appending.
-            //    You should still at least warn though...
+            ImGui::BeginDisabled(an_exact_match_is_overridden);
+            const bool button_append_to_existing = ImGui::Button("Append inexact matches and overrides to existing lexicon");
+            const bool button_append_to_existing_is_hovered = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled);
+            ImGui::EndDisabled();
+            if( an_exact_match_is_overridden
+            &&  button_append_to_existing_is_hovered ){
+                // Note:
+                //  Overriding exact matches should be disallowed, otherwise there will be a duplicate entry in the
+                //  lexicon. Currently, later entries override earlier entries, but sorting/shuffling the lexicon will
+                //  potentially change the result. Also, support for later entries overriding earlier entries is not
+                //  guaranteed by Explicator, and may cause issues when parsing the lexicon.
+                ImGui::BeginTooltip();
+                ImGui::Text("Appending would overriding an exact match, which will result in am ambiguous lexicon.");
+                ImGui::EndTooltip();
+            }
+            if(button_append_to_existing){
+                std::stringstream ss;
+                ss << "# Altered " << time_mark().Dump_as_string() << std::endl;
+                for(const auto& dc : nonexact_and_overrides){
+                    ss << dc.second << " : " << dc.first << std::endl;
+                }
+                {
+                    std::ofstream FO(FilenameLex, std::ios::app | std::ios::binary);
+                    if(!FO){
+                        YLOGWARN("Unable to append to lexicon file");
+                    }else{
+                        FO << ss.str();
+                        FO.flush();
+                    }
+                }
+                X.ReReadFile();
+            }
 
-            // Button: write all to new lexicon.
-            //  - Need to add a callback with a filename selector OR use result of a parameter table variable??
-            //  - Need to read existing lexicon = read directly from file (so not preprocessed).
-            //    So first try to copy using the filesystem, then append overrides.
+            const bool button_create_new_lexicon = ImGui::Button("Export the present translation to a new lexicon");
+            if( ImGui::IsItemHovered() ){
+                ImGui::BeginTooltip();
+                ImGui::Text("Note: the lexicon will comprise only the current translation, including exact, inexact matches, and overrides.");
+                ImGui::EndTooltip();
+            }
+            if(button_create_new_lexicon){
+                const auto worker = [current](){
 
-            // Button: write present to new lexicon.
-            //  - Need to add a callback with a filename selector OR use result of a parameter table variable??
-            //  - Only need to emit the current entries, as they are shown translated above. Otherwise ignore the
-            //    current lexicon.
+                    // Prompt for filename.
+                    std::optional<select_filename> selector_opt;
+                    if(!selector_opt){
+                        selector_opt.emplace("Select lexicon filename"_s);
+                        //                   open_file_root.string(),
+                        //                   std::vector<std::string>{ "DICOM Files"_s, "*.dcm *.DCM"_s,
+                        //                                             "All Files"_s, "*"_s } );
+                    }
 
-            // Button: copy to clipboard?
-            //  - Easiest of all to accomplish...
+                    // Wait for the user to provide input.
+                    //
+                    // Note: the following blocks by continuous polling.
+                    const auto filename = selector_opt.value().get_selection();
+                    selector_opt.reset();
+
+                    // Write the new lexicon.
+                    std::ofstream FO(filename, std::ios::app | std::ios::binary);
+                    if(!FO){
+                        YLOGWARN("Unable to open file for lexicon export");
+                    }else{
+                        FO << "# Created " << time_mark().Dump_as_string() << std::endl;
+                        for(const auto& dc : current){
+                            FO << dc.second << " : " << dc.first << std::endl;
+                        }
+                        FO.flush();
+                        YLOGINFO("Exported lexicon to file '" << filename << "'");
+                    }
+                    return;
+                };
+                wq.submit_task( worker ); // Offload to waiting worker thread.
+            }
 
             ImGui::End();
 
             ImGui::SetNextWindowSize(ImVec2(300, 600), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(750, 50), ImGuiCond_FirstUseEver);
             ImGui::Begin("Lexicon Names", &view_toggles.view_lexicon_customizer);
             for(const auto &s : cleans){
                 ImGui::Text("%s", s.c_str());
@@ -3319,6 +3406,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImGui::End();
 
             ImGui::SetNextWindowSize(ImVec2(400, 600), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(1100, 50), ImGuiCond_FirstUseEver);
             ImGui::Begin("Lexicon Entries", &view_toggles.view_lexicon_customizer);
             for(const auto &kv : lex_kv){
                 ImGui::Text("%s", kv.first.c_str());
