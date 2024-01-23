@@ -831,6 +831,13 @@ OperationDoc OpArgDocSDL_Viewer(){
     out.args.back().examples = { "true", "false" };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
+    out.args.emplace_back();
+    out.args.back().name = "Guide";
+    out.args.back().desc = "A guide to display to the user. Usually used to walk the user through one or more actions.";
+    out.args.back().default_val = "";
+    out.args.back().expected = false;
+    out.args.back().examples = { "Step 1---Step 2---Step 3" };
+
     return out;
 }
 
@@ -842,6 +849,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto DefaultLexiconCustomizerStr = OptArgs.getValueStr("LexiconCustomizer").value();
     const auto DefaultContouringStr = OptArgs.getValueStr("Contouring").value();
+    const auto GuideOpt = OptArgs.getValueStr("Guide");
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto TrueRegex = Compile_Regex("^tr?u?e?$");
@@ -3019,6 +3027,20 @@ bool SDL_Viewer(Drover &DICOM_data,
     {
         ImGuiIO &io = ImGui::GetIO();
         io.ConfigWindowsMoveFromTitleBarOnly = true;
+    }
+
+    // Load a guide passed as an argument to this operation.
+    if(GuideOpt){
+        std::unique_lock<std::shared_timed_mutex> guide_lock(guide_mutex, mutex_dt);
+        if(!guide_lock) return false;
+
+        auto l_guide_stages = parse_guide(GuideOpt.value());
+        if(!l_guide_stages.empty()){
+            guide_stages = l_guide_stages;
+            guide_stage_num = 0;
+            register_guide_textures();
+            view_toggles.view_guides_enabled = true;
+        }
     }
 
 
