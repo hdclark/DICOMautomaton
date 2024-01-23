@@ -907,6 +907,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_plots_metadata = true;
 
         bool view_parameter_table = false;
+        bool view_lexicon_customizer = false;
 
         bool view_ylogs = false;
 
@@ -1408,6 +1409,12 @@ bool SDL_Viewer(Drover &DICOM_data,
 */
     };
     opengl_texture_handle_t current_texture;
+
+    // Lexicon customizer state.
+    std::map<std::string, std::string> lexicon_overrides;
+    std::array<char, 2048> lexicon_override_buffer;
+    string_to_array(lexicon_override_buffer, "");
+    auto lexicon_exact_match_colour = ImVec4(0.0f, 1.0f, 1.0f, 1.0f);
 
     // Scale bar for showing current colour map.
     vec3<double> zero3(0.0, 0.0, 0.0);
@@ -3168,6 +3175,166 @@ bool SDL_Viewer(Drover &DICOM_data,
             throw;
         }
 
+        const auto display_lexicon_customizer = [&drover_mutex,
+                                                 &mutex_dt,
+                                                 &DICOM_data,
+                                                 &lexicon_overrides,
+                                                 &lexicon_override_buffer,
+                                                 &lexicon_exact_match_colour,
+                                                 &FilenameLex,
+                                                 &display_metadata_table,
+                                                 &X,
+                                                 &view_toggles ]() -> void {
+            if( !view_toggles.view_lexicon_customizer ) return;
+
+            // Attempt to acquire an exclusive lock.
+            std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+            if(!drover_lock) return;
+
+            // Extract contour labels.
+            DICOM_data.Ensure_Contour_Data_Allocated();
+
+            metadata_multimap_t roiname_translations;
+            const auto cc_all = All_CCs( DICOM_data );
+            for(const auto &cc_refw : cc_all){
+                for(const auto &c : cc_refw.get().contours){
+                    const auto n_opt  = get_as<std::string>(c.metadata, "ROIName");
+                    const auto nn_opt = get_as<std::string>(c.metadata, "NormalizedROIName");
+
+                    metadata_map_t l_m;
+                    if(n_opt && nn_opt){
+                        l_m[n_opt.value()] = nn_opt.value();
+                    }
+                    combine_distinct(roiname_translations, l_m);
+                }
+            }
+
+            // Extract lexicon values.
+            const auto lex_kv = X.lexicon;
+            std::set<std::string> cleans;
+            for(const auto &kv : lex_kv){
+                cleans.insert(kv.second);
+            }
+
+            ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Lexicon Customizer", &view_toggles.view_lexicon_customizer);
+            const float sep = 200.0f;
+
+            ImGui::Text("Lexicon Filename:");
+            ImGui::SameLine(sep*1.0f);
+            ImGui::Text("%s", FilenameLex.c_str());
+            ImGui::Separator();
+
+            ImGui::Text("ROI Name");
+            ImGui::SameLine(sep*1.0f);
+            ImGui::Text("Translation");
+            ImGui::SameLine(sep*2.0f);
+            ImGui::Text("Override");
+            ImGui::Separator();
+
+            int row_number = 0;
+            for(const auto &kv : roiname_translations){
+                const auto dirty = kv.first;
+                const auto predicted = X(dirty);
+                auto predictions = X.Get_Last_Results();
+                if(predictions == nullptr){
+                    continue;
+                }
+
+                ImGui::Text("%s", kv.first.c_str());
+                if( ImGui::IsItemHovered()){
+                    // std::unique_ptr<std::map<std::string, float>> Get_Last_Results(void); // Can only be called once per query!
+                    using p_t = std::pair<float, std::string>;
+                    std::list<p_t> l;
+                    for(const auto& l_kv : *predictions){
+                        l.emplace_back( l_kv.second, l_kv.first );
+                    }
+                    l.sort([](const p_t &a, const p_t &b){
+                        return a.first > b.first;
+                    });
+
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Ranking:");
+                    for(const auto &p : l){
+                        ImGui::Text("%s", std::to_string(p.first).c_str());
+                        ImGui::SameLine(sep*1.0f);
+                        ImGui::Text("'%s'", p.second.c_str());
+                    }
+                    ImGui::EndTooltip();
+                }
+
+                ImGui::SameLine(sep*1.0f);
+                if(predictions->size() == 1UL){
+                    ImGui::TextColored(lexicon_exact_match_colour, "%s", predicted.c_str());
+                }else{
+                    ImGui::Text("%s", predicted.c_str());
+                }
+                //for(const auto &v : kv.second){
+                //    ImGui::SameLine();
+                //    ImGui::Text("%s", v.c_str());
+                //}
+
+                ImGui::SameLine(sep*2.0f);
+                string_to_array(lexicon_override_buffer, lexicon_overrides[dirty]);
+                ImGui::PushID(row_number++);
+                ImGui::SetNextItemWidth(sep);
+                const auto edited = ImGui::InputText("##lexicon_override",
+                                                     lexicon_override_buffer.data(),
+                                                     lexicon_override_buffer.size() - 1UL);
+                if(edited){
+                    array_to_string(lexicon_overrides[dirty], lexicon_override_buffer);
+                }
+                ImGui::PopID();
+            }
+
+            ImGui::Separator();
+
+// TODO:
+
+            // Button: append overrides to current lexicon.
+            //  - Need to ensure no exact matches are overridden, otherwise there will be a duplicate entry...
+            //  - However, I think later entries will supercede earlier entries. So you can try appending.
+            //    You should still at least warn though...
+
+            // Button: write all to new lexicon.
+            //  - Need to add a callback with a filename selector OR use result of a parameter table variable??
+            //  - Need to read existing lexicon = read directly from file (so not preprocessed).
+            //    So first try to copy using the filesystem, then append overrides.
+
+            // Button: write present to new lexicon.
+            //  - Need to add a callback with a filename selector OR use result of a parameter table variable??
+            //  - Only need to emit the current entries, as they are shown translated above. Otherwise ignore the
+            //    current lexicon.
+
+            // Button: copy to clipboard?
+            //  - Easiest of all to accomplish...
+
+            ImGui::End();
+
+            ImGui::SetNextWindowSize(ImVec2(300, 600), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Lexicon Names", &view_toggles.view_lexicon_customizer);
+            for(const auto &s : cleans){
+                ImGui::Text("%s", s.c_str());
+            }
+            ImGui::End();
+
+            ImGui::SetNextWindowSize(ImVec2(400, 600), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Lexicon Entries", &view_toggles.view_lexicon_customizer);
+            for(const auto &kv : lex_kv){
+                ImGui::Text("%s", kv.first.c_str());
+                ImGui::SameLine(sep*1.0f);
+                ImGui::Text("%s", kv.second.c_str());
+            }
+            ImGui::End();
+            return;
+        };
+        try{
+            display_lexicon_customizer();
+        }catch(const std::exception &e){
+            YLOGWARN("Exception in display_lexicon_customizer(): '" << e.what() << "'");
+            throw;
+        }
+
 
         const auto display_ylogs = [&drover_mutex,
                                     &mutex_dt,
@@ -3437,6 +3604,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::MenuItem("Script Feedback", nullptr, &view_toggles.view_script_feedback);
                     ImGui::Separator();
                     ImGui::MenuItem("Parameter Table", nullptr, &view_toggles.view_parameter_table);
+                    ImGui::MenuItem("Lexicon Customizer", nullptr, &view_toggles.view_lexicon_customizer);
                     ImGui::Separator();
                     ImGui::MenuItem("Guides", nullptr, &view_toggles.view_guides_enabled);
                     ImGui::Separator();
