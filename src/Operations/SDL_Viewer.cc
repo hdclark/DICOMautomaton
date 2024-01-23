@@ -815,13 +815,39 @@ OperationDoc OpArgDocSDL_Viewer(){
     out.desc = 
         "Launch an interactive viewer based on SDL.";
 
+    out.args.emplace_back();
+    out.args.back().name = "LexiconCustomizer";
+    out.args.back().desc = "Controls whether the lexicon customizer interface is opened by default.";
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
+
+    out.args.emplace_back();
+    out.args.back().name = "Contouring";
+    out.args.back().desc = "Controls whether the contouring interface is opened by default.";
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
+
     return out;
 }
 
 bool SDL_Viewer(Drover &DICOM_data,
-                  const OperationArgPkg& /*OptArgs*/,
-                  std::map<std::string, std::string>& InvocationMetadata,
-                  const std::string& FilenameLex){
+                const OperationArgPkg& OptArgs,
+                std::map<std::string, std::string>& InvocationMetadata,
+                const std::string& FilenameLex){
+
+    //---------------------------------------------- User Parameters --------------------------------------------------
+    const auto DefaultLexiconCustomizerStr = OptArgs.getValueStr("LexiconCustomizer").value();
+    const auto DefaultContouringStr = OptArgs.getValueStr("Contouring").value();
+
+    //-----------------------------------------------------------------------------------------------------------------
+    const auto TrueRegex = Compile_Regex("^tr?u?e?$");
+
+    const auto DefaultLexiconCustomizer = std::regex_match(DefaultLexiconCustomizerStr, TrueRegex);
+    const auto DefaultContouring = std::regex_match(DefaultContouringStr, TrueRegex);
 
     // Register a callback for capturing (all) logs for the duration of this operation.
     std::shared_timed_mutex ylogs_mutex;
@@ -891,7 +917,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_images_enabled = true;
         bool view_image_metadata_enabled = false;
         bool view_contours_enabled = true;
-        bool view_contouring_enabled = false;
+        bool view_contouring_enabled = false; // Overridden below.
         bool view_contouring_debug = false;
         bool view_drawing_enabled = false;
         bool view_row_column_profiles = false;
@@ -907,7 +933,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_plots_metadata = true;
 
         bool view_parameter_table = false;
-        bool view_lexicon_customizer = false;
+        bool view_lexicon_customizer = false; // Overridden below.
 
         bool view_ylogs = false;
 
@@ -939,6 +965,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         bool view_guides_enabled = true;
     } view_toggles;
+    view_toggles.view_contouring_enabled = DefaultContouring;
+    view_toggles.view_lexicon_customizer = DefaultLexiconCustomizer;
 
     // Documentation state.
     std::string docs_str;
