@@ -572,7 +572,8 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                       float intensity,
                       int64_t channel,
                       float intensity_min = std::numeric_limits<float>::infinity() * -1.0,
-                      float intensity_max = std::numeric_limits<float>::infinity() ){
+                      float intensity_max = std::numeric_limits<float>::infinity(),
+                      bool is_additive = true){
 
     // Pre-extract the line segment vertices for bounding-box calculation.
     std::vector<vec3<double>> verts;
@@ -718,28 +719,72 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
     if( (brush == brush_t::rigid_circle)
     ||  (brush == brush_t::rigid_square) ){
         for(const auto &img_it : img_its){
-            apply_to_inner_pixels({img_it}, [intensity](const vec3<double> &, double, float) -> float {
-                return intensity;
+            apply_to_inner_pixels({img_it}, [intensity,is_additive](const vec3<double> &, double, float) -> float {
+                const float l_intensity = (is_additive) ? intensity : 0.0f;
+                return l_intensity;
             });
         }
 
     }else if( (brush == brush_t::gaussian_2D)
           ||  (brush == brush_t::gaussian_3D) ){
         for(const auto &img_it : img_its){
-            apply_to_inner_pixels({img_it}, [radius,intensity](const vec3<double> &, double dR, float v) -> float {
-                const float scale = 0.5f;
+            apply_to_inner_pixels({img_it}, [radius,intensity,is_additive](const vec3<double> &, double dR, float v) -> float {
+                // Approach the desired intensity at a rate dependent on the location; proportional to a spatial
+                // Gaussian.
+                const float l_intensity = (is_additive) ? intensity : 0.0f;
+                const float scale = 0.65f;
                 const auto l_exp = std::exp( -std::pow(dR / (scale * radius), 2.0f) );
-                return (intensity - v) * l_exp + v;
+                return (l_intensity - v) * l_exp + v;
             });
         }
 
     }else if( (brush == brush_t::tanh_2D)
           ||  (brush == brush_t::tanh_3D) ){
         for(const auto &img_it : img_its){
-            apply_to_inner_pixels({img_it}, [radius,intensity](const vec3<double> &, double dR, float v) -> float {
-                const float steepness = 0.75;
-                const auto l_tanh = 0.5 * (1.0 + std::tanh( steepness * (radius - dR)));
-                return (intensity - v) * l_tanh + v;
+            apply_to_inner_pixels({img_it}, [radius,intensity,is_additive](const vec3<double> &, double dR, float v) -> float {
+                const float l_intensity = (is_additive) ? intensity : 0.0f;
+                const float old_v = v;
+                const float steepness = 0.75f;  // How steep the perimeter of the brush is. Also impacts contour detail.
+                const float paint_flow_rate = 1.0f; // "Strength" of the brush stroke.
+
+                // Find proposed brush intensity.
+                auto l_tanh = 0.5 * (1.0 + std::tanh( steepness * (radius - dR)));
+                l_tanh = is_additive ? l_tanh : (1.0f - l_tanh); // Flip distribution vertically if subtracting.
+                l_tanh *= intensity; // Scale distribution to target intensity @ maximum.
+
+                // Alter brush behaviour based on whether the current voxel's intensity is above or below the target,
+                // whether in additive or subtractive mode, and whether the voxel is within the brush boundary.
+                //
+                // This system has weird behaviour for negative intensities and when in drawing mode and painting
+                // multiple intensities. But it otherwise works intuitively and provides accurate contours (e.g.,
+                // the contours produced have the correct dimensions). It is also economical, requiring lower mask
+                // resolution to accomplish the same contour smoothness.
+                const bool is_mode_aligned = (is_additive == (l_tanh >= old_v));
+                const bool is_inside_brush = (dR <= radius);
+                float new_v = old_v;
+                if(is_mode_aligned){
+                    // Free to increase or decrease in intensity. The boundary should stay reasonably accurate.
+                    new_v = l_tanh;
+
+                }else if(!is_mode_aligned && is_inside_brush){
+                    // Pull the intensity to the target intensity somewhat quickly, i.e., the maximum intensity
+                    // the brush can make. This allows the brush to honour the proposed intensity, but won't leave
+                    // noticeable edges when performing a brush stroke.
+
+                    //const bool is_beyond = (is_additive == (l_intensity < old_v));
+                    new_v = (l_intensity - old_v) * 0.5f + old_v;
+
+                }else if(!is_mode_aligned && !is_inside_brush){
+                    // Do nothing.
+
+                    // Note: pulling the intensity to the desired tanh shape *outside* the brush when not mode
+                    // aligned produces counter-intuitive results. Performing a brush stroke results in a jagged and
+                    // rough line, and sweeping results in a shape like an exclamation mark. It will also produce a
+                    // 'moat' around the current brush location if held long enough.
+                }
+
+                // Perform final blend using brush stroke strength.
+                return (new_v - old_v) * paint_flow_rate + old_v;
             });
         }
 
@@ -773,8 +818,9 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
 
     }else if( (brush == brush_t::rigid_sphere)
           ||  (brush == brush_t::rigid_cube) ){
-        apply_to_inner_pixels(img_its, [intensity](const vec3<double> &, double, float) -> float {
-            return intensity;
+        apply_to_inner_pixels(img_its, [intensity,is_additive](const vec3<double> &, double, float) -> float {
+            const float l_intensity = (is_additive) ? intensity : 0.0f;
+            return l_intensity;
         });
 
     }else if( (brush == brush_t::median_sphere)
@@ -1472,7 +1518,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     float contouring_intensity = 1.0;
     bool contouring_show_adjacent = true;
     std::string contouring_method = "marching-squares";
-    brush_t contouring_brush = brush_t::rigid_circle;
+    brush_t contouring_brush = brush_t::tanh_2D;
     float last_mouse_button_0_down = 1E30;
     float last_mouse_button_1_down = 1E30;
     std::optional<vec3<double>> last_mouse_button_pos;
@@ -6073,66 +6119,162 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 if(ImGui::Button("Rigid Circle")){
                     contouring_brush = brush_t::rigid_circle;
                 }
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("A fast brush that is not smoothed.\n"
+                                "Produces jagged brush strokes and contours.\n"
+                                "This brush has no dynamics.");
+                    ImGui::EndTooltip();
+                }
                 ImGui::SameLine();
                 if(ImGui::Button("Mean Circle")){
                     contouring_brush = brush_t::mean_circle;
+                }
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("A brush that averages voxel intensities.");
+                    ImGui::EndTooltip();
                 }
                 ImGui::SameLine();
                 if(ImGui::Button("Median Circle")){
                     contouring_brush = brush_t::median_circle;
                 }
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("A brush that applies a median filter to voxel intensities.");
+                    ImGui::EndTooltip();
+                }
 
                 if(ImGui::Button("Rigid Square")){
                     contouring_brush = brush_t::rigid_square;
+                }
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("A fast brush that is not smoothed.\n"
+                                "Produces jagged brush strokes and contours.\n"
+                                "This brush has no dynamics.");
+                    ImGui::EndTooltip();
                 }
                 ImGui::SameLine();
                 if(ImGui::Button("Mean Square")){
                     contouring_brush = brush_t::mean_square;
                 }
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("A brush that averages voxel intensities.");
+                    ImGui::EndTooltip();
+                }
                 ImGui::SameLine();
                 if(ImGui::Button("Median Square")){
                     contouring_brush = brush_t::median_square;
+                }
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("A brush that applies a median filter to voxel intensities.");
+                    ImGui::EndTooltip();
                 }
 
                 if(ImGui::Button("2D Gaussian")){
                     contouring_brush = brush_t::gaussian_2D;
                 }
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Provides a smooth brush with strong dynamic effect.\n"
+                                "This brush is somewhat slow because the Gaussian distribution extends\n"
+                                "relatively far outwards into adjacent voxels.");
+                    ImGui::EndTooltip();
+                }
                 ImGui::SameLine();
                 if(ImGui::Button("2D Tanh")){
                     contouring_brush = brush_t::tanh_2D;
+                }
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Provides geometrically-accurate contours and sweeps with minimal dynamics.\n"
+                                "This brush is also economical compared to the rigid brush,\n"
+                                "requiring lower mask resolution to achieve a smooth contour.");
+                    ImGui::EndTooltip();
                 }
 
                 ImGui::Text("3D shapes");
                 if(ImGui::Button("Rigid Sphere")){
                     contouring_brush = brush_t::rigid_sphere;
                 }
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("A fast brush that is not smoothed.\n"
+                                "Produces jagged brush strokes and contours.\n"
+                                "This brush has no dynamics.");
+                    ImGui::EndTooltip();
+                }
                 ImGui::SameLine();
                 if(ImGui::Button("Mean Sphere")){
                     contouring_brush = brush_t::mean_sphere;
+                }
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("A brush that averages voxel intensities.");
+                    ImGui::EndTooltip();
                 }
                 ImGui::SameLine();
                 if(ImGui::Button("Median Sphere")){
                     contouring_brush = brush_t::median_sphere;
                 }
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("A brush that applies a median filter to voxel intensities.");
+                    ImGui::EndTooltip();
+                }
 
                 if(ImGui::Button("Rigid Cube")){
                     contouring_brush = brush_t::rigid_cube;
+                }
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("A fast brush that is not smoothed.\n"
+                                "Produces jagged brush strokes and contours.\n"
+                                "This brush has no dynamics.");
+                    ImGui::EndTooltip();
                 }
                 ImGui::SameLine();
                 if(ImGui::Button("Mean Cube")){
                     contouring_brush = brush_t::mean_cube;
                 }
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("A brush that averages voxel intensities.");
+                    ImGui::EndTooltip();
+                }
                 ImGui::SameLine();
                 if(ImGui::Button("Median Cube")){
                     contouring_brush = brush_t::median_cube;
+                }
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("A brush that applies a median filter to voxel intensities.");
+                    ImGui::EndTooltip();
                 }
 
                 if(ImGui::Button("3D Gaussian")){
                     contouring_brush = brush_t::gaussian_3D;
                 }
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Provides a smooth brush with strong dynamic effect.\n"
+                                "This brush is somewhat slow because the Gaussian distribution extends\n"
+                                "relatively far outwards into adjacent voxels.");
+                    ImGui::EndTooltip();
+                }
                 ImGui::SameLine();
                 if(ImGui::Button("3D Tanh")){
                     contouring_brush = brush_t::tanh_3D;
+                }
+                if( ImGui::IsItemHovered() ){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Provides geometrically-accurate contours and sweeps with minimal dynamics.\n"
+                                "This brush is also economical compared to the rigid brush,\n"
+                                "requiring lower mask resolution to achieve a smooth contour.");
+                    ImGui::EndTooltip();
                 }
 
                 ImGui::Separator();
@@ -8522,6 +8664,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 const bool pressing_ctrl_Z = (io.KeyCtrl && ImGui::IsKeyPressed( SDL_SCANCODE_Z ));
                 const bool pressing_ctrl_Y = (io.KeyCtrl && ImGui::IsKeyPressed( SDL_SCANCODE_Y ));
 
+
                 if( image_mouse_pos_opt.value().image_window_focused
                 // Image navigation window focused, but image viewer window being hovered.
                 ||  (ImGui::IsWindowFocused() && image_mouse_pos_opt.value().image_window_hovered)
@@ -8677,11 +8820,13 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             cimg_its = (*l_img_array_ptr_it)->imagecoll.get_all_images();
                         }
                         const float inf = std::numeric_limits<float>::infinity();
-                        const float intensity = contouring_intensity * ((mouse_button_0) ? 1.0f : -1.0f);
+                        const float intensity = contouring_intensity;
                         const float intensity_min = (view_toggles.view_contouring_enabled) ?  0.0f : -inf;
                         const float intensity_max = (view_toggles.view_contouring_enabled) ?  1.0f :  inf;
                         const int64_t channel = 0;
-                        draw_with_brush( cimg_its, lss, contouring_brush, radius, intensity, channel, intensity_min, intensity_max );
+                        const bool is_additive = mouse_button_0;
+                        draw_with_brush( cimg_its, lss, contouring_brush, radius, intensity, channel, intensity_min,
+                                         intensity_max, is_additive );
 
                         // Update mouse position for next time, if applicable.
                         if( mouse_button_0 ){
