@@ -575,6 +575,8 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                       float intensity_max = std::numeric_limits<float>::infinity(),
                       bool is_additive = true){
 
+    YLOGINFO("Implementing brush stroke");
+
     // Pre-extract the line segment vertices for bounding-box calculation.
     std::vector<vec3<double>> verts;
     for(const auto& l : lss){
@@ -744,8 +746,8 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
             apply_to_inner_pixels({img_it}, [radius,intensity,is_additive](const vec3<double> &, double dR, float v) -> float {
                 const float l_intensity = (is_additive) ? intensity : 0.0f;
                 const float old_v = v;
-                const float steepness = 0.75f;  // How steep the perimeter of the brush is. Also impacts contour detail.
-                const float paint_flow_rate = 0.95f; // "Strength" of the brush stroke.
+                const float steepness = 1.5f;  // How steep the perimeter of the brush is. Also impacts contour detail.
+                const float paint_flow_rate = 1.0f; // "Strength" of the brush stroke.
 
                 // Find proposed brush intensity.
                 auto l_tanh = 0.5 * (1.0 + std::tanh( steepness * (radius - dR)));
@@ -6345,6 +6347,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
 
                     if(view_toggles.view_contouring_enabled){
                         contouring_img_altered = true;
+                        contouring_drover_cache.trim(10UL);
                     }else if(view_toggles.view_drawing_enabled){
                         need_to_reload_opengl_texture.store(true);
                     }
@@ -8736,31 +8739,11 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                           &&  ((0.0f <= io.MouseDownDuration[0]) || (0.0f <= io.MouseDownDuration[1]))
                           &&  image_mouse_pos_opt.value().mouse_hovering_image ){
 
-                        if(view_toggles.view_contouring_enabled){
-                            contouring_img_altered = true;
-                        }else if(view_toggles.view_drawing_enabled){
-                            need_to_reload_opengl_texture.store(true);
-                        }
-
                         // The mapping between contouring image and display image (which uses physical dimensions) is
                         // based on the relative position along row and column axes.
                         const float radius = contouring_reach; // in DICOM units (mm).
                         const auto mouse_button_0 = (0.0f <= io.MouseDownDuration[0]);
                         const auto mouse_button_1 = (0.0f <= io.MouseDownDuration[1]);
-
-                        // If the mouse was just clicked down, then make a copy.
-                        if( view_toggles.view_contouring_enabled
-                        &&  ( (0.0f == io.MouseDownDuration[0]) || (0.0f == io.MouseDownDuration[1]) ) ){
-                            YLOGINFO("Copying current contouring Drover state into undo buffer");
-                            cdrover_ptr = create_cdrover_snapshot(contouring_drover_cache, cdrover_ptr);
-                            std::tie(cimg_valid, cimg_array_ptr_it, cimg_it) = recompute_cimage_iters();
-                            if(!cimg_valid){
-                                throw std::runtime_error("Copying contouring state into undo buffer failed, result is not valid");
-                            }
-
-                            // Trim old items in the undo buffer.
-                            contouring_drover_cache.trim(10UL);
-                        }
 
                         const auto mouse_button_0_sticky = mouse_button_0
                             && ( io.KeyShift || (last_mouse_button_0_down < io.MouseDownDuration[0]) );
@@ -8768,75 +8751,109 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             && ( io.KeyShift || (last_mouse_button_1_down < io.MouseDownDuration[1]) );
                         const auto any_mouse_button_sticky = mouse_button_0_sticky || mouse_button_1_sticky;
 
-                        decltype(disp_img_it) l_img_it = (view_toggles.view_contouring_enabled) ? cimg_it : disp_img_it;
-                        decltype(img_array_ptr_it) l_img_array_ptr_it = (view_toggles.view_contouring_enabled) ? cimg_array_ptr_it : img_array_ptr_it;
+                        const bool mouse_click_has_bounced =
+                             ( (0.0f < io.MouseDownDuration[0]) || (0.0f < io.MouseDownDuration[1]) )
+                          && ( (io.MouseDownDuration[0] < 0.5f) || (io.MouseDownDuration[1] < 0.5f) )
+                          && last_mouse_button_pos
+                          && image_mouse_pos_opt
+                          && ((image_mouse_pos_opt.value().dicom_pos).distance( last_mouse_button_pos.value() ) < 1E-3);
 
-                        std::vector<line_segment<double>> lss;
-                        if( false ){
-                        }else if( any_mouse_button_sticky
-                              && last_mouse_button_pos
-                              && io.KeyCtrl){
-                            const auto pA = image_mouse_pos_opt.value().dicom_pos; // Current position.
-                            const auto pB = last_mouse_button_pos.value(); // Previous position.
-                            // Project along image axes to create a taxi-cab metric corner vertex.
-                            const auto corner = largest_projection(pA, pB, {l_img_it->row_unit, l_img_it->col_unit});
-                            lss.emplace_back(pA,corner);
-                            lss.emplace_back(corner,pB);
+                        do{
+                            if(mouse_click_has_bounced){
+                                YLOGINFO("Debouncing mouse click");
+                                //last_mouse_button_pos = {};
+                                break;
+                            }
 
-                        }else if( any_mouse_button_sticky
-                              &&  last_mouse_button_pos ){
-                            const auto pA = image_mouse_pos_opt.value().dicom_pos; // Current position.
-                            const auto pB = last_mouse_button_pos.value(); // Previous position.
-                            lss.emplace_back(pA,pB);
+                            // If the mouse was just clicked down, then make a copy.
+                            if( view_toggles.view_contouring_enabled
+                            &&  ( (0.0f == io.MouseDownDuration[0]) || (0.0f == io.MouseDownDuration[1]) ) ){
+                                YLOGINFO("Copying current contouring Drover state into undo buffer");
+                                cdrover_ptr = create_cdrover_snapshot(contouring_drover_cache, cdrover_ptr);
+                                std::tie(cimg_valid, cimg_array_ptr_it, cimg_it) = recompute_cimage_iters();
+                                if(!cimg_valid){
+                                    throw std::runtime_error("Copying contouring state into undo buffer failed, result is not valid");
+                                }
 
-                        }else{
-                            // Slightly offset the line segment endpoints to avoid degeneracy.
-                            auto pA = image_mouse_pos_opt.value().dicom_pos; // Current position.
-                            lss.emplace_back(pA,pA);
-                        }
+                                // Trim old items in the undo buffer.
+                                contouring_drover_cache.trim(10UL);
+                            }
 
-                        decltype(planar_image_collection<float,double>().get_all_images()) cimg_its;
-                        if( (contouring_brush == brush_t::rigid_circle)
-                        ||  (contouring_brush == brush_t::rigid_square)
-                        ||  (contouring_brush == brush_t::gaussian_2D) 
-                        ||  (contouring_brush == brush_t::tanh_2D) 
-                        ||  (contouring_brush == brush_t::median_circle)
-                        ||  (contouring_brush == brush_t::median_square)
-                        ||  (contouring_brush == brush_t::mean_circle)
-                        ||  (contouring_brush == brush_t::mean_square) ){
-                            // TODO: if shift or ctrl are being pressed, include all images that intersect the line
-                            // segment path. This will aply the 2D brush in 3D to all images along the path, which would
-                            // be useful!
-                            cimg_its.emplace_back( l_img_it );
+                            decltype(disp_img_it) l_img_it = (view_toggles.view_contouring_enabled) ? cimg_it : disp_img_it;
+                            decltype(img_array_ptr_it) l_img_array_ptr_it = (view_toggles.view_contouring_enabled) ? cimg_array_ptr_it : img_array_ptr_it;
 
-                        }else if( (contouring_brush == brush_t::rigid_sphere)
-                              ||  (contouring_brush == brush_t::mean_sphere)
-                              ||  (contouring_brush == brush_t::median_sphere)
-                              ||  (contouring_brush == brush_t::gaussian_3D) 
-                              ||  (contouring_brush == brush_t::tanh_3D) 
-                              ||  (contouring_brush == brush_t::rigid_cube)
-                              ||  (contouring_brush == brush_t::mean_cube)
-                              ||  (contouring_brush == brush_t::median_cube) ){
-                            cimg_its = (*l_img_array_ptr_it)->imagecoll.get_all_images();
-                        }
-                        const float inf = std::numeric_limits<float>::infinity();
-                        const float intensity = contouring_intensity;
-                        const float intensity_min = (view_toggles.view_contouring_enabled) ?  0.0f : -inf;
-                        const float intensity_max = (view_toggles.view_contouring_enabled) ?  1.0f :  inf;
-                        const int64_t channel = 0;
-                        const bool is_additive = mouse_button_0;
-                        draw_with_brush( cimg_its, lss, contouring_brush, radius, intensity, channel, intensity_min,
-                                         intensity_max, is_additive );
+                            std::vector<line_segment<double>> lss;
+                            if( false ){
+                            }else if( any_mouse_button_sticky
+                                  && last_mouse_button_pos
+                                  && io.KeyCtrl){
+                                const auto pA = image_mouse_pos_opt.value().dicom_pos; // Current position.
+                                const auto pB = last_mouse_button_pos.value(); // Previous position.
+                                // Project along image axes to create a taxi-cab metric corner vertex.
+                                const auto corner = largest_projection(pA, pB, {l_img_it->row_unit, l_img_it->col_unit});
+                                lss.emplace_back(pA,corner);
+                                lss.emplace_back(corner,pB);
 
-                        // Update mouse position for next time, if applicable.
-                        if( mouse_button_0 ){
-                            last_mouse_button_0_down = io.MouseDownDuration[0];
-                            last_mouse_button_pos = image_mouse_pos_opt.value().dicom_pos;
-                        }
-                        if( mouse_button_1 ){
-                            last_mouse_button_1_down = io.MouseDownDuration[1];
-                            last_mouse_button_pos = image_mouse_pos_opt.value().dicom_pos;
-                        }
+                            }else if( any_mouse_button_sticky
+                                  &&  last_mouse_button_pos ){
+                                const auto pA = image_mouse_pos_opt.value().dicom_pos; // Current position.
+                                const auto pB = last_mouse_button_pos.value(); // Previous position.
+                                lss.emplace_back(pA,pB);
+
+                            }else{
+                                auto pA = image_mouse_pos_opt.value().dicom_pos; // Current position.
+                                lss.emplace_back(pA,pA);
+                            }
+
+                            decltype(planar_image_collection<float,double>().get_all_images()) cimg_its;
+                            if( (contouring_brush == brush_t::rigid_circle)
+                            ||  (contouring_brush == brush_t::rigid_square)
+                            ||  (contouring_brush == brush_t::gaussian_2D) 
+                            ||  (contouring_brush == brush_t::tanh_2D) 
+                            ||  (contouring_brush == brush_t::median_circle)
+                            ||  (contouring_brush == brush_t::median_square)
+                            ||  (contouring_brush == brush_t::mean_circle)
+                            ||  (contouring_brush == brush_t::mean_square) ){
+                                // TODO: if shift or ctrl are being pressed, include all images that intersect the line
+                                // segment path. This will aply the 2D brush in 3D to all images along the path, which would
+                                // be useful!
+                                cimg_its.emplace_back( l_img_it );
+
+                            }else if( (contouring_brush == brush_t::rigid_sphere)
+                                  ||  (contouring_brush == brush_t::mean_sphere)
+                                  ||  (contouring_brush == brush_t::median_sphere)
+                                  ||  (contouring_brush == brush_t::gaussian_3D) 
+                                  ||  (contouring_brush == brush_t::tanh_3D) 
+                                  ||  (contouring_brush == brush_t::rigid_cube)
+                                  ||  (contouring_brush == brush_t::mean_cube)
+                                  ||  (contouring_brush == brush_t::median_cube) ){
+                                cimg_its = (*l_img_array_ptr_it)->imagecoll.get_all_images();
+                            }
+                            const float inf = std::numeric_limits<float>::infinity();
+                            const float intensity = contouring_intensity;
+                            const float intensity_min = (view_toggles.view_contouring_enabled) ?  0.0f : -inf;
+                            const float intensity_max = (view_toggles.view_contouring_enabled) ?  1.0f :  inf;
+                            const int64_t channel = 0;
+                            const bool is_additive = mouse_button_0;
+                            draw_with_brush( cimg_its, lss, contouring_brush, radius, intensity, channel, intensity_min,
+                                             intensity_max, is_additive );
+
+                            // Update mouse position for next time, if applicable.
+                            if( mouse_button_0 ){
+                                last_mouse_button_0_down = io.MouseDownDuration[0];
+                                last_mouse_button_pos = image_mouse_pos_opt.value().dicom_pos;
+                            }
+                            if( mouse_button_1 ){
+                                last_mouse_button_1_down = io.MouseDownDuration[1];
+                                last_mouse_button_pos = image_mouse_pos_opt.value().dicom_pos;
+                            }
+
+                            if(view_toggles.view_contouring_enabled){
+                                contouring_img_altered = true;
+                            }else if(view_toggles.view_drawing_enabled){
+                                need_to_reload_opengl_texture.store(true);
+                            }
+                        }while(false);
 
                     // Left-button mouse click on an image.
                     }else if( image_mouse_pos_opt.value().mouse_hovering_image
