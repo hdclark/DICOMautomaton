@@ -599,7 +599,7 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
 
     }else if( (brush == brush_t::gaussian_2D)
     ||        (brush == brush_t::gaussian_3D) ){
-        buffer_space = radius * 3.0;
+        buffer_space = radius * 2.75;
 
     }else if( (brush == brush_t::tanh_2D)
     ||        (brush == brush_t::tanh_3D) ){
@@ -745,7 +745,7 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
                 const float l_intensity = (is_additive) ? intensity : 0.0f;
                 const float old_v = v;
                 const float steepness = 0.75f;  // How steep the perimeter of the brush is. Also impacts contour detail.
-                const float paint_flow_rate = 1.0f; // "Strength" of the brush stroke.
+                const float paint_flow_rate = 0.95f; // "Strength" of the brush stroke.
 
                 // Find proposed brush intensity.
                 auto l_tanh = 0.5 * (1.0 + std::tanh( steepness * (radius - dR)));
