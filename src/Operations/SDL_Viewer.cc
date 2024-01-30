@@ -599,7 +599,7 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
 
     }else if( (brush == brush_t::gaussian_2D)
     ||        (brush == brush_t::gaussian_3D) ){
-        buffer_space = radius * 2.75;
+        buffer_space = radius * 2.25;
 
     }else if( (brush == brush_t::tanh_2D)
     ||        (brush == brush_t::tanh_3D) ){
