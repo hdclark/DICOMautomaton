@@ -8752,8 +8752,8 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         const auto any_mouse_button_sticky = mouse_button_0_sticky || mouse_button_1_sticky;
 
                         const bool mouse_click_has_bounced =
-                             ( (0.0f < io.MouseDownDuration[0]) || (0.0f < io.MouseDownDuration[1]) )
-                          && ( (io.MouseDownDuration[0] < 0.5f) || (io.MouseDownDuration[1] < 0.5f) )
+                          (    ( (0.0f < io.MouseDownDuration[0]) && (io.MouseDownDuration[0] < 0.5f) )
+                            || ( (0.0f < io.MouseDownDuration[1]) && (io.MouseDownDuration[1] < 0.5f) ) )
                           && last_mouse_button_pos
                           && image_mouse_pos_opt
                           && ((image_mouse_pos_opt.value().dicom_pos).distance( last_mouse_button_pos.value() ) < 1E-3);
