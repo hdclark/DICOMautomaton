@@ -405,6 +405,8 @@ bool ContourViaThreshold(Drover &DICOM_data,
                                                                  + " <= pixel_val <= " + std::to_string(Upper) + ")";
                             copl.back().metadata["ROINumber"] = std::to_string(10000); // TODO: find highest existing and ++ it.
                             copl.back().metadata["MinimumSeparation"] = std::to_string(MinimumSeparation);
+                            copy_overwrite(animg_ptr->metadata, copl.back().metadata, "SOPClassUID", "ReferencedSOPClassUID"); 
+                            copy_overwrite(animg_ptr->metadata, copl.back().metadata, "SOPInstanceUID", "ReferencedSOPInstanceUID"); 
 
                             const auto A = he_it->first; //The starting node.
                             auto B = A;
@@ -795,6 +797,8 @@ bool ContourViaThreshold(Drover &DICOM_data,
                                                                      + " <= pixel_val <= " + std::to_string(Upper) + ")";
                                 copl.back().metadata["ROINumber"] = std::to_string(10000); // TODO: find highest existing and ++ it.
                                 copl.back().metadata["MinimumSeparation"] = std::to_string(MinimumSeparation);
+                                copy_overwrite(animg_ptr->metadata, copl.back().metadata, "SOPClassUID", "ReferencedSOPClassUID"); 
+                                copy_overwrite(animg_ptr->metadata, copl.back().metadata, "SOPInstanceUID", "ReferencedSOPInstanceUID"); 
 
                                 copl.back().points.push_back( n1_ptr->tail );
 
@@ -944,6 +948,8 @@ bool ContourViaThreshold(Drover &DICOM_data,
                                                      + " <= pixel_val <= " + UpperStr + ")";
                         cop.metadata["MinimumSeparation"] = std::to_string(MinimumSeparation);
                         cop.metadata["ROINumber"] = std::to_string(10000); // TODO: find highest existing and ++ it.
+                        copy_overwrite(animg_ptr->metadata, cop.metadata, "SOPClassUID", "ReferencedSOPClassUID"); 
+                        copy_overwrite(animg_ptr->metadata, cop.metadata, "SOPInstanceUID", "ReferencedSOPInstanceUID"); 
                     }
 
                     // Try to simplify the contours as much as possible.

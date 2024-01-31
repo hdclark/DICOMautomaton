@@ -223,6 +223,26 @@ template std::optional<double     > apply_as(metadata_map_t &, const std::string
 template std::optional<std::string> apply_as(metadata_map_t &, const std::string &, const std::function<std::string(std::string)> &);
 
 
+bool
+copy_overwrite(const metadata_map_t &source,
+               metadata_map_t &destination,
+               const std::string &key,
+               std::optional<std::string> new_key,
+               std::optional<std::string> fallback){
+
+     const auto v = get_as<std::string>(source, key);
+     bool ret = false;
+     if(v){
+         destination[new_key.value_or(key)] = v.value();
+         ret = true;
+     }else if(fallback){
+         destination[new_key.value_or(key)] = fallback.value();
+         ret = true;
+     }
+     return ret;
+}
+
+
 // Combine metadata maps together. Only distinct values are retained.
 void
 combine_distinct(metadata_multimap_t &combined,

@@ -73,9 +73,10 @@ bool GenerateVirtualDataDoseStairsV1(Drover &DICOM_data,
     //const double RescaleIntercept = 0.0;
     const std::string OriginFilename = "/dev/null";
     const std::string PatientID = "VirtualDataPatientVersion1";
-    const std::string StudyInstanceUID = Generate_Random_UID(60);
-    const std::string SeriesInstanceUID = Generate_Random_UID(60);
+    const std::string StudyInstanceUID = Generate_Random_UID(31);
+    const std::string SeriesInstanceUID = Generate_Random_UID(31);
     const std::string FrameOfReferenceUID = Generate_Random_UID(60);
+    const std::string SOPClassUID = "1.2.840.10008.5.1.4.1.1.481.2"; // RT Dose IOD.
     const std::string Modality = "RTDOSE";
 
 
@@ -94,6 +95,7 @@ bool GenerateVirtualDataDoseStairsV1(Drover &DICOM_data,
         out->imagecoll.images.back().metadata["StudyInstanceUID"] = StudyInstanceUID;
         out->imagecoll.images.back().metadata["SeriesInstanceUID"] = SeriesInstanceUID;
         out->imagecoll.images.back().metadata["SOPInstanceUID"] = SOPInstanceUID;
+        out->imagecoll.images.back().metadata["SOPClassUID"] = SOPClassUID;
 
         out->imagecoll.images.back().metadata["Rows"] = std::to_string(Rows);
         out->imagecoll.images.back().metadata["Columns"] = std::to_string(Columns);

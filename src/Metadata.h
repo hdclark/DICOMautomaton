@@ -59,6 +59,18 @@ apply_as(metadata_map_t &map,
          const std::function<T(T)> &f);
 
 
+// Copies the given key and value from one map to another, but only if (1) the key-value is present in the source, or
+// (2) a valid optional fallback is provided.
+//
+// If a new key name is provided, it will be used (only) when inserting into the destination.
+bool
+copy_overwrite(const metadata_map_t &source,
+               metadata_map_t &destination,
+               const std::string &key,
+               std::optional<std::string> new_key = {},
+               std::optional<std::string> fallback = {});
+
+
 // Combine metadata maps together. Only distinct values are retained.
 void
 combine_distinct(metadata_multimap_t &combined,

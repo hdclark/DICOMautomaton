@@ -3056,231 +3056,237 @@ void Write_Dose_Array(const std::shared_ptr<Image_Array>& IA, const std::filesys
         tds->setCharsetsList(&suitableCharsets);
     }
 
-    //Top-level stuff: metadata shared by all images.
     {
-        auto cm = IA->imagecoll.get_common_metadata({});
+        const auto SOPClassUID = "1.2.840.10008.5.1.4.1.1.481.2"; // RT Dose IOD.
+        const auto SOPInstanceUID = Generate_Random_UID(60);
+
+        auto m = IA->imagecoll.get_common_metadata({});
+        if(auto x = get_as<std::string>(m, "SOPClassUID"); x && (x.value() != SOPClassUID)){
+            YLOGWARN("Altering SOPClassID (e.g., modality). Linked objects may become unlinked");
+        }
 
         //Replace any metadata that might be used to underhandedly link patients, if requested.
         if((Paranoia == ParanoiaLevel::Medium) || (Paranoia == ParanoiaLevel::High)){
             //SOP Common Module.
-            cm["InstanceCreationDate"] = "";
-            cm["InstanceCreationTime"] = "";
-            cm["InstanceCreatorUID"]   = Generate_Random_UID(60);
+            m["InstanceCreationDate"] = "";
+            m["InstanceCreationTime"] = "";
+            m["InstanceCreatorUID"]   = Generate_Random_UID(60);
 
             //Patient Module.
-            cm["PatientsBirthDate"] = "";
-            cm["PatientsGender"]    = "";
-            cm["PatientsBirthTime"] = "";
+            m["PatientsBirthDate"] = "";
+            m["PatientsGender"]    = "";
+            m["PatientsBirthTime"] = "";
 
             //General Study Module.
-            cm["StudyInstanceUID"] = "";
-            cm["StudyDate"] = "";
-            cm["StudyTime"] = "";
-            cm["ReferringPhysiciansName"] = "";
-            cm["StudyID"] = "";
-            cm["AccessionNumber"] = "";
-            cm["StudyDescription"] = "";
+            m["StudyInstanceUID"] = "";
+            m["StudyDate"] = "";
+            m["StudyTime"] = "";
+            m["ReferringPhysiciansName"] = "";
+            m["StudyID"] = "";
+            m["AccessionNumber"] = "";
+            m["StudyDescription"] = "";
 
             //General Series Module.
-            cm["SeriesInstanceUID"] = "";
-            cm["SeriesNumber"] = "";
-            cm["SeriesDate"] = "";
-            cm["SeriesTime"] = "";
-            cm["SeriesDescription"] = "";
-            cm["RequestedProcedureID"] = "";
-            cm["ScheduledProcedureStepID"] = "";
-            cm["OperatorsName"] = "";
+            m["SeriesInstanceUID"] = "";
+            m["SeriesNumber"] = "";
+            m["SeriesDate"] = "";
+            m["SeriesTime"] = "";
+            m["SeriesDescription"] = "";
+            m["RequestedProcedureID"] = "";
+            m["ScheduledProcedureStepID"] = "";
+            m["OperatorsName"] = "";
 
             //Patient Study Module.
-            cm["PatientsWeight"] = "";
+            m["PatientsWeight"] = "";
 
             //Frame of Reference Module.
-            cm["PositionReferenceIndicator"] = "";
+            m["PositionReferenceIndicator"] = "";
 
             //General Equipment Module.
-            cm["Manufacturer"] = "";
-            cm["InstitutionName"] = "";
-            cm["StationName"] = "";
-            cm["InstitutionalDepartmentName"] = "";
-            cm["ManufacturersModelName"] = "";
-            cm["SoftwareVersions"] = "";
+            m["Manufacturer"] = "";
+            m["InstitutionName"] = "";
+            m["StationName"] = "";
+            m["InstitutionalDepartmentName"] = "";
+            m["ManufacturersModelName"] = "";
+            m["SoftwareVersions"] = "";
 
             //General Image Module.
-            cm["ContentDate"] = "";
-            cm["ContentTime"] = "";
-            cm["AcquisitionNumber"] = "";
-            cm["AcquisitionDate"] = "";
-            cm["AcquisitionTime"] = "";
-            cm["DerivationDescription"] = "";
-            cm["ImagesInAcquisition"] = "";
+            m["ContentDate"] = "";
+            m["ContentTime"] = "";
+            m["AcquisitionNumber"] = "";
+            m["AcquisitionDate"] = "";
+            m["AcquisitionTime"] = "";
+            m["DerivationDescription"] = "";
+            m["ImagesInAcquisition"] = "";
 
             //RT Dose Module.
-            cm[R"***(ReferencedRTPlanSequence/ReferencedSOPInstanceUID)***"] = "";
-            if(0 != cm.count(R"***(ReferencedFractionGroupSequence/ReferencedFractionGroupNumber)***")){
-                cm[R"***(ReferencedFractionGroupSequence/ReferencedFractionGroupNumber)***"] = "";
+            m[R"***(ReferencedRTPlanSequence/ReferencedSOPInstanceUID)***"] = "";
+            if(0 != m.count(R"***(ReferencedFractionGroupSequence/ReferencedFractionGroupNumber)***")){
+                m[R"***(ReferencedFractionGroupSequence/ReferencedFractionGroupNumber)***"] = "";
             }
-            if(0 != cm.count(R"***(ReferencedBeamSequence/ReferencedBeamNumber)***")){
-                cm[R"***(ReferencedBeamSequence/ReferencedBeamNumber)***"] = "";
+            if(0 != m.count(R"***(ReferencedBeamSequence/ReferencedBeamNumber)***")){
+                m[R"***(ReferencedBeamSequence/ReferencedBeamNumber)***"] = "";
             }
         }
         if(Paranoia == ParanoiaLevel::High){
+            //SOP Common Module.
+            m["SOPInstanceUID"] = SOPInstanceUID;
+            m["ReferencedSOPInstanceUID"] = "";
+
             //Patient Module.
-            cm["PatientsName"]      = "";
-            cm["PatientID"]         = "";
+            m["PatientsName"]      = "";
+            m["PatientID"]         = "";
 
             //Frame of Reference Module.
-            cm["FrameOfReferenceUID"] = "";
+            m["FrameOfReferenceUID"] = "";
         }
 
-
-        //Generate some UIDs that need to be duplicated.
-        const auto SOPInstanceUID = Generate_Random_UID(60);
 
         //DICOM Header Metadata.
         ds_OB_insert(tds, {0x0002, 0x0001},  std::string(1,static_cast<char>(0))
                                            + std::string(1,static_cast<char>(1)) ); //"FileMetaInformationVersion".
         //ds_insert(tds, {0x0002, 0x0001}, R"***(2/0/0/0/0/1)***"); //shtl); //"FileMetaInformationVersion".
-        ds_insert(tds, {0x0002, 0x0002}, "1.2.840.10008.5.1.4.1.1.481.2"); //"MediaStorageSOPClassUID" (Radiation Therapy Dose Storage)
-        ds_insert(tds, {0x0002, 0x0003}, SOPInstanceUID); //"MediaStorageSOPInstanceUID".
+        ds_insert(tds, {0x0002, 0x0002}, SOPClassUID); //"MediaStorageSOPClassUID" (Radiation Therapy Dose Storage)
+        ds_insert(tds, {0x0002, 0x0003}, fne({ m["SOPInstanceUID"], SOPInstanceUID }) ); //"MediaStorageSOPInstanceUID".
         ds_insert(tds, {0x0002, 0x0010}, "1.2.840.10008.1.2.1"); //"TransferSyntaxUID".
         ds_insert(tds, {0x0002, 0x0013}, "DICOMautomaton"); //"ImplementationVersionName".
         ds_insert(tds, {0x0002, 0x0012}, "1.2.513.264.765.1.1.578"); //"ImplementationClassUID".
 
         //SOP Common Module.
-        ds_insert(tds, {0x0008, 0x0016}, "1.2.840.10008.5.1.4.1.1.481.2"); // "SOPClassUID"
-        ds_insert(tds, {0x0008, 0x0018}, SOPInstanceUID); // "SOPInstanceUID"
-        //ds_insert(tds, {0x0008, 0x0005}, "ISO_IR 100"); //fne({ cm["SpecificCharacterSet"], "ISO_IR 100" })); // Set above!
-        ds_insert(tds, {0x0008, 0x0012}, fne({ cm["InstanceCreationDate"], "19720101" }));
-        ds_insert(tds, {0x0008, 0x0013}, fne({ cm["InstanceCreationTime"], "010101" }));
-        ds_insert(tds, {0x0008, 0x0014}, foe({ cm["InstanceCreatorUID"] }));
-        ds_insert(tds, {0x0008, 0x0114}, foe({ cm["CodingSchemeExternalUID"] }));
-        ds_insert(tds, {0x0020, 0x0013}, foe({ cm["InstanceNumber"] }));
+        ds_insert(tds, {0x0008, 0x0016}, SOPClassUID);
+        ds_insert(tds, {0x0008, 0x0018}, fne({ m["SOPInstanceUID"], SOPInstanceUID }) );
+        //ds_insert(tds, {0x0008, 0x0005}, "ISO_IR 100"); //fne({ m["SpecificCharacterSet"], "ISO_IR 100" })); // Set above!
+        ds_insert(tds, {0x0008, 0x0012}, fne({ m["InstanceCreationDate"], "19720101" }));
+        ds_insert(tds, {0x0008, 0x0013}, fne({ m["InstanceCreationTime"], "010101" }));
+        ds_insert(tds, {0x0008, 0x0014}, foe({ m["InstanceCreatorUID"] }));
+        ds_insert(tds, {0x0008, 0x0114}, foe({ m["CodingSchemeExternalUID"] }));
+        ds_insert(tds, {0x0020, 0x0013}, foe({ m["InstanceNumber"] }));
 
         //Patient Module.
-        ds_insert(tds, {0x0010, 0x0010}, fne({ cm["PatientsName"], "DICOMautomaton^DICOMautomaton" }));
-        ds_insert(tds, {0x0010, 0x0020}, fne({ cm["PatientID"], "DCMA_"_s + Generate_Random_String_of_Length(10) }));
-        ds_insert(tds, {0x0010, 0x0030}, fne({ cm["PatientsBirthDate"], "19720101" }));
-        ds_insert(tds, {0x0010, 0x0040}, fne({ cm["PatientsGender"], "O" }));
-        ds_insert(tds, {0x0010, 0x0032}, fne({ cm["PatientsBirthTime"], "010101" }));
+        ds_insert(tds, {0x0010, 0x0010}, fne({ m["PatientsName"], "DICOMautomaton^DICOMautomaton" }));
+        ds_insert(tds, {0x0010, 0x0020}, fne({ m["PatientID"], "DCMA_"_s + Generate_Random_String_of_Length(10) }));
+        ds_insert(tds, {0x0010, 0x0030}, fne({ m["PatientsBirthDate"], "19720101" }));
+        ds_insert(tds, {0x0010, 0x0040}, fne({ m["PatientsGender"], "O" }));
+        ds_insert(tds, {0x0010, 0x0032}, fne({ m["PatientsBirthTime"], "010101" }));
 
         //General Study Module.
-        ds_insert(tds, {0x0020, 0x000D}, fne({ cm["StudyInstanceUID"], Generate_Random_UID(31) }));
-        ds_insert(tds, {0x0008, 0x0020}, fne({ cm["StudyDate"], "19720101" }));
-        ds_insert(tds, {0x0008, 0x0030}, fne({ cm["StudyTime"], "010101" }));
-        ds_insert(tds, {0x0008, 0x0090}, fne({ cm["ReferringPhysiciansName"], "UNSPECIFIED^UNSPECIFIED" }));
-        ds_insert(tds, {0x0020, 0x0010}, fne({ cm["StudyID"], "DCMA_"_s + Generate_Random_String_of_Length(10) })); // i.e., "Course"
-        ds_insert(tds, {0x0008, 0x0050}, fne({ cm["AccessionNumber"], Generate_Random_String_of_Length(14) }));
-        ds_insert(tds, {0x0008, 0x1030}, fne({ cm["StudyDescription"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0020, 0x000D}, fne({ m["StudyInstanceUID"], Generate_Random_UID(31) }));
+        ds_insert(tds, {0x0008, 0x0020}, fne({ m["StudyDate"], "19720101" }));
+        ds_insert(tds, {0x0008, 0x0030}, fne({ m["StudyTime"], "010101" }));
+        ds_insert(tds, {0x0008, 0x0090}, fne({ m["ReferringPhysiciansName"], "UNSPECIFIED^UNSPECIFIED" }));
+        ds_insert(tds, {0x0020, 0x0010}, fne({ m["StudyID"], "DCMA_"_s + Generate_Random_String_of_Length(10) })); // i.e., "Course"
+        ds_insert(tds, {0x0008, 0x0050}, fne({ m["AccessionNumber"], Generate_Random_String_of_Length(14) }));
+        ds_insert(tds, {0x0008, 0x1030}, fne({ m["StudyDescription"], "UNSPECIFIED" }));
 
         //General Series Module.
         ds_insert(tds, {0x0008, 0x0060}, "RTDOSE");
-        ds_insert(tds, {0x0020, 0x000E}, fne({ cm["SeriesInstanceUID"], Generate_Random_UID(31) }));
-        ds_insert(tds, {0x0020, 0x0011}, fne({ cm["SeriesNumber"], Generate_Random_Int_Str(5000, 32767) })); // Upper: 2^15 - 1.
-        ds_insert(tds, {0x0008, 0x0021}, foe({ cm["SeriesDate"] }));
-        ds_insert(tds, {0x0008, 0x0031}, foe({ cm["SeriesTime"] }));
-        ds_insert(tds, {0x0008, 0x103E}, fne({ cm["SeriesDescription"], "UNSPECIFIED" }));
-        ds_insert(tds, {0x0018, 0x0015}, foe({ cm["BodyPartExamined"] }));
-        ds_insert(tds, {0x0018, 0x5100}, foe({ cm["PatientPosition"] }));
-        ds_insert(tds, {0x0040, 0x1001}, fne({ cm["RequestedProcedureID"], "UNSPECIFIED" }));
-        ds_insert(tds, {0x0040, 0x0009}, fne({ cm["ScheduledProcedureStepID"], "UNSPECIFIED" }));
-        ds_insert(tds, {0x0008, 0x1070}, fne({ cm["OperatorsName"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0020, 0x000E}, fne({ m["SeriesInstanceUID"], Generate_Random_UID(31) }));
+        ds_insert(tds, {0x0020, 0x0011}, fne({ m["SeriesNumber"], Generate_Random_Int_Str(5000, 32767) })); // Upper: 2^15 - 1.
+        ds_insert(tds, {0x0008, 0x0021}, foe({ m["SeriesDate"] }));
+        ds_insert(tds, {0x0008, 0x0031}, foe({ m["SeriesTime"] }));
+        ds_insert(tds, {0x0008, 0x103E}, fne({ m["SeriesDescription"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0018, 0x0015}, foe({ m["BodyPartExamined"] }));
+        ds_insert(tds, {0x0018, 0x5100}, foe({ m["PatientPosition"] }));
+        ds_insert(tds, {0x0040, 0x1001}, fne({ m["RequestedProcedureID"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0040, 0x0009}, fne({ m["ScheduledProcedureStepID"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0008, 0x1070}, fne({ m["OperatorsName"], "UNSPECIFIED" }));
 
         //Patient Study Module.
-        ds_insert(tds, {0x0010, 0x1030}, foe({ cm["PatientsWeight"] }));
+        ds_insert(tds, {0x0010, 0x1030}, foe({ m["PatientsWeight"] }));
 
         //Frame of Reference Module.
-        ds_insert(tds, {0x0020, 0x0052}, fne({ cm["FrameOfReferenceUID"], Generate_Random_UID(32) }));
-        ds_insert(tds, {0x0020, 0x1040}, fne({ cm["PositionReferenceIndicator"], "BB" }));
+        ds_insert(tds, {0x0020, 0x0052}, fne({ m["FrameOfReferenceUID"], Generate_Random_UID(32) }));
+        ds_insert(tds, {0x0020, 0x1040}, fne({ m["PositionReferenceIndicator"], "BB" }));
 
         //General Equipment Module.
-        ds_insert(tds, {0x0008, 0x0070}, fne({ cm["Manufacturer"], "UNSPECIFIED" }));
-        ds_insert(tds, {0x0008, 0x0080}, fne({ cm["InstitutionName"], "UNSPECIFIED" }));
-        ds_insert(tds, {0x0008, 0x1010}, fne({ cm["StationName"], "UNSPECIFIED" }));
-        ds_insert(tds, {0x0008, 0x1040}, fne({ cm["InstitutionalDepartmentName"], "UNSPECIFIED" }));
-        ds_insert(tds, {0x0008, 0x1090}, fne({ cm["ManufacturersModelName"], "UNSPECIFIED" }));
-        ds_insert(tds, {0x0018, 0x1020}, fne({ cm["SoftwareVersions"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0008, 0x0070}, fne({ m["Manufacturer"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0008, 0x0080}, fne({ m["InstitutionName"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0008, 0x1010}, fne({ m["StationName"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0008, 0x1040}, fne({ m["InstitutionalDepartmentName"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0008, 0x1090}, fne({ m["ManufacturersModelName"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0018, 0x1020}, fne({ m["SoftwareVersions"], "UNSPECIFIED" }));
 
         //General Image Module.
-        ds_insert(tds, {0x0020, 0x0013}, foe({ cm["InstanceNumber"] }));
-        //ds_insert(tds, {0x0020, 0x0020}, fne({ cm["PatientOrientation"], "UNSPECIFIED" }));
-        ds_insert(tds, {0x0008, 0x0023}, foe({ cm["ContentDate"] }));
-        ds_insert(tds, {0x0008, 0x0033}, foe({ cm["ContentTime"] }));
-        //ds_insert(tds, {0x0008, 0x0008}, fne({ cm["ImageType"], "UNSPECIFIED" }));
-        ds_insert(tds, {0x0020, 0x0012}, foe({ cm["AcquisitionNumber"] }));
-        ds_insert(tds, {0x0008, 0x0022}, foe({ cm["AcquisitionDate"] }));
-        ds_insert(tds, {0x0008, 0x0032}, foe({ cm["AcquisitionTime"] }));
-        ds_insert(tds, {0x0008, 0x2111}, foe({ cm["DerivationDescription"] }));
+        ds_insert(tds, {0x0020, 0x0013}, foe({ m["InstanceNumber"] }));
+        //ds_insert(tds, {0x0020, 0x0020}, fne({ m["PatientOrientation"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0008, 0x0023}, foe({ m["ContentDate"] }));
+        ds_insert(tds, {0x0008, 0x0033}, foe({ m["ContentTime"] }));
+        //ds_insert(tds, {0x0008, 0x0008}, fne({ m["ImageType"], "UNSPECIFIED" }));
+        ds_insert(tds, {0x0020, 0x0012}, foe({ m["AcquisitionNumber"] }));
+        ds_insert(tds, {0x0008, 0x0022}, foe({ m["AcquisitionDate"] }));
+        ds_insert(tds, {0x0008, 0x0032}, foe({ m["AcquisitionTime"] }));
+        ds_insert(tds, {0x0008, 0x2111}, foe({ m["DerivationDescription"] }));
         //insert_as_string_if_nonempty({0x0008, 0x9215}, "DerivationCodeSequence"], "" }));
-        ds_insert(tds, {0x0020, 0x1002}, foe({ cm["ImagesInAcquisition"] }));
+        ds_insert(tds, {0x0020, 0x1002}, foe({ m["ImagesInAcquisition"] }));
         ds_insert(tds, {0x0020, 0x4000}, "Research image generated by DICOMautomaton. Not for clinical use!" ); //"ImageComments".
-        ds_insert(tds, {0x0028, 0x0300}, foe({ cm["QualityControlImage"] }));
+        ds_insert(tds, {0x0028, 0x0300}, foe({ m["QualityControlImage"] }));
 
         //Image Plane Module.
         ds_insert(tds, {0x0028, 0x0030}, PixelSpacing );
         ds_insert(tds, {0x0020, 0x0037}, ImageOrientationPatient );
         ds_insert(tds, {0x0020, 0x0032}, ImagePositionPatient );
         ds_insert(tds, {0x0018, 0x0050}, SliceThickness );
-        ds_insert(tds, {0x0020, 0x1041}, "" ); // foe({ cm["SliceLocation"] }));
+        ds_insert(tds, {0x0020, 0x1041}, "" ); // foe({ m["SliceLocation"] }));
 
         //Image Pixel Module.
-        ds_insert(tds, {0x0028, 0x0002}, fne({ cm["SamplesPerPixel"], "1" }));
-        ds_insert(tds, {0x0028, 0x0004}, fne({ cm["PhotometricInterpretation"], "MONOCHROME2" }));
+        ds_insert(tds, {0x0028, 0x0002}, fne({ m["SamplesPerPixel"], "1" }));
+        ds_insert(tds, {0x0028, 0x0004}, fne({ m["PhotometricInterpretation"], "MONOCHROME2" }));
         ds_insert(tds, {0x0028, 0x0010}, fne({ std::to_string(row_count) })); // "Rows"
         ds_insert(tds, {0x0028, 0x0011}, fne({ std::to_string(col_count) })); // "Columns"
-        ds_insert(tds, {0x0028, 0x0100}, "32" ); //fne({ cm["BitsAllocated"], "32" }));
-        ds_insert(tds, {0x0028, 0x0101}, "32" ); //fne({ cm["BitsStored"], "32" }));
-        ds_insert(tds, {0x0028, 0x0102}, "31" ); //fne({ cm["HighBit"], "31" }));
-        ds_insert(tds, {0x0028, 0x0103}, "0" ); // Unsigned.   fne({ cm["PixelRepresentation"], "0" }));
-        ds_insert(tds, {0x0028, 0x0006}, foe({ cm["PlanarConfiguration"] }));
-        ds_insert(tds, {0x0028, 0x0034}, foe({ cm["PixelAspectRatio"] }));
+        ds_insert(tds, {0x0028, 0x0100}, "32" ); //fne({ m["BitsAllocated"], "32" }));
+        ds_insert(tds, {0x0028, 0x0101}, "32" ); //fne({ m["BitsStored"], "32" }));
+        ds_insert(tds, {0x0028, 0x0102}, "31" ); //fne({ m["HighBit"], "31" }));
+        ds_insert(tds, {0x0028, 0x0103}, "0" ); // Unsigned.   fne({ m["PixelRepresentation"], "0" }));
+        ds_insert(tds, {0x0028, 0x0006}, foe({ m["PlanarConfiguration"] }));
+        ds_insert(tds, {0x0028, 0x0034}, foe({ m["PixelAspectRatio"] }));
 
         //Multi-Frame Module.
         ds_insert(tds, {0x0028, 0x0008}, fne({ std::to_string(num_of_imgs) })); // "NumberOfFrames".
-        ds_insert(tds, {0x0028, 0x0009}, fne({ cm["FrameIncrementPointer"], // Default to (3004,000c).
+        ds_insert(tds, {0x0028, 0x0009}, fne({ m["FrameIncrementPointer"], // Default to (3004,000c).
                                                R"***(12292\12)***" })); // Imebra default deserialization, but is brittle and depends on endianness.
                                                //"\x04\x30\x0c\x00" })); // Imebra won't accept this...
         ds_insert(tds, {0x3004, 0x000c}, GridFrameOffsetVector );
 
         //Modality LUT Module.
         //insert_as_string_if_nonempty(0x0028, 0x3000, "ModalityLUTSequence"], "" }));
-        ds_insert(tds, {0x0028, 0x3002}, foe({ cm["LUTDescriptor"] }));
-        ds_insert(tds, {0x0028, 0x3004}, foe({ cm["ModalityLUTType"] }));
-        ds_insert(tds, {0x0028, 0x3006}, foe({ cm["LUTData"] }));
-        //ds_insert(tds, {0x0028, 0x1052}, foe({ cm["RescaleIntercept"] })); // These force interpretation by Imebra
-        //ds_insert(tds, {0x0028, 0x1053}, foe({ cm["RescaleSlope"] }));     //  as 8 byte pixel depth, regardless of
-        //ds_insert(tds, {0x0028, 0x1054}, foe({ cm["RescaleType"] }));      //  the actual depth (@ current settings).
+        ds_insert(tds, {0x0028, 0x3002}, foe({ m["LUTDescriptor"] }));
+        ds_insert(tds, {0x0028, 0x3004}, foe({ m["ModalityLUTType"] }));
+        ds_insert(tds, {0x0028, 0x3006}, foe({ m["LUTData"] }));
+        //ds_insert(tds, {0x0028, 0x1052}, foe({ m["RescaleIntercept"] })); // These force interpretation by Imebra
+        //ds_insert(tds, {0x0028, 0x1053}, foe({ m["RescaleSlope"] }));     //  as 8 byte pixel depth, regardless of
+        //ds_insert(tds, {0x0028, 0x1054}, foe({ m["RescaleType"] }));      //  the actual depth (@ current settings).
 
         //RT Dose Module.
-        //ds_insert(tds, {0x0028, 0x0002}, fne({ cm["SamplesPerPixel"], "1" }));
-        //ds_insert(tds, {0x0028, 0x0004}, fne({ cm["PhotometricInterpretation"], "MONOCHROME2" }));
-        //ds_insert(tds, {0x0028, 0x0100}, fne({ cm["BitsAllocated"], "32" }));
-        //ds_insert(tds, {0x0028, 0x0101}, fne({ cm["BitsStored"], "32" }));
-        //ds_insert(tds, {0x0028, 0x0102}, fne({ cm["HighBit"], "31" }));
-        //ds_insert(tds, {0x0028, 0x0103}, fne({ cm["PixelRepresentation"], "0" }));
-        ds_insert(tds, {0x3004, 0x0002}, fne({ cm["DoseUnits"], "GY" }));
-        ds_insert(tds, {0x3004, 0x0004}, fne({ cm["DoseType"], "PHYSICAL" }));
-        ds_insert(tds, {0x3004, 0x000a}, fne({ cm["DoseSummationType"], "PLAN" }));
+        //ds_insert(tds, {0x0028, 0x0002}, fne({ m["SamplesPerPixel"], "1" }));
+        //ds_insert(tds, {0x0028, 0x0004}, fne({ m["PhotometricInterpretation"], "MONOCHROME2" }));
+        //ds_insert(tds, {0x0028, 0x0100}, fne({ m["BitsAllocated"], "32" }));
+        //ds_insert(tds, {0x0028, 0x0101}, fne({ m["BitsStored"], "32" }));
+        //ds_insert(tds, {0x0028, 0x0102}, fne({ m["HighBit"], "31" }));
+        //ds_insert(tds, {0x0028, 0x0103}, fne({ m["PixelRepresentation"], "0" }));
+        ds_insert(tds, {0x3004, 0x0002}, fne({ m["DoseUnits"], "GY" }));
+        ds_insert(tds, {0x3004, 0x0004}, fne({ m["DoseType"], "PHYSICAL" }));
+        ds_insert(tds, {0x3004, 0x000a}, fne({ m["DoseSummationType"], "PLAN" }));
         ds_insert(tds, {0x3004, 0x000e}, std::to_string(dose_scaling) ); //"DoseGridScaling"
 
         ds_seq_insert(tds, {0x300C, 0x0002},   // "ReferencedRTPlanSequence" 
                            {0x0008, 0x1150}, // "ReferencedSOPClassUID"
-                           fne({ cm[R"***(ReferencedRTPlanSequence/ReferencedSOPClassUID)***"],
+                           fne({ m[R"***(ReferencedRTPlanSequence/ReferencedSOPClassUID)***"],
                                  "1.2.840.10008.5.1.4.1.1.481.5" }) ); // "RTPlanStorage". Prefer existing UID.
         ds_seq_insert(tds, {0x300C, 0x0002},   // "ReferencedRTPlanSequence"
                            {0x0008, 0x1155}, // "ReferencedSOPInstanceUID"
-                           fne({ cm[R"***(ReferencedRTPlanSequence/ReferencedSOPInstanceUID)***"],
+                           fne({ m[R"***(ReferencedRTPlanSequence/ReferencedSOPInstanceUID)***"],
                                  Generate_Random_UID(32) }) );
   
-        if(0 != cm.count(R"***(ReferencedFractionGroupSequence/ReferencedFractionGroupNumber)***")){
+        if(0 != m.count(R"***(ReferencedFractionGroupSequence/ReferencedFractionGroupNumber)***")){
             ds_seq_insert(tds, {0x300C, 0x0020},   // "ReferencedFractionGroupSequence"
                                {0x300C, 0x0022}, // "ReferencedFractionGroupNumber"
-                               foe({ cm[R"***(ReferencedFractionGroupSequence/ReferencedFractionGroupNumber)***"] }) );
+                               foe({ m[R"***(ReferencedFractionGroupSequence/ReferencedFractionGroupNumber)***"] }) );
         }
 
-        if(0 != cm.count(R"***(ReferencedBeamSequence/ReferencedBeamNumber)***")){
+        if(0 != m.count(R"***(ReferencedBeamSequence/ReferencedBeamNumber)***")){
             ds_seq_insert(tds, {0x300C, 0x0004},   // "ReferencedBeamSequence"
                                {0x300C, 0x0006}, // "ReferencedBeamNumber"
-                               foe({ cm[R"***(ReferencedBeamSequence/ReferencedBeamNumber)***"] }) );
+                               foe({ m[R"***(ReferencedBeamSequence/ReferencedBeamNumber)***"] }) );
         }
     }
 
@@ -3381,6 +3387,14 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
     const auto StudyID = "DCMA_"_s + Generate_Random_String_of_Length(10); // i.e., "Course"
     const auto SeriesNumber = Generate_Random_Int_Str(5000, 32767); // Upper: 2^15 - 1.
 
+    const auto SOPClassUID = "1.2.840.10008.5.1.4.1.1.2"; // CT Image Storage.
+    {
+        const auto cm = IA->imagecoll.get_common_metadata({});
+        if(auto x = get_as<std::string>(cm, "SOPClassUID"); x && (x.value() != SOPClassUID)){
+            YLOGWARN("Altering SOPClassID (e.g., modality). Linked objects may become unlinked");
+        }
+    }
+
     // TODO: Sample any existing UID (ReferencedFrameOfReferenceUID or FrameOfReferenceUID). 
     // Probably OK to use only the first in this case though...
 
@@ -3397,68 +3411,71 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
 
         const auto SOPInstanceUID = Generate_Random_UID(60);
 
-        //auto cm = IA->imagecoll.get_common_metadata({});
-        auto cm = animg.metadata;
+        auto m = animg.metadata;
 
         //Replace any metadata that might be used to underhandedly link patients, if requested.
         if((Paranoia == ParanoiaLevel::Medium) || (Paranoia == ParanoiaLevel::High)){
             //SOP Common Module.
-            cm["InstanceCreationDate"] = "";
-            cm["InstanceCreationTime"] = "";
-            cm["InstanceCreatorUID"] = InstanceCreatorUID;
+            m["InstanceCreationDate"] = "";
+            m["InstanceCreationTime"] = "";
+            m["InstanceCreatorUID"] = InstanceCreatorUID;
 
             //Patient Module.
-            cm["PatientsBirthDate"] = "";
-            cm["PatientsGender"]    = "";
-            cm["PatientsBirthTime"] = "";
+            m["PatientsBirthDate"] = "";
+            m["PatientsGender"]    = "";
+            m["PatientsBirthTime"] = "";
 
             //General Study Module.
-            cm["StudyInstanceUID"] = StudyInstanceUID;
-            cm["StudyDate"] = "";
-            cm["StudyTime"] = "";
-            cm["ReferringPhysiciansName"] = "";
-            cm["StudyID"] = StudyID;
-            cm["AccessionNumber"] = "";
-            cm["StudyDescription"] = "";
+            m["StudyInstanceUID"] = StudyInstanceUID;
+            m["StudyDate"] = "";
+            m["StudyTime"] = "";
+            m["ReferringPhysiciansName"] = "";
+            m["StudyID"] = StudyID;
+            m["AccessionNumber"] = "";
+            m["StudyDescription"] = "";
 
             //General Series Module.
-            cm["SeriesInstanceUID"] = SeriesInstanceUID;
-            cm["SeriesNumber"] = "";
-            cm["SeriesDate"] = "";
-            cm["SeriesTime"] = "";
-            cm["SeriesDescription"] = "";
-            cm["RequestedProcedureID"] = "";                          // Appropriate?
-            cm["ScheduledProcedureStepID"] = "";                          // Appropriate?
-            cm["OperatorsName"] = "";                          // Appropriate?
+            m["SeriesInstanceUID"] = SeriesInstanceUID;
+            m["SeriesNumber"] = "";
+            m["SeriesDate"] = "";
+            m["SeriesTime"] = "";
+            m["SeriesDescription"] = "";
+            m["RequestedProcedureID"] = "";                          // Appropriate?
+            m["ScheduledProcedureStepID"] = "";                          // Appropriate?
+            m["OperatorsName"] = "";                          // Appropriate?
 
             //Patient Study Module.
-            cm["PatientsWeight"] = "";                          // Appropriate?
+            m["PatientsWeight"] = "";                          // Appropriate?
 
             //Frame of Reference Module.
-            cm["PositionReferenceIndicator"] = "";              // Appropriate?
+            m["PositionReferenceIndicator"] = "";              // Appropriate?
 
             //General Equipment Module.
-            cm["Manufacturer"] = "";
-            cm["InstitutionName"] = "";             // Appropriate?
-            cm["StationName"] = "";             // Appropriate?
-            cm["InstitutionalDepartmentName"] = "";             // Appropriate?
-            cm["ManufacturersModelName"] = "";
-            cm["SoftwareVersions"] = "";
+            m["Manufacturer"] = "";
+            m["InstitutionName"] = "";             // Appropriate?
+            m["StationName"] = "";             // Appropriate?
+            m["InstitutionalDepartmentName"] = "";             // Appropriate?
+            m["ManufacturersModelName"] = "";
+            m["SoftwareVersions"] = "";
         }
         if(Paranoia == ParanoiaLevel::High){
+            //SOP Common Module.
+            m["SOPInstanceUID"] = SOPInstanceUID;
+            m["ReferencedSOPInstanceUID"] = "";
+
             //Patient Module.
-            cm["PatientsName"]      = "";
-            cm["PatientID"]         = PatientID;
+            m["PatientsName"] = "";
+            m["PatientID"] = PatientID;
 
             //Frame of Reference Module.
-            cm["FrameOfReferenceUID"] = FrameOfReferenceUID;
+            m["FrameOfReferenceUID"] = FrameOfReferenceUID;
         }
 
         //-------------------------------------------------------------------------------------------------
         //DICOM Header Metadata.
         root_node.emplace_child_node({{0x0002, 0x0001}, "OB", std::string("\x0\x1", 2)}); // FileMetaInformationVersion
-        root_node.emplace_child_node({{0x0002, 0x0002}, "UI", "1.2.840.10008.5.1.4.1.1.2"}); // MediaStorageSOPClassUID -- CT Image Storage.
-        root_node.emplace_child_node({{0x0002, 0x0003}, "UI", SOPInstanceUID}); // MediaStorageSOPInstanceUID
+        root_node.emplace_child_node({{0x0002, 0x0002}, "UI", SOPClassUID }); // MediaStorageSOPClassUID -- CT Image Storage.
+        root_node.emplace_child_node({{0x0002, 0x0003}, "UI", fne({ m["SOPInstanceUID"], SOPInstanceUID }) }); // MediaStorageSOPInstanceUID
         std::string TransferSyntaxUID;
         if(enc == DCMA_DICOM::Encoding::ELE){
             TransferSyntaxUID = "1.2.840.10008.1.2.1";
@@ -3474,71 +3491,71 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
 
         //-------------------------------------------------------------------------------------------------
         //SOP Common Module.
-        root_node.emplace_child_node({{0x0008, 0x0016}, "UI", "1.2.840.10008.5.1.4.1.1.2"}); // SOPClassUID -- CT Image Storage.
-        root_node.emplace_child_node({{0x0008, 0x0018}, "UI", SOPInstanceUID}); // SOPInstanceUID
+        root_node.emplace_child_node({{0x0008, 0x0016}, "UI", SOPClassUID });
+        root_node.emplace_child_node({{0x0008, 0x0018}, "UI", fne({ m["SOPInstanceUID"], SOPInstanceUID }) });
         root_node.emplace_child_node({{0x0008, 0x0005}, "CS", "ISO_IR 192"}); // 'ISO_IR 192' = UTF-8.
-        root_node.emplace_child_node({{0x0008, 0x0012}, "DA", fne({ cm["InstanceCreationDate"], "19720101" }) });
-        root_node.emplace_child_node({{0x0008, 0x0013}, "TM", fne({ cm["InstanceCreationTime"], "010101" }) });
-        root_node.emplace_child_node({{0x0008, 0x0014}, "UI", foe({ cm["InstanceCreatorUID"] }) });
-        //root_node.emplace_child_node({{0x0008, 0x0114}, "UI", foe({ cm["CodingSchemeExternalUID"] }) });                 // Appropriate?
+        root_node.emplace_child_node({{0x0008, 0x0012}, "DA", fne({ m["InstanceCreationDate"], "19720101" }) });
+        root_node.emplace_child_node({{0x0008, 0x0013}, "TM", fne({ m["InstanceCreationTime"], "010101" }) });
+        root_node.emplace_child_node({{0x0008, 0x0014}, "UI", foe({ m["InstanceCreatorUID"] }) });
+        //root_node.emplace_child_node({{0x0008, 0x0114}, "UI", foe({ m["CodingSchemeExternalUID"] }) });                 // Appropriate?
         //root_node.emplace_child_node({{0x0020, 0x0013}, "IS", std::to_string(InstanceNumber) });
 
         //-------------------------------------------------------------------------------------------------
         //Patient Module.
-        root_node.emplace_child_node({{0x0010, 0x0010}, "PN", fne({ cm["PatientsName"], "DICOMautomaton^DICOMautomaton" }) });
-        root_node.emplace_child_node({{0x0010, 0x0020}, "LO", fne({ cm["PatientID"], PatientID }) });
-        root_node.emplace_child_node({{0x0010, 0x0030}, "DA", fne({ cm["PatientsBirthDate"], "19720101" }) });
-        root_node.emplace_child_node({{0x0010, 0x0040}, "CS", foe({ cm["PatientsSex"] }) });
-        //root_node.emplace_child_node({{0x0010, 0x0032}, "TM", fne({ cm["PatientsBirthTime"], "010101" }) });
+        root_node.emplace_child_node({{0x0010, 0x0010}, "PN", fne({ m["PatientsName"], "DICOMautomaton^DICOMautomaton" }) });
+        root_node.emplace_child_node({{0x0010, 0x0020}, "LO", fne({ m["PatientID"], PatientID }) });
+        root_node.emplace_child_node({{0x0010, 0x0030}, "DA", fne({ m["PatientsBirthDate"], "19720101" }) });
+        root_node.emplace_child_node({{0x0010, 0x0040}, "CS", foe({ m["PatientsSex"] }) });
+        //root_node.emplace_child_node({{0x0010, 0x0032}, "TM", fne({ m["PatientsBirthTime"], "010101" }) });
 
         //-------------------------------------------------------------------------------------------------
         //General Study Module.
-        root_node.emplace_child_node({{0x0020, 0x000D}, "UI", fne({ cm["StudyInstanceUID"], StudyInstanceUID }) });
-        root_node.emplace_child_node({{0x0008, 0x0020}, "DA", fne({ cm["StudyDate"], "19720101" }) });
-        root_node.emplace_child_node({{0x0008, 0x0030}, "TM", fne({ cm["StudyTime"], "010101" }) });
-        root_node.emplace_child_node({{0x0008, 0x0090}, "PN", fne({ cm["ReferringPhysiciansName"], "UNSPECIFIED^UNSPECIFIED" }) });
-        root_node.emplace_child_node({{0x0020, 0x0010}, "SH", fne({ cm["StudyID"], StudyID }) });
-        //root_node.emplace_child_node({{0x0008, 0x0050}, "SH", fne({ cm["AccessionNumber"], Generate_Random_String_of_Length(14) }) });
+        root_node.emplace_child_node({{0x0020, 0x000D}, "UI", fne({ m["StudyInstanceUID"], StudyInstanceUID }) });
+        root_node.emplace_child_node({{0x0008, 0x0020}, "DA", fne({ m["StudyDate"], "19720101" }) });
+        root_node.emplace_child_node({{0x0008, 0x0030}, "TM", fne({ m["StudyTime"], "010101" }) });
+        root_node.emplace_child_node({{0x0008, 0x0090}, "PN", fne({ m["ReferringPhysiciansName"], "UNSPECIFIED^UNSPECIFIED" }) });
+        root_node.emplace_child_node({{0x0020, 0x0010}, "SH", fne({ m["StudyID"], StudyID }) });
+        //root_node.emplace_child_node({{0x0008, 0x0050}, "SH", fne({ m["AccessionNumber"], Generate_Random_String_of_Length(14) }) });
         root_node.emplace_child_node({{0x0008, 0x0050}, "SH", "" });
-        root_node.emplace_child_node({{0x0008, 0x1030}, "LO", fne({ cm["StudyDescription"], "UNSPECIFIED" }) });
+        root_node.emplace_child_node({{0x0008, 0x1030}, "LO", fne({ m["StudyDescription"], "UNSPECIFIED" }) });
 
         //-------------------------------------------------------------------------------------------------
         //General Series Module.
         root_node.emplace_child_node({{0x0008, 0x0060}, "CS", "CT" }); // "Modality"
-        root_node.emplace_child_node({{0x0020, 0x000E}, "UI", fne({ cm["SeriesInstanceUID"], SeriesInstanceUID }) });
-        root_node.emplace_child_node({{0x0020, 0x0011}, "IS", fne({ cm["SeriesNumber"], SeriesNumber }) }); // Upper: 2^15 - 1.
-        root_node.emplace_child_node({{0x0008, 0x0021}, "DA", foe({ cm["SeriesDate"] }) });
-        root_node.emplace_child_node({{0x0008, 0x0031}, "TM", foe({ cm["SeriesTime"] }) });
-        root_node.emplace_child_node({{0x0008, 0x103E}, "LO", fne({ cm["SeriesDescription"], "UNSPECIFIED" }) });
-        //root_node.emplace_child_node({{0x0008, 0x1070}, "PN", fne({ cm["OperatorsName"], "UNSPECIFIED" }) });
+        root_node.emplace_child_node({{0x0020, 0x000E}, "UI", fne({ m["SeriesInstanceUID"], SeriesInstanceUID }) });
+        root_node.emplace_child_node({{0x0020, 0x0011}, "IS", fne({ m["SeriesNumber"], SeriesNumber }) }); // Upper: 2^15 - 1.
+        root_node.emplace_child_node({{0x0008, 0x0021}, "DA", foe({ m["SeriesDate"] }) });
+        root_node.emplace_child_node({{0x0008, 0x0031}, "TM", foe({ m["SeriesTime"] }) });
+        root_node.emplace_child_node({{0x0008, 0x103E}, "LO", fne({ m["SeriesDescription"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0008, 0x1070}, "PN", fne({ m["OperatorsName"], "UNSPECIFIED" }) });
         root_node.emplace_child_node({{0x0020, 0x0060}, "CS", "" }); // Laterality.
-        root_node.emplace_child_node({{0x0018, 0x5100}, "CS", foe({ cm["PatientPosition"] }) });
+        root_node.emplace_child_node({{0x0018, 0x5100}, "CS", foe({ m["PatientPosition"] }) });
 
 
         //-------------------------------------------------------------------------------------------------
         //General Equipment Module.
-        root_node.emplace_child_node({{0x0008, 0x0070}, "LO", fne({ cm["Manufacturer"], "UNSPECIFIED" }) });
-        //root_node.emplace_child_node({{0x0008, 0x0080}, "LO", fne({ cm["InstitutionName"], "UNSPECIFIED" }) });
-        //root_node.emplace_child_node({{0x0008, 0x1010}, "SH", fne({ cm["StationName"], "UNSPECIFIED" }) });
-        //root_node.emplace_child_node({{0x0008, 0x1040}, "LO", fne({ cm["InstitutionalDepartmentName"], "UNSPECIFIED" }) });
-        //root_node.emplace_child_node({{0x0008, 0x1090}, "LO", fne({ cm["ManufacturersModelName"], "UNSPECIFIED" }) });
-        //root_node.emplace_child_node({{0x0018, 0x1020}, "LO", fne({ cm["SoftwareVersions"], "UNSPECIFIED" }) });
+        root_node.emplace_child_node({{0x0008, 0x0070}, "LO", fne({ m["Manufacturer"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0008, 0x0080}, "LO", fne({ m["InstitutionName"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0008, 0x1010}, "SH", fne({ m["StationName"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0008, 0x1040}, "LO", fne({ m["InstitutionalDepartmentName"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0008, 0x1090}, "LO", fne({ m["ManufacturersModelName"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0018, 0x1020}, "LO", fne({ m["SoftwareVersions"], "UNSPECIFIED" }) });
 
         //-------------------------------------------------------------------------------------------------
         //Frame of Reference Module.
-        root_node.emplace_child_node({{0x0020, 0x0052}, "UI", fne({ cm["FrameOfReferenceUID"], FrameOfReferenceUID }) });
+        root_node.emplace_child_node({{0x0020, 0x0052}, "UI", fne({ m["FrameOfReferenceUID"], FrameOfReferenceUID }) });
         root_node.emplace_child_node({{0x0020, 0x1040}, "LO", "" }); //PositionReferenceIndicator (TODO).
 
         //-------------------------------------------------------------------------------------------------
         //General Image Module.
         root_node.emplace_child_node({{0x0020, 0x0013}, "IS", std::to_string(InstanceNumber) });
         root_node.emplace_child_node({{0x0020, 0x0020}, "CS", "" }); // PatientOrientation.
-        root_node.emplace_child_node({{0x0008, 0x0023}, "DA", foe({ cm["ContentDate"] }) });
-        root_node.emplace_child_node({{0x0008, 0x0033}, "TM", foe({ cm["ContentTime"] }) });
+        root_node.emplace_child_node({{0x0008, 0x0023}, "DA", foe({ m["ContentDate"] }) });
+        root_node.emplace_child_node({{0x0008, 0x0033}, "TM", foe({ m["ContentTime"] }) });
         root_node.emplace_child_node({{0x0008, 0x0008}, "CS", R"***(DERIVED\SECONDARY\AXIAL)***" }); //ImageType, note AXIAL can also mean coronal or transverse.
-        root_node.emplace_child_node({{0x0008, 0x0022}, "DA", foe({ cm["AcquisitionDate"] }) });
-        root_node.emplace_child_node({{0x0008, 0x0032}, "TM", foe({ cm["AcquisitionTime"] }) });
-        root_node.emplace_child_node({{0x0020, 0x0012}, "IS", foe({ cm["AcquisitionNumber"] }) });
+        root_node.emplace_child_node({{0x0008, 0x0022}, "DA", foe({ m["AcquisitionDate"] }) });
+        root_node.emplace_child_node({{0x0008, 0x0032}, "TM", foe({ m["AcquisitionTime"] }) });
+        root_node.emplace_child_node({{0x0020, 0x0012}, "IS", foe({ m["AcquisitionNumber"] }) });
 
         //-------------------------------------------------------------------------------------------------
         //Image Plane Module.
@@ -3637,7 +3654,7 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
         root_node.emplace_child_node({{0x0028, 0x1052}, "DS", to_DS( rescale_intercept ) }); //RescaleIntercept.
         root_node.emplace_child_node({{0x0028, 0x1053}, "DS", to_DS( rescale_slope ) }); //RescaleSlope.
         root_node.emplace_child_node({{0x0028, 0x1054}, "LO", "HU" }); //RescaleType, 'HU' for Hounsfield units, or 'US' for unspecified.
-        root_node.emplace_child_node({{0x0018, 0x0060}, "DS", foe({ cm["KVP"] }) });
+        root_node.emplace_child_node({{0x0018, 0x0060}, "DS", foe({ m["KVP"] }) });
 
         //-------------------------------------------------------------------------------------------------
         //VOI LUT Module.
@@ -3727,6 +3744,7 @@ void Write_MR_Images(const std::shared_ptr<Image_Array>& IA,
     };
 
     //Generate UIDs and IDs that need to be duplicated across all images.
+    //auto cm = IA->imagecoll.get_common_metadata({});
     const auto FrameOfReferenceUID = Generate_Random_UID(60);
     const auto StudyInstanceUID = Generate_Random_UID(31);
     const auto SeriesInstanceUID = Generate_Random_UID(31);
@@ -3735,6 +3753,14 @@ void Write_MR_Images(const std::shared_ptr<Image_Array>& IA,
     const auto PatientID = "DCMA_"_s + Generate_Random_String_of_Length(10);
     const auto StudyID = "DCMA_"_s + Generate_Random_String_of_Length(10); // i.e., "Course"
     const auto SeriesNumber = Generate_Random_Int_Str(5000, 32767); // Upper: 2^15 - 1.
+
+    const auto SOPClassUID = "1.2.840.10008.5.1.4.1.1.4"; // MR Image IOD.
+    {
+        const auto cm = IA->imagecoll.get_common_metadata({});
+        if(auto x = get_as<std::string>(cm, "SOPClassUID"); x && (x.value() != SOPClassUID)){
+            YLOGWARN("Altering SOPClassID (e.g., modality). Linked objects may become unlinked");
+        }
+    }
 
     // TODO: Sample any existing UID (ReferencedFrameOfReferenceUID or FrameOfReferenceUID).
     // Probably OK to use only the first in this case though...
@@ -3751,68 +3777,71 @@ void Write_MR_Images(const std::shared_ptr<Image_Array>& IA,
 
         const auto SOPInstanceUID = Generate_Random_UID(60);
 
-        //auto cm = IA->imagecoll.get_common_metadata({});
-        auto cm = animg.metadata;
+        auto m = animg.metadata;
 
         //Replace any metadata that might be used to underhandedly link patients, if requested.
         if((Paranoia == ParanoiaLevel::Medium) || (Paranoia == ParanoiaLevel::High)){
             //SOP Common Module.
-            cm["InstanceCreationDate"] = "";
-            cm["InstanceCreationTime"] = "";
-            cm["InstanceCreatorUID"] = InstanceCreatorUID;
+            m["InstanceCreationDate"] = "";
+            m["InstanceCreationTime"] = "";
+            m["InstanceCreatorUID"] = InstanceCreatorUID;
 
             //Patient Module.
-            cm["PatientsBirthDate"] = "";
-            cm["PatientsGender"]    = "";
-            cm["PatientsBirthTime"] = "";
+            m["PatientsBirthDate"] = "";
+            m["PatientsGender"]    = "";
+            m["PatientsBirthTime"] = "";
 
             //General Study Module.
-            cm["StudyInstanceUID"] = StudyInstanceUID;
-            cm["StudyDate"] = "";
-            cm["StudyTime"] = "";
-            cm["ReferringPhysiciansName"] = "";
-            cm["StudyID"] = StudyID;
-            cm["AccessionNumber"] = "";
-            cm["StudyDescription"] = "";
+            m["StudyInstanceUID"] = StudyInstanceUID;
+            m["StudyDate"] = "";
+            m["StudyTime"] = "";
+            m["ReferringPhysiciansName"] = "";
+            m["StudyID"] = StudyID;
+            m["AccessionNumber"] = "";
+            m["StudyDescription"] = "";
 
             //General Series Module.
-            cm["SeriesInstanceUID"] = SeriesInstanceUID;
-            cm["SeriesNumber"] = "";
-            cm["SeriesDate"] = "";
-            cm["SeriesTime"] = "";
-            cm["SeriesDescription"] = "";
-            cm["RequestedProcedureID"] = "";                          // Appropriate?
-            cm["ScheduledProcedureStepID"] = "";                          // Appropriate?
-            cm["OperatorsName"] = "";                          // Appropriate?
+            m["SeriesInstanceUID"] = SeriesInstanceUID;
+            m["SeriesNumber"] = "";
+            m["SeriesDate"] = "";
+            m["SeriesTime"] = "";
+            m["SeriesDescription"] = "";
+            m["RequestedProcedureID"] = "";                          // Appropriate?
+            m["ScheduledProcedureStepID"] = "";                          // Appropriate?
+            m["OperatorsName"] = "";                          // Appropriate?
 
             //Patient Study Module.
-            cm["PatientsWeight"] = "";                          // Appropriate?
+            m["PatientsWeight"] = "";                          // Appropriate?
 
             //Frame of Reference Module.
-            cm["PositionReferenceIndicator"] = "";              // Appropriate?
+            m["PositionReferenceIndicator"] = "";              // Appropriate?
 
             //General Equipment Module.
-            cm["Manufacturer"] = "";
-            cm["InstitutionName"] = "";             // Appropriate?
-            cm["StationName"] = "";             // Appropriate?
-            cm["InstitutionalDepartmentName"] = "";             // Appropriate?
-            cm["ManufacturersModelName"] = "";
-            cm["SoftwareVersions"] = "";
+            m["Manufacturer"] = "";
+            m["InstitutionName"] = "";             // Appropriate?
+            m["StationName"] = "";             // Appropriate?
+            m["InstitutionalDepartmentName"] = "";             // Appropriate?
+            m["ManufacturersModelName"] = "";
+            m["SoftwareVersions"] = "";
         }
         if(Paranoia == ParanoiaLevel::High){
+            //SOP Common Module.
+            m["SOPInstanceUID"] = SOPInstanceUID;
+            m["ReferencedSOPInstanceUID"] = "";
+
             //Patient Module.
-            cm["PatientsName"]      = "";
-            cm["PatientID"]         = PatientID;
+            m["PatientsName"]      = "";
+            m["PatientID"]         = PatientID;
 
             //Frame of Reference Module.
-            cm["FrameOfReferenceUID"] = FrameOfReferenceUID;
+            m["FrameOfReferenceUID"] = FrameOfReferenceUID;
         }
 
         //-------------------------------------------------------------------------------------------------
         //DICOM Header Metadata.
         root_node.emplace_child_node({{0x0002, 0x0001}, "OB", std::string("\x0\x1", 2)}); // FileMetaInformationVersion
-        root_node.emplace_child_node({{0x0002, 0x0002}, "UI", "1.2.840.10008.5.1.4.1.1.4"}); // MediaStorageSOPClassUID -- MR Image Storage.
-        root_node.emplace_child_node({{0x0002, 0x0003}, "UI", SOPInstanceUID}); // MediaStorageSOPInstanceUID
+        root_node.emplace_child_node({{0x0002, 0x0002}, "UI", SOPClassUID}); // MediaStorageSOPClassUID -- MR Image Storage.
+        root_node.emplace_child_node({{0x0002, 0x0003}, "UI", fne({ m["SOPInstanceUID"], SOPInstanceUID }) }); // MediaStorageSOPInstanceUID
         std::string TransferSyntaxUID;
         if(enc == DCMA_DICOM::Encoding::ELE){ // Explicit Little Endian
             TransferSyntaxUID = "1.2.840.10008.1.2.1";
@@ -3828,71 +3857,71 @@ void Write_MR_Images(const std::shared_ptr<Image_Array>& IA,
 
         //-------------------------------------------------------------------------------------------------
         //SOP Common Module.
-        root_node.emplace_child_node({{0x0008, 0x0016}, "UI", "1.2.840.10008.5.1.4.1.1.4"}); // SOPClassUID -- MR Image Storage.
-        root_node.emplace_child_node({{0x0008, 0x0018}, "UI", SOPInstanceUID}); // SOPInstanceUID
+        root_node.emplace_child_node({{0x0008, 0x0016}, "UI", SOPClassUID }); // SOPClassUID -- MR Image Storage.
+        root_node.emplace_child_node({{0x0008, 0x0018}, "UI", fne({ m["SOPInstanceUID"], SOPInstanceUID }) });
         root_node.emplace_child_node({{0x0008, 0x0005}, "CS", "ISO_IR 192"}); // 'ISO_IR 192' = UTF-8.
-        root_node.emplace_child_node({{0x0008, 0x0012}, "DA", fne({ cm["InstanceCreationDate"], "19720101" }) });
-        root_node.emplace_child_node({{0x0008, 0x0013}, "TM", fne({ cm["InstanceCreationTime"], "010101" }) });
-        root_node.emplace_child_node({{0x0008, 0x0014}, "UI", foe({ cm["InstanceCreatorUID"] }) });
-        //root_node.emplace_child_node({{0x0008, 0x0114}, "UI", foe({ cm["CodingSchemeExternalUID"] }) });                 // Appropriate?
+        root_node.emplace_child_node({{0x0008, 0x0012}, "DA", fne({ m["InstanceCreationDate"], "19720101" }) });
+        root_node.emplace_child_node({{0x0008, 0x0013}, "TM", fne({ m["InstanceCreationTime"], "010101" }) });
+        root_node.emplace_child_node({{0x0008, 0x0014}, "UI", foe({ m["InstanceCreatorUID"] }) });
+        //root_node.emplace_child_node({{0x0008, 0x0114}, "UI", foe({ m["CodingSchemeExternalUID"] }) });                 // Appropriate?
         //root_node.emplace_child_node({{0x0020, 0x0013}, "IS", std::to_string(InstanceNumber) });
 
         //-------------------------------------------------------------------------------------------------
         //Patient Module.
-        root_node.emplace_child_node({{0x0010, 0x0010}, "PN", fne({ cm["PatientsName"], "DICOMautomaton^DICOMautomaton" }) });
-        root_node.emplace_child_node({{0x0010, 0x0020}, "LO", fne({ cm["PatientID"], PatientID }) });
-        root_node.emplace_child_node({{0x0010, 0x0030}, "DA", fne({ cm["PatientsBirthDate"], "19720101" }) });
-        root_node.emplace_child_node({{0x0010, 0x0040}, "CS", foe({ cm["PatientsSex"] }) });
-        //root_node.emplace_child_node({{0x0010, 0x0032}, "TM", fne({ cm["PatientsBirthTime"], "010101" }) });
+        root_node.emplace_child_node({{0x0010, 0x0010}, "PN", fne({ m["PatientsName"], "DICOMautomaton^DICOMautomaton" }) });
+        root_node.emplace_child_node({{0x0010, 0x0020}, "LO", fne({ m["PatientID"], PatientID }) });
+        root_node.emplace_child_node({{0x0010, 0x0030}, "DA", fne({ m["PatientsBirthDate"], "19720101" }) });
+        root_node.emplace_child_node({{0x0010, 0x0040}, "CS", foe({ m["PatientsSex"] }) });
+        //root_node.emplace_child_node({{0x0010, 0x0032}, "TM", fne({ m["PatientsBirthTime"], "010101" }) });
 
         //-------------------------------------------------------------------------------------------------
         //General Study Module.
-        root_node.emplace_child_node({{0x0020, 0x000D}, "UI", fne({ cm["StudyInstanceUID"], StudyInstanceUID }) });
-        root_node.emplace_child_node({{0x0008, 0x0020}, "DA", fne({ cm["StudyDate"], "19720101" }) });
-        root_node.emplace_child_node({{0x0008, 0x0030}, "TM", fne({ cm["StudyTime"], "010101" }) });
-        root_node.emplace_child_node({{0x0008, 0x0090}, "PN", fne({ cm["ReferringPhysiciansName"], "UNSPECIFIED^UNSPECIFIED" }) });
-        root_node.emplace_child_node({{0x0020, 0x0010}, "SH", fne({ cm["StudyID"], StudyID }) });
-        //root_node.emplace_child_node({{0x0008, 0x0050}, "SH", fne({ cm["AccessionNumber"], Generate_Random_String_of_Length(14) }) });
+        root_node.emplace_child_node({{0x0020, 0x000D}, "UI", fne({ m["StudyInstanceUID"], StudyInstanceUID }) });
+        root_node.emplace_child_node({{0x0008, 0x0020}, "DA", fne({ m["StudyDate"], "19720101" }) });
+        root_node.emplace_child_node({{0x0008, 0x0030}, "TM", fne({ m["StudyTime"], "010101" }) });
+        root_node.emplace_child_node({{0x0008, 0x0090}, "PN", fne({ m["ReferringPhysiciansName"], "UNSPECIFIED^UNSPECIFIED" }) });
+        root_node.emplace_child_node({{0x0020, 0x0010}, "SH", fne({ m["StudyID"], StudyID }) });
+        //root_node.emplace_child_node({{0x0008, 0x0050}, "SH", fne({ m["AccessionNumber"], Generate_Random_String_of_Length(14) }) });
         root_node.emplace_child_node({{0x0008, 0x0050}, "SH", "" });
-        root_node.emplace_child_node({{0x0008, 0x1030}, "LO", fne({ cm["StudyDescription"], "UNSPECIFIED" }) });
+        root_node.emplace_child_node({{0x0008, 0x1030}, "LO", fne({ m["StudyDescription"], "UNSPECIFIED" }) });
 
         //-------------------------------------------------------------------------------------------------
         //General Series Module.
         root_node.emplace_child_node({{0x0008, 0x0060}, "CS", "MR" }); // "Modality"
-        root_node.emplace_child_node({{0x0020, 0x000E}, "UI", fne({ cm["SeriesInstanceUID"], SeriesInstanceUID }) });
-        root_node.emplace_child_node({{0x0020, 0x0011}, "IS", fne({ cm["SeriesNumber"], SeriesNumber }) }); // Upper: 2^15 - 1.
-        root_node.emplace_child_node({{0x0008, 0x0021}, "DA", foe({ cm["SeriesDate"] }) });
-        root_node.emplace_child_node({{0x0008, 0x0031}, "TM", foe({ cm["SeriesTime"] }) });
-        root_node.emplace_child_node({{0x0008, 0x103E}, "LO", fne({ cm["SeriesDescription"], "UNSPECIFIED" }) });
-        //root_node.emplace_child_node({{0x0008, 0x1070}, "PN", fne({ cm["OperatorsName"], "UNSPECIFIED" }) });
+        root_node.emplace_child_node({{0x0020, 0x000E}, "UI", fne({ m["SeriesInstanceUID"], SeriesInstanceUID }) });
+        root_node.emplace_child_node({{0x0020, 0x0011}, "IS", fne({ m["SeriesNumber"], SeriesNumber }) }); // Upper: 2^15 - 1.
+        root_node.emplace_child_node({{0x0008, 0x0021}, "DA", foe({ m["SeriesDate"] }) });
+        root_node.emplace_child_node({{0x0008, 0x0031}, "TM", foe({ m["SeriesTime"] }) });
+        root_node.emplace_child_node({{0x0008, 0x103E}, "LO", fne({ m["SeriesDescription"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0008, 0x1070}, "PN", fne({ m["OperatorsName"], "UNSPECIFIED" }) });
         root_node.emplace_child_node({{0x0020, 0x0060}, "CS", "" }); // Laterality.
-        root_node.emplace_child_node({{0x0018, 0x5100}, "CS", foe({ cm["PatientPosition"] }) });
+        root_node.emplace_child_node({{0x0018, 0x5100}, "CS", foe({ m["PatientPosition"] }) });
 
 
         //-------------------------------------------------------------------------------------------------
         //General Equipment Module.
-        root_node.emplace_child_node({{0x0008, 0x0070}, "LO", fne({ cm["Manufacturer"], "UNSPECIFIED" }) });
-        //root_node.emplace_child_node({{0x0008, 0x0080}, "LO", fne({ cm["InstitutionName"], "UNSPECIFIED" }) });
-        //root_node.emplace_child_node({{0x0008, 0x1010}, "SH", fne({ cm["StationName"], "UNSPECIFIED" }) });
-        //root_node.emplace_child_node({{0x0008, 0x1040}, "LO", fne({ cm["InstitutionalDepartmentName"], "UNSPECIFIED" }) });
-        //root_node.emplace_child_node({{0x0008, 0x1090}, "LO", fne({ cm["ManufacturersModelName"], "UNSPECIFIED" }) });
-        //root_node.emplace_child_node({{0x0018, 0x1020}, "LO", fne({ cm["SoftwareVersions"], "UNSPECIFIED" }) });
+        root_node.emplace_child_node({{0x0008, 0x0070}, "LO", fne({ m["Manufacturer"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0008, 0x0080}, "LO", fne({ m["InstitutionName"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0008, 0x1010}, "SH", fne({ m["StationName"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0008, 0x1040}, "LO", fne({ m["InstitutionalDepartmentName"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0008, 0x1090}, "LO", fne({ m["ManufacturersModelName"], "UNSPECIFIED" }) });
+        //root_node.emplace_child_node({{0x0018, 0x1020}, "LO", fne({ m["SoftwareVersions"], "UNSPECIFIED" }) });
 
         //-------------------------------------------------------------------------------------------------
         //Frame of Reference Module.
-        root_node.emplace_child_node({{0x0020, 0x0052}, "UI", fne({ cm["FrameOfReferenceUID"], FrameOfReferenceUID }) });
+        root_node.emplace_child_node({{0x0020, 0x0052}, "UI", fne({ m["FrameOfReferenceUID"], FrameOfReferenceUID }) });
         root_node.emplace_child_node({{0x0020, 0x1040}, "LO", "" }); //PositionReferenceIndicator (TODO).
 
         //-------------------------------------------------------------------------------------------------
         //General Image Module.
         root_node.emplace_child_node({{0x0020, 0x0013}, "IS", std::to_string(InstanceNumber) });
         root_node.emplace_child_node({{0x0020, 0x0020}, "CS", "" }); // PatientOrientation.
-        root_node.emplace_child_node({{0x0008, 0x0023}, "DA", foe({ cm["ContentDate"] }) });
-        root_node.emplace_child_node({{0x0008, 0x0033}, "TM", foe({ cm["ContentTime"] }) });
+        root_node.emplace_child_node({{0x0008, 0x0023}, "DA", foe({ m["ContentDate"] }) });
+        root_node.emplace_child_node({{0x0008, 0x0033}, "TM", foe({ m["ContentTime"] }) });
         root_node.emplace_child_node({{0x0008, 0x0008}, "CS", R"***(DERIVED\SECONDARY\AXIAL)***" }); //ImageType, note AXIAL can also mean coronal or transverse.
-        root_node.emplace_child_node({{0x0008, 0x0022}, "DA", foe({ cm["AcquisitionDate"] }) });
-        root_node.emplace_child_node({{0x0008, 0x0032}, "TM", foe({ cm["AcquisitionTime"] }) });
-        root_node.emplace_child_node({{0x0020, 0x0012}, "IS", foe({ cm["AcquisitionNumber"] }) });
+        root_node.emplace_child_node({{0x0008, 0x0022}, "DA", foe({ m["AcquisitionDate"] }) });
+        root_node.emplace_child_node({{0x0008, 0x0032}, "TM", foe({ m["AcquisitionTime"] }) });
+        root_node.emplace_child_node({{0x0020, 0x0012}, "IS", foe({ m["AcquisitionNumber"] }) });
 
         //-------------------------------------------------------------------------------------------------
         //Image Plane Module.
@@ -3989,94 +4018,94 @@ void Write_MR_Images(const std::shared_ptr<Image_Array>& IA,
         // Note: many elements in this module are duplicated in other modules. Omitted here if they appear above.
         //
 
-        root_node.emplace_child_node({{0x0018, 0x0020}, "CS", fne({ cm["ScanningSequence"], "RM" }) }); // Fallback to Research Mode.
-        root_node.emplace_child_node({{0x0018, 0x0021}, "CS", fne({ cm["SequenceVariant"], "UNSPECIFIED" }) });
-        root_node.emplace_child_node({{0x0018, 0x0022}, "CS", foe({ cm["ScanOptions"] }) });
-        root_node.emplace_child_node({{0x0018, 0x0023}, "CS", foe({ cm["MRAcquisitionType"] }) }); // 2D or 3D.
-        emit_iff_present(root_node, cm, 0x0018, 0x0024, "SH", "SequenceName");
-        root_node.emplace_child_node({{0x0018, 0x0080}, "DS", foe({ cm["RepetitionTime"] }) });
-        root_node.emplace_child_node({{0x0018, 0x0081}, "DS", foe({ cm["EchoTime"] }) });
-        root_node.emplace_child_node({{0x0018, 0x0082}, "DS", foe({ cm["InversionTime"] }) });
-        root_node.emplace_child_node({{0x0018, 0x0091}, "IS", foe({ cm["EchoTrainLength"] }) });
-        root_node.emplace_child_node({{0x0018, 0x1060}, "DS", foe({ cm["TriggerTime"] }) });
+        root_node.emplace_child_node({{0x0018, 0x0020}, "CS", fne({ m["ScanningSequence"], "RM" }) }); // Fallback to Research Mode.
+        root_node.emplace_child_node({{0x0018, 0x0021}, "CS", fne({ m["SequenceVariant"], "UNSPECIFIED" }) });
+        root_node.emplace_child_node({{0x0018, 0x0022}, "CS", foe({ m["ScanOptions"] }) });
+        root_node.emplace_child_node({{0x0018, 0x0023}, "CS", foe({ m["MRAcquisitionType"] }) }); // 2D or 3D.
+        emit_iff_present(root_node, m, 0x0018, 0x0024, "SH", "SequenceName");
+        root_node.emplace_child_node({{0x0018, 0x0080}, "DS", foe({ m["RepetitionTime"] }) });
+        root_node.emplace_child_node({{0x0018, 0x0081}, "DS", foe({ m["EchoTime"] }) });
+        root_node.emplace_child_node({{0x0018, 0x0082}, "DS", foe({ m["InversionTime"] }) });
+        root_node.emplace_child_node({{0x0018, 0x0091}, "IS", foe({ m["EchoTrainLength"] }) });
+        root_node.emplace_child_node({{0x0018, 0x1060}, "DS", foe({ m["TriggerTime"] }) });
 
-        emit_iff_present(root_node, cm, 0x0018, 0x0025, "CS", "AngioFlag");
-        emit_iff_present(root_node, cm, 0x0018, 0x1062, "IS", "NominalInterval");
-        emit_iff_present(root_node, cm, 0x0018, 0x1090, "IS", "CardiacNumberOfImages");
+        emit_iff_present(root_node, m, 0x0018, 0x0025, "CS", "AngioFlag");
+        emit_iff_present(root_node, m, 0x0018, 0x1062, "IS", "NominalInterval");
+        emit_iff_present(root_node, m, 0x0018, 0x1090, "IS", "CardiacNumberOfImages");
 
-        emit_iff_present(root_node, cm, 0x0018, 0x0083, "DS", "NumberOfAverages");
-        emit_iff_present(root_node, cm, 0x0018, 0x0084, "DS", "ImagingFrequency");
-        emit_iff_present(root_node, cm, 0x0018, 0x0085, "SH", "ImagedNucleus");
-        emit_iff_present(root_node, cm, 0x0018, 0x0086, "IS", "EchoNumbers");
-        emit_iff_present(root_node, cm, 0x0018, 0x0087, "DS", "MagneticFieldStrength");
+        emit_iff_present(root_node, m, 0x0018, 0x0083, "DS", "NumberOfAverages");
+        emit_iff_present(root_node, m, 0x0018, 0x0084, "DS", "ImagingFrequency");
+        emit_iff_present(root_node, m, 0x0018, 0x0085, "SH", "ImagedNucleus");
+        emit_iff_present(root_node, m, 0x0018, 0x0086, "IS", "EchoNumbers");
+        emit_iff_present(root_node, m, 0x0018, 0x0087, "DS", "MagneticFieldStrength");
 
-        emit_iff_present(root_node, cm, 0x0018, 0x0088, "DS", "SpacingBetweenSlices");
-        emit_iff_present(root_node, cm, 0x0018, 0x0089, "IS", "NumberOfPhaseEncodingSteps");
-        emit_iff_present(root_node, cm, 0x0018, 0x0093, "DS", "PercentSampling");
-        emit_iff_present(root_node, cm, 0x0018, 0x0094, "DS", "PercentPhaseFieldOfView");
-        emit_iff_present(root_node, cm, 0x0018, 0x0095, "DS", "PixelBandwidth");
+        emit_iff_present(root_node, m, 0x0018, 0x0088, "DS", "SpacingBetweenSlices");
+        emit_iff_present(root_node, m, 0x0018, 0x0089, "IS", "NumberOfPhaseEncodingSteps");
+        emit_iff_present(root_node, m, 0x0018, 0x0093, "DS", "PercentSampling");
+        emit_iff_present(root_node, m, 0x0018, 0x0094, "DS", "PercentPhaseFieldOfView");
+        emit_iff_present(root_node, m, 0x0018, 0x0095, "DS", "PixelBandwidth");
 
-        emit_iff_present(root_node, cm, 0x0018, 0x1250, "SH", "ReceiveCoilName");
-        emit_iff_present(root_node, cm, 0x0018, 0x1251, "SH", "TransmitCoilName");
-        emit_iff_present(root_node, cm, 0x0018, 0x1310, "US", "AcquisitionMatrix");
-        emit_iff_present(root_node, cm, 0x0018, 0x1312, "CS", "InplanePhaseEncodingDirection");
-        emit_iff_present(root_node, cm, 0x0018, 0x1314, "DS", "FlipAngle");
-        emit_iff_present(root_node, cm, 0x0018, 0x1315, "CS", "VariableFlipAngleFlag");
-        emit_iff_present(root_node, cm, 0x0018, 0x1316, "DS", "SAR");
-        emit_iff_present(root_node, cm, 0x0018, 0x1318, "DS", "dBdt");
+        emit_iff_present(root_node, m, 0x0018, 0x1250, "SH", "ReceiveCoilName");
+        emit_iff_present(root_node, m, 0x0018, 0x1251, "SH", "TransmitCoilName");
+        emit_iff_present(root_node, m, 0x0018, 0x1310, "US", "AcquisitionMatrix");
+        emit_iff_present(root_node, m, 0x0018, 0x1312, "CS", "InplanePhaseEncodingDirection");
+        emit_iff_present(root_node, m, 0x0018, 0x1314, "DS", "FlipAngle");
+        emit_iff_present(root_node, m, 0x0018, 0x1315, "CS", "VariableFlipAngleFlag");
+        emit_iff_present(root_node, m, 0x0018, 0x1316, "DS", "SAR");
+        emit_iff_present(root_node, m, 0x0018, 0x1318, "DS", "dBdt");
 
-        emit_iff_present(root_node, cm, 0x0020, 0x0100, "IS", "TemporalPositionIdentifier");
-        emit_iff_present(root_node, cm, 0x0020, 0x0105, "IS", "NumberOfTemporalPositions");
-        emit_iff_present(root_node, cm, 0x0020, 0x0110, "DS", "TemporalResolution");
+        emit_iff_present(root_node, m, 0x0020, 0x0100, "IS", "TemporalPositionIdentifier");
+        emit_iff_present(root_node, m, 0x0020, 0x0105, "IS", "NumberOfTemporalPositions");
+        emit_iff_present(root_node, m, 0x0020, 0x0110, "DS", "TemporalResolution");
 
         root_node.emplace_child_node({{0x0028, 0x1052}, "DS", to_DS( rescale_intercept ) }); //RescaleIntercept.
         root_node.emplace_child_node({{0x0028, 0x1053}, "DS", to_DS( rescale_slope ) }); //RescaleSlope.
 
         // MR diffusion sequence.
-        if( (cm.count("MRDiffusionSequence/DiffusionBValue") != 0)
-        ||  (cm.count("DiffusionBValue") != 0) ){
+        if( (m.count("MRDiffusionSequence/DiffusionBValue") != 0)
+        ||  (m.count("DiffusionBValue") != 0) ){
             DCMA_DICOM::Node *seq_ptr = root_node.emplace_child_node({{0x0018, 0x9117}, "SQ", ""}); // MRDiffusionSequence.
 //            DCMA_DICOM::Node *m_seq_ptr = seq_ptr->emplace_child_node({{0x0000, 0x0000}, "MULTI", ""});
 
-            seq_ptr->emplace_child_node({{0x0018, 0x9087}, "DS", fne({ cm["MRDiffusionSequence/DiffusionBValue"],
-                                                                       cm["DiffusionBValue"],
+            seq_ptr->emplace_child_node({{0x0018, 0x9087}, "DS", fne({ m["MRDiffusionSequence/DiffusionBValue"],
+                                                                       m["DiffusionBValue"],
                                                                        "0.0" }) });
-            seq_ptr->emplace_child_node({{0x0018, 0x9075}, "CS", fne({ cm["MRDiffusionSequence/DiffusionDirection"],
-                                                                       cm["DiffusionDirection"],
+            seq_ptr->emplace_child_node({{0x0018, 0x9075}, "CS", fne({ m["MRDiffusionSequence/DiffusionDirection"],
+                                                                       m["DiffusionDirection"],
                                                                        "UNSPECIFIED" }) });
-            seq_ptr->emplace_child_node({{0x0018, 0x9147}, "CS", fne({ cm["MRDiffusionSequence/DiffusionAnisotropyType"],
-                                                                       cm["DiffusionAnisotropyType"],
+            seq_ptr->emplace_child_node({{0x0018, 0x9147}, "CS", fne({ m["MRDiffusionSequence/DiffusionAnisotropyType"],
+                                                                       m["DiffusionAnisotropyType"],
                                                                        "UNSPECIFIED" }) });
 
             DCMA_DICOM::Node *dir_seq_ptr = seq_ptr->emplace_child_node({{0x0018, 0x9076}, "SQ", ""}); // DiffusionGradientDirectionSequence.
 //            DCMA_DICOM::Node *m_dir_seq_ptr = dir_seq_ptr->emplace_child_node({{0x0000, 0x0000}, "MULTI", ""});
             dir_seq_ptr->emplace_child_node({{0x0018, 0x9089}, "DS", 
-                  fne({ cm["MRDiffusionSequence/DiffusionGradientDirectionSequence/DiffusionGradientOrientation"],
-                        cm["DiffusionGradientOrientation"],
+                  fne({ m["MRDiffusionSequence/DiffusionGradientDirectionSequence/DiffusionGradientOrientation"],
+                        m["DiffusionGradientOrientation"],
                         R"***(0.0\0.0\0.0)***" }) });
 
             DCMA_DICOM::Node *mat_seq_ptr = seq_ptr->emplace_child_node({{0x0018, 0x9601}, "SQ", ""}); // DiffusionBMatrixSequence.
 //            DCMA_DICOM::Node *m_mat_seq_ptr = mat_seq_ptr->emplace_child_node({{0x0000, 0x0000}, "MULTI", ""});
             mat_seq_ptr->emplace_child_node({{0x0018, 0x9602}, "DS", 
-                fne({ cm["MRDiffusionSequence/DiffusionBMatrixSequence/DiffusionBValueXX"], cm["DiffusionBValueXX"], "0.0" }) });
+                fne({ m["MRDiffusionSequence/DiffusionBMatrixSequence/DiffusionBValueXX"], m["DiffusionBValueXX"], "0.0" }) });
             mat_seq_ptr->emplace_child_node({{0x0018, 0x9603}, "DS", 
-                fne({ cm["MRDiffusionSequence/DiffusionBMatrixSequence/DiffusionBValueXY"], cm["DiffusionBValueXY"], "0.0" }) });
+                fne({ m["MRDiffusionSequence/DiffusionBMatrixSequence/DiffusionBValueXY"], m["DiffusionBValueXY"], "0.0" }) });
             mat_seq_ptr->emplace_child_node({{0x0018, 0x9604}, "DS", 
-                fne({ cm["MRDiffusionSequence/DiffusionBMatrixSequence/DiffusionBValueXZ"], cm["DiffusionBValueXZ"], "0.0" }) });
+                fne({ m["MRDiffusionSequence/DiffusionBMatrixSequence/DiffusionBValueXZ"], m["DiffusionBValueXZ"], "0.0" }) });
             mat_seq_ptr->emplace_child_node({{0x0018, 0x9605}, "DS", 
-                fne({ cm["MRDiffusionSequence/DiffusionBMatrixSequence/DiffusionBValueYY"], cm["DiffusionBValueYY"], "0.0" }) });
+                fne({ m["MRDiffusionSequence/DiffusionBMatrixSequence/DiffusionBValueYY"], m["DiffusionBValueYY"], "0.0" }) });
             mat_seq_ptr->emplace_child_node({{0x0018, 0x9606}, "DS", 
-                fne({ cm["MRDiffusionSequence/DiffusionBMatrixSequence/DiffusionBValueYZ"], cm["DiffusionBValueYZ"], "0.0" }) });
+                fne({ m["MRDiffusionSequence/DiffusionBMatrixSequence/DiffusionBValueYZ"], m["DiffusionBValueYZ"], "0.0" }) });
             mat_seq_ptr->emplace_child_node({{0x0018, 0x9607}, "DS", 
-                fne({ cm["MRDiffusionSequence/DiffusionBMatrixSequence/DiffusionBValueZZ"], cm["DiffusionBValueZZ"], "0.0" }) });
+                fne({ m["MRDiffusionSequence/DiffusionBMatrixSequence/DiffusionBValueZZ"], m["DiffusionBValueZZ"], "0.0" }) });
         }
 
         // Siemens MR Private Diffusion Module, as detailed in syngo(R) MR E11 conformance statement.
-        emit_iff_present(root_node, cm, 0x0019, 0x0010, "LO", "SiemensMRHeader");
-        emit_iff_present(root_node, cm, 0x0019, 0x100c, "IS", "DiffusionBValue");
-        emit_iff_present(root_node, cm, 0x0019, 0x100d, "CS", "DiffusionDirection");
-        emit_iff_present(root_node, cm, 0x0019, 0x100e, "DS", "DiffusionGradientVector");
-        emit_iff_present(root_node, cm, 0x0019, 0x1027, "DS", "DiffusionBMatrix");  // multiplicity = 3.
+        emit_iff_present(root_node, m, 0x0019, 0x0010, "LO", "SiemensMRHeader");
+        emit_iff_present(root_node, m, 0x0019, 0x100c, "IS", "DiffusionBValue");
+        emit_iff_present(root_node, m, 0x0019, 0x100d, "CS", "DiffusionDirection");
+        emit_iff_present(root_node, m, 0x0019, 0x100e, "DS", "DiffusionGradientVector");
+        emit_iff_present(root_node, m, 0x0019, 0x1027, "DS", "DiffusionBMatrix");  // multiplicity = 3.
 
 
         //-------------------------------------------------------------------------------------------------
@@ -4133,6 +4162,8 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
     //Generate some UIDs that need to be duplicated.
     const auto SOPInstanceUID = Generate_Random_UID(60);
     const auto FrameOfReferenceUID = Generate_Random_UID(60);
+    const auto SOPClassUID = "1.2.840.10008.5.1.4.1.1.481.3"; // RT Structure Set IOD.
+
     // TODO: Sample any existing UID (ReferencedFrameOfReferenceUID or FrameOfReferenceUID). Probably OK to use only
     // the first in this case though...
 
@@ -4140,6 +4171,10 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
     //Top-level stuff: metadata shared by all images.
     {
         auto cm = contour_collection<double>().get_common_metadata( CC, {} );
+
+        if(auto x = get_as<std::string>(cm, "SOPClassUID"); x && (x.value() != SOPClassUID)){
+            YLOGWARN("Altering SOPClassID (e.g., modality). Linked objects may become unlinked");
+        }
 
         //Replace any metadata that might be used to underhandedly link patients, if requested.
         if((Paranoia == ParanoiaLevel::Medium) || (Paranoia == ParanoiaLevel::High)){
@@ -4192,6 +4227,10 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
             cm["StructureSetTime"] = "";
         }
         if(Paranoia == ParanoiaLevel::High){
+            //SOP Common Module.
+            cm["SOPInstanceUID"] = SOPInstanceUID;
+            cm["ReferencedSOPInstanceUID"] = "";
+
             //Patient Module.
             cm["PatientsName"]      = "";
             cm["PatientID"]         = "";
@@ -4211,8 +4250,8 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
         //-------------------------------------------------------------------------------------------------
         //DICOM Header Metadata.
         root_node.emplace_child_node({{0x0002, 0x0001}, "OB", std::string("\x0\x1", 2)}); // FileMetaInformationVersion
-        root_node.emplace_child_node({{0x0002, 0x0002}, "UI", "1.2.840.10008.5.1.4.1.1.481.3"}); // MediaStorageSOPClassUID
-        root_node.emplace_child_node({{0x0002, 0x0003}, "UI", SOPInstanceUID}); // MediaStorageSOPInstanceUID
+        root_node.emplace_child_node({{0x0002, 0x0002}, "UI", SOPClassUID}); // MediaStorageSOPClassUID
+        root_node.emplace_child_node({{0x0002, 0x0003}, "UI", fne({ cm["SOPInstanceUID"], SOPInstanceUID }) }); // MediaStorageSOPInstanceUID
         std::string TransferSyntaxUID;
         if(enc == DCMA_DICOM::Encoding::ELE){
             TransferSyntaxUID = "1.2.840.10008.1.2.1";
@@ -4228,8 +4267,8 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
 
         //-------------------------------------------------------------------------------------------------
         //SOP Common Module.
-        root_node.emplace_child_node({{0x0008, 0x0016}, "UI", "1.2.840.10008.5.1.4.1.1.481.3"}); // "SOPClassUID" (Radiation Therapy Structure Set Storage)
-        root_node.emplace_child_node({{0x0008, 0x0018}, "UI", SOPInstanceUID}); // SOPInstanceUID
+        root_node.emplace_child_node({{0x0008, 0x0016}, "UI", SOPClassUID }); // (Radiation Therapy Structure Set Storage)
+        root_node.emplace_child_node({{0x0008, 0x0018}, "UI", fne({ cm["SOPInstanceUID"], SOPInstanceUID }) });
         root_node.emplace_child_node({{0x0008, 0x0005}, "CS", "ISO_IR 192"}); //fne({ cm["SpecificCharacterSet"], "ISO_IR 192" }));
         root_node.emplace_child_node({{0x0008, 0x0012}, "DA", fne({ cm["InstanceCreationDate"], "19720101" }) });
         root_node.emplace_child_node({{0x0008, 0x0013}, "TM", fne({ cm["InstanceCreationTime"], "010101" }) });
@@ -4277,7 +4316,7 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
 
         //-------------------------------------------------------------------------------------------------
         //Frame of Reference Module.
-        root_node.emplace_child_node({{0x0020, 0x0052}, "UI", FrameOfReferenceUID}); //FrameOfReferenceUID 
+        root_node.emplace_child_node({{0x0020, 0x0052}, "UI", fne({ cm["FrameOfReferenceUID"], FrameOfReferenceUID }) });
         root_node.emplace_child_node({{0x0020, 0x1040}, "LO", "" }); //PositionReferenceIndicator (TODO).
 
 /*
@@ -4312,7 +4351,7 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
             DCMA_DICOM::Node *multi_seq_ptr = ssr_seq_ptr->emplace_child_node({{0x0000, 0x0000}, "MULTI", ""});
 
             multi_seq_ptr->emplace_child_node({{0x3006, 0x0022}, "IS", std::to_string(seq_n) }); // ROINumber (Does this need to be 1-based? TODO)
-            multi_seq_ptr->emplace_child_node({{0x3006, 0x0024}, "UI", fne({ FrameOfReferenceUID }) }); // ReferencedFrameOfReferenceUID
+            multi_seq_ptr->emplace_child_node({{0x3006, 0x0024}, "UI", fne({ cm["FrameOfReferenceUID"], FrameOfReferenceUID }) }); // ReferencedFrameOfReferenceUID
             multi_seq_ptr->emplace_child_node({{0x3006, 0x0026}, "LO", // ROIName
                  fne({ cm["ROIName"], 
                        cm["ROILabel"],
