@@ -29,9 +29,6 @@
 #include "Alignment_Field.h"
 
 
-//This is a wrapper around the YgorMath.h class "contour_of_points." It holds an instance of a contour_of_points, but also provides some meta information
-// which helps identify the origin, quality, and purpose of the data.
-//
 //This should be turned into an enum, I think. Or at least reordered numerically.
 namespace Segmentations {
     //General orientations.

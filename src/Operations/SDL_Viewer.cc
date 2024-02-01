@@ -1785,10 +1785,11 @@ bool SDL_Viewer(Drover &DICOM_data,
                 cimg_ptr->init_spatial(cimg_pxl_dx, cimg_pxl_dy, dimg.pxl_dz, dimg.anchor, cimg_offset);
                 cimg_ptr->init_orientation(dimg.row_unit, dimg.col_unit);
                 cimg_ptr->fill_pixels(-1.0f);
+
+                // Inherit metadata so that extracted contours refer to the correct image UIDs.
+                const auto uids_only = Compile_Regex(".*UID.*");
+                cimg_ptr->metadata = filter_keys_retain_only(dimg.metadata, uids_only);
             }
-
-            // Inherit common metadata from the parent.
-
 
             // Reset any existing contours.
             cdrover_ptr->Ensure_Contour_Data_Allocated();
@@ -2595,7 +2596,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                 // Inject metadata.
                 for(auto &cc : cdrover_ptr->contour_data->ccs){
                     const double MinimumSeparation = disp_img_it->pxl_dz; // TODO: use more robust method here.
-                    for(auto &cop : cc.contours) cop.metadata = cm;
+                    for(auto &cop : cc.contours){
+                        coalesce(cop.metadata, cm);
+                    }
                     cc.Insert_Metadata("ROIName", roi_name);
                     cc.Insert_Metadata("NormalizedROIName", X(roi_name));
                     cc.Insert_Metadata("ROINumber", "10000"); // TODO: find highest existing and ++ it.
@@ -6550,10 +6553,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
 
                         cdrover_ptr->contour_data->ccs.clear();
                         cdrover_ptr->Consume( shtl.contour_data );
-//YLOGINFO("Contouring image generated " << cdrover_ptr->contour_data->ccs.size() << " contour collections");
-//if(!cdrover_ptr->contour_data->ccs.empty()){
-//    YLOGINFO("    First collection contains " << cdrover_ptr->contour_data->ccs.front().contours.size() << " contours");
-//}
 
                         contouring_img_altered = false;
                     }

@@ -11,6 +11,7 @@
 #include <functional>
 #include <regex>
 #include <cstdint>
+#include <ostream>
 
 #include "YgorString.h"
 #include "YgorMath.h"
@@ -33,12 +34,22 @@ std::string Generate_Random_UID(int64_t len);
 
 std::string Generate_Random_Int_Str(int64_t low, int64_t high);
 
+void print( std::ostream &os,
+            const metadata_map_t &m );
 
 // Insert a *new* key-value pair. Will not overwrite an existing key-value pair if the key is already present.
+// The value is not considered.
+//
 // Returns true only when insertion successful.
 bool insert_if_new( metadata_map_t &map,
                     const std::string &key,
                     const std::string &val );
+
+
+// Attempts to insert all entries from map_b into map_a, but will not overwrite any existing entried in map_a.
+void
+coalesce(metadata_map_t &map_a,
+         const metadata_map_t &map_b);
 
 // Retrieve the metadata value corresponding to a given key, but only if present and it can be converted to type T.
 template <class T>
@@ -70,6 +81,10 @@ copy_overwrite(const metadata_map_t &source,
                std::optional<std::string> new_key = {},
                std::optional<std::string> fallback = {});
 
+// Filter the key-values in a map by removing all entries that do *not* match the given regex.
+metadata_map_t
+filter_keys_retain_only( const metadata_map_t &m,
+                         const std::regex &f );
 
 // Combine metadata maps together. Only distinct values are retained.
 void

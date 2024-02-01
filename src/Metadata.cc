@@ -93,6 +93,13 @@ template std::set<std::string> Extract_Distinct_Values(std::shared_ptr<Line_Samp
 template std::set<std::string> Extract_Distinct_Values(std::shared_ptr<Transform3  >, const std::string &);
 template std::set<std::string> Extract_Distinct_Values(std::shared_ptr<Sparse_Table>, const std::string &);
 
+void print( std::ostream &os,
+            const metadata_map_t &m ){
+    for(const auto &p : m){
+        os << "'" << p.first << "' = '" << p.second << "'" << std::endl;
+    }
+    return;
+}
 
 static
 void insert(metadata_map_t &out, const std::string &key, const std::string &val){
@@ -171,6 +178,13 @@ bool insert_if_new( metadata_map_t &map,
     return map.insert( {key, val} ).second;
 }
 
+void
+coalesce(metadata_map_t &map_a,
+         const metadata_map_t &map_b){
+    for(const auto &p : map_b) insert_if_new(map_a, p.first, p.second);
+    return;
+}
+
 template <class T>
 std::optional<T>
 get_as(const metadata_map_t &map,
@@ -240,6 +254,20 @@ copy_overwrite(const metadata_map_t &source,
          ret = true;
      }
      return ret;
+}
+
+
+metadata_map_t
+filter_keys_retain_only( const metadata_map_t &m,
+                         const std::regex &f ){
+    metadata_map_t out;
+    for(const auto &p : m){
+        const auto matched = std::regex_match(p.first, f);
+        if( matched ){
+            out.insert(p);
+        }
+    }
+    return out;
 }
 
 
