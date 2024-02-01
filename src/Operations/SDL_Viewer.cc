@@ -1727,6 +1727,8 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
             cdrover_ptr->image_data.back()->imagecoll.images.clear();
 
+            const auto regex_linkage_tags = Compile_Regex("^Patient.*|^Study.*|^Series.*|.*UID$");
+
             for(const auto& dimg : (*dimg_array_ptr_it)->imagecoll.images){
                 if((dimg.rows < 1) || (dimg.columns < 1)) continue;
 
@@ -1786,9 +1788,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                 cimg_ptr->init_orientation(dimg.row_unit, dimg.col_unit);
                 cimg_ptr->fill_pixels(-1.0f);
 
-                // Inherit metadata so that extracted contours refer to the correct image UIDs.
-                const auto uids_only = Compile_Regex(".*UID.*");
-                cimg_ptr->metadata = filter_keys_retain_only(dimg.metadata, uids_only);
+                // Inherit metadata selectively so contours can images can be properly linked together.
+                cimg_ptr->metadata = filter_keys_retain_only(dimg.metadata, regex_linkage_tags);
             }
 
             // Reset any existing contours.

@@ -995,7 +995,7 @@ metadata_map_t coalesce_metadata_for_rtstruct(const metadata_map_t &ref, meta_ev
     metadata_map_t out;
     out["Modality"] = "RTSTRUCT";
     out["MediaStorageSOPClassUID"] = "1.2.840.10008.5.1.4.1.1.481.3"; //RT Structure Set IOD
-    out["SOPClassUID"] = "1.2.840.10008.5.1.4.1.1.481.2";
+    out["SOPClassUID"] = "1.2.840.10008.5.1.4.1.1.481.3";
 
     out.merge( coalesce_metadata_patient(ref) );
     out.merge( coalesce_metadata_general_study(ref) );

@@ -3062,7 +3062,7 @@ void Write_Dose_Array(const std::shared_ptr<Image_Array>& IA, const std::filesys
 
         auto m = IA->imagecoll.get_common_metadata({});
         if(auto x = get_as<std::string>(m, "SOPClassUID"); x && (x.value() != SOPClassUID)){
-            YLOGWARN("Altering SOPClassID (e.g., modality). Linked objects may become unlinked");
+            YLOGWARN("Overriding SOPClassUID (e.g., modality) from '" << x.value() << "' to '" << SOPClassUID << "'. Object linkage may break");
         }
 
         //Replace any metadata that might be used to underhandedly link patients, if requested.
@@ -3391,7 +3391,7 @@ void Write_CT_Images(const std::shared_ptr<Image_Array>& IA,
     {
         const auto cm = IA->imagecoll.get_common_metadata({});
         if(auto x = get_as<std::string>(cm, "SOPClassUID"); x && (x.value() != SOPClassUID)){
-            YLOGWARN("Altering SOPClassID (e.g., modality). Linked objects may become unlinked");
+            YLOGWARN("Overriding SOPClassUID (e.g., modality) from '" << x.value() << "' to '" << SOPClassUID << "'. Object linkage may break");
         }
     }
 
@@ -3758,7 +3758,7 @@ void Write_MR_Images(const std::shared_ptr<Image_Array>& IA,
     {
         const auto cm = IA->imagecoll.get_common_metadata({});
         if(auto x = get_as<std::string>(cm, "SOPClassUID"); x && (x.value() != SOPClassUID)){
-            YLOGWARN("Altering SOPClassID (e.g., modality). Linked objects may become unlinked");
+            YLOGWARN("Overriding SOPClassUID (e.g., modality) from '" << x.value() << "' to '" << SOPClassUID << "'. Object linkage may break");
         }
     }
 
@@ -4159,23 +4159,21 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
 
     DCMA_DICOM::Node root_node;
 
-    //Generate some UIDs that need to be duplicated.
+    //Generate some fallback UIDs that need to be cross-referenced.
     const auto SOPInstanceUID = Generate_Random_UID(60);
     const auto FrameOfReferenceUID = Generate_Random_UID(60);
+    const auto StudyInstanceUID = Generate_Random_UID(31);
+    const auto SeriesInstanceUID = Generate_Random_UID(31);
+
     const auto SOPClassUID = "1.2.840.10008.5.1.4.1.1.481.3"; // RT Structure Set IOD.
+    const auto StudyComponentManagementSOPClassUID = "1.2.840.10008.3.1.2.3.2";
 
-    // TODO: Sample any existing UID (ReferencedFrameOfReferenceUID or FrameOfReferenceUID). Probably OK to use only
-    // the first in this case though...
-
-
-    //Top-level stuff: metadata shared by all images.
+    //Top-level metadata.
+    auto cm = contour_collection<double>().get_common_metadata( CC, {} );
+    if(auto x = get_as<std::string>(cm, "SOPClassUID"); x && (x.value() != SOPClassUID)){
+        YLOGWARN("Overriding SOPClassUID (e.g., modality) from '" << x.value() << "' to '" << SOPClassUID << "'. Object linkage may break");
+    }
     {
-        auto cm = contour_collection<double>().get_common_metadata( CC, {} );
-
-        if(auto x = get_as<std::string>(cm, "SOPClassUID"); x && (x.value() != SOPClassUID)){
-            YLOGWARN("Altering SOPClassID (e.g., modality). Linked objects may become unlinked");
-        }
-
         //Replace any metadata that might be used to underhandedly link patients, if requested.
         if((Paranoia == ParanoiaLevel::Medium) || (Paranoia == ParanoiaLevel::High)){
             //SOP Common Module.
@@ -4286,7 +4284,7 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
 
         //-------------------------------------------------------------------------------------------------
         //General Study Module.
-        root_node.emplace_child_node({{0x0020, 0x000D}, "UI", fne({ cm["StudyInstanceUID"], Generate_Random_UID(31) }) });
+        root_node.emplace_child_node({{0x0020, 0x000D}, "UI", fne({ cm["StudyInstanceUID"], StudyInstanceUID }) });
         root_node.emplace_child_node({{0x0008, 0x0020}, "DA", fne({ cm["StudyDate"], "19720101" }) });
         root_node.emplace_child_node({{0x0008, 0x0030}, "TM", fne({ cm["StudyTime"], "010101" }) });
         root_node.emplace_child_node({{0x0008, 0x0090}, "PN", fne({ cm["ReferringPhysiciansName"], "UNSPECIFIED^UNSPECIFIED" }) });
@@ -4314,36 +4312,68 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
         //root_node.emplace_child_node({{0x0008, 0x1090}, "LO", fne({ cm["ManufacturersModelName"], "UNSPECIFIED" }) });
         //root_node.emplace_child_node({{0x0018, 0x1020}, "LO", fne({ cm["SoftwareVersions"], "UNSPECIFIED" }) });
 
+    }
+
+    //-------------------------------------------------------------------------------------------------
+    //Structure Set Module.
+    root_node.emplace_child_node({{0x3006, 0x0002}, "SH", fne({ cm["StructureSetLabel"], "UNSPECIFIED" }) }); // "Structure Set Label"
+    root_node.emplace_child_node({{0x3006, 0x0004}, "LO", fne({ cm["StructureSetName"], "UNSPECIFIED" }) }); // "Structure Set Name"
+    root_node.emplace_child_node({{0x3006, 0x0006}, "ST", fne({ cm["StructureSetDescription"], "UNSPECIFIED" }) });
+    root_node.emplace_child_node({{0x3006, 0x0008}, "DA", foe({ cm["StructureSetDate"] }) });
+    root_node.emplace_child_node({{0x3006, 0x0009}, "TM", foe({ cm["StructureSetTime"] }) });
+
+    // We can either emit a generic 'Frame Of Reference Module', or the more specialized 'Referenced Frame Of Reference
+    // Sequence' in the 'Structure Set Module.' The latter approach is more complicated, and not strictly required. But
+    // adding it improves compatibility. so we opt to try emit it when the requisite information is available.
+    //
+    // Note that the information comes from the images used to create the contours. If this information is not imbued in
+    // the contours, then we cannot recreate it here.
+    std::set<std::pair<std::string, std::string>> img_ref_pairs;
+    for(const auto& cc_refw : CC){
+        for(const auto& c : cc_refw.get().contours){
+            const auto ReferencedSOPClassUID_opt = get_as<std::string>(c.metadata, "ReferencedSOPClassUID");
+            const auto ReferencedSOPInstanceUID_opt = get_as<std::string>(c.metadata, "ReferencedSOPInstanceUID");
+            if( ReferencedSOPClassUID_opt
+            &&  ReferencedSOPInstanceUID_opt ){
+                img_ref_pairs.insert({ ReferencedSOPClassUID_opt.value(), ReferencedSOPInstanceUID_opt.value() });
+            }
+        }
+    }
+    if( img_ref_pairs.empty() ){
+        YLOGINFO("Omitting ReferencedFrameOfReferenceSequence due to lack of metadata");
+
         //-------------------------------------------------------------------------------------------------
         //Frame of Reference Module.
         root_node.emplace_child_node({{0x0020, 0x0052}, "UI", fne({ cm["FrameOfReferenceUID"], FrameOfReferenceUID }) });
         root_node.emplace_child_node({{0x0020, 0x1040}, "LO", "" }); //PositionReferenceIndicator (TODO).
 
-/*
+    }else{
         // Emit the Referenced Frame of Reference Sequence.
-        {
-            DCMA_DICOM::Node *seq_node_ptr = root_node.emplace_child_node({{0x3006, 0x0010}, "SQ", ""});  // ReferencedFrameOfReferenceSequence
-            seq_node_ptr->emplace_child_node({{0x0020, 0x0052}, "UI", FrameOfReferenceUID}); //FrameOfReferenceUID 
+        DCMA_DICOM::Node *rfr_seq_ptr = root_node.emplace_child_node({{0x3006, 0x0010}, "SQ", ""});  // ReferencedFrameOfReferenceSequence
+
+        rfr_seq_ptr->emplace_child_node({{0x0020, 0x0052}, "UI", fne({ cm["FrameOfReferenceUID"], FrameOfReferenceUID }) });
+        DCMA_DICOM::Node *rtr_seq_ptr = rfr_seq_ptr->emplace_child_node({{0x3006, 0x0012}, "SQ", ""});  // RTReferencedStudySequence
+
+        rtr_seq_ptr->emplace_child_node({{0x0008, 0x1150}, "UI", StudyComponentManagementSOPClassUID }); // ReferencedSOPClassUID
+        rtr_seq_ptr->emplace_child_node({{0x0008, 0x1155}, "UI", fne({ cm["StudyInstanceUID"], StudyInstanceUID }) }); // ReferencedSOPInstanceUID
+        DCMA_DICOM::Node *rts_seq_ptr = rtr_seq_ptr->emplace_child_node({{0x3006, 0x0014}, "SQ", ""});  // RTReferencedSeriesSequence
+
+        rts_seq_ptr->emplace_child_node({{0x0020, 0x000E}, "UI",  fne({ cm["SeriesInstanceUID"], SeriesInstanceUID })  });
+        DCMA_DICOM::Node *cis_seq_ptr = rts_seq_ptr->emplace_child_node({{0x3006, 0x0016}, "SQ", ""});  // ContourImageSequence
+
+        for(const auto& p : img_ref_pairs){
+            const auto [ReferencedSOPClassUID, ReferencedSOPInstanceUID] = p;
+
+            DCMA_DICOM::Node *multi_seq_ptr = cis_seq_ptr->emplace_child_node({{0x0000, 0x0000}, "MULTI", ""});
+            multi_seq_ptr->emplace_child_node({{0x0008, 0x1150}, "UI", ReferencedSOPClassUID });
+            multi_seq_ptr->emplace_child_node({{0x0008, 0x1155}, "UI", ReferencedSOPInstanceUID });
         }
-*/
-
-        //-------------------------------------------------------------------------------------------------
-        //Structure Set Module.
-        root_node.emplace_child_node({{0x3006, 0x0002}, "SH", fne({ cm["StructureSetLabel"], "UNSPECIFIED" }) }); // "Structure Set Label"
-        root_node.emplace_child_node({{0x3006, 0x0004}, "LO", fne({ cm["StructureSetName"], "UNSPECIFIED" }) }); // "Structure Set Name"
-        root_node.emplace_child_node({{0x3006, 0x0006}, "ST", fne({ cm["StructureSetDescription"], "UNSPECIFIED" }) });
-        root_node.emplace_child_node({{0x3006, 0x0008}, "DA", foe({ cm["StructureSetDate"] }) });
-        root_node.emplace_child_node({{0x3006, 0x0009}, "TM", foe({ cm["StructureSetTime"] }) });
-
-        // (The following Structure Set ROI Sequence is part of the Structure Set Module.)
     }
-
 
     // Emit the Structure Set ROI Sequence, which maps an integer number to names, FrameOfReferenceUID, and creation
     // method.
     {
         DCMA_DICOM::Node *ssr_seq_ptr = root_node.emplace_child_node({{0x3006, 0x0020}, "SQ", ""});  // StructureSetROISequence
-        //uint32_t seq_n = 0;
         uint32_t seq_n = 1;
         for(const auto cc_refw : CC){
             auto cm = cc_refw.get().get_common_metadata({}, {});
@@ -4380,7 +4410,6 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
     // Emit the ROI Contour Sequence.
     {
         DCMA_DICOM::Node *rc_seq_ptr = root_node.emplace_child_node({{0x3006, 0x0039}, "SQ", ""});  // ROIContourSequence
-        //uint32_t roi_seq_n = 0;
         uint32_t roi_seq_n = 1;
         for(const auto cc_refw : CC){
             //auto cm = cc_refw.get().get_common_metadata({}, {});
@@ -4443,7 +4472,6 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
     // Emit the RT ROI Observations Sequence.
     {
         DCMA_DICOM::Node *rro_seq_ptr = root_node.emplace_child_node({{0x3006, 0x0080}, "SQ", ""});  // RTROIObservationsSequence
-        //uint32_t roi_seq_n = 0;
         uint32_t roi_seq_n = 1;
         for(const auto cc_refw : CC){
             //auto cm = cc_refw.get().get_common_metadata({}, {});

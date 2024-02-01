@@ -295,6 +295,25 @@ bool ContourViaThreshold(Drover &DICOM_data,
                             &completed,
                             img_count]() -> void {
 
+                const auto imbue_metadata = [&]( const metadata_map_t &m_img, metadata_map_t &m_out ){
+                    // Common metadata shared by all images and all contours.
+                    m_out = cm;
+
+                    // Metadata specific to all the contours within an ROI.
+                    m_out["ROIName"] = ROILabel;
+                    m_out["NormalizedROIName"] = NormalizedROILabel;
+                    m_out["Description"] = "Contoured via threshold ("_s + std::to_string(Lower)
+                                      + " <= pixel_val <= " + std::to_string(Upper) + ")";
+                    m_out["ROINumber"] = std::to_string(10000); // TODO: find highest existing and ++ it.
+                    m_out["MinimumSeparation"] = std::to_string(MinimumSeparation);
+
+                    // Metadata specific to an individual contour.
+                    copy_overwrite(m_img, m_out, "SOPClassUID", "ReferencedSOPClassUID"); 
+                    copy_overwrite(m_img, m_out, "SOPInstanceUID", "ReferencedSOPInstanceUID"); 
+
+                    return;
+                };
+
                 // ---------------------------------------------------
                 // The binary inclusivity method.
                 if(std::regex_match(MethodStr, binary_regex)){
@@ -398,15 +417,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
 
                             copl.emplace_back();
                             copl.back().closed = true;
-                            copl.back().metadata = cm;
-                            copl.back().metadata["ROIName"] = ROILabel;
-                            copl.back().metadata["NormalizedROIName"] = NormalizedROILabel;
-                            copl.back().metadata["Description"] = "Contoured via threshold ("_s + std::to_string(Lower)
-                                                                 + " <= pixel_val <= " + std::to_string(Upper) + ")";
-                            copl.back().metadata["ROINumber"] = std::to_string(10000); // TODO: find highest existing and ++ it.
-                            copl.back().metadata["MinimumSeparation"] = std::to_string(MinimumSeparation);
-                            copy_overwrite(animg_ptr->metadata, copl.back().metadata, "SOPClassUID", "ReferencedSOPClassUID"); 
-                            copy_overwrite(animg_ptr->metadata, copl.back().metadata, "SOPInstanceUID", "ReferencedSOPInstanceUID"); 
+                            imbue_metadata(animg_ptr->metadata, copl.back().metadata);
 
                             const auto A = he_it->first; //The starting node.
                             auto B = A;
@@ -790,15 +801,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
                                 // If a valid contour edge was found, start following along the contour.
                                 copl.emplace_back();
                                 copl.back().closed = true;
-                                copl.back().metadata = cm;
-                                copl.back().metadata["ROIName"] = ROILabel;
-                                copl.back().metadata["NormalizedROIName"] = NormalizedROILabel;
-                                copl.back().metadata["Description"] = "Contoured via threshold ("_s + std::to_string(Lower)
-                                                                     + " <= pixel_val <= " + std::to_string(Upper) + ")";
-                                copl.back().metadata["ROINumber"] = std::to_string(10000); // TODO: find highest existing and ++ it.
-                                copl.back().metadata["MinimumSeparation"] = std::to_string(MinimumSeparation);
-                                copy_overwrite(animg_ptr->metadata, copl.back().metadata, "SOPClassUID", "ReferencedSOPClassUID"); 
-                                copy_overwrite(animg_ptr->metadata, copl.back().metadata, "SOPInstanceUID", "ReferencedSOPInstanceUID"); 
+                                imbue_metadata(animg_ptr->metadata, copl.back().metadata);
 
                                 copl.back().points.push_back( n1_ptr->tail );
 
@@ -941,15 +944,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
                     // Tag the contours with metadata.
                     for(auto &cop : lcc.contours){
                         cop.closed = true;
-                        cop.metadata = cm;
-                        cop.metadata["ROIName"] = ROILabel;
-                        cop.metadata["NormalizedROIName"] = NormalizedROILabel;
-                        cop.metadata["Description"] = "Contoured via threshold ("_s + LowerStr
-                                                     + " <= pixel_val <= " + UpperStr + ")";
-                        cop.metadata["MinimumSeparation"] = std::to_string(MinimumSeparation);
-                        cop.metadata["ROINumber"] = std::to_string(10000); // TODO: find highest existing and ++ it.
-                        copy_overwrite(animg_ptr->metadata, cop.metadata, "SOPClassUID", "ReferencedSOPClassUID"); 
-                        copy_overwrite(animg_ptr->metadata, cop.metadata, "SOPInstanceUID", "ReferencedSOPInstanceUID"); 
+                        imbue_metadata(animg_ptr->metadata, cop.metadata);
                     }
 
                     // Try to simplify the contours as much as possible.
