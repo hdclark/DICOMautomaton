@@ -4350,23 +4350,26 @@ void Write_Contours(std::list<std::reference_wrapper<contour_collection<double>>
     }else{
         // Emit the Referenced Frame of Reference Sequence.
         DCMA_DICOM::Node *rfr_seq_ptr = root_node.emplace_child_node({{0x3006, 0x0010}, "SQ", ""});  // ReferencedFrameOfReferenceSequence
+        DCMA_DICOM::Node *m1_ptr = rfr_seq_ptr->emplace_child_node({{0x0000, 0x0000}, "MULTI", ""});
 
-        rfr_seq_ptr->emplace_child_node({{0x0020, 0x0052}, "UI", fne({ cm["FrameOfReferenceUID"], FrameOfReferenceUID }) });
-        DCMA_DICOM::Node *rtr_seq_ptr = rfr_seq_ptr->emplace_child_node({{0x3006, 0x0012}, "SQ", ""});  // RTReferencedStudySequence
+        m1_ptr->emplace_child_node({{0x0020, 0x0052}, "UI", fne({ cm["FrameOfReferenceUID"], FrameOfReferenceUID }) });
+        DCMA_DICOM::Node *rtr_seq_ptr = m1_ptr->emplace_child_node({{0x3006, 0x0012}, "SQ", ""});  // RTReferencedStudySequence
+        DCMA_DICOM::Node *m2_ptr = rtr_seq_ptr->emplace_child_node({{0x0000, 0x0000}, "MULTI", ""});
 
-        rtr_seq_ptr->emplace_child_node({{0x0008, 0x1150}, "UI", StudyComponentManagementSOPClassUID }); // ReferencedSOPClassUID
-        rtr_seq_ptr->emplace_child_node({{0x0008, 0x1155}, "UI", fne({ cm["StudyInstanceUID"], StudyInstanceUID }) }); // ReferencedSOPInstanceUID
-        DCMA_DICOM::Node *rts_seq_ptr = rtr_seq_ptr->emplace_child_node({{0x3006, 0x0014}, "SQ", ""});  // RTReferencedSeriesSequence
+        m2_ptr->emplace_child_node({{0x0008, 0x1150}, "UI", StudyComponentManagementSOPClassUID }); // ReferencedSOPClassUID
+        m2_ptr->emplace_child_node({{0x0008, 0x1155}, "UI", fne({ cm["StudyInstanceUID"], StudyInstanceUID }) }); // ReferencedSOPInstanceUID
+        DCMA_DICOM::Node *rts_seq_ptr = m2_ptr->emplace_child_node({{0x3006, 0x0014}, "SQ", ""});  // RTReferencedSeriesSequence
+        DCMA_DICOM::Node *m3_ptr = rts_seq_ptr->emplace_child_node({{0x0000, 0x0000}, "MULTI", ""});
 
-        rts_seq_ptr->emplace_child_node({{0x0020, 0x000E}, "UI",  fne({ cm["SeriesInstanceUID"], SeriesInstanceUID })  });
-        DCMA_DICOM::Node *cis_seq_ptr = rts_seq_ptr->emplace_child_node({{0x3006, 0x0016}, "SQ", ""});  // ContourImageSequence
+        m3_ptr->emplace_child_node({{0x0020, 0x000E}, "UI",  fne({ cm["SeriesInstanceUID"], SeriesInstanceUID })  });
+        DCMA_DICOM::Node *cis_seq_ptr = m3_ptr->emplace_child_node({{0x3006, 0x0016}, "SQ", ""});  // ContourImageSequence
 
         for(const auto& p : img_ref_pairs){
             const auto [ReferencedSOPClassUID, ReferencedSOPInstanceUID] = p;
 
-            DCMA_DICOM::Node *multi_seq_ptr = cis_seq_ptr->emplace_child_node({{0x0000, 0x0000}, "MULTI", ""});
-            multi_seq_ptr->emplace_child_node({{0x0008, 0x1150}, "UI", ReferencedSOPClassUID });
-            multi_seq_ptr->emplace_child_node({{0x0008, 0x1155}, "UI", ReferencedSOPInstanceUID });
+            DCMA_DICOM::Node *m4_ptr = cis_seq_ptr->emplace_child_node({{0x0000, 0x0000}, "MULTI", ""});
+            m4_ptr->emplace_child_node({{0x0008, 0x1150}, "UI", ReferencedSOPClassUID });
+            m4_ptr->emplace_child_node({{0x0008, 0x1155}, "UI", ReferencedSOPInstanceUID });
         }
     }
 
