@@ -28,6 +28,10 @@ Whitelist_Core( L lops,
            const std::string& Specifier,
            Regex_Selector_Opts Opts ){
 
+    // Detect when the object holds contours, because they use reference wrappers rather than pointers.
+    constexpr bool is_cc = std::is_same< decltype(lops),
+                                         decltype(All_CCs( Drover() )) >::value;
+
     // Multiple key-value specifications stringified together.
     // For example, "key1@value1;key2@value2".
     do{
@@ -76,7 +80,13 @@ Whitelist_Core( L lops,
 
         auto lops_after = Whitelist(lops, v_k_v.front().substr(1), v_k_v.back(), Opts);
         for(const auto &l : lops_after){
-            lops.remove( l );
+            if constexpr ( is_cc ){
+                lops.remove_if( [&](const auto &cc_refw){
+                                    return (&(cc_refw.get()) == &(l.get()));
+                                } );
+            }else{
+                lops.remove( l );
+            }
         }
 
         return lops;
@@ -243,13 +253,24 @@ Whitelist_Core( L lops,
         }
 
         const auto extract_count = []( const typename decltype(lops)::value_type &l ) -> size_t {
-            if( (*l) == nullptr ){
-                throw std::runtime_error("Encountered invalid pointer");
+            constexpr bool is_cc = std::is_same< decltype(lops),
+                                                 decltype(All_CCs( Drover() )) >::value;
+
+            if constexpr (is_cc){
+                // Do nothing.
+            }else{
+                if( (*l) == nullptr ){
+                    throw std::runtime_error("Encountered invalid pointer");
+                }
             }
+
             size_t count = 0UL;
 
-            if constexpr (std::is_same< decltype(lops),
-                                        std::list<std::list<std::shared_ptr<Image_Array>>::iterator> >::value){
+            if constexpr (is_cc){
+                count = l.get().contours.size();
+
+            }else if constexpr (std::is_same< decltype(lops),
+                                              std::list<std::list<std::shared_ptr<Image_Array>>::iterator> >::value){
                 count = (*l)->imagecoll.images.size();
 
             }else if constexpr (std::is_same< decltype(lops),
@@ -297,9 +318,13 @@ Whitelist_Core( L lops,
                 auto m = std::max_element( std::begin(lops), std::end(lops),
                                            [=]( const typename decltype(lops)::value_type &l,
                                                 const typename decltype(lops)::value_type &r ) -> bool {
-                    if( ( (*l) == nullptr )
-                    ||  ( (*r) == nullptr ) ){
-                        throw std::runtime_error("Encountered invalid pointer");
+                    if constexpr (is_cc){
+                        // Do nothing.
+                    }else{
+                        if( ( (*l) == nullptr )
+                        ||  ( (*r) == nullptr ) ){
+                            throw std::runtime_error("Encountered invalid pointer");
+                        }
                     }
 
                     const auto sort_order = [&](size_t l, size_t r) -> bool {
@@ -346,8 +371,12 @@ Whitelist_Core( L lops,
 
                 decltype(lops) out;
                 for(const auto &l : lops){
-                    if( (*l) == nullptr ){
-                        throw std::runtime_error("Encountered invalid pointer");
+                    if constexpr (is_cc){
+                        // Do nothing.
+                    }else{
+                        if( (*l) == nullptr ){
+                            throw std::runtime_error("Encountered invalid pointer");
+                        }
                     }
                     const size_t count = extract_count(l);
 
@@ -516,6 +545,37 @@ Whitelist( std::list<std::reference_wrapper<contour_collection<double>>> ccs,
     return ccs;
 }
 
+// Whitelist contour ROIs using a limited vocabulary of specifiers.
+std::list<std::reference_wrapper<contour_collection<double>>>
+Whitelist( std::list<std::reference_wrapper<contour_collection<double>>> ccs,
+           std::string Specifier,
+           Regex_Selector_Opts Opts){
+    return Whitelist_Core( std::move(ccs), std::move(Specifier), Opts );
+}
+
+
+// Utility function that accepts both optionally-valid regex selectors and an optionally-valid metadata selector.
+std::list<std::reference_wrapper<contour_collection<double>>>
+Whitelist( std::list<std::reference_wrapper<contour_collection<double>>> ccs,
+           std::optional<std::string> ROILabelRegexOpt,
+           std::optional<std::string> NormalizedROILabelRegexOpt,
+           std::optional<std::string> SpecifierOpt,
+           Regex_Selector_Opts Opts){
+
+    if(ROILabelRegexOpt){
+        ccs = Whitelist(ccs, "ROIName",
+                             ROILabelRegexOpt.value(), Opts);
+    }
+    if(NormalizedROILabelRegexOpt){
+        ccs = Whitelist(ccs, "NormalizedROIName",
+                             NormalizedROILabelRegexOpt.value(), Opts);
+    }
+    if(SpecifierOpt){
+        ccs = Whitelist(ccs, SpecifierOpt.value(), Opts);
+    }
+    return ccs;
+}
+
 // Utility functions documenting the contour whitelist routines for operations.
 OperationArgDoc RCWhitelistOpArgDoc(){
     OperationArgDoc out;
@@ -568,6 +628,24 @@ OperationArgDoc NCWhitelistOpArgDoc(){
                      R"***(^(?!Left Parotid).*$)***"};
     out.default_val = ".*";
     out.expected = true;
+
+    return out;
+}
+
+OperationArgDoc CCWhitelistOpArgDoc(){
+    OperationArgDoc out;
+
+    out.name = "ROISelection";
+    out.desc = "Select one or more contour regions of interest (aka contour collection)."_s
+               + " Note that each region of interest may be comprised of multiple individual contours."_s
+               + GenericSelectionInfo("contour collections", "contours");
+    out.default_val = "all";
+    out.expected = true;
+    out.examples = { "last", "first", "all", "none", 
+                     "#0", "#-0",
+                     "!last", "!#-3",
+                     "key@.*value.*", "key1@.*value1.*;key2@^value2$;first",
+                     "numerous", "fewest", "more-than(5)", "!fewer-than(10)" };
 
     return out;
 }
