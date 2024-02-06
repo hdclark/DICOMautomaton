@@ -48,17 +48,16 @@ OperationDoc OpArgDocPromoteMetadata() {
     out.notes.emplace_back(
         "Composite objects can have different metadata for each sub-object. For example, image arrays are composed"
         " of multiple images, and each image can have it's own metadata (e.g., ImagePosition or SliceNumber)."
-        " This operation will only succeed if all sub-objects have identical metadata."
+        " How multiple distinct metadata values are handled can be adjusted."
     );
     out.notes.emplace_back(
         "Selectors for this operation are only considered when you explicitly provide them."
         " By default, this operation will not select any objects."
     );
     out.notes.emplace_back(
-        "This operation can only extract a single metadata key-value from a single selected object per invocation."
-    );
-    out.notes.emplace_back(
-        "This operation will succeed only if a metadata key-value is promoted to the global parameter table."
+        "This operation will succeed only if a metadata key-value is written to the global parameter table."
+        " If no objects are selected or no metadata is found, the specified key will be removed from the"
+        " table."
     );
 
     out.args.emplace_back();
@@ -74,10 +73,22 @@ OperationDoc OpArgDocPromoteMetadata() {
     out.args.back().desc = "The key to assign the metadata value when it is stored in the global parameter table."
                            "\n\n"
                            "An existing metadata key-value with the given key will be overwritten if the promotion is"
-                           " successful.";
+                           " successful."
+                           "\n\n"
+                           "Note that any existing key will initially be removed, and only replaced if the promotion"
+                           " is successful.";
     out.args.back().default_val = "unspecified";
     out.args.back().expected = true;
     out.args.back().examples = { "extracted_ROIName", "xyz_from_contours" };
+
+    out.args.emplace_back();
+    out.args.back().name = "ValueSeparator";
+    out.args.back().desc = "If multiple distinct metadata values are present, they will be combined together with"
+                           " this separator. Providing an empty separator will disable concatenation and only one value"
+                           " (the last sorted value) will be promoted.";
+    out.args.back().default_val = R"***(\)***";
+    out.args.back().expected = false;
+    out.args.back().examples = { R"***(\)***", "", ",", "\t" };
 
     out.args.emplace_back();
     out.args.back() = RCWhitelistOpArgDoc();
@@ -149,6 +160,7 @@ bool PromoteMetadata(Drover &DICOM_data,
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto KeySelection = OptArgs.getValueStr("KeySelection").value();
     const auto NewKey = OptArgs.getValueStr("NewKey").value();
+    const auto ValueSeparator = OptArgs.getValueStr("ValueSeparator").value_or(R"***(\)***");
 
     const auto NormalizedROILabelRegexOpt = OptArgs.getValueStr("NormalizedROILabelRegex");
     const auto ROILabelRegexOpt = OptArgs.getValueStr("ROILabelRegex");
@@ -170,11 +182,12 @@ bool PromoteMetadata(Drover &DICOM_data,
     //-----------------------------------------------------------------------------------------------------------------
 
     // Inserts the key-value's value, but only if there is a single unique value extracted.
-    bool metadata_was_promoted = false;
-    const auto process = [&](const std::set<std::string> &values){
-        if(values.size() == 1UL){
-            InvocationMetadata[NewKey] = *(std::begin(values));
-            metadata_was_promoted = true;
+    InvocationMetadata.erase(NewKey);
+    std::set<std::string> values;
+
+    const auto ingest = [&](const std::set<std::string> &l_values){
+        for(const auto &v : l_values){
+            values.insert(v);
         }
         return;
     };
@@ -186,7 +199,7 @@ bool PromoteMetadata(Drover &DICOM_data,
         auto CCs = Whitelist( CCs_all, ROILabelRegexOpt, NormalizedROILabelRegexOpt, ROISelectionOpt );
         YLOGINFO("Selected " << CCs.size() << " contour ROIs using selector");
 
-        for(const auto& cc_refw : CCs) process( Extract_Distinct_Values( &(cc_refw.get()), KeySelection ) );
+        for(const auto& cc_refw : CCs) ingest( Extract_Distinct_Values( &(cc_refw.get()), KeySelection ) );
     }
 
     if(ImageSelectionOpt){
@@ -194,7 +207,7 @@ bool PromoteMetadata(Drover &DICOM_data,
         auto IAs = Whitelist( IAs_all, ImageSelectionOpt.value() );
         YLOGINFO("Selected " << IAs.size() << " image arrays using ImageSelection selector");
 
-        for(const auto& x_it_ptr : IAs) process( Extract_Distinct_Values( *x_it_ptr, KeySelection ) );
+        for(const auto& x_it_ptr : IAs) ingest( Extract_Distinct_Values( *x_it_ptr, KeySelection ) );
     }
 
     if(PointSelectionOpt){
@@ -202,7 +215,7 @@ bool PromoteMetadata(Drover &DICOM_data,
         auto PCs = Whitelist( PCs_all, PointSelectionOpt.value() );
         YLOGINFO("Selected " << PCs.size() << " point clouds using PointSelection selector");
 
-        for(const auto& x_it_ptr : PCs) process( Extract_Distinct_Values( *x_it_ptr, KeySelection ) );
+        for(const auto& x_it_ptr : PCs) ingest( Extract_Distinct_Values( *x_it_ptr, KeySelection ) );
     }
 
     if(MeshSelectionOpt){
@@ -210,7 +223,7 @@ bool PromoteMetadata(Drover &DICOM_data,
         auto SMs = Whitelist( SMs_all, MeshSelectionOpt.value() );
         YLOGINFO("Selected " << SMs.size() << " surface meshes using MeshSelection selector");
 
-        for(const auto& x_it_ptr : SMs) process( Extract_Distinct_Values( *x_it_ptr, KeySelection ) );
+        for(const auto& x_it_ptr : SMs) ingest( Extract_Distinct_Values( *x_it_ptr, KeySelection ) );
     }
 
     if(RTPlanSelectionOpt){
@@ -218,7 +231,7 @@ bool PromoteMetadata(Drover &DICOM_data,
         auto TPs = Whitelist( TPs_all, RTPlanSelectionOpt.value() );
         YLOGINFO("Selected " << TPs.size() << " tables using RTPlanSelection selector");
 
-        for(const auto& x_it_ptr : TPs) process( Extract_Distinct_Values( *x_it_ptr, KeySelection ) );
+        for(const auto& x_it_ptr : TPs) ingest( Extract_Distinct_Values( *x_it_ptr, KeySelection ) );
     }
 
     if(LineSelectionOpt){
@@ -226,7 +239,7 @@ bool PromoteMetadata(Drover &DICOM_data,
         auto LSs = Whitelist( LSs_all, LineSelectionOpt.value() );
         YLOGINFO("Selected " << LSs.size() << " line samples using LineSelection selector");
 
-        for(const auto& x_it_ptr : LSs) process( Extract_Distinct_Values( *x_it_ptr, KeySelection ) );
+        for(const auto& x_it_ptr : LSs) ingest( Extract_Distinct_Values( *x_it_ptr, KeySelection ) );
     }
 
     if(TransSelectionOpt){
@@ -234,7 +247,7 @@ bool PromoteMetadata(Drover &DICOM_data,
         auto T3s = Whitelist( T3s_all, TransSelectionOpt.value() );
         YLOGINFO("Selected " << T3s.size() << " tables using TransSelection selector");
 
-        for(const auto& x_it_ptr : T3s) process( Extract_Distinct_Values( *x_it_ptr, KeySelection ) );
+        for(const auto& x_it_ptr : T3s) ingest( Extract_Distinct_Values( *x_it_ptr, KeySelection ) );
     }
 
     if(TableSelectionOpt){
@@ -242,9 +255,19 @@ bool PromoteMetadata(Drover &DICOM_data,
         auto STs = Whitelist( STs_all, TableSelectionOpt.value() );
         YLOGINFO("Selected " << STs.size() << " tables using TableSelection selector");
 
-        for(const auto& x_it_ptr : STs) process( Extract_Distinct_Values( *x_it_ptr, KeySelection ) );
+        for(const auto& x_it_ptr : STs) ingest( Extract_Distinct_Values( *x_it_ptr, KeySelection ) );
     }
 
+    bool metadata_was_promoted = false;
+    if(!values.empty()){
+        metadata_was_promoted = true;
+
+        std::string val;
+        for(const auto &v : values){
+            val = (val.empty() || ValueSeparator.empty()) ? v : (val + ValueSeparator + v);
+        }
+        InvocationMetadata[NewKey] = val;
+    }
     return metadata_was_promoted;
 }
 
