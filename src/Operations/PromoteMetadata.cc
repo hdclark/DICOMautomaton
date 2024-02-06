@@ -82,6 +82,17 @@ OperationDoc OpArgDocPromoteMetadata() {
     out.args.back().examples = { "extracted_ROIName", "xyz_from_contours" };
 
     out.args.emplace_back();
+    out.args.back().name = "DefaultValue";
+    out.args.back().desc = "A value that will be inserted if no items are selected or no metadata is available."
+                           " Omitting this parameter will disable promotion when no metadata are available."
+                           "\n\n"
+                           "Note that insertion of a default value will still result in the operation signalling"
+                           " a failure to promote.";
+    out.args.back().default_val = "N/A";
+    out.args.back().expected = false;
+    out.args.back().examples = { "N/A", "(missing)", "NIL" };
+
+    out.args.emplace_back();
     out.args.back().name = "ValueSeparator";
     out.args.back().desc = "If multiple distinct metadata values are present, they will be combined together with"
                            " this separator. Providing an empty separator will disable concatenation and only one value"
@@ -161,6 +172,7 @@ bool PromoteMetadata(Drover &DICOM_data,
     const auto KeySelection = OptArgs.getValueStr("KeySelection").value();
     const auto NewKey = OptArgs.getValueStr("NewKey").value();
     const auto ValueSeparator = OptArgs.getValueStr("ValueSeparator").value_or(R"***(\)***");
+    const auto DefaultValueOpt = OptArgs.getValueStr("DefaultValue");
 
     const auto NormalizedROILabelRegexOpt = OptArgs.getValueStr("NormalizedROILabelRegex");
     const auto ROILabelRegexOpt = OptArgs.getValueStr("ROILabelRegex");
@@ -267,6 +279,10 @@ bool PromoteMetadata(Drover &DICOM_data,
             val = (val.empty() || ValueSeparator.empty()) ? v : (val + ValueSeparator + v);
         }
         InvocationMetadata[NewKey] = val;
+
+    }else if( values.empty()
+          &&  DefaultValueOpt ){
+        InvocationMetadata[NewKey] = DefaultValueOpt.value();
     }
     return metadata_was_promoted;
 }
