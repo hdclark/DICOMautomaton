@@ -1610,7 +1610,7 @@ bimap<std::string,int64_t> get_ROI_tags_and_numbers(const std::filesystem::path 
             do{
                 ROI_name   = SecondDataSet->getString(0x3006, 0, 0x0026, j);
                 ROI_number = static_cast<int64_t>(SecondDataSet->getSignedLong(0x3006, 0, 0x0022, j));
-                if(ROI_name.size()){
+                if(!ROI_name.empty()){
                     the_pairs[ROI_number] = ROI_name;
                 }
                 ++j;
@@ -1679,6 +1679,56 @@ std::unique_ptr<Contour_Data> get_Contour_Data(const std::filesystem::path &file
         }
     }
 
+    const auto insert_or_append_with_sep_iff_nonempty = [](metadata_map_t &m, const std::string &key, const std::string &val){
+        if(!val.empty()){
+            auto &v = m[key];
+            v += (v.empty()) ? val : ", "_s + val;
+        }
+        return;
+    };
+    for(size_t i=0; (SecondDataSet = TopDataSet->getSequenceItem(0x3006, 0, 0x0080, i)) != nullptr; ++i){ // RTROIObservationsSequence
+        const auto ReferencedROINumber = static_cast<int64_t>(SecondDataSet->getSignedLong(0x3006, 0, 0x0084, 0));
+        const auto ROIName = tags_names_and_numbers[ReferencedROINumber];
+        const auto key = std::make_tuple(ROIName, ReferencedROINumber);
+        contour_collection<double> &cc = mapcache[key];
+
+        const auto ObservationNumber         = SecondDataSet->getString(0x3006, 0, 0x0082, 0);
+        const auto ROIObservationDescription = SecondDataSet->getString(0x3006, 0, 0x0088, 0);
+        const auto RTROIInterpretedType      = SecondDataSet->getString(0x3006, 0, 0x00A4, 0);
+        const auto ROIInterpreter            = SecondDataSet->getString(0x3006, 0, 0x00A6, 0);
+        for(auto& c : cc.contours){
+            insert_or_append_with_sep_iff_nonempty(c.metadata, "RTROIObservationsSequence/ObservationNumber", ObservationNumber);
+            insert_or_append_with_sep_iff_nonempty(c.metadata, "RTROIObservationsSequence/ROIObservationDescription", ROIObservationDescription);
+            insert_or_append_with_sep_iff_nonempty(c.metadata, "RTROIObservationsSequence/RTROIInterpretedType", RTROIInterpretedType);
+            insert_or_append_with_sep_iff_nonempty(c.metadata, "RTROIObservationsSequence/ROIInterpreter", ROIInterpreter);
+        }
+
+        for(size_t j=0; (ThirdDataSet = SecondDataSet->getSequenceItem(0x3006, 0, 0x0086, j)) != nullptr; ++j){ // RTROIIdentificationCodeSequence
+            const auto CodeValue                = ThirdDataSet->getString(0x0008, 0, 0x0100, 0);
+            const auto CodingSchemeDesignator   = ThirdDataSet->getString(0x0008, 0, 0x0102, 0);
+            const auto CodingSchemeVersion      = ThirdDataSet->getString(0x0008, 0, 0x0103, 0);
+            const auto CodeMeaning              = ThirdDataSet->getString(0x0008, 0, 0x0104, 0);
+            const auto MappingResource          = ThirdDataSet->getString(0x0008, 0, 0x0105, 0);
+            const auto ContextGroupVersion      = ThirdDataSet->getString(0x0008, 0, 0x0106, 0);
+            const auto ContextIdentifier        = ThirdDataSet->getString(0x0008, 0, 0x010F, 0);
+            const auto ContextUID               = ThirdDataSet->getString(0x0008, 0, 0x0117, 0);
+            const auto MappingResourceUID       = ThirdDataSet->getString(0x0008, 0, 0x0118, 0);
+            const auto MappingResourceName      = ThirdDataSet->getString(0x0008, 0, 0x0122, 0);
+
+            for(auto& c : cc.contours){
+                insert_or_append_with_sep_iff_nonempty(c.metadata, "RTROIObservationsSequence/RTROIIdentificationCodeSequence/CodeValue", CodeValue);
+                insert_or_append_with_sep_iff_nonempty(c.metadata, "RTROIObservationsSequence/RTROIIdentificationCodeSequence/CodingSchemeDesignator", CodingSchemeDesignator);
+                insert_or_append_with_sep_iff_nonempty(c.metadata, "RTROIObservationsSequence/RTROIIdentificationCodeSequence/CodingSchemeVersion", CodingSchemeVersion);
+                insert_or_append_with_sep_iff_nonempty(c.metadata, "RTROIObservationsSequence/RTROIIdentificationCodeSequence/CodeMeaning", CodeMeaning);
+                insert_or_append_with_sep_iff_nonempty(c.metadata, "RTROIObservationsSequence/RTROIIdentificationCodeSequence/MappingResource", MappingResource);
+                insert_or_append_with_sep_iff_nonempty(c.metadata, "RTROIObservationsSequence/RTROIIdentificationCodeSequence/ContextGroupVersion", ContextGroupVersion);
+                insert_or_append_with_sep_iff_nonempty(c.metadata, "RTROIObservationsSequence/RTROIIdentificationCodeSequence/ContextIdentifier", ContextIdentifier);
+                insert_or_append_with_sep_iff_nonempty(c.metadata, "RTROIObservationsSequence/RTROIIdentificationCodeSequence/ContextUID", ContextUID);
+                insert_or_append_with_sep_iff_nonempty(c.metadata, "RTROIObservationsSequence/RTROIIdentificationCodeSequence/MappingResourceUID", MappingResourceUID);
+                insert_or_append_with_sep_iff_nonempty(c.metadata, "RTROIObservationsSequence/RTROIIdentificationCodeSequence/MappingResourceName", MappingResourceName);
+            }
+        }
+    }
 
     //Now sort the contours into contour_with_metas. We sort based on ROI number.
     for(auto & m_it : mapcache){
