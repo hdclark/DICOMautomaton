@@ -92,6 +92,12 @@ OperationDoc OpArgDocPromoteMetadata() {
     out.args.back().expected = false;
 
     out.args.emplace_back();
+    out.args.back() = CCWhitelistOpArgDoc();
+    out.args.back().name = "ROISelection";
+    out.args.back().default_val = "all";
+    out.args.back().expected = false;
+
+    out.args.emplace_back();
     out.args.back() = IAWhitelistOpArgDoc();
     out.args.back().name = "ImageSelection";
     out.args.back().default_val = "last";
@@ -137,15 +143,16 @@ OperationDoc OpArgDocPromoteMetadata() {
 }
 
 bool PromoteMetadata(Drover &DICOM_data,
-                        const OperationArgPkg& OptArgs,
-                        std::map<std::string, std::string>& InvocationMetadata,
-                        const std::string& FilenameLex){
+                     const OperationArgPkg& OptArgs,
+                     std::map<std::string, std::string>& InvocationMetadata,
+                     const std::string& FilenameLex){
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto KeySelection = OptArgs.getValueStr("KeySelection").value();
     const auto NewKey = OptArgs.getValueStr("NewKey").value();
 
     const auto NormalizedROILabelRegexOpt = OptArgs.getValueStr("NormalizedROILabelRegex");
     const auto ROILabelRegexOpt = OptArgs.getValueStr("ROILabelRegex");
+    const auto ROISelectionOpt = OptArgs.getValueStr("ROISelection");
 
     const auto ImageSelectionOpt = OptArgs.getValueStr("ImageSelection");
 
@@ -171,6 +178,16 @@ bool PromoteMetadata(Drover &DICOM_data,
         }
         return;
     };
+
+    if( ROILabelRegexOpt
+    ||  NormalizedROILabelRegexOpt
+    ||  ROISelectionOpt ){
+        auto CCs_all = All_CCs( DICOM_data );
+        auto CCs = Whitelist( CCs_all, ROILabelRegexOpt, NormalizedROILabelRegexOpt, ROISelectionOpt );
+        YLOGINFO("Selected " << CCs.size() << " contour ROIs using selector");
+
+        for(const auto& cc_refw : CCs) process( Extract_Distinct_Values( &(cc_refw.get()), KeySelection ) );
+    }
 
     if(ImageSelectionOpt){
         auto IAs_all = All_IAs( DICOM_data );
