@@ -180,6 +180,7 @@
 #include "Operations/Polyominoes.h"
 #include "Operations/PreFilterEnormousCTValues.h"
 #include "Operations/PruneEmptyImageDoseArrays.h"
+#include "Operations/PrintMetadata.h"
 #include "Operations/PromoteMetadata.h"
 #include "Operations/PurgeContours.h"
 #include "Operations/QuantizePixels.h"
@@ -437,6 +438,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["Polyominoes"] = std::make_pair(OpArgDocPolyominoes, Polyominoes);
     out["PreFilterEnormousCTValues"] = std::make_pair(OpArgDocPreFilterEnormousCTValues, PreFilterEnormousCTValues);
     out["PruneEmptyImageDoseArrays"] = std::make_pair(OpArgDocPruneEmptyImageDoseArrays, PruneEmptyImageDoseArrays);
+    out["PrintMetadata"] = std::make_pair(OpArgDocPrintMetadata, PrintMetadata);
     out["PromoteMetadata"] = std::make_pair(OpArgDocPromoteMetadata, PromoteMetadata);
     out["PurgeContours"] = std::make_pair(OpArgDocPurgeContours, PurgeContours);
     out["QuantizePixels"] = std::make_pair(OpArgDocQuantizePixels, QuantizePixels);
