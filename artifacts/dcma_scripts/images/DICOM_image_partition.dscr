@@ -14,7 +14,8 @@ FirstOf(){
                       Modality;
                       SeriesNumber;
                       StudyDate;
-                      SeriesDescription',
+                      SeriesDescription;
+                      ImageType',
         Strict = 'true',
         #AutoSelectKeysCommon = 'false',
         #Enforce = ''
