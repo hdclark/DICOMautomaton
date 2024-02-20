@@ -79,11 +79,11 @@ if [ "$ARCH" == "x86_64" ] || [ "$ARCH" == "i686" ] ; then
     find AppDir/usr/lib/ -type f -exec strip '{}' \; || true
 
     # Use continuous artifacts.
-    #wget "https://halclark.ca/linuxdeploy-${ARCH}.AppImage" ||
-    #wget "https://artifacts.assassinate-you.net/linuxdeploy/travis-456/linuxdeploy-${ARCH}.AppImage" ||
+    wget "https://halclark.ca/linuxdeploy-${ARCH}.AppImage" ||
       wget "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-${ARCH}.AppImage"
     chmod 777 ./linuxdeploy-${ARCH}.AppImage
     ./linuxdeploy-${ARCH}.AppImage --appimage-extract # Unpack because FUSE cannot be used in Docker.
+    NO_STRIP=true \
     ./squashfs-root/AppRun \
       --appdir ./AppDir \
       --output appimage \
