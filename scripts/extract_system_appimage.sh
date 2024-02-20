@@ -74,9 +74,13 @@ if [ "$ARCH" == "x86_64" ] || [ "$ARCH" == "i686" ] ; then
     # Awful workaround (step 2 of 2) restore original ldd when no longer needed.
     trap "printf 'Returning system ldd...\n' ; mv "${ldd_path}"{_orig,} ; exit ;" EXIT
 
+    # Manually strip the files using the platform toolchain's strip command.
+    find AppDir/usr/bin/ -type f -exec strip '{}' \; || true
+    find AppDir/usr/lib/ -type f -exec strip '{}' \; || true
+
     # Use continuous artifacts.
-    wget "https://halclark.ca/linuxdeploy-${ARCH}.AppImage" ||
-    wget "https://artifacts.assassinate-you.net/linuxdeploy/travis-456/linuxdeploy-${ARCH}.AppImage" ||
+    #wget "https://halclark.ca/linuxdeploy-${ARCH}.AppImage" ||
+    #wget "https://artifacts.assassinate-you.net/linuxdeploy/travis-456/linuxdeploy-${ARCH}.AppImage" ||
       wget "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-${ARCH}.AppImage"
     chmod 777 ./linuxdeploy-${ARCH}.AppImage
     ./linuxdeploy-${ARCH}.AppImage --appimage-extract # Unpack because FUSE cannot be used in Docker.
