@@ -562,6 +562,9 @@ Whitelist( std::list<std::reference_wrapper<contour_collection<double>>> ccs,
            std::optional<std::string> SpecifierOpt,
            Regex_Selector_Opts Opts){
 
+    if(SpecifierOpt){
+        ccs = Whitelist(ccs, SpecifierOpt.value(), Opts);
+    }
     if(ROILabelRegexOpt){
         ccs = Whitelist(ccs, "ROIName",
                              ROILabelRegexOpt.value(), Opts);
@@ -570,8 +573,11 @@ Whitelist( std::list<std::reference_wrapper<contour_collection<double>>> ccs,
         ccs = Whitelist(ccs, "NormalizedROIName",
                              NormalizedROILabelRegexOpt.value(), Opts);
     }
-    if(SpecifierOpt){
-        ccs = Whitelist(ccs, SpecifierOpt.value(), Opts);
+
+    if( !SpecifierOpt
+    &&  !ROILabelRegexOpt
+    &&  !NormalizedROILabelRegexOpt ){
+        ccs.clear();
     }
     return ccs;
 }
