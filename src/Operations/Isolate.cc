@@ -108,6 +108,12 @@ OperationDoc OpArgDocIsolate() {
     out.args.back().expected = false;
 
     out.args.emplace_back();
+    out.args.back() = CCWhitelistOpArgDoc();
+    out.args.back().name = "ROISelection";
+    out.args.back().default_val = "all";
+    out.args.back().expected = false;
+
+    out.args.emplace_back();
     out.args.back() = NCWhitelistOpArgDoc();
     out.args.back().name = "NormalizedROILabelRegex";
     out.args.back().default_val = ".*";
@@ -165,6 +171,7 @@ bool Isolate(Drover &DICOM_data,
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto NormalizedROILabelRegexOpt = OptArgs.getValueStr("NormalizedROILabelRegex");
     const auto ROILabelRegexOpt = OptArgs.getValueStr("ROILabelRegex");
+    const auto ROISelectionOpt = OptArgs.getValueStr("ROISelection");
 
     const auto ImageSelectionOpt = OptArgs.getValueStr("ImageSelection");
 
@@ -273,17 +280,10 @@ bool Isolate(Drover &DICOM_data,
     DICOM_data.Ensure_Contour_Data_Allocated();
     isolated.Ensure_Contour_Data_Allocated();
 
-    std::list<std::pair<std::string, std::string>> cc_meta_regex;
-    if(NormalizedROILabelRegexOpt){
-        cc_meta_regex.emplace_back( std::make_pair<std::string, std::string>("NormalizedROIName", std::string(NormalizedROILabelRegexOpt.value())) );
-    }
-    if(ROILabelRegexOpt){
-        cc_meta_regex.emplace_back( std::make_pair<std::string, std::string>("ROIName", std::string(ROILabelRegexOpt.value())) );
-    }
-    if(!cc_meta_regex.empty()){
-        auto cc_all = All_CCs( DICOM_data );
-        auto cc_ROIs = Whitelist( cc_all, cc_meta_regex );
-        YLOGINFO("Selected " << cc_ROIs.size() << " contour collections using ROILabelRegex/NormalizedROILabelRegex selectors");
+    auto cc_all = All_CCs( DICOM_data );
+    auto cc_ROIs = Whitelist( cc_all, ROILabelRegexOpt, NormalizedROILabelRegexOpt, ROISelectionOpt );
+    if(cc_ROIs.empty()){
+        YLOGINFO("Selected " << cc_ROIs.size() << " contour collections using ROI selectors");
 
         for(const auto &cc_refw : cc_ROIs){
             const auto ptr = std::addressof(cc_refw.get());

@@ -78,6 +78,12 @@ OperationDoc OpArgDocSelectionIsPresent() {
     out.args.back().expected = false;
 
     out.args.emplace_back();
+    out.args.back() = CCWhitelistOpArgDoc();
+    out.args.back().name = "ROISelection";
+    out.args.back().default_val = "all";
+    out.args.back().expected = false;
+
+    out.args.emplace_back();
     out.args.back() = IAWhitelistOpArgDoc();
     out.args.back().name = "ImageSelection";
     out.args.back().default_val = "last";
@@ -117,6 +123,7 @@ bool SelectionIsPresent(Drover &DICOM_data,
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto NormalizedROILabelRegexOpt = OptArgs.getValueStr("NormalizedROILabelRegex");
     const auto ROILabelRegexOpt = OptArgs.getValueStr("ROILabelRegex");
+    const auto ROISelectionOpt = OptArgs.getValueStr("ROISelection");
 
     const auto ImageSelectionOpt = OptArgs.getValueStr("ImageSelection");
 
@@ -147,6 +154,15 @@ bool SelectionIsPresent(Drover &DICOM_data,
         auto cc_all = All_CCs( DICOM_data );
         auto cc_ROIs = Whitelist( cc_all, { { "ROIName", ROILabelRegexOpt.value() } } );
         YLOGINFO("Selected " << cc_ROIs.size() << " contours using ROILabelRegex selector");
+
+        ++selectors_present;
+        if(!cc_ROIs.empty()) ++selection_present;
+    }
+
+    if(ROISelectionOpt){
+        auto cc_all = All_CCs( DICOM_data );
+        auto cc_ROIs = Whitelist( cc_all, ROISelectionOpt.value() );
+        YLOGINFO("Selected " << cc_ROIs.size() << " contours using ROISelection selector");
 
         ++selectors_present;
         if(!cc_ROIs.empty()) ++selection_present;

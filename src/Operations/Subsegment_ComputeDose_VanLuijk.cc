@@ -126,6 +126,11 @@ OperationDoc OpArgDocSubsegment_ComputeDose_VanLuijk(){
     out.args.back().default_val = ".*";
 
     out.args.emplace_back();
+    out.args.back() = CCWhitelistOpArgDoc();
+    out.args.back().name = "ROISelection";
+    out.args.back().default_val = "all";
+
+    out.args.emplace_back();
     out.args.back().name = "SubsegMethod";
     out.args.back().desc = "The method to use for sub-segmentation. Nested sub-segmentation should almost"
                       " always be preferred unless you know what you're doing. It should be faster too."
@@ -231,6 +236,7 @@ bool Subsegment_ComputeDose_VanLuijk(Drover &DICOM_data,
     const auto ReplaceAllWithSubsegmentStr = OptArgs.getValueStr("ReplaceAllWithSubsegment").value();
     const auto RetainSubsegment = OptArgs.getValueStr("RetainSubsegment").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
+    const auto ROISelection = OptArgs.getValueStr("ROISelection").value();
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto SubsegMethodReq = OptArgs.getValueStr("SubsegMethod").value();
     const auto XSelectionStr = OptArgs.getValueStr("XSelection").value();
@@ -310,8 +316,7 @@ bool Subsegment_ComputeDose_VanLuijk(Drover &DICOM_data,
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
     auto cc_all = All_CCs( DICOM_data );
-    auto cc_ROIs = Whitelist( cc_all, { { "ROIName", ROILabelRegex },
-                                        { "NormalizedROIName", NormalizedROILabelRegex } } );
+    auto cc_ROIs = Whitelist( cc_all, ROILabelRegex, NormalizedROILabelRegex, ROISelection );
 
     if(cc_ROIs.empty()){
         throw std::invalid_argument("No contours selected. Cannot continue.");

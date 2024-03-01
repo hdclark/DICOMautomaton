@@ -146,22 +146,19 @@ OperationDoc OpArgDocDumpROISurfaceMeshes(){
                                  "/path/to/some/mesh" };
 
     out.args.emplace_back();
-    out.args.back() = NCWhitelistOpArgDoc();
-    out.args.back().name = "NormalizedROILabelRegex";
+    out.args.back() = RCWhitelistOpArgDoc();
+    out.args.back().name = "ROILabelRegex";
     out.args.back().default_val = ".*";
 
     out.args.emplace_back();
-    out.args.back().name = "ROILabelRegex";
-    out.args.back().desc = "A regex matching ROI labels/names to consider. The default will match"
-                      " all available ROIs. Be aware that input spaces are trimmed to a single space."
-                      " If your ROI name has more than two sequential spaces, use regex to avoid them."
-                      " All ROIs have to match the single regex, so use the 'or' token if needed."
-                      " Regex is case insensitive and uses grep syntax.";
+    out.args.back() = CCWhitelistOpArgDoc();
+    out.args.back().name = "ROISelection";
+    out.args.back().default_val = "all";
+
+    out.args.emplace_back();
+    out.args.back() = NCWhitelistOpArgDoc();
+    out.args.back().name = "NormalizedROILabelRegex";
     out.args.back().default_val = ".*";
-    out.args.back().expected = true;
-    out.args.back().examples = { ".*", ".*body.*", "body", "Gross_Liver", 
-                             R"***(.*parotid.*|.*sub.*mand.*)***", 
-                            R"***(left_parotid|right_parotid|eyes)***" };
 
     out.args.emplace_back();
     out.args.back().name = "GridRows";
@@ -225,6 +222,7 @@ bool DumpROISurfaceMeshes(Drover &DICOM_data,
     auto OutBase = OptArgs.getValueStr("OutBase").value();
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
+    const auto ROISelection = OptArgs.getValueStr("ROISelection").value();
 
     const auto InclusivityStr = OptArgs.getValueStr("Inclusivity").value();
     const auto ContourOverlapStr = OptArgs.getValueStr("ContourOverlap").value();
@@ -259,11 +257,8 @@ bool DumpROISurfaceMeshes(Drover &DICOM_data,
         OutBase = "/tmp/dicomautomaton_dumproisurfacemeshes";
     }
 
-    //Stuff references to all contours into a list. Remember that you can still address specific contours through
-    // the original holding containers (which are not modified here).
     auto cc_all = All_CCs( DICOM_data );
-    auto cc_ROIs = Whitelist( cc_all, { { "ROIName", ROILabelRegex },
-                                        { "NormalizedROIName", NormalizedROILabelRegex } } );
+    auto cc_ROIs = Whitelist( cc_all, ROILabelRegex, NormalizedROILabelRegex, ROISelection );
     if(cc_ROIs.empty()){
         throw std::invalid_argument("No contours selected. Cannot continue.");
     }

@@ -64,6 +64,11 @@ OperationDoc OpArgDocDecayDoseOverTimeJones2014(){
     out.args.back().default_val = ".*";
 
     out.args.emplace_back();
+    out.args.back() = CCWhitelistOpArgDoc();
+    out.args.back().name = "ROISelection";
+    out.args.back().default_val = "all";
+
+    out.args.emplace_back();
     out.args.back().name = "Course1NumberOfFractions";
     out.args.back().desc = "The number of fractions delivered for the first (i.e., previous) course."
                       " If several apply, you can provide a single effective fractionation scheme's 'n'.";
@@ -149,6 +154,7 @@ bool DecayDoseOverTimeJones2014(Drover &DICOM_data,
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
+    const auto ROISelection = OptArgs.getValueStr("ROISelection").value();
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
 
     //ud.Course1DosePerFraction = std::stod( OptArgs.getValueStr("Course1DosePerFraction").value() );
@@ -188,8 +194,7 @@ bool DecayDoseOverTimeJones2014(Drover &DICOM_data,
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
     auto cc_all = All_CCs( DICOM_data );
-    auto cc_ROIs = Whitelist( cc_all, { { "ROIName", ROILabelRegex },
-                                        { "NormalizedROIName", NormalizedROILabelRegex } } );
+    auto cc_ROIs = Whitelist( cc_all, ROILabelRegex, NormalizedROILabelRegex, ROISelection );
     if(cc_ROIs.empty()){
         throw std::invalid_argument("No contours selected. Cannot continue.");
     }

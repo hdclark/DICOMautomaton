@@ -104,6 +104,11 @@ OperationDoc OpArgDocApplyCalibrationCurve(){
     out.args.back().name = "ROILabelRegex";
     out.args.back().default_val = ".*";
 
+    out.args.emplace_back();
+    out.args.back() = CCWhitelistOpArgDoc();
+    out.args.back().name = "ROISelection";
+    out.args.back().default_val = "all";
+
     return out;
 }
 
@@ -124,6 +129,7 @@ bool ApplyCalibrationCurve(Drover &DICOM_data,
 
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
+    const auto ROISelection = OptArgs.getValueStr("ROISelection").value();
 
     //-----------------------------------------------------------------------------------------------------------------
 
@@ -155,8 +161,7 @@ bool ApplyCalibrationCurve(Drover &DICOM_data,
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
     auto cc_all = All_CCs( DICOM_data );
-    auto cc_ROIs = Whitelist( cc_all, { { "ROIName", ROILabelRegex },
-                                        { "NormalizedROIName", NormalizedROILabelRegex } } );
+    auto cc_ROIs = Whitelist( cc_all, ROILabelRegex, NormalizedROILabelRegex, ROISelection );
     if(cc_ROIs.empty()){
         throw std::invalid_argument("No contours selected. Cannot continue.");
     }

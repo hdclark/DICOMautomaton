@@ -108,15 +108,15 @@ OperationDoc OpArgDocPromoteMetadata() {
     out.args.back().expected = false;
 
     out.args.emplace_back();
-    out.args.back() = NCWhitelistOpArgDoc();
-    out.args.back().name = "NormalizedROILabelRegex";
-    out.args.back().default_val = ".*";
-    out.args.back().expected = false;
-
-    out.args.emplace_back();
     out.args.back() = CCWhitelistOpArgDoc();
     out.args.back().name = "ROISelection";
     out.args.back().default_val = "all";
+    out.args.back().expected = false;
+
+    out.args.emplace_back();
+    out.args.back() = NCWhitelistOpArgDoc();
+    out.args.back().name = "NormalizedROILabelRegex";
+    out.args.back().default_val = ".*";
     out.args.back().expected = false;
 
     out.args.emplace_back();

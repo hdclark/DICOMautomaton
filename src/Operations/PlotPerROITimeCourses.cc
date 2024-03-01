@@ -39,6 +39,16 @@ OperationDoc OpArgDocPlotPerROITimeCourses(){
     out.args.back().name = "ROILabelRegex";
     out.args.back().default_val = ".*";
 
+    out.args.emplace_back();
+    out.args.back() = CCWhitelistOpArgDoc();
+    out.args.back().name = "ROISelection";
+    out.args.back().default_val = "all";
+
+    out.args.emplace_back();
+    out.args.back() = NCWhitelistOpArgDoc();
+    out.args.back().name = "NormalizedROILabelRegex";
+    out.args.back().default_val = ".*";
+
     return out;
 }
 
@@ -51,28 +61,13 @@ bool PlotPerROITimeCourses(Drover &DICOM_data,
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
+    const auto ROISelection = OptArgs.getValueStr("ROISelection").value();
+    const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     //-----------------------------------------------------------------------------------------------------------------
-    const auto theregex = Compile_Regex(ROILabelRegex);
-
     auto img_arr = DICOM_data.image_data.back();
 
-
-    //Stuff references to all contours into a list. Remember that you can still address specific contours through
-    // the original holding containers (which are not modified here).
-    std::list<std::reference_wrapper<contour_collection<double>>> cc_all;
-    DICOM_data.Ensure_Contour_Data_Allocated();
-    for(auto & cc : DICOM_data.contour_data->ccs){
-        auto base_ptr = reinterpret_cast<contour_collection<double> *>(&cc);
-        cc_all.push_back( std::ref(*base_ptr) );
-    }
-
-    //Whitelist contours using the provided regex.
-    auto cc_ROIs = cc_all;
-    cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
-                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
-                   const auto& ROIName = ROINameOpt.value();
-                   return !(std::regex_match(ROIName,theregex));
-    });
+    auto cc_all = All_CCs( DICOM_data );
+    auto cc_ROIs = Whitelist( cc_all, ROILabelRegex, NormalizedROILabelRegex, ROISelection );
 
 
     //Compute some aggregate C(t) curves from the available ROIs.

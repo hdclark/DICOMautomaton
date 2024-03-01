@@ -44,6 +44,11 @@ OperationDoc OpArgDocDumpPerROIParams_KineticModel_1Compartment2Input_5Param(){
     out.args.back().default_val = ".*";
 
     out.args.emplace_back();
+    out.args.back() = CCWhitelistOpArgDoc();
+    out.args.back().name = "ROISelection";
+    out.args.back().default_val = "all";
+
+    out.args.emplace_back();
     out.args.back().name = "Filename";
     out.args.back().desc = "A file into which the results should be dumped. If the filename is empty, the"
                       " results are dumped to the console only.";
@@ -75,6 +80,7 @@ bool DumpPerROIParams_KineticModel_1Compartment2Input_5Param(
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
+    const auto ROISelection = OptArgs.getValueStr("ROISelection").value();
     const auto Filename = OptArgs.getValueStr("Filename").value();
     const auto Separator = OptArgs.getValueStr("Separator").value();
 
@@ -104,12 +110,7 @@ bool DumpPerROIParams_KineticModel_1Compartment2Input_5Param(
     }
 
     //Whitelist contours using the provided regex.
-    auto cc_ROIs = cc_all;
-    cc_ROIs.remove_if([=](std::reference_wrapper<contour_collection<double>> cc) -> bool {
-                   const auto ROINameOpt = cc.get().contours.front().GetMetadataValueAs<std::string>("ROIName");
-                   const auto& ROIName = ROINameOpt.value();
-                   return !(std::regex_match(ROIName,theregex));
-    });
+    auto cc_ROIs = Whitelist( cc_all, ROILabelRegex, {}, ROISelection );
     if(cc_ROIs.empty()){
         throw std::runtime_error("No contours selected/remaining. Cannot continue.");
     }
