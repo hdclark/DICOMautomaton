@@ -21,7 +21,7 @@
 #include <map>
 
 
-// Read bytes from a file.
+// Read and write bytes from/to a file.
 std::vector<char> read_file(const std::string &filename){
     std::vector<char> out;
 
@@ -39,12 +39,6 @@ std::vector<char> read_file(const std::string &filename){
     return out;
 }
 
-void print(const std::vector<char> &v){
-    std::cout.write(v.data(), v.size());
-    std::cout.flush();
-    return;
-}
-
 bool
 write_file(const std::string &filename, const std::vector<char> &v){
     std::ofstream FO(filename, std::ios::binary);
@@ -57,9 +51,17 @@ write_file(const std::string &filename, const std::vector<char> &v){
     return true;
 }
 
+void print(const std::vector<char> &v){
+    std::cout.write(v.data(), v.size());
+    std::cout.flush();
+    return;
+}
+
+// Characters considered insignificant when matching the pattern in the target file.
 bool is_insignificant(char c){
-    //return std::isspace(static_cast<unsigned char>(b));
-    return (c == ' ') || (c == '\r') || (c == '\t');
+    // Note: this approach ignores quoted characters, which *could* be significant!
+    return (c == ' ')  || (c == '\t')
+        || (c == '\r') || (c == '\n');
 }
 
 // Split a byte vector into a vector of tokens.
@@ -81,8 +83,28 @@ std::vector<size_t> tokenize(std::vector<char> &bytes){
         ++i;
     }
 
+    // Ensure the final character is present and maps to the first-past-the-end.
+    orig_pos.emplace_back(i);
+
     bytes = shtl;
     return orig_pos;
+}
+
+// Trim the insignificant characters off the end of a vector.
+void trim_ends(std::vector<char> &bytes){
+    auto it1 = std::find_if_not( std::begin(bytes), std::end(bytes), is_insignificant );
+    auto it2 = std::find_if_not( std::rbegin(bytes), std::rend(bytes), is_insignificant );
+    if( (it1 == std::end(bytes))
+    ||  (it2 == std::rend(bytes)) ){
+        bytes.clear();
+        return;
+    }
+    const auto N_A = std::distance(std::begin(bytes), it1);
+    const auto N_B = std::distance(it2, std::rend(bytes));
+
+    bytes.erase( std::next( std::begin(bytes), N_B), std::end(bytes) );
+    bytes.erase( std::begin(bytes), std::next( std::begin(bytes), N_A) );
+    return;
 }
 
 int main(int argc, char **argv){
@@ -99,21 +121,30 @@ int main(int argc, char **argv){
     const auto vec_pattern = read_file(filename_pattern);
     const auto vec_replace = read_file(filename_replace);
 
-    std::cout << "Contents of pattern file:" << std::endl;
+    std::cout << "Contents of pattern file (" << vec_pattern.size() << " bytes):" << std::endl;
     print(vec_pattern);
     std::cout << std::endl;
 
-    std::cout << "Contents of replacement file:" << std::endl;
+    std::cout << "Contents of replacement file (" << vec_replace.size() << " bytes):" << std::endl;
     print(vec_replace);
     std::cout << std::endl;
 
     auto l_vec_pattern = vec_pattern;
+    auto l_vec_replace = vec_replace;
     auto l_vec_target  = vec_target;
 
     auto map_pattern = tokenize(l_vec_pattern);
     auto map_target = tokenize(l_vec_target);
 
-    // Enumerate all instances and process them backward.
+    // Trim insignificant chars from the front and back of the replacement.
+    // This helps avoid adding extra newlines and irrelevant noise.
+    trim_ends(l_vec_replace);
+
+    std::cout << "Contents of trimmed replacement file (" << l_vec_replace.size() << " bytes):" << std::endl;
+    print(l_vec_replace);
+    std::cout << std::endl;
+
+    // Enumerate all occurences of the pattern.
     using it_t = decltype(std::begin(vec_target));
     std::vector<size_t> matches;
     {
@@ -135,11 +166,12 @@ int main(int argc, char **argv){
             }
         }
     }
-    std::reverse( std::begin(matches), std::end(matches) );
     std::cout << "Found " << matches.size() << " matches." << std::endl;
 
-    // TODO: optionally only replace the first by trimming the rest.
+    // TODO: optionally only replace the first occurence by trimming all but one.
 
+    // Now process the occurences backward so we don't invalidate the vectors/mappings.
+    std::reverse( std::begin(matches), std::end(matches) );
     for(auto &m : matches){
         const auto actual_target_beg = std::begin(vec_target);
         const auto actual_target_end = std::end(vec_target);
@@ -150,25 +182,26 @@ int main(int argc, char **argv){
         auto it = std::next(l_target_beg, m);
 
         // Convert character positions back to the original target array.
+        //
+        // Note that we backtrack to the previous *significant* character so that we can
+        // find the next *insignificant* character. Otherwise, we end up trimming trailing
+        // insignificant characters (e.g., whitespace and newlines) that occur *after*
+        // the pattern, which is often not useful.
         const auto actual_beg_offset = map_target.at( std::distance(l_target_beg, it));
-        //const auto actual_end_offset = actual_beg_offset + vec_pattern.size();
         const auto actual_end_offset = map_target.at( std::distance(l_target_beg, it)
-                                                    + l_vec_pattern.size() );
+                                                    + l_vec_pattern.size() - 1UL ) + 1UL;
 
         // Remove the pattern from the (actual) target.
         auto it2 = vec_target.erase( std::next(actual_target_beg, actual_beg_offset),
                                      std::next(actual_target_beg, actual_end_offset) );
 
-        // TODO: strip insignificant chars from the *front* of the replacement, or otherwise modify so that indentation is
-        // preserved...
+        // TODO: modify so that the replacement's indentation fits adjacent text.
 
         // Insert the replacement into the (actual) target.
-        vec_target.insert(it2, std::begin(vec_replace), std::end(vec_replace));
+        vec_target.insert(it2, std::begin(l_vec_replace), std::end(l_vec_replace));
 
         // Write the (actual) target back to file.
-        std::cout << "Replaced target file." << std::endl;
-        //print(vec_target);
-        //std::cout << std::endl;
+        std::cout << "Implemented replacement." << std::endl;
         write_file(filename_target, vec_target);
     }
 
