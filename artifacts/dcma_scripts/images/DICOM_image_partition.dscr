@@ -72,3 +72,12 @@ OrderImages(
     Key = 'SeriesNumber',
 ){};
 
+# Sort within each partition using the instance number. This helps
+# deal with non-axial images, though it can be impacted by collection
+# procedure.
+OrderImages(
+    ImageSelection = 'Modality@MR',
+    Variant = 'internal',
+    Key = 'InstanceNumber',
+){};
+
