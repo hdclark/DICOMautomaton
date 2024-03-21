@@ -206,6 +206,7 @@ add_library(Operations_objs OBJECT
     WarpImages.cc
     WarpPoints.cc
     While.cc
+    WidenTable.cc
 
     $<$<BOOL:${WITH_SFML}>:PresentationImage.cc>
     $<$<BOOL:${WITH_SFML}>:SFML_Viewer.cc>

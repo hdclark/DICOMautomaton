@@ -227,6 +227,7 @@
 #include "Operations/WarpImages.h"
 #include "Operations/WarpPoints.h"
 #include "Operations/While.h"
+#include "Operations/WidenTable.h"
 
 #ifdef DCMA_USE_SDL
     #include "Operations/SDL_Viewer.h"
@@ -485,6 +486,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["WarpMeshes"] = std::make_pair(OpArgDocWarpMeshes, WarpMeshes);
     out["WarpPoints"] = std::make_pair(OpArgDocWarpPoints, WarpPoints);
     out["While"] = std::make_pair(OpArgDocWhile, While);
+    out["WidenTable"] = std::make_pair(OpArgDocWidenTable, WidenTable);
 
 #ifdef DCMA_USE_SDL
     out["SDL_Viewer"] = std::make_pair(OpArgDocSDL_Viewer, SDL_Viewer);

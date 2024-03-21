@@ -1,6 +1,8 @@
 
 #include <set>
+#include <list>
 #include <string>
+#include <regex>
 #include <iostream>
 #include <limits>
 #include <utility>
@@ -98,6 +100,14 @@ cell<T>::get_col() const {
     template int64_t cell<std::string>::get_col() const;
 #endif
 
+specifiers_t specifiers_intersection(const specifiers_t &a,
+                                     const specifiers_t &b){
+    specifiers_t c;
+    std::set_intersection( std::begin(a), std::end(a),
+                           std::begin(b), std::end(b),
+                           std::inserter(c, std::end(c)) );
+    return c;
+}
 
 // table2 class.
 
@@ -281,8 +291,8 @@ table2::remove(int64_t row, int64_t col){
 }
 
 void
-table2::visit_block( const cell_coord_t& row_bounds,
-                     const cell_coord_t& col_bounds,
+table2::visit_block( cell_coord_t row_bounds,
+                     cell_coord_t col_bounds,
                      const visitor_func_t& f ){
     if(!f){
         throw std::invalid_argument("Invalid user functor");
@@ -330,6 +340,203 @@ table2::visit_standard_block( const visitor_func_t& f ){
     this->visit_block( this->standard_min_max_row(),
                        this->standard_min_max_col(),
                        f );
+    return;
+}
+
+
+specifiers_t
+table2::get_empty_rows( std::optional<cell_coord_t> mmr_opt,
+                        std::optional<cell_coord_t> mmc_opt ) const {
+
+    if(!mmr_opt) mmr_opt = this->min_max_row();
+    if(!mmc_opt) mmc_opt = this->min_max_col();
+
+    specifiers_t nonempty_rows;
+    for(const auto &cell : this->data){
+        const auto r = cell.get_row();
+        const auto c = cell.get_row();
+        if( (mmr_opt.value().first <= r)
+        &&  (r <= mmr_opt.value().second)
+        &&  (mmc_opt.value().first <= c)
+        &&  (c <= mmc_opt.value().second) ){
+            nonempty_rows.insert(r);
+        }
+    };
+
+    specifiers_t empty_rows;
+    for(auto r = mmr_opt.value().first; r <= mmr_opt.value().second; ++r){
+        const auto is_empty = (nonempty_rows.count(r) == 0);
+        if(is_empty){
+            empty_rows.insert(r);
+        }
+    }
+    return empty_rows;
+}
+
+
+void
+table2::delete_rows( specifiers_t rows_to_delete ){
+    if(rows_to_delete.empty()) return;
+
+    const auto mmr = this->min_max_row();
+    const auto mmc = this->min_max_col();
+
+    // Ensure the cells of all deleted row are completely empty.
+    for(const auto &r : rows_to_delete){
+        for(auto c = mmc.first; c <= mmc.second; ++c){
+            this->remove(r, c);
+        }
+    }
+
+    // Get a list of rows that need to be shifted.
+    std::map<int64_t, int64_t> row_map; // row number NEW --> row number OLD.
+    int64_t offset_row = mmr.first;
+    for(auto r = mmr.first; r <= mmr.second; ++r){
+        const auto is_being_removed = (rows_to_delete.count(r) != 0);
+        if(!is_being_removed){
+            if(offset_row != r){
+                row_map[offset_row] = r;
+            }
+            ++offset_row;
+        }
+    }
+
+    // Now walk over the rows that need to be assigned into, always pulling from the OLD
+    // row into the NEW row so we don't overwrite data.
+    //
+    // TODO: there must be a faster way to do this by finding the relevant cells, extracting them, modifying the row
+    // number, and then reinserting.
+    //
+    for(const auto& [new_row, old_row] : row_map){
+        for(auto c = mmc.first; c <= mmc.second; ++c){
+            const auto v_opt = this->value(old_row, c);
+            if(v_opt){
+                this->inject(new_row, c, v_opt.value());
+                this->remove(old_row, c);
+            }
+        }
+    }
+    return;
+}
+
+std::list< table2::data_iter_t >
+table2::find_cells( const std::list<std::regex> &regexes,
+                    std::optional<cell_coord_t> mmr_opt,
+                    std::optional<cell_coord_t> mmc_opt ) const {
+
+    if(!mmr_opt) mmr_opt = this->min_max_row();
+    if(!mmc_opt) mmc_opt = this->min_max_col();
+
+    const auto r_min = mmr_opt.value().first;
+    const auto r_max = mmr_opt.value().second;
+    const auto c_min = mmc_opt.value().first;
+    const auto c_max = mmc_opt.value().second;
+
+    std::list< table2::data_iter_t > out;
+
+    const auto end = std::end(this->data);
+    for(auto it = std::begin(this->data); it != end; ++it){
+        const auto r = it->get_row();
+        const auto c = it->get_col();
+        if( (r_min <= r)
+        &&  (r <= r_max)
+        &&  (c_min <= c)
+        &&  (c <= c_max)
+        &&  std::any_of( std::begin(regexes), std::end(regexes),
+                         [&](const std::regex &r) -> bool {
+                             return std::regex_match(it->val, r);
+                         }) ){
+            out.emplace_back(it);
+        }
+    }
+
+    return out;
+}
+
+std::pair<specifiers_t, specifiers_t>
+table2::get_specifiers( const std::list< data_iter_t > &cells ) const {
+    std::pair<specifiers_t, specifiers_t> out;
+    for(const auto &c_it : cells){
+        out.first.insert(c_it->get_row());
+        out.second.insert(c_it->get_col());
+    }
+    return out;
+}
+
+void
+table2::reshape_widen( specifiers_t key_columns,
+                       specifiers_t ignore_rows,
+                       std::optional<cell_coord_t> mmr_opt,
+                       std::optional<cell_coord_t> mmc_opt ){
+
+    if(!mmr_opt) mmr_opt = this->min_max_row();
+    if(!mmc_opt) mmc_opt = this->min_max_col();
+
+    // Precompute which columns are part of the key, and which are not.
+    specifiers_t l_key_columns;
+    specifiers_t l_data_columns;
+    for(auto c = mmc_opt.value().first; c <= mmc_opt.value().second; ++c){
+        if( key_columns.count(c) != 0 ){
+            l_key_columns.insert(c);
+        }else{
+            l_data_columns.insert(c);
+        }
+    }
+    if(l_key_columns.empty()){
+        throw std::runtime_error("No columns can be used as keys.");
+    }
+
+    // Find the table's largest column, so we know where we can safely append cells.
+    const auto empty_col = this->next_empty_col();
+
+    // Determine which 'group' each row belongs to.
+    using v_t = std::optional<std::string>;
+    using keys_t = std::list<v_t>;
+    std::map<keys_t, specifiers_t> groups;
+    for(auto r = mmr_opt.value().first; r <= mmr_opt.value().second; ++r){
+        if(ignore_rows.count(r) != 0) continue;
+
+        keys_t keys;
+        for(const auto &c : l_key_columns){
+            const v_t v = this->value(r,c);
+            keys.emplace_back(v);
+        }
+        groups[keys].insert(r);
+    }
+
+    // For each group, append non-key cells to the first group member.
+    specifiers_t moved_rows;
+    for(const auto &g : groups){
+        const auto& [keys, rows] = g;
+        auto l_empty_col = empty_col;
+
+        auto r_it = std::begin(rows);
+        const auto end = std::end(rows);
+        const auto first_row = *r_it;
+        ++r_it;
+        for( ; r_it != end; ++r_it){
+            const auto r = *r_it;
+            for(const auto &c : l_key_columns){
+                this->remove(r, c);
+            }
+            for(const auto &c : l_data_columns){
+                const auto v_opt = this->value(r, c);
+                if(v_opt) this->inject(first_row, l_empty_col, v_opt.value());
+
+                this->remove(r, c);
+                ++l_empty_col;
+            }
+            moved_rows.insert(r);
+        }
+    }
+
+    // Now shift cells upward when rows have been removed.
+    // We delete rows that have been moved.
+    // To avoid data loss, we ensure the rows are *completely* empty.
+    moved_rows = specifiers_intersection(moved_rows, this->get_empty_rows());
+
+    // Eliminate the rearranged rows by shifting contents upward.
+    this->delete_rows(moved_rows);
     return;
 }
 

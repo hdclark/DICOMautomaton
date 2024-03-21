@@ -3,8 +3,10 @@
 #pragma once
 
 #include <set>
+#include <list>
 #include <map>
 #include <string>
+#include <regex>
 #include <optional>
 #include <functional>
 #include <utility>
@@ -43,6 +45,12 @@ enum class action {
 using visitor_func_t = std::function< action (int64_t r, int64_t c, std::string& v)>;
 
 using cell_coord_t = std::pair<int64_t, int64_t>;
+
+using specifiers_t = std::set<int64_t>; // Used to specify rows or columns.
+
+// Intersection or "Inner-join."
+specifiers_t specifiers_intersection(const specifiers_t& a,
+                                     const specifiers_t& b);
 
 struct table2 {
     //std::set< std::variant<cell<std::string>,
@@ -90,12 +98,38 @@ struct table2 {
 
     // Visits every cell within the bounds (inclusive), even if not active.
     // Whether the cell should be engaged or disengaged after iteration is controlled by the user functor.
-    void visit_block( const cell_coord_t& row_bounds,
-                      const cell_coord_t& col_bounds,
+    void visit_block( cell_coord_t row_bounds,
+                      cell_coord_t col_bounds,
                       const visitor_func_t& f );
     
     // Same as previous, but visits the 'standard' block (see above).
     void visit_standard_block( const visitor_func_t& f );
+
+
+    // Identify which rows are empty within the specified bounds.
+    specifiers_t get_empty_rows( std::optional<cell_coord_t> row_bounds = {},
+                                 std::optional<cell_coord_t> col_bounds = {}) const;
+
+    // Delete the specified rows, shifting remaining rows upward.
+    void delete_rows( specifiers_t rows_to_delete );
+
+    // Search for cells where the contents match one of the given regexes.
+    using data_iter_t = decltype( std::begin(data) );
+    std::list< data_iter_t >
+    find_cells( const std::list<std::regex> &r,
+                std::optional<cell_coord_t> row_bounds = {},
+                std::optional<cell_coord_t> col_bounds = {} ) const;
+
+    // Convert cell references into row and column specifiers.
+    std::pair<specifiers_t, specifiers_t>
+    get_specifiers( const std::list< data_iter_t > &cells ) const;
+
+    // Make a long table into a wide table by computing the intersection using the key columns.
+    // Rows within the bounds can be selectively ignored (e.g., headers).
+    void reshape_widen( specifiers_t key_columns,
+                        specifiers_t ignore_rows,
+                        std::optional<cell_coord_t> row_bounds = {},
+                        std::optional<cell_coord_t> col_bounds = {} );
 
     // Read from a stream.
     //
