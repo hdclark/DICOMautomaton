@@ -48,7 +48,7 @@ bool CopyTables(Drover &DICOM_data,
         tables_to_copy.push_back(*stp_it);
     }
 
-    //Copy the meshes.
+    //Copy the tables.
     for(auto & stp : tables_to_copy){
         DICOM_data.table_data.emplace_back( std::make_shared<Sparse_Table>( *stp ) );
     }
