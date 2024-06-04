@@ -85,8 +85,9 @@ bool RPCSend(Drover &DICOM_data,
     transport = std::make_shared<TSocket>(Host.c_str(), Port);
     transport = std::make_shared<TBufferedTransport>(transport);
 
-    auto protocol = std::make_shared<TBinaryProtocol>(transport);
-    ::dcma::rpc::ReceiverClient client(protocol);
+    auto input_protocol = std::make_shared<TBinaryProtocol>(transport);
+    auto output_protocol = std::make_shared<TBinaryProtocol>(transport);
+    ::dcma::rpc::ReceiverClient client(input_protocol, output_protocol);
 
     try{
         transport->open();

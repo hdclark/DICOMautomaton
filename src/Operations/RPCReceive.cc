@@ -190,11 +190,16 @@ bool RPCReceive(Drover & /*DICOM_data*/,
     auto processor = std::make_shared<::dcma::rpc::ReceiverProcessor>(handler);
 
     auto transport_server = std::make_shared<TServerSocket>( Port );
-    auto transport_factory = std::make_shared<TBufferedTransportFactory>();
-    auto protocol_factory = std::make_shared<TBinaryProtocolFactory>();
+    auto input_transport_factory = std::make_shared<TBufferedTransportFactory>();
+    auto output_transport_factory = std::make_shared<TBufferedTransportFactory>();
+    auto input_protocol_factory = std::make_shared<TBinaryProtocolFactory>();
+    auto output_protocol_factory = std::make_shared<TBinaryProtocolFactory>();
 
     YLOGINFO("Launching RPC server");
-    TSimpleServer server(processor, transport_server, transport_factory, protocol_factory);
+    //TSimpleServer server(processor, transport_server, transport_factory, protocol_factory);
+    TSimpleServer server(processor,
+                         transport_server, input_transport_factory, output_transport_factory,
+                         input_protocol_factory, output_protocol_factory);
     server.serve();
 
     return true;
