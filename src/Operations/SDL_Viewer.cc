@@ -1239,7 +1239,8 @@ bool SDL_Viewer(Drover &DICOM_data,
     size_t feature_transform_num = 0U;
 
     // ------------------------------------------ Viewer State --------------------------------------------
-    auto background_colour = ImVec4(0.025f, 0.087f, 0.118f, 1.00f);
+    auto background_colour = ImVec4(0.025f, 0.087f, 0.118f, 1.00f); // For dark mode.
+    //auto background_colour = ImVec4(0.8f, 0.9f, 1.0f, 1.00f); // For light mode.
 
     struct image_mouse_pos_s {
         bool mouse_hovering_image;
