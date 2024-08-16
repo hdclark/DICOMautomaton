@@ -100,7 +100,7 @@ bool ComputeContourSimilarity(planar_image_collection<float,double> &imagecoll,
         //Loop over the rois, rows, columns, channels, and finally any selected images (if applicable).
         const auto row_unit   = img.row_unit;
         const auto col_unit   = img.col_unit;
-        const auto ortho_unit = row_unit.Cross( col_unit ).unit();
+        const auto ortho_unit = img.ortho_unit();
    
         planar_image<float,double> img_L = (*selected_imgs.front()); //Create copies for blitting. Could be uint8_t or bool for space saving...
         planar_image<float,double> img_R = (*selected_imgs.front());

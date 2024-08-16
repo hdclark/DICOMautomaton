@@ -244,7 +244,7 @@ bool DumpPerROIParams_KineticModel_1Compartment2Input_5Param(
         //Loop over the rois, rows, columns, channels, and finally any selected images (if applicable).
         const auto row_unit   = img.row_unit;
         const auto col_unit   = img.col_unit;
-        const auto ortho_unit = row_unit.Cross( col_unit ).unit();
+        const auto ortho_unit = img.ortho_unit();
     
         //Look for serialized model_params. Deserialize them. We basically are finding AIF and VIF only here.
         //

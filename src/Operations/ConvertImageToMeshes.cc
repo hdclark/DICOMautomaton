@@ -322,7 +322,7 @@ bool ConvertImageToMeshes(Drover &DICOM_data,
                                && (0 < animg.pxl_dz)
                                && (0 < animg.rows)
                                && (0 < animg.columns);
-                const auto ortho_unit = isvalid ? animg.col_unit.Cross(animg.row_unit).unit() : animg.col_unit;
+                const auto ortho_unit = isvalid ? animg.ortho_unit() : animg.col_unit;
                 if( !isvalid
                 ||  !ortho_unit.isfinite() ){
                     YLOGWARN("Skipping image with no spatial extent");

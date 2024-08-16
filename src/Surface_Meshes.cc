@@ -459,7 +459,7 @@ Marching_Cubes_Implementation(
 
         const auto row_unit = img_refw.get().row_unit.unit();
         const auto col_unit = img_refw.get().col_unit.unit();
-        const auto img_unit = row_unit.Cross(col_unit).unit();
+        const auto img_unit = img_refw.get().ortho_unit();
 
         // Tolerance for deciding if meshed vertices are identical. If too lax, then topological inconsistencies may
         // result; if too tight, then the mesh will either be non-watertight, non-manifold, or will be constructed in an

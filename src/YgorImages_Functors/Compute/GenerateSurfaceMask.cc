@@ -93,7 +93,7 @@ bool ComputeGenerateSurfaceMask(planar_image_collection<float,double> &imagecoll
         //Loop over the rois, rows, columns, channels, and finally any selected images.
         const auto row_unit   = img.row_unit;
         const auto col_unit   = img.col_unit;
-        const auto ortho_unit = row_unit.Cross( col_unit ).unit();
+        const auto ortho_unit = img.ortho_unit();
    
         img.fill_pixels( 0, std::numeric_limits<float>::quiet_NaN() );
         

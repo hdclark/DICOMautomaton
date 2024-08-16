@@ -150,7 +150,7 @@ bool ContourWholeImages(Drover &DICOM_data,
                 cc.contours.back().closed = true;
                 const auto pi = std::acos(-1.0);
                 const auto r = diam_opt.value() / 2.0;
-                const auto ortho_unit = animg.col_unit.Cross( animg.row_unit );
+                const auto ortho_unit = animg.ortho_unit();
 
                 // Select the number of vertices so each vertex is separated at most by a context-relevant spacing.
                 // In this case, we use the smallest in-plane voxel dimension as a relative scale.

@@ -312,7 +312,7 @@ bool WarpImages(Drover &DICOM_data,
         }
         const auto row_unit = (*iap_it)->imagecoll.images.front().row_unit.unit();
         const auto col_unit = (*iap_it)->imagecoll.images.front().col_unit.unit();
-        const auto img_unit = col_unit.Cross(row_unit).unit();
+        const auto img_unit = (*iap_it)->imagecoll.images.front().ortho_unit();
 
         planar_image_adjacency<float,double> img_adj( {}, { { std::ref((*iap_it)->imagecoll) } }, img_unit );
         if(img_adj.int_to_img.empty()){

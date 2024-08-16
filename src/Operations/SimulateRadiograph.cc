@@ -272,7 +272,7 @@ bool SimulateRadiograph(Drover &DICOM_data,
 
     const auto row_unit = img_arr_ptr->imagecoll.images.front().row_unit.unit();
     const auto col_unit = img_arr_ptr->imagecoll.images.front().col_unit.unit();
-    const auto img_unit = col_unit.Cross(row_unit).unit();
+    const auto img_unit = img_arr_ptr->imagecoll.images.front().ortho_unit();
 
     planar_image_adjacency<float,double> img_adj( {}, { { std::ref(img_arr_ptr->imagecoll) } }, img_unit );
     if(img_adj.int_to_img.empty()){

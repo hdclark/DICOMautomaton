@@ -61,7 +61,7 @@ deformation_field::swap_and_rebuild(planar_image_collection<double,double> &in){
 
         const auto row_unit = this->field.images.front().row_unit.unit();
         const auto col_unit = this->field.images.front().col_unit.unit();
-        const auto img_unit = col_unit.Cross(row_unit).unit();
+        const auto img_unit = this->field.images.front().ortho_unit();
 
         planar_image_adjacency<double,double> img_adj( {}, { { std::ref(this->field) } }, img_unit );
         this->adj = img_adj;

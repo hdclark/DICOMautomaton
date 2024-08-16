@@ -75,7 +75,7 @@ bool PerROITimeCourses(planar_image_collection<float,double>::images_list_it_t f
     //Loop over the rois, rows, columns, channels, and finally any selected images (if applicable).
     const auto row_unit   = first_img_it->row_unit;
     const auto col_unit   = first_img_it->col_unit;
-    const auto ortho_unit = row_unit.Cross( col_unit ).unit();
+    const auto ortho_unit = first_img_it->ortho_unit();
 
     //Loop over the ccsl, rois, rows, columns, channels, and finally any selected images (if applicable).
     //for(const auto &roi : rois){

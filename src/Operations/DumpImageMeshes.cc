@@ -254,7 +254,7 @@ bool DumpImageMeshes(Drover &DICOM_data,
                 FO << "o ImageMesh" << std::endl;
                 FO << std::endl;
 
-                const auto ortho_unit = img.col_unit.Cross( img.row_unit ).unit();
+                const auto ortho_unit = img.ortho_unit();
                 int64_t gvc = 1; // Global vertex counter. Used to track vert number because they have whole-file scope.
                                   // Indices start at 1.
                 for(int64_t row = 0; row <= img.rows; ++row){

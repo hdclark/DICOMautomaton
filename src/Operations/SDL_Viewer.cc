@@ -6406,7 +6406,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         }
                         const auto row_unit = (*img_array_ptr_it)->imagecoll.images.front().row_unit.unit();
                         const auto col_unit = (*img_array_ptr_it)->imagecoll.images.front().col_unit.unit();
-                        const auto img_unit = col_unit.Cross(row_unit).unit();
+                        const auto img_unit = (*img_array_ptr_it)->imagecoll.images.front().ortho_unit();
 
                         planar_image_adjacency<float,double> img_adj( {}, { { std::ref((*img_array_ptr_it)->imagecoll) } }, img_unit );
                         if(img_adj.int_to_img.empty()){

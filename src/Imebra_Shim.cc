@@ -3049,7 +3049,7 @@ void Write_Dose_Array(const std::shared_ptr<Image_Array>& IA, const std::filesys
 
     const auto row_unit = IA->imagecoll.images.front().row_unit;
     const auto col_unit = IA->imagecoll.images.front().col_unit;
-    const auto ortho_unit = row_unit.Cross(col_unit);
+    const auto ortho_unit = IA->imagecoll.images.front().ortho_unit();
     const auto ImageOrientationPatient = std::to_string(row_unit.x) + R"***(\)***"_s
                                        + std::to_string(row_unit.y) + R"***(\)***"_s
                                        + std::to_string(row_unit.z) + R"***(\)***"_s
