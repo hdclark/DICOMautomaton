@@ -27,6 +27,7 @@
 #include "XML_Tools.h"
 #include "Metadata.h"
 #include "Structs.h"
+#include "GIS.h"
 
 bool contains_xml_signature(dcma::xml::node &root){
     bool contains_an_xml_named_node = false;
@@ -59,13 +60,7 @@ contains_gpx_gps_coords(dcma::xml::node &root){
 
         if(lat_opt && lon_opt){
             // Mercator projection.
-            const double pi = 3.141592653;
-            const double R = 6'371'000; // mean radius of Earth, in metres.
-            const double l = lon_opt.value() * (pi / 180.0); // converted from degrees to radians.
-            const double t = lat_opt.value() * (pi / 180.0); // converted from degrees to radians.
-            const double x = R * l;
-            const double y = -R * std::log( std::tan( (pi * 0.25) + (t * 0.5) ) );
-
+            const auto [x, y] = gis::project_mercator(lat_opt.value(), lon_opt.value());
             out.back().contours.back().points.emplace_back( x, y, 0.0 );
         }
         return true;

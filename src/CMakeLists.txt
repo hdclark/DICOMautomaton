@@ -33,6 +33,9 @@ set_target_properties(  Structs_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 add_library(            Tables_obj OBJECT Tables.cc)
 set_target_properties(  Tables_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            GIS_obj OBJECT GIS.cc)
+set_target_properties(  GIS_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Partition_Drover_obj OBJECT Partition_Drover.cc)
 set_target_properties(  Partition_Drover_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -417,6 +420,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:XYZ_File_Loader_obj>
     $<TARGET_OBJECTS:XML_File_Loader_obj>
     $<TARGET_OBJECTS:XML_Tools_obj>
+    $<TARGET_OBJECTS:GIS_obj>
     $<TARGET_OBJECTS:XIM_File_Loader_obj>
     $<TARGET_OBJECTS:SNC_File_Loader_obj>
     $<TARGET_OBJECTS:CSV_File_Loader_obj>
@@ -517,6 +521,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:XYZ_File_Loader_obj>
         $<TARGET_OBJECTS:XML_File_Loader_obj>
         $<TARGET_OBJECTS:XML_Tools_obj>
+        $<TARGET_OBJECTS:GIS_obj>
         $<TARGET_OBJECTS:XIM_File_Loader_obj>
         $<TARGET_OBJECTS:SNC_File_Loader_obj>
         $<TARGET_OBJECTS:CSV_File_Loader_obj>
