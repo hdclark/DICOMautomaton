@@ -8,6 +8,7 @@
 #include <vector>
 #include <memory>
 #include <functional>
+#include <initializer_list>
 
 #include <filesystem>
 
@@ -99,6 +100,25 @@ search_by_names( node &root,
 
     }
     return continue_searching;
+}
+
+// Wrapper for the previous function, but supporting an initializer list.
+template <class T>
+[[maybe_unused]]
+inline
+bool
+search_by_names( node &root,
+                 std::initializer_list<T> l,
+                 const search_callback_t &f_user,
+                 bool permit_recursive_search = true,
+                 node_chain_t chain = {} ){
+
+    return search_by_names( root,
+                            std::begin(l),
+                            std::end(l),
+                            f_user,
+                            permit_recursive_search,
+                            chain );
 }
 
 }; // namespace xml.

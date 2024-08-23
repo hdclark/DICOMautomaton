@@ -50,10 +50,32 @@ contains_gpx_gps_coords(dcma::xml::node &root){
 
     const bool permit_recursive_search = false;
 
-    // This callback is for individual track points (i.e., vertices).
-    std::vector<std::string> names_trackpoints;
-    names_trackpoints.push_back("trkpt");
+    // Look for some sort of top-level identifier (e.g., name or description).
+    std::optional<std::string> name_opt;
 
+    dcma::xml::search_by_names(root,
+        { "gpx", "metadata", "name" },
+        [&](const dcma::xml::node_chain_t &nc) -> bool {
+            const auto &n = nc.back().get().content;
+            if( !n.empty() ){
+                name_opt = n;
+            }
+            return true;
+        },
+        permit_recursive_search );
+
+    dcma::xml::search_by_names(root,
+        { "gpx", "metadata", "link", "text" },
+        [&](const dcma::xml::node_chain_t &nc) -> bool {
+            const auto &n = nc.back().get().content;
+            if( !n.empty() ){
+                name_opt = n;
+            }
+            return true;
+        },
+        permit_recursive_search );
+
+    // This callback is for handling individual track points (i.e., vertices).
     dcma::xml::search_callback_t f_trkpts = [&](const dcma::xml::node_chain_t &nc) -> bool {
         const auto lat_opt = get_as<double>(nc.back().get().metadata, "lat");
         const auto lon_opt = get_as<double>(nc.back().get().metadata, "lon");
@@ -66,31 +88,74 @@ contains_gpx_gps_coords(dcma::xml::node &root){
         return true;
     };
 
-    // This callback is for individual tracks (i.e., a logical string of vertices with a start and end).
-    std::vector<std::string> names_tracks;
-    names_tracks.push_back("gpx");
-    names_tracks.push_back("trk");
-    names_tracks.push_back("trkseg");
-
-    dcma::xml::search_callback_t f_trks = [&](const dcma::xml::node_chain_t &nc) -> bool {
-        // For each track segment, create a new contour and then recursively search for track points (i.e., vertices).
-        if(out.empty()){
-            out.emplace_back();
-        }
+    // Callback for processing each track segment.
+    //
+    // For each track segment, create a new contour and then recursively search for track points (i.e., vertices).
+    dcma::xml::search_callback_t f_trksegs = [&](const dcma::xml::node_chain_t &nc) -> bool {
+        out.emplace_back();
         out.back().contours.emplace_back();
         dcma::xml::search_by_names(nc.back().get(),
-                                   std::begin(names_trackpoints),
-                                   std::end(names_trackpoints),
+                                   { "trkpt" },
                                    f_trkpts,
                                    permit_recursive_search);
         return true;
     };
 
-    // Perform the search.
+    // Process each track separately, one at a time.
+    //
+    // A track can hold metadata and multiple track segments, which are converted to contours separately.
     dcma::xml::search_by_names(root,
-                               std::begin(names_tracks),
-                               std::end(names_tracks),
-                               f_trks, permit_recursive_search);
+        { "gpx", "trk" },
+        [&](const dcma::xml::node_chain_t &nc) -> bool {
+            decltype(out) shtl;
+            std::swap(out,shtl);
+
+            // Extract track data as contours.
+            dcma::xml::search_by_names(nc.back().get(),
+                                       { "trkseg" },
+                                       f_trksegs,
+                                       permit_recursive_search);
+
+            // Search for track metadata, and assign it to the extracted contours.
+            std::optional<std::string> l_name_opt;
+            dcma::xml::search_by_names(root,
+                { "name" },
+                [&](const dcma::xml::node_chain_t &nc) -> bool {
+                    const auto &n = nc.back().get().content;
+                    if( !n.empty() ){
+                        l_name_opt = n;
+                    }
+                    return true;
+                },
+                permit_recursive_search );
+
+            if(l_name_opt){
+                for(auto &cc : out){
+                    for(auto &c : cc.contours){
+                        insert_if_new(c.metadata, "ROIName", name_opt.value());
+                    }
+                }
+            }
+
+            // Merge the temporary buffer into the outgoing list.
+            std::swap(out,shtl);
+            shtl.remove_if([](const contour_collection<double> &cc){
+                return cc.contours.empty();
+            });
+            out.merge(shtl);
+            return true;
+        },
+        permit_recursive_search);
+
+    // Inject top-level metadata if nothing more specific has been found yet.
+    if(name_opt){
+        for(auto &cc : out){
+            for(auto &c : cc.contours){
+                insert_if_new(c.metadata, "ROIName", name_opt.value());
+            }
+        }
+    }
+        
     return out;
 }
 
@@ -144,9 +209,12 @@ bool Load_From_XML_Files( Drover &DICOM_data,
 
                 for(auto& c : cc.back().contours){
                     auto l_meta = c.metadata;
+                    insert_if_new(l_meta, "ROIName", Filename.string());
+
                     l_meta = coalesce_metadata_for_rtstruct(l_meta);
-                    l_meta["Filename"] = Filename.string();
-                    l_meta["ROIName"] = Filename.string();
+                    l_meta["Fullpath"] = Filename.string();
+                    l_meta["Filename"] = Filename.filename().string();
+
                     inject_metadata(c.metadata, std::move(l_meta));
                 }
 
