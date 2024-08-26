@@ -5655,14 +5655,14 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 bool altered = false;
 
                 ImGui::Text("Contour colour");
-                if(ImGui::Button("Unique", ImVec2(window_extent.x/2, 0))){ 
+                if(ImGui::Button("Unique", ImVec2(window_extent.x/2.1, 0))){ 
                     std::unique_lock<std::shared_mutex> lock(preprocessed_contour_mutex);
                     contour_colour_from_orientation = false;
                     contour_colours.clear();
                     altered = true;
                 }
                 ImGui::SameLine();
-                if(ImGui::Button("Orientation", ImVec2(window_extent.x/2, 0))){ 
+                if(ImGui::Button("Orientation", ImVec2(window_extent.x/2.1, 0))){ 
                     std::unique_lock<std::shared_mutex> lock(preprocessed_contour_mutex);
                     contour_colour_from_orientation = true;
                     contour_colours.clear();
@@ -5682,15 +5682,15 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 }
 
                 ImGui::Text("Contour display");
-                if(ImGui::Button("All", ImVec2(window_extent.x/3, 0))){ 
+                if(ImGui::Button("All", ImVec2(window_extent.x/3.1, 0))){ 
                     for(auto &p : contour_enabled) p.second = true;
                 }
                 ImGui::SameLine();
-                if(ImGui::Button("None", ImVec2(window_extent.x/3, 0))){ 
+                if(ImGui::Button("None", ImVec2(window_extent.x/3.1, 0))){ 
                     for(auto &p : contour_enabled) p.second = false;
                 }
                 ImGui::SameLine();
-                if(ImGui::Button("Invert", ImVec2(window_extent.x/3, 0))){ 
+                if(ImGui::Button("Invert", ImVec2(window_extent.x/3.1, 0))){ 
                     for(auto &p : contour_enabled) p.second = !p.second;
                 }
 
@@ -5715,6 +5715,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     ImGui::Checkbox(checkbox_id.c_str(), &(contour_enabled[ROIName]));
                     if(!contour_colour_from_orientation_l){
                         ImGui::SameLine();
+                        ImGui::SetNextItemWidth( window_extent.x/3.1 );
                         if(ImGui::ColorEdit4(colour_id.c_str(), &(cc_p.second.x))){
                             altered = true;
                         }
