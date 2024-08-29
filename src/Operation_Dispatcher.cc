@@ -130,6 +130,7 @@
 #include "Operations/Fork.h"
 #include "Operations/FVPicketFence.h"
 #include "Operations/GenerateCalibrationCurve.h"
+#include "Operations/GenerateMapTiles.h"
 #include "Operations/GenerateMeshes.h"
 #include "Operations/GenerateSurfaceMask.h"
 #include "Operations/GenerateSyntheticImages.h"
@@ -389,6 +390,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["Fork"] = std::make_pair(OpArgDocFork, Fork);
     out["FVPicketFence"] = std::make_pair(OpArgDocFVPicketFence, FVPicketFence);
     out["GenerateCalibrationCurve"] = std::make_pair(OpArgDocGenerateCalibrationCurve, GenerateCalibrationCurve);
+    out["GenerateMapTiles"] = std::make_pair(OpArgDocGenerateMapTiles, GenerateMapTiles);
     out["GenerateMeshes"] = std::make_pair(OpArgDocGenerateMeshes, GenerateMeshes);
     out["GenerateSurfaceMask"] = std::make_pair(OpArgDocGenerateSurfaceMask, GenerateSurfaceMask);
     out["GenerateSyntheticImages"] = std::make_pair(OpArgDocGenerateSyntheticImages, GenerateSyntheticImages);

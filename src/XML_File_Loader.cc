@@ -82,7 +82,7 @@ contains_gpx_gps_coords(dcma::xml::node &root){
 
         if(lat_opt && lon_opt){
             // Mercator projection.
-            const auto [x, y] = gis::project_mercator(lat_opt.value(), lon_opt.value());
+            const auto [x, y] = dcma::gis::project_mercator(lat_opt.value(), lon_opt.value());
             out.back().contours.back().points.emplace_back( x, y, 0.0 );
         }
         return true;

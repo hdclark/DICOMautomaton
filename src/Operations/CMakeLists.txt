@@ -109,6 +109,7 @@ add_library(Operations_objs OBJECT
     Fork.cc
     FVPicketFence.cc
     GenerateCalibrationCurve.cc
+    GenerateMapTiles.cc
     GenerateMeshes.cc
     GenerateSurfaceMask.cc
     GenerateSyntheticImages.cc
