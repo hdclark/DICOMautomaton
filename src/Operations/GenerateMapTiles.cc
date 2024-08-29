@@ -225,9 +225,10 @@ bool GenerateMapTiles(Drover &DICOM_data,
     const auto EW_tile_count = (SE_tile_x - NW_tile_x + 1);
     const auto tile_count = NS_tile_count * EW_tile_count;
 
+    YLOGINFO("Bounding box (lat, lon): (" << min_lat << ", " << min_lon << "), (" << max_lat << ", " << max_lon << ")");
+    YLOGINFO("Total required tile count: " << tile_count);
     YLOGDEBUG("north-west tile coords: " << NW_tile_x << ", " << NW_tile_y);
     YLOGDEBUG("south-east tile coords: " << SE_tile_x << ", " << SE_tile_y);
-    YLOGDEBUG("total tile count: " << tile_count);
 
     // Limit the total amount of memory the amalgamated map can consume.
     const auto memory_needed = static_cast<int64_t>(tile_count * TileHeight * TileWidth * 32 * 3);
