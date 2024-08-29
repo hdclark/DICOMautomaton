@@ -1829,7 +1829,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             const auto img_rows = img.rows;
             const auto img_chns = img.channels;
 
-            if(!isininc(1,img_rows,10000) || !isininc(1,img_cols,10000)){
+            if(!isininc(1,img_rows,50000) || !isininc(1,img_cols,50000)){
                 throw std::invalid_argument("Image dimensions are not reasonable. Refusing to continue");
             }
             if(!img_is_rgb && !isininc(1,img_channel+1,img_chns)){
