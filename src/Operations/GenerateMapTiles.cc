@@ -243,7 +243,7 @@ bool GenerateMapTiles(Drover &DICOM_data,
     Explicator X(FilenameLex);
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-    const auto Zoom = static_cast<int64_t>( std::stoll( OptArgs.getValueStr("Zoom").value() ));
+    const auto Zoom = std::stol( OptArgs.getValueStr("Zoom").value() );
 
     const auto TileCacheDirectoryStr = OptArgs.getValueStr("TileCacheDirectory").value();
     const auto ProviderURLStr = OptArgs.getValueStr("ProviderURL").value();
@@ -253,7 +253,7 @@ bool GenerateMapTiles(Drover &DICOM_data,
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto ROISelection = OptArgs.getValueStr("ROISelection").value();
 
-    const auto MaxMemory = std::stol( OptArgs.getValueStr("MaxMemory").value() );
+    const auto MaxMemory = static_cast<int64_t>(std::stoll( OptArgs.getValueStr("MaxMemory").value() ));
     const auto TileWidth = std::stol( OptArgs.getValueStr("TileWidth").value() );
     const auto TileHeight = std::stol( OptArgs.getValueStr("TileHeight").value() );
 
