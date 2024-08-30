@@ -114,15 +114,25 @@ OperationDoc OpArgDocGenerateMapTiles(){
     out.args.back().expected = true;
     out.args.back().examples = { "OSM" };
 
+    const auto swap_backslashes = [](const std::string &s){
+        return Lineate_Vector( SplitStringToVector(s, '\\', 'd'), "/" );
+    };
+    const auto tempdir = swap_backslashes( std::filesystem::temp_directory_path().string() );
+    const auto tcd = swap_backslashes( (std::filesystem::temp_directory_path() / "dcma_generatemaptile_cache").string());
     out.args.emplace_back();
     out.args.back().name = "TileCacheDirectory";
     out.args.back().desc = "The top-level directory wherein tiles are, or can be, cached."
                            "\n\n"
                            "The cache structure follows a common hierarchical organization:"
-                           " '${TileCacheDirectory}/${LayerName}/${zoom}/${x_tile_number}/${y_tile_number}.png'";
-    out.args.back().default_val = (std::filesystem::temp_directory_path() / "dcma_generatemaptile_cache").string();
+                           " '${TileCacheDirectory}/${LayerName}/${zoom}/${x_tile_number}/${y_tile_number}.png'"
+                           "\n\n"
+                           "Note: filenames with backslashes ('\\') will need to escape the backslash character, which"
+                           " is interpretted as an escape character when parsing operation parameters. Backslashes can"
+                           " also be replaced with forwardslahses ('/') in some cases.";
+    out.args.back().default_val = tcd;
     out.args.back().expected = true;
-    out.args.back().examples = { "/tmp/", 
+    out.args.back().examples = { tempdir, 
+                                 ".",
                                  "$HOME/.cache/dcma_map_tiles/" };
 
     out.args.emplace_back();
@@ -174,7 +184,7 @@ bool GenerateMapTiles(Drover &DICOM_data,
     Explicator X(FilenameLex);
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-    const auto Zoom = std::stol( OptArgs.getValueStr("Zoom").value() );
+    const auto Zoom = static_cast<int64_t>( std::stoll( OptArgs.getValueStr("Zoom").value() ));
 
     const auto TileCacheDirectoryStr = OptArgs.getValueStr("TileCacheDirectory").value();
     const auto ProviderURLStr = OptArgs.getValueStr("ProviderURL").value();
@@ -189,6 +199,7 @@ bool GenerateMapTiles(Drover &DICOM_data,
     const auto TileHeight = std::stol( OptArgs.getValueStr("TileHeight").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
+    YLOGINFO("Proceeding with TileCacheDirectory = '" << TileCacheDirectoryStr << "'");
 
     auto cc_all = All_CCs( DICOM_data );
     auto cc_ROIs = Whitelist( cc_all, ROILabelRegex, NormalizedROILabelRegex, ROISelection );
