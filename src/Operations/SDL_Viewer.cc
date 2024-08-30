@@ -1,4 +1,4 @@
-//SDL_Viewer.cc - A part of DICOMautomaton 2020-2023. Written by hal clark.
+//SDL_Viewer.cc - A part of DICOMautomaton 2020-2024. Written by hal clark.
 
 #include <algorithm>
 #include <array>
@@ -3825,6 +3825,41 @@ bool SDL_Viewer(Drover &DICOM_data,
                         }
                         if(ImGui::MenuItem("Light Mode", nullptr, nullptr)){
                             ImGui::StyleColorsLight();
+                        }
+                        ImGui::EndMenu();
+                    }
+                    ImGui::Separator();
+                    if(ImGui::BeginMenu("Log/Notification Verbosity")){
+                        const auto ll_callback = ygor::log_level_to_string(ygor::g_logger.get_callback_min_level());
+                        const auto ll_terminal = ygor::log_level_to_string(ygor::g_logger.get_terminal_min_level());
+                        const auto ll_callback_str = "Current Tray Notification Level: "_s + ll_callback;
+                        const auto ll_terminal_str = "Current Terminal Log Level: "_s + ll_terminal;
+                        ImGui::MenuItem(ll_terminal_str.c_str(), nullptr, false, false);
+                        ImGui::MenuItem(ll_callback_str.c_str(), nullptr, false, false);
+                        ImGui::Separator();
+                        if(ImGui::BeginMenu("Increase")){
+                            if(ImGui::MenuItem("All Logs/Notifications", nullptr, nullptr)){
+                                ygor::g_logger.increase_verbosity();
+                            }
+                            if(ImGui::MenuItem("Terminal/Console Logs", nullptr, nullptr)){
+                                ygor::g_logger.increase_terminal_verbosity();
+                            }
+                            if(ImGui::MenuItem("Tray Notifications", nullptr, nullptr)){
+                                ygor::g_logger.increase_callback_verbosity();
+                            }
+                            ImGui::EndMenu();
+                        }
+                        if(ImGui::BeginMenu("Decrease")){
+                            if(ImGui::MenuItem("All Logs/Notifications", nullptr, nullptr)){
+                                ygor::g_logger.decrease_verbosity();
+                            }
+                            if(ImGui::MenuItem("Terminal/Console Logs", nullptr, nullptr)){
+                                ygor::g_logger.decrease_terminal_verbosity();
+                            }
+                            if(ImGui::MenuItem("Tray Notifications", nullptr, nullptr)){
+                                ygor::g_logger.decrease_callback_verbosity();
+                            }
+                            ImGui::EndMenu();
                         }
                         ImGui::EndMenu();
                     }
