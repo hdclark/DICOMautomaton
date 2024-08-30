@@ -67,7 +67,7 @@ download_url(std::string url, std::filesystem::path p){
             // Wget.
             if(dm.count(download_method::wget) != 0){
                 // Build the invocation.
-                const std::string proto_cmd = R"***(: | wget --no-verbose -U '$USERAGENT' '$URL' -O '$DESTFILE' && echo 'OK' )***";
+                const std::string proto_cmd = R"***(: | wget --no-verbose -U '$USERAGENT' '$URL' -O '$DESTFILE' && echo 'OK')***";
                 std::string cmd = ExpandMacros(proto_cmd, key_vals, "$");
 
                 // Query the user.
@@ -84,7 +84,7 @@ download_url(std::string url, std::filesystem::path p){
             // Curl.
             if(dm.count(download_method::curl) != 0){
                 // Build the invocation.
-                const std::string proto_cmd = R"***(curl --silent --output "$DESTFILE" --user-agent "$USERAGENT" "$URL" && echo OK )***";
+                const std::string proto_cmd = R"***(curl --silent --output "$DESTFILE" --user-agent "$USERAGENT" "$URL" && echo OK)***";
                 std::string cmd = ExpandMacros(proto_cmd, key_vals, "$");
 
                 // Query the user.
