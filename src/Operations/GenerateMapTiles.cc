@@ -31,22 +31,81 @@
 static
 bool
 download_url(std::string url, std::filesystem::path p){
+    // Attempt to use an external command to download a file from a remote server.
+    // It would be better to use a built-in HTTPS-capable client, but that comes with a *lot* of baggage.
+    // For now, until this is no longer suitable, shelling out seems like the better option.
+
+    enum class download_method {
+        wget,
+        curl,
+    };
+
+    std::set<download_method> dm;
+#if defined(_WIN32) || defined(_WIN64)
+    dm.insert( download_method::wget );
+    dm.insert( download_method::curl );
+#endif
+#if defined(__linux__)
+    dm.insert( download_method::wget );
+    dm.insert( download_method::curl );
+#endif
+#if defined(__APPLE__) && defined(__MACH__)
+    dm.insert( download_method::curl );
+#endif
+
     std::map<std::string, std::string> key_vals;
     //key_vals["USERAGENT"] = escape_for_quotes("Mozilla/5.0 (X11; Linux x86_64; rv:102.0) Gecko/20100101 Firefox/102.0");
     key_vals["USERAGENT"] = escape_for_quotes("DICOMautomaton GenerateMapTiles");
     key_vals["URL"] = escape_for_quotes(url);
     key_vals["DESTFILE"] = escape_for_quotes(p.string());
 
-    // Build the invocation.
-    const std::string proto_cmd = R"***(: | wget -U '$USERAGENT' '$URL' -O '$DESTFILE' 1>/dev/null && printf 'OK' )***";
-    std::string cmd = ExpandMacros(proto_cmd, key_vals, "$");
+    bool success = false;
+    int64_t tries = 0;
+    while((tries++ < 3) && !success){
+        try{
 
-    // Query the user.
-    YLOGDEBUG("About to invoke shell command: '" << cmd << "'");
-    auto res = Execute_Command_In_Pipe(cmd);
-    res = escape_for_quotes(res); // Trim newlines and unprintable characters.
-    YLOGDEBUG("Received response: '" << res << "'");
-    const bool success = (res == "OK");
+            // Wget.
+            if(dm.count(download_method::wget) != 0){
+                // Build the invocation.
+                const std::string proto_cmd = R"***(: | wget --no-verbose -U '$USERAGENT' '$URL' -O '$DESTFILE' && echo 'OK' )***";
+                std::string cmd = ExpandMacros(proto_cmd, key_vals, "$");
+
+                // Query the user.
+                YLOGDEBUG("About to invoke shell command: '" << cmd << "'");
+                auto res = Execute_Command_In_Pipe(cmd);
+                res = escape_for_quotes(res); // Trim newlines and unprintable characters.
+                YLOGDEBUG("Received response: '" << res << "'");
+
+                // Break out of the while loop on success.
+                success = (res == "OK");
+                if(success) break;
+            }
+
+            // Curl.
+            if(dm.count(download_method::curl) != 0){
+                // Build the invocation.
+                const std::string proto_cmd = R"***(curl --silent --output '$DESTFILE' --user-agent '$USERAGENT' '$URL' && echo 'OK' )***";
+                std::string cmd = ExpandMacros(proto_cmd, key_vals, "$");
+
+                // Query the user.
+                YLOGDEBUG("About to invoke shell command: '" << cmd << "'");
+                auto res = Execute_Command_In_Pipe(cmd);
+                res = escape_for_quotes(res); // Trim newlines and unprintable characters.
+                YLOGDEBUG("Received response: '" << res << "'");
+
+                // Break out of the while loop on success.
+                success = (res == "OK");
+                if(success) break;
+            }
+
+        }catch(const std::exception &e){
+            YLOGWARN("URL download failed: '" << e.what() << "'");
+        }
+
+        if(3 <= tries){
+            throw std::runtime_error("Unable to download URL");
+        }
+    }
 
     return success;
 }
