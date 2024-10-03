@@ -79,8 +79,6 @@ if(NOT BUILD_SHARED_LIBS)
     #set(Boost_USE_STATIC_RUNTIME ON)
     set(Boost_USE_STATIC_LIBS ON)
 endif()
-#cmake_policy(SET CMP0167 OLD) # Enable CMake built-in FindBoost module.
-#find_package(Boost CONFIG COMPONENTS serialization iostreams thread system)
 find_package(Boost COMPONENTS serialization iostreams thread system)
 if(NOT Boost_FOUND)
     message(STATUS "find_package(Boost CONFIG) not found, attempting non-config method instead")
@@ -103,13 +101,14 @@ if(WITH_CGAL)
     if(WITH_EIGEN)
         add_definitions(-DCGAL_EIGEN3_ENABLED=1) # Explicitly instruct CGAL to use Eigen.
     endif()
-
-    cmake_policy(PUSH)
-    cmake_policy(SET CMP0167 OLD) # Enable CMake built-in FindBoost module, which CGAL currently depends on.
-    #set(BOOST_DIR ${Boost_DIR} )
     find_package(CGAL REQUIRED COMPONENTS Core)
-    #include(${CGAL_USE_FILE})
-    cmake_policy(POP)
+
+    # This workaround is for a CGAL v4.13 class rename.
+    include(CheckIncludeFileCXX)
+    check_include_file_cxx("CGAL/Labeled_mesh_domain_3.h" DCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER)
+    if(DCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER)
+        add_definitions(-DDCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER=1)
+    endif()
 endif()
 
 if(WITH_NLOPT)

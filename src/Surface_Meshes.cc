@@ -47,8 +47,12 @@
     #include <CGAL/Mesh_complex_3_in_triangulation_3.h>
     #include <CGAL/Mesh_criteria_3.h>
 
+#ifdef DCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER
+    #include <CGAL/Labeled_mesh_domain_3.h>  // Deprecation handling: for CGAL v4.13 and later.
+#else
     #include <CGAL/Implicit_mesh_domain_3.h> // Deprecation handling: for CGAL v4.13 and earlier.
-    //#include <CGAL/Labeled_mesh_domain_3.h>  // Deprecation handling: for CGAL v4.13 and later.
+#endif
+
     #include <CGAL/Mesh_domain_with_polyline_features_3.h>
     #include <CGAL/make_mesh_3.h>
 #endif // DCMA_USE_CGAL
@@ -1642,12 +1646,14 @@ Polyhedron Estimate_Surface_Mesh(
 
     // Define some CGAL types for meshing purposes.
 
+#ifdef DCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER
+    // Deprecation handling: for CGAL v4.13 and later.
+    //using Mesh_domain = CGAL::Mesh_domain_with_polyline_features_3< CGAL::Labeled_mesh_domain_3<Kernel> >;
+#else
     // Deprecation handling: for CGAL v4.13 and earlier.
     using Implicit_Function = decltype(surface_oracle);
     using Mesh_domain = CGAL::Mesh_domain_with_polyline_features_3< CGAL::Implicit_mesh_domain_3<Implicit_Function,Kernel> >;
-
-    // Deprecation handling: for CGAL v4.13 and later.
-    //using Mesh_domain = CGAL::Mesh_domain_with_polyline_features_3< CGAL::Labeled_mesh_domain_3<Kernel> >;
+#endif
 
     using Polyline_3 = std::vector<Point_3>;
 
@@ -1728,16 +1734,18 @@ Polyhedron Estimate_Surface_Mesh(
         err_bound = 0.05 / bounding_sphere_radius;
     }
 
+#ifdef DCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER
+    // Deprecation handling: for CGAL v4.13 and later.
+    Mesh_domain domain = Mesh_domain::create_implicit_mesh_domain(
+                           CGAL::parameters::function = surface_oracle,
+                           CGAL::parameters::bounding_object = cgal_bounding_sphere,
+                           CGAL::parameters::relative_error_bound = err_bound);
+#else
     // Deprecation handling: for CGAL v4.13 and earlier.
     Mesh_domain domain(surface_oracle,
                        cgal_bounding_sphere, 
                        err_bound);
-
-    // Deprecation handling: for CGAL v4.13 and later.
-    //Mesh_domain domain = Mesh_domain::create_implicit_mesh_domain(
-    //                       CGAL::parameters::function = surface_oracle,
-    //                       CGAL::parameters::bounding_object = cgal_bounding_sphere,
-    //                       CGAL::parameters::relative_error_bound = err_bound);
+#endif
 
     domain.add_features(polylines.begin(), polylines.end());
   
