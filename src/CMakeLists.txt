@@ -461,7 +461,8 @@ target_link_libraries (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_freeformoptimization>
     explicator 
     ygor 
-    $<$<BOOL:${WITH_CGAL}>:CGAL>
+    $<$<BOOL:${WITH_CGAL}>:CGAL::CGAL>
+    $<$<BOOL:${WITH_CGAL}>:CGAL::CGAL_Core>
     "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
     $<$<BOOL:${WITH_JANSSON}>:jansson>
     "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
@@ -561,7 +562,8 @@ if(WITH_WT)
         $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_freeformoptimization>
         explicator 
         ygor 
-        $<$<BOOL:${WITH_CGAL}>:CGAL>
+        $<$<BOOL:${WITH_CGAL}>:CGAL::CGAL>
+        $<$<BOOL:${WITH_CGAL}>:CGAL::CGAL_Core>
         "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
         $<$<BOOL:${WITH_JANSSON}>:jansson>
         "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
