@@ -104,6 +104,7 @@ if(WITH_CGAL)
         add_definitions(-DCGAL_EIGEN3_ENABLED=1) # Explicitly instruct CGAL to use Eigen.
     endif()
 
+    cmake_policy(SET CMP0167 OLD) # Enable CMake built-in FindBoost module, which CGAL currently depends on.
     find_package(CGAL REQUIRED COMPONENTS Core)
     include(${CGAL_USE_FILE})
 endif()
