@@ -266,7 +266,6 @@
     #include "Operations/RemeshSurfaceMeshes.h"
     #include "Operations/SeamContours.h"
     #include "Operations/SubdivideSurfaceMeshes.h"
-    #include "Operations/SurfaceBasedRayCastDoseAccumulate.h"
 #endif // DCMA_USE_CGAL
 
 #ifdef DCMA_USE_THRIFT
@@ -526,7 +525,6 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["RemeshSurfaceMeshes"] = std::make_pair(OpArgDocRemeshSurfaceMeshes, RemeshSurfaceMeshes);
     out["SeamContours"] = std::make_pair(OpArgDocSeamContours, SeamContours);
     out["SubdivideSurfaceMeshes"] = std::make_pair(OpArgDocSubdivideSurfaceMeshes, SubdivideSurfaceMeshes);
-    out["SurfaceBasedRayCastDoseAccumulate"] = std::make_pair(OpArgDocSurfaceBasedRayCastDoseAccumulate, SurfaceBasedRayCastDoseAccumulate);
 #endif // DCMA_USE_CGAL
 
 #ifdef DCMA_USE_THRIFT

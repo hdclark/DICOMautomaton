@@ -235,7 +235,6 @@ add_library(Operations_objs OBJECT
     $<$<BOOL:${WITH_CGAL}>:RemeshSurfaceMeshes.cc>
     $<$<BOOL:${WITH_CGAL}>:SeamContours.cc>
     $<$<BOOL:${WITH_CGAL}>:SubdivideSurfaceMeshes.cc>
-    $<$<BOOL:${WITH_CGAL}>:SurfaceBasedRayCastDoseAccumulate.cc>
 
     $<$<BOOL:${WITH_THRIFT}>:ExportDrover.cc>
     $<$<BOOL:${WITH_THRIFT}>:ImportDrover.cc>
