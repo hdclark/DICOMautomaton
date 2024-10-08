@@ -103,10 +103,17 @@ if(WITH_CGAL)
     endif()
     find_package(CGAL REQUIRED COMPONENTS Core)
 
-    # This workaround is for a CGAL v4.13 class rename.
+    # This workaround is for a CGAL v4.13 class and file rename {Implicit,Labeled}_mesh_domain_3.h.
     include(CheckIncludeFileCXX)
-    check_include_file_cxx("CGAL/Labeled_mesh_domain_3.h" DCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER)
-    if(DCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER)
+    # Opt into the newer Labeled_mesh_domain_3.h when available.
+    #check_include_file_cxx("CGAL/Labeled_mesh_domain_3.h" DCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER)
+    #if(DCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER)
+    #    add_definitions(-DDCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER=1)
+    #endif()
+    #
+    # Alternatively, prefer to use the older Implicit_mesh_domain_3.h when available.
+    check_include_file_cxx("CGAL/Implicit_mesh_domain_3.h" DCMA_CGAL_HAS_IMPLICIT_MESH_DOMAIN_3_HEADER)
+    if(NOT DCMA_CGAL_HAS_IMPLICIT_MESH_DOMAIN_3_HEADER)
         add_definitions(-DDCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER=1)
     endif()
 endif()

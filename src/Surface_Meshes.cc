@@ -1648,7 +1648,7 @@ Polyhedron Estimate_Surface_Mesh(
 
 #ifdef DCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER
     // Deprecation handling: for CGAL v4.13 and later.
-    //using Mesh_domain = CGAL::Mesh_domain_with_polyline_features_3< CGAL::Labeled_mesh_domain_3<Kernel> >;
+    using Mesh_domain = CGAL::Mesh_domain_with_polyline_features_3< CGAL::Labeled_mesh_domain_3<Kernel> >;
 #else
     // Deprecation handling: for CGAL v4.13 and earlier.
     using Implicit_Function = decltype(surface_oracle);
