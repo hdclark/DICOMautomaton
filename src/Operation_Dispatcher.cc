@@ -193,6 +193,7 @@
 #include "Operations/ResampleImages.h"
 #include "Operations/RigidWarpImages.h"
 #include "Operations/ScalePixels.h"
+#include "Operations/SelectDirectory.h"
 #include "Operations/SelectFilename.h"
 #include "Operations/SelectionIsPresent.h"
 #include "Operations/SelectSlicesIntersectingROI.h"
@@ -452,6 +453,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ResampleImages"] = std::make_pair(OpArgDocResampleImages, ResampleImages);
     out["RigidWarpImages"] = std::make_pair(OpArgDocRigidWarpImages, RigidWarpImages);
     out["ScalePixels"] = std::make_pair(OpArgDocScalePixels, ScalePixels);
+    out["SelectDirectory"] = std::make_pair(OpArgDocSelectDirectory, SelectDirectory);
     out["SelectFilename"] = std::make_pair(OpArgDocSelectFilename, SelectFilename);
     out["SelectionIsPresent"] = std::make_pair(OpArgDocSelectionIsPresent, SelectionIsPresent);
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);

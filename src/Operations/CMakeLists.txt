@@ -172,6 +172,7 @@ add_library(Operations_objs OBJECT
     ResampleImages.cc
     RigidWarpImages.cc
     ScalePixels.cc
+    SelectDirectory.cc
     SelectFilename.cc
     SelectionIsPresent.cc
     SelectSlicesIntersectingROI.cc
