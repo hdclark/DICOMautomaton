@@ -456,7 +456,7 @@ if(MINGW OR WIN32)
     link_libraries("-mconsole")
     # Override IFileDialogs check to disable.
     # See https://github.com/samhocevar/portable-file-dialogs/issues/50
-    add_definitions(-DPFD_HAS_IFILEDIALOG=1)
+    add_definitions(-DPFD_HAS_IFILEDIALOG=0)
 endif()
 
 # Use the directory where CMakeLists.txt is for inclusions.
