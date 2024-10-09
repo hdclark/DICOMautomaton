@@ -85,7 +85,7 @@ select_directory(std::string query_text){
                                               R"***( Add-Type -AssemblyName System.Windows.Forms ; )***"
                                               R"***( $dialog = New-Object System.Windows.Forms.FolderBrowserDialog ; )***"
                                               R"***( $dialog.Description = '%QUERY' ; )***"
-                                              R"***( if($dialog.ShowDialog() -eq 'OK'){ $dialog.SelectedPath }; )***";
+                                              R"***( if($dialog.ShowDialog() -eq 'OK'){ $dialog.SelectedPath };" )***";
                 std::string cmd = ExpandMacros(proto_cmd, key_vals, "%");
 
                 // Query the user.
