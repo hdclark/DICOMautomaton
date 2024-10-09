@@ -81,33 +81,3 @@ class select_filename {
 };
 
 
-class select_directory {
-    private:
-        std::unique_ptr<pfd::select_folder> dialog;
-        std::chrono::time_point<std::chrono::steady_clock> t_launched;
-        std::any user_data;
-
-    public:
-        select_directory( const std::string &title,
-                          const std::filesystem::path &root = std::filesystem::path() );
-
-        ~select_directory();
-
-        // User data access.
-        void set_user_data(const std::any &);
-        std::any get_user_data() const;
-
-        // Synchronously block while attempting to close the dialog.
-        void terminate();
-
-        // Asynchronously check if the result is ready.
-        bool is_ready() const;
-
-        // Synchronously block until the result is ready.
-        //
-        // Note that calling this will terminate and invalidate the dialog. It can only be called once.
-        std::string get_selection();
-
-};
-
-

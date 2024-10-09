@@ -28,7 +28,7 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
-#include "../Dialogs.h"
+#include "../Dialogs/Selectors.h"
 
 #include "SelectDirectory.h"
 
@@ -86,18 +86,10 @@ bool SelectDirectory(Drover& /*DICOM_data*/,
         throw std::invalid_argument("No key provided for directory name storage");
     }
 
-    // Create a dialog box.
-    //std::filesystem::path open_file_root = std::filesystem::current_path();
-    std::optional<select_directory> selector_opt;
-    if(!selector_opt){
-       selector_opt.emplace("Select directory"_s);
-    }
+    const std::string query_text = "Select directory...";
 
     // Wait for the user to provide input.
-    //
-    // Note: the following blocks by continuous polling.
-    std::string selection = selector_opt.value().get_selection();
-    selector_opt.reset();
+    const std::string selection = select_directory(query_text);
 
     bool ret = true;
     if(selection.empty()){

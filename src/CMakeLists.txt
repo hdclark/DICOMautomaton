@@ -317,6 +317,7 @@ add_library(dialogshim
     Dialogs.cc 
     Dialogs/Text_Query.cc
     Dialogs/Tray_Notification.cc
+    Dialogs/Selectors.cc
 )
 set_target_properties(dialogshim PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 target_link_libraries(dialogshim
