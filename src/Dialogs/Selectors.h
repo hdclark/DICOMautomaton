@@ -12,5 +12,5 @@
 #include <any>
 
 std::string
-select_directory(std::string query_text);
+select_directory(std::string query_text = std::string("Please select a directory..."));
 

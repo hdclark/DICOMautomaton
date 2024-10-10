@@ -55,6 +55,7 @@ select_directory(std::string query_text){
         zenity,
         pshell1,
         pshell2,
+        osascript,
     };
     std::set<query_method> qm;
 #if defined(_WIN32) || defined(_WIN64)
@@ -65,6 +66,7 @@ select_directory(std::string query_text){
     qm.insert( query_method::zenity );
 #endif
 #if defined(__APPLE__) && defined(__MACH__)
+    qm.insert( query_method::osascript );
     qm.insert( query_method::zenity );
 #endif
 
@@ -141,6 +143,27 @@ select_directory(std::string query_text){
                 if(res == "dcmausercancelled"){
                     throw std::runtime_error("User cancelled directory selection");
                 }
+
+                // Break out of the while loop on success.
+                if(!res.empty()){
+                    out = res;
+                    break;
+                }
+            }
+
+            // MacOS osascript.
+            if(qm.count(query_method::osascript) != 0){
+
+                // Build the invocation.
+                //const std::string proto_cmd = R"***(: | osascript -e 'set result to text returned of (display dialog "@QUERY" with title "@TITLE" buttons {"Cancel", "OK"} default button "OK" default answer "@DEFAULT")' 2>/dev/null)***";
+                const std::string proto_cmd = R"***(: | osascript -e 'set odir to the POSIX path of (choose folder with prompt "@QUERY")' 2>/dev/null)***";
+                std::string cmd = ExpandMacros(proto_cmd, key_vals, "@");
+
+                // Query the user.
+                YLOGINFO("About to perform osascript command: '" << cmd << "'");
+                auto res = Execute_Command_In_Pipe(cmd);
+                res = escape_for_quotes(res); // Trim newlines and unprintable characters.
+                YLOGINFO("Received user input: '" << res << "'");
 
                 // Break out of the while loop on success.
                 if(!res.empty()){
