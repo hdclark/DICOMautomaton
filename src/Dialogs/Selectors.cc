@@ -70,8 +70,7 @@ select_directory(std::string query_text){
 
     std::string out;
 
-    int64_t tries = 0;
-    while(tries++ < 3){
+    do{
         try{
 
             // Prepare the query parameters.
@@ -173,9 +172,10 @@ select_directory(std::string query_text){
         }catch(const std::exception &e){
             YLOGWARN("User input (directory selection) failed: '" << e.what() << "'");
         }
-    }
 
-    if(3 <= tries){
+    }while(false);
+
+    if(out.empty()){
         throw std::runtime_error("Unable to query user for directory selection");
     }
 
