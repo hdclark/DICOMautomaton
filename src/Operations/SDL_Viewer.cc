@@ -3056,7 +3056,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
             const auto res = Operation_Dispatcher(DICOM_data, l_InvocationMetadata, FilenameLex, Operations);
             if(!res){
-                YLOGWARN("DICOM export failed");
+                YLOGWARN("Export failed");
             }
 
             return;
@@ -3693,15 +3693,44 @@ bool SDL_Viewer(Drover &DICOM_data,
                         if( ImGui::MenuItem("Images as DICOM CT") ){
                             export_as_DICOM("export images DICOM CT");
                         }
+                        if( ImGui::IsItemHovered()){
+                            ImGui::BeginTooltip();
+                            ImGui::Text("Note: exports the images currently being displayed in the image viewer.");
+                            ImGui::EndTooltip();
+                        }
                         if( ImGui::MenuItem("Images as DICOM MR") ){
                             export_as_DICOM("export images DICOM MR");
+                        }
+                        if( ImGui::IsItemHovered()){
+                            ImGui::BeginTooltip();
+                            ImGui::Text("Note: exports the images currently being displayed in the image viewer.");
+                            ImGui::EndTooltip();
                         }
                         if( ImGui::MenuItem("Images as DICOM RTDOSE") ){
                             export_as_DICOM("export images DICOM RTDOSE");
                         }
+                        if( ImGui::IsItemHovered()){
+                            ImGui::BeginTooltip();
+                            ImGui::Text("Note: exports the images currently being displayed in the image viewer.");
+                            ImGui::EndTooltip();
+                        }
+                        ImGui::Separator();
+                        if( ImGui::MenuItem("Original images") ){
+                            export_as_DICOM("export original images");
+                        }
+                        if( ImGui::IsItemHovered()){
+                            ImGui::BeginTooltip();
+                            ImGui::Text("Note: exports the images currently being displayed in the image viewer.");
+                            ImGui::EndTooltip();
+                        }
                         ImGui::Separator();
                         if( ImGui::MenuItem("Contours as DICOM RTSTRUCT") ){
                             export_as_DICOM("export contours DICOM RTSTRUCT");
+                        }
+                        if( ImGui::IsItemHovered()){
+                            ImGui::BeginTooltip();
+                            ImGui::Text("Note: exports all loaded and saved contours. Does not export unsaved contours in contouring mode!");
+                            ImGui::EndTooltip();
                         }
                         ImGui::EndMenu();
                     }
