@@ -164,7 +164,7 @@ EOF
           -v '${BUILD_DIR}':/chroot/dcma/:rw \
           -v '${PORTABLE_BIN_DIR}':/pbin/:rw \
           -w / \
-          dicomautomaton_webserver_debian_buster:latest \
+          dcma_build_base_debian_buster:latest \
           /chroot/dcma/docker_run.sh
       "
 
@@ -194,7 +194,7 @@ EOF
           -v '${BUILD_DIR}':/start/:rw \
           -v '${PORTABLE_BIN_DIR}':/pbin/:rw \
           -w /start/ \
-          dicomautomaton_webserver_debian_buster:latest \
+          dcma_build_base_debian_buster:latest \
           /start/docker_run.sh
       "
 
@@ -223,7 +223,7 @@ EOF
           -v '${BUILD_DIR}':/start/:rw \
           -v '${PORTABLE_BIN_DIR}':/pbin/:rw \
           -w /start/ \
-          dicomautomaton_webserver_arch:latest \
+          dcma_build_base_arch:latest \
           /start/docker_run.sh
       "
 
