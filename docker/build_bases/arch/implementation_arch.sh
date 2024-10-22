@@ -88,23 +88,24 @@ mkdir -p /var/empty/.config/yay
 chown -R builduser:builduser /var/empty
 printf '\n''builduser ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
 
+git config --global --add safe.directory "*"
+
 
 # Download an AUR helper in case it is needed later.
 #
 # Note: `su - builduser -c "yay -S --noconfirm packageA packageB ..."`
 if ! command -v yay &>/dev/null ; then
     cd /tmp
-    yay_version='10.3.1'
+    yay_version='12.4.2'
     yay_arch="$(uname -m)"
     wget "https://github.com/Jguer/yay/releases/download/v${yay_version}/yay_${yay_version}_${yay_arch}.tar.gz"
     tar -axf yay_*tar.gz
     mv yay_*/yay /tmp/
     rm -rf yay_*
     chmod 777 yay
-    su - builduser -c "cd /tmp && ./yay -S --mflags --skipinteg --nopgpfetch --noconfirm yay-bin"
+    su - builduser -c "cd /tmp && ./yay -S --mflags --skipinteg --noconfirm yay-bin"
     rm -rf /tmp/yay
 fi
-
 
 # Build something from the AUR.
 #su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm example-git"
