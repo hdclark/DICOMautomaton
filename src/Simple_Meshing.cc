@@ -98,6 +98,7 @@ Estimate_Contour_Correspondence(
     vec3<double> centroid_A = contour_A.Average_Point();
     vec3<double> centroid_B = contour_B.Average_Point();
 
+/*
     // Adjust the contours to make determining the initial correspondence easier.
     if( (N_A > 2) && (N_B > 2) ){
         const bool assume_planar_contours = true;
@@ -123,11 +124,14 @@ Estimate_Contour_Correspondence(
             p += dcentroid;
         }
     }
+*/
 
     auto beg_A = std::begin(contour_A.points);
     auto beg_B = std::begin(contour_B.points);
     auto end_A = std::end(contour_A.points);
     auto end_B = std::end(contour_B.points);
+
+
 
     // Additional metrics needed for alternative meshing heuristics below.
     //const auto total_perimeter_A = contour_A.Perimeter();
@@ -155,6 +159,88 @@ Estimate_Contour_Correspondence(
         }
         //YLOGINFO("Shortest distance is between " << *p_i << " and " << *p_j);
     }
+
+    // Use the convex hull to find correspondences.
+    //std::multimap<uint64_t, uint64_t> hull_edges_A; // vert in A to verts in B.
+    //std::multimap<uint64_t, uint64_t> hull_edges_B; // vert in B to verts in A.
+    std::set<std::pair<uint64_t, uint64_t>> hull_edges; // vert in A to vert in B.
+
+    try{
+        fv_surface_mesh<double, uint64_t> convex_hull_mesh;
+        for(const auto &v : contour_A.points){
+            convex_hull_mesh.vertices.emplace_back(v);
+        }
+        for(const auto &v : contour_B.points){
+            convex_hull_mesh.vertices.emplace_back(v);
+        }
+        using vert_vec_t = decltype(std::begin(convex_hull_mesh.vertices));
+        convex_hull_mesh.faces = Convex_Hull_3<vert_vec_t,uint64_t>( std::begin(convex_hull_mesh.vertices),
+                                                                     std::end(convex_hull_mesh.vertices) );
+
+        // Extract all edges connecting vertices between the contours.
+        for(const auto &f : convex_hull_mesh.faces){
+            const auto v0 = f.at(0);
+            const auto v1 = f.at(1);
+            const auto v2 = f.at(2);
+            const bool v0_is_A = v0 < N_A;
+            const bool v1_is_A = v1 < N_A;
+            const bool v2_is_A = v2 < N_A;
+            const auto v0_adjusted = (v0_is_A) ? v0 : v0 - N_A;
+            const auto v1_adjusted = (v1_is_A) ? v1 : v1 - N_A;
+            const auto v2_adjusted = (v2_is_A) ? v2 : v2 - N_A;
+
+            if( v0_is_A == !v1_is_A){
+                if( v0_is_A ){
+                    hull_edges.insert({v0_adjusted, v1_adjusted});
+                    //hull_edges_B.insert({v1_adjusted, v0_adjusted});
+                    p_i = std::next(beg_A, v0_adjusted);
+                    p_j = std::next(beg_B, v1_adjusted);
+                }else{
+                    hull_edges.insert({v1_adjusted, v0_adjusted});
+                    //hull_edges_B.insert({v0_adjusted, v1_adjusted});
+                    p_i = std::next(beg_A, v1_adjusted);
+                    p_j = std::next(beg_B, v0_adjusted);
+                }
+            }
+            if( v0_is_A == !v2_is_A){
+                if( v0_is_A ){
+                    hull_edges.insert({v0_adjusted, v2_adjusted});
+                    //hull_edges_B.insert({v2_adjusted, v0_adjusted});
+                    p_i = std::next(beg_A, v0_adjusted);
+                    p_j = std::next(beg_B, v2_adjusted);
+                }else{
+                    hull_edges.insert({v2_adjusted, v0_adjusted});
+                    //hull_edges_B.insert({v0_adjusted, v1_adjusted});
+                    p_i = std::next(beg_A, v2_adjusted);
+                    p_j = std::next(beg_B, v0_adjusted);
+                }
+            }
+            if( v2_is_A == !v1_is_A){
+                if( v2_is_A ){
+                    hull_edges.insert({v2_adjusted, v1_adjusted});
+                    //hull_edges_B.insert({v1_adjusted, v2_adjusted});
+                    p_i = std::next(beg_A, v2_adjusted);
+                    p_j = std::next(beg_B, v1_adjusted);
+                }else{
+                    hull_edges.insert({v1_adjusted, v2_adjusted});
+                    //hull_edges_B.insert({v2_adjusted, v1_adjusted});
+                    p_i = std::next(beg_A, v1_adjusted);
+                    p_j = std::next(beg_B, v2_adjusted);
+                }
+            }
+        }
+        if(hull_edges.empty()){
+            throw std::runtime_error("Convex hull was empty");
+        }else{
+            YLOGINFO("Used convex hull to seed contour correspondence");
+        }
+
+    }catch(const std::exception &e){
+        const std::string msg = "Convex hull subroutine: "_s + e.what()
+                              + ", continuing with fallback heuristic stitching method";
+        YLOGWARN(msg);
+    }
+
 
     // Estimates the radius of the circumsphere (i.e., the smallest sphere that intersects all vertices) that bounds the
     // embedded triangle ABC.
@@ -244,6 +330,21 @@ Estimate_Contour_Correspondence(
         p_i_next = (p_i_next == end_A) ? beg_A : p_i_next; // Circular wrap.
         p_j_next = (p_j_next == end_B) ? beg_B : p_j_next; // Circular wrap.
 
+        // There are two options for a new face:
+        //  - p_i, p_i_next, and p_j, and
+        //  - p_i, p_j, and p_j_next.
+
+        const auto indx_p_i = static_cast<uint64_t>(std::distance(beg_A, p_i));
+        const auto indx_p_j = static_cast<uint64_t>(std::distance(beg_B, p_j));
+        const auto indx_p_i_next = static_cast<uint64_t>(std::distance(beg_A, p_i_next));
+        const auto indx_p_j_next = static_cast<uint64_t>(std::distance(beg_B, p_j_next));
+
+        const bool A_depleted = !(N_edges_consumed_A < N_A);
+        const bool B_depleted = !(N_edges_consumed_B < N_B);
+
+        const bool p_i_next_on_hull = (hull_edges.count({indx_p_i_next, indx_p_j}) != 0UL);
+        const bool p_j_next_on_hull = (hull_edges.count({indx_p_i, indx_p_j_next}) != 0UL);
+
 
         // Of the two candidate triangles, select one based on some criteria.
         double criteria_w_i_next = std::numeric_limits<double>::infinity();
@@ -252,9 +353,10 @@ Estimate_Contour_Correspondence(
         double candidate_A_dwperim = 0.0;
         double candidate_B_dwperim = 0.0;
 
-        if(N_edges_consumed_A < N_A){
+        if(!A_depleted){
             // Smallest face area.
             //criteria_w_i_next = 0.5 * ((*p_i_next - *p_i).Cross(*p_j - *p_i) ).length();
+
 
             // Alternate back-and-forth between two ~orthogonal metrics.
             if( (N_edges_consumed_A + N_edges_consumed_B) % 2 == 0){
@@ -362,7 +464,7 @@ Estimate_Contour_Correspondence(
             //candidate_A_dwperim = dwperim;
             //criteria_w_i_next = - d_wperimeter;
         }
-        if(N_edges_consumed_B < N_B){
+        if(!B_depleted){
             // Smallest face area.
             //criteria_w_j_next = 0.5 * ((*p_j_next - *p_j).Cross(*p_i - *p_j) ).length();
 
@@ -524,6 +626,10 @@ YLOGWARN("Terminated meshing early. Mesh may be incomplete.");
         }else if( A_is_valid && !B_is_valid){
             accept_i_next();
         }else if( !A_is_valid && B_is_valid){
+            accept_j_next();
+        }else if(!A_depleted && p_i_next_on_hull){
+            accept_i_next();
+        }else if(!B_depleted && p_j_next_on_hull){
             accept_j_next();
         }else if(criteria_w_i_next < criteria_w_j_next){
             accept_i_next();
