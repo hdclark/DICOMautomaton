@@ -97,6 +97,7 @@ Estimate_Contour_Correspondence(
 
     vec3<double> centroid_A = contour_A.Average_Point();
     vec3<double> centroid_B = contour_B.Average_Point();
+    const auto oblique_connector = (centroid_B - centroid_A).unit();
 
 /*
     // Adjust the contours to make determining the initial correspondence easier.
@@ -178,7 +179,11 @@ Estimate_Contour_Correspondence(
                                                                      std::end(convex_hull_mesh.vertices) );
 
         // Extract all edges connecting vertices between the contours.
+        // Also select a single 'seed' edge used to start the stitching.
+        double best_align = 0.0;
         for(const auto &f : convex_hull_mesh.faces){
+            auto l_p_i = p_i;
+            auto l_p_j = p_j;
             const auto v0 = f.at(0);
             const auto v1 = f.at(1);
             const auto v2 = f.at(2);
@@ -193,39 +198,50 @@ Estimate_Contour_Correspondence(
                 if( v0_is_A ){
                     hull_edges.insert({v0_adjusted, v1_adjusted});
                     //hull_edges_B.insert({v1_adjusted, v0_adjusted});
-                    p_i = std::next(beg_A, v0_adjusted);
-                    p_j = std::next(beg_B, v1_adjusted);
+                    l_p_i = std::next(beg_A, v0_adjusted);
+                    l_p_j = std::next(beg_B, v1_adjusted);
                 }else{
                     hull_edges.insert({v1_adjusted, v0_adjusted});
                     //hull_edges_B.insert({v0_adjusted, v1_adjusted});
-                    p_i = std::next(beg_A, v1_adjusted);
-                    p_j = std::next(beg_B, v0_adjusted);
+                    l_p_i = std::next(beg_A, v1_adjusted);
+                    l_p_j = std::next(beg_B, v0_adjusted);
                 }
             }
             if( v0_is_A == !v2_is_A){
                 if( v0_is_A ){
                     hull_edges.insert({v0_adjusted, v2_adjusted});
                     //hull_edges_B.insert({v2_adjusted, v0_adjusted});
-                    p_i = std::next(beg_A, v0_adjusted);
-                    p_j = std::next(beg_B, v2_adjusted);
+                    l_p_i = std::next(beg_A, v0_adjusted);
+                    l_p_j = std::next(beg_B, v2_adjusted);
                 }else{
                     hull_edges.insert({v2_adjusted, v0_adjusted});
                     //hull_edges_B.insert({v0_adjusted, v1_adjusted});
-                    p_i = std::next(beg_A, v2_adjusted);
-                    p_j = std::next(beg_B, v0_adjusted);
+                    l_p_i = std::next(beg_A, v2_adjusted);
+                    l_p_j = std::next(beg_B, v0_adjusted);
                 }
             }
             if( v2_is_A == !v1_is_A){
                 if( v2_is_A ){
                     hull_edges.insert({v2_adjusted, v1_adjusted});
                     //hull_edges_B.insert({v1_adjusted, v2_adjusted});
-                    p_i = std::next(beg_A, v2_adjusted);
-                    p_j = std::next(beg_B, v1_adjusted);
+                    l_p_i = std::next(beg_A, v2_adjusted);
+                    l_p_j = std::next(beg_B, v1_adjusted);
                 }else{
                     hull_edges.insert({v1_adjusted, v2_adjusted});
                     //hull_edges_B.insert({v2_adjusted, v1_adjusted});
-                    p_i = std::next(beg_A, v1_adjusted);
-                    p_j = std::next(beg_B, v2_adjusted);
+                    l_p_i = std::next(beg_A, v1_adjusted);
+                    l_p_j = std::next(beg_B, v2_adjusted);
+                }
+            }
+
+            if( (v0_is_A == !v1_is_A)
+            ||  (v0_is_A == !v2_is_A)
+            ||  (v2_is_A == !v1_is_A) ){
+                const auto l_align = std::abs(oblique_connector.Dot((*l_p_j - *l_p_i).unit()));
+                if(l_align > best_align){
+                    best_align = l_align;
+                    p_i = l_p_i;
+                    p_j = l_p_j;
                 }
             }
         }
@@ -597,7 +613,7 @@ Estimate_Contour_Correspondence(
             // Accept the j-next move.
             if(N_B < N_edges_consumed_B) throw std::logic_error("Looped contour B");
 
-            if(N_edges_consumed_A % 2 == 0){
+            if(N_edges_consumed_B % 2 == 0){
                 prev_face_N = (*p_j_next - *p_j).Cross(*p_i - *p_j).unit();
             }else{
                 prev_face_N.x = std::numeric_limits<double>::infinity();
@@ -623,19 +639,22 @@ YLOGWARN("Terminated meshing early. Mesh may be incomplete.");
             //       - Invalid number of loops in the implementation above.
             //       - (Possibly) duplicate vertices??
             //       - Possibly something else.
-        }else if( A_is_valid && !B_is_valid){
-            accept_i_next();
-        }else if( !A_is_valid && B_is_valid){
-            accept_j_next();
         }else if(!A_depleted && p_i_next_on_hull){
             accept_i_next();
         }else if(!B_depleted && p_j_next_on_hull){
             accept_j_next();
+
+        }else if( A_is_valid && !B_is_valid){
+            accept_i_next();
+        }else if( !A_is_valid && B_is_valid){
+            accept_j_next();
+
         }else if(criteria_w_i_next < criteria_w_j_next){
             accept_i_next();
         }else{
             accept_j_next();
         }
+
     }
     //YLOGINFO("Completed meshing with N_faces = " << faces.size() << " where N_A + N_B = " << (N_A + N_B));
 
