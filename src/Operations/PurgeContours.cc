@@ -1,4 +1,4 @@
-//PurgeContours.cc - A part of DICOMautomaton 2018. Written by hal clark.
+//PurgeContours.cc - A part of DICOMautomaton 2018, 2024. Written by hal clark.
 
 #include <cmath>
 #include <cstdlib>            //Needed for exit() calls.
@@ -23,9 +23,14 @@ OperationDoc OpArgDocPurgeContours(){
         "This routine purges (deletes) individual contours if they satisfy various criteria.";
         
     out.notes.emplace_back(
-        "This operation considers only individual contours at the moment. It could be extended to operate on whole"
-        " ROIs (i.e., contour_collections), or to perform a separate vote within each ROI. The individual contour"
-        " approach was taken since filtering out small contour 'islands' is the primary use-case."
+        "Each criteria is evaluated separately for each individual contour. Satisfaction of any of the individual"
+        " criteria will result in the contour being purged."
+    );
+    out.notes.emplace_back(
+        "This operation considers individually. It could be extended to operate on whole"
+        " ROIs (i.e., contour_collections), or to perform a separate evaluation within each contour plane."
+        " The individual contour approach was taken since filtering out small contour 'island' artifacts is the"
+        " primary use-case."
     );
 
 
