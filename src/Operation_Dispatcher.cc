@@ -156,6 +156,7 @@
 #include "Operations/ImageRoutineTests.h"
 #include "Operations/ImprintImages.h"
 #include "Operations/InterpolateSlices.h"
+#include "Operations/InvokeStandardScript.h"
 #include "Operations/Isolate.h"
 #include "Operations/IsolatedVoxelFilter.h"
 #include "Operations/LoadFiles.h"
@@ -418,6 +419,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ImageRoutineTests"] = std::make_pair(OpArgDocImageRoutineTests, ImageRoutineTests);
     out["ImprintImages"] = std::make_pair(OpArgDocImprintImages, ImprintImages);
     out["InterpolateSlices"] = std::make_pair(OpArgDocInterpolateSlices, InterpolateSlices);
+    out["InvokeStandardScript"] = std::make_pair(OpArgDocInvokeStandardScript, InvokeStandardScript);
     out["Isolate"] = std::make_pair(OpArgDocIsolate, Isolate);
     out["IsolatedVoxelFilter"] = std::make_pair(OpArgDocIsolatedVoxelFilter, IsolatedVoxelFilter);
     out["LoadFiles"] = std::make_pair(OpArgDocLoadFiles, LoadFiles);
