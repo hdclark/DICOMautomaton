@@ -81,11 +81,8 @@ bool InvokeStandardScript(Drover &DICOM_data,
     const bool op_load_res = Load_Standard_Script( Operations, category, name );
     if(!op_load_res) throw std::runtime_error("Unable to load script");
 
-    // TODO: do I want to support a 'synthetic' parameter table environment?
-    //       Doing so would make it challenging to allow side-effects to the parameter table.
-    //auto l_InvocationMetadata = InvocationMetadata;
-    //l_InvocationMetadata["method"] = contouring_method;
 
+    YLOGINFO("Invoking standard script '" << ScriptStr << "' now");
     const auto res = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, Operations);
     return res;
 }
