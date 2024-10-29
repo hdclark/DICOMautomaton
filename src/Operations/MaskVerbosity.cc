@@ -1,4 +1,4 @@
-//AdjustVerbosity.cc - A part of DICOMautomaton 2024. Written by hal clark.
+//MaskVerbosity.cc - A part of DICOMautomaton 2024. Written by hal clark.
 
 #include <algorithm>
 #include <optional>
@@ -31,18 +31,18 @@
 #include "../Thread_Pool.h"
 #include "../Operation_Dispatcher.h"
 
-#include "AdjustVerbosity.h"
+#include "MaskVerbosity.h"
 
 
-OperationDoc OpArgDocAdjustVerbosity() {
+OperationDoc OpArgDocMaskVerbosity() {
     OperationDoc out;
-    out.name = "AdjustVerbosity";
-    out.aliases.emplace_back("SuppressWarnings");
-    out.aliases.emplace_back("AdjustLogs");
-    out.aliases.emplace_back("AdjustNotifications");
+    out.name = "MaskVerbosity";
+    out.aliases.emplace_back("MaskWarnings");
+    out.aliases.emplace_back("MaskLogs");
+    out.aliases.emplace_back("MaskNotifications");
 
-    out.desc = "This operation is a meta-operation that temporarily adjusts the global log verbosity level."
-               " Child operations are executed with the adjust verbosity level, which affects what log"
+    out.desc = "This operation is a meta-operation that temporarily alters the global log verbosity level."
+               " Child operations are executed with the adjusted verbosity level, which affects what log"
                " messages, and thus notifications, are suppressed.";
 
     out.notes.emplace_back(
@@ -61,9 +61,10 @@ OperationDoc OpArgDocAdjustVerbosity() {
     out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
-    out.args.back().name = "ResetAfterward";
-    out.args.back().desc = "Controls whether the original verbosity levels are reset after executing children"
-                           " operations.";
+    out.args.back().name = "Permanent";
+    out.args.back().desc = "Controls whether the original verbosity levels are reset after invoking children"
+                           " operations. If false, the effect is temporary and applied only to children operations."
+                           " If true, the effect is permanent and applies to all subsequent operations.";
     out.args.back().default_val = "true";
     out.args.back().expected = true;
     out.args.back().examples = { "true", "false" };
@@ -72,13 +73,13 @@ OperationDoc OpArgDocAdjustVerbosity() {
     return out;
 }
 
-bool AdjustVerbosity(Drover &DICOM_data,
-                     const OperationArgPkg& OptArgs,
-                     std::map<std::string, std::string>& InvocationMetadata,
-                     const std::string& FilenameLex){
+bool MaskVerbosity(Drover &DICOM_data,
+                   const OperationArgPkg& OptArgs,
+                   std::map<std::string, std::string>& InvocationMetadata,
+                   const std::string& FilenameLex){
     //-----------------------------------------------------------------------------------------------------------------
     const auto VerbosityStr = OptArgs.getValueStr("Verbosity").value();
-    const auto ResetAfterwardStr = OptArgs.getValueStr("ResetAfterward").value();
+    const auto PermanentStr = OptArgs.getValueStr("Permanent").value();
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_true = Compile_Regex("^tr?u?e?$");
 
@@ -88,7 +89,7 @@ bool AdjustVerbosity(Drover &DICOM_data,
     const bool should_inc = std::regex_match(VerbosityStr, regex_inc);
     const bool should_dec = std::regex_match(VerbosityStr, regex_dec);
 
-    const bool should_reset_afterward = std::regex_match(ResetAfterwardStr, regex_true);
+    const bool make_permanent = std::regex_match(PermanentStr, regex_true);
 
     if( (!should_inc && !should_dec)
     ||  (should_inc != !should_dec) ){
@@ -115,7 +116,7 @@ bool AdjustVerbosity(Drover &DICOM_data,
     const bool res = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, children);
 
     // Reset the log thresholds.
-    if(should_reset_afterward){
+    if(!make_permanent){
         ygor::g_logger.set_callback_min_level(log_lvl_callback);
         ygor::g_logger.set_terminal_min_level(log_lvl_terminal);
     }

@@ -23,7 +23,6 @@
 #include "Structs.h"
 
 #include "Operations/AccumulateRowsColumns.h"
-#include "Operations/AdjustVerbosity.h"
 #include "Operations/AnalyzeHistograms.h"
 #include "Operations/AnalyzeLightRadFieldCoincidence.h"
 #include "Operations/AnalyzePicketFence.h"
@@ -162,6 +161,8 @@
 #include "Operations/LoadFiles.h"
 #include "Operations/LoadFilesInteractively.h"
 #include "Operations/LogScale.h"
+#include "Operations/MaskParameters.h"
+#include "Operations/MaskVerbosity.h"
 #include "Operations/MaxMinPixels.h"
 #include "Operations/MeldDose.h"
 #include "Operations/ModifyContourMetadata.h"
@@ -286,7 +287,6 @@ std::map<std::string, op_packet_t> Known_Operations(){
     std::map<std::string, op_packet_t> out;
 
     out["AccumulateRowsColumns"] = std::make_pair(OpArgDocAccumulateRowsColumns, AccumulateRowsColumns);
-    out["AdjustVerbosity"] = std::make_pair(OpArgDocAdjustVerbosity, AdjustVerbosity);
     out["AnalyzeHistograms"] = std::make_pair(OpArgDocAnalyzeHistograms, AnalyzeHistograms);
     out["AnalyzeLightRadFieldCoincidence"] = std::make_pair(OpArgDocAnalyzeLightRadFieldCoincidence, AnalyzeLightRadFieldCoincidence);
     out["AnalyzePicketFence"] = std::make_pair(OpArgDocAnalyzePicketFence, AnalyzePicketFence);
@@ -425,6 +425,8 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["LoadFiles"] = std::make_pair(OpArgDocLoadFiles, LoadFiles);
     out["LoadFilesInteractively"] = std::make_pair(OpArgDocLoadFilesInteractively, LoadFilesInteractively);
     out["LogScale"] = std::make_pair(OpArgDocLogScale, LogScale);
+    out["MaskParameters"] = std::make_pair(OpArgDocMaskParameters, MaskParameters);
+    out["MaskVerbosity"] = std::make_pair(OpArgDocMaskVerbosity, MaskVerbosity);
     out["MaxMinPixels"] = std::make_pair(OpArgDocMaxMinPixels, MaxMinPixels);
     out["MeldDose"] = std::make_pair(OpArgDocMeldDose, MeldDose);
     out["ModifyContourMetadata"] = std::make_pair(OpArgDocModifyContourMetadata, ModifyContourMetadata);

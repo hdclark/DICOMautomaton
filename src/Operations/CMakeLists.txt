@@ -2,7 +2,6 @@
 
 add_library(Operations_objs OBJECT 
     AccumulateRowsColumns.cc
-    AdjustVerbosity.cc
     AnalyzeHistograms.cc
     AnalyzeLightRadFieldCoincidence.cc
     AnalyzePicketFence.cc
@@ -141,6 +140,8 @@ add_library(Operations_objs OBJECT
     LoadFiles.cc
     LoadFilesInteractively.cc
     LogScale.cc
+    MaskParameters.cc
+    MaskVerbosity.cc
     MaxMinPixels.cc
     MeldDose.cc
     ModifyContourMetadata.cc
