@@ -42,7 +42,7 @@ OperationDoc OpArgDocInvokeStandardScript(){
         "This operation invokes a built-in DICOMautomaton script.";
         
     out.notes.emplace_back(
-        "Scripts may require configuration via paramete table entries in order to function"
+        "Scripts may require configuration via parameter table entries in order to function"
         " correctly. Refer to the scripts themselves for documentation."
     );
         
