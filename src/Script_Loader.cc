@@ -1034,7 +1034,7 @@ Generate_Operation_List( const std::list<script_statement_t> &statements,
             {
                 std::stringstream ss;
                 ss << "Available parameters: ";
-                for(const auto &p : Argument_Lexicon) ss << p.first << " ";
+                for(const auto &p : Argument_Lexicon) ss << "'" << p.first << "' ";
                 report(feedback, script_feedback_severity_t::debug, s.get_valid_cwct(), ss.str());
             }
 
@@ -1058,7 +1058,7 @@ Generate_Operation_List( const std::list<script_statement_t> &statements,
                 if(Exhaustive_Arguments.count(canonical_arg_name) != 0){
                     std::stringstream ss;
                     ss << "Accepted options: ";
-                    for(const auto &p : Exhaustive_Arguments[canonical_arg_name]) ss << p << " ";
+                    for(const auto &p : Exhaustive_Arguments[canonical_arg_name]) ss << "'" << p << "' ";
                     report(feedback, script_feedback_severity_t::debug, a.first.front(), ss.str());
                 }
 
