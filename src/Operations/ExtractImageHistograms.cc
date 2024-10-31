@@ -190,10 +190,22 @@ OperationDoc OpArgDocExtractImageHistograms(){
     out.args.back().desc = "The (fixed) bin width, in units of dose (DICOM units; nominally Gy)."
                            " Note that this is the *maximum* bin width, in practice bins may be"
                            " smaller to account for slop (i.e., excess caused by the extrema being"
-                           " separated by a non-integer number of bins of width $dDose$).";
+                           " separated by a non-integer number of bins of width $dDose$)."
+                           "\n\n"
+                           "Note that one of either 'dDose' or 'BinCount' must be provided.";
     out.args.back().default_val = "0.1";
-    out.args.back().expected = true;
+    out.args.back().expected = false;
     out.args.back().examples = { "0.0001", "0.001", "0.01", "5.0", "10", "50" };
+
+
+    out.args.emplace_back();
+    out.args.back().name = "BinCount";
+    out.args.back().desc = "The number of bins to use in the histogram. The bin width depends on the data range."
+                           "\n\n"
+                           "Note that one of either 'dDose' or 'BinCount' must be provided.";
+    out.args.back().default_val = "1000";
+    out.args.back().expected = false;
+    out.args.back().examples = { "10", "1000", "10000" };
 
 
     out.args.emplace_back();
@@ -231,7 +243,8 @@ bool ExtractImageHistograms(Drover &DICOM_data,
 
     const auto Lower = std::stod(OptArgs.getValueStr("Lower").value());
     const auto Upper = std::stod(OptArgs.getValueStr("Upper").value());
-    const auto dDose = std::stod(OptArgs.getValueStr("dDose").value());
+    const auto dDoseStrOpt = OptArgs.getValueStr("dDose");
+    const auto BinCountStrOpt = OptArgs.getValueStr("BinCount");
 
     const auto UserComment = OptArgs.getValueStr("UserComment");
 
@@ -254,6 +267,15 @@ bool ExtractImageHistograms(Drover &DICOM_data,
                                   || std::regex_match(GroupingStr, regex_grouped);
 
     Explicator X(FilenameLex);
+
+    std::optional<double> dDoseOpt;
+    std::optional<uint64_t> BinCountOpt;
+    if(dDoseStrOpt) dDoseOpt = std::stod(dDoseStrOpt.value());
+    if(BinCountStrOpt) BinCountOpt = std::stoull(BinCountStrOpt.value());
+    if( (!dDoseOpt && !BinCountOpt)
+    ||  (!!dDoseOpt == !!BinCountOpt) ){
+        throw std::invalid_argument("Must provide either dDose or BinCount. Cannot continue");
+    }
 
     if( should_be_combined && !GroupLabelOpt ){
         throw std::invalid_argument("A valid 'GroupLabel' must be provided when 'Grouping'='combined'.");
@@ -287,7 +309,8 @@ bool ExtractImageHistograms(Drover &DICOM_data,
     for(auto & iap_it : IAs){
         ComputeExtractHistogramsUserData ud;
 
-        ud.dDose = dDose;
+        ud.dDose = dDoseOpt;
+        ud.bin_count = BinCountOpt;
         ud.channel = Channel;
         ud.lower_threshold = Lower;
         ud.upper_threshold = Upper;

@@ -8,6 +8,7 @@
 #include <map>
 #include <string>
 #include <cstdint>
+#include <optional>
 
 #include "YgorImages.h"
 #include "YgorMath.h"
@@ -31,9 +32,14 @@ struct ComputeExtractHistogramsUserData {
     //mutation_opts.maskmod        = Mutate_Voxels_Opts::MaskMod::Noop;
 
     // -----------------------------
-    // The width of histogram bins, in DICOM units (nominally Gy).
+    // The width of histogram bins, in DICOM units (nominally Gy), which is used to determine
+    // the number of bins.
     //
-    double dDose = 1.0;
+    std::optional<double> dDose;
+    //
+    // Or, directly specify the number of bins (where width is derived from the voxel intensity
+    // extrema.
+    std::optional<uint64_t> bin_count;
 
     // -----------------------------
     // The (inclusive) range of voxels to consider, in DICOM units (nominally Gy).
@@ -71,7 +77,7 @@ struct ComputeExtractHistogramsUserData {
 };
 
 bool ComputeExtractHistograms(planar_image_collection<float,double> &,
-                          std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
-                          std::list<std::reference_wrapper<contour_collection<double>>>,
-                          std::any ud );
+                              std::list<std::reference_wrapper<planar_image_collection<float,double>>>,
+                              std::list<std::reference_wrapper<contour_collection<double>>>,
+                              std::any ud );
 

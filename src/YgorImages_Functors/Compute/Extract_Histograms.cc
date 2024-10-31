@@ -187,29 +187,55 @@ bool ComputeExtractHistograms(planar_image_collection<float,double> &imagecoll,
         const auto voxel_min = extrema.second.first;
         const auto voxel_max = extrema.second.second;
         const auto range = (voxel_max - voxel_min);
-        const auto count_f = range / user_data_s->dDose;
-        if( !std::isfinite(count_f)
-        ||  (1.0E9 < count_f) // approx 10 GB just for the bin values, actual usage would be higher.
-        ||  (count_f <= 1.0) ){
-            YLOGWARN("Excessive or invalid number of bins required for key '" << key << "'. Skipping it");
+
+        uint64_t l_bin_count = 0UL;
+
+        if( user_data_s->dDose
+        &&  std::isfinite(user_data_s->dDose.value()) ){
+            const auto count_f = range / user_data_s->dDose.value();
+            if( !std::isfinite(count_f)
+            ||  (1.0E9 < count_f) // approx 10 GB just for the bin values, actual usage would be higher.
+            ||  (count_f <= 1.0) ){
+                YLOGWARN("Excessive or invalid number of bins required for key '" << key << "'. Skipping it");
+                to_purge.insert(key);
+                continue;
+            }
+            l_bin_count = static_cast<uint64_t>(std::ceil( count_f ));
+
+        }else if( user_data_s->bin_count ){
+            l_bin_count = user_data_s->bin_count.value();
+
+        }else{
+            YLOGWARN("Histogram bin count not specified for key '" << key << "'. Skipping it");
             to_purge.insert(key);
             continue;
         }
-        const auto bin_count = static_cast<size_t>(std::ceil( count_f ));
-        const auto bin_width = range / static_cast<double>(bin_count);
+
+        if(l_bin_count <= static_cast<uint64_t>(1ULL)){
+            YLOGWARN("Histogram would have one or zero bins for key '" << key << "'. Skipping it");
+            to_purge.insert(key);
+            continue;
+        }
+        if(static_cast<uint64_t>(1'000'000'000ULL) < l_bin_count){
+            YLOGWARN("Histogram bin count will result in significant memory usage for key '" << key << "'. Skipping it");
+            to_purge.insert(key);
+            continue;
+        }
+
+        const auto l_bin_width = range / static_cast<double>(l_bin_count);
 
         // Prepare the histograms bins.
         //
         // Note: bin values are centred.
-        std::vector<std::array<double,4>> hist(bin_count, {0.0, 0.0, 0.0, 0.0} );
-        for(size_t i = 0; i < bin_count; ++i){
+        std::vector<std::array<double,4>> hist(l_bin_count, {0.0, 0.0, 0.0, 0.0} );
+        for(uint64_t i = 0; i < l_bin_count; ++i){
             hist[i][0] = voxel_min 
-                       + (bin_width * static_cast<double>(i)) 
-                       + (bin_width * 0.5);
+                       + (l_bin_width * static_cast<double>(i)) 
+                       + (l_bin_width * 0.5);
         }
 
-        bin_counts.emplace(key, bin_count);
-        bin_widths.emplace(key, bin_width);
+        bin_counts.emplace(key, l_bin_count);
+        bin_widths.emplace(key, l_bin_width);
         raw_diff_histograms.emplace(key, hist);
     }
     for(const auto &key : to_purge) voxel_extrema.extract(key);
