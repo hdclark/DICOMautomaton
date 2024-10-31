@@ -111,7 +111,7 @@ OperationDoc OpArgDocAnalyzeHistograms(){
     out.args.emplace_back();
     out.args.back().name = "Constraints";
     out.args.back().desc = "Constraint criteria that will be evaluated against the selected line samples."
-                           " There three general types of constraints will be recognized."
+                           " Three general types of constraints are recognized."
                            "\n\n"
                            " First, constraints in the style of 'Dmax < 50.0 Gy'."
                            " The left-hand-size (LHS) can be any of {Dmin, Dmean, Dmax}."
@@ -134,9 +134,19 @@ OperationDoc OpArgDocAnalyzeHistograms(){
                            " The RHS units can be any of {cc, cm3, cm^3, %} where"
                            " '%' means the inner LHS number is a percentage of the total volume."
                            "\n\n"
-                           "Additionally, dosimetric values can be assigned to a variable name"
-                           " and written to the global parameter store."
-                           " Dose is reported in the existing units, as-is (e.g., DICOM units; Gy)."
+                           "All of the preceding constraints can be prefixed with '(x,y):' to assign"
+                           " the results to variables in the global parameter table. For example,"
+                           " '(var_x, var_y) : Dmax < 50.0 Gy' will save the key-value 'var_x' as"
+                           " the extracted value of Dmax, and 'var_y' as the boolean result of the"
+                           " inequality (i.e., either 'true' or 'false'). Dose and volume units are"
+                           " consistent with the expression's RHS units. An underscore can be used"
+                           " to ignore one of the results. Note that saving results in the parameter"
+                           " table precludes them from being written to file."
+                           "\n\n"
+                           "Additionally, dosimetric values can be directly assigned to a variable name"
+                           " and inserted into the global parameter store, e.g., 'x : Dmin'."
+                           " Dose is reported in the default units, as-is, without conversion"
+                           " (e.g., DICOM units; Gy)."
                            " Note that variables assigned this way are not written to file."
                            "\n\n"
                            "Multiple constraints can be supplied by separating them with ';' delimiters."
@@ -158,9 +168,12 @@ OperationDoc OpArgDocAnalyzeHistograms(){
                                  "V(24.5 Gy) < 500.0 cc",
                                  "V(10%) < 50.0 cc",
                                  "V(24.5 Gy) < 500.0 cc",
+                                 "(x,y) : V(24.5 Gy) < 500.0 cc",
+                                 "(x,_) : Dmean < 5 %",
+                                 "(_,x) : V(24.5 Gy) < 500.0 cc",
                                  "max_dose = Dmax",
                                  "x = D(coldest 10%)",
-                                 "Dmax < 50.0 Gy ; Dmean lte 80 % ; D(hottest 10%) gte 95.0 %" };
+                                 "(Dmax,_): Dmax < 50.0 Gy ; x: Dmin; (dose_median,passed): D(hottest 50%) <= 5 Gy; Dmean lte 80 % ; D(hottest 10%) gte 95.0 %" };
 
 
     out.args.emplace_back();
@@ -262,7 +275,7 @@ bool AnalyzeHistograms(Drover &DICOM_data,
         split_constraints = SplitVector(split_constraints, '\n', 'd');
         split_constraints = SplitVector(split_constraints, '\r', 'd');
         split_constraints = SplitVector(split_constraints, '\t', 'd');
-        for(auto &ac : split_constraints){
+        for(auto ac : split_constraints){
 
             // Check if this line is a comment, empty, or is likely to contain a constraint.
             const auto ctrim = CANONICALIZE::TRIM_ENDS;
@@ -271,6 +284,29 @@ bool AnalyzeHistograms(Drover &DICOM_data,
 
             const auto r_comment = lCompile_Regex(R"***(^[ ]*[#].*$)***");
             if( std::regex_match(ac, r_comment ) ) continue;
+
+            // Peel off any assignment statements, like:
+            //    (x,y) : Dmin < 10 Gy
+            // where 'x' should hold the value of Dmin and 'y' should hold the result of the inequality.
+            std::string key_LHS;
+            std::string key_RHS;
+            if(auto q = lCompile_Regex(R"***(^[ ]*[(]([ ]*[^ ,]*)[ ]*[,][ ]*([^ )]*)[ ]*[)][ ]*[:](.*))***");
+                     std::regex_match(ac, q) ){
+
+                const auto p = Get_All_Regex(ac, q);
+                //for(const auto &x : p) YLOGINFO("    Parsed parameter: '" << x << "'");                
+                if(p.size() == 3UL){
+                    key_LHS = Canonicalize_String2(p.at(0UL), ctrim);
+                    key_RHS = Canonicalize_String2(p.at(1UL), ctrim);
+                    ac = Canonicalize_String2(p.at(2UL), ctrim);
+
+                    if(key_LHS == "_") key_LHS.clear();
+                    if(key_RHS == "_") key_RHS.clear();
+
+                    if(!key_LHS.empty()) InvocationMetadata.erase(key_LHS);
+                    if(!key_RHS.empty()) InvocationMetadata.erase(key_RHS);
+                }
+            }
 
             const auto emit_boilerplate = [&]() -> void {
                 //Reset the header so only one is ever emitted.
@@ -310,7 +346,7 @@ bool AnalyzeHistograms(Drover &DICOM_data,
             const auto r_gt     = lCompile_Regex(R"***(^.*[>][^=].*$|^.*gt[^e].*$)***");
             const auto r_lte    = lCompile_Regex(R"***(^.*[<][=].*$|^.*lte.*$)***");
             const auto r_gte    = lCompile_Regex(R"***(^.*[>][=].*$|^.*gte.*$)***");
-            const auto r_assign = lCompile_Regex(R"***(^.*[^><][=].*$|^.*as.*$)***");
+            const auto r_assign = lCompile_Regex(R"***(^.*[^><][:].*$|^.*as.*$)***");
 
             enum class equality_t { na, assign, lt, lte, gt, gte };   // inequality type.
             equality_t eq = equality_t::na;
@@ -385,17 +421,26 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                     throw std::runtime_error("Unable to parse RHS unit.");
                 }
 
+                const bool passed = compare_inequality(D_mmm, D_rhs);
+
+                // Store the result.
+                if( !key_LHS.empty() || !key_RHS.empty() ){
+                    if(!key_LHS.empty()) InvocationMetadata[key_LHS] = std::to_string(D_mmm);
+                    if(!key_RHS.empty()) InvocationMetadata[key_RHS] = (passed ? "true" : "false");
+
                 // Add to the report.
-                emit_boilerplate();
+                }else{
+                    emit_boilerplate();
 
-                header << ",Actual";
-                report << "," << D_mmm << " " << out_unit;
+                    header << ",Actual";
+                    report << "," << D_mmm << " " << out_unit;
 
-                header << ",Passed";
-                report << "," << std::boolalpha << compare_inequality(D_mmm, D_rhs);
+                    header << ",Passed";
+                    report << "," << std::boolalpha << passed;
 
-                header << std::endl;
-                report << std::endl;
+                    header << std::endl;
+                    report << std::endl;
+                }
 
             /////////////////////////////////////////////////////////////////////////////////
             // D( hottest 500 cc) <=> 70 Gy 
@@ -473,17 +518,26 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                     throw std::runtime_error("Unable to parse RHS unit.");
                 }
 
+                const bool passed = compare_inequality(D_eval, D_rhs);
+
+                // Store the result.
+                if( !key_LHS.empty() || !key_RHS.empty() ){
+                    if(!key_LHS.empty()) InvocationMetadata[key_LHS] = std::to_string(D_eval);
+                    if(!key_RHS.empty()) InvocationMetadata[key_RHS] = (passed ? "true" : "false");
+
                 // Add to the report.
-                emit_boilerplate();
+                }else{
+                    emit_boilerplate();
 
-                header << ",Actual";
-                report << "," << D_eval << " " << out_unit;
+                    header << ",Actual";
+                    report << "," << D_eval << " " << out_unit;
 
-                header << ",Passed";
-                report << "," << std::boolalpha << compare_inequality(D_eval, D_rhs);
+                    header << ",Passed";
+                    report << "," << std::boolalpha << passed;
 
-                header << std::endl;
-                report << std::endl;
+                    header << std::endl;
+                    report << std::endl;
+                }
 
             /////////////////////////////////////////////////////////////////////////////////
             // V(24 Gy) < 500 cc
@@ -540,22 +594,31 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                     throw std::runtime_error("Unable to express the LHS volume in RHS units.");
                 }
 
+                const bool passed = compare_inequality(V_eval, V_rhs);
+
+                // Store the result.
+                if( !key_LHS.empty() || !key_RHS.empty() ){
+                    if(!key_LHS.empty()) InvocationMetadata[key_LHS] = std::to_string(V_eval);
+                    if(!key_RHS.empty()) InvocationMetadata[key_RHS] = (passed ? "true" : "false");
+
                 // Add to the report.
-                emit_boilerplate();
+                }else{
+                    emit_boilerplate();
 
-                header << ",Actual";
-                report << "," << V_eval << " " << out_unit;
+                    header << ",Actual";
+                    report << "," << V_eval << " " << out_unit;
 
-                header << ",Passed";
-                report << "," << std::boolalpha << compare_inequality(V_eval, V_rhs);
+                    header << ",Passed";
+                    report << "," << std::boolalpha << passed;
 
-                header << std::endl;
-                report << std::endl;
+                    header << std::endl;
+                    report << std::endl;
+                }
 
             /////////////////////////////////////////////////////////////////////////////////
             // Assignment:
-            //   var_name = D{min,mean,max}
-            }else if(auto q = lCompile_Regex(R"***([ ]*([^ =]*)[ ]*[=][ ]*D(min|max|mean).*)***");
+            //   var_name : D{min,mean,max}
+            }else if(auto q = lCompile_Regex(R"***([ ]*([^ :]*)[ ]*[:][ ]*D(min|max|mean).*)***");
                      std::regex_match(ac, q) ){
 
                 const auto p = Get_All_Regex(ac, q);
@@ -577,10 +640,10 @@ bool AnalyzeHistograms(Drover &DICOM_data,
 
             /////////////////////////////////////////////////////////////////////////////////
             // Assignment:
-            //   var_name = D( hottest 500 cc)
-            //   var_name = D( hottest 500 cc) 
-            //   var_name = D( coldest 25% )
-            }else if(auto q = lCompile_Regex(R"***([ ]*([^ =]*)[ ]*[=][ ]*D[(][ ]*(hott?e?s?t?|cold?e?s?t?)[ ]*([0-9.]+)[ ]*(cc|cm3|cm\^3|%)[ ]*[)][ ]*)***");
+            //   var_name : D( hottest 500 cc)
+            //   var_name : D( hottest 500 cc) 
+            //   var_name : D( coldest 25% )
+            }else if(auto q = lCompile_Regex(R"***([ ]*([^ :]*)[ ]*[:][ ]*D[(][ ]*(hott?e?s?t?|cold?e?s?t?)[ ]*([0-9.]+)[ ]*(cc|cm3|cm\^3|%)[ ]*[)][ ]*)***");
                      std::regex_match(ac, q) ){
 
                 const auto p = Get_All_Regex(ac, q);
