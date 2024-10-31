@@ -22,6 +22,9 @@ std::array<char, 2048> string_to_array(const std::string &s);
 // Remove characters so that the argument can be inserted like '...' on command line.
 std::string escape_for_quotes(std::string s);
 
+// std::to_string, but with max precision (so round-trip should be as lossless as possible).
+template <class T>
+std::string to_string_max_precision(T x);
 
 // Parser for functions like 'func(1.0, 2.0,3.0, -1.23, 1.0x, 123%, "some text", ...)'.
 //

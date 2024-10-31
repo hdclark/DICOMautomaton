@@ -28,6 +28,7 @@
 #include "../Structs.h"
 #include "../Write_File.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 
 #include "AnalyzeHistograms.h"
 
@@ -212,6 +213,7 @@ lCompile_Regex(const std::string& input){
                              std::regex::optimize |
                              std::regex::extended);
 }
+
 bool AnalyzeHistograms(Drover &DICOM_data,
                        const OperationArgPkg& OptArgs,
                        std::map<std::string, std::string>& InvocationMetadata,
@@ -313,9 +315,14 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                 //
                 // Note: this requires a fixed, consistent report structure!
                 {
-                    std::stringstream dummy;
-                    header = std::move(dummy);
+                    std::stringstream placeholder;
+                    header = std::move(placeholder);
                 }
+
+                // Maximize numerical precision to support (near-)lossless interchange.
+                const auto print_digits = std::numeric_limits<double>::max_digits10;
+                header.precision(print_digits);
+                report.precision(print_digits);
 
                 // Patient metadata.
                 {
@@ -335,9 +342,6 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                     report << "," << ExpandedDescriptionOpt.value_or("");
                 }
 
-                // Default to 2 significant digits for reported values.
-                report << std::fixed;
-                report << std::setprecision(2);
                 return;
             };
 
@@ -425,7 +429,7 @@ bool AnalyzeHistograms(Drover &DICOM_data,
 
                 // Store the result.
                 if( !key_LHS.empty() || !key_RHS.empty() ){
-                    if(!key_LHS.empty()) InvocationMetadata[key_LHS] = std::to_string(D_mmm);
+                    if(!key_LHS.empty()) InvocationMetadata[key_LHS] = to_string_max_precision(D_mmm);
                     if(!key_RHS.empty()) InvocationMetadata[key_RHS] = (passed ? "true" : "false");
 
                 // Add to the report.
@@ -522,7 +526,7 @@ bool AnalyzeHistograms(Drover &DICOM_data,
 
                 // Store the result.
                 if( !key_LHS.empty() || !key_RHS.empty() ){
-                    if(!key_LHS.empty()) InvocationMetadata[key_LHS] = std::to_string(D_eval);
+                    if(!key_LHS.empty()) InvocationMetadata[key_LHS] = to_string_max_precision(D_eval);
                     if(!key_RHS.empty()) InvocationMetadata[key_RHS] = (passed ? "true" : "false");
 
                 // Add to the report.
@@ -598,7 +602,7 @@ bool AnalyzeHistograms(Drover &DICOM_data,
 
                 // Store the result.
                 if( !key_LHS.empty() || !key_RHS.empty() ){
-                    if(!key_LHS.empty()) InvocationMetadata[key_LHS] = std::to_string(V_eval);
+                    if(!key_LHS.empty()) InvocationMetadata[key_LHS] = to_string_max_precision(V_eval);
                     if(!key_RHS.empty()) InvocationMetadata[key_RHS] = (passed ? "true" : "false");
 
                 // Add to the report.
@@ -636,7 +640,7 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                 }else{  throw std::runtime_error("Unable to parse constraint (F).");
                 }
 
-                InvocationMetadata[var_name] = std::to_string(D_mmm);
+                InvocationMetadata[var_name] = to_string_max_precision(D_mmm);
 
             /////////////////////////////////////////////////////////////////////////////////
             // Assignment:
@@ -702,7 +706,7 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                     throw std::runtime_error("Unable to parse directionality (i.e., hot or cold).");
                 }
 
-                InvocationMetadata[var_name] = std::to_string(D_eval);
+                InvocationMetadata[var_name] = to_string_max_precision(D_eval);
 
             // If the constraint did not match any known format.
             }else{

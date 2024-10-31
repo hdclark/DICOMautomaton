@@ -5,6 +5,8 @@
 #include <string>
 #include <optional>
 #include <cstdint>
+#include <sstream>
+#include <limits>
 
 #include "YgorString.h"
 #include "YgorMath.h"
@@ -64,6 +66,18 @@ std::string escape_for_quotes(std::string s){
     return s;
 }
 
+
+template <class T>
+std::string to_string_max_precision(T x){
+    std::stringstream ss;
+    const auto defaultprecision = ss.precision();
+    ss.precision(std::numeric_limits<T>::max_digits10);
+    ss << x;
+    ss.precision(defaultprecision);
+    return ss.str();
+}
+template std::string to_string_max_precision(float x);
+template std::string to_string_max_precision(double x);
 
 
 std::vector<parsed_function>
