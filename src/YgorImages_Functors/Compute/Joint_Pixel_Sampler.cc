@@ -69,6 +69,19 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
 
     const auto inaccessible_val = std::numeric_limits<double>::quiet_NaN();
 
+    // Determine a reasonable spatial 'scale' to gauge alignment.
+    //
+    // It is important to be tolerant because some implementations or data interchange formats cause truncation which
+    // causes otherwise rectilinear image arrays to appear non-rectilinear.
+    double l_eps = static_cast<double>(10) * std::sqrt(std::numeric_limits<double>::epsilon());
+    const double imprecision_factor = 1.0/100.0;
+    for(const auto &img : imagecoll.images){
+        if(l_eps < (imprecision_factor * img.pxl_dx)) l_eps = (imprecision_factor * img.pxl_dx);
+        if(l_eps < (imprecision_factor * img.pxl_dy)) l_eps = (imprecision_factor * img.pxl_dy);
+        if(l_eps < (imprecision_factor * img.pxl_dz)) l_eps = (imprecision_factor * img.pxl_dz);
+    }
+    YLOGDEBUG("Using spatial discrepancy eps = " << l_eps << " derived from maximum voxel extent");
+
     // Ensure each reference image array forms a regular grid.
     for(auto & picrw : external_imgs){
         std::list<std::reference_wrapper<planar_image<float,double>>> selected_imgs;
@@ -76,7 +89,7 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
             selected_imgs.push_back( std::ref(img) );
         }
 
-        if(!Images_Form_Rectilinear_Grid(selected_imgs)){
+        if(!Images_Form_Rectilinear_Grid(selected_imgs, l_eps)){
             YLOGWARN("Reference images do not form a rectilinear grid. Cannot continue");
             return false;
         }
