@@ -110,33 +110,44 @@ OperationDoc OpArgDocModelIVIM(){
 
     out.args.emplace_back();
     out.args.back().name = "Model";
-    out.args.back().desc = "The model that will be fitted.."
+    out.args.back().desc = "The model that will be fitted."
 #ifdef DCMA_USE_EIGEN
-                           " Currently, 'adc-simple' , 'adc-ls' , 'biexp', and 'kurtosis' are available."
+                           " Currently, 'adc-simple' , 'adc-ls' , 'auc', 'biexp', and 'kurtosis' are available."
 #else
-                           " Currently, 'adc-simple' , 'adc-ls' , and 'biexp' are available."
+                           " Currently, 'adc-simple' , 'adc-ls' , 'auc', and 'biexp' are available."
 #endif //DCMA_USE_EIGEN
-                           " The 'adc-simple' model does not take into account perfusion, only free diffusion is"
-                           " modeled. It only uses the minimum and maximum b-value images and analytically estimates"
-                           " ADC. The 'adc-ls' model, like 'adc-simple', only models free diffusion."
-                           " It fits a linear least-squares models that uses all available b-value images."
+                           "\n\n"
+                           "The 'adc-simple' is a simplistic diffusion model that ignores perfusion."
+                           " It models only free diffusion using only the minimum and maximum b-values."
+                           " An analytical estimate of ADC (i.e., the apparent diffusion coefficient) is generated."
+                           "\n\n"
+                           "The 'adc-ls' model, like 'adc-simple', is a simplistic model that ignores perfusion."
+                           " It fits a linearized least-squares model that uses all available b-value images."
+                           " Like 'adc-simple', this model only estimates ADC."
+                           "\n\n"
+                           "The 'auc' model is a simple, nonparametric model that integrates the area under the"
+                           "intensity-vs-b-value curve."
+                           "\n\n"
+                           "The 'biexp' model uses a segmented fitting approach along with Marquardt's method to fit a"
+                           " biexponential model, which estimates the pseudodiffusion fraction, the pseudodiffusion"
+                           " coefficient, and the diffusion coefficient for each voxel."
 #ifdef DCMA_USE_EIGEN
-                           " The 'kurtosis' model returns 5 parameters corresponding to a biexponential diffsion model"
-                           " with a Kurtosis adjustment, as well as a noise floor parameter added in quadrature with"
-                           " the model."
+                           "\n\n"
+                           "The 'kurtosis' model returns five parameters corresponding to a biexponential diffusion"
+                           " model with a kurtosis adjustment and a noise floor parameter added in quadrature."
 #endif //DCMA_USE_EIGEN
-                           " The 'biexp' model uses a segmented fitting approach along with Marquardts method to fit a"
-                           " biexponential decay model, obtaining the pseudodiffusion fraction, pseudodiffusion"
-                           " coefficient, and diffusion coefficient for each voxel.";
+                           "";
                            
     out.args.back().default_val = "adc-simple";
     out.args.back().expected = true;
     out.args.back().examples = { "adc-simple",
-                                 "adc-ls" ,
+                                 "adc-ls",
+                                 "auc",
+                                 "biexp",
 #ifdef DCMA_USE_EIGEN
                                  "kurtosis",
 #endif //DCMA_USE_EIGEN
-                                 "biexp" };
+                               };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
@@ -195,10 +206,11 @@ bool ModelIVIM(Drover &DICOM_data,
     const auto TestImgUpperThreshold = std::stod( OptArgs.getValueStr("TestImgUpperThreshold").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto model_adc_simple = Compile_Regex("^ad?c?[-_]?si?m?p?l?e?$");
-    const auto model_adc_ls = Compile_Regex("^ad?c?[-_]?ls?$");
-    const auto model_biexp = Compile_Regex("^bie?x?p?");
+    const auto model_adc_simple = Compile_Regex("^adc?[-_]?si?m?p?l?e?$");
+    const auto model_adc_ls = Compile_Regex("^adc?[-_]?ls?$");
+    const auto model_biexp = Compile_Regex("^bi[-_]?e?x?p?");
     const auto model_kurtosis = Compile_Regex("^ku?r?t?o?s?i?s?");
+    const auto model_auc = Compile_Regex("^auc?$");
 
     //-----------------------------------------------------------------------------------------------------------------
 
@@ -409,8 +421,45 @@ bool ModelIVIM(Drover &DICOM_data,
                 
             };
 
-        }
-        else{
+        }else if(std::regex_match(ModelStr, model_auc)){
+            ud.description = "AUC";
+            ud.f_reduce = [bvalues, bvalue_min_i, bvalue_max_i]( std::vector<float> &vals, 
+                                                                 vec3<double> ) -> float {
+                vals.erase(vals.begin()); // Remove the base image's value.
+                if(vals.size() != bvalues.size()){
+                    throw std::runtime_error("Unmatched voxel and b-value vectors. Refusing to continue.");
+                }
+
+                // This factor is used to correct when the b-values are not sorted.
+                // The integration would still ideally sum to the correct number (barring numerical imprecision errors
+                // like round-off), but might be negative due to reversal. Applying this factor saves having to re-sort
+                // the values for every voxel.
+                //
+                // TODO: confirm this is legit!
+                const double sort_correction = (bvalue_max_i <= bvalue_min_i) ? -1.0 : 1.0;
+
+                double auc = 0.0;
+
+                const auto N_vals = vals.size();
+                for(size_t i = 0UL; i < N_vals; ++i){
+                    const auto j = i + 1UL;
+                    if(N_vals <= j) break;
+
+                    const auto b_i = bvalues.at(i);
+                    const auto I_i = vals.at(i);
+
+                    const auto b_j = bvalues.at(j);
+                    const auto I_j = vals.at(j);
+
+                    const auto dauc = (b_j - b_i) * (I_i + I_j) * 0.5;
+                    auc += dauc;
+                }
+                auc *= sort_correction;
+                if(!std::isfinite( auc )) throw std::runtime_error("auc is not finite");
+                return auc;
+            };
+
+        }else{
             throw std::invalid_argument("Model not understood. Cannot continue.");
         }
 

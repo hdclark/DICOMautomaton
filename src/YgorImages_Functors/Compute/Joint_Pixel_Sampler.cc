@@ -76,9 +76,9 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
     double l_eps = static_cast<double>(10) * std::sqrt(std::numeric_limits<double>::epsilon());
     const double imprecision_factor = 1.0/100.0;
     for(const auto &img : imagecoll.images){
-        if(l_eps < (imprecision_factor * img.pxl_dx)) l_eps = (imprecision_factor * img.pxl_dx);
-        if(l_eps < (imprecision_factor * img.pxl_dy)) l_eps = (imprecision_factor * img.pxl_dy);
-        if(l_eps < (imprecision_factor * img.pxl_dz)) l_eps = (imprecision_factor * img.pxl_dz);
+        const auto pxl_min = std::min({ img.pxl_dx, img.pxl_dy, img.pxl_dz });
+        const auto pxl_frac = imprecision_factor * pxl_min;
+        if(l_eps < pxl_frac) l_eps = pxl_frac;
     }
     YLOGDEBUG("Using spatial discrepancy eps = " << l_eps << " derived from maximum voxel extent");
 
