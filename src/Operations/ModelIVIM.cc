@@ -112,9 +112,9 @@ OperationDoc OpArgDocModelIVIM(){
     out.args.back().name = "Model";
     out.args.back().desc = "The model that will be fitted."
 #ifdef DCMA_USE_EIGEN
-                           " Currently, 'adc-simple' , 'adc-ls' , 'auc', 'biexp', and 'kurtosis' are available."
+                           " Currently, 'adc-simple' , 'adc-ls' , 'auc-simple', 'biexp', and 'kurtosis' are available."
 #else
-                           " Currently, 'adc-simple' , 'adc-ls' , 'auc', and 'biexp' are available."
+                           " Currently, 'adc-simple' , 'adc-ls' , 'auc-simple', and 'biexp' are available."
 #endif //DCMA_USE_EIGEN
                            "\n\n"
                            "The 'adc-simple' is a simplistic diffusion model that ignores perfusion."
@@ -125,8 +125,9 @@ OperationDoc OpArgDocModelIVIM(){
                            " It fits a linearized least-squares model that uses all available b-value images."
                            " Like 'adc-simple', this model only estimates ADC."
                            "\n\n"
-                           "The 'auc' model is a simple, nonparametric model that integrates the area under the"
-                           "intensity-vs-b-value curve."
+                           "The 'auc-simple' model is a simplistic, nonparametric model that integrates the area under"
+                           " the intensity-vs-b-value curve. Note that no model fitting is performed; the voxel"
+                           " intensity-b-value product is summed directly. No extrapolation is performed."
                            "\n\n"
                            "The 'biexp' model uses a segmented fitting approach along with Marquardt's method to fit a"
                            " biexponential model, which estimates the pseudodiffusion fraction, the pseudodiffusion"
@@ -142,7 +143,7 @@ OperationDoc OpArgDocModelIVIM(){
     out.args.back().expected = true;
     out.args.back().examples = { "adc-simple",
                                  "adc-ls",
-                                 "auc",
+                                 "auc-simple",
                                  "biexp",
 #ifdef DCMA_USE_EIGEN
                                  "kurtosis",
@@ -210,7 +211,7 @@ bool ModelIVIM(Drover &DICOM_data,
     const auto model_adc_ls = Compile_Regex("^adc?[-_]?ls?$");
     const auto model_biexp = Compile_Regex("^bi[-_]?e?x?p?");
     const auto model_kurtosis = Compile_Regex("^ku?r?t?o?s?i?s?");
-    const auto model_auc = Compile_Regex("^auc?$");
+    const auto model_auc = Compile_Regex("^auc?[-_]?si?m?p?l?e?$");
 
     //-----------------------------------------------------------------------------------------------------------------
 
