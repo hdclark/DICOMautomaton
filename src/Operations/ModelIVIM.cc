@@ -13,6 +13,7 @@
 #include <mutex>
 #include <cmath>
 #include <algorithm>
+#include <numeric>
 #include <cstdint>
 
 #include "YgorImages.h"
@@ -257,6 +258,16 @@ bool ModelIVIM(Drover &DICOM_data,
         bvalues.emplace_back( std::stod(vals.front()) );
     }
 
+    // Determine the sorted order of the b-values. We do this *without* sorting since the order of the 
+    // reference images isn't changed, so the b-values and voxel intensities would be out-of-order if we
+    // only sorted the b-values.
+    std::vector<size_t> bvalues_order(std::size(bvalues));
+    std::iota(bvalues_order.begin(), bvalues_order.end(), 0UL);
+    std::sort(bvalues_order.begin(), bvalues_order.end(),
+              [&](size_t i, size_t j){
+                  return (bvalues[i] < bvalues[j]); 
+              } );
+
     // Extract common metadata from reference images.
     auto cm = planar_image_collection<float, double>().get_common_metadata(ref_img_iters);
     cm = coalesce_metadata_for_basic_mr_image(cm);
@@ -424,38 +435,35 @@ bool ModelIVIM(Drover &DICOM_data,
 
         }else if(std::regex_match(ModelStr, model_auc)){
             ud.description = "AUC";
-            ud.f_reduce = [bvalues, bvalue_min_i, bvalue_max_i]( std::vector<float> &vals, 
-                                                                 vec3<double> ) -> float {
+            ud.f_reduce = [bvalues, bvalues_order, bvalue_min_i, bvalue_max_i]( std::vector<float> &vals, 
+                                                                                vec3<double> ) -> float {
                 vals.erase(vals.begin()); // Remove the base image's value.
                 if(vals.size() != bvalues.size()){
                     throw std::runtime_error("Unmatched voxel and b-value vectors. Refusing to continue.");
                 }
-
-                // This factor is used to correct when the b-values are not sorted.
-                // The integration would still ideally sum to the correct number (barring numerical imprecision errors
-                // like round-off), but might be negative due to reversal. Applying this factor saves having to re-sort
-                // the values for every voxel.
-                //
-                // TODO: confirm this is legit!
-                const double sort_correction = (bvalue_max_i <= bvalue_min_i) ? -1.0 : 1.0;
+                if(vals.empty()){
+                    throw std::runtime_error("No overlapping images detected. Unable to continue.");
+                }
 
                 double auc = 0.0;
 
-                const auto N_vals = vals.size();
-                for(size_t i = 0UL; i < N_vals; ++i){
-                    const auto j = i + 1UL;
-                    if(N_vals <= j) break;
+                // Note: we traverse b-values from lowest to highest, processing two adjacent values at a time.
+                const auto N = bvalues_order.size();
+                for(size_t k = 0UL; (k+1UL) < N; ++k){
+                    const auto i = bvalues_order.at(k);
+                    const auto j = bvalues_order.at(k+1UL);
 
                     const auto b_i = bvalues.at(i);
-                    const auto I_i = vals.at(i);
-
                     const auto b_j = bvalues.at(j);
+
+                    const auto I_i = vals.at(i);
                     const auto I_j = vals.at(j);
 
+                    // Trapezoidal summation.
                     const auto dauc = (b_j - b_i) * (I_i + I_j) * 0.5;
                     auc += dauc;
                 }
-                auc *= sort_correction;
+
                 if(!std::isfinite( auc )) throw std::runtime_error("auc is not finite");
                 return auc;
             };
