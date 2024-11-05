@@ -29,6 +29,7 @@
 #include "../Write_File.h"
 #include "../Regex_Selectors.h"
 #include "../String_Parsing.h"
+#include "../Metadata.h"
 
 #include "AnalyzeHistograms.h"
 
@@ -107,6 +108,17 @@ OperationDoc OpArgDocAnalyzeHistograms(){
     out.args.back().default_val = "";
     out.args.back().expected = false;
     out.args.back().examples = { "Liver", "Lung", "Liver - GTV", "$LineName" };
+
+
+    out.args.emplace_back();
+    out.args.back().name = "MetadataColumns";
+    out.args.back().desc = "A comma-separated list of metadata key-value keys that will each be inserted as a separate"
+                           " column. The values will be expanded by first attempting to use the histogram's metadata,"
+                           " and if not present, the global parameter table. If not present in the global parameter"
+                           " table, the column will remain empty.";
+    out.args.back().default_val = "";
+    out.args.back().expected = false;
+    out.args.back().examples = { "Modality", "PatientID", "PatientID,StudyDate,StudyTime" };
 
 
     out.args.emplace_back();
@@ -236,8 +248,10 @@ bool AnalyzeHistograms(Drover &DICOM_data,
 
     const auto DescriptionOpt = OptArgs.getValueStr("Description");
     const auto UserCommentOpt = OptArgs.getValueStr("UserComment");
+    const auto MetadataColumnsOpt = OptArgs.getValueStr("MetadataColumns");
     //-----------------------------------------------------------------------------------------------------------------
     const auto nan = std::numeric_limits<double>::quiet_NaN();
+    const auto ctrim = CANONICALIZE::TRIM_ENDS;
 
     std::stringstream header;
     std::stringstream report;
@@ -277,6 +291,29 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                                                   (*lsp_it)->line.metadata, "$");
         }
 
+        // Retrieve metadata for user-provided columns.
+        std::vector<std::string> mc_names;
+        std::vector<std::string> mc_vals;
+        if(MetadataColumnsOpt){
+            auto tokens = SplitStringToVector(MetadataColumnsOpt.value(), ',', 'd');
+            tokens = SplitVector(tokens, ';', 'd');
+            tokens = SplitVector(tokens, '\n', 'd');
+            tokens = SplitVector(tokens, '\r', 'd');
+            tokens = SplitVector(tokens, '\t', 'd');
+            for(auto t : tokens){
+                t = Canonicalize_String2(t, ctrim);
+                auto val_opt = get_as<std::string>( (*lsp_it)->line.metadata, t );
+                if(!val_opt){
+                    val_opt = get_as<std::string>( InvocationMetadata, t );
+                }
+                if(!val_opt){
+                    val_opt = "";
+                }
+                mc_names.emplace_back(t);
+                mc_vals.emplace_back(val_opt.value());
+            }
+        }
+
         // Grab the line sample more specifically.
         const auto DVH_abs_D_abs_V = (*lsp_it)->line;
 
@@ -288,7 +325,6 @@ bool AnalyzeHistograms(Drover &DICOM_data,
         for(auto ac : split_constraints){
 
             // Check if this line is a comment, empty, or is likely to contain a constraint.
-            const auto ctrim = CANONICALIZE::TRIM_ENDS;
             ac = Canonicalize_String2(ac, ctrim);
             if(ac.empty()) continue;
 
@@ -304,7 +340,8 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                      std::regex_match(ac, q) ){
 
                 const auto p = Get_All_Regex(ac, q);
-                //for(const auto &x : p) YLOGINFO("    Parsed parameter: '" << x << "'");                
+                YLOGDEBUG("'" << ac << "' matched generic assignment syntax");
+                for(const auto &x : p) YLOGDEBUG("    Parsed parameter: '" << x << "'");                
                 if(p.size() == 3UL){
                     key_LHS = Canonicalize_String2(p.at(0UL), ctrim);
                     key_RHS = Canonicalize_String2(p.at(1UL), ctrim);
@@ -348,6 +385,12 @@ bool AnalyzeHistograms(Drover &DICOM_data,
 
                     header << ",Description";
                     report << "," << ExpandedDescriptionOpt.value_or("");
+
+                    const auto N_mc = std::size(mc_names);
+                    for(size_t i = 0UL; i < N_mc; ++i){
+                        header << "," << mc_names.at(i);
+                        report << "," << mc_vals.at(i);
+                    }
                 }
 
                 return;
@@ -398,14 +441,17 @@ bool AnalyzeHistograms(Drover &DICOM_data,
 
             /////////////////////////////////////////////////////////////////////////////////
             // D{min,mean,max} {<,<=,>=,>,lt,lte,gt,gte} 123.123 {%,Gy,none}.
+            //
             // For example, 'Dmin < 70 Gy' or 'Dmean <= 105%' or 'Dmax lte 23.2Gy'.
             // Note that a '%' on the RHS is relative to the ReferenceDose.
-            if(auto q = lCompile_Regex(R"***([ ]*D(min|max|mean).*(<|<=|>=|>|lte|lt|gte|gt)[^0-9.]*([0-9.]+)[^0-9.]*(Gy|%|[ ]*|[]*).*)***");
+            if(auto q = lCompile_Regex(R"***([ ]*D(min|max|mean).*(<|<=|>=|>|lte|lt|gte|gt)[ ]*([0-9.]+)[ ]*(Gy|%|[ ]*|.{0})$)***");
                      std::regex_match(ac, q) ){
 
                 const auto p = Get_All_Regex(ac, q);
-                //for(const auto &x : p) YLOGINFO("    Parsed parameter: '" << x << "'");                
+                YLOGDEBUG("'" << ac << "' matched 'D{min,mean,max} {<,<=,>=,>,lt,lte,gt,gte} 123.123 {%,Gy,none}' syntax");
+                for(const auto &x : p) YLOGDEBUG("    Parsed parameter: '" << x << "'");                
                 if(p.size() != 4) throw std::runtime_error("Unable to parse constraint (C).");
+
                 const auto mmm = p.at(0);
                 //const auto ineq = p.at(1);
                 const auto D_rhs = std::stod(p.at(2));
@@ -460,15 +506,19 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                 }
 
             /////////////////////////////////////////////////////////////////////////////////
-            // D( hottest 500 cc) <=> 70 Gy 
-            // D( hottest 500 cc) <= 70 Gy 
-            // D( coldest 25% ) lte 25 %
-            }else if(auto q = lCompile_Regex(R"***([ ]*D[(][ ]*(hott?e?s?t?|cold?e?s?t?)[ ]*([0-9.]+)[ ]*(cc|cm3|cm\^3|%)[ ]*[)][ ]*(<|<=|>=|>|lte|lt|gte|gt)[^0-9.]*([0-9.]+)[^0-9.]*(Gy|%|[ ]*|[]*).*)***");
+            // D({hottest,coldest} 123.123 {cc,%}) {<,<=,>=,>,lt,lte,gt,gte} 123.123 {%,Gy,none}
+            //
+            // Examples:
+            //    D( hottest 500 cc) <=> 70 Gy 
+            //    D( hottest 500 cc) <= 70 Gy 
+            //    D( coldest 25% ) lte 25 %
+            }else if(auto q = lCompile_Regex(R"***([ ]*D[(][ ]*(hott?e?s?t?|cold?e?s?t?)[ ]*([0-9.]+)[ ]*(cc|cm3|cm\^3|%)[ ]*[)][ ]*(<|<=|>=|>|lte|lt|gte|gt)[ ]*([0-9.]+)[ ]*(Gy|%|[ ]*|.{0})$)***");
                      std::regex_match(ac, q) ){
 
                 const auto p = Get_All_Regex(ac, q);
+                YLOGDEBUG("'" << ac << "' matched 'D({hottest,coldest} 123.123 {cc,%}) {<,<=,>=,>,lt,lte,gt,gte} 123.123 {%,Gy,none}' syntax");
+                for(const auto &x : p) YLOGDEBUG("    Parsed parameter: '" << x << "'");                
                 if(p.size() != 6) throw std::runtime_error("Unable to parse constraint (E).");
-                //for(const auto &x : p) YLOGINFO("    Parsed parameter: '" << x << "'");                
 
                 const auto HC = p.at(0); // hot or cold.
                 const auto V_lhs = std::stod(p.at(1)); // inner volume number.
@@ -561,16 +611,20 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                 }
 
             /////////////////////////////////////////////////////////////////////////////////
-            // V(24 Gy) < 500 cc
-            // V(20%) < 500 cc
-            // V(25 Gy) < 25%
-            // V(20%) < 25%
-            }else if(auto q = lCompile_Regex(R"***([ ]*V[(][ ]*([0-9.]+)[ ]*(Gy|%|[ ]*|[]*)[ ]*[)][ ]*(<|<=|>=|>|lte|lt|gte|gt)[^0-9.]*([0-9.]+)[^0-9.]*(cc|cm3|cm\^3|%).*)***");
+            // V(123.123 {Gy,%,none}) {<,<=,>=,>,lt,lte,gt,gte} 123.123 {cc,%}
+            //
+            // Examples:
+            //    V(24 Gy) < 500 cc
+            //    V(20%) < 500 cc
+            //    V(25 Gy) < 25%
+            //    V(20%) < 25%
+            }else if(auto q = lCompile_Regex(R"***([ ]*V[(][ ]*([0-9.]+)[ ]*(Gy|%|[ ]*|.{0})[ ]*[)][ ]*(<|<=|>=|>|lte|lt|gte|gt)[^0-9.]*([0-9.]+)[^0-9.]*(cc|cm3|cm\^3|%).*)***");
                      std::regex_match(ac, q) ){
 
                 const auto p = Get_All_Regex(ac, q);
+                YLOGDEBUG("'" << ac << "' matched 'V(123.123 {Gy,%,none}) {<,<=,>=,>,lt,lte,gt,gte} 123.123 {cc,%}' syntax");
+                for(const auto &x : p) YLOGDEBUG("    Parsed parameter: '" << x << "'");                
                 if(p.size() != 5) throw std::runtime_error("Unable to parse constraint (E).");
-                //for(const auto &x : p) YLOGINFO("    Parsed parameter: '" << x << "'");                
 
                 const auto D_lhs = std::stod(p.at(0)); // inner dose number.
                 const auto LHS_unit = p.at(1); // Gy or %.
@@ -645,7 +699,10 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                      std::regex_match(ac, q) ){
 
                 const auto p = Get_All_Regex(ac, q);
+                YLOGDEBUG("'" << ac << "' matched assignment 'var : D{min,mean,max}' syntax");
+                for(const auto &x : p) YLOGDEBUG("    Parsed parameter: '" << x << "'");                
                 if(p.size() != 2) throw std::runtime_error("Unable to parse constraint (F).");
+
                 const auto var_name = p.at(0);
                 const auto mmm = p.at(1);
 
@@ -670,8 +727,9 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                      std::regex_match(ac, q) ){
 
                 const auto p = Get_All_Regex(ac, q);
+                YLOGDEBUG("'" << ac << "' matched assignment 'var : D{{hottest,coldest} {cc,%}}' syntax");
+                for(const auto &x : p) YLOGDEBUG("    Parsed parameter: '" << x << "'");                
                 if(p.size() != 4) throw std::runtime_error("Unable to parse constraint (G).");
-                //for(const auto &x : p) YLOGINFO("    Parsed parameter: '" << x << "'");                
 
                 const auto var_name = p.at(0);
                 const auto HC = p.at(1); // hot or cold.
