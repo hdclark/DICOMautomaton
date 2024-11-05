@@ -129,7 +129,7 @@ OperationDoc OpArgDocAnalyzeHistograms(){
                            " First, constraints in the style of 'Dmax < 50.0 Gy'."
                            " The left-hand-size (LHS) can be any of {Dmin, Dmean, Dmax}."
                            " The inequality can be any of {<, lt, <=, lte, >, gt, >=, gte}."
-                           " The right-hand-side (RHS) units can be any of {Gy, %, none} where"
+                           " The right-hand-side (RHS) units can be any of {Gy, cGy, %, none} where"
                            " the default units are assumed to be 'Gy',"
                            " '%' means the RHS number is a percentage of the ReferenceDose,"
                            " and 'none' uses the existing values without printing or conversion."
@@ -139,13 +139,13 @@ OperationDoc OpArgDocAnalyzeHistograms(){
                            " The inner LHS units can be any of {cc, cm3, cm^3, %} where"
                            " '%' means the inner LHS number is a percentage of the total volume."
                            " The inequality can be any of {<, lt, <=, lte, >, gt, >=, gte}."
-                           " The RHS units can be any of {Gy, %, none} where"
+                           " The RHS units can be any of {Gy, cGy, %, none} where"
                            " the default units are assumed to be 'Gy',"
                            " '%' means the RHS number is a percentage of the ReferenceDose"
                            " and 'none' uses the existing values without printing or conversion."
                            "\n\n"
                            "Third, constraints in the style of 'V(24.5 Gy) < 500.0 cc'."
-                           " The inner LHS units can be any of {Gy, %, none} where"
+                           " The inner LHS units can be any of {Gy, cGy, %, none} where"
                            " the default units are assumed to be 'Gy',"
                            " '%' means the inner LHS number is a percentage of the ReferenceDose"
                            " and 'none' uses the existing values without printing or conversion."
@@ -181,6 +181,7 @@ OperationDoc OpArgDocAnalyzeHistograms(){
                                  "Dmin >= 80 %",
                                  "Dmin >= 65 Gy",
                                  "Dmin >= 65",
+                                 "Dmin >= 6500 cGy",
                                  "D(coldest 500.0 cc) <= 25.0 Gy",
                                  "D(coldest 500.0 cc) <= 15.0 %",
                                  "D(coldest 50%) <= 15.0 %",
@@ -431,6 +432,7 @@ bool AnalyzeHistograms(Drover &DICOM_data,
             const auto r_max  = lCompile_Regex(R"***(.*max.*)***");
 
             const auto r_gy   = lCompile_Regex(R"***(.*Gy.*)***");
+            const auto r_cgy  = lCompile_Regex(R"***(.*cGy.*)***");
             const auto r_pcnt = lCompile_Regex(R"***(.*[%].*)***");
             const auto r_none = lCompile_Regex(R"***(^[ ]*$|^$)***");
 
@@ -473,6 +475,9 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                 }else if( std::regex_match(unit, r_gy ) ){
                     D_mmm *= 1.0; // a no-op.
                     out_unit = "Gy";
+                }else if( std::regex_match(unit, r_cgy ) ){
+                    D_mmm *= 100.0;
+                    out_unit = "cGy";
                 }else if( std::regex_match(unit, r_pcnt ) ){
                     D_mmm *= 100.0 / ReferenceDose; // Express as a percentage of ReferenceDose.
                     out_unit = "%";
@@ -578,6 +583,9 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                 }else if( std::regex_match(RHS_unit, r_gy ) ){
                     D_eval *= 1.0; // A no-op.
                     out_unit = "Gy";
+                }else if( std::regex_match(RHS_unit, r_cgy ) ){
+                    D_eval *= 100.0;
+                    out_unit = "Gy";
                 }else if( std::regex_match(RHS_unit, r_pcnt ) ){
                     D_eval *= 100.0 / ReferenceDose; // Express as a percentage of ReferenceDose.
                     out_unit = "%";
@@ -639,6 +647,8 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                 if( false ){
                 }else if( std::regex_match(LHS_unit, r_gy ) ){
                     D_abs = D_lhs; // A no-op.
+                }else if( std::regex_match(LHS_unit, r_cgy ) ){
+                    D_abs = D_lhs / 100.0;
                 }else if( std::regex_match(LHS_unit, r_pcnt) ){
                     D_abs = D_lhs * ReferenceDose / 100.0; // Convert from % to abs.
                 }else if( std::regex_match(LHS_unit, r_none ) ){
