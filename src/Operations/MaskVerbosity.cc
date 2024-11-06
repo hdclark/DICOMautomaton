@@ -40,6 +40,7 @@ OperationDoc OpArgDocMaskVerbosity() {
     out.aliases.emplace_back("MaskWarnings");
     out.aliases.emplace_back("MaskLogs");
     out.aliases.emplace_back("MaskNotifications");
+    out.aliases.emplace_back("SilenceWarnings");
 
     out.desc = "This operation is a meta-operation that temporarily alters the global log verbosity level."
                " Child operations are executed with the adjusted verbosity level, which affects what log"
@@ -65,7 +66,7 @@ OperationDoc OpArgDocMaskVerbosity() {
     out.args.back().desc = "Controls whether the original verbosity levels are reset after invoking children"
                            " operations. If false, the effect is temporary and applied only to children operations."
                            " If true, the effect is permanent and applies to all subsequent operations.";
-    out.args.back().default_val = "true";
+    out.args.back().default_val = "false";
     out.args.back().expected = true;
     out.args.back().examples = { "true", "false" };
     out.args.back().samples = OpArgSamples::Exhaustive;
