@@ -86,7 +86,10 @@ OperationDoc OpArgDocAnalyzeHistograms(){
                            " Even if left empty, the column will remain in the output to ensure the outputs from"
                            " multiple runs can be safely concatenated."
                            " Preceding alphanumeric variables with a '$' will cause them to be treated as metadata"
-                           " keys and replaced with the corresponding key's value, if present. For example,"
+                           " keys and replaced with the corresponding key's value, if present."
+                           " Metadata sources are (1) from the global parameter table, and (2) from the current"
+                           " line sample / histogram being processed."
+                           " For example,"
                            " 'The modality is $Modality' might be (depending on the metadata) expanded to"
                            " 'The modality is Histogram'. If the metadata key is not present, the expression will remain"
                            " unexpanded (i.e., with a preceeding '$').";
@@ -101,7 +104,10 @@ OperationDoc OpArgDocAnalyzeHistograms(){
                            " constraint and any caveats that the viewer should be aware of. Generally, the UserComment"
                            " is best for broadly-defined notes whereas the Description is tailored for each constraint."
                            " Preceding alphanumeric variables with a '$' will cause them to be treated as metadata"
-                           " keys and replaced with the corresponding key's value, if present. For example,"
+                           " keys and replaced with the corresponding key's value, if present."
+                           " Metadata sources are (1) from the global parameter table, and (2) from the current"
+                           " line sample / histogram being processed."
+                           " For example,"
                            " 'The modality is $Modality' might be (depending on the metadata) expanded to"
                            " 'The modality is Histogram'. If the metadata key is not present, the expression will remain"
                            " unexpanded (i.e., with a preceeding '$').";
