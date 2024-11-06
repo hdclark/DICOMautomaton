@@ -2198,6 +2198,16 @@ OperationArgPkg::visit_opts( const std::function<void(const std::string &key, st
     return;
 }
 
+void
+OperationArgPkg::visit_opts( const std::function<void(const std::string &key, const std::string &val)> &f) const {
+    for(auto &o : this->opts){
+        const auto key = o.first; // Distruct user due to const-cast, which would be problematic.
+        const auto val = o.second;
+        if(f) f(key, val);
+    }
+    return;
+}
+
 // Children.
 void
 OperationArgPkg::makeChild(std::string unparsed, const std::string& sepr, const std::string& eqls){

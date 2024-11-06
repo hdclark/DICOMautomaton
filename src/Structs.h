@@ -617,6 +617,7 @@ class OperationArgPkg {
         bool insert(const std::string& keyval); //Will not overwrite.
 
         void visit_opts( const std::function<void(const std::string &key, std::string &val)> &);
+        void visit_opts( const std::function<void(const std::string &key, const std::string &val)> &) const;
 
         //Children.
         void makeChild(std::string unparsed, const std::string& sepr = ":", const std::string& eqls = "=");
