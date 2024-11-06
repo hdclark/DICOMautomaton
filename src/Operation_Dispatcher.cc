@@ -633,6 +633,11 @@ bool Operation_Dispatcher( Drover &DICOM_data,
                     });
 
                     YLOGINFO("Performing operation '" << op_func.first << "' now..");
+                    optargs.visit_opts([](const std::string &key, const std::string &val){
+                        YLOGDEBUG("  Parameter '" << key << "' = '" << val << "'");
+                        return;
+                    });
+
                     const bool res = op_func.second.second(DICOM_data,
                                                            optargs,
                                                            InvocationMetadata,
