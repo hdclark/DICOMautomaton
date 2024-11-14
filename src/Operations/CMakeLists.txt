@@ -85,6 +85,7 @@ add_library(Operations_objs OBJECT
     EQDXTable.cc
     EvaluateDoseVolumeStats.cc
     EvaluateNTCPModels.cc
+    EvaluateParameters.cc
     EvaluateTCPModels.cc
     ExecuteShell.cc
     ExplodeImages.cc

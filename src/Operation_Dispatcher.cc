@@ -106,6 +106,7 @@
 #include "Operations/EQDXTable.h"
 #include "Operations/EvaluateDoseVolumeStats.h"
 #include "Operations/EvaluateNTCPModels.h"
+#include "Operations/EvaluateParameters.h"
 #include "Operations/EvaluateTCPModels.h"
 #include "Operations/ExecuteShell.h"
 #include "Operations/ExplodeImages.h"
@@ -370,6 +371,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["EQDXTable"] = std::make_pair(OpArgDocEQDXTable, EQDXTable);
     out["EvaluateDoseVolumeStats"] = std::make_pair(OpArgDocEvaluateDoseVolumeStats, EvaluateDoseVolumeStats);
     out["EvaluateNTCPModels"] = std::make_pair(OpArgDocEvaluateNTCPModels, EvaluateNTCPModels);
+    out["EvaluateParameters"] = std::make_pair(OpArgDocEvaluateParameters, EvaluateParameters);
     out["EvaluateTCPModels"] = std::make_pair(OpArgDocEvaluateTCPModels, EvaluateTCPModels);
     out["ExecuteShell"] = std::make_pair(OpArgDocExecuteShell, ExecuteShell);
     out["ExplodeImages"] = std::make_pair(OpArgDocExplodeImages, ExplodeImages);
