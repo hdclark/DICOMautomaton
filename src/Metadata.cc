@@ -304,6 +304,20 @@ size_t hash_std_map(const metadata_map_t &m){
 
 void recursively_expand_macros(metadata_map_t &working,
                                const metadata_map_t &ref ){
+
+    // Search for the presence of variable prefix character '$'.
+    const auto contains_char = [](const std::string &s) -> bool {
+                                   const auto pos = s.find('$');
+                                   return (pos != std::string::npos);
+    };
+
+    const bool any_has_char = std::any_of( std::begin(working),
+                                           std::end(working),
+                                           [&](const auto &p) -> bool {
+                                               return contains_char(p.second);
+                                           });
+    if(!any_has_char) return;
+
     // Continually attempt replacements until no changes occur. This will cover recursive changes (up to a
     // point) which adds some extra capabilities.
     auto prev_hash = hash_std_map(working);
@@ -311,12 +325,18 @@ void recursively_expand_macros(metadata_map_t &working,
     while(true){
         // Expand macros against the reference metadata, if any are present.
         for(auto &kv : working){
-            kv.second = ExpandMacros(kv.second, ref);
+            const bool has_char = contains_char(kv.second);
+            if(has_char){
+                kv.second = ExpandMacros(kv.second, ref);
+            }
         }
 
         // Expand macros against the working metadata, if any are present.
         for(auto &kv : working){
-            kv.second = ExpandMacros(kv.second, working);
+            const bool has_char = contains_char(kv.second);
+            if(has_char){
+                kv.second = ExpandMacros(kv.second, working);
+            }
         }
 
         const auto new_hash = hash_std_map(working);
