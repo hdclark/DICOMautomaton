@@ -331,13 +331,13 @@ void recursively_expand_macros(metadata_map_t &working,
             }
         }
 
-        // Expand macros against the working metadata, if any are present.
-        for(auto &kv : working){
-            const bool has_char = contains_char(kv.second);
-            if(has_char){
-                kv.second = ExpandMacros(kv.second, working);
-            }
-        }
+        //// Expand macros against the working metadata, if any are present.
+        //for(auto &kv : working){
+        //    const bool has_char = contains_char(kv.second);
+        //    if(has_char){
+        //        kv.second = ExpandMacros(kv.second, working);
+        //    }
+        //}
 
         const auto new_hash = hash_std_map(working);
         if(prev_hash == new_hash) break;

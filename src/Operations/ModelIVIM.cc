@@ -480,6 +480,8 @@ bool ModelIVIM(Drover &DICOM_data,
         // Assign common metadata.
         for(auto & img : (*iap_it)->imagecoll.images){
             auto l_cm = cm;
+            l_cm["Description"] = img.metadata["Description"];
+
             img.metadata.clear();
             inject_metadata( img.metadata, std::move(l_cm) );
             cm = coalesce_metadata_for_basic_mr_image(cm, meta_evolve::iterate);
