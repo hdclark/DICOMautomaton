@@ -342,7 +342,7 @@ void recursively_expand_macros(metadata_map_t &working,
         const auto new_hash = hash_std_map(working);
         if(prev_hash == new_hash) break;
         prev_hash = new_hash;
-        if(500 < ++i){
+        if(10 < ++i){
             throw std::invalid_argument("Excessive number of recursive macro replacements detected.");
         }
     }
