@@ -106,6 +106,7 @@ add_library(Operations_objs OBJECT
     ExtractAlphaBeta.cc
     ExtractPointsWarp.cc
     False.cc
+    FindFiles.cc
     ForEachDistinct.cc
     ForEachRTPlan.cc
     For.cc

@@ -127,6 +127,7 @@
 #include "Operations/ExtractImageHistograms.h"
 #include "Operations/ExtractPointsWarp.h"
 #include "Operations/False.h"
+#include "Operations/FindFiles.h"
 #include "Operations/ForEachDistinct.h"
 #include "Operations/ForEachRTPlan.h"
 #include "Operations/For.h"
@@ -393,6 +394,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["ExtractImageHistograms"] = std::make_pair(OpArgDocExtractImageHistograms, ExtractImageHistograms);
     out["ExtractPointsWarp"] = std::make_pair(OpArgDocExtractPointsWarp, ExtractPointsWarp);
     out["False"] = std::make_pair(OpArgDocFalse, False);
+    out["FindFiles"] = std::make_pair(OpArgDocFindFiles, FindFiles);
     out["ForEachDistinct"] = std::make_pair(OpArgDocForEachDistinct, ForEachDistinct);
     out["ForEachRTPlan"] = std::make_pair(OpArgDocForEachRTPlan, ForEachRTPlan);
     out["For"] = std::make_pair(OpArgDocFor, For);
