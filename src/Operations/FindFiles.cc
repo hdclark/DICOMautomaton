@@ -127,6 +127,11 @@ bool FindFiles(Drover& DICOM_data,
     // Search for files/directories.
     std::list< std::filesystem::path > paths;
 
+    // Add the root dir if looking for directories.
+    if(get_dirs){
+        paths.emplace_back(root);
+    }
+
     YLOGINFO("Beginning search now");
     const auto f_search = [&](const auto &dir_iter){
         for(const auto &p :  dir_iter){
