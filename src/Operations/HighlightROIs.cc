@@ -218,7 +218,7 @@ bool HighlightROIs(Drover &DICOM_data,
 
     //-----------------------------------------------------------------------------------------------------------------
 
-    const auto TrueRegex = Compile_Regex("^tr?u?e?$");
+    const auto regex_true = Compile_Regex("^tr?u?e?$");
 
     const auto regex_centre = Compile_Regex("^ce?n?t?[re]?[er]?");
     const auto regex_pci = Compile_Regex("^pl?a?n?a?r?[_-]?c?o?r?n?e?r?s?[_-]?inc?l?u?s?i?v?e?$");
@@ -231,8 +231,8 @@ bool HighlightROIs(Drover &DICOM_data,
     const auto regex_binary = Compile_Regex("^bi?n?a?r?y?$");
     const auto regex_recede = Compile_Regex("^re?c?e?d?i?n?g?[_-]?s?q?u?a?r?e?s?$");
 
-    const auto ShouldOverwriteExterior = std::regex_match(ExteriorOverwriteStr, TrueRegex);
-    const auto ShouldOverwriteInterior = std::regex_match(InteriorOverwriteStr, TrueRegex);
+    const auto ShouldOverwriteExterior = std::regex_match(ExteriorOverwriteStr, regex_true);
+    const auto ShouldOverwriteInterior = std::regex_match(InteriorOverwriteStr, regex_true);
 
     const bool contour_overlap_ignore  = std::regex_match(ContourOverlapStr, regex_ignore);
     const bool contour_overlap_honopps = std::regex_match(ContourOverlapStr, regex_honopps);
