@@ -155,11 +155,14 @@ bool FindFiles(Drover& DICOM_data,
 
     // Invoke the children operations for each path.
     YLOGINFO("Located " << paths.size() << " files/directories, beginning processing now");
-    for(const auto &p : paths){
-        InvocationMetadata[Key] = p.string();
+    auto children = OptArgs.getChildren();
+    if(!children.empty()){
+        for(const auto &p : paths){
+            InvocationMetadata[Key] = p.string();
 
-        ret = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, OptArgs.getChildren());
-        if(!ret) break;
+            ret = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, children);
+            if(!ret) break;
+        }
     }
 
     // Restore the key to its original state in the global parameter table.
