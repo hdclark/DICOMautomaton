@@ -41,13 +41,17 @@ OperationDoc OpArgDocConvertParametersToTable(){
     out.name = "ConvertParametersToTable";
 
     out.desc = 
-        "Convert one or more key-value parameters from the global parameter table into a table.";
+        "Convert one or more key-value parameters from the global parameter table into a table."
+        " If no table is selected, a new table will be created."
+        " If an existing table is selected, it will be appended to an empty row at the bottom of the table.";
 
     out.args.emplace_back();
     out.args.back().name = "KeySelection";
     out.args.back().desc = "A regular expression that will select key-values to include in the table."
                            "\n\n"
                            "This regular expression will be applied only to keys."
+                           " Note that multiple keys can be selected, and all matches will be printed on"
+                           " the same row."
                            "";
     out.args.back().default_val = ".*";
     out.args.back().expected = true;
@@ -58,7 +62,8 @@ OperationDoc OpArgDocConvertParametersToTable(){
     out.args.back() = STWhitelistOpArgDoc();
     out.args.back().name = "TableSelection";
     out.args.back().default_val = "last";
-    
+
+
     out.args.emplace_back();
     out.args.back().name = "TableLabel";
     out.args.back().desc = "A label to attach to table if and only if a new table is created.";
@@ -66,13 +71,30 @@ OperationDoc OpArgDocConvertParametersToTable(){
     out.args.back().expected = true;
     out.args.back().examples = { "unspecified", "xyz", "sheet A" };
 
+
+    out.args.emplace_back();
+    out.args.back().name = "EmitHeader";
+    out.args.back().desc = "Controls whether a header is emitted."
+                           " If 'false' no header is emitted."
+                           " If 'true', two rows are emitted regardless of whether there is a pre-existing header."
+                           " If 'empty', a header is only emitted when the table is empty (i.e., no content in any"
+                           " cells). Consistency of the emitted row with the existing table content and"
+                           " structure is not verified and is therefore left to the user."
+                           "\n\n"
+                           "Note that the header consists of the key names."
+                           "";
+    out.args.back().default_val = "empty";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false", "empty" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
+
     return out;
 }
 
 bool ConvertParametersToTable(Drover& DICOM_data,
-                      const OperationArgPkg& OptArgs,
-                      std::map<std::string, std::string>& InvocationMetadata,
-                      const std::string& FilenameLex){
+                              const OperationArgPkg& OptArgs,
+                              std::map<std::string, std::string>& InvocationMetadata,
+                              const std::string& FilenameLex){
 
     Explicator X(FilenameLex);
 
@@ -81,12 +103,22 @@ bool ConvertParametersToTable(Drover& DICOM_data,
 
     const auto TableLabel = OptArgs.getValueStr("TableLabel").value();
     const auto TableSelectionStr = OptArgs.getValueStr("TableSelection").value();
+    const auto EmitHeaderStr = OptArgs.getValueStr("EmitHeader").value();
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto NormalizedTableLabel = X(TableLabel);
 
     const auto regex_key = Compile_Regex(KeySelectionStr);
 
+    const auto regex_true = Compile_Regex("^tr?u?e?$");
+    const auto regex_false = Compile_Regex("^fa?l?s?e?$");
+    const auto regex_empty = Compile_Regex("^em?p?t?y?$");
+    
+    const bool emit_header_true  = std::regex_match(EmitHeaderStr, regex_true);
+    const bool emit_header_false = std::regex_match(EmitHeaderStr, regex_false);
+    const bool emit_header_empty = std::regex_match(EmitHeaderStr, regex_empty);
+
+    // Select or create a table.
     auto STs_all = All_STs( DICOM_data );
     auto STs = Whitelist( STs_all, TableSelectionStr );
 
@@ -94,23 +126,37 @@ bool ConvertParametersToTable(Drover& DICOM_data,
     std::shared_ptr<Sparse_Table> st = create_new_table ? std::make_shared<Sparse_Table>()
                                                         : *(STs.back());
 
-    // Emit a header.
-    int64_t row = st->table.next_empty_row();
-    if(create_new_table){
-        ++row;
-        int64_t col = 1;
-        st->table.inject(row, col++, "Key");
-        st->table.inject(row, col++, "Value");
-    }
 
-    // Fill in the table.
-    {
-        for(const auto& kvp : InvocationMetadata){
-            if(std::regex_match(kvp.first, regex_key)){
-                ++row;
-                int64_t col = 1;
-                st->table.inject(row, col++, kvp.first);
-                st->table.inject(row, col++, kvp.second);
+    // Search all parameters.
+    const int64_t row_a = st->table.next_empty_row();
+    const int64_t row_b = row_a + 1;
+    tables::table2 placeholder_table;
+    const bool is_empty = create_new_table || (row_a == placeholder_table.next_empty_row());
+
+    int64_t col = 1;
+    for(const auto& kvp : InvocationMetadata){
+        if(std::regex_match(kvp.first, regex_key)){
+            std::optional<int64_t> row_hdr;
+            std::optional<int64_t> row_val;
+
+            if(false){
+            }else if( emit_header_true
+                  ||  (emit_header_empty && is_empty) ){
+                row_hdr = row_a;
+                row_val = row_b;
+            }else if( emit_header_false
+                  ||  (emit_header_empty && !is_empty) ){
+                row_hdr = {};
+                row_val = row_a;
+            }else{
+                throw std::runtime_error("EmitHeader argument not understood");
+            }
+
+            if(row_hdr){
+                st->table.inject(row_hdr.value(), col, kvp.first);
+            }
+            if(row_val){
+                st->table.inject(row_val.value(), col++, kvp.second);
             }
         }
     }
