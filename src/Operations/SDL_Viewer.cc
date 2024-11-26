@@ -1042,6 +1042,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     int64_t img_num = -1; // The image currently displayed.
     int64_t img_channel = -1; // Which channel to display.
     bool img_is_rgb = false; // Treat the image as though it were in RGB format already.
+    bool use_texture_antialiasing = false; // Controls whether textures use mipmaps for antialiasing.
     using img_array_ptr_it_t = decltype(DICOM_data.image_data.begin());
     using disp_img_it_t = decltype(DICOM_data.image_data.front()->imagecoll.images.begin());
     bool img_precess = false;
@@ -1822,6 +1823,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                       &nan_colour  ]( const planar_image<float,double>& img,
                                                       const int64_t img_channel,
                                                       const bool img_is_rgb,
+                                                      const bool use_texture_antialiasing,
                                                       const std::optional<double>& custom_centre,
                                                       const std::optional<double>& custom_width ) -> opengl_texture_handle_t {
 
@@ -2044,9 +2046,16 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
             CHECK_FOR_GL_ERRORS();
 
+            if(use_texture_antialiasing){
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE); //MIRRORED_REPEAT);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE); //MIRRORED_REPEAT);
+            }else{
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+            }
 
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
             CHECK_FOR_GL_ERRORS();
 
             glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
@@ -2054,6 +2063,12 @@ bool SDL_Viewer(Drover &DICOM_data,
             glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB,
                          static_cast<int>(out.col_count), static_cast<int>(out.row_count),
                          0, GL_RGB, GL_UNSIGNED_BYTE, static_cast<void*>(animage.data()));
+            CHECK_FOR_GL_ERRORS();
+
+            if(use_texture_antialiasing){
+                glGenerateMipmap(GL_TEXTURE_2D);
+            }
+            glBindTexture(GL_TEXTURE_2D, 0);
             CHECK_FOR_GL_ERRORS();
 
             out.texture_exists = true;
@@ -2177,6 +2192,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                          &img_num,
                                          &img_channel,
                                          &img_is_rgb,
+                                         &use_texture_antialiasing,
                                          &recompute_image_iters,
                                          &current_texture,
                                          &custom_centre,
@@ -2205,6 +2221,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             img_num = 0;
             img_channel = 0;
             img_is_rgb = false;
+            use_texture_antialiasing = false;
             if( auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters(); img_valid ){
                 break;
             }
@@ -2215,6 +2232,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             img_num = -1;
             img_channel = -1;
             img_is_rgb = false;
+            use_texture_antialiasing = false;
         }while(false);
 
         // Signal the need to reload the texture.
@@ -2326,7 +2344,9 @@ bool SDL_Viewer(Drover &DICOM_data,
         auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
         if( img_valid ){ 
             Free_OpenGL_Texture(scale_bar_texture);
-            scale_bar_texture = Load_OpenGL_Texture( scale_bar_img, 0L, false, {}, {} );
+            const bool l_img_is_rgb = false;
+            const bool l_use_texture_antialiasing = false;
+            scale_bar_texture = Load_OpenGL_Texture( scale_bar_img, 0L, l_img_is_rgb, l_use_texture_antialiasing, {}, {} );
         }
         return;
     };
@@ -2361,8 +2381,11 @@ bool SDL_Viewer(Drover &DICOM_data,
                 const auto pic = ReadImageUsingSTB(img_blob);
                 for(const auto &img : pic.images){
                     const int64_t img_channel = 0L;
-                    const bool img_is_rgb = true;
-                    guide_image_textures.emplace_back( Load_OpenGL_Texture(img, img_channel, img_is_rgb, {}, {}) );
+                    const bool l_img_is_rgb = true;
+                    const bool l_use_texture_antialiasing = true;
+                    guide_image_textures.emplace_back( Load_OpenGL_Texture(img, img_channel,
+                                                                           l_img_is_rgb,
+                                                                           l_use_texture_antialiasing, {}, {}) );
                 }
             }catch(const std::exception &e){
                 YLOGWARN("Unable to load embedded base64-encoded image: " << e.what());
@@ -3582,6 +3605,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                            &img_array_num,
                                            &img_channel,
                                            &img_is_rgb,
+                                           &use_texture_antialiasing,
                                            &Free_OpenGL_Texture,
                                            &Load_OpenGL_Texture ]() -> void {
             std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex);
@@ -3590,12 +3614,15 @@ bool SDL_Viewer(Drover &DICOM_data,
             &&  img_valid ){
                 img_channel = std::clamp<int64_t>(img_channel, 0, disp_img_it->channels-1);
                 Free_OpenGL_Texture(current_texture);
-                current_texture = Load_OpenGL_Texture(*disp_img_it, img_channel, img_is_rgb, custom_centre, custom_width);
+                current_texture = Load_OpenGL_Texture(*disp_img_it, img_channel,
+                                                      img_is_rgb, use_texture_antialiasing,
+                                                      custom_centre, custom_width);
             }else{
                 img_channel = -1;
                 img_array_num = -1;
                 img_num = -1;
                 img_is_rgb = false;
+                use_texture_antialiasing = false;
                 current_texture = opengl_texture_handle_t();
             }
             return;
@@ -3613,7 +3640,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::SetNextWindowPos(ImVec2(700, 40), ImGuiCond_FirstUseEver);
                 ImGui::Begin("Contour Mask Debugging", &view_toggles.view_contouring_debug, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar ); //| ImGuiWindowFlags_AlwaysAutoResize);
                 Free_OpenGL_Texture(contouring_texture);
-                contouring_texture = Load_OpenGL_Texture( *cimg_it, 0L, false, {}, {} );
+                const bool l_img_is_rgb = false;
+                const bool l_use_texture_antialiasing = false;
+                contouring_texture = Load_OpenGL_Texture( *cimg_it, 0L, l_img_is_rgb, l_use_texture_antialiasing, {}, {} );
                 auto gl_tex_ptr = reinterpret_cast<void*>(static_cast<intptr_t>(contouring_texture.texture_number));
                 ImGui::Image(gl_tex_ptr, ImVec2(600,600), uv_min, uv_max);
                 ImGui::End();
@@ -4203,7 +4232,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                 img_ptr->metadata["WindowCenter"] = "0.5";
                 img_ptr->metadata["WindowWidth"] = "1.0";
 
-                polyomino_texture = Load_OpenGL_Texture( *img_ptr, 0L, false, {}, {} );
+                const bool l_img_is_rgb = false;
+                const bool l_use_texture_antialiasing = false;
+                polyomino_texture = Load_OpenGL_Texture( *img_ptr, 0L, l_img_is_rgb, l_use_texture_antialiasing, {}, {} );
                 t_polyomino_updated = std::chrono::steady_clock::now();
             }
             const auto score = polyomino_imgs.image_data.back()->imagecoll.images.back().GetMetadataValueAs<double>("PolyominoesScore").value_or(0.0);
@@ -4282,7 +4313,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                     auto *img_ptr = &(polyomino_imgs.image_data.back()->imagecoll.images.back());
 
                     Free_OpenGL_Texture(polyomino_texture);
-                    polyomino_texture = Load_OpenGL_Texture( *img_ptr, 0L, false, {}, {} );
+                    const bool l_img_is_rgb = false;
+                    const bool l_use_texture_antialiasing = false;
+                    polyomino_texture = Load_OpenGL_Texture( *img_ptr, 0L, l_img_is_rgb, l_use_texture_antialiasing, {}, {} );
                 }else{
                     polyomino_paused = true;
                 }
@@ -8597,6 +8630,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                                &img_precess_last,
                                                &img_channel,
                                                &img_is_rgb,
+                                               &use_texture_antialiasing,
 
                                                &zoom,
                                                &pan,
@@ -8648,6 +8682,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             int scroll_images = img_num;
             int scroll_channel = img_channel;
             bool scroll_is_rgb = img_is_rgb;
+            bool scroll_use_tex_aa = use_texture_antialiasing;
             {
                 //ImVec2 window_extent = ImGui::GetContentRegionAvail();
 
@@ -8724,6 +8759,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 ImGui::Text("Display");
                 const auto N_channels = static_cast<int>(disp_img_it->channels);
                 ImGui::SliderInt("Channel", &scroll_channel, 0, N_channels - 1);
+                ImGui::Checkbox("Use antialiasing", &scroll_use_tex_aa);
                 if( 3 <= N_channels ){
                     ImGui::Checkbox("Image represents RGB colour", &scroll_is_rgb);
                 }else{
@@ -9040,6 +9076,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             int64_t new_img_num = scroll_images;
             int64_t new_img_chnl = scroll_channel;
             bool new_img_is_rgb = scroll_is_rgb;
+            bool new_use_tex_aa = scroll_use_tex_aa;
 
             // Update the image state.
             if( new_img_array_num != img_array_num ){
@@ -9066,11 +9103,13 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
                 if( !img_valid ) throw std::runtime_error("Advanced to inaccessible image channel");
 
-            }else if( new_img_is_rgb != img_is_rgb ){
+            }else if( (new_img_is_rgb != img_is_rgb)
+                  ||  (new_use_tex_aa != use_texture_antialiasing) ){
                 img_is_rgb = new_img_is_rgb;
+                use_texture_antialiasing = new_use_tex_aa;
                 recompute_image_state();
                 auto [img_valid, img_array_ptr_it, disp_img_it] = recompute_image_iters();
-                if( !img_valid ) throw std::runtime_error("Unable to render image as RGB format");
+                if( !img_valid ) throw std::runtime_error("Unable to render image (RGB or antialiasing issue)");
             }
 
             ImGui::End();
