@@ -1,0 +1,40 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# Example of ConvertParametersToTable.
+
+ModifyParameters(
+    Actions = 'define(key_1, value_1);
+               define(key_2, value_2);
+               define(key_3, value_3);',
+){};
+
+# Create two tables, one wide and one tall.
+For(
+    Key = 'shape',
+    EachOf = 'wide,tall',
+){
+
+    GenerateTable(
+        TableLabel = 'unspecified',
+    ){};
+
+    # Demonstrate header emission.
+    For(
+        Key = 'emit_header',
+        EachOf = 'empty,empty,true,false',
+    ){
+
+        ConvertParametersToTable(
+            KeySelection = '.*',
+            TableSelection = 'last',
+            TableLabel = 'unspecified',
+            EmitHeader = '${emit_header}',
+            Shape = '${shape}',
+        ){};  
+  
+    };
+
+};
+
+
+
