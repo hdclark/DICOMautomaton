@@ -49,6 +49,10 @@ OperationDoc OpArgDocMapTableToParameters(){
     out.args.back().name = "KeyPrefix";
     out.args.back().desc = "Used to map columns to the global parameter table. This string will prefix"
                            " the parameter table keys; an identifier will be appended for each column."
+                           "\n\n"
+                           "Note that any metadata keys that inadvertently match the mapping will be"
+                           " stowed while children operations are being invoked, and reset afterward."
+                           " All other metadata, including metadata added by children, are unaffected."
                            "";
     out.args.back().default_val = "_column_";
     out.args.back().expected = true;
