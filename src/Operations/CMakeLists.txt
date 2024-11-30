@@ -143,6 +143,7 @@ add_library(Operations_objs OBJECT
     LoadFiles.cc
     LoadFilesInteractively.cc
     LogScale.cc
+    MapTableToParameters.cc
     MaskParameters.cc
     MaskVerbosity.cc
     MaxMinPixels.cc

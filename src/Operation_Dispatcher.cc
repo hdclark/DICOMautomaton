@@ -164,6 +164,7 @@
 #include "Operations/LoadFiles.h"
 #include "Operations/LoadFilesInteractively.h"
 #include "Operations/LogScale.h"
+#include "Operations/MapTableToParameters.h"
 #include "Operations/MaskParameters.h"
 #include "Operations/MaskVerbosity.h"
 #include "Operations/MaxMinPixels.h"
@@ -431,6 +432,7 @@ std::map<std::string, op_packet_t> Known_Operations(){
     out["LoadFiles"] = std::make_pair(OpArgDocLoadFiles, LoadFiles);
     out["LoadFilesInteractively"] = std::make_pair(OpArgDocLoadFilesInteractively, LoadFilesInteractively);
     out["LogScale"] = std::make_pair(OpArgDocLogScale, LogScale);
+    out["MapTableToParameters"] = std::make_pair(OpArgDocMapTableToParameters, MapTableToParameters);
     out["MaskParameters"] = std::make_pair(OpArgDocMaskParameters, MaskParameters);
     out["MaskVerbosity"] = std::make_pair(OpArgDocMaskVerbosity, MaskVerbosity);
     out["MaxMinPixels"] = std::make_pair(OpArgDocMaxMinPixels, MaxMinPixels);
