@@ -1,0 +1,32 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+
+GenerateTable(
+    # TableLabel = 'unspecified',
+){};
+
+ConvertParametersToTable(
+    KeySelection = '.*',
+    TableSelection = 'last',
+    # TableLabel = 'unspecified',
+    # EmitHeader = 'empty',
+    Shape = 'tall',
+){};
+
+MapTableToParameters(
+    KeyPrefix = 'column',
+    TableSelection = 'last',
+){
+
+    ModifyParameters(
+        Actions = ' insert("column_5", "new column");
+                    define("column_1", "overwritten");
+                    remove("column_0"); ',
+    ){};
+
+};
+
+DeleteTables(
+    TableSelection = 'last',
+){};
+
