@@ -136,30 +136,24 @@ bool MapTableToParameters(Drover& DICOM_data,
 
     // ====== Metadata stowing =======
 
-    // Data and closure for deferred key-value garbage removal.
-    std::set<std::string> keys_to_erase;
-    const auto erase_marked_keys = [&](){
-        for(const auto& k : keys_to_erase){
-            InvocationMetadata.erase(k);
-        }
-        keys_to_erase.clear();
-        return;
-    };
-
     // Stow a copy of all matching keys currently in the parameter table, including keys that
     // will match later. Remove them from the parameter table and only restore at the end.
     //
     // TODO: Move this to a class accepting a user-provided unary functor controlling whether to stow?
+    const auto im_end = std::end(InvocationMetadata);
     std::map<std::string, std::optional<std::string>> stowed_kvps;
-    for(const auto& kvp : InvocationMetadata){
-        const auto key = kvp.first;
+    for(auto kvp_it = std::begin(InvocationMetadata); kvp_it != im_end; ){
+        const auto &key = kvp_it->first;
+        const auto &val = kvp_it->second;
+
         const auto col_opt = decode_cell_key(key);
         if(col_opt){ // If we can decode a column number, this key interferes.
-            stowed_kvps[key] = kvp.second;
-            keys_to_erase.insert(key);
+            stowed_kvps[key] = val;
+            kvp_it = InvocationMetadata.erase(kvp_it);
+        }else{
+            ++kvp_it;
         }
     }
-    erase_marked_keys();
 
     // Restore stowed metadata.
     //
@@ -216,22 +210,24 @@ bool MapTableToParameters(Drover& DICOM_data,
                     t.remove(r,c);
                     if(val_opt){
                         t.inject(r, c, val_opt.value());
-                        keys_to_erase.insert(key);
+                        InvocationMetadata.erase(key);
                     }
                 }
-                erase_marked_keys();
 
                 // Next, detect insertions of cells that were not encoded,
                 // i.e., new column entries that were added out of the prior column bounds.
-                for(const auto &kvp : InvocationMetadata){
-                    const auto &key = kvp.first;
+                for(auto kvp_it = std::begin(InvocationMetadata); kvp_it != im_end; ){
+                    const auto &key = kvp_it->first;
+                    const auto &val = kvp_it->second;
+
                     const auto col_opt = decode_cell_key(key);
                     if(col_opt){
-                        t.inject(r, col_opt.value(), kvp.second);
-                        keys_to_erase.insert(key);
+                        t.inject(r, col_opt.value(), val);
+                        kvp_it = InvocationMetadata.erase(kvp_it);
+                    }else{
+                        ++kvp_it;
                     }
                 }
-                erase_marked_keys();
 
                 if(!ret) break;
             }
