@@ -14,7 +14,7 @@ ConvertParametersToTable(
 ){};
 
 MapTableToParameters(
-    KeyPrefix = 'column',
+    ColumnNumberKeyPrefix = 'column_',
     TableSelection = 'last',
 ){
 

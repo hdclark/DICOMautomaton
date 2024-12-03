@@ -46,17 +46,39 @@ OperationDoc OpArgDocMapTableToParameters(){
         " and invoking children operations.";
 
     out.args.emplace_back();
-    out.args.back().name = "KeyPrefix";
+    out.args.back().name = "ColumnNumberKeyPrefix";
     out.args.back().desc = "Used to map columns to the global parameter table. This string will prefix"
                            " the parameter table keys; an identifier will be appended for each column."
+                           "\n\n"
+                           "For example, if the prefix key is '_column_' then the first column will have"
+                           " the key '_column_0', the second will have the key '_column_1', the 23rd will"
+                           " have key '_column_22', etc.."
+                           " The value corresponding to each key will be taken from the cells of the table;"
+                           " if a cell is empty the column will not be mapped."
+                           "\n\n"
+                           "Note that any metadata keys that inadvertently match the mapping will be"
+                           " stowed while children operations are being invoked, and reset afterward."
+                           " All other metadata, including metadata added by children, are unaffected."
+                           "\n\n"
+                           "Also note that cells can be deleted by deleting the key-value pair, and"
+                           " new cells can be added by inserting a new key-value pair."
+                           "";
+    out.args.back().default_val = "_column_";
+    out.args.back().expected = true;
+    out.args.back().examples = { "c_", "mapped_column_number", "xyz" };
+
+
+    out.args.emplace_back();
+    out.args.back().name = "RowNumberKey";
+    out.args.back().desc = "Optionally used to inform children operations which row number is being processed."
                            "\n\n"
                            "Note that any metadata keys that inadvertently match the mapping will be"
                            " stowed while children operations are being invoked, and reset afterward."
                            " All other metadata, including metadata added by children, are unaffected."
                            "";
-    out.args.back().default_val = "_column_";
-    out.args.back().expected = true;
-    out.args.back().examples = { "key_", "mapped", "xyz" };
+    out.args.back().default_val = "_row_";
+    out.args.back().expected = false;
+    out.args.back().examples = { "key", "mapped_row_number", "xyz" };
 
 
     out.args.emplace_back();
@@ -100,13 +122,14 @@ bool MapTableToParameters(Drover& DICOM_data,
                           const std::string& FilenameLex){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-    const auto KeyPrefixStr = OptArgs.getValueStr("KeyPrefix").value();
+    const auto ColumnNumberKeyPrefixStr = OptArgs.getValueStr("ColumnNumberKeyPrefix").value();
     const auto TableSelectionStr = OptArgs.getValueStr("TableSelection").value();
+    const auto RowNumberKeyOpt = OptArgs.getValueStr("RowNumberKey");
 //    const auto IgnoreHeaderStr = OptArgs.getValueStr("IgnoreHeader").value();
 //    const auto AccessModeStr = OptArgs.getValueStr("AccessMode").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto full_key_prefix = KeyPrefixStr + "_"_s;
+    const auto full_key_prefix = ColumnNumberKeyPrefixStr;
     const auto N_full_key_prefix = full_key_prefix.size();
 
 //    const auto regex_true = Compile_Regex("^tr?u?e?$");
@@ -146,6 +169,10 @@ bool MapTableToParameters(Drover& DICOM_data,
             return !!col_opt;
         });
 
+    if(RowNumberKeyOpt){
+        metadata_stow = stow_metadata(InvocationMetadata, metadata_stow, RowNumberKeyOpt.value());
+    }
+
     // Automaticaly restores the stowed metadata when exiting this scope.
     metadata_stow_guard msg( InvocationMetadata, metadata_stow );
 
@@ -170,10 +197,22 @@ bool MapTableToParameters(Drover& DICOM_data,
                     }
                 }
 
+                // Insert the row number.
+                if(RowNumberKeyOpt){
+                    const auto &key = RowNumberKeyOpt.value();
+                    InvocationMetadata[key] = std::to_string(r);
+                }
+
                 // Invoke children.
                 auto children = OptArgs.getChildren();
                 if(!children.empty()){
                     ret = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, children);
+                }
+
+                // Remove the row number.
+                if(RowNumberKeyOpt){
+                    const auto &key = RowNumberKeyOpt.value();
+                    InvocationMetadata.erase( key );
                 }
 
                 // Extract cell contents from the parameter table.
