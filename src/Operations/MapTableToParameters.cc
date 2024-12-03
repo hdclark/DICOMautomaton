@@ -134,52 +134,27 @@ bool MapTableToParameters(Drover& DICOM_data,
         return out;
     };
 
-    // ====== Metadata stowing =======
-
     // Stow a copy of all matching keys currently in the parameter table, including keys that
     // will match later. Remove them from the parameter table and only restore at the end.
-    //
-    // TODO: Move this to a class accepting a user-provided unary functor controlling whether to stow?
-    const auto im_end = std::end(InvocationMetadata);
-    std::map<std::string, std::optional<std::string>> stowed_kvps;
-    for(auto kvp_it = std::begin(InvocationMetadata); kvp_it != im_end; ){
-        const auto &key = kvp_it->first;
-        const auto &val = kvp_it->second;
+    auto metadata_stow = stow_metadata(InvocationMetadata, {},
+        [&]( const metadata_map_t::iterator &kvp_it ) -> bool {
+            const auto &key = kvp_it->first;
+            const auto &val = kvp_it->second;
 
-        const auto col_opt = decode_cell_key(key);
-        if(col_opt){ // If we can decode a column number, this key interferes.
-            stowed_kvps[key] = val;
-            kvp_it = InvocationMetadata.erase(kvp_it);
-        }else{
-            ++kvp_it;
-        }
-    }
+            // If we can decode a column number, this key interferes.
+            const auto col_opt = decode_cell_key(key);
+            return !!col_opt;
+        });
 
-    // Restore stowed metadata.
-    //
-    // TODO: Move this to a class for automatic restoration via RAII?
-    const auto restore_stowed_metadata = [&](){
-        for(const auto &kvp : stowed_kvps){
-            const auto& key = kvp.first;
-            const auto& val_opt = kvp.second;
+    // Automaticaly restores the stowed metadata when exiting this scope.
+    metadata_stow_guard msg( InvocationMetadata, metadata_stow );
 
-            InvocationMetadata.erase(key);
-            if(val_opt){
-                InvocationMetadata[key] = val_opt.value();
-            }
-        }
-        return;
-    };
-    // ===========================
-
-
+    // Process each table and each row one-at-a-time.
     bool ret = true;
     for(auto & stp_it : STs){
         tables::table2& t = (*stp_it)->table;
         try{
             const auto mmr = t.min_max_row();
-
-            // Process rows one-at-a-time.
             for(auto r = mmr.first; r <= mmr.second; ++r){
                 // Recompute the column number bounding box each row in case additional columns were added.
                 const auto mmc = t.min_max_col();
@@ -216,6 +191,7 @@ bool MapTableToParameters(Drover& DICOM_data,
 
                 // Next, detect insertions of cells that were not encoded,
                 // i.e., new column entries that were added out of the prior column bounds.
+                const auto im_end = std::end(InvocationMetadata);
                 for(auto kvp_it = std::begin(InvocationMetadata); kvp_it != im_end; ){
                     const auto &key = kvp_it->first;
                     const auto &val = kvp_it->second;
@@ -238,8 +214,6 @@ bool MapTableToParameters(Drover& DICOM_data,
             break;
         }
     }
-
-    restore_stowed_metadata();
 
     return ret;
 }

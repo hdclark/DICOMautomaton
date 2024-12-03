@@ -291,6 +291,78 @@ singular_keys(const metadata_multimap_t &multi){
     return out;
 }
 
+metadata_stow_t
+stow_metadata( metadata_map_t &m,
+               std::optional<metadata_stow_t> stow,
+               std::function<bool( const metadata_map_t::iterator &)> f_should_stow ){
+    if(!stow){
+        stow = metadata_stow_t();
+    }
+
+    if(f_should_stow){
+        const auto m_end = std::end(m);
+        for(auto kvp_it = std::begin(m); kvp_it != m_end; ){
+            const bool ret = f_should_stow( kvp_it );
+            if(ret){
+                const auto& key = kvp_it->first;
+                const auto& val = kvp_it->second;
+
+                (stow.value())[key] = val;
+                kvp_it = m.erase(kvp_it);
+            }else{
+                ++kvp_it;
+            }
+        }
+    }
+
+    return stow.value();
+}
+
+metadata_stow_t
+stow_metadata( metadata_map_t &m,
+               std::optional<metadata_stow_t> stow,
+               const std::string &key ){
+    if(!stow){
+        stow = metadata_stow_t();
+    }
+
+    const auto m_end = std::end(m);
+    auto kvp_it = m.find(key);
+    if(kvp_it != m_end){
+        (stow.value())[key] = kvp_it->second;
+        kvp_it = m.erase(kvp_it);
+    }else{
+        (stow.value())[key] = {};
+    }
+
+    return stow.value();
+}
+
+void
+restore_stowed( metadata_map_t &m,
+                metadata_stow_t &stow ){
+    for(const auto &kvp : stow){
+        const auto& key = kvp.first;
+        const auto& val_opt = kvp.second;
+
+        // Erase first to handle the case with disengaged optional, which encodes that a
+        // key should be removed.
+        m.erase(key);
+        if(val_opt){
+            m[key] = val_opt.value();
+        }
+    }
+    stow.clear();
+    return;
+}
+
+metadata_stow_guard::metadata_stow_guard(metadata_map_t &m, metadata_stow_t &m_stow)
+    : l_m(std::ref(m)), l_m_stow(std::ref(m_stow)) { };
+
+metadata_stow_guard::~metadata_stow_guard(){
+    restore_stowed( l_m.get(), l_m_stow.get() );
+}
+
 // This is not provided in the std library. Not sure why?
 size_t hash_std_map(const metadata_map_t &m){
     size_t h = 0;

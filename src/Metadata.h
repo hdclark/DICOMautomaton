@@ -21,7 +21,8 @@
 
 
 using metadata_map_t = std::map<std::string,std::string>; // key, value.
-using metadata_multimap_t = std::map<std::string,std::set<std::string>>; // key, value.
+using metadata_multimap_t = std::map<std::string,std::set<std::string>>; // key, values.
+using metadata_stow_t = std::map<std::string,std::optional<std::string>>; // key, value.
 
 // ---------------------------------- Extractors ------------------------------------------
 // A routine that extracts metadata from each of the Drover members.
@@ -95,6 +96,41 @@ combine_distinct(metadata_multimap_t &combined,
 // Extract the subset of keys that have a single distinct value.
 metadata_map_t
 singular_keys(const metadata_multimap_t &multi);
+
+
+// --------------------------------------- Stowing ------------------------------------------
+// Temporarily stow metadata key-values and then later replace them.
+
+// Stow using a functor. Note this function cannot encode 'removals'.
+//
+// Note that stowed key-values are removed when stowed.
+metadata_stow_t
+stow_metadata( metadata_map_t &m,
+               std::optional<metadata_stow_t> stow,
+               std::function<bool( const metadata_map_t::iterator &)> f_should_stow );
+
+// Stow a specific key-value.
+// If present, the value will be restored later.
+// If not present, it will be encoded as a removal when restored.
+//
+// Note that stowed key-values are removed when stowed.
+metadata_stow_t
+stow_metadata( metadata_map_t &m,
+               std::optional<metadata_stow_t> stow,
+               const std::string &key );
+
+void
+restore_stowed( metadata_map_t &m,
+                metadata_stow_t &stow );
+
+class metadata_stow_guard {
+    private:
+        std::reference_wrapper<metadata_map_t> l_m;
+        std::reference_wrapper<metadata_stow_t> l_m_stow;
+    public:
+        metadata_stow_guard(metadata_map_t &m, metadata_stow_t &m_stow);
+        ~metadata_stow_guard();
+};
 
 // --------------------------------- Operation helpers --------------------------------------
 // Hash both keys and values of a metadata map.
