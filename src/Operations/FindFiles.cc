@@ -121,8 +121,10 @@ bool FindFiles(Drover& DICOM_data,
 
     bool ret = true;
 
-    // Store the original state of the key in the global parameter table.
-    const auto orig_val = get_as<std::string>(InvocationMetadata, Key);
+    // Stow a copy of the original state of the key in the global parameter table.
+    auto metadata_stow = stow_metadata(InvocationMetadata, {}, Key);
+    // Automaticaly restores the stowed metadata when exiting this scope.
+    metadata_stow_guard msg( InvocationMetadata, metadata_stow );
 
     // Search for files/directories.
     std::list< std::filesystem::path > paths;
@@ -168,12 +170,6 @@ bool FindFiles(Drover& DICOM_data,
             ret = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, children);
             if(!ret) break;
         }
-    }
-
-    // Restore the key to its original state in the global parameter table.
-    InvocationMetadata.erase(Key);
-    if(orig_val){
-        InvocationMetadata[Key] = orig_val.value();
     }
 
     return ret;
