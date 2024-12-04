@@ -88,13 +88,13 @@ OperationDoc OpArgDocMapTableToParameters(){
 
 
     out.args.emplace_back();
-    out.args.back().name = "SkipHeader";
-    out.args.back().desc = "If 'true', the first non-empty row is assumed to contain a header and is skipped."
+    out.args.back().name = "SkipHeaderRows";
+    out.args.back().desc = "Controls the number of non-empty rows at the top that are assumed to contain a header"
+                           " and are skipped."
                            "";
-    out.args.back().default_val = "false";
+    out.args.back().default_val = "0";
     out.args.back().expected = true;
-    out.args.back().examples = { "true", "false" };
-    out.args.back().samples = OpArgSamples::Exhaustive;
+    out.args.back().examples = { "0", "1", "2", "3" };
 
 
 //    out.args.emplace_back();
@@ -125,16 +125,15 @@ bool MapTableToParameters(Drover& DICOM_data,
     const auto ColumnNumberKeyPrefixStr = OptArgs.getValueStr("ColumnNumberKeyPrefix").value();
     const auto TableSelectionStr = OptArgs.getValueStr("TableSelection").value();
     const auto RowNumberKeyOpt = OptArgs.getValueStr("RowNumberKey");
-    const auto SkipHeaderStr = OptArgs.getValueStr("SkipHeader").value();
+    const auto SkipHeaderRows = std::stoll( OptArgs.getValueStr("SkipHeaderRows").value() );
 //    const auto AccessModeStr = OptArgs.getValueStr("AccessMode").value();
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto full_key_prefix = ColumnNumberKeyPrefixStr;
     const auto N_full_key_prefix = full_key_prefix.size();
 
-    const auto regex_true = Compile_Regex("^tr?u?e?$");
+//    const auto regex_true = Compile_Regex("^tr?u?e?$");
 //    const auto regex_false = Compile_Regex("^fa?l?s?e?$");
-    const auto SkipHeader = std::regex_match(SkipHeaderStr, regex_true);
 
     // Select or create a table.
     auto STs_all = All_STs( DICOM_data );
@@ -184,8 +183,7 @@ bool MapTableToParameters(Drover& DICOM_data,
         try{
             const auto mmr = t.min_max_row();
             for(auto r = mmr.first; r <= mmr.second; ++r){
-                if( SkipHeader
-                &&  (r == mmr.first) ){
+                if( r < (mmr.first + SkipHeaderRows) ){
                     continue;
                 }
                 // Recompute the column number bounding box each row in case additional columns were added.
