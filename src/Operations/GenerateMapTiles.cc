@@ -196,12 +196,14 @@ OperationDoc OpArgDocGenerateMapTiles(){
 
     out.args.emplace_back();
     out.args.back().name = "MaxMemory";
-    out.args.back().desc = "Abort when the map would exceed this amount of memory (in bytes).";
+    out.args.back().desc = "Abort when the map would exceed this amount of memory (in bytes)."
+                           " Negative values amount to no limit.";
     out.args.back().default_val = std::to_string(2LL * 1024LL * 1024LL * 1024LL);
     out.args.back().expected = true;
     out.args.back().examples = { "524288000",
                                  "1073741824",
-                                 "2147483648" };
+                                 "2147483648",
+                                 "-1" };
 
     out.args.emplace_back();
     out.args.back().name = "TileWidth";
@@ -216,6 +218,18 @@ OperationDoc OpArgDocGenerateMapTiles(){
     out.args.back().default_val = "256";
     out.args.back().expected = true;
     out.args.back().examples = { "256", "512" };
+
+    out.args.emplace_back();
+    out.args.back().name = "Simulate";
+    out.args.back().desc = "Controls whether an image is generated. If 'true', then images are downloaded and loaded,"
+                           " but not amalgamated into a single image. This option is useful to download tiles or verify"
+                           " integrity of tiles in the cache without requiring a (possibly) large block of memory to"
+                           " store the final amalgamated image."
+                           "";
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
     out.args.back() = NCWhitelistOpArgDoc();
@@ -257,8 +271,13 @@ bool GenerateMapTiles(Drover &DICOM_data,
     const auto TileWidth = std::stol( OptArgs.getValueStr("TileWidth").value() );
     const auto TileHeight = std::stol( OptArgs.getValueStr("TileHeight").value() );
 
+    const auto SimulateStr = OptArgs.getValueStr("Simulate").value();
+
     //-----------------------------------------------------------------------------------------------------------------
     YLOGINFO("Proceeding with TileCacheDirectory = '" << TileCacheDirectoryStr << "'");
+
+    const auto regex_true = Compile_Regex("^tr?u?e?$");
+    const auto Simulate = std::regex_match(SimulateStr, regex_true);
 
     auto cc_all = All_CCs( DICOM_data );
     auto cc_ROIs = Whitelist( cc_all, ROILabelRegex, NormalizedROILabelRegex, ROISelection );
@@ -302,7 +321,8 @@ bool GenerateMapTiles(Drover &DICOM_data,
 
     // Limit the total amount of memory the amalgamated map can consume.
     const auto memory_needed = static_cast<int64_t>(tile_count * TileHeight * TileWidth * 32 * 3);
-    if(MaxMemory < memory_needed){
+    if( (0 <= MaxMemory)
+    &&  (MaxMemory < memory_needed) ){
         throw std::runtime_error("The map at current zoom level would consume too much memory."
                                  " Decrease zoom level, decrease field-of-view, or increase memory limit.");
     }
@@ -320,13 +340,11 @@ bool GenerateMapTiles(Drover &DICOM_data,
 
     const vec3<double> ImageOrientationRow(1.0, 0.0, 0.0);
     const vec3<double> ImageOrientationColumn(0.0, 1.0, 0.0);
-    img.init_orientation(ImageOrientationRow, ImageOrientationColumn);
 
     const int64_t NumberOfRows = NS_tile_count * TileHeight;
     const int64_t NumberOfColumns = EW_tile_count * TileWidth;
     const int64_t NumberOfChannels = 3;
     YLOGINFO("Creating image with " << NumberOfRows << "x" << NumberOfColumns << " pixels requiring " << memory_needed << " bytes");
-    img.init_buffer(NumberOfRows, NumberOfColumns, NumberOfChannels);
 
     // In order to get the pixel height and width, we take the total length spanned by the tile and divide by the
     // number of along an edge. Due to projection distortion, this is NOT accurate for large distances since some
@@ -343,11 +361,16 @@ bool GenerateMapTiles(Drover &DICOM_data,
     const auto SliceThickness = 1.0;
     const vec3<double> ImageAnchor(0.0, 0.0, 0.0);
     const vec3<double> ImagePosition(NW_tile_pos_x, NW_tile_pos_y, 0.0);
-    img.init_spatial(VoxelWidth, VoxelHeight, SliceThickness, ImageAnchor, ImagePosition);
 
-    // Fill in the pixels with a default value.
-    const auto VoxelValue = 0.0f;
-    img.fill_pixels(VoxelValue);
+    if(!Simulate){
+        img.init_orientation(ImageOrientationRow, ImageOrientationColumn);
+        img.init_buffer(NumberOfRows, NumberOfColumns, NumberOfChannels);
+        img.init_spatial(VoxelWidth, VoxelHeight, SliceThickness, ImageAnchor, ImagePosition);
+
+        // Fill in the pixels with a default value.
+        const auto VoxelValue = 0.0f;
+        img.fill_pixels(VoxelValue);
+    }
 
     // Transfer pixels from the tiles to the amalgamated image.
     for(const auto& [tile_x, tile_y] : tile_coords){
@@ -401,23 +424,27 @@ bool GenerateMapTiles(Drover &DICOM_data,
             ||  (l_img.columns != TileWidth) ){
                 YLOGWARN("Unexpected tile dimensions");
             }
-            l_img.apply_to_pixels([&](int64_t l_row, int64_t l_col, int64_t l_chn, float l_val) -> void {
-                const auto col = l_col + (tile_x - NW_tile_x) * static_cast<double>(TileWidth);
-                const auto row = l_row + (tile_y - NW_tile_y) * static_cast<double>(TileHeight);
-                if( (l_col < TileWidth)
-                &&  (l_row < TileHeight)
-                &&  (l_chn < NumberOfChannels)
-                &&  (0 <= row) && (row < NumberOfRows)
-                &&  (0 <= col) && (col < NumberOfColumns) ){
-                    img.reference(row, col, l_chn) = l_val;
-                }
-                return;
-            });
+            if(!Simulate){
+                l_img.apply_to_pixels([&](int64_t l_row, int64_t l_col, int64_t l_chn, float l_val) -> void {
+                    const auto col = l_col + (tile_x - NW_tile_x) * static_cast<double>(TileWidth);
+                    const auto row = l_row + (tile_y - NW_tile_y) * static_cast<double>(TileHeight);
+                    if( (l_col < TileWidth)
+                    &&  (l_row < TileHeight)
+                    &&  (l_chn < NumberOfChannels)
+                    &&  (0 <= row) && (row < NumberOfRows)
+                    &&  (0 <= col) && (col < NumberOfColumns) ){
+                        img.reference(row, col, l_chn) = l_val;
+                    }
+                    return;
+                });
+            }
 
         }
     }
 
-    DICOM_data.image_data.emplace_back(std::move(out));
+    if(!Simulate){
+        DICOM_data.image_data.emplace_back(std::move(out));
+    }
 
     return true;
 }
