@@ -320,7 +320,7 @@ bool GenerateMapTiles(Drover &DICOM_data,
     YLOGDEBUG("south-east tile coords: " << SE_tile_x << ", " << SE_tile_y);
 
     // Limit the total amount of memory the amalgamated map can consume.
-    const auto memory_needed = static_cast<int64_t>(tile_count * TileHeight * TileWidth * 32 * 3);
+    const auto memory_needed = static_cast<int64_t>(tile_count * TileHeight * TileWidth * 4 * 3);
     if( (0 <= MaxMemory)
     &&  (MaxMemory < memory_needed) ){
         throw std::runtime_error("The map at current zoom level would consume too much memory."

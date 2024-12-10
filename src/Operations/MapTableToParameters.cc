@@ -87,16 +87,16 @@ OperationDoc OpArgDocMapTableToParameters(){
     out.args.back().default_val = "last";
 
 
-//    out.args.emplace_back();
-//    out.args.back().name = "IgnoreHeader";
-//    out.args.back().desc = "If 'true', the first non-empty row is assumed to contain a header and is skipped."
-//                           "";
-//    out.args.back().default_val = "false";
-//    out.args.back().expected = true;
-//    out.args.back().examples = { "true", "false" };
-//    out.args.back().samples = OpArgSamples::Exhaustive;
-//
-//
+    out.args.emplace_back();
+    out.args.back().name = "SkipHeaderRows";
+    out.args.back().desc = "Controls the number of non-empty rows at the top that are assumed to contain a header"
+                           " and are skipped."
+                           "";
+    out.args.back().default_val = "0";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0", "1", "2", "3" };
+
+
 //    out.args.emplace_back();
 //    out.args.back().name = "AccessMode";
 //    out.args.back().desc = "Controls whether the table can be modified."
@@ -125,7 +125,7 @@ bool MapTableToParameters(Drover& DICOM_data,
     const auto ColumnNumberKeyPrefixStr = OptArgs.getValueStr("ColumnNumberKeyPrefix").value();
     const auto TableSelectionStr = OptArgs.getValueStr("TableSelection").value();
     const auto RowNumberKeyOpt = OptArgs.getValueStr("RowNumberKey");
-//    const auto IgnoreHeaderStr = OptArgs.getValueStr("IgnoreHeader").value();
+    const auto SkipHeaderRows = std::stoll( OptArgs.getValueStr("SkipHeaderRows").value() );
 //    const auto AccessModeStr = OptArgs.getValueStr("AccessMode").value();
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -183,6 +183,9 @@ bool MapTableToParameters(Drover& DICOM_data,
         try{
             const auto mmr = t.min_max_row();
             for(auto r = mmr.first; r <= mmr.second; ++r){
+                if( r < (mmr.first + SkipHeaderRows) ){
+                    continue;
+                }
                 // Recompute the column number bounding box each row in case additional columns were added.
                 const auto mmc = t.min_max_col();
 
