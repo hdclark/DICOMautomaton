@@ -4584,6 +4584,11 @@ bool SDL_Viewer(Drover &DICOM_data,
         }
 
         if( view_toggles.view_encompass_enabled ){
+            // Reset the game before any game state is used.
+            if( ImGui::IsKeyPressed(SDL_SCANCODE_R) ){
+                reset_en_game();
+            }
+
             const auto pi = std::acos(-1.0);
 
             const auto win_width  = static_cast<int>( std::ceil(en_game.box_width) ) + 15;
