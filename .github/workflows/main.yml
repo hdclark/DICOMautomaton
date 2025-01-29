@@ -242,7 +242,7 @@ jobs:
              cp -R . ~/dcma
              export DEBIAN_FRONTEND="noninteractive"
              sudo apt-get update --yes
-             sudo apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf qemu binfmt-support qemu-user-static
+             sudo apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf qemu-system qemu-utils binfmt-support qemu-user-static
              sudo ./docker/build_bases/alpine/setup_host.sh
              sudo ./scripts/enable_swapfile.sh
       - name: authenticate_with_dockerhub
@@ -301,7 +301,7 @@ jobs:
              cp -R . ~/dcma
              export DEBIAN_FRONTEND="noninteractive"
              sudo apt-get update --yes
-             sudo apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf qemu binfmt-support qemu-user-static
+             sudo apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf qemu-system qemu-utils binfmt-support qemu-user-static
              sudo ./docker/build_bases/alpine/setup_host.sh
              sudo ./scripts/enable_swapfile.sh
       - name: authenticate_with_dockerhub
@@ -360,7 +360,7 @@ jobs:
              cp -R . ~/dcma
              export DEBIAN_FRONTEND="noninteractive"
              sudo apt-get update --yes
-             sudo apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf qemu binfmt-support qemu-user-static
+             sudo apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf qemu-system qemu-utils binfmt-support qemu-user-static
              sudo ./docker/build_bases/alpine/setup_host.sh
              sudo ./scripts/enable_swapfile.sh
       - name: authenticate_with_dockerhub
