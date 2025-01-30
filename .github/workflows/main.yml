@@ -79,7 +79,7 @@ jobs:
              cp ci_artifacts/DICOMautomaton-latest-x86_64.zip "ci_artifacts/DICOMautomaton-${short_sha}-x86_64.zip"
              find ci_artifacts/ -iname '*.zip' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
       - name: deploy_to_github
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: "DICOMautomaton-exes"
           if-no-files-found: error
@@ -124,7 +124,7 @@ jobs:
              mv DICOMautomaton*AppImage ci_artifacts/
              find ci_artifacts/ -iname '*AppImage' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
       - name: deploy_to_github
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: "DICOMautomaton-AppImage"
           if-no-files-found: error
@@ -171,7 +171,7 @@ jobs:
              mv /debian_buster_aarch64/dcma/DICOMautomaton*AppImage ci_artifacts/
              find ci_artifacts/ -iname '*AppImage' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
       - name: deploy_to_github
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: "DICOMautomaton-AppImage"
           if-no-files-found: error
@@ -219,7 +219,7 @@ jobs:
              mv /debian_buster_armhf/dcma/DICOMautomaton*AppImage ci_artifacts/
              find ci_artifacts/ -iname '*AppImage' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
       - name: deploy_to_github
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: "DICOMautomaton-AppImage"
           if-no-files-found: error
@@ -278,7 +278,7 @@ jobs:
              cp ~/binaries/bin/dicomautomaton_dispatcher ~/ci_artifacts/DICOMautomaton-latest-armv7.static
              find ~/ci_artifacts/ -type f -iname '*static' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
       - name: deploy_to_github
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: "DICOMautomaton-static"
           if-no-files-found: error
@@ -337,7 +337,7 @@ jobs:
              cp ~/binaries/bin/dicomautomaton_dispatcher ~/ci_artifacts/DICOMautomaton-latest-x86_64.static
              find ~/ci_artifacts/ -type f -iname '*static' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
       - name: deploy_to_github
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: "DICOMautomaton-static"
           if-no-files-found: error
@@ -396,7 +396,7 @@ jobs:
              cp ~/binaries/bin/dicomautomaton_dispatcher ~/ci_artifacts/DICOMautomaton-latest-aarch64.static
              find ~/ci_artifacts/ -type f -iname '*static' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
       - name: deploy_to_github
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: "DICOMautomaton-static"
           if-no-files-found: error
