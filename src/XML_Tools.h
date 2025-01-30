@@ -121,6 +121,6 @@ search_by_names( node &root,
                             chain );
 }
 
-}; // namespace xml.
-}; // namespace dcma.
+} // namespace xml.
+} // namespace dcma.
 

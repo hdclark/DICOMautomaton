@@ -30,7 +30,7 @@ aa_bbox::aa_bbox(){
     const auto inf = std::numeric_limits<double>::infinity();
     this->min = vec3<double>( inf, inf, inf );
     this->max = vec3<double>( -inf, -inf, -inf );
-};
+}
 
 void aa_bbox::digest(const vec3<double>& r){
     this->min.x = std::min<double>( this->min.x, r.x );
@@ -40,14 +40,14 @@ void aa_bbox::digest(const vec3<double>& r){
     this->max.x = std::max<double>( this->max.x, r.x );
     this->max.y = std::max<double>( this->max.y, r.y );
     this->max.z = std::max<double>( this->max.z, r.z );
-};
+}
 
 
 // -------------------------------- 3D Shapes -------------------------------------
 namespace shape {
 
 // Sphere centred at (0,0,0).
-sphere::sphere(double r) : radius(r) {};
+sphere::sphere(double r) : radius(r) {}
 
 double sphere::evaluate_sdf(const vec3<double>& pos) const {
     const auto sdf = pos.length() - this->radius;
@@ -62,7 +62,7 @@ aa_bbox sphere::evaluate_aa_bbox() const {
 }
 
 // Axis-aligned box centred at (0,0,0).
-aa_box::aa_box(const vec3<double>& r) : radii(r) {};
+aa_box::aa_box(const vec3<double>& r) : radii(r) {}
 
 double aa_box::evaluate_sdf(const vec3<double>& pos) const {
     const auto positive_octant_pos = vec3<double>(std::abs(pos.x), std::abs(pos.y), std::abs(pos.z));
@@ -85,7 +85,7 @@ aa_bbox aa_box::evaluate_aa_bbox() const {
 // Infinite plane.
 plane::plane(const vec3<double>& p,
              const vec3<double>& n,
-             double w) : point(p), normal(n.unit()), bbox_width(w) {};
+             double w) : point(p), normal(n.unit()), bbox_width(w) {}
 
 double plane::evaluate_sdf(const vec3<double>& pos) const {
     const auto sdf = (pos - this->point).Dot(this->normal);
@@ -100,8 +100,8 @@ aa_bbox plane::evaluate_aa_bbox() const {
 }
 
 // Connected line segments with rounded edges.
-poly_chain::poly_chain(double r, const std::vector<vec3<double>> &v) : radius(r), vertices(v) {};
-poly_chain::poly_chain(double r, const std::list<vec3<double>> &v) : radius(r), vertices(std::begin(v), std::end(v)) {};
+poly_chain::poly_chain(double r, const std::vector<vec3<double>> &v) : radius(r), vertices(v) {}
+poly_chain::poly_chain(double r, const std::list<vec3<double>> &v) : radius(r), vertices(std::begin(v), std::end(v)) {}
 
 double poly_chain::evaluate_sdf(const vec3<double>& pos) const {
     if(this->vertices.size() < 2UL){
@@ -144,7 +144,7 @@ aa_bbox poly_chain::evaluate_aa_bbox() const {
 namespace op {
 
 // Translate.
-translate::translate(const vec3<double>& offset) : dR(offset) {};
+translate::translate(const vec3<double>& offset) : dR(offset) {}
 
 double translate::evaluate_sdf(const vec3<double> &pos) const {
     if(this->children.size() != 1UL){
@@ -165,7 +165,7 @@ aa_bbox translate::evaluate_aa_bbox() const {
 }
 
 // Rotate.
-rotate::rotate(const vec3<double>& axis, double theta) : rot(affine_rotate(vec3<double>(0,0,0), axis, -theta)) {};
+rotate::rotate(const vec3<double>& axis, double theta) : rot(affine_rotate(vec3<double>(0,0,0), axis, -theta)) {}
 
 double rotate::evaluate_sdf(const vec3<double> &pos) const {
     if(this->children.size() != 1UL){
@@ -212,7 +212,7 @@ aa_bbox rotate::evaluate_aa_bbox() const {
 }
 
 // Boolean 'AND' or 'add' or 'union' or 'join.'
-join::join(){};
+join::join(){}
 
 double join::evaluate_sdf(const vec3<double> &pos) const {
     if(this->children.empty()){
@@ -252,7 +252,7 @@ aa_bbox join::evaluate_aa_bbox() const {
 }
 
 // Boolean 'difference' or 'subtract.'
-subtract::subtract(){};
+subtract::subtract(){}
 
 double subtract::evaluate_sdf(const vec3<double> &pos) const {
     if(this->children.size() != 2UL){
@@ -290,7 +290,7 @@ aa_bbox subtract::evaluate_aa_bbox() const {
 }
 
 // Boolean 'OR' or 'intersect.'
-intersect::intersect(){};
+intersect::intersect(){}
 
 double intersect::evaluate_sdf(const vec3<double> &pos) const {
     if(this->children.size() < 2UL){
@@ -318,7 +318,7 @@ aa_bbox intersect::evaluate_aa_bbox() const {
 }
 
 // Chamfer-Booleans.
-chamfer_join::chamfer_join(double t) : thickness(t) {};
+chamfer_join::chamfer_join(double t) : thickness(t) {}
 
 double chamfer_join::evaluate_sdf(const vec3<double> &pos) const {
     if(this->children.empty()){
@@ -350,7 +350,7 @@ aa_bbox chamfer_join::evaluate_aa_bbox() const {
 }
 
 
-chamfer_subtract::chamfer_subtract(double t) : thickness(t) {};
+chamfer_subtract::chamfer_subtract(double t) : thickness(t) {}
 
 double chamfer_subtract::evaluate_sdf(const vec3<double> &pos) const {
     if(this->children.size() != 2UL){
@@ -375,7 +375,7 @@ aa_bbox chamfer_subtract::evaluate_aa_bbox() const {
 }
 
 
-chamfer_intersect::chamfer_intersect(double t) : thickness(t) {};
+chamfer_intersect::chamfer_intersect(double t) : thickness(t) {}
 
 double chamfer_intersect::evaluate_sdf(const vec3<double> &pos) const {
     if(this->children.empty()){
@@ -411,7 +411,7 @@ aa_bbox chamfer_intersect::evaluate_aa_bbox() const {
 
 
 // Dilation and erosion.
-dilate::dilate(double dist) : offset(dist) {};
+dilate::dilate(double dist) : offset(dist) {}
 
 double dilate::evaluate_sdf(const vec3<double> &pos) const {
     if(this->children.size() != 1UL){
@@ -435,7 +435,7 @@ aa_bbox dilate::evaluate_aa_bbox() const {
 }
 
 
-erode::erode(double dist) : offset(dist) {};
+erode::erode(double dist) : offset(dist) {}
 
 double erode::evaluate_sdf(const vec3<double> &pos) const {
     if(this->children.size() != 1UL){
@@ -468,7 +468,7 @@ aa_bbox erode::evaluate_aa_bbox() const {
 
 
 // Extrude.
-extrude::extrude(double dist, const plane<double> &p) : distance(dist), cut_plane(p) {};
+extrude::extrude(double dist, const plane<double> &p) : distance(dist), cut_plane(p) {}
 
 double extrude::evaluate_sdf(const vec3<double> &pos) const {
     if(this->children.size() != 1UL){
