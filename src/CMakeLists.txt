@@ -179,6 +179,9 @@ set_target_properties(  Simple_Meshing_obj PROPERTIES POSITION_INDEPENDENT_CODE 
 add_library(            Triple_Three_obj OBJECT Triple_Three.cc)
 set_target_properties(  Triple_Three_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            Rotating_Cube_obj OBJECT Rotating_Cube.cc)
+set_target_properties(  Rotating_Cube_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Write_File_obj OBJECT Write_File.cc)
 set_target_properties(  Write_File_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -439,6 +442,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Standard_Scripts_obj>
     $<TARGET_OBJECTS:Standard_Guides_obj>
     $<TARGET_OBJECTS:Triple_Three_obj>
+    $<TARGET_OBJECTS:Rotating_Cube_obj>
     $<TARGET_OBJECTS:Write_File_obj>
     $<TARGET_OBJECTS:Operation_Dispatcher_obj>
     $<TARGET_OBJECTS:Documentation_obj>
@@ -541,6 +545,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Standard_Scripts_obj>
         $<TARGET_OBJECTS:Standard_Guides_obj>
         $<TARGET_OBJECTS:Triple_Three_obj>
+        $<TARGET_OBJECTS:Rotating_Cube_obj>
         $<TARGET_OBJECTS:Write_File_obj>
         $<TARGET_OBJECTS:Operation_Dispatcher_obj>
         $<TARGET_OBJECTS:Documentation_obj>
