@@ -29,6 +29,7 @@ until
       sudo \
       pyalpm \
       wget \
+      ca-certificates \
       rsync \
       patchelf
 do
@@ -52,7 +53,7 @@ until
     pacman -S --noconfirm --needed \
       gcc-libs \
       gnu-free-fonts \
-      sfml \
+      `#sfml   # Need SFML2 but no compat pkg available yet...` \
       sdl2 \
       glew \
       glu \
@@ -71,6 +72,11 @@ do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5
 done
+
+# Use snapshot of SFML2 package until something more permanent is available.
+wget 'https://www.halclark.ca/sfml-2.6.1-1-x86_64.pkg.tar.zst' -O sfml-2.6.1-1-x86_64.pkg.tar.zst
+pacman -U --noconfirm --needed ./sfml-2.6.1-1-x86_64.pkg.tar.zst
+
 rm -f /var/cache/pacman/pkg/*
 
 

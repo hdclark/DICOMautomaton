@@ -14,7 +14,7 @@ depends=(
    'gcc-libs'
    'gnu-free-fonts'
    'zenity'
-   'sfml'
+   'sfml<3.0'
    'sdl2'
    'glew'
    'glu'
