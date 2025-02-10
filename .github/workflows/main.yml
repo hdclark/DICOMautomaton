@@ -81,7 +81,7 @@ jobs:
       - name: deploy_to_github
         uses: actions/upload-artifact@v4
         with:
-          name: "DICOMautomaton-exes"
+          name: "DICOMautomaton-mxe-x86_64-exes"
           if-no-files-found: error
           path: |
                 ci_artifacts/DICOMautomaton-latest-x86_64.zip
@@ -126,7 +126,7 @@ jobs:
       - name: deploy_to_github
         uses: actions/upload-artifact@v4
         with:
-          name: "DICOMautomaton-AppImage"
+          name: "DICOMautomaton-debian-buster-x86_64-AppImage"
           if-no-files-found: error
           path: |
                 ci_artifacts/DICOMautomaton-latest-x86_64.AppImage
@@ -173,7 +173,7 @@ jobs:
       - name: deploy_to_github
         uses: actions/upload-artifact@v4
         with:
-          name: "DICOMautomaton-AppImage"
+          name: "DICOMautomaton-debian-buster-aarch64-AppImage"
           if-no-files-found: error
           path: |
                 ci_artifacts/DICOMautomaton-latest-aarch64.AppImage
@@ -221,7 +221,7 @@ jobs:
       - name: deploy_to_github
         uses: actions/upload-artifact@v4
         with:
-          name: "DICOMautomaton-AppImage"
+          name: "DICOMautomaton-debian-buster-armhf-AppImage"
           if-no-files-found: error
           path: |
                 ci_artifacts/DICOMautomaton-latest-armhf.AppImage
@@ -280,7 +280,7 @@ jobs:
       - name: deploy_to_github
         uses: actions/upload-artifact@v4
         with:
-          name: "DICOMautomaton-static"
+          name: "DICOMautomaton-alpine-armv7-static"
           if-no-files-found: error
           path: |
                 ~/ci_artifacts/DICOMautomaton-latest-armv7.static
@@ -339,7 +339,7 @@ jobs:
       - name: deploy_to_github
         uses: actions/upload-artifact@v4
         with:
-          name: "DICOMautomaton-static"
+          name: "DICOMautomaton-alpine-x86_64-static"
           if-no-files-found: error
           path: |
                 ~/ci_artifacts/DICOMautomaton-latest-x86_64.static
@@ -398,7 +398,7 @@ jobs:
       - name: deploy_to_github
         uses: actions/upload-artifact@v4
         with:
-          name: "DICOMautomaton-static"
+          name: "DICOMautomaton-alpine-aarch64-static"
           if-no-files-found: error
           path: |
                 ~/ci_artifacts/DICOMautomaton-latest-aarch64.static
