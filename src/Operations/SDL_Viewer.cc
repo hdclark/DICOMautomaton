@@ -5274,6 +5274,9 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
 
                     }
 
+                    // Invert the y coordinate (map between screen space and the face cell layout).
+                    std::get<2>(c) = (rc_game_N - 1) - std::get<2>(c);
+
                     const auto index = rc_game.index(c);
 
                     if(rc_game.confirm_index_valid(index)){
@@ -5290,11 +5293,14 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         // Check if this face can accept an in-progress drag-and-drop index.
                         bool drag_and_drop_active = !!drag_and_drop_index;
 
+                        const auto & [ cell_face, cell_x, cell_y ] = c;
+
                         std::stringstream ss;
-                        ss << "##";
+                        //ss << "##";
                         ss << i << ", " << j << "\n"
-                           << "f=" << std::get<0>(c) << "\n"
-                           << std::get<1>(c) << ", " << std::get<2>(c);
+                           << cell_face << ", "
+                           << cell_x << ", "
+                           << cell_y << "\n";
 
                         ImGui::SetCursorPos(face_pos_window);
 
@@ -5368,19 +5374,33 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 auto [i, j, c] = drag_and_drop_grid_coords.value();
 
                 using pack_t = std::vector< std::tuple< int64_t, int64_t, rc_direction, std::string > >;
-                for( auto [di, dj, dir, desc] : pack_t { { -1,  0, rc_direction::left,         std::string("##left") },
-                                                         {  1,  0, rc_direction::right,        std::string("##right") },
-                                                         {  0, -1, rc_direction::up,           std::string("##up") },
-                                                         {  0,  1, rc_direction::down,         std::string("##down") },
-                                                         { -1, -1, rc_direction::rotate_left,  std::string("##rotate\nleft") },
-                                                         {  1, -1, rc_direction::rotate_right, std::string("##rotate\nright") } } ){
+                for( auto [di, dj, dir, desc] : pack_t { { -1,  0, rc_direction::left,         std::string("left") },
+                                                         {  1,  0, rc_direction::right,        std::string("right") },
+                                                         {  0, -1, rc_direction::up,           std::string("up") },
+                                                         {  0,  1, rc_direction::down,         std::string("down") },
+                                                         { -1, -1, rc_direction::rotate_left,  std::string("rotate\nleft") },
+                                                         {  1, -1, rc_direction::rotate_right, std::string("rotate\nright") } } ){
                     ImVec2 face_pos_screen( curr_screen_pos.x + (cell_width  * (i + di)),
                                             curr_screen_pos.y + (cell_height * (j + dj)) );
                     ImVec2 face_pos_window( curr_window_pos.x + (cell_width  * (i + di)),
                                             curr_window_pos.y + (cell_height * (j + dj)) );
 
+                    std::stringstream ss;
+                    if( false ){
+                    }else if( (dir == rc_direction::left)
+                          ||  (dir == rc_direction::right)
+                          ||  (dir == rc_direction::up)
+                          ||  (dir == rc_direction::down) ){
+                        const auto [adj_c, adj_dir] = rc_game.get_neighbour_cell({c, dir});
+                        const auto [adj_f, adj_x, adj_y] = adj_c;
+                        ss << "\n" << desc << "\n" << adj_f << "," << adj_x << "," << adj_y;
+                    }else{
+                        ss << "##" << desc;
+                    }
+
                     ImGui::SetCursorPos(face_pos_window);
-                    ImGui::Button(desc.c_str(), block_dims);
+//                    ImGui::Button(desc.c_str(), block_dims);
+                    ImGui::Button(ss.str().c_str(), block_dims);
 
                     // Accept a face dragged here.
                     if( ImGui::BeginDragDropTarget() ){

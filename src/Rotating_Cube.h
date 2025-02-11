@@ -10,13 +10,16 @@ struct rc_face_t {
     int64_t colour = 0;
 };
 
-enum class rc_direction {
-    left,
-    right,
-    down,
-    up,
-    rotate_left,
-    rotate_right,
+enum class rc_direction : int64_t {
+    left         = 0,
+    right        = 1,
+    down         = 2,
+    up           = 3,
+
+    rotate_left  = 4,
+    rotate_right = 5,
+
+    highest      = 6,
 };
 
 
@@ -25,8 +28,8 @@ struct rc_game_t {
     std::vector<rc_face_t> faces;
 
     using coords_t = std::tuple<int64_t,   // face number in [0,5].
-                                int64_t,   // grid 'x' in [0,N-1].
-                                int64_t>;  // grid 'y' in [0,N-1].
+                                int64_t,   // cell 'x' in [0,N-1].
+                                int64_t>;  // cell 'y' in [0,N-1].
 
 
     rc_game_t();
@@ -45,7 +48,10 @@ struct rc_game_t {
 
     std::array<float,4> colour_to_rgba(int64_t colour) const;
 
-    // get_neighbours ?
+    std::tuple<int64_t, rc_direction> get_neighbour_face(int64_t, rc_direction) const;
+
+    std::tuple<rc_game_t::coords_t, rc_direction>
+    get_neighbour_cell(std::tuple<rc_game_t::coords_t, rc_direction>) const;
 
 };
 
