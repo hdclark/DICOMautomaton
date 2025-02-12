@@ -5159,7 +5159,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             ImGui::SameLine();
             {
                 auto l_N = static_cast<int>(rc_game.get_N());
-                ImGui::SliderInt("Size", &l_N, 2, 10);
+                ImGui::SliderInt("Size", &l_N, 1, 10);
                 if(l_N != rc_game_size){
                     rc_game_size = l_N;
                     reset_cube_game();
