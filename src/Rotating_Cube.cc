@@ -267,7 +267,7 @@ rc_game_t::get_neighbour_cell(std::tuple<rc_game_t::coords_t, rc_direction> x) c
         }
 
         // Perform the rotations.
-        const auto half_N = (static_cast<double>(N) - 1) * 0.5;
+        const auto half_N = (static_cast<double>(this->N - 1L)) * 0.5;
         while(N_rots_needed > 0){
             // Shift the coordinates to the virtual centre of the face.
             const double orig_x = static_cast<double>(new_cell_x) - half_N;
@@ -290,41 +290,133 @@ rc_game_t::get_neighbour_cell(std::tuple<rc_game_t::coords_t, rc_direction> x) c
 
 void rc_game_t::move(std::tuple<rc_game_t::coords_t, rc_direction> x){
 
-    // Implements a move by rotating a portion of the cube.
-    //
-    // There are two distinct kinds of rotations possible:
-    //
-    // (1) face rotations, which involves spinning N*(N+4) cells around an axis intersecting the centre of the cube by
-    // 90 degrees. Note that this type of move impacts one adjacent face.
-    //
-    // (2) cell shifts, which involves spinning N*4 cells around an axis intersecting the centre of the cube by 90
-    // degrees. This type only impacts a few cells. Note that the cells cannot be directly adjacent to the edge of any
-    // faces, otherwise the adjacent face will need to rotate as well (i.e., then it will be a type (1) move).
-
+    // Triage a requested move, breaking it down into separate shifts and face rotations.
     const auto orig_coords = std::get<0>(x);
     const auto orig_dir = std::get<1>(x);
     const auto [orig_face, orig_cell_x, orig_cell_y] = orig_coords;
     const auto orig_index = this->index(orig_coords);
 
+    using move_t = std::tuple<rc_game_t::coords_t, rc_direction>;
+    std::optional< move_t > move_shift;
+    std::optional< move_t > move_face_rot;
 
-    // Type (1) moves:
+    if( false ){
+    }else if( (orig_dir == rc_direction::rotate_left)
+          ||  (orig_dir == rc_direction::rotate_right) ){
+        move_face_rot = x;
+        move_shift = {};
 
-    // TODO.
+        // A face rotation always necessitates a shift of the cells along the face's perimeter.
 
-    // Type (2) moves:
+        // Move along neighbour cells until a cell from an adjacent face is identified.
+        auto adj_cell_coords = orig_coords;
+        auto [adj_face, adj_cell_x, adj_cell_y] = adj_cell_coords;
+        auto adj_cell_dir = rc_direction::up; // Use up as a probe direction.
+        while(adj_face == orig_face){
+            std::tie(adj_cell_coords, adj_cell_dir) = this->get_neighbour_cell( std::make_tuple(adj_cell_coords, adj_cell_dir) );
+            std::tie(adj_face, adj_cell_x, adj_cell_y) = adj_cell_coords;
+        }
+
+        // Translate the face's rotation into a shift direction.
+        int64_t N_rotations_needed = (orig_dir == rc_direction::rotate_left) ? 1L : 3L;
+        while(N_rotations_needed > 0L){
+            if(false){
+            }else if(adj_cell_dir == rc_direction::left ){
+                adj_cell_dir = rc_direction::down;
+            }else if(adj_cell_dir == rc_direction::down ){
+                adj_cell_dir = rc_direction::right;
+            }else if(adj_cell_dir == rc_direction::right ){
+                adj_cell_dir = rc_direction::up;
+            }else if(adj_cell_dir == rc_direction::up ){
+                adj_cell_dir = rc_direction::left;
+            }
+
+            --N_rotations_needed;
+        }
+
+        move_shift = std::make_tuple(adj_cell_coords, adj_cell_dir);
+
+    }else if( (orig_dir == rc_direction::left)
+          ||  (orig_dir == rc_direction::right)
+          ||  (orig_dir == rc_direction::up)
+          ||  (orig_dir == rc_direction::down) ){
+        move_shift = x;
+        move_face_rot = {};
+
+        // Check if the shift necessitates a face rotation. This is only the case if the cell is adjacent to the edge of
+        // a face AND the direction of travel is parallel to the edge.
+        std::vector<rc_direction> adj_dirs;
+        rc_direction rot_dir = rc_direction::rotate_left;
+        if(false){
+        }else if( orig_dir == rc_direction::left ){
+            adj_dirs.emplace_back(rc_direction::up);
+            adj_dirs.emplace_back(rc_direction::down);
+            rot_dir = rc_direction::rotate_right;
+        }else if( orig_dir == rc_direction::right ){
+            adj_dirs.emplace_back(rc_direction::up);
+            adj_dirs.emplace_back(rc_direction::down);
+            rot_dir = rc_direction::rotate_left;
+        }else if( orig_dir == rc_direction::up ){
+            adj_dirs.emplace_back(rc_direction::left);
+            adj_dirs.emplace_back(rc_direction::right);
+            rot_dir = rc_direction::rotate_right;
+        }else if( orig_dir == rc_direction::down ){
+            adj_dirs.emplace_back(rc_direction::left);
+            adj_dirs.emplace_back(rc_direction::right);
+            rot_dir = rc_direction::rotate_left;
+        }
+
+        for(const auto & adj_dir : adj_dirs){
+            const auto [adj_cell_coords, adj_cell_dir] = this->get_neighbour_cell( std::make_tuple(orig_coords, adj_dir) );
+            const auto [adj_face, adj_cell_x, adj_cell_y] = adj_cell_coords;
+            if(adj_face != orig_face){
+                move_face_rot = std::make_tuple(adj_cell_coords, rot_dir);
+                break;
+            }
+        }
+
+    }else{
+        throw std::invalid_argument("Unsupported move direction");
+    }
+
+    // Perform the necessary moves.
+    //
+    // Moves should not conflict or interfere with one another, so the order is irrelevant.
+    if(move_face_rot){
+        this->implement_primitive_face_rotate(move_face_rot.value());
+    }
+    if(move_shift){
+        this->implement_primitive_shift(move_shift.value());
+    }
+
+    return;
+}
+
+
+void rc_game_t::implement_primitive_shift(std::tuple<rc_game_t::coords_t, rc_direction> x){
+    // Implement circular cell shifts, which involves spinning N*4 cells around an axis intersecting the centre of the
+    // cube by 90 degrees.
+    //
+    // Note that this type of move also necessitates a rotation primitive when the cells are directly adjacent to the
+    // edge of a face, but this rotation is not performed here.
+    const auto orig_coords = std::get<0>(x);
+    const auto orig_dir = std::get<1>(x);
+    const auto [orig_face, orig_cell_x, orig_cell_y] = orig_coords;
+    const auto orig_index = this->index(orig_coords);
+
+    if( false ){
+    }else if( (orig_dir == rc_direction::left)
+          ||  (orig_dir == rc_direction::right)
+          ||  (orig_dir == rc_direction::up)
+          ||  (orig_dir == rc_direction::down) ){
+        // Do nothing.
+    }else{
+        throw std::invalid_argument("Unsupported move direction");
+    }
+
     for(int64_t i = 0; i < this->N; ++i){
         auto curr_index = orig_index;
         auto curr_dir = orig_dir;
-
-        if( false ){
-        }else if( (orig_dir == rc_direction::left)
-              ||  (orig_dir == rc_direction::right)
-              ||  (orig_dir == rc_direction::up)
-              ||  (orig_dir == rc_direction::down) ){
-            // Do nothing.
-        }else{
-            throw std::logic_error("Unsupported move direction");
-        }
 
         std::map<int64_t, rc_cell_t> new_cells;
 
@@ -362,4 +454,68 @@ void rc_game_t::move(std::tuple<rc_game_t::coords_t, rc_direction> x){
     return;
 }
 
+void rc_game_t::implement_primitive_face_rotate(std::tuple<rc_game_t::coords_t, rc_direction> x){
+    // Implement face rotations, which involves spinning the N*N cells of a face around the centre of the face.
+    // 
+    // Note that this type of move also necessitates a shift primitive, which is not performed here.
+    const auto orig_coords = std::get<0>(x);
+    const auto orig_dir = std::get<1>(x);
+    const auto [orig_face, orig_cell_x, orig_cell_y] = orig_coords;
+    const auto orig_index = this->index(orig_coords);
+
+    if( false ){
+    }else if( (orig_dir == rc_direction::rotate_left)
+          ||  (orig_dir == rc_direction::rotate_right) ){
+        // Do nothing.
+    }else{
+        throw std::logic_error("Unsupported move direction");
+    }
+
+    const int64_t N_rots_needed = ( orig_dir == rc_direction::rotate_left ) ? 1L : 3L;
+
+    std::map<int64_t, rc_cell_t> new_cells;
+
+    for(int64_t i = 0L; i < this->N; ++i){
+        for(int64_t j = 0L; j < this->N; ++j){
+            auto new_cell_x = i;
+            auto new_cell_y = j;
+
+            // Perform the rotations.
+            const auto half_N = (static_cast<double>(this->N - 1L)) * 0.5;
+            auto l_N_rots_needed = N_rots_needed;
+            while(l_N_rots_needed > 0){
+                // Shift the coordinates to the virtual centre of the face.
+                const double shifted_x = static_cast<double>(new_cell_x) - half_N;
+                const double shifted_y = static_cast<double>(new_cell_y) - half_N;
+
+                // Apply a 90 degree rotation.
+                const double rot_x = -shifted_y;
+                const double rot_y = shifted_x;
+
+                // Shift back to the original coordinates (bottom-left origin).
+                new_cell_x = static_cast<int64_t>( std::round(rot_x + half_N) );
+                new_cell_y = static_cast<int64_t>( std::round(rot_y + half_N) );
+
+                --l_N_rots_needed;
+            }
+
+            const coords_t curr_cell_coords = { orig_face, i, j };
+            const auto curr_cell_index = this->index(curr_cell_coords);
+
+            const coords_t new_cell_coords = { orig_face, new_cell_x, new_cell_y };
+            const auto new_cell_index = this->index(new_cell_coords);
+
+            new_cells[ new_cell_index ] = this->get_const_cell(curr_cell_index);
+        }
+    }
+
+    // Implement the moves.
+    for(const auto &c : new_cells){
+        const auto& index = c.first;
+        const auto& cell = c.second;
+        this->get_cell(index) = cell;
+    }
+
+    return;
+}
 

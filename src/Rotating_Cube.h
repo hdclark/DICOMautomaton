@@ -54,6 +54,8 @@ struct rc_game_t {
     get_neighbour_cell(std::tuple<rc_game_t::coords_t, rc_direction>) const;
 
     void move(std::tuple<rc_game_t::coords_t, rc_direction>);
+    void implement_primitive_shift(std::tuple<rc_game_t::coords_t, rc_direction>);
+    void implement_primitive_face_rotate(std::tuple<rc_game_t::coords_t, rc_direction>);
 
 };
 

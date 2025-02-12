@@ -5296,7 +5296,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         const auto & [ cell_face, cell_x, cell_y ] = c;
 
                         std::stringstream ss;
-                        //ss << "##";
+                        ss << "##";
                         ss << i << ", " << j << "\n"
                            << cell_face << ", "
                            << cell_x << ", "
@@ -5393,13 +5393,12 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                           ||  (dir == rc_direction::down) ){
                         const auto [adj_c, adj_dir] = rc_game.get_neighbour_cell({c, dir});
                         const auto [adj_f, adj_x, adj_y] = adj_c;
-                        ss << "\n" << desc << "\n" << adj_f << "," << adj_x << "," << adj_y;
+                        ss << "##" << desc << "\n" << adj_f << "," << adj_x << "," << adj_y;
                     }else{
                         ss << "##" << desc;
                     }
 
                     ImGui::SetCursorPos(cell_pos_window);
-//                    ImGui::Button(desc.c_str(), block_dims);
                     ImGui::Button(ss.str().c_str(), block_dims);
 
                     // Accept a cell dragged here.
@@ -5408,12 +5407,14 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             if(payload->DataSize != sizeof(int64_t)){
                                 throw std::logic_error("Drag-and-drop payload is not expected size, refusing to continue");
                             }
-                            const int64_t l_index = *static_cast<const int64_t*>(payload->Data);
+                            const int64_t payload_index = *static_cast<const int64_t*>(payload->Data);
+                            const int64_t l_index = rc_game.index(c);
+                            if(l_index != payload_index){
+                                throw std::logic_error("Drag-and-drop inconsistency, unable to continue");
+                            }
 
-
-                            // Implement the move here...
+                            // Implement the move.
                             rc_game.move( std::make_tuple(c, dir) );
-
                         }
                         ImGui::EndDragDropTarget();
                     }
