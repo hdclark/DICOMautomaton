@@ -187,8 +187,8 @@ rc_game_t::get_neighbour_face(int64_t face, rc_direction dir) const {
     return adj[ std::make_pair(face, dir) ];
 }
 
-std::tuple<rc_game_t::coords_t, rc_direction>
-rc_game_t::get_neighbour_cell(std::tuple<rc_game_t::coords_t, rc_direction> x) const {
+rc_game_t::move_t
+rc_game_t::get_neighbour_cell(rc_game_t::move_t x) const {
 
 
     // Get current face.
@@ -288,7 +288,7 @@ rc_game_t::get_neighbour_cell(std::tuple<rc_game_t::coords_t, rc_direction> x) c
     return {new_coords, new_dir};
 }
 
-void rc_game_t::move(std::tuple<rc_game_t::coords_t, rc_direction> x){
+void rc_game_t::move(rc_game_t::move_t x){
 
     // Triage a requested move, breaking it down into separate shifts and face rotations.
     const auto orig_coords = std::get<0>(x);
@@ -296,9 +296,8 @@ void rc_game_t::move(std::tuple<rc_game_t::coords_t, rc_direction> x){
     const auto [orig_face, orig_cell_x, orig_cell_y] = orig_coords;
     const auto orig_index = this->index(orig_coords);
 
-    using move_t = std::tuple<rc_game_t::coords_t, rc_direction>;
-    std::optional< move_t > move_shift;
-    std::optional< move_t > move_face_rot;
+    std::optional< rc_game_t::move_t > move_shift;
+    std::optional< rc_game_t::move_t > move_face_rot;
 
     if( false ){
     }else if( (orig_dir == rc_direction::rotate_left)
@@ -313,7 +312,7 @@ void rc_game_t::move(std::tuple<rc_game_t::coords_t, rc_direction> x){
         auto [adj_face, adj_cell_x, adj_cell_y] = adj_cell_coords;
         auto adj_cell_dir = rc_direction::up; // Use up as a probe direction.
         while(adj_face == orig_face){
-            std::tie(adj_cell_coords, adj_cell_dir) = this->get_neighbour_cell( std::make_tuple(adj_cell_coords, adj_cell_dir) );
+            std::tie(adj_cell_coords, adj_cell_dir) = this->get_neighbour_cell( rc_game_t::move_t{adj_cell_coords, adj_cell_dir} );
             std::tie(adj_face, adj_cell_x, adj_cell_y) = adj_cell_coords;
         }
 
@@ -334,7 +333,7 @@ void rc_game_t::move(std::tuple<rc_game_t::coords_t, rc_direction> x){
             --N_rotations_needed;
         }
 
-        move_shift = std::make_tuple(adj_cell_coords, adj_cell_dir);
+        move_shift = rc_game_t::move_t{adj_cell_coords, adj_cell_dir};
 
     }else if( (orig_dir == rc_direction::left)
           ||  (orig_dir == rc_direction::right)
@@ -346,31 +345,38 @@ void rc_game_t::move(std::tuple<rc_game_t::coords_t, rc_direction> x){
         // Check if the shift necessitates a face rotation. This is only the case if the cell is adjacent to the edge of
         // a face AND the direction of travel is parallel to the edge.
         std::vector<rc_direction> adj_dirs;
-        rc_direction rot_dir = rc_direction::rotate_left;
         if(false){
         }else if( orig_dir == rc_direction::left ){
             adj_dirs.emplace_back(rc_direction::up);
             adj_dirs.emplace_back(rc_direction::down);
-            rot_dir = rc_direction::rotate_right;
         }else if( orig_dir == rc_direction::right ){
             adj_dirs.emplace_back(rc_direction::up);
             adj_dirs.emplace_back(rc_direction::down);
-            rot_dir = rc_direction::rotate_left;
+
         }else if( orig_dir == rc_direction::up ){
             adj_dirs.emplace_back(rc_direction::left);
             adj_dirs.emplace_back(rc_direction::right);
-            rot_dir = rc_direction::rotate_right;
         }else if( orig_dir == rc_direction::down ){
             adj_dirs.emplace_back(rc_direction::left);
             adj_dirs.emplace_back(rc_direction::right);
-            rot_dir = rc_direction::rotate_left;
         }
 
         for(const auto & adj_dir : adj_dirs){
-            const auto [adj_cell_coords, adj_cell_dir] = this->get_neighbour_cell( std::make_tuple(orig_coords, adj_dir) );
+            const auto [adj_cell_coords, adj_cell_dir] = this->get_neighbour_cell( rc_game_t::move_t{orig_coords, adj_dir} );
             const auto [adj_face, adj_cell_x, adj_cell_y] = adj_cell_coords;
             if(adj_face != orig_face){
-                move_face_rot = std::make_tuple(adj_cell_coords, rot_dir);
+                rc_direction rot_dir = rc_direction::highest;
+                if(false){
+                }else if(adj_dir == rc_direction::left){
+                    rot_dir = (orig_dir == rc_direction::up) ? rc_direction::rotate_left : rc_direction::rotate_right;
+                }else if(adj_dir == rc_direction::right){
+                    rot_dir = (orig_dir == rc_direction::up) ? rc_direction::rotate_right : rc_direction::rotate_left;
+                }else if(adj_dir == rc_direction::up){
+                    rot_dir = (orig_dir == rc_direction::left) ? rc_direction::rotate_right : rc_direction::rotate_left;
+                }else if(adj_dir == rc_direction::down){
+                    rot_dir = (orig_dir == rc_direction::left) ? rc_direction::rotate_left : rc_direction::rotate_right;
+                }
+                move_face_rot = rc_game_t::move_t{adj_cell_coords, rot_dir};
                 break;
             }
         }
@@ -393,7 +399,7 @@ void rc_game_t::move(std::tuple<rc_game_t::coords_t, rc_direction> x){
 }
 
 
-void rc_game_t::implement_primitive_shift(std::tuple<rc_game_t::coords_t, rc_direction> x){
+void rc_game_t::implement_primitive_shift(rc_game_t::move_t x){
     // Implement circular cell shifts, which involves spinning N*4 cells around an axis intersecting the centre of the
     // cube by 90 degrees.
     //
@@ -424,7 +430,7 @@ void rc_game_t::implement_primitive_shift(std::tuple<rc_game_t::coords_t, rc_dir
             auto curr_coords = this->coords(curr_index);
             auto curr_cell = this->get_const_cell(curr_index);
 
-            const auto next_x = this->get_neighbour_cell( std::make_tuple(curr_coords, curr_dir ));
+            const auto next_x = this->get_neighbour_cell( rc_game_t::move_t{curr_coords, curr_dir} );
 
             const auto next_coords = std::get<0>(next_x);
             const auto next_dir = std::get<1>(next_x);
@@ -454,7 +460,7 @@ void rc_game_t::implement_primitive_shift(std::tuple<rc_game_t::coords_t, rc_dir
     return;
 }
 
-void rc_game_t::implement_primitive_face_rotate(std::tuple<rc_game_t::coords_t, rc_direction> x){
+void rc_game_t::implement_primitive_face_rotate(rc_game_t::move_t x){
     // Implement face rotations, which involves spinning the N*N cells of a face around the centre of the face.
     // 
     // Note that this type of move also necessitates a shift primitive, which is not performed here.

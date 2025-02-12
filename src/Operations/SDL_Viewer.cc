@@ -5315,9 +5315,9 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             im_colour_active.w *= 0.6;
 
                             if(drag_and_drop_active){
-                                im_colour_button.w *= 0.25;
-                                im_colour_hovered.w *= 0.25;
-                                im_colour_active.w *= 0.25;
+                                im_colour_button.w *= 0.75;
+                                im_colour_hovered.w *= 0.75;
+                                im_colour_active.w *= 0.75;
                             }
 
                             // Temporarily alter the appearance of buttons.
@@ -5414,7 +5414,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             }
 
                             // Implement the move.
-                            rc_game.move( std::make_tuple(c, dir) );
+                            rc_game.move( rc_game_t::move_t{c, dir} );
                         }
                         ImGui::EndDragDropTarget();
                     }

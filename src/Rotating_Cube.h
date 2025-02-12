@@ -31,6 +31,9 @@ struct rc_game_t {
                                 int64_t,   // cell 'x' in [0,N-1].
                                 int64_t>;  // cell 'y' in [0,N-1].
 
+    using move_t = std::tuple<rc_game_t::coords_t, rc_direction>;
+
+    //-----
 
     rc_game_t();
     void reset(int64_t N);
@@ -50,12 +53,11 @@ struct rc_game_t {
 
     std::tuple<int64_t, rc_direction> get_neighbour_face(int64_t, rc_direction) const;
 
-    std::tuple<rc_game_t::coords_t, rc_direction>
-    get_neighbour_cell(std::tuple<rc_game_t::coords_t, rc_direction>) const;
+    move_t get_neighbour_cell(move_t) const;
 
-    void move(std::tuple<rc_game_t::coords_t, rc_direction>);
-    void implement_primitive_shift(std::tuple<rc_game_t::coords_t, rc_direction>);
-    void implement_primitive_face_rotate(std::tuple<rc_game_t::coords_t, rc_direction>);
+    void move(move_t);
+    void implement_primitive_shift(move_t);
+    void implement_primitive_face_rotate(move_t);
 
 };
 
