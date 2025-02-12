@@ -24,8 +24,8 @@ rc_game_t::rc_game_t(){
 void rc_game_t::reset(int64_t l_N){
     this->N = l_N;
 
-    const auto N_faces = this->N * this->N * 6;
-    this->faces.resize( N_faces ); 
+    const auto N_cells = this->N * this->N * 6;
+    this->cells.resize( N_cells ); 
 
     for(int64_t f = 0; f < 6; ++f){
         for(int64_t x = 0; x < N; ++x){
@@ -33,7 +33,7 @@ void rc_game_t::reset(int64_t l_N){
                 const auto c = std::make_tuple(f, x, y);
                 const auto index = this->index(c);
                 this->assert_index_valid(index);
-                this->get_face(index).colour = f;
+                this->get_cell(index).colour = f;
             }
         }
     }
@@ -59,18 +59,18 @@ void rc_game_t::assert_index_valid(int64_t index) const {
 }
 
 bool rc_game_t::confirm_index_valid(int64_t index) const {
-    const auto N_faces = this->N * this->N * 6;
-    return isininc(0, index, N_faces - 1);
+    const auto N_cells = this->N * this->N * 6;
+    return isininc(0, index, N_cells - 1);
 }
 
 rc_game_t::coords_t rc_game_t::coords(int64_t index) const {
     this->assert_index_valid(index); 
 
-    const ldiv_t q = ::ldiv(index,6);
-    const ldiv_t z = ::ldiv(q.quot,this->N);
-    const int64_t f = q.rem;
-    const int64_t y = z.rem;
-    const int64_t x = z.quot;
+    const ldiv_t q = ::ldiv(index,this->N*this->N);
+    const ldiv_t z = ::ldiv(q.rem,this->N);
+    const int64_t f = q.quot;
+    const int64_t y = z.quot;
+    const int64_t x = z.rem;
 
     const auto t = std::make_tuple(f, x, y);
     if( (this->index(t) != index)
@@ -80,14 +80,14 @@ rc_game_t::coords_t rc_game_t::coords(int64_t index) const {
     return t;
 }
 
-const rc_face_t& rc_game_t::get_const_face(int64_t index) const {
+const rc_cell_t& rc_game_t::get_const_cell(int64_t index) const {
     this->assert_index_valid(index); 
-    return this->faces.at(index);
+    return this->cells.at(index);
 }
 
-rc_face_t& rc_game_t::get_face(int64_t index){
+rc_cell_t& rc_game_t::get_cell(int64_t index){
     this->assert_index_valid(index); 
-    return this->faces.at(index);
+    return this->cells.at(index);
 }
 
 int64_t rc_game_t::get_N() const {
@@ -200,7 +200,7 @@ rc_game_t::get_neighbour_cell(std::tuple<rc_game_t::coords_t, rc_direction> x) c
     rc_direction new_dir = curr_dir;
     auto & [new_face, new_cell_x, new_cell_y] = new_coords;
 
-    // Determine if the neighbour is on the current face. If so, return it and the same direction.
+    // Determine if the directly adjacent neighbour is on the current face. If so, return it and the same direction.
     const auto N = this->get_N();
     if(false){
     }else if( curr_dir == rc_direction::highest ){
@@ -287,4 +287,79 @@ rc_game_t::get_neighbour_cell(std::tuple<rc_game_t::coords_t, rc_direction> x) c
 
     return {new_coords, new_dir};
 }
+
+void rc_game_t::move(std::tuple<rc_game_t::coords_t, rc_direction> x){
+
+    // Implements a move by rotating a portion of the cube.
+    //
+    // There are two distinct kinds of rotations possible:
+    //
+    // (1) face rotations, which involves spinning N*(N+4) cells around an axis intersecting the centre of the cube by
+    // 90 degrees. Note that this type of move impacts one adjacent face.
+    //
+    // (2) cell shifts, which involves spinning N*4 cells around an axis intersecting the centre of the cube by 90
+    // degrees. This type only impacts a few cells. Note that the cells cannot be directly adjacent to the edge of any
+    // faces, otherwise the adjacent face will need to rotate as well (i.e., then it will be a type (1) move).
+
+    const auto orig_coords = std::get<0>(x);
+    const auto orig_dir = std::get<1>(x);
+    const auto [orig_face, orig_cell_x, orig_cell_y] = orig_coords;
+    const auto orig_index = this->index(orig_coords);
+
+
+    // Type (1) moves:
+
+    // TODO.
+
+    // Type (2) moves:
+    for(int64_t i = 0; i < this->N; ++i){
+        auto curr_index = orig_index;
+        auto curr_dir = orig_dir;
+
+        if( false ){
+        }else if( (orig_dir == rc_direction::left)
+              ||  (orig_dir == rc_direction::right)
+              ||  (orig_dir == rc_direction::up)
+              ||  (orig_dir == rc_direction::down) ){
+            // Do nothing.
+        }else{
+            throw std::logic_error("Unsupported move direction");
+        }
+
+        std::map<int64_t, rc_cell_t> new_cells;
+
+        while(true){
+            auto curr_coords = this->coords(curr_index);
+            auto curr_cell = this->get_const_cell(curr_index);
+
+            const auto next_x = this->get_neighbour_cell( std::make_tuple(curr_coords, curr_dir ));
+
+            const auto next_coords = std::get<0>(next_x);
+            const auto next_dir = std::get<1>(next_x);
+            const auto [next_face, next_cell_x, next_cell_y] = next_coords;
+            const auto next_index = this->index(next_coords);
+
+            // Insert the mapping.
+            new_cells[ next_index ] = curr_cell;
+
+            // Check if we've wrapped around the cube yet.
+            if(next_index == orig_index){
+                break;
+            }else{
+                curr_index = next_index;
+                curr_dir = next_dir;
+            }
+        }
+
+        // Implement the moves.
+        for(const auto &c : new_cells){
+            const auto& index = c.first;
+            const auto& cell = c.second;
+            this->get_cell(index) = cell;
+        }
+    }
+
+    return;
+}
+
 

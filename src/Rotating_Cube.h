@@ -6,7 +6,7 @@
 #include <optional>
 #include <tuple>
 
-struct rc_face_t {
+struct rc_cell_t {
     int64_t colour = 0;
 };
 
@@ -24,8 +24,8 @@ enum class rc_direction : int64_t {
 
 
 struct rc_game_t {
-    int64_t N = 3; // Number of faces along a cartesian direction.
-    std::vector<rc_face_t> faces;
+    int64_t N = 3; // Number of cells along a cartesian direction.
+    std::vector<rc_cell_t> cells;
 
     using coords_t = std::tuple<int64_t,   // face number in [0,5].
                                 int64_t,   // cell 'x' in [0,N-1].
@@ -41,8 +41,8 @@ struct rc_game_t {
 
     coords_t coords(int64_t index) const;
 
-    const rc_face_t& get_const_face(int64_t index) const;
-    rc_face_t& get_face(int64_t index);
+    const rc_cell_t& get_const_cell(int64_t index) const;
+    rc_cell_t& get_cell(int64_t index);
 
     int64_t get_N() const; // Use reset() to set N.
 
@@ -52,6 +52,8 @@ struct rc_game_t {
 
     std::tuple<rc_game_t::coords_t, rc_direction>
     get_neighbour_cell(std::tuple<rc_game_t::coords_t, rc_direction>) const;
+
+    void move(std::tuple<rc_game_t::coords_t, rc_direction>);
 
 };
 

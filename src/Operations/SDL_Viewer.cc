@@ -5171,7 +5171,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             const int64_t rc_game_box_height = 800;
 
 
-            // Lay out the faces on a grid.
+            // Lay out the faces and cells on a grid.
             const auto rc_game_N = rc_game.get_N();
             
             const int64_t cell_count_height = rc_game_N * 3 + 2;
@@ -5228,9 +5228,9 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             // Walk over the grid.
             for(int64_t i = 1; (i+1) < cell_count_width; ++i){
                 for(int64_t j = 1; (j+1) < cell_count_height; ++j){
-                    ImVec2 face_pos_window( curr_window_pos.x + (cell_width  * i),
+                    ImVec2 cell_pos_window( curr_window_pos.x + (cell_width  * i),
                                             curr_window_pos.y + (cell_height * j) );
-                    ImVec2 face_pos_screen( curr_screen_pos.x + (cell_width  * i),
+                    ImVec2 cell_pos_screen( curr_screen_pos.x + (cell_width  * i),
                                             curr_screen_pos.y + (cell_height * j) );
 
                     rc_game_t::coords_t c { -1, -1, -1 };
@@ -5274,23 +5274,23 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
 
                     }
 
-                    // Invert the y coordinate (map between screen space and the face cell layout).
+                    // Invert the y coordinate (map between screen space and the cell layout).
                     std::get<2>(c) = (rc_game_N - 1) - std::get<2>(c);
 
                     const auto index = rc_game.index(c);
 
                     if(rc_game.confirm_index_valid(index)){
-                        // If this is the face being dragged, save the coordinates for later.
+                        // If this is the cell being dragged, save the coordinates for later.
                         if( drag_and_drop_index
                         &&  (index == drag_and_drop_index.value()) ){
                             drag_and_drop_grid_coords = std::make_tuple(i, j, c);
                         }
 
-                        const auto l_colour_num = rc_game.get_const_face(index).colour;
+                        const auto l_colour_num = rc_game.get_const_cell(index).colour;
                         const auto l_colour = rc_game.colour_to_rgba(l_colour_num);
                         const auto im_col = ImColor(l_colour.at(0), l_colour.at(1), l_colour.at(2), l_colour.at(3)).Value;
 
-                        // Check if this face can accept an in-progress drag-and-drop index.
+                        // Check if this cell can accept an in-progress drag-and-drop index.
                         bool drag_and_drop_active = !!drag_and_drop_index;
 
                         const auto & [ cell_face, cell_x, cell_y ] = c;
@@ -5302,7 +5302,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                            << cell_x << ", "
                            << cell_y << "\n";
 
-                        ImGui::SetCursorPos(face_pos_window);
+                        ImGui::SetCursorPos(cell_pos_window);
 
                         int styles_overridden = 0;
                         {
@@ -5341,25 +5341,25 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             ImGui::PopStyleColor(styles_overridden);
                         }
 
-                        // Make the face draggable.
+                        // Make the cell draggable.
                         if( ImGui::BeginDragDropSource(ImGuiDragDropFlags_None)){
                             int64_t payload = index;
                             ImGui::SetDragDropPayload("rc_game_index", static_cast<void*>(&payload), sizeof(payload));
 
                             // Show a preview of the cube being dragged.
-                            ImGui::Text("Face");
+                            ImGui::Text("Cell");
 
                             ImGui::EndDragDropSource();
                         }
 
-                        // Draw a border around the face.
+                        // Draw a border around the cell.
                         const auto c_border = ImColor(1.0f, 1.0f, 1.0f, 1.0f);
-                        window_draw_list->AddRect(face_pos_screen, ImVec2( face_pos_screen.x + block_dims.x, 
-                                                                           face_pos_screen.y + block_dims.y ), c_border);
+                        window_draw_list->AddRect(cell_pos_screen, ImVec2( cell_pos_screen.x + block_dims.x, 
+                                                                           cell_pos_screen.y + block_dims.y ), c_border);
                     }
 
 
-                    //ImGui::SetCursorPos(face_pos);
+                    //ImGui::SetCursorPos(cell_pos);
                     //ImGui::Text("%s", const_cast<char *>(text.c_str()));
                     //ImGui::Dummy(block_dims);
 
@@ -5380,9 +5380,9 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                                          {  0,  1, rc_direction::down,         std::string("down") },
                                                          { -1, -1, rc_direction::rotate_left,  std::string("rotate\nleft") },
                                                          {  1, -1, rc_direction::rotate_right, std::string("rotate\nright") } } ){
-                    ImVec2 face_pos_screen( curr_screen_pos.x + (cell_width  * (i + di)),
+                    ImVec2 cell_pos_screen( curr_screen_pos.x + (cell_width  * (i + di)),
                                             curr_screen_pos.y + (cell_height * (j + dj)) );
-                    ImVec2 face_pos_window( curr_window_pos.x + (cell_width  * (i + di)),
+                    ImVec2 cell_pos_window( curr_window_pos.x + (cell_width  * (i + di)),
                                             curr_window_pos.y + (cell_height * (j + dj)) );
 
                     std::stringstream ss;
@@ -5398,11 +5398,11 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         ss << "##" << desc;
                     }
 
-                    ImGui::SetCursorPos(face_pos_window);
+                    ImGui::SetCursorPos(cell_pos_window);
 //                    ImGui::Button(desc.c_str(), block_dims);
                     ImGui::Button(ss.str().c_str(), block_dims);
 
-                    // Accept a face dragged here.
+                    // Accept a cell dragged here.
                     if( ImGui::BeginDragDropTarget() ){
                         if(const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("rc_game_index"); payload != nullptr){
                             if(payload->DataSize != sizeof(int64_t)){
@@ -5412,6 +5412,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
 
 
                             // Implement the move here...
+                            rc_game.move( std::make_tuple(c, dir) );
 
                         }
                         ImGui::EndDragDropTarget();
@@ -5474,8 +5475,8 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     for(auto & v : verts){
                         // Scale and rotate if needed.
                         ImVec2 im_v;
-                        im_v.x = face_pos_screen.x + block_dims.x * 0.5 + v.x * (block_dims.x * 0.45);
-                        im_v.y = face_pos_screen.y + block_dims.y * 0.5 - v.y * (block_dims.y * 0.45);
+                        im_v.x = cell_pos_screen.x + block_dims.x * 0.5 + v.x * (block_dims.x * 0.45);
+                        im_v.y = cell_pos_screen.y + block_dims.y * 0.5 - v.y * (block_dims.y * 0.45);
                         window_draw_list->PathLineTo( im_v );
                     }
                     float thickness = 1.5f;
