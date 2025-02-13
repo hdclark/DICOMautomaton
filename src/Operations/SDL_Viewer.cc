@@ -5165,6 +5165,30 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     reset_cube_game();
                 }
             }
+            ImGui::SameLine();
+            const auto scramble_3x = ImGui::Button("Scramble (3)");
+            if(scramble_3x){
+                const auto moves = rc_game.generate_random_moves(3L);
+                for(const auto& move : moves){
+                    rc_game.move(move);
+                }
+            }
+            ImGui::SameLine();
+            const auto scramble_5x = ImGui::Button("Scramble (5)");
+            if(scramble_5x){
+                const auto moves = rc_game.generate_random_moves(5L);
+                for(const auto& move : moves){
+                    rc_game.move(move);
+                }
+            }
+            ImGui::SameLine();
+            const auto scramble_1x = ImGui::Button("Scramble (10)");
+            if(scramble_10x){
+                const auto moves = rc_game.generate_random_moves(10L);
+                for(const auto& move : moves){
+                    rc_game.move(move);
+                }
+            }
             ImGui::Separator();
 
             const int64_t rc_game_box_width = 1200;

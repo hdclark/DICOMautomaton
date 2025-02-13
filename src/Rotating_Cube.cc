@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include <limits>
 #include <cmath>
+#include <random>
 
 #include "YgorMisc.h"
 #include "YgorLog.h"
@@ -523,5 +524,34 @@ void rc_game_t::implement_primitive_face_rotate(rc_game_t::move_t x){
     }
 
     return;
+}
+
+std::vector<rc_game_t::move_t>
+rc_game_t::generate_random_moves(int64_t n) const {
+    std::vector<rc_game_t::move_t> out;
+
+    std::array<rc_direction,6> dirs { rc_direction::left,
+                                      rc_direction::right,
+                                      rc_direction::up,
+                                      rc_direction::down,
+                                      rc_direction::rotate_left,
+                                      rc_direction::rotate_right, };
+
+    // Create random distributions for sampled quantities.
+    //
+    // Note: endpoints are inclusive.
+    std::uniform_int_distribution<int64_t> rd_dirs(0L, dirs.size()-1L);
+    std::uniform_int_distribution<int64_t> rd_face(0L, 5L);
+    std::uniform_int_distribution<int64_t> rd_cell_x(0L, this->N-1L);
+    std::uniform_int_distribution<int64_t> rd_cell_y(0L, this->N-1L);
+
+    std::random_device rdev;
+    std::mt19937 re( rdev() ); //Random engine.
+
+    for(int64_t i = 0; i < n; ++i){
+        out.emplace_back(move_t{ coords_t{ rd_face(re), rd_cell_x(re), rd_cell_y(re)},
+                                 dirs.at( rd_dirs(re) ) });
+    }
+    return out;
 }
 

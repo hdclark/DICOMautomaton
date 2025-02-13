@@ -59,5 +59,7 @@ struct rc_game_t {
     void implement_primitive_shift(move_t);
     void implement_primitive_face_rotate(move_t);
 
+    std::vector<move_t> generate_random_moves(int64_t) const;
+
 };
 
