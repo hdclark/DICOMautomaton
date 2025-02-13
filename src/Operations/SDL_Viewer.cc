@@ -1698,10 +1698,12 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     int64_t rc_game_size = 4L;
     rc_game_t rc_game;
+    int64_t rc_game_move_count = 0L;
 
     const auto reset_cube_game = [&](){
-
         rc_game.reset(rc_game_size);
+
+        rc_game_move_count = 0L;
 
         // Reset the update time.
         const auto t_now = std::chrono::steady_clock::now();
@@ -5172,6 +5174,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 for(const auto& move : moves){
                     rc_game.move(move);
                 }
+                rc_game_move_count -= 3;
             }
             ImGui::SameLine();
             const auto scramble_5x = ImGui::Button("Scramble (5)");
@@ -5180,14 +5183,22 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 for(const auto& move : moves){
                     rc_game.move(move);
                 }
+                rc_game_move_count -= 5;
             }
             ImGui::SameLine();
-            const auto scramble_1x = ImGui::Button("Scramble (10)");
+            const auto scramble_10x = ImGui::Button("Scramble (10)");
             if(scramble_10x){
                 const auto moves = rc_game.generate_random_moves(10L);
                 for(const auto& move : moves){
                     rc_game.move(move);
                 }
+                rc_game_move_count -= 10;
+            }
+            ImGui::SameLine();
+            {
+                std::stringstream ss;
+                ss << "Move count: " << rc_game_move_count;
+                ImGui::Text(ss.str().c_str());
             }
             ImGui::Separator();
 
@@ -5377,7 +5388,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         }
 
                         // Draw a border around the cell.
-                        const auto c_border = ImColor(1.0f, 1.0f, 1.0f, 1.0f);
+                        const auto c_border = ImColor(1.0f, 1.0f, 1.0f, 0.60f);
                         window_draw_list->AddRect(cell_pos_screen, ImVec2( cell_pos_screen.x + block_dims.x, 
                                                                            cell_pos_screen.y + block_dims.y ), c_border);
                     }
@@ -5439,6 +5450,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
 
                             // Implement the move.
                             rc_game.move( rc_game_t::move_t{c, dir} );
+                            ++rc_game_move_count;
                         }
                         ImGui::EndDragDropTarget();
                     }
