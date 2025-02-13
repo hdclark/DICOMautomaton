@@ -1694,21 +1694,23 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // Cube state.
     std::chrono::time_point<std::chrono::steady_clock> t_cube_updated;
-    std::chrono::time_point<std::chrono::steady_clock> t_cube_started;
 
     int64_t rc_game_size = 4L;
     rc_game_t rc_game;
     int64_t rc_game_move_count = 0L;
+    double rc_game_anim_dt = 500.0; // in ms.
+
+    std::map<int64_t, int64_t> rc_game_colour_map; // index to colour number.
 
     const auto reset_cube_game = [&](){
         rc_game.reset(rc_game_size);
 
         rc_game_move_count = 0L;
+        rc_game_colour_map.clear();
 
         // Reset the update time.
         const auto t_now = std::chrono::steady_clock::now();
         t_cube_updated = t_now;
-        t_cube_started = t_now;
         return;
     };
     reset_cube_game();
@@ -5229,14 +5231,13 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             }
 
             const auto t_now = std::chrono::steady_clock::now();
-            const auto t_started_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_cube_started).count();
-            auto t_updated_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_en_updated).count();
+            auto t_updated_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_cube_updated).count();
 
             // Limit individual time steps to around 30 fps otherwise 'infinitesimal' updates to the system will no
             // longer be small, and the simulation will quickly break down.
             //
             // Note that this will cause the simulation to be choppy if the frame rate falls below 30 fps or so.
-            if(30 < t_updated_diff) t_updated_diff = 30;
+            const auto t_diff_decay_factor = 1.0f - (std::clamp<float>(t_updated_diff, 0.0f, rc_game_anim_dt) / rc_game_anim_dt);
 
             const auto block_dims = ImVec2( cell_width, cell_height );
 
@@ -5322,7 +5323,26 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         }
 
                         const auto l_colour_num = rc_game.get_const_cell(index).colour;
-                        const auto l_colour = rc_game.colour_to_rgba(l_colour_num);
+                        auto l_colour = rc_game.colour_to_rgba(l_colour_num);
+
+                        // Animate the colour.
+                        const auto has_cached_colour = (rc_game_colour_map.count(index) != 0UL);
+                        if(!has_cached_colour){
+                            // Insert the current colour into the cache.
+                            rc_game_colour_map[index] = l_colour_num;
+                        }else{
+                            // If the blend factor is sufficiently low, update the cache to terminate the animation.
+                            if(t_diff_decay_factor < 0.01){
+                                rc_game_colour_map[index] = l_colour_num;
+                            }
+
+                            // Retrieve the cached colour and interpolate between the colours.
+                            const auto prev_colour_num = rc_game_colour_map[index];
+                            const auto prev_colour = rc_game.colour_to_rgba(prev_colour_num);
+                            for(auto i = 0UL; i < l_colour.size(); ++i){
+                                l_colour.at(i) = std::clamp<float>(l_colour.at(i) + (prev_colour.at(i) - l_colour.at(i)) * t_diff_decay_factor, 0.0f, 1.0f);
+                            }
+                        }
                         const auto im_col = ImColor(l_colour.at(0), l_colour.at(1), l_colour.at(2), l_colour.at(3)).Value;
 
                         // Check if this cell can accept an in-progress drag-and-drop index.
@@ -5392,12 +5412,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         window_draw_list->AddRect(cell_pos_screen, ImVec2( cell_pos_screen.x + block_dims.x, 
                                                                            cell_pos_screen.y + block_dims.y ), c_border);
                     }
-
-
-                    //ImGui::SetCursorPos(cell_pos);
-                    //ImGui::Text("%s", const_cast<char *>(text.c_str()));
-                    //ImGui::Dummy(block_dims);
-
                 }
             }
             ImGui::SetCursorPos(curr_window_pos);
@@ -5451,6 +5465,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             // Implement the move.
                             rc_game.move( rc_game_t::move_t{c, dir} );
                             ++rc_game_move_count;
+                            t_cube_updated = t_now;
                         }
                         ImGui::EndDragDropTarget();
                     }
@@ -5523,66 +5538,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
 
             }
             ImGui::SetCursorPos(curr_window_pos);
-
-
-
-/*
-            decltype(en_game_objs) l_en_game_objs;
-            for(auto &obj : en_game_objs){
-                ImVec2 obj_pos = curr_pos;
-                obj_pos.x = curr_pos.x + obj.pos.x;
-                obj_pos.y = curr_pos.y + obj.pos.y;
-
-                const auto rel_r = std::clamp<double>(obj.rad / 30.0, 0.0, 1.0);
-                auto c = ImColor(rel_r * 1.0f, (1.0f - rel_r) * 1.0f, 0.5f, 1.0f);
-                if(obj.player_controlled){
-                    c = ImColor(1.0f, 1.0f, 0.1f, 1.0f);
-                }
-                window_draw_list->AddCircle(obj_pos, obj.rad, c);
-
-                // Implement player controls.
-                if( f && obj.player_controlled){
-                    if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_LeftArrow)) ){
-                        obj.vel.x -= 1.0;
-                    }
-                    if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_RightArrow)) ){
-                        obj.vel.x += 1.0;
-                    }
-                    if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_UpArrow)) ){
-                        obj.vel.y -= 1.0;
-                    }
-                    if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_DownArrow)) ){
-                        obj.vel.y += 1.0;
-                    }
-                    if( ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Space)) ){
-                        // Jettison a small object in the direction opposite of travel.
-                        auto l_rad = obj.rad * 0.05;
-                        l_rad = (l_rad < en_game.min_radius) ? en_game.min_radius : l_rad;
-                        auto l_dir = obj.vel * (-1.0);
-                        l_dir = ( 0.0 < l_dir.length() ) ? l_dir : vec2<double>(1.0, 0.0);
-
-                        attempt_to_shed( obj, l_dir, l_rad, l_en_game_objs);
-                    }
-                    if( ImGui::IsKeyPressed(SDL_SCANCODE_S) ){
-                        // Attempt to split into two.
-                        auto l_rad = std::sqrt(0.5) * obj.rad;
-                        auto l_dir = obj.vel * (-1.0);
-                        l_dir = ( 0.0 < l_dir.length() ) ? l_dir : vec2<double>(1.0, 0.0);
-
-                        decltype(en_game_objs) ll_en_game_objs;
-                        attempt_to_shed( obj, l_dir, l_rad, ll_en_game_objs);
-                        for(auto& obj : ll_en_game_objs){
-                            obj.player_controlled = true;
-                        }
-                        l_en_game_objs.insert( std::begin(l_en_game_objs),
-                                               std::begin(ll_en_game_objs), std::end(ll_en_game_objs) );
-                    }
-                }
-            }
-*/
-
-            t_cube_updated = t_now;
-
             ImGui::Dummy(ImVec2(rc_game_box_width, rc_game_box_height));
             ImGui::End();
         }
