@@ -36,6 +36,7 @@
 #include <initializer_list>
 #include <thread>
 #include <random>
+#include <cinttypes>
 
 #include <filesystem>
 
@@ -7256,7 +7257,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     ImGui::Text("Distance: %.4f", tagged_pos.value().distance(image_mouse_pos.dicom_pos));
                 }
                 ImGui::Text("Image coordinates: %.4f, %.4f", image_mouse_pos.region_y, image_mouse_pos.region_x);
-                ImGui::Text("Pixel coordinates: (r, c) = %jd, %jd", static_cast<intmax_t>(image_mouse_pos.r), static_cast<intmax_t>(image_mouse_pos.c));
+                ImGui::Text("Pixel coordinates: (r, c) = %" PRId64 ", %" PRId64, image_mouse_pos.r, image_mouse_pos.c);
                 ImGui::Text("Mouse coordinates: (x, y, z) = %.4f, %.4f, %.4f", image_mouse_pos.dicom_pos.x, image_mouse_pos.dicom_pos.y, image_mouse_pos.dicom_pos.z);
                 ImGui::Text("Voxel coordinates: (x, y, z) = %.4f, %.4f, %.4f", image_mouse_pos.voxel_pos.x, image_mouse_pos.voxel_pos.y, image_mouse_pos.voxel_pos.z);
                 if(disp_img_it->channels == 1){
