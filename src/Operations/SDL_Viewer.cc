@@ -111,6 +111,35 @@
 #endif
 
 
+// Wraps the imgui SliderInt() function to better handle int64_t and other non-'int' inputs.
+//
+// Also enforces the lower and upper bounds, which the user can otherwise overcome via CTRL+click
+// on the slider widget.
+//
+// Invokes the user functor, if valid, and returns true when the number changes.
+template <class T>
+bool
+imgui_slider_int_wrapper( const std::string &desc,
+                          T &i,
+                          const T lower_bound_inclusive,
+                          const T upper_bound_inclusive,
+                          const std::function<void(void)> &f = std::function<void(void)>() ){
+    auto int_i = static_cast<int>(i);
+    const auto orig_int_i = int_i;
+
+    auto int_lb = static_cast<int>(lower_bound_inclusive);
+    auto int_ub = static_cast<int>(upper_bound_inclusive);
+
+    ImGui::SliderInt(desc.c_str(), &int_i, int_lb, int_ub);
+    int_i = std::clamp(int_i, int_lb, int_ub);
+    const bool has_changed = (int_i != orig_int_i);
+
+    i = static_cast<T>(int_i);
+    if(has_changed && f) f();
+    return has_changed;
+}
+
+
 // Draw a loading animation using ImGui primitives.
 //
 // Looks like a wave propagating through a line of squares.
@@ -1697,16 +1726,20 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     int64_t rc_game_size = 4L;
     rc_game_t rc_game;
-    int64_t rc_game_move_count = 0L;
-    double rc_game_anim_dt = 500.0; // in ms.
+    double rc_game_anim_dt = 350.0; // in ms.
+
+    std::list<rc_game_t::move_t> rc_game_move_history;
+    int64_t rc_game_move_history_current = 0L; // Zero = implicit game reset (i.e., no moves yet).
 
     std::map<int64_t, int64_t> rc_game_colour_map; // index to colour number.
 
     const auto reset_cube_game = [&](){
         rc_game.reset(rc_game_size);
 
-        rc_game_move_count = 0L;
         rc_game_colour_map.clear();
+
+        rc_game_move_history.clear();
+        rc_game_move_history_current = 0L;
 
         // Reset the update time.
         const auto t_now = std::chrono::steady_clock::now();
@@ -1714,6 +1747,40 @@ bool SDL_Viewer(Drover &DICOM_data,
         return;
     };
     reset_cube_game();
+
+    const auto jump_to_cube_game_history = [&](int64_t n) -> void {
+        const auto l_N = static_cast<int64_t>(rc_game_move_history.size());
+        if( !isininc(0L, n, l_N) ){
+            throw std::invalid_argument("Requested history is not available");
+        }
+
+        rc_game.reset(rc_game_size);
+        rc_game_move_history_current = n;
+        for(const auto& move : rc_game_move_history){
+            --n;
+            if(n < 0L) break;
+            rc_game.move(move);
+        }
+        return;
+    };
+    const auto append_cube_game_history = [&](rc_game_t::move_t x) -> void {
+        // Trim any moves after the current history, if any are present.
+        {
+            decltype(rc_game_move_history) l_history;
+            auto n = rc_game_move_history_current;
+            for(const auto& move : rc_game_move_history){
+                --n;
+                if(n < 0L) break;
+                l_history.emplace_back(move);
+            }
+            rc_game_move_history = l_history;
+        }
+
+        rc_game_move_history.emplace_back(x);
+        const auto n = static_cast<int64_t>(rc_game_move_history.size());
+        rc_game_move_history_current = n;
+        return;
+    };
 
     // Guide state.
     std::shared_timed_mutex guide_mutex;
@@ -5145,6 +5212,22 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
 
 
         if( view_toggles.view_cube_enabled ){
+            double t_updated_diff = 0.0;
+            double t_diff_decay_factor = 0.0;
+            const auto update_t_diff = [&](){
+                const auto t_now = std::chrono::steady_clock::now();
+                t_updated_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_cube_updated).count();
+                t_diff_decay_factor = 1.0 - (std::clamp<double>(t_updated_diff, 0.0, rc_game_anim_dt) / rc_game_anim_dt);
+                return;
+            };
+            update_t_diff();
+
+            const auto propagate_t_diff = [&](){
+                const auto t_now = std::chrono::steady_clock::now();
+                t_cube_updated = t_now;
+                update_t_diff();
+                return;
+            };
 
             const auto win_width  = static_cast<int>(700);
             const auto win_height = static_cast<int>(500);
@@ -5155,6 +5238,27 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             ImGui::SetNextWindowSize(ImVec2(win_width, win_height), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
             ImGui::Begin("Cube", &view_toggles.view_cube_enabled, flags );
+
+            {
+                ImGuiIO &io = ImGui::GetIO();
+                const bool hotkey_ctrl_z = io.KeyCtrl && ImGui::IsKeyPressed(SDL_SCANCODE_Z);
+                const bool hotkey_ctrl_y = io.KeyCtrl && ImGui::IsKeyPressed(SDL_SCANCODE_Y);
+
+                const auto l_N = static_cast<int64_t>(rc_game_move_history.size());
+                if(0UL < l_N){
+                    const auto l_n = rc_game_move_history_current;
+                    if(false){
+                    }else if( hotkey_ctrl_z
+                          &&  (0L < l_n) ){
+                        jump_to_cube_game_history( l_n - 1L );
+                        propagate_t_diff();
+                    }else if( hotkey_ctrl_y
+                          &&  (l_n < l_N) ){
+                        jump_to_cube_game_history( l_n + 1L );
+                        propagate_t_diff();
+                    }
+                }
+            }
 
             const auto reset = ImGui::Button("Reset");
             if(reset){
@@ -5169,38 +5273,31 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     reset_cube_game();
                 }
             }
-            ImGui::SameLine();
-            const auto scramble_3x = ImGui::Button("Scramble (3)");
-            if(scramble_3x){
-                const auto moves = rc_game.generate_random_moves(3L);
-                for(const auto& move : moves){
-                    rc_game.move(move);
-                }
-                rc_game_move_count -= 3;
-            }
-            ImGui::SameLine();
-            const auto scramble_5x = ImGui::Button("Scramble (5)");
-            if(scramble_5x){
-                const auto moves = rc_game.generate_random_moves(5L);
-                for(const auto& move : moves){
-                    rc_game.move(move);
-                }
-                rc_game_move_count -= 5;
-            }
-            ImGui::SameLine();
-            const auto scramble_10x = ImGui::Button("Scramble (10)");
-            if(scramble_10x){
-                const auto moves = rc_game.generate_random_moves(10L);
-                for(const auto& move : moves){
-                    rc_game.move(move);
-                }
-                rc_game_move_count -= 10;
-            }
-            ImGui::SameLine();
-            {
+            for(const int64_t & n : { 3L, 4L, 5L, 7L, 10L}){
+                ImGui::SameLine();
                 std::stringstream ss;
-                ss << "Move count: " << rc_game_move_count;
-                ImGui::Text(ss.str().c_str());
+                ss << "Scramble (" << n << ")";
+                const auto scramble = ImGui::Button(ss.str().c_str());
+                if(scramble){
+                    const auto moves = rc_game.generate_random_moves(n);
+                    for(const auto& move : moves){
+                        rc_game.move(move);
+                        append_cube_game_history( move );
+                        propagate_t_diff();
+                    }
+                }
+            }
+            if( !rc_game_move_history.empty() ){
+                ImGui::SameLine();
+
+                const auto l_orig = rc_game_move_history_current;
+                imgui_slider_int_wrapper("History", rc_game_move_history_current,
+                                         0L, static_cast<int64_t>(rc_game_move_history.size()),
+                    [&](void){
+                        jump_to_cube_game_history( rc_game_move_history_current );
+                        propagate_t_diff();
+                        return;
+                    });
             }
             ImGui::Separator();
 
@@ -5229,15 +5326,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 window_draw_list->AddRect(curr_screen_pos, ImVec2( curr_screen_pos.x + rc_game_box_width, 
                                                                    curr_screen_pos.y + rc_game_box_height ), c);
             }
-
-            const auto t_now = std::chrono::steady_clock::now();
-            auto t_updated_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_cube_updated).count();
-
-            // Limit individual time steps to around 30 fps otherwise 'infinitesimal' updates to the system will no
-            // longer be small, and the simulation will quickly break down.
-            //
-            // Note that this will cause the simulation to be choppy if the frame rate falls below 30 fps or so.
-            const auto t_diff_decay_factor = 1.0f - (std::clamp<float>(t_updated_diff, 0.0f, rc_game_anim_dt) / rc_game_anim_dt);
 
             const auto block_dims = ImVec2( cell_width, cell_height );
 
@@ -5463,9 +5551,10 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             }
 
                             // Implement the move.
-                            rc_game.move( rc_game_t::move_t{c, dir} );
-                            ++rc_game_move_count;
-                            t_cube_updated = t_now;
+                            const auto l_move = rc_game_t::move_t{c, dir};
+                            rc_game.move(l_move);
+                            append_cube_game_history( l_move );
+                            propagate_t_diff();
                         }
                         ImGui::EndDragDropTarget();
                     }
