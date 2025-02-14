@@ -5273,7 +5273,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     reset_cube_game();
                 }
             }
-            for(const int64_t & n : { 3L, 4L, 5L, 7L, 10L}){
+            for(const int64_t n : { 3L, 4L, 5L, 7L, 10L}){
                 ImGui::SameLine();
                 std::stringstream ss;
                 ss << "Scramble (" << n << ")";
@@ -5291,8 +5291,8 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 ImGui::SameLine();
 
                 const auto l_orig = rc_game_move_history_current;
-                imgui_slider_int_wrapper("History", rc_game_move_history_current,
-                                         0L, static_cast<int64_t>(rc_game_move_history.size()),
+                imgui_slider_int_wrapper<int64_t>("History", rc_game_move_history_current,
+                                                  0L, static_cast<int64_t>(rc_game_move_history.size()),
                     [&](void){
                         jump_to_cube_game_history( rc_game_move_history_current );
                         propagate_t_diff();
@@ -7256,7 +7256,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     ImGui::Text("Distance: %.4f", tagged_pos.value().distance(image_mouse_pos.dicom_pos));
                 }
                 ImGui::Text("Image coordinates: %.4f, %.4f", image_mouse_pos.region_y, image_mouse_pos.region_x);
-                ImGui::Text("Pixel coordinates: (r, c) = %ld, %ld", image_mouse_pos.r, image_mouse_pos.c);
+                ImGui::Text("Pixel coordinates: (r, c) = %jd, %jd", static_cast<intmax_t>(image_mouse_pos.r), static_cast<intmax_t>(image_mouse_pos.c));
                 ImGui::Text("Mouse coordinates: (x, y, z) = %.4f, %.4f, %.4f", image_mouse_pos.dicom_pos.x, image_mouse_pos.dicom_pos.y, image_mouse_pos.dicom_pos.z);
                 ImGui::Text("Voxel coordinates: (x, y, z) = %.4f, %.4f, %.4f", image_mouse_pos.voxel_pos.x, image_mouse_pos.voxel_pos.y, image_mouse_pos.voxel_pos.z);
                 if(disp_img_it->channels == 1){
