@@ -4423,7 +4423,16 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImGui::End();
         }
 
-        if( view_toggles.view_triple_three_enabled ){
+        const auto display_tt_game = [&view_toggles,
+                                      &tt_game,
+                                      &tt_hidden,
+                                      &t_tt_updated,
+                                      &dt_tt_update,
+                                      &tt_cell_owner,
+                                      &tt_cell_owner_time,
+                                      &tt_anim_dt ]() -> bool {
+            if( !view_toggles.view_triple_three_enabled ) return true;
+
             ImGui::SetNextWindowSize(ImVec2(450, 650), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(150, 200), ImGuiCond_FirstUseEver);
             ImGui::Begin("Triple-Three", &view_toggles.view_triple_three_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoScrollbar );
@@ -4674,9 +4683,24 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
 
             ImGui::End();
+            return true;
+        };
+        try{
+            // Break from the main render loop if false is received.
+            if(!display_tt_game()) break;
+        }catch(const std::exception &e){
+            YLOGWARN("Exception in display_tt_game(): '" << e.what() << "'");
+            throw;
         }
 
-        if( view_toggles.view_encompass_enabled ){
+        const auto display_en_game = [&view_toggles,
+                                      &en_game_objs,
+                                      &t_en_updated,
+                                      &t_en_started,
+                                      &en_game,
+                                      &reset_en_game ]() -> bool {
+            if( !view_toggles.view_encompass_enabled ) return true;
+
             // Reset the game before any game state is used.
             if( ImGui::IsKeyPressed(SDL_SCANCODE_R) ){
                 reset_en_game();
@@ -5209,10 +5233,29 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
 
             ImGui::Dummy(ImVec2(en_game.box_width, en_game.box_height));
             ImGui::End();
+            return true;
+        };
+        try{
+            // Break from the main render loop if false is received.
+            if(!display_en_game()) break;
+        }catch(const std::exception &e){
+            YLOGWARN("Exception in display_en_game(): '" << e.what() << "'");
+            throw;
         }
 
+        const auto display_rc_game = [&view_toggles,
+                                      &t_cube_updated,
+                                      &rc_game_size,
+                                      &rc_game,
+                                      &rc_game_anim_dt,
+                                      &rc_game_move_history,
+                                      &rc_game_move_history_current,
+                                      &rc_game_colour_map,
+                                      &reset_cube_game,
+                                      &jump_to_cube_game_history,
+                                      &append_cube_game_history ]() -> bool {
+            if( !view_toggles.view_cube_enabled ) return true;
 
-        if( view_toggles.view_cube_enabled ){
             double t_updated_diff = 0.0;
             double t_diff_decay_factor = 0.0;
             const auto update_t_diff = [&](){
@@ -5246,7 +5289,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 const bool hotkey_ctrl_y = io.KeyCtrl && ImGui::IsKeyPressed(SDL_SCANCODE_Y);
 
                 const auto l_N = static_cast<int64_t>(rc_game_move_history.size());
-                if(0UL < l_N){
+                if(0L < l_N){
                     const auto l_n = rc_game_move_history_current;
                     if(false){
                     }else if( hotkey_ctrl_z
@@ -5630,7 +5673,17 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             ImGui::SetCursorPos(curr_window_pos);
             ImGui::Dummy(ImVec2(rc_game_box_width, rc_game_box_height));
             ImGui::End();
+
+            return true;
+        };
+        try{
+            // Break from the main render loop if false is received.
+            if(!display_rc_game()) break;
+        }catch(const std::exception &e){
+            YLOGWARN("Exception in display_rc_game(): '" << e.what() << "'");
+            throw;
         }
+
 
 
         // Display the shader editor dialog.
