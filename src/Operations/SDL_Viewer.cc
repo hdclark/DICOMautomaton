@@ -5256,6 +5256,10 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                       &append_cube_game_history ]() -> bool {
             if( !view_toggles.view_cube_enabled ) return true;
 
+            if( ImGui::IsKeyPressed(SDL_SCANCODE_R) ){
+                reset_cube_game();
+            }
+
             double t_updated_diff = 0.0;
             double t_diff_decay_factor = 0.0;
             const auto update_t_diff = [&](){
