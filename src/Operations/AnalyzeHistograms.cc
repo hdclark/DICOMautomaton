@@ -131,6 +131,8 @@ OperationDoc OpArgDocAnalyzeHistograms(){
     out.args.back().name = "Constraints";
     out.args.back().desc = "Constraint criteria that will be evaluated against the selected line samples."
                            " Three general types of constraints are recognized."
+                           " Note that in the examples below, 'D' represents radiation dose, but can be"
+                           " replaced with 'I' which represents generic scalar intensity."
                            "\n\n"
                            " First, constraints in the style of 'Dmax < 50.0 Gy'."
                            " The left-hand-size (LHS) can be any of {Dmin, Dmean, Dmax}."
@@ -188,6 +190,8 @@ OperationDoc OpArgDocAnalyzeHistograms(){
                                  "Dmin >= 65 Gy",
                                  "Dmin >= 65",
                                  "Dmin >= 6500 cGy",
+                                 "Imean lte 50 %",
+                                 "Imean < 123.0",
                                  "D(coldest 500.0 cc) <= 25.0 Gy",
                                  "D(coldest 500.0 cc) <= 15.0 %",
                                  "D(coldest 50%) <= 15.0 %",
@@ -201,14 +205,20 @@ OperationDoc OpArgDocAnalyzeHistograms(){
                                  "(_,x) : V(24.5 Gy) < 500.0 cc",
                                  "max_dose = Dmax",
                                  "x = D(coldest 10%)",
+                                 "x = I(coldest 10%)",
                                  "(Dmax,_): Dmax < 50.0 Gy ; x: Dmin; (dose_median,passed): D(hottest 50%) <= 5 Gy; Dmean lte 80 % ; D(hottest 10%) gte 95.0 %" };
 
 
     out.args.emplace_back();
     out.args.back().name = "ReferenceDose";
-    out.args.back().desc = "The absolute dose that relative (i.e., percentage) constraint doses will be considered against."
-                           " Generally this will be the prescription dose (in DICOM units; Gy)."
-                           " If there are multiple prescriptions, either the prescription appropriate for the constraint"
+    out.args.back().desc = "The absolute dose (or intensity) that relative (i.e., percentage) constraint doses will"
+                           " be considered against."
+                           "\n\n"
+                           "Generally this will be the prescription dose (in DICOM units; Gy), but can also represent"
+                           " a generic scalar intensity. (The units are not specified, so are considered to be the same"
+                           " as the source histogram data.)"
+                           "\n\n"
+                           "If there are multiple prescriptions, either the prescription appropriate for the constraint"
                            " should be supplied, or relative dose constraints should not be used.";
     out.args.back().default_val = "nan";
     out.args.back().expected = true;
@@ -448,22 +458,23 @@ bool AnalyzeHistograms(Drover &DICOM_data,
             const auto r_cold = lCompile_Regex(R"***(.*cold.*)***");
 
             /////////////////////////////////////////////////////////////////////////////////
-            // D{min,mean,max} {<,<=,>=,>,lt,lte,gt,gte} 123.123 {%,Gy,none}.
+            // {D,I}{min,mean,max} {<,<=,>=,>,lt,lte,gt,gte} 123.123 {%,Gy,none}.
             //
-            // For example, 'Dmin < 70 Gy' or 'Dmean <= 105%' or 'Dmax lte 23.2Gy'.
+            // For example, 'Dmin < 70 Gy' or 'Dmean <= 105%' or 'Dmax lte 23.2Gy' or 'Imin < 123.0'.
             // Note that a '%' on the RHS is relative to the ReferenceDose.
-            if(auto q = lCompile_Regex(R"***([ ]*D(min|max|mean).*(<|<=|>=|>|lte|lt|gte|gt)[ ]*([0-9.]+)[ ]*(Gy|%|[ ]*|.{0})$)***");
+            if(auto q = lCompile_Regex(R"***([ ]*(D|I)(min|max|mean).*(<|<=|>=|>|lte|lt|gte|gt)[ ]*([0-9.]+)[ ]*(Gy|%|[ ]*|.{0})$)***");
                      std::regex_match(ac, q) ){
 
                 const auto p = Get_All_Regex(ac, q);
-                YLOGDEBUG("'" << ac << "' matched 'D{min,mean,max} {<,<=,>=,>,lt,lte,gt,gte} 123.123 {%,Gy,none}' syntax");
+                YLOGDEBUG("'" << ac << "' matched '{D,I}{min,mean,max} {<,<=,>=,>,lt,lte,gt,gte} 123.123 {%,Gy,none}' syntax");
                 for(const auto &x : p) YLOGDEBUG("    Parsed parameter: '" << x << "'");                
-                if(p.size() != 4) throw std::runtime_error("Unable to parse constraint (C).");
+                if(p.size() != 5UL) throw std::runtime_error("Unable to parse constraint (C).");
 
-                const auto mmm = p.at(0);
-                //const auto ineq = p.at(1);
-                const auto D_rhs = std::stod(p.at(2));
-                const auto unit = p.at(3);
+                const auto D_or_I = p.at(0);
+                const auto mmm = p.at(1);
+                //const auto ineq = p.at(2);
+                const auto D_rhs = std::stod(p.at(3));
+                const auto unit = p.at(4);
 
                 // Determine which statistic is needed.
                 double D_mmm = nan;
@@ -517,26 +528,28 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                 }
 
             /////////////////////////////////////////////////////////////////////////////////
-            // D({hottest,coldest} 123.123 {cc,%}) {<,<=,>=,>,lt,lte,gt,gte} 123.123 {%,Gy,none}
+            // {D,I}({hottest,coldest} 123.123 {cc,%}) {<,<=,>=,>,lt,lte,gt,gte} 123.123 {%,Gy,none}
             //
             // Examples:
             //    D( hottest 500 cc) <=> 70 Gy 
             //    D( hottest 500 cc) <= 70 Gy 
+            //    I( hottest 500 cc) <= 123.0 
             //    D( coldest 25% ) lte 25 %
-            }else if(auto q = lCompile_Regex(R"***([ ]*D[(][ ]*(hott?e?s?t?|cold?e?s?t?)[ ]*([0-9.]+)[ ]*(cc|cm3|cm\^3|%)[ ]*[)][ ]*(<|<=|>=|>|lte|lt|gte|gt)[ ]*([0-9.]+)[ ]*(Gy|%|[ ]*|.{0})$)***");
+            }else if(auto q = lCompile_Regex(R"***([ ]*(D|I)[(][ ]*(hott?e?s?t?|cold?e?s?t?)[ ]*([0-9.]+)[ ]*(cc|cm3|cm\^3|%)[ ]*[)][ ]*(<|<=|>=|>|lte|lt|gte|gt)[ ]*([0-9.]+)[ ]*(Gy|%|[ ]*|.{0})$)***");
                      std::regex_match(ac, q) ){
 
                 const auto p = Get_All_Regex(ac, q);
-                YLOGDEBUG("'" << ac << "' matched 'D({hottest,coldest} 123.123 {cc,%}) {<,<=,>=,>,lt,lte,gt,gte} 123.123 {%,Gy,none}' syntax");
+                YLOGDEBUG("'" << ac << "' matched '{D,I}({hottest,coldest} 123.123 {cc,cm3,cm^3,%}) {<,<=,>=,>,lt,lte,gt,gte} 123.123 {%,Gy,none}' syntax");
                 for(const auto &x : p) YLOGDEBUG("    Parsed parameter: '" << x << "'");                
-                if(p.size() != 6) throw std::runtime_error("Unable to parse constraint (E).");
+                if(p.size() != 7UL) throw std::runtime_error("Unable to parse constraint (E).");
 
-                const auto HC = p.at(0); // hot or cold.
-                const auto V_lhs = std::stod(p.at(1)); // inner volume number.
-                const auto LHS_unit = p.at(2); // cc or cm3 or cm^3 or %.
-                const auto ineq = p.at(3); // < or <= or ... .
-                const auto D_rhs = std::stod(p.at(4)); // dose number.
-                const auto RHS_unit = p.at(5); // Gy or %.
+                const auto D_or_I = p.at(0); // Either 'D' or 'I'.
+                const auto HC = p.at(1); // hot or cold.
+                const auto V_lhs = std::stod(p.at(2)); // inner volume number.
+                const auto LHS_unit = p.at(3); // cc or cm3 or cm^3 or %.
+                const auto ineq = p.at(4); // < or <= or ... .
+                const auto D_rhs = std::stod(p.at(5)); // dose number.
+                const auto RHS_unit = p.at(6); // Gy or % or none.
                 
                 // Determine the equivalent absolute volume from the inner LHS.
                 double V_abs = nan; // in mm^3.
@@ -636,9 +649,9 @@ bool AnalyzeHistograms(Drover &DICOM_data,
                      std::regex_match(ac, q) ){
 
                 const auto p = Get_All_Regex(ac, q);
-                YLOGDEBUG("'" << ac << "' matched 'V(123.123 {Gy,%,none}) {<,<=,>=,>,lt,lte,gt,gte} 123.123 {cc,%}' syntax");
+                YLOGDEBUG("'" << ac << "' matched 'V(123.123 {Gy,%,none}) {<,<=,>=,>,lt,lte,gt,gte} 123.123 {cc,cm3,cm^3,%}' syntax");
                 for(const auto &x : p) YLOGDEBUG("    Parsed parameter: '" << x << "'");                
-                if(p.size() != 5) throw std::runtime_error("Unable to parse constraint (E).");
+                if(p.size() != 5UL) throw std::runtime_error("Unable to parse constraint (E).");
 
                 const auto D_lhs = std::stod(p.at(0)); // inner dose number.
                 const auto LHS_unit = p.at(1); // Gy or %.
@@ -711,16 +724,18 @@ bool AnalyzeHistograms(Drover &DICOM_data,
             /////////////////////////////////////////////////////////////////////////////////
             // Assignment:
             //   var_name : D{min,mean,max}
-            }else if(auto q = lCompile_Regex(R"***([ ]*([^ :]*)[ ]*[:][ ]*D(min|max|mean).*)***");
+            //   var_name : I{min,mean,max}
+            }else if(auto q = lCompile_Regex(R"***([ ]*([^ :]*)[ ]*[:][ ]*(D|I)(min|max|mean).*)***");
                      std::regex_match(ac, q) ){
 
                 const auto p = Get_All_Regex(ac, q);
-                YLOGDEBUG("'" << ac << "' matched assignment 'var : D{min,mean,max}' syntax");
+                YLOGDEBUG("'" << ac << "' matched assignment 'var : {D,I}{min,mean,max}' syntax");
                 for(const auto &x : p) YLOGDEBUG("    Parsed parameter: '" << x << "'");                
-                if(p.size() != 2) throw std::runtime_error("Unable to parse constraint (F).");
+                if(p.size() != 3UL) throw std::runtime_error("Unable to parse constraint (F).");
 
                 const auto var_name = p.at(0);
-                const auto mmm = p.at(1);
+                const auto D_or_I = p.at(1);
+                const auto mmm = p.at(2);
 
                 InvocationMetadata.erase(var_name);
 
@@ -739,18 +754,20 @@ bool AnalyzeHistograms(Drover &DICOM_data,
             //   var_name : D( hottest 500 cc)
             //   var_name : D( hottest 500 cc) 
             //   var_name : D( coldest 25% )
-            }else if(auto q = lCompile_Regex(R"***([ ]*([^ :]*)[ ]*[:][ ]*D[(][ ]*(hott?e?s?t?|cold?e?s?t?)[ ]*([0-9.]+)[ ]*(cc|cm3|cm\^3|%)[ ]*[)][ ]*)***");
+            //   var_name : I( coldest 25% )
+            }else if(auto q = lCompile_Regex(R"***([ ]*([^ :]*)[ ]*[:][ ]*(D|I)[(][ ]*(hott?e?s?t?|cold?e?s?t?)[ ]*([0-9.]+)[ ]*(cc|cm3|cm\^3|%)[ ]*[)][ ]*)***");
                      std::regex_match(ac, q) ){
 
                 const auto p = Get_All_Regex(ac, q);
-                YLOGDEBUG("'" << ac << "' matched assignment 'var : D{{hottest,coldest} {cc,%}}' syntax");
+                YLOGDEBUG("'" << ac << "' matched assignment 'var : {D,I}{{hottest,coldest} {cc,cm3,cm^3%}}' syntax");
                 for(const auto &x : p) YLOGDEBUG("    Parsed parameter: '" << x << "'");                
-                if(p.size() != 4) throw std::runtime_error("Unable to parse constraint (G).");
+                if(p.size() != 5UL) throw std::runtime_error("Unable to parse constraint (G).");
 
                 const auto var_name = p.at(0);
-                const auto HC = p.at(1); // hot or cold.
-                const auto V_rhs = std::stod(p.at(2)); // inner volume number.
-                const auto V_unit = p.at(3); // cc or cm3 or cm^3 or %.
+                const auto D_or_I = p.at(1);
+                const auto HC = p.at(2); // hot or cold.
+                const auto V_rhs = std::stod(p.at(3)); // inner volume number.
+                const auto V_unit = p.at(4); // cc or cm3 or cm^3 or %.
 
                 InvocationMetadata.erase(var_name);
                 
