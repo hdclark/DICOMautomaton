@@ -676,6 +676,7 @@ struct OperationDoc {
     std::list<std::string> aliases; // Other names for the operation itself.
     std::string desc; // Documentation for the operation itself.
     std::list<std::string> notes; // Special notes concerning the operation, usually caveats or notices.
+    std::list<std::string> tags; // Explicit tags used to categorize operations.
 
 };
 

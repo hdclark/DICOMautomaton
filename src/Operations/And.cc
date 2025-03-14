@@ -42,6 +42,9 @@ OperationDoc OpArgDocAnd() {
     out.aliases.emplace_back("AllOf");
     out.aliases.emplace_back("Group");
 
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: control flow");
+
     out.desc = "This operation is a control flow meta-operation that requires all children to complete successfully.";
 
     out.notes.emplace_back(

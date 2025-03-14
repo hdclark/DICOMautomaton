@@ -45,6 +45,8 @@ OperationDoc OpArgDocTime() {
     OperationDoc out;
     out.name = "Time";
 
+    out.tags.emplace_back("category: meta");
+
     out.desc = "This operation is a control flow meta-operation that times how long it takes to execute the"
                " child operations.";
 

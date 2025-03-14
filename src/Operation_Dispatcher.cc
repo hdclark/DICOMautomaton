@@ -287,8 +287,8 @@
 #include "Operation_Dispatcher.h"
 
 
-std::map<std::string, op_packet_t> Known_Operations(){
-    std::map<std::string, op_packet_t> out;
+known_ops_t Known_Operations(){
+    known_ops_t out;
 
     out["AccumulateRowsColumns"] = std::make_pair(OpArgDocAccumulateRowsColumns, AccumulateRowsColumns);
     out["AnalyzeHistograms"] = std::make_pair(OpArgDocAnalyzeHistograms, AnalyzeHistograms);
@@ -555,11 +555,11 @@ std::map<std::string, op_packet_t> Known_Operations(){
     return out;
 }
 
-std::map<std::string, op_packet_t> Known_Operations_and_Aliases(){
+known_ops_t Known_Operations_and_Aliases(){
     auto out = Known_Operations();
 
     // Create a separate map for all listed aliases.
-    std::map<std::string, op_packet_t> aliases;
+    known_ops_t aliases;
     for(const auto &p : out){
         const auto op_name = p.first;
         auto OpDocs = p.second.first();
@@ -601,6 +601,59 @@ std::map<std::string, std::string> Operation_Lexicon(){
 
     return op_name_lex;
 }
+
+known_ops_t Only_Operations(const known_ops_t &kos, known_ops_tags_t tags){
+
+    known_ops_t out;
+    for(const auto &op_func : kos){
+        known_ops_tags_t l_tags;
+
+        // Compute runtime tags.
+        //
+        // ... TODO ...
+        // l_tags.insert(tag);
+
+        // Include all explicit tags.
+        auto OpDocs = op_func.second.first();
+        for(const auto &tag : OpDocs.tags){
+            l_tags.insert(tag);
+        }
+
+        // Determine if the two sets have any common tags.
+        const bool res = std::all_of( std::begin(tags), std::end(tags),
+                                      [&l_tags](const std::string &t1) -> bool {
+                                          return std::any_of( std::begin(l_tags), std::end(l_tags),
+                                                              [&t1](const std::string &t2) -> bool {
+                                                                  return (t1 == t2);
+                                                              });
+                                     });
+
+        if(res){
+            out.insert(op_func);
+        }
+    }
+    return out;
+}
+
+known_ops_tags_t Get_Unique_Tags(const known_ops_t &kos){
+    known_ops_tags_t out;
+
+    for(const auto &op_func : kos){
+
+        // Compute runtime tags.
+        //
+        // ... TODO ...
+        // out.insert(tag);
+
+        // Include all explicit tags.
+        auto OpDocs = op_func.second.first();
+        for(const auto &tag : OpDocs.tags){
+            out.insert(tag);
+        }
+    }
+    return out;
+}
+
 
 bool Operation_Dispatcher( Drover &DICOM_data,
                            std::map<std::string,std::string> &InvocationMetadata,

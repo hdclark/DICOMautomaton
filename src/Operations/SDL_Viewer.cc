@@ -894,6 +894,8 @@ OperationDoc OpArgDocSDL_Viewer(){
     out.desc = 
         "Launch an interactive viewer based on SDL.";
 
+    out.tags.emplace_back("category: interactive");
+
     out.args.emplace_back();
     out.args.back().name = "LexiconCustomizer";
     out.args.back().desc = "Controls whether the lexicon customizer interface is opened by default.";
@@ -4023,100 +4025,171 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::Separator();
                 if(ImGui::BeginMenu("Script")){
                     if(ImGui::BeginMenu("Append Operation")){
-                        auto known_ops = Known_Operations_and_Aliases();
-                        for(auto &anop : known_ops){
-                            std::stringstream nss;
+                        const auto generate_name = [](const known_ops_t::value_type &anop) -> std::string {
+                            std::stringstream ss;
                             const auto op_name = anop.first;
-                            nss << op_name;
+                            ss << op_name;
 
+                            auto op_docs = (anop.second.first)();
+                            for(const auto &a : op_docs.aliases) ss << ", " << a;
+
+                            return ss.str();
+                        };
+
+                        const auto generate_desc = [](const known_ops_t::value_type &anop) -> std::string {
                             std::stringstream ss;
                             auto op_docs = (anop.second.first)();
-                            for(const auto &a : op_docs.aliases) nss << ", " << a;
                             ss << op_docs.desc << "\n\n";
+
                             if(!op_docs.notes.empty()){
                                 ss << "Notes:" << std::endl;
                                 for(auto &note : op_docs.notes){
                                     ss << "\n" << "- " << note << std::endl;
                                 }
                             }
+                            return ss.str();
+                        };
 
-                            if(ImGui::MenuItem(nss.str().c_str())){
-                                std::unique_lock<std::shared_mutex> script_lock(script_mutex);
+                        const auto append_op = [&](const known_ops_t::value_type &anop) -> void {
+                            const auto op_name = anop.first;
+                            auto op_docs = (anop.second.first)();
 
-                                auto N_sfs = static_cast<int64_t>(script_files.size());
-                                if( N_sfs == 0 ){
-                                    YLOGINFO("No script to append to. Creating new script.");
-                                    script_files.emplace_back();
-                                    script_files.back().altered = true;
-                                    append_to_script(script_files.back().content, new_script_content);
-                                    script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
-                                    active_script_file = N_sfs;
-                                    N_sfs = static_cast<int64_t>(script_files.size());
-                                }
-                                if( !script_files.empty()
-                                &&  isininc(0, active_script_file, N_sfs-1)){
-                                    // Remove terminating '\0' from script.
-                                    script_files.at(active_script_file).content.erase(
-                                        std::remove_if( std::begin(script_files.at(active_script_file).content),
-                                                        std::end(script_files.at(active_script_file).content),
-                                                        [](char c) -> bool { return (c == '\0'); }), 
-                                        std::end(script_files.at(active_script_file).content) );
+                            std::unique_lock<std::shared_mutex> script_lock(script_mutex);
 
-                                    // Count whitespace on preceeding line to indent new line accordingly.
-                                    // ... TODO ...
+                            auto N_sfs = static_cast<int64_t>(script_files.size());
+                            if( N_sfs == 0 ){
+                                YLOGINFO("No script to append to. Creating new script.");
+                                script_files.emplace_back();
+                                script_files.back().altered = true;
+                                append_to_script(script_files.back().content, new_script_content);
+                                script_files.back().content.emplace_back('\0'); // Ensure there is at least a null character.
+                                active_script_file = N_sfs;
+                                N_sfs = static_cast<int64_t>(script_files.size());
+                            }
+                            if( !script_files.empty()
+                            &&  isininc(0, active_script_file, N_sfs-1)){
+                                // Remove terminating '\0' from script.
+                                script_files.at(active_script_file).content.erase(
+                                    std::remove_if( std::begin(script_files.at(active_script_file).content),
+                                                    std::end(script_files.at(active_script_file).content),
+                                                    [](char c) -> bool { return (c == '\0'); }), 
+                                    std::end(script_files.at(active_script_file).content) );
 
-                                    // Add operation to script.
-                                    std::stringstream sc; // required arguments.
-                                    std::stringstream oc; // optional arguments.
-                                    sc << std::endl << op_name << "(";
-                                    std::set<std::string> args;
-                                    for(const auto & a : op_docs.args){
-                                        // Avoid duplicate arguments (from composite operations).
-                                        const auto name = a.name;
-                                        if(args.count(name) != 0) continue;
-                                        args.insert(name);
+                                // Count whitespace on preceeding line to indent new line accordingly.
+                                // ... TODO ...
 
-                                        // Escape any quotes in the default value, which will generally be parsed
-                                        // fuzzily via regex and should be OK.
-                                        std::string escaped_val;
-                                        {
-                                            bool prev_was_escape = false;
-                                            for(const auto &c : a.default_val){
-                                                if(!prev_was_escape && (c == '\'')) escaped_val += '\\';
-                                                escaped_val += c;
-                                                prev_was_escape = (c == '\\');
-                                            }
-                                        }
+                                // Add operation to script.
+                                std::stringstream sc; // required arguments.
+                                std::stringstream oc; // optional arguments.
+                                sc << std::endl << op_name << "(";
+                                std::set<std::string> args;
+                                for(const auto & a : op_docs.args){
+                                    // Avoid duplicate arguments (from composite operations).
+                                    const auto name = a.name;
+                                    if(args.count(name) != 0) continue;
+                                    args.insert(name);
 
-                                        // Emit the parameter and default value.
-                                        if(a.expected){
-                                            // Note the trailing comma. This is valid syntax and makes it easier to
-                                            // enable/disable optional arguments.
-                                            sc << std::endl << "    " << name << " = '" << escaped_val << "',";
-                                        }else{
-                                            oc << std::endl << "    # " << name << " = '" << escaped_val << "',";
+                                    // Escape any quotes in the default value, which will generally be parsed
+                                    // fuzzily via regex and should be OK.
+                                    std::string escaped_val;
+                                    {
+                                        bool prev_was_escape = false;
+                                        for(const auto &c : a.default_val){
+                                            if(!prev_was_escape && (c == '\'')) escaped_val += '\\';
+                                            escaped_val += c;
+                                            prev_was_escape = (c == '\\');
                                         }
                                     }
 
-                                    // Print optional arguments at the end.
-                                    if(!oc.str().empty()) sc << oc.str();
-
-                                    // Avoid all newlines for parameter-less operations (e.g., 'True(){};').
-                                    if(!op_docs.args.empty()) sc << std::endl;
-                                    sc << "){};" << std::endl;
-
-                                    append_to_script(script_files.at(active_script_file).content, sc.str());
-                                    script_files.back().content.emplace_back('\0');
-                                    view_toggles.view_script_editor_enabled = true;
+                                    // Emit the parameter and default value.
+                                    if(a.expected){
+                                        // Note the trailing comma. This is valid syntax and makes it easier to
+                                        // enable/disable optional arguments.
+                                        sc << std::endl << "    " << name << " = '" << escaped_val << "',";
+                                    }else{
+                                        oc << std::endl << "    # " << name << " = '" << escaped_val << "',";
+                                    }
                                 }
+
+                                // Print optional arguments at the end.
+                                if(!oc.str().empty()) sc << oc.str();
+
+                                // Avoid all newlines for parameter-less operations (e.g., 'True(){};').
+                                if(!op_docs.args.empty()) sc << std::endl;
+                                sc << "){};" << std::endl;
+
+                                append_to_script(script_files.at(active_script_file).content, sc.str());
+                                script_files.back().content.emplace_back('\0');
+                                view_toggles.view_script_editor_enabled = true;
                             }
-                            if(ImGui::IsItemHovered()){
-                                ImGui::SetNextWindowSizeConstraints(ImVec2(400.0, -1), ImVec2(500.0, -1));
-                                ImGui::BeginTooltip();
-                                ImGui::TextWrapped("%s", ss.str().c_str());
-                                ImGui::EndTooltip();
+                            return;
+                        };
+
+                        const auto display_ops_list = [&generate_name,
+                                                       &generate_desc,
+                                                       &append_op](const known_ops_t &kos) -> void {
+                                for(auto &anop : kos){
+                                    auto name_str = generate_name(anop);
+                                    if(ImGui::MenuItem(name_str.c_str())){
+                                        append_op(anop);
+                                    }
+                                    if(ImGui::IsItemHovered()){
+                                        auto desc_str = generate_desc(anop);
+                                        ImGui::SetNextWindowSizeConstraints(ImVec2(400.0, -1), ImVec2(500.0, -1));
+                                        ImGui::BeginTooltip();
+                                        ImGui::TextWrapped("%s", desc_str.c_str());
+                                        ImGui::EndTooltip();
+                                    }
+                                }
+                            return;
+                        };
+
+                        std::function<void(const known_ops_t &, 
+                                           const known_ops_tags_t &)> insert_filter_menu;
+                        insert_filter_menu = [&insert_filter_menu,
+                                              &generate_name,
+                                              &generate_desc,
+                                              &display_ops_list ]( const known_ops_t &known_ops,
+                                                                   const known_ops_tags_t &known_ops_tags ) -> void {
+
+                            if(known_ops.empty()){
+                                return;
                             }
-                        }
+                            if(ImGui::BeginMenu("Filter")){
+                                for(const auto &tag : known_ops_tags){
+                                    if(ImGui::BeginMenu(tag.c_str())){
+                                        known_ops_tags_t l_tags = { tag };
+                                        auto l_known_ops = Only_Operations(known_ops, l_tags);
+
+                                        // Provide an option to further filter by tags.
+                                        // Remove the current tag and recurse.
+                                        auto l_other_tags = Get_Unique_Tags(l_known_ops);
+                                        //auto l_other_tags = known_ops_tags;
+                                        l_other_tags.erase(tag);
+                                        if(!l_other_tags.empty()){
+                                            insert_filter_menu(l_known_ops, l_other_tags);
+                                        }
+
+                                        // Then show the operations that satisfy the current list of tags.
+                                        display_ops_list(l_known_ops);
+
+                                        ImGui::EndMenu();
+                                    }
+                                }
+                                ImGui::EndMenu();
+                            }
+                            ImGui::Separator();
+                            return;
+                        };
+
+                        auto known_ops = Known_Operations_and_Aliases();
+                        auto known_op_tags = Get_Unique_Tags(known_ops);
+                        // Insert a filter menu.
+                        insert_filter_menu(known_ops, known_op_tags);
+
+                        // Display the full, unfiltered list.
+                        display_ops_list(known_ops);
+
                         ImGui::EndMenu();
                     }
                     if(ImGui::BeginMenu("Edit Action Script")){
