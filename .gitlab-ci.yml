@@ -73,7 +73,7 @@ cross_compile_mxe:
   needs: []
   image:
     name: "hdclark/dcma_build_base_mxe:latest"
-    pull_policy: [always, if-not-present]
+    pull_policy: [if-not-present, always]
   before_script:
     - "cp -R . /dcma"
     - "./scripts/enable_swapfile.sh"
