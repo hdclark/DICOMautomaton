@@ -21,7 +21,9 @@ build_ci_debian_buster:
   stage: build
   tags: [dcma, docker, linux]
   needs: []
-  image: "debian:buster"
+  image:
+    name: "debian:buster"
+    pull_policy: [always, if-not-present]
   before_script:
     - "cp -R ./docker/builders/ci /scratch"
     - "cp -R . /dcma"
@@ -44,7 +46,9 @@ build_ci_arch:
   stage: build
   tags: [dcma, docker, linux]
   needs: []
-  image: "archlinux:latest"
+  image:
+    name: "archlinux:latest"
+    pull_policy: [always, if-not-present]
   before_script:
     - "cp -R ./docker/builders/ci /scratch"
     - "cp -R . /dcma"
@@ -67,7 +71,9 @@ cross_compile_mxe:
   stage: build
   tags: [dcma, docker, linux]
   needs: []
-  image: "hdclark/dcma_build_base_mxe:latest"
+  image:
+    name: "hdclark/dcma_build_base_mxe:latest"
+    pull_policy: [always, if-not-present]
   before_script:
     - "cp -R . /dcma"
     - "./scripts/enable_swapfile.sh"
@@ -133,7 +139,9 @@ test_ci_debian_buster_on_debian_buster:
   stage: test
   tags: [dcma, docker, linux]
   needs: ["build_ci_debian_buster"]
-  image: "debian:buster"
+  image:
+    name: "debian:buster"
+    pull_policy: [always, if-not-present]
   script:
     # Provide minimal system libraries.
     - "./scripts/install_AppImage_runtime_dependencies.sh"
@@ -154,7 +162,9 @@ test_ci_arch_on_arch:
   stage: test
   tags: [dcma, docker, linux]
   needs: ["build_ci_arch"]
-  image: "archlinux:latest"
+  image:
+    name: "archlinux:latest"
+    pull_policy: [always, if-not-present]
   script:
     # Provide minimal system libraries.
     - "./scripts/install_AppImage_runtime_dependencies.sh"
@@ -176,7 +186,9 @@ test_ci_debian_buster_on_arch:
   stage: test
   tags: [dcma, docker, linux]
   needs: ["build_ci_debian_buster"]
-  image: "archlinux:latest"
+  image:
+    name: "archlinux:latest"
+    pull_policy: [always, if-not-present]
   script:
     # Provide minimal system libraries.
     - "./scripts/install_AppImage_runtime_dependencies.sh"
@@ -197,7 +209,9 @@ test_ci_debian_buster_on_ubuntu_latest:
   stage: test
   tags: [dcma, docker, linux]
   needs: ["build_ci_debian_buster"]
-  image: "ubuntu:latest"
+  image:
+    name: "ubuntu:latest"
+    pull_policy: [always, if-not-present]
   script:
     # Provide minimal system libraries.
     - "./scripts/install_AppImage_runtime_dependencies.sh"
@@ -221,7 +235,9 @@ test_ci_debian_buster_on_fedora_latest:
   stage: test
   tags: [dcma, docker, linux]
   needs: ["build_ci_debian_buster"]
-  image: "fedora:latest"
+  image:
+    name: "fedora:latest"
+    pull_policy: [always, if-not-present]
   script:
     # Provide minimal system libraries.
     - "./scripts/install_AppImage_runtime_dependencies.sh"
@@ -251,7 +267,9 @@ test_cross_compile_mxe_on_debian_buster:
   stage: test
   tags: [dcma, docker, linux]
   needs: ["cross_compile_mxe"]
-  image: "debian:buster"
+  image:
+    name: "debian:buster"
+    pull_policy: [always, if-not-present]
   script:
     # Provide minimal system libraries.
     - "export DEBIAN_FRONTEND='noninteractive'"
