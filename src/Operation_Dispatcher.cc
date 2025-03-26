@@ -602,19 +602,64 @@ std::map<std::string, std::string> Operation_Lexicon(){
     return op_name_lex;
 }
 
+static
+void extract_runtime_known_ops_tags( const OperationDoc &op_docs, known_ops_tags_t &tags ){
+    const auto extract = [](const OperationDoc &op_docs,
+                            known_ops_tags_t &tags,
+                            std::optional<std::string> name,
+                            std::optional<OpArgFlow> flow,
+                            std::optional<OpArgSamples> samples,
+                            const std::string &desc ) -> void {
+        for(const auto &arg : op_docs.args){
+            if( (!!name ? name.value() == arg.name : true)
+            &&  (!!flow ? flow.value() == arg.flow : true)
+            &&  (!!samples ? samples.value() == arg.samples : true) ){
+                tags.insert(desc);
+            }
+        }
+        return;
+    };
+
+    // TODO: change the name matching to regex or even just substring-based?
+    //       That would help with multiple image selections, e.g., ReferenceImageSelection.
+    extract(op_docs, tags, "ImageSelection", {}, {}, "accepts parameter: images");
+    extract(op_docs, tags, "PointSelection", {}, {}, "accepts parameter: point clouds");
+    extract(op_docs, tags, "MeshSelection",  {}, {}, "accepts parameter: surface meshes");
+    extract(op_docs, tags, "ROILabelRegex",  {}, {}, "accepts parameter: contours");
+    extract(op_docs, tags, "NormalizedROILabelRegex",  {}, {}, "accepts parameter: contours");
+    extract(op_docs, tags, "ROISelection",  {}, {}, "accepts parameter: contours");
+
+    extract(op_docs, tags, "ImageSelection", OpArgFlow::Egress, {}, "egress parameter: images");
+    extract(op_docs, tags, "PointSelection", OpArgFlow::Egress, {}, "egress parameter: point clouds");
+    extract(op_docs, tags, "MeshSelection",  OpArgFlow::Egress, {}, "egress parameter: surface meshes");
+    extract(op_docs, tags, "ROILabelRegex",  OpArgFlow::Egress, {}, "egress parameter: contours");
+    extract(op_docs, tags, "NormalizedROILabelRegex",  OpArgFlow::Egress, {}, "egress parameter: contours");
+    extract(op_docs, tags, "ROISelection",  OpArgFlow::Egress, {}, "egress parameter: contours");
+
+    extract(op_docs, tags, "ImageSelection", OpArgFlow::Ingress, {}, "ingress parameter: images");
+    extract(op_docs, tags, "PointSelection", OpArgFlow::Ingress, {}, "ingress parameter: point clouds");
+    extract(op_docs, tags, "MeshSelection",  OpArgFlow::Ingress, {}, "ingress parameter: surface meshes");
+    extract(op_docs, tags, "ROILabelRegex",  OpArgFlow::Ingress, {}, "ingress parameter: contours");
+    extract(op_docs, tags, "NormalizedROILabelRegex",  OpArgFlow::Ingress, {}, "ingress parameter: contours");
+    extract(op_docs, tags, "ROISelection",  OpArgFlow::Ingress, {}, "ingress parameter: contours");
+
+    //extract(op_docs, tags, {}, {}, OpArgSamples::Exhaustive, "has an exhaustive parameter");
+
+    return;
+}
+
 known_ops_t Only_Operations(const known_ops_t &kos, known_ops_tags_t tags){
 
     known_ops_t out;
     for(const auto &op_func : kos){
         known_ops_tags_t l_tags;
 
+        auto OpDocs = op_func.second.first();
+
         // Compute runtime tags.
-        //
-        // ... TODO ...
-        // l_tags.insert(tag);
+        extract_runtime_known_ops_tags(OpDocs, l_tags);
 
         // Include all explicit tags.
-        auto OpDocs = op_func.second.first();
         for(const auto &tag : OpDocs.tags){
             l_tags.insert(tag);
         }
@@ -639,14 +684,12 @@ known_ops_tags_t Get_Unique_Tags(const known_ops_t &kos){
     known_ops_tags_t out;
 
     for(const auto &op_func : kos){
+        auto OpDocs = op_func.second.first();
 
         // Compute runtime tags.
-        //
-        // ... TODO ...
-        // out.insert(tag);
+        extract_runtime_known_ops_tags(OpDocs, out);
 
         // Include all explicit tags.
-        auto OpDocs = op_func.second.first();
         for(const auto &tag : OpDocs.tags){
             out.insert(tag);
         }
