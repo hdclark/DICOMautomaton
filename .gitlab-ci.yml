@@ -2,6 +2,7 @@
 
 default:
   timeout: 360m
+  retry: 1
 
 stages:
   - build
