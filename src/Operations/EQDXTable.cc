@@ -30,6 +30,7 @@
 OperationDoc OpArgDocEQDXTable(){
     OperationDoc out;
     out.name = "EQDXTable";
+    out.tags.emplace_back("category: table processing");
 
     out.desc = 
         "This operation transforms a given fractionated high dose rate radiotherapy dose to an"

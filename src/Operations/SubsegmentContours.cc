@@ -35,6 +35,8 @@
 OperationDoc OpArgDocSubsegmentContours(){
     OperationDoc out;
     out.name = "SubsegmentContours";
+    out.tags.emplace_back("category: contour processing");
+
     out.desc = "This operation sub-segments the selected contours, resulting in contours with reduced size.";
 
 

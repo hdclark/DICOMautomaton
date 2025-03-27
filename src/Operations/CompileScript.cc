@@ -21,6 +21,8 @@
 OperationDoc OpArgDocCompileScript(){
     OperationDoc out;
     out.name = "CompileScript";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: scripting");
 
     out.desc = 
         "This operation can be used to parse, optionally validate, and optionally run a DICOMautomaton script.";

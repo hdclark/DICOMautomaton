@@ -16,6 +16,9 @@
 OperationDoc OpArgDocCropROIDose(){
     OperationDoc out;
     out.name = "CropROIDose";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: radiation dose");
+
     out.desc = 
       "This operation provides a simplified interface for overriding voxel values outside a ROI."
       " For example, this operation can be used to modify a base plan by eliminating dose "

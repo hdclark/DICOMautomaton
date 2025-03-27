@@ -30,6 +30,8 @@
 OperationDoc OpArgDocAccumulateRowsColumns(){
     OperationDoc out;
     out.name = "AccumulateRowsColumns";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: interactive");
 
     out.desc = 
         "This operation generates row- and column-profiles of images in which the entire row or column has been summed"

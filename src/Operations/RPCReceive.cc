@@ -155,6 +155,9 @@ class ReceiverHandler : virtual public ::dcma::rpc::ReceiverIf {
 OperationDoc OpArgDocRPCReceive(){
     OperationDoc out;
     out.name = "RPCReceive";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: RPC");
+    out.tags.emplace_back("category: networking");
 
     out.desc = 
         "This operation launches a server that accepts remote procedure calls (RPC) for distributed computing.";

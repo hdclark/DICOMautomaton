@@ -25,6 +25,7 @@
 OperationDoc OpArgDocContourVote(){
     OperationDoc out;
     out.name = "ContourVote";
+    out.tags.emplace_back("category: contour processing");
 
     out.desc = 
         " This routine pits contours against one another using various criteria. A number of 'closest' or 'best' or"

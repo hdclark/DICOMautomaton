@@ -25,6 +25,7 @@
 OperationDoc OpArgDocVolumetricSpatialBlur(){
     OperationDoc out;
     out.name = "VolumetricSpatialBlur";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This operation performs blurring of voxel values within 3D rectilinear image arrays.";

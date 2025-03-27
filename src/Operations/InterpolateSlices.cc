@@ -23,6 +23,8 @@
 OperationDoc OpArgDocInterpolateSlices(){
     OperationDoc out;
     out.name = "InterpolateSlices";
+    out.tags.emplace_back("category: image processing");
+
     out.desc = 
         "This operation interpolates the slices of an image array using a reference image array, effectively"
         " performing trilinear interpolation."

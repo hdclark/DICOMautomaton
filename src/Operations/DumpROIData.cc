@@ -24,6 +24,7 @@
 OperationDoc OpArgDocDumpROIData(){
     OperationDoc out;
     out.name = "DumpROIData";
+    out.tags.emplace_back("category: contour processing");
 
     out.desc = "This operation dumps ROI contour information for debugging and quick inspection purposes.";
 

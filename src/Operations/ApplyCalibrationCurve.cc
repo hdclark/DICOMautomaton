@@ -28,6 +28,7 @@
 OperationDoc OpArgDocApplyCalibrationCurve(){
     OperationDoc out;
     out.name = "ApplyCalibrationCurve";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This operation applies a given calibration curve to voxel data inside the specified ROI(s)."

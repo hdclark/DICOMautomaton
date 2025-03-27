@@ -37,6 +37,8 @@
 OperationDoc OpArgDocExportSurfaceMeshesOFF(){
     OperationDoc out;
     out.name = "ExportSurfaceMeshesOFF";
+    out.tags.emplace_back("category: mesh processing");
+    out.tags.emplace_back("category: file export");
 
     out.desc = 
         "This operation writes one or more surface meshes to file in Object File Format ('OFF').";

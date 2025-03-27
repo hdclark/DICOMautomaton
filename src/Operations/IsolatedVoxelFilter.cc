@@ -27,6 +27,7 @@
 OperationDoc OpArgDocIsolatedVoxelFilter(){
     OperationDoc out;
     out.name = "IsolatedVoxelFilter";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This routine applies a filter that discriminates between well-connected and isolated voxels."

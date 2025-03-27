@@ -33,6 +33,7 @@
 OperationDoc OpArgDocQuantizePixels(){
     OperationDoc out;
     out.name = "QuantizePixels";
+    out.tags.emplace_back("category: contour processing");
 
     out.desc = 
         "This operation quantizes pixel (voxel) values confined to one or more ROIs.";

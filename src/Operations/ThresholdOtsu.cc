@@ -38,6 +38,7 @@
 OperationDoc OpArgDocThresholdOtsu(){
     OperationDoc out;
     out.name = "ThresholdOtsu";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This routine performs Otsu thresholding (i.e., 'binarization') on an image volume."

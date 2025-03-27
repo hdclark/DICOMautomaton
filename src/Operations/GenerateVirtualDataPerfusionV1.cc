@@ -27,6 +27,10 @@
 OperationDoc OpArgDocGenerateVirtualDataPerfusionV1(){
     OperationDoc out;
     out.name = "GenerateVirtualDataPerfusionV1";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: generator");
+    out.tags.emplace_back("category: perfusion");
+    out.tags.emplace_back("category: virtual phantom");
 
     out.desc = 
         "This operation generates data suitable for testing perfusion modeling operations. There are no specific checks in"

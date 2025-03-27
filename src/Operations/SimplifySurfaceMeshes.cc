@@ -39,6 +39,7 @@
 OperationDoc OpArgDocSimplifySurfaceMeshes(){
     OperationDoc out;
     out.name = "SimplifySurfaceMeshes";
+    out.tags.emplace_back("category: mesh processing");
 
     out.desc = 
         "This operation performs mesh simplification on existing surface meshes according to"

@@ -19,6 +19,8 @@
 OperationDoc OpArgDocGiveWholeImageArrayAThoraxWindowLevel(){
     OperationDoc out;
     out.name = "GiveWholeImageArrayAThoraxWindowLevel";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: needs refresh");
 
     out.desc = 
         "This operation runs the images in an image array through a uniform window-and-leveler instead of per-slice"

@@ -36,6 +36,10 @@
 OperationDoc OpArgDocSelectDirectory(){
     OperationDoc out;
     out.name = "SelectDirectory";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: interactive");
+    out.tags.emplace_back("category: parameter table");
+
     out.aliases.push_back("SpecifyDirectory");
     out.aliases.push_back("SelectFolder");
     out.aliases.push_back("SpecifyFolder");

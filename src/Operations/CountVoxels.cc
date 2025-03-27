@@ -40,6 +40,7 @@
 OperationDoc OpArgDocCountVoxels(){
     OperationDoc out;
     out.name = "CountVoxels";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This operation counts the number of voxels confined to one or more ROIs within a user-provided range.";

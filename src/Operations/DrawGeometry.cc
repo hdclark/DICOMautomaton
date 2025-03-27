@@ -38,6 +38,7 @@
 OperationDoc OpArgDocDrawGeometry(){
     OperationDoc out;
     out.name = "DrawGeometry";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This operation draws shapes and patterns on images."

@@ -358,6 +358,8 @@ bool dispatch_checks( common_context_t& c ){
 OperationDoc OpArgDocValidateRTPlan(){
     OperationDoc out;
     out.name = "ValidateRTPlan";
+    out.tags.emplace_back("category: rtplan processing");
+    out.tags.emplace_back("category: table processing");
 
     out.desc = 
         "This operation evaluates a radiotherapy treatment plan against user-specified criteria.";

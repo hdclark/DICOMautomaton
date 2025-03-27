@@ -18,6 +18,8 @@
 OperationDoc OpArgDocDumpFilesPartitionedByTime(){
     OperationDoc out;
     out.name = "DumpFilesPartitionedByTime";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: needs refresh");
        
     out.desc = 
         " This operation prints PACS filenames along with the associated time. It is more focused than the metadata "

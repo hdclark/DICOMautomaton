@@ -23,6 +23,9 @@
 OperationDoc OpArgDocImageRoutineTests(){
     OperationDoc out;
     out.name = "ImageRoutineTests";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: needs refresh");
+
     out.desc = "This operation performs a series of sub-operations that are generally useful when inspecting an image.";
 
     return out;

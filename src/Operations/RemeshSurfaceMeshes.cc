@@ -40,6 +40,7 @@
 OperationDoc OpArgDocRemeshSurfaceMeshes(){
     OperationDoc out;
     out.name = "RemeshSurfaceMeshes";
+    out.tags.emplace_back("category: mesh processing");
 
     out.desc = 
         "This operation re-meshes existing surface meshes according to the specified criteria, replacing the"

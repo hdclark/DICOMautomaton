@@ -43,6 +43,7 @@
 OperationDoc OpArgDocAnalyzeLightRadFieldCoincidence(){
     OperationDoc out;
     out.name = "AnalyzeLightRadFieldCoincidence";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This operation analyzes the selected images to compare light and radiation field coincidence for fixed, symmetric"

@@ -26,6 +26,9 @@
 OperationDoc OpArgDocDumpROIContours(){
     OperationDoc out;
     out.name = "DumpROIContours";
+    out.tags.emplace_back("category: contour processing");
+    out.tags.emplace_back("category: mesh processing");
+    out.tags.emplace_back("category: file export");
 
     out.desc = 
         "This operation exports contours in a standard surface mesh format (structured ASCII Wavefront OBJ)"

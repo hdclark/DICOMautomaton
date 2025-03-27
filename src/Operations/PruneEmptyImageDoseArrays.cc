@@ -15,6 +15,10 @@
 OperationDoc OpArgDocPruneEmptyImageDoseArrays(){
     OperationDoc out;
     out.name = "PruneEmptyImageDoseArrays";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: radiation dose");
+    out.tags.emplace_back("category: needs refresh");
+
     out.desc = "This operation deletes Image_Arrays that do not contain any images.";
 
     return out;

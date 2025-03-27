@@ -23,6 +23,7 @@
 OperationDoc OpArgDocCropImages(){
     OperationDoc out;
     out.name = "CropImages";
+    out.tags.emplace_back("category: image processing");
     out.desc = "This operation crops image slices in either pixel or DICOM coordinate spaces.";
 
     out.args.emplace_back();

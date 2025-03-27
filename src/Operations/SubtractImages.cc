@@ -20,6 +20,8 @@
 OperationDoc OpArgDocSubtractImages(){
     OperationDoc out;
     out.name = "SubtractImages";
+    out.tags.emplace_back("category: image processing");
+
     out.desc = 
         "This routine subtracts images that spatially overlap.";
 

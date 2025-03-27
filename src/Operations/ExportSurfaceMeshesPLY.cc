@@ -37,6 +37,8 @@
 OperationDoc OpArgDocExportSurfaceMeshesPLY(){
     OperationDoc out;
     out.name = "ExportSurfaceMeshesPLY";
+    out.tags.emplace_back("category: mesh processing");
+    out.tags.emplace_back("category: file export");
 
     out.desc = 
         "This operation writes one or more surface meshs to file in the 'Stanford' Polygon File format.";

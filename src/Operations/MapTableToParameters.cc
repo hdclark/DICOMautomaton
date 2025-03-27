@@ -40,6 +40,8 @@
 OperationDoc OpArgDocMapTableToParameters(){
     OperationDoc out;
     out.name = "MapTableToParameters";
+    out.tags.emplace_back("category: parameter table");
+    out.tags.emplace_back("category: table processing");
 
     out.desc = 
         "Process the rows of a table, one-at-a-time, by mapping them to the global parameter table"

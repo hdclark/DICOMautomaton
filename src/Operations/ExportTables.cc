@@ -19,6 +19,8 @@
 OperationDoc OpArgDocExportTables(){
     OperationDoc out;
     out.name = "ExportTables";
+    out.tags.emplace_back("category: table processing");
+    out.tags.emplace_back("category: file export");
 
     out.desc = 
         "This operation exports the selected table(s) into a single CSV formatted file.";

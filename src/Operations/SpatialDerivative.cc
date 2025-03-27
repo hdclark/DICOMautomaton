@@ -24,6 +24,7 @@
 OperationDoc OpArgDocSpatialDerivative(){
     OperationDoc out;
     out.name = "SpatialDerivative";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This operation estimates various partial derivatives (of pixel values) within 2D images.";

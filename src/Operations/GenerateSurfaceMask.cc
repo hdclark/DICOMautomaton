@@ -20,6 +20,11 @@
 OperationDoc OpArgDocGenerateSurfaceMask(){
     OperationDoc out;
     out.name = "GenerateSurfaceMask";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: mesh processing");
+    out.tags.emplace_back("category: generator");
+    out.tags.emplace_back("category: needs refresh");
+
     out.desc = 
         "This operation generates a surface image mask, which contains information about whether each voxel is"
         " within, on, or outside the selected ROI(s).";

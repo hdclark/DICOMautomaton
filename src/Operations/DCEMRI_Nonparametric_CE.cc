@@ -25,6 +25,8 @@
 OperationDoc OpArgDocDCEMRI_Nonparametric_CE(){
     OperationDoc out;
     out.name = "DCEMRI_Nonparametric_CE";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: diffusion");
 
     out.desc = 
         "This operation takes a single DCE-MRI scan ('measurement') and generates a \"poor-mans's\" contrast enhancement"

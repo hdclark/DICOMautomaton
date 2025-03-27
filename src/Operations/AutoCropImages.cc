@@ -27,6 +27,7 @@
 OperationDoc OpArgDocAutoCropImages(){
     OperationDoc out;
     out.name = "AutoCropImages";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This operation crops image slices using image-specific metadata embedded within the image.";

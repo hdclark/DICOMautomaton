@@ -36,6 +36,8 @@
 OperationDoc OpArgDocPrintMetadata() {
     OperationDoc out;
     out.name = "PrintMetadata";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: parameter table");
 
     out.desc = "This operation can be used to print the value corresponding to a key in the global parameter table."
                "\n\n"

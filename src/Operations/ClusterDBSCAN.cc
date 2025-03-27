@@ -32,6 +32,7 @@
 OperationDoc OpArgDocClusterDBSCAN(){
     OperationDoc out;
     out.name = "ClusterDBSCAN";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This routine performs DBSCAN clustering on an image volume."

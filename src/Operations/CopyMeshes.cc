@@ -17,6 +17,7 @@
 OperationDoc OpArgDocCopyMeshes(){
     OperationDoc out;
     out.name = "CopyMeshes";
+    out.tags.emplace_back("category: mesh processing");
 
     out.desc = 
         "This operation deep-copies the selected surface meshes.";

@@ -625,6 +625,9 @@ void extract_runtime_known_ops_tags( const OperationDoc &op_docs, known_ops_tags
     extract(op_docs, tags, "ImageSelection", {}, {}, "accepts parameter: images");
     extract(op_docs, tags, "PointSelection", {}, {}, "accepts parameter: point clouds");
     extract(op_docs, tags, "MeshSelection",  {}, {}, "accepts parameter: surface meshes");
+    extract(op_docs, tags, "LineSelection",  {}, {}, "accepts parameter: line samples");
+    extract(op_docs, tags, "TableSelection",  {}, {}, "accepts parameter: tables");
+    extract(op_docs, tags, "WarpSelection",  {}, {}, "accepts parameter: registrations");
     extract(op_docs, tags, "ROILabelRegex",  {}, {}, "accepts parameter: contours");
     extract(op_docs, tags, "NormalizedROILabelRegex",  {}, {}, "accepts parameter: contours");
     extract(op_docs, tags, "ROISelection",  {}, {}, "accepts parameter: contours");
@@ -632,6 +635,9 @@ void extract_runtime_known_ops_tags( const OperationDoc &op_docs, known_ops_tags
     extract(op_docs, tags, "ImageSelection", OpArgFlow::Egress, {}, "egress parameter: images");
     extract(op_docs, tags, "PointSelection", OpArgFlow::Egress, {}, "egress parameter: point clouds");
     extract(op_docs, tags, "MeshSelection",  OpArgFlow::Egress, {}, "egress parameter: surface meshes");
+    extract(op_docs, tags, "LineSelection",  OpArgFlow::Egress, {}, "egress parameter: line samples");
+    extract(op_docs, tags, "TableSelection",  OpArgFlow::Egress, {}, "egress parameter: tables");
+    extract(op_docs, tags, "WarpSelection",  OpArgFlow::Egress, {}, "egress parameter: registrations");
     extract(op_docs, tags, "ROILabelRegex",  OpArgFlow::Egress, {}, "egress parameter: contours");
     extract(op_docs, tags, "NormalizedROILabelRegex",  OpArgFlow::Egress, {}, "egress parameter: contours");
     extract(op_docs, tags, "ROISelection",  OpArgFlow::Egress, {}, "egress parameter: contours");
@@ -639,6 +645,9 @@ void extract_runtime_known_ops_tags( const OperationDoc &op_docs, known_ops_tags
     extract(op_docs, tags, "ImageSelection", OpArgFlow::Ingress, {}, "ingress parameter: images");
     extract(op_docs, tags, "PointSelection", OpArgFlow::Ingress, {}, "ingress parameter: point clouds");
     extract(op_docs, tags, "MeshSelection",  OpArgFlow::Ingress, {}, "ingress parameter: surface meshes");
+    extract(op_docs, tags, "LineSelection",  OpArgFlow::Ingress, {}, "ingress parameter: line samples");
+    extract(op_docs, tags, "TableSelection",  OpArgFlow::Ingress, {}, "ingress parameter: tables");
+    extract(op_docs, tags, "WarpSelection",  OpArgFlow::Ingress, {}, "ingress parameter: registrations");
     extract(op_docs, tags, "ROILabelRegex",  OpArgFlow::Ingress, {}, "ingress parameter: contours");
     extract(op_docs, tags, "NormalizedROILabelRegex",  OpArgFlow::Ingress, {}, "ingress parameter: contours");
     extract(op_docs, tags, "ROISelection",  OpArgFlow::Ingress, {}, "ingress parameter: contours");

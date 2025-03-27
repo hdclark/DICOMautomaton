@@ -28,6 +28,8 @@
 OperationDoc OpArgDocContourWholeImages(){
     OperationDoc out;
     out.name = "ContourWholeImages";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: contour processing");
 
     out.desc = 
         "This operation constructs contours for an ROI that encompasses voxels of the specified images."

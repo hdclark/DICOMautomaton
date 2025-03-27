@@ -21,6 +21,9 @@
 OperationDoc OpArgDocDumpAllOrderedImageMetadataToFile(){
     OperationDoc out;
     out.name = "DumpAllOrderedImageMetadataToFile";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: needs refresh");
+
     out.desc = 
         "Dump exactly what order the data will be in for the following analysis.";
 

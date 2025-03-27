@@ -37,6 +37,8 @@
 OperationDoc OpArgDocExtractPointsWarp(){
     OperationDoc out;
     out.name = "ExtractPointsWarp";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: spatial transform processing");
 
     out.desc = 
         "This operation uses two point clouds (one 'moving' and the other 'stationary' or 'reference') to find a"

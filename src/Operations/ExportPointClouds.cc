@@ -37,6 +37,8 @@
 OperationDoc OpArgDocExportPointClouds(){
     OperationDoc out;
     out.name = "ExportPointClouds";
+    out.tags.emplace_back("category: point cloud processing");
+    out.tags.emplace_back("category: file export");
 
     out.desc = 
         "This operation writes point clouds to file.";

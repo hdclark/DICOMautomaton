@@ -23,6 +23,8 @@
 OperationDoc OpArgDocComparePixels(){
     OperationDoc out;
     out.name = "ComparePixels";
+    out.tags.emplace_back("category: image processing");
+
     out.desc = 
         "This operation compares images ('test' images and 'reference' images) on a per-voxel/per-pixel basis."
         " Any combination of 2D and 3D images is supported, including images which do not fully overlap, but the"

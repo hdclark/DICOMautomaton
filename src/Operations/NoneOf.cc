@@ -42,6 +42,8 @@ OperationDoc OpArgDocNoneOf() {
     out.aliases.emplace_back("Not");
     out.aliases.emplace_back("Negate");
     out.aliases.emplace_back("Invert");
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: control flow");
 
     out.desc = "This operation is a control flow meta-operation that performs a 'none-of' Boolean check"
                " by evaluating child operations. The first child operation that succeeds short-circuits the remaining"

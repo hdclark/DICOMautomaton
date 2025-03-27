@@ -24,6 +24,9 @@
 OperationDoc OpArgDocExtractAlphaBeta(){
     OperationDoc out;
     out.name = "ExtractAlphaBeta";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: radiation dose");
+
     out.desc = 
         "This operation compares two images arrays: either a biologically-equivalent dose"
         " ($BED_{\\alpha/\\beta}$) transformed array"

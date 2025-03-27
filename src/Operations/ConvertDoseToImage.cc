@@ -13,6 +13,8 @@
 OperationDoc OpArgDocConvertDoseToImage(){
     OperationDoc out;
     out.name = "ConvertDoseToImage";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: radiation dose");
 
     out.desc = 
         "This operation converts all loaded images from RTDOSE modality to CT modality. Image contents will not change,"

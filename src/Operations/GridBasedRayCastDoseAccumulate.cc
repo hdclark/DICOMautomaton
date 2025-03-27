@@ -40,6 +40,11 @@
 OperationDoc OpArgDocGridBasedRayCastDoseAccumulate(){
     OperationDoc out;
     out.name = "GridBasedRayCastDoseAccumulate";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: radiation dose");
+    out.tags.emplace_back("category: file export");
+    out.tags.emplace_back("category: simulation");
+
     out.desc = 
         "This operation performs a ray casting to estimate the surface dose of an ROI.";
 

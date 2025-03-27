@@ -40,6 +40,8 @@
 OperationDoc OpArgDocDumpPlanSummary(){
     OperationDoc out;
     out.name = "DumpPlanSummary";
+    out.tags.emplace_back("category: rtplan processing");
+    out.tags.emplace_back("category: file export");
 
     out.desc = 
         "This operation dumps a summary of a radiotherapy plan. This operation can be used to gain insight into a plan"

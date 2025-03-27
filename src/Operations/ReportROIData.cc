@@ -29,6 +29,8 @@
 OperationDoc OpArgDocReportROIData(){
     OperationDoc out;
     out.name = "ReportROIData";
+    out.tags.emplace_back("category: table processing");
+    out.tags.emplace_back("category: contour processing");
 
     out.desc = "This operation prints ROI contour information into a table.";
 

@@ -39,6 +39,8 @@
 OperationDoc OpArgDocSelectionIsPresent() {
     OperationDoc out;
     out.name = "SelectionIsPresent";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: control flow");
 
     out.desc = "This operation is a control flow meta-operation that evaluates whether the provided selection"
                " criteria selects one or more objects."

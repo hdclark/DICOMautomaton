@@ -29,6 +29,9 @@
 OperationDoc OpArgDocGenerateCalibrationCurve(){
     OperationDoc out;
     out.name = "GenerateCalibrationCurve";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: contour processing");
+    out.tags.emplace_back("category: file export");
 
     out.desc = 
         "This operation uses two overlapping images volumes to generate a calibration curve mapping from the first"

@@ -36,6 +36,7 @@ static void dump_metadata(std::ostream &os,
 OperationDoc OpArgDocDroverDebug(){
     OperationDoc out;
     out.name = "DroverDebug";
+    out.tags.emplace_back("category: meta");
 
     out.desc = 
         "This operation reports basic information on the state of the main Drover class."

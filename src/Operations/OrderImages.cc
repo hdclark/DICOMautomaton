@@ -25,6 +25,8 @@
 OperationDoc OpArgDocOrderImages(){
     OperationDoc out;
     out.name = "OrderImages";
+    out.tags.emplace_back("category: image processing");
+
     out.desc = 
         "This operation will order either individual image slices within each image array, or image arrays"
         " based on the values of the specified metadata tags.";

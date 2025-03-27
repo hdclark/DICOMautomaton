@@ -13,6 +13,8 @@
 OperationDoc OpArgDocNoOp(){
     OperationDoc out;
     out.name = "NoOp";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: control flow");
 
     out.desc = 
         "This operation does nothing. It produces no side-effects.";

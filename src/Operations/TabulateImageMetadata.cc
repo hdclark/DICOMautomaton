@@ -32,6 +32,9 @@
 OperationDoc OpArgDocTabulateImageMetadata(){
     OperationDoc out;
     out.name = "TabulateImageMetadata";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: table processing");
+    out.tags.emplace_back("category: metadata");
 
     out.desc = 
         "Extract metadata from images and write them in a tabular format.";

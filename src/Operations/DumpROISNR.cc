@@ -38,6 +38,9 @@
 OperationDoc OpArgDocDumpROISNR(){
     OperationDoc out;
     out.name = "DumpROISNR";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: contour processing");
+    out.tags.emplace_back("category: file export");
 
     out.desc = 
         "This operation computes the Signal-to-Noise ratio (SNR) for each ROI. The specific 'SNR' computed is SNR = (mean"

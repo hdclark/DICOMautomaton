@@ -35,6 +35,8 @@
 OperationDoc OpArgDocExportLineSamples(){
     OperationDoc out;
     out.name = "ExportLineSamples";
+    out.tags.emplace_back("category: line sample processing");
+    out.tags.emplace_back("category: file export");
 
     out.desc = 
         "This operation writes a line sample to a file.";

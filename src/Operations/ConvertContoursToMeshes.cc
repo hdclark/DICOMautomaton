@@ -35,6 +35,8 @@
 OperationDoc OpArgDocConvertContoursToMeshes(){
     OperationDoc out;
     out.name = "ConvertContoursToMeshes";
+    out.tags.emplace_back("category: contour processing");
+    out.tags.emplace_back("category: mesh processing");
 
     out.desc = 
         "This routine creates a mesh from contours. There are four supported methods:"

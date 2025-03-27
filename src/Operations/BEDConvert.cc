@@ -24,6 +24,7 @@
 OperationDoc OpArgDocBEDConvert(){
     OperationDoc out;
     out.name = "BEDConvert";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This operation performs Biologically Effective Dose (BED) and Equivalent Dose with 'x'-dose per fraction"

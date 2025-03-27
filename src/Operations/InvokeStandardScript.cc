@@ -37,6 +37,9 @@
 OperationDoc OpArgDocInvokeStandardScript(){
     OperationDoc out;
     out.name = "InvokeStandardScript";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: scripting");
+    out.tags.emplace_back("category: file import");
 
     out.desc = 
         "This operation invokes a built-in DICOMautomaton script.";

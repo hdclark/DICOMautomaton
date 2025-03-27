@@ -20,6 +20,10 @@
 OperationDoc OpArgDocDICOMExportImagesAsDose(){
     OperationDoc out;
     out.name = "DICOMExportImagesAsDose";
+    out.tags.emplace_back("category: file export");
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: radiation dose");
+
     out.desc = "This operation exports the selected Image_Array to a DICOM dose file.";
 
     out.notes.emplace_back(

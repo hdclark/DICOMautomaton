@@ -48,6 +48,9 @@
 OperationDoc OpArgDocPresentationImage(){
     OperationDoc out;
     out.name = "PresentationImage";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: file export");
+
     out.desc = "This operation renders an image with any contours in-place and colour mapping using an SFML backend.";
 
 

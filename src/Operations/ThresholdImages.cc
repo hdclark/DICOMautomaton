@@ -35,6 +35,7 @@
 OperationDoc OpArgDocThresholdImages(){
     OperationDoc out;
     out.name = "ThresholdImages";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This operation applies thresholds to images. Both upper and lower thresholds can be specified.";

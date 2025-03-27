@@ -39,6 +39,8 @@
 OperationDoc OpArgDocExportWarps(){
     OperationDoc out;
     out.name = "ExportWarps";
+    out.tags.emplace_back("category: spatial transform processing");
+    out.tags.emplace_back("category: file export");
 
     out.desc = 
         "This operation exports a transform object (e.g., affine matrix, TPS, vector deformation field) to file.";

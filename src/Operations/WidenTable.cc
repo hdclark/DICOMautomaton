@@ -24,6 +24,7 @@
 OperationDoc OpArgDocWidenTable(){
     OperationDoc out;
     out.name = "WidenTable";
+    out.tags.emplace_back("category: table processing");
 
     out.desc = 
         "This operation reshapes tables, changing from 'long' to 'wide' by computing a self-intersection.";

@@ -20,6 +20,7 @@
 OperationDoc OpArgDocCopyContours(){
     OperationDoc out;
     out.name = "CopyContours";
+    out.tags.emplace_back("category: contour processing");
 
     out.desc = 
         "This operation deep-copies the selected contours.";

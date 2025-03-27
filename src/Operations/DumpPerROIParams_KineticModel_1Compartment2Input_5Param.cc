@@ -36,6 +36,10 @@
 OperationDoc OpArgDocDumpPerROIParams_KineticModel_1Compartment2Input_5Param(){
     OperationDoc out;
     out.name = "DumpPerROIParams_KineticModel_1Compartment2Input_5Param";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: perfusion");
+    out.tags.emplace_back("category: modeling");
+
     out.desc = "Given a perfusion model, this routine computes parameter estimates for ROIs.";
 
     out.args.emplace_back();

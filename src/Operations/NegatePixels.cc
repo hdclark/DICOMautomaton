@@ -22,6 +22,7 @@
 OperationDoc OpArgDocNegatePixels(){
     OperationDoc out;
     out.name = "NegatePixels";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This operation negates pixels for the selected image arrays. This functionality is often desired for"

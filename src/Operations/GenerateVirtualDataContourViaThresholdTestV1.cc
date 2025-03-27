@@ -23,6 +23,9 @@
 OperationDoc OpArgDocGenerateVirtualDataContourViaThresholdTestV1(){
     OperationDoc out;
     out.name = "GenerateVirtualDataContourViaThresholdTestV1";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: generator");
+    out.tags.emplace_back("category: virtual phantom");
 
     out.desc = 
         "This operation generates data suitable for testing the ContourViaThreshold operation.";

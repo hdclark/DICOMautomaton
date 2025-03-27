@@ -28,6 +28,11 @@ template <class T> class contour_collection;
 OperationDoc OpArgDocUBC3TMRI_DCE(){
     OperationDoc out;
     out.name = "UBC3TMRI_DCE";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: modeling");
+    out.tags.emplace_back("category: perfusion");
+    out.tags.emplace_back("category: needs refresh");
+
     out.desc = 
         "This operation is used to generate dynamic contrast-enhanced MRI contrast enhancement maps.";
 

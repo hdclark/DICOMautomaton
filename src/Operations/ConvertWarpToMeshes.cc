@@ -22,6 +22,8 @@
 OperationDoc OpArgDocConvertWarpToMeshes(){
     OperationDoc out;
     out.name = "ConvertWarpToMeshes";
+    out.tags.emplace_back("category: spatial transform processing");
+    out.tags.emplace_back("category: mesh processing");
 
     out.desc = 
         "This operation attempts to convert a warp (i.e., a spatial registration or deformable spatial registration)"

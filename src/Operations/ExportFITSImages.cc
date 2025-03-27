@@ -36,6 +36,8 @@
 OperationDoc OpArgDocExportFITSImages(){
     OperationDoc out;
     out.name = "ExportFITSImages";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: file export");
 
     out.desc = 
         "This operation writes image arrays to FITS-formatted image files.";

@@ -29,6 +29,7 @@
 OperationDoc OpArgDocConvolveImages(){
     OperationDoc out;
     out.name = "ConvolveImages";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This routine convolves, correlates, or pattern-matches one rectilinear image array with another in voxel number space"

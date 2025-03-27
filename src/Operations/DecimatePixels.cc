@@ -20,6 +20,7 @@
 OperationDoc OpArgDocDecimatePixels(){
     OperationDoc out;
     out.name = "DecimatePixels";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         " This operation spatially aggregates blocks of pixels, thereby decimating them and making the images consume"

@@ -19,6 +19,8 @@
 OperationDoc OpArgDocBCCAExtractRadiomicFeatures(){
     OperationDoc out;
     out.name = "BCCAExtractRadiomicFeatures";
+    out.tags.emplace_back("category: image processing");
+
     out.desc = "This operation extracts radiomic features from an image and one or more ROIs.";
 
     out.notes.emplace_back(

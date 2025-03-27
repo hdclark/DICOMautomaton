@@ -51,6 +51,8 @@
 OperationDoc OpArgDocVoxelRANSAC(){
     OperationDoc out;
     out.name = "VoxelRANSAC";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: needs refresh");
 
     out.desc = 
         "This routine performs RANSAC fitting using voxel positions as inputs."

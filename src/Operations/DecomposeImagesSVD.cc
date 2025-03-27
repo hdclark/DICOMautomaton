@@ -38,6 +38,7 @@
 OperationDoc OpArgDocDecomposeImagesSVD(){
     OperationDoc out;
     out.name = "DecomposeImagesSVD";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This operation uses Singular Value Decomposition (SVD) on a set of images to generate an orthonormal basis."

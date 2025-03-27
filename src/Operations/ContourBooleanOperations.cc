@@ -31,6 +31,7 @@
 OperationDoc OpArgDocContourBooleanOperations(){
     OperationDoc out;
     out.name = "ContourBooleanOperations";
+    out.tags.emplace_back("category: contour processing");
 
     out.desc = 
         "This routine performs 2D Boolean operations on user-provided sets of ROIs. The ROIs themselves are planar"

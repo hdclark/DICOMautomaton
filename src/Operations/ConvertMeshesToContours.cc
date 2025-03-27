@@ -43,6 +43,8 @@
 OperationDoc OpArgDocConvertMeshesToContours(){
     OperationDoc out;
     out.name = "ConvertMeshesToContours";
+    out.tags.emplace_back("category: mesh processing");
+    out.tags.emplace_back("category: contour processing");
 
     out.desc = 
         "This operation constructs ROI contours by slicing the given meshes on a set of image planes.";

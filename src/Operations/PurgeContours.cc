@@ -19,6 +19,8 @@
 OperationDoc OpArgDocPurgeContours(){
     OperationDoc out;
     out.name = "PurgeContours";
+    out.tags.emplace_back("category: contour processing");
+
     out.desc = 
         "This routine purges (deletes) individual contours if they satisfy various criteria.";
         

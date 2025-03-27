@@ -30,6 +30,8 @@
 OperationDoc OpArgDocPolyominoes(){
     OperationDoc out;
     out.name = "Polyominoes";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: simulation");
 
     out.desc = 
         "This operation implements a 2D inventory management survival-horror game using discretized affine"

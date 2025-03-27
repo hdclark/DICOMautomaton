@@ -25,6 +25,9 @@
 OperationDoc OpArgDocGenerateSyntheticImages(){
     OperationDoc out;
     out.name = "GenerateSyntheticImages";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: generator");
+
     out.desc = 
         "This operation generates a synthetic, regular bitmap image array."
         " It can be used for testing how images are quantified or transformed.";

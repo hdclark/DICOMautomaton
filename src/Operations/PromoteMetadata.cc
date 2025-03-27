@@ -36,6 +36,8 @@
 OperationDoc OpArgDocPromoteMetadata() {
     OperationDoc out;
     out.name = "PromoteMetadata";
+    out.tags.emplace_back("category: metadata");
+    out.tags.emplace_back("category: parameter table");
 
     out.desc = "This operation can be used to copy metadata from an object to the global parameter table."
                "\n\n"

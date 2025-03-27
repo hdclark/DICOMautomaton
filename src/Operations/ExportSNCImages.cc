@@ -37,6 +37,8 @@
 OperationDoc OpArgDocExportSNCImages(){
     OperationDoc out;
     out.name = "ExportSNCImages";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: file export");
 
     out.desc = 
         "This operation writes image arrays to ASCII 'SNC' formatted files.";

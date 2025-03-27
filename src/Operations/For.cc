@@ -41,6 +41,8 @@
 OperationDoc OpArgDocFor() {
     OperationDoc out;
     out.name = "For";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: control flow");
 
     out.desc = "This operation is a control flow meta-operation that invokes children operations"
                " multiple times.";

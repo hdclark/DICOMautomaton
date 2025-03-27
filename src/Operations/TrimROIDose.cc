@@ -16,6 +16,10 @@
 OperationDoc OpArgDocTrimROIDose(){
     OperationDoc out;
     out.name = "TrimROIDose";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: contour processing");
+    out.tags.emplace_back("category: radiation dose");
+
     out.desc = 
       "This operation provides a simplified interface for overriding the dose within a ROI."
       " For example, this operation can be used to modify a base plan by eliminating dose"

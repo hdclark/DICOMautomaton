@@ -22,6 +22,9 @@
 OperationDoc OpArgDocModifyContourMetadata(){
     OperationDoc out;
     out.name = "ModifyContourMetadata";
+    out.tags.emplace_back("category: contour processing");
+    out.tags.emplace_back("category: metadata");
+
     out.desc = 
         "This operation injects metadata into contours.";
 

@@ -19,6 +19,7 @@
 OperationDoc OpArgDocConvertNaNsToZeros(){
     OperationDoc out;
     out.name = "ConvertNaNsToZeros";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This operation runs the data through a per-pixel filter, converting NaN's to zeros.";

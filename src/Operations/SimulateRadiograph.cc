@@ -56,6 +56,8 @@
 OperationDoc OpArgDocSimulateRadiograph(){
     OperationDoc out;
     out.name = "SimulateRadiograph";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: simulation");
 
     out.desc = 
         "This routine uses ray marching and volumetric sampling to simulate radiographs using a CT image array."

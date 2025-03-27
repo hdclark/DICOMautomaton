@@ -114,6 +114,9 @@ download_url(std::string url, std::filesystem::path p){
 OperationDoc OpArgDocGenerateMapTiles(){
     OperationDoc out;
     out.name = "GenerateMapTiles";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: geospatial");
+
     out.desc = 
         "This operation generates an image (representing a geospatial map) from one or more contours"
         " (representing geospatial traces). It can be used to help visualize or analyze tracks and terrain.";

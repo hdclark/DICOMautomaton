@@ -19,6 +19,8 @@
 OperationDoc OpArgDocDCEMRI_IAUC(){
     OperationDoc out;
     out.name = "DCEMRI_IAUC";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: diffusion");
 
     out.desc = 
         " This operation will compute the Integrated Area Under the Curve (IAUC) for any images present.";

@@ -27,6 +27,8 @@
 OperationDoc OpArgDocTransaction(){
     OperationDoc out;
     out.name = "Transaction";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: control flow");
 
     out.desc = 
         "This operation will make a snapshot of the internal data state and execute children operations."

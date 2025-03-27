@@ -969,6 +969,8 @@ Write_Everything("/tmp/ransac"_s + std::to_string(icp_invoke) + "_icp" + std::to
 OperationDoc OpArgDocDetectGrid3D(){
     OperationDoc out;
     out.name = "DetectGrid3D";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: point cloud processing");
 
     out.desc = 
         "This routine fits a 3D grid to a point cloud using a Procrustes analysis with "

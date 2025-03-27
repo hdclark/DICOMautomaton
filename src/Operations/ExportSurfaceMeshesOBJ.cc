@@ -37,6 +37,8 @@
 OperationDoc OpArgDocExportSurfaceMeshesOBJ(){
     OperationDoc out;
     out.name = "ExportSurfaceMeshesOBJ";
+    out.tags.emplace_back("category: mesh processing");
+    out.tags.emplace_back("category: file export");
 
     out.desc = 
         "This operation writes one or more surface meshes to file in Wavefront Object ('OBJ') format.";

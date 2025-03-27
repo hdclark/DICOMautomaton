@@ -34,6 +34,8 @@
 OperationDoc OpArgDocConvertPixelsToPoints(){
     OperationDoc out;
     out.name = "ConvertPixelsToPoints";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: point cloud processing");
 
     out.desc = 
         "This operation extracts pixels from the selected images and converts them into a point cloud."

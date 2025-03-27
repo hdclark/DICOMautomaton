@@ -26,6 +26,9 @@
 OperationDoc OpArgDocModifyImageMetadata(){
     OperationDoc out;
     out.name = "ModifyImageMetadata";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: meta");
+
     out.desc = 
         "This operation injects metadata into images."
         " It can also modify image spatial characteristics, which are distinct from metadata.";

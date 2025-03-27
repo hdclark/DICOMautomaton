@@ -56,6 +56,9 @@
 OperationDoc OpArgDocMinkowskiSum3D(){
     OperationDoc out;
     out.name = "MinkowskiSum3D";
+    out.tags.emplace_back("category: mesh processing");
+    out.tags.emplace_back("category: contour processing");
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This operation computes a Minkowski sum or symmetric difference of a 3D surface mesh generated from the"

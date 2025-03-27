@@ -41,6 +41,8 @@
 OperationDoc OpArgDocNotifyUser(){
     OperationDoc out;
     out.name = "NotifyUser";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: interactive");
 
     out.desc = 
         "This operation attempts to notify the user using a tray notification.";

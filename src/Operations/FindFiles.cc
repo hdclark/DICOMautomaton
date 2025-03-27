@@ -39,6 +39,7 @@
 OperationDoc OpArgDocFindFiles(){
     OperationDoc out;
     out.name = "FindFiles";
+    out.tags.emplace_back("category: meta");
 
     out.desc = 
         "Search a directory for files and/or subdirectories without loading them."

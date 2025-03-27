@@ -19,6 +19,8 @@
 OperationDoc OpArgDocMaxMinPixels(){
     OperationDoc out;
     out.name = "MaxMinPixels";
+    out.tags.emplace_back("category: image processing");
+
     out.desc = 
         "This operation replaces pixels with the pixel-wise difference (max)-(min).";
 

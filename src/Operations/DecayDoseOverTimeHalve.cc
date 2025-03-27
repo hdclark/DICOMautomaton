@@ -22,6 +22,8 @@
 OperationDoc OpArgDocDecayDoseOverTimeHalve(){
     OperationDoc out;
     out.name = "DecayDoseOverTimeHalve";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: radiation dose");
 
     out.desc = 
         "This operation transforms a dose map (assumed to be delivered some distant time in the past) to simulate 'decay'"

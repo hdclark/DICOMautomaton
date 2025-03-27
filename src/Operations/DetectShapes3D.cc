@@ -23,6 +23,8 @@
 OperationDoc OpArgDocDetectShapes3D(){
     OperationDoc out;
     out.name = "DetectShapes3D";
+    out.tags.emplace_back("category: image processing");
+
     out.desc = "This operation attempts to detect shapes in image volumes.";
 
     out.args.emplace_back();

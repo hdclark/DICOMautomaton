@@ -37,6 +37,9 @@
 OperationDoc OpArgDocMaskParameters() {
     OperationDoc out;
     out.name = "MaskParameters";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: parameter table");
+
     out.aliases.emplace_back("MaskMetadata");
 
     out.desc = "This operation is a meta-operation that temporarily alters the global parameter table."

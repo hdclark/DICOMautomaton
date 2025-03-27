@@ -38,6 +38,11 @@
 OperationDoc OpArgDocEvaluateTCPModels(){
     OperationDoc out;
     out.name = "EvaluateTCPModels";
+    out.tags.emplace_back("category: contour processing");
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: radiation dose");
+    out.tags.emplace_back("category: file export");
+    out.tags.emplace_back("category: modeling");
 
     out.desc = 
         "This operation evaluates a variety of TCP models for each provided ROI. The selected ROI should be the GTV"

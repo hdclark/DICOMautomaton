@@ -36,6 +36,8 @@
 OperationDoc OpArgDocConvertMeshesToPoints(){
     OperationDoc out;
     out.name = "ConvertMeshesToPoints";
+    out.tags.emplace_back("category: mesh processing");
+    out.tags.emplace_back("category: point cloud processing");
 
     out.desc = 
         "This operation converts meshes to point clouds.";

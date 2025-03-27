@@ -97,6 +97,8 @@ double DVH_Normalize(std::vector<double> in,
 OperationDoc OpArgDocOptimizeStaticBeams(){
     OperationDoc out;
     out.name = "OptimizeStaticBeams";
+    out.tags.emplace_back("category: rtplan processing");
+    out.tags.emplace_back("category: radiation dose");
 
     out.desc = 
       "This operation takes dose matrices corresponding to single, static RT beams and attempts to"

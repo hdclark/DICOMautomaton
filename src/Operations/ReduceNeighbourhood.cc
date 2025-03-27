@@ -26,6 +26,8 @@
 OperationDoc OpArgDocReduceNeighbourhood(){
     OperationDoc out;
     out.name = "ReduceNeighbourhood";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: contour processing");
 
     out.desc = 
         "This routine walks the voxels of a 3D rectilinear image collection, "

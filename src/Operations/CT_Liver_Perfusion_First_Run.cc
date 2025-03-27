@@ -23,6 +23,9 @@
 OperationDoc OpArgDocCT_Liver_Perfusion_First_Run(){
     OperationDoc out;
     out.name = "CT_Liver_Perfusion_First_Run";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: perfusion");
+
     out.desc = 
         "This operation performed dynamic contrast-enhanced CT perfusion image modeling on a time series image volume.";
 

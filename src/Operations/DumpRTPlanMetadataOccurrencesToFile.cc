@@ -29,6 +29,8 @@
 OperationDoc OpArgDocDumpRTPlanMetadataOccurrencesToFile(){
     OperationDoc out;
     out.name = "DumpRTPlanMetadataOccurrencesToFile";
+    out.tags.emplace_back("category: rtplan processing");
+    out.tags.emplace_back("category: file export");
 
     out.desc = 
         "Dump all the metadata elements, but group like-items together and also print the occurence number.";

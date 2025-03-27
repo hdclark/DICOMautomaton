@@ -29,6 +29,9 @@
 OperationDoc OpArgDocBuildLexiconInteractively(){
     OperationDoc out;
     out.name = "BuildLexiconInteractively";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: interactive");
+
     out.desc = 
         "This operation interactively builds a lexicon using the currently loaded contour labels."
         " It is useful for constructing a domain-specific lexicon from a set of representative data.";

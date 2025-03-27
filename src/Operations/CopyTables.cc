@@ -17,6 +17,7 @@
 OperationDoc OpArgDocCopyTables(){
     OperationDoc out;
     out.name = "CopyTables";
+    out.tags.emplace_back("category: table processing");
 
     out.desc = 
         "This operation deep-copies the selected tables.";

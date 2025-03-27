@@ -32,6 +32,8 @@
 OperationDoc OpArgDocConvertContoursToPoints(){
     OperationDoc out;
     out.name = "ConvertContoursToPoints";
+    out.tags.emplace_back("category: contour processing");
+    out.tags.emplace_back("category: point cloud processing");
 
     out.desc = 
         "This operation extracts vertices from the selected contours and converts them into a point cloud."

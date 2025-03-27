@@ -19,6 +19,8 @@
 OperationDoc OpArgDocDeleteMeshes(){
     OperationDoc out;
     out.name = "DeleteMeshes";
+    out.tags.emplace_back("category: mesh processing");
+
     out.desc = 
         "This routine deletes surface meshes from memory."
         " It is most useful when working with positional operations in stages.";

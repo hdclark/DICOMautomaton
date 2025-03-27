@@ -27,6 +27,8 @@
 OperationDoc OpArgDocCellularAutomata(){
     OperationDoc out;
     out.name = "CellularAutomata";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: simulation");
 
     out.desc = 
         "This operation implements 2D cellular automata (Conway's Game of Life) with periodic boundary"

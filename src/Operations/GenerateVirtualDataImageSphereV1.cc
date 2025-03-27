@@ -24,6 +24,10 @@
 OperationDoc OpArgDocGenerateVirtualDataImageSphereV1(){
     OperationDoc out;
     out.name = "GenerateVirtualDataImageSphereV1";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: generator");
+    out.tags.emplace_back("category: virtual phantom");
+
     out.desc = 
         "This operation generates a bitmap image of a sphere."
         " It can be used for testing how images are quantified or transformed.";

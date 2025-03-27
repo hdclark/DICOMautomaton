@@ -74,6 +74,8 @@ implement_additions_and_deletions( T &mainline,
 OperationDoc OpArgDocIsolate() {
     OperationDoc out;
     out.name = "Isolate";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: control flow");
 
     out.desc = "This operation is a control flow meta-operation that selects only the specified objects (e.g., image"
                " arrays, surface meshes, etc.) and forwards them to a virtual Drover object where they are isolated"

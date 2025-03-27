@@ -39,6 +39,8 @@
 OperationDoc OpArgDocTrue() {
     OperationDoc out;
     out.name = "True";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: control flow");
 
     out.desc = "This operation is a control flow meta-operation that completes successfully."
                " It has no side effects and evaluates to a no-op.";

@@ -36,6 +36,10 @@
 OperationDoc OpArgDocSelectFilename(){
     OperationDoc out;
     out.name = "SelectFilename";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: interactive");
+    out.tags.emplace_back("category: parameter table");
+
     out.aliases.push_back("SpecifyFilename");
 
     out.notes.emplace_back(

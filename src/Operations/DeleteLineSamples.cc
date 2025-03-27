@@ -17,6 +17,7 @@
 OperationDoc OpArgDocDeleteLineSamples(){
     OperationDoc out;
     out.name = "DeleteLineSamples";
+    out.tags.emplace_back("category: line sample processing");
 
     out.desc = 
         "This operation deletes the selected line samples.";

@@ -36,6 +36,8 @@
 OperationDoc OpArgDocPartitionContours(){
     OperationDoc out;
     out.name = "PartitionContours";
+    out.tags.emplace_back("category: contour processing");
+
     out.desc = "This operation partitions the selected contours, producing a number of sub-segments that"
                " could be re-combined to re-create the original contours.";
 

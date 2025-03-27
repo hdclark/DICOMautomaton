@@ -37,6 +37,8 @@
 OperationDoc OpArgDocConvertImageToMeshes(){
     OperationDoc out;
     out.name = "ConvertImageToMeshes";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: mesh processing");
 
     out.desc = 
         "This operation extracts surface meshes from images and pixel/voxel value thresholds."

@@ -43,6 +43,8 @@
 OperationDoc OpArgDocForEachRTPlan() {
     OperationDoc out;
     out.name = "ForEachRTPlan";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: rtplan processing");
 
     out.desc = "This operation is a control flow meta-operation that creates a 'view' of all available data such"
                " that each grouping contains a single treatment plan and any supplementary data it references"

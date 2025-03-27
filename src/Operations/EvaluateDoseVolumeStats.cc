@@ -41,6 +41,10 @@
 OperationDoc OpArgDocEvaluateDoseVolumeStats(){
     OperationDoc out;
     out.name = "EvaluateDoseVolumeStats";
+    out.tags.emplace_back("category: contour processing");
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: radiation dose");
+    out.tags.emplace_back("category: file export");
 
     out.desc = 
         R"***(This operation evaluates a variety of Dose-Volume statistics. It is geared toward PTV ROIs.)***"

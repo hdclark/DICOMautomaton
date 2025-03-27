@@ -28,6 +28,8 @@
 OperationDoc OpArgDocCombineImages(){
     OperationDoc out;
     out.name = "CombineImages";
+    out.tags.emplace_back("category: image processing");
+
     out.desc = 
         "This operation combines the images in two or more image arrays, creating a single image array"
         " containing all images.";

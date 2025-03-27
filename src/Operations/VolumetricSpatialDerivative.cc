@@ -25,6 +25,7 @@
 OperationDoc OpArgDocVolumetricSpatialDerivative(){
     OperationDoc out;
     out.name = "VolumetricSpatialDerivative";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This operation estimates various spatial partial derivatives (of pixel values) within 3D rectilinear image arrays.";

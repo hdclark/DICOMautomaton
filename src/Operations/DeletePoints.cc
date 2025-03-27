@@ -19,6 +19,8 @@
 OperationDoc OpArgDocDeletePoints(){
     OperationDoc out;
     out.name = "DeletePoints";
+    out.tags.emplace_back("category: point cloud processing");
+
     out.desc = 
         "This routine deletes point clouds from memory."
         " It is most useful when working with positional operations in stages.";

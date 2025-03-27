@@ -28,6 +28,8 @@
 OperationDoc OpArgDocExplodeImages(){
     OperationDoc out;
     out.name = "ExplodeImages";
+    out.tags.emplace_back("category: image processing");
+
     out.desc = 
         "This operation takes an image array containing multiple images and 'explodes' it,"
         " creating one new image array for each individual image.";

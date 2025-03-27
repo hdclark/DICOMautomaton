@@ -17,6 +17,7 @@
 OperationDoc OpArgDocCopyLineSamples(){
     OperationDoc out;
     out.name = "CopyLineSamples";
+    out.tags.emplace_back("category: line sample processing");
 
     out.desc = 
         "This operation deep-copies the selected line samples.";

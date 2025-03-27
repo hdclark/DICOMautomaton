@@ -38,6 +38,8 @@
 OperationDoc OpArgDocGenerateTable(){
     OperationDoc out;
     out.name = "GenerateTable";
+    out.tags.emplace_back("category: table processing");
+    out.tags.emplace_back("category: generator");
 
     out.desc = 
         "This operation creates an empty table.";

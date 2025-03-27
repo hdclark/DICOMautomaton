@@ -42,6 +42,7 @@
 OperationDoc OpArgDocMakeMeshesManifold(){
     OperationDoc out;
     out.name = "MakeMeshesManifold";
+    out.tags.emplace_back("category: mesh processing");
 
     out.desc = 
         "This operation attempts to make non-manifold surface meshes into manifold meshes."

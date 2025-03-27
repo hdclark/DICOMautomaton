@@ -35,6 +35,9 @@
 OperationDoc OpArgDocEvaluateParameters(){
     OperationDoc out;
     out.name = "EvaluateParameters";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: control flow");
+    out.tags.emplace_back("category: parameter table");
 
     out.desc = 
         "Exposes the global parameter metadata table for query and evaluation.";

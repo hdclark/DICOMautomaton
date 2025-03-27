@@ -23,6 +23,7 @@
 OperationDoc OpArgDocSpatialBlur(){
     OperationDoc out;
     out.name = "SpatialBlur";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This operation blurs pixels (within the plane of the image only) using the specified estimator.";

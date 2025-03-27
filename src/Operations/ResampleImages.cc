@@ -28,6 +28,9 @@
 OperationDoc OpArgDocResampleImages(){
     OperationDoc out;
     out.name = "ResampleImages";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: contour processing");
+
     out.desc = 
         "This operation combines two image arrays. The voxel values from one array are resampled onto the"
         " geometry of the other. This routine is used to ensure two image arrays have consistent spatial"

@@ -39,6 +39,9 @@
 OperationDoc OpArgDocFalse() {
     OperationDoc out;
     out.name = "False";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: control flow");
+
     out.aliases.emplace_back("Throw");
     out.aliases.emplace_back("Break");
 

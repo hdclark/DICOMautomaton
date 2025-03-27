@@ -27,6 +27,8 @@
 OperationDoc OpArgDocGroupImages(){
     OperationDoc out;
     out.name = "GroupImages";
+    out.tags.emplace_back("category: image processing");
+
     out.aliases.emplace_back("PartitionImages");
 
     out.desc = 

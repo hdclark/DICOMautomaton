@@ -40,6 +40,8 @@
 OperationDoc OpArgDocRepeat() {
     OperationDoc out;
     out.name = "Repeat";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: control flow");
 
     out.desc = "This operation is a control flow meta-operation that repeatedly and sequentially invokes all child"
                " operations the given number of times.";

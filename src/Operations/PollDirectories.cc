@@ -32,6 +32,7 @@
 OperationDoc OpArgDocPollDirectories(){
     OperationDoc out;
     out.name = "PollDirectories";
+    out.tags.emplace_back("category: meta");
 
     out.desc = 
         "This operation continuously polls ('watches') a directory, waiting for new files."

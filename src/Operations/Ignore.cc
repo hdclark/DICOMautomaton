@@ -39,6 +39,9 @@
 OperationDoc OpArgDocIgnore() {
     OperationDoc out;
     out.name = "Ignore";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: control flow");
+
     out.aliases.emplace_back("Always");
     out.aliases.emplace_back("Force");
 

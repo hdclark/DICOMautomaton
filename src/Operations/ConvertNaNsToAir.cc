@@ -19,6 +19,8 @@
 OperationDoc OpArgDocConvertNaNsToAir(){
     OperationDoc out;
     out.name = "ConvertNaNsToAir";
+    out.tags.emplace_back("category: image processing");
+
     out.desc = 
         "This operation runs the data through a per-pixel filter, converting NaN's to air in Hounsfield units (-1024).";
 

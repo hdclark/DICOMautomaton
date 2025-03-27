@@ -29,6 +29,7 @@
 OperationDoc OpArgDocNormalizePixels(){
     OperationDoc out;
     out.name = "NormalizePixels";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This routine normalizes voxel intensities by adjusting them so they satisfy a 'normalization'"

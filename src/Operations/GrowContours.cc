@@ -17,6 +17,7 @@
 OperationDoc OpArgDocGrowContours(){
     OperationDoc out;
     out.name = "GrowContours";
+    out.tags.emplace_back("category: contour processing");
 
     out.desc = 
         "This routine will grow (or shrink) 2D contours in their plane by the specified amount. "

@@ -20,6 +20,8 @@
 OperationDoc OpArgDocDumpVoxelDoseInfo(){
     OperationDoc out;
     out.name = "DumpVoxelDoseInfo";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: radiation dose");
 
     out.desc = 
         "This operation locates the minimum and maximum dose voxel values. It is useful for estimating prescription doses.";

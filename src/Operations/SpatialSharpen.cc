@@ -23,6 +23,7 @@
 OperationDoc OpArgDocSpatialSharpen(){
     OperationDoc out;
     out.name = "SpatialSharpen";
+    out.tags.emplace_back("category: image processing");
 
     out.desc = 
         "This operation 'sharpens' pixels (within the plane of the image only) using the specified estimator.";

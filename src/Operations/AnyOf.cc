@@ -42,6 +42,8 @@ OperationDoc OpArgDocAnyOf() {
     out.aliases.emplace_back("FirstOf");
     out.aliases.emplace_back("Or");
     out.aliases.emplace_back("Coalesce");
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: control flow");
 
     out.desc = "This operation is a control flow meta-operation that performs an 'any-of' or 'first-of' Boolean check"
                " by evaluating child operations. The first child operation that succeeds short-circuits the remaining"

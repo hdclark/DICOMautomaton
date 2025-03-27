@@ -19,6 +19,8 @@
 OperationDoc OpArgDocDeleteTables(){
     OperationDoc out;
     out.name = "DeleteTables";
+    out.tags.emplace_back("category: table processing");
+
     out.desc = 
         "This routine deletes tables.";
 

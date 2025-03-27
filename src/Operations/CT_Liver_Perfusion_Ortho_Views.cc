@@ -22,8 +22,11 @@
 OperationDoc OpArgDocCT_Liver_Perfusion_Ortho_Views (){
     OperationDoc out;
     out.name = "CT_Liver_Perfusion_Ortho_Views ";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: perfusion");
+
     out.desc = 
-        "This operation performed dynamic contrast-enhanced CT perfusion image modeling on a time series image volume.";
+        "This operation performs dynamic contrast-enhanced CT perfusion image modeling on a time series image volume.";
 
     out.notes.emplace_back(
         "Use this mode when you are only interested in oblique/orthogonal views."

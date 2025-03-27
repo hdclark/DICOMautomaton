@@ -28,6 +28,9 @@
 OperationDoc OpArgDocDICOMExportImagesAsCT(){
     OperationDoc out;
     out.name = "DICOMExportImagesAsCT";
+    out.tags.emplace_back("category: file export");
+    out.tags.emplace_back("category: image processing");
+
     out.desc = "This operation exports the selected Image_Array(s) to DICOM CT-modality files.";
 
     out.notes.emplace_back(

@@ -24,6 +24,9 @@
 OperationDoc OpArgDocFVPicketFence(){
     OperationDoc out;
     out.name = "FVPicketFence";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: image processing");
+
     out.desc = "This operation performs a picket fence QA test using an RTIMAGE file.";
 
     out.notes.emplace_back(

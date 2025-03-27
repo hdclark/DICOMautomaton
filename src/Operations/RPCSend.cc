@@ -44,6 +44,9 @@ using namespace ::apache::thrift::transport;
 OperationDoc OpArgDocRPCSend(){
     OperationDoc out;
     out.name = "RPCSend";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: RPC");
+    out.tags.emplace_back("category: networking");
 
     out.desc = 
         "This operation sends a remote procedure call (RPC) to a corresponding client for distributed computing.";

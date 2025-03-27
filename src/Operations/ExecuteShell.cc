@@ -19,6 +19,7 @@
 OperationDoc OpArgDocExecuteShell(){
     OperationDoc out;
     out.name = "ExecuteShell";
+    out.tags.emplace_back("category: meta");
 
     out.desc = 
         "This operation executes the given command in a system shell.";

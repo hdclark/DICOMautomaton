@@ -19,6 +19,9 @@
 OperationDoc OpArgDocDumpAnEncompassedPoint(){
     OperationDoc out;
     out.name = "DumpAnEncompassedPoint";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: needs refresh");
+
     out.desc = 
         "This operation estimates the number of spatially-overlapping images. It finds an arbitrary point within an"
         " arbitrary image, and then finds all other images which encompass the point.";

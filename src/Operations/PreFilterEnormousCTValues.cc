@@ -19,6 +19,9 @@
 OperationDoc OpArgDocPreFilterEnormousCTValues(){
     OperationDoc out;
     out.name = "PreFilterEnormousCTValues";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: needs refresh");
+
     out.desc = 
         " This operation runs the data through a per-pixel filter, censoring pixels which are too high to legitimately"
         " show up in a clinical CT. Censored pixels are set to NaN. Data is modified and no copy is made!";

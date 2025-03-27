@@ -39,6 +39,8 @@
 OperationDoc OpArgDocWhile() {
     OperationDoc out;
     out.name = "While";
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: control flow");
 
     out.desc = "This operation is a control flow meta-operation that repeatedly and sequentially invokes child"
                " operations (2-n) until the first child operation completes successfully.";

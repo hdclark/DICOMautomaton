@@ -37,6 +37,7 @@
 OperationDoc OpArgDocModifyParameters(){
     OperationDoc out;
     out.name = "ModifyParameters";
+    out.tags.emplace_back("category: parameter table");
 
     out.desc = 
         "Define or delete a key-value parameter into/from the global parameter table.";

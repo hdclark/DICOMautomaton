@@ -18,6 +18,8 @@
 OperationDoc OpArgDocSelectSlicesIntersectingROI(){
     OperationDoc out;
     out.name = "SelectSlicesIntersectingROI";
+    out.tags.emplace_back("category: contour processing");
+    out.tags.emplace_back("category: needs refresh");
 
     out.desc = 
         "This operation applies a whitelist to the most-recently loaded images. Images must 'slice' through one of the"

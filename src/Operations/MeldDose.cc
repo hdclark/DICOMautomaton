@@ -12,6 +12,8 @@
 OperationDoc OpArgDocMeldDose(){
     OperationDoc out;
     out.name = "MeldDose";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: radiation dose");
 
     out.desc = 
         "This operation melds all available dose image data. At a high level, dose melding sums overlapping pixel values"

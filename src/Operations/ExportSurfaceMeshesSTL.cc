@@ -37,6 +37,8 @@
 OperationDoc OpArgDocExportSurfaceMeshesSTL(){
     OperationDoc out;
     out.name = "ExportSurfaceMeshesSTL";
+    out.tags.emplace_back("category: mesh processing");
+    out.tags.emplace_back("category: file export");
 
     out.desc = 
         "This operation writes one or more surface meshes to file in the (3D Systems) Stereolithography format.";

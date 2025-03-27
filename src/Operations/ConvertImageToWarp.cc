@@ -18,6 +18,8 @@
 OperationDoc OpArgDocConvertImageToWarp(){
     OperationDoc out;
     out.name = "ConvertImageToWarp";
+    out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: spatial transform processing");
 
     out.desc = 
         "This operation attempts to convert an image array into a warp"

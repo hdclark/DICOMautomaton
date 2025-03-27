@@ -65,6 +65,8 @@
 OperationDoc OpArgDocSFML_Viewer(){
     OperationDoc out;
     out.name = "SFML_Viewer";
+    out.tags.emplace_back("category: interactive");
+
     out.desc = 
         "Launch an interactive viewer based on SFML."
         " Using this viewer, it is possible to contour ROIs,"
