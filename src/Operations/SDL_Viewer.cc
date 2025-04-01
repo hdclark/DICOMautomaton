@@ -4164,10 +4164,26 @@ bool SDL_Viewer(Drover &DICOM_data,
                                         auto l_known_ops = Only_Operations(known_ops, l_tags);
 
                                         // Provide an option to further filter by tags.
+                                        //
                                         // Remove the current tag and recurse.
-                                        auto l_other_tags = Get_Unique_Tags(l_known_ops);
-                                        //auto l_other_tags = known_ops_tags;
+                                        auto l_other_tags = known_ops_tags;
                                         l_other_tags.erase(tag);
+
+                                        // Take the inner join of the lists (tags that have not yet been excluded) and
+                                        // (tags that are present in the currently selected operations).
+                                        // This will exclude combinations that would result in zero eligible operations.
+                                        {
+                                            known_ops_tags_t shtl;
+
+                                            auto l_present_tags = Get_Unique_Tags(l_known_ops);
+                                            for(const auto &t : l_present_tags){
+                                                if(l_other_tags.count(t) != 0UL){
+                                                    shtl.insert(t);
+                                                }
+                                            }
+                                            l_other_tags = shtl;
+                                        }
+
                                         if(!l_other_tags.empty()){
                                             insert_filter_menu(l_known_ops, l_other_tags);
                                         }
