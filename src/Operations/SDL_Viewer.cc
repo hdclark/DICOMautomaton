@@ -4469,6 +4469,9 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImGui::SameLine();
             if( ImGui::Button("Drop", ImVec2(window_extent.x/7, 0))
             ||  (f && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Space))) ) action = "drop";
+            if( f && ImGui::IsKeyPressed(SDL_SCANCODE_P) ){
+                polyomino_paused = !polyomino_paused;
+            }
 
             ImGui::SliderInt("Polyomino Family", &polyomino_family, 0, 5);
             polyomino_family = std::clamp<int>(polyomino_family, 0, 5);
