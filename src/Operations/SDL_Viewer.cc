@@ -4147,16 +4147,33 @@ bool SDL_Viewer(Drover &DICOM_data,
                         };
 
                         std::function<void(const known_ops_t &, 
-                                           const known_ops_tags_t &)> insert_filter_menu;
+                                           const known_ops_tags_t &,
+                                           long int)> insert_filter_menu;
                         insert_filter_menu = [&insert_filter_menu,
                                               &generate_name,
                                               &generate_desc,
                                               &display_ops_list ]( const known_ops_t &known_ops,
-                                                                   const known_ops_tags_t &known_ops_tags ) -> void {
+                                                                   const known_ops_tags_t &known_ops_tags,
+                                                                   long int depth ) -> void {
+
 
                             if(known_ops.empty()){
                                 return;
                             }
+
+                            // Alter the colour to help differentiate the filter menu.
+                            int styles_overridden = 0;
+                            const auto& styles = ImGui::GetStyle();
+
+                            auto bg_colour = styles.Colors[ImGuiCol_PopupBg];
+                            for(long int i = 0L; i < depth; ++i){
+                                //bg_colour.x = 1.0f - (1.0f - bg_colour.x) * 0.96;
+                                bg_colour.y = 1.0f - (1.0f - bg_colour.y) * 0.96;
+                                bg_colour.z = 1.0f - (1.0f - bg_colour.z) * 0.96;
+                            }
+                            ImGui::PushStyleColor(ImGuiCol_PopupBg, bg_colour);
+                            ++styles_overridden;
+
                             if(ImGui::BeginMenu("Filter")){
                                 for(const auto &tag : known_ops_tags){
                                     if(ImGui::BeginMenu(tag.c_str())){
@@ -4185,7 +4202,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                         }
 
                                         if(!l_other_tags.empty()){
-                                            insert_filter_menu(l_known_ops, l_other_tags);
+                                            insert_filter_menu(l_known_ops, l_other_tags, depth + 1L);
                                         }
 
                                         // Then show the operations that satisfy the current list of tags.
@@ -4197,13 +4214,15 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 ImGui::EndMenu();
                             }
                             ImGui::Separator();
+
+                            ImGui::PopStyleColor(styles_overridden);
                             return;
                         };
 
                         auto known_ops = Known_Operations_and_Aliases();
                         auto known_op_tags = Get_Unique_Tags(known_ops);
                         // Insert a filter menu.
-                        insert_filter_menu(known_ops, known_op_tags);
+                        insert_filter_menu(known_ops, known_op_tags, 0L);
 
                         // Display the full, unfiltered list.
                         display_ops_list(known_ops);
