@@ -4167,9 +4167,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                             auto bg_colour = styles.Colors[ImGuiCol_PopupBg];
                             for(long int i = 0L; i < depth; ++i){
-                                //bg_colour.x = 1.0f - (1.0f - bg_colour.x) * 0.96;
-                                bg_colour.y = 1.0f - (1.0f - bg_colour.y) * 0.90;
-                                //bg_colour.z = 1.0f - (1.0f - bg_colour.z) * 0.95;
+                                bg_colour.y -= (bg_colour.y - 0.5f) * 0.10f;
                                 std::swap(bg_colour.x, bg_colour.y);
                                 std::swap(bg_colour.y, bg_colour.z);
                             }
