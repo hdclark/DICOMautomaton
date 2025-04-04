@@ -88,6 +88,25 @@ void Emit_Op_Documentation(const std::string &op_name_or_alias,
         );
 
         auto optdocs = p_it->second.first();
+
+        // Tags.
+        {
+            // List both compile-time and run-time tags.
+            known_ops_t l_ko;
+            l_ko.insert(*p_it);
+            auto op_tags = Get_Unique_Tags(l_ko);
+
+            if(!op_tags.empty()){
+                reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
+                    "### Tags"
+                );
+                for(auto &t : op_tags){
+                    os << bulleta << t << std::endl;
+                }
+                os << std::endl;
+            }
+        }
+
         reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
             "### Description"
         );
@@ -107,7 +126,7 @@ void Emit_Op_Documentation(const std::string &op_name_or_alias,
                 );
             }else{
                 for(const auto &alias : optdocs.aliases){
-                    os << bulleta << "```\"" << alias << "\"```" << std::endl;
+                    os << bulleta << alias << std::endl;
                 }
                 os << std::endl;
             }
