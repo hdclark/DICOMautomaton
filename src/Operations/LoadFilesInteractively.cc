@@ -40,6 +40,7 @@
 OperationDoc OpArgDocLoadFilesInteractively(){
     OperationDoc out;
     out.name = "LoadFilesInteractively";
+
     out.tags.emplace_back("category: meta");
     out.tags.emplace_back("category: file import");
     out.tags.emplace_back("category: interactive");

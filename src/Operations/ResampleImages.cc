@@ -28,6 +28,7 @@
 OperationDoc OpArgDocResampleImages(){
     OperationDoc out;
     out.name = "ResampleImages";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: contour processing");
 

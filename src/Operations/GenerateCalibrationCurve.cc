@@ -29,6 +29,7 @@
 OperationDoc OpArgDocGenerateCalibrationCurve(){
     OperationDoc out;
     out.name = "GenerateCalibrationCurve";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: contour processing");
     out.tags.emplace_back("category: file export");

@@ -41,6 +41,7 @@
 OperationDoc OpArgDocQueryUserInteractively(){
     OperationDoc out;
     out.name = "QueryUserInteractively";
+
     out.tags.emplace_back("category: meta");
     out.tags.emplace_back("category: parameter table");
     out.tags.emplace_back("category: interactive");

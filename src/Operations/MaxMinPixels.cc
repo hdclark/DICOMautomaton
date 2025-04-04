@@ -19,6 +19,7 @@
 OperationDoc OpArgDocMaxMinPixels(){
     OperationDoc out;
     out.name = "MaxMinPixels";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 

@@ -20,6 +20,7 @@
 OperationDoc OpArgDocDumpVoxelDoseInfo(){
     OperationDoc out;
     out.name = "DumpVoxelDoseInfo";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: radiation dose");
 

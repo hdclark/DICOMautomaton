@@ -33,6 +33,7 @@
 OperationDoc OpArgDocPointSeparation(){
     OperationDoc out;
     out.name = "PointSeparation";
+
     out.tags.emplace_back("category: point cloud processing");
     out.tags.emplace_back("category: file export");
 

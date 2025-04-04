@@ -36,6 +36,7 @@
 OperationDoc OpArgDocWarpPoints(){
     OperationDoc out;
     out.name = "WarpPoints";
+
     out.tags.emplace_back("category: point cloud processing");
     out.tags.emplace_back("category: spatial transform processing");
 

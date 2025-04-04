@@ -23,6 +23,7 @@
 OperationDoc OpArgDocSpatialBlur(){
     OperationDoc out;
     out.name = "SpatialBlur";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 

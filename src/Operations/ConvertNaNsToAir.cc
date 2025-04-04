@@ -19,6 +19,7 @@
 OperationDoc OpArgDocConvertNaNsToAir(){
     OperationDoc out;
     out.name = "ConvertNaNsToAir";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 

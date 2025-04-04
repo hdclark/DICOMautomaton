@@ -28,6 +28,7 @@
 OperationDoc OpArgDocDumpImageMetadataOccurrencesToFile(){
     OperationDoc out;
     out.name = "DumpImageMetadataOccurrencesToFile";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: file export");
 

@@ -40,6 +40,7 @@
 OperationDoc OpArgDocRepeat() {
     OperationDoc out;
     out.name = "Repeat";
+
     out.tags.emplace_back("category: meta");
     out.tags.emplace_back("category: control flow");
 

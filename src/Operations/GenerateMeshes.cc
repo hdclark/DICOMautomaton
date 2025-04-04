@@ -37,6 +37,7 @@
 OperationDoc OpArgDocGenerateMeshes(){
     OperationDoc out;
     out.name = "GenerateMeshes";
+
     out.tags.emplace_back("category: mesh processing");
     out.tags.emplace_back("category: generator");
 

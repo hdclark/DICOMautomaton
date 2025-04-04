@@ -19,6 +19,7 @@
 OperationDoc OpArgDocExportTables(){
     OperationDoc out;
     out.name = "ExportTables";
+
     out.tags.emplace_back("category: table processing");
     out.tags.emplace_back("category: file export");
 

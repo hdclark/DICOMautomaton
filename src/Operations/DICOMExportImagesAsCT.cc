@@ -28,6 +28,7 @@
 OperationDoc OpArgDocDICOMExportImagesAsCT(){
     OperationDoc out;
     out.name = "DICOMExportImagesAsCT";
+
     out.tags.emplace_back("category: file export");
     out.tags.emplace_back("category: image processing");
 

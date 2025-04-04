@@ -23,6 +23,7 @@
 OperationDoc OpArgDocAverage(){
     OperationDoc out;
     out.name = "Average";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 

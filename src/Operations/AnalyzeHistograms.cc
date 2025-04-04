@@ -44,6 +44,7 @@
 OperationDoc OpArgDocAnalyzeHistograms(){
     OperationDoc out;
     out.name = "AnalyzeHistograms";
+
     out.tags.emplace_back("category: line sample processing");
 
     out.desc = 

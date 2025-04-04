@@ -38,6 +38,7 @@
 OperationDoc OpArgDocRigidWarpImages(){
     OperationDoc out;
     out.name = "RigidWarpImages";
+
     out.tags.emplace_back("category: spatial transform processing");
     out.tags.emplace_back("category: image processing");
 

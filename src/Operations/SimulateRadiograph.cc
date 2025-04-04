@@ -56,6 +56,7 @@
 OperationDoc OpArgDocSimulateRadiograph(){
     OperationDoc out;
     out.name = "SimulateRadiograph";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: simulation");
 

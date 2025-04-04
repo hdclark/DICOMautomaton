@@ -22,6 +22,7 @@
 OperationDoc OpArgDocDecayDoseOverTimeHalve(){
     OperationDoc out;
     out.name = "DecayDoseOverTimeHalve";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: radiation dose");
 

@@ -31,6 +31,7 @@
 OperationDoc OpArgDocSeamContours(){
     OperationDoc out;
     out.name = "SeamContours";
+
     out.tags.emplace_back("category: contour processing");
     out.tags.emplace_back("category: needs refresh");
 

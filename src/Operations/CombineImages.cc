@@ -28,6 +28,7 @@
 OperationDoc OpArgDocCombineImages(){
     OperationDoc out;
     out.name = "CombineImages";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 

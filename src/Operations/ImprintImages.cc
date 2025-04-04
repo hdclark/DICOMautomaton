@@ -35,6 +35,7 @@
 OperationDoc OpArgDocImprintImages(){
     OperationDoc out;
     out.name = "ImprintImages";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: point cloud processing");
     out.tags.emplace_back("category: needs refresh");

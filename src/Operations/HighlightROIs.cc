@@ -32,6 +32,7 @@
 OperationDoc OpArgDocHighlightROIs(){
     OperationDoc out;
     out.name = "HighlightROIs";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: contour processing");
 

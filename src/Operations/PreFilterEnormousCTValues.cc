@@ -19,6 +19,7 @@
 OperationDoc OpArgDocPreFilterEnormousCTValues(){
     OperationDoc out;
     out.name = "PreFilterEnormousCTValues";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: needs refresh");
 

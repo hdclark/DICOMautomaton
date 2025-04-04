@@ -20,6 +20,7 @@
 OperationDoc OpArgDocDeleteContours(){
     OperationDoc out;
     out.name = "DeleteContours";
+
     out.tags.emplace_back("category: contour processing");
 
     out.desc = 

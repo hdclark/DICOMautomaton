@@ -21,6 +21,7 @@
 OperationDoc OpArgDocContouringAides(){
     OperationDoc out;
     out.name = "ContouringAides";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = "This operation attempts to prepare an image for easier contouring.";

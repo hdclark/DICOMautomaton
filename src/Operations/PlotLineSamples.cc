@@ -310,6 +310,7 @@ void Plot(const std::vector<Shuttle<samples_1D<T>>> &Shuttles,
 OperationDoc OpArgDocPlotLineSamples(){
     OperationDoc out;
     out.name = "PlotLineSamples";
+
     out.tags.emplace_back("category: line sample processing");
     out.tags.emplace_back("category: interactive");
     out.tags.emplace_back("category: needs refresh");

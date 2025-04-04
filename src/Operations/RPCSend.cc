@@ -44,6 +44,7 @@ using namespace ::apache::thrift::transport;
 OperationDoc OpArgDocRPCSend(){
     OperationDoc out;
     out.name = "RPCSend";
+
     out.tags.emplace_back("category: meta");
     out.tags.emplace_back("category: RPC");
     out.tags.emplace_back("category: networking");

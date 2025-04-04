@@ -36,6 +36,7 @@
 OperationDoc OpArgDocContourViaGeometry(){
     OperationDoc out;
     out.name = "ContourViaGeometry";
+
     out.tags.emplace_back("category: contour processing");
 
     out.desc = 

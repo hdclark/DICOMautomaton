@@ -51,6 +51,7 @@
 OperationDoc OpArgDocExtractRadiomicFeatures(){
     OperationDoc out;
     out.name = "ExtractRadiomicFeatures";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: file export");
 

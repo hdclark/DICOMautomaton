@@ -17,6 +17,7 @@
 OperationDoc OpArgDocCopyImages(){
     OperationDoc out;
     out.name = "CopyImages";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 

@@ -25,6 +25,7 @@
 OperationDoc OpArgDocGenerateSyntheticImages(){
     OperationDoc out;
     out.name = "GenerateSyntheticImages";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: generator");
 

@@ -29,6 +29,7 @@
 OperationDoc OpArgDocDumpImageMeshes(){
     OperationDoc out;
     out.name = "DumpImageMeshes";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: mesh processing");
     out.tags.emplace_back("category: file export");

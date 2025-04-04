@@ -39,6 +39,7 @@
 OperationDoc OpArgDocIfElse() {
     OperationDoc out;
     out.name = "IfElse";
+
     out.tags.emplace_back("category: meta");
     out.tags.emplace_back("category: control flow");
 

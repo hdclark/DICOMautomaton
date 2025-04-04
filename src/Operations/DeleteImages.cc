@@ -19,6 +19,7 @@
 OperationDoc OpArgDocDeleteImages(){
     OperationDoc out;
     out.name = "DeleteImages";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 

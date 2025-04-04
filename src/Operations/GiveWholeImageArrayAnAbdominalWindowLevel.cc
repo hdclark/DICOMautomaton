@@ -19,6 +19,7 @@
 OperationDoc OpArgDocGiveWholeImageArrayAnAbdominalWindowLevel(){
     OperationDoc out;
     out.name = "GiveWholeImageArrayAnAbdominalWindowLevel";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: needs refresh");
 

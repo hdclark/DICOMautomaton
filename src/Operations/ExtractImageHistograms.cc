@@ -37,6 +37,7 @@
 OperationDoc OpArgDocExtractImageHistograms(){
     OperationDoc out;
     out.name = "ExtractImageHistograms";
+
     out.tags.emplace_back("category: line sample processing");
     out.tags.emplace_back("category: contour processing");
     out.tags.emplace_back("category: image processing");

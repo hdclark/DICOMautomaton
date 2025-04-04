@@ -18,6 +18,7 @@
 OperationDoc OpArgDocSelectSlicesIntersectingROI(){
     OperationDoc out;
     out.name = "SelectSlicesIntersectingROI";
+
     out.tags.emplace_back("category: contour processing");
     out.tags.emplace_back("category: needs refresh");
 

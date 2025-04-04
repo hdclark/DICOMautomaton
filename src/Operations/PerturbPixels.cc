@@ -34,6 +34,7 @@
 OperationDoc OpArgDocPerturbPixels(){
     OperationDoc out;
     out.name = "PerturbPixels";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 

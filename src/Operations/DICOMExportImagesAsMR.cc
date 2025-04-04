@@ -28,6 +28,7 @@
 OperationDoc OpArgDocDICOMExportImagesAsMR(){
     OperationDoc out;
     out.name = "DICOMExportImagesAsMR";
+
     out.tags.emplace_back("category: file export");
     out.tags.emplace_back("category: image processing");
 

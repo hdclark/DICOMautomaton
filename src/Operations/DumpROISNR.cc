@@ -38,6 +38,7 @@
 OperationDoc OpArgDocDumpROISNR(){
     OperationDoc out;
     out.name = "DumpROISNR";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: contour processing");
     out.tags.emplace_back("category: file export");

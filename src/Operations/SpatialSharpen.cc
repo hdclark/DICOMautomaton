@@ -23,6 +23,7 @@
 OperationDoc OpArgDocSpatialSharpen(){
     OperationDoc out;
     out.name = "SpatialSharpen";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 

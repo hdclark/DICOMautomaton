@@ -38,6 +38,7 @@
 OperationDoc OpArgDocDecomposeImagesSVD(){
     OperationDoc out;
     out.name = "DecomposeImagesSVD";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 

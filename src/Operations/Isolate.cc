@@ -74,6 +74,7 @@ implement_additions_and_deletions( T &mainline,
 OperationDoc OpArgDocIsolate() {
     OperationDoc out;
     out.name = "Isolate";
+
     out.tags.emplace_back("category: meta");
     out.tags.emplace_back("category: control flow");
 

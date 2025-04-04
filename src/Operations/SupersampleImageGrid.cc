@@ -25,6 +25,7 @@
 OperationDoc OpArgDocSupersampleImageGrid(){
     OperationDoc out;
     out.name = "SupersampleImageGrid";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 

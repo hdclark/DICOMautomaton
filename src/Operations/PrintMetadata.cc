@@ -36,6 +36,7 @@
 OperationDoc OpArgDocPrintMetadata() {
     OperationDoc out;
     out.name = "PrintMetadata";
+
     out.tags.emplace_back("category: meta");
     out.tags.emplace_back("category: parameter table");
 

@@ -12,6 +12,7 @@
 OperationDoc OpArgDocMeldDose(){
     OperationDoc out;
     out.name = "MeldDose";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: radiation dose");
 

@@ -24,6 +24,7 @@
 OperationDoc OpArgDocBEDConvert(){
     OperationDoc out;
     out.name = "BEDConvert";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 

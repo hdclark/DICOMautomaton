@@ -44,6 +44,7 @@
 OperationDoc OpArgDocTime() {
     OperationDoc out;
     out.name = "Time";
+
     out.tags.emplace_back("category: meta");
     out.tags.emplace_back("category: control flow");
 

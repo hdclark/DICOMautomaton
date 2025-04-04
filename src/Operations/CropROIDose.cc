@@ -16,6 +16,7 @@
 OperationDoc OpArgDocCropROIDose(){
     OperationDoc out;
     out.name = "CropROIDose";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: radiation dose");
 

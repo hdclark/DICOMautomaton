@@ -27,6 +27,7 @@
 OperationDoc OpArgDocGenerateVirtualDataPerfusionV1(){
     OperationDoc out;
     out.name = "GenerateVirtualDataPerfusionV1";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: generator");
     out.tags.emplace_back("category: perfusion");

@@ -41,6 +41,7 @@ OperationDoc OpArgDocAnd() {
     out.name = "And";
     out.aliases.emplace_back("AllOf");
     out.aliases.emplace_back("Group");
+
     out.tags.emplace_back("category: meta");
     out.tags.emplace_back("category: control flow");
 

@@ -37,6 +37,7 @@
 OperationDoc OpArgDocMaskVerbosity() {
     OperationDoc out;
     out.name = "MaskVerbosity";
+
     out.tags.emplace_back("category: meta");
 
     out.aliases.emplace_back("MaskWarnings");

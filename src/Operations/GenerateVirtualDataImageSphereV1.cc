@@ -24,6 +24,7 @@
 OperationDoc OpArgDocGenerateVirtualDataImageSphereV1(){
     OperationDoc out;
     out.name = "GenerateVirtualDataImageSphereV1";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: generator");
     out.tags.emplace_back("category: virtual phantom");

@@ -20,6 +20,7 @@
 OperationDoc OpArgDocGenerateSurfaceMask(){
     OperationDoc out;
     out.name = "GenerateSurfaceMask";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: mesh processing");
     out.tags.emplace_back("category: generator");

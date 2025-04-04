@@ -21,6 +21,7 @@
 OperationDoc OpArgDocCompileScript(){
     OperationDoc out;
     out.name = "CompileScript";
+
     out.tags.emplace_back("category: meta");
     out.tags.emplace_back("category: scripting");
 

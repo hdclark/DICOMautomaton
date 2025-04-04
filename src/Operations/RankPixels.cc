@@ -23,6 +23,7 @@
 OperationDoc OpArgDocRankPixels(){
     OperationDoc out;
     out.name = "RankPixels";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = "This operation ranks pixels throughout an image array.";

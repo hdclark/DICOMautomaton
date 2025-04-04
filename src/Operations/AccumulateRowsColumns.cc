@@ -30,6 +30,7 @@
 OperationDoc OpArgDocAccumulateRowsColumns(){
     OperationDoc out;
     out.name = "AccumulateRowsColumns";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: interactive");
 

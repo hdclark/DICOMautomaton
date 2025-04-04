@@ -27,6 +27,7 @@
 OperationDoc OpArgDocCellularAutomata(){
     OperationDoc out;
     out.name = "CellularAutomata";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: simulation");
 

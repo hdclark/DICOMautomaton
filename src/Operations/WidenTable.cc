@@ -24,6 +24,7 @@
 OperationDoc OpArgDocWidenTable(){
     OperationDoc out;
     out.name = "WidenTable";
+
     out.tags.emplace_back("category: table processing");
 
     out.desc = 

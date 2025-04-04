@@ -37,6 +37,7 @@
 OperationDoc OpArgDocMaskParameters() {
     OperationDoc out;
     out.name = "MaskParameters";
+
     out.tags.emplace_back("category: meta");
     out.tags.emplace_back("category: parameter table");
 

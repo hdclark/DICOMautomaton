@@ -42,6 +42,7 @@ OperationDoc OpArgDocAnyOf() {
     out.aliases.emplace_back("FirstOf");
     out.aliases.emplace_back("Or");
     out.aliases.emplace_back("Coalesce");
+
     out.tags.emplace_back("category: meta");
     out.tags.emplace_back("category: control flow");
 

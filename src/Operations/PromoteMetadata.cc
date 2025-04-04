@@ -36,6 +36,7 @@
 OperationDoc OpArgDocPromoteMetadata() {
     OperationDoc out;
     out.name = "PromoteMetadata";
+
     out.tags.emplace_back("category: metadata");
     out.tags.emplace_back("category: parameter table");
 

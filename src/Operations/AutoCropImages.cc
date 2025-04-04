@@ -27,6 +27,7 @@
 OperationDoc OpArgDocAutoCropImages(){
     OperationDoc out;
     out.name = "AutoCropImages";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 

@@ -33,6 +33,7 @@
 OperationDoc OpArgDocContourSimilarity(){
     OperationDoc out;
     out.name = "ContourSimilarity";
+
     out.tags.emplace_back("category: contour processing");
 
     out.desc = 

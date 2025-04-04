@@ -17,6 +17,7 @@
 OperationDoc OpArgDocCopyPoints(){
     OperationDoc out;
     out.name = "CopyPoints";
+
     out.tags.emplace_back("category: point cloud processing");
 
     out.desc = 

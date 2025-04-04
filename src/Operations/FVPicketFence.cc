@@ -24,6 +24,7 @@
 OperationDoc OpArgDocFVPicketFence(){
     OperationDoc out;
     out.name = "FVPicketFence";
+
     out.tags.emplace_back("category: meta");
     out.tags.emplace_back("category: image processing");
 

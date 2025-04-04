@@ -36,6 +36,7 @@
 OperationDoc OpArgDocExportContours(){
     OperationDoc out;
     out.name = "ExportContours";
+
     out.tags.emplace_back("category: contour processing");
     out.tags.emplace_back("category: file export");
 

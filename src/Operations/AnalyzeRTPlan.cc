@@ -47,6 +47,9 @@ OperationDoc OpArgDocAnalyzeRTPlan(){
     OperationDoc out;
     out.name = "AnalyzeRTPlan";
 
+    out.tags.emplace_back("category: rtplan processing");
+    out.tags.emplace_back("category: file export");
+
     out.desc = 
         "This operation analyzes the selected RT plans, performing a general analysis"
         " suitable for exploring or comparing plans at a high-level."

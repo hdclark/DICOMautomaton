@@ -33,6 +33,7 @@
 OperationDoc OpArgDocGenerateWarp(){
     OperationDoc out;
     out.name = "GenerateWarp";
+
     out.tags.emplace_back("category: spatial transform processing");
     out.tags.emplace_back("category: generator");
 

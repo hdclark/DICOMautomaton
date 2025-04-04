@@ -37,6 +37,7 @@
 OperationDoc OpArgDocEvaluateNTCPModels(){
     OperationDoc out;
     out.name = "EvaluateNTCPModels";
+
     out.tags.emplace_back("category: contour processing");
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: radiation dose");

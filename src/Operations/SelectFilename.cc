@@ -36,11 +36,11 @@
 OperationDoc OpArgDocSelectFilename(){
     OperationDoc out;
     out.name = "SelectFilename";
+    out.aliases.push_back("SpecifyFilename");
+
     out.tags.emplace_back("category: meta");
     out.tags.emplace_back("category: interactive");
     out.tags.emplace_back("category: parameter table");
-
-    out.aliases.push_back("SpecifyFilename");
 
     out.notes.emplace_back(
         "Invocation of this operation will first purge any existing filename with the provided key."

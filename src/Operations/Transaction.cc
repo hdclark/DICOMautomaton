@@ -27,6 +27,7 @@
 OperationDoc OpArgDocTransaction(){
     OperationDoc out;
     out.name = "Transaction";
+
     out.tags.emplace_back("category: meta");
     out.tags.emplace_back("category: control flow");
 

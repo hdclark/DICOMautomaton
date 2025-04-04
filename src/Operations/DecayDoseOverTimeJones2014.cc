@@ -29,6 +29,7 @@
 OperationDoc OpArgDocDecayDoseOverTimeJones2014(){
     OperationDoc out;
     out.name = "DecayDoseOverTimeJones2014";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: radiation dose");
 

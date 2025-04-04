@@ -125,6 +125,7 @@
 OperationDoc OpArgDocDumpROISurfaceMeshes(){
     OperationDoc out;
     out.name = "DumpROISurfaceMeshes";
+
     out.tags.emplace_back("category: contour processing");
     out.tags.emplace_back("category: mesh processing");
     out.tags.emplace_back("category: file export");

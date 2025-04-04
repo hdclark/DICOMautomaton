@@ -40,6 +40,7 @@ OperationDoc OpArgDocContourViaThreshold(){
     OperationDoc out;
     out.name = "ContourViaThreshold";
     out.aliases.emplace_back("ConvertImagesToContours");
+
     out.tags.emplace_back("category: contour processing");
 
     out.desc = 

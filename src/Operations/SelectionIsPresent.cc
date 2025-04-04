@@ -39,6 +39,7 @@
 OperationDoc OpArgDocSelectionIsPresent() {
     OperationDoc out;
     out.name = "SelectionIsPresent";
+
     out.tags.emplace_back("category: meta");
     out.tags.emplace_back("category: control flow");
 

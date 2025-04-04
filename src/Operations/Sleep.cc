@@ -43,11 +43,12 @@
 OperationDoc OpArgDocSleep() {
     OperationDoc out;
     out.name = "Sleep";
-    out.tags.emplace_back("category: meta");
-    out.tags.emplace_back("category: control flow");
 
     out.aliases.emplace_back("Delay");
     out.aliases.emplace_back("Wait");
+
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: control flow");
 
     out.desc = "This operation is a control flow meta-operation that times how long it takes to execute the"
                " child operations.";

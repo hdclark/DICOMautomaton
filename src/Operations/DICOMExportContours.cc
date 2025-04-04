@@ -23,6 +23,7 @@
 OperationDoc OpArgDocDICOMExportContours(){
     OperationDoc out;
     out.name = "DICOMExportContours";
+
     out.tags.emplace_back("category: file export");
     out.tags.emplace_back("category: contour processing");
 

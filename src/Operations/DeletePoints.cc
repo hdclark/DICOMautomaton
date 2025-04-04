@@ -19,6 +19,7 @@
 OperationDoc OpArgDocDeletePoints(){
     OperationDoc out;
     out.name = "DeletePoints";
+
     out.tags.emplace_back("category: point cloud processing");
 
     out.desc = 

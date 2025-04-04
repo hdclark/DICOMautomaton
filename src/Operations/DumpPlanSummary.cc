@@ -40,6 +40,7 @@
 OperationDoc OpArgDocDumpPlanSummary(){
     OperationDoc out;
     out.name = "DumpPlanSummary";
+
     out.tags.emplace_back("category: rtplan processing");
     out.tags.emplace_back("category: file export");
 

@@ -23,6 +23,7 @@
 OperationDoc OpArgDocCropImageDoseToROIs(){
     OperationDoc out;
     out.name = "CropImageDoseToROIs";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: radiation dose");
 

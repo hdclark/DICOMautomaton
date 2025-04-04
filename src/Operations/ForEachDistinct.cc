@@ -43,6 +43,7 @@
 OperationDoc OpArgDocForEachDistinct() {
     OperationDoc out;
     out.name = "ForEachDistinct";
+
     out.tags.emplace_back("category: meta");
 
     out.desc = "This operation is a control flow meta-operation that partitions all available data and invokes all"

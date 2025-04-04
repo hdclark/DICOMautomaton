@@ -31,6 +31,7 @@
 OperationDoc OpArgDocPlotPerROITimeCourses(){
     OperationDoc out;
     out.name = "PlotPerROITimeCourses";
+
     out.tags.emplace_back("category: line sample processing");
     out.tags.emplace_back("category: interactive");
     out.tags.emplace_back("category: needs refresh");

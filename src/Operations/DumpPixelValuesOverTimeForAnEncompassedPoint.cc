@@ -19,6 +19,7 @@
 OperationDoc OpArgDocDumpPixelValuesOverTimeForAnEncompassedPoint(){
     OperationDoc out;
     out.name = "DumpPixelValuesOverTimeForAnEncompassedPoint";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: needs refresh");
 

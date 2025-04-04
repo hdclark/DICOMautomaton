@@ -37,6 +37,7 @@
 OperationDoc OpArgDocExportSurfaceMeshesPLY(){
     OperationDoc out;
     out.name = "ExportSurfaceMeshesPLY";
+
     out.tags.emplace_back("category: mesh processing");
     out.tags.emplace_back("category: file export");
 

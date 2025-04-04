@@ -51,6 +51,7 @@
 OperationDoc OpArgDocVoxelRANSAC(){
     OperationDoc out;
     out.name = "VoxelRANSAC";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: needs refresh");
 

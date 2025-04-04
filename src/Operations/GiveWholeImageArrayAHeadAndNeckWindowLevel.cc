@@ -19,6 +19,7 @@
 OperationDoc OpArgDocGiveWholeImageArrayAHeadAndNeckWindowLevel(){
     OperationDoc out;
     out.name = "GiveWholeImageArrayAHeadAndNeckWindowLevel";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: needs refresh");
 

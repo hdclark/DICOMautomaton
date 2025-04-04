@@ -35,6 +35,7 @@
 OperationDoc OpArgDocConvertContoursToMeshes(){
     OperationDoc out;
     out.name = "ConvertContoursToMeshes";
+
     out.tags.emplace_back("category: contour processing");
     out.tags.emplace_back("category: mesh processing");
 

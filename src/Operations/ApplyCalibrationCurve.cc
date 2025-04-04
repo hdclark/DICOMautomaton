@@ -28,6 +28,7 @@
 OperationDoc OpArgDocApplyCalibrationCurve(){
     OperationDoc out;
     out.name = "ApplyCalibrationCurve";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 

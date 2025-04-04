@@ -34,6 +34,7 @@
 OperationDoc OpArgDocScalePixels(){
     OperationDoc out;
     out.name = "ScalePixels";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 

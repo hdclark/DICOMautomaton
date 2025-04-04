@@ -65,6 +65,7 @@
 OperationDoc OpArgDocSFML_Viewer(){
     OperationDoc out;
     out.name = "SFML_Viewer";
+
     out.tags.emplace_back("category: interactive");
 
     out.desc = 

@@ -32,6 +32,7 @@
 OperationDoc OpArgDocConvertContoursToPoints(){
     OperationDoc out;
     out.name = "ConvertContoursToPoints";
+
     out.tags.emplace_back("category: contour processing");
     out.tags.emplace_back("category: point cloud processing");
 

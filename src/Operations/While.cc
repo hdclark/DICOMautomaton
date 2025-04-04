@@ -39,6 +39,7 @@
 OperationDoc OpArgDocWhile() {
     OperationDoc out;
     out.name = "While";
+
     out.tags.emplace_back("category: meta");
     out.tags.emplace_back("category: control flow");
 

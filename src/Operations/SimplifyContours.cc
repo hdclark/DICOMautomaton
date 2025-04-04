@@ -25,6 +25,7 @@
 OperationDoc OpArgDocSimplifyContours(){
     OperationDoc out;
     out.name = "SimplifyContours";
+
     out.tags.emplace_back("category: contour processing");
 
     out.desc = 

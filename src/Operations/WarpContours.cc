@@ -38,6 +38,7 @@
 OperationDoc OpArgDocWarpContours(){
     OperationDoc out;
     out.name = "WarpContours";
+
     out.tags.emplace_back("category: contour processing");
     out.tags.emplace_back("category: spatial transform processing");
 

@@ -22,6 +22,7 @@
 OperationDoc OpArgDocNegatePixels(){
     OperationDoc out;
     out.name = "NegatePixels";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 

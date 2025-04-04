@@ -560,6 +560,7 @@ void draw_image( std::ostream &os,
 OperationDoc OpArgDocTerminal_Viewer(){
     OperationDoc out;
     out.name = "Terminal_Viewer";
+
     out.tags.emplace_back("category: interactive");
 
     out.desc = 

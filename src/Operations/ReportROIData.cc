@@ -29,6 +29,7 @@
 OperationDoc OpArgDocReportROIData(){
     OperationDoc out;
     out.name = "ReportROIData";
+
     out.tags.emplace_back("category: table processing");
     out.tags.emplace_back("category: contour processing");
 

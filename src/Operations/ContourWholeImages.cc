@@ -28,6 +28,7 @@
 OperationDoc OpArgDocContourWholeImages(){
     OperationDoc out;
     out.name = "ContourWholeImages";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: contour processing");
 

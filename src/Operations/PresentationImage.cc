@@ -48,6 +48,7 @@
 OperationDoc OpArgDocPresentationImage(){
     OperationDoc out;
     out.name = "PresentationImage";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: file export");
 

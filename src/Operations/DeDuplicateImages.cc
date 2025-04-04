@@ -23,6 +23,7 @@
 OperationDoc OpArgDocDeDuplicateImages(){
     OperationDoc out;
     out.name = "DeDuplicateImages";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 

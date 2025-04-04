@@ -26,6 +26,7 @@
 OperationDoc OpArgDocDumpROIContours(){
     OperationDoc out;
     out.name = "DumpROIContours";
+
     out.tags.emplace_back("category: contour processing");
     out.tags.emplace_back("category: mesh processing");
     out.tags.emplace_back("category: file export");

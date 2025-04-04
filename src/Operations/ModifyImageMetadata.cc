@@ -26,6 +26,7 @@
 OperationDoc OpArgDocModifyImageMetadata(){
     OperationDoc out;
     out.name = "ModifyImageMetadata";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: meta");
 

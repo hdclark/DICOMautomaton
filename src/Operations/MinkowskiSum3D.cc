@@ -56,6 +56,7 @@
 OperationDoc OpArgDocMinkowskiSum3D(){
     OperationDoc out;
     out.name = "MinkowskiSum3D";
+
     out.tags.emplace_back("category: mesh processing");
     out.tags.emplace_back("category: contour processing");
     out.tags.emplace_back("category: image processing");

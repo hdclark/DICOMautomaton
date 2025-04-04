@@ -24,6 +24,7 @@
 OperationDoc OpArgDocExtractAlphaBeta(){
     OperationDoc out;
     out.name = "ExtractAlphaBeta";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: radiation dose");
 

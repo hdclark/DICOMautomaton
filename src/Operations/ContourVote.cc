@@ -25,6 +25,7 @@
 OperationDoc OpArgDocContourVote(){
     OperationDoc out;
     out.name = "ContourVote";
+
     out.tags.emplace_back("category: contour processing");
 
     out.desc = 

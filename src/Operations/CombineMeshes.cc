@@ -24,6 +24,7 @@
 OperationDoc OpArgDocCombineMeshes(){
     OperationDoc out;
     out.name = "CombineMeshes";
+
     out.tags.emplace_back("category: mesh processing");
 
     out.desc = 

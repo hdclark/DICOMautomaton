@@ -29,6 +29,7 @@
 OperationDoc OpArgDocNormalizePixels(){
     OperationDoc out;
     out.name = "NormalizePixels";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 

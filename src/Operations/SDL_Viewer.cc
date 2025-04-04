@@ -891,12 +891,10 @@ void draw_with_brush( const decltype(planar_image_collection<float,double>().get
 OperationDoc OpArgDocSDL_Viewer(){
     OperationDoc out;
     out.name = "SDL_Viewer";
-    out.tags.emplace_back("category: interactive");
-
-    out.desc = 
-        "Launch an interactive viewer based on SDL.";
 
     out.tags.emplace_back("category: interactive");
+
+    out.desc = "Launch an interactive viewer based on SDL.";
 
     out.args.emplace_back();
     out.args.back().name = "LexiconCustomizer";

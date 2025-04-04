@@ -26,6 +26,7 @@
 OperationDoc OpArgDocReduceNeighbourhood(){
     OperationDoc out;
     out.name = "ReduceNeighbourhood";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: contour processing");
 

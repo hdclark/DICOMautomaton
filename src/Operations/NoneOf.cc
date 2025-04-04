@@ -42,6 +42,7 @@ OperationDoc OpArgDocNoneOf() {
     out.aliases.emplace_back("Not");
     out.aliases.emplace_back("Negate");
     out.aliases.emplace_back("Invert");
+
     out.tags.emplace_back("category: meta");
     out.tags.emplace_back("category: control flow");
 

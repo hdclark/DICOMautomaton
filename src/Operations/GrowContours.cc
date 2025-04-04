@@ -17,6 +17,7 @@
 OperationDoc OpArgDocGrowContours(){
     OperationDoc out;
     out.name = "GrowContours";
+
     out.tags.emplace_back("category: contour processing");
 
     out.desc = 

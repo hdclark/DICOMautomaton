@@ -25,6 +25,7 @@
 OperationDoc OpArgDocVolumetricSpatialBlur(){
     OperationDoc out;
     out.name = "VolumetricSpatialBlur";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 

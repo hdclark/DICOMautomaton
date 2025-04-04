@@ -22,6 +22,7 @@
 OperationDoc OpArgDocLogScale(){
     OperationDoc out;
     out.name = "LogScale";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 

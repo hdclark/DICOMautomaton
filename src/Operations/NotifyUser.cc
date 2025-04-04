@@ -41,6 +41,7 @@
 OperationDoc OpArgDocNotifyUser(){
     OperationDoc out;
     out.name = "NotifyUser";
+
     out.tags.emplace_back("category: meta");
     out.tags.emplace_back("category: interactive");
 

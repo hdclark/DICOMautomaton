@@ -16,6 +16,7 @@
 OperationDoc OpArgDocTrimROIDose(){
     OperationDoc out;
     out.name = "TrimROIDose";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: contour processing");
     out.tags.emplace_back("category: radiation dose");

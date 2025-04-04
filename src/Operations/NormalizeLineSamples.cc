@@ -44,6 +44,7 @@
 OperationDoc OpArgDocNormalizeLineSamples(){
     OperationDoc out;
     out.name = "NormalizeLineSamples";
+
     out.tags.emplace_back("category: line sample processing");
 
     out.desc = 

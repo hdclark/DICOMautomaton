@@ -30,6 +30,7 @@
 OperationDoc OpArgDocExportOriginalFiles() {
     OperationDoc out;
     out.name = "ExportOriginalFiles";
+
     out.tags.emplace_back("category: file export");
 
     out.desc = "This operation attempts to copy the original file associated with the selected object(s)."

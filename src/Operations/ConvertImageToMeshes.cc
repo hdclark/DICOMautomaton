@@ -37,6 +37,7 @@
 OperationDoc OpArgDocConvertImageToMeshes(){
     OperationDoc out;
     out.name = "ConvertImageToMeshes";
+
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: mesh processing");
 

@@ -25,6 +25,7 @@
 OperationDoc OpArgDocVolumetricCorrelationDetector(){
     OperationDoc out;
     out.name = "VolumetricCorrelationDetector";
+
     out.tags.emplace_back("category: image processing");
 
     out.desc = 
