@@ -34,7 +34,7 @@ until
         openssl-libs-static \
         zlib-static zlib-dev \
         sfml-dev \
-        sdl2-dev sdl-static \
+        sdl2-dev \
         glew-dev \
         jansson-dev \
         patchelf \
@@ -67,6 +67,9 @@ done
 #    boost1.76-static boost1.76-dev \
 #    asio-dev \
 # Note: these libraries seem to be either shared, or have a shared runtime, which CMake dislikes when compiling static DCMA.
+
+# Removed:
+#    sdl-static      (Seems to have disappeared during SDL3 release.)
 
 /scratch_base/build_install_customized_system_dependencies.sh
 

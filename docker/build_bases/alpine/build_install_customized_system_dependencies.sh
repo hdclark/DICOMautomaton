@@ -29,7 +29,7 @@ set -eux
 # Boost.
 (
     cd / && rm -rf /boost* || true
-    wget 'https://boostorg.jfrog.io/artifactory/main/release/1.77.0/source/boost_1_77_0.tar.gz' 
+    wget 'https://archives.boost.io/release/1.77.0/source/boost_1_77_0.tar.gz'
     tar -axf 'boost_1_77_0.tar.gz' 
     rm 'boost_1_77_0.tar.gz' 
     cd /boost_1_77_0/tools/build/src/engine/
@@ -91,7 +91,7 @@ set -eux
     mkdir -pv /thrift
     cd /thrift
 
-    wget 'https://dlcdn.apache.org/thrift/0.17.0/thrift-0.17.0.tar.gz' -O thrift.tgz
+    wget 'http://archive.apache.org/dist/thrift/0.17.0/thrift-0.17.0.tar.gz' -O thrift.tgz
     tar -axf thrift.tgz || unzip thrift.tgz
     cd thrift-*/
     mkdir cmake_build && cd cmake_build
