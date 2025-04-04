@@ -54,6 +54,7 @@ OperationDoc OpArgDocExtractRadiomicFeatures(){
 
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: file export");
+    out.tags.emplace_back("category: acquires futex");
 
     out.desc = 
       "This operation extracts radiomic features from the selected images."

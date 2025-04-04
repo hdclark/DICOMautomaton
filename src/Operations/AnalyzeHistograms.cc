@@ -46,6 +46,8 @@ OperationDoc OpArgDocAnalyzeHistograms(){
     out.name = "AnalyzeHistograms";
 
     out.tags.emplace_back("category: line sample processing");
+    out.tags.emplace_back("category: file export");
+    out.tags.emplace_back("category: acquires futex");
 
     out.desc = 
         "This operation analyzes the selected line samples as if they were cumulative dose-volume histograms (DVHs)."

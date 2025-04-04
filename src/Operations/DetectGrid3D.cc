@@ -972,6 +972,8 @@ OperationDoc OpArgDocDetectGrid3D(){
 
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: point cloud processing");
+    out.tags.emplace_back("category: file export");
+    out.tags.emplace_back("category: acquires futex");
 
     out.desc = 
         "This routine fits a 3D grid to a point cloud using a Procrustes analysis with "

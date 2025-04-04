@@ -22,6 +22,7 @@ OperationDoc OpArgDocExportTables(){
 
     out.tags.emplace_back("category: table processing");
     out.tags.emplace_back("category: file export");
+    out.tags.emplace_back("category: acquires futex");
 
     out.desc = 
         "This operation exports the selected table(s) into a single CSV formatted file.";

@@ -100,6 +100,8 @@ OperationDoc OpArgDocOptimizeStaticBeams(){
 
     out.tags.emplace_back("category: rtplan processing");
     out.tags.emplace_back("category: radiation dose");
+    out.tags.emplace_back("category: file export");
+    out.tags.emplace_back("category: acquires futex");
 
     out.desc = 
       "This operation takes dose matrices corresponding to single, static RT beams and attempts to"

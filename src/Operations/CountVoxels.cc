@@ -42,6 +42,8 @@ OperationDoc OpArgDocCountVoxels(){
     out.name = "CountVoxels";
 
     out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: file export");
+    out.tags.emplace_back("category: acquires futex");
 
     out.desc = 
         "This operation counts the number of voxels confined to one or more ROIs within a user-provided range.";

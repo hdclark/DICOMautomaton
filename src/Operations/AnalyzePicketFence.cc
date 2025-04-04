@@ -44,6 +44,8 @@ OperationDoc OpArgDocAnalyzePicketFence(){
     out.name = "AnalyzePicketFence";
 
     out.tags.emplace_back("category: image processing");
+    out.tags.emplace_back("category: file export");
+    out.tags.emplace_back("category: acquires futex");
 
     out.desc = "This operation extracts MLC positions from a picket fence image.";
 

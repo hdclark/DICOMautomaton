@@ -49,6 +49,7 @@ OperationDoc OpArgDocAnalyzeRTPlan(){
 
     out.tags.emplace_back("category: rtplan processing");
     out.tags.emplace_back("category: file export");
+    out.tags.emplace_back("category: acquires futex");
 
     out.desc = 
         "This operation analyzes the selected RT plans, performing a general analysis"
