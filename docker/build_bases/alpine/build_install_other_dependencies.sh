@@ -45,7 +45,7 @@ set -eux
         -DBoost_USE_STATIC_LIBS=ON \
         .
     cd /build_explicator
-    time make -j8 VERBOSE=1 install
+    time make -j "$JOBS" VERBOSE=1 install
     #cd ..
     #git reset --hard
     #git clean -fxd 
@@ -72,7 +72,7 @@ set -eux
         -DBoost_USE_STATIC_LIBS=ON \
         .
     cd /build_ygor
-    time make -j8 VERBOSE=1 install
+    time make -j "$JOBS" VERBOSE=1 install
     #cd ..
     #git reset --hard
     #git clean -fxd  

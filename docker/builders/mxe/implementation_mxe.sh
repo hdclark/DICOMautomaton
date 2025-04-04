@@ -11,6 +11,9 @@ set -eux
 #export PATH="/mxe/usr/bin:$PATH"
 source /etc/profile.d/mxe_toolchain.sh
 
+export JOBS=$(nproc)
+export JOBS=$(( $JOBS < 8 ? $JOBS : 8 ))
+
 # Report the compiler version for debugging.
 "${TOOLCHAIN}-g++" --version
 # Confirm the search locations reflect the toolchain prefix.
@@ -72,7 +75,7 @@ for repo_dir in /ygor /ygorclustering /explicator /dcma ; do
       -DBUILD_SHARED_LIBS=OFF \
       ../
 
-    make -j2 --ignore-errors VERBOSE=1 2>&1 | tee ../build_log 
+    make -j "$JOBS" --ignore-errors VERBOSE=1 2>&1 | tee ../build_log 
     make install DESTDIR="/mxe/usr/${TOOLCHAIN}/"
 
     # Make the artifacts available elsewhere for easier access.

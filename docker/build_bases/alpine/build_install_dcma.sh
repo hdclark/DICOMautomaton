@@ -46,7 +46,7 @@ set -eux
         -DBoost_USE_STATIC_RUNTIME=ON \
         .
     cd /dcma_build
-    time make -j8 VERBOSE=1 install
+    time make -j "$JOBS" VERBOSE=1 install
     cd /dcma
     git reset --hard || true
     git clean -fxd :/ || true
