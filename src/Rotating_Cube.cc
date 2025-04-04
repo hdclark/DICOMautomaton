@@ -1,5 +1,4 @@
 //Rotating_Cube.cc - A part of DICOMautomaton 2025. Written by hal clark.
-#pragma once
 
 #include <cstdint>
 #include <vector>
