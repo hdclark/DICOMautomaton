@@ -29,10 +29,10 @@ set -eux
 # Boost.
 (
     cd / && rm -rf /boost* || true
-    wget 'https://archives.boost.io/release/1.77.0/source/boost_1_77_0.tar.gz'
-    tar -axf 'boost_1_77_0.tar.gz' 
-    rm 'boost_1_77_0.tar.gz' 
-    cd /boost_1_77_0/tools/build/src/engine/
+    wget 'https://archives.boost.io/release/1.77.0/source/boost_1_77_0.tar.gz' -O 'boost.tgz'
+    tar -axf 'boost.tgz' 
+    rm 'boost.tgz' 
+    cd /boost*/tools/build/src/engine/
     printf '%s\n' "using gcc : : ${CXX} ${CXXFLAGS} : <link>static <runtime-link>static <cflags>${CFLAGS} <cxxflags>${CXXFLAGS} <linkflags>${LDFLAGS} ;" > /user-config.jam
     printf '%s\n' "using zlib : : <search>/usr/lib <name>zlib <include>/use/include ;" >> /user-config.jam
     ./build.sh --cxx="g++"
@@ -69,7 +69,7 @@ set -eux
         -sZLIB_INCLUDE=/usr/include/ \
         -sZLIB_LIBRARY_PATH=/usr/lib/ \
         install
-    ls -lash /usr/lib
+    ls -lash /usr/lib | grep boost || true
     cd / && rm -rf /boost* || true
 )
 
@@ -95,6 +95,7 @@ set -eux
     tar -axf thrift.tgz || unzip thrift.tgz
     cd thrift-*/
     mkdir cmake_build && cd cmake_build
+    export CXXFLAGS="${CXXFLAGS} -Wno-enum-constexpr-conversion"
     cmake \
       -DCMAKE_CXX_STANDARD=17 \
       -DCMAKE_INSTALL_PREFIX=/usr \

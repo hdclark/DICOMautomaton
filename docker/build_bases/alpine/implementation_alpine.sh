@@ -26,6 +26,18 @@ until
         wget \
         unzip \
     && \
+    apk add --no-cache --update \
+        ` # Additional toolchain ` \
+        clang \
+        clang-headers \
+        clang-libs \
+        clang-extra-tools \
+        llvm \
+        libc++ \
+        lld \
+        musl-dev \
+        compiler-rt \
+    && \
     apk add --no-cache \
         ` # Ygor dependencies ` \
         gsl-static gsl-dev \

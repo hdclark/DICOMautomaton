@@ -15,11 +15,12 @@ if [ "${BUILD_SHARED_LIBS}" != "ON" ] ; then
 fi
 
 unset CC CXX AR RANLIB CFLAGS CXXFLAGS LDFLAGS
-export CC="gcc"
-export CXX="g++"
+export CC="clang"
+export CXX="clang++"
 export AR="ar"
 export RANLIB="ranlib"
 export CFLAGS="${CUSTOM_FLAGS}"
 export CXXFLAGS="${CUSTOM_FLAGS}"
+export CXXFLAGS="${CXXFLAGS} -Wno-enum-constexpr-conversion"  # Needed for a Boost MPL bug with clang.
 export LDFLAGS=""
 
