@@ -27,6 +27,26 @@ jobs:
         run: |
              ./scripts/perform_static_checks.sh
 
+  url_reachability_debian_stable_x86_64:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:stable
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v1
+      - name: prep
+        run: |
+             cp -R . /dcma
+      - name: install_dependencies
+        run: |
+             export DEBIAN_FRONTEND="noninteractive"
+             apt-get update --yes
+             apt-get install --yes --no-install-recommends coreutils binutils findutils grep sed curl git
+      - name: check_documentation_urls
+        run: |
+             ./scripts/check_markdown_document_url_reachability.sh <(cat /dcma/README.md | grep -v 'macos')
+             ./scripts/check_markdown_document_url_reachability.sh /dcma/documentation/reference_guide.md
+
   build_cross_mxe_x86_64:
     runs-on: ubuntu-latest
     container:
