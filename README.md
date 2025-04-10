@@ -23,7 +23,6 @@
   - [`Arch Linux`](https://gitlab.com/hdeanclark/DICOMautomaton/-/jobs/artifacts/master/download?job=build_ci_arch)
   - [`Debian`](https://gitlab.com/hdeanclark/DICOMautomaton/-/jobs/artifacts/master/download?job=build_ci_debian_buster)
   - [`MXE` (i.e., `Windows` executables)](https://gitlab.com/hdeanclark/DICOMautomaton/-/jobs/artifacts/master/download?job=cross_compile_mxe)
-  - [`MacOS`](https://gitlab.com/hdeanclark/DICOMautomaton/-/jobs/artifacts/master/download?job=build_ci_macos)
 
 - Recent pre-built `Docker` containers:
   - [![Arch Linux](https://img.shields.io/badge/Latest_Docker_Build_Base-Arch_Linux-brightgreen)](https://hub.docker.com/r/hdclark/dcma_build_base_arch)
