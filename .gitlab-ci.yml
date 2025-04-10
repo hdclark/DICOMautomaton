@@ -5,9 +5,44 @@ default:
   retry: 1
 
 stages:
+  - check
   - build
   - test
   - deploy
+
+#######################################################################################################################
+### Checking stages.
+#######################################################################################################################
+# These stages perform simple checks without compiling.
+
+# URL reachability testing.
+check_ci_url_reachability_debian_stable:
+  stage: check
+  tags: [dcma, docker, linux]
+  needs: []
+  image:
+    name: "debian:stable"
+    pull_policy: [always, if-not-present]
+  before_script:
+    - |
+      cp -R ./docker/builders/ci /scratch
+      cp -R . /dcma
+      ./scripts/enable_swapfile.sh
+  install_dependencies:
+    - |
+      export DEBIAN_FRONTEND="noninteractive"
+      apt-get update --yes
+      apt-get install --yes --no-install-recommends coreutils binutils findutils grep sed curl git
+      git config --global --add safe.directory '*' || true
+  check_documentation:
+    - |
+      ./scripts/check_markdown_document_url_reachability.sh /dcma/documentation/reference_guide.md
+      ./scripts/check_markdown_document_url_reachability.sh /dcma/README.md
+  check_wiki_documentation:
+    - |
+      git clone --depth=1 'https://github.com/hdclark/DICOMautomaton.wiki.git' /dcma_wiki/
+      find /dcma_wiki/ -type f -iname '*.md' -exec ./scripts/check_markdown_document_url_reachability.sh '{}' \+
+
 
 #######################################################################################################################
 ### Building stages.

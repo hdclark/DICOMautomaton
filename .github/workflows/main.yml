@@ -23,31 +23,10 @@ jobs:
              export DEBIAN_FRONTEND="noninteractive"
              apt-get update --yes
              apt-get install --yes --no-install-recommends coreutils binutils findutils grep sed
+             git config --global --add safe.directory '*' || true
       - name: check_for_common_nonthreadsafe_nonreentrant_functions
         run: |
              ./scripts/perform_static_checks.sh
-
-  url_reachability_debian_stable_x86_64:
-    runs-on: ubuntu-latest
-    container:
-      image: debian:stable
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v1
-      - name: prep
-        run: |
-             cp -R . /dcma
-      - name: install_dependencies
-        run: |
-             export DEBIAN_FRONTEND="noninteractive"
-             apt-get update --yes
-             apt-get install --yes --no-install-recommends coreutils binutils findutils grep sed curl git
-      - name: check_documentation_urls
-        run: |
-             ./scripts/check_markdown_document_url_reachability.sh /dcma/documentation/reference_guide.md
-             ./scripts/check_markdown_document_url_reachability.sh /dcma/README.md
-             git clone --depth=1 'https://github.com/hdclark/DICOMautomaton.wiki.git' /dcma_wiki/
-             find /dcma_wiki/ -type f -iname '*.md' -exec ./scripts/check_markdown_document_url_reachability.sh '{}' \+
 
   build_cross_mxe_x86_64:
     runs-on: ubuntu-latest
