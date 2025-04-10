@@ -26,14 +26,14 @@ for u in "${urls[@]}" ; do
     if ! [[ "${status_code}" -eq 200 ||
             "${status_code}" -eq 301 ||
             "${status_code}" -eq 302 ]] ; then
-        printf -- '        ^^^ not reachable ^^^\n' 1>&2
+        printf -- '        ^^^ not reachable ^^^\n'
         any_failed=1
     fi
 done
 
 
 if ! [[ "${any_failed}" -eq 0 ]] ; then
-    printf '    !!! One or more URLs were not reachable. !!! \n' 1>&2
+    printf '    !!! One or more URLs were not reachable. !!! \n'
     exit 1
 fi
 
