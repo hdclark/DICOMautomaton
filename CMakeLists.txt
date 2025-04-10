@@ -308,10 +308,17 @@ if(ARCH_IS_ARM OR ARCH_IS_ARM64)
     if(CMAKE_CXX_FLAGS MATCHES "-march=|-mcpu=|-mtune=")
         message(STATUS "Architecture set by user.")
     else()
-        message(STATUS "No architecture set, adding march=native flag")
-        # Enable to fix linking errors for toolchains that do not auto-detect atomic intrinsics (e.g., some ARM systems).
-        # Note: Binaries built this way should not be distributed.
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+        if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+            # Enable to fix linking errors for toolchains that do not auto-detect atomic intrinsics (e.g., some ARM systems).
+            # Note: Binaries built this way should not be distributed.
+            message(STATUS "No architecture set, adding march=native flag")
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+        elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+            message(STATUS "No architecture set, adding mcpu=generic flag")
+            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=generic")
+        else()
+            message(WARNING "Not able to set architecture, if compilation errors occur set architecture manually")
+        endif()
     endif()
 endif()
 
