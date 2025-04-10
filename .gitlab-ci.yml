@@ -20,6 +20,8 @@ check_ci_url_reachability_debian_stable:
   stage: check
   tags: [dcma, docker, linux]
   needs: []
+  allow_failure: true
+  interruptible: true
   image:
     name: "debian:stable"
     pull_policy: [always, if-not-present]
