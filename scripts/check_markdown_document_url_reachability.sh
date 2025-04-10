@@ -33,8 +33,9 @@ for d in "${documents[@]}" ; do
     printf 'Checking %s\n' "${d}"
 
     cat "${d}" |
+      sed -e 's@(@(\n@' -e 's@)@)\n@' |
+      sed -e 's@.*\(http[s]*://[^ \"\)\>]*\).*@\1@g' |
       grep '://' |
-      sed -e 's@.*\(http[s]*://[^\"\)\>]*\).*@\1@g' |
-      ./scripts/check_url_reachability.sh
+      "${REPOROOT}"/scripts/check_url_reachability.sh
 done
 
