@@ -44,8 +44,10 @@ jobs:
              apt-get install --yes --no-install-recommends coreutils binutils findutils grep sed curl git
       - name: check_documentation_urls
         run: |
-             ./scripts/check_markdown_document_url_reachability.sh <(cat /dcma/README.md | grep -v 'macos')
              ./scripts/check_markdown_document_url_reachability.sh /dcma/documentation/reference_guide.md
+             ./scripts/check_markdown_document_url_reachability.sh /dcma/README.md
+             git clone --depth=1 'https://github.com/hdclark/DICOMautomaton.wiki.git' /dcma_wiki/
+             find /dcma_wiki/ -type f -iname '*.md' -exec ./scripts/check_markdown_document_url_reachability.sh '{}' \+
 
   build_cross_mxe_x86_64:
     runs-on: ubuntu-latest
