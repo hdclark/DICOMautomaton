@@ -137,12 +137,13 @@ OperationDoc OpArgDocModelIVIM(){
                            " intensity-b-value product is summed directly. No extrapolation is performed."
                            "\n\n"
                            "The 'biexp' model uses a segmented fitting approach along with Marquardt's method to fit a"
-                           " biexponential model, which estimates the pseudodiffusion fraction, the pseudodiffusion"
-                           " coefficient, and the diffusion coefficient for each voxel."
+                           " biexponential model, which estimates the pseudodiffusion fraction, the diffusion"
+                           " coefficient, and the pseudodiffusion coefficient for each voxel."
 #ifdef DCMA_USE_EIGEN
                            "\n\n"
-                           "The 'kurtosis' model returns five parameters corresponding to a biexponential diffusion"
-                           " model with a kurtosis adjustment and a noise floor parameter added in quadrature."
+                           "The 'kurtosis' model returns three parameters corresponding to a biexponential diffusion"
+                           " model with a kurtosis adjustment and a noise floor parameter added in quadrature"
+                           " (pseudodiffusion fraction, diffusion, and pseudodiffusion coefficient for each voxel)."
 #endif //DCMA_USE_EIGEN
                            "";
                            
@@ -353,7 +354,7 @@ bool ModelIVIM(Drover &DICOM_data,
             const int64_t chan_D  = 1;
             const int64_t chan_pD = 2;
 
-            ud.description = "f, D, pseudoD (Kurtosis Model fit)";
+            ud.description = "f, D, pseudo-D (Kurtosis Model fit)";
             ud.f_reduce = [bvalues,
                            bvalue_min_i,
                            bvalue_max_i,
@@ -401,7 +402,7 @@ bool ModelIVIM(Drover &DICOM_data,
             const int64_t chan_pD = 2;
 
 
-            ud.description = "f, D, pseudoD (Bi-exponential segmented fit)";
+            ud.description = "f, D, pseudo-D (Bi-exponential segmented fit)";
             ud.f_reduce = [bvalues,
                            bvalue_min_i,
                            bvalue_max_i,
