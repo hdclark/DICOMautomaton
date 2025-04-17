@@ -270,7 +270,7 @@ integration testing for specific workflows.
 ## License and Copying
 
 All materials herein which may be copywrited, where applicable, are. Copyright
-2010-2022 Hal Clark and contributing authors.
+2010-2025 Hal Clark and contributing authors.
 
 See [LICENSE.txt](LICENSE.txt) for details about the license. Informally,
 `DICOMautomaton` is available under a GPLv3+ license. The Imebra library is
