@@ -740,10 +740,27 @@ bool Operation_Dispatcher( Drover &DICOM_data,
                     }
 
                     // Perform macro replacement using the parameter table.
+
+                    // First, try replace required-replacement macros like '$$xyz'.
+                    // If these cannot be replaced, do not proceed.
+                    optargs.visit_opts([&InvocationMetadata](const std::string &key, std::string &val){
+                        const std::string required_macro_symbol = "$$";
+                        val = ExpandMacros(val, InvocationMetadata, required_macro_symbol);
+
+                        const auto pos = val.find(required_macro_symbol);
+                        if(pos == std::string::npos){
+                            throw std::runtime_error("Unable to replace required macro for key '$$" + key + "'");
+                        }
+                        return;
+                    });
+
+                    // Second, replace '$' macros, which might need to be passed through to the operation
+                    // to be properly expanded.
                     optargs.visit_opts([&InvocationMetadata](const std::string &/*key*/, std::string &val){
                         val = ExpandMacros(val, InvocationMetadata, "$");
                         return;
                     });
+
 
                     YLOGINFO("Performing operation '" << op_func.first << "' now..");
                     optargs.visit_opts([](const std::string &key, const std::string &val){
