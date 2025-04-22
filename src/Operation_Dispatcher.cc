@@ -748,7 +748,7 @@ bool Operation_Dispatcher( Drover &DICOM_data,
                         val = ExpandMacros(val, InvocationMetadata, required_macro_symbol);
 
                         const auto pos = val.find(required_macro_symbol);
-                        if(pos == std::string::npos){
+                        if(pos != std::string::npos){
                             throw std::runtime_error("Unable to replace required macro for key '$$" + key + "'");
                         }
                         return;
