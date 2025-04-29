@@ -23,6 +23,7 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorLog.h"
+#include "YgorTime.h"
 
 #include "XML_Tools.h"
 #include "Metadata.h"
@@ -44,9 +45,10 @@ bool contains_xml_signature(dcma::xml::node &root){
     return contains_an_xml_named_node;
 }
 
-std::list<contour_collection<double>>
+std::pair< std::list<contour_collection<double>>, std::list<samples_1D<double>>>
 contains_gpx_gps_coords(dcma::xml::node &root){
-    std::list<contour_collection<double>> out;
+    std::list<contour_collection<double>> contours_out;
+    std::list<samples_1D<double>> lines_out;
 
     const bool permit_recursive_search = false;
 
@@ -83,8 +85,44 @@ contains_gpx_gps_coords(dcma::xml::node &root){
         if(lat_opt && lon_opt){
             // Mercator projection.
             const auto [x, y] = dcma::gis::project_mercator(lat_opt.value(), lon_opt.value());
-            out.back().contours.back().points.emplace_back( x, y, 0.0 );
+            contours_out.back().contours.back().points.emplace_back( x, y, 0.0 );
         }
+
+        // Look for an optional elevation.
+        std::optional<double> ele_opt;
+        dcma::xml::search_callback_t f_ele = [&](const dcma::xml::node_chain_t &nc) -> bool {
+            const auto l_ele_opt = get_as<double>(nc.back().get().metadata, "ele");
+            if( !ele_opt
+            &&  l_ele_opt ){
+                ele_opt = l_ele_opt;
+            }
+            return true;
+        };
+        dcma::xml::search_by_names(nc.back().get(),
+                                   { "trkpt" },
+                                   f_trkpts,
+                                   permit_recursive_search);
+
+        // Look for an optional datetime.
+        std::optional<double> time_opt;
+        dcma::xml::search_callback_t f_time = [&](const dcma::xml::node_chain_t &nc) -> bool {
+            const auto l_time_opt = get_as<std::string>(nc.back().get().metadata, "time");
+            if( !time_opt
+            &&  l_time_opt ){
+                time_mark t;
+                double t_frac = 0.0;
+                if(t.Read_from_string(l_time_opt.value(), &t_frac)){
+                    time_opt = t.As_UNIX_time(t_frac);
+                }
+            }
+            return true;
+        };
+
+        if( ele_opt && time_opt ){
+            const bool inhibit_sort = true;
+            lines_out.back().push_back( time_opt.value(), ele_opt.value(), inhibit_sort );
+        }
+
         return true;
     };
 
@@ -92,8 +130,11 @@ contains_gpx_gps_coords(dcma::xml::node &root){
     //
     // For each track segment, create a new contour and then recursively search for track points (i.e., vertices).
     dcma::xml::search_callback_t f_trksegs = [&](const dcma::xml::node_chain_t &nc) -> bool {
-        out.emplace_back();
-        out.back().contours.emplace_back();
+        contours_out.emplace_back();
+        contours_out.back().contours.emplace_back();
+
+        lines_out.emplace_back();
+
         dcma::xml::search_by_names(nc.back().get(),
                                    { "trkpt" },
                                    f_trkpts,
@@ -107,8 +148,11 @@ contains_gpx_gps_coords(dcma::xml::node &root){
     dcma::xml::search_by_names(root,
         { "gpx", "trk" },
         [&](const dcma::xml::node_chain_t &nc) -> bool {
-            decltype(out) shtl;
-            std::swap(out,shtl);
+            decltype(contours_out) contour_shtl;
+            std::swap(contours_out, contour_shtl);
+
+            decltype(lines_out) lines_shtl;
+            std::swap(lines_out, lines_shtl);
 
             // Extract track data as contours.
             dcma::xml::search_by_names(nc.back().get(),
@@ -130,7 +174,7 @@ contains_gpx_gps_coords(dcma::xml::node &root){
                 permit_recursive_search );
 
             if(l_name_opt){
-                for(auto &cc : out){
+                for(auto &cc : contours_out){
                     for(auto &c : cc.contours){
                         insert_if_new(c.metadata, "ROIName", name_opt.value());
                     }
@@ -138,25 +182,32 @@ contains_gpx_gps_coords(dcma::xml::node &root){
             }
 
             // Merge the temporary buffer into the outgoing list.
-            std::swap(out,shtl);
-            shtl.remove_if([](const contour_collection<double> &cc){
+            std::swap(contours_out, contour_shtl);
+            contour_shtl.remove_if([](const contour_collection<double> &cc){
                 return cc.contours.empty();
             });
-            out.merge(shtl);
+            contours_out.merge(contour_shtl);
+
+            std::swap(lines_out, lines_shtl);
+            lines_shtl.remove_if([](const samples_1D<double> &ls){
+                return ls.samples.empty();
+            });
+            lines_out.splice(std::end(lines_out), lines_shtl);
+            lines_shtl.clear();
             return true;
         },
         permit_recursive_search);
 
     // Inject top-level metadata if nothing more specific has been found yet.
     if(name_opt){
-        for(auto &cc : out){
+        for(auto &cc : contours_out){
             for(auto &c : cc.contours){
                 insert_if_new(c.metadata, "ROIName", name_opt.value());
             }
         }
     }
         
-    return out;
+    return { contours_out, lines_out };
 }
 
 
@@ -203,7 +254,10 @@ bool Load_From_XML_Files( Drover &DICOM_data,
             // Parse the tree and try to extract information from it.
 
             // Contours in 'GPX' (GPS coordinate) format.
-            auto cc = contains_gpx_gps_coords(root);
+            //std::list<contour_collection<double>> contours_out;
+            //std::list<samples_1D<double>> lines_out;
+
+            auto [ cc, ls ] = contains_gpx_gps_coords(root);
             if(!cc.empty()){
                 auto cm = cc.back().get_common_metadata({}, {});
 
@@ -222,6 +276,19 @@ bool Load_From_XML_Files( Drover &DICOM_data,
                 DICOM_data.Ensure_Contour_Data_Allocated();
                 DICOM_data.contour_data->ccs.splice( std::end(DICOM_data.contour_data->ccs), cc );
                 cc.clear();
+
+                read_and_parsed_successfully = true;
+                // or
+                //return false;
+            }
+            if(!ls.empty()){
+
+                // Inject the data.
+                for(auto & l_ls : ls){
+                    DICOM_data.lsamp_data.emplace_back();
+                    DICOM_data.lsamp_data.back()->line = l_ls;
+                }
+                ls.clear();
 
                 read_and_parsed_successfully = true;
                 // or
