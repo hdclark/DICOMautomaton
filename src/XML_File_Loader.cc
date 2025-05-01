@@ -174,7 +174,7 @@ contains_gpx_gps_coords(dcma::xml::node &root){
                 }
 
                 for(auto &l : lines_out){
-                    insert_if_new(l.metadata, "ROIName", name_opt.value());
+                    insert_if_new(l.metadata, "LineName", name_opt.value());
                 }
             }
 
@@ -211,7 +211,7 @@ contains_gpx_gps_coords(dcma::xml::node &root){
         }
 
         for(auto &l : lines_out){
-            insert_if_new(l.metadata, "ROIName", name_opt.value());
+            insert_if_new(l.metadata, "LineName", name_opt.value());
         }
     }
         
@@ -294,11 +294,14 @@ bool Load_From_XML_Files( Drover &DICOM_data,
                 // Inject the data.
                 for(auto & l_ls : ls){
                     auto l_meta = l_ls.metadata;
-                    insert_if_new(l_meta, "ROIName", Filename.string());
+                    insert_if_new(l_meta, "LineName", Filename.string());
 
                     l_meta = coalesce_metadata_for_lsamp(l_meta);
                     l_meta["Fullpath"] = Filename.string();
                     l_meta["Filename"] = Filename.filename().string();
+
+                    l_meta["Abscissa"] = "Time";
+                    l_meta["Ordinate"] = "Elevation";
 
                     inject_metadata(l_ls.metadata, std::move(l_meta));
 
