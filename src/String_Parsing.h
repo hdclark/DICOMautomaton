@@ -10,6 +10,12 @@
 #include "YgorString.h"
 #include "YgorMath.h"
 
+// General-purpose extractor.
+template <class T>
+std::optional<T>
+get_as(const std::string &in);
+
+
 // String <--> fixed array conversion routines.
 void array_to_string(std::string &s, const std::array<char, 2048> &a);
 

@@ -27,6 +27,7 @@
 
 #include "XML_Tools.h"
 #include "Metadata.h"
+#include "String_Parsing.h"
 #include "Structs.h"
 #include "GIS.h"
 
@@ -90,33 +91,35 @@ contains_gpx_gps_coords(dcma::xml::node &root){
 
         // Look for an optional elevation.
         std::optional<double> ele_opt;
-        dcma::xml::search_callback_t f_ele = [&](const dcma::xml::node_chain_t &nc) -> bool {
-            const auto l_ele_opt = get_as<double>(nc.back().get().metadata, "ele");
-            if( !ele_opt
-            &&  l_ele_opt ){
-                ele_opt = l_ele_opt;
-            }
-            return true;
-        };
         dcma::xml::search_by_names(nc.back().get(),
-                                   { "trkpt" },
-                                   f_trkpts,
-                                   permit_recursive_search);
+            { "ele" },
+            [&](const dcma::xml::node_chain_t &nc) -> bool {
+                const auto &c = nc.back().get().content;
+                const auto l_ele_opt = get_as<double>(c);
+                if( !ele_opt
+                &&  l_ele_opt ){
+                    ele_opt = l_ele_opt;
+                }
+                return true;
+            },
+            permit_recursive_search);
 
         // Look for an optional datetime.
         std::optional<double> time_opt;
-        dcma::xml::search_callback_t f_time = [&](const dcma::xml::node_chain_t &nc) -> bool {
-            const auto l_time_opt = get_as<std::string>(nc.back().get().metadata, "time");
-            if( !time_opt
-            &&  l_time_opt ){
+        dcma::xml::search_by_names(nc.back().get(),
+            { "time" },
+            [&](const dcma::xml::node_chain_t &nc) -> bool {
+                const auto &c = nc.back().get().content;
+
                 time_mark t;
                 double t_frac = 0.0;
-                if(t.Read_from_string(l_time_opt.value(), &t_frac)){
+                if( !time_opt
+                &&  t.Read_from_string(c, &t_frac)){
                     time_opt = t.As_UNIX_time(t_frac);
                 }
-            }
-            return true;
-        };
+                return true;
+            },
+            permit_recursive_search);
 
         if( ele_opt && time_opt ){
             const bool inhibit_sort = true;

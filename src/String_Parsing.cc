@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <sstream>
 #include <limits>
+#include <optional>
 
 #include "YgorString.h"
 #include "YgorMath.h"
@@ -14,6 +15,28 @@
 #include "YgorLog.h"
 
 #include "String_Parsing.h"
+
+template <class T>
+std::optional<T>
+get_as(const std::string &in){
+
+    if( !Is_String_An_X<T>(in) ){
+        return std::optional<T>();
+    }else{
+        return std::make_optional(stringtoX<T>(in));
+    }
+}
+template std::optional<uint8_t    > get_as(const std::string &);
+template std::optional<uint16_t   > get_as(const std::string &);
+template std::optional<uint32_t   > get_as(const std::string &);
+template std::optional<uint64_t   > get_as(const std::string &);
+template std::optional<int8_t     > get_as(const std::string &);
+template std::optional<int16_t    > get_as(const std::string &);
+template std::optional<int32_t    > get_as(const std::string &);
+template std::optional<int64_t    > get_as(const std::string &);
+template std::optional<float      > get_as(const std::string &);
+template std::optional<double     > get_as(const std::string &);
+template std::optional<std::string> get_as(const std::string &);
 
 
 void array_to_string(std::string &s, const std::array<char, 2048> &a){
