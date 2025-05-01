@@ -115,7 +115,7 @@ contains_gpx_gps_coords(dcma::xml::node &root){
                 double t_frac = 0.0;
                 if( !time_opt
                 &&  t.Read_from_string(c, &t_frac)){
-                    time_opt = t.As_UNIX_time(t_frac);
+                    time_opt = t.As_UNIX_time() + t_frac;
                 }
                 return true;
             },
@@ -288,7 +288,7 @@ bool Load_From_XML_Files( Drover &DICOM_data,
 
                 // Inject the data.
                 for(auto & l_ls : ls){
-                    DICOM_data.lsamp_data.emplace_back();
+                    DICOM_data.lsamp_data.emplace_back( std::make_shared<Line_Sample>() );
                     DICOM_data.lsamp_data.back()->line = l_ls;
                 }
                 ls.clear();
