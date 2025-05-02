@@ -68,6 +68,7 @@
 #include "Operations/CopyMeshes.h"
 #include "Operations/CopyTables.h"
 #include "Operations/CopyPoints.h"
+#include "Operations/CountObjects.h"
 #include "Operations/CountVoxels.h"
 #include "Operations/CropImageDoseToROIs.h"
 #include "Operations/CropImages.h"
@@ -336,6 +337,7 @@ known_ops_t Known_Operations(){
     out["CopyMeshes"] = std::make_pair(OpArgDocCopyMeshes, CopyMeshes);
     out["CopyTables"] = std::make_pair(OpArgDocCopyTables, CopyTables);
     out["CopyPoints"] = std::make_pair(OpArgDocCopyPoints, CopyPoints);
+    out["CountObjects"] = std::make_pair(OpArgDocCountObjects, CountObjects);
     out["CountVoxels"] = std::make_pair(OpArgDocCountVoxels, CountVoxels);
     out["CropImageDoseToROIs"] = std::make_pair(OpArgDocCropImageDoseToROIs, CropImageDoseToROIs);
     out["CropImages"] = std::make_pair(OpArgDocCropImages, CropImages);

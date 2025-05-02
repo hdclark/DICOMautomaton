@@ -47,6 +47,7 @@ add_library(Operations_objs OBJECT
     CopyMeshes.cc
     CopyTables.cc
     CopyPoints.cc
+    CountObjects.cc
     CountVoxels.cc
     CropImageDoseToROIs.cc
     CropImages.cc
