@@ -40,6 +40,7 @@
 OperationDoc OpArgDocMapTableToParameters(){
     OperationDoc out;
     out.name = "MapTableToParameters";
+    out.aliases.emplace_back("ConvertParametersToTable");
 
     out.tags.emplace_back("category: parameter table");
     out.tags.emplace_back("category: table processing");
