@@ -39,14 +39,12 @@
 OperationDoc OpArgDocIfElse() {
     OperationDoc out;
     out.name = "IfElse";
-
-    out.tags.emplace_back("category: meta");
-    out.tags.emplace_back("category: control flow");
-
     out.aliases.emplace_back("If");
     out.aliases.emplace_back("IfThenElse");
     out.aliases.emplace_back("ElseIf");
 
+    out.tags.emplace_back("category: meta");
+    out.tags.emplace_back("category: control flow");
 
     out.desc = "This operation is a control flow meta-operation that performs an 'if-then' or 'if-then-else' by evaluating"
                " child operations. If the first child operation (the conditional) completes without throwing an"

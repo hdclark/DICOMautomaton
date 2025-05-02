@@ -37,13 +37,15 @@
 OperationDoc OpArgDocMaskVerbosity() {
     OperationDoc out;
     out.name = "MaskVerbosity";
-
-    out.tags.emplace_back("category: meta");
-
     out.aliases.emplace_back("MaskWarnings");
     out.aliases.emplace_back("MaskLogs");
     out.aliases.emplace_back("MaskNotifications");
     out.aliases.emplace_back("SilenceWarnings");
+    out.aliases.emplace_back("SilenceLogs");
+    out.aliases.emplace_back("SilenceVerbosity");
+    out.aliases.emplace_back("SilenceNotifications");
+
+    out.tags.emplace_back("category: meta");
 
     out.desc = "This operation is a meta-operation that temporarily alters the global log verbosity level."
                " Child operations are executed with the adjusted verbosity level, which affects what log"

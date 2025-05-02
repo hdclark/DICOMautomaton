@@ -32,11 +32,10 @@
 OperationDoc OpArgDocHighlightROIs(){
     OperationDoc out;
     out.name = "HighlightROIs";
+    out.aliases.emplace_back("ConvertContoursToImages");
 
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: contour processing");
-
-    out.aliases.emplace_back("ConvertContoursToImages");
 
     out.desc = 
         "This operation overwrites voxel data inside and/or outside of ROI(s) to create an image"

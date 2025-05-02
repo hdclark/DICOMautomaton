@@ -39,12 +39,11 @@
 OperationDoc OpArgDocIgnore() {
     OperationDoc out;
     out.name = "Ignore";
+    out.aliases.emplace_back("Always");
+    out.aliases.emplace_back("Force");
 
     out.tags.emplace_back("category: meta");
     out.tags.emplace_back("category: control flow");
-
-    out.aliases.emplace_back("Always");
-    out.aliases.emplace_back("Force");
 
     out.desc = "This operation is a control flow meta-operation that ignores the return"
                " value of all child operations.";

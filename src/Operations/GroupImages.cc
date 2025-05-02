@@ -27,10 +27,9 @@
 OperationDoc OpArgDocGroupImages(){
     OperationDoc out;
     out.name = "GroupImages";
+    out.aliases.emplace_back("PartitionImages");
 
     out.tags.emplace_back("category: image processing");
-
-    out.aliases.emplace_back("PartitionImages");
 
     out.desc = 
         "This operation will group individual image slices into partitions (Image_Arrays) based on the values"

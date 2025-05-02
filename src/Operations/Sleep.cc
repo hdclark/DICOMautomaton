@@ -43,7 +43,6 @@
 OperationDoc OpArgDocSleep() {
     OperationDoc out;
     out.name = "Sleep";
-
     out.aliases.emplace_back("Delay");
     out.aliases.emplace_back("Wait");
 
