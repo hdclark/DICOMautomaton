@@ -1,0 +1,140 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+DeleteLineSamples(
+    LineSelection = 'all',
+){};
+
+ExtractImageHistograms(
+    ImageSelection = 'last',
+    Channel = '-1',
+    ROILabelRegex = '.*',
+    ROISelection = 'all',
+    NormalizedROILabelRegex = '.*',
+    ContourOverlap = 'ignore',
+    Inclusivity = 'center',
+    Grouping = 'separate',
+    Lower = '-inf',
+    Upper = 'inf',
+    # GroupLabel = '',
+    # dDose = '0.1',
+    BinCount = '500',
+    # UserComment = '',
+){};
+
+DeleteLineSamples(
+    LineSelection = 'HistogramType@Differential',
+){};
+
+Coalesce(){
+
+    SilenceWarnings(
+        Verbosity = 'decrease',
+        Permanent = 'false',
+    ){
+    SilenceWarnings(
+        Verbosity = 'decrease',
+        Permanent = 'false',
+    ){
+    SilenceWarnings(
+        Verbosity = 'decrease',
+        Permanent = 'false',
+    ){
+    SilenceWarnings(
+        Verbosity = 'decrease',
+        Permanent = 'false',
+    ){
+    AllOf(){
+        For(
+            Key = 'i',
+            Inclusivity = 'inclusive',
+            # EachOf = '',
+            Begin = '0',
+            End = '100',
+            Increment = '1',
+        ){
+        
+        
+        SelectionIsPresent(
+            # NormalizedROILabelRegex = '.*',
+            # ROILabelRegex = '.*',
+            # ROISelection = 'all',
+            # ImageSelection = 'last',
+            LineSelection = '#${i}',
+            # MeshSelection = 'last',
+            # PointSelection = 'last',
+            # TableSelection = 'last',
+        ){};
+        
+        
+        PromoteMetadata(
+            KeySelection = 'LineName',
+            NewKey = 'n',
+            # DefaultValue = 'N/A',
+            # ValueSeparator = '\',
+            # ROILabelRegex = '.*',
+            # ROISelection = 'all',
+            # NormalizedROILabelRegex = '.*',
+            # ImageSelection = 'last',
+            LineSelection = '#${i}',
+            # MeshSelection = 'last',
+            # PointSelection = 'last',
+            # TransformSelection = 'last',
+            # TableSelection = 'last',
+            # RTPlanSelection = 'last',
+        ){};
+        
+        AnalyzeHistograms(
+            LineSelection = '#${i}',
+            #SummaryFilename = '',
+            Constraints = 'x : Dmean',
+            ReferenceDose = 'nan',
+            # UserComment = '',
+            # Description = '',
+            # MetadataColumns = '',
+        ){};
+        
+        ModifyParameters(
+            Actions = 'define("Dmean for ROI ${n}", "${x}")',
+        ){};
+        
+        ModifyParameters(
+            Actions = 'remove("x"); remove("n");',
+        ){};
+        
+        }; # For
+    }; # AllOf
+    }; # SilenceWarnings
+    }; # SilenceWarnings
+    }; # SilenceWarnings
+    }; # SilenceWarnings
+    
+    AllOf(){
+    
+        DeleteTable(
+            TableSelection = 'TableLabel@Image ROI Statistics',
+        ){};
+        
+        GenerateTable(
+            TableLabel = 'Image ROI Statistics',
+        ){};
+        
+        ConvertParametersToTable(
+            KeySelection = 'Dmean for ROI .*',
+            TableSelection = 'last',
+            TableLabel = 'unspecified',
+            EmitHeader = 'empty',
+            Shape = 'tall',
+        ){};
+    }; # AllOf
+    
+    True(){};
+
+}; # Coalesce
+
+
+
+
+
+
+
+
