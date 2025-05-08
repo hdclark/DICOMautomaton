@@ -49,21 +49,21 @@ OperationDoc OpArgDocModifyLineSamples(){
    
 
     out.args.emplace_back();
-    out.args.back().name = "Method";
+    out.args.back().name = "Methods";
     out.args.back().desc = "A list of methods to apply to the selected line samples."
                            " Multiple methods can be specified, and are applied sequentially in the order supplied."
                            " Note that some methods accept parameters."
                            "\n\n"
-                           "Option 'abscissa-offset' subtracts the left-most abscissa value from all selected line"
-                           " samples."
+                           "Option 'abscissa-offset' finds the left-most abscissa value from all selected line"
+                           " samples, and subtracts it from each individual line sample abscissa."
                            "\n\n"
-                           "Option 'ordinate-offset' subtracts the bottom-most ordinate value from all selected line"
-                           " samples."
+                           "Option 'ordinate-offset' finds the bottom-most ordinate value from all selected line"
+                           " samples, and subtracts it from each individual line sample ordinate."
                            "";
     out.args.back().default_val = "";
     out.args.back().expected = true;
-    out.args.back().examples = { "abscissa-offset", 
-                                 "ordinate-offset" };
+    out.args.back().examples = { "abscissa-offset()", 
+                                 "ordinate-offset()" };
 
     return out;
 }
@@ -77,11 +77,11 @@ bool ModifyLineSamples(Drover &DICOM_data,
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto LineSelectionStr = OptArgs.getValueStr("LineSelection").value();
-    const auto MethodsStr = OptArgs.getValueStr("Method").value();
+    const auto MethodsStr = OptArgs.getValueStr("Methods").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_abscissa_offset = Compile_Regex("^abscissa[_-]offset$");
-    const auto regex_ordinate_offset = Compile_Regex("^ordinate[_-]offset$");
+    const auto regex_abscissa_offset = Compile_Regex("^absc?i?s?s?a?[_-]?offs?e?t$");
+    const auto regex_ordinate_offset = Compile_Regex("^ordi?n?a?t?e?[_-]?offs?e?t$");
 
 /*
 struct function_parameter {
@@ -142,7 +142,7 @@ struct parsed_function {
             }
 
         // ordinate-offset
-        }else if(std::regex_match(pf.name, regex_abscissa_offset)){
+        }else if(std::regex_match(pf.name, regex_ordinate_offset)){
             if(pf.parameters.size() != 0UL){
                 throw std::invalid_argument("Incorrect number of arguments");
             }
