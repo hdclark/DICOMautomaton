@@ -59,6 +59,9 @@ OperationDoc OpArgDocModifyLineSamples(){
                            "\n\n"
                            "Option 'ordinate-offset' finds the bottom-most ordinate value from all selected line"
                            " samples, and subtracts it from each individual line sample ordinate."
+                           "\n\n"
+                           "Option 'average-coincident-values' ensures there is a single datum with the given abscissa"
+                           " range, across the entire line sample, averaging adjcaent data if necessary."
                            "";
     out.args.back().default_val = "";
     out.args.back().expected = true;
@@ -82,6 +85,7 @@ bool ModifyLineSamples(Drover &DICOM_data,
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_abscissa_offset = Compile_Regex("^absc?i?s?s?a?[_-]?offs?e?t$");
     const auto regex_ordinate_offset = Compile_Regex("^ordi?n?a?t?e?[_-]?offs?e?t$");
+    const auto regex_average_coincident_values = Compile_Regex("^ave?r?a?g?e?[_-]?coi?n?c?i?d?e?n?t?[_-]?valu?e?s?$");
 
 /*
 struct function_parameter {
@@ -127,7 +131,7 @@ struct parsed_function {
             // Gather information about all selected line samples.
             std::optional<double> min_x;
             for(auto & lsp_it : LSs){
-                const auto x = (*lsp_it)->line.Get_Extreme_Datum_x().first[0];
+                const auto x = (*lsp_it)->line.Get_Extreme_Datum_x().first.at(0);
                 if(!min_x || (x < min_x.value())){
                     min_x = x;
                 }
@@ -136,7 +140,7 @@ struct parsed_function {
             if(min_x){
                 for(auto & lsp_it : LSs){
                     for(auto & s : (*lsp_it)->line.samples){
-                        s[0] -= min_x.value();
+                        s.at(0) -= min_x.value();
                     }
                 }
             }
@@ -149,7 +153,7 @@ struct parsed_function {
 
             std::optional<double> min_y;
             for(auto & lsp_it : LSs){
-                const auto y = (*lsp_it)->line.Get_Extreme_Datum_y().first[2];
+                const auto y = (*lsp_it)->line.Get_Extreme_Datum_y().first.at(2);
                 if(!min_y || (y < min_y.value())){
                     min_y = y;
                 }
@@ -157,9 +161,19 @@ struct parsed_function {
             if(min_y){
                 for(auto & lsp_it : LSs){
                     for(auto & s : (*lsp_it)->line.samples){
-                        s[2] -= min_y.value();
+                        s.at(2) -= min_y.value();
                     }
                 }
+            }
+
+        // average-coincident-values 
+        }else if(std::regex_match(pf.name, regex_average_coincident_values)){
+            if(pf.parameters.size() != 1UL){
+                throw std::invalid_argument("Incorrect number of arguments");
+            }
+            const auto eps = pf.parameters.at(0).number.value();
+            for(auto & lsp_it : LSs){
+                (*lsp_it)->line.Average_Coincident_Data(eps);
             }
 
         }else{
