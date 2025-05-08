@@ -171,6 +171,7 @@
 #include "Operations/MaxMinPixels.h"
 #include "Operations/MeldDose.h"
 #include "Operations/ModifyContourMetadata.h"
+#include "Operations/ModifyLineSamples.h"
 #include "Operations/ModifyImageMetadata.h"
 #include "Operations/ModifyParameters.h"
 #include "Operations/NegatePixels.h"
@@ -440,6 +441,7 @@ known_ops_t Known_Operations(){
     out["MaxMinPixels"] = std::make_pair(OpArgDocMaxMinPixels, MaxMinPixels);
     out["MeldDose"] = std::make_pair(OpArgDocMeldDose, MeldDose);
     out["ModifyContourMetadata"] = std::make_pair(OpArgDocModifyContourMetadata, ModifyContourMetadata);
+    out["ModifyLineSamples"] = std::make_pair(OpArgDocModifyLineSamples, ModifyLineSamples);
     out["ModifyImageMetadata"] = std::make_pair(OpArgDocModifyImageMetadata, ModifyImageMetadata);
     out["ModifyParameters"] = std::make_pair(OpArgDocModifyParameters, ModifyParameters);
     out["NegatePixels"] = std::make_pair(OpArgDocNegatePixels, NegatePixels);

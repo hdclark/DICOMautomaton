@@ -150,6 +150,7 @@ add_library(Operations_objs OBJECT
     MaxMinPixels.cc
     MeldDose.cc
     ModifyContourMetadata.cc
+    ModifyLineSamples.cc
     ModifyImageMetadata.cc
     ModifyParameters.cc
     NegatePixels.cc
