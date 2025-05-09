@@ -7,6 +7,7 @@
 #include <initializer_list>
 #include <functional>
 #include <regex>
+#include <map>
 
 #include "YgorString.h"
 #include "YgorMath.h"
@@ -42,6 +43,21 @@ struct Regex_Selector_Opts {
 std::regex
 Compile_Regex(const std::string& input);
 
+
+// A class for managing multiple mutually-exclusive regexes, e.g., method selectors.
+class regex_group {
+    private:
+        int64_t prefix_length;
+        std::map<std::string, std::regex> regexes;
+        std::map<std::vector<std::string>, std::string> prefixes;
+
+    public:
+        regex_group();
+
+        std::string insert(std::string);
+        const std::regex & locate(const std::string &) const;
+        bool matches(const std::string &raw, const std::string &known) const;
+};
 
 // ---------------------------------- Contours / ROIs ----------------------------------
 

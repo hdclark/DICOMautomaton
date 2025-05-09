@@ -66,12 +66,11 @@ OperationDoc OpArgDocModifyLineSamples(){
     out.args.back().default_val = "";
     out.args.back().expected = true;
     out.args.back().examples = { "abscissa-offset()", 
-                                 "ordinate-offset()" };
+                                 "ordinate-offset()",
+                                 "average-coincident-values()", };
 
     return out;
 }
-
-
 
 bool ModifyLineSamples(Drover &DICOM_data,
                          const OperationArgPkg& OptArgs,
@@ -83,9 +82,10 @@ bool ModifyLineSamples(Drover &DICOM_data,
     const auto MethodsStr = OptArgs.getValueStr("Methods").value();
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_abscissa_offset = Compile_Regex("^absc?i?s?s?a?[_-]?offs?e?t$");
-    const auto regex_ordinate_offset = Compile_Regex("^ordi?n?a?t?e?[_-]?offs?e?t$");
-    const auto regex_average_coincident_values = Compile_Regex("^ave?r?a?g?e?[_-]?coi?n?c?i?d?e?n?t?[_-]?valu?e?s?$");
+    regex_group rg;
+    const auto method_abs_off  = rg.insert("abscissa-offset");
+    const auto method_ord_off  = rg.insert("ordinate-offset");
+    const auto method_acv      = rg.insert("average-coincident-values");
 
 /*
 struct function_parameter {
@@ -120,10 +120,9 @@ struct parsed_function {
         YLOGDEBUG("Attempting method '" << pf.name << "' now");
         if(!pf.children.empty()){
             throw std::invalid_argument("Children functions are not accepted");
-        }
 
         // abscissa-offset
-        if(std::regex_match(pf.name, regex_abscissa_offset)){
+        }else if(rg.matches(pf.name, method_abs_off)){
             if(pf.parameters.size() != 0UL){
                 throw std::invalid_argument("Incorrect number of arguments");
             }
@@ -146,7 +145,7 @@ struct parsed_function {
             }
 
         // ordinate-offset
-        }else if(std::regex_match(pf.name, regex_ordinate_offset)){
+        }else if(rg.matches(pf.name, method_ord_off)){
             if(pf.parameters.size() != 0UL){
                 throw std::invalid_argument("Incorrect number of arguments");
             }
@@ -167,7 +166,7 @@ struct parsed_function {
             }
 
         // average-coincident-values 
-        }else if(std::regex_match(pf.name, regex_average_coincident_values)){
+        }else if(rg.matches(pf.name, method_acv)){
             if(pf.parameters.size() != 1UL){
                 throw std::invalid_argument("Incorrect number of arguments");
             }

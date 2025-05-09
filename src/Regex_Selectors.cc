@@ -426,6 +426,133 @@ Compile_Regex(const std::string& input){
                              std::regex::ECMAScript);
 }
 
+// A class for managing multiple mutually-exclusive regexes, e.g., method selectors.
+regex_group::regex_group() : prefix_length(2) {};
+
+std::string regex_group::insert(std::string n){
+
+    // Splits the key into parts along hyphens and spaces.
+    const auto split = [](std::string x){
+        auto s = SplitStringToVector(x, '-', 'd');
+        s = SplitVector(s, '_', 'd');
+        s = SplitVector(s, ' ', 'd');
+        return s;
+    };
+
+    // Trims the prefix vector.
+    const auto trim = [](std::vector<std::string> x,
+                         int64_t l){
+        for(auto &s : x){
+            s = Get_Preceeding_Chars(s, l);
+        }
+        return x;
+    };
+
+    // Applies in-band characters to control the regex match.
+    const auto decorate = [&split,
+                           &trim ](std::string x,
+                                   int64_t l){
+        std::string out;
+        out += "^";
+
+        auto strs = split(x);
+        auto prfx = trim(strs, l);
+
+        for(size_t i = 0UL; i < strs.size(); ++i){
+            // Add separator.
+            if(i != 0UL){
+                out += "[-_ ]?";
+            }
+
+            // Add the prefix characters, which are mandatory in the regex pattern.
+            out += prfx.at(i);
+
+            // Add the remaining characters, which are optional in the regex.
+            for(size_t j = prfx.at(i).size(); j < strs.at(i).size(); ++j){
+                out += strs[i].at(j);
+                out += "?";
+            }
+        }
+
+        out += "$";
+        return std::make_pair(out, prfx);
+    };
+
+    // Starting with only the current pattern in the bag, attempt to generate a decoration
+    // and prefix that is distinct from all prior patterns.
+    std::set<std::string> bag;
+
+    // Confirm that the input is not already an exact duplicates.
+    bool is_duplicate = false;
+    for(const auto &p : this->regexes){
+        if(p.first == n){
+            is_duplicate = true;
+            break;
+        }
+    }
+    if(is_duplicate){
+        YLOGDEBUG("Input '" << n << "' is a duplicate, skipping it");
+    }else{
+        bag.insert(n);
+    }
+
+    while(!bag.empty()){
+        std::map<std::string, std::string> l_decorations;
+        std::map<std::vector<std::string>, std::string> l_prefixes;
+
+        for(const auto &pattern : bag){
+            const auto [decorated, prefixes] = decorate(pattern, this->prefix_length);
+            l_decorations[pattern] = decorated;
+            l_prefixes[prefixes] = pattern;
+            YLOGDEBUG("Generated regex '" << decorated << "' from pattern '" << pattern << "'");
+        }
+
+        const bool unique_in_bag = (l_prefixes.size() == bag.size());
+        this->prefixes.merge(l_prefixes);
+        const bool unique_globally = l_prefixes.empty();
+
+        // Check if there are any conflicts within the bag or with all existing patterns.
+        if( unique_in_bag 
+        &&  unique_globally ){
+            // No conflict detected. Insert the decorations and terminate the loop.
+            for(const auto &d : l_decorations){
+                this->regexes.insert({d.first, Compile_Regex(d.second)});
+            }
+            bag.clear();
+            break;
+
+        // Otherwise, increase the prefix length, enroll *all* patterns in the bag, and loop.
+        }else{
+            ++this->prefix_length;
+            YLOGDEBUG("Detected conflict with input '" << n
+                      << "', increasing prefix length to " << this->prefix_length
+                      << " and trying again");
+
+            for(const auto &p : this->regexes){
+                bag.insert(p.first);
+            }
+            this->regexes.clear();
+            this->prefixes.clear();
+        }
+
+        if(10 < this->prefix_length){
+            throw std::runtime_error("Unable to orthogonalize inputs");
+        }
+    }
+
+    return n;
+}
+
+const std::regex & regex_group::locate(const std::string &n) const {
+    return this->regexes.at(n);
+}
+
+bool regex_group::matches(const std::string &raw, const std::string &known) const {
+    return std::regex_match(raw, this->regexes.at(known));
+}
+
+
+
 // Human-readable information about how selectors can be specified.
 static
 std::string
