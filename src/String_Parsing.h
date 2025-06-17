@@ -67,3 +67,6 @@ retain_only_numeric_parameters(std::vector<parsed_function>);
 std::vector<double> parse_numbers(const std::string &split_chars,
                                   const std::string &in);
 
+// Wide string narrowing.
+std::string convert_wstring_to_string(const std::wstring &);
+

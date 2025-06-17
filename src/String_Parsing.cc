@@ -8,6 +8,7 @@
 #include <sstream>
 #include <limits>
 #include <optional>
+#include <codecvt>
 
 #include "YgorString.h"
 #include "YgorMath.h"
@@ -449,5 +450,11 @@ parse_numbers(const std::string &split_chars, const std::string &in){
        }catch(const std::exception &){ }
     }
     return numbers;
+}
+
+// Wide string narrowing.
+std::string convert_wstring_to_string(const std::wstring &wstr){
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> l_conv;
+    return l_conv.to_bytes(wstr);
 }
 

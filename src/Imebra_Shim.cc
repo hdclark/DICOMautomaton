@@ -50,6 +50,7 @@
 #include "DCMA_DICOM.h"
 #include "Structs.h"
 #include "Metadata.h"
+#include "String_Parsing.h"
 #include "Alignment_Rigid.h"
 #include "Alignment_Field.h"
 
@@ -2172,6 +2173,8 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
         //       us to handle compressed images without any extra work.
         puntoexe::imebra::transforms::colorTransforms::colorTransformsFactory*  pFactory = 
             puntoexe::imebra::transforms::colorTransforms::colorTransformsFactory::getColorTransformsFactory();
+
+        YLOGDEBUG("Attempting colour space conversion from '" << convert_wstring_to_string(presImage->getColorSpace()) << "' to 'MONOCHROME2'");
         ptr<puntoexe::imebra::transforms::transform> myColorTransform = 
             pFactory->getTransform(presImage->getColorSpace(), L"MONOCHROME2");//L"RGB");
         if(myColorTransform != nullptr){ //If we get a nullptr, we do not need to transform the image.
