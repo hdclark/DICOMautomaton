@@ -2174,13 +2174,31 @@ Load_Image_Array(const std::filesystem::path &FilenameIn){
         puntoexe::imebra::transforms::colorTransforms::colorTransformsFactory*  pFactory = 
             puntoexe::imebra::transforms::colorTransforms::colorTransformsFactory::getColorTransformsFactory();
 
-        YLOGDEBUG("Attempting colour space conversion from '" << convert_wstring_to_string(presImage->getColorSpace()) << "' to 'MONOCHROME2'");
-        ptr<puntoexe::imebra::transforms::transform> myColorTransform = 
-            pFactory->getTransform(presImage->getColorSpace(), L"MONOCHROME2");//L"RGB");
-        if(myColorTransform != nullptr){ //If we get a nullptr, we do not need to transform the image.
-            ptr<puntoexe::imebra::image> rgbImage(myColorTransform->allocateOutputImage(presImage,width,height));
-            myColorTransform->runTransform(presImage, 0, 0, width, height, rgbImage, 0, 0);
-            presImage = rgbImage;
+        const auto src_colour_space = presImage->getColorSpace();
+        const bool src_is_monochrome = puntoexe::imebra::transforms::colorTransforms::colorTransformsFactory::isMonochrome(src_colour_space);
+        bool implemented_colour_transform = false;
+        for(const auto& dest_colour_space : { L"MONOCHROME2", L"MONOCHROME1", L"RGB" }){
+            try{
+                YLOGDEBUG("Attempting colour space conversion from '" << convert_wstring_to_string(presImage->getColorSpace()) 
+                       << "' to '" << convert_wstring_to_string(dest_colour_space));
+                YLOGDEBUG("Is source colour space monochrome? " << !!src_is_monochrome);
+
+                ptr<puntoexe::imebra::transforms::transform> colour_transform = 
+                    pFactory->getTransform(src_colour_space, dest_colour_space);
+                if(colour_transform != nullptr){ //If we get a nullptr, we do not need to transform the image.
+                    ptr<puntoexe::imebra::image> rgbImage(colour_transform->allocateOutputImage(presImage,width,height));
+                    colour_transform->runTransform(presImage, 0, 0, width, height, rgbImage, 0, 0);
+                    presImage = rgbImage;
+                }
+                implemented_colour_transform = true;
+                break;
+
+            }catch(const std::exception &e){
+                YLOGDEBUG("Attempted colour transform failed: '" << e.what() << "'");
+            }
+        }
+        if(!implemented_colour_transform){
+            YLOGWARN("No colour transform was performed, proceeding with raw pixel intensities");
         }
     
         //Get a 'dataHandler' to access the image data waiting in 'presImage.' Get some image metadata.
