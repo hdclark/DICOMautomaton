@@ -1080,6 +1080,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     using img_array_ptr_it_t = decltype(DICOM_data.image_data.begin());
     using disp_img_it_t = decltype(DICOM_data.image_data.front()->imagecoll.images.begin());
     bool img_precess = false;
+    bool img_precess_arrays = false;
     float img_precess_period = 0.1f; // in seconds.
     std::chrono::time_point<std::chrono::steady_clock> img_precess_last = std::chrono::steady_clock::now();
 
@@ -9313,6 +9314,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                                &img_array_num,
                                                &img_num,
                                                &img_precess,
+                                               &img_precess_arrays,
                                                &img_precess_period,
                                                &img_precess_last,
                                                &img_channel,
@@ -9392,17 +9394,31 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 }
 
                 {
-                    if(ImGui::Checkbox("Auto-advance", &img_precess)){
+                    if(ImGui::Checkbox("Auto-advance images", &img_precess)){
                         // Reset the previous time point.
                         img_precess_last = std::chrono::steady_clock::now();
+                        img_precess_arrays = false;
+                    }
+                    if(ImGui::Checkbox("Auto-advance arrays", &img_precess_arrays)){
+                        // Reset the previous time point.
+                        img_precess_last = std::chrono::steady_clock::now();
+                        img_precess = false;
                     }
                     ImGui::DragFloat("Advance period (s)", &img_precess_period, 0.01f, 0.0f, 10.0f, "%.01f");
-                    if(img_precess){
+
+                    if( img_precess
+                    ||  img_precess_arrays ){
                         const auto t_now = std::chrono::steady_clock::now();
                         const auto dt_since_last = 0.001f * static_cast<float>(std::chrono::duration_cast<std::chrono::milliseconds>(t_now - img_precess_last).count());
-                        if(img_precess_period <= dt_since_last){
+                        if( img_precess
+                        && (img_precess_period <= dt_since_last) ){
                             scroll_images = (scroll_images + N_images + 1) % N_images;
-                            img_precess_last = t_now; // Note: should we try correct for missing time here?
+                            img_precess_last = t_now;
+                        }
+                        if( img_precess_arrays
+                        &&  (img_precess_period <= dt_since_last) ){
+                            scroll_arrays = (scroll_arrays + N_arrays + 1) % N_arrays;
+                            img_precess_last = t_now;
                         }
                     }
                 }
