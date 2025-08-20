@@ -5,7 +5,7 @@
 ARG BASE_CONTAINER_NAME="dcma_build_base_debian_buster"
 FROM "$BASE_CONTAINER_NAME"
 
-LABEL maintainer="http://www.halclark.ca" \
+LABEL maintainer="https://www.halclark.ca" \
       description="DICOMautomaton Web Server built from Debian buster."
 
 EXPOSE 80

@@ -3,7 +3,7 @@
 
 FROM archlinux:latest
 
-LABEL maintainer="http://www.halclark.ca" \
+LABEL maintainer="https://www.halclark.ca" \
       description="DICOMautomaton build base for Arch Linux."
 
 WORKDIR /scratch_base

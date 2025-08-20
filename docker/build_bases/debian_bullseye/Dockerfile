@@ -3,7 +3,7 @@
 
 FROM debian:bullseye
 
-LABEL maintainer="http://www.halclark.ca" \
+LABEL maintainer="https://www.halclark.ca" \
       description="DICOMautomaton Debian build base."
 
 WORKDIR /scratch_base

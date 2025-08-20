@@ -5,7 +5,7 @@
 ARG BASE_CONTAINER_NAME="dcma_build_base_alpine_armv7"
 FROM --platform=linux/arm/v7 "$BASE_CONTAINER_NAME"
 
-LABEL maintainer="http://www.halclark.ca" \
+LABEL maintainer="https://www.halclark.ca" \
       description="DICOMautomaton built from Alpine (armv7)."
 
 WORKDIR /scratch

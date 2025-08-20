@@ -320,6 +320,6 @@ and may be more appropriate to cite.
 
 ## Project Home
 
-The `DICOMautomaton` homepage can be found at <http://www.halclark.ca/>. Source
+The `DICOMautomaton` homepage can be found at <https://www.halclark.ca/>. Source
 code is available at <https://github.com/hdclark/DICOMautomaton/> and mirrored
 at <https://gitlab.com/hdeanclark/DICOMautomaton/>.

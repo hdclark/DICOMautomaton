@@ -249,7 +249,7 @@ void Emit_Documentation(std::ostream &os,
         "## Project Home"
     );
     reflow_and_emit_paragraph(os, max_width, nobullet, nobullet, nolinebreak,
-        "This project's homepage can be found at <http://www.halclark.ca/>."
+        "This project's homepage can be found at <https://www.halclark.ca/>."
         " The source code is available at either"
         " <https://gitlab.com/hdeanclark/DICOMautomaton/> or" 
         " <https://github.com/hdclark/DICOMautomaton/>."

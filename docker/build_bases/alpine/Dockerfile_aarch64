@@ -3,7 +3,7 @@
 #FROM --platform=linux/arm64 alpine:latest
 FROM --platform=linux/arm64 arm64v8/alpine
 
-LABEL maintainer="http://www.halclark.ca" \
+LABEL maintainer="https://www.halclark.ca" \
       description="DICOMautomaton Alpine Linux build base (aarch64)."
 
 WORKDIR /scratch_base

@@ -246,7 +246,7 @@ BaseWebServerApplication::BaseWebServerApplication(const Wt::WEnvironment &env) 
         auto title = headercont->addWidget(std::make_unique<Wt::WText>("DICOMautomaton Web Services"));
         title->addStyleClass("Title");
 
-        auto homeurl = Wt::WLink("http://www.halclark.ca/");
+        auto homeurl = Wt::WLink("https://www.halclark.ca/");
         homeurl.setTarget(Wt::LinkTarget::NewWindow);
 
         auto hpage = headercont->addWidget(std::make_unique<Wt::WAnchor>(homeurl, "halclark.ca"));

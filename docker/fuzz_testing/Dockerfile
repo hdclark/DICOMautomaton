@@ -2,7 +2,7 @@
 #FROM debian:testing
 FROM debian:buster
 
-LABEL maintainer="http://www.halclark.ca" \
+LABEL maintainer="https://www.halclark.ca" \
       description="DICOMautomaton Debian fuzz tester."
 
 

@@ -3,7 +3,7 @@
 
 FROM voidlinux/voidlinux-musl
 
-LABEL maintainer="http://www.halclark.ca" \
+LABEL maintainer="https://www.halclark.ca" \
       description="DICOMautomaton Void Linux build base."
 
 WORKDIR /scratch_base

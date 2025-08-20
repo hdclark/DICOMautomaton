@@ -147,7 +147,7 @@ stdenv.mkDerivation rec {
   enableParallelBuilding = true;
 
   meta = with stdenv.lib; {
-    homepage        = "http://halclark.ca";
+    homepage        = "https://www.halclark.ca";
     license         = stdenv.lib.licenses.gpl3Plus;
     platforms       = stdenv.lib.platforms.linux;
     maintainers     = with stdenv.lib.maintainers; [ halclark ];

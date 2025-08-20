@@ -2,7 +2,7 @@
 #FROM archlinux:latest
 FROM debian:buster
 
-LABEL maintainer="http://www.halclark.ca" \
+LABEL maintainer="https://www.halclark.ca" \
       description="DICOMautomaton minimal CI build."
 
 WORKDIR /scratch

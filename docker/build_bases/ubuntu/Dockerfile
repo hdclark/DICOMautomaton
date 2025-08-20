@@ -3,7 +3,7 @@
 
 FROM ubuntu
 
-LABEL maintainer="http://www.halclark.ca" \
+LABEL maintainer="https://www.halclark.ca" \
       description="DICOMautomaton Ubuntu build base."
 
 WORKDIR /scratch_base
