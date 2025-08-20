@@ -23,7 +23,7 @@ Users of DICOMautomaton do so fully at their own risk.
 
 ## Project Home
 
-This project's homepage can be found at <http://www.halclark.ca/>. The source code is available at either
+This project's homepage can be found at <https://www.halclark.ca/>. The source code is available at either
 <https://gitlab.com/hdeanclark/DICOMautomaton/> or <https://github.com/hdclark/DICOMautomaton/>.
 
 ## Download
@@ -39,10 +39,11 @@ most ARM systems. To maintain flexibility, DICOMautomaton is generally not ABI o
 ## License and Copying
 
 All materials herein which may be copywrited, where applicable, are. Copyright 2010, 2011, 2012, 2013, 2014, 2015, 2016,
-2017, 2018, 2019, 2020 hal clark. See the ```LICENSE``` file for details about the license. Informally, DICOMautomaton
-is available under a GPLv3+ license. The Imebra library is bundled for convenience and was not written by hal clark;
-consult its license file in ```src/imebra20121219/license.txt```. The ImGui toolkit is bundled for convenience and was
-not written by hal clark; consult its license file in ```src/imgui20210904/license.txt```.
+2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025 hal clark. See the ```LICENSE``` file for details about the
+license. Informally, DICOMautomaton is available under a GPLv3+ license. The Imebra library is bundled for convenience
+and was not written by hal clark; consult its license file in ```src/imebra20121219/license.txt```. The ImGui toolkit is
+bundled for convenience and was not written by hal clark; consult its license file in
+```src/imgui20210904/license.txt```.
 
 All liability is herefore disclaimed. The person(s) who use this source and/or software do so strictly under their own
 volition. They assume all associated liability for use and misuse, including but not limited to damages, harm, injury,
@@ -334,7 +335,10 @@ will work.
 - CellularAutomata
 - ClusterDBSCAN
 - Coalesce (alias for AnyOf)
+- CombineImages
+- CombineMeshes
 - ComparePixels
+- CompileScript
 - ContourBasedRayCastDoseAccumulate
 - ContourBooleanOperations
 - ContourSimilarity
@@ -355,15 +359,19 @@ will work.
 - ConvertMeshesToPoints
 - ConvertNaNsToAir
 - ConvertNaNsToZeros
+- ConvertParametersToTable
 - ConvertPixelsToPoints
+- ConvertTableToParameters (alias for MapTableToParameters)
 - ConvertWarpToImage
 - ConvertWarpToMeshes
 - ConvolveImages
 - CopyContours
 - CopyImages
+- CopyLineSamples
 - CopyMeshes
 - CopyPoints
 - CopyTables
+- CountObjects
 - CountVoxels
 - CropImageDoseToROIs
 - CropImages
@@ -373,12 +381,16 @@ will work.
 - DICOMExportContours
 - DICOMExportImagesAsCT
 - DICOMExportImagesAsDose
+- DICOMExportImagesAsMR
 - DeDuplicateImages
 - DecayDoseOverTimeHalve
 - DecayDoseOverTimeJones2014
 - DecimatePixels
+- DecomposeImagesSVD
+- Delay (alias for Sleep)
 - DeleteContours
 - DeleteImages
+- DeleteLineSamples
 - DeleteMeshes
 - DeletePoints
 - DeleteTables
@@ -400,13 +412,21 @@ will work.
 - DumpROISurfaceMeshes
 - DumpRTPlanMetadataOccurrencesToFile
 - DumpVoxelDoseInfo
+- EQDXTable
 - ElseIf (alias for IfElse)
 - EvaluateDoseVolumeStats
 - EvaluateNTCPModels
+- EvaluateParameters
 - EvaluateTCPModels
+- ExecuteShell
+- ExplodeImages
+- ExportContours
+- ExportDrover
 - ExportFITSImages
 - ExportLineSamples
+- ExportOriginalFiles
 - ExportPointClouds
+- ExportSNCImages
 - ExportSurfaceMeshes
 - ExportSurfaceMeshesOBJ
 - ExportSurfaceMeshesOFF
@@ -420,11 +440,15 @@ will work.
 - ExtractRadiomicFeatures
 - FVPicketFence
 - False
+- FindFiles
 - FirstOf (alias for AnyOf)
+- For
 - ForEachDistinct
 - ForEachRTPlan
 - Force (alias for Ignore)
+- Fork
 - GenerateCalibrationCurve
+- GenerateMapTiles
 - GenerateMeshes
 - GenerateSurfaceMask
 - GenerateSyntheticImages
@@ -449,20 +473,31 @@ will work.
 - IfThenElse (alias for IfElse)
 - Ignore
 - ImageRoutineTests
+- ImportDrover
 - ImprintImages
 - InterpolateSlices
 - Invert (alias for NoneOf)
+- InvokeStandardScript
+- Isolate
 - IsolatedVoxelFilter
 - LoadFiles
 - LoadFilesInteractively
 - LogScale
 - MakeMeshesManifold
+- MapTableToParameters
+- MaskLogs (alias for MaskVerbosity)
+- MaskMetadata (alias for MaskParameters)
+- MaskNotifications (alias for MaskVerbosity)
+- MaskParameters
+- MaskVerbosity
+- MaskWarnings (alias for MaskVerbosity)
 - MaxMinPixels
 - MeldDose
 - MinkowskiSum3D
 - ModelIVIM
 - ModifyContourMetadata
 - ModifyImageMetadata
+- ModifyLineSamples
 - ModifyParameters
 - Negate (alias for NoneOf)
 - NegatePixels
@@ -481,36 +516,61 @@ will work.
 - PlotLineSamples
 - PlotPerROITimeCourses
 - PointSeparation
+- PollDirectories
+- Polyominoes
 - PreFilterEnormousCTValues
 - PresentationImage
+- PrintMetadata
+- PromoteMetadata
 - PruneEmptyImageDoseArrays
 - PurgeContours
+- QuantizePixels
 - QueryUserInteractively
+- RPCReceive
+- RPCSend
 - RankPixels
 - ReduceNeighbourhood
 - RemeshSurfaceMeshes
 - Repeat
+- ReportROIData
+- ResampleImages
+- RigidWarpImages
 - SDL_Viewer
 - SFML_Viewer
 - ScalePixels
 - SeamContours
+- SelectDirectory
+- SelectFilename
+- SelectFolder (alias for SelectDirectory)
 - SelectSlicesIntersectingROI
+- SelectionIsPresent
+- SilenceLogs (alias for MaskVerbosity)
+- SilenceNotifications (alias for MaskVerbosity)
+- SilenceVerbosity (alias for MaskVerbosity)
+- SilenceWarnings (alias for MaskVerbosity)
 - SimplifyContours
 - SimplifySurfaceMeshes
 - SimulateRadiograph
+- Sleep
 - SpatialBlur
 - SpatialDerivative
 - SpatialSharpen
+- Spawn (alias for Fork)
+- SpecifyDirectory (alias for SelectDirectory)
+- SpecifyFilename (alias for SelectFilename)
+- SpecifyFolder (alias for SelectDirectory)
 - SubdivideSurfaceMeshes
 - SubsegmentContours
 - Subsegment_ComputeDose_VanLuijk
 - SubtractImages
 - SupersampleImageGrid
-- SurfaceBasedRayCastDoseAccumulate
+- TabulateImageMetadata
 - Terminal_Viewer
 - ThresholdImages
 - ThresholdOtsu
 - Throw (alias for False)
+- Time
+- Transaction
 - TrimROIDose
 - True
 - UBC3TMRI_DCE
@@ -522,15 +582,24 @@ will work.
 - VolumetricSpatialBlur
 - VolumetricSpatialDerivative
 - VoxelRANSAC
+- Wait (alias for Sleep)
 - WarpContours
 - WarpImages
+- WarpImagesRigid (alias for RigidWarpImages)
 - WarpMeshes
 - WarpPoints
 - While
+- WidenTable
 
 # Operations Reference
 
 ## AccumulateRowsColumns
+
+### Tags
+
+- accepts parameter: images
+- category: image processing
+- category: interactive
 
 ### Description
 
@@ -563,10 +632,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -588,17 +660,27 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## AnalyzeHistograms
 
+### Tags
+
+- accepts parameter: line samples
+- category: acquires futex
+- category: file export
+- category: line sample processing
+
 ### Description
 
 This operation analyzes the selected line samples as if they were cumulative dose-volume histograms (DVHs). Multiple
-criteria can be specified. The output is a CSV file that can be concatenated or appended to other output files to
-provide a summary of multiple criteria.
+criteria can be specified. Results can be written to a CSV file that can be concatenated or appended to other output
+files to provide a summary of multiple criteria, or stored as key-values in the global parameter table.
 
 ### Notes
 
@@ -606,12 +688,16 @@ provide a summary of multiple criteria.
   explicitly marked as a cumulative, unscaled abscissa + unscaled ordinate histogram; and differential distribution
   statistics must be available (e.g., min, mean, and max voxel doses).
 
+- No output files will be written when (1) there are no constraints to evaluate, and/or (2) results are written in the
+  global parameter table.
+
 ### Parameters
 
 - LineSelection
 - SummaryFilename
 - UserComment
 - Description
+- MetadataColumns
 - Constraints
 - ReferenceDose
 
@@ -630,10 +716,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the line sample
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all line sample that do not have the greatest number of sub-objects, not the least-numerous
-line sample (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the line sample composed of the greatest and fewest number of samples. Only one or zero line sample will be
+selected; if there are ties, there is no guarantee which line sample will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple line sample based on a threshold count, i.e., where all selected line sample have
+more than or fewer than $N$ samples. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all line sample that do not have the greatest number of samples, not the least-numerous line sample (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -655,13 +744,17 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### SummaryFilename
 
 ##### Description
 
 A summary of the criteria and results will be appended to this file. The format is CSV. Leave empty to dump to generate
-a unique temporary file. If an existing file is present, rows will be appended without writing a header.
+a unique temporary file. If an existing file is present, rows will be appended without writing a header. If there is
+nothing to write, a no file will be created.
 
 ##### Default
 
@@ -681,7 +774,8 @@ a unique temporary file. If an existing file is present, rows will be appended w
 A string that will be inserted into the output file which will simplify merging output with differing parameters, from
 different sources, or using sub-selections of the data. Even if left empty, the column will remain in the output to
 ensure the outputs from multiple runs can be safely concatenated. Preceding alphanumeric variables with a '$' will cause
-them to be treated as metadata keys and replaced with the corresponding key's value, if present. For example, 'The
+them to be treated as metadata keys and replaced with the corresponding key's value, if present. Metadata sources are
+(1) from the global parameter table, and (2) from the current line sample / histogram being processed. For example, 'The
 modality is $Modality' might be (depending on the metadata) expanded to 'The modality is Histogram'. If the metadata key
 is not present, the expression will remain unexpanded (i.e., with a preceeding '$').
 
@@ -702,7 +796,8 @@ is not present, the expression will remain unexpanded (i.e., with a preceeding '
 A string that will be inserted into the output file which should be used to describe the constraint and any caveats that
 the viewer should be aware of. Generally, the UserComment is best for broadly-defined notes whereas the Description is
 tailored for each constraint. Preceding alphanumeric variables with a '$' will cause them to be treated as metadata keys
-and replaced with the corresponding key's value, if present. For example, 'The modality is $Modality' might be
+and replaced with the corresponding key's value, if present. Metadata sources are (1) from the global parameter table,
+and (2) from the current line sample / histogram being processed. For example, 'The modality is $Modality' might be
 (depending on the metadata) expanded to 'The modality is Histogram'. If the metadata key is not present, the expression
 will remain unexpanded (i.e., with a preceeding '$').
 
@@ -717,24 +812,61 @@ will remain unexpanded (i.e., with a preceeding '$').
 - ```"Liver - GTV"```
 - ```"$LineName"```
 
+#### MetadataColumns
+
+##### Description
+
+A comma-separated list of metadata key-value keys that will each be inserted as a separate column. The values will be
+expanded by first attempting to use the histogram's metadata, and if not present, the global parameter table. If not
+present in the global parameter table, the column will remain empty.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"Modality"```
+- ```"PatientID"```
+- ```"PatientID,StudyDate,StudyTime"```
+
 #### Constraints
 
 ##### Description
 
-Constraint criteria that will be evaluated against the selected line samples. There three general types of constraints
-will be recognized. First, constraints in the style of 'Dmax < 50.0 Gy'. The left-hand-size (LHS) can be any of {Dmin,
-Dmean, Dmax}. The inequality can be any of {<, lt, <=, lte, >, gt, >=, gte}. The right-hand-side (RHS) units can be any
-of {Gy, %} where '%' means the RHS number is a percentage of the ReferenceDose. Second, constraints in the style of
-'D(coldest 500.0 cc) < 50.4 Gy'. The inner LHS can be any of {coldest, hottest}. The inner LHS units can be any of {cc,
-cm3, cm^3, %} where '%' means the inner LHS number is a percentage of the total volume. The inequality can be any of {<,
-lt, <=, lte, >, gt, >=, gte}. The RHS units can be any of {Gy, %} where '%' means the RHS number is a percentage of the
-ReferenceDose. Third, constraints in the style of 'V(24.5 Gy) < 500.0 cc'. The inner LHS units can be any of {Gy, %}
-where '%' means the inner LHS number is a percentage of the ReferenceDose. The inequality can be any of {<, lt, <=, lte,
->, gt, >=, gte}. The RHS units can be any of {cc, cm3, cm^3, %} where '%' means the inner LHS number is a percentage of
-the total volume. Multiple constraints can be supplied by separating them with ';' delimiters. Each will be evaluated
-separately. Newlines can also be used, though constraints should all end with a ';'. Comments can be included by
-preceeding with a '#', which facilitate supplying lists of constraints piped in (e.g., from a file via Bash process
-substitution).
+Constraint criteria that will be evaluated against the selected line samples. Three general types of constraints are
+recognized. Note that in the examples below, 'D' represents radiation dose, but can be replaced with 'I' which
+represents generic scalar intensity.
+
+First, constraints in the style of 'Dmax < 50.0 Gy'. The left-hand-size (LHS) can be any of {Dmin, Dmean, Dmax}. The
+inequality can be any of {<, lt, <=, lte, >, gt, >=, gte}. The right-hand-side (RHS) units can be any of {Gy, cGy, %,
+none} where the default units are assumed to be 'Gy', '%' means the RHS number is a percentage of the ReferenceDose, and
+'none' uses the existing values without printing or conversion.
+
+Second, constraints in the style of 'D(coldest 500.0 cc) < 50.4 Gy'. The inner LHS can be any of {coldest, hottest}. The
+inner LHS units can be any of {cc, cm3, cm^3, %} where '%' means the inner LHS number is a percentage of the total
+volume. The inequality can be any of {<, lt, <=, lte, >, gt, >=, gte}. The RHS units can be any of {Gy, cGy, %, none}
+where the default units are assumed to be 'Gy', '%' means the RHS number is a percentage of the ReferenceDose and 'none'
+uses the existing values without printing or conversion.
+
+Third, constraints in the style of 'V(24.5 Gy) < 500.0 cc'. The inner LHS units can be any of {Gy, cGy, %, none} where
+the default units are assumed to be 'Gy', '%' means the inner LHS number is a percentage of the ReferenceDose and 'none'
+uses the existing values without printing or conversion. The inequality can be any of {<, lt, <=, lte, >, gt, >=, gte}.
+The RHS units can be any of {cc, cm3, cm^3, %} where '%' means the inner LHS number is a percentage of the total volume.
+
+All of the preceding constraints can be prefixed with '(x,y):' to assign the results to variables in the global
+parameter table. For example, '(var_x, var_y) : Dmax < 50.0 Gy' will save the key-value 'var_x' as the extracted value
+of Dmax, and 'var_y' as the boolean result of the inequality (i.e., either 'true' or 'false'). Dose and volume units are
+consistent with the expression's RHS units. An underscore can be used to ignore one of the results. Note that saving
+results in the parameter table precludes them from being written to file.
+
+Additionally, dosimetric values can be directly assigned to a variable name and inserted into the global parameter
+store, e.g., 'x : Dmin'. Dose is reported in the default units, as-is, without printing or conversion (e.g., DICOM
+units; Gy). Note that variables assigned this way are not written to file.
+
+Multiple constraints can be supplied by separating them with ';' delimiters. Each will be evaluated separately. Newlines
+can also be used, though constraints should all end with a ';'. Comments can be included by preceeding with a '#', which
+facilitate supplying lists of constraints piped in (e.g., from a file via Bash process substitution).
 
 ##### Default
 
@@ -746,6 +878,10 @@ substitution).
 - ```"Dmean lte 80 %"```
 - ```"Dmin >= 80 %"```
 - ```"Dmin >= 65 Gy"```
+- ```"Dmin >= 65"```
+- ```"Dmin >= 6500 cGy"```
+- ```"Imean lte 50 %"```
+- ```"Imean < 123.0"```
 - ```"D(coldest 500.0 cc) <= 25.0 Gy"```
 - ```"D(coldest 500.0 cc) <= 15.0 %"```
 - ```"D(coldest 50%) <= 15.0 %"```
@@ -753,15 +889,26 @@ substitution).
 - ```"V(24.5 Gy) < 500.0 cc"```
 - ```"V(10%) < 50.0 cc"```
 - ```"V(24.5 Gy) < 500.0 cc"```
-- ```"Dmax < 50.0 Gy ; Dmean lte 80 % ; D(hottest 10%) gte 95.0 %"```
+- ```"V(24.5) < 500.0 cc"```
+- ```"(x,y) : V(24.5 Gy) < 500.0 cc"```
+- ```"(x,_) : Dmean < 5 %"```
+- ```"(_,x) : V(24.5 Gy) < 500.0 cc"```
+- ```"max_dose = Dmax"```
+- ```"x = D(coldest 10%)"```
+- ```"x = I(coldest 10%)"```
+- ```"(Dmax,_): Dmax < 50.0 Gy ; x: Dmin; (dose_median,passed): D(hottest 50%) <= 5 Gy; Dmean lte 80 % ; D(hottest 10%) gte 95.0 %"```
 
 #### ReferenceDose
 
 ##### Description
 
-The absolute dose that relative (i.e., percentage) constraint doses will be considered against. Generally this will be
-the prescription dose (in DICOM units; Gy). If there are multiple prescriptions, either the prescription appropriate for
-the constraint should be supplied, or relative dose constraints should not be used.
+The absolute dose (or intensity) that relative (i.e., percentage) constraint doses will be considered against.
+
+Generally this will be the prescription dose (in DICOM units; Gy), but can also represent a generic scalar intensity.
+(The units are not specified, so are considered to be the same as the source histogram data.)
+
+If there are multiple prescriptions, either the prescription appropriate for the constraint should be supplied, or
+relative dose constraints should not be used.
 
 ##### Default
 
@@ -776,6 +923,11 @@ the constraint should be supplied, or relative dose constraints should not be us
 ----------------------------------------------------
 
 ## AnalyzeLightRadFieldCoincidence
+
+### Tags
+
+- accepts parameter: images
+- category: image processing
 
 ### Description
 
@@ -821,10 +973,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -846,6 +1001,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ToleranceLevel
 
@@ -983,6 +1141,13 @@ Whether to interactively show plots showing detected edges.
 
 ## AnalyzePicketFence
 
+### Tags
+
+- accepts parameter: images
+- category: acquires futex
+- category: file export
+- category: image processing
+
 ### Description
 
 This operation extracts MLC positions from a picket fence image.
@@ -1029,10 +1194,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -1054,6 +1222,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### MLCModel
 
@@ -1235,6 +1406,12 @@ Whether to interactively show plots showing detected edges.
 
 ## AnalyzeRTPlan
 
+### Tags
+
+- category: acquires futex
+- category: file export
+- category: rtplan processing
+
 ### Description
 
 This operation analyzes the selected RT plans, performing a general analysis suitable for exploring or comparing plans
@@ -1265,10 +1442,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the treatment plan
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all treatment plan that do not have the greatest number of sub-objects, not the
-least-numerous treatment plan (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the treatment plan composed of the greatest and fewest number of control points. Only one or zero treatment plan
+will be selected; if there are ties, there is no guarantee which treatment plan will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple treatment plan based on a threshold count, i.e., where all selected treatment plan
+have more than or fewer than $N$ control points. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all treatment plan that do not have the greatest number of control points, not the least-numerous
+treatment plan (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -1290,6 +1470,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### SummaryFilename
 
@@ -1356,9 +1539,19 @@ will remain unexpanded (i.e., with a preceeding '$').
 
 ## And
 
+### Tags
+
+- category: control flow
+- category: meta
+
 ### Description
 
 This operation is a control flow meta-operation that requires all children to complete successfully.
+
+### Aliases
+
+- AllOf
+- Group
 
 ### Notes
 
@@ -1375,11 +1568,22 @@ No registered options.
 
 ## AnyOf
 
+### Tags
+
+- category: control flow
+- category: meta
+
 ### Description
 
 This operation is a control flow meta-operation that performs an 'any-of' or 'first-of' Boolean check by evaluating
 child operations. The first child operation that succeeds short-circuits the remaining checks and returns true. If no
 child operation succeeds, false is returned. Side effects from all evaluated operations are possible.
+
+### Aliases
+
+- FirstOf
+- Or
+- Coalesce
 
 ### Notes
 
@@ -1400,6 +1604,12 @@ No registered options.
 
 ## ApplyCalibrationCurve
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
 This operation applies a given calibration curve to voxel data inside the specified ROI(s). It is designed to apply
@@ -1418,6 +1628,7 @@ calibration curves, but is useful for transforming voxel intensities using any s
 - CalibCurveFileName
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 
 #### Channel
 
@@ -1453,10 +1664,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -1478,6 +1692,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ContourOverlap
 
@@ -1550,8 +1767,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -1569,6 +1789,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -1578,8 +1799,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -1596,11 +1820,65 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## AutoCropImages
+
+### Tags
+
+- accepts parameter: images
+- category: image processing
 
 ### Description
 
@@ -1629,10 +1907,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -1654,6 +1935,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### DICOMMargin
 
@@ -1693,6 +1977,11 @@ options.
 
 ## Average
 
+### Tags
+
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
 This operation averages image arrays/volumes. It can average over spatial or temporal dimensions. However, rather than
@@ -1725,10 +2014,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -1750,6 +2042,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### AveragingMethod
 
@@ -1771,6 +2066,12 @@ The averaging method to use. Valid methods are 'overlapping-spatially' and 'over
 
 ## BCCAExtractRadiomicFeatures
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
 This operation extracts radiomic features from an image and one or more ROIs.
@@ -1784,6 +2085,7 @@ This operation extracts radiomic features from an image and one or more ROIs.
 
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - FractionalAreaTolerance
 - SimplificationMethod
 - UserComment
@@ -1791,6 +2093,7 @@ This operation extracts radiomic features from an image and one or more ROIs.
 - ImageSelection
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - ScaleFactor
 - ImageFileName
 - ColourMapRegex
@@ -1805,8 +2108,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -1824,6 +2130,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -1833,8 +2140,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -1851,6 +2161,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### FractionalAreaTolerance
 
@@ -1947,10 +2306,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -1972,6 +2334,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -1981,8 +2346,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -2000,6 +2368,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -2009,8 +2378,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -2027,6 +2399,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ScaleFactor
 
@@ -2136,6 +2557,11 @@ window overrides.
 
 ## BEDConvert
 
+### Tags
+
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
 This operation performs Biologically Effective Dose (BED) and Equivalent Dose with 'x'-dose per fraction (EQDx)
@@ -2185,10 +2611,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -2210,6 +2639,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### AlphaBetaRatioLate
 
@@ -2341,8 +2773,11 @@ matching *raw* ROI contour labels/names to consider.
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -2366,8 +2801,11 @@ matching *normalized* ROI contour labels/names to consider.
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -2388,6 +2826,10 @@ matching is required. Refer to the lexicon for available labels.
 ----------------------------------------------------
 
 ## BoostSerializeDrover
+
+### Tags
+
+- category: meta
 
 ### Description
 
@@ -2440,6 +2882,11 @@ clouds), (all surface meshes), and (all treatment plans) can be selected. Note t
 ----------------------------------------------------
 
 ## BuildLexiconInteractively
+
+### Tags
+
+- category: interactive
+- category: meta
 
 ### Description
 
@@ -2504,8 +2951,11 @@ regular expression (regex) matching *raw* ROI contour labels/names to consider.
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -2538,6 +2988,11 @@ A file containing a 'seed' lexicon to use and add to. This is the lexicon that i
 
 ## CT_Liver_Perfusion
 
+### Tags
+
+- category: image processing
+- category: perfusion
+
 ### Description
 
 This operation performed dynamic contrast-enhanced CT perfusion image modeling on a time series image volume.
@@ -2553,6 +3008,11 @@ No registered options.
 ----------------------------------------------------
 
 ## CT_Liver_Perfusion_First_Run
+
+### Tags
+
+- category: image processing
+- category: perfusion
 
 ### Description
 
@@ -2571,9 +3031,14 @@ No registered options.
 
 ## CT_Liver_Perfusion_Ortho_Views
 
+### Tags
+
+- category: image processing
+- category: perfusion
+
 ### Description
 
-This operation performed dynamic contrast-enhanced CT perfusion image modeling on a time series image volume.
+This operation performs dynamic contrast-enhanced CT perfusion image modeling on a time series image volume.
 
 ### Notes
 
@@ -2587,6 +3052,11 @@ No registered options.
 ----------------------------------------------------
 
 ## CT_Liver_Perfusion_Pharmaco_1C2I_5Param
+
+### Tags
+
+- category: image processing
+- category: perfusion
 
 ### Description
 
@@ -2919,6 +3389,11 @@ of interest.
 
 ## CT_Liver_Perfusion_Pharmaco_1C2I_Reduced3Param
 
+### Tags
+
+- category: image processing
+- category: perfusion
+
 ### Description
 
 This operation performed dynamic contrast-enhanced CT perfusion image modeling on a time series image volume.
@@ -3233,6 +3708,13 @@ of interest.
 
 ## CellularAutomata
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: image processing
+- category: simulation
+
 ### Description
 
 This operation implements 2D cellular automata (Conway's Game of Life) with periodic boundary conditions.
@@ -3246,6 +3728,7 @@ This operation implements 2D cellular automata (Conway's Game of Life) with peri
 - ImageSelection
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - Channel
 - Method
 - Iterations
@@ -3269,10 +3752,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -3294,6 +3780,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -3303,8 +3792,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -3322,6 +3814,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -3331,8 +3824,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -3349,6 +3845,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Channel
 
@@ -3441,6 +3986,12 @@ low and high values is used as the threshold.
 
 ## ClusterDBSCAN
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
 This routine performs DBSCAN clustering on an image volume. The clustering is limited within ROI(s) and also within a
@@ -3456,6 +4007,7 @@ background value.
 - ImageSelection
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - ContourOverlap
 - Inclusivity
 - Channel
@@ -3484,10 +4036,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -3509,6 +4064,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -3518,8 +4076,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -3537,6 +4098,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -3546,8 +4108,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -3564,6 +4129,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ContourOverlap
 
@@ -3757,7 +4371,180 @@ cluster will be reduced to the median coordinate.
 
 ----------------------------------------------------
 
+## CombineImages
+
+### Tags
+
+- accepts parameter: images
+- category: image processing
+
+### Description
+
+This operation combines the images in two or more image arrays, creating a single image array containing all images.
+
+### Notes
+
+- The original image arrays are removed and all images are placed into a image array appended at the end.
+
+- Individual images (e.g., those that are spatially overlapping) are not merged together. No voxel resampling or
+  combination is performed.
+
+### Parameters
+
+- ImageSelection
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"first"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+
+----------------------------------------------------
+
+## CombineMeshes
+
+### Tags
+
+- accepts parameter: surface meshes
+- category: mesh processing
+
+### Description
+
+This operation deep-copies the selected surface meshes, combining all into a single mesh.
+
+### Notes
+
+- This operation does *not* implement 3D boolean operations. Using it can lead to mesh intersections and
+  non-manifoldness, so it is best suited for visualization or as part of a controlled explode-alter-combine workflow.
+
+### Parameters
+
+- MeshSelection
+- MeshLabel
+
+#### MeshSelection
+
+##### Description
+
+Select one or more surface meshes. Note that a single surface mesh may hold many disconnected mesh components; they
+should collectively represent a single logically cohesive object. Be aware that it is possible to mix logically
+unrelated sub-meshes together in a single mesh. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth surface mesh (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last surface mesh.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the surface mesh composed of the greatest and fewest number of elements (vertices + faces). Only one or zero
+surface mesh will be selected; if there are ties, there is no guarantee which surface mesh will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple surface mesh based on a threshold count, i.e., where all selected
+surface mesh have more than or fewer than $N$ elements (vertices + faces). Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all surface mesh that do not have the greatest number of elements
+(vertices + faces), not the least-numerous surface mesh (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### MeshLabel
+
+##### Description
+
+A label to attach to the combined surface mesh.
+
+##### Default
+
+- ```"unspecified"```
+
+##### Examples
+
+- ```"unspecified"```
+- ```"body"```
+- ```"air"```
+- ```"bone"```
+- ```"invalid"```
+- ```"above_zero"```
+- ```"below_5.3"```
+
+
+----------------------------------------------------
+
 ## ComparePixels
+
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: image processing
 
 ### Description
 
@@ -3793,6 +4580,7 @@ rectilinear (this property is verified).
 - ReferenceImageSelection
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - Method
 - Channel
 - TestImgLowerThreshold
@@ -3825,10 +4613,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -3850,6 +4641,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ReferenceImageSelection
 
@@ -3868,10 +4662,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -3893,6 +4690,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -3902,8 +4702,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -3921,6 +4724,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -3930,8 +4734,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -3948,6 +4755,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Method
 
@@ -4232,7 +5088,80 @@ only matters when it is <1. In lieu of the true gamma-index, a value slightly >1
 
 ----------------------------------------------------
 
+## CompileScript
+
+### Tags
+
+- category: meta
+- category: scripting
+
+### Description
+
+This operation can be used to parse, optionally validate, and optionally run a DICOMautomaton script.
+
+### Parameters
+
+- Filename
+- Actions
+
+#### Filename
+
+##### Description
+
+The name of a file containing the script.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"script.dscr"```
+- ```"/path/to/script.dscr"```
+
+#### Actions
+
+##### Description
+
+The actions to perform on or using the script. Current options are 'parse', 'validate', and 'run'.
+
+The 'parse' action loads the script and attempts to parse it. An abstract syntax tree is constructed, but no warnings,
+errors, or feedback is provided. The script is not actually executed. In this mode, the return value indicates whether
+parsing errors were detected.
+
+The 'validate' action parses the script, then prints out warnings, errors, and notices. The script is not actually
+executed. In this mode, the return value indicates whether validation errors were detected (note: warnings are ignored).
+Note that 'lint' and 'compile' are currently synonyms for 'validate'.
+
+The 'run' action parses and validates the script, then immediately executes it. In this mode, the return value indicates
+two things: (1) that there were no errors detected during the parsing and validation steps, and (2) the return value of
+the operations. Note that 'execute' is a synonym for 'run'.
+
+##### Default
+
+- ```"validate"```
+
+##### Supported Options
+
+- ```"parse"```
+- ```"validate"```
+- ```"lint"```
+- ```"compile"```
+- ```"run"```
+- ```"execute"```
+
+
+----------------------------------------------------
+
 ## ContourBasedRayCastDoseAccumulate
+
+### Tags
+
+- accepts parameter: contours
+- category: file export
+- category: image processing
+- category: radiation dose
+- category: simulation
 
 ### Description
 
@@ -4245,6 +5174,7 @@ This operation performs ray-casting to estimate the dose of a surface. The surfa
 - LengthMapFileName
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - CylinderRadius
 - RaydL
 - Rows
@@ -4294,8 +5224,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -4313,6 +5246,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -4322,8 +5256,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -4340,6 +5277,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### CylinderRadius
 
@@ -4418,6 +5404,10 @@ The number of columns in the resulting images.
 
 ## ContourBooleanOperations
 
+### Tags
+
+- category: contour processing
+
 ### Description
 
 This routine performs 2D Boolean operations on user-provided sets of ROIs. The ROIs themselves are planar contours
@@ -4455,8 +5445,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -4474,6 +5467,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegexA
 
@@ -4483,8 +5477,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -4501,6 +5498,7 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
 
 #### NormalizedROILabelRegexB
 
@@ -4510,8 +5508,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -4529,6 +5530,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegexB
 
@@ -4538,8 +5540,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -4556,6 +5561,7 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
 
 #### Operation
 
@@ -4603,6 +5609,11 @@ The label to attach to the ROI contour product of f(A,B).
 
 ## ContourSimilarity
 
+### Tags
+
+- accepts parameter: images
+- category: contour processing
+
 ### Description
 
 This operation estimates the similarity or overlap between two sets of contours. The comparison is based on point
@@ -4640,10 +5651,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -4665,6 +5679,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ROILabelRegexA
 
@@ -4674,8 +5691,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -4692,6 +5712,7 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
 
 #### NormalizedROILabelRegexA
 
@@ -4701,8 +5722,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -4720,6 +5744,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegexB
 
@@ -4729,8 +5754,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -4747,6 +5775,7 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
 
 #### NormalizedROILabelRegexB
 
@@ -4756,8 +5785,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -4775,6 +5807,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### FileName
 
@@ -4815,6 +5848,11 @@ different sources, or using sub-selections of the data.
 ----------------------------------------------------
 
 ## ContourViaGeometry
+
+### Tags
+
+- accepts parameter: images
+- category: contour processing
 
 ### Description
 
@@ -4876,10 +5914,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -4901,6 +5942,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Shapes
 
@@ -4923,6 +5967,11 @@ radius. A sphere with centre (1.0,2.0,3.0) and radius 12.3 can be specified as '
 
 ## ContourViaThreshold
 
+### Tags
+
+- accepts parameter: images
+- category: contour processing
+
 ### Description
 
 This operation constructs ROI contours using images and pixel/voxel value thresholds. There are three methods of contour
@@ -4930,6 +5979,10 @@ generation available: a simple binary method in which voxels are either fully in
 squares (which uses linear interpolation to give smooth contours), and a method based on 3D marching cubes that will
 also provide smooth contours. The marching cubes method does **not** construct a full surface mesh; rather each
 individual image slice has their own mesh constructed in parallel.
+
+### Aliases
+
+- ConvertImagesToContours
 
 ### Notes
 
@@ -5054,10 +6107,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -5079,6 +6135,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Method
 
@@ -5128,6 +6187,11 @@ images. Furthermore, if you know the ROI does not have holes (or if you don't ca
 ----------------------------------------------------
 
 ## ContourVote
+
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
 
 ### Description
 
@@ -5181,8 +6245,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -5199,6 +6266,7 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
 
 #### NormalizedROILabelRegex
 
@@ -5208,8 +6276,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -5227,6 +6298,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### Area
 
@@ -5345,11 +6417,17 @@ Retain this number of 'best' or 'winning' contours.
 
 ## ContourWholeImages
 
+### Tags
+
+- accepts parameter: images
+- category: contour processing
+- category: image processing
+
 ### Description
 
-This operation constructs contours for an ROI that encompasses the whole of all specified images. It is useful for
+This operation constructs contours for an ROI that encompasses voxels of the specified images. It is useful for
 operations that operate on ROIs whenever you want to compute something over the whole image. This routine avoids having
-to manually contour anything. The output is 'ephemeral' and is not commited to any database.
+to manually contour.
 
 ### Notes
 
@@ -5358,13 +6436,11 @@ to manually contour anything. The output is 'ephemeral' and is not commited to a
 
 - Existing contours are ignored and unaltered.
 
-- Contours are set slightly inside the outer boundary so they can be easily visualized by overlaying on the image. All
-  voxel centres will be within the bounds.
-
 ### Parameters
 
 - ROILabel
 - ImageSelection
+- EncircleMethod
 
 #### ROILabel
 
@@ -5399,10 +6475,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -5424,11 +6503,39 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### EncircleMethod
+
+##### Description
+
+The method used to generate the ROI contours. Options include 'whole' and 'FOV'.
+
+The default option, 'whole', makes contours that encircle all voxels. Contours are set slightly inside the outer
+boundary so they can be easily visualized by overlaying on an image. All voxel centres will be within the ROI contours.
+
+Option 'FOV' uses image metadata (if available) to only encircle image voxels which are within the scanned field of
+view. In practice, this will be a large circle centred on the middle of an image.
+
+##### Default
+
+- ```"whole"```
+
+##### Examples
+
+- ```"whole"```
+- ```"FOV"```
 
 
 ----------------------------------------------------
 
 ## ContouringAides
+
+### Tags
+
+- category: image processing
 
 ### Description
 
@@ -5446,19 +6553,39 @@ No registered options.
 
 ## ConvertContoursToMeshes
 
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
+- category: mesh processing
+
 ### Description
 
-This routine creates a mesh from contours. There are two methods supported: one that directly stitches together contours
-(polygons) by finding a correspondence between adjacent contours and 'zippering' them together, and another that uses
-contours to first generate an image mask and then uses Marching Cubes to extract a mesh.
+This routine creates a mesh from contours. There are four supported methods:
 
-The direct method, when it can be used appropriately, should be significantly faster than meshing via voxelization
+- 'direct', which stitches together contours (polygons) by finding a correspondence between adjacent contours and
+zippering them together;
+
+- 'marching', which uses contours to first generate an image mask and then uses Marching Cubes to extract a mesh;
+
+- 'convex-hull', which builds the convex hull around the provided contours; and
+
+- 'contours', which converts the contours into thin triangle strips.
+
+The 'direct' method, when it can be used appropriately, should be significantly faster than meshing via voxelization
 (e.g., marching cubes). It will also insert few (or zero) additional vertices on the original contour planes, meaning
-the resulting mesh can be sliced to give (nearly) the exact original contours.
+the resulting mesh can be sliced to give (nearly) the exact original contours. However, please note that the 'direct'
+method is not robust and should only be expected to work for simple, sphere-like contours (i.e., convex polyhedra and
+mostly-convex polyhedra with only small concavities; see notes for additional information).
 
-However, please note that the direct method is not robust and should only be expected to work for simple, sphere-like
-contours (i.e., convex polyhedra and mostly-convex polyhedra with only small concavities; see notes for additional
-information).
+The 'marching' method is robust, but slow since it requires conversion to an intermediate bitmask. There is also a loss
+of spatial resolution due to use of bitmasks.
+
+The 'convex-hull' method is reasonably accurate, but scales poorly. It will also provide a zero-volume (i.e.,
+non-manifold) surface if only a single contour is present.
+
+The 'contours' method will not produce a manifold surface mesh, but will symmetrically extrude each contour to make a
+thin strip. This method is best suited for display purposes.
 
 ### Notes
 
@@ -5486,10 +6613,14 @@ information).
   representing convex polyhedra **should** result in manifold meshes, though they may not be watertight and if contour
   vertices are degenerate (or too close together numerically) meshes will fail to remain manifold.
 
+- The 'convex-hull' method uses an algorithm that scales poorly, especially when the contours are mostly convex (and
+  thus have many vertices on the hull).
+
 ### Parameters
 
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - MeshLabel
 - Method
 
@@ -5501,8 +6632,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -5520,6 +6654,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -5529,8 +6664,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -5547,6 +6685,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### MeshLabel
 
@@ -5572,9 +6759,10 @@ A label to attach to the surface mesh.
 
 ##### Description
 
-There are currently two supported methods for mesh extraction: (1) a simplistic but fast contour stitching method known
-as the 'direct' method, and (2) a method that first converts contours to a binary mask and then uses Marching Cubes to
-extract meshes. The latter is known as the 'marching' method. See operation description and notes for more details.
+There are currently three supported methods: 'direct' -- a simplistic but fast contour stitching method; 'marching' -- a
+method that first converts contours to a binary bitmask and then uses Marching Cubes to extract meshes; and
+'convex-hull' -- a robust routine that only works for convex contours. See operation description and notes for more
+details.
 
 ##### Default
 
@@ -5584,11 +6772,19 @@ extract meshes. The latter is known as the 'marching' method. See operation desc
 
 - ```"direct"```
 - ```"marching"```
+- ```"convex-hull"```
+- ```"contours"```
 
 
 ----------------------------------------------------
 
 ## ConvertContoursToPoints
+
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
+- category: point cloud processing
 
 ### Description
 
@@ -5603,6 +6799,7 @@ modified.
 
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - Label
 - Method
 
@@ -5614,8 +6811,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -5633,6 +6833,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -5642,8 +6843,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -5660,6 +6864,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Label
 
@@ -5704,6 +6957,11 @@ roughly be the case for spherical contour collections). Point clouds created thi
 
 ## ConvertDoseToImage
 
+### Tags
+
+- category: image processing
+- category: radiation dose
+
 ### Description
 
 This operation converts all loaded images from RTDOSE modality to CT modality. Image contents will not change, but the
@@ -5734,6 +6992,11 @@ The modality that will replace 'RTDOSE'.
 
 ## ConvertImageToDose
 
+### Tags
+
+- category: image processing
+- category: radiation dose
+
 ### Description
 
 This operation converts all loaded image modalities into RTDOSE. Image contents will not change, but the intent to treat
@@ -5747,12 +7010,20 @@ No registered options.
 
 ## ConvertImageToMeshes
 
+### Tags
+
+- accepts parameter: images
+- category: image processing
+- category: mesh processing
+
 ### Description
 
 This operation extracts surface meshes from images and pixel/voxel value thresholds. Meshes are appended to the back of
-the Surface_Mesh stack. There are two methods of contour generation available: a simple binary method in which voxels
-are either fully in or fully out of the contour, and a method based on marching cubes that will provide smoother
-contours. Both methods make use of marching cubes -- the binary method involves pre-processing.
+the Surface_Mesh stack. There are three methods of mesh extract available: (1) a simple 'binary' method in which voxels
+are either fully in or fully out of the contour, (2) a method based on 'marching' cubes that will provide smoother
+contours, and (3) a purely 'geometrical' method that extracts only the shape and extent of images but does not use the
+pixel intensities. Both pixel-based methods (2) and (3) make use of marching cubes -- the binary method involves
+pre-processing.
 
 ### Notes
 
@@ -5784,10 +7055,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -5809,6 +7083,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Lower
 
@@ -5876,11 +7153,18 @@ The image channel to use. Zero-based.
 
 ##### Description
 
-There are currently two supported methods for generating contours: (1) a simple (and fast) binary inclusivity checker,
-that simply checks if a voxel is within the ROI by testing the value at the voxel centre, and (2) a robust (but slow)
-method based on marching cubes. The binary method is fast, but produces extremely jagged contours. It may also have
-problems with 'pinches' and topological consistency. The marching method is more robust and should reliably produce
-contours for even the most complicated topologies, but is considerably slower than the binary method.
+There are currently three supported methods for generating meshes:
+
+1. A simple (and fast) binary inclusivity checker, that simply checks if a voxel is within an ROI by testing the value
+at the voxel centre. This method is fast, but produces extremely jagged contours. It may also have problems with
+'pinches' and topological consistency.
+
+2. A robust (but comparatively slower) method based on marching cubes. This method is more robust than the binary method
+and should reliably produce meshes for even the most complicated topologies. It is expected to run slower than the
+binary method.
+
+3. A method that only extracts the geometrical aspects of images, including orientation, position, and spatial extent.
+This method does not use pixel intensities. It is useful for inspecting or debugging spatial alignment.
 
 ##### Default
 
@@ -5890,6 +7174,7 @@ contours for even the most complicated topologies, but is considerably slower th
 
 - ```"binary"```
 - ```"marching"```
+- ```"geometrical"```
 
 #### MeshLabel
 
@@ -5915,6 +7200,12 @@ A label to attach to the surface mesh.
 ----------------------------------------------------
 
 ## ConvertImageToWarp
+
+### Tags
+
+- accepts parameter: images
+- category: image processing
+- category: spatial transform processing
 
 ### Description
 
@@ -5948,10 +7239,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -5973,6 +7267,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### KeyValues
 
@@ -6006,6 +7303,13 @@ characteristics.
 ----------------------------------------------------
 
 ## ConvertMeshesToContours
+
+### Tags
+
+- accepts parameter: images
+- accepts parameter: surface meshes
+- category: contour processing
+- category: mesh processing
 
 ### Description
 
@@ -6064,10 +7368,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the surface mesh
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all surface mesh that do not have the greatest number of sub-objects, not the least-numerous
-surface mesh (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the surface mesh composed of the greatest and fewest number of elements (vertices + faces). Only one or zero
+surface mesh will be selected; if there are ties, there is no guarantee which surface mesh will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple surface mesh based on a threshold count, i.e., where all selected
+surface mesh have more than or fewer than $N$ elements (vertices + faces). Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all surface mesh that do not have the greatest number of elements
+(vertices + faces), not the least-numerous surface mesh (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -6089,6 +7396,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ImageSelection
 
@@ -6107,10 +7417,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -6132,11 +7445,20 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## ConvertMeshesToPoints
+
+### Tags
+
+- accepts parameter: surface meshes
+- category: mesh processing
+- category: point cloud processing
 
 ### Description
 
@@ -6171,10 +7493,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the surface mesh
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all surface mesh that do not have the greatest number of sub-objects, not the least-numerous
-surface mesh (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the surface mesh composed of the greatest and fewest number of elements (vertices + faces). Only one or zero
+surface mesh will be selected; if there are ties, there is no guarantee which surface mesh will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple surface mesh based on a threshold count, i.e., where all selected
+surface mesh have more than or fewer than $N$ elements (vertices + faces). Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all surface mesh that do not have the greatest number of elements
+(vertices + faces), not the least-numerous surface mesh (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -6196,6 +7521,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Label
 
@@ -6281,6 +7609,10 @@ over the entire surface, so individual samples may cluster or spread out and dev
 
 ## ConvertNaNsToAir
 
+### Tags
+
+- category: image processing
+
 ### Description
 
 This operation runs the data through a per-pixel filter, converting NaN's to air in Hounsfield units (-1024).
@@ -6293,6 +7625,10 @@ No registered options.
 
 ## ConvertNaNsToZeros
 
+### Tags
+
+- category: image processing
+
 ### Description
 
 This operation runs the data through a per-pixel filter, converting NaN's to zeros.
@@ -6303,7 +7639,160 @@ No registered options.
 
 ----------------------------------------------------
 
+## ConvertParametersToTable
+
+### Tags
+
+- accepts parameter: tables
+- category: parameter table
+- category: table processing
+
+### Description
+
+Convert one or more key-value parameters from the global parameter table into a table. If no table is selected, a new
+table will be created. If an existing table is selected, row(s) will be appended to the bottom.
+
+### Parameters
+
+- KeySelection
+- TableSelection
+- TableLabel
+- EmitHeader
+- Shape
+
+#### KeySelection
+
+##### Description
+
+A regular expression that will select key-values to include in the table.
+
+This regular expression will be applied only to keys. Note that multiple keys can be selected; whether they are emitted
+on one or multiple rows is controlled by the 'Shape' parameter.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```"a_specific_key"```
+- ```"^a_specific_prefix.*"```
+
+#### TableSelection
+
+##### Description
+
+Select one or more tables. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth table (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last table. Positional specifiers
+can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the table composed of the greatest and fewest number of rows. Only one or zero table will be selected; if there
+are ties, there is no guarantee which table will be selected. Use 'more-than(N)' or 'fewer-than(N)' to select multiple
+table based on a threshold count, i.e., where all selected table have more than or fewer than $N$ rows. Intrinsic
+specifiers can be inverted by prefixing with a '!'. Note that '!numerous' means all table that do not have the greatest
+number of rows, not the least-numerous table (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### TableLabel
+
+##### Description
+
+A label to attach to table if and only if a new table is created.
+
+##### Default
+
+- ```"unspecified"```
+
+##### Examples
+
+- ```"unspecified"```
+- ```"xyz"```
+- ```"sheet A"```
+
+#### EmitHeader
+
+##### Description
+
+Controls whether a header (consisting of the key names) is emitted. If 'false' no header is emitted. If 'true', two rows
+are emitted regardless of whether there is a pre-existing header. If 'empty', a header is only emitted when the table is
+empty (i.e., no content in any cells). Consistency of the emitted row with the existing table content and structure is
+not verified and is therefore left to the user.
+
+##### Default
+
+- ```"empty"```
+
+##### Supported Options
+
+- ```"true"```
+- ```"false"```
+- ```"empty"```
+
+#### Shape
+
+##### Description
+
+Controls whether the table is written in 'wide' or 'tall' format.
+
+The 'wide' shape places all output from a single invocation onto a single row (or two if a header is also emitted). This
+format is most useful for analysis since the relationship between metadata elements can be analyzed more easily (e.g.,
+regression or classification).
+
+The 'tall' shape places every metadata key-value pair on a separate row. This format is most useful for simplistic data
+extraction or simple analysis where the relationship between metadata elements is not important (e.g., grepping for a
+specific key-value, checking if one-of-any tags are present).
+
+##### Default
+
+- ```"wide"```
+
+##### Supported Options
+
+- ```"wide"```
+- ```"tall"```
+
+
+----------------------------------------------------
+
 ## ConvertPixelsToPoints
+
+### Tags
+
+- accepts parameter: images
+- category: image processing
+- category: point cloud processing
 
 ### Description
 
@@ -6416,10 +7905,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -6441,11 +7933,19 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## ConvertWarpToImage
+
+### Tags
+
+- category: image processing
+- category: spatial transform processing
 
 ### Description
 
@@ -6472,10 +7972,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the transformation
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all transformation that do not have the greatest number of sub-objects, not the
-least-numerous transformation (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the transformation composed of the greatest and fewest number of sub-objects. Only one or zero transformation
+will be selected; if there are ties, there is no guarantee which transformation will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple transformation based on a threshold count, i.e., where all selected transformation
+have more than or fewer than $N$ sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all transformation that do not have the greatest number of sub-objects, not the least-numerous
+transformation (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -6530,6 +8033,11 @@ characteristics.
 
 ## ConvertWarpToMeshes
 
+### Tags
+
+- category: mesh processing
+- category: spatial transform processing
+
 ### Description
 
 This operation attempts to convert a warp (i.e., a spatial registration or deformable spatial registration) to a mesh
@@ -6557,10 +8065,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the transformation
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all transformation that do not have the greatest number of sub-objects, not the
-least-numerous transformation (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the transformation composed of the greatest and fewest number of sub-objects. Only one or zero transformation
+will be selected; if there are ties, there is no guarantee which transformation will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple transformation based on a threshold count, i.e., where all selected transformation
+have more than or fewer than $N$ sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all transformation that do not have the greatest number of sub-objects, not the least-numerous
+transformation (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -6656,6 +8167,12 @@ characteristics.
 
 ## ConvolveImages
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
 This routine convolves, correlates, or pattern-matches one rectilinear image array with another in voxel number space
@@ -6681,6 +8198,7 @@ This routine convolves, correlates, or pattern-matches one rectilinear image arr
 - ReferenceImageSelection
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - Channel
 - Operation
 
@@ -6701,10 +8219,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -6726,6 +8247,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ReferenceImageSelection
 
@@ -6744,10 +8268,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -6769,6 +8296,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -6778,8 +8308,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -6797,6 +8330,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -6806,8 +8340,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -6824,6 +8361,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Channel
 
@@ -6871,6 +8457,11 @@ convolution). In all cases the kernel is (approximately) centred.
 
 ## CopyContours
 
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
+
 ### Description
 
 This operation deep-copies the selected contours.
@@ -6879,6 +8470,7 @@ This operation deep-copies the selected contours.
 
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - ROILabel
 
 #### NormalizedROILabelRegex
@@ -6889,8 +8481,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -6908,6 +8503,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -6917,8 +8513,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -6935,6 +8534,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ROILabel
 
@@ -6958,6 +8606,11 @@ A label to attach to the copied ROI contours.
 ----------------------------------------------------
 
 ## CopyImages
+
+### Tags
+
+- accepts parameter: images
+- category: image processing
 
 ### Description
 
@@ -6984,10 +8637,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -7009,11 +8665,84 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+
+----------------------------------------------------
+
+## CopyLineSamples
+
+### Tags
+
+- accepts parameter: line samples
+- category: line sample processing
+
+### Description
+
+This operation deep-copies the selected line samples.
+
+### Parameters
+
+- LineSelection
+
+#### LineSelection
+
+##### Description
+
+Select one or more line samples. Selection specifiers can be of three types: positional, metadata-based key@value regex,
+and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth line sample (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last line sample.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the line sample composed of the greatest and fewest number of samples. Only one or zero line sample will be
+selected; if there are ties, there is no guarantee which line sample will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple line sample based on a threshold count, i.e., where all selected line sample have
+more than or fewer than $N$ samples. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all line sample that do not have the greatest number of samples, not the least-numerous line sample (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## CopyMeshes
+
+### Tags
+
+- accepts parameter: surface meshes
+- category: mesh processing
 
 ### Description
 
@@ -7040,10 +8769,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the surface mesh
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all surface mesh that do not have the greatest number of sub-objects, not the least-numerous
-surface mesh (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the surface mesh composed of the greatest and fewest number of elements (vertices + faces). Only one or zero
+surface mesh will be selected; if there are ties, there is no guarantee which surface mesh will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple surface mesh based on a threshold count, i.e., where all selected
+surface mesh have more than or fewer than $N$ elements (vertices + faces). Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all surface mesh that do not have the greatest number of elements
+(vertices + faces), not the least-numerous surface mesh (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -7065,11 +8797,19 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## CopyPoints
+
+### Tags
+
+- accepts parameter: point clouds
+- category: point cloud processing
 
 ### Description
 
@@ -7096,10 +8836,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the point cloud
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all point cloud that do not have the greatest number of sub-objects, not the least-numerous
-point cloud (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the point cloud composed of the greatest and fewest number of vertices. Only one or zero point cloud will be
+selected; if there are ties, there is no guarantee which point cloud will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple point cloud based on a threshold count, i.e., where all selected point cloud have
+more than or fewer than $N$ vertices. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all point cloud that do not have the greatest number of vertices, not the least-numerous point cloud
+(i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -7121,11 +8864,19 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## CopyTables
+
+### Tags
+
+- accepts parameter: tables
+- category: table processing
 
 ### Description
 
@@ -7150,9 +8901,230 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the table composed of
-the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
-'!numerous' means all table that do not have the greatest number of sub-objects, not the least-numerous table (i.e.,
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the table composed of the greatest and fewest number of rows. Only one or zero table will be selected; if there
+are ties, there is no guarantee which table will be selected. Use 'more-than(N)' or 'fewer-than(N)' to select multiple
+table based on a threshold count, i.e., where all selected table have more than or fewer than $N$ rows. Intrinsic
+specifiers can be inverted by prefixing with a '!'. Note that '!numerous' means all table that do not have the greatest
+number of rows, not the least-numerous table (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+
+----------------------------------------------------
+
+## CountObjects
+
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- accepts parameter: line samples
+- accepts parameter: point clouds
+- accepts parameter: surface meshes
+- accepts parameter: tables
+- category: meta
+
+### Description
+
+This operation is a meta-operatio that counts the number of selected objects and stores the result in the global
+parameter table. It can be used to control for loops and test for the presence of data to make conditional program
+flows.
+
+### Notes
+
+- Multiple selection criteria can be provided. If multiple criteria are specified, this operation returns the total
+  number of objects selected.
+
+- This operation is read-only and produces no side-effects. It does not alter the selection.
+
+- Selectors for this operation are only considered when you explicitly provide them. The default values are not used by
+  this operation.
+
+### Parameters
+
+- Key
+- NormalizedROILabelRegex
+- ROILabelRegex
+- ROISelection
+- ImageSelection
+- LineSelection
+- MeshSelection
+- PointSelection
+- TableSelection
+
+#### Key
+
+##### Description
+
+The key used to insert the object count into the key-value global parameter table.
+
+##### Default
+
+- ```"unspecified"```
+
+##### Examples
+
+- ```"count"```
+- ```"N"```
+- ```"x"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
+user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
+matching is required. Refer to the lexicon for available labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *raw* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match 'raw' contour labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"^body$"```
+- ```"Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
@@ -7175,11 +9147,213 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### LineSelection
+
+##### Description
+
+Select one or more line samples. Selection specifiers can be of three types: positional, metadata-based key@value regex,
+and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth line sample (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last line sample.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the line sample composed of the greatest and fewest number of samples. Only one or zero line sample will be
+selected; if there are ties, there is no guarantee which line sample will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple line sample based on a threshold count, i.e., where all selected line sample have
+more than or fewer than $N$ samples. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all line sample that do not have the greatest number of samples, not the least-numerous line sample (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### MeshSelection
+
+##### Description
+
+Select one or more surface meshes. Note that a single surface mesh may hold many disconnected mesh components; they
+should collectively represent a single logically cohesive object. Be aware that it is possible to mix logically
+unrelated sub-meshes together in a single mesh. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth surface mesh (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last surface mesh.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the surface mesh composed of the greatest and fewest number of elements (vertices + faces). Only one or zero
+surface mesh will be selected; if there are ties, there is no guarantee which surface mesh will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple surface mesh based on a threshold count, i.e., where all selected
+surface mesh have more than or fewer than $N$ elements (vertices + faces). Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all surface mesh that do not have the greatest number of elements
+(vertices + faces), not the least-numerous surface mesh (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### PointSelection
+
+##### Description
+
+Select one or more point clouds. Note that point clouds can hold a variety of data with varying attributes, but each
+point cloud is meant to represent a single logically cohesive collection of points. Be aware that it is possible to mix
+logically unrelated points together. Selection specifiers can be of three types: positional, metadata-based key@value
+regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth point cloud (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last point cloud.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the point cloud composed of the greatest and fewest number of vertices. Only one or zero point cloud will be
+selected; if there are ties, there is no guarantee which point cloud will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple point cloud based on a threshold count, i.e., where all selected point cloud have
+more than or fewer than $N$ vertices. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all point cloud that do not have the greatest number of vertices, not the least-numerous point cloud
+(i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### TableSelection
+
+##### Description
+
+Select one or more tables. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth table (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last table. Positional specifiers
+can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the table composed of the greatest and fewest number of rows. Only one or zero table will be selected; if there
+are ties, there is no guarantee which table will be selected. Use 'more-than(N)' or 'fewer-than(N)' to select multiple
+table based on a threshold count, i.e., where all selected table have more than or fewer than $N$ rows. Intrinsic
+specifiers can be inverted by prefixing with a '!'. Note that '!numerous' means all table that do not have the greatest
+number of rows, not the least-numerous table (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## CountVoxels
+
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: acquires futex
+- category: file export
+- category: image processing
 
 ### Description
 
@@ -7194,6 +9368,7 @@ This operation counts the number of voxels confined to one or more ROIs within a
 - ImageSelection
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - Inclusivity
 - ContourOverlap
 - Lower
@@ -7219,10 +9394,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -7244,6 +9422,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -7253,8 +9434,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -7272,6 +9456,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -7281,8 +9466,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -7299,6 +9487,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Inclusivity
 
@@ -7444,6 +9681,13 @@ different sources, or using sub-selections of the data.
 
 ## CropImageDoseToROIs
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: image processing
+- category: radiation dose
+
 ### Description
 
 This operation crops image slices to the specified ROI(s), with an additional margin.
@@ -7454,6 +9698,7 @@ This operation crops image slices to the specified ROI(s), with an additional ma
 - ImageSelection
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 
 #### DICOMMargin
 
@@ -7489,10 +9734,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -7514,6 +9762,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -7523,8 +9774,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -7542,6 +9796,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -7551,8 +9806,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -7569,11 +9827,65 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## CropImages
+
+### Tags
+
+- accepts parameter: images
+- category: image processing
 
 ### Description
 
@@ -7605,10 +9917,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -7630,6 +9945,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### RowsL
 
@@ -7737,6 +10055,13 @@ The amount of margin (in the DICOM coordinate system) to spare from cropping.
 
 ## CropROIDose
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: image processing
+- category: radiation dose
+
 ### Description
 
 This operation provides a simplified interface for overriding voxel values outside a ROI. For example, this operation
@@ -7762,6 +10087,7 @@ can be used to modify a base plan by eliminating dose outside an OAR.
 - InteriorOverwrite
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - ImageSelection
 - Filename
 - ParanoiaLevel
@@ -7800,10 +10126,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -7825,6 +10154,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ContourOverlap
 
@@ -7968,8 +10300,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -7987,6 +10322,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -7996,8 +10332,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -8014,28 +10353,31 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
 
-#### ImageSelection
+#### ROISelection
 
 ##### Description
 
-Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
-contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
-unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
-intrinsic.
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
 
 Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
-selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
-Positional specifiers can be inverted by prefixing with a '!'.
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
 
 Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -8057,6 +10399,58 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Filename
 
@@ -8099,6 +10493,11 @@ you don't. Use the high setting if your TPS goes overboard linking data sets by 
 
 ## DCEMRI_IAUC
 
+### Tags
+
+- category: diffusion
+- category: image processing
+
 ### Description
 
 This operation will compute the Integrated Area Under the Curve (IAUC) for any images present.
@@ -8115,6 +10514,11 @@ No registered options.
 ----------------------------------------------------
 
 ## DCEMRI_Nonparametric_CE
+
+### Tags
+
+- category: diffusion
+- category: image processing
 
 ### Description
 
@@ -8140,22 +10544,32 @@ No registered options.
 
 ## DICOMExportContours
 
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
+- category: file export
+
 ### Description
 
 This operation exports the selected contours to a DICOM RTSTRUCT-modality file.
 
 ### Notes
 
-- There are various 'paranoia' levels that can be used to partially anonymize the output. In particular, most metadata
-  and UIDs are replaced, but the files may still be recognized by a determined individual by comparing the contour data.
-  Do NOT rely on this routine to fully anonymize the data!
+- There are various 'paranoia' levels that can be used to partially de-identify / anonymize the output for purposes of
+  retaining or breaking linkage to originating data sets.. Note that the 'paranoia' option is **not** sufficient to
+  de-identify / anonymize data since other tags may contain personally identifying information. Beyond metadata and
+  UIDs, personally identifying information may still be found by a determined individual via inspection of the contour
+  vertex data. **Do not rely on this routine to de-identify / anonymize data.**
 
 ### Parameters
 
 - Filename
 - ParanoiaLevel
+- Encoding
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 
 #### Filename
 
@@ -8177,11 +10591,18 @@ The filename (or full path name) to which the DICOM file should be written.
 
 ##### Description
 
-At low paranoia setting, only top-level UIDs are replaced. At medium paranoia setting, many UIDs, descriptions, and
-labels are replaced, but the PatientID and FrameOfReferenceUID are retained. The high paranoia setting is the same as
-the medium setting, but the PatientID and FrameOfReferenceUID are also replaced. (Note: this is not a full
-anonymization.) Use the low setting if you want to retain linkage to the originating data set. Use the medium setting if
-you don't. Use the high setting if your TPS goes overboard linking data sets by PatientID and/or FrameOfReferenceUID.
+Controls how metadata is emitted.
+
+At the `low` paranoia setting, top-level UIDs are replaced. Use the `low` setting if you want to retain linkage to the
+originating data set.
+
+At low `medium` paranoia setting, many UIDs, descriptions, and labels are replaced, but the PatientID and
+FrameOfReferenceUID are retained. Use the `medium` setting if you do not want to retain linkage to the originating data
+set.
+
+The low `high` paranoia setting is the same as the `medium` setting, but the PatientID and FrameOfReferenceUID are also
+replaced. Use the `high` setting if your treatment planning system or other processing software goes overboard linking
+data sets using (possibly only) PatientID and/or FrameOfReferenceUID.
 
 ##### Default
 
@@ -8193,6 +10614,32 @@ you don't. Use the high setting if your TPS goes overboard linking data sets by 
 - ```"medium"```
 - ```"high"```
 
+#### Encoding
+
+##### Description
+
+Controls the transfer syntax of the emitted DICOM file. Options include `explicit` and `implicit`.
+
+`Explicit` transfer syntax directly encodes the DICOM Value Representation (VR) types of tags, which can make them
+appropriate for distribution and archival. However, `explicit` transfer syntax imposes limits on some VR types (e.g.,
+maximum string length) and will likely produce larger files than `implicit` transfer syntax.
+
+`Implicit` transfer syntax does not encode the DICOM VR, instead writing tags in a standardized way. However, the DICOM
+dictionary, which codifies this encoding, may differ from implementation to implementation or over time. `Implicit`
+transfer syntax will likely produce smaller files than `explicit` transfer syntax, but there is increased risk of data
+misinterpretation.
+
+Note that little-endian encoding is always used.
+
+##### Default
+
+- ```"explicit"```
+
+##### Supported Options
+
+- ```"explicit"```
+- ```"implicit"```
+
 #### NormalizedROILabelRegex
 
 ##### Description
@@ -8201,8 +10648,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -8220,6 +10670,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -8229,8 +10680,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -8247,11 +10701,66 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## DICOMExportImagesAsCT
+
+### Tags
+
+- accepts parameter: images
+- category: file export
+- category: image processing
 
 ### Description
 
@@ -8286,10 +10795,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -8311,6 +10823,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Filename
 
@@ -8354,6 +10869,13 @@ you don't. Use the high setting if your TPS goes overboard linking data sets by 
 
 ## DICOMExportImagesAsDose
 
+### Tags
+
+- accepts parameter: images
+- category: file export
+- category: image processing
+- category: radiation dose
+
 ### Description
 
 This operation exports the selected Image_Array to a DICOM dose file.
@@ -8387,10 +10909,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -8412,6 +10937,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Filename
 
@@ -8452,7 +10980,125 @@ you don't. Use the high setting if your TPS goes overboard linking data sets by 
 
 ----------------------------------------------------
 
+## DICOMExportImagesAsMR
+
+### Tags
+
+- accepts parameter: images
+- category: file export
+- category: image processing
+
+### Description
+
+This operation exports the selected Image_Array(s) to DICOM MR-modality files.
+
+### Notes
+
+- There are various 'paranoia' levels that can be used to partially anonymize the output. In particular, most metadata
+  and UIDs are replaced, but the files may still be recognized by a determined individual by comparing the coordinate
+  system and pixel values. Do NOT rely on this routine to fully anonymize the data!
+
+### Parameters
+
+- ImageSelection
+- Filename
+- ParanoiaLevel
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### Filename
+
+##### Description
+
+The filename (or full path name) to which the DICOM files should be written. The file format is a gzipped-TAR file
+containing multiple MR-modality files.
+
+##### Default
+
+- ```"MRs.tgz"```
+
+##### Examples
+
+- ```"/tmp/MRs.tgz"```
+- ```"./MRs.tar.gz"```
+- ```"MRs.tgz"```
+
+#### ParanoiaLevel
+
+##### Description
+
+At low paranoia setting, only top-level UIDs are replaced. At medium paranoia setting, many UIDs, descriptions, and
+labels are replaced, but the PatientID and FrameOfReferenceUID are retained. The high paranoia setting is the same as
+the medium setting, but the PatientID and FrameOfReferenceUID are also replaced. (Note: this is not a full
+anonymization.) Use the low setting if you want to retain linkage to the originating data set. Use the medium setting if
+you don't. Use the high setting if your TPS goes overboard linking data sets by PatientID and/or FrameOfReferenceUID.
+
+##### Default
+
+- ```"medium"```
+
+##### Supported Options
+
+- ```"low"```
+- ```"medium"```
+- ```"high"```
+
+
+----------------------------------------------------
+
 ## DeDuplicateImages
+
+### Tags
+
+- accepts parameter: images
+- category: image processing
 
 ### Description
 
@@ -8484,10 +11130,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -8509,11 +11158,20 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## DecayDoseOverTimeHalve
+
+### Tags
+
+- accepts parameter: contours
+- category: image processing
+- category: radiation dose
 
 ### Description
 
@@ -8536,6 +11194,7 @@ rule of thumb, do not use this routine if fewer than 2-3y have elapsed.
 
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 
 #### NormalizedROILabelRegex
 
@@ -8545,8 +11204,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -8564,6 +11226,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -8573,8 +11236,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -8591,11 +11257,66 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## DecayDoseOverTimeJones2014
+
+### Tags
+
+- accepts parameter: contours
+- category: image processing
+- category: radiation dose
 
 ### Description
 
@@ -8618,6 +11339,7 @@ Grant paper or 'Nasopharyngeal Carcinoma' by Wai Tong Ng et al. (2016; doi:10.10
 
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - Course1NumberOfFractions
 - ToleranceTotalDose
 - ToleranceNumberOfFractions
@@ -8633,8 +11355,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -8652,6 +11377,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -8661,8 +11387,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -8679,6 +11408,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Course1NumberOfFractions
 
@@ -8800,6 +11578,10 @@ is used.
 
 ## DecimatePixels
 
+### Tags
+
+- category: image processing
+
 ### Description
 
 This operation spatially aggregates blocks of pixels, thereby decimating them and making the images consume far less
@@ -8861,7 +11643,106 @@ the incoming image's column count. No decimation occurs if either this or 'OutSi
 
 ----------------------------------------------------
 
+## DecomposeImagesSVD
+
+### Tags
+
+- accepts parameter: images
+- category: image processing
+
+### Description
+
+This operation uses Singular Value Decomposition (SVD) on a set of images to generate an orthonormal basis. The basis is
+ordered and such that the first image corresponds with the largest singular value. The resulting basis can be used for
+classification, compression, and principal component analysis, among other things.
+
+### Notes
+
+- Images are 'reshaped' from a MxN matrix to a vector with length MxN using the default Ygor image pixel ordering
+  (row-major).
+
+- Spatial information is disregarded for all images, and the basis images have default geometry.
+
+### Parameters
+
+- ImageSelection
+- Channel
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### Channel
+
+##### Description
+
+The image channel to use. Zero-based. Use '-1' to operate on all available channels.
+
+##### Default
+
+- ```"-1"```
+
+##### Examples
+
+- ```"-1"```
+- ```"0"```
+- ```"1"```
+- ```"2"```
+
+
+----------------------------------------------------
+
 ## DeleteContours
+
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
 
 ### Description
 
@@ -8877,6 +11758,7 @@ This operation deletes the selected contours.
 
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 
 #### NormalizedROILabelRegex
 
@@ -8886,8 +11768,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -8905,6 +11790,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -8914,8 +11800,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -8932,15 +11821,69 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## DeleteImages
 
+### Tags
+
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
-This routine deletes images from memory. It is most useful when working with positional operations in stages.
+This routine deletes image arrays.
 
 ### Parameters
 
@@ -8963,10 +11906,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -8988,11 +11934,84 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+
+----------------------------------------------------
+
+## DeleteLineSamples
+
+### Tags
+
+- accepts parameter: line samples
+- category: line sample processing
+
+### Description
+
+This operation deletes the selected line samples.
+
+### Parameters
+
+- LineSelection
+
+#### LineSelection
+
+##### Description
+
+Select one or more line samples. Selection specifiers can be of three types: positional, metadata-based key@value regex,
+and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth line sample (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last line sample.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the line sample composed of the greatest and fewest number of samples. Only one or zero line sample will be
+selected; if there are ties, there is no guarantee which line sample will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple line sample based on a threshold count, i.e., where all selected line sample have
+more than or fewer than $N$ samples. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all line sample that do not have the greatest number of samples, not the least-numerous line sample (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## DeleteMeshes
+
+### Tags
+
+- accepts parameter: surface meshes
+- category: mesh processing
 
 ### Description
 
@@ -9019,10 +12038,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the surface mesh
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all surface mesh that do not have the greatest number of sub-objects, not the least-numerous
-surface mesh (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the surface mesh composed of the greatest and fewest number of elements (vertices + faces). Only one or zero
+surface mesh will be selected; if there are ties, there is no guarantee which surface mesh will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple surface mesh based on a threshold count, i.e., where all selected
+surface mesh have more than or fewer than $N$ elements (vertices + faces). Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all surface mesh that do not have the greatest number of elements
+(vertices + faces), not the least-numerous surface mesh (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -9044,11 +12066,19 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## DeletePoints
+
+### Tags
+
+- accepts parameter: point clouds
+- category: point cloud processing
 
 ### Description
 
@@ -9075,10 +12105,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the point cloud
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all point cloud that do not have the greatest number of sub-objects, not the least-numerous
-point cloud (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the point cloud composed of the greatest and fewest number of vertices. Only one or zero point cloud will be
+selected; if there are ties, there is no guarantee which point cloud will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple point cloud based on a threshold count, i.e., where all selected point cloud have
+more than or fewer than $N$ vertices. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all point cloud that do not have the greatest number of vertices, not the least-numerous point cloud
+(i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -9100,11 +12133,19 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## DeleteTables
+
+### Tags
+
+- accepts parameter: tables
+- category: table processing
 
 ### Description
 
@@ -9129,10 +12170,12 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the table composed of
-the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
-'!numerous' means all table that do not have the greatest number of sub-objects, not the least-numerous table (i.e.,
-'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the table composed of the greatest and fewest number of rows. Only one or zero table will be selected; if there
+are ties, there is no guarantee which table will be selected. Use 'more-than(N)' or 'fewer-than(N)' to select multiple
+table based on a threshold count, i.e., where all selected table have more than or fewer than $N$ rows. Intrinsic
+specifiers can be inverted by prefixing with a '!'. Note that '!numerous' means all table that do not have the greatest
+number of rows, not the least-numerous table (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -9154,11 +12197,22 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## DetectGrid3D
+
+### Tags
+
+- accepts parameter: point clouds
+- category: acquires futex
+- category: file export
+- category: image processing
+- category: point cloud processing
 
 ### Description
 
@@ -9235,10 +12289,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the point cloud
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all point cloud that do not have the greatest number of sub-objects, not the least-numerous
-point cloud (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the point cloud composed of the greatest and fewest number of vertices. Only one or zero point cloud will be
+selected; if there are ties, there is no guarantee which point cloud will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple point cloud based on a threshold count, i.e., where all selected point cloud have
+more than or fewer than $N$ vertices. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all point cloud that do not have the greatest number of vertices, not the least-numerous point cloud
+(i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -9260,6 +12317,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### GridSeparation
 
@@ -9448,6 +12508,11 @@ different sources, or using sub-selections of the data.
 
 ## DetectShapes3D
 
+### Tags
+
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
 This operation attempts to detect shapes in image volumes.
@@ -9473,10 +12538,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -9498,11 +12566,20 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## DrawGeometry
+
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: image processing
 
 ### Description
 
@@ -9516,6 +12593,7 @@ This operation draws shapes and patterns on images. Drawing is confined to one o
 - Channel
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - ContourOverlap
 - Inclusivity
 - Shapes
@@ -9537,10 +12615,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -9562,6 +12643,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### VoxelValue
 
@@ -9620,8 +12704,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -9639,6 +12726,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -9648,8 +12736,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -9666,6 +12757,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ContourOverlap
 
@@ -9742,6 +12882,10 @@ easier composition of multiple shapes or custom backgrounds.
 
 ## DroverDebug
 
+### Tags
+
+- category: meta
+
 ### Description
 
 This operation reports basic information on the state of the main Drover class. It can be used to report on the state of
@@ -9788,6 +12932,11 @@ Controls the amount of information printed.
 
 ## DumpAllOrderedImageMetadataToFile
 
+### Tags
+
+- category: meta
+- category: needs refresh
+
 ### Description
 
 Dump exactly what order the data will be in for the following analysis.
@@ -9799,6 +12948,11 @@ No registered options.
 ----------------------------------------------------
 
 ## DumpAnEncompassedPoint
+
+### Tags
+
+- category: meta
+- category: needs refresh
 
 ### Description
 
@@ -9813,6 +12967,11 @@ No registered options.
 
 ## DumpFilesPartitionedByTime
 
+### Tags
+
+- category: meta
+- category: needs refresh
+
 ### Description
 
 This operation prints PACS filenames along with the associated time. It is more focused than the metadata dumpers above.
@@ -9826,6 +12985,13 @@ No registered options.
 ----------------------------------------------------
 
 ## DumpImageMeshes
+
+### Tags
+
+- accepts parameter: images
+- category: file export
+- category: image processing
+- category: mesh processing
 
 ### Description
 
@@ -9864,10 +13030,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -9889,6 +13058,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### OutBase
 
@@ -9976,6 +13148,12 @@ of the image it is derived from.
 
 ## DumpImageMetadataOccurrencesToFile
 
+### Tags
+
+- accepts parameter: images
+- category: file export
+- category: image processing
+
 ### Description
 
 Dump all the metadata elements, but group like-items together and also print the occurence number.
@@ -10003,10 +13181,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -10028,6 +13209,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### FileName
 
@@ -10069,6 +13253,13 @@ different sources, or using sub-selections of the data. If left empty, the colum
 
 ## DumpPerROIParams_KineticModel_1C2I_5P
 
+### Tags
+
+- accepts parameter: contours
+- category: image processing
+- category: modeling
+- category: perfusion
+
 ### Description
 
 Given a perfusion model, this routine computes parameter estimates for ROIs.
@@ -10076,6 +13267,7 @@ Given a perfusion model, this routine computes parameter estimates for ROIs.
 ### Parameters
 
 - ROILabelRegex
+- ROISelection
 - Filename
 - Separator
 
@@ -10087,8 +13279,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -10105,6 +13300,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Filename
 
@@ -10145,6 +13389,11 @@ currently supported.
 
 ## DumpPixelValuesOverTimeForAnEncompassedPoint
 
+### Tags
+
+- category: image processing
+- category: needs refresh
+
 ### Description
 
 Output the pixel values over time for a generic point. Currently the point is arbitrarily taken to tbe the centre of the
@@ -10158,6 +13407,11 @@ No registered options.
 ----------------------------------------------------
 
 ## DumpPlanSummary
+
+### Tags
+
+- category: file export
+- category: rtplan processing
 
 ### Description
 
@@ -10209,6 +13463,13 @@ different sources, or using sub-selections of the data. If left empty, the colum
 
 ## DumpROIContours
 
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
+- category: file export
+- category: mesh processing
+
 ### Description
 
 This operation exports contours in a standard surface mesh format (structured ASCII Wavefront OBJ) in planar polygon
@@ -10226,6 +13487,7 @@ format. A companion material library file (MTL) assigns colours to each ROI to h
 - MTLFileName
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 
 #### DumpFileName
 
@@ -10271,8 +13533,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -10290,6 +13555,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -10299,8 +13565,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -10317,11 +13586,64 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## DumpROIData
+
+### Tags
+
+- category: contour processing
 
 ### Description
 
@@ -10334,6 +13656,13 @@ No registered options.
 ----------------------------------------------------
 
 ## DumpROISNR
+
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
+- category: file export
+- category: image processing
 
 ### Description
 
@@ -10350,6 +13679,7 @@ This operation computes the Signal-to-Noise ratio (SNR) for each ROI. The specif
 - SNRFileName
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 
 #### SNRFileName
 
@@ -10377,8 +13707,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -10396,6 +13729,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -10405,8 +13739,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -10423,11 +13760,67 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## DumpROISurfaceMeshes
+
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
+- category: file export
+- category: mesh processing
 
 ### Description
 
@@ -10442,8 +13835,9 @@ viewer (e.g., meshlab).
 ### Parameters
 
 - OutBase
-- NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
+- NormalizedROILabelRegex
 - GridRows
 - GridColumns
 - ContourOverlap
@@ -10466,6 +13860,85 @@ automatically.
 - ```"../somedir/output"```
 - ```"/path/to/some/mesh"```
 
+#### ROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *raw* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match 'raw' contour labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"^body$"```
+- ```"Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
 #### NormalizedROILabelRegex
 
 ##### Description
@@ -10474,8 +13947,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -10493,27 +13969,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
-
-#### ROILabelRegex
-
-##### Description
-
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses grep syntax.
-
-##### Default
-
-- ```".*"```
-
-##### Examples
-
-- ```".*"```
-- ```".*body.*"```
-- ```"body"```
-- ```"Gross_Liver"```
-- ```".*parotid.*|.*sub.*mand.*"```
-- ```"left_parotid|right_parotid|eyes"```
+- ```"^(?!Left Parotid).*$"```
 
 #### GridRows
 
@@ -10603,6 +14059,11 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 
 ## DumpRTPlanMetadataOccurrencesToFile
 
+### Tags
+
+- category: file export
+- category: rtplan processing
+
 ### Description
 
 Dump all the metadata elements, but group like-items together and also print the occurence number.
@@ -10629,10 +14090,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the treatment plan
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all treatment plan that do not have the greatest number of sub-objects, not the
-least-numerous treatment plan (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the treatment plan composed of the greatest and fewest number of control points. Only one or zero treatment plan
+will be selected; if there are ties, there is no guarantee which treatment plan will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple treatment plan based on a threshold count, i.e., where all selected treatment plan
+have more than or fewer than $N$ control points. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all treatment plan that do not have the greatest number of control points, not the least-numerous
+treatment plan (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -10654,6 +14118,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### FileName
 
@@ -10695,6 +14162,11 @@ different sources, or using sub-selections of the data. If left empty, the colum
 
 ## DumpVoxelDoseInfo
 
+### Tags
+
+- category: image processing
+- category: radiation dose
+
 ### Description
 
 This operation locates the minimum and maximum dose voxel values. It is useful for estimating prescription doses.
@@ -10710,7 +14182,197 @@ No registered options.
 
 ----------------------------------------------------
 
+## EQDXTable
+
+### Tags
+
+- accepts parameter: tables
+- category: table processing
+
+### Description
+
+This operation transforms a given fractionated high dose rate radiotherapy dose to an Equivalent Dose with 'x'-Dose per
+fraction (EQDx). A table with various $\alpha/\beta$ and variations is generated. Currently, only photon external beam
+therapy conversions are supported.
+
+### Notes
+
+- This operation transforms a single scalar dose. For an operation that transforms an image array, consider the
+  'BEDConvert' operation.
+
+- The default is an 'EQD2' transformation, with 2 Gy per fraction (i.e., EQDx with $x=2$).
+
+- This operation currently assumes a linear-quadratic BED model that disregards time delays, in particular tissue
+  repopulation. Specifically Withers' formula is used: $EQD_{x} = nd(d + \alpha/\beta)/(x + \alpha/\beta)$.
+
+### Parameters
+
+- TargetDosePerFraction
+- NumberOfFractions
+- Dose
+- AlphaBetaRatios
+- TableSelection
+- TableLabel
+
+#### TargetDosePerFraction
+
+##### Description
+
+The desired dose per fraction 'x' for an EQDx conversion.
+
+Note that the recommended units are Gy. However, the only requirement is to be consistent with the dose parameter's
+units and the $\alpha/\beta$. For an 'EQD2' conversion, this value should be 2 Gy and the input dose should also be in
+units of Gy. For an 'EQD3.5' conversion, this value should be 3.5 Gy.
+
+##### Default
+
+- ```"2.0"```
+
+##### Examples
+
+- ```"1.8"```
+- ```"2.0"```
+- ```"5.0"```
+- ```"8.0"```
+
+#### NumberOfFractions
+
+##### Description
+
+The number of fractions over which the dose distribution was (or will be) delivered. Decimal fractions are supported to
+accommodate multi-pass BED conversions.
+
+##### Default
+
+- ```"35"```
+
+##### Examples
+
+- ```"10"```
+- ```"20.5"```
+- ```"35"```
+- ```"40.123"```
+
+#### Dose
+
+##### Description
+
+The dose to be transformed. It should be a dose that was (or will be) delivered (e.g., a point dose delivered to a
+voxel, or a prescription delivered to a PTV).
+
+Note that the recommended units are Gy. However, the only requirement is to be consistent with the 'x' dose (i.e., the
+$x$ in EQDx) and the $\alpha/\beta$. For a 70 Gy dose provide the value '70'.
+
+Note that if the dose is a prescription dose, then the result should be considered a virtual dose or even a sort of
+'ballpark estimate' since the prescribed tissues will only nominally receive the prescription dose. Also note that the
+specified dose need not actually exist; it can be purely virtual to accommodate multiple/compound conversions.
+
+##### Default
+
+- ```"70"```
+
+##### Examples
+
+- ```"5.0"```
+- ```"15"```
+- ```"22.5"```
+- ```"45.0"```
+- ```"66"```
+- ```"70.001"```
+
+#### AlphaBetaRatios
+
+##### Description
+
+A list of $\alpha/\beta$ to use, where each $\alpha/\beta$ is separated with a ';'. A conversion will be performed
+separately for each $\alpha/\beta$.
+
+Note that the recommended units are Gy. However, the only requirement is to be consistent with the 'x' dose (i.e., the
+$x$ in EQDx) and the dose parameter's units.
+
+##### Default
+
+- ```"1;2;3;5;6;8;10"```
+
+##### Examples
+
+- ```"2,0"```
+- ```"1;2;3"```
+- ```"0.1;25"```
+
+#### TableSelection
+
+##### Description
+
+Select one or more tables. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth table (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last table. Positional specifiers
+can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the table composed of the greatest and fewest number of rows. Only one or zero table will be selected; if there
+are ties, there is no guarantee which table will be selected. Use 'more-than(N)' or 'fewer-than(N)' to select multiple
+table based on a threshold count, i.e., where all selected table have more than or fewer than $N$ rows. Intrinsic
+specifiers can be inverted by prefixing with a '!'. Note that '!numerous' means all table that do not have the greatest
+number of rows, not the least-numerous table (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"TableLabel@EQDx"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### TableLabel
+
+##### Description
+
+A label to attach to table if and only if a new table is created.
+
+##### Default
+
+- ```"EQDx"```
+
+##### Examples
+
+- ```"unspecified"```
+- ```"xyz"```
+- ```"sheet A"```
+
+
+----------------------------------------------------
+
 ## EvaluateDoseVolumeStats
+
+### Tags
+
+- category: contour processing
+- category: file export
+- category: image processing
+- category: radiation dose
 
 ### Description
 
@@ -10779,8 +14441,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -10797,6 +14462,7 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
 
 #### PTVNormalizedROILabelRegex
 
@@ -10806,8 +14472,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -10825,6 +14494,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### BodyROILabelRegex
 
@@ -10834,8 +14504,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -10852,6 +14525,7 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
 
 #### BodyNormalizedROILabelRegex
 
@@ -10861,8 +14535,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -10880,6 +14557,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### UserComment
 
@@ -10902,6 +14580,15 @@ different sources, or using sub-selections of the data. If left empty, the colum
 ----------------------------------------------------
 
 ## EvaluateNTCPModels
+
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
+- category: file export
+- category: image processing
+- category: modeling
+- category: radiation dose
 
 ### Description
 
@@ -10926,6 +14613,7 @@ OAR).
 - NTCPFileName
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - LKB_TD50
 - LKB_M
 - LKB_Alpha
@@ -10957,8 +14645,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -10976,6 +14667,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -10985,8 +14677,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -11003,6 +14698,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### LKB_TD50
 
@@ -11083,7 +14827,56 @@ different sources, or using sub-selections of the data. If left empty, the colum
 
 ----------------------------------------------------
 
+## EvaluateParameters
+
+### Tags
+
+- category: control flow
+- category: meta
+- category: parameter table
+
+### Description
+
+Exposes the global parameter metadata table for query and evaluation.
+
+### Parameters
+
+- Contains
+
+#### Contains
+
+##### Description
+
+Key@value pairs that can be used to check for the presence of specific metadata. Keys are interpretted verbatim, but
+values are interpretted as regex.
+
+Note that if the key is absent in the table, the value will never match.
+
+Note to query if a given key is present, regardless of the value, use a regex that matches any input, e.g., 'key@.*'.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"Modality@CT"```
+- ```"StudyDate@.*2024.*"```
+- ```"SomeMetadataKey@.*"```
+
+
+----------------------------------------------------
+
 ## EvaluateTCPModels
+
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
+- category: file export
+- category: image processing
+- category: modeling
+- category: radiation dose
 
 ### Description
 
@@ -11110,6 +14903,7 @@ TCP. (3) The 'Fenwick' model for solid tumours.
 - TCPFileName
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - Gamma50
 - Dose50
 - EUD_Gamma50
@@ -11146,8 +14940,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -11165,6 +14962,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -11174,8 +14972,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -11192,6 +14993,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Gamma50
 
@@ -11392,7 +15242,353 @@ different sources, or using sub-selections of the data. If left empty, the colum
 
 ----------------------------------------------------
 
+## ExecuteShell
+
+### Tags
+
+- category: meta
+
+### Description
+
+This operation executes the given command in a system shell.
+
+### Parameters
+
+- Command
+- Result
+- Return
+
+#### Command
+
+##### Description
+
+The command(s) to execute using the system shell.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"echo example"```
+- ```"echo 'another example'"```
+- ```"for i in 1 2 3 ; do echo "loop iteration $i" ; done"```
+- ```"for %i in (1 2 3) do echo "loop iteration %i""```
+
+#### Result
+
+##### Description
+
+The name of the variable in which to store the shell's stdout. The result will be stored in the global parameter table;
+the variable name corresponds to the 'key' and the stdout will be stored as the 'value.'
+
+If no variable name is provided, the stdout will be ignored.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"result"```
+- ```"stdout"```
+- ```"x"```
+
+#### Return
+
+##### Description
+
+The name of the variable in which to store the shell's return value (if available). The result will be stored in the
+global parameter table; the variable name corresponds to the 'key' and the return value will be stored as the 'value.'
+
+If no variable name is provided, the return value will not be recorded. However, this operation will still evaluate to
+'true' only when the shell reports that the command succeeds.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"ret"```
+- ```"return_value"```
+
+
+----------------------------------------------------
+
+## ExplodeImages
+
+### Tags
+
+- accepts parameter: images
+- category: image processing
+
+### Description
+
+This operation takes an image array containing multiple images and 'explodes' it, creating one new image array for each
+individual image.
+
+### Notes
+
+- The original image array is removed and each image is appended as a separate image array.
+
+### Parameters
+
+- ImageSelection
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"first"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+
+----------------------------------------------------
+
+## ExportContours
+
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
+- category: file export
+
+### Description
+
+This operation writes contour collections to a file in a simplified text format. Contour collections exported this way
+should round-trip, including metadata.
+
+### Notes
+
+- This operation does *not* export in DICOM format. Rather, it instead uses a custom plaintext format.
+
+### Parameters
+
+- NormalizedROILabelRegex
+- ROILabelRegex
+- ROISelection
+- FilenameBase
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
+user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
+matching is required. Refer to the lexicon for available labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *raw* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match 'raw' contour labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"^body$"```
+- ```"Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### FilenameBase
+
+##### Description
+
+The base filename that contours will be written to. The file format is a simplified custom text format. Metadata is
+included, but will be base64 encoded if any non-printable characters are detected. If no filename is given, the default
+will be used. A '_', a sequentially-increasing number, and the '.dat' file suffix are appended after the base filename.
+
+##### Default
+
+- ```"/tmp/dcma_exportcontours"```
+
+##### Examples
+
+- ```"contours"```
+- ```"../somedir/data"```
+- ```"/path/to/some/selected_roi_contours"```
+
+
+----------------------------------------------------
+
+## ExportDrover
+
+### Tags
+
+- category: RPC
+- category: file export
+- category: meta
+
+### Description
+
+This operation serializes the current Drover to a file. It uses Apache Thrift for serialization.
+
+### Notes
+
+- RPC functionality is currently alpha-quality code, and much is expected to change.
+
+### Parameters
+
+- Filename
+
+#### Filename
+
+##### Description
+
+The filename to write to.
+
+##### Default
+
+- ```"out.ts_dcma"```
+
+##### Examples
+
+- ```"out.ts_dcma"```
+- ```"/tmp/out.ts_dcma"```
+
+
+----------------------------------------------------
+
 ## ExportFITSImages
+
+### Tags
+
+- accepts parameter: images
+- category: file export
+- category: image processing
 
 ### Description
 
@@ -11400,9 +15596,8 @@ This operation writes image arrays to FITS-formatted image files.
 
 ### Notes
 
-- Only pixel information and basic image positioning metadata are exported. In particular, contours and arbitrary
-  metadata are **not** exported by this routine. (If a rendering of the image with contours drawn is needed, consult the
-  PresentationImage operation.)
+- FITS images support lossless metadata export, but the metadata is embedded in a non-standard (but compliant) manner.
+  Altering images using other software may result in invalidated metadata or (partial) removal of metadata.
 
 ### Parameters
 
@@ -11426,10 +15621,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -11451,6 +15649,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### FilenameBase
 
@@ -11472,6 +15673,12 @@ the base filename. Note that the file type is FITS.
 ----------------------------------------------------
 
 ## ExportLineSamples
+
+### Tags
+
+- accepts parameter: line samples
+- category: file export
+- category: line sample processing
 
 ### Description
 
@@ -11497,10 +15704,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the line sample
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all line sample that do not have the greatest number of sub-objects, not the least-numerous
-line sample (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the line sample composed of the greatest and fewest number of samples. Only one or zero line sample will be
+selected; if there are ties, there is no guarantee which line sample will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple line sample based on a threshold count, i.e., where all selected line sample have
+more than or fewer than $N$ samples. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all line sample that do not have the greatest number of samples, not the least-numerous line sample (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -11522,6 +15732,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### FilenameBase
 
@@ -11545,7 +15758,514 @@ be used. A '_', a sequentially-increasing number, and the '.dat' file suffix are
 
 ----------------------------------------------------
 
+## ExportOriginalFiles
+
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- accepts parameter: line samples
+- accepts parameter: point clouds
+- accepts parameter: surface meshes
+- accepts parameter: tables
+- category: file export
+
+### Description
+
+This operation attempts to copy the original file associated with the selected object(s).
+
+Note that the original file may not be available, or may no longer be accessible. For example, when the working
+directory has been modified and relative paths are used, or when network resources are used.
+
+### Notes
+
+- This operation does not modify the selection.
+
+- Selectors for this operation are only considered when you explicitly provide them. The default values are not used by
+  this operation.
+
+### Parameters
+
+- RootDirectory
+- ROILabelRegex
+- ROISelection
+- NormalizedROILabelRegex
+- ImageSelection
+- LineSelection
+- MeshSelection
+- PointSelection
+- TransformSelection
+- TableSelection
+- RTPlanSelection
+
+#### RootDirectory
+
+##### Description
+
+The root directory in which to copy files.
+
+##### Default
+
+- ```"/tmp/dcma_exportoriginalfiles"```
+
+##### Examples
+
+- ```"/tmp"```
+- ```"."```
+- ```"$HOME/dcma_exportoriginalfiles/"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *raw* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match 'raw' contour labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"^body$"```
+- ```"Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
+user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
+matching is required. Refer to the lexicon for available labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### LineSelection
+
+##### Description
+
+Select one or more line samples. Selection specifiers can be of three types: positional, metadata-based key@value regex,
+and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth line sample (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last line sample.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the line sample composed of the greatest and fewest number of samples. Only one or zero line sample will be
+selected; if there are ties, there is no guarantee which line sample will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple line sample based on a threshold count, i.e., where all selected line sample have
+more than or fewer than $N$ samples. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all line sample that do not have the greatest number of samples, not the least-numerous line sample (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### MeshSelection
+
+##### Description
+
+Select one or more surface meshes. Note that a single surface mesh may hold many disconnected mesh components; they
+should collectively represent a single logically cohesive object. Be aware that it is possible to mix logically
+unrelated sub-meshes together in a single mesh. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth surface mesh (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last surface mesh.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the surface mesh composed of the greatest and fewest number of elements (vertices + faces). Only one or zero
+surface mesh will be selected; if there are ties, there is no guarantee which surface mesh will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple surface mesh based on a threshold count, i.e., where all selected
+surface mesh have more than or fewer than $N$ elements (vertices + faces). Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all surface mesh that do not have the greatest number of elements
+(vertices + faces), not the least-numerous surface mesh (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### PointSelection
+
+##### Description
+
+Select one or more point clouds. Note that point clouds can hold a variety of data with varying attributes, but each
+point cloud is meant to represent a single logically cohesive collection of points. Be aware that it is possible to mix
+logically unrelated points together. Selection specifiers can be of three types: positional, metadata-based key@value
+regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth point cloud (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last point cloud.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the point cloud composed of the greatest and fewest number of vertices. Only one or zero point cloud will be
+selected; if there are ties, there is no guarantee which point cloud will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple point cloud based on a threshold count, i.e., where all selected point cloud have
+more than or fewer than $N$ vertices. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all point cloud that do not have the greatest number of vertices, not the least-numerous point cloud
+(i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### TransformSelection
+
+##### Description
+
+Select one or more transform objects (aka 'warp' objects). Selection specifiers can be of three types: positional,
+metadata-based key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth transformation (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last transformation.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the transformation composed of the greatest and fewest number of sub-objects. Only one or zero transformation
+will be selected; if there are ties, there is no guarantee which transformation will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple transformation based on a threshold count, i.e., where all selected transformation
+have more than or fewer than $N$ sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all transformation that do not have the greatest number of sub-objects, not the least-numerous
+transformation (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### TableSelection
+
+##### Description
+
+Select one or more tables. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth table (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last table. Positional specifiers
+can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the table composed of the greatest and fewest number of rows. Only one or zero table will be selected; if there
+are ties, there is no guarantee which table will be selected. Use 'more-than(N)' or 'fewer-than(N)' to select multiple
+table based on a threshold count, i.e., where all selected table have more than or fewer than $N$ rows. Intrinsic
+specifiers can be inverted by prefixing with a '!'. Note that '!numerous' means all table that do not have the greatest
+number of rows, not the least-numerous table (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### RTPlanSelection
+
+##### Description
+
+Select one or more treatment plans. Note that a single treatment plan may be composed of multiple beams; if delivered
+sequentially, they should collectively represent a single logically cohesive plan. Selection specifiers can be of three
+types: positional, metadata-based key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth treatment plan (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last treatment plan.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the treatment plan composed of the greatest and fewest number of control points. Only one or zero treatment plan
+will be selected; if there are ties, there is no guarantee which treatment plan will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple treatment plan based on a threshold count, i.e., where all selected treatment plan
+have more than or fewer than $N$ control points. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all treatment plan that do not have the greatest number of control points, not the least-numerous
+treatment plan (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+
+----------------------------------------------------
+
 ## ExportPointClouds
+
+### Tags
+
+- accepts parameter: point clouds
+- category: file export
+- category: point cloud processing
 
 ### Description
 
@@ -11573,10 +16293,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the point cloud
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all point cloud that do not have the greatest number of sub-objects, not the least-numerous
-point cloud (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the point cloud composed of the greatest and fewest number of vertices. Only one or zero point cloud will be
+selected; if there are ties, there is no guarantee which point cloud will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple point cloud based on a threshold count, i.e., where all selected point cloud have
+more than or fewer than $N$ vertices. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all point cloud that do not have the greatest number of vertices, not the least-numerous point cloud
+(i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -11598,6 +16321,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### FilenameBase
 
@@ -11620,7 +16346,102 @@ suffix are appended after the base filename.
 
 ----------------------------------------------------
 
+## ExportSNCImages
+
+### Tags
+
+- accepts parameter: images
+- category: file export
+- category: image processing
+
+### Description
+
+This operation writes image arrays to ASCII 'SNC' formatted files.
+
+### Notes
+
+- Support for this format is ad-hoc. Metadata export is not supported.
+
+### Parameters
+
+- ImageSelection
+- FilenameBase
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### FilenameBase
+
+##### Description
+
+The base filename that images will be written to. A sequentially-increasing number and file suffix are appended after
+the base filename. Note that the file type is ASCII SNC.
+
+##### Default
+
+- ```"/tmp/dcma_exportsncimages"```
+
+##### Examples
+
+- ```"../somedir/out"```
+- ```"/path/to/some/dir/file_prefix"```
+
+
+----------------------------------------------------
+
 ## ExportSurfaceMeshes
+
+### Tags
+
+- accepts parameter: surface meshes
+- category: file export
+- category: mesh processing
 
 ### Description
 
@@ -11628,7 +16449,7 @@ This operation writes one or more surface meshs to file in the 'Stanford' Polygo
 
 ### Notes
 
-- Support for metadata in OBJ files is fully supported. Surface mesh metadata will be encoded in specially-marked
+- Support for metadata in PLY files is fully supported. Surface mesh metadata will be encoded in specially-marked
   comments and base64 encoded if non-printable characters are present. Metadata will be recovered when PLY files are
   loaded in DICOMautomaton. Note that other software may disregard these comments.
 
@@ -11655,10 +16476,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the surface mesh
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all surface mesh that do not have the greatest number of sub-objects, not the least-numerous
-surface mesh (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the surface mesh composed of the greatest and fewest number of elements (vertices + faces). Only one or zero
+surface mesh will be selected; if there are ties, there is no guarantee which surface mesh will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple surface mesh based on a threshold count, i.e., where all selected
+surface mesh have more than or fewer than $N$ elements (vertices + faces). Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all surface mesh that do not have the greatest number of elements
+(vertices + faces), not the least-numerous surface mesh (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -11680,6 +16504,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Filename
 
@@ -11724,6 +16551,12 @@ and may be more widely supported. ASCII is generally recommended unless performa
 
 ## ExportSurfaceMeshesOBJ
 
+### Tags
+
+- accepts parameter: surface meshes
+- category: file export
+- category: mesh processing
+
 ### Description
 
 This operation writes one or more surface meshes to file in Wavefront Object ('OBJ') format.
@@ -11757,10 +16590,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the surface mesh
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all surface mesh that do not have the greatest number of sub-objects, not the least-numerous
-surface mesh (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the surface mesh composed of the greatest and fewest number of elements (vertices + faces). Only one or zero
+surface mesh will be selected; if there are ties, there is no guarantee which surface mesh will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple surface mesh based on a threshold count, i.e., where all selected
+surface mesh have more than or fewer than $N$ elements (vertices + faces). Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all surface mesh that do not have the greatest number of elements
+(vertices + faces), not the least-numerous surface mesh (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -11782,6 +16618,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Filename
 
@@ -11808,6 +16647,12 @@ format.
 ----------------------------------------------------
 
 ## ExportSurfaceMeshesOFF
+
+### Tags
+
+- accepts parameter: surface meshes
+- category: file export
+- category: mesh processing
 
 ### Description
 
@@ -11843,10 +16688,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the surface mesh
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all surface mesh that do not have the greatest number of sub-objects, not the least-numerous
-surface mesh (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the surface mesh composed of the greatest and fewest number of elements (vertices + faces). Only one or zero
+surface mesh will be selected; if there are ties, there is no guarantee which surface mesh will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple surface mesh based on a threshold count, i.e., where all selected
+surface mesh have more than or fewer than $N$ elements (vertices + faces). Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all surface mesh that do not have the greatest number of elements
+(vertices + faces), not the least-numerous surface mesh (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -11868,6 +16716,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Filename
 
@@ -11894,13 +16745,19 @@ increasing counter between the file's stem name and extension. Files will be for
 
 ## ExportSurfaceMeshesPLY
 
+### Tags
+
+- accepts parameter: surface meshes
+- category: file export
+- category: mesh processing
+
 ### Description
 
 This operation writes one or more surface meshs to file in the 'Stanford' Polygon File format.
 
 ### Notes
 
-- Support for metadata in OBJ files is fully supported. Surface mesh metadata will be encoded in specially-marked
+- Support for metadata in PLY files is fully supported. Surface mesh metadata will be encoded in specially-marked
   comments and base64 encoded if non-printable characters are present. Metadata will be recovered when PLY files are
   loaded in DICOMautomaton. Note that other software may disregard these comments.
 
@@ -11927,10 +16784,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the surface mesh
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all surface mesh that do not have the greatest number of sub-objects, not the least-numerous
-surface mesh (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the surface mesh composed of the greatest and fewest number of elements (vertices + faces). Only one or zero
+surface mesh will be selected; if there are ties, there is no guarantee which surface mesh will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple surface mesh based on a threshold count, i.e., where all selected
+surface mesh have more than or fewer than $N$ elements (vertices + faces). Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all surface mesh that do not have the greatest number of elements
+(vertices + faces), not the least-numerous surface mesh (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -11952,6 +16812,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Filename
 
@@ -11996,6 +16859,12 @@ and may be more widely supported. ASCII is generally recommended unless performa
 
 ## ExportSurfaceMeshesSTL
 
+### Tags
+
+- accepts parameter: surface meshes
+- category: file export
+- category: mesh processing
+
 ### Description
 
 This operation writes one or more surface meshes to file in the (3D Systems) Stereolithography format.
@@ -12033,10 +16902,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the surface mesh
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all surface mesh that do not have the greatest number of sub-objects, not the least-numerous
-surface mesh (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the surface mesh composed of the greatest and fewest number of elements (vertices + faces). Only one or zero
+surface mesh will be selected; if there are ties, there is no guarantee which surface mesh will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple surface mesh based on a threshold count, i.e., where all selected
+surface mesh have more than or fewer than $N$ elements (vertices + faces). Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all surface mesh that do not have the greatest number of elements
+(vertices + faces), not the least-numerous surface mesh (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -12058,6 +16930,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Filename
 
@@ -12102,6 +16977,13 @@ and may be more widely supported. ASCII is generally recommended unless performa
 
 ## ExportTables
 
+### Tags
+
+- accepts parameter: tables
+- category: acquires futex
+- category: file export
+- category: table processing
+
 ### Description
 
 This operation exports the selected table(s) into a single CSV formatted file.
@@ -12126,10 +17008,12 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the table composed of
-the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
-'!numerous' means all table that do not have the greatest number of sub-objects, not the least-numerous table (i.e.,
-'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the table composed of the greatest and fewest number of rows. Only one or zero table will be selected; if there
+are ties, there is no guarantee which table will be selected. Use 'more-than(N)' or 'fewer-than(N)' to select multiple
+table based on a threshold count, i.e., where all selected table have more than or fewer than $N$ rows. Intrinsic
+specifiers can be inverted by prefixing with a '!'. Note that '!numerous' means all table that do not have the greatest
+number of rows, not the least-numerous table (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -12151,6 +17035,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Filename
 
@@ -12175,9 +17062,18 @@ present, the contents will be appended. If multiple tables are selected, they wi
 
 ## ExportWarps
 
+### Tags
+
+- category: file export
+- category: spatial transform processing
+
 ### Description
 
-This operation exports a transform object (e.g., affine matrix, vector deformation field) to file.
+This operation exports a transform object (e.g., affine matrix, TPS, vector deformation field) to file.
+
+### Notes
+
+- Written files include all available metadata. Unprintable characters are transparently base-64 encoded.
 
 ### Parameters
 
@@ -12199,10 +17095,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the transformation
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all transformation that do not have the greatest number of sub-objects, not the
-least-numerous transformation (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the transformation composed of the greatest and fewest number of sub-objects. Only one or zero transformation
+will be selected; if there are ties, there is no guarantee which transformation will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple transformation based on a threshold count, i.e., where all selected transformation
+have more than or fewer than $N$ sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all transformation that do not have the greatest number of sub-objects, not the least-numerous
+transformation (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -12228,8 +17127,8 @@ separating them with a ';' and are applied in the order specified.
 
 ##### Description
 
-The filename (or full path name) to which the transformation should be written. Existing files will be overwritten. The
-file format is a 4x4 Affine matrix. If no name is given, a unique name will be chosen automatically.
+The filename (or full path name) to which the transformation should be written. Existing files will be overwritten. If
+no name is given, a unique name will be chosen automatically.
 
 ##### Default
 
@@ -12238,13 +17137,19 @@ file format is a 4x4 Affine matrix. If no name is given, a unique name will be c
 ##### Examples
 
 - ```"transformation.trans"```
-- ```"trans.txt"```
-- ```"/path/to/some/trans.txt"```
+- ```"affine.trans"```
+- ```"/path/to/some/mapping.trans"```
 
 
 ----------------------------------------------------
 
 ## ExtractAlphaBeta
+
+### Tags
+
+- accepts parameter: contours
+- category: image processing
+- category: radiation dose
 
 ### Description
 
@@ -12275,6 +17180,7 @@ transformation (e.g., for QA purposes).
 - ReferenceImageSelection
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - Model
 - Channel
 - TestImgLowerThreshold
@@ -12299,10 +17205,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -12324,6 +17233,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ReferenceImageSelection
 
@@ -12342,10 +17254,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -12367,6 +17282,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -12376,8 +17294,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -12395,6 +17316,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -12404,8 +17326,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -12422,6 +17347,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Model
 
@@ -12526,6 +17500,14 @@ The nominal dose per fraction (in DICOM units; Gy) assumed by an EQDx transforma
 
 ## ExtractImageHistograms
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: contour processing
+- category: image processing
+- category: line sample processing
+
 ### Description
 
 This operation extracts histograms (e.g., dose-volume -- DVH, or pixel intensity-volume) for the selected image(s) and
@@ -12553,6 +17535,7 @@ ROI(s). Results are stored as line samples for later analysis or export.
 - ImageSelection
 - Channel
 - ROILabelRegex
+- ROISelection
 - NormalizedROILabelRegex
 - ContourOverlap
 - Inclusivity
@@ -12561,6 +17544,7 @@ ROI(s). Results are stored as line samples for later analysis or export.
 - Lower
 - Upper
 - dDose
+- BinCount
 - UserComment
 
 #### ImageSelection
@@ -12580,10 +17564,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -12605,6 +17592,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Channel
 
@@ -12631,8 +17621,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -12649,6 +17642,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -12658,8 +17700,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -12677,6 +17722,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ContourOverlap
 
@@ -12728,13 +17774,16 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 
 This routine partitions individual contours using their ROI labels. This parameter controls whether contours with
 different names should be treated as though they belong to distinct logical groups ('separate') or whether *all*
-contours should be treated as though they belong to a single logical group ('combined'). The 'separate' option works
-best for exploratory analysis, extracting histograms for many OARs at once, or when you know the 'physical' grouping of
-contours by label reflects a consistent logical grouping. The 'combined' option works best when the physical and logical
-groupings are inconsistent. For example, when you need a combined histograms from multiple contours or organs, or when
-similar structures should be combined (e.g., spinal cord + canal; or distinct left + right lateral organs that should be
-paired, e.g.. 'combined parotids'). Note that when the 'combined' option is used, the 'GroupLabel' parameter *must* also
-be provided.
+contours should be treated as though they belong to a single logical group ('combined').
+
+The 'separate' option works best for exploratory analysis, extracting histograms for many OARs at once, or when you know
+the 'physical' grouping of contours by label reflects a consistent logical grouping.
+
+The 'combined' option works best when the physical and logical groupings are inconsistent. For example, when you need a
+combined histograms from multiple contours or organs, or when similar structures should be combined (e.g., spinal cord +
+canal; or distinct left + right lateral organs that should be paired, e.g.. 'combined parotids'). Note that when the
+'combined' option is used, the 'GroupLabel' parameter *must* also be provided. Also note that 'grouped' can be used as a
+synonym for 'combined'.
 
 ##### Default
 
@@ -12743,14 +17792,16 @@ be provided.
 ##### Supported Options
 
 - ```"separate"```
+- ```"combined"```
 - ```"grouped"```
 
 #### GroupLabel
 
 ##### Description
 
-If the 'Grouping' parameter is set to 'combined', the value of the 'GroupLabel' parameter will be used in lieu of any
-consitituent ROILabel. Note that this parameter *must* be provided when the 'Grouping' parameter is set to'combined'.
+If the 'Grouping' parameter is set to 'combined', the value of the 'GroupLabel' parameter will be used as the
+histogram's ROILabel in lieu of any consitituent ROILabels. Note that this parameter *must* be provided when the
+'Grouping' parameter is set to'combined'.
 
 ##### Default
 
@@ -12811,6 +17862,8 @@ The (fixed) bin width, in units of dose (DICOM units; nominally Gy). Note that t
 practice bins may be smaller to account for slop (i.e., excess caused by the extrema being separated by a non-integer
 number of bins of width $dDose$).
 
+Note that one of either 'dDose' or 'BinCount' must be provided.
+
 ##### Default
 
 - ```"0.1"```
@@ -12823,6 +17876,24 @@ number of bins of width $dDose$).
 - ```"5.0"```
 - ```"10"```
 - ```"50"```
+
+#### BinCount
+
+##### Description
+
+The number of bins to use in the histogram. The bin width depends on the data range.
+
+Note that one of either 'dDose' or 'BinCount' must be provided.
+
+##### Default
+
+- ```"1000"```
+
+##### Examples
+
+- ```"10"```
+- ```"1000"```
+- ```"10000"```
 
 #### UserComment
 
@@ -12844,6 +17915,11 @@ different sources, or using sub-selections of the data. If left empty, the colum
 ----------------------------------------------------
 
 ## ExtractPointsWarp
+
+### Tags
+
+- category: image processing
+- category: spatial transform processing
 
 ### Description
 
@@ -12907,10 +17983,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the point cloud
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all point cloud that do not have the greatest number of sub-objects, not the least-numerous
-point cloud (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the point cloud composed of the greatest and fewest number of vertices. Only one or zero point cloud will be
+selected; if there are ties, there is no guarantee which point cloud will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple point cloud based on a threshold count, i.e., where all selected point cloud have
+more than or fewer than $N$ vertices. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all point cloud that do not have the greatest number of vertices, not the least-numerous point cloud
+(i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -12932,6 +18011,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ReferencePointSelection
 
@@ -12950,10 +18032,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the point cloud
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all point cloud that do not have the greatest number of sub-objects, not the least-numerous
-point cloud (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the point cloud composed of the greatest and fewest number of vertices. Only one or zero point cloud will be
+selected; if there are ties, there is no guarantee which point cloud will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple point cloud based on a threshold count, i.e., where all selected point cloud have
+more than or fewer than $N$ vertices. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all point cloud that do not have the greatest number of vertices, not the least-numerous point cloud
+(i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Note that this point cloud is not modified.
@@ -12975,6 +18060,9 @@ separating them with a ';' and are applied in the order specified. Note that thi
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Method
 
@@ -13437,6 +18525,14 @@ methods that are not controlled by, e.g., an annealing schedule.
 
 ## ExtractRadiomicFeatures
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: acquires futex
+- category: file export
+- category: image processing
+
 ### Description
 
 This operation extracts radiomic features from the selected images. Features are implemented as per specification in the
@@ -13457,6 +18553,7 @@ ambiguous.
 - ImageSelection
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 
 #### UserComment
 
@@ -13510,10 +18607,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -13535,6 +18635,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -13544,8 +18647,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -13563,6 +18669,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -13572,8 +18679,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -13590,11 +18700,67 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## FVPicketFence
+
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: image processing
+- category: meta
 
 ### Description
 
@@ -13609,9 +18775,11 @@ This operation performs a picket fence QA test using an RTIMAGE file.
 
 - ROILabel
 - ImageSelection
+- EncircleMethod
 - ImageSelection
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - Channel
 - Replacement
 - Replace
@@ -13677,10 +18845,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -13702,6 +18873,30 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### EncircleMethod
+
+##### Description
+
+The method used to generate the ROI contours. Options include 'whole' and 'FOV'.
+
+The default option, 'whole', makes contours that encircle all voxels. Contours are set slightly inside the outer
+boundary so they can be easily visualized by overlaying on an image. All voxel centres will be within the ROI contours.
+
+Option 'FOV' uses image metadata (if available) to only encircle image voxels which are within the scanned field of
+view. In practice, this will be a large circle centred on the middle of an image.
+
+##### Default
+
+- ```"whole"```
+
+##### Examples
+
+- ```"whole"```
+- ```"FOV"```
 
 #### ImageSelection
 
@@ -13720,10 +18915,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -13745,6 +18943,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -13754,8 +18955,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -13773,6 +18977,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -13782,8 +18987,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -13800,6 +19008,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Channel
 
@@ -13925,10 +19182,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -13950,6 +19210,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### DICOMMargin
 
@@ -14001,10 +19264,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -14026,6 +19292,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### RowsL
 
@@ -14145,10 +19414,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -14170,6 +19442,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### MLCModel
 
@@ -14454,9 +19729,19 @@ window overrides.
 
 ## False
 
+### Tags
+
+- category: control flow
+- category: meta
+
 ### Description
 
 This operation is a control flow meta-operation that does not complete successfully. It has no side effects.
+
+### Aliases
+
+- Throw
+- Break
 
 ### Parameters
 
@@ -14464,7 +19749,261 @@ No registered options.
 
 ----------------------------------------------------
 
+## FindFiles
+
+### Tags
+
+- category: meta
+
+### Description
+
+Search a directory for files and/or subdirectories without loading them. Children operations will be invoked once for
+each file or directory.
+
+### Notes
+
+- The search is halted when a child operation returns false.
+
+- The return value is 'false' if a child operation fails or returns false, otherwise the return value is true.
+
+### Parameters
+
+- Key
+- RootDir
+- Recurse
+- Target
+
+#### Key
+
+##### Description
+
+Children operations will be invoked once per located file or subdirectory. The path will be saved temporarily in the
+global parameter table using this argument as the key.
+
+Note that any existing key will be reset after this operation runs.
+
+##### Default
+
+- ```"path"```
+
+##### Examples
+
+- ```"path"```
+- ```"file"```
+- ```"dir"```
+- ```"x"```
+
+#### RootDir
+
+##### Description
+
+The root directory to search. Note that backslashes might be interpretted as esccape characters.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"/tmp/"```
+- ```"$HOME"```
+- ```"/path/to/root/dir"```
+
+#### Recurse
+
+##### Description
+
+Controls whether the search should recurse into directories. If false, only the root directory is searched.
+
+##### Default
+
+- ```"true"```
+
+##### Supported Options
+
+- ```"true"```
+- ```"false"```
+
+#### Target
+
+##### Description
+
+Controls whether files, directories, or both should be located.
+
+##### Default
+
+- ```"files"```
+
+##### Supported Options
+
+- ```"files"```
+- ```"directories"```
+- ```"files+directories"```
+
+
+----------------------------------------------------
+
+## For
+
+### Tags
+
+- category: control flow
+- category: meta
+
+### Description
+
+This operation is a control flow meta-operation that invokes children operations multiple times.
+
+### Notes
+
+- If this operation has no children, this operation will evaluate to a no-op.
+
+### Parameters
+
+- Key
+- EachOf
+- Begin
+- End
+- Increment
+- Inclusivity
+
+#### Key
+
+##### Description
+
+If a non-empty value is provided, the value or number associated with each loop is stored in the global parameter table
+using this key. If the key already exists in the global parameter table, it is temporarily stored during the loop and
+restored afterward.
+
+Note: altering the value of the key stored in global parameter table in one iteration will not impact other iterations
+of the loop.
+
+##### Default
+
+- ```"i"```
+
+##### Examples
+
+- ```"i"```
+- ```"j"```
+- ```"k"```
+- ```"x"```
+- ```"val"```
+- ```"abc"```
+- ```"123"```
+
+#### EachOf
+
+##### Description
+
+Loop over the provided comma-separated list, invoking children operations once for every item in the order provided. The
+item in each loop is optionally inserted into the global parameter table.
+
+Note that this option is used for 'discrete' loop mode and cannot be combined when any 'counter' loop mode parameters
+are provided.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"a,b,c,d,e,f"```
+- ```"1,2,3,4,5"```
+- ```"InstanceCreationDate,StudyData,SeriesDate,AcquisitionDate,ContentDate"```
+- ```"x,123,Modality"```
+
+#### Begin
+
+##### Description
+
+'Counter' loop mode parameter. This is the value which the counter will first start with. The counter is incremented
+until the end value is reached. Children operations are invoked once per counter value. The counter value in each loop
+is optionally inserted into the global parameter table.
+
+Note that this option is used for 'counter' loop mode and cannot be combined when any 'discrete' loop mode parameters
+are provided.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"0"```
+- ```"1"```
+- ```"-10"```
+- ```"100.23"```
+
+#### End
+
+##### Description
+
+'Counter' loop mode parameter. This value controls when the loop terminates. Note that whether this parameter is treated
+inclusively (i.e., '<=') or exclusively (i.e., '<'); is controlled by the Inclusivity parameter; the default is to be
+inclusive.
+
+Note that this option is used for 'counter' loop mode and cannot be combined when any 'discrete' loop mode parameters
+are provided.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"100"```
+- ```"3"```
+- ```"-5"```
+- ```"200.23"```
+
+#### Increment
+
+##### Description
+
+'Counter' loop mode parameter. Controls the step size. The counter value in each loop is optionally inserted into the
+global parameter table.
+
+Note that this option is used for 'counter' loop mode and cannot be combined when any 'discrete' loop mode parameters
+are provided.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"1"```
+- ```"2"```
+- ```"-10"```
+- ```"1.23"```
+
+#### Inclusivity
+
+##### Description
+
+'Counter' loop mode parameter. Controls whether the end value is treated inclusively (i.e., '<=') or exclusively (i.e.,
+'<'). The default is to be inclusive.
+
+Note that this option is only used for 'counter' loop mode.
+
+##### Default
+
+- ```"inclusive"```
+
+##### Supported Options
+
+- ```"inclusive"```
+- ```"exclusive"```
+
+
+----------------------------------------------------
+
 ## ForEachDistinct
+
+### Tags
+
+- category: meta
 
 ### Description
 
@@ -14534,6 +20073,11 @@ Whether to perform the loop body for the 'N/A' (i.e., non-matching) group if non
 
 ## ForEachRTPlan
 
+### Tags
+
+- category: meta
+- category: rtplan processing
+
 ### Description
 
 This operation is a control flow meta-operation that creates a 'view' of all available data such that each grouping
@@ -14578,10 +20122,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the treatment plan
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all treatment plan that do not have the greatest number of sub-objects, not the
-least-numerous treatment plan (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the treatment plan composed of the greatest and fewest number of control points. Only one or zero treatment plan
+will be selected; if there are ties, there is no guarantee which treatment plan will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple treatment plan based on a threshold count, i.e., where all selected treatment plan
+have more than or fewer than $N$ control points. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all treatment plan that do not have the greatest number of control points, not the least-numerous
+treatment plan (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -14603,6 +20150,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### IncludeNA
 
@@ -14622,7 +20172,53 @@ Whether to perform the loop body for the 'N/A' (i.e., non-matching) group if non
 
 ----------------------------------------------------
 
+## Fork
+
+### Tags
+
+- category: meta
+
+### Description
+
+This operation is a control flow meta-operation that causes child operations to be executed in a POSIX fork. The main
+process returns immediately after forking, while the fork executes the children operations.
+
+### Aliases
+
+- Spawn
+
+### Notes
+
+- The return value of the main process describes whether the fork was successful, not whether the children operations
+  succeeded. Since the forked process is detached, the return value of the children operations are ignored; however,
+  execution will otherwise continue normally, terminating if an operation fails.
+
+- The forked process is detached from the main process, so any state changes in the fork are contained to the fork only.
+
+- Child operations are performed in order, and all side-effects are carried forward in the fork. In particular, all
+  selectors in child operations are evaluated lazily, at the moment when the child operation is invoked.
+
+- Windows does not provide fork(), so threads are used to (approximately) emulate fork() on Windows. However, this is
+  not a true fork. Note that signals, file descriptors, and almost all other state will be shared. Copy-on-write is used
+  for fork(), but thread-emulated forking requires an up-front copy of all application state, so it will be considerably
+  slower than a true fork(). Also, thread-emulated fork does not create a new process, so when the parent process
+  terminates normally any thread-emulated "forks" will likely be terminated as well.
+
+### Parameters
+
+No registered options.
+
+----------------------------------------------------
+
 ## GenerateCalibrationCurve
+
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: contour processing
+- category: file export
+- category: image processing
 
 ### Description
 
@@ -14647,6 +20243,7 @@ to the second. Only the region within the specified ROI(s) is considered.
 - CalibCurveFileName
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 
 #### Channel
 
@@ -14682,10 +20279,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Note that these images are the 'mapped-from' or
@@ -14708,6 +20308,9 @@ separating them with a ';' and are applied in the order specified. Note that the
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### RefImageSelection
 
@@ -14726,10 +20329,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Note that these images are the 'mapped-to' or 'fixed'
@@ -14752,6 +20358,9 @@ images.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ContourOverlap
 
@@ -14822,8 +20431,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -14841,6 +20453,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -14850,8 +20463,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -14868,11 +20484,368 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+
+----------------------------------------------------
+
+## GenerateMapTiles
+
+### Tags
+
+- accepts parameter: contours
+- category: geospatial
+- category: image processing
+
+### Description
+
+This operation generates an image (representing a geospatial map) from one or more contours (representing geospatial
+traces). It can be used to help visualize or analyze tracks and terrain.
+
+### Notes
+
+- This operation can use a local cache or download tiles from a remote server into a local cache. Maintenance of the
+  cache is left to the user; for one-off invocations, it is recommended to delete the cache as soon as possible to avoid
+  stale data.
+
+- This operation is known to fail when contours traverse the 180 degrees longitude line.
+
+### Parameters
+
+- Zoom
+- ProviderURL
+- LayerName
+- TileCacheDirectory
+- MaxMemory
+- TileWidth
+- TileHeight
+- Simulate
+- NormalizedROILabelRegex
+- ROILabelRegex
+- ROISelection
+
+#### Zoom
+
+##### Description
+
+Web Mercator projection zoom parameter. This factor represents an exponent; the resolution of the map doubles with each
+additional zoom factor. Increasing the zoom by one results in four times as many tiles needed to cover the same
+geographical area.
+
+The specific zoom required will depend on the required level of detail, but as a rough guide use 1-5 for countries, 5-10
+for intracountry states/provinces, 10-15 for cites/municipalities, and 15-19 for parks/trails.
+
+##### Default
+
+- ```"10"```
+
+##### Examples
+
+- ```"1"```
+- ```"5"```
+- ```"10"```
+- ```"12"```
+- ```"14"```
+- ```"16"```
+
+#### ProviderURL
+
+##### Description
+
+The prototype URL endpoint used to request map tile images.
+
+This prototype URL assumes a typical format for web Mercator map tile servers. (This operation is specifically designed
+to be compatible with OpenStreetMap tile servers, but other servers similarly following the osgeo.org Tile Map Server
+Specification are likely to be compatible.)
+
+Variables within the prototype URL will be replaced for individual tiles. The following metadata are currently
+recognized: $TILEX (the web Mercator tile coordinate for longitude), $TILEY (the web Mercator tile coordinate for
+latitude), and $ZOOM (the web Mercator zoom factor).
+
+Downloads can be disabled by providing an invalid URL, e.g., '/dev/null'.
+
+##### Default
+
+- ```"https://tile.openstreetmap.org/${ZOOM}/${TILEX}/${TILEY}.png"```
+
+##### Examples
+
+- ```"/dev/null"```
+- ```"https://tile.openstreetmap.org/${ZOOM}/${TILEX}/${TILEY}.png"```
+- ```"http://tile.thunderforest.com/cycle/${ZOOM}/${TILEX}/${TILEY}.png?apikey=abc123xyz"```
+- ```"https://maptiles.p.rapidapi.com/local/osm/v1/${ZOOM}/${TILEX}/${TILEY}.png?rapidapi-key=abc123xyz"```
+
+#### LayerName
+
+##### Description
+
+The name or ID associated with a given tile set.
+
+This name is predominantly used for caching purposes. Each distinct provider should have a corresponding distinct
+LayerName, otherwise tiles from multiple layers will be mixed.
+
+##### Default
+
+- ```"OSM"```
+
+##### Examples
+
+- ```"OSM"```
+
+#### TileCacheDirectory
+
+##### Description
+
+The top-level directory wherein tiles are, or can be, cached.
+
+The cache structure follows a common hierarchical organization:
+'${TileCacheDirectory}/${LayerName}/${zoom}/${x_tile_number}/${y_tile_number}.png'
+
+Note: filenames with backslashes ('\') will need to escape the backslash character, which is interpretted as an escape
+character when parsing operation parameters. Backslashes can also be replaced with forwardslahses ('/') in some cases.
+
+##### Default
+
+- ```"/tmp/dcma_generatemaptile_cache"```
+
+##### Examples
+
+- ```"/tmp"```
+- ```"."```
+- ```"$HOME/.cache/dcma_map_tiles/"```
+
+#### MaxMemory
+
+##### Description
+
+Abort when the map would exceed this amount of memory (in bytes). Negative values amount to no limit.
+
+##### Default
+
+- ```"2147483648"```
+
+##### Examples
+
+- ```"524288000"```
+- ```"1073741824"```
+- ```"2147483648"```
+- ```"-1"```
+
+#### TileWidth
+
+##### Description
+
+The width, in pixels, of each tile image. Either 256 or 512 is typical.
+
+##### Default
+
+- ```"256"```
+
+##### Examples
+
+- ```"256"```
+- ```"512"```
+
+#### TileHeight
+
+##### Description
+
+The height, in pixels, of each tile image. Either 256 or 512 is typical.
+
+##### Default
+
+- ```"256"```
+
+##### Examples
+
+- ```"256"```
+- ```"512"```
+
+#### Simulate
+
+##### Description
+
+Controls whether an image is generated. If 'true', then images are downloaded and loaded, but not amalgamated into a
+single image. This option is useful to download tiles or verify integrity of tiles in the cache without requiring a
+(possibly) large block of memory to store the final amalgamated image.
+
+##### Default
+
+- ```"false"```
+
+##### Supported Options
+
+- ```"true"```
+- ```"false"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
+user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
+matching is required. Refer to the lexicon for available labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *raw* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match 'raw' contour labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"^body$"```
+- ```"Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## GenerateMeshes
+
+### Tags
+
+- category: generator
+- category: mesh processing
 
 ### Description
 
@@ -14938,6 +20911,14 @@ The (minimal) spatial resolution to apply along x, y, and z axes. Can be specifi
 
 ## GenerateSurfaceMask
 
+### Tags
+
+- accepts parameter: contours
+- category: generator
+- category: image processing
+- category: mesh processing
+- category: needs refresh
+
 ### Description
 
 This operation generates a surface image mask, which contains information about whether each voxel is within, on, or
@@ -14950,6 +20931,7 @@ outside the selected ROI(s).
 - SurfaceVal
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 
 #### BackgroundVal
 
@@ -15010,8 +20992,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -15029,6 +21014,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -15038,8 +21024,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -15056,11 +21045,65 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## GenerateSyntheticImages
+
+### Tags
+
+- category: generator
+- category: image processing
 
 ### Description
 
@@ -15193,8 +21236,9 @@ SpacingBetweenSlices is larger than SliceThickness, there will be a gap between 
 
 ##### Description
 
-Voxels will have this (in-plane) width (in DICOM units: mm). This means that row-adjacent voxels centres will be
-separated by VoxelWidth). Each voxel will have dimensions: VoxelWidth x VoxelHeight x SliceThickness.
+Voxels will have this (in-plane) width (in DICOM units: mm). This means that the centre of two voxels that are in the
+same row but adjacent columns will be separated by VoxelWidth. Each voxel will have dimensions: VoxelWidth x VoxelHeight
+x SliceThickness.
 
 ##### Default
 
@@ -15211,8 +21255,9 @@ separated by VoxelWidth). Each voxel will have dimensions: VoxelWidth x VoxelHei
 
 ##### Description
 
-Voxels will have this (in-plane) height (in DICOM units: mm). This means that column-adjacent voxels centres will be
-separated by VoxelHeight). Each voxel will have dimensions: VoxelWidth x VoxelHeight x SliceThickness.
+Voxels will have this (in-plane) height (in DICOM units: mm). This means that the centre of two voxels that are in the
+same column but adjacent rows will be separated by VoxelHeight. Each voxel will have dimensions: VoxelWidth x
+VoxelHeight x SliceThickness.
 
 ##### Default
 
@@ -15386,6 +21431,11 @@ keys with the provided values.
 
 ## GenerateTable
 
+### Tags
+
+- category: generator
+- category: table processing
+
 ### Description
 
 This operation creates an empty table.
@@ -15415,6 +21465,12 @@ A label to attach to the new table.
 
 ## GenerateVirtualDataContourViaThresholdTestV1
 
+### Tags
+
+- category: generator
+- category: image processing
+- category: virtual phantom
+
 ### Description
 
 This operation generates data suitable for testing the ContourViaThreshold operation.
@@ -15426,6 +21482,12 @@ No registered options.
 ----------------------------------------------------
 
 ## GenerateVirtualDataDoseStairsV1
+
+### Tags
+
+- category: image processing
+- category: radiation dose
+- category: virtual phantom
 
 ### Description
 
@@ -15439,6 +21501,12 @@ No registered options.
 
 ## GenerateVirtualDataImageSphereV1
 
+### Tags
+
+- category: generator
+- category: image processing
+- category: virtual phantom
+
 ### Description
 
 This operation generates a bitmap image of a sphere. It can be used for testing how images are quantified or
@@ -15451,6 +21519,13 @@ No registered options.
 ----------------------------------------------------
 
 ## GenerateVirtualDataPerfusionV1
+
+### Tags
+
+- category: generator
+- category: image processing
+- category: perfusion
+- category: virtual phantom
 
 ### Description
 
@@ -15466,6 +21541,11 @@ No registered options.
 
 ## GenerateWarp
 
+### Tags
+
+- category: generator
+- category: spatial transform processing
+
 ### Description
 
 This operation can be used to create a transformation object. The transformation object can later be applied to objects
@@ -15474,7 +21554,7 @@ with spatial extent.
 ### Parameters
 
 - Transforms
-- TransformLabel
+- TransformName
 - Metadata
 
 #### Transforms
@@ -15517,11 +21597,11 @@ separated by a ';' and are evaluated from left to right.
 - ```"rotate(4.0, 5.0, 6.0,  1.0, 0.0, 0.0,  3.141592653)"```
 - ```"translate(1,0,0) ; scale(0,0,0, 5) ; translate(-1,0,0)"```
 
-#### TransformLabel
+#### TransformName
 
 ##### Description
 
-A label to attach to the transformation.
+A name or label to attach to the transformation.
 
 ##### Default
 
@@ -15555,6 +21635,11 @@ existing keys with the provided values.
 
 ## GiveWholeImageArrayABoneWindowLevel
 
+### Tags
+
+- category: image processing
+- category: needs refresh
+
 ### Description
 
 This operation runs the images in an image array through a uniform window-and-leveler instead of per-slice
@@ -15567,6 +21652,11 @@ No registered options.
 ----------------------------------------------------
 
 ## GiveWholeImageArrayAHeadAndNeckWindowLevel
+
+### Tags
+
+- category: image processing
+- category: needs refresh
 
 ### Description
 
@@ -15581,6 +21671,11 @@ No registered options.
 
 ## GiveWholeImageArrayAThoraxWindowLevel
 
+### Tags
+
+- category: image processing
+- category: needs refresh
+
 ### Description
 
 This operation runs the images in an image array through a uniform window-and-leveler instead of per-slice
@@ -15593,6 +21688,11 @@ No registered options.
 ----------------------------------------------------
 
 ## GiveWholeImageArrayAnAbdominalWindowLevel
+
+### Tags
+
+- category: image processing
+- category: needs refresh
 
 ### Description
 
@@ -15607,6 +21707,11 @@ No registered options.
 
 ## GiveWholeImageArrayAnAlphaBetaWindowLevel
 
+### Tags
+
+- category: image processing
+- category: needs refresh
+
 ### Description
 
 This operation runs the images in an image array through a uniform window-and-leveler instead of per-slice
@@ -15619,6 +21724,14 @@ No registered options.
 ----------------------------------------------------
 
 ## GridBasedRayCastDoseAccumulate
+
+### Tags
+
+- accepts parameter: contours
+- category: file export
+- category: image processing
+- category: radiation dose
+- category: simulation
 
 ### Description
 
@@ -15722,8 +21835,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -15741,6 +21857,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ReferenceROILabelRegex
 
@@ -15770,8 +21887,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -15788,6 +21908,7 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
 
 #### SmallestFeature
 
@@ -15918,6 +22039,11 @@ something specific to force an override.
 
 ## GroupImages
 
+### Tags
+
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
 This operation will group individual image slices into partitions (Image_Arrays) based on the values of the specified
@@ -15926,6 +22052,10 @@ can express connections between images. For example a group could contain the sc
 the series in a study, individual image volumes within a single series (e.g., a 3D volume in a temporal perfusion scan),
 or individual slices. A group could also contain all the slices that intersect a given plane, or were taken on a
 specified StationName.
+
+### Aliases
+
+- PartitionImages
 
 ### Notes
 
@@ -15965,10 +22095,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -15990,6 +22123,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### KeysCommon
 
@@ -16075,6 +22211,11 @@ logic-based grouping.
 
 ## GrowContours
 
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
+
 ### Description
 
 This routine will grow (or shrink) 2D contours in their plane by the specified amount. Growth is accomplish by
@@ -16095,8 +22236,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -16114,6 +22258,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -16123,8 +22268,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -16141,6 +22289,7 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
 
 #### Distance
 
@@ -16164,10 +22313,21 @@ The distance to translate contour vertices. (The direction is outward.)
 
 ## HighlightROIs
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: contour processing
+- category: image processing
+
 ### Description
 
 This operation overwrites voxel data inside and/or outside of ROI(s) to create an image representation of a set of
 contours. It can handle overlapping or duplicate contours.
+
+### Aliases
+
+- ConvertContoursToImages
 
 ### Notes
 
@@ -16206,6 +22366,7 @@ contours. It can handle overlapping or duplicate contours.
 - InteriorOverwrite
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 
 #### Channel
 
@@ -16241,10 +22402,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -16266,6 +22430,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ContourOverlap
 
@@ -16409,8 +22576,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -16428,6 +22598,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -16437,8 +22608,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -16455,11 +22629,65 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## IfElse
+
+### Tags
+
+- category: control flow
+- category: meta
 
 ### Description
 
@@ -16467,6 +22695,12 @@ This operation is a control flow meta-operation that performs an 'if-then' or 'i
 operations. If the first child operation (the conditional) completes without throwing an exception, then the second
 operation is performed. Otherwise the third operation ('else statement'), if present, is performed. Side effects from
 all evaluated operations are possible.
+
+### Aliases
+
+- If
+- IfThenElse
+- ElseIf
 
 ### Notes
 
@@ -16488,9 +22722,19 @@ No registered options.
 
 ## Ignore
 
+### Tags
+
+- category: control flow
+- category: meta
+
 ### Description
 
 This operation is a control flow meta-operation that ignores the return value of all child operations.
+
+### Aliases
+
+- Always
+- Force
 
 ### Notes
 
@@ -16508,6 +22752,11 @@ No registered options.
 
 ## ImageRoutineTests
 
+### Tags
+
+- category: image processing
+- category: needs refresh
+
 ### Description
 
 This operation performs a series of sub-operations that are generally useful when inspecting an image.
@@ -16518,7 +22767,53 @@ No registered options.
 
 ----------------------------------------------------
 
+## ImportDrover
+
+### Tags
+
+- category: RPC
+- category: file import
+- category: meta
+
+### Description
+
+This operation deserializes a Drover object from a file. It uses Apache Thrift for serialization.
+
+### Notes
+
+- RPC functionality is currently alpha-quality code, and much is expected to change.
+
+### Parameters
+
+- Filename
+
+#### Filename
+
+##### Description
+
+The filename to read from.
+
+##### Default
+
+- ```"in.ts_dcma"```
+
+##### Examples
+
+- ```"in.ts_dcma"```
+- ```"/tmp/in.ts_dcma"```
+
+
+----------------------------------------------------
+
 ## ImprintImages
+
+### Tags
+
+- accepts parameter: images
+- accepts parameter: point clouds
+- category: image processing
+- category: needs refresh
+- category: point cloud processing
 
 ### Description
 
@@ -16549,10 +22844,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -16574,6 +22872,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### PointSelection
 
@@ -16592,10 +22893,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the point cloud
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all point cloud that do not have the greatest number of sub-objects, not the least-numerous
-point cloud (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the point cloud composed of the greatest and fewest number of vertices. Only one or zero point cloud will be
+selected; if there are ties, there is no guarantee which point cloud will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple point cloud based on a threshold count, i.e., where all selected point cloud have
+more than or fewer than $N$ vertices. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all point cloud that do not have the greatest number of vertices, not the least-numerous point cloud
+(i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -16617,6 +22921,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### VoxelValue
 
@@ -16658,6 +22965,11 @@ The image channel to use. Zero-based.
 
 ## InterpolateSlices
 
+### Tags
+
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
 This operation interpolates the slices of an image array using a reference image array, effectively performing trilinear
@@ -16697,10 +23009,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -16722,6 +23037,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ReferenceImageSelection
 
@@ -16740,10 +23058,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -16765,6 +23086,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Channel
 
@@ -16788,7 +23112,582 @@ specifier.
 
 ----------------------------------------------------
 
+## InvokeStandardScript
+
+### Tags
+
+- category: file import
+- category: meta
+- category: scripting
+
+### Description
+
+This operation invokes a built-in DICOMautomaton script.
+
+### Notes
+
+- Scripts may require configuration via parameter table entries in order to function correctly. Refer to the scripts
+  themselves for documentation.
+
+### Parameters
+
+- Script
+
+#### Script
+
+##### Description
+
+The name of the script to invoke.
+
+##### Default
+
+- ```""```
+
+##### Supported Options
+
+- ```"QA/de-EQD2"```
+- ```"QA/point-dose EQD2"```
+- ```"debugging/script comments"```
+- ```"debugging/script functions"```
+- ```"debugging/script functions disallowed names"```
+- ```"debugging/script quotes"```
+- ```"debugging/script variables"```
+- ```"debugging/script variables disallowed names"```
+- ```"examples/CleanContours"```
+- ```"examples/GenerateMeshes"```
+- ```"examples/ModelIVIM"```
+- ```"examples/ROIImageHistogramStatistics"```
+- ```"examples/TransferContours"```
+- ```"examples/TransferContours2"```
+- ```"examples/ValidateRTPlan"```
+- ```"images/DICOM image partition"```
+- ```"images/assign time in seconds"```
+- ```"images/isolate most numerous array"```
+- ```"images/make new image array"```
+- ```"images/reorder images via instance number"```
+- ```"images/reorder images via position"```
+- ```"plumbing/copy existing contours"```
+- ```"plumbing/dilate erode margin"```
+- ```"plumbing/export contours DICOM RTSTRUCT"```
+- ```"plumbing/export images DICOM CT"```
+- ```"plumbing/export images DICOM MR"```
+- ```"plumbing/export images DICOM RTDOSE"```
+- ```"plumbing/export original images"```
+- ```"plumbing/extract contours from mask"```
+- ```"plumbing/iterate polyominoes"```
+- ```"tables/make new table"```
+- ```"tutorials/tutorial 1 scripting basics"```
+- ```"tutorials/tutorial 2 Boolean operations"```
+- ```"usage/ConvertParametersToTable"```
+- ```"usage/Isolate"```
+- ```"usage/MapTableToParameters"```
+- ```"usage/Polyominoes"```
+
+
+----------------------------------------------------
+
+## Isolate
+
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- accepts parameter: line samples
+- accepts parameter: point clouds
+- accepts parameter: surface meshes
+- accepts parameter: tables
+- category: control flow
+- category: meta
+
+### Description
+
+This operation is a control flow meta-operation that selects only the specified objects (e.g., image arrays, surface
+meshes, etc.) and forwards them to a virtual Drover object where they are isolated from the objects that were not
+selected. This creates a 'view' of the Drover object containing only the selected objects. Children operations will
+operate on this isolated view where the unselected objects are hidden.
+
+This operation is useful for implementing complicated filters. For example, selecting the third and seventh image arrays
+will present a view with *only* those two image arrays (in the first and second positions). Children operations can then
+address (only) those image arrays in the first and second place, rather than third and seventh place. When the children
+operations conclude, these image arrays would be returned to the third and seventh position in the original Drover.
+
+### Notes
+
+- This operation itself produces no side-effects. It does not alter the selected objects. However, children operations
+  may alter the selected objects and/or create side-effects.
+
+- The order of objects in the original Drover is retained when this operation concludes. Objects deleted within the
+  isolated view are also deleted from the original Drover object. Objects created within the isolated view are inserted
+  at the end of the original Drover object.
+
+- Selectors for this operation are only considered when you explicitly provide them. By default, this operation will
+  provide an empty view.
+
+### Parameters
+
+- ROILabelRegex
+- ROISelection
+- NormalizedROILabelRegex
+- ImageSelection
+- LineSelection
+- MeshSelection
+- PointSelection
+- TransformSelection
+- TableSelection
+- RTPlanSelection
+
+#### ROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *raw* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match 'raw' contour labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"^body$"```
+- ```"Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
+user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
+matching is required. Refer to the lexicon for available labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### LineSelection
+
+##### Description
+
+Select one or more line samples. Selection specifiers can be of three types: positional, metadata-based key@value regex,
+and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth line sample (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last line sample.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the line sample composed of the greatest and fewest number of samples. Only one or zero line sample will be
+selected; if there are ties, there is no guarantee which line sample will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple line sample based on a threshold count, i.e., where all selected line sample have
+more than or fewer than $N$ samples. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all line sample that do not have the greatest number of samples, not the least-numerous line sample (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### MeshSelection
+
+##### Description
+
+Select one or more surface meshes. Note that a single surface mesh may hold many disconnected mesh components; they
+should collectively represent a single logically cohesive object. Be aware that it is possible to mix logically
+unrelated sub-meshes together in a single mesh. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth surface mesh (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last surface mesh.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the surface mesh composed of the greatest and fewest number of elements (vertices + faces). Only one or zero
+surface mesh will be selected; if there are ties, there is no guarantee which surface mesh will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple surface mesh based on a threshold count, i.e., where all selected
+surface mesh have more than or fewer than $N$ elements (vertices + faces). Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all surface mesh that do not have the greatest number of elements
+(vertices + faces), not the least-numerous surface mesh (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### PointSelection
+
+##### Description
+
+Select one or more point clouds. Note that point clouds can hold a variety of data with varying attributes, but each
+point cloud is meant to represent a single logically cohesive collection of points. Be aware that it is possible to mix
+logically unrelated points together. Selection specifiers can be of three types: positional, metadata-based key@value
+regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth point cloud (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last point cloud.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the point cloud composed of the greatest and fewest number of vertices. Only one or zero point cloud will be
+selected; if there are ties, there is no guarantee which point cloud will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple point cloud based on a threshold count, i.e., where all selected point cloud have
+more than or fewer than $N$ vertices. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all point cloud that do not have the greatest number of vertices, not the least-numerous point cloud
+(i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### TransformSelection
+
+##### Description
+
+Select one or more transform objects (aka 'warp' objects). Selection specifiers can be of three types: positional,
+metadata-based key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth transformation (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last transformation.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the transformation composed of the greatest and fewest number of sub-objects. Only one or zero transformation
+will be selected; if there are ties, there is no guarantee which transformation will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple transformation based on a threshold count, i.e., where all selected transformation
+have more than or fewer than $N$ sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all transformation that do not have the greatest number of sub-objects, not the least-numerous
+transformation (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### TableSelection
+
+##### Description
+
+Select one or more tables. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth table (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last table. Positional specifiers
+can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the table composed of the greatest and fewest number of rows. Only one or zero table will be selected; if there
+are ties, there is no guarantee which table will be selected. Use 'more-than(N)' or 'fewer-than(N)' to select multiple
+table based on a threshold count, i.e., where all selected table have more than or fewer than $N$ rows. Intrinsic
+specifiers can be inverted by prefixing with a '!'. Note that '!numerous' means all table that do not have the greatest
+number of rows, not the least-numerous table (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### RTPlanSelection
+
+##### Description
+
+Select one or more treatment plans. Note that a single treatment plan may be composed of multiple beams; if delivered
+sequentially, they should collectively represent a single logically cohesive plan. Selection specifiers can be of three
+types: positional, metadata-based key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth treatment plan (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last treatment plan.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the treatment plan composed of the greatest and fewest number of control points. Only one or zero treatment plan
+will be selected; if there are ties, there is no guarantee which treatment plan will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple treatment plan based on a threshold count, i.e., where all selected treatment plan
+have more than or fewer than $N$ control points. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all treatment plan that do not have the greatest number of control points, not the least-numerous
+treatment plan (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+
+----------------------------------------------------
+
 ## IsolatedVoxelFilter
+
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: image processing
 
 ### Description
 
@@ -16807,6 +23706,7 @@ be filtered out or retained. This operation considers the 3D neighbourhood surro
 - ImageSelection
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - Channel
 - Replacement
 - Replace
@@ -16831,10 +23731,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -16856,6 +23759,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -16865,8 +23771,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -16884,6 +23793,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -16893,8 +23803,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -16911,6 +23824,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Channel
 
@@ -17024,6 +23986,11 @@ distance will not be evaluated together.
 
 ## LoadFiles
 
+### Tags
+
+- category: file import
+- category: meta
+
 ### Description
 
 This operation loads files on-the-fly.
@@ -17061,6 +24028,12 @@ Currently this includes serialized Drover class files, DICOM files, FITS image f
 
 ## LoadFilesInteractively
 
+### Tags
+
+- category: file import
+- category: interactive
+- category: meta
+
 ### Description
 
 This operation lets the user interactively select one or more files and then attempts to load them.
@@ -17094,6 +24067,11 @@ An instruction provided to the user, if possible. In most cases this will be the
 
 ## LogScale
 
+### Tags
+
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
 This operation log-scales pixels for all available image arrays. This functionality is often desired for viewing
@@ -17120,10 +24098,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -17145,11 +24126,19 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## MakeMeshesManifold
+
+### Tags
+
+- accepts parameter: surface meshes
+- category: mesh processing
 
 ### Description
 
@@ -17206,10 +24195,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the surface mesh
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all surface mesh that do not have the greatest number of sub-objects, not the least-numerous
-surface mesh (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the surface mesh composed of the greatest and fewest number of elements (vertices + faces). Only one or zero
+surface mesh will be selected; if there are ties, there is no guarantee which surface mesh will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple surface mesh based on a threshold count, i.e., where all selected
+surface mesh have more than or fewer than $N$ elements (vertices + faces). Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all surface mesh that do not have the greatest number of elements
+(vertices + faces), not the least-numerous surface mesh (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -17231,11 +24223,275 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+
+----------------------------------------------------
+
+## MapTableToParameters
+
+### Tags
+
+- accepts parameter: tables
+- category: parameter table
+- category: table processing
+
+### Description
+
+Process the rows of a table, one-at-a-time, by mapping them to the global parameter table and invoking children
+operations.
+
+### Aliases
+
+- ConvertTableToParameters
+
+### Parameters
+
+- ColumnNumberKeyPrefix
+- RowNumberKey
+- TableSelection
+- SkipHeaderRows
+
+#### ColumnNumberKeyPrefix
+
+##### Description
+
+Used to map columns to the global parameter table. This string will prefix the parameter table keys; an identifier will
+be appended for each column.
+
+For example, if the prefix key is '_column_' then the first column will have the key '_column_0', the second will have
+the key '_column_1', the 23rd will have key '_column_22', etc.. The value corresponding to each key will be taken from
+the cells of the table; if a cell is empty the column will not be mapped.
+
+Note that any metadata keys that inadvertently match the mapping will be stowed while children operations are being
+invoked, and reset afterward. All other metadata, including metadata added by children, are unaffected.
+
+Also note that cells can be deleted by deleting the key-value pair, and new cells can be added by inserting a new
+key-value pair.
+
+##### Default
+
+- ```"_column_"```
+
+##### Examples
+
+- ```"c_"```
+- ```"mapped_column_number"```
+- ```"xyz"```
+
+#### RowNumberKey
+
+##### Description
+
+Optionally used to inform children operations which row number is being processed.
+
+Note that any metadata keys that inadvertently match the mapping will be stowed while children operations are being
+invoked, and reset afterward. All other metadata, including metadata added by children, are unaffected.
+
+##### Default
+
+- ```"_row_"```
+
+##### Examples
+
+- ```"key"```
+- ```"mapped_row_number"```
+- ```"xyz"```
+
+#### TableSelection
+
+##### Description
+
+Select one or more tables. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth table (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last table. Positional specifiers
+can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the table composed of the greatest and fewest number of rows. Only one or zero table will be selected; if there
+are ties, there is no guarantee which table will be selected. Use 'more-than(N)' or 'fewer-than(N)' to select multiple
+table based on a threshold count, i.e., where all selected table have more than or fewer than $N$ rows. Intrinsic
+specifiers can be inverted by prefixing with a '!'. Note that '!numerous' means all table that do not have the greatest
+number of rows, not the least-numerous table (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### SkipHeaderRows
+
+##### Description
+
+Controls the number of non-empty rows at the top that are assumed to contain a header and are skipped.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"0"```
+- ```"1"```
+- ```"2"```
+- ```"3"```
+
+
+----------------------------------------------------
+
+## MaskParameters
+
+### Tags
+
+- category: meta
+- category: parameter table
+
+### Description
+
+This operation is a meta-operation that temporarily alters the global parameter table. Child operations are executed
+with the adjusted parameter table, which affects what key-values appear.
+
+### Aliases
+
+- MaskMetadata
+
+### Notes
+
+- The parameter table is a shared object that all operations have access to. This operation creates a snapshot of the
+  parameter table, optionally modifies the copy, invokes children operations, and then resets the original parameter
+  table.
+
+### Parameters
+
+- Method
+
+#### Method
+
+##### Description
+
+Controls how the parameter table is merged after invoking children operations.
+
+'reset' causes the temporary copy to be discarded and the original, unmodified parameter table to be reinstated.
+
+'retain' causes the temporary copy to permanently take the place of the original parameter table.
+
+'transaction' causes the temporary copy to permanently take the place of the original parameter table, but *only* if all
+children operations complete successfully. If the children operations fail or return false, the original, unmodified
+parameter table will be reinstated. This method is helpful to ensure a multi-part operation is either completed fully,
+or has no impact.
+
+##### Default
+
+- ```"reset"```
+
+##### Supported Options
+
+- ```"reset"```
+- ```"retain"```
+- ```"transaction"```
+
+
+----------------------------------------------------
+
+## MaskVerbosity
+
+### Tags
+
+- category: meta
+
+### Description
+
+This operation is a meta-operation that temporarily alters the global log verbosity level. Child operations are executed
+with the adjusted verbosity level, which affects what log messages, and thus notifications, are suppressed.
+
+### Aliases
+
+- MaskWarnings
+- MaskLogs
+- MaskNotifications
+- SilenceWarnings
+- SilenceLogs
+- SilenceVerbosity
+- SilenceNotifications
+
+### Notes
+
+- The log is a global object, accessible by all threads in the process. Adjusting the log verbosity in one thread will
+  also impact all other threads, so it is best to avoid multiple concurrent calls where logs may be written. (Note:
+  recursively calling this operation, i.e., calling this operation as a child of itself, is ok.)
+
+### Parameters
+
+- Verbosity
+- Permanent
+
+#### Verbosity
+
+##### Description
+
+Controls whether to 'increase' or 'decrease' verbosity.
+
+##### Default
+
+- ```"decrease"```
+
+##### Supported Options
+
+- ```"decrease"```
+- ```"increase"```
+
+#### Permanent
+
+##### Description
+
+Controls whether the original verbosity levels are reset after invoking children operations. If false, the effect is
+temporary and applied only to children operations. If true, the effect is permanent and applies to all subsequent
+operations.
+
+##### Default
+
+- ```"false"```
+
+##### Supported Options
+
+- ```"true"```
+- ```"false"```
 
 
 ----------------------------------------------------
 
 ## MaxMinPixels
+
+### Tags
+
+- category: image processing
 
 ### Description
 
@@ -17248,6 +24504,11 @@ No registered options.
 ----------------------------------------------------
 
 ## MeldDose
+
+### Tags
+
+- category: image processing
+- category: radiation dose
 
 ### Description
 
@@ -17262,6 +24523,14 @@ No registered options.
 
 ## MinkowskiSum3D
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: contour processing
+- category: image processing
+- category: mesh processing
+
 ### Description
 
 This operation computes a Minkowski sum or symmetric difference of a 3D surface mesh generated from the selected ROIs
@@ -17270,11 +24539,91 @@ with a sphere. The effect is that a margin is added or subtracted to the ROIs, c
 
 ### Parameters
 
-- NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
+- NormalizedROILabelRegex
 - ImageSelection
 - Operation
 - Distance
+
+#### ROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *raw* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match 'raw' contour labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"^body$"```
+- ```"Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -17284,8 +24633,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -17303,27 +24655,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
-
-#### ROILabelRegex
-
-##### Description
-
-A regex matching ROI labels/names to consider. The default will match all available ROIs. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regex to avoid them. All ROIs have
-to match the single regex, so use the 'or' token if needed. Regex is case insensitive and uses grep syntax.
-
-##### Default
-
-- ```".*"```
-
-##### Examples
-
-- ```".*"```
-- ```".*body.*"```
-- ```"body"```
-- ```"Gross_Liver"```
-- ```".*parotid.*|.*sub.*mand.*"```
-- ```"left_parotid|right_parotid|eyes"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ImageSelection
 
@@ -17342,10 +24674,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified. Note that the selected images are used to sample the
@@ -17368,6 +24703,9 @@ new contours on. Image planes need not match the original since a full 3D mesh s
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Operation
 
@@ -17412,6 +24750,15 @@ operations, this parameter controls the resultant thickness of the shell. In all
 
 ## ModelIVIM
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: diffusion
+- category: image processing
+- category: modeling
+- category: perfusion
+
 ### Description
 
 This operation fits an Intra-voxel Incoherent Motion (IVIM) model to a series of diffusion-weighted MR images.
@@ -17437,6 +24784,7 @@ This operation fits an Intra-voxel Incoherent Motion (IVIM) model to a series of
 - ReferenceImageSelection
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - Model
 - Channel
 - TestImgLowerThreshold
@@ -17459,10 +24807,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -17484,6 +24835,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ReferenceImageSelection
 
@@ -17502,10 +24856,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -17527,6 +24884,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -17536,8 +24896,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -17555,6 +24918,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -17564,8 +24928,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -17582,19 +24949,78 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Model
 
 ##### Description
 
-The model that will be fitted.. Currently, 'adc-simple' , 'adc-ls' , 'biexp', and 'kurtosis' are available. The
-'adc-simple' model does not take into account perfusion, only free diffusion is modeled. It only uses the minimum and
-maximum b-value images and analytically estimates ADC. The 'adc-ls' model, like 'adc-simple', only models free
-diffusion. It fits a linear least-squares models that uses all available b-value images. The 'kurtosis' model returns 5
-parameters corresponding to a biexponential diffsion model with a Kurtosis adjustment, as well as a noise floor
-parameter added in quadrature with the model. The 'biexp' model uses a segmented fitting approach along with Marquardts
-method to fit a biexponential decay model, obtaining the pseudodiffusion fraction, pseudodiffusion coefficient, and
-diffusion coefficient for each voxel.
+The model that will be fitted. Currently, 'adc-simple' , 'adc-ls' , 'auc-simple', 'biexp', and 'kurtosis' are available.
+
+The 'adc-simple' is a simplistic diffusion model that ignores perfusion. It models only free diffusion using only the
+minimum and maximum b-values. An analytical estimate of ADC (i.e., the apparent diffusion coefficient) is generated.
+
+The 'adc-ls' model, like 'adc-simple', is a simplistic model that ignores perfusion. It fits a linearized least-squares
+model that uses all available b-value images. Like 'adc-simple', this model only estimates ADC.
+
+The 'auc-simple' model is a simplistic, nonparametric model that integrates the area under the intensity-vs-b-value
+curve. Note that no model fitting is performed; the voxel intensity-b-value product is summed directly. No extrapolation
+is performed.
+
+The 'biexp' model uses a segmented fitting approach along with Marquardt's method to fit a biexponential model, which
+estimates the pseudodiffusion fraction, the diffusion coefficient, and the pseudodiffusion coefficient for each voxel.
+
+The 'kurtosis' model returns three parameters corresponding to a biexponential diffusion model with a kurtosis
+adjustment and a noise floor parameter added in quadrature (pseudodiffusion fraction, diffusion, and pseudodiffusion
+coefficient for each voxel).
 
 ##### Default
 
@@ -17604,8 +25030,9 @@ diffusion coefficient for each voxel.
 
 - ```"adc-simple"```
 - ```"adc-ls"```
-- ```"kurtosis"```
+- ```"auc-simple"```
 - ```"biexp"```
+- ```"kurtosis"```
 
 #### Channel
 
@@ -17662,6 +25089,12 @@ Pixel upper threshold for the test images. Only voxels with values below this th
 
 ## ModifyContourMetadata
 
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
+- category: metadata
+
 ### Description
 
 This operation injects metadata into contours.
@@ -17670,6 +25103,7 @@ This operation injects metadata into contours.
 
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - KeyValues
 
 #### NormalizedROILabelRegex
@@ -17680,8 +25114,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -17699,6 +25136,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -17708,8 +25146,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -17726,6 +25167,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### KeyValues
 
@@ -17751,6 +25241,12 @@ properly interpret the argument.
 ----------------------------------------------------
 
 ## ModifyImageMetadata
+
+### Tags
+
+- accepts parameter: images
+- category: image processing
+- category: meta
 
 ### Description
 
@@ -17786,10 +25282,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -17811,6 +25310,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### KeyValues
 
@@ -17866,8 +25368,9 @@ SpacingBetweenSlices is known and consistent, it should be reflected in the imag
 
 ##### Description
 
-Voxels will have this (in-plane) width (in DICOM units: mm). This means that row-adjacent voxels centres will be
-separated by VoxelWidth). Each voxel will have dimensions: VoxelWidth x VoxelHeight x SliceThickness.
+Voxels will have this (in-plane) width (in DICOM units: mm). This means that the centre of two voxels that are in the
+same row but adjacent columns will be separated by VoxelWidth. Each voxel will have dimensions: VoxelWidth x VoxelHeight
+x SliceThickness.
 
 ##### Default
 
@@ -17884,8 +25387,9 @@ separated by VoxelWidth). Each voxel will have dimensions: VoxelWidth x VoxelHei
 
 ##### Description
 
-Voxels will have this (in-plane) height (in DICOM units: mm). This means that column-adjacent voxels centres will be
-separated by VoxelHeight). Each voxel will have dimensions: VoxelWidth x VoxelHeight x SliceThickness.
+Voxels will have this (in-plane) height (in DICOM units: mm). This means that the centre of two voxels that are in the
+same column but adjacent rows will be separated by VoxelHeight. Each voxel will have dimensions: VoxelWidth x
+VoxelHeight x SliceThickness.
 
 ##### Default
 
@@ -17973,7 +25477,209 @@ convenience. Specify coordinates separated by commas.
 
 ----------------------------------------------------
 
+## ModifyLineSamples
+
+### Tags
+
+- accepts parameter: line samples
+- category: line sample processing
+
+### Description
+
+This operation can apply a variety of processing algorithms to line samples, providing functionality that supports
+smoothing, normalization, arithmetical operations, and analysis of line samples.
+
+### Parameters
+
+- LineSelection
+- Methods
+
+#### LineSelection
+
+##### Description
+
+Select one or more line samples. Selection specifiers can be of three types: positional, metadata-based key@value regex,
+and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth line sample (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last line sample.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the line sample composed of the greatest and fewest number of samples. Only one or zero line sample will be
+selected; if there are ties, there is no guarantee which line sample will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple line sample based on a threshold count, i.e., where all selected line sample have
+more than or fewer than $N$ samples. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all line sample that do not have the greatest number of samples, not the least-numerous line sample (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### Methods
+
+##### Description
+
+A list of methods to apply to the selected line samples. Multiple methods can be specified, and are applied sequentially
+in the order supplied. Note that some methods accept parameters.
+
+Option 'abscissa-offset' finds the left-most abscissa value from all selected line samples, and subtracts it from each
+individual line sample abscissa.
+
+Option 'ordinate-offset' finds the bottom-most ordinate value from all selected line samples, and subtracts it from each
+individual line sample ordinate.
+
+Option 'average-coincident-values' ensures there is a single datum with the given abscissa range, across the entire line
+sample, averaging adjacent data if necessary.
+
+Option 'purge-redundant-samples' ensures there is a single datum with the given abscissa and ordinate range across the
+entire line sample, purging adjacent data if necessary.
+
+Option 'rank-abscissa' replaces the abscissa values with their ordered rank number.
+
+Option 'rank-ordinate' replaces the ordinate values with their ordered rank number.
+
+Option 'swap-abscissa-and-ordinate' swaps the abscissa and ordinate for each individual datum.
+
+Option 'select-abscissa-range' trims all datum that fall outside of the provided abscissa range. The selection is
+inclusive, so datum coinciding with one or both endpoints will be retained.
+
+Option 'crossings' locates the places where each line sample crosses the provided ordinate value (using linear
+interpolation) and returns a new line sample containing only the crossings.
+
+Option 'peaks' locates the local peaks for each line sample (using linear interpolation) and returns a new line sample
+containing only the peaks.
+
+Option 'resample-equal-spacing' resamples each line sample into approximately equally-spaced samples using linear
+interpolation. The number of outgoing samples needs to be provided, e.g., 100.
+
+Option 'multiply-scalar' multiplies all ordinates by the provided scalar factor.
+
+Option 'sum-scalar' adds to all ordinates the provided scalar factor.
+
+Option 'absolute-ordinate' replaces the ordinate of each line sample with its absolute value.
+
+Option 'purge-nonfinite' censors all datum with infinite or NaN coordinates.
+
+Option 'histogram' generates a histogram with N equal-width bins. Each bin's height is the sum of the samples that
+appear within the bin's domain. This method can also optionally add an outline surrounding the histogram bins for
+visualization purposes by supplying a second numerical argument that evaluates to 'true' (e.g., 1).
+
+Option 'moving-average-two-sided-15-sample' computes the "Spencer's" 15-sample moving average, averaging the ordinates.
+This is a convolution that effectively acts like a low-pass filter, letting polynomials of order 3 or less through
+approximately as-is.
+
+Option 'moving-average-two-sided-23-sample' computes the "Henderson's" 23-sample moving average, averaging the
+ordinates. This is a convolution that effectively acts like a low-pass filter, letting polynomials of order 3 or less
+through approximately as-is.
+
+Option 'moving-average-two-sided-equal-weighting' computes a $(2N+1)$-sample moving average, averaging the ordinates
+with equal weighting. The discrete window size $N$ must be supplied.
+
+Option 'moving-average-two-sided-gaussian-weighting' computes a moving average, averaging the ordinates using gaussian
+weighting. The width of the gaussian ($\sigma$) must be supplied. Applying consecutively emulates applying once with a
+larger width.
+
+Option 'moving-median-filter-two-sided-equal-weighting' computes a $(2N+1)$-sample moving median filter of the ordinate
+values. All ordinates are weighted identically. The discrete window size $N$ must be supplied.
+
+Option 'moving-median-filter-two-sided-gaussian-weighting' computes a $(2N+1)$-sample moving median filter of the
+ordinate values, using gaussian weighting to scale ordinates based on their distance. The width of the gaussian
+($\sigma$) must be supplied.
+
+Option 'moving-median-filter-two-sided-triangular-weighting' computes a $(2N+1)$-sample moving median filter of the
+ordinate values. All ordinates are weighted linearly based on their rank position relative to the averaging point. The
+discrete window size $N$ must be supplied.
+
+Option 'moving-variance-two-sided' calculates an unbiased estimate of a population's variance over a window of ($2N+1$)
+samples. Endpoint variance estimation uses fewer samples (min = N) and have higher variance. Setting N to be 5 or higher
+is recommended. The discrete window size $N$ must be supplied.
+
+Option 'derivative-forward-finite-differences' calculates the discrete derivative using forward finite differences. The
+right-side endpoint uses backward finite differences to handle the boundary. Data should be reasonably smooth -- no
+interpolation is used.
+
+Option 'derivative-backward-finite-differences' calculates the discrete derivative using backward finite differences.
+The left-side endpoint uses forward finite differences to handle the boundary. Data should be reasonably smooth -- no
+interpolation is used.
+
+Option 'derivative-backward-centered-differences' calculates the discrete derivative using centered finite differences.
+The endpoints use either forward or backward finite differences to handle the boundaries. Data should be reasonably
+smooth -- no interpolation is used.
+
+Option 'local-signed-curvature-three-sample' calculates the local signed curvature at each sample using the two
+nearest-neighbour samples. Endpoints are discarded. Curvature here is the tangent circle's inverse radius, and the sign
+indicates the direction of concavity.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"abscissa-offset()"```
+- ```"ordinate-offset()"```
+- ```"average-coincident-values(0.5)"```
+- ```"purge-redundant-samples(0.5, 1.23)"```
+- ```"rank-abscissa()"```
+- ```"rank-ordinate()"```
+- ```"swap-abscissa-and-ordinate()"```
+- ```"select-abscissa-range(-1.23, 2.34)"```
+- ```"crossings(0.0)"```
+- ```"peaks()"```
+- ```"resample-equal-spacing(100)"```
+- ```"multiply-scalar(1.25)"```
+- ```"sum-scalar(-1.23)"```
+- ```"absolute-ordinate()"```
+- ```"purge-nonfinite()"```
+- ```"histogram(100)"```
+- ```"histogram(100, 1)"```
+- ```"moving-average-two-sided-15-sample()"```
+- ```"moving-average-two-sided-23-sample()"```
+- ```"moving-average-two-sided-equal-weighting(5)"```
+- ```"moving-average-two-sided-gaussian-weighting(1.23)"```
+- ```"moving-median-filter-two-sided-equal-weighting(5)"```
+- ```"moving-median-filter-two-sided-gaussian-weighting(1.23)"```
+- ```"moving-median-filter-two-sided-triangular-weighting(5)"```
+- ```"moving-variance-two-sided(5)"```
+- ```"derivative-forward-finite-differences()"```
+- ```"derivative-backward-finite-differences()"```
+- ```"derivative-centered-finite-differences()"```
+- ```"local-signed-curvature-three-sample()"```
+
+
+----------------------------------------------------
+
 ## ModifyParameters
+
+### Tags
+
+- category: parameter table
 
 ### Description
 
@@ -18007,6 +25713,11 @@ accepts a key and removes it from the global parameter table if it is already pr
 
 ## NegatePixels
 
+### Tags
+
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
 This operation negates pixels for the selected image arrays. This functionality is often desired for processing MR
@@ -18033,10 +25744,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -18058,11 +25772,19 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## NoOp
+
+### Tags
+
+- category: control flow
+- category: meta
 
 ### Description
 
@@ -18076,11 +25798,22 @@ No registered options.
 
 ## NoneOf
 
+### Tags
+
+- category: control flow
+- category: meta
+
 ### Description
 
 This operation is a control flow meta-operation that performs a 'none-of' Boolean check by evaluating child operations.
 The first child operation that succeeds short-circuits the remaining checks and returns false. If no child operation
 succeeds, true is returned. Side effects from all evaluated operations are possible.
+
+### Aliases
+
+- Not
+- Negate
+- Invert
 
 ### Notes
 
@@ -18098,6 +25831,11 @@ No registered options.
 ----------------------------------------------------
 
 ## NormalizeLineSamples
+
+### Tags
+
+- accepts parameter: line samples
+- category: line sample processing
 
 ### Description
 
@@ -18127,10 +25865,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the line sample
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all line sample that do not have the greatest number of sub-objects, not the least-numerous
-line sample (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the line sample composed of the greatest and fewest number of samples. Only one or zero line sample will be
+selected; if there are ties, there is no guarantee which line sample will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple line sample based on a threshold count, i.e., where all selected line sample have
+more than or fewer than $N$ samples. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all line sample that do not have the greatest number of samples, not the least-numerous line sample (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -18152,6 +25893,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Method
 
@@ -18175,6 +25919,12 @@ ordinate is zero.
 
 ## NormalizePixels
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
 This routine normalizes voxel intensities by adjusting them so they satisfy a 'normalization' criteria. This operation
@@ -18193,6 +25943,7 @@ is useful as a pre-processing step when performing convolution or thresholding w
 - ImageSelection
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - Inclusivity
 - ContourOverlap
 - Channel
@@ -18215,10 +25966,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -18240,6 +25994,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -18249,8 +26006,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -18268,6 +26028,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -18277,8 +26038,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -18295,6 +26059,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Inclusivity
 
@@ -18391,6 +26204,11 @@ PET modality. See <https://doi.org/10.2967/jnmt.119.233353> for additional detai
 
 ## NotifyUser
 
+### Tags
+
+- category: interactive
+- category: meta
+
 ### Description
 
 This operation attempts to notify the user using a tray notification.
@@ -18423,6 +26241,15 @@ It will be displayed for 5 seconds.
 
 ## OptimizeStaticBeams
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: acquires futex
+- category: file export
+- category: radiation dose
+- category: rtplan processing
+
 ### Description
 
 This operation takes dose matrices corresponding to single, static RT beams and attempts to optimize beam weighting to
@@ -18450,6 +26277,7 @@ create an optimal plan subject to various criteria.
 - UserComment
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - MaxVoxelSamples
 - NormalizationD
 - NormalizationV
@@ -18472,10 +26300,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -18497,6 +26328,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ResultsSummaryFileName
 
@@ -18541,8 +26375,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -18560,6 +26397,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -18569,8 +26407,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -18587,6 +26428,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### MaxVoxelSamples
 
@@ -18672,6 +26562,11 @@ The dose prescribed to the ROI that will be optimized. The units depend on the D
 
 ## OrderImages
 
+### Tags
+
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
 This operation will order either individual image slices within each image array, or image arrays based on the values of
@@ -18716,10 +26611,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -18741,6 +26639,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Variant
 
@@ -18799,6 +26700,11 @@ by first sorting internally.
 
 ## PartitionContours
 
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
+
 ### Description
 
 This operation partitions the selected contours, producing a number of sub-segments that could be re-combined to
@@ -18807,6 +26713,7 @@ re-create the original contours.
 ### Parameters
 
 - ROILabelRegex
+- ROISelection
 - NormalizedROILabelRegex
 - PlanarOrientation
 - SubsegmentRootROILabel
@@ -18829,8 +26736,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -18847,6 +26757,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -18856,8 +26815,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -18875,14 +26837,27 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### PlanarOrientation
 
 ##### Description
 
-A string instructing how to orient the cleaving planes. Currently supported: (1) 'axis-aligned' (i.e., align with the
-image/dose grid row and column unit vectors) and (2) 'static-oblique' (i.e., same as axis-aligned but rotated 22.5
-degrees to reduce colinearity, which sometimes improves sub-segment area consistency).
+A string instructing how to orient the cleaving planes. Currently supported:
+
+1. 'cardinal', which aligns the planes with the cardinal direction axes unit vectors. This method is most consistent,
+but does not adapt to the anatomy of the subject. It works best when the subject's contours are defined on axial slices
+in HFS position or have otherwise been transferred or transformed to this alignment.
+
+2. 'axis-aligned', which aligns the cleave plane's Z axis with the average contour normal and uses a Gram-Schmidt
+process to provide best-guesses for appropriate X and Y unit vectors. This method adapts to the subject's position but
+because the contour planes and the cleaving planes are coplanar, it can result in splitting difficulties (e.g.,
+degeneracies, numerical precision issues like contours being split into many thin, jagged sub-segments). If using this
+method, consider limiting the number of iterations and fractional tolerance to help minimize risk of numerical issues.
+
+3. 'static-oblique', which is the same as 'axis-aligned', but rotates all unit vectors by 22.5 degrees to reduce
+coplanarity of the contour plane and the cleaving plane. This sometimes improves sub-segment area consistency, but
+results in oblique sub-segments.
 
 ##### Default
 
@@ -18890,6 +26865,7 @@ degrees to reduce colinearity, which sometimes improves sub-segment area consist
 
 ##### Supported Options
 
+- ```"cardinal"```
 - ```"axis-aligned"```
 - ```"static-oblique"```
 
@@ -19099,6 +27075,12 @@ the fractional tolerance to be excessively small.
 
 ## PerturbPixels
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
 This operation applies random noise to voxel intensities. It can be used to help fuzz testing or benchmark statistical
@@ -19112,6 +27094,7 @@ analysis.
 - Inclusivity
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - Model
 - Method
 - Seed
@@ -19150,10 +27133,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -19175,6 +27161,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ContourOverlap
 
@@ -19232,8 +27221,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -19251,6 +27243,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -19260,8 +27253,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -19278,6 +27274,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Model
 
@@ -19343,6 +27388,13 @@ The seed value to use for random number generation.
 
 ## PlotLineSamples
 
+### Tags
+
+- accepts parameter: line samples
+- category: interactive
+- category: line sample processing
+- category: needs refresh
+
 ### Description
 
 This operation plots the selected line samples.
@@ -19369,10 +27421,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the line sample
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all line sample that do not have the greatest number of sub-objects, not the least-numerous
-line sample (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the line sample composed of the greatest and fewest number of samples. Only one or zero line sample will be
+selected; if there are ties, there is no guarantee which line sample will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple line sample based on a threshold count, i.e., where all selected line sample have
+more than or fewer than $N$ samples. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all line sample that do not have the greatest number of samples, not the least-numerous line sample (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -19394,6 +27449,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Title
 
@@ -19450,6 +27508,13 @@ The label to attach to the ordinate (i.e., the 'y' or vertical coordinate). Leav
 
 ## PlotPerROITimeCourses
 
+### Tags
+
+- accepts parameter: contours
+- category: interactive
+- category: line sample processing
+- category: needs refresh
+
 ### Description
 
 Interactively plot time courses for the specified ROI(s).
@@ -19457,6 +27522,8 @@ Interactively plot time courses for the specified ROI(s).
 ### Parameters
 
 - ROILabelRegex
+- ROISelection
+- NormalizedROILabelRegex
 
 #### ROILabelRegex
 
@@ -19466,8 +27533,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -19484,11 +27554,97 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
+user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
+matching is required. Refer to the lexicon for available labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 
 ----------------------------------------------------
 
 ## PointSeparation
+
+### Tags
+
+- category: file export
+- category: point cloud processing
 
 ### Description
 
@@ -19529,10 +27685,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the point cloud
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all point cloud that do not have the greatest number of sub-objects, not the least-numerous
-point cloud (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the point cloud composed of the greatest and fewest number of vertices. Only one or zero point cloud will be
+selected; if there are ties, there is no guarantee which point cloud will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple point cloud based on a threshold count, i.e., where all selected point cloud have
+more than or fewer than $N$ vertices. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all point cloud that do not have the greatest number of vertices, not the least-numerous point cloud
+(i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -19554,6 +27713,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### PointSelectionB
 
@@ -19572,10 +27734,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the point cloud
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all point cloud that do not have the greatest number of sub-objects, not the least-numerous
-point cloud (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the point cloud composed of the greatest and fewest number of vertices. Only one or zero point cloud will be
+selected; if there are ties, there is no guarantee which point cloud will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple point cloud based on a threshold count, i.e., where all selected point cloud have
+more than or fewer than $N$ vertices. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all point cloud that do not have the greatest number of vertices, not the least-numerous point cloud
+(i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -19597,6 +27762,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### FileName
 
@@ -19636,7 +27804,339 @@ different sources, or using sub-selections of the data.
 
 ----------------------------------------------------
 
+## PollDirectories
+
+### Tags
+
+- category: meta
+
+### Description
+
+This operation continuously polls ('watches') a directory, waiting for new files. When files are received, they are
+loaded and child operations are performed.
+
+### Notes
+
+- This operation can be used to automatically perform an action when data appears in the specified directories. Consider
+  this operation a 'trigger' that can initiate further processing.
+
+- Only file names and sizes are used to evaluate when a file was last altered. Filesystem modification times are not
+  used, and file contents being altered will not be detected.
+
+- To reduce external dependencies, only rudimentary directory polling methods are used. Polling may therefore be slow
+  and/or inefficient, depending on filesystem/OS caching.
+
+- Files will be loaded and processed in batches sequentially, i.e., in 'blocking' mode.
+
+- Before files are processed, they are loaded into the existing Drover object. Similarly after processing, the Drover
+  object containing loaded files and processing results are retained. The Drover object can be explicitly cleared after
+  processing if needed.
+
+- This operation will stop polling and return false when the first child operation returns false. If files cannot be
+  loaded, this operation will also stop polling and return false. Otherwise, this operation will continue polling
+  forever. It will never return true.
+
+### Parameters
+
+- Directories
+- PollInterval
+- SettleDelay
+- IgnoreExisting
+- GroupBy
+
+#### Directories
+
+##### Description
+
+The directories to poll, separated by semicolons. Files and directories within these directories will be loaded and
+processed.
+
+##### Default
+
+- ```"./"```
+
+##### Examples
+
+- ```"/tmp/"```
+- ```"/home/user/incoming/;/path/to/another/directory/"```
+
+#### PollInterval
+
+##### Description
+
+The amount of time, in seconds, to wait between polling. Note that the time spent polling (i.e., enumerating directory
+contents and metadata) is not included in this time, so the total polling cycle time will be larger than this interval.
+
+##### Default
+
+- ```"5.0"```
+
+##### Examples
+
+- ```"1.0"```
+- ```"5"```
+- ```"600"```
+
+#### SettleDelay
+
+##### Description
+
+The amount of time, in seconds, that directories need to remain unaltered before processing. When files are copied to
+one of the input directories, this amount of time needs to pass before the file will be loaded. If any file is altered
+within this time period, the delay timer will reset.
+
+Adding this delay ensures that files still in transit are not loaded early.
+
+##### Default
+
+- ```"60.0"```
+
+##### Examples
+
+- ```"30.0"```
+- ```"60"```
+- ```"200"```
+
+#### IgnoreExisting
+
+##### Description
+
+Controls whether files present during the first poll should be considered already processed. This option can increase
+robustness if irrelevant files are found, but can also result in files being missed if inputs are provided prior to the
+first poll.
+
+##### Default
+
+- ```"false"```
+
+##### Supported Options
+
+- ```"true"```
+- ```"false"```
+
+#### GroupBy
+
+##### Description
+
+Controls how files are grouped together for processing. Currently supported options are 'separate', 'subdirs', and
+'altogether'.
+
+Use 'separate' to process files individually, one-at-a-time. This option is most useful for performing checks or
+validation of individual files where the logical relations to other files are not important.
+
+Use 'subdirs' to group all files that share a common parent sub-directory or folder. This option will cause all files in
+a directory (non-recursively) to be processed together. This option is useful when multiple logically-distinct inputs
+are received at the same time, but use a single top-level directory to keep separated.
+
+Use 'altogether' to process all files together as one logical unit, disregarding the directory structure. This option
+works best when the directory is expected to receive one set of files at a time, and is robust to the directory
+structure (e.g., a set of DICOM files which have been nested in a DICOM tree for optimal filesystem lookup, but not
+necessarily grouped logically).
+
+##### Default
+
+- ```"separate"```
+
+##### Supported Options
+
+- ```"separate"```
+- ```"subdirs"```
+- ```"altogether"```
+
+
+----------------------------------------------------
+
+## Polyominoes
+
+### Tags
+
+- accepts parameter: images
+- category: image processing
+- category: simulation
+
+### Description
+
+This operation implements a 2D inventory management survival-horror game using discretized affine transformations on
+polyominoes.
+
+### Notes
+
+- This operation will perform a single iteration of a polyomino game. Invoke multiple times to play a complete game.
+
+### Parameters
+
+- ImageSelection
+- Channel
+- Family
+- Action
+- Low
+- High
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### Channel
+
+##### Description
+
+The image channel to operated on (zero-based). Negative values will cause all channels to be operated on.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"-1"```
+- ```"0"```
+- ```"1"```
+
+#### Family
+
+##### Description
+
+The family from which to randomly draw new ominoes from.
+
+'0' draws ominoes from all available families.
+
+'1' draws only from the monomino family, which contains only a single, trivial omino.
+
+'2' draws only from the domino family, which contains a single omino.
+
+'3' draws only from the tromino family, which contains two one-sided ominoes.
+
+'4' draws only from the tetromino family, which contains seven one-sided ominoes.
+
+'5' draws only from the pentomino family, which contains eighteen one-sided ominoes.
+
+##### Default
+
+- ```"0"```
+
+##### Supported Options
+
+- ```"0"```
+- ```"1"```
+- ```"2"```
+- ```"3"```
+- ```"4"```
+- ```"5"```
+
+#### Action
+
+##### Description
+
+Controls how the moving polyomino (if any are present) is manipulated.
+
+The 'none' action causes the moving polyomino to drop down one row, otherwise any number of other actions can be taken
+to defer this movement. For consitency with other implementations, the 'none' action should be performed repeatedly
+approximately every second. Other actions should be performed in the interim time between the 'none' action.
+
+Note: actions that are not possible are ignored but still defer the 'none' action movement.
+
+##### Default
+
+- ```"none"```
+
+##### Supported Options
+
+- ```"none"```
+- ```"rotate-clockwise"```
+- ```"rotate-counterclockwise"```
+- ```"translate-left"```
+- ```"translate-right"```
+- ```"translate-down"```
+- ```"drop"```
+
+#### Low
+
+##### Description
+
+The voxel value that represents 'inactive' cells. Since cells are either 'active' or 'inactive', the value halfway
+between the low and high values is used as the threshold.
+
+##### Default
+
+- ```"0.0"```
+
+##### Examples
+
+- ```"0.0"```
+- ```"-1.23"```
+- ```"10.0"```
+
+#### High
+
+##### Description
+
+The voxel value that represents 'active' cells. Since cells are either 'active' or 'inactive', the value halfway between
+the low and high values is used as the threshold.
+
+##### Default
+
+- ```"1.0"```
+
+##### Examples
+
+- ```"1.5"```
+- ```"-0.23"```
+- ```"255.0"```
+
+
+----------------------------------------------------
+
 ## PreFilterEnormousCTValues
+
+### Tags
+
+- category: image processing
+- category: needs refresh
 
 ### Description
 
@@ -19650,6 +28150,11 @@ No registered options.
 ----------------------------------------------------
 
 ## PresentationImage
+
+### Tags
+
+- category: file export
+- category: image processing
 
 ### Description
 
@@ -19774,7 +28279,625 @@ window overrides.
 
 ----------------------------------------------------
 
+## PrintMetadata
+
+### Tags
+
+- category: meta
+- category: parameter table
+
+### Description
+
+This operation can be used to print the value corresponding to a key in the global parameter table.
+
+This operation is meant to be used to extract information as part of a pipeline, where stdout can be intercepted.
+
+### Notes
+
+- The output is printed to stdout.
+
+- If the key does not exist, nothing will be emitted.
+
+- This operation will succeed only if there is a key-value present with the specified key.
+
+### Parameters
+
+- Key
+
+#### Key
+
+##### Description
+
+The key selection.
+
+##### Default
+
+- ```"unspecified"```
+
+##### Examples
+
+- ```"ROIName"```
+- ```"SliceThickness"```
+- ```"xyz"```
+
+
+----------------------------------------------------
+
+## PromoteMetadata
+
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- accepts parameter: line samples
+- accepts parameter: point clouds
+- accepts parameter: surface meshes
+- accepts parameter: tables
+- category: metadata
+- category: parameter table
+
+### Description
+
+This operation can be used to copy metadata from an object to the global parameter table.
+
+Metadata in the global parameter table is accessible in most operations where metadata can be assigned to objects, so
+this operation effectively allows one to copy metadata from one object to another.
+
+### Notes
+
+- Metadata can be copied from any selected object, regardless of the modality or type of object.
+
+- Composite objects can have different metadata for each sub-object. For example, image arrays are composed of multiple
+  images, and each image can have it's own metadata (e.g., ImagePosition or SliceNumber). How multiple distinct metadata
+  values are handled can be adjusted.
+
+- Selectors for this operation are only considered when you explicitly provide them. By default, this operation will not
+  select any objects.
+
+- This operation will succeed only if a metadata key-value is written to the global parameter table. If no objects are
+  selected or no metadata is found, the specified key will be removed from the table.
+
+### Parameters
+
+- KeySelection
+- NewKey
+- DefaultValue
+- ValueSeparator
+- ROILabelRegex
+- ROISelection
+- NormalizedROILabelRegex
+- ImageSelection
+- LineSelection
+- MeshSelection
+- PointSelection
+- TransformSelection
+- TableSelection
+- RTPlanSelection
+
+#### KeySelection
+
+##### Description
+
+The key to extract from the key-value metadata. The corresponding value will be extracted to the global parameter table.
+
+##### Default
+
+- ```"unspecified"```
+
+##### Examples
+
+- ```"ROIName"```
+- ```"SliceThickness"```
+- ```"xyz"```
+
+#### NewKey
+
+##### Description
+
+The key to assign the metadata value when it is stored in the global parameter table.
+
+An existing metadata key-value with the given key will be overwritten if the promotion is successful.
+
+Note that any existing key will initially be removed, and only replaced if the promotion is successful.
+
+##### Default
+
+- ```"unspecified"```
+
+##### Examples
+
+- ```"extracted_ROIName"```
+- ```"xyz_from_contours"```
+
+#### DefaultValue
+
+##### Description
+
+A value that will be inserted if no items are selected or no metadata is available. Omitting this parameter will disable
+promotion when no metadata are available.
+
+Note that insertion of a default value will still result in the operation signalling a failure to promote.
+
+##### Default
+
+- ```"N/A"```
+
+##### Examples
+
+- ```"N/A"```
+- ```"(missing)"```
+- ```"NIL"```
+
+#### ValueSeparator
+
+##### Description
+
+If multiple distinct metadata values are present, they will be combined together with this separator. Providing an empty
+separator will disable concatenation and only one value (the last sorted value) will be promoted.
+
+##### Default
+
+- ```"\"```
+
+##### Examples
+
+- ```"\"```
+- ```""```
+- ```","```
+- ```"	"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *raw* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match 'raw' contour labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"^body$"```
+- ```"Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
+user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
+matching is required. Refer to the lexicon for available labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### LineSelection
+
+##### Description
+
+Select one or more line samples. Selection specifiers can be of three types: positional, metadata-based key@value regex,
+and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth line sample (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last line sample.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the line sample composed of the greatest and fewest number of samples. Only one or zero line sample will be
+selected; if there are ties, there is no guarantee which line sample will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple line sample based on a threshold count, i.e., where all selected line sample have
+more than or fewer than $N$ samples. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all line sample that do not have the greatest number of samples, not the least-numerous line sample (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### MeshSelection
+
+##### Description
+
+Select one or more surface meshes. Note that a single surface mesh may hold many disconnected mesh components; they
+should collectively represent a single logically cohesive object. Be aware that it is possible to mix logically
+unrelated sub-meshes together in a single mesh. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth surface mesh (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last surface mesh.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the surface mesh composed of the greatest and fewest number of elements (vertices + faces). Only one or zero
+surface mesh will be selected; if there are ties, there is no guarantee which surface mesh will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple surface mesh based on a threshold count, i.e., where all selected
+surface mesh have more than or fewer than $N$ elements (vertices + faces). Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all surface mesh that do not have the greatest number of elements
+(vertices + faces), not the least-numerous surface mesh (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### PointSelection
+
+##### Description
+
+Select one or more point clouds. Note that point clouds can hold a variety of data with varying attributes, but each
+point cloud is meant to represent a single logically cohesive collection of points. Be aware that it is possible to mix
+logically unrelated points together. Selection specifiers can be of three types: positional, metadata-based key@value
+regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth point cloud (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last point cloud.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the point cloud composed of the greatest and fewest number of vertices. Only one or zero point cloud will be
+selected; if there are ties, there is no guarantee which point cloud will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple point cloud based on a threshold count, i.e., where all selected point cloud have
+more than or fewer than $N$ vertices. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all point cloud that do not have the greatest number of vertices, not the least-numerous point cloud
+(i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### TransformSelection
+
+##### Description
+
+Select one or more transform objects (aka 'warp' objects). Selection specifiers can be of three types: positional,
+metadata-based key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth transformation (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last transformation.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the transformation composed of the greatest and fewest number of sub-objects. Only one or zero transformation
+will be selected; if there are ties, there is no guarantee which transformation will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple transformation based on a threshold count, i.e., where all selected transformation
+have more than or fewer than $N$ sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all transformation that do not have the greatest number of sub-objects, not the least-numerous
+transformation (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+#### TableSelection
+
+##### Description
+
+Select one or more tables. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth table (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last table. Positional specifiers
+can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the table composed of the greatest and fewest number of rows. Only one or zero table will be selected; if there
+are ties, there is no guarantee which table will be selected. Use 'more-than(N)' or 'fewer-than(N)' to select multiple
+table based on a threshold count, i.e., where all selected table have more than or fewer than $N$ rows. Intrinsic
+specifiers can be inverted by prefixing with a '!'. Note that '!numerous' means all table that do not have the greatest
+number of rows, not the least-numerous table (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### RTPlanSelection
+
+##### Description
+
+Select one or more treatment plans. Note that a single treatment plan may be composed of multiple beams; if delivered
+sequentially, they should collectively represent a single logically cohesive plan. Selection specifiers can be of three
+types: positional, metadata-based key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth treatment plan (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last treatment plan.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the treatment plan composed of the greatest and fewest number of control points. Only one or zero treatment plan
+will be selected; if there are ties, there is no guarantee which treatment plan will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple treatment plan based on a threshold count, i.e., where all selected treatment plan
+have more than or fewer than $N$ control points. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all treatment plan that do not have the greatest number of control points, not the least-numerous
+treatment plan (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+
+----------------------------------------------------
+
 ## PruneEmptyImageDoseArrays
+
+### Tags
+
+- category: image processing
+- category: needs refresh
+- category: radiation dose
 
 ### Description
 
@@ -19788,15 +28911,23 @@ No registered options.
 
 ## PurgeContours
 
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
+
 ### Description
 
 This routine purges (deletes) individual contours if they satisfy various criteria.
 
 ### Notes
 
-- This operation considers only individual contours at the moment. It could be extended to operate on whole ROIs (i.e.,
-  contour_collections), or to perform a separate vote within each ROI. The individual contour approach was taken since
-  filtering out small contour 'islands' is the primary use-case.
+- Each criteria is evaluated separately for each individual contour. Satisfaction of any of the individual criteria will
+  result in the contour being purged.
+
+- This operation considers individually. It could be extended to operate on whole ROIs (i.e., contour_collections), or
+  to perform a separate evaluation within each contour plane. The individual contour approach was taken since filtering
+  out small contour 'island' artifacts is the primary use-case.
 
 ### Parameters
 
@@ -19819,8 +28950,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -19837,6 +28971,7 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
 
 #### NormalizedROILabelRegex
 
@@ -19846,8 +28981,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -19865,6 +29003,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### InvertLogic
 
@@ -20020,7 +29159,277 @@ option.)
 
 ----------------------------------------------------
 
+## QuantizePixels
+
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: contour processing
+
+### Description
+
+This operation quantizes pixel (voxel) values confined to one or more ROIs.
+
+### Notes
+
+- This routine is often helpful for lossy compression.
+
+### Parameters
+
+- ImageSelection
+- NormalizedROILabelRegex
+- ROILabelRegex
+- ROISelection
+- Inclusivity
+- ContourOverlap
+- Method
+- Channel
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
+user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
+matching is required. Refer to the lexicon for available labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *raw* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match 'raw' contour labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"^body$"```
+- ```"Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### Inclusivity
+
+##### Description
+
+Controls how voxels are deemed to be 'within' the interior of the selected ROI(s). The default 'center' considers only
+the central-most point of each voxel. There are two corner options that correspond to a 2D projection of the voxel onto
+the image plane. The first, 'planar_corner_inclusive', considers a voxel interior if ANY corner is interior. The second,
+'planar_corner_exclusive', considers a voxel interior if ALL (four) corners are interior.
+
+##### Default
+
+- ```"center"```
+
+##### Supported Options
+
+- ```"center"```
+- ```"centre"```
+- ```"planar_corner_inclusive"```
+- ```"planar_inc"```
+- ```"planar_corner_exclusive"```
+- ```"planar_exc"```
+
+#### ContourOverlap
+
+##### Description
+
+Controls overlapping contours are treated. The default 'ignore' treats overlapping contours as a single contour,
+regardless of contour orientation. The option 'honour_opposite_orientations' makes overlapping contours with opposite
+orientation cancel. Otherwise, orientation is ignored. The latter is useful for Boolean structures where contour
+orientation is significant for interior contours (holes). The option 'overlapping_contours_cancel' ignores orientation
+and cancels all contour overlap.
+
+##### Default
+
+- ```"ignore"```
+
+##### Supported Options
+
+- ```"ignore"```
+- ```"honour_opposite_orientations"```
+- ```"overlapping_contours_cancel"```
+- ```"honour_opps"```
+- ```"overlap_cancel"```
+
+#### Method
+
+##### Description
+
+The method to use for quantization. Currently only 'round' is available, which rounds to the nearest integer.
+
+##### Default
+
+- ```"round"```
+
+##### Supported Options
+
+- ```"round"```
+
+#### Channel
+
+##### Description
+
+The image channel to use. Zero-based.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"0"```
+- ```"1"```
+- ```"2"```
+
+
+----------------------------------------------------
+
 ## QueryUserInteractively
+
+### Tags
+
+- category: interactive
+- category: meta
+- category: parameter table
 
 ### Description
 
@@ -20054,7 +29463,108 @@ or transform problematic characters.
 
 ----------------------------------------------------
 
+## RPCReceive
+
+### Tags
+
+- category: RPC
+- category: meta
+- category: networking
+
+### Description
+
+This operation launches a server that accepts remote procedure calls (RPC) for distributed computing.
+
+### Notes
+
+- RPC functionality is currently alpha-quality code, and much is expected to change.
+
+### Parameters
+
+- Port
+
+#### Port
+
+##### Description
+
+The port number to listen on.
+
+##### Default
+
+- ```"9090"```
+
+##### Examples
+
+- ```"13"```
+- ```"8080"```
+- ```"9090"```
+- ```"16378"```
+
+
+----------------------------------------------------
+
+## RPCSend
+
+### Tags
+
+- category: RPC
+- category: meta
+- category: networking
+
+### Description
+
+This operation sends a remote procedure call (RPC) to a corresponding client for distributed computing.
+
+### Notes
+
+- RPC functionality is currently alpha-quality code, and much is expected to change.
+
+### Parameters
+
+- Port
+- Host
+
+#### Port
+
+##### Description
+
+The port number to connect to.
+
+##### Default
+
+- ```"9090"```
+
+##### Examples
+
+- ```"13"```
+- ```"8080"```
+- ```"9090"```
+- ```"16378"```
+
+#### Host
+
+##### Description
+
+The remote host name or IP address to connect to.
+
+##### Default
+
+- ```"localhost"```
+
+##### Examples
+
+- ```"localhost"```
+- ```"127.0.0.1"```
+
+
+----------------------------------------------------
+
 ## RankPixels
+
+### Tags
+
+- accepts parameter: images
+- category: image processing
 
 ### Description
 
@@ -20095,10 +29605,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -20120,6 +29633,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Method
 
@@ -20174,6 +29690,13 @@ The (inclusive) threshold below which pixel values must be in order to participa
 
 ## ReduceNeighbourhood
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: contour processing
+- category: image processing
+
 ### Description
 
 This routine walks the voxels of a 3D rectilinear image collection, reducing the distribution of voxels within the local
@@ -20195,6 +29718,7 @@ statistical reductions, logical reductions can be applied.
 - ImageSelection
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - Channel
 - Neighbourhood
 - Reduction
@@ -20217,10 +29741,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -20242,6 +29769,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -20251,8 +29781,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -20270,6 +29803,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -20279,8 +29813,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -20297,6 +29834,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Channel
 
@@ -20318,19 +29904,25 @@ The channel to operated on (zero-based). Negative values will cause all channels
 
 ##### Description
 
-Controls how the neighbourhood surrounding a voxel is defined. Variable-size neighbourhoods 'spherical' and 'cubic' are
-defined. An appropriate isotropic extent must be provided for these neighbourhoods. (See below; extents must be provided
-in DICOM units, i.e., mm.) Fixed-size neighbourhoods specify a fixed number of adjacent voxels. Fixed rectagular
-neighbourhoods are specified like 'RxCxI' for row, column, and image slice extents (as integer number of rows, columns,
-and slices). Fixed spherical neighbourhoods are specified like 'Wsphere' where W is the width (i.e., the number of
-voxels wide). In morphological terminology, the neighbourhood is referred to as a 'structuring element.' A similar
-concept is the convolutional 'kernel.'
+Controls how the neighbourhood surrounding a voxel is defined.
+
+Variable-size neighbourhoods 'spherical' and 'cubic' are defined. An appropriate isotropic extent must be provided for
+these neighbourhoods. (See below; extents must be provided in DICOM units, i.e., mm.)
+
+Fixed-size neighbourhoods specify a fixed number of adjacent voxels.
+
+Fixed rectagular neighbourhoods are specified like 'RxCxI' for row, column, and image slice extents (as integer number
+of rows, columns, and slices).
+
+Fixed spherical neighbourhoods are specified like 'Wsphere' where W is the width (i.e., the number of voxels wide). In
+morphological terminology, the neighbourhood is referred to as a 'structuring element.' A similar concept is the
+convolutional 'kernel.'
 
 ##### Default
 
 - ```"spherical"```
 
-##### Examples
+##### Supported Options
 
 - ```"spherical"```
 - ```"cubic"```
@@ -20348,23 +29940,33 @@ concept is the convolutional 'kernel.'
 
 ##### Description
 
-Controls how the distribution of voxel values from neighbouring voxels is reduced. Statistical distribution reducers
-'min', 'mean', 'median', and 'max' are defined. 'min' is also known as the 'erosion' operation. Likewise, 'max' is also
-known as the 'dilation' operation. Note that the morphological 'opening' operation can be accomplished by sequentially
-performing an erosion and then a dilation using the same neighbourhood. The 'standardize' reduction method can be used
-for adaptive rescaling by subtracting the local neighbourhood mean and dividing the local neighbourhood standard
-deviation. The 'standardize' reduction method is a way to (locally) transform variables on different scales so they can
-more easily be compared. Note that standardization can result in undefined voxel values when the local neighbourhood is
-perfectly uniform. Also, since only the local neighbourhood is considered, voxels will in general have *neither* zero
-mean *nor* a unit standard deviation (growing the neighbourhood extremely large *will* accomplish this, but the
-calculation will be inefficient). The 'percentile01' reduction method evaluates which percentile the central voxel
-occupies within the local neighbourhood. It is reported scaled to $[0,1]$. 'percentile01' can be used to implement
-non-parametric adaptive scaling since only the local neighbourhood is examined. (Duplicate values assume the percentile
-of the middle of the range.) In contrast to 'standardize', the 'percentile01' reduction should remain valid anywhere the
-local neighbourhood has a non-zero number of finite voxels. Logical reducers 'is_min' and 'is_max' are also available --
-is_min (is_max) replace the voxel value with 1.0 if it was the min (max) in the neighbourhood and 0.0 otherwise. Logical
-reducers 'is_min_nan' and 'is_max_nan' are variants that replace the voxel with a NaN instead of 1.0 and otherwise do
-not overwrite the original voxel value.
+Controls how the distribution of voxel values from neighbouring voxels is reduced.
+
+Statistical distribution reducers 'min', 'mean', 'median', and 'max' are defined. 'min' is also known as the 'erosion'
+operation. Likewise, 'max' is also known as the 'dilation' operation. Note that the morphological 'opening' operation
+can be accomplished by sequentially performing an erosion and then a dilation using the same neighbourhood. The
+'standardize' reduction method can be used for adaptive rescaling by subtracting the local neighbourhood mean and
+dividing the local neighbourhood standard deviation.
+
+The 'geometric_mean' implements the Nth root of the product of N intensities within the neighbourhood. It is a smoothing
+filter often used to remove Gaussian noise. Note that all pixels should be non-negative, otherwise the geometric mean is
+not well-defined. Otherwise NaN is returned.
+
+The 'standardize' reduction method is a way to (locally) transform variables on different scales so they can more easily
+be compared. Note that standardization can result in undefined voxel values when the local neighbourhood is perfectly
+uniform. Also, since only the local neighbourhood is considered, voxels will in general have *neither* zero mean *nor* a
+unit standard deviation (growing the neighbourhood extremely large *will* accomplish this, but the calculation will be
+inefficient).
+
+The 'percentile01' reduction method evaluates which percentile the central voxel occupies within the local
+neighbourhood. It is reported scaled to $[0,1]$. 'percentile01' can be used to implement non-parametric adaptive scaling
+since only the local neighbourhood is examined. (Duplicate values assume the percentile of the middle of the range.) In
+contrast to 'standardize', the 'percentile01' reduction should remain valid anywhere the local neighbourhood has a
+non-zero number of finite voxels.
+
+Logical reducers 'is_min' and 'is_max' are also available -- is_min (is_max) replace the voxel value with 1.0 if it was
+the min (max) in the neighbourhood and 0.0 otherwise. Logical reducers 'is_min_nan' and 'is_max_nan' are variants that
+replace the voxel with a NaN instead of 1.0 and otherwise do not overwrite the original voxel value.
 
 ##### Default
 
@@ -20378,6 +29980,7 @@ not overwrite the original voxel value.
 - ```"median"```
 - ```"max"```
 - ```"dilate"```
+- ```"geometric_mean"```
 - ```"standardize"```
 - ```"percentile01"```
 - ```"is_min"```
@@ -20391,6 +29994,7 @@ not overwrite the original voxel value.
 
 The maximum distance (inclusive, in DICOM units: mm) within which neighbouring voxels will be evaluated for
 variable-size neighbourhoods. Note that this parameter will be ignored if a fixed-size neighbourhood has been specified.
+
 For spherical neighbourhoods, this distance refers to the radius. For cubic neighbourhoods, this distance refers to 'box
 radius' or the distance from the cube centre to the nearest point on each bounding face. Voxels separated by more than
 this distance will not be evaluated together.
@@ -20409,6 +30013,11 @@ this distance will not be evaluated together.
 ----------------------------------------------------
 
 ## RemeshSurfaceMeshes
+
+### Tags
+
+- accepts parameter: surface meshes
+- category: mesh processing
 
 ### Description
 
@@ -20442,10 +30051,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the surface mesh
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all surface mesh that do not have the greatest number of sub-objects, not the least-numerous
-surface mesh (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the surface mesh composed of the greatest and fewest number of elements (vertices + faces). Only one or zero
+surface mesh will be selected; if there are ties, there is no guarantee which surface mesh will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple surface mesh based on a threshold count, i.e., where all selected
+surface mesh have more than or fewer than $N$ elements (vertices + faces). Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all surface mesh that do not have the greatest number of elements
+(vertices + faces), not the least-numerous surface mesh (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -20467,6 +30079,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Iterations
 
@@ -20507,6 +30122,11 @@ The desired length of all edges in the remeshed mesh in DICOM units (mm).
 ----------------------------------------------------
 
 ## Repeat
+
+### Tags
+
+- category: control flow
+- category: meta
 
 ### Description
 
@@ -20549,7 +30169,642 @@ The number of times to repeat the children operations.
 
 ----------------------------------------------------
 
+## ReportROIData
+
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: tables
+- category: contour processing
+- category: table processing
+
+### Description
+
+This operation prints ROI contour information into a table.
+
+### Parameters
+
+- NormalizedROILabelRegex
+- ROILabelRegex
+- ROISelection
+- TableSelection
+- TableLabel
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
+user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
+matching is required. Refer to the lexicon for available labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *raw* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match 'raw' contour labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"^body$"```
+- ```"Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### TableSelection
+
+##### Description
+
+Select one or more tables. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth table (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last table. Positional specifiers
+can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the table composed of the greatest and fewest number of rows. Only one or zero table will be selected; if there
+are ties, there is no guarantee which table will be selected. Use 'more-than(N)' or 'fewer-than(N)' to select multiple
+table based on a threshold count, i.e., where all selected table have more than or fewer than $N$ rows. Intrinsic
+specifiers can be inverted by prefixing with a '!'. Note that '!numerous' means all table that do not have the greatest
+number of rows, not the least-numerous table (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### TableLabel
+
+##### Description
+
+A label to attach to table if and only if a new table is created.
+
+##### Default
+
+- ```"unspecified"```
+
+##### Examples
+
+- ```"unspecified"```
+- ```"xyz"```
+- ```"sheet A"```
+
+
+----------------------------------------------------
+
+## ResampleImages
+
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: contour processing
+- category: image processing
+
+### Description
+
+This operation combines two image arrays. The voxel values from one array are resampled onto the geometry of the other.
+This routine is used to ensure two image arrays have consistent spatial characteristics (e.g., number of images, rows,
+columns, spatial extent, orientations, etc.), which can simplify and accelerate other operations.
+
+### Notes
+
+- No images are overwritten. A resampled image array is created.
+
+- The resampling con be confined using a region of interest (via a contour collection) or using intensity thresholds.
+  Note that both of these are applied to the *reference* image array (i.e., the image array that provides the reference
+  geometry).
+
+- The image array providing voxel values must be rectilinear. (This is a requirement specific to this implementation, a
+  less restrictive implementation could overcome the issue.)
+
+- This operation will make use of trlinear interpolation if corresponding voxels do not exactly overlap.
+
+### Parameters
+
+- ImageSelection
+- ReferenceImageSelection
+- NormalizedROILabelRegex
+- ROILabelRegex
+- ROISelection
+- Channel
+- Lower
+- Upper
+
+#### ImageSelection
+
+##### Description
+
+The image array from which voxel values will be borrowed. These voxel values are what is being resampled. Select one or
+more image arrays. Note that image arrays can hold anything, but will typically represent a single contiguous 3D volume
+(i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically unrelated images
+together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"first"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### ReferenceImageSelection
+
+##### Description
+
+The image array from which geometry will be borrowed. This image array provides the reference geometry. Select one or
+more image arrays. Note that image arrays can hold anything, but will typically represent a single contiguous 3D volume
+(i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically unrelated images
+together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
+user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
+matching is required. Refer to the lexicon for available labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *raw* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match 'raw' contour labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"^body$"```
+- ```"Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### Channel
+
+##### Description
+
+The channel to compare (zero-based). Setting to -1 will compare each channel separately. Note that both image arrays
+must share this specifier.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"-1"```
+- ```"0"```
+- ```"1"```
+- ```"2"```
+
+#### Lower
+
+##### Description
+
+Voxel intensity lower threshold. Only voxels with values above this threshold (inclusive) will be altered.
+
+##### Default
+
+- ```"-inf"```
+
+##### Examples
+
+- ```"-inf"```
+- ```"0.0"```
+- ```"200"```
+
+#### Upper
+
+##### Description
+
+Voxel intensity upper threshold. Only voxels with values below this threshold (inclusive) will be altered.
+
+##### Default
+
+- ```"inf"```
+
+##### Examples
+
+- ```"inf"```
+- ```"1.23"```
+- ```"1000"```
+
+
+----------------------------------------------------
+
+## RigidWarpImages
+
+### Tags
+
+- accepts parameter: images
+- category: image processing
+- category: spatial transform processing
+
+### Description
+
+This operation applies a rigid transform object to the specified image arrays, warping (i.e., rotating, scaling, and
+translating) them spatially.
+
+### Aliases
+
+- WarpImagesRigid
+
+### Notes
+
+- A transform object must be selected; this operation cannot create transforms. Transforms can be generated via
+  registration or by parsing user-provided functions.
+
+- Images are transformed in-place. Metadata may become invalid by this operation.
+
+- This operation can only handle individual transforms. If multiple, sequential transforms are required, this operation
+  must be invoked multiple time. This will guarantee the ordering of the transforms.
+
+- This operation supports only the rigid subset of affine transformations. Local transformations and those requiring
+  shear require special handling and voxel resampling that is not yet implemented.
+
+- Transformations are not (generally) restricted to the coordinate frame of reference that they were derived from. This
+  permits a single transformation to be applicable to point clouds, surface meshes, images, and contours.
+
+### Parameters
+
+- ImageSelection
+- TransformSelection
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### TransformSelection
+
+##### Description
+
+Select one or more transform objects (aka 'warp' objects). Selection specifiers can be of three types: positional,
+metadata-based key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth transformation (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last transformation.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the transformation composed of the greatest and fewest number of sub-objects. Only one or zero transformation
+will be selected; if there are ties, there is no guarantee which transformation will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple transformation based on a threshold count, i.e., where all selected transformation
+have more than or fewer than $N$ sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all transformation that do not have the greatest number of sub-objects, not the least-numerous
+transformation (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+
+
+----------------------------------------------------
+
 ## SDL_Viewer
+
+### Tags
+
+- category: interactive
 
 ### Description
 
@@ -20557,11 +30812,62 @@ Launch an interactive viewer based on SDL.
 
 ### Parameters
 
-No registered options.
+- LexiconCustomizer
+- Contouring
+- Guide
+
+#### LexiconCustomizer
+
+##### Description
+
+Controls whether the lexicon customizer interface is opened by default.
+
+##### Default
+
+- ```"false"```
+
+##### Supported Options
+
+- ```"true"```
+- ```"false"```
+
+#### Contouring
+
+##### Description
+
+Controls whether the contouring interface is opened by default.
+
+##### Default
+
+- ```"false"```
+
+##### Supported Options
+
+- ```"true"```
+- ```"false"```
+
+#### Guide
+
+##### Description
+
+A guide to display to the user. Usually used to walk the user through one or more actions.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"Step 1---Step 2---Step 3"```
+
 
 ----------------------------------------------------
 
 ## SFML_Viewer
+
+### Tags
+
+- category: interactive
 
 ### Description
 
@@ -20630,6 +30936,12 @@ suggestion.
 
 ## ScalePixels
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
 This operation scales pixel (voxel) values confined to one or more ROIs.
@@ -20643,6 +30955,7 @@ This operation scales pixel (voxel) values confined to one or more ROIs.
 - ImageSelection
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - Inclusivity
 - ContourOverlap
 - ScaleFactor
@@ -20665,10 +30978,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -20690,6 +31006,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -20699,8 +31018,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -20718,6 +31040,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -20727,8 +31050,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -20745,6 +31071,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Inclusivity
 
@@ -20827,6 +31202,11 @@ The image channel to use. Zero-based.
 
 ## SeamContours
 
+### Tags
+
+- category: contour processing
+- category: needs refresh
+
 ### Description
 
 This routine converts contours that represent 'outer' and 'inner' via contour orientation into contours that are
@@ -20860,7 +31240,139 @@ No registered options.
 
 ----------------------------------------------------
 
+## SelectDirectory
+
+### Tags
+
+- category: interactive
+- category: meta
+- category: parameter table
+
+### Description
+
+Allow the user to interactively select/specify a directory name, and then insert it into the global parameter table.
+
+### Aliases
+
+- SpecifyDirectory
+- SelectFolder
+- SpecifyFolder
+
+### Notes
+
+- Invocation of this operation will first purge any existing directory names with the provided key. This is done to
+  avoid risk of any existing directory names being propagated through if the selection dialog fails or the user cancels
+  the dialog.
+
+- The specified directory name is not validated. However, providing an empty name will cause a false to be returned.
+
+### Parameters
+
+- Key
+
+#### Key
+
+##### Description
+
+The key used to store the selected/specified directory name in the global parameter table.
+
+##### Default
+
+- ```"selected_dirname"```
+
+##### Examples
+
+- ```"selected_dirname"```
+- ```"out_dirname"```
+- ```"value"```
+
+
+----------------------------------------------------
+
+## SelectFilename
+
+### Tags
+
+- category: interactive
+- category: meta
+- category: parameter table
+
+### Description
+
+Allow the user to interactively select/specify a filename, and then insert it into the global parameter table. Note that
+either an existing file can be selected, or a new filename can be specified.
+
+A file with the specified name does not need to exist, and no new file is created by this operation.
+
+If a file *does* exist with the specified filename, it will not be modified by this operation.
+
+However, subsequent operations may use the filename to create, overwrite, or append to such a file.
+
+### Aliases
+
+- SpecifyFilename
+
+### Notes
+
+- Invocation of this operation will first purge any existing filename with the provided key. This is done to avoid risk
+  of any existing filenames being propagated through if the file selection fails or the user cancels the dialog.
+
+- As with any non-atomic filename selection operation where the file is not reserved, there is a possible race condition
+  between filename selection and file use. This is broadly known as the 'TOCTOU' or time-of-check, time-of-use race
+  condition. Beware!
+
+- The specified filename is not validated. However, providing an empty filename will cause a false to be returned.
+
+### Parameters
+
+- Key
+- Extension
+
+#### Key
+
+##### Description
+
+The key used to store the selected/specified filename in the global parameter table.
+
+##### Default
+
+- ```"selected_filename"```
+
+##### Examples
+
+- ```"selected_filename"```
+- ```"out_filename"```
+- ```"value"```
+
+#### Extension
+
+##### Description
+
+An extension to impose on the filename. Note that this option will add the extension or override any extension provided
+by the user. To permit any extension and disable overriding the extension, leave this parameter empty.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```".dcm"```
+- ```".txt"```
+- ```".tar.gz"```
+- ```".CSV"```
+
+
+----------------------------------------------------
+
 ## SelectSlicesIntersectingROI
+
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
+- category: needs refresh
 
 ### Description
 
@@ -20872,6 +31384,7 @@ of view of extraneous image slices.
 
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 
 #### NormalizedROILabelRegex
 
@@ -20881,8 +31394,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -20900,6 +31416,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -20909,8 +31426,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -20927,11 +31447,466 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+
+----------------------------------------------------
+
+## SelectionIsPresent
+
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- accepts parameter: line samples
+- accepts parameter: point clouds
+- accepts parameter: surface meshes
+- accepts parameter: tables
+- category: control flow
+- category: meta
+
+### Description
+
+This operation is a control flow meta-operation that evaluates whether the provided selection criteria selects one or
+more objects.
+
+For example, if you need to know whether there is an image array with a given metadata key-value pair, this operation
+will return a logical 'true' if and only if the image array can be located. This operation allows for branching logic,
+where operations will be taken only when data is (or is not) available.
+
+### Notes
+
+- Multiple selection criteria can be provided. If multiple criteria are specified, this operation returns the logical
+  'AND' for each selection criteria (e.g., has images AND has contours). If no selection criteria are provided, this
+  operation fails therefore evaluates logically to false.
+
+- This operation is read-only and produces no side-effects. It does not alter the selection.
+
+- Selectors for this operation are only considered when you explicitly provide them. The default values are not used by
+  this operation.
+
+- Note that many operations will tolerate empty selections, degrading to a no-op. This operation is useful as a
+  side-effect-free option for operations that do not tolerate empty selections.
+
+### Parameters
+
+- NormalizedROILabelRegex
+- ROILabelRegex
+- ROISelection
+- ImageSelection
+- LineSelection
+- MeshSelection
+- PointSelection
+- TableSelection
+
+#### NormalizedROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *normalized* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
+user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
+matching is required. Refer to the lexicon for available labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
+
+#### ROILabelRegex
+
+##### Description
+
+A regular expression (regex) matching *raw* ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match 'raw' contour labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"^body$"```
+- ```"Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### LineSelection
+
+##### Description
+
+Select one or more line samples. Selection specifiers can be of three types: positional, metadata-based key@value regex,
+and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth line sample (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last line sample.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the line sample composed of the greatest and fewest number of samples. Only one or zero line sample will be
+selected; if there are ties, there is no guarantee which line sample will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple line sample based on a threshold count, i.e., where all selected line sample have
+more than or fewer than $N$ samples. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all line sample that do not have the greatest number of samples, not the least-numerous line sample (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### MeshSelection
+
+##### Description
+
+Select one or more surface meshes. Note that a single surface mesh may hold many disconnected mesh components; they
+should collectively represent a single logically cohesive object. Be aware that it is possible to mix logically
+unrelated sub-meshes together in a single mesh. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth surface mesh (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last surface mesh.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the surface mesh composed of the greatest and fewest number of elements (vertices + faces). Only one or zero
+surface mesh will be selected; if there are ties, there is no guarantee which surface mesh will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple surface mesh based on a threshold count, i.e., where all selected
+surface mesh have more than or fewer than $N$ elements (vertices + faces). Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all surface mesh that do not have the greatest number of elements
+(vertices + faces), not the least-numerous surface mesh (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### PointSelection
+
+##### Description
+
+Select one or more point clouds. Note that point clouds can hold a variety of data with varying attributes, but each
+point cloud is meant to represent a single logically cohesive collection of points. Be aware that it is possible to mix
+logically unrelated points together. Selection specifiers can be of three types: positional, metadata-based key@value
+regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth point cloud (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last point cloud.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the point cloud composed of the greatest and fewest number of vertices. Only one or zero point cloud will be
+selected; if there are ties, there is no guarantee which point cloud will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple point cloud based on a threshold count, i.e., where all selected point cloud have
+more than or fewer than $N$ vertices. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all point cloud that do not have the greatest number of vertices, not the least-numerous point cloud
+(i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### TableSelection
+
+##### Description
+
+Select one or more tables. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth table (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last table. Positional specifiers
+can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the table composed of the greatest and fewest number of rows. Only one or zero table will be selected; if there
+are ties, there is no guarantee which table will be selected. Use 'more-than(N)' or 'fewer-than(N)' to select multiple
+table based on a threshold count, i.e., where all selected table have more than or fewer than $N$ rows. Intrinsic
+specifiers can be inverted by prefixing with a '!'. Note that '!numerous' means all table that do not have the greatest
+number of rows, not the least-numerous table (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## SimplifyContours
+
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
 
 ### Description
 
@@ -20949,6 +31924,7 @@ reduce the computational complexity of other operations.
 
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - FractionalAreaTolerance
 - SimplificationMethod
 
@@ -20960,8 +31936,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -20979,6 +31958,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -20988,8 +31968,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -21006,6 +31989,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### FractionalAreaTolerance
 
@@ -21055,10 +32087,15 @@ averaging that may result in numerical imprecision.
 
 ## SimplifySurfaceMeshes
 
+### Tags
+
+- accepts parameter: surface meshes
+- category: mesh processing
+
 ### Description
 
 This operation performs mesh simplification on existing surface meshes according to the specified criteria, replacing
-the original meshes with simplified copies.
+the original meshes with simplified meshes.
 
 ### Notes
 
@@ -21067,7 +32104,10 @@ the original meshes with simplified copies.
 ### Parameters
 
 - MeshSelection
+- Method
 - EdgeCountLimit
+- ToleranceDistance
+- MinAlignAngle
 
 #### MeshSelection
 
@@ -21086,10 +32126,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the surface mesh
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all surface mesh that do not have the greatest number of sub-objects, not the least-numerous
-surface mesh (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the surface mesh composed of the greatest and fewest number of elements (vertices + faces). Only one or zero
+surface mesh will be selected; if there are ties, there is no guarantee which surface mesh will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple surface mesh based on a threshold count, i.e., where all selected
+surface mesh have more than or fewer than $N$ elements (vertices + faces). Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all surface mesh that do not have the greatest number of elements
+(vertices + faces), not the least-numerous surface mesh (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -21111,12 +32154,39 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### Method
+
+##### Description
+
+Controls which simplification algorithm is used. Currently supported are 'flat' and 'edge-collapse'.
+
+'flat' removes vertices when the immediate surrounding patch is uniformly flat within a given tolerance distance. Border
+and non-manifold vertices are not removed, maintaining surface topology. The 'flat' algorithm works best on redundant,
+flat meshes, like those produced by marching cubes. Choosing a small tolerance distance should result in a nearly
+lossless simplification, but will only be applicable for meshes with redundant flat sections.
+
+'edge-collapse' builds a priority queue of edges that can be collapsed (converting two vertices into one) one at a time
+with minimal impact on the surface. Collapse stops when a given edge count limit is reached. 'edge-collapse' is a
+general-purpose simplification algorithm that works well on a variety of meshes.
+
+##### Default
+
+- ```"edge-collapse"```
+
+##### Supported Options
+
+- ```"flat"```
+- ```"edge-collapse"```
 
 #### EdgeCountLimit
 
 ##### Description
 
-The maximum number of edges simplified meshes should contain.
+Needed for 'edge-collapse' algorithm. The maximum number of edges simplified meshes should contain.
 
 ##### Default
 
@@ -21129,10 +32199,67 @@ The maximum number of edges simplified meshes should contain.
 - ```"500000"```
 - ```"5000000"```
 
+#### ToleranceDistance
+
+##### Description
+
+Needed for 'flat' algorithm. The maximum allowed surface deviation (in DICOM units; mm) above which vertices will NOT be
+simplified.
+
+Note that this number is not the same as the maximum surface deviation after simplification, since every nearby vertex
+can in principle perturb the surface up to the tolerance distance. In most practical situations, the tolerance distance
+is representative of the surface deviation after simplification.
+
+Setting this number to a value much smaller than the smallest feature should cause effectively lossless simplification
+of exactly-flat patches.
+
+##### Default
+
+- ```"0.001"```
+
+##### Examples
+
+- ```"0.001"```
+- ```"1E-4"```
+- ```"0.5"```
+- ```"1.5"```
+
+#### MinAlignAngle
+
+##### Description
+
+Needed for 'flat' algorithm. The minimum angle (in rads) between a candidate surface and the original surface patch's
+area-weighted average normal in order for the candidate surface to be accepted.
+
+The range is from zero to pi with zero being perfect alignment and pi (180 degrees) accepting any surface, even if it
+faces away from the original.
+
+Note that being too permissive can result in the surface folding back on itself, resulting in (potentially) non-manifold
+pinches. An angle between zero and pi/2 is recommended.
+
+##### Default
+
+- ```"1.045"```
+
+##### Examples
+
+- ```"0.01"```
+- ```"0.1"```
+- ```"0.5"```
+- ```"1.0"```
+- ```"1.5"```
+- ```"3.14159"```
+
 
 ----------------------------------------------------
 
 ## SimulateRadiograph
+
+### Tags
+
+- accepts parameter: images
+- category: image processing
+- category: simulation
 
 ### Description
 
@@ -21178,10 +32305,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -21203,6 +32333,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Filename
 
@@ -21328,7 +32461,59 @@ from the number of rows and columns, so increasing the column count will only re
 
 ----------------------------------------------------
 
+## Sleep
+
+### Tags
+
+- category: control flow
+- category: meta
+
+### Description
+
+This operation is a control flow meta-operation that times how long it takes to execute the child operations.
+
+### Aliases
+
+- Delay
+- Wait
+
+### Notes
+
+- Child operations are performed in order, and all side-effects are carried forward. In particular, all selectors in
+  child operations are evaluated lazily, at the moment when the child operation is invoked.
+
+- This operation behaves equivalent to the boolean 'And' meta-operation. If a child operation fails, the remaining child
+  operations are not performed.
+
+### Parameters
+
+- Duration
+
+#### Duration
+
+##### Description
+
+The length of time to wait, in seconds.
+
+##### Default
+
+- ```"1.0"```
+
+##### Examples
+
+- ```"0.1"```
+- ```"1.23"```
+- ```"5"```
+
+
+----------------------------------------------------
+
 ## SpatialBlur
+
+### Tags
+
+- accepts parameter: images
+- category: image processing
 
 ### Description
 
@@ -21357,10 +32542,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -21382,6 +32570,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Estimator
 
@@ -21430,6 +32621,11 @@ aware this operation can take an enormous amount of time, since the pixel neighb
 
 ## SpatialDerivative
 
+### Tags
+
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
 This operation estimates various partial derivatives (of pixel values) within 2D images.
@@ -21457,10 +32653,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -21482,6 +32681,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Estimator
 
@@ -21537,6 +32739,11 @@ orientation (in radians; [0,2pi) ).
 
 ## SpatialSharpen
 
+### Tags
+
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
 This operation 'sharpens' pixels (within the plane of the image only) using the specified estimator.
@@ -21563,10 +32770,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -21588,6 +32798,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Estimator
 
@@ -21609,6 +32822,11 @@ is based on a 5x5 Gaussian blur estimator.
 ----------------------------------------------------
 
 ## SubdivideSurfaceMeshes
+
+### Tags
+
+- accepts parameter: surface meshes
+- category: mesh processing
 
 ### Description
 
@@ -21641,10 +32859,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the surface mesh
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all surface mesh that do not have the greatest number of sub-objects, not the least-numerous
-surface mesh (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the surface mesh composed of the greatest and fewest number of elements (vertices + faces). Only one or zero
+surface mesh will be selected; if there are ties, there is no guarantee which surface mesh will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple surface mesh based on a threshold count, i.e., where all selected
+surface mesh have more than or fewer than $N$ elements (vertices + faces). Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all surface mesh that do not have the greatest number of elements
+(vertices + faces), not the least-numerous surface mesh (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -21666,6 +32887,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Iterations
 
@@ -21688,6 +32912,11 @@ The number of times subdivision should be performed.
 
 ## SubsegmentContours
 
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
+
 ### Description
 
 This operation sub-segments the selected contours, resulting in contours with reduced size.
@@ -21695,6 +32924,7 @@ This operation sub-segments the selected contours, resulting in contours with re
 ### Parameters
 
 - ROILabelRegex
+- ROISelection
 - NormalizedROILabelRegex
 - PlanarOrientation
 - ReplaceAllWithSubsegment
@@ -21715,8 +32945,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -21733,6 +32966,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -21742,8 +33024,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -21761,14 +33046,27 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### PlanarOrientation
 
 ##### Description
 
-A string instructing how to orient the cleaving planes. Currently supported: (1) 'axis-aligned' (i.e., align with the
-image/dose grid row and column unit vectors) and (2) 'static-oblique' (i.e., same as axis-aligned but rotated 22.5
-degrees to reduce colinearity, which sometimes improves sub-segment area consistency).
+A string instructing how to orient the cleaving planes. Currently supported:
+
+1. 'cardinal', which aligns the planes with the cardinal direction axes unit vectors. This method is most consistent,
+but does not adapt to the anatomy of the subject. It works best when the subject's contours are defined on axial slices
+in HFS position or have otherwise been transferred or transformed to this alignment.
+
+2. 'axis-aligned', which aligns the cleave plane's Z axis with the average contour normal and uses a Gram-Schmidt
+process to provide best-guesses for appropriate X and Y unit vectors. This method adapts to the subject's position but
+because the contour planes and the cleaving planes are coplanar, it can result in splitting difficulties (e.g.,
+degeneracies, numerical precision issues like contours being split into many thin, jagged sub-segments). If using this
+method, consider limiting the number of iterations and fractional tolerance to help minimize risk of numerical issues.
+
+3. 'static-oblique', which is the same as 'axis-aligned', but rotates all unit vectors by 22.5 degrees to reduce
+coplanarity of the contour plane and the cleaving plane. This sometimes improves sub-segment area consistency, but
+results in oblique sub-segments.
 
 ##### Default
 
@@ -21776,6 +33074,7 @@ degrees to reduce colinearity, which sometimes improves sub-segment area consist
 
 ##### Supported Options
 
+- ```"cardinal"```
 - ```"axis-aligned"```
 - ```"static-oblique"```
 
@@ -21964,6 +33263,11 @@ the fractional tolerance to be excessively small.
 
 ## Subsegment_ComputeDose_VanLuijk
 
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
+
 ### Description
 
 This operation sub-segments the selected ROI(s) and computes dose within the resulting sub-segments.
@@ -21978,6 +33282,7 @@ This operation sub-segments the selected ROI(s) and computes dose within the res
 - ReplaceAllWithSubsegment
 - RetainSubsegment
 - ROILabelRegex
+- ROISelection
 - SubsegMethod
 - XSelection
 - YSelection
@@ -22051,8 +33356,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -22070,6 +33378,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### PlanarOrientation
 
@@ -22132,8 +33441,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -22150,6 +33462,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### SubsegMethod
 
@@ -22277,6 +33638,11 @@ the fractional tolerance to be excessively small.
 
 ## SubtractImages
 
+### Tags
+
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
 This routine subtracts images that spatially overlap.
@@ -22312,10 +33678,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -22337,6 +33706,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ReferenceImageSelection
 
@@ -22355,10 +33727,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -22380,22 +33755,31 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## SupersampleImageGrid
 
+### Tags
+
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
-This operation scales supersamples images so they have more rows and/or columns, but the whole image keeps its shape and
-spatial extent. This operation is typically used for zooming into images or trying to ensure a sufficient number of
-voxels are within small contours.
+This operation supersamples (i.e., scales and resamples) whole image arrays so they have more rows and/or columns, but
+in a way that the supersampled image array retains the shape and spatial extent of the original image array. This
+operation is typically used for 'zooming' into images, or dividing large voxels so that binarization using small
+contours has reduced spillover.
 
 ### Notes
 
-- Be aware that specifying large multipliers (or even small multipliers on large images) will consume much memory. It is
-  best to pre-crop images to a region of interest if possible.
+- Be aware that specifying large multipliers (or even small multipliers on large images) could consume large amounts of
+  memory. It is best to pre-crop images to a given region of interest if possible.
 
 ### Parameters
 
@@ -22422,10 +33806,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -22447,6 +33834,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### RowScaleFactor
 
@@ -22525,438 +33915,201 @@ as the inputs.
 
 ----------------------------------------------------
 
-## SurfaceBasedRayCastDoseAccumulate
+## TabulateImageMetadata
+
+### Tags
+
+- accepts parameter: images
+- category: image processing
+- category: metadata
+- category: table processing
 
 ### Description
 
-This routine uses rays (actually: line segments) to estimate point-dose on the surface of an ROI. The ROI is
-approximated by surface mesh and rays are passed through. Dose is interpolated at the intersection points and
-intersecting lines (i.e., where the ray 'glances' the surface) are discarded. The surface reconstruction can be tweaked,
-but appear to reasonably approximate the ROI contours; both can be output to compare visually. Though it is not required
-by the implementation, only the ray-surface intersection nearest to the detector is considered. All other intersections
-(i.e., on the far side of the surface mesh) are ignored. This routine is fairly fast compared to the slow grid-based
-counterpart previously implemented. The speedup comes from use of an AABB-tree to accelerate intersection queries and
-avoid having to 'walk' rays step-by-step through over/through the geometry.
+Extract metadata from images and write them in a tabular format.
 
 ### Parameters
 
-- TotalDoseMapFileName
-- RefCroppedTotalDoseMapFileName
-- IntersectionCountMapFileName
-- DepthMapFileName
-- RadialDistMapFileName
-- RefIntersectionCountMapFileName
-- ROISurfaceMeshFileName
-- SubdividedROISurfaceMeshFileName
-- RefSurfaceMeshFileName
-- SubdividedRefSurfaceMeshFileName
-- ROICOMCOMLineFileName
-- NormalizedReferenceROILabelRegex
-- NormalizedROILabelRegex
-- ReferenceROILabelRegex
-- ROILabelRegex
-- SourceDetectorRows
-- SourceDetectorColumns
-- MeshingSubdivisionIterations
-- MaxRaySurfaceIntersections
-- OnlyGenerateSurface
+- ImageSelection
+- Keys
+- ProvideDefault
+- DefaultValue
+- UserComment
+- TableShape
+- IncludeHeader
+- TableLabel
 
-#### TotalDoseMapFileName
+#### ImageSelection
 
 ##### Description
 
-A filename (or full path) for the total dose image map (at all ray-surface intersection points). The dose for each ray
-is summed over all ray-surface point intersections. The format is FITS. This file is always generated. Leave the
-argument empty to generate a unique filename.
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
 
 ##### Default
 
-- ```""```
+- ```"last"```
 
 ##### Examples
 
-- ```""```
-- ```"total_dose_map.fits"```
-- ```"/tmp/out.fits"```
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
-#### RefCroppedTotalDoseMapFileName
+#### Keys
 
 ##### Description
 
-A filename (or full path) for the total dose image map (at all ray-surface intersection points). The dose for each ray
-is summed over all ray-surface point intersections. Doses in this map are only registered when the ray intersects the
-reference ROI mesh. The format is FITS. This file is always generated. Leave the argument empty to generate a unique
-filename.
+A string of semicolon-separated metadata keys. The value corresponding to each key will be output. Images that do not
+have the metadata key will either return the user-provided DefaultValue, or simply not output anything if ProvideDefault
+is false.
 
 ##### Default
 
-- ```""```
+- ```"PatientID;Filename"```
 
 ##### Examples
 
-- ```""```
-- ```"total_dose_map.fits"```
-- ```"/tmp/out.fits"```
+- ```"PatientID"```
+- ```"Filename"```
+- ```"Treatment plan C"```
 
-#### IntersectionCountMapFileName
+#### ProvideDefault
 
 ##### Description
 
-A filename (or full path) for the (number of ray-surface intersections) image map. Each pixel in this map (and the total
-dose map) represents a single ray; the number of times the ray intersects the surface can be useful for various
-purposes, but most often it will simply be a sanity check for the cross-sectional shape or that a specific number of
-intersections were recorded in regions with geometrical folds. Pixels will all be within [0,MaxRaySurfaceIntersections].
-The format is FITS. Leave empty to dump to generate a unique filename.
+If an image does not have the given metadata key, this option controls whether the user-provided DefaultValue is output.
 
 ##### Default
 
-- ```""```
+- ```"true"```
 
-##### Examples
-
-- ```""```
-- ```"intersection_count_map.fits"```
-- ```"/tmp/out.fits"```
-
-#### DepthMapFileName
-
-##### Description
-
-A filename (or full path) for the distance (depth) of each ray-surface intersection point from the detector. Has DICOM
-coordinate system units. This image is potentially multi-channel with [MaxRaySurfaceIntersections] channels (when
-MaxRaySurfaceIntersections = 1 there is 1 channel). The format is FITS. Leaving empty will result in no file being
-written.
-
-##### Default
-
-- ```""```
-
-##### Examples
-
-- ```""```
-- ```"depth_map.fits"```
-- ```"/tmp/out.fits"```
-
-#### RadialDistMapFileName
-
-##### Description
-
-A filename (or full path) for the distance of each ray-surface intersection point from the line joining reference and
-target ROI centre-of-masses. This helps quantify position in 3D. Has DICOM coordinate system units. This image is
-potentially multi-channel with [MaxRaySurfaceIntersections] channels (when MaxRaySurfaceIntersections = 1 there is 1
-channel). The format is FITS. Leaving empty will result in no file being written.
-
-##### Default
-
-- ```""```
-
-##### Examples
-
-- ```""```
-- ```"radial_dist_map.fits"```
-- ```"/tmp/out.fits"```
-
-#### RefIntersectionCountMapFileName
-
-##### Description
-
-A filename (or full path) for the (number of ray-surface intersections) for the reference ROIs. Each pixel in this map
-(and the total dose map) represents a single ray; the number of times the ray intersects the surface can be useful for
-various purposes, but most often it will simply be a sanity check for the cross-sectional shape or that a specific
-number of intersections were recorded in regions with geometrical folds. Note: currently, the number of intersections is
-limited to 0 or 1! The format is FITS. Leave empty to dump to generate a unique filename.
-
-##### Default
-
-- ```""```
-
-##### Examples
-
-- ```""```
-- ```"ref_roi_intersection_count_map.fits"```
-- ```"/tmp/out.fits"```
-
-#### ROISurfaceMeshFileName
-
-##### Description
-
-A filename (or full path) for the (pre-subdivided) surface mesh that is contructed from the ROI contours. The format is
-OFF. This file is mostly useful for inspection of the surface or comparison with contours. Leaving empty will result in
-no file being written.
-
-##### Default
-
-- ```""```
-
-##### Examples
-
-- ```""```
-- ```"/tmp/roi_surface_mesh.off"```
-- ```"roi_surface_mesh.off"```
-
-#### SubdividedROISurfaceMeshFileName
-
-##### Description
-
-A filename (or full path) for the Loop-subdivided surface mesh that is contructed from the ROI contours. The format is
-OFF. This file is mostly useful for inspection of the surface or comparison with contours. Leaving empty will result in
-no file being written.
-
-##### Default
-
-- ```""```
-
-##### Examples
-
-- ```""```
-- ```"/tmp/subdivided_roi_surface_mesh.off"```
-- ```"subdivided_roi_surface_mesh.off"```
-
-#### RefSurfaceMeshFileName
-
-##### Description
-
-A filename (or full path) for the (pre-subdivided) surface mesh that is contructed from the reference ROI contours. The
-format is OFF. This file is mostly useful for inspection of the surface or comparison with contours. Leaving empty will
-result in no file being written.
-
-##### Default
-
-- ```""```
-
-##### Examples
-
-- ```""```
-- ```"/tmp/roi_surface_mesh.off"```
-- ```"roi_surface_mesh.off"```
-
-#### SubdividedRefSurfaceMeshFileName
-
-##### Description
-
-A filename (or full path) for the Loop-subdivided surface mesh that is contructed from the reference ROI contours. The
-format is OFF. This file is mostly useful for inspection of the surface or comparison with contours. Leaving empty will
-result in no file being written.
-
-##### Default
-
-- ```""```
-
-##### Examples
-
-- ```""```
-- ```"/tmp/subdivided_roi_surface_mesh.off"```
-- ```"subdivided_roi_surface_mesh.off"```
-
-#### ROICOMCOMLineFileName
-
-##### Description
-
-A filename (or full path) for the line segment that connected the centre-of-mass (COM) of reference and target ROI. The
-format is OFF. This file is mostly useful for inspection of the surface or comparison with contours. Leaving empty will
-result in no file being written.
-
-##### Default
-
-- ```""```
-
-##### Examples
-
-- ```""```
-- ```"/tmp/roi_com_com_line.off"```
-- ```"roi_com_com_line.off"```
-
-#### NormalizedReferenceROILabelRegex
-
-##### Description
-
-A regex matching reference ROI labels/names to consider. The default will match all available ROIs, which is
-non-sensical. The reference ROI is used to orient the cleaving plane to trim the grid surface mask.
-
-##### Default
-
-- ```".*"```
-
-##### Examples
-
-- ```".*"```
-- ```".*Prostate.*"```
-- ```"Left Kidney"```
-- ```"Gross Liver"```
-
-#### NormalizedROILabelRegex
-
-##### Description
-
-A regular expression (regex) matching *normalized* ROI contour labels/names to consider.
-
-Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
-
-Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
-user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
-matching is required. Refer to the lexicon for available labels.
-
-##### Default
-
-- ```".*"```
-
-##### Examples
-
-- ```".*"```
-- ```".*Body.*"```
-- ```"Body"```
-- ```"liver"```
-- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
-- ```"Left Parotid|Right Parotid"```
-
-#### ReferenceROILabelRegex
-
-##### Description
-
-A regex matching reference ROI labels/names to consider. The default will match all available ROIs, which is
-non-sensical. The reference ROI is used to orient the cleaving plane to trim the grid surface mask.
-
-##### Default
-
-- ```".*"```
-
-##### Examples
-
-- ```".*"```
-- ```".*[pP]rostate.*"```
-- ```"body"```
-- ```"Gross_Liver"```
-- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
-- ```"left_parotid|right_parotid"```
-
-#### ROILabelRegex
-
-##### Description
-
-A regular expression (regex) matching *raw* ROI contour labels/names to consider.
-
-Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
-trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
-
-Note that this parameter will match 'raw' contour labels.
-
-##### Default
-
-- ```".*"```
-
-##### Examples
-
-- ```".*"```
-- ```".*body.*"```
-- ```"body"```
-- ```"^body$"```
-- ```"Liver"```
-- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
-- ```"left_parotid|right_parotid"```
-
-#### SourceDetectorRows
-
-##### Description
-
-The number of rows in the resulting images, which also defines how many rays are used. (Each pixel in the source image
-represents a single ray.) Setting too fine relative to the surface mask grid or dose grid is futile.
-
-##### Default
-
-- ```"1024"```
-
-##### Examples
-
-- ```"100"```
-- ```"128"```
-- ```"1024"```
-- ```"4096"```
-
-#### SourceDetectorColumns
-
-##### Description
-
-The number of columns in the resulting images. (Each pixel in the source image represents a single ray.) Setting too
-fine relative to the surface mask grid or dose grid is futile.
-
-##### Default
-
-- ```"1024"```
-
-##### Examples
-
-- ```"100"```
-- ```"128"```
-- ```"1024"```
-- ```"4096"```
-
-#### MeshingSubdivisionIterations
-
-##### Description
-
-The number of iterations of Loop's subdivision to apply to the surface mesh. The aim of subdivision in this context is
-to have a smooth surface to work with, but too many applications will create too many facets. More facets will not lead
-to more precise results beyond a certain (modest) amount of smoothing. If the geometry is relatively spherical already,
-and meshing bounds produce reasonably smooth (but 'blocky') surface meshes, then 2-3 iterations should suffice. More
-than 3-4 iterations will almost always be inappropriate.
-
-##### Default
-
-- ```"2"```
-
-##### Examples
-
-- ```"0"```
-- ```"1"```
-- ```"2"```
-- ```"3"```
-
-#### MaxRaySurfaceIntersections
-
-##### Description
-
-The maximum number of ray-surface intersections to accumulate before retiring each ray. Note that intersections are
-sorted spatially by their distance to the detector, and those closest to the detector are considered first. If the ROI
-surface is opaque, setting this value to 1 will emulate visibility. Setting to 2 will permit rays continue through the
-ROI and pass through the other side; dose will be the accumulation of dose at each ray-surface intersection. This value
-should most often be 1 or some very high number (e.g., 1000) to make the surface either completely opaque or completely
-transparent. (A transparent surface may help to visualize geometrical 'folds' or other surface details of interest.)
-
-##### Default
-
-- ```"1"```
-
-##### Examples
-
-- ```"1"```
-- ```"4"```
-- ```"1000"```
-
-#### OnlyGenerateSurface
-
-##### Description
-
-Stop processing after writing the surface and subdivided surface meshes. This option is primarily used for debugging and
-visualization.
-
-##### Default
-
-- ```"false"```
-
-##### Examples
+##### Supported Options
 
 - ```"true"```
 - ```"false"```
+
+#### DefaultValue
+
+##### Description
+
+If an image does not have the given metadata key, this default will be output when ProvideDefault is true.
+
+##### Default
+
+- ```"NA"```
+
+##### Examples
+
+- ```""```
+- ```"NA"```
+- ```"NULL"```
+- ```"1.23"```
+
+#### UserComment
+
+##### Description
+
+A string that will be inserted into the output. If left empty, the column will be empty in the output.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```""```
+- ```"Using XYZ"```
+- ```"Treatment plan C"```
+
+#### TableShape
+
+##### Description
+
+Controls the 'shape' of the output, i.e., whether all records appear on the same line ('wide') or are split along
+several lines ('tall', i.e., key-value shape).
+
+##### Default
+
+- ```"wide"```
+
+##### Supported Options
+
+- ```"wide"```
+- ```"tall"```
+
+#### IncludeHeader
+
+##### Description
+
+Controls whether a 'header' is output. Note that the header refers to the metadatakeys, which may appear in different
+places depending on the TableShape
+
+##### Default
+
+- ```"true"```
+
+##### Supported Options
+
+- ```"true"```
+- ```"false"```
+
+#### TableLabel
+
+##### Description
+
+A label to attach to the new table.
+
+##### Default
+
+- ```"unspecified"```
+
+##### Examples
+
+- ```"unspecified"```
+- ```"xyz"```
+- ```"sheet A"```
 
 
 ----------------------------------------------------
 
 ## Terminal_Viewer
+
+### Tags
+
+- category: interactive
 
 ### Description
 
@@ -23024,6 +34177,11 @@ However, automatic detection is hard so overrides may be needed.
 ----------------------------------------------------
 
 ## ThresholdImages
+
+### Tags
+
+- accepts parameter: images
+- category: image processing
 
 ### Description
 
@@ -23158,10 +34316,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -23183,11 +34344,20 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 
 ----------------------------------------------------
 
 ## ThresholdOtsu
+
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: image processing
 
 ### Description
 
@@ -23211,6 +34381,7 @@ configurable. Voxels are binarized; the replacement values are also configurable
 - Channel
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - ContourOverlap
 - Inclusivity
 
@@ -23231,10 +34402,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -23256,6 +34430,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### HistogramBins
 
@@ -23358,8 +34535,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -23377,6 +34557,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -23386,8 +34567,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -23404,6 +34588,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ContourOverlap
 
@@ -23452,7 +34685,69 @@ the image plane. The first, 'planar_corner_inclusive', considers a voxel interio
 
 ----------------------------------------------------
 
+## Time
+
+### Tags
+
+- category: control flow
+- category: meta
+
+### Description
+
+This operation is a control flow meta-operation that times how long it takes to execute the child operations.
+
+### Notes
+
+- Child operations are performed in order, and all side-effects are carried forward. In particular, all selectors in
+  child operations are evaluated lazily, at the moment when the child operation is invoked.
+
+- This operation behaves equivalent to the boolean 'And' meta-operation. If a child operation fails, the remaining child
+  operations are not performed.
+
+### Parameters
+
+No registered options.
+
+----------------------------------------------------
+
+## Transaction
+
+### Tags
+
+- category: control flow
+- category: meta
+
+### Description
+
+This operation will make a snapshot of the internal data state and execute children operations. If any child operation
+fails or returns false, the state will be reset to the snapshot and the remaining children operations will not be
+executed. If all children operations succeed, any modifications to the modified state will be committed automatically
+when the final operation succeeds, and the snapshot will be discarded.
+
+### Notes
+
+- This operation only transacts the internal state of the Drover object and the parameter table. Any side-effects caused
+  by the children operations, such as modifying files, appending to logs, interaction with terminals/consoles, or
+  interacting over networks, will not be transacted. Side-effects will therefore be committed immediately, regardless of
+  whether the transaction succeeds.
+
+- This operation duplicates the full internal data state, so can be memory-intensive.
+
+### Parameters
+
+No registered options.
+
+----------------------------------------------------
+
 ## TrimROIDose
+
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: contour processing
+- category: image processing
+- category: radiation dose
 
 ### Description
 
@@ -23482,6 +34777,7 @@ used to modify a base plan by eliminating dose that coincides with a PTV/CTV/GTV
 - InteriorOverwrite
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - ImageSelection
 - Filename
 - ParanoiaLevel
@@ -23520,10 +34816,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -23545,6 +34844,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ContourOverlap
 
@@ -23688,8 +34990,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -23707,6 +35012,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -23716,8 +35022,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -23734,28 +35043,31 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
 
-#### ImageSelection
+#### ROISelection
 
 ##### Description
 
-Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
-contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
-unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
-intrinsic.
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
 
 Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
-selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
-Positional specifiers can be inverted by prefixing with a '!'.
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
 
 Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -23777,6 +35089,58 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Filename
 
@@ -23819,6 +35183,11 @@ you don't. Use the high setting if your TPS goes overboard linking data sets by 
 
 ## True
 
+### Tags
+
+- category: control flow
+- category: meta
+
 ### Description
 
 This operation is a control flow meta-operation that completes successfully. It has no side effects and evaluates to a
@@ -23832,6 +35201,13 @@ No registered options.
 
 ## UBC3TMRI_DCE
 
+### Tags
+
+- category: image processing
+- category: modeling
+- category: needs refresh
+- category: perfusion
+
 ### Description
 
 This operation is used to generate dynamic contrast-enhanced MRI contrast enhancement maps.
@@ -23843,6 +35219,13 @@ No registered options.
 ----------------------------------------------------
 
 ## UBC3TMRI_DCE_Differences
+
+### Tags
+
+- category: image processing
+- category: modeling
+- category: needs refresh
+- category: perfusion
 
 ### Description
 
@@ -23861,6 +35244,13 @@ No registered options.
 
 ## UBC3TMRI_DCE_Experimental
 
+### Tags
+
+- category: image processing
+- category: modeling
+- category: needs refresh
+- category: perfusion
+
 ### Description
 
 This operation is an experimental operation for processing dynamic contrast-enhanced MR images.
@@ -23873,6 +35263,13 @@ No registered options.
 
 ## UBC3TMRI_IVIM_ADC
 
+### Tags
+
+- category: diffusion
+- category: image processing
+- category: modeling
+- category: needs refresh
+
 ### Description
 
 This operation is an experimental operation for processing IVIM MR images into ADC maps.
@@ -23884,6 +35281,12 @@ No registered options.
 ----------------------------------------------------
 
 ## ValidateRTPlan
+
+### Tags
+
+- accepts parameter: tables
+- category: rtplan processing
+- category: table processing
 
 ### Description
 
@@ -23911,10 +35314,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the treatment plan
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all treatment plan that do not have the greatest number of sub-objects, not the
-least-numerous treatment plan (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the treatment plan composed of the greatest and fewest number of control points. Only one or zero treatment plan
+will be selected; if there are ties, there is no guarantee which treatment plan will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple treatment plan based on a threshold count, i.e., where all selected treatment plan
+have more than or fewer than $N$ control points. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all treatment plan that do not have the greatest number of control points, not the least-numerous
+treatment plan (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -23936,6 +35342,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Checks
 
@@ -23989,9 +35398,92 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the table composed of
-the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
-'!numerous' means all table that do not have the greatest number of sub-objects, not the least-numerous table (i.e.,
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the table composed of the greatest and fewest number of rows. Only one or zero table will be selected; if there
+are ties, there is no guarantee which table will be selected. Use 'more-than(N)' or 'fewer-than(N)' to select multiple
+table based on a threshold count, i.e., where all selected table have more than or fewer than $N$ rows. Intrinsic
+specifiers can be inverted by prefixing with a '!'. Note that '!numerous' means all table that do not have the greatest
+number of rows, not the least-numerous table (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+
+----------------------------------------------------
+
+## VolumetricCorrelationDetector
+
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: image processing
+
+### Description
+
+This operation can assess 3D correlations by sampling the neighbourhood surrounding each voxel and assigning a
+similarity score. This routine is useful for detecting repetitive (regular) patterns that are known in advance.
+
+### Notes
+
+- The provided image collection must be rectilinear.
+
+- At the moment this routine can only be modified via recompilation.
+
+### Parameters
+
+- ImageSelection
+- NormalizedROILabelRegex
+- ROILabelRegex
+- ROISelection
+- Low
+- High
+- Channel
+
+#### ImageSelection
+
+##### Description
+
+Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
+contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
+unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
@@ -24014,74 +35506,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
-
-
-----------------------------------------------------
-
-## VolumetricCorrelationDetector
-
-### Description
-
-This operation can assess 3D correlations by sampling the neighbourhood surrounding each voxel and assigning a
-similarity score. This routine is useful for detecting repetitive (regular) patterns that are known in advance.
-
-### Notes
-
-- The provided image collection must be rectilinear.
-
-- At the moment this routine can only be modified via recompilation.
-
-### Parameters
-
-- ImageSelection
-- NormalizedROILabelRegex
-- ROILabelRegex
-- Low
-- High
-- Channel
-
-#### ImageSelection
-
-##### Description
-
-Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
-contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
-unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
-intrinsic.
-
-Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
-selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
-Positional specifiers can be inverted by prefixing with a '!'.
-
-Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
-invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
-with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
-
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
-
-All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
-separating them with a ';' and are applied in the order specified.
-
-##### Default
-
-- ```"last"```
-
-##### Examples
-
-- ```"last"```
-- ```"first"```
-- ```"all"```
-- ```"none"```
-- ```"#0"```
-- ```"#-0"```
-- ```"!last"```
-- ```"!#-3"```
-- ```"key@.*value.*"```
-- ```"key1@.*value1.*;key2@^value2$;first"```
-- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -24091,8 +35518,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -24110,6 +35540,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -24119,8 +35550,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -24137,6 +35571,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Low
 
@@ -24191,6 +35674,12 @@ The channel to operated on (zero-based). Negative values will cause all channels
 
 ## VolumetricSpatialBlur
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
 This operation performs blurring of voxel values within 3D rectilinear image arrays.
@@ -24204,6 +35693,7 @@ This operation performs blurring of voxel values within 3D rectilinear image arr
 - ImageSelection
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - Channel
 - Estimator
 
@@ -24224,10 +35714,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -24249,6 +35742,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -24258,8 +35754,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -24277,6 +35776,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -24286,8 +35786,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -24304,6 +35807,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Channel
 
@@ -24343,6 +35895,12 @@ same window to be more heavily weighted. Try avoid boundaries or add extra margi
 
 ## VolumetricSpatialDerivative
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: image processing
+
 ### Description
 
 This operation estimates various spatial partial derivatives (of pixel values) within 3D rectilinear image arrays.
@@ -24356,6 +35914,7 @@ This operation estimates various spatial partial derivatives (of pixel values) w
 - ImageSelection
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - Channel
 - Estimator
 - Method
@@ -24377,10 +35936,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -24402,6 +35964,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -24411,8 +35976,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -24430,6 +35998,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -24439,8 +36008,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -24457,6 +36029,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### Channel
 
@@ -24515,6 +36136,13 @@ support magnitude (addition of orthogonal components in quadrature).
 
 ## VoxelRANSAC
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: image processing
+- category: needs refresh
+
 ### Description
 
 This routine performs RANSAC fitting using voxel positions as inputs. The search can be confined within ROIs and a range
@@ -24530,6 +36158,7 @@ of voxel intensities.
 - ImageSelection
 - NormalizedROILabelRegex
 - ROILabelRegex
+- ROISelection
 - ContourOverlap
 - Inclusivity
 - Channel
@@ -24554,10 +36183,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -24579,6 +36211,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -24588,8 +36223,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -24607,6 +36245,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### ROILabelRegex
 
@@ -24616,8 +36255,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -24634,6 +36276,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### ContourOverlap
 
@@ -24749,6 +36440,12 @@ The known separation of the grid (in DICOM units; mm) being sought.
 
 ## WarpContours
 
+### Tags
+
+- accepts parameter: contours
+- category: contour processing
+- category: spatial transform processing
+
 ### Description
 
 This operation applies a transform object to the specified contours, warping them spatially.
@@ -24769,6 +36466,7 @@ This operation applies a transform object to the specified contours, warping the
 ### Parameters
 
 - ROILabelRegex
+- ROISelection
 - NormalizedROILabelRegex
 - TransformSelection
 
@@ -24780,8 +36478,11 @@ A regular expression (regex) matching *raw* ROI contour labels/names to consider
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match 'raw' contour labels.
 
@@ -24798,6 +36499,55 @@ Note that this parameter will match 'raw' contour labels.
 - ```"Liver"```
 - ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
 - ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Select one or more contour regions of interest (aka contour collection). Note that each region of interest may be
+comprised of multiple individual contours. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### NormalizedROILabelRegex
 
@@ -24807,8 +36557,11 @@ A regular expression (regex) matching *normalized* ROI contour labels/names to c
 
 Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
 trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
-avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed. The
-regular expression engine is extended POSIX and is case insensitive. '.*' will match all available ROIs.
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
 
 Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
 user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
@@ -24826,6 +36579,7 @@ matching is required. Refer to the lexicon for available labels.
 - ```"liver"```
 - ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
 - ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
 
 #### TransformSelection
 
@@ -24842,10 +36596,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the transformation
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all transformation that do not have the greatest number of sub-objects, not the
-least-numerous transformation (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the transformation composed of the greatest and fewest number of sub-objects. Only one or zero transformation
+will be selected; if there are ties, there is no guarantee which transformation will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple transformation based on a threshold count, i.e., where all selected transformation
+have more than or fewer than $N$ sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all transformation that do not have the greatest number of sub-objects, not the least-numerous
+transformation (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -24872,6 +36629,13 @@ separating them with a ';' and are applied in the order specified.
 
 ## WarpImages
 
+### Tags
+
+- accepts parameter: contours
+- accepts parameter: images
+- category: image processing
+- category: spatial transform processing
+
 ### Description
 
 This operation applies a transform object to the specified image arrays, warping them spatially.
@@ -24881,7 +36645,7 @@ This operation applies a transform object to the specified image arrays, warping
 - A transform object must be selected; this operation cannot create transforms. Transforms can be generated via
   registration or by parsing user-provided functions.
 
-- Images are transformed in-place. Metadata may become invalid by this operation.
+- Image metadata may become invalidated by this operation.
 
 - This operation can only handle individual transforms. If multiple, sequential transforms are required, this operation
   must be invoked multiple time. This will guarantee the ordering of the transforms.
@@ -24895,16 +36659,24 @@ This operation applies a transform object to the specified image arrays, warping
 ### Parameters
 
 - ImageSelection
+- ReferenceImageSelection
 - TransformSelection
+- NormalizedROILabelRegex
+- ROILabelRegex
+- ROISelection
+- ContourOverlap
+- Inclusivity
+- Channel
 
 #### ImageSelection
 
 ##### Description
 
-Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a single
-contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix logically
-unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
-intrinsic.
+The image array that will be transformed or sampled. Voxel intensities from ImageSelection will be retain, but possibly
+resampled. Select one or more image arrays. Note that image arrays can hold anything, but will typically represent a
+single contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible to mix
+logically unrelated images together. Selection specifiers can be of three types: positional, metadata-based key@value
+regex, and intrinsic.
 
 Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
 selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
@@ -24914,10 +36686,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the image array
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all image array that do not have the greatest number of sub-objects, not the least-numerous
-image array (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -24939,13 +36714,66 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### ReferenceImageSelection
+
+##### Description
+
+The image array that will be copied and voxel values overwritten. The ImageSelection will inherit geometry from the
+ReferenceImageSelection. Select one or more image arrays. Note that image arrays can hold anything, but will typically
+represent a single contiguous 3D volume (i.e., a volumetric CT scan) or '4D' time-series. Be aware that it is possible
+to mix logically unrelated images together. Selection specifiers can be of three types: positional, metadata-based
+key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth image array (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last image array.
+Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the image array composed of the greatest and fewest number of images. Only one or zero image array will be
+selected; if there are ties, there is no guarantee which image array will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple image array based on a threshold count, i.e., where all selected image array have
+more than or fewer than $N$ images. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that '!numerous'
+means all image array that do not have the greatest number of images, not the least-numerous image array (i.e.,
+'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"first"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### TransformSelection
 
 ##### Description
 
-Select one or more transform objects (aka 'warp' objects). Selection specifiers can be of three types: positional,
-metadata-based key@value regex, and intrinsic.
+Transformations to be applied to the ImageSelection array. Select one or more transform objects (aka 'warp' objects).
+Selection specifiers can be of three types: positional, metadata-based key@value regex, and intrinsic.
 
 Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
 selects the Nth transformation (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last transformation.
@@ -24955,10 +36783,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the transformation
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all transformation that do not have the greatest number of sub-objects, not the
-least-numerous transformation (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the transformation composed of the greatest and fewest number of sub-objects. Only one or zero transformation
+will be selected; if there are ties, there is no guarantee which transformation will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple transformation based on a threshold count, i.e., where all selected transformation
+have more than or fewer than $N$ sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all transformation that do not have the greatest number of sub-objects, not the least-numerous
+transformation (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -24980,10 +36811,195 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 
+#### NormalizedROILabelRegex
+
+##### Description
+
+Contours on the ReferenceImageSelection images that limit resampling. A regular expression (regex) matching *normalized*
+ROI contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match contour labels that have been *normalized* (i.e., mapped, translated) using the
+user-provided provided lexicon. This is useful for handling data with heterogeneous naming conventions where fuzzy
+matching is required. Refer to the lexicon for available labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*Body.*"```
+- ```"Body"```
+- ```"liver"```
+- ```".*Left.*Parotid.*|.*Right.*Parotid.*|.*Eye.*"```
+- ```"Left Parotid|Right Parotid"```
+- ```"^(?!Left Parotid).*$"```
+
+#### ROILabelRegex
+
+##### Description
+
+Contours on the ReferenceImageSelection images that limit resampling. A regular expression (regex) matching *raw* ROI
+contour labels/names to consider.
+
+Selection is performed on a whole-ROI basis; individual contours cannot be selected. Be aware that input spaces are
+trimmed to a single space. If your ROI name has more than two sequential spaces, use regular expressions or escaping to
+avoid them. All ROIs you want to select must match the provided (single) regex, so use boolean or ('|') if needed.
+
+The regular expression engine is case insensitive and uses a C++ modified ECMAScript grammar which is documented at
+<https://en.cppreference.com/w/cpp/regex/ecmascript>. Note that '.*' will match all available ROIs and '^(?!xyz).*$'
+will match all except 'xyz'.
+
+Note that this parameter will match 'raw' contour labels.
+
+##### Default
+
+- ```".*"```
+
+##### Examples
+
+- ```".*"```
+- ```".*body.*"```
+- ```"body"```
+- ```"^body$"```
+- ```"Liver"```
+- ```".*left.*parotid.*|.*right.*parotid.*|.*eyes.*"```
+- ```"left_parotid|right_parotid"```
+- ```"^(?!left_parotid).*$"```
+
+#### ROISelection
+
+##### Description
+
+Contours on the ReferenceImageSelection images that limit resampling. Select one or more contour regions of interest
+(aka contour collection). Note that each region of interest may be comprised of multiple individual contours. Selection
+specifiers can be of three types: positional, metadata-based key@value regex, and intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth contour collections (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last contour
+collections. Positional specifiers can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the contour collections composed of the greatest and fewest number of contours. Only one or zero contour
+collections will be selected; if there are ties, there is no guarantee which contour collections will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple contour collections based on a threshold count, i.e., where all
+selected contour collections have more than or fewer than $N$ contours. Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all contour collections that do not have the greatest number of
+contours, not the least-numerous contour collections (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"all"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### ContourOverlap
+
+##### Description
+
+Controls overlapping contours are treated. The default 'ignore' treats overlapping contours as a single contour,
+regardless of contour orientation. This will effectively honour only the outermost contour regardless of orientation,
+but provides the most predictable and consistent results. The option 'honour_opposite_orientations' makes overlapping
+contours with opposite orientation cancel. Otherwise, orientation is ignored. This is useful for Boolean structures
+where contour orientation is significant for interior contours (holes). If contours do not have consistent overlap
+(e.g., if contours intersect) the results can be unpredictable and hard to interpret. The option
+'overlapping_contours_cancel' ignores orientation and alternately cancerls all overlapping contours. Again, if the
+contours do not have consistent overlap (e.g., if contours intersect) the results can be unpredictable and hard to
+interpret.
+
+##### Default
+
+- ```"ignore"```
+
+##### Supported Options
+
+- ```"ignore"```
+- ```"honour_opposite_orientations"```
+- ```"overlapping_contours_cancel"```
+- ```"honour_opps"```
+- ```"overlap_cancel"```
+
+#### Inclusivity
+
+##### Description
+
+Controls how voxels are deemed to be 'within' the interior of the selected ROI(s). The default 'center' considers only
+the central-most point of each voxel. There are two corner options that correspond to a 2D projection of the voxel onto
+the image plane. The first, 'planar_corner_inclusive', considers a voxel interior if ANY corner is interior. The second,
+'planar_corner_exclusive', considers a voxel interior if ALL (four) corners are interior.
+
+##### Default
+
+- ```"center"```
+
+##### Supported Options
+
+- ```"center"```
+- ```"centre"```
+- ```"planar_corner_inclusive"```
+- ```"planar_inc"```
+- ```"planar_corner_exclusive"```
+- ```"planar_exc"```
+
+#### Channel
+
+##### Description
+
+The channel to use (zero-based). Setting to -1 will use each channel separately. Note that both images sets will share
+this specifier.
+
+##### Default
+
+- ```"0"```
+
+##### Examples
+
+- ```"-1"```
+- ```"0"```
+- ```"1"```
+- ```"2"```
+
 
 ----------------------------------------------------
 
 ## WarpMeshes
+
+### Tags
+
+- accepts parameter: surface meshes
+- category: mesh processing
+- category: spatial transform processing
 
 ### Description
 
@@ -25024,10 +37040,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the surface mesh
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all surface mesh that do not have the greatest number of sub-objects, not the least-numerous
-surface mesh (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the surface mesh composed of the greatest and fewest number of elements (vertices + faces). Only one or zero
+surface mesh will be selected; if there are ties, there is no guarantee which surface mesh will be selected. Use
+'more-than(N)' or 'fewer-than(N)' to select multiple surface mesh based on a threshold count, i.e., where all selected
+surface mesh have more than or fewer than $N$ elements (vertices + faces). Intrinsic specifiers can be inverted by
+prefixing with a '!'. Note that '!numerous' means all surface mesh that do not have the greatest number of elements
+(vertices + faces), not the least-numerous surface mesh (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -25049,6 +37068,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### TransformSelection
 
@@ -25065,10 +37087,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the transformation
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all transformation that do not have the greatest number of sub-objects, not the
-least-numerous transformation (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the transformation composed of the greatest and fewest number of sub-objects. Only one or zero transformation
+will be selected; if there are ties, there is no guarantee which transformation will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple transformation based on a threshold count, i.e., where all selected transformation
+have more than or fewer than $N$ sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all transformation that do not have the greatest number of sub-objects, not the least-numerous
+transformation (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -25094,6 +37119,12 @@ separating them with a ';' and are applied in the order specified.
 ----------------------------------------------------
 
 ## WarpPoints
+
+### Tags
+
+- accepts parameter: point clouds
+- category: point cloud processing
+- category: spatial transform processing
 
 ### Description
 
@@ -25134,10 +37165,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the point cloud
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all point cloud that do not have the greatest number of sub-objects, not the least-numerous
-point cloud (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the point cloud composed of the greatest and fewest number of vertices. Only one or zero point cloud will be
+selected; if there are ties, there is no guarantee which point cloud will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple point cloud based on a threshold count, i.e., where all selected point cloud have
+more than or fewer than $N$ vertices. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all point cloud that do not have the greatest number of vertices, not the least-numerous point cloud
+(i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -25159,6 +37193,9 @@ separating them with a ';' and are applied in the order specified.
 - ```"key@.*value.*"```
 - ```"key1@.*value1.*;key2@^value2$;first"```
 - ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
 
 #### TransformSelection
 
@@ -25175,10 +37212,13 @@ Metadata-based key@value expressions are applied by matching the keys verbatim a
 invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
 with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
 
-Intrinsic specifiers are currently limited to the 'numerous' and 'fewest' literals, which selects the transformation
-composed of the greatest and fewest number of sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'.
-Note that '!numerous' means all transformation that do not have the greatest number of sub-objects, not the
-least-numerous transformation (i.e., 'fewest').
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the transformation composed of the greatest and fewest number of sub-objects. Only one or zero transformation
+will be selected; if there are ties, there is no guarantee which transformation will be selected. Use 'more-than(N)' or
+'fewer-than(N)' to select multiple transformation based on a threshold count, i.e., where all selected transformation
+have more than or fewer than $N$ sub-objects. Intrinsic specifiers can be inverted by prefixing with a '!'. Note that
+'!numerous' means all transformation that do not have the greatest number of sub-objects, not the least-numerous
+transformation (i.e., 'fewest').
 
 All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
 separating them with a ';' and are applied in the order specified.
@@ -25204,6 +37244,11 @@ separating them with a ';' and are applied in the order specified.
 ----------------------------------------------------
 
 ## While
+
+### Tags
+
+- category: control flow
+- category: meta
 
 ### Description
 
@@ -25242,6 +37287,124 @@ truthiness. If 'N' is negative or not provided, then looping will continue indef
 - ```"5"```
 - ```"10"```
 - ```"1000"```
+
+
+----------------------------------------------------
+
+## WidenTable
+
+### Tags
+
+- accepts parameter: tables
+- category: table processing
+
+### Description
+
+This operation reshapes tables, changing from 'long' to 'wide' by computing a self-intersection.
+
+### Parameters
+
+- TableSelection
+- KeyColumns
+- IgnoreRows
+
+#### TableSelection
+
+##### Description
+
+Select one or more tables. Selection specifiers can be of three types: positional, metadata-based key@value regex, and
+intrinsic.
+
+Positional specifiers can be 'first', 'last', 'none', or 'all' literals. Additionally '#N' for some positive integer N
+selects the Nth table (with zero-based indexing). Likewise, '#-N' selects the Nth-from-last table. Positional specifiers
+can be inverted by prefixing with a '!'.
+
+Metadata-based key@value expressions are applied by matching the keys verbatim and the values with regex. In order to
+invert metadata-based selectors, the regex logic must be inverted (i.e., you can *not* prefix metadata-based selectors
+with a '!'). Note regexes are case insensitive and should use extended POSIX syntax.
+
+Intrinsic specifiers can be 'numerous', 'fewest', 'more-than(N)', and 'fewer-than(N)'. Literals 'numerous' and 'fewest'
+select the table composed of the greatest and fewest number of rows. Only one or zero table will be selected; if there
+are ties, there is no guarantee which table will be selected. Use 'more-than(N)' or 'fewer-than(N)' to select multiple
+table based on a threshold count, i.e., where all selected table have more than or fewer than $N$ rows. Intrinsic
+specifiers can be inverted by prefixing with a '!'. Note that '!numerous' means all table that do not have the greatest
+number of rows, not the least-numerous table (i.e., 'fewest').
+
+All criteria (positional, metadata, and intrinsic) can be mixed together. Multiple criteria can be specified by
+separating them with a ';' and are applied in the order specified.
+
+##### Default
+
+- ```"last"```
+
+##### Examples
+
+- ```"last"```
+- ```"first"```
+- ```"all"```
+- ```"none"```
+- ```"#0"```
+- ```"#-0"```
+- ```"!last"```
+- ```"!#-3"```
+- ```"key@.*value.*"```
+- ```"key1@.*value1.*;key2@^value2$;first"```
+- ```"numerous"```
+- ```"fewest"```
+- ```"more-than(5)"```
+- ```"!fewer-than(10)"```
+
+#### KeyColumns
+
+##### Description
+
+A list of the columns to collectively use as a key. All rows with matching cell contents in these columns forms a group,
+and the group is reshaped such that the first row is unaltered except subsequent rows are appended to the right. After
+this operation, the distinct combinations of keys appearing in the specified columns will appear on only one row.
+
+Multiple columns can be specified as a comma-separated list. Specifiers are intepretted as either column numbers (note:
+zero-based), or regular expressions. Regular expressions will be applied to the entire table, and the column number of
+any cell whose value matches will be added to the list.
+
+Note that the relative order of rows is preserved, except instead of subsequent rows appearing *below* earlier rows,
+they will now appear to the *right*.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"0"```
+- ```"0,1"```
+- ```"0,1,5,6"```
+- ```"5,6,7"```
+- ```"ROILabel,StudyDate,.*Date.*"```
+
+#### IgnoreRows
+
+##### Description
+
+A list of rows to ignore. For example: rows containing headers, or cells that should not be appended.
+
+Multiple rows can be specified as a comma-separated list. Specifiers are intepretted as either row numbers (note:
+zero-based), or regular expressions. Regular expressions will be applied to the entire table, and the row number of any
+cell whose value matches will be added to the list.
+
+Note that while ignored rows will not participate in the reshaping process, their row numbers may be altered due to
+reshaped rows being removed. The relative order will not be altered.
+
+##### Default
+
+- ```""```
+
+##### Examples
+
+- ```"0"```
+- ```"0,1"```
+- ```"0,1,5,6"```
+- ```"5,6,7"```
+- ```"ROILabel,StudyDate,.*Date.*"```
 
 
 # Known Issues and Limitations
