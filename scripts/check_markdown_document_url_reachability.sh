@@ -36,6 +36,8 @@ for d in "${documents[@]}" ; do
       sed -e 's@(@(\n@' -e 's@)@)\n@' |
       sed -e 's@.*\(http[s]*://[^ \"\)\>]*\).*@\1@g' |
       grep '://' |
+      grep -v '[$]' |
+      sort -u |
       "${REPOROOT}"/scripts/check_url_reachability.sh
 done
 
