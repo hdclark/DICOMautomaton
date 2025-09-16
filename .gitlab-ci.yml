@@ -296,12 +296,12 @@ test_ci_debian_buster_on_fedora_latest:
     expire_in: 55 hours
 
 # Cross-compilation testing.
-test_cross_compile_mxe_on_debian_buster:
+test_cross_compile_mxe_on_debian_stable:
   stage: test
   tags: [dcma, docker, linux]
   needs: ["cross_compile_mxe"]
   image:
-    name: "debian:buster"
+    name: "debian:stable"
     pull_policy: [always, if-not-present]
   script:
     # Provide minimal system libraries.
