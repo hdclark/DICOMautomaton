@@ -8,6 +8,24 @@ set -eux
 # Install build dependencies.
 export DEBIAN_FRONTEND="noninteractive"
 
+
+# Workarounds using the Debian archive for buster release.
+#( printf 'deb http://archive.debian.org/debian buster main contrib non-free' ;
+#  printf 'deb http://archive.debian.org/debian-security buster/updates main contrib non-free' ;
+#  printf 'deb http://archive.debian.org/debian buster-backports main contrib non-free' ; ) > /etc/apt/sources.list
+
+( printf 'deb http://snapshot.debian.org/archive/debian/20250131T143955Z buster main contrib' ;
+  printf 'deb http://snapshot.debian.org/archive/debian/20250131T143955Z buster-updates main contrib' ;
+  printf 'deb-src http://snapshot.debian.org/archive/debian/20250131T143955Z buster main contrib' ;
+  printf 'deb-src http://snapshot.debian.org/archive/debian/20250131T143955Z buster-updates main contrib' ; ) > /etc/apt/sources.list
+
+apt-get install --yes --allow-remove-essential --allow-downgrades libc6=2.28-10+deb10u1
+apt-get install --yes --allow-remove-essential --allow-downgrades zlib1g=1:1.2.11.dfsg-1+deb10u1
+apt-get install --yes --allow-remove-essential --allow-downgrades libtinfo6=6.1+20181013-2+deb10u2
+apt-get install --yes --allow-remove-essential --allow-downgrades libncurses6 libtinfo6=6.1+20181013-2+deb10u2
+apt-get install --yes --allow-remove-essential --allow-downgrades libelf1=0.176-1.1 libmount1=2.33.1-0.1 libblkid1=2.33.1-0.1 libuuid1=2.33.1-0.1 'libudev1=241-7~deb10u8'
+
+
 retry_count=0
 retry_limit=5
 until
