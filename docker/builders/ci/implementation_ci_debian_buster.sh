@@ -2,6 +2,9 @@
 
 # This script installs dependencies and then builds and installs DICOMautomaton.
 # It can be used for continuous integration (CI), development, and deployment (CD).
+#
+# Note that Debian buster is no longer supported, and this script relies on historical snapshots
+# to source packages. Packages should be cached if possible to reduce load on the upstream servers.
 
 set -eux
 
@@ -10,20 +13,35 @@ export DEBIAN_FRONTEND="noninteractive"
 
 
 # Workarounds using the Debian archive for buster release.
-#( printf 'deb http://archive.debian.org/debian buster main contrib non-free' ;
-#  printf 'deb http://archive.debian.org/debian-security buster/updates main contrib non-free' ;
-#  printf 'deb http://archive.debian.org/debian buster-backports main contrib non-free' ; ) > /etc/apt/sources.list
+#( printf -- 'deb http://archive.debian.org/debian buster main contrib non-free' ;
+#  printf -- 'deb http://archive.debian.org/debian-security buster/updates main contrib non-free' ;
+#  printf -- 'deb http://archive.debian.org/debian buster-backports main contrib non-free' ; ) > /etc/apt/sources.list
 
-( printf 'deb http://snapshot.debian.org/archive/debian/20250131T143955Z buster main contrib' ;
-  printf 'deb http://snapshot.debian.org/archive/debian/20250131T143955Z buster-updates main contrib' ;
-  printf 'deb-src http://snapshot.debian.org/archive/debian/20250131T143955Z buster main contrib' ;
-  printf 'deb-src http://snapshot.debian.org/archive/debian/20250131T143955Z buster-updates main contrib' ; ) > /etc/apt/sources.list
+# Downgrade specific packages.
+# apt-get install --yes --allow-remove-essential --allow-downgrades libc6=2.28-10+deb10u1
+# apt-get install --yes --allow-remove-essential --allow-downgrades zlib1g=1:1.2.11.dfsg-1+deb10u1
+# apt-get install --yes --allow-remove-essential --allow-downgrades libtinfo6=6.1+20181013-2+deb10u2
+# apt-get install --yes --allow-remove-essential --allow-downgrades libncurses6 libtinfo6=6.1+20181013-2+deb10u2
+# apt-get install --yes --allow-remove-essential --allow-downgrades libelf1=0.176-1.1 libmount1=2.33.1-0.1 libblkid1=2.33.1-0.1 libuuid1=2.33.1-0.1 'libudev1=241-7~deb10u8'
 
-apt-get install --yes --allow-remove-essential --allow-downgrades libc6=2.28-10+deb10u1
-apt-get install --yes --allow-remove-essential --allow-downgrades zlib1g=1:1.2.11.dfsg-1+deb10u1
-apt-get install --yes --allow-remove-essential --allow-downgrades libtinfo6=6.1+20181013-2+deb10u2
-apt-get install --yes --allow-remove-essential --allow-downgrades libncurses6 libtinfo6=6.1+20181013-2+deb10u2
-apt-get install --yes --allow-remove-essential --allow-downgrades libelf1=0.176-1.1 libmount1=2.33.1-0.1 libblkid1=2.33.1-0.1 libuuid1=2.33.1-0.1 'libudev1=241-7~deb10u8'
+# Use the last snapshot of Debian buster.
+( printf -- 'deb http://snapshot.debian.org/archive/debian/20250712T143640Z buster unstable main contrib' ;
+  printf -- 'deb http://snapshot.debian.org/archive/debian/20250712T143640Z buster-updates unstable main contrib' ;
+  printf -- 'deb-src http://snapshot.debian.org/archive/debian/20250712T143640Z buster unstable main contrib' ;
+  printf -- 'deb-src http://snapshot.debian.org/archive/debian/20250712T143640Z buster-updates unstable main contrib' ) > /etc/apt/sources.list
+
+# 'Pin' packages from the snapshot source so they override the local packages, even if the snapshotted sources are
+# downgrades. See https://vincent.bernat.ch/en/blog/2020-downgrade-debian .
+( printf -- 'Package: *\n' ; 
+  printf -- 'Pin: origin snapshot.debian.org\n' ; 
+  printf -- 'Pin-Priority: 2000\n' ) > /etc/apt/preferences.d/override_buster.pref
+
+# Make a wrapper for the apt-get program that includes additional flags.
+l_orig_apt="$(which apt-get)"
+l_moved_apt="/real_apt-get"
+mv -n "${l_orig_apt}" "${l_moved_apt}"
+printf -- '#!/usr/bin/env bash\n%s --allow-remove-essential --allow-downgrades --no-install-recommends "$@"\n' "${l_moved_apt}" > "${l_orig_apt}"
+chmod 777 "${l_orig_apt}"
 
 
 retry_count=0
@@ -71,14 +89,25 @@ until
       libxmu-dev \
       libthrift-dev \
       thrift-compiler \
-      patchelf #\
-#     && \
-#     apt-get install --yes --no-install-recommends \
-#      ` # Additional dependencies for headless OpenGL rendering with SFML ` \
-#      x-window-system \
-#      mesa-utils \
-#      xserver-xorg-video-dummy \
-#      x11-apps
+      patchelf \
+      ` # Additional packages prospectively added in case needed for future development ` \
+      libsqlite3-dev \
+      sqlite3 \
+      liblua5.3-dev \
+      libpython3-dev \
+      libprotobuf-dev \
+      protobuf-compiler \
+      clang \
+      clang-format \
+      clang-tidy \
+      clang-tools \
+     && \
+     ` # Additional dependencies for headless OpenGL rendering with SFML ` \
+     apt-get install --yes --no-install-recommends \
+      x-window-system \
+      mesa-utils \
+      xserver-xorg-video-dummy \
+      x11-apps
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5
@@ -118,6 +147,7 @@ cp /scratch/xpra-xorg.conf /etc/X11/xorg.conf || true
 #JOBS=$(nproc)
 #JOBS=$(( JOBS < 8 ? JOBS : 8 ))
 #JOBS=$(( JOBS < 3 ? 3 : JOBS ))
+#cd build/
 #make -j "$JOBS" VERBOSE=1
 #make install
 #make clean
