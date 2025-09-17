@@ -168,12 +168,35 @@ build_ci_macos:
 # AppImage distribution.
 
 # Same-system testing.
-test_ci_debian_buster_on_debian_buster:
+test_ci_debian_buster_on_debian_stable:
   stage: test
   tags: [dcma, docker, linux]
   needs: ["build_ci_debian_buster"]
   image:
-    name: "debian:buster"
+    name: "debian:stable"
+    pull_policy: [always, if-not-present]
+  script:
+    # Provide minimal system libraries.
+    - "./scripts/install_AppImage_runtime_dependencies.sh"
+    # Unpack the AppImage and overlay it in the containers root filesystem.
+    - "chmod 777 DICOMautomaton*AppImage"
+    - "./DICOMautomaton*AppImage --appimage-extract"
+    - "rsync -a ./squashfs-root/usr/ /usr/"
+    # Ensure it can be run and then run tests.
+    - "ldd $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher || true"
+    - "dicomautomaton_dispatcher -h"
+    - "./integration_tests/Run.sh -v"
+  artifacts:
+    paths:
+      - "dcma_integration_testing"
+    expire_in: 55 hours
+
+test_ci_debian_buster_on_debian_oldstable:
+  stage: test
+  tags: [dcma, docker, linux]
+  needs: ["build_ci_debian_buster"]
+  image:
+    name: "debian:oldstable"
     pull_policy: [always, if-not-present]
   script:
     # Provide minimal system libraries.
