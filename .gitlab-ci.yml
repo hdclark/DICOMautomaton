@@ -362,6 +362,6 @@ test_cross_compile_mxe_on_debian_stable:
 deploy_ci_debian_buster:
   stage: deploy
   tags: [dcma, docker, linux]
-  needs: ["test_ci_debian_buster_on_debian_buster"]
+  needs: ["test_ci_debian_buster_on_debian_stable"]
   script:
     - "echo 'Deployment placeholder successful'"
