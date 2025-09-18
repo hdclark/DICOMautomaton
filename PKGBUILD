@@ -91,7 +91,7 @@ build() {
     -DWITH_SFML=ON \
     -DWITH_WT=ON \
     -DWITH_GNU_GSL=ON \
-    -DWITH_POSTGRES=ON \
+    -DWITH_POSTGRES=OFF \
     -DWITH_JANSSON=ON \
     ../
 
