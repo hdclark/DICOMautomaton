@@ -273,6 +273,9 @@ if(WITH_ASAN  OR  WITH_TSAN  OR  WITH_MSAN)
                          #-fprofile-instr-generate
                          #-fcoverage-mapping
     )
+    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+        link_libraries(gcov)
+    endif()
 
     add_definitions(-U_FORTIFY_SOURCE)
 endif()
