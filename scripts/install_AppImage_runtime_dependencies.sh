@@ -85,6 +85,7 @@ if [[ "${DISTRIBUTION}" =~ .*[dD]ebian.* ]] ; then
           $SUDO apt-get install --yes --no-install-recommends \
             bash git rsync \
             wget ca-certificates openssl \
+            libgpg-error0 \
             mesa-utils libfreetype6 libsdl2-dev libice-dev libsm-dev libopengl0 g++
     do
         (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
