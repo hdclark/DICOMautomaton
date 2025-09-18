@@ -132,15 +132,15 @@ chmod 777 "${OUT_SCRIPT}"
 
 # Only create the chroot if the run script fails to work. This allows for better re-use of the chroot.
 if ! "${OUT_SCRIPT}" 'true' ; then
-    debootstrap --arch="${DEBIAN_ARCHITECTURE}" --foreign --variant=minbase buster "${OUT_DIRECTORY}" 'http://deb.debian.org/debian/'
+    debootstrap --arch="${DEBIAN_ARCHITECTURE}" --foreign --variant=minbase buster "${OUT_DIRECTORY}" 'http://snapshot.debian.org/archive/debian/20250712T143640Z'
     #mkdir -pv "${OUT_DIRECTORY}"{/usr/bin,/sbin}
     #cp "$(which qemu-${ARCHITECTURE}-static)" "${OUT_DIRECTORY}/usr/bin"
     #touch "${OUT_DIRECTORY}/sbin/start-stop-daemon"
     #chroot "/debootstrap" /debootstrap/debootstrap --second-stage
     "${OUT_SCRIPT}" "set -eux ; cd debootstrap && ./debootstrap --arch=${ARCHITECTURE} --second-stage || dpkg --configure -a"
 fi
-"${OUT_SCRIPT}" 'DEBIAN_FRONTEND="noninteractive" apt-get update --yes'
-"${OUT_SCRIPT}" 'DEBIAN_FRONTEND="noninteractive" apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf'
+"${OUT_SCRIPT}" 'DEBIAN_FRONTEND="noninteractive" apt-get update --yes --allow-remove-essential --allow-downgrades --no-install-recommends '
+"${OUT_SCRIPT}" 'DEBIAN_FRONTEND="noninteractive" apt-get install --yes --allow-remove-essential --allow-downgrades --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf'
 
 printf 'Outside the chroot:\n'
 uname -a

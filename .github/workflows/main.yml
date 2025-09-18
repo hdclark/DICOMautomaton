@@ -96,7 +96,7 @@ jobs:
   build_debian_buster_x86_64:
     runs-on: ubuntu-latest
     container:
-      image: debian:buster
+      image: debian:stable
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v1
@@ -141,7 +141,7 @@ jobs:
   build_debian_buster_aarch64:
     runs-on: ubuntu-latest
     container:
-      image: debian:buster
+      image: debian:stable
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v1
@@ -189,7 +189,7 @@ jobs:
   build_debian_buster_armhf:
     runs-on: ubuntu-latest
     container:
-      image: debian:buster
+      image: debian:stable
     timeout-minutes: 360
     steps:
       - uses: actions/checkout@v1
