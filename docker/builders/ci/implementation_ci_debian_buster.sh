@@ -43,11 +43,11 @@ mv -n "${l_orig_apt}" "${l_moved_apt}"
 printf -- '#!/usr/bin/env bash\n%s --allow-remove-essential --allow-downgrades --no-install-recommends "$@"\n' "${l_moved_apt}" > "${l_orig_apt}"
 chmod 777 "${l_orig_apt}"
 
+apt-get update --yes || true
 
 retry_count=0
 retry_limit=5
 until
-    apt-get update --yes && \
     apt-get install --yes --no-install-recommends \
       git \
       cmake \

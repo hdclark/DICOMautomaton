@@ -94,7 +94,7 @@ if [[ "${DISTRIBUTION}" =~ .*debian.* ]] ; then
     apt-get update -y
     apt-get upgrade -y
     command_exists debootstrap                    || apt-get install --yes debootstrap 
-    command_exists "qemu-${ARCHITECTURE}-static"  || apt-get install --yes qemu qemu-user-static
+    command_exists "qemu-${ARCHITECTURE}-static"  || apt-get install --yes qemu-user-static
     command_exists proot                          || apt-get install --yes proot
 
 elif [[ "${DISTRIBUTION}" =~ .*arch.* ]] ; then
@@ -107,7 +107,6 @@ else
     printf 'Unsupported host system. Cannot continue.\n' 1>&2
     exit 1
 fi
-
 
 cat << EOF > "${OUT_SCRIPT}"
 #!/bin/sh
@@ -132,15 +131,26 @@ chmod 777 "${OUT_SCRIPT}"
 
 # Only create the chroot if the run script fails to work. This allows for better re-use of the chroot.
 if ! "${OUT_SCRIPT}" 'true' ; then
-    debootstrap --arch="${DEBIAN_ARCHITECTURE}" --foreign --variant=minbase buster "${OUT_DIRECTORY}" 'http://snapshot.debian.org/archive/debian/20250712T143640Z'
+    #debootstrap --arch="${DEBIAN_ARCHITECTURE}" --foreign --variant=minbase buster "${OUT_DIRECTORY}" 'http://snapshot.debian.org/archive/debian/20250712T143640Z'
+    debootstrap --arch="${DEBIAN_ARCHITECTURE}" --foreign --variant=buildd buster "${OUT_DIRECTORY}" 'http://snapshot.debian.org/archive/debian/20250712T143640Z'
     #mkdir -pv "${OUT_DIRECTORY}"{/usr/bin,/sbin}
     #cp "$(which qemu-${ARCHITECTURE}-static)" "${OUT_DIRECTORY}/usr/bin"
     #touch "${OUT_DIRECTORY}/sbin/start-stop-daemon"
     #chroot "/debootstrap" /debootstrap/debootstrap --second-stage
-    "${OUT_SCRIPT}" "set -eux ; cd debootstrap && ./debootstrap --arch=${ARCHITECTURE} --second-stage || dpkg --configure -a"
+    rm -rf "${OUT_DIRECTORY}"/dev "${OUT_DIRECTORY}"/proc
+
+    "${OUT_SCRIPT}" "set -eux ; cd debootstrap && DEBOOTSTRAP_DIR='/debootstrap' ./debootstrap --arch=${ARCHITECTURE} --second-stage || dpkg --configure -a"
+
+    # Make a wrapper for the apt-get program that includes additional flags.
+    l_orig_apt="/usr/bin/apt-get"
+    l_moved_apt="/real_apt-get"
+    mv -n "${OUT_DIRECTORY}/${l_orig_apt}" "${OUT_DIRECTORY}/${l_moved_apt}"
+    printf -- '#!/usr/bin/env bash\n%s --allow-remove-essential --allow-downgrades -o Acquire::AllowInsecureRepositories=true -o Acquire::AllowDowngradeToInsecureRepositories=true "$@"\n' "${l_moved_apt}" > "${OUT_DIRECTORY}/${l_orig_apt}"
+    chmod 777 "${OUT_DIRECTORY}/${l_orig_apt}"
+
 fi
-"${OUT_SCRIPT}" 'DEBIAN_FRONTEND="noninteractive" apt-get update --yes --allow-remove-essential --allow-downgrades --no-install-recommends '
-"${OUT_SCRIPT}" 'DEBIAN_FRONTEND="noninteractive" apt-get install --yes --allow-remove-essential --allow-downgrades --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf'
+"${OUT_SCRIPT}" 'DEBIAN_FRONTEND="noninteractive" apt-get update --yes --no-install-recommends || true'
+"${OUT_SCRIPT}" 'DEBIAN_FRONTEND="noninteractive" apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf'
 
 printf 'Outside the chroot:\n'
 uname -a
