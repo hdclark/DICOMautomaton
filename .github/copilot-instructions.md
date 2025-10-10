@@ -1,6 +1,6 @@
 ## DICOMautomaton — Guidance for AI coding agents
 
-Be pragmatic and work from concrete, discoverable facts in the repository. This file highlights the project's architecture, developer workflows, conventions, and useful file pointers so an AI agent can be immediately productive.
+Be pragmatic and work from concrete, discoverable facts in the repository. This file highlights the project's architecture, developer workflows, conventions, and useful file pointers so an AI agent can be immediately productive!!!
 
 Key constraints (short):
 - Primary language: C++17 (large codebase in `src/`). A smaller Python package lives in `py/`.
