@@ -96,7 +96,7 @@ jobs:
   build_debian_buster_x86_64:
     runs-on: ubuntu-latest
     container:
-      image: debian:stable
+      image: 'hdclark/dcma_build_base_debian_buster:latest'
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v1
@@ -108,7 +108,7 @@ jobs:
       - name: build
         run: |
              ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
-             ./docker/builders/ci/implementation_ci_debian_buster.sh
+             ./docker/builders/debian_buster/implementation_debian_buster.sh
              git config --global --add safe.directory '*' || true
       - name: test
         run: |
@@ -116,9 +116,6 @@ jobs:
       - name: create_appimage
         run: |
              ./scripts/extract_system_appimage.sh
-             export DEBIAN_FRONTEND="noninteractive"
-             apt-get update --yes
-             apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf
              rm -rf ci_artifacts
              mkdir -pv ci_artifacts
              cp DICOMautomaton*AppImage DICOMautomaton-latest-x86_64.AppImage
