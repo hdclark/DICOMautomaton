@@ -304,7 +304,7 @@ target_link_libraries(imebrashim
     Boost::serialization
     Boost::iostreams
     Boost::thread
-    Boost::system
+    "$<$<BOOL:${Boost_system_FOUND}>:Boost::system>"
     "$<$<BOOL:${MINGW}>:ws2_32>"
     "$<$<BOOL:${MINGW}>:wsock32>"
     z
@@ -480,7 +480,7 @@ target_link_libraries (dicomautomaton_dispatcher
     Boost::serialization
     Boost::iostreams
     Boost::thread
-    Boost::system
+    "$<$<BOOL:${Boost_system_FOUND}>:Boost::system>"
     "$<$<BOOL:${MINGW}>:ws2_32>"
     "$<$<BOOL:${MINGW}>:wsock32>"
     z
@@ -584,7 +584,7 @@ if(WITH_WT)
         Boost::serialization
         Boost::iostreams
         Boost::thread
-        Boost::system
+        "$<$<BOOL:${Boost_system_FOUND}>:Boost::system>"
         "$<$<BOOL:${MINGW}>:ws2_32>"
         "$<$<BOOL:${MINGW}>:wsock32>"
         z
@@ -616,7 +616,7 @@ target_link_libraries(dicomautomaton_bsarchive_convert
     Boost::serialization
     Boost::iostreams
     Boost::thread
-    Boost::system
+    "$<$<BOOL:${Boost_system_FOUND}>:Boost::system>"
     "$<$<BOOL:${MINGW}>:ws2_32>"
     "$<$<BOOL:${MINGW}>:wsock32>"
     z
