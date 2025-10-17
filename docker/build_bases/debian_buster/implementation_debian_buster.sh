@@ -159,7 +159,7 @@ fi
 # This function either freshly clones a git repository, or pulls from upstream remotes.
 # The return value can be used to determine whether recompilation is required.
 function clone_or_pull {
-    if git clone --depth=1 "$@" . ; then
+    if git clone "$@" . ; then
         return 0 # Requires compilation.
     fi
 
