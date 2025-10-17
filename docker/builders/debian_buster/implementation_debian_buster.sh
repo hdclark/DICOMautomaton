@@ -88,6 +88,7 @@ mkdir -pv /dcma
 cd /dcma
 sed -i -e 's@MEMORY_CONSTRAINED_BUILD=OFF@MEMORY_CONSTRAINED_BUILD=ON@' /dcma/compile_and_install.sh || true
 sed -i -e 's@option.*WITH_WT.*ON.*@option(WITH_WT "Wt disabled" OFF)@' /dcma/CMakeLists.txt || true
-./compile_and_install.sh -b build                                          -git reset --hard
+./compile_and_install.sh -b build
+git reset --hard
 git clean -fxd :/
 
