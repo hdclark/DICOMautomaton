@@ -86,12 +86,8 @@ fi
 # Option 3: use the working directory.
 mkdir -pv /dcma
 cd /dcma
-if clone_or_pull "https://github.com/hdclark/DICOMautomaton" ; then
-    #sed -i -e 's@MEMORY_CONSTRAINED_BUILD=OFF@MEMORY_CONSTRAINED_BUILD=ON@' /dcma/compile_and_install.sh || true
-    #sed -i -e 's@option.*WITH_WT.*ON.*@option(WITH_WT "Wt disabled" OFF)@' /dcma/CMakeLists.txt || true
-    ./compile_and_install.sh -b build
-    git reset --hard
-    git clean -fxd :/ 
-else
-    printf 'DICOMautomaton already up-to-date.\n'
-fi
+sed -i -e 's@MEMORY_CONSTRAINED_BUILD=OFF@MEMORY_CONSTRAINED_BUILD=ON@' /dcma/compile_and_install.sh || true
+sed -i -e 's@option.*WITH_WT.*ON.*@option(WITH_WT "Wt disabled" OFF)@' /dcma/CMakeLists.txt || true
+./compile_and_install.sh -b build                                          -git reset --hard
+git clean -fxd :/
+
