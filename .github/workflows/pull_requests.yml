@@ -1,0 +1,90 @@
+# This is a definition file for GitHub CI.
+
+name: GitHub CI (pull requests)
+
+on:
+  pull_request:
+    types: [opened, reopened]
+  workflow_dispatch:
+
+jobs:
+  static_checks_debian_stable_x86_64:
+    runs-on: ubuntu-latest
+    container:
+      image: debian:stable
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v1
+      - name: prep
+        run: |
+             cp -R . /dcma
+      - name: install_dependencies
+        run: |
+             export DEBIAN_FRONTEND="noninteractive"
+             apt-get update --yes
+             apt-get install --yes --no-install-recommends coreutils binutils findutils grep sed
+             git config --global --add safe.directory '*' || true
+      - name: check_for_common_nonthreadsafe_nonreentrant_functions
+        run: |
+             ./scripts/perform_static_checks.sh
+
+  build_cross_mxe_x86_64:
+    runs-on: ubuntu-latest
+    container:
+      image: "hdclark/dcma_build_base_mxe:latest"
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v1
+      - name: prep
+        run: |
+             cp -R ./docker/builders/mxe /scratch
+             cp -R . /dcma
+             ./scripts/enable_swapfile.sh
+      - name: build
+        run: |
+             ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
+             ./docker/builders/mxe/implementation_mxe.sh
+             rsync -avP /out/ ./Windows/
+             strip ./Windows/usr/bin/*exe
+             strip ./Windows/usr/lib/*a
+             ( cd ./Windows/usr/bin/ && mv opengl32.dll opengl32_disabled.dll ) || true
+             git config --global --add safe.directory '*' || true
+      - name: test
+        run: |
+             export DEBIAN_FRONTEND='noninteractive'
+             sed -i -e 's@stable@bullseye@g' /etc/apt/sources.list
+             apt-get update --yes
+             apt-get install --yes --no-install-recommends git ca-certificates rsync mesa-utils
+             dpkg --add-architecture i386
+             apt-get update --yes
+             apt-get install --yes wine32 wine64
+             mkdir -pv wine-conf-dir
+             chown "$(id -u)":"$(id -g)" wine-conf-dir
+             export WINEPREFIX="$(pwd)/wine-conf-dir/.wine-prefix"
+             find ./Windows/usr/bin/ -type f -exec chmod 777 '{}' \;
+             rsync -a ./Windows/ /opt/
+             echo '#!/bin/bash' > /usr/bin/dicomautomaton_dispatcher
+             echo 'exec wine /opt/usr/bin/dicomautomaton_dispatcher.exe "$@"' >> /usr/bin/dicomautomaton_dispatcher
+             chmod 777 /usr/bin/dicomautomaton_dispatcher
+             dicomautomaton_dispatcher -h
+             ./integration_tests/Run.sh -v
+      - name: create_zip
+        run: |
+             export short_sha="$(git rev-parse --short HEAD || printf 'unknown')"
+             export DEBIAN_FRONTEND="noninteractive"
+             apt-get update --yes
+             apt-get install --yes --no-install-recommends coreutils binutils findutils rsync openssh-client patchelf zip
+             rm -rf ci_artifacts
+             mkdir -pv ci_artifacts
+             ( cd ./Windows/ && zip -r ../ci_artifacts/DICOMautomaton-latest-x86_64.zip . )
+             cp ci_artifacts/DICOMautomaton-latest-x86_64.zip "ci_artifacts/DICOMautomaton-${short_sha}-x86_64.zip"
+             find ci_artifacts/ -iname '*.zip' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
+      - name: deploy_to_github
+        uses: actions/upload-artifact@v4
+        with:
+          name: "DICOMautomaton-mxe-x86_64-exes"
+          if-no-files-found: error
+          path: |
+                ci_artifacts/DICOMautomaton-latest-x86_64.zip
+                ci_artifacts/DICOMautomaton-latest-x86_64.zip.sha256sum
+

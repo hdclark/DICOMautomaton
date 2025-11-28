@@ -59,6 +59,10 @@ until
       wget \
       ca-certificates \
       file \
+      coreutils \
+      binutils \
+      findutils \
+      openssh-client \
       ` # Ygor dependencies ` \
       libboost-dev \
       libgsl-dev \
@@ -157,46 +161,70 @@ cp /scratch/xpra-xorg.conf /etc/X11/xorg.conf || true
 #  -f ./libwt-dev_10.0_all.deb ./libwthttp-dev_10.0_all.deb
 
 
+# This function either freshly clones a git repository, or pulls from upstream remotes.
+# The return value can be used to determine whether recompilation is required.
+function clone_or_pull {
+    if git clone "$@" . ; then
+        return 0 # Requires compilation.
+    fi
+
+    if ! git fetch ; then
+        return 2 # Failure.
+    fi
+
+    if [ "$(git rev-parse HEAD)" == "$(git rev-parse '@{u}')" ] ; then
+        return 1 # Compilation not required.
+    fi
+    git merge
+}
+export -f clone_or_pull
+
 # Install Ygor.
 #
 # Option 1: install a binary package.
-#mkdir -pv /ygor
-#cd /ygor
+#mkdir -pv /scratch
+#cd /scratch
 #apt-get install --yes -f ./Ygor*deb
 #
 # Option 2: clone the latest upstream commit.
 mkdir -pv /ygor
 cd /ygor
-git clone https://github.com/hdclark/Ygor .
-./compile_and_install.sh -b build
-git reset --hard
-git clean -fxd :/ 
-
+if clone_or_pull "https://github.com/hdclark/Ygor" ; then
+    ./compile_and_install.sh -b build
+    git reset --hard
+    git clean -fxd :/ 
+else
+    printf 'Ygor already up-to-date.\n'
+fi
 
 # Install Explicator.
 #
 # Option 1: install a binary package.
-#mkdir -pv /explicator
-#cd /explicator
+#mkdir -pv /scratch
+#cd /scratch
 #apt-get install --yes -f ./Explicator*deb
 #
 # Option 2: clone the latest upstream commit.
 mkdir -pv /explicator
 cd /explicator
-git clone https://github.com/hdclark/explicator .
-./compile_and_install.sh -b build
-git reset --hard
-git clean -fxd :/ 
-
+if clone_or_pull "https://github.com/hdclark/explicator" ; then
+    ./compile_and_install.sh -b build
+    git reset --hard
+    git clean -fxd :/ 
+else
+    printf 'Explicator already up-to-date.\n'
+fi
 
 # Install YgorClustering.
 mkdir -pv /ygorcluster
 cd /ygorcluster
-git clone https://github.com/hdclark/YgorClustering .
-./compile_and_install.sh -b build
-git reset --hard
-git clean -fxd :/ 
-
+if clone_or_pull "https://github.com/hdclark/YgorClustering" ; then
+    ./compile_and_install.sh -b build
+    git reset --hard
+    git clean -fxd :/ 
+else
+    printf 'Ygor Clustering already up-to-date.\n'
+fi
 
 # Install DICOMautomaton.
 #
@@ -214,9 +242,14 @@ git clean -fxd :/
 # Option 3: use the working directory.
 mkdir -pv /dcma
 cd /dcma
-sed -i -e 's@MEMORY_CONSTRAINED_BUILD=OFF@MEMORY_CONSTRAINED_BUILD=ON@' /dcma/compile_and_install.sh
-sed -i -e 's@option.*WITH_WT.*ON.*@option(WITH_WT "Wt disabled" OFF)@' /dcma/CMakeLists.txt
-./compile_and_install.sh -b build
-git reset --hard
-git clean -fxd :/ 
+if clone_or_pull "https://github.com/hdclark/DICOMautomaton" ; then
+    sed -i -e 's@MEMORY_CONSTRAINED_BUILD=OFF@MEMORY_CONSTRAINED_BUILD=ON@' /dcma/compile_and_install.sh || true
+    sed -i -e 's@option.*WITH_WT.*ON.*@option(WITH_WT "Wt disabled" OFF)@' /dcma/CMakeLists.txt || true
+    ./compile_and_install.sh -b build
+    git reset --hard
+    git clean -fxd :/ 
+else
+    printf 'DICOMautomaton already up-to-date.\n'
+fi
+
 
