@@ -79,10 +79,12 @@ if(NOT BUILD_SHARED_LIBS)
     #set(Boost_USE_STATIC_RUNTIME ON)
     set(Boost_USE_STATIC_LIBS ON)
 endif()
-find_package(Boost COMPONENTS serialization iostreams thread system)
+find_package(Boost COMPONENTS serialization iostreams thread
+                   OPTIONAL_COMPONENTS system)
 if(NOT Boost_FOUND)
     message(STATUS "find_package(Boost CONFIG) not found, attempting non-config method instead")
-    find_package(Boost REQUIRED COMPONENTS serialization iostreams thread system)
+    find_package(Boost REQUIRED COMPONENTS serialization iostreams thread
+                                OPTIONAL_COMPONENTS system)
 endif()
 include_directories(${Boost_INCLUDE_DIRS})
 

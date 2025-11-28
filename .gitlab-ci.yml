@@ -55,7 +55,7 @@ build_ci_debian_buster:
   tags: [dcma, docker, linux]
   needs: []
   image:
-    name: "debian:buster"
+    name: "hdclark/dcma_build_base_debian_buster:latest"
     pull_policy: [always, if-not-present]
   before_script:
     - "cp -R ./docker/builders/ci /scratch"
@@ -64,7 +64,7 @@ build_ci_debian_buster:
   script:
     - |
       ( ( while true ; do sleep 30 ; printf '\n\n' ; df -h ; printf '\n\n' ; cat /proc/meminfo | grep 'Mem\|Cache\|Swap' ; printf '\n\n' ; done ) &)
-      ./docker/builders/ci/implementation_ci_debian_buster.sh
+      ./docker/builders/debian_buster/implementation_debian_buster.sh
       ./integration_tests/Run.sh -v
       ./scripts/extract_system_appimage.sh
   artifacts:
