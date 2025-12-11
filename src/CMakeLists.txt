@@ -194,6 +194,13 @@ set_target_properties(  Documentation_obj PROPERTIES POSITION_INDEPENDENT_CODE T
 add_library(            Font_DCMA_Minimal_obj OBJECT Font_DCMA_Minimal.cc )
 set_target_properties(  Font_DCMA_Minimal_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+if(WITH_EIGEN)
+    add_library(            MRI_IVIM_obj OBJECT MRI_IVIM.cc )
+    set_target_properties(  MRI_IVIM_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+    add_library(            MRI_IVIM_2_obj OBJECT MRI_IVIM_2.cc )
+    set_target_properties(  MRI_IVIM_2_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+endif()
 
 FILE(GLOB ygorimaging_functors "./YgorImages_Functors/*/*cc")
 add_library( YgorImaging_Functor_objs OBJECT ${ygorimaging_functors} )
@@ -415,6 +422,8 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:CSG_SDF_obj>
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
     $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
+    $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:MRI_IVIM_obj>>
+    $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:MRI_IVIM_2_obj>>
     $<TARGET_OBJECTS:File_Loader_obj>
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
     $<TARGET_OBJECTS:DICOM_File_Loader_obj>
@@ -518,6 +527,8 @@ if(WITH_WT)
         $<TARGET_OBJECTS:CSG_SDF_obj>
         $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
         $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
+        $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:MRI_IVIM_obj>>
+        $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:MRI_IVIM_2_obj>>
         $<TARGET_OBJECTS:File_Loader_obj>
         $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
         $<TARGET_OBJECTS:DICOM_File_Loader_obj>

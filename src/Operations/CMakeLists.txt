@@ -226,6 +226,7 @@ add_library(Operations_objs OBJECT
 
     $<$<BOOL:${WITH_EIGEN}>:DetectGrid3D.cc>
     $<$<BOOL:${WITH_EIGEN}>:ModelIVIM.cc>
+    $<$<BOOL:${WITH_EIGEN}>:ModelIVIM2.cc>
     $<$<BOOL:${WITH_EIGEN}>:VoxelRANSAC.cc>
     $<$<BOOL:${WITH_EIGEN}>:DecomposeImagesSVD.cc>
 
