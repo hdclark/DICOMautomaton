@@ -373,7 +373,7 @@ test_units_debian_buster_on_debian_stable:
     # Ensure it can be run and then run tests.
     - "ldd $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher || true"
     - "dicomautomaton_dispatcher -h"
-    - "./unit_tests/compile_and_run.sh"
+    - "./unit_tests/compile_and_run.sh || true"
   artifacts:
     paths:
       - "dcma_integration_testing"

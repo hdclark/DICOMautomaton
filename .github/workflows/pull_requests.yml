@@ -68,6 +68,7 @@ jobs:
              chmod 777 /usr/bin/dicomautomaton_dispatcher
              dicomautomaton_dispatcher -h
              ./integration_tests/Run.sh -v
+             ./unit_tests/compile_and_run.sh || true
       - name: create_zip
         run: |
              export short_sha="$(git rev-parse --short HEAD || printf 'unknown')"
