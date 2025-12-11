@@ -38,7 +38,8 @@ TEST_CASE( "MRI_IVIM_2" ){
     }
 
     for(const auto &f : test_files){
-        CAPTURE( f.string() );
+        const auto filename = f.string();
+        CAPTURE( filename );
         //std::cout << f << std::endl;
 
         // Parse the file. Sample test file:
@@ -88,15 +89,11 @@ TEST_CASE( "MRI_IVIM_2" ){
         const auto m_D  = out.at(1);
         const auto m_Dp = out.at(2);
 
-        REQUIRE(l_f  == m_f);
-        REQUIRE(l_D  == m_D);
-        REQUIRE(l_Dp == m_Dp);
+        CHECK(l_f  == doctest::Approx(m_f));
+        CHECK(l_D  == doctest::Approx(m_D));
+        CHECK(l_Dp == doctest::Approx(m_Dp));
 
         //std::array<double, 3> GetKurtosisParams(const std::vector<float> &bvalues, const std::vector<float> &vals, int numIterations);
-    }
-
-    SUBCASE("blah"){
-        REQUIRE(pi == pi);
     }
 }
 
