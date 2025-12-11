@@ -18,7 +18,7 @@ cd "${REPOROOT}"
 set -eux
 
 # Move to script location.
-cd "unit_tests/"
+cd "unit_tests/Thread_Pool/"
 
 
 #trap "{ rm './test_futures' ; }" EXIT # Clean-up the temp file when we exit.

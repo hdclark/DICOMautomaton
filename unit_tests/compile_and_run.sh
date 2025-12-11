@@ -26,11 +26,12 @@ if [ ! -f doctest/doctest.h ] ; then
 fi
 
 g++ -std=c++17 -Wall -I. -I"${REPOROOT}/src" \
+  -DDCMA_USE_EIGEN=1 \
   Main.cc \
-  {,"${REPOROOT}/src/"}Alignment_TPSRPM.cc \
+  "${REPOROOT}/src/"Alignment_TPSRPM.cc "${REPOROOT}/src/"Alignment_Rigid.cc Alignment_TPSRPM/*cc \
+  "${REPOROOT}/src/"MRI_IVIM_2.cc MRI_IVIM_2/*cc \
   -o run_tests \
   -pthread \
-  -lboost_system \
   -lygor
 
 ./run_tests #--success
