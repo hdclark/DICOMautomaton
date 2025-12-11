@@ -176,6 +176,8 @@ function clone_or_pull {
         return 1 # Compilation not required.
     fi
     git merge
+
+    return 0 # Force recompilation.
 }
 export -f clone_or_pull
 
