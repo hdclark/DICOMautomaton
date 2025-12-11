@@ -407,3 +407,31 @@ jobs:
              chmod 600 deploy_key
              for i in `seq 1 20` ; do sleep 5 ; rsync -avP -e 'ssh -v -i deploy_key -o ServerAliveInterval=30 -o ServerAliveCountMax=5 -o StrictHostKeyChecking=no' ~/ci_artifacts/ root@halclark.ca:/var/www/html/ci/ && break ; done
 
+  unit_tests_debian_buster_x86_64:
+    needs: build_debian_buster_x86_64
+    runs-on: ubuntu-latest
+    container:
+      image: 'hdclark/dcma_build_base_debian_buster:latest'
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v1
+      - name: prep_1
+        run: |
+             cp -R ./docker/builders/ci /scratch
+             cp -R . /dcma
+      - name: acquire_build_artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: "DICOMautomaton-debian-buster-x86_64-AppImage"
+          path: "dcma.AppImage"
+      - name: prep_2
+        run: |
+             chmod 777 dcma.AppImage 
+             ./dcma.AppImage --appimage-extract
+             rsync -a ./squashfs-root/usr/ /usr/
+             ldd $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher || true
+             dicomautomaton_dispatcher -h
+      - name: perform_tests
+        run: |
+             ./unit_tests/compile_and_run.sh
+
