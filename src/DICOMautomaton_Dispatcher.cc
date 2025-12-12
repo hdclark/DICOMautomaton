@@ -22,6 +22,8 @@
 #include <utility>            //Needed for std::pair.
 #include <csignal>
 
+#include "doctest20251212/doctest.h"
+
 #include "YgorArguments.h"    //Needed for ArgumentHandler class.
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
@@ -317,6 +319,17 @@ try{
         return;
       })
     );
+
+    arger.push_back( ygor_arg_handlr_t(700, 't', "test", false, "",
+      "Run unit tests and terminate.",
+      [&](const std::string &) -> void {
+        doctest::Context context;
+        auto r = context.run();
+        std::exit(r);
+        return;
+      })
+    );
+ 
 
     arger.Launch(argc, argv);
 

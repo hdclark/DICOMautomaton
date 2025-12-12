@@ -194,6 +194,9 @@ set_target_properties(  Documentation_obj PROPERTIES POSITION_INDEPENDENT_CODE T
 add_library(            Font_DCMA_Minimal_obj OBJECT Font_DCMA_Minimal.cc )
 set_target_properties(  Font_DCMA_Minimal_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            Doctest_impl_obj OBJECT doctest20251212/doctest_impl.cc )
+set_target_properties(  Doctest_impl_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 if(WITH_EIGEN)
     add_library(            MRI_IVIM_obj OBJECT MRI_IVIM.cc )
     set_target_properties(  MRI_IVIM_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -463,6 +466,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Operations_objs>
     $<$<BOOL:${WITH_THRIFT}>:$<TARGET_OBJECTS:Thrift_objs>>
     $<TARGET_OBJECTS:DCMA_Version_obj>
+    $<TARGET_OBJECTS:Doctest_impl_obj>
     $<$<BOOL:${MINGW}>:$<TARGET_OBJECTS:WindowsIcon_obj>>
 )
 target_link_libraries (dicomautomaton_dispatcher
@@ -568,6 +572,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Operations_objs>
         $<$<BOOL:${WITH_THRIFT}>:$<TARGET_OBJECTS:Thrift_objs>>
         $<TARGET_OBJECTS:DCMA_Version_obj>
+        $<TARGET_OBJECTS:Doctest_impl_obj>
     )
     target_link_libraries(dicomautomaton_webserver
         imebrashim
