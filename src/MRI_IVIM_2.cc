@@ -1,5 +1,6 @@
 // MRI_IVIM_2.cc - A part of DICOMautomaton 2025. Written by Caleb Sample, Hal Clark, and Arash Javanmardi.
 
+#include <limits>
 #include <optional>
 #include <iterator>
 #include <list>
@@ -18,6 +19,8 @@
 
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+
+#include "doctest20251212/doctest.h"
 
 #ifdef DCMA_USE_EIGEN
 #else
@@ -693,3 +696,62 @@ std::array<double, 3> GetBiExp(const std::vector<float> &bvalues, const std::vec
 }
 
 } // namespace MRI_IVIM_2
+
+
+TEST_CASE( "MRI_IVIM_2::GetBiExp" ){
+
+    //const auto nan = std::numeric_limits<double>::quiet_NaN();
+    //const auto inf = std::numeric_limits<double>::infinity();
+    //const double pi = 3.141592653;
+
+    struct test_case {
+        int sample;
+        std::string desc;
+        std::string gen_f; // generating formula.
+        double S0; // Model parameters used to generate the S(b) curve data.
+        double f;
+        double D;
+        double Dp;
+        std::vector<float> b_vals;
+        std::vector<float> S_vals;
+    };
+
+    std::vector<test_case> tcs;
+
+    tcs.emplace_back();
+    tcs.back().sample = 1;
+    tcs.back().desc   = "IVIM two-compartment model";
+    tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*(D+D*)) + (1-f)*exp(-b*D) ]";
+    tcs.back().S0     = 1.0;   // arb units
+    tcs.back().f      = 0.3;   // arb units
+    tcs.back().D      = 0.001; // mm^2/s
+    tcs.back().Dp     = 0.01;  // mm^2/s
+    tcs.back().b_vals = { 0,20,30,40,50,60,70,80,90,100,120,150,250,400,800,1000 };
+    tcs.back().S_vals = { 1.000000,0.926895,0.894989,0.865764,0.838946,0.814291,0.791580,0.770616,0.751225,0.733248,0.700985,0.660111,0.564339,0.472907,0.314575,0.257521};
+
+    for(const auto &tc : tcs){
+        CAPTURE( tc.desc );
+        CAPTURE( tc.sample );
+
+        REQUIRE(tc.b_vals.size() == tc.S_vals.size());
+        REQUIRE(tc.b_vals.size() > 3UL);
+
+        //std::array<double,3> out = GetBiExp(b_vals, S_vals, num_iters);
+        //std::array<double, 3> GetKurtosisParams(const std::vector<float> &bvalues, const std::vector<float> &vals, int numIterations);
+        const int num_iters = 100;
+        const auto out  = MRI_IVIM_2::GetBiExp(tc.b_vals, tc.S_vals, num_iters);
+        const auto m_f  = out.at(0);
+        const auto m_D  = out.at(1);
+        const auto m_Dp = out.at(2);
+
+        CHECK(tc.f  == doctest::Approx(m_f).epsilon(0.02));
+        CHECK(tc.D  == doctest::Approx(m_D).epsilon(0.02));
+        CHECK(tc.Dp == doctest::Approx(m_Dp).epsilon(0.02));
+
+        REQUIRE(tc.f  == doctest::Approx(m_f).epsilon(0.05));
+        REQUIRE(tc.D  == doctest::Approx(m_D).epsilon(0.05));
+        REQUIRE(tc.Dp == doctest::Approx(m_Dp).epsilon(0.05));
+
+    }
+}
+
