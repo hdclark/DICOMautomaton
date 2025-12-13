@@ -568,3 +568,164 @@ std::array<double, 3> GetBiExp(const std::vector<float> &bvalues, const std::vec
 }
 
 } // namespace MRI_IVIM
+
+TEST_CASE( "MRI_IVIM::GetBiExp" ){
+    // Verify that the model can be recovered correctly under a variety of situations.
+    struct test_case {
+        int sample;
+        std::string name;
+        std::string desc;
+        std::string gen_f; // generating formula.
+        double S0; // Model parameters used to generate the S(b) curve data.
+        double f;
+        double D;
+        double Dp;
+        std::vector<float> b_vals;
+        std::vector<float> S_vals;
+    };
+
+    std::vector<test_case> tcs;
+
+    tcs.emplace_back();
+    tcs.back().sample = 1;
+    tcs.back().name   = "IVIM signal full";
+    tcs.back().desc   = "two-compartment model";
+    tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*(D+D*)) + (1-f)*exp(-b*D) ]";
+    tcs.back().S0     = 1.0;   // arb units
+    tcs.back().f      = 0.3;   // arb units
+    tcs.back().D      = 0.001; // mm^2/s
+    tcs.back().Dp     = 0.01;  // mm^2/s
+    tcs.back().b_vals = { 0,20,30,40,50,60,70,80,90,100,120,150,250,400,800,1000 };
+    tcs.back().S_vals = { 1.000000,0.926895,0.894989,0.865764,0.838946,0.814291,0.791580,0.770616,0.751225,0.733248,0.700985,0.660111,0.564339,0.472907,0.314575,0.257521 };
+
+
+    tcs.emplace_back();
+    tcs.back().sample = 2;
+    tcs.back().name   = "IVIM signal gaussian SNR10";
+    tcs.back().desc   = "two-compartment model";
+    tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*(D+D*)) + (1-f)*exp(-b*D) ]";
+    tcs.back().S0     = 1.0;   // arb units
+    tcs.back().f      = 0.3;   // arb units
+    tcs.back().D      = 0.001; // mm^2/s
+    tcs.back().Dp     = 0.01;  // mm^2/s
+    tcs.back().b_vals = { 0,20,30,40,50,60,70,80,90,100,120,150,250,400,800,1000 };
+    tcs.back().S_vals = { 1.147474,1.056806,1.074123,0.932267,0.605788,0.802093,0.704476,0.861205,0.689836,0.759748,0.550188,0.644978,0.497753,0.545190,0.077369,0.139554 };
+
+
+    tcs.emplace_back();
+    tcs.back().sample = 3;
+    tcs.back().name   = "IVIM signal gaussian SNR20";
+    tcs.back().desc   = "two-compartment model";
+    tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*(D+D*)) + (1-f)*exp(-b*D) ]";
+    tcs.back().S0     = 1.0;   // arb units
+    tcs.back().f      = 0.3;   // arb units
+    tcs.back().D      = 0.001; // mm^2/s
+    tcs.back().Dp     = 0.01;  // mm^2/s
+    tcs.back().b_vals = { 0,20,30,40,50,60,70,80,90,100,120,150,250,400,800,1000, };
+    tcs.back().S_vals = { 0.906530,0.972024,0.930560,0.902189,0.880082,0.851548,0.808341,0.754185,0.804325,0.707315,0.710168,0.764125,0.551366,0.498396,0.444692,0.232203 };
+
+
+    tcs.emplace_back();
+    tcs.back().sample = 4;
+    tcs.back().name   = "IVIM signal gaussian SNR40";
+    tcs.back().desc   = "two-compartment model";
+    tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*(D+D*)) + (1-f)*exp(-b*D) ]";
+    tcs.back().S0     = 1.0;   // arb units
+    tcs.back().f      = 0.3;   // arb units
+    tcs.back().D      = 0.001; // mm^2/s
+    tcs.back().Dp     = 0.01;  // mm^2/s
+    tcs.back().b_vals = { 0,20,30,40,50,60,70,80,90,100,120,150,250,400,800,1000 };
+    tcs.back().S_vals = { 1.028380,0.948413,0.929232,0.870578,0.820750,0.831935,0.773545,0.809484,0.761854,0.778995,0.682160,0.690352,0.589193,0.476538,0.310103,0.261949 };
+
+
+    tcs.emplace_back();
+    tcs.back().sample = 5;
+    tcs.back().name   = "IVIM signal high";
+    tcs.back().desc   = "two-compartment model";
+    tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*(D+D*)) + (1-f)*exp(-b*D) ]";
+    tcs.back().S0     = 1.0;   // arb units
+    tcs.back().f      = 0.3;   // arb units
+    tcs.back().D      = 0.001; // mm^2/s
+    tcs.back().Dp     = 0.01;  // mm^2/s
+    tcs.back().b_vals = { 0,200,400,800 };
+    tcs.back().S_vals = { 1.000000,0.606352,0.472907,0.314575 };
+
+
+    tcs.emplace_back();
+    tcs.back().sample = 6;
+    tcs.back().name   = "IVIM signal low";
+    tcs.back().desc   = "two-compartment model";
+    tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*(D+D*)) + (1-f)*exp(-b*D) ]";
+    tcs.back().S0     = 1.0;   // arb units
+    tcs.back().f      = 0.3;   // arb units
+    tcs.back().D      = 0.001; // mm^2/s
+    tcs.back().Dp     = 0.01;  // mm^2/s
+    tcs.back().b_vals = { 0,30,70,100 };
+    tcs.back().S_vals = { 1.000000,0.894989,0.791580,0.733248 };
+
+
+    tcs.emplace_back();
+    tcs.back().sample = 7;
+    tcs.back().name   = "IVIM signal minimal";
+    tcs.back().desc   = "two-compartment model";
+    tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*(D+D*)) + (1-f)*exp(-b*D) ]";
+    tcs.back().S0     = 1.0;   // arb units
+    tcs.back().f      = 0.3;   // arb units
+    tcs.back().D      = 0.001; // mm^2/s
+    tcs.back().Dp     = 0.01;  // mm^2/s
+    tcs.back().b_vals = { 0,100,800 };
+    tcs.back().S_vals = { 1.000000,0.733248,0.314575 };
+
+
+    tcs.emplace_back();
+    tcs.back().sample = 8;
+    tcs.back().name   = "IVIM signal noise uniform";
+    tcs.back().desc   = "two-compartment model";
+    tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*(D+D*)) + (1-f)*exp(-b*D) ]";
+    tcs.back().S0     = 1.0;   // arb units
+    tcs.back().f      = 0.3;   // arb units
+    tcs.back().D      = 0.001; // mm^2/s
+    tcs.back().Dp     = 0.01;  // mm^2/s
+    tcs.back().b_vals = { 0,20,30,40,50,60,70,80,90,100,120,150,250,400,800,1000 };
+    tcs.back().S_vals = { 0.864601,0.180844,0.849800,0.349927,0.500078,0.696309,0.358925,0.210463,0.546582,0.531038,0.122543,0.347121,0.635032,0.509413,0.519526,0.899352 };
+
+
+    tcs.emplace_back();
+    tcs.back().sample = 9;
+    tcs.back().name   = "IVIM signal whitepaper";
+    tcs.back().desc   = "two-compartment model";
+    tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*(D+D*)) + (1-f)*exp(-b*D) ]";
+    tcs.back().S0     = 1.0;   // arb units
+    tcs.back().f      = 0.3;   // arb units
+    tcs.back().D      = 0.001; // mm^2/s
+    tcs.back().Dp     = 0.01;  // mm^2/s
+    tcs.back().b_vals = { 0,30,70,100,200,400,800 };
+    tcs.back().S_vals = { 1.000000,0.894989,0.791580,0.733248,0.606352,0.472907,0.314575 };
+
+
+    for(const auto &tc : tcs){
+        CAPTURE( tc.sample );
+        CAPTURE( tc.name );
+        CAPTURE( tc.desc );
+
+        REQUIRE(tc.b_vals.size() == tc.S_vals.size());
+        REQUIRE(tc.b_vals.size() > 3UL);
+
+        //std::array<double,3> out = GetBiExp(b_vals, S_vals, num_iters);
+        //std::array<double, 3> GetKurtosisParams(const std::vector<float> &bvalues, const std::vector<float> &vals, int numIterations);
+        const int num_iters = 100;
+        const auto out  = MRI_IVIM::GetBiExp(tc.b_vals, tc.S_vals, num_iters);
+        const auto m_f  = out.at(0);
+        const auto m_D  = out.at(1);
+        const auto m_Dp = out.at(2);
+
+        CHECK(tc.f  == doctest::Approx(m_f).epsilon(0.02));
+        CHECK(tc.D  == doctest::Approx(m_D).epsilon(0.02));
+        CHECK(tc.Dp == doctest::Approx(m_Dp).epsilon(0.02));
+
+        REQUIRE(tc.f  == doctest::Approx(m_f).epsilon(0.05));
+        REQUIRE(tc.D  == doctest::Approx(m_D).epsilon(0.05));
+        REQUIRE(tc.Dp == doctest::Approx(m_Dp).epsilon(0.05));
+    }
+}
+
