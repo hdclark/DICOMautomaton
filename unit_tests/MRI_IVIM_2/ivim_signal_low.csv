@@ -1,8 +1,0 @@
-# IVIM two-compartment model: S(b) = S0 * [ f*exp(-b*(D+D*)) + (1-f)*exp(-b*D) ]
-"# Parameters: S0=1.0, f=0.3, D=0.001 mm^2/s, D*=0.01 mm^2/s"
-"# Units: b [s/mm^2], S [a.u.]"
-b,S
-0,1.000000
-30,0.894989
-70,0.791580
-100,0.733248
