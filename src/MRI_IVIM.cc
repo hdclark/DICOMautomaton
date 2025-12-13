@@ -19,6 +19,8 @@
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
+#include "doctest20251212/doctest.h"
+
 #ifdef DCMA_USE_EIGEN
 #else
     #error "Attempted to compile without Eigen support, which is required."
