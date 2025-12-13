@@ -433,5 +433,5 @@ jobs:
              dicomautomaton_dispatcher -h
       - name: perform_tests
         run: |
-             ./unit_tests/compile_and_run.sh || true
+             dicomautomaton_dispatcher -t
 
