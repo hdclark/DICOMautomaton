@@ -2,6 +2,14 @@
 
 Be pragmatic and work from concrete, discoverable facts in the repository. This file highlights the project's architecture, developer workflows, conventions, and useful file pointers so an AI agent can be immediately productive.
 
+Overview:
+- DICOMautomaton is a set of tools with a common interface that supports medical physics.
+- Functionality are organized into Operations which can be composed together to build complex data processing pipelines.
+- Supported data types include radiotherapy data formats (medical images, structure sets, radiotherapy plans), surface meshes, tabular data, image deformations, geospatial traces, and one dimensional line samples.
+- Supported operations are numerous, including image processing, registration deformation, geospatial data reduction amd dose accumulation, visualization, computer-aided design, physical simulation, and meta operations that support composition.
+- New functionality can be added via C++ code.
+- Composition and development of existing operations can be accomplished with DCMA scripts, a custom domain-specific scripting language.
+
 Key constraints (short):
 - Primary language: C++17 (large codebase in `src/`).
 - Build system: CMake (top-level `CMakeLists.txt`). Many helper scripts live in `scripts/` and top-level helpers (`compile_and_install.sh`, `compile_on.sh`).inline
@@ -17,8 +25,8 @@ Big picture architecture (where to look):
 Developer workflows & concrete commands:
 - Quick local debug build (generic, non-package-managed):
   - mkdir -p build && cd build
-  - cmake -DDCMA_VERSION="$(./scripts/extract_dcma_version.sh)" -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release ..
-  - make -j$(nproc)
+  - cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release ..
+  - make
 - Distribution-aware build + install: use `./compile_and_install.sh` (supports `-d arch|debian|mxe|generic`, `-b <buildroot>`, `-i <installprefix>`). This script is the canonical way CI and developers build for different targets.
 - Remote or container builds: use `./compile_on.sh user@remote` or the `docker/` builders (examples in `compile_on.sh`). This method generally requires access to a remote system capable of downloading and running a public Docker image.
 - Run integration tests (after building): `integration_tests/Run.sh` — it expects `dicomautomaton_dispatcher` available and will copy test artifacts to `dcma_integration_testing`.
@@ -52,7 +60,7 @@ What not to assume / common pitfalls:
 - Do not assume all optional dependencies are present — `CMakeLists.txt` gates features via `WITH_*` options. Prefer to keep changes backward-compatible when a dependency is absent.
 - The project is permissively modular: multiple viewers and backends exist; changing one may require adjusting compile flags or linking (SDL vs SFML).
 - Avoid changing public build defaults without updating `compile_and_install.sh` and documentation in `src/Documentation.cc`.
-- Do not assume specific platform support is available. The defsult target system is a generic old version of Debian Linux which, when built as a portable `AppImage`, provides `glibc` compatibility with more modern Linux platforms. There are facilities to cross-compile for Windows and macOS operating systems.
+- Do not assume specific platform support is available. The default build target system is a generic older version of Debian Linux (codename Buster) which, when built as a portable `AppImage`, provides `glibc` compatibility across nearly all modern Linux platforms. Both dynamic and static linked builds are possible too, and there are facilities to cross-compile for Windows and macOS operating systems. DICOMautomaton can also target ARM cpus and both 64 and 32 bit platforms, but not all functionality is available for all targets.
 - Do not assume C++ language features beyond C++17 are available. Limiting the language version improves portability.
 
 If you need clarification from a human: ask for
