@@ -253,7 +253,6 @@
 #ifdef DCMA_USE_EIGEN
     #include "Operations/DetectGrid3D.h"
     #include "Operations/ModelIVIM.h"
-    #include "Operations/ModelIVIM2.h"
     #include "Operations/VoxelRANSAC.h"
     #include "Operations/DecomposeImagesSVD.h"
 #endif // DCMA_USE_EIGEN
@@ -524,7 +523,6 @@ known_ops_t Known_Operations(){
 #ifdef DCMA_USE_EIGEN
     out["DetectGrid3D"] = std::make_pair(OpArgDocDetectGrid3D, DetectGrid3D);
     out["ModelIVIM"] = std::make_pair(OpArgDocModelIVIM, ModelIVIM);
-    out["ModelIVIM2"] = std::make_pair(OpArgDocModelIVIM2, ModelIVIM2);
     out["VoxelRANSAC"] = std::make_pair(OpArgDocVoxelRANSAC, VoxelRANSAC);
     out["DecomposeImagesSVD"] = std::make_pair(OpArgDocDecomposeImagesSVD, DecomposeImagesSVD);
 #endif // DCMA_USE_EIGEN

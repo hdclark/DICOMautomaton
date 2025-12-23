@@ -200,9 +200,6 @@ set_target_properties(  Doctest_impl_obj PROPERTIES POSITION_INDEPENDENT_CODE TR
 if(WITH_EIGEN)
     add_library(            MRI_IVIM_obj OBJECT MRI_IVIM.cc )
     set_target_properties(  MRI_IVIM_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
-
-    add_library(            MRI_IVIM_2_obj OBJECT MRI_IVIM_2.cc )
-    set_target_properties(  MRI_IVIM_2_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 endif()
 
 FILE(GLOB ygorimaging_functors "./YgorImages_Functors/*/*cc")
@@ -426,7 +423,6 @@ add_executable (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
     $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
     $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:MRI_IVIM_obj>>
-    $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:MRI_IVIM_2_obj>>
     $<TARGET_OBJECTS:File_Loader_obj>
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
     $<TARGET_OBJECTS:DICOM_File_Loader_obj>
@@ -532,7 +528,6 @@ if(WITH_WT)
         $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
         $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
         $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:MRI_IVIM_obj>>
-        $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:MRI_IVIM_2_obj>>
         $<TARGET_OBJECTS:File_Loader_obj>
         $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
         $<TARGET_OBJECTS:DICOM_File_Loader_obj>

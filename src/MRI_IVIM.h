@@ -31,4 +31,3 @@ namespace MRI_IVIM {
     std::vector<double> GetInverse(const std::vector<double> &matrix);
 
 } // namespace MRI_IVIM
-

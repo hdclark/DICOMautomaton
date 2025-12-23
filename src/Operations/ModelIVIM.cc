@@ -1,4 +1,4 @@
-//ModelIVIM.cc - A part of DICOMautomaton 2022. Written by Caleb Sample and Hal Clark.
+//ModelIVIM.cc - A part of DICOMautomaton 2025. Written by Caleb Sample, Hal Clark, and Arash Javanmardi.
 
 #include <optional>
 #include <iterator>
@@ -182,9 +182,9 @@ OperationDoc OpArgDocModelIVIM(){
 
 
 bool ModelIVIM(Drover &DICOM_data,
-                 const OperationArgPkg& OptArgs,
-                 std::map<std::string, std::string>& /*InvocationMetadata*/,
-                 const std::string& /*FilenameLex*/){
+               const OperationArgPkg& OptArgs,
+               std::map<std::string, std::string>& /*InvocationMetadata*/,
+               const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
