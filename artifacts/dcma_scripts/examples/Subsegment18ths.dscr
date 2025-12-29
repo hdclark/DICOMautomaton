@@ -1,0 +1,121 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# This script demonstrates how to split contours into 18 sub-segment pieces.
+#
+# Note that the outputs are indexed by their absolute position, so left-hand and
+# right-hand contours are sub-segmented the same way. Often contours will need
+# to be mirrored during later analysis.
+
+
+# Consider each contour ROI separately.
+ForEachDistinct(
+    KeysCommon = 'ROIName',
+    IncludeNA = 'false',
+){
+
+    # Operate within a transaction to ensure contours remain present even if
+    # this process fails.
+    Ignore(){
+        Transaction(){
+
+            # Remove any potentially conflicting variable in the parameter
+            # table.
+            Ignore(){
+                ModifyParameters(
+                    Actions = 'remove("gROIName");',
+                ){};
+            };
+
+            # Store the contour ROI name in the parameter table.
+            PromoteMetadata(
+                KeySelection = 'ROIName',
+                NewKey = 'gROIName',
+                # DefaultValue = 'N/A',
+                # ValueSeparator = '\',
+                ROISelection = 'all',
+            ){};
+
+            # Rename the contours so they are more convenient to select.
+            ModifyContourMetadata(
+                ROILabelRegex = '.*',
+                KeyValues = 'ROIName@original_${gROIName}',
+            ){};
+
+            # Perform the sub-segmentation.
+            #
+            # Note that we could instead use the PartitionContours operation
+            # here. Using SubsegmentContours gives more control over the
+            # individual contour names.
+            ModifyParameters(
+                Actions = ' define("Z_step", "0.333");
+                            define("Y_step", "0.500");
+                            define("X_step", "0.333"); ',
+            ){};
+
+            For(
+                EachOf = '0.000,0.333,0.666',
+                Key = 'Z_offset'
+            ){
+            For(
+                EachOf = '0.000,0.500',
+                Key = 'Y_offset'
+            ){
+            For(
+                EachOf = '0.000,0.333,0.666',
+                Key = 'X_offset'
+            ){
+            Ignore(){  # Continue if one subsegment fails.
+
+                SubsegmentContours(
+                    ROILabelRegex = 'original_${gROIName}',
+                    # ROISelection = 'all',
+                    # NormalizedROILabelRegex = '.*',
+                    PlanarOrientation = 'axis-aligned',
+                    ReplaceAllWithSubsegment = 'false',
+                    RetainSubsegment = 'subsegment',
+                    SubsegMethod = 'nested-cleave',
+                    NestedCleaveOrder = 'ZYX',
+                    XSelection = '${X_step};${X_offset}',
+                    YSelection = '${Y_step};${Y_offset}',
+                    ZSelection = '${Z_step};${Z_offset}',
+                    FractionalTolerance = '0.001',
+                    MaxBisects = '20',
+                ){};
+
+                # Rename the subsegment.
+                ModifyContourMetadata(
+                    ROILabelRegex = '^subsegment$',
+                    KeyValues = 'ROIName@${gROIName}_subsegment_${X_step}-${X_offset}_${Y_step}-${Y_offset}_${Z_step}-${Z_offset}',
+                ){};
+
+            }; # Ignore.
+            }; # For Z.
+            }; # For Y.
+            }; # For X
+
+            Ignore(){
+                ModifyParameters(
+                    Actions = ' remove("Z_step");
+                                remove("Y_step");
+                                remove("X_step"); ',
+                ){};
+            };
+
+            # Rename the original contours back to their original name.'
+            ModifyContourMetadata(
+                ROILabelRegex = 'original_${gROIName}',
+                KeyValues = 'ROIName@${gROIName}',
+            ){};
+
+            # Remove the global parameter table entry.
+            Ignore(){
+                ModifyParameters(
+                    Actions = 'remove("gROIName");',
+                ){};
+            };
+        }; # Transaction.
+    }; # Ignore.
+
+}; # ForEachDistinct
+
+
