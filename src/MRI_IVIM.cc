@@ -450,6 +450,9 @@ double GetADCls(const std::vector<float> &bvalues, const std::vector<float> &val
 // Fixed GetBiExp implementation with consensus-aligned WLLS
 // Drop-in replacement for ModelIVIM.cc
 
+// Fixed GetBiExp implementation with consensus-aligned WLLS
+// Drop-in replacement for ModelIVIM.cc
+
 double GetADC_WLLS(const std::vector<float> &bvalues, const std::vector<float> &vals, 
                    int max_iterations = 10, double tolerance = 1e-6){
     
@@ -617,7 +620,10 @@ std::array<double, 3> GetBiExp(const std::vector<float> &bvalues, const std::vec
     double cost = 0.5 * (r.transpose() * r)(0,0);
     
     int successful_updates = 0;
-    double tolerance = 1e-6;
+    int consecutive_small_updates = 0;
+    double rel_cost_tolerance = 1e-8;  // Relative cost change tolerance
+    double param_tolerance = 1e-5;     // Less strict parameter tolerance
+    double previous_cost = cost;
     
     for (int iter = 0; iter < numIterations; iter++){
         
@@ -656,18 +662,35 @@ std::array<double, 3> GetBiExp(const std::vector<float> &bvalues, const std::vec
         
         // Accept or reject update
         if (new_cost < cost){
+            // Calculate relative changes
+            double rel_cost_change = std::abs(cost - new_cost) / (cost + 1e-12);
+            double f_change = std::abs(new_f - f);
+            double pseudoD_change = std::abs(new_pseudoD - pseudoD) / (pseudoD + 1e-12);
+            
             f = new_f;
             pseudoD = new_pseudoD;
+            previous_cost = cost;
             cost = new_cost;
             lambda *= 0.7;  // Reduce damping
             successful_updates++;
             
-            // Check for convergence
-            if(std::abs(h(0,0)) < tolerance && std::abs(h(1,0)) < tolerance * pseudoD){
-                break; // Converged
+            // Check for convergence using multiple criteria
+            if(rel_cost_change < rel_cost_tolerance && successful_updates > 3){
+                consecutive_small_updates++;
+                if(consecutive_small_updates >= 3){
+                    break; // Converged - cost not improving
+                }
+            } else if(f_change < param_tolerance && pseudoD_change < param_tolerance && successful_updates > 5){
+                consecutive_small_updates++;
+                if(consecutive_small_updates >= 3){
+                    break; // Converged - parameters stabilized
+                }
+            } else {
+                consecutive_small_updates = 0; // Reset counter
             }
         } else {
             lambda *= 1.5;  // Increase damping
+            consecutive_small_updates = 0; // Reset on rejected update
         }
         
         // Prevent lambda from becoming too large
