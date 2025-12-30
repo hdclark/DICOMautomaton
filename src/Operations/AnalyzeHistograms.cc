@@ -296,9 +296,9 @@ bool AnalyzeHistograms(Drover &DICOM_data,
         const auto PatientID = PatientIDOpt.value_or("unknown");
 
         const auto LineName = (*lsp_it)->line.GetMetadataValueAs<std::string>("LineName").value_or("unspecified");
-        const auto MinDose  = (*lsp_it)->line.GetMetadataValueAs<double>("DistributionMin").value_or(nan);
-        const auto MeanDose = (*lsp_it)->line.GetMetadataValueAs<double>("DistributionMean").value_or(nan);
-        const auto MaxDose  = (*lsp_it)->line.GetMetadataValueAs<double>("DistributionMax").value_or(nan);
+        auto MinDose  = (*lsp_it)->line.GetMetadataValueAs<double>("DistributionMin").value_or(nan);
+        auto MeanDose = (*lsp_it)->line.GetMetadataValueAs<double>("DistributionMean").value_or(nan);
+        auto MaxDose  = (*lsp_it)->line.GetMetadataValueAs<double>("DistributionMax").value_or(nan);
 
         // Expand $-variables in the UserComment and Description with metadata.
         auto ExpandedUserCommentOpt = UserCommentOpt;
@@ -337,6 +337,33 @@ bool AnalyzeHistograms(Drover &DICOM_data,
 
         // Grab the line sample more specifically.
         const auto DVH_abs_D_abs_V = (*lsp_it)->line;
+
+        // Check if the histogram is sensible.
+        const bool DVH_is_empty = DVH_abs_D_abs_V.empty();
+        bool DVH_has_one_sample = (DVH_abs_D_abs_V.size() == 1UL);
+
+        if(DVH_is_empty){
+            throw std::runtime_error("Histogram is empty, unable to analyze");
+        }
+
+        // Ensure we have access to critical data.
+        if(!std::isfinite(MinDose)){
+            MinDose = DVH_abs_D_abs_V.Get_Extreme_Datum_x().first[0];
+        }
+        if(!std::isfinite(MeanDose)){
+            MeanDose = DVH_abs_D_abs_V.Mean_x()[0];
+        }
+        if(!std::isfinite(MaxDose)){
+            MaxDose = DVH_abs_D_abs_V.Get_Extreme_Datum_x().second[0];
+        }
+        if( !std::isfinite(MinDose)
+        ||  !std::isfinite(MeanDose)
+        ||  !std::isfinite(MaxDose) ){
+            throw std::runtime_error("Unable to compute histogram statistics, cannot continue");
+        }
+        if(!DVH_has_one_sample){
+            DVH_has_one_sample = (MinDose == MaxDose);
+        }
 
         // Evaluate the criteria.
         auto split_constraints = SplitStringToVector(ConstraintsStr, ';', 'd');
@@ -570,7 +597,10 @@ bool AnalyzeHistograms(Drover &DICOM_data,
 
                 // Find the corresponding D from the LHS.
                 double D_eval = nan;
-                if( std::regex_match(HC, r_hot ) ){
+                if( DVH_has_one_sample ){
+                    D_eval = DVH_abs_D_abs_V.samples.at(0)[0];
+
+                }else if( std::regex_match(HC, r_hot ) ){
                     // For a cumulative DVH, we merely have to find the right-most crossing point of the volume
                     // threshold and the DVH curve.
                     const auto crossings = DVH_abs_D_abs_V.Crossings(V_abs);
@@ -790,7 +820,10 @@ bool AnalyzeHistograms(Drover &DICOM_data,
 
                 // Find the corresponding D from the RHS.
                 double D_eval = nan;
-                if( std::regex_match(HC, r_hot ) ){
+                if( DVH_has_one_sample ){
+                    D_eval = DVH_abs_D_abs_V.samples.at(0)[0];
+
+                }else if( std::regex_match(HC, r_hot ) ){
                     // For a cumulative DVH, we merely have to find the right-most crossing point of the volume
                     // threshold and the DVH curve.
                     const auto crossings = DVH_abs_D_abs_V.Crossings(V_abs);
