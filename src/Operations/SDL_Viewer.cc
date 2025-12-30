@@ -8004,9 +8004,13 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 const auto name = (*lsamp_ptr_it)->line.GetMetadataValueAs<std::string>("LineName").value_or("unknown"_s);
                 const auto modality = (*lsamp_ptr_it)->line.GetMetadataValueAs<std::string>("Modality").value_or("unknown"_s);
                 const auto histtype = (*lsamp_ptr_it)->line.GetMetadataValueAs<std::string>("HistogramType").value_or("unknown"_s);
-                const auto title = std::to_string(i) + " " + name;
+                const auto title = std::to_string(i) + " " + modality;
 
                 ImGui::Checkbox(title.c_str(), &lsamps_visible[i]); 
+                ImGui::SameLine(125);
+                ImGui::Text("%s", histtype.c_str());
+                ImGui::SameLine(225);
+                ImGui::Text("%s", name.c_str());
                 // Display metadata when hovering.
                 if( ImGui::IsItemHovered() 
                 &&  view_toggles.view_plots_metadata ){
@@ -8025,10 +8029,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     ImGui::EndTooltip();
                 }
 
-                ImGui::SameLine(200);
-                ImGui::Text("%s", modality.c_str());
-                ImGui::SameLine(300);
-                ImGui::Text("%s", histtype.c_str());
 
                 const auto is_visible = lsamps_visible[i];
                 if(is_visible){
