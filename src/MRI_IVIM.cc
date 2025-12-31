@@ -17,6 +17,7 @@
 #include <numeric>
 #include <cstdint>
 
+#include "YgorMisc.h"
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -41,7 +42,7 @@ using Eigen::MatrixXd;
 
 namespace MRI_IVIM {
 
-std::vector<double> GetHessianAndGradient(const std::vector<float> &bvalues, const std::vector<float> &vals, float f, double pseudoD, const double D){
+std::vector<double> GetHessianAndGradient(const std::vector<float> &bvalues, const std::vector<float> &vals, float f, double pseudoD, double D){
     //This function returns the hessian as the first 4 elements in the vector (4 matrix elements, goes across columns and then rows) and the last two elements are the gradient (derivative_f, derivative_pseudoD)
 
     const auto F = static_cast<double>(f);
@@ -285,8 +286,7 @@ void GetHessian(MatrixXd &hessian, const std::vector<float> &bvalues, const std:
     hessian(4,3) = gradDiff(3,0);
     hessian(4,4) = gradDiff(4,0);
 
-    
-
+    return;
 }
 
 
@@ -302,15 +302,13 @@ std::array<double, 3> GetKurtosisParams(const std::vector<float> &bvalues, const
     int b0_index = 0;
 
     for(size_t i = 0; i < number_bVals; ++i){
-        if (bvalues.at(i) == 0){ //first get the index of b = 0 (I'm unsure if b values are in order already)
+        if(bvalues.at(i) == 0){ //first get the index of b = 0 (I'm unsure if b values are in order already)
             b0_index = i;
             break;
-        }         
-        
+        }
     }
     for(size_t i = 0; i < number_bVals; ++i){
-        signals.push_back(vals.at(b0_index));           
-        
+        signals.push_back(vals.at(b0_index));
     }
 
     double f = 0.1;
@@ -342,12 +340,11 @@ std::array<double, 3> GetKurtosisParams(const std::vector<float> &bvalues, const
 
     theta = GetKurtosisTheta(bvalues, signals, params, priors);
     std::vector<double> newParams;
-    for (int i = 0; i < 5; i++){
+    for(int i = 0; i < 5; i++){
         newParams.push_back(0.0);
     }
     
-    for (int i = 0; i < numIterations; i++){
-         
+    for(int i = 0; i < numIterations; i++){
         //Now calculate the Hessian matrix which is in the form of a vector (columns then rows), which also contains the gradient at the end
         GetHessian(H, bvalues, signals, params, priors);
         GetKurtosisGradient(gradient, bvalues, signals, params, priors);
@@ -364,7 +361,7 @@ std::array<double, 3> GetKurtosisParams(const std::vector<float> &bvalues, const
         }
         H += lambda_I; //add identity to H 
         inverse = H.inverse();
-        
+
         //Now update parameters 
         MatrixXd newParamMatrix = -inverse * gradient;
 
@@ -385,7 +382,6 @@ std::array<double, 3> GetKurtosisParams(const std::vector<float> &bvalues, const
         if (newParams[2] < 0){
             newParams[2] = 0.0;
         }
-        
 
         //Now check if we have lowered the cost
         newTheta = GetKurtosisTheta(bvalues, signals, newParams, priors);
@@ -399,13 +395,9 @@ std::array<double, 3> GetKurtosisParams(const std::vector<float> &bvalues, const
             params[2] = newParams[2];
             params[3] = newParams[3];
             params[4] = newParams[4];
-                      
         }else{
             lambda *= 2.0;
         }
-        
-
-
     }
     return {params[0], params[1], params[2]};
 }
@@ -447,11 +439,11 @@ double GetADCls(const std::vector<float> &bvalues, const std::vector<float> &val
     return ADC;
 }
 
-// Fixed GetBiExp implementation with consensus-aligned WLLS
-// Drop-in replacement for ModelIVIM.cc
-
-double GetADC_WLLS(const std::vector<float> &bvalues, const std::vector<float> &vals, 
-                   int max_iterations = 10, double tolerance = 1e-6){
+// GetBiExp implementation with consensus-aligned WLLS
+double GetADC_WLLS(const std::vector<float> &bvalues,
+                   const std::vector<float> &vals, 
+                   int max_iterations = 10,
+                   double tolerance = 1e-6){
     
     const auto nan = std::numeric_limits<double>::quiet_NaN();
     const auto n_points = bvalues.size();
@@ -542,14 +534,17 @@ double GetADC_WLLS(const std::vector<float> &bvalues, const std::vector<float> &
     return D_current;
 }
 
-std::array<double, 3> GetBiExp(const std::vector<float> &bvalues, const std::vector<float> &vals, int numIterations){
+std::array<double, 3> GetBiExp(const std::vector<float> &bvalues,
+                               const std::vector<float> &vals,
+                               int numIterations,
+                               float b_value_threshold){
     
     const auto nan = std::numeric_limits<double>::quiet_NaN();
     const auto number_bVals = bvalues.size();
     
     // Find b=0 index
     int b0_index = 0;
-    for(size_t i = 0; i < number_bVals; ++i){
+    for(size_t i = 0UL; (i < number_bVals); ++i){
         if (bvalues[i] == 0.0){ 
             b0_index = i;
             break;
@@ -558,14 +553,14 @@ std::array<double, 3> GetBiExp(const std::vector<float> &bvalues, const std::vec
     
     // Extract high b-values for D estimation (consensus: use raw signals for WLLS)
     std::vector<float> bvaluesH, signalsH;
-    for(size_t i = 0; i < number_bVals; ++i){
-        if (bvalues[i] > 200){         
+    for(size_t i = 0UL; i < number_bVals; ++i){
+        if (bvalues[i] > b_value_threshold){
             bvaluesH.push_back(bvalues[i]);
             signalsH.push_back(vals[i]); // Use raw signals for WLLS
         }
     }
     
-    if(bvaluesH.size() < 2){
+    if(bvaluesH.size() < 2UL){
         return {nan, nan, nan}; // Insufficient high b-values
     }
     
@@ -573,9 +568,9 @@ std::array<double, 3> GetBiExp(const std::vector<float> &bvalues, const std::vec
     double D = GetADC_WLLS(bvaluesH, signalsH);
     
     // Fallback to original method if WLLS fails
-    if(!std::isfinite(D) || D <= 0){
+    if(!std::isfinite(D) || (D <= 0.0f)){
         D = GetADCls(bvaluesH, signalsH);
-        if(!std::isfinite(D) || D <= 0){
+        if(!std::isfinite(D) || (D <= 0.0f)){
             return {nan, nan, nan};
         }
     }
@@ -593,13 +588,24 @@ std::array<double, 3> GetBiExp(const std::vector<float> &bvalues, const std::vec
     }
     
     // Step 3: Estimate f and D* using Levenberg-Marquardt
-    float lambda = 1.0;  // Start with smaller lambda
-    double pseudoD = 10.0 * D;  // Consensus initial guess
-    float f = 0.3;  // Better initial guess for parotid glands
+    float lambda = 1.0f;        // Start with smaller lambda
+    double pseudoD = D * 10.0;  // Initial guess
+    float f = 0.15f;            // Initial guess (3% in brain, 20% in highly vascular organs, 30% in parotids)
+    // Note: the b_value_threshold should fluctuate based on the fitted f accounting for the amount of signal decay,
+    // but the threshold in practice impacts the fitted f. So a meta optimization would be needed if both were
+    // fitted at the same time. In practice, selecting a threshold of 200 for brain and 400 for body seems reasonable,
+    // though some tissues vary. The 'optimal' value also depends on the SNR and a variety of other factors.
     
-    // Parameter bounds for parotid glands
-    const float f_min = 0.0, f_max = 0.4;
-    const double pseudoD_min = 3.0 * D, pseudoD_max = 0.15;
+    // Parameter bounds derived roughly from multiple sources. Selected mostly to be as accomodating as possible.
+    //
+    // See doi:10.1002/jmri.27875
+    //     doi:10.1016/j.neuroimage.2017.03.004
+    //     doi:10.1016/j.neuroimage.2017.12.062
+    //     doi:10.1002/mrm.24277
+    const float f_min = 0.0f;
+    const float f_max = 0.5f;
+    const double pseudoD_min = D * 3.0;
+    const double pseudoD_max = D * 150.0;
     
     MatrixXd h(2,1);
     MatrixXd r(number_bVals, 1);
@@ -617,9 +623,12 @@ std::array<double, 3> GetBiExp(const std::vector<float> &bvalues, const std::vec
     double cost = 0.5 * (r.transpose() * r)(0,0);
     
     int successful_updates = 0;
-    double tolerance = 1e-6;
+    int consecutive_small_updates = 0;
+    double rel_cost_tolerance = 1e-8;  // Relative cost change tolerance
+    double param_tolerance = 1e-5;     // Less strict parameter tolerance
+    double previous_cost = cost;
     
-    for (int iter = 0; iter < numIterations; iter++){
+    for(int iter = 0; iter < numIterations; iter++){
         
         // Compute Jacobian
         for(size_t i = 0; i < number_bVals; ++i){ 
@@ -655,19 +664,40 @@ std::array<double, 3> GetBiExp(const std::vector<float> &bvalues, const std::vec
         double new_cost = 0.5 * (r.transpose() * r)(0,0);
         
         // Accept or reject update
-        if (new_cost < cost){
+        if(new_cost < cost){
+            // Calculate relative changes
+            double rel_cost_change = std::abs(cost - new_cost) / (cost + 1e-12);
+            double f_change = std::abs(new_f - f);
+            double pseudoD_change = std::abs(new_pseudoD - pseudoD) / (pseudoD + 1e-12);
+            
             f = new_f;
             pseudoD = new_pseudoD;
+            previous_cost = cost;
             cost = new_cost;
             lambda *= 0.7;  // Reduce damping
             successful_updates++;
             
-            // Check for convergence
-            if(std::abs(h(0,0)) < tolerance && std::abs(h(1,0)) < tolerance * pseudoD){
-                break; // Converged
+            // Check for convergence using multiple criteria
+            if(false){
+            }else if( (rel_cost_change < rel_cost_tolerance)
+                  &&  (successful_updates > 3) ){
+                consecutive_small_updates++;
+                if(consecutive_small_updates >= 3){
+                    break; // Converged - cost not improving
+                }
+            }else if( (f_change < param_tolerance)
+                  &&  (pseudoD_change < param_tolerance)
+                  &&  (successful_updates > 5) ){
+                consecutive_small_updates++;
+                if(consecutive_small_updates >= 3){
+                    break; // Converged - parameters stabilized
+                }
+            }else{
+                consecutive_small_updates = 0; // Reset counter
             }
-        } else {
+        }else{
             lambda *= 1.5;  // Increase damping
+            consecutive_small_updates = 0; // Reset on rejected update
         }
         
         // Prevent lambda from becoming too large
@@ -676,16 +706,18 @@ std::array<double, 3> GetBiExp(const std::vector<float> &bvalues, const std::vec
         }
     }
     
-    // Final parameter validation for parotid glands
-    const bool valid_D = (0.0008 <= D && D <= 0.002);
-    const bool valid_f = (0.05 <= f && f <= 0.35);
-    const bool valid_pseudoD = (0.01 <= pseudoD && pseudoD <= 0.12) && (pseudoD > 2*D);
-    
-    if(!valid_D || !valid_f || !valid_pseudoD || successful_updates < 3){
-        // Could log warnings or return constrained values instead of NaN
-        // For now, return the fitted values even if outside expected ranges
-        // since parotid glands may have different characteristics
-    }
+    //// Parameter validation.
+    ////
+    //// It will be best to validate after fitting by the user, as the application and tissues vary.
+    //const bool valid_D = (0.0008 <= D && D <= 0.002);
+    //const bool valid_f = (0.05 <= f && f <= 0.35);
+    //const bool valid_pseudoD = (0.01 <= pseudoD && pseudoD <= 0.12) && (pseudoD > 2*D);
+    //
+    //if(!valid_D || !valid_f || !valid_pseudoD || successful_updates < 3){
+    //    // Could log warnings or return constrained values instead of NaN
+    //    // For now, return the fitted values even if outside expected ranges
+    //    // since parotid glands may have different characteristics
+    //}
     
     // Ensure finite results
     if(!std::isfinite(f) || !std::isfinite(D) || !std::isfinite(pseudoD)){
