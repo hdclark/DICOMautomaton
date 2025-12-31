@@ -93,7 +93,7 @@ bool Load_From_XYZ_Files( Drover &DICOM_data,
             auto l_meta = DICOM_data.point_data.back()->pset.metadata;
             l_meta = coalesce_metadata_for_basic_pset(l_meta);
             l_meta["Filename"] = Filename.string();
-            inject_metadata(DICOM_data.point_data.back()->pset.metadata, std::move(l_meta));
+            inject_metadata(DICOM_data.point_data.back()->pset.metadata, std::move(l_meta), metadata_preprocessing::none);
 
             YLOGINFO("Loaded point cloud with " << N_points << " points");
             bfit = Filenames.erase( bfit ); 

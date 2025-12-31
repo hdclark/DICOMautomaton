@@ -184,7 +184,7 @@ bool Load_From_Contour_Collection_Files( Drover &DICOM_data,
                     auto l_meta = c.metadata;
                     l_meta = coalesce_metadata_for_rtstruct(l_meta);
                     l_meta["Filename"] = Filename.string();
-                    inject_metadata(c.metadata, std::move(l_meta));
+                    inject_metadata(c.metadata, std::move(l_meta), metadata_preprocessing::none);
                 }
             }
 

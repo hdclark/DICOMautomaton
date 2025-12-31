@@ -277,7 +277,7 @@ bool Load_From_XML_Files( Drover &DICOM_data,
                     l_meta["Fullpath"] = Filename.string();
                     l_meta["Filename"] = Filename.filename().string();
 
-                    inject_metadata(c.metadata, std::move(l_meta));
+                    inject_metadata(c.metadata, std::move(l_meta), metadata_preprocessing::none);
                 }
 
                 // Inject the data.
@@ -303,7 +303,7 @@ bool Load_From_XML_Files( Drover &DICOM_data,
                     l_meta["Abscissa"] = "Time";
                     l_meta["Ordinate"] = "Elevation";
 
-                    inject_metadata(l_ls.metadata, std::move(l_meta));
+                    inject_metadata(l_ls.metadata, std::move(l_meta), metadata_preprocessing::none);
 
                     DICOM_data.lsamp_data.emplace_back( std::make_shared<Line_Sample>() );
                     DICOM_data.lsamp_data.back()->line = l_ls;

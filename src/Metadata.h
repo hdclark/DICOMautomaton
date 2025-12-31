@@ -150,8 +150,15 @@ metadata_map_t parse_key_values(const std::string &s);
 // Insert a copy of the user-provided key-values, but pre-process to replace macros and evaluate known functions.
 //
 // Note that any duplicate keys already present in target will be overwritten (i.e., to_inject takes priority).
+enum class metadata_preprocessing {
+    none,
+    replace_macros,
+    evaluate_functions,
+    all
+};
 void inject_metadata( metadata_map_t &target,
-                      metadata_map_t &&to_inject );
+                      metadata_map_t &&to_inject,
+                      metadata_preprocessing processing = metadata_preprocessing::all );
 
 // Utility function documenting the metadata mutation operation.
 OperationArgDoc MetadataInjectionOpArgDoc();

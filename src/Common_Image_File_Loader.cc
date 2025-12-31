@@ -58,7 +58,7 @@ bool Load_From_Common_Image_Files( Drover &DICOM_data,
             // precedent.
             for(auto& animg : imgcoll.images){
                 auto ll_meta = animg.metadata;
-                inject_metadata( l_meta, std::move(ll_meta) ); // ll_meta takes priority.
+                inject_metadata( l_meta, std::move(ll_meta), metadata_preprocessing::none ); // ll_meta takes priority.
                 animg.metadata = l_meta;
                 animg.metadata["Filename"] = Filename.string();
                 l_meta = coalesce_metadata_for_basic_image(l_meta, meta_evolve::iterate); // Evolve for next image.

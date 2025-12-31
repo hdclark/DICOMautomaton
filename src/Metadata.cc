@@ -469,10 +469,17 @@ metadata_map_t parse_key_values(const std::string &s){
 
 // Insert a copy of the user-provided key-values, but pre-process to replace macros and evaluate known functions.
 void inject_metadata( metadata_map_t &target,
-                      metadata_map_t &&to_inject ){
+                      metadata_map_t &&to_inject,
+                      metadata_preprocessing processing ){
 
-    recursively_expand_macros(to_inject, target);
-    evaluate_time_functions(to_inject, std::nullopt);
+    if( (processing == metadata_preprocessing::replace_macros)
+    ||  (processing == metadata_preprocessing::all) ){
+        recursively_expand_macros(to_inject, target);
+    }
+    if( (processing == metadata_preprocessing::evaluate_functions)
+    ||  (processing == metadata_preprocessing::all) ){
+        evaluate_time_functions(to_inject, std::nullopt);
+    }
 
     // Update or insert all metadata.
     to_inject.merge(target);
