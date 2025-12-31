@@ -282,6 +282,7 @@ bool Isolate(Drover &DICOM_data,
     // Imbue the contours directly into the view.
     DICOM_data.Ensure_Contour_Data_Allocated();
     isolated.Ensure_Contour_Data_Allocated();
+    isolated_orig.Ensure_Contour_Data_Allocated();
 
     auto cc_all = All_CCs( DICOM_data );
     auto cc_ROIs = Whitelist( cc_all, ROILabelRegexOpt, NormalizedROILabelRegexOpt, ROISelectionOpt );
@@ -312,7 +313,12 @@ bool Isolate(Drover &DICOM_data,
 
     // Re-insert the contours into the main Drover object.
     DICOM_data.Ensure_Contour_Data_Allocated();
+    isolated.Ensure_Contour_Data_Allocated();
+
     DICOM_data.contour_data->ccs.splice( std::end(DICOM_data.contour_data->ccs), isolated.contour_data->ccs );
+
+    DICOM_data.Ensure_Contour_Data_Allocated();
+    isolated.Ensure_Contour_Data_Allocated();
 
     // Detect and implement object deletion/creation using the shadow reference snapshots.
     implement_additions_and_deletions(DICOM_data.image_data,  isolated_orig.image_data,  isolated.image_data);
@@ -322,6 +328,8 @@ bool Isolate(Drover &DICOM_data,
     implement_additions_and_deletions(DICOM_data.lsamp_data,  isolated_orig.lsamp_data,  isolated.lsamp_data);
     implement_additions_and_deletions(DICOM_data.trans_data,  isolated_orig.trans_data,  isolated.trans_data);
     implement_additions_and_deletions(DICOM_data.table_data,  isolated_orig.table_data,  isolated.table_data);
+
+    DICOM_data.Ensure_Contour_Data_Allocated();
 
     // Pass along the return the status of the children operations.
     return ret;
