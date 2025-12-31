@@ -6283,6 +6283,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
 
                                            &frame_count,
 
+                                           &img_channel,
                                            &img_features ]() -> void {
 
 // Lock the image details mutex in shared mode.
@@ -7456,13 +7457,13 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 auto common_metadata = coalesce_metadata_for_lsamp(disp_img_it->metadata);
 
                 for(auto i = 0; i < disp_img_it->columns; ++i){
-                    const auto val_raw = disp_img_it->value(image_mouse_pos.r,i,0);
+                    const auto val_raw = disp_img_it->value(image_mouse_pos.r,i,img_channel);
                     const auto col_num = static_cast<double>(i);
                     if(std::isfinite(val_raw)) row_profile.push_back({ col_num, 0.0, val_raw, 0.0 });
                 }
 
                 for(auto i = 0; i < disp_img_it->rows; ++i){
-                    const auto val_raw = disp_img_it->value(i,image_mouse_pos.c,0);
+                    const auto val_raw = disp_img_it->value(i,image_mouse_pos.c,img_channel);
                     const auto row_num = static_cast<double>(i);
                     if(std::isfinite(val_raw)) col_profile.push_back({ row_num, 0.0, val_raw, 0.0 });
                 }
