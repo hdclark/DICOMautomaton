@@ -534,7 +534,7 @@ double GetADC_WLLS(const std::vector<float> &bvalues,
     return D_current;
 }
 
-std::array<double, 3> GetBiExp(const std::vector<float> &bvalues,
+std::array<double, 5> GetBiExp(const std::vector<float> &bvalues,
                                const std::vector<float> &vals,
                                int numIterations,
                                float b_value_threshold){
@@ -622,13 +622,13 @@ std::array<double, 3> GetBiExp(const std::vector<float> &bvalues,
     r = sigs - sigs_pred;
     double cost = 0.5 * (r.transpose() * r)(0,0);
     
-    int successful_updates = 0;
-    int consecutive_small_updates = 0;
+    int64_t successful_updates = 0;
+    int64_t consecutive_small_updates = 0;
     double rel_cost_tolerance = 1e-8;  // Relative cost change tolerance
     double param_tolerance = 1e-5;     // Less strict parameter tolerance
     double previous_cost = cost;
     
-    for(int iter = 0; iter < numIterations; iter++){
+    for(int64_t iter = 0; iter < numIterations; iter++){
         
         // Compute Jacobian
         for(size_t i = 0; i < number_bVals; ++i){ 
@@ -715,7 +715,7 @@ std::array<double, 3> GetBiExp(const std::vector<float> &bvalues,
     //
     //if(!valid_D || !valid_f || !valid_pseudoD || successful_updates < 3){
     //    // Could log warnings or return constrained values instead of NaN
-    //    // For now, return the fitted values even if outside expected ranges
+    //   // For now, return the fitted values even if outside expected ranges
     //    // since parotid glands may have different characteristics
     //}
     
@@ -724,7 +724,7 @@ std::array<double, 3> GetBiExp(const std::vector<float> &bvalues,
         return {nan, nan, nan};
     }
     
-    return {f, D, pseudoD};
+    return {f, D, pseudoD, static_cast<double>(successful_updates), cost};
 }
 
 } // namespace MRI_IVIM

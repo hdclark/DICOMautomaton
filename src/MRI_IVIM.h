@@ -31,7 +31,7 @@ namespace MRI_IVIM {
                                             const std::vector<float> &vals,
                                             int numIterations = 10);
     
-    std::array<double, 3> GetBiExp(const std::vector<float> &bvalues,
+    std::array<double, 5> GetBiExp(const std::vector<float> &bvalues,
                                    const std::vector<float> &vals,
                                    int numIterations = 10,
                                    float b_value_threshold = 200.0f);
