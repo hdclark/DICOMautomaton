@@ -286,6 +286,10 @@ bool ModelIVIM(Drover &DICOM_data,
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
+        for(auto &img : (*iap_it)->imagecoll.images){
+            img.fill_pixels( std::numeric_limits<float>::quiet_NaN() );
+        }
+
         ComputeJointPixelSamplerUserData ud;
         ud.sampling_method = ComputeJointPixelSamplerUserData::SamplingMethod::LinearInterpolation;
         ud.channel = Channel;
@@ -334,6 +338,7 @@ bool ModelIVIM(Drover &DICOM_data,
             auto imgarr_ptr = &((*iap_it)->imagecoll);
             for(auto &img : imgarr_ptr->images){
                 img.init_buffer( img.rows, img.columns, 3 ); // for f, D, pseudoD.
+                img.fill_pixels( std::numeric_limits<float>::quiet_NaN() );
             }
             const int64_t chan_f  = 0;
             const int64_t chan_D  = 1;
@@ -381,6 +386,7 @@ bool ModelIVIM(Drover &DICOM_data,
             auto imgarr_ptr = &((*iap_it)->imagecoll);
             for(auto &img : imgarr_ptr->images){
                 img.init_buffer( img.rows, img.columns, 5 ); // for f, D, pseudoD, num_iters, fitted tolerance.
+                img.fill_pixels( std::numeric_limits<float>::quiet_NaN() );
             }
             const int64_t chan_f  = 0;
             const int64_t chan_D  = 1;
