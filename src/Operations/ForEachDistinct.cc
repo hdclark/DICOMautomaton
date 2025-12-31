@@ -133,8 +133,10 @@ bool ForEachDistinct(Drover &DICOM_data,
         }
 
         // Combine all partitions back into a single Drover object to capture all additions/removals/modifications.
+        YLOGDEBUG("Recombining partitions");
         DICOM_data = Combine_Partitioned_Drover( pd );
     }
+    YLOGDEBUG("Partitioning complete");
 
     return true;
 }
