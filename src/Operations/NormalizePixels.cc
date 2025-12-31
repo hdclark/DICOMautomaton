@@ -118,7 +118,7 @@ OperationDoc OpArgDocNormalizePixels(){
                            " and the maxima are 1. Likewise, 'stretch11' will rescale such"
                            " that the minima are -1 and the maxima are 1."
                            "\n\n"
-                           "Clamp will ensure all voxel intensities are within [0:1] by setting those lower than"
+                           "'Clamp' will ensure all voxel intensities are within [0:1] by setting those lower than"
                            " 0 to 0 and those higher than 1 to 1."
                            " (Voxels already within [0:1] will not be altered.)"
                            "\n\n"
@@ -127,14 +127,26 @@ OperationDoc OpArgDocNormalizePixels(){
                            "\n\n"
                            "'SUVbw' scales PET images in 'Bq/ml' to body-weight SUV."
                            " Note that this method will likely fail if images do not have a PET modality."
-                           " See <https://doi.org/10.2967/jnmt.119.233353> for additional details.";
+                           " See <https://doi.org/10.2967/jnmt.119.233353> for additional details."
+                           "\n\n"
+                           "'Zero' will set all pixel intensities to 0."
+                           "\n\n"
+                           "'One' will set all pixel intensities to 1."
+                           "\n\n"
+                           "'NaN' will set all pixel intensities to NaN."
+                           "\n\n"
+                           ""
+                           "";
     out.args.back().default_val = "stretch11";
     out.args.back().expected = true;
     out.args.back().examples = { "clamp",
                                  "stretch01",
                                  "stretch11",
                                  "sum-to-zero",
-                                 "suv-bw" };
+                                 "suv-bw",
+                                 "zero",
+                                 "one",
+                                 "nan" };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
     return out;
@@ -172,12 +184,18 @@ bool NormalizePixels(Drover &DICOM_data,
     const auto regex_st11 = Compile_Regex("^st?r?e?t?c?h?-11$");
     const auto regex_smtz = Compile_Regex("^sum.*t?o?.*z?e?r?o?$");
     const auto regex_suvb = Compile_Regex("^suv[-_]?b?w?$");
+    const auto regex_zero = Compile_Regex("^ze?r?o?$");
+    const auto regex_one  = Compile_Regex("^on?e?$");
+    const auto regex_nan  = Compile_Regex("^na?n?$");
 
     const bool op_is_clmp = std::regex_match(MethodStr, regex_clmp);
     const bool op_is_st01 = std::regex_match(MethodStr, regex_st01);
     const bool op_is_st11 = std::regex_match(MethodStr, regex_st11);
     const bool op_is_smtz = std::regex_match(MethodStr, regex_smtz);
     const bool op_is_suvb = std::regex_match(MethodStr, regex_suvb);
+    const bool op_is_zero = std::regex_match(MethodStr, regex_zero);
+    const bool op_is_one  = std::regex_match(MethodStr, regex_one );
+    const bool op_is_nan  = std::regex_match(MethodStr, regex_nan );
 
     //-----------------------------------------------------------------------------------------------------------------
 
@@ -221,6 +239,7 @@ bool NormalizePixels(Drover &DICOM_data,
         }
 
         if(op_is_clmp){
+            YLOGINFO("Performing clamp [0:1] normalization"); 
             ud.f_bounded = [Channel](int64_t, int64_t, int64_t chan,
                                      std::reference_wrapper<planar_image<float,double>>,
                                      std::reference_wrapper<planar_image<float,double>>,
@@ -234,6 +253,8 @@ bool NormalizePixels(Drover &DICOM_data,
 
         }else if( op_is_st01
               ||  op_is_st11 ){
+            if( op_is_st01 ) YLOGINFO("Performing stretch [0:1] normalization"); 
+            if( op_is_st11 ) YLOGINFO("Performing stretch [-1:1] normalization"); 
 
             // Determine the min and max voxel intensities.
             Stats::Running_MinMax<float> minmax;
@@ -273,6 +294,7 @@ bool NormalizePixels(Drover &DICOM_data,
             };
 
         }else if(op_is_smtz){
+            YLOGINFO("Performing sum-to-zero normalization"); 
             
             // Calculate the sum of all voxels.
             double total_sum = 0.0;
@@ -306,6 +328,7 @@ bool NormalizePixels(Drover &DICOM_data,
             };
 
         }else if(op_is_suvb){
+            YLOGINFO("Performing SUVb normalization"); 
 
             // Extract the metadata keys needed for radiopharmaceutical normalization.
             //
@@ -335,6 +358,42 @@ bool NormalizePixels(Drover &DICOM_data,
                 if( (Channel < 0) || (Channel == chan) ){
                     const auto mass_in_grams = mass.value() * 1000.0;
                     val = val * mass_in_grams / rnd.value();
+                }
+                return;
+            };
+
+        }else if(op_is_zero){
+            YLOGINFO("Assigning zero to selected channel(s)"); 
+            ud.f_bounded = [Channel](int64_t, int64_t, int64_t chan,
+                                     std::reference_wrapper<planar_image<float,double>>,
+                                     std::reference_wrapper<planar_image<float,double>>,
+                                     float &val) {
+                if( (Channel < 0) || (Channel == chan) ){
+                    val = 0.0f;
+                }
+                return;
+            };
+
+        }else if(op_is_one){
+            YLOGINFO("Assigning one to selected channel(s)"); 
+            ud.f_bounded = [Channel](int64_t, int64_t, int64_t chan,
+                                     std::reference_wrapper<planar_image<float,double>>,
+                                     std::reference_wrapper<planar_image<float,double>>,
+                                     float &val) {
+                if( (Channel < 0) || (Channel == chan) ){
+                    val = 1.0f;
+                }
+                return;
+            };
+
+        }else if(op_is_nan){
+            YLOGINFO("Assigning NaN to selected channel(s)"); 
+            ud.f_bounded = [Channel](int64_t, int64_t, int64_t chan,
+                                     std::reference_wrapper<planar_image<float,double>>,
+                                     std::reference_wrapper<planar_image<float,double>>,
+                                     float &val) {
+                if( (Channel < 0) || (Channel == chan) ){
+                    val = std::numeric_limits<float>::quiet_NaN();
                 }
                 return;
             };
