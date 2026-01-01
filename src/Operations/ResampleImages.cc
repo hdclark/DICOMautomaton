@@ -100,7 +100,7 @@ OperationDoc OpArgDocResampleImages(){
 
     out.args.emplace_back();
     out.args.back().name = "Lower";
-    out.args.back().desc = "Voxel intensity lower threshold."
+    out.args.back().desc = "Voxel intensity filter lower threshold."
                            " Only voxels with values above this threshold (inclusive) will be altered.";
     out.args.back().default_val = "-inf";
     out.args.back().expected = true;
@@ -110,13 +110,32 @@ OperationDoc OpArgDocResampleImages(){
 
     out.args.emplace_back();
     out.args.back().name = "Upper";
-    out.args.back().desc = "Voxel intensity upper threshold."
+    out.args.back().desc = "Voxel intensity filter upper threshold."
                            " Only voxels with values below this threshold (inclusive) will be altered.";
     out.args.back().default_val = "inf";
     out.args.back().expected = true;
     out.args.back().examples = { "inf",
                                  "1.23",
                                  "1000" };
+
+    out.args.emplace_back();
+    out.args.back().name = "IncludeNaN";
+    out.args.back().desc = "Voxel intensity filter for non-finite values (i.e., NaNs)."
+                           " This setting controls whether voxels with NaN intensity be altered.";
+    out.args.back().default_val = "true";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true",
+                                 "false" };
+
+    out.args.emplace_back();
+    out.args.back().name = "InaccessibleValue";
+    out.args.back().desc = "The voxel value to use as a fallback when a voxel cannot be reached.";
+    out.args.back().default_val = "nan";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.0",
+                                 "1.0",
+                                 "nan",
+                                 "-inf" };
 
     return out;
 }
@@ -140,8 +159,12 @@ bool ResampleImages(Drover &DICOM_data,
     const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
     const auto ImgLowerThreshold = std::stod( OptArgs.getValueStr("Lower").value() );
     const auto ImgUpperThreshold = std::stod( OptArgs.getValueStr("Upper").value() );
+    const auto IncludeNaNStr = OptArgs.getValueStr("IncludeNaN").value();
+    const auto InaccessibleValue = std::stod( OptArgs.getValueStr("InaccessibleValue").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
+    const auto regex_true = Compile_Regex("^tr?u?e?$");
+    const auto IncludeNaN = std::regex_match(IncludeNaNStr, regex_true);
 
     auto cc_all = All_CCs( DICOM_data );
     auto cc_ROIs = Whitelist( cc_all, ROILabelRegex, NormalizedROILabelRegex, ROISelection );
@@ -174,6 +197,8 @@ bool ResampleImages(Drover &DICOM_data,
     ud.description = "Resampled";
     ud.inc_lower_threshold = ImgLowerThreshold;
     ud.inc_upper_threshold = ImgUpperThreshold;
+    ud.inc_nan = IncludeNaN;
+    ud.inaccessible_val = InaccessibleValue;
 
     ud.f_reduce = []( std::vector<float> &vals, 
                       vec3<double>                ) -> float {

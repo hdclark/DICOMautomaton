@@ -67,8 +67,6 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
 
     const auto ud_channel = user_data_s->channel;
 
-    const auto inaccessible_val = std::numeric_limits<double>::quiet_NaN();
-
     // Determine a reasonable spatial 'scale' to gauge alignment.
     //
     // It is important to be tolerant because some implementations or data interchange formats cause truncation which
@@ -170,7 +168,12 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
                                  std::reference_wrapper<planar_image<float,double>> img_refw, 
                                  std::reference_wrapper<planar_image<float,double>>, 
                                  float &voxel_val) {
-                if( !isininc( user_data_s->inc_lower_threshold, voxel_val, user_data_s->inc_upper_threshold) ){
+                const bool is_nan = std::isnan(voxel_val);
+                if( !user_data_s->inc_nan && is_nan ){
+                    return; // No-op since NaN encountered when not allowing them.
+                }
+                if( !is_nan
+                &&  !isininc( user_data_s->inc_lower_threshold, voxel_val, user_data_s->inc_upper_threshold) ){
                     return; // No-op if outside of the thresholds.
                 }
                 if( (ud_channel >= 0) && (channel != ud_channel) ){
@@ -182,7 +185,7 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
                 vals.emplace_back(voxel_val);
 
                 // Default the output to an invalid voxel value.
-                voxel_val = inaccessible_val;
+                voxel_val = user_data_s->inaccessible_val;
 
                 // Get the position of the voxel in the image to edit.
                 const auto pos = img_refw.get().position(E_row, E_col);
@@ -196,14 +199,14 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
                     // Sample the image.
                     if(exact_overlap){
                         if((*(int_img_it))->channels <= channel){
-                            vals.emplace_back(inaccessible_val); // Cannot access this voxel.
+                            vals.emplace_back(user_data_s->inaccessible_val); // Cannot access this voxel.
                             continue;
                         }
 
                         try{
                             vals.emplace_back( (*(int_img_it))->value(E_row, E_col, channel) );
                         }catch(const std::exception &){
-                            vals.emplace_back(inaccessible_val); // Cannot access this voxel.
+                            vals.emplace_back(user_data_s->inaccessible_val); // Cannot access this voxel.
                             continue;
                         }
 
@@ -216,21 +219,21 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
                             try{
                                 l_int_img_ptr = std::addressof( img_adj_it->position_to_image(pos).get() );
                             }catch(const std::exception &){
-                                vals.emplace_back(inaccessible_val); // Cannot access this voxel.
+                                vals.emplace_back(user_data_s->inaccessible_val); // Cannot access this voxel.
                                 continue;
                             }
                         }
 
                         // Ensure the image supports the specified channel.
                         if(l_int_img_ptr->channels <= channel){
-                            vals.emplace_back(inaccessible_val); // Cannot access this voxel.
+                            vals.emplace_back(user_data_s->inaccessible_val); // Cannot access this voxel.
                             continue;
                         }
 
                         // Calculate the index in the intersecting image.
                         const auto index = l_int_img_ptr->index(pos, channel);
                         if(index < 0){ // If not valid, ignore the voxel.
-                            vals.emplace_back(inaccessible_val); // Cannot access this voxel.
+                            vals.emplace_back(user_data_s->inaccessible_val); // Cannot access this voxel.
                             continue;
                         }
 
@@ -238,7 +241,7 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
                         vals.emplace_back( sampled_val );
 
                     }else if(user_data_s->sampling_method == ComputeJointPixelSamplerUserData::SamplingMethod::LinearInterpolation){
-                        const auto sampled_val = img_adj_it->trilinearly_interpolate(pos, channel, inaccessible_val);
+                        const auto sampled_val = img_adj_it->trilinearly_interpolate(pos, channel, user_data_s->inaccessible_val);
                         vals.emplace_back( sampled_val );
 
                     }else{
@@ -250,7 +253,7 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
                 try{
                     voxel_val = user_data_s->f_reduce( vals, pos );
                 }catch(const std::exception &){ 
-                    voxel_val = inaccessible_val;
+                    voxel_val = user_data_s->inaccessible_val;
                 }
                 return;
             };

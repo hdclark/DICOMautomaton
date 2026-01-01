@@ -127,6 +127,25 @@ OperationDoc OpArgDocExtractAlphaBeta(){
                                  "1000" };
 
     out.args.emplace_back();
+    out.args.back().name = "TestIncludeNaN";
+    out.args.back().desc = "Pixel intensity filter for non-finite values (i.e., NaNs) for the test images."
+                           " This setting controls whether voxels with NaN intensity be altered.";
+    out.args.back().default_val = "true";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true",
+                                 "false" };
+
+    out.args.emplace_back();
+    out.args.back().name = "InaccessibleValue";
+    out.args.back().desc = "The pixel value to use as a fallback when a voxel cannot be reached.";
+    out.args.back().default_val = "nan";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.0",
+                                 "1.0",
+                                 "nan",
+                                 "-inf" };
+
+    out.args.emplace_back();
     out.args.back().name = "NumberOfFractions";
     out.args.back().desc = "Number of fractions assumed in the BED or EQDd transformation.";
     out.args.back().default_val = "35";
@@ -169,14 +188,19 @@ bool ExtractAlphaBeta(Drover &DICOM_data,
     const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
     const auto TestImgLowerThreshold = std::stod( OptArgs.getValueStr("TestImgLowerThreshold").value() );
     const auto TestImgUpperThreshold = std::stod( OptArgs.getValueStr("TestImgUpperThreshold").value() );
+    const auto TestIncludeNaNStr = OptArgs.getValueStr("TestIncludeNaN").value();
+    const auto InaccessibleValue = std::stod( OptArgs.getValueStr("InaccessibleValue").value() );
 
     const auto NumberOfFractions = std::stof( OptArgs.getValueStr("NumberOfFractions").value() );
     const auto NominalDosePerFraction = std::stof( OptArgs.getValueStr("NominalDosePerFraction").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
+    const auto regex_true = Compile_Regex("^tr?u?e?$");
+
     const auto model_simple_lq = Compile_Regex("^eq?d?x?[-_]?l?q?[-_]?s?i?m?p?l?e?$");
 
     //-----------------------------------------------------------------------------------------------------------------
+    const auto TestIncludeNaN = std::regex_match(TestIncludeNaNStr, regex_true);
 
     //Stuff references to all contours into a list. Remember that you can still address specific contours through
     // the original holding containers (which are not modified here).
@@ -203,9 +227,10 @@ bool ExtractAlphaBeta(Drover &DICOM_data,
 
         ud.channel = Channel;
         ud.description = "Extracted alpha/beta";
-
         ud.inc_lower_threshold = TestImgLowerThreshold;
         ud.inc_upper_threshold = TestImgUpperThreshold;
+        ud.inc_nan = TestIncludeNaN;
+        ud.inaccessible_val = InaccessibleValue;
 
         if(std::regex_match(ModelStr, model_simple_lq)){
             ud.f_reduce = [NumberOfFractions,

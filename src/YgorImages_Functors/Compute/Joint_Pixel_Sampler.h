@@ -27,9 +27,14 @@ struct ComputeJointPixelSamplerUserData {
     // Parameters for pixel thresholds.
 
     // Pixel thresholds for the images that will be edited. Only pixels with values between these thresholds (inclusive)
-    // will be compared.
+    // will be compared. This provides a means to fine-tune where image updates occur.
     double inc_lower_threshold = -(std::numeric_limits<double>::infinity());
     double inc_upper_threshold = std::numeric_limits<double>::infinity();
+    bool inc_nan = true; // NaNs will only be edited if this is true.
+
+    // -----------------------------
+    // Default value to use when a voxel cannot be reached.
+    float inaccessible_val = std::numeric_limits<float>::quiet_NaN();
 
     // -----------------------------
     // Reduction functor for joint voxels.

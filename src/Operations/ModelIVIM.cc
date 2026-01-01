@@ -36,6 +36,31 @@ using namespace MRI_IVIM;
 
 #include "ModelIVIM.h"
 
+// This function re-initializes a planar image to have the given number of channels.
+//
+// If the number of channels increase, the internal buffer is grown and filled with the contents of an existing channel,
+// which (1) reduces the risk of confusing pixel contents in the outputs, and (2) allows intensity thresholds to be used
+// in the JointPixelSampler code.
+//
+// Since the pixel indexing can vary, we cannot simply grow the buffer in-place and copy channels. Instead, we just copy
+// the entire image to use as a reference.
+void set_channels(planar_image<float,double> &img,
+                  int64_t N_channels){
+    const int64_t orig_N_channels = img.channels;
+    const auto orig_img = img;
+
+    img.init_buffer( img.rows, img.columns, N_channels );
+
+    for(int64_t chn = 0; chn < N_channels; ++chn){
+        const auto ref_chn = chn % orig_N_channels;
+        for(int64_t row = 0; row < img.rows; ++row){
+            for(int64_t col = 0; col < img.columns; ++col){
+                img.reference(row, col, chn) = orig_img.value(row, col, ref_chn);
+            }
+        }
+    }
+    return;
+}
 
 OperationDoc OpArgDocModelIVIM(){
     OperationDoc out;
@@ -176,6 +201,25 @@ OperationDoc OpArgDocModelIVIM(){
                                  "1.23",
                                  "1000" };
 
+    out.args.emplace_back();
+    out.args.back().name = "TestIncludeNaN";
+    out.args.back().desc = "Pixel intensity filter for non-finite values (i.e., NaNs) for the test images."
+                           " This setting controls whether voxels with NaN intensity be altered.";
+    out.args.back().default_val = "true";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true",
+                                 "false" };
+
+    out.args.emplace_back();
+    out.args.back().name = "InaccessibleValue";
+    out.args.back().desc = "The pixel value to use as a fallback when a voxel cannot be reached.";
+    out.args.back().default_val = "nan";
+    out.args.back().expected = true;
+    out.args.back().examples = { "0.0",
+                                 "1.0",
+                                 "nan",
+                                 "-inf" };
+
     return out;
 }
 
@@ -198,8 +242,12 @@ bool ModelIVIM(Drover &DICOM_data,
     const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
     const auto TestImgLowerThreshold = std::stod( OptArgs.getValueStr("TestImgLowerThreshold").value() );
     const auto TestImgUpperThreshold = std::stod( OptArgs.getValueStr("TestImgUpperThreshold").value() );
+    const auto TestIncludeNaNStr = OptArgs.getValueStr("TestIncludeNaN").value();
+    const auto InaccessibleValue = std::stod( OptArgs.getValueStr("InaccessibleValue").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
+    const auto regex_true = Compile_Regex("^tr?u?e?$");
+
     const auto model_adc_simple = Compile_Regex("^adc?[-_]?si?m?p?l?e?$");
     const auto model_adc_ls = Compile_Regex("^adc?[-_]?ls?$");
     const auto model_biexp = Compile_Regex("^bi[-_]?e?x?p?");
@@ -207,6 +255,7 @@ bool ModelIVIM(Drover &DICOM_data,
     const auto model_auc = Compile_Regex("^auc?[-_]?si?m?p?l?e?$");
 
     //-----------------------------------------------------------------------------------------------------------------
+    const auto TestIncludeNaN = std::regex_match(TestIncludeNaNStr, regex_true);
 
     auto RIAs_all = All_IAs( DICOM_data );
     auto RIAs = Whitelist( RIAs_all, ReferenceImageSelectionStr );
@@ -288,18 +337,23 @@ bool ModelIVIM(Drover &DICOM_data,
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     YLOGDEBUG("Selected " << IAs.size() << " working image arrays");
     for(auto & iap_it : IAs){
-        for(auto &img : (*iap_it)->imagecoll.images){
-//            img.fill_pixels( std::numeric_limits<float>::quiet_NaN() );
-            img.fill_pixels( 0.0f );
-        }
 
         ComputeJointPixelSamplerUserData ud;
         ud.sampling_method = ComputeJointPixelSamplerUserData::SamplingMethod::LinearInterpolation;
         ud.channel = Channel;
         ud.inc_lower_threshold = TestImgLowerThreshold;
         ud.inc_upper_threshold = TestImgUpperThreshold;
+        ud.inc_nan = TestIncludeNaN;
+        ud.inaccessible_val = InaccessibleValue;
 
         if(std::regex_match(ModelStr, model_adc_simple)){
+            // Set outgoing channels accordingly.
+            const int64_t N_channels = 1; // ADC.
+            auto imgarr_ptr = &((*iap_it)->imagecoll);
+            for(auto &img : imgarr_ptr->images){
+                set_channels(img, N_channels);
+            }
+
             ud.description = "ADC (simple model)";
             ud.f_reduce = [bvalues, bvalue_min_i, bvalue_max_i]( std::vector<float> &vals, 
                                                                  vec3<double> ) -> float {
@@ -321,6 +375,13 @@ bool ModelIVIM(Drover &DICOM_data,
             };
 
         }else if(std::regex_match(ModelStr, model_adc_ls)){
+            // Set outgoing channels accordingly.
+            const int64_t N_channels = 1; // ADC.
+            auto imgarr_ptr = &((*iap_it)->imagecoll);
+            for(auto &img : imgarr_ptr->images){
+                set_channels(img, N_channels);
+            }
+
             ud.description = "ADC (linear least squares)";
             ud.f_reduce = [bvalues, bvalue_min_i, bvalue_max_i]( std::vector<float> &vals, 
                                                                  vec3<double> ) -> float {
@@ -337,12 +398,11 @@ bool ModelIVIM(Drover &DICOM_data,
 
 #ifdef DCMA_USE_EIGEN
         }else if(std::regex_match(ModelStr, model_kurtosis)){
-            // Add channels to each image for each model parameter.
+            // Set outgoing channels accordingly.
+            const int64_t N_channels = 3; // for f, D, pseudoD.
             auto imgarr_ptr = &((*iap_it)->imagecoll);
             for(auto &img : imgarr_ptr->images){
-                img.init_buffer( img.rows, img.columns, 3 ); // for f, D, pseudoD.
-                //img.fill_pixels( std::numeric_limits<float>::quiet_NaN() );
-                img.fill_pixels( 0.0f );
+                set_channels(img, N_channels);
             }
             const int64_t chan_f  = 0;
             const int64_t chan_D  = 1;
@@ -386,12 +446,11 @@ bool ModelIVIM(Drover &DICOM_data,
 #endif //DCMA_USE_EIGEN
 
         }else if(std::regex_match(ModelStr, model_biexp)){
-            // Add channels to each image for each model parameter.
+            // Set outgoing channels accordingly.
+            const int64_t N_channels = 6; // f, D, pseudoD, attempted iters, updates, fitted model cost.
             auto imgarr_ptr = &((*iap_it)->imagecoll);
             for(auto &img : imgarr_ptr->images){
-                img.init_buffer( img.rows, img.columns, 6 ); // f, D, pseudoD, attempted iters, updates, fitted model cost.
-                //img.fill_pixels( std::numeric_limits<float>::quiet_NaN() );
-                img.fill_pixels( 0.0f );
+                set_channels(img, N_channels);
             }
             const int64_t chan_f  = 0;
             const int64_t chan_D  = 1;
@@ -399,7 +458,6 @@ bool ModelIVIM(Drover &DICOM_data,
             const int64_t chan_is = 3;
             const int64_t chan_u  = 4;
             const int64_t chan_c  = 5;
-
 
             ud.description = "f, D, pseudo-D (Bi-exponential segmented fit)";
             ud.f_reduce = [bvalues,
@@ -441,11 +499,6 @@ bool ModelIVIM(Drover &DICOM_data,
                 ||  (index_c < 0) ){
                     throw std::logic_error("Unable to locate voxel via position");
                 }
-                //img_it_l.front()->reference(index_D) = 2.22;
-                //img_it_l.front()->reference(index_pD) = 3.33;
-                //img_it_l.front()->reference(index_is) = 4.44;
-                //img_it_l.front()->reference(index_t) = 5.55;
-                //return 1.11;
                 img_it_l.front()->reference(index_D) = D;
                 img_it_l.front()->reference(index_pD) = pseudoD;
                 img_it_l.front()->reference(index_is) = num_iters;
@@ -456,6 +509,13 @@ bool ModelIVIM(Drover &DICOM_data,
             };
 
         }else if(std::regex_match(ModelStr, model_auc)){
+            // Set outgoing channels accordingly.
+            const int64_t N_channels = 1; // AUC.
+            auto imgarr_ptr = &((*iap_it)->imagecoll);
+            for(auto &img : imgarr_ptr->images){
+                set_channels(img, N_channels);
+            }
+
             ud.description = "AUC";
             ud.f_reduce = [bvalues, bvalues_order, bvalue_min_i, bvalue_max_i]( std::vector<float> &vals, 
                                                                                 vec3<double> ) -> float {
