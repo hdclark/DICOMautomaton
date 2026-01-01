@@ -534,12 +534,13 @@ double GetADC_WLLS(const std::vector<float> &bvalues,
     return D_current;
 }
 
-std::array<double, 5> GetBiExp(const std::vector<float> &bvalues,
+std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
                                const std::vector<float> &vals,
                                int numIterations,
                                float b_value_threshold){
     
     const auto nan = std::numeric_limits<double>::quiet_NaN();
+    std::array<double, 6> default_out = {nan, nan, nan, nan, nan, nan};
     const auto number_bVals = bvalues.size();
     
     // Find b=0 index
@@ -561,7 +562,7 @@ std::array<double, 5> GetBiExp(const std::vector<float> &bvalues,
     }
     
     if(bvaluesH.size() < 2UL){
-        return {nan, nan, nan}; // Insufficient high b-values
+        return default_out; // Insufficient high b-values
     }
     
     // Step 1: Estimate D using consensus-recommended WLLS
@@ -571,7 +572,7 @@ std::array<double, 5> GetBiExp(const std::vector<float> &bvalues,
     if(!std::isfinite(D) || (D <= 0.0f)){
         D = GetADCls(bvaluesH, signalsH);
         if(!std::isfinite(D) || (D <= 0.0f)){
-            return {nan, nan, nan};
+            return default_out;
         }
     }
     
@@ -622,6 +623,7 @@ std::array<double, 5> GetBiExp(const std::vector<float> &bvalues,
     r = sigs - sigs_pred;
     double cost = 0.5 * (r.transpose() * r)(0,0);
     
+    int64_t iters_attempted = 0;
     int64_t successful_updates = 0;
     int64_t consecutive_small_updates = 0;
     double rel_cost_tolerance = 1e-8;  // Relative cost change tolerance
@@ -629,6 +631,7 @@ std::array<double, 5> GetBiExp(const std::vector<float> &bvalues,
     double previous_cost = cost;
     
     for(int64_t iter = 0; iter < numIterations; iter++){
+        ++iters_attempted;
         
         // Compute Jacobian
         for(size_t i = 0; i < number_bVals; ++i){ 
@@ -721,10 +724,10 @@ std::array<double, 5> GetBiExp(const std::vector<float> &bvalues,
     
     // Ensure finite results
     if(!std::isfinite(f) || !std::isfinite(D) || !std::isfinite(pseudoD)){
-        return {nan, nan, nan};
+        return {nan, nan, nan, static_cast<double>(iters_attempted), static_cast<double>(successful_updates), cost};
     }
     
-    return {f, D, pseudoD, static_cast<double>(successful_updates), cost};
+    return {f, D, pseudoD, static_cast<double>(iters_attempted), static_cast<double>(successful_updates), cost};
 }
 
 } // namespace MRI_IVIM

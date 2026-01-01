@@ -29,11 +29,11 @@ namespace MRI_IVIM {
     
     std::array<double, 3> GetKurtosisParams(const std::vector<float> &bvalues,
                                             const std::vector<float> &vals,
-                                            int numIterations = 10);
+                                            int numIterations = 500);
     
-    std::array<double, 5> GetBiExp(const std::vector<float> &bvalues,
+    std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
                                    const std::vector<float> &vals,
-                                   int numIterations = 10,
+                                   int numIterations = 500,
                                    float b_value_threshold = 200.0f);
     
     std::vector<double> GetHessianAndGradient(const std::vector<float> &bvalues,
