@@ -275,18 +275,12 @@ bool Isolate(Drover &DICOM_data,
         for(const auto& x_it_ptr : STs) isolated.table_data.push_back( *x_it_ptr );
     }
 
-    // Make a copy of the isolated objects which we can later use to track additions and deletions.
-    // These 'shadow' references also defer object deletion.
-    Drover isolated_orig(isolated);
-
     // Imbue the contours directly into the view.
     DICOM_data.Ensure_Contour_Data_Allocated();
     isolated.Ensure_Contour_Data_Allocated();
-    isolated_orig.Ensure_Contour_Data_Allocated();
-
     auto cc_all = All_CCs( DICOM_data );
     auto cc_ROIs = Whitelist( cc_all, ROILabelRegexOpt, NormalizedROILabelRegexOpt, ROISelectionOpt );
-    if(cc_ROIs.empty()){
+    if(!cc_ROIs.empty()){
         YLOGINFO("Selected " << cc_ROIs.size() << " contour collections using ROI selectors");
 
         for(const auto &cc_refw : cc_ROIs){
@@ -307,6 +301,12 @@ bool Isolate(Drover &DICOM_data,
             }
         }
     }
+    DICOM_data.Ensure_Contour_Data_Allocated();
+
+    // Make a copy of the isolated objects which we can later use to track additions and deletions.
+    // These 'shadow' references also defer object deletion.
+    Drover isolated_orig(isolated);
+    isolated_orig.Ensure_Contour_Data_Allocated();
 
     // Execute children operations.
     const bool ret = Operation_Dispatcher(isolated, InvocationMetadata, FilenameLex, OptArgs.getChildren());
@@ -316,7 +316,6 @@ bool Isolate(Drover &DICOM_data,
     isolated.Ensure_Contour_Data_Allocated();
 
     DICOM_data.contour_data->ccs.splice( std::end(DICOM_data.contour_data->ccs), isolated.contour_data->ccs );
-
     DICOM_data.Ensure_Contour_Data_Allocated();
     isolated.Ensure_Contour_Data_Allocated();
 
@@ -328,8 +327,6 @@ bool Isolate(Drover &DICOM_data,
     implement_additions_and_deletions(DICOM_data.lsamp_data,  isolated_orig.lsamp_data,  isolated.lsamp_data);
     implement_additions_and_deletions(DICOM_data.trans_data,  isolated_orig.trans_data,  isolated.trans_data);
     implement_additions_and_deletions(DICOM_data.table_data,  isolated_orig.table_data,  isolated.table_data);
-
-    DICOM_data.Ensure_Contour_Data_Allocated();
 
     // Pass along the return the status of the children operations.
     return ret;
