@@ -238,7 +238,7 @@ bool ComputeJointPixelSampler(planar_image_collection<float,double> &imagecoll,
                         vals.emplace_back( sampled_val );
 
                     }else if(user_data_s->sampling_method == ComputeJointPixelSamplerUserData::SamplingMethod::LinearInterpolation){
-                        const auto sampled_val = img_adj_it->trilinearly_interpolate(pos, channel);
+                        const auto sampled_val = img_adj_it->trilinearly_interpolate(pos, channel, inaccessible_val);
                         vals.emplace_back( sampled_val );
 
                     }else{
