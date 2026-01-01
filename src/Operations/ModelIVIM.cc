@@ -210,6 +210,7 @@ bool ModelIVIM(Drover &DICOM_data,
 
     auto RIAs_all = All_IAs( DICOM_data );
     auto RIAs = Whitelist( RIAs_all, ReferenceImageSelectionStr );
+    YLOGDEBUG("Selected " << RIAs.size() << " reference image arrays");
     if(RIAs.size() < 2){
         throw std::invalid_argument("At least two b-value images are required to model ADC.");
     }
@@ -285,9 +286,11 @@ bool ModelIVIM(Drover &DICOM_data,
     }
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
+    YLOGDEBUG("Selected " << IAs.size() << " working image arrays");
     for(auto & iap_it : IAs){
         for(auto &img : (*iap_it)->imagecoll.images){
-            img.fill_pixels( std::numeric_limits<float>::quiet_NaN() );
+//            img.fill_pixels( std::numeric_limits<float>::quiet_NaN() );
+            img.fill_pixels( 0.0f );
         }
 
         ComputeJointPixelSamplerUserData ud;
@@ -338,7 +341,8 @@ bool ModelIVIM(Drover &DICOM_data,
             auto imgarr_ptr = &((*iap_it)->imagecoll);
             for(auto &img : imgarr_ptr->images){
                 img.init_buffer( img.rows, img.columns, 3 ); // for f, D, pseudoD.
-                img.fill_pixels( std::numeric_limits<float>::quiet_NaN() );
+                //img.fill_pixels( std::numeric_limits<float>::quiet_NaN() );
+                img.fill_pixels( 0.0f );
             }
             const int64_t chan_f  = 0;
             const int64_t chan_D  = 1;
@@ -386,7 +390,8 @@ bool ModelIVIM(Drover &DICOM_data,
             auto imgarr_ptr = &((*iap_it)->imagecoll);
             for(auto &img : imgarr_ptr->images){
                 img.init_buffer( img.rows, img.columns, 5 ); // for f, D, pseudoD, num_iters, fitted tolerance.
-                img.fill_pixels( std::numeric_limits<float>::quiet_NaN() );
+                //img.fill_pixels( std::numeric_limits<float>::quiet_NaN() );
+                img.fill_pixels( 0.0f );
             }
             const int64_t chan_f  = 0;
             const int64_t chan_D  = 1;
@@ -432,11 +437,15 @@ bool ModelIVIM(Drover &DICOM_data,
                 ||  (index_t < 0) ){
                     throw std::logic_error("Unable to locate voxel via position");
                 }
+                //img_it_l.front()->reference(index_D) = 2.22;
+                //img_it_l.front()->reference(index_pD) = 3.33;
+                //img_it_l.front()->reference(index_is) = 4.44;
+                //img_it_l.front()->reference(index_t) = 5.55;
+                //return 1.11;
                 img_it_l.front()->reference(index_D) = D;
                 img_it_l.front()->reference(index_pD) = pseudoD;
                 img_it_l.front()->reference(index_is) = num_iters;
                 img_it_l.front()->reference(index_t) = tol;
-
                 return f;
                 
             };
