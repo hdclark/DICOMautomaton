@@ -632,8 +632,8 @@ bool ModelIVIM(Drover &DICOM_data,
                 }
                 img_it_l.front()->reference(index_D)   = D;
                 img_it_l.front()->reference(index_pD)  = pseudoD;
-                img_it_l.front()->reference(index_s1c) = stage1.tvalue;
-                img_it_l.front()->reference(index_s2c) = stage2.tvalue;
+                img_it_l.front()->reference(index_s1c) = stage1.pvalue;
+                img_it_l.front()->reference(index_s2c) = stage2.pvalue;
                 return f;
             };
 
