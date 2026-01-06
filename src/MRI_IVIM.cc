@@ -416,14 +416,14 @@ double GetADCls(const std::vector<float> &bvalues, const std::vector<float> &val
     double log_S_avg = 0.0;
     const auto number_bVals = bvalues.size();
     for(size_t i = 0; i < number_bVals; ++i){
-        b_avg += bvalues[i]; 
+        b_avg += bvalues[i];
         log_S_avg += std::log( vals[i] );
         if(!std::isfinite(log_S_avg)){
             return nan;
         }
     }
-    b_avg /= (1.0 * number_bVals);
-    log_S_avg /= (1.0 * number_bVals);
+    b_avg /= static_cast<double>(number_bVals);
+    log_S_avg /= static_cast<double>(number_bVals);
 
     //Now do the sums
     double sum_numerator = 0.0;
@@ -509,7 +509,7 @@ double GetADC_WLLS(const std::vector<float> &bvalues,
         
         // Solve weighted normal equations
         const double denominator = sum_w * sum_wb2 - sum_wb * sum_wb;
-        if(std::abs(denominator) < 1e-12){
+        if( std::abs(denominator) < 1e-12 ){
             return nan; // Singular system
         }
         
@@ -521,13 +521,13 @@ double GetADC_WLLS(const std::vector<float> &bvalues,
         S0_current = std::exp(ln_S0_new);
         
         // Check convergence
-        if(std::abs(D_current - D_previous) < tolerance * std::abs(D_previous)){
+        if( std::abs(D_current - D_previous) < (tolerance * std::abs(D_previous)) ){
             break;
         }
     }
     
     // Final validation
-    if(!std::isfinite(D_current) || D_current <= 0 || D_current > 0.01){
+    if( !std::isfinite(D_current) || (D_current <= 0.0) ){
         return nan;
     }
     

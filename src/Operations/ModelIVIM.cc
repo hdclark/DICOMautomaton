@@ -17,6 +17,7 @@
 #include <cstdint>
 
 #include "YgorImages.h"
+#include "YgorMath.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
 #ifdef DCMA_USE_EIGEN
@@ -149,6 +150,11 @@ OperationDoc OpArgDocModelIVIM(){
                            "The 'biexp' model uses a segmented fitting approach along with Marquardt's method to fit a"
                            " biexponential model, which estimates the pseudodiffusion fraction, the diffusion"
                            " coefficient, and the pseudodiffusion coefficient for each voxel."
+                           "\n\n"
+                           "The 'biexp-simple' model uses a segmented fitting approach with linearized data to perform"
+                           " ordinary least-squares fitting of a biexponential equation."
+                           " This model estimates the pseudodiffusion fraction, the diffusion"
+                           " coefficient, and the pseudodiffusion coefficient for each voxel."
 #ifdef DCMA_USE_EIGEN
                            "\n\n"
                            "The 'kurtosis' model returns three parameters corresponding to a biexponential diffusion"
@@ -163,6 +169,7 @@ OperationDoc OpArgDocModelIVIM(){
                                  "adc-ls",
                                  "auc-simple",
                                  "biexp",
+                                 "biexp-simple",
 #ifdef DCMA_USE_EIGEN
                                  "kurtosis",
 #endif //DCMA_USE_EIGEN
@@ -220,6 +227,23 @@ OperationDoc OpArgDocModelIVIM(){
                                  "nan",
                                  "-inf" };
 
+    out.args.emplace_back();
+    out.args.back().name = "BValueThreshold";
+    out.args.back().desc = "If applicable to the model, this b-value controls the effective cut-off above which"
+                           " the pseudo-diffusion contribution to signal is no longer relevant."
+                           "\n\n"
+                           "This parameter is used for two-stage fitting of bi-exponential models, where in the"
+                           " first stage samples with a b-value less than (or equal to) this value are disregarded."
+                           "\n\n"
+                           "Units are mm*mm/s. Typical values are 100-200 mm*mm/s, but the most appropriate threshold"
+                           " may depend on how b-values have been sampled and the amount of noise present."
+                           "";
+    out.args.back().default_val = "100";
+    out.args.back().expected = true;
+    out.args.back().examples = { "50.0",
+                                 "100.0",
+                                 "200.0" };
+
     return out;
 }
 
@@ -244,13 +268,15 @@ bool ModelIVIM(Drover &DICOM_data,
     const auto TestImgUpperThreshold = std::stod( OptArgs.getValueStr("TestImgUpperThreshold").value() );
     const auto TestIncludeNaNStr = OptArgs.getValueStr("TestIncludeNaN").value();
     const auto InaccessibleValue = std::stod( OptArgs.getValueStr("InaccessibleValue").value() );
+    const auto BValueThreshold = std::stod( OptArgs.getValueStr("BValueThreshold").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_true = Compile_Regex("^tr?u?e?$");
 
     const auto model_adc_simple = Compile_Regex("^adc?[-_]?si?m?p?l?e?$");
     const auto model_adc_ls = Compile_Regex("^adc?[-_]?ls?$");
-    const auto model_biexp = Compile_Regex("^bi[-_]?e?x?p?");
+    const auto model_biexp = Compile_Regex("^bi[-_]?e?x?p?o?n?e?n?t?i?a?l?$");
+    const auto model_biexp_simple = Compile_Regex("^bi[-_]?e?x?p?o?n?e?n?t?i?a?l?[-_]?si?m?p?l?e?$");
     const auto model_kurtosis = Compile_Regex("^ku?r?t?o?s?i?s?");
     const auto model_auc = Compile_Regex("^auc?[-_]?si?m?p?l?e?$");
 
@@ -324,6 +350,7 @@ bool ModelIVIM(Drover &DICOM_data,
 
     // Sort the RIARL using bvalues, to simplify access later.
     // ...
+    const auto N_bvalues = bvalues.size();
     const auto bvalue_min_i = std::distance( std::begin(bvalues), std::min_element( std::begin(bvalues), std::end(bvalues) ) );
     const auto bvalue_max_i = std::distance( std::begin(bvalues), std::max_element( std::begin(bvalues), std::end(bvalues) ) );
     const auto nan = std::numeric_limits<double>::quiet_NaN();
@@ -355,10 +382,13 @@ bool ModelIVIM(Drover &DICOM_data,
             }
 
             ud.description = "ADC (simple model)";
-            ud.f_reduce = [bvalues, bvalue_min_i, bvalue_max_i]( std::vector<float> &vals, 
-                                                                 vec3<double> ) -> float {
+            ud.f_reduce = [bvalues,
+                           bvalue_min_i,
+                           bvalue_max_i,
+                           N_bvalues]( std::vector<float> &vals, 
+                                       vec3<double> ) -> float {
                 vals.erase(vals.begin()); // Remove the base image's value.
-                if(vals.size() != bvalues.size()){
+                if(vals.size() != N_bvalues){
                     throw std::runtime_error("Unmatched voxel and b-value vectors. Refusing to continue.");
                 }
 
@@ -383,10 +413,13 @@ bool ModelIVIM(Drover &DICOM_data,
             }
 
             ud.description = "ADC (linear least squares)";
-            ud.f_reduce = [bvalues, bvalue_min_i, bvalue_max_i]( std::vector<float> &vals, 
-                                                                 vec3<double> ) -> float {
+            ud.f_reduce = [bvalues,
+                           bvalue_min_i,
+                           bvalue_max_i,
+                           N_bvalues]( std::vector<float> &vals, 
+                                       vec3<double> ) -> float {
                 vals.erase(vals.begin()); // Remove the base image's value.
-                if(vals.size() != bvalues.size()){
+                if(vals.size() != N_bvalues){
                     throw std::runtime_error("Unmatched voxel and b-value vectors. Refusing to continue.");
                 }
 
@@ -412,12 +445,13 @@ bool ModelIVIM(Drover &DICOM_data,
             ud.f_reduce = [bvalues,
                            bvalue_min_i,
                            bvalue_max_i,
+                           N_bvalues,
                            imgarr_ptr,
                            chan_D,
                            chan_pD ]( std::vector<float> &vals, 
                                       vec3<double> pos ) -> float {
                 vals.erase(vals.begin()); // Remove the base image's value.
-                if(vals.size() != bvalues.size()){
+                if(vals.size() != N_bvalues){
                     throw std::runtime_error("Unmatched voxel and b-value vectors. Refusing to continue.");
                 }
                 int numIterations = 600;
@@ -445,6 +479,164 @@ bool ModelIVIM(Drover &DICOM_data,
             };
 #endif //DCMA_USE_EIGEN
 
+        }else if(std::regex_match(ModelStr, model_biexp_simple)){
+            // Set outgoing channels accordingly.
+            const int64_t N_channels = 5; // f, D, pseudoD, stage 1 goodness-of-fit, stage2 goodness-of-fit.
+            auto imgarr_ptr = &((*iap_it)->imagecoll);
+            for(auto &img : imgarr_ptr->images){
+                set_channels(img, N_channels);
+            }
+            const int64_t chan_f   = 0;
+            const int64_t chan_D   = 1;
+            const int64_t chan_pD  = 2;
+            const int64_t chan_s1c = 3;
+            const int64_t chan_s2c = 4;
+
+            ud.description = "f, D, pseudo-D (Bi-exponential segmented fit - simple)";
+            ud.f_reduce = [bvalues,
+                           bvalue_min_i,
+                           bvalue_max_i,
+                           N_bvalues,
+                           BValueThreshold,
+                           imgarr_ptr,
+                           chan_D,
+                           chan_pD,
+                           chan_s1c,
+                           chan_s2c,
+                           nan ]( std::vector<float> &vals, 
+                                  vec3<double> pos ) -> float {
+                vals.erase(vals.begin()); // Remove the base image's value.
+                if(vals.size() != N_bvalues){
+                    throw std::runtime_error("Unmatched voxel and b-value vectors. Refusing to continue.");
+                }
+                if(vals.empty()){
+                    throw std::runtime_error("No overlapping images detected. Unable to continue.");
+                }
+
+                // The bi-exponential model is:
+                //
+                //    S(b) = S0 * [ f * exp(-b * Dp) + (1 - f) * exp(-b * D) ]
+                //
+                // where
+                //
+                //    - D is the diffusion coefficient,
+                //    - Dp is the pseduo-diffusion coefficient, which describes vascular perfusion, and
+                //    - f is the perfusion fraction.
+                //
+                // Assume D < Dp by at least an order of magnitude, and that there is a 'threshold' b-value above
+                // which the first term is suppressed. In that case, we can fit this simplified model for the 'upper'
+                // data only:
+                //
+                //    S(b) = S0' * exp(-b * D)   where S0' = S0 * (1 - f)
+                //
+                // which we can linearize as:
+                //
+                //    ln( S(b) ) = -D * b + ln( S0' )
+                //
+                // Then we can use all data for a second model fit, rearranging the ordinate as a mix of measurement
+                // and upper model predictions.
+                //
+                //    S(b) - S0' * exp(-b * D) = S0'' * exp(-b * Dp)   where S0'' = S0 * f
+                //
+                // which we can linearize as:
+                //
+                //    ln[ S(b) - S0' * exp(-b * D) ] = -Dp * b + ln( S0'' )
+                //
+                // After fitting this model, we have D and Dp estimates directly, and two indirect estimates for f
+                // via the amplitude. We can solve for f via
+                //
+                //    S0' / S0'' = (1 - f) / f = (1 / f) - 1
+                //
+                // or, rearranging:
+                //
+                //    f = S0'' / (S0' + S0'') 
+                //      = exp(ln(S0'')) / (exp(ln(S0')) + exp(ln(S0'')))
+                //
+                // written suggestively since we have fitted estimates of ln(S0') and ln(S0'').
+
+                // Stage 1.
+                samples_1D<double> shtl;
+                const bool inhibit_sort = true;
+                for(size_t i = 0; i < N_bvalues; ++i){
+                    const auto S = vals.at(i);
+                    const auto b = bvalues.at(i);
+                    const auto y = (0.0 < S) ? std::log(S) : nan;
+
+                    if( (BValueThreshold < b)
+                    &&  std::isfinite(y) ){
+                        shtl.push_back( b, 0.0, y, 0.0, inhibit_sort );
+                    }
+                }
+                shtl.stable_sort();
+                if(shtl.size() < 2UL){
+                    return nan;
+                }
+
+                bool OK = false;
+                const bool skip_extras = false;
+                const lin_reg_results<double> stage1 = shtl.Linear_Least_Squares_Regression(&OK, skip_extras);
+                if(!OK){
+                    return nan;
+                }
+                const auto D = stage1.slope * -1.0;
+                const auto lnS0p = stage1.intercept;
+                const auto S0p = std::exp(lnS0p);
+
+                // Stage 2.
+                shtl.samples.clear();
+                for(size_t i = 0; i < N_bvalues; ++i){
+                    const auto S = vals.at(i);
+                    const auto b = bvalues.at(i);
+                    const auto t = S - S0p * std::exp(-b*D);
+                    const auto y = (0.0 < t) ? std::log(t) : nan;
+
+                    if( std::isfinite(y) ){
+                        shtl.push_back( b, 0.0, y, 0.0, inhibit_sort );
+                    }
+                }
+                shtl.stable_sort();
+                if(shtl.size() < 2UL){
+                    return nan;
+                }
+                
+                OK = false;
+                const lin_reg_results<double> stage2 = shtl.Linear_Least_Squares_Regression(&OK, skip_extras);
+                if(!OK){
+                    return nan;
+                }
+                const auto pseudoD = stage2.slope * -1.0;
+                const auto lnS0pp = stage2.intercept;
+                const auto S0pp = std::exp(lnS0pp);
+
+                if( !std::isfinite(S0p)
+                ||  !std::isfinite(S0pp) ){
+                    return nan;
+                }
+                const auto f = S0pp / (S0p + S0pp);
+
+                // The image/voxel iterator interface isn't capable of handling multiple-channel values,
+                // so we have to explicitly lookup the position and insert it directly.
+                const auto img_it_l = imgarr_ptr->get_images_which_encompass_point(pos);
+                if(img_it_l.size() != 1){
+                    throw std::logic_error("Unable to find singular overlapping image.");
+                }
+                const auto index_D   = img_it_l.front()->index(pos, chan_D);
+                const auto index_pD  = img_it_l.front()->index(pos, chan_pD);
+                const auto index_s1c = img_it_l.front()->index(pos, chan_s1c);
+                const auto index_s2c = img_it_l.front()->index(pos, chan_s2c);
+                if( (index_D   < 0)
+                ||  (index_pD  < 0)
+                ||  (index_s1c < 0)
+                ||  (index_s2c < 0) ){
+                    throw std::logic_error("Unable to locate voxel via position");
+                }
+                img_it_l.front()->reference(index_D)   = D;
+                img_it_l.front()->reference(index_pD)  = pseudoD;
+                img_it_l.front()->reference(index_s1c) = stage1.tvalue;
+                img_it_l.front()->reference(index_s2c) = stage2.tvalue;
+                return f;
+            };
+
         }else if(std::regex_match(ModelStr, model_biexp)){
             // Set outgoing channels accordingly.
             const int64_t N_channels = 6; // f, D, pseudoD, attempted iters, updates, fitted model cost.
@@ -463,6 +655,7 @@ bool ModelIVIM(Drover &DICOM_data,
             ud.f_reduce = [bvalues,
                            bvalue_min_i,
                            bvalue_max_i,
+                           N_bvalues,
                            imgarr_ptr,
                            chan_D,
                            chan_pD,
@@ -471,7 +664,7 @@ bool ModelIVIM(Drover &DICOM_data,
                            chan_c  ]( std::vector<float> &vals, 
                                       vec3<double> pos ) -> float {
                 vals.erase(vals.begin()); // Remove the base image's value.
-                if(vals.size() != bvalues.size()){
+                if(vals.size() != N_bvalues){
                     throw std::runtime_error("Unmatched voxel and b-value vectors. Refusing to continue.");
                 }
                 if(vals.empty()){
@@ -517,10 +710,14 @@ bool ModelIVIM(Drover &DICOM_data,
             }
 
             ud.description = "AUC";
-            ud.f_reduce = [bvalues, bvalues_order, bvalue_min_i, bvalue_max_i]( std::vector<float> &vals, 
-                                                                                vec3<double> ) -> float {
+            ud.f_reduce = [bvalues,
+                           bvalues_order,
+                           bvalue_min_i,
+                           bvalue_max_i,
+                           N_bvalues]( std::vector<float> &vals, 
+                                       vec3<double> ) -> float {
                 vals.erase(vals.begin()); // Remove the base image's value.
-                if(vals.size() != bvalues.size()){
+                if(vals.size() != N_bvalues){
                     throw std::runtime_error("Unmatched voxel and b-value vectors. Refusing to continue.");
                 }
                 if(vals.empty()){
