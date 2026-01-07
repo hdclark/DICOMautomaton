@@ -543,7 +543,7 @@ bool ModelIVIM(Drover &DICOM_data,
 
         }else if(std::regex_match(ModelStr, model_biexp)){
             // Set outgoing channels accordingly.
-            const int64_t N_channels = 6; // f, D, pseudoD, attempted iters, updates, fitted model cost.
+            const int64_t N_channels = 7; // f, D, pseudoD, attempted iters, updates, fitted model cost, voxel status.
             auto imgarr_ptr = &((*iap_it)->imagecoll);
             for(auto &img : imgarr_ptr->images){
                 set_channels(img, N_channels);
@@ -554,6 +554,7 @@ bool ModelIVIM(Drover &DICOM_data,
             const int64_t chan_is = 3;
             const int64_t chan_u  = 4;
             const int64_t chan_c  = 5;
+            const int64_t chan_s  = 6;
 
             ud.description = "f, D, pseudo-D (Bi-exponential segmented fit)";
             ud.f_reduce = [bvalues,
@@ -566,7 +567,8 @@ bool ModelIVIM(Drover &DICOM_data,
                            chan_pD,
                            chan_is,
                            chan_u,
-                           chan_c  ]( std::vector<float> &vals, 
+                           chan_c,
+                           chan_s  ]( std::vector<float> &vals, 
                                       vec3<double> pos ) -> float {
                 vals.erase(vals.begin()); // Remove the base image's value.
                 if(vals.size() != N_bvalues){
@@ -576,7 +578,7 @@ bool ModelIVIM(Drover &DICOM_data,
                     throw std::runtime_error("No overlapping images detected. Unable to continue.");
                 }
                 int numIterations = 1000;
-                const auto [f, D, pseudoD, num_iters, num_updates, cost] = GetBiExp(bvalues, vals, numIterations, BValueThreshold);
+                const auto [f, D, pseudoD, num_iters, num_updates, cost, voxel_status] = GetBiExp(bvalues, vals, numIterations, BValueThreshold);
                 if(!std::isfinite( f )) throw std::runtime_error("f is not finite");
 
                 // The image/voxel iterator interface isn't capable of handling multiple-channel values,
@@ -590,11 +592,13 @@ bool ModelIVIM(Drover &DICOM_data,
                 const auto index_is = img_it_l.front()->index(pos, chan_is);
                 const auto index_u  = img_it_l.front()->index(pos, chan_u);
                 const auto index_c  = img_it_l.front()->index(pos, chan_c);
+                const auto index_s  = img_it_l.front()->index(pos, chan_s);
                 if( (index_D < 0)
                 ||  (index_pD < 0)
                 ||  (index_is < 0)
                 ||  (index_u < 0)
-                ||  (index_c < 0) ){
+                ||  (index_c < 0)
+                ||  (index_s < 0) ){
                     throw std::logic_error("Unable to locate voxel via position");
                 }
                 img_it_l.front()->reference(index_D) = D;
@@ -602,8 +606,8 @@ bool ModelIVIM(Drover &DICOM_data,
                 img_it_l.front()->reference(index_is) = num_iters;
                 img_it_l.front()->reference(index_u) = num_updates;
                 img_it_l.front()->reference(index_c) = cost;
+                img_it_l.front()->reference(index_s) = voxel_status;
                 return f;
-                
             };
 
         }else if(std::regex_match(ModelStr, model_auc)){

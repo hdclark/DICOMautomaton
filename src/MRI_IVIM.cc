@@ -496,15 +496,18 @@ evaluate_biexp(double b,
     return S0 * ( f * std::exp(-b * pseudoD) + (1.0 - f) * std::exp(-b * D) );
 }
 
-std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
+std::array<double, 7> GetBiExp(const std::vector<float> &bvalues,
                                const std::vector<float> &vals,
                                int numIterations,
                                float b_value_threshold){
     
     const auto nan = std::numeric_limits<double>::quiet_NaN();
-    std::array<double, 6> default_out = {nan, nan, nan, nan, nan, nan};
+    std::array<double, 7> default_out = {nan, nan, nan, nan, nan, nan, nan};
+    constexpr auto index_vox_status = 6UL;
     const auto number_bVals = bvalues.size();
     
+    std::get<index_vox_status>(default_out) = 1001.0;
+
     // Find b=0 index
     int b0_index = 0;
     for(size_t i = 0UL; (i < number_bVals); ++i){
@@ -524,6 +527,7 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
     }
     
     if(bvaluesH.size() < 2UL){
+        std::get<index_vox_status>(default_out) = 1002.0;
         return default_out; // Insufficient high b-values
     }
     
@@ -534,6 +538,7 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
     if(!std::isfinite(D) || (D <= 0.0)){
         D = GetADCls(bvaluesH, signalsH);
         if(!std::isfinite(D) || (D <= 0.0)){
+            std::get<index_vox_status>(default_out) = 1003.0;
             return default_out;
         }
     }
@@ -543,6 +548,7 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
     for(size_t i = 0; i < number_bVals; ++i){
         const float norm_sig = vals[i] / vals[b0_index];
         if(!std::isfinite(norm_sig)){
+            std::get<index_vox_status>(default_out) = 1004.0;
             return default_out;
         }
         signals_normalized.push_back(norm_sig);
@@ -591,6 +597,7 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
     
     // Check initial cost
     if(!std::isfinite(cost)){
+        std::get<index_vox_status>(default_out) = 1005.0;
         return default_out;
     }
     
@@ -608,6 +615,7 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
             
             // Check for numerical issues
             if(!std::isfinite(exp_pseudo) || !std::isfinite(exp_diff)){
+                std::get<index_vox_status>(default_out) = 1006.0;
                 return default_out;
             }
             
@@ -627,6 +635,7 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
             if(successful_updates > 0){
                 break;
             }
+            std::get<index_vox_status>(default_out) = 1007.0;
             return default_out;
         }
 
@@ -640,6 +649,7 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
             if(successful_updates > 0){
                 break;
             }
+            std::get<index_vox_status>(default_out) = 1008.0;
             return default_out;
         }
         
@@ -650,6 +660,7 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
             if(successful_updates > 0){
                 break;
             }
+            std::get<index_vox_status>(default_out) = 1009.0;
             return default_out;
         }
         
@@ -686,6 +697,7 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
             double rel_change = std::abs(cost - new_cost) / (cost + 1e-12);
             if((rel_change < 1e-8) && (successful_updates >= 5)){
                 // Converged...
+                std::get<index_vox_status>(default_out) = 1010.0;
                 break;
             }
 
@@ -707,10 +719,11 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
     
     // Ensure finite results
     if(!std::isfinite(f) || !std::isfinite(D) || !std::isfinite(pseudoD)){
+        std::get<index_vox_status>(default_out) = 1011.0;
         return default_out;
     }
     
-    return {f, D, pseudoD, static_cast<double>(iters_attempted), static_cast<double>(successful_updates), cost};
+    return {f, D, pseudoD, static_cast<double>(iters_attempted), static_cast<double>(successful_updates), cost, 1012.0};
 }
 
 
@@ -1034,8 +1047,6 @@ TEST_CASE( "MRI_IVIM::GetBiExp_SegmentedOLS" ){
         REQUIRE(tc.b_vals.size() == tc.S_vals.size());
         REQUIRE(tc.b_vals.size() > 2UL);
 
-        //const int num_iters = 100;
-        //const auto out  = MRI_IVIM::GetBiExp(tc.b_vals, tc.S_vals, num_iters);
         const auto out  = MRI_IVIM::GetBiExp_SegmentedOLS(tc.b_vals, tc.S_vals, tc.bvalue_threshold);
         const auto m_f  = out.at(0);
         const auto m_D  = out.at(1);
@@ -1048,6 +1059,118 @@ TEST_CASE( "MRI_IVIM::GetBiExp_SegmentedOLS" ){
         //REQUIRE(tc.f  == doctest::Approx(m_f).epsilon(0.05));
         //REQUIRE(tc.D  == doctest::Approx(m_D).epsilon(0.05));
         //REQUIRE(tc.Dp == doctest::Approx(m_Dp).epsilon(0.05));
+    }
+}
+
+
+TEST_CASE( "MRI_IVIM::GetBiExp" ){
+    // Verify that the model can be recovered correctly under a variety of situations.
+    struct test_case {
+        int sample;
+        std::string name;
+        std::string desc;
+        std::string gen_f; // generating formula.
+
+        double S0; // Model parameters used to generate the S(b) curve data.
+        double f;
+        double D;
+        double Dp;
+
+        double bvalue_threshold;
+
+        double f_rtol;  // Relative tolerance recovering f, i.e., 0.01 = 1%.
+        double D_rtol;  // Relative tolerance recovering D, i.e., 0.01 = 1%.
+        double Dp_rtol; // Relative tolerance recovering Dp, i.e., 0.01 = 1%.
+
+        std::vector<float> b_vals;
+        std::vector<float> S_vals;
+    };
+
+
+    // Given a set of model parameters and b-values, generate synthetic voxel intensities.
+    const auto generate_Ss = []( const test_case &t ) -> std::vector<float> {
+        std::vector<float> S_vals;
+        S_vals = t.b_vals;
+        for(size_t i = 0UL; i < S_vals.size(); i++){
+            S_vals.at(i) = MRI_IVIM::evaluate_biexp( t.b_vals.at(i), t.S0, t.f, t.D, t.Dp );
+        }
+        return S_vals;
+    };
+
+    std::vector<test_case> tcs;
+
+    tcs.emplace_back();
+    tcs.back().sample = 1;
+    tcs.back().name   = "IVIM signal full";
+    tcs.back().desc   = "two-compartment model";
+    tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*Dp) + (1-f)*exp(-b*D) ]";
+    tcs.back().S0     = 1.0;   // arb units
+    tcs.back().f      = 0.3;   // arb units
+    tcs.back().D      = 0.001; // mm^2/s
+    tcs.back().Dp     = 0.01;  // mm^2/s
+    tcs.back().bvalue_threshold = 300.0;
+    tcs.back().f_rtol  = 0.30;
+    tcs.back().D_rtol  = 0.05;
+    tcs.back().Dp_rtol = 0.30;
+    tcs.back().b_vals = { 0,20,30,40,50,60,70,80,90,100,120,150,250,400,800,1000 };
+    tcs.back().S_vals = generate_Ss(tcs.back());
+
+
+
+    tcs.emplace_back();
+    tcs.back().sample = 5;
+    tcs.back().name   = "IVIM signal high";
+    tcs.back().desc   = "two-compartment model";
+    tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*Dp) + (1-f)*exp(-b*D) ]";
+    tcs.back().S0     = 1.0;   // arb units
+    tcs.back().f      = 0.3;   // arb units
+    tcs.back().D      = 0.001; // mm^2/s
+    tcs.back().Dp     = 0.01;  // mm^2/s
+    tcs.back().bvalue_threshold = 200.0;
+    tcs.back().f_rtol  = 0.55;
+    tcs.back().D_rtol  = 0.05;
+    tcs.back().Dp_rtol = 3.00;
+    tcs.back().b_vals = { 0,200,400,800 };
+    tcs.back().S_vals = generate_Ss(tcs.back());
+
+
+    tcs.emplace_back();
+    tcs.back().sample = 9;
+    tcs.back().name   = "IVIM signal whitepaper";
+    tcs.back().desc   = "two-compartment model";
+    tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*Dp) + (1-f)*exp(-b*D) ]";
+    tcs.back().S0     = 1.0;   // arb units
+    tcs.back().f      = 0.3;   // arb units
+    tcs.back().D      = 0.001; // mm^2/s
+    tcs.back().Dp     = 0.01;  // mm^2/s
+    tcs.back().bvalue_threshold = 250.0;
+    tcs.back().f_rtol  = 0.30;
+    tcs.back().D_rtol  = 0.05;
+    tcs.back().Dp_rtol = 3.00;
+    tcs.back().b_vals = { 0,30,70,100,200,400,800 };
+    tcs.back().S_vals = generate_Ss(tcs.back());
+
+
+    for(const auto &tc : tcs){
+        CAPTURE( tc.sample );
+        CAPTURE( tc.name );
+        CAPTURE( tc.desc );
+        CAPTURE( tc.f_rtol );
+        CAPTURE( tc.D_rtol );
+        CAPTURE( tc.Dp_rtol );
+
+        REQUIRE(tc.b_vals.size() == tc.S_vals.size());
+        REQUIRE(tc.b_vals.size() > 2UL);
+
+        const int num_iters = 100;
+        const auto out  = MRI_IVIM::GetBiExp(tc.b_vals, tc.S_vals, num_iters, tc.bvalue_threshold);
+        const auto m_f  = out.at(0);
+        const auto m_D  = out.at(1);
+        const auto m_Dp = out.at(2);
+
+        CHECK(tc.f  == doctest::Approx(m_f).scale(tc.f).epsilon(tc.f_rtol));
+        CHECK(tc.D  == doctest::Approx(m_D).scale(tc.D).epsilon(tc.D_rtol));
+        CHECK(tc.Dp == doctest::Approx(m_Dp).scale(tc.Dp).epsilon(tc.Dp_rtol));
     }
 }
 

@@ -32,7 +32,7 @@ namespace MRI_IVIM {
                    double D,
                    double pseudoD);
 
-    std::array<double, 6>
+    std::array<double, 7>
     GetBiExp(const std::vector<float> &bvalues,
              const std::vector<float> &vals,
              int numIterations = 500,
