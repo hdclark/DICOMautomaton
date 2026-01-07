@@ -18,6 +18,7 @@
 #include <cstdint>
 
 #include "YgorMisc.h"
+#include "YgorMath.h"
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
 
@@ -41,6 +42,7 @@
 using Eigen::MatrixXd;
 
 namespace MRI_IVIM {
+
 
 std::vector<double> GetHessianAndGradient(const std::vector<float> &bvalues, const std::vector<float> &vals, float f, double pseudoD, double D){
     //This function returns the hessian as the first 4 elements in the vector (4 matrix elements, goes across columns and then rows) and the last two elements are the gradient (derivative_f, derivative_pseudoD)
@@ -81,18 +83,6 @@ std::vector<double> GetHessianAndGradient(const std::vector<float> &bvalues, con
 
     return H;
 }
-
-std::vector<double> GetInverse(const std::vector<double> &matrix){
-    std::vector<double> inverse;
-    double determinant = 1 / (matrix.at(0)*matrix.at(3) - matrix.at(1)*matrix.at(2));
-
-    inverse.push_back(determinant * matrix.at(3));
-    inverse.push_back(- determinant * matrix.at(1));
-    inverse.push_back(- determinant * matrix.at(2));
-    inverse.push_back(determinant * matrix.at(0));
-    return inverse;
-}
-
 
 #ifdef DCMA_USE_EIGEN
 double GetKurtosisModel(float b, const std::vector<double> &params){
@@ -728,6 +718,119 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
     }
     
     return {f, D, pseudoD, static_cast<double>(iters_attempted), static_cast<double>(successful_updates), cost};
+}
+
+
+std::array<double, 5> GetBiExp_SegmentedOLS(const std::vector<float> &bvalues,
+                                            const std::vector<float> &vals,
+                                            float bvalue_threshold){
+    // The bi-exponential model is:
+    //
+    //    S(b) = S0 * [ f * exp(-b * Dp) + (1 - f) * exp(-b * D) ]
+    //
+    // where
+    //
+    //    - D is the diffusion coefficient,
+    //    - Dp is the pseduo-diffusion coefficient, which describes vascular perfusion, and
+    //    - f is the perfusion fraction.
+    //
+    // Assume D < Dp by at least an order of magnitude, and that there is a 'threshold' b-value above
+    // which the first term is suppressed. In that case, we can fit this simplified model for the 'upper'
+    // data only:
+    //
+    //    S(b) = S0' * exp(-b * D)   where S0' = S0 * (1 - f)
+    //
+    // which we can linearize as:
+    //
+    //    ln( S(b) ) = -D * b + ln( S0' )
+    //
+    // Then we can use all data for a second model fit, rearranging the ordinate as a mix of measurement
+    // and upper model predictions.
+    //
+    //    S(b) - S0' * exp(-b * D) = S0'' * exp(-b * Dp)   where S0'' = S0 * f
+    //
+    // which we can linearize as:
+    //
+    //    ln[ S(b) - S0' * exp(-b * D) ] = -Dp * b + ln( S0'' )
+    //
+    // After fitting this model, we have D and Dp estimates directly, and two indirect estimates for f
+    // via the amplitude. We can solve for f via
+    //
+    //    S0' / S0'' = (1 - f) / f = (1 / f) - 1
+    //
+    // or, rearranging:
+    //
+    //    f = S0'' / (S0' + S0'') 
+    //      = exp(ln(S0'')) / (exp(ln(S0')) + exp(ln(S0'')))
+    //
+    // written suggestively since we have fitted estimates of ln(S0') and ln(S0'').
+    const auto nan = std::numeric_limits<double>::quiet_NaN();
+    std::array<double, 5> default_out = {nan, nan, nan, nan, nan};
+    const auto N_bvalues = bvalues.size();
+
+    // Stage 1.
+    samples_1D<double> shtl;
+    const bool inhibit_sort = true;
+    for(size_t i = 0; i < N_bvalues; ++i){
+        const auto S = vals.at(i);
+        const auto b = bvalues.at(i);
+        const auto y = (0.0 < S) ? std::log(S) : nan;
+
+        if( (bvalue_threshold < b)
+        &&  std::isfinite(y) ){
+            shtl.push_back( b, 0.0, y, 0.0, inhibit_sort );
+        }
+    }
+    shtl.stable_sort();
+    if(shtl.size() < 2UL){
+        return default_out;
+    }
+
+    bool OK = false;
+    const bool skip_extras = false;
+    const lin_reg_results<double> stage1 = shtl.Linear_Least_Squares_Regression(&OK, skip_extras);
+    if(!OK){
+        return default_out;
+    }
+    const auto D = stage1.slope * -1.0;
+    const auto lnS0p = stage1.intercept;
+    const auto S0p = std::exp(lnS0p);
+
+    // Stage 2.
+    shtl.samples.clear();
+    for(size_t i = 0; i < N_bvalues; ++i){
+        const auto S = vals.at(i);
+        const auto b = bvalues.at(i);
+        const auto t = S - S0p * std::exp(-b*D);
+        const auto y = (0.0 < t) ? std::log(t) : nan;
+
+        if( std::isfinite(y) ){
+            shtl.push_back( b, 0.0, y, 0.0, inhibit_sort );
+        }
+    }
+    shtl.stable_sort();
+    if(shtl.size() < 2UL){
+        return default_out;
+    }
+    
+    OK = false;
+    const lin_reg_results<double> stage2 = shtl.Linear_Least_Squares_Regression(&OK, skip_extras);
+    if(!OK){
+        return default_out;
+    }
+    const auto pseudoD = stage2.slope * -1.0;
+    const auto lnS0pp = stage2.intercept;
+    const auto S0pp = std::exp(lnS0pp);
+
+    if( !std::isfinite(S0p)
+    ||  !std::isfinite(S0pp) ){
+        return default_out;
+    }
+    const auto f = S0pp / (S0p + S0pp);
+    const auto stage1_gof = stage1.pvalue;
+    const auto stage2_gof = stage2.pvalue;
+
+    return {f, D, pseudoD, stage1_gof, stage2_gof};
 }
 
 } // namespace MRI_IVIM

@@ -151,10 +151,12 @@ OperationDoc OpArgDocModelIVIM(){
                            " biexponential model, which estimates the pseudodiffusion fraction, the diffusion"
                            " coefficient, and the pseudodiffusion coefficient for each voxel."
                            "\n\n"
-                           "The 'biexp-simple' model uses a segmented fitting approach with linearized data to perform"
-                           " ordinary least-squares fitting of a biexponential equation."
+                           "The 'biexp-ols' model uses a segmented fitting approach with linearized data to perform"
+                           " ordinary least-squares fitting of"
+                           " $S(b) = S0 * \\left\\[ f * exp(-b * Dp) + (1 - f) * exp(-b * D)\\right\\].$"
                            " This model estimates the pseudodiffusion fraction, the diffusion"
                            " coefficient, and the pseudodiffusion coefficient for each voxel."
+                           " A goodness of fit estimate of the two stages for each voxel is also generated."
 #ifdef DCMA_USE_EIGEN
                            "\n\n"
                            "The 'kurtosis' model returns three parameters corresponding to a biexponential diffusion"
@@ -169,7 +171,7 @@ OperationDoc OpArgDocModelIVIM(){
                                  "adc-ls",
                                  "auc-simple",
                                  "biexp",
-                                 "biexp-simple",
+                                 "biexp-ols",
 #ifdef DCMA_USE_EIGEN
                                  "kurtosis",
 #endif //DCMA_USE_EIGEN
@@ -276,7 +278,7 @@ bool ModelIVIM(Drover &DICOM_data,
     const auto model_adc_simple = Compile_Regex("^adc?[-_]?si?m?p?l?e?$");
     const auto model_adc_ls = Compile_Regex("^adc?[-_]?ls?$");
     const auto model_biexp = Compile_Regex("^bi[-_]?e?x?p?o?n?e?n?t?i?a?l?$");
-    const auto model_biexp_simple = Compile_Regex("^bi[-_]?e?x?p?o?n?e?n?t?i?a?l?[-_]?si?m?p?l?e?$");
+    const auto model_biexp_ols = Compile_Regex("^bi[-_]?e?x?p?o?n?e?n?t?i?a?l?[-_]?ols$");
     const auto model_kurtosis = Compile_Regex("^ku?r?t?o?s?i?s?");
     const auto model_auc = Compile_Regex("^auc?[-_]?si?m?p?l?e?$");
 
@@ -479,7 +481,7 @@ bool ModelIVIM(Drover &DICOM_data,
             };
 #endif //DCMA_USE_EIGEN
 
-        }else if(std::regex_match(ModelStr, model_biexp_simple)){
+        }else if(std::regex_match(ModelStr, model_biexp_ols)){
             // Set outgoing channels accordingly.
             const int64_t N_channels = 5; // f, D, pseudoD, stage 1 goodness-of-fit, stage2 goodness-of-fit.
             auto imgarr_ptr = &((*iap_it)->imagecoll);
@@ -492,7 +494,7 @@ bool ModelIVIM(Drover &DICOM_data,
             const int64_t chan_s1c = 3;
             const int64_t chan_s2c = 4;
 
-            ud.description = "f, D, pseudo-D (Bi-exponential segmented fit - simple)";
+            ud.description = "f, D, pseudo-D (Bi-exponential segmented OLS)";
             ud.f_reduce = [bvalues,
                            bvalue_min_i,
                            bvalue_max_i,
@@ -513,106 +515,8 @@ bool ModelIVIM(Drover &DICOM_data,
                     throw std::runtime_error("No overlapping images detected. Unable to continue.");
                 }
 
-                // The bi-exponential model is:
-                //
-                //    S(b) = S0 * [ f * exp(-b * Dp) + (1 - f) * exp(-b * D) ]
-                //
-                // where
-                //
-                //    - D is the diffusion coefficient,
-                //    - Dp is the pseduo-diffusion coefficient, which describes vascular perfusion, and
-                //    - f is the perfusion fraction.
-                //
-                // Assume D < Dp by at least an order of magnitude, and that there is a 'threshold' b-value above
-                // which the first term is suppressed. In that case, we can fit this simplified model for the 'upper'
-                // data only:
-                //
-                //    S(b) = S0' * exp(-b * D)   where S0' = S0 * (1 - f)
-                //
-                // which we can linearize as:
-                //
-                //    ln( S(b) ) = -D * b + ln( S0' )
-                //
-                // Then we can use all data for a second model fit, rearranging the ordinate as a mix of measurement
-                // and upper model predictions.
-                //
-                //    S(b) - S0' * exp(-b * D) = S0'' * exp(-b * Dp)   where S0'' = S0 * f
-                //
-                // which we can linearize as:
-                //
-                //    ln[ S(b) - S0' * exp(-b * D) ] = -Dp * b + ln( S0'' )
-                //
-                // After fitting this model, we have D and Dp estimates directly, and two indirect estimates for f
-                // via the amplitude. We can solve for f via
-                //
-                //    S0' / S0'' = (1 - f) / f = (1 / f) - 1
-                //
-                // or, rearranging:
-                //
-                //    f = S0'' / (S0' + S0'') 
-                //      = exp(ln(S0'')) / (exp(ln(S0')) + exp(ln(S0'')))
-                //
-                // written suggestively since we have fitted estimates of ln(S0') and ln(S0'').
-
-                // Stage 1.
-                samples_1D<double> shtl;
-                const bool inhibit_sort = true;
-                for(size_t i = 0; i < N_bvalues; ++i){
-                    const auto S = vals.at(i);
-                    const auto b = bvalues.at(i);
-                    const auto y = (0.0 < S) ? std::log(S) : nan;
-
-                    if( (BValueThreshold < b)
-                    &&  std::isfinite(y) ){
-                        shtl.push_back( b, 0.0, y, 0.0, inhibit_sort );
-                    }
-                }
-                shtl.stable_sort();
-                if(shtl.size() < 2UL){
-                    return nan;
-                }
-
-                bool OK = false;
-                const bool skip_extras = false;
-                const lin_reg_results<double> stage1 = shtl.Linear_Least_Squares_Regression(&OK, skip_extras);
-                if(!OK){
-                    return nan;
-                }
-                const auto D = stage1.slope * -1.0;
-                const auto lnS0p = stage1.intercept;
-                const auto S0p = std::exp(lnS0p);
-
-                // Stage 2.
-                shtl.samples.clear();
-                for(size_t i = 0; i < N_bvalues; ++i){
-                    const auto S = vals.at(i);
-                    const auto b = bvalues.at(i);
-                    const auto t = S - S0p * std::exp(-b*D);
-                    const auto y = (0.0 < t) ? std::log(t) : nan;
-
-                    if( std::isfinite(y) ){
-                        shtl.push_back( b, 0.0, y, 0.0, inhibit_sort );
-                    }
-                }
-                shtl.stable_sort();
-                if(shtl.size() < 2UL){
-                    return nan;
-                }
-                
-                OK = false;
-                const lin_reg_results<double> stage2 = shtl.Linear_Least_Squares_Regression(&OK, skip_extras);
-                if(!OK){
-                    return nan;
-                }
-                const auto pseudoD = stage2.slope * -1.0;
-                const auto lnS0pp = stage2.intercept;
-                const auto S0pp = std::exp(lnS0pp);
-
-                if( !std::isfinite(S0p)
-                ||  !std::isfinite(S0pp) ){
-                    return nan;
-                }
-                const auto f = S0pp / (S0p + S0pp);
+                const auto [f, D, pseudoD, stage1_gof, stage2_gof] = GetBiExp_SegmentedOLS(bvalues, vals, BValueThreshold);
+                if(!std::isfinite( f )) throw std::runtime_error("f is not finite");
 
                 // The image/voxel iterator interface isn't capable of handling multiple-channel values,
                 // so we have to explicitly lookup the position and insert it directly.
@@ -632,8 +536,8 @@ bool ModelIVIM(Drover &DICOM_data,
                 }
                 img_it_l.front()->reference(index_D)   = D;
                 img_it_l.front()->reference(index_pD)  = pseudoD;
-                img_it_l.front()->reference(index_s1c) = stage1.pvalue;
-                img_it_l.front()->reference(index_s2c) = stage2.pvalue;
+                img_it_l.front()->reference(index_s1c) = stage1_gof;
+                img_it_l.front()->reference(index_s2c) = stage2_gof;
                 return f;
             };
 
@@ -655,6 +559,7 @@ bool ModelIVIM(Drover &DICOM_data,
             ud.f_reduce = [bvalues,
                            bvalue_min_i,
                            bvalue_max_i,
+                           BValueThreshold,
                            N_bvalues,
                            imgarr_ptr,
                            chan_D,
@@ -671,7 +576,7 @@ bool ModelIVIM(Drover &DICOM_data,
                     throw std::runtime_error("No overlapping images detected. Unable to continue.");
                 }
                 int numIterations = 1000;
-                const auto [f, D, pseudoD, num_iters, num_updates, cost] = GetBiExp(bvalues, vals, numIterations);
+                const auto [f, D, pseudoD, num_iters, num_updates, cost] = GetBiExp(bvalues, vals, numIterations, BValueThreshold);
                 if(!std::isfinite( f )) throw std::runtime_error("f is not finite");
 
                 // The image/voxel iterator interface isn't capable of handling multiple-channel values,
