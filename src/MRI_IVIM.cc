@@ -724,7 +724,7 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
             
             // Partial derivatives for CORRECT model:
             // S = f*exp(-b*D*) + (1-f)*exp(-b*D)
-            J(i,0) = -exp_pseudo + exp_diff;  // ∂S/∂f
+            J(i,0) = exp_pseudo - exp_diff;  // ∂S/∂f
             J(i,1) = -b * f * exp_pseudo;     // ∂S/∂D*
         }
         
