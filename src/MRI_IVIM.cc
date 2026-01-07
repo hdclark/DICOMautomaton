@@ -67,7 +67,7 @@ std::vector<double> GetHessianAndGradient(const std::vector<float> &bvalues, con
         derivative_pseudoD += 2.0 * ( signal - F*expon - (1.0-F)*c ) * (b*F*expon);
 
         derivative_ff += 2.0 * std::pow((c - expon), 2.0);
-        derivative_pseudoD_pseudoD += 2.0 * (b*F*expon) - 2.0 * (signal - F*expon-(1.0-F)*c)*(b*b*F*expon);
+        derivative_pseudoD_pseudoD += 2.0 * std::pow(b*F*expon, 2.0) - 2.0 * (signal - F*expon-(1.0-F)*c)*(b*b*F*expon);
 
         derivative_fpseudoD += (2.0 * (c - expon)*b*F*expon) + (2.0 * (signal - F*expon - (1.0-F)*c) * b*expon );
         derivative_pseudoDf += (2.0 * (b*F*expon)*(-expon + c)) + (2.0*(signal - F*expon - (1.0-F)*c)*(b*expon));
@@ -251,7 +251,8 @@ void GetHessian(MatrixXd &hessian, const std::vector<float> &bvalues, const std:
 
     gradDiff -= temp;
     gradDiff /= 2.0 * delta;
-    
+
+    hessian(3,0) = gradDiff(0,0);
     hessian(3,1) = gradDiff(1,0);
     hessian(3,2) = gradDiff(2,0);
     hessian(3,3) = gradDiff(3,0);
@@ -298,7 +299,7 @@ std::array<double, 3> GetKurtosisParams(const std::vector<float> &bvalues, const
         }
     }
     for(size_t i = 0; i < number_bVals; ++i){
-        signals.push_back(vals.at(b0_index));
+        signals.push_back(vals.at(i) / vals.at(b0_index));  // Normalize each signal
     }
 
     double f = 0.1;
@@ -618,7 +619,7 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
     }
     
     // Additional safety check on D
-    if(D > 0.01 || D < 1e-5){
+    if(D > 0.005 || D < 1e-6){
         if(debug_this){
             YLOGINFO("  FAIL: D outside reasonable range: " << D);
         }
