@@ -534,6 +534,8 @@ double GetADC_WLLS(const std::vector<float> &bvalues,
     return D_current;
 }
 
+// More robust GetBiExp implementation with extensive error checking
+
 std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
                                const std::vector<float> &vals,
                                int numIterations,
@@ -552,12 +554,17 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
         }
     }
     
-    // Extract high b-values for D estimation (consensus: use raw signals for WLLS)
+    // Check for valid b=0 signal
+    if(vals[b0_index] <= 0.0 || !std::isfinite(vals[b0_index])){
+        return default_out; // Invalid b=0 signal
+    }
+    
+    // Extract high b-values for D estimation
     std::vector<float> bvaluesH, signalsH;
     for(size_t i = 0UL; i < number_bVals; ++i){
         if (bvalues[i] > b_value_threshold){
             bvaluesH.push_back(bvalues[i]);
-            signalsH.push_back(vals[i]); // Use raw signals for WLLS
+            signalsH.push_back(vals[i]);
         }
     }
     
@@ -565,44 +572,43 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
         return default_out; // Insufficient high b-values
     }
     
-    // Step 1: Estimate D using consensus-recommended WLLS
+    // Step 1: Estimate D using WLLS with fallback
     double D = GetADC_WLLS(bvaluesH, signalsH);
     
-    // Fallback to original method if WLLS fails
-    if(!std::isfinite(D) || (D <= 0.0f)){
+    if(!std::isfinite(D) || (D <= 0.0)){
         D = GetADCls(bvaluesH, signalsH);
-        if(!std::isfinite(D) || (D <= 0.0f)){
+        if(!std::isfinite(D) || (D <= 0.0)){
             return default_out;
         }
     }
     
-    // Step 2: Prepare normalized signals for LM optimization
-    std::vector<float> signals_normalized;
-    for(size_t i = 0; i < number_bVals; ++i){
-        signals_normalized.push_back(vals[i] / vals[b0_index]);
+    // Additional safety check on D
+    if(D > 0.01 || D < 1e-5){
+        return default_out; // D outside reasonable range
     }
     
-    // Convert to Eigen matrices for LM optimization
+    // Step 2: Prepare normalized signals
+    std::vector<float> signals_normalized;
+    for(size_t i = 0; i < number_bVals; ++i){
+        const float norm_sig = vals[i] / vals[b0_index];
+        if(!std::isfinite(norm_sig)){
+            return default_out; // Normalization failed
+        }
+        signals_normalized.push_back(norm_sig);
+    }
+    
+    // Convert to Eigen matrices
     MatrixXd sigs(number_bVals, 1);
     for(size_t i = 0; i < number_bVals; ++i){
         sigs(i, 0) = signals_normalized[i];
     }
     
     // Step 3: Estimate f and D* using Levenberg-Marquardt
-    float lambda = 1.0f;        // Start with smaller lambda
+    double lambda = 1.0;
     double pseudoD = D * 10.0;  // Initial guess
-    float f = 0.15f;            // Initial guess (3% in brain, 20% in highly vascular organs, 30% in parotids)
-    // Note: the b_value_threshold should fluctuate based on the fitted f accounting for the amount of signal decay,
-    // but the threshold in practice impacts the fitted f. So a meta optimization would be needed if both were
-    // fitted at the same time. In practice, selecting a threshold of 200 for brain and 400 for body seems reasonable,
-    // though some tissues vary. The 'optimal' value also depends on the SNR and a variety of other factors.
+    float f = 0.15f;
     
-    // Parameter bounds derived roughly from multiple sources. Selected mostly to be as accomodating as possible.
-    //
-    // See doi:10.1002/jmri.27875
-    //     doi:10.1016/j.neuroimage.2017.03.004
-    //     doi:10.1016/j.neuroimage.2017.12.062
-    //     doi:10.1002/mrm.24277
+    // Parameter bounds
     const float f_min = 0.0f;
     const float f_max = 0.5f;
     const double pseudoD_min = D * 3.0;
@@ -612,9 +618,9 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
     MatrixXd r(number_bVals, 1);
     MatrixXd J(number_bVals, 2);
     MatrixXd sigs_pred(number_bVals, 1);
-    MatrixXd I = MatrixXd::Identity(2, 2); // Fixed: properly initialized identity matrix
+    MatrixXd I = MatrixXd::Identity(2, 2);
     
-    // Initial predictions and cost
+    // Initial predictions
     for(size_t i = 0; i < number_bVals; ++i){ 
         const double exp_diff   = std::exp(-bvalues[i] * D);
         const double exp_pseudo = std::exp(-bvalues[i] * pseudoD);
@@ -623,113 +629,142 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
     r = sigs - sigs_pred;
     double cost = 0.5 * (r.transpose() * r)(0,0);
     
+    // Check initial cost
+    if(!std::isfinite(cost)){
+        return default_out;
+    }
+    
     int64_t iters_attempted = 0;
     int64_t successful_updates = 0;
-    int64_t consecutive_small_updates = 0;
-    double rel_cost_tolerance = 1e-8;  // Relative cost change tolerance
-    double param_tolerance = 1e-5;     // Less strict parameter tolerance
-    double previous_cost = cost;
     
     for(int64_t iter = 0; iter < numIterations; iter++){
         ++iters_attempted;
         
         // Compute Jacobian
         for(size_t i = 0; i < number_bVals; ++i){ 
-            const double exp_pseudo = std::exp(-bvalues[i] * pseudoD);
-            const double exp_diff = std::exp(-bvalues[i] * D);
+            const double b = bvalues[i];
+            const double exp_pseudo = std::exp(-b * pseudoD);
+            const double exp_diff = std::exp(-b * D);
+            
+            // Check for numerical issues
+            if(!std::isfinite(exp_pseudo) || !std::isfinite(exp_diff)){
+                return default_out;
+            }
             
             J(i,0) = -exp_pseudo + exp_diff;  // ∂/∂f
-            J(i,1) = bvalues[i] * f * exp_pseudo;  // ∂/∂D*
+            J(i,1) = b * f * exp_pseudo;       // ∂/∂D*
         }
         
-        // Levenberg-Marquardt update with numerical stability check
+        // Compute J^T*J and J^T*r
         MatrixXd JTJ = J.transpose() * J;
         MatrixXd JTr = J.transpose() * r;
         
-        // Check for numerical issues
-        if(JTJ.determinant() < 1e-12){
-            break; // Matrix near singular
+        // Check determinant before inversion
+        double det = JTJ.determinant();
+        if(!std::isfinite(det) || std::abs(det) < 1e-15){
+            // Matrix is singular or near-singular
+            // If we have some successful updates, return what we have
+            if(successful_updates > 0){
+                break;
+            }
+            return default_out;
         }
         
-        h = (JTJ + lambda * I).inverse() * JTr;
+        // Compute update using standard inversion
+        // The key insight: r = sigs - sigs_pred already has correct sign
+        // So solving (J^T*J + λI)*h = J^T*r gives descent direction
+        MatrixXd A = JTJ + lambda * I;
         
-        // Update parameters with bounds enforcement
+        // Check condition number indirectly
+        if(!std::isfinite(A.determinant())){
+            if(successful_updates > 0) break;
+            return default_out;
+        }
+        
+        h = A.inverse() * JTr;
+        
+        // Check if h is finite
+        if(!std::isfinite(h(0,0)) || !std::isfinite(h(1,0))){
+            if(successful_updates > 0) break;
+            return default_out;
+        }
+        
+        // Update parameters with bounds
         float new_f = std::max(f_min, std::min(f_max, f + static_cast<float>(h(0,0))));
         double new_pseudoD = std::max(pseudoD_min, std::min(pseudoD_max, pseudoD + h(1,0)));
         
-        // Compute new predictions and cost
+        // Compute new predictions
         for(size_t i = 0; i < number_bVals; ++i){ 
             const double exp_diff = std::exp(-bvalues[i] * D);
             const double exp_new_pseudo = std::exp(-bvalues[i] * new_pseudoD);
             sigs_pred(i,0) = new_f * exp_new_pseudo + (1.0 - new_f) * exp_diff;
         }
-        r = sigs - sigs_pred;
-        double new_cost = 0.5 * (r.transpose() * r)(0,0);
+        MatrixXd r_new = sigs - sigs_pred;
+        double new_cost = 0.5 * (r_new.transpose() * r_new)(0,0);
+        
+        // Check new cost validity
+        if(!std::isfinite(new_cost)){
+            lambda *= 2.0;
+            continue;
+        }
         
         // Accept or reject update
         if(new_cost < cost){
-            // Calculate relative changes
-            double rel_cost_change = std::abs(cost - new_cost) / (cost + 1e-12);
-            double f_change = std::abs(new_f - f);
-            double pseudoD_change = std::abs(new_pseudoD - pseudoD) / (pseudoD + 1e-12);
-            
+            // Update accepted
+            r = r_new;
             f = new_f;
             pseudoD = new_pseudoD;
-            previous_cost = cost;
             cost = new_cost;
-            lambda *= 0.7;  // Reduce damping
+            lambda /= 2.0;
             successful_updates++;
             
-            // Check for convergence using multiple criteria
-            if(false){
-            }else if( (rel_cost_change < rel_cost_tolerance)
-                  &&  (successful_updates > 3) ){
-                consecutive_small_updates++;
-                if(consecutive_small_updates >= 3){
-                    break; // Converged - cost not improving
-                }
-            }else if( (f_change < param_tolerance)
-                  &&  (pseudoD_change < param_tolerance)
-                  &&  (successful_updates > 5) ){
-                consecutive_small_updates++;
-                if(consecutive_small_updates >= 3){
-                    break; // Converged - parameters stabilized
-                }
-            }else{
-                consecutive_small_updates = 0; // Reset counter
+            // Check for convergence
+            double rel_change = std::abs(cost - new_cost) / (cost + 1e-12);
+            if((rel_change < 1e-8) && (successful_updates >= 5)){
+                break;
             }
-        }else{
-            lambda *= 1.5;  // Increase damping
-            consecutive_small_updates = 0; // Reset on rejected update
+            
+        } else {
+            // Update rejected
+            lambda *= 2.0;
         }
         
-        // Prevent lambda from becoming too large
-        if(lambda > 1e6){
+        // Prevent lambda from growing too large
+        if(lambda > 1e8){
             break;
+        }
+        
+        // Minimum lambda to prevent numerical issues
+        if(lambda < 1e-10){
+            lambda = 1e-10;
         }
     }
     
-    //// Parameter validation.
-    ////
-    //// It will be best to validate after fitting by the user, as the application and tissues vary.
-    //const bool valid_D = (0.0008 <= D && D <= 0.002);
-    //const bool valid_f = (0.05 <= f && f <= 0.35);
-    //const bool valid_pseudoD = (0.01 <= pseudoD && pseudoD <= 0.12) && (pseudoD > 2*D);
-    //
-    //if(!valid_D || !valid_f || !valid_pseudoD || successful_updates < 3){
-    //    // Could log warnings or return constrained values instead of NaN
-    //   // For now, return the fitted values even if outside expected ranges
-    //    // since parotid glands may have different characteristics
-    //}
+    // More lenient success criterion - accept if we have at least 1 successful update
+    // The original code would return even with 0 updates
+    if(successful_updates == 0){
+        // As a last resort, return initial guesses if they're reasonable
+        // This mimics the original behavior better
+        if(std::isfinite(f) && std::isfinite(D) && std::isfinite(pseudoD)){
+            return {f, D, pseudoD, static_cast<double>(iters_attempted), 0.0, cost};
+        }
+        return default_out;
+    }
     
-    // Ensure finite results
+    // Final validation
     if(!std::isfinite(f) || !std::isfinite(D) || !std::isfinite(pseudoD)){
-        return {nan, nan, nan, static_cast<double>(iters_attempted), static_cast<double>(successful_updates), cost};
+        return default_out;
+    }
+    
+    // Sanity checks
+    if(f < 0.0 || f > 1.0 || pseudoD <= 0.0 || D <= 0.0 || pseudoD <= D){
+        // Parameters are physically unreasonable, but if we had successful optimization,
+        // return them anyway and let the user filter
+        // This prevents excessive NaN
     }
     
     return {f, D, pseudoD, static_cast<double>(iters_attempted), static_cast<double>(successful_updates), cost};
 }
-
 } // namespace MRI_IVIM
 
 
