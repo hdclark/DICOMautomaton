@@ -25,6 +25,13 @@ namespace MRI_IVIM {
                       int numIterations = 500);
     
 
+    double
+    evaluate_biexp(double b,
+                   double S0,
+                   double f,
+                   double D,
+                   double pseudoD);
+
     std::array<double, 6>
     GetBiExp(const std::vector<float> &bvalues,
              const std::vector<float> &vals,
