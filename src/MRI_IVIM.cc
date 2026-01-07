@@ -534,7 +534,10 @@ double GetADC_WLLS(const std::vector<float> &bvalues,
     return D_current;
 }
 
-// More robust GetBiExp implementation with extensive error checking
+// GetBiExp with diagnostic output and robust error handling
+// IMPORTANT: This implements the CORRECT IVIM model:
+// S(b) = S0 * [f*exp(-b*D*) + (1-f)*exp(-b*D)]
+// NOT: S(b) = S0 * [f*exp(-b*(D+D*)) + (1-f)*exp(-b*D)]
 
 std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
                                const std::vector<float> &vals,
@@ -544,6 +547,21 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
     const auto nan = std::numeric_limits<double>::quiet_NaN();
     std::array<double, 6> default_out = {nan, nan, nan, nan, nan, nan};
     const auto number_bVals = bvalues.size();
+    
+    // Diagnostic counter (static persists across calls)
+    static std::atomic<int> voxel_count{0};
+    static std::atomic<int> success_count{0};
+    static std::atomic<int> fail_d_estimation{0};
+    static std::atomic<int> fail_normalization{0};
+    static std::atomic<int> fail_optimization{0};
+    
+    const int current_voxel = voxel_count.fetch_add(1);
+    const bool debug_this = (current_voxel < 10); // Debug first 10 voxels
+    
+    if(debug_this){
+        YLOGINFO("=== Voxel " << current_voxel << " ===");
+        YLOGINFO("  Number of b-values: " << number_bVals);
+    }
     
     // Find b=0 index
     int b0_index = 0;
@@ -556,7 +574,15 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
     
     // Check for valid b=0 signal
     if(vals[b0_index] <= 0.0 || !std::isfinite(vals[b0_index])){
-        return default_out; // Invalid b=0 signal
+        if(debug_this){
+            YLOGINFO("  FAIL: Invalid b=0 signal: " << vals[b0_index]);
+        }
+        fail_normalization.fetch_add(1);
+        return default_out;
+    }
+    
+    if(debug_this){
+        YLOGINFO("  b=0 signal: " << vals[b0_index]);
     }
     
     // Extract high b-values for D estimation
@@ -569,22 +595,45 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
     }
     
     if(bvaluesH.size() < 2UL){
-        return default_out; // Insufficient high b-values
+        if(debug_this){
+            YLOGINFO("  FAIL: Insufficient high b-values: " << bvaluesH.size());
+        }
+        fail_d_estimation.fetch_add(1);
+        return default_out;
+    }
+    
+    if(debug_this){
+        YLOGINFO("  High b-values (>" << b_value_threshold << "): " << bvaluesH.size());
     }
     
     // Step 1: Estimate D using WLLS with fallback
     double D = GetADC_WLLS(bvaluesH, signalsH);
     
     if(!std::isfinite(D) || (D <= 0.0)){
+        if(debug_this){
+            YLOGINFO("  WLLS failed, trying GetADCls. D from WLLS: " << D);
+        }
         D = GetADCls(bvaluesH, signalsH);
         if(!std::isfinite(D) || (D <= 0.0)){
+            if(debug_this){
+                YLOGINFO("  FAIL: Both D estimation methods failed. D: " << D);
+            }
+            fail_d_estimation.fetch_add(1);
             return default_out;
         }
     }
     
     // Additional safety check on D
     if(D > 0.01 || D < 1e-5){
-        return default_out; // D outside reasonable range
+        if(debug_this){
+            YLOGINFO("  FAIL: D outside reasonable range: " << D);
+        }
+        fail_d_estimation.fetch_add(1);
+        return default_out;
+    }
+    
+    if(debug_this){
+        YLOGINFO("  D estimated: " << D << " mm²/s");
     }
     
     // Step 2: Prepare normalized signals
@@ -592,7 +641,11 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
     for(size_t i = 0; i < number_bVals; ++i){
         const float norm_sig = vals[i] / vals[b0_index];
         if(!std::isfinite(norm_sig)){
-            return default_out; // Normalization failed
+            if(debug_this){
+                YLOGINFO("  FAIL: Normalization produced non-finite value at b=" << bvalues[i]);
+            }
+            fail_normalization.fetch_add(1);
+            return default_out;
         }
         signals_normalized.push_back(norm_sig);
     }
@@ -608,6 +661,11 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
     double pseudoD = D * 10.0;  // Initial guess
     float f = 0.15f;
     
+    if(debug_this){
+        YLOGINFO("  Initial: f=" << f << ", D*=" << pseudoD << " mm²/s");
+        YLOGINFO("  Using CORRECT IVIM model: S(b) = f*exp(-b*D*) + (1-f)*exp(-b*D)");
+    }
+    
     // Parameter bounds
     const float f_min = 0.0f;
     const float f_max = 0.5f;
@@ -620,10 +678,11 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
     MatrixXd sigs_pred(number_bVals, 1);
     MatrixXd I = MatrixXd::Identity(2, 2);
     
-    // Initial predictions
+    // Initial predictions using CORRECT formula
     for(size_t i = 0; i < number_bVals; ++i){ 
         const double exp_diff   = std::exp(-bvalues[i] * D);
         const double exp_pseudo = std::exp(-bvalues[i] * pseudoD);
+        // CORRECT: f*exp(-b*D*) + (1-f)*exp(-b*D)
         sigs_pred(i,0) = f * exp_pseudo + (1.0 - f) * exp_diff;
     }
     r = sigs - sigs_pred;
@@ -631,7 +690,15 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
     
     // Check initial cost
     if(!std::isfinite(cost)){
+        if(debug_this){
+            YLOGINFO("  FAIL: Initial cost is not finite: " << cost);
+        }
+        fail_optimization.fetch_add(1);
         return default_out;
+    }
+    
+    if(debug_this){
+        YLOGINFO("  Initial cost: " << cost);
     }
     
     int64_t iters_attempted = 0;
@@ -640,7 +707,7 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
     for(int64_t iter = 0; iter < numIterations; iter++){
         ++iters_attempted;
         
-        // Compute Jacobian
+        // Compute Jacobian for CORRECT model
         for(size_t i = 0; i < number_bVals; ++i){ 
             const double b = bvalues[i];
             const double exp_pseudo = std::exp(-b * pseudoD);
@@ -648,11 +715,17 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
             
             // Check for numerical issues
             if(!std::isfinite(exp_pseudo) || !std::isfinite(exp_diff)){
+                if(debug_this){
+                    YLOGINFO("  FAIL: Exponentials not finite at iter " << iter);
+                }
+                fail_optimization.fetch_add(1);
                 return default_out;
             }
             
-            J(i,0) = -exp_pseudo + exp_diff;  // ∂/∂f
-            J(i,1) = b * f * exp_pseudo;       // ∂/∂D*
+            // Partial derivatives for CORRECT model:
+            // S = f*exp(-b*D*) + (1-f)*exp(-b*D)
+            J(i,0) = -exp_pseudo + exp_diff;  // ∂S/∂f
+            J(i,1) = -b * f * exp_pseudo;     // ∂S/∂D*
         }
         
         // Compute J^T*J and J^T*r
@@ -662,22 +735,25 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
         // Check determinant before inversion
         double det = JTJ.determinant();
         if(!std::isfinite(det) || std::abs(det) < 1e-15){
-            // Matrix is singular or near-singular
-            // If we have some successful updates, return what we have
+            if(debug_this && iter < 5){
+                YLOGINFO("  Iter " << iter << ": Matrix singular, det=" << det);
+            }
             if(successful_updates > 0){
                 break;
             }
+            fail_optimization.fetch_add(1);
             return default_out;
         }
         
-        // Compute update using standard inversion
-        // The key insight: r = sigs - sigs_pred already has correct sign
-        // So solving (J^T*J + λI)*h = J^T*r gives descent direction
+        // Compute update
+        // Key: r = sigs - sigs_pred (positive means we need MORE signal)
+        // Gradient of cost w.r.t. params is -J^T*r (negative because we want to reduce residuals)
+        // So solving (J^T*J + λI)*h = J^T*r gives us the descent direction
         MatrixXd A = JTJ + lambda * I;
         
-        // Check condition number indirectly
         if(!std::isfinite(A.determinant())){
             if(successful_updates > 0) break;
+            fail_optimization.fetch_add(1);
             return default_out;
         }
         
@@ -685,7 +761,11 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
         
         // Check if h is finite
         if(!std::isfinite(h(0,0)) || !std::isfinite(h(1,0))){
+            if(debug_this && iter < 5){
+                YLOGINFO("  Iter " << iter << ": Update not finite");
+            }
             if(successful_updates > 0) break;
+            fail_optimization.fetch_add(1);
             return default_out;
         }
         
@@ -693,10 +773,11 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
         float new_f = std::max(f_min, std::min(f_max, f + static_cast<float>(h(0,0))));
         double new_pseudoD = std::max(pseudoD_min, std::min(pseudoD_max, pseudoD + h(1,0)));
         
-        // Compute new predictions
+        // Compute new predictions using CORRECT model
         for(size_t i = 0; i < number_bVals; ++i){ 
             const double exp_diff = std::exp(-bvalues[i] * D);
             const double exp_new_pseudo = std::exp(-bvalues[i] * new_pseudoD);
+            // CORRECT: f*exp(-b*D*) + (1-f)*exp(-b*D)
             sigs_pred(i,0) = new_f * exp_new_pseudo + (1.0 - new_f) * exp_diff;
         }
         MatrixXd r_new = sigs - sigs_pred;
@@ -706,6 +787,13 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
         if(!std::isfinite(new_cost)){
             lambda *= 2.0;
             continue;
+        }
+        
+        // Debug output for first few iterations
+        if(debug_this && iter < 5){
+            YLOGINFO("  Iter " << iter << ": f=" << f << " D*=" << pseudoD 
+                     << " cost=" << cost << " new_cost=" << new_cost 
+                     << " lambda=" << lambda << " det=" << det);
         }
         
         // Accept or reject update
@@ -718,19 +806,33 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
             lambda /= 2.0;
             successful_updates++;
             
+            if(debug_this && iter < 10){
+                YLOGINFO("  Iter " << iter << ": ACCEPTED. New f=" << f << ", D*=" << pseudoD);
+            }
+            
             // Check for convergence
             double rel_change = std::abs(cost - new_cost) / (cost + 1e-12);
             if((rel_change < 1e-8) && (successful_updates >= 5)){
+                if(debug_this){
+                    YLOGINFO("  Converged at iter " << iter);
+                }
                 break;
             }
             
         } else {
             // Update rejected
             lambda *= 2.0;
+            
+            if(debug_this && iter < 5){
+                YLOGINFO("  Iter " << iter << ": REJECTED. Lambda increased to " << lambda);
+            }
         }
         
         // Prevent lambda from growing too large
         if(lambda > 1e8){
+            if(debug_this){
+                YLOGINFO("  Lambda too large, stopping at iter " << iter);
+            }
             break;
         }
         
@@ -740,27 +842,37 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
         }
     }
     
-    // More lenient success criterion - accept if we have at least 1 successful update
-    // The original code would return even with 0 updates
+    if(debug_this){
+        YLOGINFO("  Optimization complete: " << successful_updates << " successful updates out of " << iters_attempted);
+        YLOGINFO("  Final: f=" << f << ", D=" << D << ", D*=" << pseudoD << ", cost=" << cost);
+    }
+    
+    // Accept results even with 0 successful updates if parameters are reasonable
+    // (This matches original behavior better)
     if(successful_updates == 0){
-        // As a last resort, return initial guesses if they're reasonable
-        // This mimics the original behavior better
-        if(std::isfinite(f) && std::isfinite(D) && std::isfinite(pseudoD)){
-            return {f, D, pseudoD, static_cast<double>(iters_attempted), 0.0, cost};
+        if(debug_this){
+            YLOGINFO("  WARNING: No successful updates, returning initial guesses");
         }
-        return default_out;
     }
     
     // Final validation
     if(!std::isfinite(f) || !std::isfinite(D) || !std::isfinite(pseudoD)){
+        if(debug_this){
+            YLOGINFO("  FAIL: Final parameters not finite");
+        }
+        fail_optimization.fetch_add(1);
         return default_out;
     }
     
-    // Sanity checks
-    if(f < 0.0 || f > 1.0 || pseudoD <= 0.0 || D <= 0.0 || pseudoD <= D){
-        // Parameters are physically unreasonable, but if we had successful optimization,
-        // return them anyway and let the user filter
-        // This prevents excessive NaN
+    success_count.fetch_add(1);
+    
+    // Print summary periodically
+    if(current_voxel > 0 && current_voxel % 100 == 0){
+        YLOGINFO("Progress: " << current_voxel << " voxels processed. "
+                 << "Success: " << success_count.load() << ", "
+                 << "Fail D: " << fail_d_estimation.load() << ", "
+                 << "Fail norm: " << fail_normalization.load() << ", "
+                 << "Fail opt: " << fail_optimization.load());
     }
     
     return {f, D, pseudoD, static_cast<double>(iters_attempted), static_cast<double>(successful_updates), cost};
