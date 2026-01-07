@@ -14,34 +14,27 @@
 
 namespace MRI_IVIM {
 
-    double GetADCls(const std::vector<float> &bvalues,
-                    const std::vector<float> &vals);
+    double
+    GetADCls(const std::vector<float> &bvalues,
+             const std::vector<float> &vals);
     
-    double GetKurtosisModel(float b,
-                            const std::vector<double> &params);
+
+    std::array<double, 3>
+    GetKurtosisParams(const std::vector<float> &bvalues,
+                      const std::vector<float> &vals,
+                      int numIterations = 500);
     
-    double GetKurtosisTheta(const std::vector<float> &bvalues,
-                            const std::vector<float> &signals,
-                            const std::vector<double> &params,
-                            const std::vector<double> &priors);
+
+    std::array<double, 6>
+    GetBiExp(const std::vector<float> &bvalues,
+             const std::vector<float> &vals,
+             int numIterations = 500,
+             float b_value_threshold = 200.0f);
     
-    std::vector<double> GetKurtosisPriors(const std::vector<double> &params);
-    
-    std::array<double, 3> GetKurtosisParams(const std::vector<float> &bvalues,
-                                            const std::vector<float> &vals,
-                                            int numIterations = 500);
-    
-    std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
-                                   const std::vector<float> &vals,
-                                   int numIterations = 500,
-                                   float b_value_threshold = 200.0f);
-    
-    std::vector<double> GetHessianAndGradient(const std::vector<float> &bvalues,
-                                              const std::vector<float> &vals,
-                                              float f,
-                                              double pseudoD,
-                                              double D);
-    
-    std::vector<double> GetInverse(const std::vector<double> &matrix);
+
+    std::array<double, 5>
+    GetBiExp_SegmentedOLS(const std::vector<float> &bvalues,
+                          const std::vector<float> &vals,
+                          float bvalue_threshold = 200.0f);
 
 } // namespace MRI_IVIM
