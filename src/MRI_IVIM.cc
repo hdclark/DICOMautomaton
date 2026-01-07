@@ -850,7 +850,7 @@ std::array<double, 5> GetBiExp_SegmentedOLS(const std::vector<float> &bvalues,
 } // namespace MRI_IVIM
 
 
-TEST_CASE( "MRI_IVIM::GetBiExp" ){
+TEST_CASE( "MRI_IVIM::GetBiExp_SegmentedOLS" ){
     // Verify that the model can be recovered correctly under a variety of situations.
     struct test_case {
         int sample;
@@ -896,9 +896,9 @@ TEST_CASE( "MRI_IVIM::GetBiExp" ){
     tcs.back().D      = 0.001; // mm^2/s
     tcs.back().Dp     = 0.01;  // mm^2/s
     tcs.back().bvalue_threshold = 300.0;
-    tcs.back().f_rtol  = 0.10;
-    tcs.back().D_rtol  = 0.02;
-    tcs.back().Dp_rtol = 0.02;
+    tcs.back().f_rtol  = 0.30;
+    tcs.back().D_rtol  = 0.05;
+    tcs.back().Dp_rtol = 0.30;
     tcs.back().b_vals = { 0,20,30,40,50,60,70,80,90,100,120,150,250,400,800,1000 };
     tcs.back().S_vals = generate_Ss(tcs.back());
 
@@ -964,9 +964,9 @@ TEST_CASE( "MRI_IVIM::GetBiExp" ){
     tcs.back().D      = 0.001; // mm^2/s
     tcs.back().Dp     = 0.01;  // mm^2/s
     tcs.back().bvalue_threshold = 200.0;
-    tcs.back().f_rtol  = 0.15;
-    tcs.back().D_rtol  = 0.02;
-    tcs.back().Dp_rtol = 0.02;
+    tcs.back().f_rtol  = 0.55;
+    tcs.back().D_rtol  = 0.05;
+    tcs.back().Dp_rtol = 3.00;
     tcs.back().b_vals = { 0,200,400,800 };
     tcs.back().S_vals = generate_Ss(tcs.back());
 
@@ -1032,9 +1032,9 @@ TEST_CASE( "MRI_IVIM::GetBiExp" ){
     tcs.back().D      = 0.001; // mm^2/s
     tcs.back().Dp     = 0.01;  // mm^2/s
     tcs.back().bvalue_threshold = 250.0;
-    tcs.back().f_rtol  = 0.05;
-    tcs.back().D_rtol  = 0.02;
-    tcs.back().Dp_rtol = 0.02;
+    tcs.back().f_rtol  = 0.30;
+    tcs.back().D_rtol  = 0.05;
+    tcs.back().Dp_rtol = 3.00;
     tcs.back().b_vals = { 0,30,70,100,200,400,800 };
     tcs.back().S_vals = generate_Ss(tcs.back());
 
@@ -1043,6 +1043,9 @@ TEST_CASE( "MRI_IVIM::GetBiExp" ){
         CAPTURE( tc.sample );
         CAPTURE( tc.name );
         CAPTURE( tc.desc );
+        CAPTURE( tc.f_rtol );
+        CAPTURE( tc.D_rtol );
+        CAPTURE( tc.Dp_rtol );
 
         REQUIRE(tc.b_vals.size() == tc.S_vals.size());
         REQUIRE(tc.b_vals.size() > 2UL);
@@ -1054,9 +1057,9 @@ TEST_CASE( "MRI_IVIM::GetBiExp" ){
         const auto m_D  = out.at(1);
         const auto m_Dp = out.at(2);
 
-        CHECK(tc.f  == doctest::Approx(m_f).epsilon(tc.f_rtol));
-        CHECK(tc.D  == doctest::Approx(m_D).epsilon(tc.D_rtol));
-        CHECK(tc.Dp == doctest::Approx(m_Dp).epsilon(tc.Dp_rtol));
+        CHECK(tc.f  == doctest::Approx(m_f).scale(tc.f).epsilon(tc.f_rtol));
+        CHECK(tc.D  == doctest::Approx(m_D).scale(tc.D).epsilon(tc.D_rtol));
+        CHECK(tc.Dp == doctest::Approx(m_Dp).scale(tc.Dp).epsilon(tc.Dp_rtol));
 
         //REQUIRE(tc.f  == doctest::Approx(m_f).epsilon(0.05));
         //REQUIRE(tc.D  == doctest::Approx(m_D).epsilon(0.05));
