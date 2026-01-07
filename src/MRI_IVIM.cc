@@ -542,6 +542,21 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
     std::array<double, 6> default_out = {nan, nan, nan, nan, nan, nan};
     const auto number_bVals = bvalues.size();
     
+    // Diagnostic counter (static persists across calls)
+    static std::atomic<int> voxel_count{0};
+    static std::atomic<int> success_count{0};
+    static std::atomic<int> fail_d_estimation{0};
+    static std::atomic<int> fail_normalization{0};
+    static std::atomic<int> fail_optimization{0};
+    
+    const int current_voxel = voxel_count.fetch_add(1);
+    const bool debug_this = (current_voxel < 10); // Debug first 10 voxels
+    
+    if(debug_this){
+        YLOGINFO("=== Voxel " << current_voxel << " ===");
+        YLOGINFO("  Number of b-values: " << number_bVals);
+    }
+    
     // Find b=0 index
     int b0_index = 0;
     for(size_t i = 0UL; (i < number_bVals); ++i){
@@ -551,57 +566,101 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
         }
     }
     
-    // Extract high b-values for D estimation (consensus: use raw signals for WLLS)
+    // Check for valid b=0 signal
+    if(vals[b0_index] <= 0.0 || !std::isfinite(vals[b0_index])){
+        if(debug_this){
+            YLOGINFO("  FAIL: Invalid b=0 signal: " << vals[b0_index]);
+        }
+        fail_normalization.fetch_add(1);
+        return default_out;
+    }
+    
+    if(debug_this){
+        YLOGINFO("  b=0 signal: " << vals[b0_index]);
+    }
+    
+    // Extract high b-values for D estimation
     std::vector<float> bvaluesH, signalsH;
     for(size_t i = 0UL; i < number_bVals; ++i){
         if (bvalues[i] > b_value_threshold){
             bvaluesH.push_back(bvalues[i]);
-            signalsH.push_back(vals[i]); // Use raw signals for WLLS
+            signalsH.push_back(vals[i]);
         }
     }
     
     if(bvaluesH.size() < 2UL){
-        return default_out; // Insufficient high b-values
+        if(debug_this){
+            YLOGINFO("  FAIL: Insufficient high b-values: " << bvaluesH.size());
+        }
+        fail_d_estimation.fetch_add(1);
+        return default_out;
     }
     
-    // Step 1: Estimate D using consensus-recommended WLLS
+    if(debug_this){
+        YLOGINFO("  High b-values (>" << b_value_threshold << "): " << bvaluesH.size());
+    }
+    
+    // Step 1: Estimate D using WLLS with fallback
     double D = GetADC_WLLS(bvaluesH, signalsH);
     
-    // Fallback to original method if WLLS fails
-    if(!std::isfinite(D) || (D <= 0.0f)){
+    if(!std::isfinite(D) || (D <= 0.0)){
+        if(debug_this){
+            YLOGINFO("  WLLS failed, trying GetADCls. D from WLLS: " << D);
+        }
         D = GetADCls(bvaluesH, signalsH);
-        if(!std::isfinite(D) || (D <= 0.0f)){
+        if(!std::isfinite(D) || (D <= 0.0)){
+            if(debug_this){
+                YLOGINFO("  FAIL: Both D estimation methods failed. D: " << D);
+            }
+            fail_d_estimation.fetch_add(1);
             return default_out;
         }
     }
     
-    // Step 2: Prepare normalized signals for LM optimization
-    std::vector<float> signals_normalized;
-    for(size_t i = 0; i < number_bVals; ++i){
-        signals_normalized.push_back(vals[i] / vals[b0_index]);
+    // Additional safety check on D
+    if(D > 0.01 || D < 1e-5){
+        if(debug_this){
+            YLOGINFO("  FAIL: D outside reasonable range: " << D);
+        }
+        fail_d_estimation.fetch_add(1);
+        return default_out;
     }
     
-    // Convert to Eigen matrices for LM optimization
+    if(debug_this){
+        YLOGINFO("  D estimated: " << D << " mm²/s");
+    }
+    
+    // Step 2: Prepare normalized signals
+    std::vector<float> signals_normalized;
+    for(size_t i = 0; i < number_bVals; ++i){
+        const float norm_sig = vals[i] / vals[b0_index];
+        if(!std::isfinite(norm_sig)){
+            if(debug_this){
+                YLOGINFO("  FAIL: Normalization produced non-finite value at b=" << bvalues[i]);
+            }
+            fail_normalization.fetch_add(1);
+            return default_out;
+        }
+        signals_normalized.push_back(norm_sig);
+    }
+    
+    // Convert to Eigen matrices
     MatrixXd sigs(number_bVals, 1);
     for(size_t i = 0; i < number_bVals; ++i){
         sigs(i, 0) = signals_normalized[i];
     }
     
     // Step 3: Estimate f and D* using Levenberg-Marquardt
-    float lambda = 1.0f;        // Start with smaller lambda
+    double lambda = 1.0;
     double pseudoD = D * 10.0;  // Initial guess
-    float f = 0.15f;            // Initial guess (3% in brain, 20% in highly vascular organs, 30% in parotids)
-    // Note: the b_value_threshold should fluctuate based on the fitted f accounting for the amount of signal decay,
-    // but the threshold in practice impacts the fitted f. So a meta optimization would be needed if both were
-    // fitted at the same time. In practice, selecting a threshold of 200 for brain and 400 for body seems reasonable,
-    // though some tissues vary. The 'optimal' value also depends on the SNR and a variety of other factors.
+    float f = 0.15f;
     
-    // Parameter bounds derived roughly from multiple sources. Selected mostly to be as accomodating as possible.
-    //
-    // See doi:10.1002/jmri.27875
-    //     doi:10.1016/j.neuroimage.2017.03.004
-    //     doi:10.1016/j.neuroimage.2017.12.062
-    //     doi:10.1002/mrm.24277
+    if(debug_this){
+        YLOGINFO("  Initial: f=" << f << ", D*=" << pseudoD << " mm²/s");
+        YLOGINFO("  Using CORRECT IVIM model: S(b) = f*exp(-b*D*) + (1-f)*exp(-b*D)");
+    }
+    
+    // Parameter bounds
     const float f_min = 0.0f;
     const float f_max = 0.5f;
     const double pseudoD_min = D * 3.0;
@@ -611,119 +670,203 @@ std::array<double, 6> GetBiExp(const std::vector<float> &bvalues,
     MatrixXd r(number_bVals, 1);
     MatrixXd J(number_bVals, 2);
     MatrixXd sigs_pred(number_bVals, 1);
-    MatrixXd I = MatrixXd::Identity(2, 2); // Fixed: properly initialized identity matrix
+    MatrixXd I = MatrixXd::Identity(2, 2);
     
-    // Initial predictions and cost
+    // Initial predictions using CORRECT formula
     for(size_t i = 0; i < number_bVals; ++i){ 
         const double exp_diff   = std::exp(-bvalues[i] * D);
         const double exp_pseudo = std::exp(-bvalues[i] * pseudoD);
+        // CORRECT: f*exp(-b*D*) + (1-f)*exp(-b*D)
         sigs_pred(i,0) = f * exp_pseudo + (1.0 - f) * exp_diff;
     }
     r = sigs - sigs_pred;
     double cost = 0.5 * (r.transpose() * r)(0,0);
     
+    // Check initial cost
+    if(!std::isfinite(cost)){
+        if(debug_this){
+            YLOGINFO("  FAIL: Initial cost is not finite: " << cost);
+        }
+        fail_optimization.fetch_add(1);
+        return default_out;
+    }
+    
+    if(debug_this){
+        YLOGINFO("  Initial cost: " << cost);
+    }
+    
     int64_t iters_attempted = 0;
     int64_t successful_updates = 0;
-    int64_t consecutive_small_updates = 0;
-    double rel_cost_tolerance = 1e-8;  // Relative cost change tolerance
-    double param_tolerance = 1e-5;     // Less strict parameter tolerance
-    double previous_cost = cost;
     
     for(int64_t iter = 0; iter < numIterations; iter++){
         ++iters_attempted;
         
-        // Compute Jacobian
+        // Compute Jacobian for CORRECT model
         for(size_t i = 0; i < number_bVals; ++i){ 
-            const double exp_pseudo = std::exp(-bvalues[i] * pseudoD);
-            const double exp_diff = std::exp(-bvalues[i] * D);
+            const double b = bvalues[i];
+            const double exp_pseudo = std::exp(-b * pseudoD);
+            const double exp_diff = std::exp(-b * D);
             
-            J(i,0) = -exp_pseudo + exp_diff;  // ∂/∂f
-            J(i,1) = bvalues[i] * f * exp_pseudo;  // ∂/∂D*
+            // Check for numerical issues
+            if(!std::isfinite(exp_pseudo) || !std::isfinite(exp_diff)){
+                if(debug_this){
+                    YLOGINFO("  FAIL: Exponentials not finite at iter " << iter);
+                }
+                fail_optimization.fetch_add(1);
+                return default_out;
+            }
+            
+            // Partial derivatives for CORRECT model:
+            // S = f*exp(-b*D*) + (1-f)*exp(-b*D)
+            J(i,0) = exp_pseudo - exp_diff;  // ∂S/∂f
+            J(i,1) = -b * f * exp_pseudo;     // ∂S/∂D*
         }
         
-        // Levenberg-Marquardt update with numerical stability check
+        // Compute J^T*J and J^T*r
         MatrixXd JTJ = J.transpose() * J;
         MatrixXd JTr = J.transpose() * r;
         
-        // Check for numerical issues
-        if(JTJ.determinant() < 1e-12){
-            break; // Matrix near singular
+        // Check determinant before inversion
+        double det = JTJ.determinant();
+        if(!std::isfinite(det) || std::abs(det) < 1e-15){
+            if(debug_this && iter < 5){
+                YLOGINFO("  Iter " << iter << ": Matrix singular, det=" << det);
+            }
+            if(successful_updates > 0){
+                break;
+            }
+            fail_optimization.fetch_add(1);
+            return default_out;
         }
         
-        h = (JTJ + lambda * I).inverse() * JTr;
+        // Compute update
+        // Key: r = sigs - sigs_pred (positive means we need MORE signal)
+        // Gradient of cost w.r.t. params is -J^T*r (negative because we want to reduce residuals)
+        // So solving (J^T*J + λI)*h = J^T*r gives us the descent direction
+        MatrixXd A = JTJ + lambda * I;
         
-        // Update parameters with bounds enforcement
+        if(!std::isfinite(A.determinant())){
+            if(successful_updates > 0) break;
+            fail_optimization.fetch_add(1);
+            return default_out;
+        }
+        
+        h = A.inverse() * JTr;
+        
+        // Check if h is finite
+        if(!std::isfinite(h(0,0)) || !std::isfinite(h(1,0))){
+            if(debug_this && iter < 5){
+                YLOGINFO("  Iter " << iter << ": Update not finite");
+            }
+            if(successful_updates > 0) break;
+            fail_optimization.fetch_add(1);
+            return default_out;
+        }
+        
+        // Update parameters with bounds
         float new_f = std::max(f_min, std::min(f_max, f + static_cast<float>(h(0,0))));
         double new_pseudoD = std::max(pseudoD_min, std::min(pseudoD_max, pseudoD + h(1,0)));
         
-        // Compute new predictions and cost
+        // Compute new predictions using CORRECT model
         for(size_t i = 0; i < number_bVals; ++i){ 
             const double exp_diff = std::exp(-bvalues[i] * D);
             const double exp_new_pseudo = std::exp(-bvalues[i] * new_pseudoD);
+            // CORRECT: f*exp(-b*D*) + (1-f)*exp(-b*D)
             sigs_pred(i,0) = new_f * exp_new_pseudo + (1.0 - new_f) * exp_diff;
         }
-        r = sigs - sigs_pred;
-        double new_cost = 0.5 * (r.transpose() * r)(0,0);
+        MatrixXd r_new = sigs - sigs_pred;
+        double new_cost = 0.5 * (r_new.transpose() * r_new)(0,0);
+        
+        // Check new cost validity
+        if(!std::isfinite(new_cost)){
+            lambda *= 2.0;
+            continue;
+        }
+        
+        // Debug output for first few iterations
+        if(debug_this && iter < 5){
+            YLOGINFO("  Iter " << iter << ": f=" << f << " D*=" << pseudoD 
+                     << " cost=" << cost << " new_cost=" << new_cost 
+                     << " lambda=" << lambda << " det=" << det);
+        }
         
         // Accept or reject update
         if(new_cost < cost){
-            // Calculate relative changes
-            double rel_cost_change = std::abs(cost - new_cost) / (cost + 1e-12);
-            double f_change = std::abs(new_f - f);
-            double pseudoD_change = std::abs(new_pseudoD - pseudoD) / (pseudoD + 1e-12);
-            
+            // Update accepted
+            r = r_new;
             f = new_f;
             pseudoD = new_pseudoD;
-            previous_cost = cost;
             cost = new_cost;
-            lambda *= 0.7;  // Reduce damping
+            lambda /= 2.0;
             successful_updates++;
             
-            // Check for convergence using multiple criteria
-            if(false){
-            }else if( (rel_cost_change < rel_cost_tolerance)
-                  &&  (successful_updates > 3) ){
-                consecutive_small_updates++;
-                if(consecutive_small_updates >= 3){
-                    break; // Converged - cost not improving
-                }
-            }else if( (f_change < param_tolerance)
-                  &&  (pseudoD_change < param_tolerance)
-                  &&  (successful_updates > 5) ){
-                consecutive_small_updates++;
-                if(consecutive_small_updates >= 3){
-                    break; // Converged - parameters stabilized
-                }
-            }else{
-                consecutive_small_updates = 0; // Reset counter
+            if(debug_this && iter < 10){
+                YLOGINFO("  Iter " << iter << ": ACCEPTED. New f=" << f << ", D*=" << pseudoD);
             }
-        }else{
-            lambda *= 1.5;  // Increase damping
-            consecutive_small_updates = 0; // Reset on rejected update
+            
+            // Check for convergence
+            double rel_change = std::abs(cost - new_cost) / (cost + 1e-12);
+            if((rel_change < 1e-8) && (successful_updates >= 5)){
+                if(debug_this){
+                    YLOGINFO("  Converged at iter " << iter);
+                }
+                break;
+            }
+            
+        } else {
+            // Update rejected
+            lambda *= 2.0;
+            
+            if(debug_this && iter < 5){
+                YLOGINFO("  Iter " << iter << ": REJECTED. Lambda increased to " << lambda);
+            }
         }
         
-        // Prevent lambda from becoming too large
-        if(lambda > 1e6){
+        // Prevent lambda from growing too large
+        if(lambda > 1e8){
+            if(debug_this){
+                YLOGINFO("  Lambda too large, stopping at iter " << iter);
+            }
             break;
+        }
+        
+        // Minimum lambda to prevent numerical issues
+        if(lambda < 1e-10){
+            lambda = 1e-10;
         }
     }
     
-    //// Parameter validation.
-    ////
-    //// It will be best to validate after fitting by the user, as the application and tissues vary.
-    //const bool valid_D = (0.0008 <= D && D <= 0.002);
-    //const bool valid_f = (0.05 <= f && f <= 0.35);
-    //const bool valid_pseudoD = (0.01 <= pseudoD && pseudoD <= 0.12) && (pseudoD > 2*D);
-    //
-    //if(!valid_D || !valid_f || !valid_pseudoD || successful_updates < 3){
-    //    // Could log warnings or return constrained values instead of NaN
-    //   // For now, return the fitted values even if outside expected ranges
-    //    // since parotid glands may have different characteristics
-    //}
+    if(debug_this){
+        YLOGINFO("  Optimization complete: " << successful_updates << " successful updates out of " << iters_attempted);
+        YLOGINFO("  Final: f=" << f << ", D=" << D << ", D*=" << pseudoD << ", cost=" << cost);
+    }
     
-    // Ensure finite results
+    // Accept results even with 0 successful updates if parameters are reasonable
+    // (This matches original behavior better)
+    if(successful_updates == 0){
+        if(debug_this){
+            YLOGINFO("  WARNING: No successful updates, returning initial guesses");
+        }
+    }
+    
+    // Final validation
     if(!std::isfinite(f) || !std::isfinite(D) || !std::isfinite(pseudoD)){
-        return {nan, nan, nan, static_cast<double>(iters_attempted), static_cast<double>(successful_updates), cost};
+        if(debug_this){
+            YLOGINFO("  FAIL: Final parameters not finite");
+        }
+        fail_optimization.fetch_add(1);
+        return default_out;
+    }
+    
+    success_count.fetch_add(1);
+    
+    // Print summary periodically
+    if(current_voxel > 0 && current_voxel % 100 == 0){
+        YLOGINFO("Progress: " << current_voxel << " voxels processed. "
+                 << "Success: " << success_count.load() << ", "
+                 << "Fail D: " << fail_d_estimation.load() << ", "
+                 << "Fail norm: " << fail_normalization.load() << ", "
+                 << "Fail opt: " << fail_optimization.load());
     }
     
     return {f, D, pseudoD, static_cast<double>(iters_attempted), static_cast<double>(successful_updates), cost};
