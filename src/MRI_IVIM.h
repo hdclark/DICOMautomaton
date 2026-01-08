@@ -39,7 +39,7 @@ namespace MRI_IVIM {
              float b_value_threshold = 200.0f);
     
 
-    std::array<double, 5>
+    std::array<double, 6>
     GetBiExp_SegmentedOLS(const std::vector<float> &bvalues,
                           const std::vector<float> &vals,
                           float bvalue_threshold = 200.0f);

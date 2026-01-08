@@ -130,33 +130,57 @@ OperationDoc OpArgDocModelIVIM(){
     out.args.back().name = "Model";
     out.args.back().desc = "The model that will be fitted."
 #ifdef DCMA_USE_EIGEN
-                           " Currently, 'adc-simple' , 'adc-ls' , 'auc-simple', 'biexp', and 'kurtosis' are available."
+                           " Currently, 'adc-simple' , 'adc-ls' , 'auc-simple', 'biexp', 'biexp-ols', and 'kurtosis' are available."
 #else
-                           " Currently, 'adc-simple' , 'adc-ls' , 'auc-simple', and 'biexp' are available."
+                           " Currently, 'adc-simple' , 'adc-ls' , 'auc-simple', 'biexp', and 'biexp-ols' are available."
 #endif //DCMA_USE_EIGEN
                            "\n\n"
-                           "The 'adc-simple' is a simplistic diffusion model that ignores perfusion."
+                           "The 'adc-simple' is a simplistic diffusion model that ignores perfusion:"
+                           " $S(b) = S0 * exp(-b * D).$"
                            " It models only free diffusion using only the minimum and maximum b-values."
                            " An analytical estimate of ADC (i.e., the apparent diffusion coefficient) is generated."
                            "\n\n"
-                           "The 'adc-ls' model, like 'adc-simple', is a simplistic model that ignores perfusion."
-                           " It fits a linearized least-squares model that uses all available b-value images."
+                           "The 'adc-ls' model, like 'adc-simple', is a simplistic model that ignores perfusion:"
+                           " $S(b) = S0 * exp(-b * D).$"
+                           " It linearizes all available samples and fits a model analytically using ordinary"
+                           " least-squares."
                            " Like 'adc-simple', this model only estimates ADC."
                            "\n\n"
                            "The 'auc-simple' model is a simplistic, nonparametric model that integrates the area under"
                            " the intensity-vs-b-value curve. Note that no model fitting is performed; the voxel"
                            " intensity-b-value product is summed directly. No extrapolation is performed."
                            "\n\n"
-                           "The 'biexp' model uses a segmented fitting approach along with Marquardt's method to fit a"
-                           " biexponential model, which estimates the pseudodiffusion fraction, the diffusion"
-                           " coefficient, and the pseudodiffusion coefficient for each voxel."
+                           "The 'biexp-lm' model uses an iterative, segmented fitting approach to fit"
+                           " the biexponential model"
+                           " $S(b) = S0 * \\left\\[ f * exp(-b * Dp) + (1 - f) * exp(-b * D)\\right\\]$"
+                           " using the Levenberg-Marquardt algorithm."
+                           " This model estimates the pseudodiffusion fraction, the diffusion"
+                           " coefficient, and the pseudodiffusion coefficient for each voxel in two stages."
+                           ""
+                           " In the first stage, samples at b-values less than the provided threshold are ignored"
+                           " (as they contain the most contribution from perfusion effects) and the diffusion parameter"
+                           " is fitted. In the second stage"
+                           " only samples at b-values less than or equal to the threshold are used to fit the"
+                           " pseudodiffusion parameters."
+                           ""
+                           " The output images have channels for: pseudodiffusion fraction (f), diffusion (D),"
+                           " pseudodiffusion (Dp), the number of attempted iterations, the number of steps in"
+                           " Marquardt's algorithm where updates were accepted, final model cost, and voxel status."
                            "\n\n"
-                           "The 'biexp-ols' model uses a segmented fitting approach with linearized data to perform"
-                           " ordinary least-squares fitting of"
+                           "The 'biexp-ls' model uses a segmented fitting approach with linearized data to perform"
+                           " analytical ordinary least-squares fitting of the biexponential model"
                            " $S(b) = S0 * \\left\\[ f * exp(-b * Dp) + (1 - f) * exp(-b * D)\\right\\].$"
                            " This model estimates the pseudodiffusion fraction, the diffusion"
-                           " coefficient, and the pseudodiffusion coefficient for each voxel."
-                           " A goodness of fit estimate of the two stages for each voxel is also generated."
+                           " coefficient, and the pseudodiffusion coefficient for each voxel in two stages."
+                           ""
+                           " In the first stage, samples at b-values less than the provided threshold are ignored"
+                           " (as they contain the most contribution from perfusion effects) and the diffusion parameter"
+                           " is fitted. In the second stage"
+                           " only samples at b-values less than or equal to the threshold are used to fit the"
+                           " pseudodiffusion parameters."
+                           ""
+                           " The output images have channels for: pseudodiffusion fraction (f), diffusion (D),"
+                           " pseudodiffusion (Dp), stage 1 goodness-of-fit, stage2 goodness-of-fit, and voxel status."
 #ifdef DCMA_USE_EIGEN
                            "\n\n"
                            "The 'kurtosis' model returns three parameters corresponding to a biexponential diffusion"
@@ -170,8 +194,8 @@ OperationDoc OpArgDocModelIVIM(){
     out.args.back().examples = { "adc-simple",
                                  "adc-ls",
                                  "auc-simple",
-                                 "biexp",
-                                 "biexp-ols",
+                                 "biexp-lm",
+                                 "biexp-ls",
 #ifdef DCMA_USE_EIGEN
                                  "kurtosis",
 #endif //DCMA_USE_EIGEN
@@ -277,10 +301,10 @@ bool ModelIVIM(Drover &DICOM_data,
 
     const auto model_adc_simple = Compile_Regex("^adc?[-_]?si?m?p?l?e?$");
     const auto model_adc_ls = Compile_Regex("^adc?[-_]?ls?$");
-    const auto model_biexp = Compile_Regex("^bi[-_]?e?x?p?o?n?e?n?t?i?a?l?$");
-    const auto model_biexp_ols = Compile_Regex("^bi[-_]?e?x?p?o?n?e?n?t?i?a?l?[-_]?ols$");
-    const auto model_kurtosis = Compile_Regex("^ku?r?t?o?s?i?s?");
     const auto model_auc = Compile_Regex("^auc?[-_]?si?m?p?l?e?$");
+    const auto model_biexp_lm = Compile_Regex("^bi[-_]?e?x?p?o?n?e?n?t?i?a?l?[-_]?lm$");
+    const auto model_biexp_ls = Compile_Regex("^bi[-_]?e?x?p?o?n?e?n?t?i?a?l?[-_]?o?ls$");
+    const auto model_kurtosis = Compile_Regex("^ku?r?t?o?s?i?s?");
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto TestIncludeNaN = std::regex_match(TestIncludeNaNStr, regex_true);
@@ -481,9 +505,9 @@ bool ModelIVIM(Drover &DICOM_data,
             };
 #endif //DCMA_USE_EIGEN
 
-        }else if(std::regex_match(ModelStr, model_biexp_ols)){
+        }else if(std::regex_match(ModelStr, model_biexp_ls)){
             // Set outgoing channels accordingly.
-            const int64_t N_channels = 5; // f, D, pseudoD, stage 1 goodness-of-fit, stage2 goodness-of-fit.
+            const int64_t N_channels = 6; // f, D, pseudoD, stage 1 goodness-of-fit, stage2 goodness-of-fit, voxel status.
             auto imgarr_ptr = &((*iap_it)->imagecoll);
             for(auto &img : imgarr_ptr->images){
                 set_channels(img, N_channels);
@@ -493,8 +517,9 @@ bool ModelIVIM(Drover &DICOM_data,
             const int64_t chan_pD  = 2;
             const int64_t chan_s1c = 3;
             const int64_t chan_s2c = 4;
+            const int64_t chan_s   = 5;
 
-            ud.description = "f, D, pseudo-D (Bi-exponential segmented OLS)";
+            ud.description = "f, D, pseudo-D, stage 1 goodness-of-fit, stage2 goodness-of-fit, voxel status (bi-exponential LS segmented fit)";
             ud.f_reduce = [bvalues,
                            bvalue_min_i,
                            bvalue_max_i,
@@ -505,6 +530,7 @@ bool ModelIVIM(Drover &DICOM_data,
                            chan_pD,
                            chan_s1c,
                            chan_s2c,
+                           chan_s,
                            nan ]( std::vector<float> &vals, 
                                   vec3<double> pos ) -> float {
                 vals.erase(vals.begin()); // Remove the base image's value.
@@ -515,7 +541,7 @@ bool ModelIVIM(Drover &DICOM_data,
                     throw std::runtime_error("No overlapping images detected. Unable to continue.");
                 }
 
-                const auto [f, D, pseudoD, stage1_gof, stage2_gof] = GetBiExp_SegmentedOLS(bvalues, vals, BValueThreshold);
+                const auto [f, D, pseudoD, stage1_gof, stage2_gof, voxel_status] = GetBiExp_SegmentedOLS(bvalues, vals, BValueThreshold);
                 if(!std::isfinite( f )) throw std::runtime_error("f is not finite");
 
                 // The image/voxel iterator interface isn't capable of handling multiple-channel values,
@@ -528,20 +554,23 @@ bool ModelIVIM(Drover &DICOM_data,
                 const auto index_pD  = img_it_l.front()->index(pos, chan_pD);
                 const auto index_s1c = img_it_l.front()->index(pos, chan_s1c);
                 const auto index_s2c = img_it_l.front()->index(pos, chan_s2c);
+                const auto index_s   = img_it_l.front()->index(pos, chan_s);
                 if( (index_D   < 0)
                 ||  (index_pD  < 0)
                 ||  (index_s1c < 0)
-                ||  (index_s2c < 0) ){
+                ||  (index_s2c < 0)
+                ||  (index_s   < 0) ){
                     throw std::logic_error("Unable to locate voxel via position");
                 }
                 img_it_l.front()->reference(index_D)   = D;
                 img_it_l.front()->reference(index_pD)  = pseudoD;
                 img_it_l.front()->reference(index_s1c) = stage1_gof;
                 img_it_l.front()->reference(index_s2c) = stage2_gof;
+                img_it_l.front()->reference(index_s)   = voxel_status;
                 return f;
             };
 
-        }else if(std::regex_match(ModelStr, model_biexp)){
+        }else if(std::regex_match(ModelStr, model_biexp_lm)){
             // Set outgoing channels accordingly.
             const int64_t N_channels = 7; // f, D, pseudoD, attempted iters, updates, fitted model cost, voxel status.
             auto imgarr_ptr = &((*iap_it)->imagecoll);
@@ -556,7 +585,7 @@ bool ModelIVIM(Drover &DICOM_data,
             const int64_t chan_c  = 5;
             const int64_t chan_s  = 6;
 
-            ud.description = "f, D, pseudo-D (Bi-exponential segmented fit)";
+            ud.description = "f, D, pseudo-D, attempted iters, number of updates, fitted model cost, voxel status (bi-exponential LM segmented fit)";
             ud.f_reduce = [bvalues,
                            bvalue_min_i,
                            bvalue_max_i,
@@ -577,7 +606,7 @@ bool ModelIVIM(Drover &DICOM_data,
                 if(vals.empty()){
                     throw std::runtime_error("No overlapping images detected. Unable to continue.");
                 }
-                int numIterations = 1000;
+                int numIterations = 100;
                 const auto [f, D, pseudoD, num_iters, num_updates, cost, voxel_status] = GetBiExp(bvalues, vals, numIterations, BValueThreshold);
                 if(!std::isfinite( f )) throw std::runtime_error("f is not finite");
 

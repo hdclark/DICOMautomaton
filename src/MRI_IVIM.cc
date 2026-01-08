@@ -509,12 +509,16 @@ std::array<double, 7> GetBiExp(const std::vector<float> &bvalues,
     std::get<index_vox_status>(default_out) = 1001.0;
 
     // Find b=0 index
-    int b0_index = 0;
+    size_t b0_index = number_bVals;;
     for(size_t i = 0UL; (i < number_bVals); ++i){
         if (bvalues[i] == 0.0){ 
             b0_index = i;
             break;
         }
+    }
+    if(b0_index == number_bVals){
+        std::get<index_vox_status>(default_out) = 1006.0;
+        return default_out;
     }
     
     // Extract high b-values for D estimation
@@ -527,7 +531,7 @@ std::array<double, 7> GetBiExp(const std::vector<float> &bvalues,
     }
     
     if(bvaluesH.size() < 2UL){
-        std::get<index_vox_status>(default_out) = 1002.0;
+        std::get<index_vox_status>(default_out) = 1011.0;
         return default_out; // Insufficient high b-values
     }
     
@@ -538,7 +542,7 @@ std::array<double, 7> GetBiExp(const std::vector<float> &bvalues,
     if(!std::isfinite(D) || (D <= 0.0)){
         D = GetADCls(bvaluesH, signalsH);
         if(!std::isfinite(D) || (D <= 0.0)){
-            std::get<index_vox_status>(default_out) = 1003.0;
+            std::get<index_vox_status>(default_out) = 1016.0;
             return default_out;
         }
     }
@@ -548,7 +552,7 @@ std::array<double, 7> GetBiExp(const std::vector<float> &bvalues,
     for(size_t i = 0; i < number_bVals; ++i){
         const float norm_sig = vals[i] / vals[b0_index];
         if(!std::isfinite(norm_sig)){
-            std::get<index_vox_status>(default_out) = 1004.0;
+            std::get<index_vox_status>(default_out) = 1021.0;
             return default_out;
         }
         signals_normalized.push_back(norm_sig);
@@ -597,7 +601,7 @@ std::array<double, 7> GetBiExp(const std::vector<float> &bvalues,
     
     // Check initial cost
     if(!std::isfinite(cost)){
-        std::get<index_vox_status>(default_out) = 1005.0;
+        std::get<index_vox_status>(default_out) = 1026.0;
         return default_out;
     }
     
@@ -615,7 +619,7 @@ std::array<double, 7> GetBiExp(const std::vector<float> &bvalues,
             
             // Check for numerical issues
             if(!std::isfinite(exp_pseudo) || !std::isfinite(exp_diff)){
-                std::get<index_vox_status>(default_out) = 1006.0;
+                std::get<index_vox_status>(default_out) = 1031.0;
                 return default_out;
             }
             
@@ -635,7 +639,7 @@ std::array<double, 7> GetBiExp(const std::vector<float> &bvalues,
             if(successful_updates > 0){
                 break;
             }
-            std::get<index_vox_status>(default_out) = 1007.0;
+            std::get<index_vox_status>(default_out) = 1036.0;
             return default_out;
         }
 
@@ -649,7 +653,7 @@ std::array<double, 7> GetBiExp(const std::vector<float> &bvalues,
             if(successful_updates > 0){
                 break;
             }
-            std::get<index_vox_status>(default_out) = 1008.0;
+            std::get<index_vox_status>(default_out) = 1041.0;
             return default_out;
         }
         
@@ -660,7 +664,7 @@ std::array<double, 7> GetBiExp(const std::vector<float> &bvalues,
             if(successful_updates > 0){
                 break;
             }
-            std::get<index_vox_status>(default_out) = 1009.0;
+            std::get<index_vox_status>(default_out) = 1046.0;
             return default_out;
         }
         
@@ -697,7 +701,7 @@ std::array<double, 7> GetBiExp(const std::vector<float> &bvalues,
             double rel_change = std::abs(cost - new_cost) / (cost + 1e-12);
             if((rel_change < 1e-8) && (successful_updates >= 5)){
                 // Converged...
-                std::get<index_vox_status>(default_out) = 1010.0;
+                std::get<index_vox_status>(default_out) = 1051.0;
                 break;
             }
 
@@ -719,15 +723,15 @@ std::array<double, 7> GetBiExp(const std::vector<float> &bvalues,
     
     // Ensure finite results
     if(!std::isfinite(f) || !std::isfinite(D) || !std::isfinite(pseudoD)){
-        std::get<index_vox_status>(default_out) = 1011.0;
+        std::get<index_vox_status>(default_out) = 1056.0;
         return default_out;
     }
     
-    return {f, D, pseudoD, static_cast<double>(iters_attempted), static_cast<double>(successful_updates), cost, 1012.0};
+    return {f, D, pseudoD, static_cast<double>(iters_attempted), static_cast<double>(successful_updates), cost, 1100.0};
 }
 
 
-std::array<double, 5> GetBiExp_SegmentedOLS(const std::vector<float> &bvalues,
+std::array<double, 6> GetBiExp_SegmentedOLS(const std::vector<float> &bvalues,
                                             const std::vector<float> &vals,
                                             float bvalue_threshold){
     // The bi-exponential model is:
@@ -776,8 +780,11 @@ std::array<double, 5> GetBiExp_SegmentedOLS(const std::vector<float> &bvalues,
     // though we typically don't care about this amplitude.
     //
     const auto nan = std::numeric_limits<double>::quiet_NaN();
-    std::array<double, 5> default_out = {nan, nan, nan, nan, nan};
+    std::array<double, 6> default_out = {nan, nan, nan, nan, nan, nan};
+    constexpr auto index_vox_status = 5UL;
     const auto N_bvalues = bvalues.size();
+
+    std::get<index_vox_status>(default_out) = 2001.0;
 
     // Stage 1.
     samples_1D<double> shtl;
@@ -794,6 +801,7 @@ std::array<double, 5> GetBiExp_SegmentedOLS(const std::vector<float> &bvalues,
     }
     shtl.stable_sort();
     if(shtl.size() < 2UL){
+        std::get<index_vox_status>(default_out) = 2006.0;
         return default_out;
     }
 
@@ -801,11 +809,18 @@ std::array<double, 5> GetBiExp_SegmentedOLS(const std::vector<float> &bvalues,
     const bool skip_extras = false;
     const lin_reg_results<double> stage1 = shtl.Linear_Least_Squares_Regression(&OK, skip_extras);
     if(!OK){
+        std::get<index_vox_status>(default_out) = 2011.0;
         return default_out;
     }
     const auto D = stage1.slope * -1.0;
     const auto lnS0p = stage1.intercept;
     const auto S0p = std::exp(lnS0p);
+
+    if( (D < 0.0)
+    ||  !std::isfinite(D) ){
+        std::get<index_vox_status>(default_out) = 2016.0;
+        return default_out;
+    }
 
     // Stage 2.
     shtl.samples.clear();
@@ -815,33 +830,43 @@ std::array<double, 5> GetBiExp_SegmentedOLS(const std::vector<float> &bvalues,
         const auto t = S - S0p * std::exp(-b*D);
         const auto y = (0.0 < t) ? std::log(t) : nan;
 
-        if( std::isfinite(y) ){
+        if( (b <= bvalue_threshold)
+        &&  std::isfinite(y) ){
             shtl.push_back( b, 0.0, y, 0.0, inhibit_sort );
         }
     }
     shtl.stable_sort();
     if(shtl.size() < 2UL){
+        std::get<index_vox_status>(default_out) = 2021.0;
         return default_out;
     }
     
     OK = false;
     const lin_reg_results<double> stage2 = shtl.Linear_Least_Squares_Regression(&OK, skip_extras);
     if(!OK){
+        std::get<index_vox_status>(default_out) = 2026.0;
         return default_out;
     }
     const auto pseudoD = stage2.slope * -1.0;
     const auto lnS0pp = stage2.intercept;
     const auto S0pp = std::exp(lnS0pp);
 
+    //if( (pseudoD < 0.0)
+    //||  !std::isfinite(pseudoD) ){
+    //    std::get<index_vox_status>(default_out) = 2031.0;
+    //    return default_out;
+    //}
+
     if( !std::isfinite(S0p)
     ||  !std::isfinite(S0pp) ){
+        std::get<index_vox_status>(default_out) = 2036.0;
         return default_out;
     }
     const auto f = S0pp / (S0p + S0pp);
     const auto stage1_gof = stage1.pvalue;
     const auto stage2_gof = stage2.pvalue;
 
-    return {f, D, pseudoD, stage1_gof, stage2_gof};
+    return {f, D, pseudoD, stage1_gof, stage2_gof, 2100.0};
 }
 
 } // namespace MRI_IVIM
@@ -870,7 +895,6 @@ TEST_CASE( "MRI_IVIM::GetBiExp_SegmentedOLS" ){
         std::vector<float> S_vals;
     };
 
-
     // Given a set of model parameters and b-values, generate synthetic voxel intensities.
     const auto generate_Ss = []( const test_case &t ) -> std::vector<float> {
         std::vector<float> S_vals;
@@ -893,66 +917,14 @@ TEST_CASE( "MRI_IVIM::GetBiExp_SegmentedOLS" ){
     tcs.back().D      = 0.001; // mm^2/s
     tcs.back().Dp     = 0.01;  // mm^2/s
     tcs.back().bvalue_threshold = 300.0;
-    tcs.back().f_rtol  = 0.30;
+    tcs.back().f_rtol  = 0.05;
     tcs.back().D_rtol  = 0.05;
-    tcs.back().Dp_rtol = 0.30;
+    tcs.back().Dp_rtol = 0.15;
     tcs.back().b_vals = { 0,20,30,40,50,60,70,80,90,100,120,150,250,400,800,1000 };
     tcs.back().S_vals = generate_Ss(tcs.back());
 
-
-//    tcs.emplace_back();
-//    tcs.back().sample = 2;
-//    tcs.back().name   = "IVIM signal gaussian SNR10";
-//    tcs.back().desc   = "two-compartment model";
-//    tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*Dp) + (1-f)*exp(-b*D) ]";
-//    tcs.back().S0     = 1.0;   // arb units
-//    tcs.back().f      = 0.3;   // arb units
-//    tcs.back().D      = 0.001; // mm^2/s
-//    tcs.back().Dp     = 0.01;  // mm^2/s
-//    tcs.back().bvalue_threshold = 200.0;
-//    tcs.back().f_rtol  = 0.20;
-//    tcs.back().D_rtol  = 0.02;
-//    tcs.back().Dp_rtol = 0.02;
-//    tcs.back().b_vals = { 0,20,30,40,50,60,70,80,90,100,120,150,250,400,800,1000 };
-//    tcs.back().S_vals = generate_Ss(tcs.back());
-//
-//
-//    tcs.emplace_back();
-//    tcs.back().sample = 3;
-//    tcs.back().name   = "IVIM signal gaussian SNR20";
-//    tcs.back().desc   = "two-compartment model";
-//    tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*Dp) + (1-f)*exp(-b*D) ]";
-//    tcs.back().S0     = 1.0;   // arb units
-//    tcs.back().f      = 0.3;   // arb units
-//    tcs.back().D      = 0.001; // mm^2/s
-//    tcs.back().Dp     = 0.01;  // mm^2/s
-//    tcs.back().bvalue_threshold = 200.0;
-//    tcs.back().f_rtol  = 0.20;
-//    tcs.back().D_rtol  = 0.02;
-//    tcs.back().Dp_rtol = 0.02;
-//    tcs.back().b_vals = { 0,20,30,40,50,60,70,80,90,100,120,150,250,400,800,1000, };
-//    tcs.back().S_vals = generate_Ss(tcs.back());
-//
-//
-//    tcs.emplace_back();
-//    tcs.back().sample = 4;
-//    tcs.back().name   = "IVIM signal gaussian SNR40";
-//    tcs.back().desc   = "two-compartment model";
-//    tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*Dp) + (1-f)*exp(-b*D) ]";
-//    tcs.back().S0     = 1.0;   // arb units
-//    tcs.back().f      = 0.3;   // arb units
-//    tcs.back().D      = 0.001; // mm^2/s
-//    tcs.back().Dp     = 0.01;  // mm^2/s
-//    tcs.back().bvalue_threshold = 200.0;
-//    tcs.back().f_rtol  = 0.20;
-//    tcs.back().D_rtol  = 0.02;
-//    tcs.back().Dp_rtol = 0.02;
-//    tcs.back().b_vals = { 0,20,30,40,50,60,70,80,90,100,120,150,250,400,800,1000 };
-//    tcs.back().S_vals = generate_Ss(tcs.back());
-
-
     tcs.emplace_back();
-    tcs.back().sample = 5;
+    tcs.back().sample = 2;
     tcs.back().name   = "IVIM signal high";
     tcs.back().desc   = "two-compartment model";
     tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*Dp) + (1-f)*exp(-b*D) ]";
@@ -961,66 +933,14 @@ TEST_CASE( "MRI_IVIM::GetBiExp_SegmentedOLS" ){
     tcs.back().D      = 0.001; // mm^2/s
     tcs.back().Dp     = 0.01;  // mm^2/s
     tcs.back().bvalue_threshold = 200.0;
-    tcs.back().f_rtol  = 0.55;
+    tcs.back().f_rtol  = 0.05;
     tcs.back().D_rtol  = 0.05;
-    tcs.back().Dp_rtol = 3.00;
+    tcs.back().Dp_rtol = 0.15;
     tcs.back().b_vals = { 0,200,400,800 };
     tcs.back().S_vals = generate_Ss(tcs.back());
 
-
-//    tcs.emplace_back();
-//    tcs.back().sample = 6;
-//    tcs.back().name   = "IVIM signal low";
-//    tcs.back().desc   = "two-compartment model";
-//    tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*Dp) + (1-f)*exp(-b*D) ]";
-//    tcs.back().S0     = 1.0;   // arb units
-//    tcs.back().f      = 0.3;   // arb units
-//    tcs.back().D      = 0.001; // mm^2/s
-//    tcs.back().Dp     = 0.01;  // mm^2/s
-//    tcs.back().bvalue_threshold = 200.0;
-//    tcs.back().f_rtol  = 0.20;
-//    tcs.back().D_rtol  = 0.02;
-//    tcs.back().Dp_rtol = 0.02;
-//    tcs.back().b_vals = { 0,30,70,100 };
-//    tcs.back().S_vals = generate_Ss(tcs.back());
-
-
-//    tcs.emplace_back();
-//    tcs.back().sample = 7;
-//    tcs.back().name   = "IVIM signal minimal";
-//    tcs.back().desc   = "two-compartment model";
-//    tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*Dp) + (1-f)*exp(-b*D) ]";
-//    tcs.back().S0     = 1.0;   // arb units
-//    tcs.back().f      = 0.3;   // arb units
-//    tcs.back().D      = 0.001; // mm^2/s
-//    tcs.back().Dp     = 0.01;  // mm^2/s
-//    tcs.back().bvalue_threshold = 200.0;
-//    tcs.back().f_rtol  = 0.20;
-//    tcs.back().D_rtol  = 0.02;
-//    tcs.back().Dp_rtol = 0.02;
-//    tcs.back().b_vals = { 0,100,800 };
-//    tcs.back().S_vals = generate_Ss(tcs.back());
-
-
-//    tcs.emplace_back();
-//    tcs.back().sample = 8;
-//    tcs.back().name   = "IVIM signal noise uniform";
-//    tcs.back().desc   = "two-compartment model";
-//    tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*Dp) + (1-f)*exp(-b*D) ]";
-//    tcs.back().S0     = 1.0;   // arb units
-//    tcs.back().f      = 0.3;   // arb units
-//    tcs.back().D      = 0.001; // mm^2/s
-//    tcs.back().Dp     = 0.01;  // mm^2/s
-//    tcs.back().bvalue_threshold = 400.0;
-//    tcs.back().f_rtol  = 0.20;
-//    tcs.back().D_rtol  = 0.02;
-//    tcs.back().Dp_rtol = 0.02;
-//    tcs.back().b_vals = { 0,20,30,40,50,60,70,80,90,100,120,150,250,400,800,1000 };
-//    tcs.back().S_vals = generate_Ss(tcs.back());
-
-
     tcs.emplace_back();
-    tcs.back().sample = 9;
+    tcs.back().sample = 3;
     tcs.back().name   = "IVIM signal whitepaper";
     tcs.back().desc   = "two-compartment model";
     tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*Dp) + (1-f)*exp(-b*D) ]";
@@ -1029,9 +949,9 @@ TEST_CASE( "MRI_IVIM::GetBiExp_SegmentedOLS" ){
     tcs.back().D      = 0.001; // mm^2/s
     tcs.back().Dp     = 0.01;  // mm^2/s
     tcs.back().bvalue_threshold = 250.0;
-    tcs.back().f_rtol  = 0.30;
+    tcs.back().f_rtol  = 0.05;
     tcs.back().D_rtol  = 0.05;
-    tcs.back().Dp_rtol = 3.00;
+    tcs.back().Dp_rtol = 0.15;
     tcs.back().b_vals = { 0,30,70,100,200,400,800 };
     tcs.back().S_vals = generate_Ss(tcs.back());
 
@@ -1055,10 +975,6 @@ TEST_CASE( "MRI_IVIM::GetBiExp_SegmentedOLS" ){
         CHECK(tc.f  == doctest::Approx(m_f).scale(tc.f).epsilon(tc.f_rtol));
         CHECK(tc.D  == doctest::Approx(m_D).scale(tc.D).epsilon(tc.D_rtol));
         CHECK(tc.Dp == doctest::Approx(m_Dp).scale(tc.Dp).epsilon(tc.Dp_rtol));
-
-        //REQUIRE(tc.f  == doctest::Approx(m_f).epsilon(0.05));
-        //REQUIRE(tc.D  == doctest::Approx(m_D).epsilon(0.05));
-        //REQUIRE(tc.Dp == doctest::Approx(m_Dp).epsilon(0.05));
     }
 }
 
@@ -1085,7 +1001,6 @@ TEST_CASE( "MRI_IVIM::GetBiExp" ){
         std::vector<float> b_vals;
         std::vector<float> S_vals;
     };
-
 
     // Given a set of model parameters and b-values, generate synthetic voxel intensities.
     const auto generate_Ss = []( const test_case &t ) -> std::vector<float> {
@@ -1115,9 +1030,8 @@ TEST_CASE( "MRI_IVIM::GetBiExp" ){
     tcs.back().b_vals = { 0,20,30,40,50,60,70,80,90,100,120,150,250,400,800,1000 };
     tcs.back().S_vals = generate_Ss(tcs.back());
 
-
     tcs.emplace_back();
-    tcs.back().sample = 5;
+    tcs.back().sample = 2;
     tcs.back().name   = "IVIM signal high";
     tcs.back().desc   = "two-compartment model";
     tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*Dp) + (1-f)*exp(-b*D) ]";
@@ -1132,9 +1046,8 @@ TEST_CASE( "MRI_IVIM::GetBiExp" ){
     tcs.back().b_vals = { 0,200,400,800 };
     tcs.back().S_vals = generate_Ss(tcs.back());
 
-
     tcs.emplace_back();
-    tcs.back().sample = 9;
+    tcs.back().sample = 3;
     tcs.back().name   = "IVIM signal whitepaper";
     tcs.back().desc   = "two-compartment model";
     tcs.back().gen_f  = "S(b) = S0 * [ f*exp(-b*Dp) + (1-f)*exp(-b*D) ]";
