@@ -16,6 +16,7 @@
 #include <algorithm>
 #include <numeric>
 #include <cstdint>
+#include <random>
 
 #include "YgorMisc.h"
 #include "YgorMath.h"
@@ -971,6 +972,16 @@ TEST_CASE( "MRI_IVIM::GetBiExp_SegmentedOLS" ){
         const auto m_f  = out.at(0);
         const auto m_D  = out.at(1);
         const auto m_Dp = out.at(2);
+        const auto status = out.at(5);
+        
+        CAPTURE(m_f);
+        CAPTURE(m_D);
+        CAPTURE(m_Dp);
+        CAPTURE(status);
+
+        REQUIRE(std::isfinite(m_f));
+        REQUIRE(std::isfinite(m_D));
+        REQUIRE(std::isfinite(m_Dp));
 
         CHECK(tc.f  == doctest::Approx(m_f).scale(tc.f).epsilon(tc.f_rtol));
         CHECK(tc.D  == doctest::Approx(m_D).scale(tc.D).epsilon(tc.D_rtol));
@@ -1079,6 +1090,16 @@ TEST_CASE( "MRI_IVIM::GetBiExp" ){
         const auto m_f  = out.at(0);
         const auto m_D  = out.at(1);
         const auto m_Dp = out.at(2);
+        const auto status = out.at(6);
+        
+        CAPTURE(m_f);
+        CAPTURE(m_D);
+        CAPTURE(m_Dp);
+        CAPTURE(status);
+
+        REQUIRE(std::isfinite(m_f));
+        REQUIRE(std::isfinite(m_D));
+        REQUIRE(std::isfinite(m_Dp));
 
         CHECK(tc.f  == doctest::Approx(m_f).scale(tc.f).epsilon(tc.f_rtol));
         CHECK(tc.D  == doctest::Approx(m_D).scale(tc.D).epsilon(tc.D_rtol));
@@ -1086,3 +1107,375 @@ TEST_CASE( "MRI_IVIM::GetBiExp" ){
     }
 }
 
+
+// =============================================================================
+// Rician noise utilities for testing (MUST BE OUTSIDE TEST_CASE!)
+// =============================================================================
+
+// Helper class to add Rician noise to IVIM signals
+// Rician noise arises in MRI magnitude images:
+//   - Real channel: S_true + gaussian_noise
+//   - Imaginary channel: 0 + gaussian_noise  
+//   - Magnitude: sqrt(real^2 + imag^2) follows Rician distribution
+//
+// At high SNR: approximately Gaussian
+// At low SNR: positive bias (noise floor effect)
+namespace {
+    class RicianNoiseGenerator {
+    private:
+        std::mt19937 rng_;
+        std::normal_distribution<double> gaussian_;
+        
+    public:
+        explicit RicianNoiseGenerator(unsigned int seed = 42) 
+            : rng_(seed), gaussian_(0.0, 1.0) {}
+        
+        // Add true Rician noise to a signal
+        // sigma = noise standard deviation (same for real and imaginary channels)
+        double addRicianNoise(double signal, double sigma) {
+            const double real = signal + sigma * gaussian_(rng_);
+            const double imag = sigma * gaussian_(rng_);
+            return std::sqrt(real * real + imag * imag);
+        }
+        
+        // Reset RNG with new seed for reproducibility
+        void setSeed(unsigned int seed) {
+            rng_.seed(seed);
+        }
+    };
+    
+    // Generate noisy S(b) values from true IVIM parameters
+    std::vector<float> generate_noisy_Ss(const std::vector<float>& b_vals,
+                                          double S0, double f, double D, double Dp,
+                                          double SNR,  // Signal-to-noise ratio at b=0
+                                          unsigned int seed = 42) {
+        std::vector<float> S_vals;
+        S_vals.reserve(b_vals.size());
+        
+        const double sigma = S0 / SNR;  // Noise std dev
+        RicianNoiseGenerator noise(seed);
+        
+        for(const auto b : b_vals) {
+            // True signal from bi-exponential model
+            const double S_true = MRI_IVIM::evaluate_biexp(b, S0, f, D, Dp);
+            // Add Rician noise
+            const double S_noisy = noise.addRicianNoise(S_true, sigma);
+            S_vals.push_back(static_cast<float>(S_noisy));
+        }
+        return S_vals;
+    }
+} // anonymous namespace
+
+
+TEST_CASE( "MRI_IVIM::GetBiExp with Rician noise" ){
+    // Test that GetBiExp can recover parameters from noisy data
+    // This validates robustness to realistic MRI noise conditions
+    
+    struct noisy_test_case {
+        int sample;
+        std::string name;
+        
+        double S0;
+        double f;
+        double D;
+        double Dp;
+        
+        double SNR;              // Signal-to-noise ratio at b=0
+        unsigned int seed;       // RNG seed for reproducibility
+        
+        double bvalue_threshold;
+        
+        double f_rtol;           // Tolerance scales with noise
+        double D_rtol;
+        double Dp_rtol;
+        
+        std::vector<float> b_vals;
+    };
+    
+    std::vector<noisy_test_case> tcs;
+    
+    // Test case 1: High SNR (SNR=100) - should recover parameters accurately
+    tcs.emplace_back();
+    tcs.back().sample = 1;
+    tcs.back().name   = "High SNR (100) - full b-values";
+    tcs.back().S0     = 1.0;
+    tcs.back().f      = 0.3;
+    tcs.back().D      = 0.001;
+    tcs.back().Dp     = 0.01;
+    tcs.back().SNR    = 100.0;
+    tcs.back().seed   = 12345;
+    tcs.back().bvalue_threshold = 300.0;
+    tcs.back().f_rtol  = 0.05;  // 5% tolerance
+    tcs.back().D_rtol  = 0.05;
+    tcs.back().Dp_rtol = 0.05;
+    tcs.back().b_vals = { 0, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 150, 250, 400, 800, 1000 };
+    
+    // Test case 2: Medium SNR (SNR=40)
+    tcs.emplace_back();
+    tcs.back().sample = 2;
+    tcs.back().name   = "Medium SNR (40) - full b-values";
+    tcs.back().S0     = 1.0;
+    tcs.back().f      = 0.3;
+    tcs.back().D      = 0.001;
+    tcs.back().Dp     = 0.01;
+    tcs.back().SNR    = 40.0;
+    tcs.back().seed   = 12345;
+    tcs.back().bvalue_threshold = 300.0;
+    tcs.back().f_rtol  = 0.15;  // 15% tolerance
+    tcs.back().D_rtol  = 0.15;
+    tcs.back().Dp_rtol = 0.15;
+    tcs.back().b_vals = { 0, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 150, 250, 400, 800, 1000 };
+    
+    // Test case 3: Low SNR (SNR=20) - challenging case
+    tcs.emplace_back();
+    tcs.back().sample = 3;
+    tcs.back().name   = "Low SNR (20) - full b-values";
+    tcs.back().S0     = 1.0;
+    tcs.back().f      = 0.3;
+    tcs.back().D      = 0.001;
+    tcs.back().Dp     = 0.01;
+    tcs.back().SNR    = 20.0;
+    tcs.back().seed   = 12345;
+    tcs.back().bvalue_threshold = 300.0;
+    tcs.back().f_rtol  = 0.40;  // 40% tolerance - noise makes this hard
+    tcs.back().D_rtol  = 0.30;
+    tcs.back().Dp_rtol = 0.15;
+    tcs.back().b_vals = { 0, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 150, 250, 400, 800, 1000 };
+    
+    // Test case 4: High SNR with sparse b-values (clinical scenario)
+    tcs.emplace_back();
+    tcs.back().sample = 4;
+    tcs.back().name   = "High SNR (100) - sparse b-values";
+    tcs.back().S0     = 1.0;
+    tcs.back().f      = 0.3;
+    tcs.back().D      = 0.001;
+    tcs.back().Dp     = 0.01;
+    tcs.back().SNR    = 100.0;
+    tcs.back().seed   = 12345;
+    tcs.back().bvalue_threshold = 250.0;
+    tcs.back().f_rtol  = 0.10;
+    tcs.back().D_rtol  = 0.15;
+    tcs.back().Dp_rtol = 0.15;
+    tcs.back().b_vals = { 0, 30, 70, 100, 200, 400, 800 };
+    
+    // Test case 5: Different tissue parameters (lower f, like brain)
+    tcs.emplace_back();
+    tcs.back().sample = 5;
+    tcs.back().name   = "Brain-like params (f=0.05) - High SNR";
+    tcs.back().S0     = 1.0;
+    tcs.back().f      = 0.05;   // Lower perfusion fraction
+    tcs.back().D      = 0.0008; // Typical brain ADC
+    tcs.back().Dp     = 0.008;
+    tcs.back().SNR    = 100.0;
+    tcs.back().seed   = 54321;
+    tcs.back().bvalue_threshold = 200.0;
+    tcs.back().f_rtol  = 0.50;  // Low f is hard to estimate accurately
+    tcs.back().D_rtol  = 0.15;
+    tcs.back().Dp_rtol = 1.50;
+    tcs.back().b_vals = { 0, 20, 50, 100, 200, 400, 800, 1000 };
+    
+    // Test case 6: Higher perfusion (like kidney or parotid)
+    tcs.emplace_back();
+    tcs.back().sample = 6;
+    tcs.back().name   = "High perfusion (f=0.35) - Medium SNR";
+    tcs.back().S0     = 1.0;
+    tcs.back().f      = 0.35;
+    tcs.back().D      = 0.0012;
+    tcs.back().Dp     = 0.015;
+    tcs.back().SNR    = 40.0;
+    tcs.back().seed   = 99999;
+    tcs.back().bvalue_threshold = 300.0;
+    tcs.back().f_rtol  = 0.15;
+    tcs.back().D_rtol  = 0.10;
+    tcs.back().Dp_rtol = 0.15;
+    tcs.back().b_vals = { 0, 10, 20, 30, 50, 70, 100, 150, 200, 400, 800 };
+    
+    for(const auto& tc : tcs) {
+        CAPTURE(tc.sample);
+        CAPTURE(tc.name);
+        CAPTURE(tc.SNR);
+        CAPTURE(tc.f);
+        CAPTURE(tc.D);
+        CAPTURE(tc.Dp);
+        
+        // Generate noisy data
+        const auto S_vals = generate_noisy_Ss(tc.b_vals, tc.S0, tc.f, tc.D, tc.Dp, 
+                                               tc.SNR, tc.seed);
+        
+        REQUIRE(tc.b_vals.size() == S_vals.size());
+        REQUIRE(tc.b_vals.size() > 2UL);
+        
+        // Run GetBiExp
+        const int num_iters = 100;
+        const auto out = MRI_IVIM::GetBiExp(tc.b_vals, S_vals, num_iters, tc.bvalue_threshold);
+        const auto m_f  = out.at(0);
+        const auto m_D  = out.at(1);
+        const auto m_Dp = out.at(2);
+        const auto status = out.at(6);
+        
+        // Check that we got valid output (not NaN)
+        CAPTURE(m_f);
+        CAPTURE(m_D);
+        CAPTURE(m_Dp);
+        CAPTURE(status);
+        
+        REQUIRE(std::isfinite(m_f));
+        REQUIRE(std::isfinite(m_D));
+        REQUIRE(std::isfinite(m_Dp));
+
+        CHECK(tc.f  == doctest::Approx(m_f).scale(tc.f).epsilon(tc.f_rtol));
+        CHECK(tc.D  == doctest::Approx(m_D).scale(tc.D).epsilon(tc.D_rtol));
+        CHECK(tc.Dp == doctest::Approx(m_Dp).scale(tc.Dp).epsilon(tc.Dp_rtol));
+    }
+}
+
+
+TEST_CASE( "MRI_IVIM::GetBiExp_SegmentedOLS with Rician noise" ){
+    // Same tests but for the SegmentedOLS method
+    
+    struct noisy_test_case {
+        int sample;
+        std::string name;
+        
+        double S0;
+        double f;
+        double D;
+        double Dp;
+        
+        double SNR;
+        unsigned int seed;
+        
+        double bvalue_threshold;
+        
+        double f_rtol;
+        double D_rtol;
+        double Dp_rtol;
+        
+        std::vector<float> b_vals;
+    };
+    
+    std::vector<noisy_test_case> tcs;
+    
+    // Test case 1: High SNR
+    tcs.emplace_back();
+    tcs.back().sample = 1;
+    tcs.back().name   = "High SNR (100) - SegmentedOLS";
+    tcs.back().S0     = 1.0;
+    tcs.back().f      = 0.3;
+    tcs.back().D      = 0.001;
+    tcs.back().Dp     = 0.01;
+    tcs.back().SNR    = 100.0;
+    tcs.back().seed   = 12345;
+    tcs.back().bvalue_threshold = 300.0;
+    tcs.back().f_rtol  = 0.10;
+    tcs.back().D_rtol  = 0.05;
+    tcs.back().Dp_rtol = 0.30;
+    tcs.back().b_vals = { 0, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 150, 250, 400, 800, 1000 };
+    
+    // Test case 2: Medium SNR
+    tcs.emplace_back();
+    tcs.back().sample = 2;
+    tcs.back().name   = "Medium SNR (40) - SegmentedOLS";
+    tcs.back().S0     = 1.0;
+    tcs.back().f      = 0.3;
+    tcs.back().D      = 0.001;
+    tcs.back().Dp     = 0.01;
+    tcs.back().SNR    = 40.0;
+    tcs.back().seed   = 12345;
+    tcs.back().bvalue_threshold = 300.0;
+    tcs.back().f_rtol  = 0.55;
+    tcs.back().D_rtol  = 0.15;
+    tcs.back().Dp_rtol = 2.50;
+    tcs.back().b_vals = { 0, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 150, 250, 400, 800, 1000 };
+    
+    for(const auto& tc : tcs) {
+        CAPTURE(tc.sample);
+        CAPTURE(tc.name);
+        CAPTURE(tc.SNR);
+        
+        const auto S_vals = generate_noisy_Ss(tc.b_vals, tc.S0, tc.f, tc.D, tc.Dp,
+                                               tc.SNR, tc.seed);
+        
+        REQUIRE(tc.b_vals.size() == S_vals.size());
+        
+        const auto out = MRI_IVIM::GetBiExp_SegmentedOLS(tc.b_vals, S_vals, tc.bvalue_threshold);
+        const auto m_f  = out.at(0);
+        const auto m_D  = out.at(1);
+        const auto m_Dp = out.at(2);
+        const auto status = out.at(5);
+        
+        CAPTURE(m_f);
+        CAPTURE(m_D);
+        CAPTURE(m_Dp);
+        CAPTURE(status);
+        
+        REQUIRE(std::isfinite(m_f));
+        REQUIRE(std::isfinite(m_D));
+        REQUIRE(std::isfinite(m_Dp));
+
+        CHECK(tc.f  == doctest::Approx(m_f).scale(tc.f).epsilon(tc.f_rtol));
+        CHECK(tc.D  == doctest::Approx(m_D).scale(tc.D).epsilon(tc.D_rtol));
+        CHECK(tc.Dp == doctest::Approx(m_Dp).scale(tc.Dp).epsilon(tc.Dp_rtol));
+    }
+}
+
+
+TEST_CASE( "MRI_IVIM::Compare GetBiExp vs SegmentedOLS accuracy" ){
+    // This test compares the two methods on the same noisy data
+    // to see which performs better under various conditions
+    
+    const double S0 = 1.0;
+    const double f_true = 0.3;
+    const double D_true = 0.001;
+    const double Dp_true = 0.01;
+    const std::vector<float> b_vals = { 0, 20, 30, 40, 50, 60, 70, 80, 90, 100, 120, 150, 250, 400, 800, 1000 };
+    
+    std::vector<double> SNRs = {20, 40, 100};
+    
+    for(double snr : SNRs) {
+        // Test multiple noise realizations
+        double sum_err_f_biexp = 0, sum_err_f_ols = 0;
+        double sum_err_D_biexp = 0, sum_err_D_ols = 0;
+        int valid_biexp = 0, valid_ols = 0;
+        
+        const int N_trials = 10;
+        for(int trial = 0; trial < N_trials; trial++) {
+            const auto S_vals = generate_noisy_Ss(b_vals, S0, f_true, D_true, Dp_true,
+                                                   snr, 1000 + trial);
+            
+            // GetBiExp
+            const auto out_biexp = MRI_IVIM::GetBiExp(b_vals, S_vals, 100, 300.0f);
+            if(std::isfinite(out_biexp.at(0)) && std::isfinite(out_biexp.at(1))) {
+                sum_err_f_biexp += std::abs(out_biexp.at(0) - f_true) / f_true;
+                sum_err_D_biexp += std::abs(out_biexp.at(1) - D_true) / D_true;
+                valid_biexp++;
+            }
+            
+            // SegmentedOLS
+            const auto out_ols = MRI_IVIM::GetBiExp_SegmentedOLS(b_vals, S_vals, 300.0f);
+            if(std::isfinite(out_ols.at(0)) && std::isfinite(out_ols.at(1))) {
+                sum_err_f_ols += std::abs(out_ols.at(0) - f_true) / f_true;
+                sum_err_D_ols += std::abs(out_ols.at(1) - D_true) / D_true;
+                valid_ols++;
+            }
+        }
+        
+        // Report average errors (not assertions - just informative)
+        if(valid_biexp > 0) {
+            MESSAGE("SNR=" << snr << " GetBiExp: avg f_err=" << (sum_err_f_biexp/valid_biexp) 
+                    << ", avg D_err=" << (sum_err_D_biexp/valid_biexp)
+                    << " (" << valid_biexp << "/" << N_trials << " valid)");
+        }
+        if(valid_ols > 0) {
+            MESSAGE("SNR=" << snr << " SegmentedOLS: avg f_err=" << (sum_err_f_ols/valid_ols)
+                    << ", avg D_err=" << (sum_err_D_ols/valid_ols)
+                    << " (" << valid_ols << "/" << N_trials << " valid)");
+        }
+        
+        // Basic sanity check - at least some trials should succeed at high SNR
+        if(snr >= 40) {
+            CHECK(valid_biexp >= N_trials / 2);
+            CHECK(valid_ols >= N_trials / 2);
+        }
+    }
+}
