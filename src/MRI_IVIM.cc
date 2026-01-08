@@ -1109,12 +1109,11 @@ TEST_CASE( "MRI_IVIM::GetBiExp" ){
     tcs.back().D      = 0.001; // mm^2/s
     tcs.back().Dp     = 0.01;  // mm^2/s
     tcs.back().bvalue_threshold = 300.0;
-    tcs.back().f_rtol  = 0.30;
+    tcs.back().f_rtol  = 0.05;
     tcs.back().D_rtol  = 0.05;
-    tcs.back().Dp_rtol = 0.30;
+    tcs.back().Dp_rtol = 0.05;
     tcs.back().b_vals = { 0,20,30,40,50,60,70,80,90,100,120,150,250,400,800,1000 };
     tcs.back().S_vals = generate_Ss(tcs.back());
-
 
 
     tcs.emplace_back();
@@ -1127,9 +1126,9 @@ TEST_CASE( "MRI_IVIM::GetBiExp" ){
     tcs.back().D      = 0.001; // mm^2/s
     tcs.back().Dp     = 0.01;  // mm^2/s
     tcs.back().bvalue_threshold = 200.0;
-    tcs.back().f_rtol  = 0.55;
+    tcs.back().f_rtol  = 0.05;
     tcs.back().D_rtol  = 0.05;
-    tcs.back().Dp_rtol = 3.00;
+    tcs.back().Dp_rtol = 0.25;
     tcs.back().b_vals = { 0,200,400,800 };
     tcs.back().S_vals = generate_Ss(tcs.back());
 
@@ -1144,9 +1143,9 @@ TEST_CASE( "MRI_IVIM::GetBiExp" ){
     tcs.back().D      = 0.001; // mm^2/s
     tcs.back().Dp     = 0.01;  // mm^2/s
     tcs.back().bvalue_threshold = 250.0;
-    tcs.back().f_rtol  = 0.30;
+    tcs.back().f_rtol  = 0.05;
     tcs.back().D_rtol  = 0.05;
-    tcs.back().Dp_rtol = 3.00;
+    tcs.back().Dp_rtol = 0.05;
     tcs.back().b_vals = { 0,30,70,100,200,400,800 };
     tcs.back().S_vals = generate_Ss(tcs.back());
 
