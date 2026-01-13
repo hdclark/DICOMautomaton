@@ -61,11 +61,11 @@ jobs:
              mkdir -pv wine-conf-dir
              chown "$(id -u)":"$(id -g)" wine-conf-dir
              export WINEPREFIX="$(pwd)/wine-conf-dir/.wine-prefix"
-             find ./Windows/usr/bin/ -type f -exec chmod 777 '{}' \;
+             find ./Windows/usr/bin/ -type f -exec chmod u+x '{}' \;
              rsync -a ./Windows/ /opt/
              echo '#!/bin/bash' > /usr/bin/dicomautomaton_dispatcher
              echo 'exec wine /opt/usr/bin/dicomautomaton_dispatcher.exe "$@"' >> /usr/bin/dicomautomaton_dispatcher
-             chmod 777 /usr/bin/dicomautomaton_dispatcher
+             chmod u+x /usr/bin/dicomautomaton_dispatcher
              dicomautomaton_dispatcher -h
              ./integration_tests/Run.sh -v
       - name: create_zip
@@ -266,7 +266,7 @@ jobs:
              sudo chown --recursive $USER:$USER ~/binaries
       - name: test
         run: |
-             find ~/binaries/ -type f -execdir chmod 777 '{}' \;
+             find ~/binaries/ -type f -execdir chmod u+x '{}' \;
              sudo cp ~/binaries/bin/dicomautomaton_dispatcher /usr/bin/
              cd ~/dcma && ./integration_tests/Run.sh -v
       - name: gather_files
@@ -325,7 +325,7 @@ jobs:
              sudo chown --recursive $USER:$USER ~/binaries
       - name: test
         run: |
-             find ~/binaries/ -type f -execdir chmod 777 '{}' \;
+             find ~/binaries/ -type f -execdir chmod u+x '{}' \;
              sudo cp ~/binaries/bin/dicomautomaton_dispatcher /usr/bin/
              cd ~/dcma && ./integration_tests/Run.sh -v
       - name: gather_files
@@ -384,7 +384,7 @@ jobs:
              sudo chown --recursive $USER:$USER ~/binaries
       - name: test
         run: |
-             find ~/binaries/ -type f -execdir chmod 777 '{}' \;
+             find ~/binaries/ -type f -execdir chmod u+x '{}' \;
              sudo cp ~/binaries/bin/dicomautomaton_dispatcher /usr/bin/
              cd ~/dcma && ./integration_tests/Run.sh -v
       - name: gather_files
@@ -426,7 +426,7 @@ jobs:
           path: "dcma.AppImage"
       - name: prep_2
         run: |
-             chmod 777 dcma.AppImage 
+             chmod u+x dcma.AppImage 
              ./dcma.AppImage --appimage-extract
              rsync -a ./squashfs-root/usr/ /usr/
              ldd $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher || true
