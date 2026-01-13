@@ -116,7 +116,8 @@ elif [ "$ARCH" == "aarch64" ] || [ "$ARCH" == "armhf" ] ; then
 #    ./AppDir/AppRun -h # Test the script is functional.
 
     # Use the provided AppRun program, which is more sophisticated than a shell script.
-    wget "https://github.com/AppImage/AppImageKit/releases/download/13/AppRun-${ARCH}" -O ./AppDir/AppRun
+    #wget "https://github.com/AppImage/AppImageKit/releases/download/13/AppRun-${ARCH}" -O ./AppDir/AppRun
+    wget "https://github.com/AppImage/AppImageKit/releases/download/13/obsolete AppRun-${ARCH}" -O ./AppDir/AppRun
     chmod 777 ./AppDir/AppRun
 
     # Bundle required libraries, but exclude libraries known to be problematic.
@@ -143,7 +144,8 @@ elif [ "$ARCH" == "aarch64" ] || [ "$ARCH" == "armhf" ] ; then
     find AppDir/usr/lib/ -type f -exec strip '{}' \; \
                                  -exec patchelf --set-rpath '$ORIGIN/../lib/' '{}' \; || true
 
-    wget "https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-${ARCH}.AppImage"
+    #wget "https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-${ARCH}.AppImage"
+    wget "https://github.com/AppImage/AppImageKit/releases/download/13/obsolete-appimagetool-${ARCH}.AppImage"
     chmod 777 ./appimagetool-${ARCH}.AppImage
     ./appimagetool-${ARCH}.AppImage --appimage-extract # Unpack because FUSE cannot be used in Docker.
     ./squashfs-root/AppRun -v ./AppDir
