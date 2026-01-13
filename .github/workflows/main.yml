@@ -66,6 +66,8 @@ jobs:
              echo '#!/bin/bash' > /usr/bin/dicomautomaton_dispatcher
              echo 'exec wine /opt/usr/bin/dicomautomaton_dispatcher.exe "$@"' >> /usr/bin/dicomautomaton_dispatcher
              chmod u+x /usr/bin/dicomautomaton_dispatcher
+             # Attempted fix for error 'wine: failed to map the shared user data ...'
+             sysctl -w vm.mmap_min_addr=0 || true
              dicomautomaton_dispatcher -h
              ./integration_tests/Run.sh -v
       - name: create_zip
