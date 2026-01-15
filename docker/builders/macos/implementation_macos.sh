@@ -14,7 +14,7 @@ export LDFLAGS="'-L${INSTALLROOT}/lib/' -L/usr/local/lib/ -undefined dynamic_loo
 export JOBS=2
 
 export URLROOT="https://github.com/hdclark"
-[ ! -z "${GITLAB_CI}" ] && export URLROOT="https://gitlab.com/hdeanclark"
+[ -v GITLAB_CI ] && export URLROOT="https://gitlab.com/hdeanclark"
 
 cd
 mkdir -pv "${INSTALLROOT}"/{include,lib,bin,etc}
