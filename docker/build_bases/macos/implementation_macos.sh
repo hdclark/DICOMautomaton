@@ -19,8 +19,11 @@ export HOMEBREW_NO_ANALYTICS=1
 brew analytics off
 
 brew install \
-  coreutils \
   git \
+  svn
+
+brew install \
+  coreutils \
   cmake \
   make \
   vim \
@@ -35,15 +38,17 @@ brew install \
   glew \
   jansson \
   libpq \
-  libpqxx \
-  cgal \
   nlopt \
   asio \
   thrift \
-  libnotify \
-  zenity \
   gcc \
   llvm
+
+brew install \
+  cgal \
+  libpqxx \
+  libnotify \
+  zenity \
 
 # Alter mesa formula before installing because it fails to build on catalina.
 EDITOR=true brew edit mesa  # Add '-Wno-register' {C,CPP,CXX}FLAGS env variables.
