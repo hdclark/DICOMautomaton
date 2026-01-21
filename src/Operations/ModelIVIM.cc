@@ -30,7 +30,7 @@
 #include "../Structs.h"
 #include "../Metadata.h"
 #include "../Regex_Selectors.h"
-#include "../BED_Conversion.h"
+#include "../String_Parsing.h"
 #include "../YgorImages_Functors/Compute/Joint_Pixel_Sampler.h"
 #include "../MRI_IVIM.h"
 using namespace MRI_IVIM;
@@ -270,6 +270,16 @@ OperationDoc OpArgDocModelIVIM(){
                                  "100.0",
                                  "200.0" };
 
+    out.args.emplace_back();
+    out.args.back().name = "BValueFilter";
+    out.args.back().desc = "If this option is specified, only images with matching b-values will be used for modeling."
+                           " Not providing this option, or providing an empty string will disable the filter.";
+    out.args.back().default_val = "";
+    out.args.back().expected = false;
+    out.args.back().examples = { "0,10,20,50,500,1500",
+                                 "0,15,30,200",
+                                 "0,100" };
+
     return out;
 }
 
@@ -295,6 +305,7 @@ bool ModelIVIM(Drover &DICOM_data,
     const auto TestIncludeNaNStr = OptArgs.getValueStr("TestIncludeNaN").value();
     const auto InaccessibleValue = std::stod( OptArgs.getValueStr("InaccessibleValue").value() );
     const auto BValueThreshold = std::stod( OptArgs.getValueStr("BValueThreshold").value() );
+    const auto BValueFilterOpt = OptArgs.getValueStr("BValueFilter");
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_true = Compile_Regex("^tr?u?e?$");
@@ -309,24 +320,29 @@ bool ModelIVIM(Drover &DICOM_data,
     //-----------------------------------------------------------------------------------------------------------------
     const auto TestIncludeNaN = std::regex_match(TestIncludeNaNStr, regex_true);
 
+    std::set<int64_t> bvalue_filter;
+    {
+        auto bvals = parse_numbers(",", BValueFilterOpt.value_or(""));
+        for(const auto &b : bvals){
+            bvalue_filter.insert( static_cast<int64_t>(b) );
+        }
+    }
+
     auto RIAs_all = All_IAs( DICOM_data );
     auto RIAs = Whitelist( RIAs_all, ReferenceImageSelectionStr );
     YLOGDEBUG("Selected " << RIAs.size() << " reference image arrays");
     if(RIAs.size() < 2){
-        throw std::invalid_argument("At least two b-value images are required to model ADC.");
+        throw std::invalid_argument("At least two b-value images are required for modeling.");
     }
     std::list<std::reference_wrapper<planar_image_collection<float, double>>> RIARL;
     std::list<planar_image_collection<float, double>::images_list_it_t> ref_img_iters;
-    for(auto & RIA : RIAs){
-        RIARL.emplace_back( std::ref( (*RIA)->imagecoll ) );
-        for(auto it = (*RIA)->imagecoll.images.begin(); it != (*RIA)->imagecoll.images.end(); ++it){
-            ref_img_iters.emplace_back(it);
-        }
-    }
-
-    // Identify the b-value of each reference image, which is needed for later analysis.
     std::vector<float> bvalues;
-    for(const auto &RIA_refw : RIARL){
+
+    for(auto & RIA : RIAs){
+        auto RIA_refw = std::ref( (*RIA)->imagecoll );
+
+        // Extract b-values, ensure the array presents a single, distinct b-value, and then filter if necessary.
+
         // Exact key lookup.
         //const auto vals = RIA_refw.get().get_distinct_values_for_key("DiffusionBValue");
 
@@ -349,7 +365,24 @@ bool ModelIVIM(Drover &DICOM_data,
         if(vals.size() != 1){
             throw std::invalid_argument("Reference image does not contain a single distinct b-value.");
         }
-        bvalues.emplace_back( std::stod(vals.front()) );
+        const auto bval_as_int = static_cast<int64_t>(std::stol(vals.front()));
+
+        bool should_include = true;
+
+        if( BValueFilterOpt ){
+            should_include = (0UL != bvalue_filter.count( bval_as_int ));
+        }
+
+        if( should_include ){
+            RIARL.emplace_back( RIA_refw );
+            for(auto it = (*RIA)->imagecoll.images.begin(); it != (*RIA)->imagecoll.images.end(); ++it){
+                ref_img_iters.emplace_back(it);
+            }
+            bvalues.emplace_back( std::stod(vals.front()) );
+
+        }else{
+            YLOGINFO("Disregarding image array with b-value " << bval_as_int);
+        }
     }
 
     // Determine the sorted order of the b-values. We do this *without* sorting since the order of the 
