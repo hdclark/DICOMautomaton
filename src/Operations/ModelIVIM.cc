@@ -4,6 +4,7 @@
 #include <iterator>
 #include <list>
 #include <map>
+#include <set>
 #include <memory>
 #include <regex>
 #include <stdexcept>
