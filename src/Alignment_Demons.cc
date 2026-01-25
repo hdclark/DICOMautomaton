@@ -284,7 +284,9 @@ smooth_vector_field(
                     for(int64_t k = -kernel_radius_x; k <= kernel_radius_x; ++k){
                         const int64_t col_k = col + k;
                         if(col_k >= 0 && col_k < N_cols){
-                            const double val = field.images[&img - &field.images.front()].value(row, col_k, chnl);
+                            // Calculate image index using distance from first image
+                            const size_t img_idx = static_cast<size_t>(&img - &field.images.front());
+                            const double val = field.images[img_idx].value(row, col_k, chnl);
                             if(std::isfinite(val)){
                                 const double w = kernel_x[k + kernel_radius_x];
                                 sum += w * val;
@@ -314,7 +316,9 @@ smooth_vector_field(
                     for(int64_t k = -kernel_radius_y; k <= kernel_radius_y; ++k){
                         const int64_t row_k = row + k;
                         if(row_k >= 0 && row_k < N_rows){
-                            const double val = temp_x.images[&img - &temp_y.images.front()].value(row_k, col, chnl);
+                            // Calculate image index using distance from first image
+                            const size_t img_idx = static_cast<size_t>(&img - &temp_y.images.front());
+                            const double val = temp_x.images[img_idx].value(row_k, col, chnl);
                             if(std::isfinite(val)){
                                 const double w = kernel_y[k + kernel_radius_y];
                                 sum += w * val;
@@ -522,6 +526,9 @@ AlignViaDemons(AlignViaDemonsParams & params,
                const planar_image_collection<float, double> & moving_in,
                const planar_image_collection<float, double> & stationary ){
     
+    // Small epsilon to prevent division by zero
+    constexpr double epsilon = 1e-10;
+    
     if(moving_in.images.empty() || stationary.images.empty()){
         YLOGWARN("Unable to perform demons alignment: an image array is empty");
         return std::nullopt;
@@ -618,9 +625,9 @@ AlignViaDemons(AlignViaDemonsParams & params,
                         
                         // Demons force: u = - (diff * gradient) / (grad_mag^2 + diff^2 / normalization)
                         // This is the classic demons formulation
-                        const double denom = grad_mag_sq + (diff * diff) / (params.normalization_factor + 1e-10);
+                        const double denom = grad_mag_sq + (diff * diff) / (params.normalization_factor + epsilon);
                         
-                        if(denom > 1e-10){
+                        if(denom > epsilon){
                             double update_x = - diff * grad_x / denom;
                             double update_y = - diff * grad_y / denom;
                             double update_z = - diff * grad_z / denom;
@@ -698,14 +705,12 @@ AlignViaDemons(AlignViaDemonsParams & params,
                 smooth_vector_field(deformation_field_images, params.deformation_field_smoothing_sigma);
             }
             
-            // Create temporary deformation field for warping
-            deformation_field temp_def_field(std::move(planar_image_collection<double, double>(deformation_field_images)));
+            // Create a copy for warping (to avoid move semantics issues)
+            planar_image_collection<double, double> def_field_copy = deformation_field_images;
+            deformation_field temp_def_field(std::move(def_field_copy));
             
             // Warp moving image with updated deformation field
             warped_moving = warp_image_with_field(moving, temp_def_field);
-            
-            // Restore the deformation field images (they were moved)
-            deformation_field_images = temp_def_field.get_imagecoll_crefw().get().images;
         }
         
         // Return final deformation field
