@@ -31,3 +31,4 @@ dcma_integration_testing/
 # vim temporary files.
 *.swp
 
+build_test/
