@@ -180,6 +180,7 @@ add_library(Operations_objs OBJECT
     Repeat.cc
     ReportROIData.cc
     ResampleImages.cc
+    RegisterImagesDemons.cc
     RigidWarpImages.cc
     ScalePixels.cc
     SelectDirectory.cc
