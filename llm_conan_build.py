@@ -346,13 +346,9 @@ def main():
             cwd=repo_root
         )
         dcma_version = result.stdout.strip() or 'unknown'
-    except (subprocess.CalledProcessError, FileNotFoundError) as e:
-        # Script not found or failed to execute
-        log_warn(f"Could not extract version: {e}")
-        dcma_version = 'unknown'
-    except OSError as e:
-        # Permission denied or other OS-level error
-        log_warn(f"OS error extracting version: {e}")
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
+        # Script not found, failed to execute, or permission denied
+        log_warn(f"Could not extract version ({type(e).__name__}): {e}")
         dcma_version = 'unknown'
     
     # Prepare CMake arguments

@@ -356,9 +356,10 @@ cd "${BUILD_DIR}/dicomautomaton"
 # Get version
 VERSION_SCRIPT="${REPO_ROOT}/scripts/extract_dcma_version.sh"
 if [ -x "${VERSION_SCRIPT}" ]; then
-    DCMA_VERSION="$(${VERSION_SCRIPT} 2>&1 || echo "unknown")"
-    if [ "${DCMA_VERSION}" = "unknown" ]; then
+    DCMA_VERSION="$(${VERSION_SCRIPT} 2>&1 || true)"
+    if [ -z "${DCMA_VERSION}" ]; then
         log_warn "Version extraction failed, using 'unknown'"
+        DCMA_VERSION="unknown"
     fi
 else
     log_warn "Version script not found or not executable, using 'unknown'"
