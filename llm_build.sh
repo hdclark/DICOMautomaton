@@ -354,7 +354,16 @@ mkdir -p "${BUILD_DIR}/dicomautomaton"
 cd "${BUILD_DIR}/dicomautomaton"
 
 # Get version
-DCMA_VERSION="$(${REPO_ROOT}/scripts/extract_dcma_version.sh 2>/dev/null || echo "unknown")"
+VERSION_SCRIPT="${REPO_ROOT}/scripts/extract_dcma_version.sh"
+if [ -x "${VERSION_SCRIPT}" ]; then
+    DCMA_VERSION="$(${VERSION_SCRIPT} 2>&1 || echo "unknown")"
+    if [ "${DCMA_VERSION}" = "unknown" ]; then
+        log_warn "Version extraction failed, using 'unknown'"
+    fi
+else
+    log_warn "Version script not found or not executable, using 'unknown'"
+    DCMA_VERSION="unknown"
+fi
 
 # Configure with CMake
 log_info "Configuring DICOMautomaton with CMake..."

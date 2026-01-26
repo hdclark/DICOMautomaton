@@ -91,6 +91,7 @@ gitignore_entries=(
     "build_llm/"
     "build_conan/"
     ".linuxbrew/"
+    ".conan/"
     "__pycache__/"
 )
 
