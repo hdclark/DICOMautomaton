@@ -144,7 +144,9 @@ log_info "Build directory: ${BUILD_DIR}"
 
 # Determine number of parallel jobs
 if [ -z "${JOBS}" ]; then
-    JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
+    # Fallback to 4 cores if CPU detection fails (reasonable minimum for modern systems)
+    DEFAULT_JOBS=4
+    JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo ${DEFAULT_JOBS})
     JOBS=$((JOBS < 8 ? JOBS : 8))  # Limit to 8 to avoid OOM
 fi
 log_info "Using ${JOBS} parallel jobs"

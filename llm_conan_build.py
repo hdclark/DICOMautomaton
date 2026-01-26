@@ -113,7 +113,8 @@ def get_repo_root():
             check=True
         )
         return Path(result.stdout.strip())
-    except:
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        # Git not available or not in a git repository, use script location
         return Path(__file__).parent.absolute()
 
 def create_conanfile(build_dir, features):
@@ -341,7 +342,8 @@ def main():
             cwd=repo_root
         )
         dcma_version = result.stdout.strip() or 'unknown'
-    except:
+    except (subprocess.CalledProcessError, FileNotFoundError, OSError):
+        # Script not found or failed to execute
         dcma_version = 'unknown'
     
     # Prepare CMake arguments
