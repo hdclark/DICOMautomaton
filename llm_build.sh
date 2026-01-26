@@ -58,6 +58,10 @@ DO_INSTALL="no"
 CLEAN_BUILD="no"
 JOBS=""
 
+# Build parallelism defaults
+DEFAULT_JOBS=4  # Fallback when CPU detection fails (reasonable minimum for modern systems)
+MAX_JOBS=8      # Maximum parallel jobs to avoid OOM on memory-constrained systems
+
 # Feature flags with defaults
 WITH_EIGEN="${WITH_EIGEN:-ON}"
 WITH_CGAL="${WITH_CGAL:-ON}"
@@ -144,10 +148,8 @@ log_info "Build directory: ${BUILD_DIR}"
 
 # Determine number of parallel jobs
 if [ -z "${JOBS}" ]; then
-    # Fallback to 4 cores if CPU detection fails (reasonable minimum for modern systems)
-    DEFAULT_JOBS=4
     JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo ${DEFAULT_JOBS})
-    JOBS=$((JOBS < 8 ? JOBS : 8))  # Limit to 8 to avoid OOM
+    JOBS=$((JOBS < MAX_JOBS ? JOBS : MAX_JOBS))
 fi
 log_info "Using ${JOBS} parallel jobs"
 

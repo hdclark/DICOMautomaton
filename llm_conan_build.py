@@ -48,6 +48,10 @@ import shutil
 from pathlib import Path
 import multiprocessing
 
+# Build parallelism constants
+DEFAULT_JOBS = 4  # Fallback when CPU detection fails (reasonable minimum for modern systems)
+MAX_JOBS = 8      # Maximum parallel jobs to avoid OOM on memory-constrained systems
+
 # ANSI color codes for terminal output
 class Colors:
     RED = '\033[0;31m'
@@ -233,7 +237,7 @@ def main():
     if args.jobs:
         jobs = args.jobs
     else:
-        jobs = min(multiprocessing.cpu_count(), 8)
+        jobs = min(multiprocessing.cpu_count(), MAX_JOBS)
     log_info(f"Using {jobs} parallel jobs")
     
     # Get feature flags from environment
