@@ -71,6 +71,25 @@ implement_additions_and_deletions( T &mainline,
     return;
 }
 
+// Helper function to invert a selection by computing set differences.
+template <class T>
+T invert_selection(const T &all_items, const T &selected_items){
+    T inverted;
+    for(const auto &item : all_items){
+        bool found = false;
+        for(const auto &sel : selected_items){
+            if(item == sel){
+                found = true;
+                break;
+            }
+        }
+        if(!found){
+            inverted.push_back(item);
+        }
+    }
+    return inverted;
+}
+
 OperationDoc OpArgDocIsolate() {
     OperationDoc out;
     out.name = "Isolate";
@@ -164,6 +183,16 @@ OperationDoc OpArgDocIsolate() {
     out.args.back().default_val = "last";
     out.args.back().expected = false;
 
+    out.args.emplace_back();
+    out.args.back().name = "InvertSelection";
+    out.args.back().desc = "If enabled, the selection criteria are inverted, meaning that all objects"
+                           " *except* those matching the selection criteria will be isolated."
+                           " Note that only criteria that have been specified will be inverted."
+                           " This feature is useful for filtering out specific objects while keeping everything else.";
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
+
     return out;
 }
 
@@ -189,7 +218,12 @@ bool Isolate(Drover &DICOM_data,
     const auto TableSelectionOpt = OptArgs.getValueStr("TableSelection");
 
     const auto RTPlanSelectionOpt = OptArgs.getValueStr("RTPlanSelection");
+
+    const auto InvertSelectionStr = OptArgs.getValueStr("InvertSelection").value();
     //-----------------------------------------------------------------------------------------------------------------
+    const auto regex_true = Compile_Regex("^tr?u?e?$");
+
+    const auto ShouldInvertSelection = std::regex_match(InvertSelectionStr, regex_true);
 
     // Build the isolated Drover in such a way that the original Drover can be reassembled, even in the presence of
     // additions and deletions.
@@ -222,7 +256,13 @@ bool Isolate(Drover &DICOM_data,
     if(ImageSelectionOpt){
         auto IAs_all = All_IAs( DICOM_data );
         auto IAs = Whitelist( IAs_all, ImageSelectionOpt.value() );
-        YLOGINFO("Selected " << IAs.size() << " image arrays using ImageSelection selector");
+
+        if(ShouldInvertSelection){
+            IAs = invert_selection(IAs_all, IAs);
+            YLOGINFO("Selected " << IAs.size() << " image arrays using negated ImageSelection selector");
+        }else{
+            YLOGINFO("Selected " << IAs.size() << " image arrays using ImageSelection selector");
+        }
 
         for(const auto& x_it_ptr : IAs) isolated.image_data.push_back( *x_it_ptr );
     }
@@ -230,7 +270,13 @@ bool Isolate(Drover &DICOM_data,
     if(PointSelectionOpt){
         auto PCs_all = All_PCs( DICOM_data );
         auto PCs = Whitelist( PCs_all, PointSelectionOpt.value() );
-        YLOGINFO("Selected " << PCs.size() << " point clouds using PointSelection selector");
+
+        if(ShouldInvertSelection){
+            PCs = invert_selection(PCs_all, PCs);
+            YLOGINFO("Selected " << PCs.size() << " point clouds using negated PointSelection selector");
+        }else{
+            YLOGINFO("Selected " << PCs.size() << " point clouds using PointSelection selector");
+        }
 
         for(const auto& x_it_ptr : PCs) isolated.point_data.push_back( *x_it_ptr );
     }
@@ -238,7 +284,13 @@ bool Isolate(Drover &DICOM_data,
     if(MeshSelectionOpt){
         auto SMs_all = All_SMs( DICOM_data );
         auto SMs = Whitelist( SMs_all, MeshSelectionOpt.value() );
-        YLOGINFO("Selected " << SMs.size() << " surface meshes using MeshSelection selector");
+
+        if(ShouldInvertSelection){
+            SMs = invert_selection(SMs_all, SMs);
+            YLOGINFO("Selected " << SMs.size() << " surface meshes using negated MeshSelection selector");
+        }else{
+            YLOGINFO("Selected " << SMs.size() << " surface meshes using MeshSelection selector");
+        }
 
         for(const auto& x_it_ptr : SMs) isolated.smesh_data.push_back( *x_it_ptr );
     }
@@ -246,7 +298,13 @@ bool Isolate(Drover &DICOM_data,
     if(RTPlanSelectionOpt){
         auto TPs_all = All_TPs( DICOM_data );
         auto TPs = Whitelist( TPs_all, RTPlanSelectionOpt.value() );
-        YLOGINFO("Selected " << TPs.size() << " tables using RTPlanSelection selector");
+
+        if(ShouldInvertSelection){
+            TPs = invert_selection(TPs_all, TPs);
+            YLOGINFO("Selected " << TPs.size() << " RT plans using negated RTPlanSelection selector");
+        }else{
+            YLOGINFO("Selected " << TPs.size() << " RT plans using RTPlanSelection selector");
+        }
 
         for(const auto& x_it_ptr : TPs) isolated.rtplan_data.push_back( *x_it_ptr );
     }
@@ -254,7 +312,13 @@ bool Isolate(Drover &DICOM_data,
     if(LineSelectionOpt){
         auto LSs_all = All_LSs( DICOM_data );
         auto LSs = Whitelist( LSs_all, LineSelectionOpt.value() );
-        YLOGINFO("Selected " << LSs.size() << " line samples using LineSelection selector");
+
+        if(ShouldInvertSelection){
+            LSs = invert_selection(LSs_all, LSs);
+            YLOGINFO("Selected " << LSs.size() << " line samples using negated LineSelection selector");
+        }else{
+            YLOGINFO("Selected " << LSs.size() << " line samples using LineSelection selector");
+        }
 
         for(const auto& x_it_ptr : LSs) isolated.lsamp_data.push_back( *x_it_ptr );
     }
@@ -262,7 +326,13 @@ bool Isolate(Drover &DICOM_data,
     if(TransSelectionOpt){
         auto T3s_all = All_T3s( DICOM_data );
         auto T3s = Whitelist( T3s_all, TransSelectionOpt.value() );
-        YLOGINFO("Selected " << T3s.size() << " tables using TransSelection selector");
+
+        if(ShouldInvertSelection){
+            T3s = invert_selection(T3s_all, T3s);
+            YLOGINFO("Selected " << T3s.size() << " transforms using negated TransformSelection selector");
+        }else{
+            YLOGINFO("Selected " << T3s.size() << " transforms using TransformSelection selector");
+        }
 
         for(const auto& x_it_ptr : T3s) isolated.trans_data.push_back( *x_it_ptr );
     }
@@ -270,7 +340,13 @@ bool Isolate(Drover &DICOM_data,
     if(TableSelectionOpt){
         auto STs_all = All_STs( DICOM_data );
         auto STs = Whitelist( STs_all, TableSelectionOpt.value() );
-        YLOGINFO("Selected " << STs.size() << " tables using TableSelection selector");
+
+        if(ShouldInvertSelection){
+            STs = invert_selection(STs_all, STs);
+            YLOGINFO("Selected " << STs.size() << " tables using negated TableSelection selector");
+        }else{
+            YLOGINFO("Selected " << STs.size() << " tables using TableSelection selector");
+        }
 
         for(const auto& x_it_ptr : STs) isolated.table_data.push_back( *x_it_ptr );
     }
@@ -280,9 +356,33 @@ bool Isolate(Drover &DICOM_data,
     isolated.Ensure_Contour_Data_Allocated();
     auto cc_all = All_CCs( DICOM_data );
     auto cc_ROIs = Whitelist( cc_all, ROILabelRegexOpt, NormalizedROILabelRegexOpt, ROISelectionOpt );
-    if(!cc_ROIs.empty()){
-        YLOGINFO("Selected " << cc_ROIs.size() << " contour collections using ROI selectors");
 
+    if( ShouldInvertSelection
+    &&  (ROILabelRegexOpt || NormalizedROILabelRegexOpt || ROISelectionOpt) ){
+        // Invert the contour selection
+        decltype(cc_ROIs) cc_negated;
+        for(const auto &cc_refw : cc_all){
+            bool found = false;
+            for(const auto &sel : cc_ROIs){
+                if(std::addressof(cc_refw.get()) == std::addressof(sel.get())){
+                    found = true;
+                    break;
+                }
+            }
+            if(!found){
+                cc_negated.push_back(cc_refw);
+            }
+        }
+        cc_ROIs = cc_negated;
+        if(!cc_ROIs.empty()){
+            YLOGINFO("Selected " << cc_ROIs.size() << " contour collections using negated ROI selectors");
+        }
+
+    }else if(!cc_ROIs.empty()){
+        YLOGINFO("Selected " << cc_ROIs.size() << " contour collections using ROI selectors");
+    }
+
+    if(!cc_ROIs.empty()){
         for(const auto &cc_refw : cc_ROIs){
             const auto ptr = std::addressof(cc_refw.get());
 
@@ -331,4 +431,3 @@ bool Isolate(Drover &DICOM_data,
     // Pass along the return the status of the children operations.
     return ret;
 }
-
