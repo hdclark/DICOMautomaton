@@ -89,7 +89,7 @@ base64png:iVBORw0KGgoAAAANSUhEUgAAAbYAAAErCAYAAACy8abtAAAAAXNSR0IArs4c6QAAAARnQU
 
 ---
 There are many supported operations that span a wide variety of functionality, including operations that can invoke
-other operations and operations that create temporary views.
+other operations, and operations that create temporary views.
 
 We won't go into any more operations in this tutorial. However, every operation is documented. If you're ready to begin
 creating your own scripts, check out the operation documentation or the reference guide.
