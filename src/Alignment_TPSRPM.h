@@ -116,7 +116,8 @@ struct AlignViaTPSRPMParams {
     // Controls the smoothness of the fitted thin plate spline function.
     // Setting to zero will ensure that all points are interpolated exactly (up to numerical imprecision). Setting
     // higher will allow the spline to 'relax' and smooth out.
-    double lambda_start = 0.0;
+    // A small positive value (e.g., 0.001) is recommended to ensure numerical stability.
+    double lambda_start = 0.001;
 
     // Controls the balance of how points are considered to be outliers.
     // Setting to zero will disable this bias. Setting higher will cause fewer points to be considered outliers.

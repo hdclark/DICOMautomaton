@@ -500,7 +500,11 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     //
     // L matrix: "K" kernel part.
     //
-    // Note: "K"s diagonals are later adjusted using the regularization parameter. They are set to zero initially.
+    //
+    // Note: The kernel matrix "K" diagonals are set to zero here to match the standard TPS formulation.
+    //       Numerical regularization is introduced later when assembling the full system, either by adding a
+    //       scaled identity to the kernel block or, when double-sided outlier handling is enabled, via the W*lambda
+    //       weighting used in the objective.
     for(int64_t i = 0; i < N_move_points; ++i) L(i, i) = 0.0;
     for(int64_t i = 0; i < N_move_points; ++i){
         const auto P_i = moving.points[i];
@@ -527,7 +531,10 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         L(N_move_points + 3, i) = P_moving.z;
     }
  
-    // Index matrix that only alters the "K" kernel part of L.
+    // Identity matrix used for regularization. The last 4 diagonal elements are zeroed to exclude
+    // the affine part from regularization, keeping only the kernel part regularized.
+    // This ensures that regularization (lambda * I_N4) is applied uniformly to the TPS warp coefficients
+    // while leaving the affine transformation coefficients unregularized.
     I_N4(N_move_points + 0, N_move_points + 0) = 0.0;
     I_N4(N_move_points + 1, N_move_points + 1) = 0.0;
     I_N4(N_move_points + 2, N_move_points + 2) = 0.0;
@@ -545,6 +552,9 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
 
     if(params.seed_with_centroid_shift){
         // Seed the affine transformation with the output from a simpler rigid registration.
+        // Note: Only the translation component is seeded here. The rotation/scale components remain as the
+        // identity affine initialization set just above. This is intentional as the TPS-RPM algorithm naturally
+        // discovers rotation and scale through the annealing process.
         auto t_com = AlignViaCentroid(moving, stationary);
         if(!t_com){
             YLOGWARN("Unable to compute centroid seed transformation");
@@ -694,8 +704,8 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             for(int64_t j = 0; j < N_stat_points; ++j){ // column
                 const auto P_stationary = stationary.points[j];
                 const auto dP = P_stationary - P_moving; // Note: intentionally not transformed.
-                M(i, j) = (1.0 / T_start)
-                        * std::exp( -dP.Dot(dP) / T_start);
+                M(i, j) = (1.0 / T_now)
+                        * std::exp( -dP.Dot(dP) / T_now);
             }
         }
 
@@ -706,8 +716,8 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             const auto j = N_stat_points; // column
             const auto& P_stationary = com_stat;
             const auto dP = P_stationary - P_moved;
-            M(i, j) = (1.0 / T_start)
-                    * std::exp( -dP.Dot(dP) / T_start);
+            M(i, j) = (1.0 / T_now)
+                    * std::exp( -dP.Dot(dP) / T_now);
         }
 
         // Override forced correspondences and disable outlier detection (iff user specifies to do so).
@@ -960,6 +970,31 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
 
         if(!W_A.allFinite()){
             throw std::runtime_error("Failed to update transformation.");
+        }
+
+        // Validate transformation to detect potential point cloud collapse or invalid scaling.
+        // Check if the transformed points maintain reasonable variance.
+        {
+            Stats::Running_Variance<double> var_x, var_y, var_z;
+            for(int64_t i = 0; i < N_move_points; ++i){
+                const auto P_moving = moving.points[i];
+                const auto P_moved = t.transform(P_moving);
+                var_x.Digest(P_moved.x);
+                var_y.Digest(P_moved.y);
+                var_z.Digest(P_moved.z);
+            }
+            
+            const double total_variance = var_x.Current_Variance() + var_y.Current_Variance() + var_z.Current_Variance();
+            if(!std::isfinite(total_variance)){
+                throw std::runtime_error("Transformation validation failed: non-finite variance detected.");
+            }
+            
+            // Check for dramatic collapse (variance approaching zero)
+            // Note: This threshold may need adjustment based on the scale of the input point clouds
+            const double collapse_threshold = 1e-10;
+            if(total_variance < collapse_threshold){
+                YLOGWARN("Point cloud may be collapsing: total variance = " << total_variance);
+            }
         }
 
         return;
