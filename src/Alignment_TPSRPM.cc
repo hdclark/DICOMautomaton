@@ -500,8 +500,11 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
     //
     // L matrix: "K" kernel part.
     //
-    // Note: The kernel matrix "K" diagonals are set to zero initially, as per the TPS formulation.
-    //       Regularization is applied later via I_N4 to ensure numerical stability (see lines 531-534, 917, 941).
+    //
+    // Note: The kernel matrix "K" diagonals are set to zero here to match the standard TPS formulation.
+    //       Numerical regularization is introduced later when assembling the full system, either by adding a
+    //       scaled identity to the kernel block or, when double-sided outlier handling is enabled, via the W*lambda
+    //       weighting used in the objective.
     for(int64_t i = 0; i < N_move_points; ++i) L(i, i) = 0.0;
     for(int64_t i = 0; i < N_move_points; ++i){
         const auto P_i = moving.points[i];
