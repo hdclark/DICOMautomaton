@@ -36,6 +36,19 @@ WITH_CGAL=OFF WITH_WT=OFF ./llm_build.sh --clean --install
 
 ### Method 2: Conan Build
 
+**Prerequisites:** The Conan build script requires some system packages to be installed:
+- Python 3 with venv module (python3-venv on Debian/Ubuntu)
+- Git
+- CMake  
+- C++ compiler (gcc/g++ or clang)
+- pkg-config
+- curl
+
+On Debian/Ubuntu:
+```bash
+apt-get install -y python3 python3-venv git cmake gcc g++ pkg-config curl
+```
+
 **Note:** The Conan build script automatically creates and uses a local Python virtual environment in the build directory. No system-wide Python package installation is required.
 
 ```bash
@@ -66,6 +79,9 @@ chmod +x llm_build.sh
 ./llm_build.sh --install
 
 # Option 2: Use Conan (Python)
+# First, install prerequisites (Debian/Ubuntu):
+apt-get install -y python3 python3-venv git cmake gcc g++ pkg-config curl
+
 chmod +x llm_conan_build.py
 python3 llm_conan_build.py --install
 ```

@@ -6,6 +6,17 @@ This script provides an automated, reproducible build method using Conan
 for C++ dependency management. It's designed to be easily understood and
 executed by LLMs.
 
+Prerequisites:
+    - Python 3 with venv module (python3-venv on Debian/Ubuntu)
+    - Git
+    - CMake
+    - C++ compiler (gcc/g++ or clang)
+    - pkg-config
+    - curl (for Conan package downloads)
+
+    On Debian/Ubuntu:
+        apt-get install -y python3 python3-venv git cmake gcc g++ pkg-config curl
+
 Usage:
     python3 llm_conan_build.py [options]
 
@@ -90,6 +101,36 @@ def run_command(cmd, cwd=None, env=None, check=True):
         if check:
             sys.exit(1)
         return None
+
+def check_system_dependencies():
+    """Check for required system dependencies and provide helpful error messages."""
+    required_commands = {
+        'git': 'Git version control system',
+        'cmake': 'CMake build system',
+        'gcc': 'GNU C compiler (or alternative C compiler)',
+        'g++': 'GNU C++ compiler (or alternative C++ compiler)',
+        'pkg-config': 'pkg-config tool',
+        'curl': 'curl download tool',
+    }
+    
+    missing = []
+    for cmd, description in required_commands.items():
+        if not shutil.which(cmd):
+            missing.append(f"  - {cmd}: {description}")
+    
+    if missing:
+        log_error("Missing required system dependencies:")
+        for item in missing:
+            print(item)
+        print()
+        log_error("On Debian/Ubuntu, install with:")
+        print("  apt-get install -y python3 python3-venv git cmake gcc g++ pkg-config curl")
+        print()
+        log_error("On other distributions, install equivalent packages for your system.")
+        return False
+    
+    log_success("All required system dependencies found")
+    return True
 
 def setup_virtual_environment(build_root):
     """Create and set up a Python virtual environment for Conan."""
@@ -236,7 +277,7 @@ def create_conanfile(build_dir, features):
     log_info(f"Created conanfile.txt at {conanfile_path}")
     return conanfile_path
 
-def build_dependency(name, repo_url, install_prefix, build_root, cmake_prefix_path, jobs):
+def build_dependency(name, repo_url, install_prefix, build_root, cmake_prefix_path, jobs, conan_build_env):
     """Build a dependency from source (Ygor, Explicator, YgorClustering)."""
     log_info(f"Building {name}...")
     
@@ -248,8 +289,33 @@ def build_dependency(name, repo_url, install_prefix, build_root, cmake_prefix_pa
     build_dir = dep_dir / 'build'
     build_dir.mkdir(exist_ok=True)
     
-    cmake_env = os.environ.copy()
+    # Set up environment with Conan paths and standard paths
+    cmake_env = conan_build_env.copy()
     cmake_env['CMAKE_PREFIX_PATH'] = cmake_prefix_path
+    
+    # Ensure install_prefix paths are in the environment
+    lib_path = str(Path(install_prefix) / 'lib')
+    include_path = str(Path(install_prefix) / 'include')
+    bin_path = str(Path(install_prefix) / 'bin')
+    
+    # Update PATH to include install_prefix/bin
+    if 'PATH' in cmake_env:
+        cmake_env['PATH'] = f"{bin_path}:{cmake_env['PATH']}"
+    else:
+        cmake_env['PATH'] = f"{bin_path}:{os.environ.get('PATH', '')}"
+    
+    # Update PKG_CONFIG_PATH
+    pkg_config_path = str(Path(install_prefix) / 'lib' / 'pkgconfig')
+    if 'PKG_CONFIG_PATH' in cmake_env:
+        cmake_env['PKG_CONFIG_PATH'] = f"{pkg_config_path}:{cmake_env['PKG_CONFIG_PATH']}"
+    else:
+        cmake_env['PKG_CONFIG_PATH'] = pkg_config_path
+    
+    # Update LD_LIBRARY_PATH for runtime linking
+    if 'LD_LIBRARY_PATH' in cmake_env:
+        cmake_env['LD_LIBRARY_PATH'] = f"{lib_path}:{cmake_env['LD_LIBRARY_PATH']}"
+    else:
+        cmake_env['LD_LIBRARY_PATH'] = lib_path
     
     # Configure
     cmake_args = [
@@ -268,6 +334,53 @@ def build_dependency(name, repo_url, install_prefix, build_root, cmake_prefix_pa
     run_command(['make', 'install'], cwd=build_dir, env=cmake_env)
     
     log_success(f"{name} built and installed")
+    
+    log_success(f"{name} built and installed")
+
+def get_conan_build_environment(build_root):
+    """
+    Extract build environment from Conan installation.
+    Conan 2.x generates environment files that we need to source.
+    """
+    env = os.environ.copy()
+    
+    # Conan 2.x generates conanbuild.sh and conanrun.sh scripts
+    # We need to parse these to get the environment variables
+    conan_build_script = build_root / 'conanbuild.sh'
+    
+    if conan_build_script.exists():
+        log_info("Extracting Conan build environment...")
+        
+        # Parse the conan build script to extract environment variables
+        try:
+            # Run a shell command that sources the script and prints the environment
+            result = subprocess.run(
+                ['bash', '-c', f'source {conan_build_script} && env'],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            
+            if result.returncode == 0:
+                # Parse environment variables from output
+                for line in result.stdout.split('\n'):
+                    if '=' in line:
+                        key, _, value = line.partition('=')
+                        # Update key environment variables
+                        if key in ['PATH', 'LD_LIBRARY_PATH', 'PKG_CONFIG_PATH', 
+                                   'CPATH', 'LIBRARY_PATH', 'CC', 'CXX', 'CFLAGS', 
+                                   'CXXFLAGS', 'LDFLAGS']:
+                            env[key] = value
+                log_success("Conan build environment extracted")
+            else:
+                log_warn("Could not source Conan build script, using basic environment")
+        except Exception as e:
+            log_warn(f"Failed to extract Conan environment: {e}")
+    else:
+        log_warn(f"Conan build script not found at {conan_build_script}")
+        log_warn("Build may fail if Conan dependencies are not found")
+    
+    return env
 
 def main():
     parser = argparse.ArgumentParser(
@@ -287,6 +400,11 @@ def main():
                         help='Number of parallel jobs (default: auto-detect, max 8)')
     
     args = parser.parse_args()
+    
+    # Check for required system dependencies
+    log_info("Checking system dependencies...")
+    if not check_system_dependencies():
+        sys.exit(1)
     
     # Determine repository root
     repo_root = get_repo_root()
@@ -375,6 +493,9 @@ def main():
     run_command(conan_install_cmd, cwd=build_root)
     log_success("Conan dependencies installed")
     
+    # Extract Conan build environment
+    conan_build_env = get_conan_build_environment(build_root)
+    
     # Set up CMAKE_PREFIX_PATH
     conan_toolchain = build_root / 'conan_toolchain.cmake'
     cmake_prefix_paths = [
@@ -390,7 +511,8 @@ def main():
         install_prefix,
         build_root,
         cmake_prefix_path,
-        jobs
+        jobs,
+        conan_build_env
     )
     
     # Build Explicator
@@ -400,7 +522,8 @@ def main():
         install_prefix,
         build_root,
         cmake_prefix_path,
-        jobs
+        jobs,
+        conan_build_env
     )
     
     # Build YgorClustering
@@ -410,7 +533,8 @@ def main():
         install_prefix,
         build_root,
         cmake_prefix_path,
-        jobs
+        jobs,
+        conan_build_env
     )
     
     # Build DICOMautomaton
@@ -435,9 +559,32 @@ def main():
         log_warn(f"Could not extract version ({type(e).__name__}): {e}")
         dcma_version = 'unknown'
     
-    # Prepare CMake arguments
-    cmake_env = os.environ.copy()
+    # Prepare CMake arguments with Conan environment
+    cmake_env = conan_build_env.copy()
     cmake_env['CMAKE_PREFIX_PATH'] = cmake_prefix_path
+    
+    # Ensure install_prefix paths are in the environment
+    lib_path = str(Path(install_prefix) / 'lib')
+    bin_path = str(Path(install_prefix) / 'bin')
+    pkg_config_path = str(Path(install_prefix) / 'lib' / 'pkgconfig')
+    
+    # Update PATH
+    if 'PATH' in cmake_env:
+        cmake_env['PATH'] = f"{bin_path}:{cmake_env['PATH']}"
+    else:
+        cmake_env['PATH'] = f"{bin_path}:{os.environ.get('PATH', '')}"
+    
+    # Update PKG_CONFIG_PATH
+    if 'PKG_CONFIG_PATH' in cmake_env:
+        cmake_env['PKG_CONFIG_PATH'] = f"{pkg_config_path}:{cmake_env['PKG_CONFIG_PATH']}"
+    else:
+        cmake_env['PKG_CONFIG_PATH'] = pkg_config_path
+    
+    # Update LD_LIBRARY_PATH
+    if 'LD_LIBRARY_PATH' in cmake_env:
+        cmake_env['LD_LIBRARY_PATH'] = f"{lib_path}:{cmake_env['LD_LIBRARY_PATH']}"
+    else:
+        cmake_env['LD_LIBRARY_PATH'] = lib_path
     
     cmake_args = [
         'cmake',
