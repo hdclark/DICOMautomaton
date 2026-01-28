@@ -91,21 +91,81 @@ def run_command(cmd, cwd=None, env=None, check=True):
             sys.exit(1)
         return None
 
-def ensure_conan_installed():
-    """Ensure Conan is installed, install via pip if not."""
-    try:
-        result = subprocess.run(['conan', '--version'], capture_output=True, text=True)
-        log_info(f"Conan already installed: {result.stdout.strip()}")
-        return True
-    except FileNotFoundError:
-        log_info("Conan not found, installing via pip...")
+def setup_virtual_environment(build_root):
+    """Create and set up a Python virtual environment for Conan."""
+    venv_dir = build_root / '.venv'
+    
+    log_info(f"Setting up Python virtual environment at {venv_dir}")
+    
+    # Create virtual environment if it doesn't exist
+    if not venv_dir.exists():
         try:
-            run_command([sys.executable, '-m', 'pip', 'install', '--user', 'conan'])
-            log_success("Conan installed successfully")
-            return True
+            import venv
+            log_info("Creating virtual environment...")
+            venv.create(venv_dir, with_pip=True, clear=False)
+            log_success("Virtual environment created")
         except Exception as e:
-            log_error(f"Failed to install Conan: {e}")
-            return False
+            log_error(f"Failed to create virtual environment: {e}")
+            return None, None
+    else:
+        log_info("Virtual environment already exists")
+    
+    # Determine the Python executable path in the venv
+    if os.name == 'nt':  # Windows
+        venv_python = venv_dir / 'Scripts' / 'python.exe'
+        venv_pip = venv_dir / 'Scripts' / 'pip.exe'
+    else:  # Unix-like (Linux, macOS)
+        venv_python = venv_dir / 'bin' / 'python'
+        venv_pip = venv_dir / 'bin' / 'pip'
+    
+    if not venv_python.exists():
+        log_error(f"Virtual environment Python not found at {venv_python}")
+        return None, None
+    
+    log_success(f"Using virtual environment Python: {venv_python}")
+    return venv_python, venv_pip
+
+def ensure_conan_installed(venv_python, venv_pip):
+    """Ensure Conan is installed in the virtual environment."""
+    # Check if conan is available in the venv
+    try:
+        result = subprocess.run(
+            [str(venv_python), '-m', 'pip', 'show', 'conan'],
+            capture_output=True,
+            text=True,
+            check=False
+        )
+        if result.returncode == 0:
+            # Get conan version
+            version_result = subprocess.run(
+                [str(venv_python), '-m', 'conans.client.command', '--version'],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if version_result.returncode == 0:
+                log_info(f"Conan already installed: {version_result.stdout.strip()}")
+                return True
+    except Exception:
+        pass
+    
+    log_info("Conan not found in virtual environment, installing via pip...")
+    try:
+        # Install conan in the virtual environment
+        result = subprocess.run(
+            [str(venv_pip), 'install', 'conan'],
+            capture_output=False,
+            text=True,
+            check=True
+        )
+        log_success("Conan installed successfully in virtual environment")
+        return True
+    except subprocess.CalledProcessError as e:
+        log_error(f"Failed to install Conan: {e}")
+        return False
+    except Exception as e:
+        log_error(f"Failed to install Conan: {e}")
+        return False
 
 def get_repo_root():
     """Get the repository root directory."""
@@ -268,11 +328,6 @@ def main():
     if features['jansson']:
         log_warn("Jansson is not available in Conan Center, will need system installation")
     
-    # Ensure Conan is installed
-    if not ensure_conan_installed():
-        log_error("Failed to install Conan")
-        sys.exit(1)
-    
     # Clean build if requested
     if args.clean and build_root.exists():
         log_info(f"Removing existing build directory: {build_root}")
@@ -281,13 +336,24 @@ def main():
     # Create build directory
     build_root.mkdir(exist_ok=True)
     
+    # Set up Python virtual environment
+    venv_python, venv_pip = setup_virtual_environment(build_root)
+    if venv_python is None or venv_pip is None:
+        log_error("Failed to set up virtual environment")
+        sys.exit(1)
+    
+    # Ensure Conan is installed in the virtual environment
+    if not ensure_conan_installed(venv_python, venv_pip):
+        log_error("Failed to install Conan in virtual environment")
+        sys.exit(1)
+    
     # Create conanfile.txt
     create_conanfile(build_root, features)
     
-    # Install Conan dependencies
+    # Install Conan dependencies using venv Python
     log_info("Installing Conan dependencies...")
     conan_install_cmd = [
-        'conan', 'install', str(build_root),
+        str(venv_python), '-m', 'conans.client.command', 'install', str(build_root),
         '--build=missing',
         '-s', 'compiler.cppstd=17',
         '-s', 'build_type=Release'

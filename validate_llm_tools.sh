@@ -93,6 +93,7 @@ gitignore_entries=(
     ".linuxbrew/"
     ".conan/"
     "__pycache__/"
+    ".venv/"
 )
 
 for entry in "${gitignore_entries[@]}"; do

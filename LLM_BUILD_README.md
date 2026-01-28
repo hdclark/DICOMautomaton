@@ -36,11 +36,13 @@ WITH_CGAL=OFF WITH_WT=OFF ./llm_build.sh --clean --install
 
 ### Method 2: Conan Build
 
+**Note:** The Conan build script automatically creates and uses a local Python virtual environment in the build directory. No system-wide Python package installation is required.
+
 ```bash
 # Make the script executable
 chmod +x llm_conan_build.py
 
-# Basic build (requires Python 3)
+# Basic build (requires Python 3 with venv module)
 python3 llm_conan_build.py
 
 # Build and install to custom location
@@ -227,6 +229,7 @@ DICOMautomaton/
 ```
 DICOMautomaton/
 ├── build_conan/                  # Main build directory
+│   ├── .venv/                    # Python virtual environment (auto-created)
 │   ├── conanfile.txt             # Generated Conan dependencies
 │   ├── conan_toolchain.cmake     # Generated CMake toolchain
 │   ├── ygor/                     # Ygor source and build
@@ -302,9 +305,11 @@ dicomautomaton_dispatcher -u  # Show available operations
 - Smaller footprint
 - Native CMake integration
 - Python-based (better error handling)
+- Uses local virtual environment (no system-wide installation needed)
+- Isolated from system Python packages
 
 **Cons:**
-- Requires Python 3
+- Requires Python 3 with venv module
 - Smaller package ecosystem
 - Some packages not in Conan Center (Wt, Jansson)
 - More complex troubleshooting
@@ -314,6 +319,7 @@ dicomautomaton_dispatcher -u  # Show available operations
 - Reproducible builds
 - Version-pinned dependencies
 - Cross-platform C++ projects
+- Environments without root access
 
 ## Troubleshooting
 
@@ -341,6 +347,19 @@ ERROR: Package 'wt' not found in remotes
 **Solution:**
 - Set feature flag to OFF: `WITH_WT=OFF python3 llm_conan_build.py`
 - Or install package via system package manager first
+
+#### 2a. Conan Installation Issues
+
+**Problem:** Cannot install Conan due to system Python restrictions
+```
+error: externally-managed-environment
+```
+
+**Solution:**
+- The script now automatically creates and uses a local Python virtual environment in `build_conan/.venv/`
+- No system-wide Python package installation required
+- The virtual environment is created automatically on first run
+- To start fresh, delete the `build_conan/.venv/` directory and re-run the script
 
 #### 3. Build Runs Out of Memory
 
