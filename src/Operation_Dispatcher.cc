@@ -143,6 +143,7 @@
 #include "Operations/GenerateWarp.h"
 #include "Operations/GenerateVirtualDataContourViaThresholdTestV1.h"
 #include "Operations/GenerateVirtualDataDoseStairsV1.h"
+#include "Operations/GenerateVirtualDataLineSampleV1.h"
 #include "Operations/GenerateVirtualDataImageSphereV1.h"
 #include "Operations/GenerateVirtualDataPerfusionV1.h"
 #include "Operations/GiveWholeImageArrayABoneWindowLevel.h"
@@ -412,6 +413,7 @@ known_ops_t Known_Operations(){
     out["GenerateTable"] = std::make_pair(OpArgDocGenerateTable, GenerateTable);
     out["GenerateVirtualDataContourViaThresholdTestV1"] = std::make_pair(OpArgDocGenerateVirtualDataContourViaThresholdTestV1, GenerateVirtualDataContourViaThresholdTestV1);
     out["GenerateVirtualDataDoseStairsV1"] = std::make_pair(OpArgDocGenerateVirtualDataDoseStairsV1, GenerateVirtualDataDoseStairsV1);
+    out["GenerateVirtualDataLineSampleV1"] = std::make_pair(OpArgDocGenerateVirtualDataLineSampleV1, GenerateVirtualDataLineSampleV1);
     out["GenerateVirtualDataImageSphereV1"] = std::make_pair(OpArgDocGenerateVirtualDataImageSphereV1, GenerateVirtualDataImageSphereV1);
     out["GenerateVirtualDataPerfusionV1"] = std::make_pair(OpArgDocGenerateVirtualDataPerfusionV1, GenerateVirtualDataPerfusionV1);
     out["GenerateWarp"] = std::make_pair(OpArgDocGenerateWarp, GenerateWarp);
