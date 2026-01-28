@@ -123,6 +123,10 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         --jobs)
+            if ! [[ "$2" =~ ^[0-9]+$ ]] || [ "$2" -le 0 ]; then
+                log_error "--jobs must be a positive integer, got '$2'"
+                exit 1
+            fi
             JOBS="$2"
             shift 2
             ;;
