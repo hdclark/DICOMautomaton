@@ -122,6 +122,7 @@ add_library(Operations_objs OBJECT
     GenerateVirtualDataContourViaThresholdTestV1.cc
     GenerateVirtualDataDoseStairsV1.cc
     GenerateVirtualDataImageSphereV1.cc
+    GenerateVirtualDataLineSampleV1.cc
     GenerateVirtualDataPerfusionV1.cc
     GenerateWarp.cc
     GiveWholeImageArrayABoneWindowLevel.cc
