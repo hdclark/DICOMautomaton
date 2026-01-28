@@ -125,7 +125,7 @@ def setup_virtual_environment(build_root):
     log_success(f"Using virtual environment Python: {venv_python}")
     return venv_python, venv_pip
 
-def ensure_conan_installed(venv_python, venv_pip, venv_dir):
+def ensure_conan_installed(venv_pip, venv_dir):
     """Ensure Conan is installed in the virtual environment."""
     # Determine the conan executable path in the venv
     if os.name == 'nt':  # Windows
@@ -351,7 +351,7 @@ def main():
         sys.exit(1)
     
     # Ensure Conan is installed in the virtual environment
-    venv_conan = ensure_conan_installed(venv_python, venv_pip, build_root / '.venv')
+    venv_conan = ensure_conan_installed(venv_pip, build_root / '.venv')
     if venv_conan is None:
         log_error("Failed to install Conan in virtual environment")
         sys.exit(1)
