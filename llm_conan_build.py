@@ -237,7 +237,10 @@ def main():
     if args.jobs:
         jobs = args.jobs
     else:
-        jobs = min(multiprocessing.cpu_count(), MAX_JOBS)
+        try:
+            jobs = min(multiprocessing.cpu_count(), MAX_JOBS)
+        except NotImplementedError:
+            jobs = DEFAULT_JOBS
     log_info(f"Using {jobs} parallel jobs")
     
     # Get feature flags from environment
