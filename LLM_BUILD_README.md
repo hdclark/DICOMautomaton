@@ -119,25 +119,23 @@ python3 llm_conan_build.py \
 
 ## Feature Flags
 
-Both scripts support the same feature flags through environment variables:
+Both scripts support the same feature flags through environment variables. The table below shows defaults for the Homebrew/Linuxbrew method:
 
-| Environment Variable | Default | Description |
-|---------------------|---------|-------------|
-| `WITH_EIGEN`        | ON      | Enable Eigen linear algebra library |
-| `WITH_CGAL`         | ON      | Enable CGAL computational geometry |
-| `WITH_NLOPT`        | ON      | Enable NLopt optimization library |
-| `WITH_SFML`         | ON      | Enable SFML for graphics/viewer |
-| `WITH_SDL`          | ON      | Enable SDL2 for graphics/viewer |
-| `WITH_WT`           | ON      | Enable Wt web interface |
-| `WITH_GNU_GSL`      | ON      | Enable GNU Scientific Library |
-| `WITH_POSTGRES`     | ON      | Enable PostgreSQL database support |
-| `WITH_JANSSON`      | ON      | Enable Jansson JSON library |
-| `WITH_THRIFT`       | ON      | Enable Apache Thrift RPC |
+| Environment Variable | Default (Homebrew) | Default (Conan) | Description |
+|---------------------|--------------------|--------------------|-------------|
+| `WITH_EIGEN`        | ON                 | ON                 | Enable Eigen linear algebra library |
+| `WITH_CGAL`         | ON                 | ON                 | Enable CGAL computational geometry |
+| `WITH_NLOPT`        | ON                 | ON                 | Enable NLopt optimization library |
+| `WITH_SFML`         | ON                 | ON                 | Enable SFML for graphics/viewer |
+| `WITH_SDL`          | ON                 | ON                 | Enable SDL2 for graphics/viewer |
+| `WITH_WT`           | ON                 | OFF*               | Enable Wt web interface |
+| `WITH_GNU_GSL`      | ON                 | ON                 | Enable GNU Scientific Library |
+| `WITH_POSTGRES`     | ON                 | ON                 | Enable PostgreSQL database support |
+| `WITH_JANSSON`      | ON                 | OFF*               | Enable Jansson JSON library |
+| `WITH_THRIFT`       | ON                 | ON                 | Enable Apache Thrift RPC |
 
-**Notes for Conan:**
-- `WITH_WT` defaults to OFF (not available in Conan Center)
-- `WITH_JANSSON` defaults to OFF (not available in Conan Center)
-- These packages need system installation if required
+**Notes:**
+- \* `WITH_WT` and `WITH_JANSSON` default to OFF for Conan because these packages are not available in Conan Center. These packages need system installation if required when using Conan.
 
 ### Using Feature Flags
 

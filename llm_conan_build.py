@@ -346,11 +346,12 @@ def main():
             [str(version_script)],
             capture_output=True,
             text=True,
-            cwd=repo_root
+            cwd=repo_root,
+            check=False  # Don't raise on non-zero exit; check stdout instead
         )
         dcma_version = result.stdout.strip() or 'unknown'
-    except (subprocess.CalledProcessError, FileNotFoundError, OSError) as e:
-        # Script not found, failed to execute, or permission denied
+    except (FileNotFoundError, OSError) as e:
+        # Script not found or permission denied
         log_warn(f"Could not extract version ({type(e).__name__}): {e}")
         dcma_version = 'unknown'
     
