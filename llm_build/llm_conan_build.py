@@ -56,6 +56,7 @@ import os
 import sys
 import subprocess
 import shutil
+import shlex
 from pathlib import Path
 import multiprocessing
 
@@ -105,6 +106,7 @@ def run_command(cmd, cwd=None, env=None, check=True):
 def check_system_dependencies():
     """Check for required system dependencies and provide helpful error messages."""
     required_commands = {
+        'bash': 'Bash shell',
         'git': 'Git version control system',
         'cmake': 'CMake build system',
         'gcc': 'GNU C compiler (or alternative C compiler)',
@@ -289,33 +291,9 @@ def build_dependency(name, repo_url, install_prefix, build_root, cmake_prefix_pa
     build_dir = dep_dir / 'build'
     build_dir.mkdir(exist_ok=True)
     
-    # Set up environment with Conan paths and standard paths
-    cmake_env = conan_build_env.copy()
+    # Set up environment with Conan paths and install_prefix paths
+    cmake_env = update_build_environment(conan_build_env, install_prefix)
     cmake_env['CMAKE_PREFIX_PATH'] = cmake_prefix_path
-    
-    # Ensure install_prefix paths are in the environment
-    lib_path = str(Path(install_prefix) / 'lib')
-    include_path = str(Path(install_prefix) / 'include')
-    bin_path = str(Path(install_prefix) / 'bin')
-    
-    # Update PATH to include install_prefix/bin
-    if 'PATH' in cmake_env:
-        cmake_env['PATH'] = f"{bin_path}:{cmake_env['PATH']}"
-    else:
-        cmake_env['PATH'] = f"{bin_path}:{os.environ.get('PATH', '')}"
-    
-    # Update PKG_CONFIG_PATH
-    pkg_config_path = str(Path(install_prefix) / 'lib' / 'pkgconfig')
-    if 'PKG_CONFIG_PATH' in cmake_env:
-        cmake_env['PKG_CONFIG_PATH'] = f"{pkg_config_path}:{cmake_env['PKG_CONFIG_PATH']}"
-    else:
-        cmake_env['PKG_CONFIG_PATH'] = pkg_config_path
-    
-    # Update LD_LIBRARY_PATH for runtime linking
-    if 'LD_LIBRARY_PATH' in cmake_env:
-        cmake_env['LD_LIBRARY_PATH'] = f"{lib_path}:{cmake_env['LD_LIBRARY_PATH']}"
-    else:
-        cmake_env['LD_LIBRARY_PATH'] = lib_path
     
     # Configure
     cmake_args = [
@@ -354,8 +332,10 @@ def get_conan_build_environment(build_root):
         # Parse the conan build script to extract environment variables
         try:
             # Run a shell command that sources the script and prints the environment
+            # Use shlex.quote to prevent shell injection
+            script_path = shlex.quote(str(conan_build_script))
             result = subprocess.run(
-                ['bash', '-c', f'source {conan_build_script} && env'],
+                ['bash', '-c', f'source {script_path} && env'],
                 capture_output=True,
                 text=True,
                 check=False
@@ -379,6 +359,37 @@ def get_conan_build_environment(build_root):
     else:
         log_warn(f"Conan build script not found at {conan_build_script}")
         log_warn("Build may fail if Conan dependencies are not found")
+    
+    return env
+
+def update_build_environment(base_env, install_prefix):
+    """
+    Update environment with install_prefix paths.
+    Returns a copy of the environment with updated PATH, PKG_CONFIG_PATH, and LD_LIBRARY_PATH.
+    """
+    env = base_env.copy()
+    
+    lib_path = str(Path(install_prefix) / 'lib')
+    bin_path = str(Path(install_prefix) / 'bin')
+    pkg_config_path = str(Path(install_prefix) / 'lib' / 'pkgconfig')
+    
+    # Update PATH to include install_prefix/bin
+    if 'PATH' in env:
+        env['PATH'] = f"{bin_path}:{env['PATH']}"
+    else:
+        env['PATH'] = f"{bin_path}:{os.environ.get('PATH', '')}"
+    
+    # Update PKG_CONFIG_PATH
+    if 'PKG_CONFIG_PATH' in env:
+        env['PKG_CONFIG_PATH'] = f"{pkg_config_path}:{env['PKG_CONFIG_PATH']}"
+    else:
+        env['PKG_CONFIG_PATH'] = pkg_config_path
+    
+    # Update LD_LIBRARY_PATH for runtime linking
+    if 'LD_LIBRARY_PATH' in env:
+        env['LD_LIBRARY_PATH'] = f"{lib_path}:{env['LD_LIBRARY_PATH']}"
+    else:
+        env['LD_LIBRARY_PATH'] = lib_path
     
     return env
 
@@ -560,31 +571,8 @@ def main():
         dcma_version = 'unknown'
     
     # Prepare CMake arguments with Conan environment
-    cmake_env = conan_build_env.copy()
+    cmake_env = update_build_environment(conan_build_env, install_prefix)
     cmake_env['CMAKE_PREFIX_PATH'] = cmake_prefix_path
-    
-    # Ensure install_prefix paths are in the environment
-    lib_path = str(Path(install_prefix) / 'lib')
-    bin_path = str(Path(install_prefix) / 'bin')
-    pkg_config_path = str(Path(install_prefix) / 'lib' / 'pkgconfig')
-    
-    # Update PATH
-    if 'PATH' in cmake_env:
-        cmake_env['PATH'] = f"{bin_path}:{cmake_env['PATH']}"
-    else:
-        cmake_env['PATH'] = f"{bin_path}:{os.environ.get('PATH', '')}"
-    
-    # Update PKG_CONFIG_PATH
-    if 'PKG_CONFIG_PATH' in cmake_env:
-        cmake_env['PKG_CONFIG_PATH'] = f"{pkg_config_path}:{cmake_env['PKG_CONFIG_PATH']}"
-    else:
-        cmake_env['PKG_CONFIG_PATH'] = pkg_config_path
-    
-    # Update LD_LIBRARY_PATH
-    if 'LD_LIBRARY_PATH' in cmake_env:
-        cmake_env['LD_LIBRARY_PATH'] = f"{lib_path}:{cmake_env['LD_LIBRARY_PATH']}"
-    else:
-        cmake_env['LD_LIBRARY_PATH'] = lib_path
     
     cmake_args = [
         'cmake',
