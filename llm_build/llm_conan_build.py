@@ -312,8 +312,6 @@ def build_dependency(name, repo_url, install_prefix, build_root, cmake_prefix_pa
     run_command(['make', 'install'], cwd=build_dir, env=cmake_env)
     
     log_success(f"{name} built and installed")
-    
-    log_success(f"{name} built and installed")
 
 def get_conan_build_environment(build_root):
     """
@@ -343,14 +341,20 @@ def get_conan_build_environment(build_root):
             
             if result.returncode == 0:
                 # Parse environment variables from output
+                # Only accept variables from our whitelist to avoid injection issues
+                target_vars = {'PATH', 'LD_LIBRARY_PATH', 'PKG_CONFIG_PATH', 
+                               'CPATH', 'LIBRARY_PATH', 'CC', 'CXX', 'CFLAGS', 
+                               'CXXFLAGS', 'LDFLAGS'}
+                
                 for line in result.stdout.split('\n'):
-                    if '=' in line:
-                        key, _, value = line.partition('=')
-                        # Update key environment variables
-                        if key in ['PATH', 'LD_LIBRARY_PATH', 'PKG_CONFIG_PATH', 
-                                   'CPATH', 'LIBRARY_PATH', 'CC', 'CXX', 'CFLAGS', 
-                                   'CXXFLAGS', 'LDFLAGS']:
-                            env[key] = value
+                    if '=' not in line:
+                        continue
+                    
+                    key, _, value = line.partition('=')
+                    # Only update if the key is in our whitelist and looks like a valid variable name
+                    if key in target_vars and key.isidentifier():
+                        env[key] = value
+                
                 log_success("Conan build environment extracted")
             else:
                 log_warn("Could not source Conan build script, using basic environment")
