@@ -121,23 +121,24 @@ python3 llm_conan_build.py \
 
 ## Feature Flags
 
-Both scripts support the same feature flags through environment variables. The table below shows defaults for the Homebrew/Linuxbrew method:
+Both scripts support the same feature flags through environment variables. The table below shows defaults for each method:
 
 | Environment Variable | Default (Homebrew) | Default (Conan) | Description                           |
 |---------------------|--------------------|--------------------|-------------------------------------|
 | `WITH_EIGEN`        | ON                 | ON                 | Enable Eigen linear algebra library |
-| `WITH_CGAL`         | ON                 | ON                 | Enable CGAL computational geometry  |
-| `WITH_NLOPT`        | ON                 | ON                 | Enable NLopt optimization library   |
-| `WITH_SFML`         | ON                 | ON                 | Enable SFML for graphics/viewer     |
-| `WITH_SDL`          | ON                 | ON                 | Enable SDL2 for graphics/viewer     |
+| `WITH_CGAL`         | ON                 | OFF                | Enable CGAL computational geometry  |
+| `WITH_NLOPT`        | ON                 | OFF                | Enable NLopt optimization library   |
+| `WITH_SFML`         | ON                 | OFF                | Enable SFML for graphics/viewer     |
+| `WITH_SDL`          | ON                 | OFF                | Enable SDL2 for graphics/viewer     |
 | `WITH_WT`           | ON                 | OFF*               | Enable Wt web interface             |
 | `WITH_GNU_GSL`      | ON                 | ON                 | Enable GNU Scientific Library       |
-| `WITH_POSTGRES`     | ON                 | ON                 | Enable PostgreSQL database support  |
+| `WITH_POSTGRES`     | ON                 | OFF                | Enable PostgreSQL database support  |
 | `WITH_JANSSON`      | ON                 | OFF*               | Enable Jansson JSON library         |
-| `WITH_THRIFT`       | ON                 | ON                 | Enable Apache Thrift RPC            |
+| `WITH_THRIFT`       | ON                 | OFF                | Enable Apache Thrift RPC            |
 
 **Notes:**
 - \* `WITH_WT` and `WITH_JANSSON` default to OFF for Conan because these packages are not available in Conan Center. These packages need system installation if required when using Conan.
+- The Conan build defaults to OFF for several optional dependencies (CGAL, NLOPT, SFML, SDL, POSTGRES, THRIFT) to simplify the build process and reduce download/compile time. Enable them as needed by setting the environment variables to ON.
 
 ### Using Feature Flags
 
@@ -360,6 +361,19 @@ error: externally-managed-environment
 - No system-wide Python package installation required
 - The virtual environment is created automatically on first run
 - To start fresh, delete the `build_conan/.venv/` directory and re-run the script
+
+#### 2b. Conan Module Not Found Error
+
+**Problem:** Script fails with `ModuleNotFoundError: No module named 'conans.client'`
+```
+build_conan/.venv/bin/python: Error while finding module specification for 'conans.client.command'
+```
+
+**Solution:**
+- This error occurred in older versions of the script that used Conan 1.x invocation method
+- The script has been updated to use Conan 2.x (the `conan` executable directly)
+- Update to the latest version of `llm_conan_build.py`
+- Delete `build_conan/.venv/` and re-run to use the updated Conan invocation
 
 #### 3. Build Runs Out of Memory
 
