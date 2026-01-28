@@ -40,12 +40,17 @@ printf 'Test 3: Export line sample\n' |
 "${DCMA_BIN}" \
   -v \
   -o GenerateVirtualDataLineSampleV1 \
-  -o ExportLineSamples:FilenameLex='linesample.csv' |
+  -o ExportLineSamples -p FilenameBase='linesample' |
   tee -a fullstdout
 
 # Verify the exported file exists and is not empty.
-if [ ! -s linesample.csv ]; then
-  printf 'Error: linesample.csv does not exist or is empty\n' 2>&1
+# ExportLineSamples creates files with pattern: FilenameBase_N.dat
+if ! ls linesample_*.dat 1> /dev/null 2>&1; then
+  printf 'Error: No linesample_*.dat files found\n' 2>&1
+  exit 1
+fi
+if [ ! -s linesample_*.dat ]; then
+  printf 'Error: linesample_*.dat file is empty\n' 2>&1
   exit 1
 fi
 
