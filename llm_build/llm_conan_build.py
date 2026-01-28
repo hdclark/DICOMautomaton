@@ -19,15 +19,15 @@ Options:
 
 Environment Variables (Feature Flags):
     WITH_EIGEN=ON|OFF     Enable/disable Eigen support (default: ON)
-    WITH_CGAL=ON|OFF      Enable/disable CGAL support (default: ON)
-    WITH_NLOPT=ON|OFF     Enable/disable NLopt support (default: ON)
-    WITH_SFML=ON|OFF      Enable/disable SFML support (default: ON)
-    WITH_SDL=ON|OFF       Enable/disable SDL support (default: ON)
+    WITH_CGAL=ON|OFF      Enable/disable CGAL support (default: OFF)
+    WITH_NLOPT=ON|OFF     Enable/disable NLopt support (default: OFF)
+    WITH_SFML=ON|OFF      Enable/disable SFML support (default: OFF)
+    WITH_SDL=ON|OFF       Enable/disable SDL support (default: OFF)
     WITH_WT=ON|OFF        Enable/disable Wt support (default: OFF, not in Conan)
     WITH_GNU_GSL=ON|OFF   Enable/disable GNU GSL support (default: ON)
-    WITH_POSTGRES=ON|OFF  Enable/disable PostgreSQL support (default: ON)
+    WITH_POSTGRES=ON|OFF  Enable/disable PostgreSQL support (default: OFF)
     WITH_JANSSON=ON|OFF   Enable/disable Jansson support (default: OFF, not in Conan)
-    WITH_THRIFT=ON|OFF    Enable/disable Apache Thrift support (default: ON)
+    WITH_THRIFT=ON|OFF    Enable/disable Apache Thrift support (default: OFF)
 
 Example:
     # Basic build
@@ -125,27 +125,27 @@ def setup_virtual_environment(build_root):
     log_success(f"Using virtual environment Python: {venv_python}")
     return venv_python, venv_pip
 
-def ensure_conan_installed(venv_python, venv_pip):
+def ensure_conan_installed(venv_python, venv_pip, venv_dir):
     """Ensure Conan is installed in the virtual environment."""
+    # Determine the conan executable path in the venv
+    if os.name == 'nt':  # Windows
+        venv_conan = venv_dir / 'Scripts' / 'conan.exe'
+    else:  # Unix-like (Linux, macOS)
+        venv_conan = venv_dir / 'bin' / 'conan'
+    
     # Check if conan is available in the venv
     try:
-        result = subprocess.run(
-            [str(venv_python), '-m', 'pip', 'show', 'conan'],
-            capture_output=True,
-            text=True,
-            check=False
-        )
-        if result.returncode == 0:
+        if venv_conan.exists():
             # Get conan version
             version_result = subprocess.run(
-                [str(venv_python), '-m', 'conans.client.command', '--version'],
+                [str(venv_conan), '--version'],
                 capture_output=True,
                 text=True,
                 check=False
             )
             if version_result.returncode == 0:
                 log_info(f"Conan already installed: {version_result.stdout.strip()}")
-                return True
+                return venv_conan
     except Exception:
         pass
     
@@ -159,13 +159,19 @@ def ensure_conan_installed(venv_python, venv_pip):
             check=True
         )
         log_success("Conan installed successfully in virtual environment")
-        return True
+        
+        # Verify installation
+        if not venv_conan.exists():
+            log_error(f"Conan executable not found at {venv_conan} after installation")
+            return None
+        
+        return venv_conan
     except subprocess.CalledProcessError as e:
         log_error(f"Failed to install Conan: {e}")
-        return False
+        return None
     except Exception as e:
         log_error(f"Failed to install Conan: {e}")
-        return False
+        return None
 
 def get_repo_root():
     """Get the repository root directory."""
@@ -304,17 +310,19 @@ def main():
     log_info(f"Using {jobs} parallel jobs")
     
     # Get feature flags from environment
+    # Note: CGAL, NLOPT, SFML, SDL, POSTGRES, and THRIFT are disabled by default
+    # to simplify the build and reduce download/compile time. Enable as needed.
     features = {
         'eigen': os.getenv('WITH_EIGEN', 'ON') == 'ON',
-        'cgal': os.getenv('WITH_CGAL', 'ON') == 'ON',
-        'nlopt': os.getenv('WITH_NLOPT', 'ON') == 'ON',
-        'sfml': os.getenv('WITH_SFML', 'ON') == 'ON',
-        'sdl': os.getenv('WITH_SDL', 'ON') == 'ON',
+        'cgal': os.getenv('WITH_CGAL', 'OFF') == 'ON',
+        'nlopt': os.getenv('WITH_NLOPT', 'OFF') == 'ON',
+        'sfml': os.getenv('WITH_SFML', 'OFF') == 'ON',
+        'sdl': os.getenv('WITH_SDL', 'OFF') == 'ON',
         'wt': os.getenv('WITH_WT', 'OFF') == 'ON',  # Not available in Conan
         'gsl': os.getenv('WITH_GNU_GSL', 'ON') == 'ON',
-        'postgres': os.getenv('WITH_POSTGRES', 'ON') == 'ON',
+        'postgres': os.getenv('WITH_POSTGRES', 'OFF') == 'ON',
         'jansson': os.getenv('WITH_JANSSON', 'OFF') == 'ON',  # Not in Conan
-        'thrift': os.getenv('WITH_THRIFT', 'ON') == 'ON',
+        'thrift': os.getenv('WITH_THRIFT', 'OFF') == 'ON',
     }
     
     # Display feature flags
@@ -343,17 +351,23 @@ def main():
         sys.exit(1)
     
     # Ensure Conan is installed in the virtual environment
-    if not ensure_conan_installed(venv_python, venv_pip):
+    venv_conan = ensure_conan_installed(venv_python, venv_pip, build_root / '.venv')
+    if venv_conan is None:
         log_error("Failed to install Conan in virtual environment")
         sys.exit(1)
     
     # Create conanfile.txt
     create_conanfile(build_root, features)
     
-    # Install Conan dependencies using venv Python
+    # Ensure Conan profile exists (required for Conan 2.x)
+    log_info("Setting up Conan profile...")
+    profile_detect_cmd = [str(venv_conan), 'profile', 'detect', '--force']
+    run_command(profile_detect_cmd, cwd=build_root, check=False)
+    
+    # Install Conan dependencies using venv conan executable
     log_info("Installing Conan dependencies...")
     conan_install_cmd = [
-        str(venv_python), '-m', 'conans.client.command', 'install', str(build_root),
+        str(venv_conan), 'install', str(build_root),
         '--build=missing',
         '-s', 'compiler.cppstd=17',
         '-s', 'build_type=Release'
