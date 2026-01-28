@@ -552,9 +552,9 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
 
     if(params.seed_with_centroid_shift){
         // Seed the affine transformation with the output from a simpler rigid registration.
-        // Note: Only the translation component is seeded here. The rotation/scale components remain as identity
-        // (set above at lines 542-544). This is intentional as the TPS-RPM algorithm naturally discovers
-        // rotation and scale through the annealing process.
+        // Note: Only the translation component is seeded here. The rotation/scale components remain as the
+        // identity affine initialization set just above. This is intentional as the TPS-RPM algorithm naturally
+        // discovers rotation and scale through the annealing process.
         auto t_com = AlignViaCentroid(moving, stationary);
         if(!t_com){
             YLOGWARN("Unable to compute centroid seed transformation");
