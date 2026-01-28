@@ -6,6 +6,17 @@ This script provides an automated, reproducible build method using Conan
 for C++ dependency management. It's designed to be easily understood and
 executed by LLMs.
 
+Prerequisites:
+    - Python 3 with venv module (python3-venv on Debian/Ubuntu)
+    - Git
+    - CMake
+    - C++ compiler (gcc/g++ or clang)
+    - pkg-config
+    - curl (for Conan package downloads)
+
+    On Debian/Ubuntu:
+        apt-get install -y python3 python3-venv git cmake gcc g++ pkg-config curl
+
 Usage:
     python3 llm_conan_build.py [options]
 
@@ -19,15 +30,15 @@ Options:
 
 Environment Variables (Feature Flags):
     WITH_EIGEN=ON|OFF     Enable/disable Eigen support (default: ON)
-    WITH_CGAL=ON|OFF      Enable/disable CGAL support (default: ON)
-    WITH_NLOPT=ON|OFF     Enable/disable NLopt support (default: ON)
-    WITH_SFML=ON|OFF      Enable/disable SFML support (default: ON)
-    WITH_SDL=ON|OFF       Enable/disable SDL support (default: ON)
+    WITH_CGAL=ON|OFF      Enable/disable CGAL support (default: OFF)
+    WITH_NLOPT=ON|OFF     Enable/disable NLopt support (default: OFF)
+    WITH_SFML=ON|OFF      Enable/disable SFML support (default: OFF)
+    WITH_SDL=ON|OFF       Enable/disable SDL support (default: OFF)
     WITH_WT=ON|OFF        Enable/disable Wt support (default: OFF, not in Conan)
     WITH_GNU_GSL=ON|OFF   Enable/disable GNU GSL support (default: ON)
-    WITH_POSTGRES=ON|OFF  Enable/disable PostgreSQL support (default: ON)
+    WITH_POSTGRES=ON|OFF  Enable/disable PostgreSQL support (default: OFF)
     WITH_JANSSON=ON|OFF   Enable/disable Jansson support (default: OFF, not in Conan)
-    WITH_THRIFT=ON|OFF    Enable/disable Apache Thrift support (default: ON)
+    WITH_THRIFT=ON|OFF    Enable/disable Apache Thrift support (default: OFF)
 
 Example:
     # Basic build
@@ -45,6 +56,7 @@ import os
 import sys
 import subprocess
 import shutil
+import shlex
 from pathlib import Path
 import multiprocessing
 
@@ -91,6 +103,37 @@ def run_command(cmd, cwd=None, env=None, check=True):
             sys.exit(1)
         return None
 
+def check_system_dependencies():
+    """Check for required system dependencies and provide helpful error messages."""
+    required_commands = {
+        'bash': 'Bash shell',
+        'git': 'Git version control system',
+        'cmake': 'CMake build system',
+        'gcc': 'GNU C compiler (or alternative C compiler)',
+        'g++': 'GNU C++ compiler (or alternative C++ compiler)',
+        'pkg-config': 'pkg-config tool',
+        'curl': 'curl download tool',
+    }
+    
+    missing = []
+    for cmd, description in required_commands.items():
+        if not shutil.which(cmd):
+            missing.append(f"  - {cmd}: {description}")
+    
+    if missing:
+        log_error("Missing required system dependencies:")
+        for item in missing:
+            print(item)
+        print()
+        log_error("On Debian/Ubuntu, install with:")
+        print("  apt-get install -y python3 python3-venv git cmake gcc g++ pkg-config curl")
+        print()
+        log_error("On other distributions, install equivalent packages for your system.")
+        return False
+    
+    log_success("All required system dependencies found")
+    return True
+
 def setup_virtual_environment(build_root):
     """Create and set up a Python virtual environment for Conan."""
     venv_dir = build_root / '.venv'
@@ -125,27 +168,27 @@ def setup_virtual_environment(build_root):
     log_success(f"Using virtual environment Python: {venv_python}")
     return venv_python, venv_pip
 
-def ensure_conan_installed(venv_python, venv_pip):
+def ensure_conan_installed(venv_pip, venv_dir):
     """Ensure Conan is installed in the virtual environment."""
+    # Determine the conan executable path in the venv
+    if os.name == 'nt':  # Windows
+        venv_conan = venv_dir / 'Scripts' / 'conan.exe'
+    else:  # Unix-like (Linux, macOS)
+        venv_conan = venv_dir / 'bin' / 'conan'
+    
     # Check if conan is available in the venv
     try:
-        result = subprocess.run(
-            [str(venv_python), '-m', 'pip', 'show', 'conan'],
-            capture_output=True,
-            text=True,
-            check=False
-        )
-        if result.returncode == 0:
+        if venv_conan.exists():
             # Get conan version
             version_result = subprocess.run(
-                [str(venv_python), '-m', 'conans.client.command', '--version'],
+                [str(venv_conan), '--version'],
                 capture_output=True,
                 text=True,
                 check=False
             )
             if version_result.returncode == 0:
                 log_info(f"Conan already installed: {version_result.stdout.strip()}")
-                return True
+                return venv_conan
     except Exception:
         pass
     
@@ -159,13 +202,19 @@ def ensure_conan_installed(venv_python, venv_pip):
             check=True
         )
         log_success("Conan installed successfully in virtual environment")
-        return True
+        
+        # Verify installation
+        if not venv_conan.exists():
+            log_error(f"Conan executable not found at {venv_conan} after installation")
+            return None
+        
+        return venv_conan
     except subprocess.CalledProcessError as e:
         log_error(f"Failed to install Conan: {e}")
-        return False
+        return None
     except Exception as e:
         log_error(f"Failed to install Conan: {e}")
-        return False
+        return None
 
 def get_repo_root():
     """Get the repository root directory."""
@@ -230,7 +279,7 @@ def create_conanfile(build_dir, features):
     log_info(f"Created conanfile.txt at {conanfile_path}")
     return conanfile_path
 
-def build_dependency(name, repo_url, install_prefix, build_root, cmake_prefix_path, jobs):
+def build_dependency(name, repo_url, install_prefix, build_root, cmake_prefix_path, jobs, conan_build_env):
     """Build a dependency from source (Ygor, Explicator, YgorClustering)."""
     log_info(f"Building {name}...")
     
@@ -242,7 +291,8 @@ def build_dependency(name, repo_url, install_prefix, build_root, cmake_prefix_pa
     build_dir = dep_dir / 'build'
     build_dir.mkdir(exist_ok=True)
     
-    cmake_env = os.environ.copy()
+    # Set up environment with Conan paths and install_prefix paths
+    cmake_env = update_build_environment(conan_build_env, install_prefix)
     cmake_env['CMAKE_PREFIX_PATH'] = cmake_prefix_path
     
     # Configure
@@ -263,6 +313,90 @@ def build_dependency(name, repo_url, install_prefix, build_root, cmake_prefix_pa
     
     log_success(f"{name} built and installed")
 
+def get_conan_build_environment(build_root):
+    """
+    Extract build environment from Conan installation.
+    Conan 2.x generates environment files that we need to source.
+    """
+    env = os.environ.copy()
+    
+    # Conan 2.x generates conanbuild.sh and conanrun.sh scripts
+    # We need to parse these to get the environment variables
+    conan_build_script = build_root / 'conanbuild.sh'
+    
+    if conan_build_script.exists():
+        log_info("Extracting Conan build environment...")
+        
+        # Parse the conan build script to extract environment variables
+        try:
+            # Run a shell command that sources the script and prints the environment
+            # Use shlex.quote to prevent shell injection
+            script_path = shlex.quote(str(conan_build_script))
+            result = subprocess.run(
+                ['bash', '-c', f'source {script_path} && env'],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            
+            if result.returncode == 0:
+                # Parse environment variables from output
+                # Only accept variables from our whitelist to avoid injection issues
+                target_vars = {'PATH', 'LD_LIBRARY_PATH', 'PKG_CONFIG_PATH', 
+                               'CPATH', 'LIBRARY_PATH', 'CC', 'CXX', 'CFLAGS', 
+                               'CXXFLAGS', 'LDFLAGS'}
+                
+                for line in result.stdout.split('\n'):
+                    if '=' not in line:
+                        continue
+                    
+                    key, _, value = line.partition('=')
+                    # Only update if the key is in our whitelist and looks like a valid variable name
+                    if key in target_vars and key.isidentifier():
+                        env[key] = value
+                
+                log_success("Conan build environment extracted")
+            else:
+                log_warn("Could not source Conan build script, using basic environment")
+        except Exception as e:
+            log_warn(f"Failed to extract Conan environment: {e}")
+    else:
+        log_warn(f"Conan build script not found at {conan_build_script}")
+        log_warn("Build may fail if Conan dependencies are not found")
+    
+    return env
+
+def update_build_environment(base_env, install_prefix):
+    """
+    Update environment with install_prefix paths.
+    Returns a copy of the environment with updated PATH, PKG_CONFIG_PATH, and LD_LIBRARY_PATH.
+    """
+    env = base_env.copy()
+    
+    lib_path = str(Path(install_prefix) / 'lib')
+    bin_path = str(Path(install_prefix) / 'bin')
+    pkg_config_path = str(Path(install_prefix) / 'lib' / 'pkgconfig')
+    
+    # Update PATH to include install_prefix/bin
+    if 'PATH' in env:
+        env['PATH'] = f"{bin_path}:{env['PATH']}"
+    else:
+        env['PATH'] = f"{bin_path}:{os.environ.get('PATH', '')}"
+    
+    # Update PKG_CONFIG_PATH
+    if 'PKG_CONFIG_PATH' in env:
+        env['PKG_CONFIG_PATH'] = f"{pkg_config_path}:{env['PKG_CONFIG_PATH']}"
+    else:
+        env['PKG_CONFIG_PATH'] = pkg_config_path
+    
+    # Update LD_LIBRARY_PATH for runtime linking
+    if 'LD_LIBRARY_PATH' in env:
+        env['LD_LIBRARY_PATH'] = f"{lib_path}:{env['LD_LIBRARY_PATH']}"
+    else:
+        env['LD_LIBRARY_PATH'] = lib_path
+    
+    return env
+
 def main():
     parser = argparse.ArgumentParser(
         description='LLM-friendly Conan build script for DICOMautomaton',
@@ -281,6 +415,11 @@ def main():
                         help='Number of parallel jobs (default: auto-detect, max 8)')
     
     args = parser.parse_args()
+    
+    # Check for required system dependencies
+    log_info("Checking system dependencies...")
+    if not check_system_dependencies():
+        sys.exit(1)
     
     # Determine repository root
     repo_root = get_repo_root()
@@ -304,17 +443,19 @@ def main():
     log_info(f"Using {jobs} parallel jobs")
     
     # Get feature flags from environment
+    # Note: CGAL, NLOPT, SFML, SDL, POSTGRES, and THRIFT are disabled by default
+    # to simplify the build and reduce download/compile time. Enable as needed.
     features = {
         'eigen': os.getenv('WITH_EIGEN', 'ON') == 'ON',
-        'cgal': os.getenv('WITH_CGAL', 'ON') == 'ON',
-        'nlopt': os.getenv('WITH_NLOPT', 'ON') == 'ON',
-        'sfml': os.getenv('WITH_SFML', 'ON') == 'ON',
-        'sdl': os.getenv('WITH_SDL', 'ON') == 'ON',
+        'cgal': os.getenv('WITH_CGAL', 'OFF') == 'ON',
+        'nlopt': os.getenv('WITH_NLOPT', 'OFF') == 'ON',
+        'sfml': os.getenv('WITH_SFML', 'OFF') == 'ON',
+        'sdl': os.getenv('WITH_SDL', 'OFF') == 'ON',
         'wt': os.getenv('WITH_WT', 'OFF') == 'ON',  # Not available in Conan
         'gsl': os.getenv('WITH_GNU_GSL', 'ON') == 'ON',
-        'postgres': os.getenv('WITH_POSTGRES', 'ON') == 'ON',
+        'postgres': os.getenv('WITH_POSTGRES', 'OFF') == 'ON',
         'jansson': os.getenv('WITH_JANSSON', 'OFF') == 'ON',  # Not in Conan
-        'thrift': os.getenv('WITH_THRIFT', 'ON') == 'ON',
+        'thrift': os.getenv('WITH_THRIFT', 'OFF') == 'ON',
     }
     
     # Display feature flags
@@ -343,23 +484,32 @@ def main():
         sys.exit(1)
     
     # Ensure Conan is installed in the virtual environment
-    if not ensure_conan_installed(venv_python, venv_pip):
+    venv_conan = ensure_conan_installed(venv_pip, build_root / '.venv')
+    if venv_conan is None:
         log_error("Failed to install Conan in virtual environment")
         sys.exit(1)
     
     # Create conanfile.txt
     create_conanfile(build_root, features)
     
-    # Install Conan dependencies using venv Python
+    # Ensure Conan profile exists (required for Conan 2.x)
+    log_info("Setting up Conan profile...")
+    profile_detect_cmd = [str(venv_conan), 'profile', 'detect', '--force']
+    run_command(profile_detect_cmd, cwd=build_root, check=False)
+    
+    # Install Conan dependencies using venv conan executable
     log_info("Installing Conan dependencies...")
     conan_install_cmd = [
-        str(venv_python), '-m', 'conans.client.command', 'install', str(build_root),
+        str(venv_conan), 'install', str(build_root),
         '--build=missing',
         '-s', 'compiler.cppstd=17',
         '-s', 'build_type=Release'
     ]
     run_command(conan_install_cmd, cwd=build_root)
     log_success("Conan dependencies installed")
+    
+    # Extract Conan build environment
+    conan_build_env = get_conan_build_environment(build_root)
     
     # Set up CMAKE_PREFIX_PATH
     conan_toolchain = build_root / 'conan_toolchain.cmake'
@@ -376,7 +526,8 @@ def main():
         install_prefix,
         build_root,
         cmake_prefix_path,
-        jobs
+        jobs,
+        conan_build_env
     )
     
     # Build Explicator
@@ -386,7 +537,8 @@ def main():
         install_prefix,
         build_root,
         cmake_prefix_path,
-        jobs
+        jobs,
+        conan_build_env
     )
     
     # Build YgorClustering
@@ -396,7 +548,8 @@ def main():
         install_prefix,
         build_root,
         cmake_prefix_path,
-        jobs
+        jobs,
+        conan_build_env
     )
     
     # Build DICOMautomaton
@@ -421,8 +574,8 @@ def main():
         log_warn(f"Could not extract version ({type(e).__name__}): {e}")
         dcma_version = 'unknown'
     
-    # Prepare CMake arguments
-    cmake_env = os.environ.copy()
+    # Prepare CMake arguments with Conan environment
+    cmake_env = update_build_environment(conan_build_env, install_prefix)
     cmake_env['CMAKE_PREFIX_PATH'] = cmake_prefix_path
     
     cmake_args = [
