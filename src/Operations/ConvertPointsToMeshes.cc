@@ -246,6 +246,8 @@ bool ConvertPointsToMeshes(Drover &DICOM_data,
         // Prune unneeded vertices.
         DICOM_data.smesh_data.back()->meshes.remove_disconnected_vertices();
 
+        // Rebuild adjacency/index metadata to keep behavior consistent with the expand method.
+        DICOM_data.smesh_data.back()->meshes.recreate_involved_face_index();
         YLOGINFO("Created convex hull with "
                  << DICOM_data.smesh_data.back()->meshes.vertices.size() << " vertices, "
                  << DICOM_data.smesh_data.back()->meshes.faces.size() << " faces");
