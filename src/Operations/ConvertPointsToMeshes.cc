@@ -1,4 +1,4 @@
-//ConvertPointsToMeshes.cc - A part of DICOMautomaton 2024. Written by hal clark.
+//ConvertPointsToMeshes.cc - A part of DICOMautomaton 2026. Written by hal clark.
 
 #include <algorithm>
 #include <optional>
@@ -83,6 +83,10 @@ bool ConvertPointsToMeshes(Drover &DICOM_data,
     const auto PointSelectionStr = OptArgs.getValueStr("PointSelection").value();
     const auto CubeWidth = std::stod( OptArgs.getValueStr("CubeWidth").value() );
     //-----------------------------------------------------------------------------------------------------------------
+
+    if(CubeWidth <= 0.0){
+        throw std::invalid_argument("CubeWidth must be positive. Cannot continue.");
+    }
 
     auto PCs_all = All_PCs( DICOM_data );
     auto PCs = Whitelist( PCs_all, PointSelectionStr );
