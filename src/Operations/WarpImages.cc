@@ -43,6 +43,7 @@
 OperationDoc OpArgDocWarpImages(){
     OperationDoc out;
     out.name = "WarpImages";
+    out.aliases.emplace_back("TransformImages");
 
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: spatial transform processing");

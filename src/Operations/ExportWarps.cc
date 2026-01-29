@@ -39,6 +39,7 @@
 OperationDoc OpArgDocExportWarps(){
     OperationDoc out;
     out.name = "ExportWarps";
+    out.aliases.emplace_back("ExportTransforms");
 
     out.tags.emplace_back("category: spatial transform processing");
     out.tags.emplace_back("category: file export");
