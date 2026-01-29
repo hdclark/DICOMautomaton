@@ -1163,5 +1163,338 @@ TEST_CASE( "thin_plate_spline class" ){
         REQUIRE( tps_B.control_points.points == ps_B.points );
         REQUIRE( tps_B.kernel_dimension == kdim3 );
     }
+
+    SUBCASE("eval_kernel 2D"){
+        // Test the 2D radial basis function kernel evaluation.
+        // The 2D kernel should be: r^2 * log(r^2) for r > 0, and 0 for r = 0.
+        thin_plate_spline tps(ps_A, 2);
+
+        // Test at zero distance (overlapping points).
+        const double k_zero = tps.eval_kernel(0.0);
+        REQUIRE( std::isfinite(k_zero) );
+        REQUIRE( k_zero == 0.0 );
+
+        // Test at non-zero distances.
+        const double d1 = 1.0;
+        const double k1 = tps.eval_kernel(d1);
+        const double expected1 = d1 * d1 * std::log(d1 * d1);
+        REQUIRE( std::isfinite(k1) );
+        CHECK( k1 == doctest::Approx(expected1) );
+
+        const double d2 = 2.5;
+        const double k2 = tps.eval_kernel(d2);
+        const double expected2 = d2 * d2 * std::log(d2 * d2);
+        REQUIRE( std::isfinite(k2) );
+        CHECK( k2 == doctest::Approx(expected2) );
+    }
+
+    SUBCASE("eval_kernel 3D"){
+        // Test the 3D radial basis function kernel evaluation.
+        // The 3D kernel should be: r (linear distance).
+        thin_plate_spline tps(ps_A, 3);
+
+        const double d1 = 1.0;
+        const double k1 = tps.eval_kernel(d1);
+        REQUIRE( std::isfinite(k1) );
+        CHECK( k1 == doctest::Approx(d1) );
+
+        const double d2 = 3.7;
+        const double k2 = tps.eval_kernel(d2);
+        REQUIRE( std::isfinite(k2) );
+        CHECK( k2 == doctest::Approx(d2) );
+    }
+
+    SUBCASE("transform identity"){
+        // Test that a default-constructed TPS applies an identity transformation.
+        // The default TPS has zero warp coefficients and identity affine transform.
+        thin_plate_spline tps(ps_A, 2);
+
+        for(const auto &p : ps_A.points){
+            const auto p_transformed = tps.transform(p);
+            REQUIRE( p_transformed.isfinite() );
+            CHECK( p.x == doctest::Approx(p_transformed.x) );
+            CHECK( p.y == doctest::Approx(p_transformed.y) );
+            CHECK( p.z == doctest::Approx(p_transformed.z) );
+        }
+    }
 }
+
+#ifdef DCMA_USE_EIGEN
+TEST_CASE( "AlignViaTPS" ){
+    // Test the standard thin-plate spline alignment for pre-matched point sets.
+    
+    SUBCASE("identity transformation"){
+        // When moving and stationary points are identical, TPS should produce identity transform.
+        point_set<double> moving;
+        moving.points.emplace_back( vec3<double>( 0.0,  0.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 1.0,  0.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 0.0,  1.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 0.0,  0.0,  1.0) );
+
+        point_set<double> stationary = moving;
+
+        AlignViaTPSParams params;
+        params.kernel_dimension = 2;
+        params.lambda = 0.0; // No regularization for exact interpolation.
+
+        auto tps_opt = AlignViaTPS(params, moving, stationary);
+        REQUIRE( tps_opt.has_value() );
+
+        auto tps = tps_opt.value();
+        for(const auto &p : moving.points){
+            const auto p_transformed = tps.transform(p);
+            REQUIRE( p_transformed.isfinite() );
+            CHECK( p.x == doctest::Approx(p_transformed.x).epsilon(0.001) );
+            CHECK( p.y == doctest::Approx(p_transformed.y).epsilon(0.001) );
+            CHECK( p.z == doctest::Approx(p_transformed.z).epsilon(0.001) );
+        }
+    }
+
+    SUBCASE("simple translation"){
+        // Test TPS with a simple translation.
+        point_set<double> moving;
+        moving.points.emplace_back( vec3<double>( 0.0,  0.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 1.0,  0.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 0.0,  1.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 0.0,  0.0,  1.0) );
+
+        const vec3<double> translation(2.0, 3.0, 1.0);
+        point_set<double> stationary;
+        for(const auto &p : moving.points){
+            stationary.points.emplace_back( p + translation );
+        }
+
+        AlignViaTPSParams params;
+        params.kernel_dimension = 2;
+        params.lambda = 0.0;
+
+        auto tps_opt = AlignViaTPS(params, moving, stationary);
+        REQUIRE( tps_opt.has_value() );
+
+        auto tps = tps_opt.value();
+        for(size_t i = 0; i < moving.points.size(); ++i){
+            const auto p_transformed = tps.transform(moving.points[i]);
+            REQUIRE( p_transformed.isfinite() );
+            CHECK( stationary.points[i].x == doctest::Approx(p_transformed.x).epsilon(0.001) );
+            CHECK( stationary.points[i].y == doctest::Approx(p_transformed.y).epsilon(0.001) );
+            CHECK( stationary.points[i].z == doctest::Approx(p_transformed.z).epsilon(0.001) );
+        }
+    }
+
+    SUBCASE("mismatched point counts"){
+        // AlignViaTPS requires equal number of points in both sets.
+        point_set<double> moving;
+        moving.points.emplace_back( vec3<double>( 0.0,  0.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 1.0,  0.0,  0.0) );
+
+        point_set<double> stationary;
+        stationary.points.emplace_back( vec3<double>( 0.0,  0.0,  0.0) );
+
+        AlignViaTPSParams params;
+        auto tps_opt = AlignViaTPS(params, moving, stationary);
+        REQUIRE_FALSE( tps_opt.has_value() );
+    }
+}
+
+TEST_CASE( "AlignViaTPSRPM" ){
+    // Test the TPS-RPM algorithm for point cloud registration with automatic correspondence.
+
+    SUBCASE("identity correspondence"){
+        // When point sets are identical, TPS-RPM should find identity transformation.
+        point_set<double> moving;
+        moving.points.emplace_back( vec3<double>( 0.0,  0.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 1.0,  0.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 0.0,  1.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 0.0,  0.0,  1.0) );
+
+        point_set<double> stationary = moving;
+
+        AlignViaTPSRPMParams params;
+        params.kernel_dimension = 2;
+        params.T_end_scale = 0.001; // Very precise registration.
+        params.report_final_correspondence = true;
+
+        auto tps_opt = AlignViaTPSRPM(params, moving, stationary);
+        REQUIRE( tps_opt.has_value() );
+
+        auto tps = tps_opt.value();
+        for(size_t i = 0; i < moving.points.size(); ++i){
+            const auto p_transformed = tps.transform(moving.points[i]);
+            REQUIRE( p_transformed.isfinite() );
+            CHECK( stationary.points[i].x == doctest::Approx(p_transformed.x).epsilon(0.05) );
+            CHECK( stationary.points[i].y == doctest::Approx(p_transformed.y).epsilon(0.05) );
+            CHECK( stationary.points[i].z == doctest::Approx(p_transformed.z).epsilon(0.05) );
+        }
+
+        // Verify correspondence is correctly identified (should be 1-to-1).
+        REQUIRE( params.final_move_correspondence.size() == moving.points.size() );
+        for(size_t i = 0; i < params.final_move_correspondence.size(); ++i){
+            CHECK( params.final_move_correspondence[i].first == static_cast<int64_t>(i) );
+            CHECK( params.final_move_correspondence[i].second == static_cast<int64_t>(i) );
+        }
+    }
+
+    SUBCASE("simple translation with permutation"){
+        // Test TPS-RPM with a translation and permuted point order.
+        // This tests the correspondence-finding capability.
+        point_set<double> moving;
+        moving.points.emplace_back( vec3<double>( 0.0,  0.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 1.0,  0.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 0.0,  1.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 1.0,  1.0,  0.0) );
+
+        const vec3<double> translation(0.5, 0.5, 0.0);
+        point_set<double> stationary;
+        // Add points in different order (permuted).
+        stationary.points.emplace_back( moving.points[2] + translation ); // Third point.
+        stationary.points.emplace_back( moving.points[0] + translation ); // First point.
+        stationary.points.emplace_back( moving.points[3] + translation ); // Fourth point.
+        stationary.points.emplace_back( moving.points[1] + translation ); // Second point.
+
+        AlignViaTPSRPMParams params;
+        params.kernel_dimension = 2;
+        params.T_end_scale = 0.001;
+
+        auto tps_opt = AlignViaTPSRPM(params, moving, stationary);
+        REQUIRE( tps_opt.has_value() );
+
+        auto tps = tps_opt.value();
+        // Verify that all moving points transform close to some stationary point.
+        for(const auto &p_move : moving.points){
+            const auto p_transformed = tps.transform(p_move);
+            REQUIRE( p_transformed.isfinite() );
+            
+            bool found_close = false;
+            for(const auto &p_stat : stationary.points){
+                const double dist = p_transformed.distance(p_stat);
+                if(dist < 0.1){
+                    found_close = true;
+                    break;
+                }
+            }
+            CHECK( found_close );
+        }
+    }
+
+    SUBCASE("outlier handling"){
+        // Test that TPS-RPM can handle outliers in the point clouds.
+        point_set<double> moving;
+        moving.points.emplace_back( vec3<double>( 0.0,  0.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 1.0,  0.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 0.0,  1.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 1.0,  1.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 10.0, 10.0, 0.0) ); // Outlier.
+
+        point_set<double> stationary;
+        stationary.points.emplace_back( vec3<double>( 0.0,  0.0,  0.0) );
+        stationary.points.emplace_back( vec3<double>( 1.0,  0.0,  0.0) );
+        stationary.points.emplace_back( vec3<double>( 0.0,  1.0,  0.0) );
+        stationary.points.emplace_back( vec3<double>( 1.0,  1.0,  0.0) );
+        stationary.points.emplace_back( vec3<double>( -10.0, -10.0, 0.0) ); // Outlier.
+
+        AlignViaTPSRPMParams params;
+        params.kernel_dimension = 2;
+        params.T_end_scale = 0.01;
+        params.permit_move_outliers = true;
+        params.permit_stat_outliers = true;
+        params.report_final_correspondence = true;
+
+        auto tps_opt = AlignViaTPSRPM(params, moving, stationary);
+        REQUIRE( tps_opt.has_value() );
+
+        auto tps = tps_opt.value();
+        // The first 4 points should align well (they match exactly).
+        for(size_t i = 0; i < 4; ++i){
+            const auto p_transformed = tps.transform(moving.points[i]);
+            REQUIRE( p_transformed.isfinite() );
+            const double dist = p_transformed.distance(stationary.points[i]);
+            CHECK( dist < 0.1 );
+        }
+
+        // Check that outliers are detected.
+        // The last point in moving set should be marked as outlier (index = N_stat).
+        REQUIRE( params.final_move_correspondence.size() == moving.points.size() );
+        const auto outlier_idx = params.final_move_correspondence[4].second;
+        CHECK( outlier_idx == static_cast<int64_t>(stationary.points.size()) );
+    }
+
+    SUBCASE("forced correspondence"){
+        // Test that forced correspondence is respected by TPS-RPM.
+        point_set<double> moving;
+        moving.points.emplace_back( vec3<double>( 0.0,  0.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 1.0,  0.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 0.0,  1.0,  0.0) );
+
+        point_set<double> stationary;
+        stationary.points.emplace_back( vec3<double>( 2.0,  0.0,  0.0) );
+        stationary.points.emplace_back( vec3<double>( 0.0,  2.0,  0.0) );
+        stationary.points.emplace_back( vec3<double>( 0.0,  0.0,  2.0) );
+
+        AlignViaTPSRPMParams params;
+        params.kernel_dimension = 2;
+        params.T_end_scale = 0.001;
+        // Force first moving point to correspond to first stationary point.
+        params.forced_correspondence.emplace_back(0, 0);
+        params.N_Sinkhorn_iters = 10000; // May need more iterations with forced correspondence.
+        params.report_final_correspondence = true;
+
+        auto tps_opt = AlignViaTPSRPM(params, moving, stationary);
+        REQUIRE( tps_opt.has_value() );
+
+        // Verify the forced correspondence is respected.
+        REQUIRE( params.final_move_correspondence.size() >= 1 );
+        bool forced_respected = false;
+        for(const auto &corr : params.final_move_correspondence){
+            if(corr.first == 0 && corr.second == 0){
+                forced_respected = true;
+                break;
+            }
+        }
+        CHECK( forced_respected );
+    }
+
+    SUBCASE("regularization effect"){
+        // Test that lambda regularization allows the TPS to smooth out.
+        point_set<double> moving;
+        moving.points.emplace_back( vec3<double>( 0.0,  0.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 1.0,  0.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 0.0,  1.0,  0.0) );
+        moving.points.emplace_back( vec3<double>( 1.0,  1.0,  0.0) );
+
+        point_set<double> stationary = moving;
+
+        // Test with no regularization.
+        AlignViaTPSRPMParams params_no_reg;
+        params_no_reg.kernel_dimension = 2;
+        params_no_reg.lambda_start = 0.0;
+        params_no_reg.T_end_scale = 0.001;
+
+        auto tps_no_reg_opt = AlignViaTPSRPM(params_no_reg, moving, stationary);
+        REQUIRE( tps_no_reg_opt.has_value() );
+
+        // Test with regularization.
+        AlignViaTPSRPMParams params_with_reg;
+        params_with_reg.kernel_dimension = 2;
+        params_with_reg.lambda_start = 0.1; // Smooth regularization.
+        params_with_reg.T_end_scale = 0.001;
+
+        auto tps_with_reg_opt = AlignViaTPSRPM(params_with_reg, moving, stationary);
+        REQUIRE( tps_with_reg_opt.has_value() );
+
+        // Both should produce valid transformations.
+        // With identical point sets, both should be close to identity, but regularized
+        // version may be slightly smoother.
+        auto tps_no_reg = tps_no_reg_opt.value();
+        auto tps_with_reg = tps_with_reg_opt.value();
+
+        for(const auto &p : moving.points){
+            const auto p_no_reg = tps_no_reg.transform(p);
+            const auto p_with_reg = tps_with_reg.transform(p);
+            REQUIRE( p_no_reg.isfinite() );
+            REQUIRE( p_with_reg.isfinite() );
+        }
+    }
+}
+#endif // DCMA_USE_EIGEN
+
 
