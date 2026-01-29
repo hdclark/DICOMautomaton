@@ -124,6 +124,7 @@ add_library(Operations_objs OBJECT
     GenerateVirtualDataImageSphereV1.cc
     GenerateVirtualDataLineSampleV1.cc
     GenerateVirtualDataPerfusionV1.cc
+    GenerateVirtualDataPointCloudV1.cc
     GenerateWarp.cc
     GiveWholeImageArrayABoneWindowLevel.cc
     GiveWholeImageArrayAHeadAndNeckWindowLevel.cc
@@ -182,6 +183,7 @@ add_library(Operations_objs OBJECT
     ReportROIData.cc
     ResampleImages.cc
     RigidWarpImages.cc
+    SamplePoints.cc
     ScalePixels.cc
     SelectDirectory.cc
     SelectFilename.cc

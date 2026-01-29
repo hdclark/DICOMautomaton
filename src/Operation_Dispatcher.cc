@@ -146,6 +146,7 @@
 #include "Operations/GenerateVirtualDataLineSampleV1.h"
 #include "Operations/GenerateVirtualDataImageSphereV1.h"
 #include "Operations/GenerateVirtualDataPerfusionV1.h"
+#include "Operations/GenerateVirtualDataPointCloudV1.h"
 #include "Operations/GiveWholeImageArrayABoneWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAHeadAndNeckWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAThoraxWindowLevel.h"
@@ -203,6 +204,7 @@
 #include "Operations/ReportROIData.h"
 #include "Operations/ResampleImages.h"
 #include "Operations/RigidWarpImages.h"
+#include "Operations/SamplePoints.h"
 #include "Operations/ScalePixels.h"
 #include "Operations/SelectDirectory.h"
 #include "Operations/SelectFilename.h"
@@ -416,6 +418,7 @@ known_ops_t Known_Operations(){
     out["GenerateVirtualDataLineSampleV1"] = std::make_pair(OpArgDocGenerateVirtualDataLineSampleV1, GenerateVirtualDataLineSampleV1);
     out["GenerateVirtualDataImageSphereV1"] = std::make_pair(OpArgDocGenerateVirtualDataImageSphereV1, GenerateVirtualDataImageSphereV1);
     out["GenerateVirtualDataPerfusionV1"] = std::make_pair(OpArgDocGenerateVirtualDataPerfusionV1, GenerateVirtualDataPerfusionV1);
+    out["GenerateVirtualDataPointCloudV1"] = std::make_pair(OpArgDocGenerateVirtualDataPointCloudV1, GenerateVirtualDataPointCloudV1);
     out["GenerateWarp"] = std::make_pair(OpArgDocGenerateWarp, GenerateWarp);
     out["GiveWholeImageArrayABoneWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayABoneWindowLevel, GiveWholeImageArrayABoneWindowLevel);
     out["GiveWholeImageArrayAHeadAndNeckWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAHeadAndNeckWindowLevel, GiveWholeImageArrayAHeadAndNeckWindowLevel);
@@ -474,6 +477,7 @@ known_ops_t Known_Operations(){
     out["ReportROIData"] = std::make_pair(OpArgDocReportROIData, ReportROIData);
     out["ResampleImages"] = std::make_pair(OpArgDocResampleImages, ResampleImages);
     out["RigidWarpImages"] = std::make_pair(OpArgDocRigidWarpImages, RigidWarpImages);
+    out["SamplePoints"] = std::make_pair(OpArgDocSamplePoints, SamplePoints);
     out["ScalePixels"] = std::make_pair(OpArgDocScalePixels, ScalePixels);
     out["SelectDirectory"] = std::make_pair(OpArgDocSelectDirectory, SelectDirectory);
     out["SelectFilename"] = std::make_pair(OpArgDocSelectFilename, SelectFilename);
