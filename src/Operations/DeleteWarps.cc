@@ -1,4 +1,4 @@
-//DeleteWarps.cc - A part of DICOMautomaton 2019. Written by hal clark.
+//DeleteWarps.cc - A part of DICOMautomaton 2026. Written by hal clark.
 
 #include <cmath>
 #include <cstdlib>            //Needed for exit() calls.
