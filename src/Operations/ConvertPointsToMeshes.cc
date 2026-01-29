@@ -104,12 +104,8 @@ bool ConvertPointsToMeshes(Drover &DICOM_data,
     const auto CubeWidth = std::stod( OptArgs.getValueStr("CubeWidth").value() );
     //-----------------------------------------------------------------------------------------------------------------
 
-    const auto expand_regex = Compile_Regex("^ex?p?a?n?d?$");
+    const auto expand_regex = Compile_Regex("^exp?a?n?d?$");
     const auto convexhull_regex = Compile_Regex("^conve?x?[-_]?h?u?l?l?$");
-
-    if(CubeWidth <= 0.0){
-        throw std::invalid_argument("CubeWidth must be positive. Cannot continue.");
-    }
 
     auto PCs_all = All_PCs( DICOM_data );
     auto PCs = Whitelist( PCs_all, PointSelectionStr );
@@ -143,6 +139,10 @@ bool ConvertPointsToMeshes(Drover &DICOM_data,
 
     // -------------------------- Expand (cube) method --------------------------
     if(std::regex_match(MethodStr, expand_regex)){
+        if(CubeWidth <= 0.0){
+            throw std::invalid_argument("CubeWidth must be positive. Cannot continue.");
+        }
+
         // Process each point cloud.
         int64_t completed = 0;
         int64_t total_points = 0;
