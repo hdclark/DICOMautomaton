@@ -41,15 +41,20 @@ OperationDoc OpArgDocConvertPointsToMeshes(){
     out.tags.emplace_back("category: mesh processing");
 
     out.desc = 
-        "This operation converts point clouds to a surface mesh by representing each point as a small"
-        " axis-aligned cube centered at the point location.";
+        "This operation converts point clouds to a surface mesh. There are two supported methods:"
+        " 'expand' -- represents each point as a small axis-aligned cube centered at the point location;"
+        " 'convexhull' -- computes the convex hull of all points in the selected point clouds.";
         
     out.notes.emplace_back(
         "Point clouds are unaltered. Existing surface meshes are ignored and unaltered."
     );
     out.notes.emplace_back(
-        "The resulting surface mesh will contain multiple disjoint surfaces (one cube per point)"
+        "The 'expand' method creates a mesh with multiple disjoint surfaces (one cube per point)"
         " combined into a single Surface_Mesh object. Meshes may overlap with one another."
+    );
+    out.notes.emplace_back(
+        "The 'convexhull' method creates a single manifold surface mesh that encloses all points."
+        " This method only works for point sets with non-zero volume and will produce a convex shape."
     );
 
 
@@ -60,9 +65,25 @@ OperationDoc OpArgDocConvertPointsToMeshes(){
 
 
     out.args.emplace_back();
+    out.args.back().name = "Method";
+    out.args.back().desc = "There are currently two supported methods:"
+                           "\n\n"
+                           "Method 'expand' replaces each point with an axis-aligned cube."
+                           " This method is most useful for visualizing a point cloud."
+                           "\n\n"
+                           "Method 'convexhull' computes the convex hull of all selected points."
+                           " This is useful for creating a minimal bounding surface.";
+    out.args.back().default_val = "expand";
+    out.args.back().expected = true;
+    out.args.back().examples = { "expand", "convexhull" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
+
+
+    out.args.emplace_back();
     out.args.back().name = "CubeWidth";
     out.args.back().desc = "The width (side length) of each cube representing a point."
-                           " All cubes are axis-aligned and centered at the point location.";
+                           " All cubes are axis-aligned and centered at the point location."
+                           " This parameter is only used with the 'expand' method.";
     out.args.back().default_val = "1.0";
     out.args.back().expected = true;
     out.args.back().examples = { "0.01", "0.1", "1.0", "2.0", "50.0" };
@@ -73,20 +94,20 @@ OperationDoc OpArgDocConvertPointsToMeshes(){
 
 
 bool ConvertPointsToMeshes(Drover &DICOM_data,
-                               const OperationArgPkg& OptArgs,
-                               std::map<std::string, std::string>& /*InvocationMetadata*/,
-                               const std::string& FilenameLex){
+                           const OperationArgPkg& OptArgs,
+                           std::map<std::string, std::string>& /*InvocationMetadata*/,
+                           const std::string& FilenameLex){
 
     Explicator X(FilenameLex);
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto PointSelectionStr = OptArgs.getValueStr("PointSelection").value();
+    const auto MethodStr = OptArgs.getValueStr("Method").value();
     const auto CubeWidth = std::stod( OptArgs.getValueStr("CubeWidth").value() );
     //-----------------------------------------------------------------------------------------------------------------
 
-    if(CubeWidth <= 0.0){
-        throw std::invalid_argument("CubeWidth must be positive. Cannot continue.");
-    }
+    const auto expand_regex = Compile_Regex("^ex?p?a?n?d?$");
+    const auto convexhull_regex = Compile_Regex("^co?n?v?e?x?[-_]?hu?l?l?$");
 
     auto PCs_all = All_PCs( DICOM_data );
     auto PCs = Whitelist( PCs_all, PointSelectionStr );
@@ -118,88 +139,125 @@ bool ConvertPointsToMeshes(Drover &DICOM_data,
     DICOM_data.smesh_data.back()->meshes.metadata = coalesce_metadata_for_basic_mesh(combined_metadata, meta_evolve::iterate);
     DICOM_data.smesh_data.back()->meshes.metadata["Description"] = "Surface mesh derived from point clouds.";
 
-    // Process each point cloud.
-    int64_t completed = 0;
-    int64_t total_points = 0;
-    
-    for(auto & pcp_it : PCs){
-        const auto &points = (*pcp_it)->pset.points;
-        total_points += points.size();
-
-        // For each point, create a cube centered at the point.
-        const double half_width = CubeWidth * 0.5;
-        
-        for(const auto &p : points){
-            // Define the 8 vertices of the cube centered at point p.
-            const size_t base_vertex_idx = DICOM_data.smesh_data.back()->meshes.vertices.size();
-            
-            // The 8 corners of an axis-aligned cube.
-            DICOM_data.smesh_data.back()->meshes.vertices.emplace_back(
-                vec3<double>(p.x - half_width, p.y - half_width, p.z - half_width));
-            DICOM_data.smesh_data.back()->meshes.vertices.emplace_back(
-                vec3<double>(p.x + half_width, p.y - half_width, p.z - half_width));
-            DICOM_data.smesh_data.back()->meshes.vertices.emplace_back(
-                vec3<double>(p.x + half_width, p.y + half_width, p.z - half_width));
-            DICOM_data.smesh_data.back()->meshes.vertices.emplace_back(
-                vec3<double>(p.x - half_width, p.y + half_width, p.z - half_width));
-            DICOM_data.smesh_data.back()->meshes.vertices.emplace_back(
-                vec3<double>(p.x - half_width, p.y - half_width, p.z + half_width));
-            DICOM_data.smesh_data.back()->meshes.vertices.emplace_back(
-                vec3<double>(p.x + half_width, p.y - half_width, p.z + half_width));
-            DICOM_data.smesh_data.back()->meshes.vertices.emplace_back(
-                vec3<double>(p.x + half_width, p.y + half_width, p.z + half_width));
-            DICOM_data.smesh_data.back()->meshes.vertices.emplace_back(
-                vec3<double>(p.x - half_width, p.y + half_width, p.z + half_width));
-            
-            // Create the 12 triangular faces (2 per cube face, 6 faces total).
-            // Bottom face (z-)
-            DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
-                std::vector<uint64_t>{{base_vertex_idx + 0, base_vertex_idx + 1, base_vertex_idx + 2}});
-            DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
-                std::vector<uint64_t>{{base_vertex_idx + 0, base_vertex_idx + 2, base_vertex_idx + 3}});
-            
-            // Top face (z+)
-            DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
-                std::vector<uint64_t>{{base_vertex_idx + 4, base_vertex_idx + 6, base_vertex_idx + 5}});
-            DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
-                std::vector<uint64_t>{{base_vertex_idx + 4, base_vertex_idx + 7, base_vertex_idx + 6}});
-            
-            // Front face (y-)
-            DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
-                std::vector<uint64_t>{{base_vertex_idx + 0, base_vertex_idx + 4, base_vertex_idx + 5}});
-            DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
-                std::vector<uint64_t>{{base_vertex_idx + 0, base_vertex_idx + 5, base_vertex_idx + 1}});
-            
-            // Back face (y+)
-            DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
-                std::vector<uint64_t>{{base_vertex_idx + 2, base_vertex_idx + 6, base_vertex_idx + 7}});
-            DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
-                std::vector<uint64_t>{{base_vertex_idx + 2, base_vertex_idx + 7, base_vertex_idx + 3}});
-            
-            // Left face (x-)
-            DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
-                std::vector<uint64_t>{{base_vertex_idx + 0, base_vertex_idx + 3, base_vertex_idx + 7}});
-            DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
-                std::vector<uint64_t>{{base_vertex_idx + 0, base_vertex_idx + 7, base_vertex_idx + 4}});
-            
-            // Right face (x+)
-            DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
-                std::vector<uint64_t>{{base_vertex_idx + 1, base_vertex_idx + 5, base_vertex_idx + 6}});
-            DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
-                std::vector<uint64_t>{{base_vertex_idx + 1, base_vertex_idx + 6, base_vertex_idx + 2}});
+    // -------------------------- Expand (cube) method --------------------------
+    if(false){
+    }else if(std::regex_match(MethodStr, expand_regex)){
+        if(CubeWidth <= 0.0){
+            throw std::invalid_argument("CubeWidth must be positive. Cannot continue.");
         }
 
-        ++completed;
-        YLOGINFO("Completed " << completed << " of " << pc_count
-              << " --> " << static_cast<int>(1000.0*(completed)/pc_count)/10.0 << "% done");
+        // Process each point cloud.
+        int64_t completed = 0;
+        int64_t total_points = 0;
+        
+        for(auto & pcp_it : PCs){
+            const auto &points = (*pcp_it)->pset.points;
+            total_points += points.size();
+
+            // For each point, create a cube centered at the point.
+            const double half_width = CubeWidth * 0.5;
+            
+            for(const auto &p : points){
+                // Define the 8 vertices of the cube centered at point p.
+                const size_t base_vertex_idx = DICOM_data.smesh_data.back()->meshes.vertices.size();
+                
+                // The 8 corners of an axis-aligned cube.
+                DICOM_data.smesh_data.back()->meshes.vertices.emplace_back(
+                    vec3<double>(p.x - half_width, p.y - half_width, p.z - half_width));
+                DICOM_data.smesh_data.back()->meshes.vertices.emplace_back(
+                    vec3<double>(p.x + half_width, p.y - half_width, p.z - half_width));
+                DICOM_data.smesh_data.back()->meshes.vertices.emplace_back(
+                    vec3<double>(p.x + half_width, p.y + half_width, p.z - half_width));
+                DICOM_data.smesh_data.back()->meshes.vertices.emplace_back(
+                    vec3<double>(p.x - half_width, p.y + half_width, p.z - half_width));
+                DICOM_data.smesh_data.back()->meshes.vertices.emplace_back(
+                    vec3<double>(p.x - half_width, p.y - half_width, p.z + half_width));
+                DICOM_data.smesh_data.back()->meshes.vertices.emplace_back(
+                    vec3<double>(p.x + half_width, p.y - half_width, p.z + half_width));
+                DICOM_data.smesh_data.back()->meshes.vertices.emplace_back(
+                    vec3<double>(p.x + half_width, p.y + half_width, p.z + half_width));
+                DICOM_data.smesh_data.back()->meshes.vertices.emplace_back(
+                    vec3<double>(p.x - half_width, p.y + half_width, p.z + half_width));
+                
+                // Create the 12 triangular faces (2 per cube face, 6 faces total).
+                // Bottom face (z-)
+                DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
+                    std::vector<uint64_t>{{base_vertex_idx + 0, base_vertex_idx + 1, base_vertex_idx + 2}});
+                DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
+                    std::vector<uint64_t>{{base_vertex_idx + 0, base_vertex_idx + 2, base_vertex_idx + 3}});
+                
+                // Top face (z+)
+                DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
+                    std::vector<uint64_t>{{base_vertex_idx + 4, base_vertex_idx + 6, base_vertex_idx + 5}});
+                DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
+                    std::vector<uint64_t>{{base_vertex_idx + 4, base_vertex_idx + 7, base_vertex_idx + 6}});
+                
+                // Front face (y-)
+                DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
+                    std::vector<uint64_t>{{base_vertex_idx + 0, base_vertex_idx + 4, base_vertex_idx + 5}});
+                DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
+                    std::vector<uint64_t>{{base_vertex_idx + 0, base_vertex_idx + 5, base_vertex_idx + 1}});
+                
+                // Back face (y+)
+                DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
+                    std::vector<uint64_t>{{base_vertex_idx + 2, base_vertex_idx + 6, base_vertex_idx + 7}});
+                DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
+                    std::vector<uint64_t>{{base_vertex_idx + 2, base_vertex_idx + 7, base_vertex_idx + 3}});
+                
+                // Left face (x-)
+                DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
+                    std::vector<uint64_t>{{base_vertex_idx + 0, base_vertex_idx + 3, base_vertex_idx + 7}});
+                DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
+                    std::vector<uint64_t>{{base_vertex_idx + 0, base_vertex_idx + 7, base_vertex_idx + 4}});
+                
+                // Right face (x+)
+                DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
+                    std::vector<uint64_t>{{base_vertex_idx + 1, base_vertex_idx + 5, base_vertex_idx + 6}});
+                DICOM_data.smesh_data.back()->meshes.faces.emplace_back(
+                    std::vector<uint64_t>{{base_vertex_idx + 1, base_vertex_idx + 6, base_vertex_idx + 2}});
+            }
+
+            ++completed;
+            YLOGINFO("Completed " << completed << " of " << pc_count
+                  << " --> " << static_cast<int>(1000.0*(completed)/pc_count)/10.0 << "% done");
+        }
+
+        // Recreate the involved face index for efficient queries.
+        DICOM_data.smesh_data.back()->meshes.recreate_involved_face_index();
+
+        YLOGINFO("Created surface mesh with " << total_points << " cubes ("
+                 << DICOM_data.smesh_data.back()->meshes.vertices.size() << " vertices and "
+                 << DICOM_data.smesh_data.back()->meshes.faces.size() << " faces)");
+
+    // -------------------------- Convex hull method --------------------------
+    }else if(std::regex_match(MethodStr, convexhull_regex)){
+        // Gather all vertices from all selected point clouds.
+        for(auto & pcp_it : PCs){
+            for(const auto &p : (*pcp_it)->pset.points){
+                DICOM_data.smesh_data.back()->meshes.vertices.emplace_back(p);
+            }
+        }
+
+        YLOGINFO("Generating convex hull from " << DICOM_data.smesh_data.back()->meshes.vertices.size() << " vertices");
+
+        // Construct the convex hull.
+        using vert_vec_t = decltype(std::begin(DICOM_data.smesh_data.back()->meshes.vertices));
+        DICOM_data.smesh_data.back()->meshes.faces = Convex_Hull_3<vert_vec_t,uint64_t>(
+            std::begin(DICOM_data.smesh_data.back()->meshes.vertices),
+            std::end(DICOM_data.smesh_data.back()->meshes.vertices) );
+
+        // Prune unneeded vertices.
+        DICOM_data.smesh_data.back()->meshes.remove_disconnected_vertices();
+
+        // Rebuild adjacency/index metadata to keep behavior consistent with the expand method.
+        DICOM_data.smesh_data.back()->meshes.recreate_involved_face_index();
+        YLOGINFO("Created convex hull with "
+                 << DICOM_data.smesh_data.back()->meshes.vertices.size() << " vertices and "
+                 << DICOM_data.smesh_data.back()->meshes.faces.size() << " faces");
+
+    }else{
+        throw std::invalid_argument("Unrecognized method '" + MethodStr + "'. Cannot continue.");
     }
-
-    // Recreate the involved face index for efficient queries.
-    DICOM_data.smesh_data.back()->meshes.recreate_involved_face_index();
-
-    YLOGINFO("Created surface mesh with " << total_points << " cubes ("
-             << DICOM_data.smesh_data.back()->meshes.vertices.size() << " vertices, "
-             << DICOM_data.smesh_data.back()->meshes.faces.size() << " faces)");
 
     return true;
 }
