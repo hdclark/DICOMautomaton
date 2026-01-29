@@ -69,6 +69,7 @@ add_library(Operations_objs OBJECT
     DeleteMeshes.cc
     DeleteTables.cc
     DeletePoints.cc
+    DeleteWarps.cc
     DetectShapes3D.cc
     DrawGeometry.cc
     DroverDebug.cc
