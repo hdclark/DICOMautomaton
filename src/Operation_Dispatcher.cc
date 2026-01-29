@@ -90,6 +90,7 @@
 #include "Operations/DeleteMeshes.h"
 #include "Operations/DeleteTables.h"
 #include "Operations/DeletePoints.h"
+#include "Operations/DeleteWarps.h"
 #include "Operations/DetectShapes3D.h"
 #include "Operations/DrawGeometry.h"
 #include "Operations/DroverDebug.h"
@@ -360,6 +361,7 @@ known_ops_t Known_Operations(){
     out["DeleteMeshes"] = std::make_pair(OpArgDocDeleteMeshes, DeleteMeshes);
     out["DeleteTables"] = std::make_pair(OpArgDocDeleteTables, DeleteTables);
     out["DeletePoints"] = std::make_pair(OpArgDocDeletePoints, DeletePoints);
+    out["DeleteWarps"] = std::make_pair(OpArgDocDeleteWarps, DeleteWarps);
     out["DetectShapes3D"] = std::make_pair(OpArgDocDetectShapes3D, DetectShapes3D);
     out["DICOMExportContours"] = std::make_pair(OpArgDocDICOMExportContours, DICOMExportContours);
     out["DICOMExportImagesAsCT"] = std::make_pair(OpArgDocDICOMExportImagesAsCT, DICOMExportImagesAsCT);
