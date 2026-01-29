@@ -54,6 +54,7 @@
 #include "Operations/ConvertImageToMeshes.h"
 #include "Operations/ConvertImageToWarp.h"
 #include "Operations/ConvertMeshesToPoints.h"
+#include "Operations/ConvertPointsToMeshes.h"
 #include "Operations/ConvertNaNsToAir.h"
 #include "Operations/ConvertNaNsToZeros.h"
 #include "Operations/ConvertParametersToTable.h"
@@ -328,6 +329,7 @@ known_ops_t Known_Operations(){
     out["ConvertImageToMeshes"] = std::make_pair(OpArgDocConvertImageToMeshes, ConvertImageToMeshes);
     out["ConvertImageToWarp"] = std::make_pair(OpArgDocConvertImageToWarp, ConvertImageToWarp);
     out["ConvertMeshesToPoints"] = std::make_pair(OpArgDocConvertMeshesToPoints, ConvertMeshesToPoints);
+    out["ConvertPointsToMeshes"] = std::make_pair(OpArgDocConvertPointsToMeshes, ConvertPointsToMeshes);
     out["ConvertNaNsToAir"] = std::make_pair(OpArgDocConvertNaNsToAir, ConvertNaNsToAir);
     out["ConvertNaNsToZeros"] = std::make_pair(OpArgDocConvertNaNsToZeros, ConvertNaNsToZeros);
     out["ConvertParametersToTable"] = std::make_pair(OpArgDocConvertParametersToTable, ConvertParametersToTable);
