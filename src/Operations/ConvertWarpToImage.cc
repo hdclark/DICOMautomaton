@@ -18,6 +18,7 @@
 OperationDoc OpArgDocConvertWarpToImage(){
     OperationDoc out;
     out.name = "ConvertWarpToImage";
+    out.aliases.emplace_back("ConvertTransformToImage");
 
     out.tags.emplace_back("category: image processing");
     out.tags.emplace_back("category: spatial transform processing");

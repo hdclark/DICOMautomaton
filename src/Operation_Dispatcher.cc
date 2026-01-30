@@ -54,6 +54,7 @@
 #include "Operations/ConvertImageToMeshes.h"
 #include "Operations/ConvertImageToWarp.h"
 #include "Operations/ConvertMeshesToPoints.h"
+#include "Operations/ConvertPointsToMeshes.h"
 #include "Operations/ConvertNaNsToAir.h"
 #include "Operations/ConvertNaNsToZeros.h"
 #include "Operations/ConvertParametersToTable.h"
@@ -89,6 +90,7 @@
 #include "Operations/DeleteMeshes.h"
 #include "Operations/DeleteTables.h"
 #include "Operations/DeletePoints.h"
+#include "Operations/DeleteWarps.h"
 #include "Operations/DetectShapes3D.h"
 #include "Operations/DrawGeometry.h"
 #include "Operations/DroverDebug.h"
@@ -143,8 +145,10 @@
 #include "Operations/GenerateWarp.h"
 #include "Operations/GenerateVirtualDataContourViaThresholdTestV1.h"
 #include "Operations/GenerateVirtualDataDoseStairsV1.h"
+#include "Operations/GenerateVirtualDataLineSampleV1.h"
 #include "Operations/GenerateVirtualDataImageSphereV1.h"
 #include "Operations/GenerateVirtualDataPerfusionV1.h"
+#include "Operations/GenerateVirtualDataPointCloudV1.h"
 #include "Operations/GiveWholeImageArrayABoneWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAHeadAndNeckWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAThoraxWindowLevel.h"
@@ -184,6 +188,7 @@
 #include "Operations/OrderImages.h"
 #include "Operations/PartitionContours.h"
 #include "Operations/PerturbPixels.h"
+#include "Operations/PerturbPoints.h"
 #include "Operations/PlotPerROITimeCourses.h"
 #include "Operations/PlotLineSamples.h"
 #include "Operations/PointSeparation.h"
@@ -202,6 +207,7 @@
 #include "Operations/ReportROIData.h"
 #include "Operations/ResampleImages.h"
 #include "Operations/RigidWarpImages.h"
+#include "Operations/SamplePoints.h"
 #include "Operations/ScalePixels.h"
 #include "Operations/SelectDirectory.h"
 #include "Operations/SelectFilename.h"
@@ -325,6 +331,7 @@ known_ops_t Known_Operations(){
     out["ConvertImageToMeshes"] = std::make_pair(OpArgDocConvertImageToMeshes, ConvertImageToMeshes);
     out["ConvertImageToWarp"] = std::make_pair(OpArgDocConvertImageToWarp, ConvertImageToWarp);
     out["ConvertMeshesToPoints"] = std::make_pair(OpArgDocConvertMeshesToPoints, ConvertMeshesToPoints);
+    out["ConvertPointsToMeshes"] = std::make_pair(OpArgDocConvertPointsToMeshes, ConvertPointsToMeshes);
     out["ConvertNaNsToAir"] = std::make_pair(OpArgDocConvertNaNsToAir, ConvertNaNsToAir);
     out["ConvertNaNsToZeros"] = std::make_pair(OpArgDocConvertNaNsToZeros, ConvertNaNsToZeros);
     out["ConvertParametersToTable"] = std::make_pair(OpArgDocConvertParametersToTable, ConvertParametersToTable);
@@ -355,6 +362,7 @@ known_ops_t Known_Operations(){
     out["DeleteMeshes"] = std::make_pair(OpArgDocDeleteMeshes, DeleteMeshes);
     out["DeleteTables"] = std::make_pair(OpArgDocDeleteTables, DeleteTables);
     out["DeletePoints"] = std::make_pair(OpArgDocDeletePoints, DeletePoints);
+    out["DeleteWarps"] = std::make_pair(OpArgDocDeleteWarps, DeleteWarps);
     out["DetectShapes3D"] = std::make_pair(OpArgDocDetectShapes3D, DetectShapes3D);
     out["DICOMExportContours"] = std::make_pair(OpArgDocDICOMExportContours, DICOMExportContours);
     out["DICOMExportImagesAsCT"] = std::make_pair(OpArgDocDICOMExportImagesAsCT, DICOMExportImagesAsCT);
@@ -412,8 +420,10 @@ known_ops_t Known_Operations(){
     out["GenerateTable"] = std::make_pair(OpArgDocGenerateTable, GenerateTable);
     out["GenerateVirtualDataContourViaThresholdTestV1"] = std::make_pair(OpArgDocGenerateVirtualDataContourViaThresholdTestV1, GenerateVirtualDataContourViaThresholdTestV1);
     out["GenerateVirtualDataDoseStairsV1"] = std::make_pair(OpArgDocGenerateVirtualDataDoseStairsV1, GenerateVirtualDataDoseStairsV1);
+    out["GenerateVirtualDataLineSampleV1"] = std::make_pair(OpArgDocGenerateVirtualDataLineSampleV1, GenerateVirtualDataLineSampleV1);
     out["GenerateVirtualDataImageSphereV1"] = std::make_pair(OpArgDocGenerateVirtualDataImageSphereV1, GenerateVirtualDataImageSphereV1);
     out["GenerateVirtualDataPerfusionV1"] = std::make_pair(OpArgDocGenerateVirtualDataPerfusionV1, GenerateVirtualDataPerfusionV1);
+    out["GenerateVirtualDataPointCloudV1"] = std::make_pair(OpArgDocGenerateVirtualDataPointCloudV1, GenerateVirtualDataPointCloudV1);
     out["GenerateWarp"] = std::make_pair(OpArgDocGenerateWarp, GenerateWarp);
     out["GiveWholeImageArrayABoneWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayABoneWindowLevel, GiveWholeImageArrayABoneWindowLevel);
     out["GiveWholeImageArrayAHeadAndNeckWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAHeadAndNeckWindowLevel, GiveWholeImageArrayAHeadAndNeckWindowLevel);
@@ -454,6 +464,7 @@ known_ops_t Known_Operations(){
     out["OrderImages"] = std::make_pair(OpArgDocOrderImages, OrderImages);
     out["PartitionContours"] = std::make_pair(OpArgDocPartitionContours, PartitionContours);
     out["PerturbPixels"] = std::make_pair(OpArgDocPerturbPixels, PerturbPixels);
+    out["PerturbPoints"] = std::make_pair(OpArgDocPerturbPoints, PerturbPoints);
     out["PlotLineSamples"] = std::make_pair(OpArgDocPlotLineSamples, PlotLineSamples);
     out["PlotPerROITimeCourses"] = std::make_pair(OpArgDocPlotPerROITimeCourses, PlotPerROITimeCourses);
     out["PointSeparation"] = std::make_pair(OpArgDocPointSeparation, PointSeparation);
@@ -472,6 +483,7 @@ known_ops_t Known_Operations(){
     out["ReportROIData"] = std::make_pair(OpArgDocReportROIData, ReportROIData);
     out["ResampleImages"] = std::make_pair(OpArgDocResampleImages, ResampleImages);
     out["RigidWarpImages"] = std::make_pair(OpArgDocRigidWarpImages, RigidWarpImages);
+    out["SamplePoints"] = std::make_pair(OpArgDocSamplePoints, SamplePoints);
     out["ScalePixels"] = std::make_pair(OpArgDocScalePixels, ScalePixels);
     out["SelectDirectory"] = std::make_pair(OpArgDocSelectDirectory, SelectDirectory);
     out["SelectFilename"] = std::make_pair(OpArgDocSelectFilename, SelectFilename);

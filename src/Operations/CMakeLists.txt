@@ -33,6 +33,7 @@ add_library(Operations_objs OBJECT
     ConvertImageToMeshes.cc
     ConvertImageToWarp.cc
     ConvertMeshesToPoints.cc
+    ConvertPointsToMeshes.cc
     ConvertNaNsToAir.cc
     ConvertNaNsToZeros.cc
     ConvertParametersToTable.cc
@@ -68,6 +69,7 @@ add_library(Operations_objs OBJECT
     DeleteMeshes.cc
     DeleteTables.cc
     DeletePoints.cc
+    DeleteWarps.cc
     DetectShapes3D.cc
     DrawGeometry.cc
     DroverDebug.cc
@@ -122,7 +124,9 @@ add_library(Operations_objs OBJECT
     GenerateVirtualDataContourViaThresholdTestV1.cc
     GenerateVirtualDataDoseStairsV1.cc
     GenerateVirtualDataImageSphereV1.cc
+    GenerateVirtualDataLineSampleV1.cc
     GenerateVirtualDataPerfusionV1.cc
+    GenerateVirtualDataPointCloudV1.cc
     GenerateWarp.cc
     GiveWholeImageArrayABoneWindowLevel.cc
     GiveWholeImageArrayAHeadAndNeckWindowLevel.cc
@@ -163,6 +167,7 @@ add_library(Operations_objs OBJECT
     OrderImages.cc
     PartitionContours.cc
     PerturbPixels.cc
+    PerturbPoints.cc
     PlotLineSamples.cc
     PlotPerROITimeCourses.cc
     PointSeparation.cc
@@ -181,6 +186,7 @@ add_library(Operations_objs OBJECT
     ReportROIData.cc
     ResampleImages.cc
     RigidWarpImages.cc
+    SamplePoints.cc
     ScalePixels.cc
     SelectDirectory.cc
     SelectFilename.cc

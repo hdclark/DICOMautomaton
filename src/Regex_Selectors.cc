@@ -10,6 +10,7 @@
 #include <optional>
 #include <utility>
 #include <cstdint>
+#include <unordered_set>
 
 #include "YgorString.h"
 #include "YgorMath.h"
@@ -41,9 +42,42 @@ Whitelist_Core( L lops,
         auto v_kvs = SplitStringToVector(Specifier, ';', 'd');
         if(v_kvs.size() <= 1) throw std::logic_error("Unable to separate multiple key@value specifiers");
 
+        // Because 'filtering' each selector will modify the positional selectors, we evaluate
+        // each selector on the full (unaltered) input list, then combine the selection, and finally
+        // de-duplicate the results.
+        using lops_t = decltype(lops);
+        lops_t all;
         for(auto & keyvalue : v_kvs){
-            lops = Whitelist(lops, keyvalue, Opts);
+            auto l_lops = Whitelist(lops, keyvalue, Opts);
+            all.splice(std::end(all), l_lops);
         }
+
+        // Deduplication (based on the address, since all selectors refer to the same input list).
+        YLOGDEBUG("Multiple selection: selected " << all.size() << " elements before deduplication");
+        all.sort( []( const auto &lhs, const auto &rhs ) -> bool {
+            if constexpr ( is_cc ){
+                const auto *lhs_a = std::addressof(lhs.get());
+                const auto *rhs_a = std::addressof(rhs.get());
+                return (lhs_a < rhs_a);
+            }else{
+                const auto *lhs_a = std::addressof(*lhs);
+                const auto *rhs_a = std::addressof(*rhs);
+                return (lhs_a < rhs_a);
+            }
+        });
+        all.unique( []( const auto &lhs, const auto &rhs ) -> bool {
+            if constexpr ( is_cc ){
+                const auto *lhs_a = std::addressof(lhs.get());
+                const auto *rhs_a = std::addressof(rhs.get());
+                return (lhs_a == rhs_a);
+            }else{
+                const auto *lhs_a = std::addressof(*lhs);
+                const auto *rhs_a = std::addressof(*rhs);
+                return (lhs_a == rhs_a);
+            }
+        });
+        lops = all;
+        YLOGDEBUG("Multiple selection: selected " << lops.size() << " elements after deduplication");
         return lops;
     }while(false);
 
@@ -109,31 +143,31 @@ Whitelist_Core( L lops,
     // Single-word positional specifiers, i.e. "all", "none", "first", "last", or zero-based 
     // numerical specifiers, e.g., "#0" (front), "#1" (second), "#-0" (last), and "#-1" (second-from-last).
     do{
-        const auto regex_none  = Compile_Regex("^non?e?$");
-        const auto regex_all   = Compile_Regex("^al?l?$");
-        const auto regex_1st   = Compile_Regex("^fir?s?t?$");
-        const auto regex_2nd   = Compile_Regex("^se?c?o?n?d?$");
-        const auto regex_3rd   = Compile_Regex("^th?i?r?d?$");
-        const auto regex_last  = Compile_Regex("^la?s?t?$");
-        const auto regex_pnum  = Compile_Regex("^[#][0-9]+$");
-        const auto regex_nnum  = Compile_Regex("^[#]-[0-9]+$");
-        const auto regex_numer = Compile_Regex("^num?e?r?o?u?s?$");
-        const auto regex_few   = Compile_Regex("^fewest?$");
-        const auto regex_moret = Compile_Regex("^mor?e?[-_]?t?h?[ae]?n?[-_]?[(][-]?[0-9]+[)]$");
-        const auto regex_fewt  = Compile_Regex("^fewer[-_]?t?h?[ae]?n?[-_]?[(][-]?[0-9]+[)]$");
+        const auto regex_none  = Compile_Regex("^[[:space:]]*non?e?[[:space:]]*$");
+        const auto regex_all   = Compile_Regex("^[[:space:]]*al?l?[[:space:]]*$");
+        const auto regex_1st   = Compile_Regex("^[[:space:]]*fir?s?t?[[:space:]]*$");
+        const auto regex_2nd   = Compile_Regex("^[[:space:]]*se?c?o?n?d?[[:space:]]*$");
+        const auto regex_3rd   = Compile_Regex("^[[:space:]]*th?i?r?d?[[:space:]]*$");
+        const auto regex_last  = Compile_Regex("^[[:space:]]*la?s?t?[[:space:]]*$");
+        const auto regex_pnum  = Compile_Regex("^[[:space:]]*[#][0-9]+[[:space:]]*$");
+        const auto regex_nnum  = Compile_Regex("^[[:space:]]*[#]-[0-9]+[[:space:]]*$");
+        const auto regex_numer = Compile_Regex("^[[:space:]]*num?e?r?o?u?s?[[:space:]]*$");
+        const auto regex_few   = Compile_Regex("^[[:space:]]*fewest?[[:space:]]*$");
+        const auto regex_moret = Compile_Regex("^[[:space:]]*mor?e?[-_]?t?h?[ae]?n?[-_]?[(][-]?[0-9]+[)][[:space:]]*$");
+        const auto regex_fewt  = Compile_Regex("^[[:space:]]*fewer[-_]?t?h?[ae]?n?[-_]?[(][-]?[0-9]+[)][[:space:]]*$");
 
-        const auto regex_i_none  = Compile_Regex("^[!]non?e?$"); // Inverted variants of the above.
-        const auto regex_i_all   = Compile_Regex("^[!]al?l?$");
-        const auto regex_i_1st   = Compile_Regex("^[!]fir?s?t?$");
-        const auto regex_i_2nd   = Compile_Regex("^[!]se?c?o?n?d?$");
-        const auto regex_i_3rd   = Compile_Regex("^[!]th?i?r?d?$");
-        const auto regex_i_last  = Compile_Regex("^[!]la?s?t?$");
-        const auto regex_i_pnum  = Compile_Regex("^[!][#][0-9]+$");
-        const auto regex_i_nnum  = Compile_Regex("^[!][#]-[0-9]+$");
-        const auto regex_i_numer = Compile_Regex("^[!]num?e?r?o?u?s?$");
-        const auto regex_i_few   = Compile_Regex("^[!]fewest?$");
-        const auto regex_i_moret = Compile_Regex("^[!]mor?e?[-_]?t?h?[ae]?n?[-_]?[(][-]?[0-9]+[)]$");
-        const auto regex_i_fewt  = Compile_Regex("^[!]fewer[-_]?t?h?[ae]?n?[-_]?[(][-]?[0-9]+[)]$");
+        const auto regex_i_none  = Compile_Regex("^[[:space:]]*[!][[:space:]]*non?e?[[:space:]]*$"); // Inverted variants of the above.
+        const auto regex_i_all   = Compile_Regex("^[[:space:]]*[!][[:space:]]*al?l?[[:space:]]*$");
+        const auto regex_i_1st   = Compile_Regex("^[[:space:]]*[!][[:space:]]*fir?s?t?[[:space:]]*$");
+        const auto regex_i_2nd   = Compile_Regex("^[[:space:]]*[!][[:space:]]*se?c?o?n?d?[[:space:]]*$");
+        const auto regex_i_3rd   = Compile_Regex("^[[:space:]]*[!][[:space:]]*th?i?r?d?[[:space:]]*$");
+        const auto regex_i_last  = Compile_Regex("^[[:space:]]*[!][[:space:]]*la?s?t?[[:space:]]*$");
+        const auto regex_i_pnum  = Compile_Regex("^[[:space:]]*[!][[:space:]]*[#][0-9]+[[:space:]]*$");
+        const auto regex_i_nnum  = Compile_Regex("^[[:space:]]*[!][[:space:]]*[#]-[0-9]+[[:space:]]*$");
+        const auto regex_i_numer = Compile_Regex("^[[:space:]]*[!][[:space:]]*num?e?r?o?u?s?[[:space:]]*$");
+        const auto regex_i_few   = Compile_Regex("^[[:space:]]*[!][[:space:]]*fewest?[[:space:]]*$");
+        const auto regex_i_moret = Compile_Regex("^[[:space:]]*[!][[:space:]]*mor?e?[-_]?t?h?[ae]?n?[-_]?[(][-]?[0-9]+[)][[:space:]]*$");
+        const auto regex_i_fewt  = Compile_Regex("^[[:space:]]*[!][[:space:]]*fewer[-_]?t?h?[ae]?n?[-_]?[(][-]?[0-9]+[)][[:space:]]*$");
         
         if(std::regex_match(Specifier, regex_i_none)){
             return lops;
@@ -196,9 +230,10 @@ Whitelist_Core( L lops,
         }
 
         if(std::regex_match(Specifier, regex_i_pnum)){
-            auto pnum_extractor = std::regex("^[!][#]([0-9]+)$", std::regex::icase |
-                                                                 std::regex::optimize |
-                                                                 std::regex::extended);
+            auto pnum_extractor = std::regex("^[[:space:]]*[!][[:space:]]*[#]([0-9]+)[[:space:]]*$",
+                                             std::regex::icase |
+                                             std::regex::optimize |
+                                             std::regex::extended);
             auto N = std::stoul(GetFirstRegex(Specifier, pnum_extractor));
 
             if(N < lops.size()){
@@ -208,9 +243,10 @@ Whitelist_Core( L lops,
             return lops;
         }
         if(std::regex_match(Specifier, regex_pnum)){
-            auto pnum_extractor = std::regex("^[#]([0-9]+)$", std::regex::icase |
-                                                              std::regex::optimize |
-                                                              std::regex::extended);
+            auto pnum_extractor = std::regex("^[[:space:]]*[#]([0-9]+)[[:space:]]*$",
+                                             std::regex::icase |
+                                             std::regex::optimize |
+                                             std::regex::extended);
             auto N = std::stoul(GetFirstRegex(Specifier, pnum_extractor));
 
             decltype(lops) out;
@@ -222,9 +258,10 @@ Whitelist_Core( L lops,
         }
 
         if(std::regex_match(Specifier, regex_i_nnum)){
-            auto nnum_extractor = std::regex("^[!][#]-([0-9]+)$", std::regex::icase |
-                                                                  std::regex::optimize |
-                                                                  std::regex::extended);
+            auto nnum_extractor = std::regex("^[[:space:]]*[!][[:space:]]*[#]-([0-9]+)[[:space:]]*$",
+                                             std::regex::icase |
+                                             std::regex::optimize |
+                                             std::regex::extended);
             auto N = std::stoul(GetFirstRegex(Specifier, nnum_extractor));
 
             if(N < lops.size()) return lops;
@@ -239,9 +276,10 @@ Whitelist_Core( L lops,
             return out;
         }
         if(std::regex_match(Specifier, regex_nnum)){
-            auto nnum_extractor = std::regex("^[#]-([0-9]+)$", std::regex::icase |
-                                                               std::regex::optimize |
-                                                               std::regex::extended);
+            auto nnum_extractor = std::regex("^[[:space:]]*[#]-([0-9]+)[[:space:]]*$",
+                                             std::regex::icase |
+                                             std::regex::optimize |
+                                             std::regex::extended);
             auto N = std::stoul(GetFirstRegex(Specifier, nnum_extractor));
 
             decltype(lops) out;
@@ -355,9 +393,10 @@ Whitelist_Core( L lops,
             if( selector_moret || selector_fewt || selector_i_moret || selector_i_fewt ){
                 if(lops.empty()) return lops;
 
-                const auto num_extractor = std::regex(".*[(]([-]?[0-9]+)[)]$", std::regex::icase |
-                                                                               std::regex::optimize |
-                                                                               std::regex::extended);
+                const auto num_extractor = std::regex(".*[(]([-]?[0-9]+)[)][[:space:]]*$",
+                                                      std::regex::icase |
+                                                      std::regex::optimize |
+                                                      std::regex::extended);
                 const auto N = std::stol(GetFirstRegex(Specifier, num_extractor));
 
                 const auto eval = [&](size_t count) -> bool {

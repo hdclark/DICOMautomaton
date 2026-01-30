@@ -704,17 +704,20 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             const auto i = N_move_points; // row
             const double outlier_coeff = 1.0 / T_now;
             for(int64_t j = 0; j < N_stat_points; ++j){ // column
-                M(i, j) = outlier_coeff;
+                const auto P_stationary = stationary.points[j];
+                const auto dP = P_stationary - P_moving; // Note: intentionally not transformed.
+                M(i, j) = (1.0 / T_now)
+                        * std::exp( -dP.Dot(dP) / T_now);
             }
         }
 
         // Stationary outlier coefficients.
         {
             const auto j = N_stat_points; // column
-            const double outlier_coeff = 1.0 / T_now;
-            for(int64_t i = 0; i < N_move_points; ++i){ // row
-                M(i, j) = outlier_coeff;
-            }
+            const auto& P_stationary = com_stat;
+            const auto dP = P_stationary - P_moved;
+            M(i, j) = (1.0 / T_now)
+                    * std::exp( -dP.Dot(dP) / T_now);
         }
 
         // Override forced correspondences and disable outlier detection (iff user specifies to do so).

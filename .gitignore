@@ -28,6 +28,14 @@ build/
 compile_commands.json
 dcma_integration_testing/
 
+# LLM build tool artifacts
+build_llm/
+build_conan/
+.linuxbrew/
+.conan/
+__pycache__/
+.venv/
+
 # vim temporary files.
 *.swp
 
