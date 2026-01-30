@@ -700,9 +700,14 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         // Moving outlier coefficients.
         // According to the TPS-RPM algorithm (Chui & Rangarajan), outlier "gutter" coefficients
         // should be uniform across all points, representing the cost of declaring a point an outlier.
+        // The outlier coefficient uses the mean nearest-neighbor squared distance as a baseline,
+        // ensuring that perfect correspondences (dP = 0) are preferred over declaring points as outliers.
+        // This prevents point cloud collapse when correspondences are ambiguous.
         {
             const auto i = N_move_points; // row
-            const double outlier_coeff = 1.0 / T_now;
+            const double outlier_coeff = (1.0 / T_now) 
+                                       * std::exp(s_reg / T_now)
+                                       * std::exp( -mean_nn_sq_dist / T_now);
             for(int64_t j = 0; j < N_stat_points; ++j){ // column
                 M(i, j) = outlier_coeff;
             }
@@ -711,7 +716,9 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
         // Stationary outlier coefficients.
         {
             const auto j = N_stat_points; // column
-            const double outlier_coeff = 1.0 / T_now;
+            const double outlier_coeff = (1.0 / T_now)
+                                       * std::exp(s_reg / T_now)
+                                       * std::exp( -mean_nn_sq_dist / T_now);
             for(int64_t i = 0; i < N_move_points; ++i){ // row
                 M(i, j) = outlier_coeff;
             }
@@ -859,55 +866,62 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
 
         // Fill the Y vector with the corresponding points.
         for(int64_t i = 0; i < N_move_points; ++i){
-            double col_sum_inv = std::numeric_limits<double>::quiet_NaN();
-            if(params.double_sided_outliers){
-                // This column sum is only needed for the 'double-sided outlier handling' approach described by Yang et al (2011).
-                //
-                // Note: The 'gutter' term is intentionally omitted here.
-                Stats::Running_Sum<double> col_sum_rs;
-                for(int64_t j = 0; j < N_stat_points; ++j){ // column
-                    col_sum_rs.Digest( M(i,j) );
-                }
-                col_sum_inv = 1.0 / col_sum_rs.Current_Sum();
-                if(!std::isfinite(col_sum_inv)){
-                    // Kludge factor here. Change from inf to 'some big number'.
-                    //
-                    // TODO: Come up with better way to deal with perfect outliers.
-                    col_sum_inv = std::sqrt( std::numeric_limits<double>::max() );
-                }
-                W(i,i) = col_sum_inv;
+            // Compute the sum of non-outlier correspondence coefficients for this moving point.
+            // This is needed for both the normalization and the confidence-weighted prior.
+            Stats::Running_Sum<double> row_sum_rs;
+            double max_coeff = 0.0;
+            for(int64_t j = 0; j < N_stat_points; ++j){ // column
+                row_sum_rs.Digest( M(i,j) );
+                if(M(i,j) > max_coeff) max_coeff = M(i,j);
+            }
+            const double row_sum = row_sum_rs.Current_Sum();
+            double row_sum_inv = 1.0 / row_sum;
+            if(!std::isfinite(row_sum_inv)){
+                row_sum_inv = std::sqrt( std::numeric_limits<double>::max() );
             }
 
+            if(params.double_sided_outliers){
+                W(i,i) = row_sum_inv;
+            }
+
+            // Compute the correspondence confidence: how much of the weight goes to the best match.
+            // When correspondences are soft (uniform), confidence is low (1/N).
+            // When correspondences are hard (one dominant), confidence is high (close to 1).
+            // We include the outlier coefficient in the total to account for ambiguity with outliers.
+            const double outlier_coeff = M(i, N_stat_points);
+            const double total_weight = row_sum + outlier_coeff;
+            double confidence = (total_weight > 0.0) ? (max_coeff / total_weight) : 0.0;
+            if(!std::isfinite(confidence)) confidence = 0.0;
+            confidence = std::min(confidence, 1.0);
+            
+            // Get the current transformed position of the moving point.
+            // This serves as a prior to prevent collapse when correspondences are uncertain.
+            const auto P_moving = moving.points[i];
+            const auto P_moved = t.transform(P_moving);
+
+            // Compute weighted average of stationary points (normalized).
             Stats::Running_Sum<double> c_x;
             Stats::Running_Sum<double> c_y;
             Stats::Running_Sum<double> c_z;
             for(int64_t j = 0; j < N_stat_points; ++j){ // column
                 const auto P_stationary = stationary.points[j];
-
-                double weight = std::numeric_limits<double>::quiet_NaN();
-                if(params.double_sided_outliers){
-                    // 'Double-sided outlier handling' approach from Yang et al (2011).
-                    weight = M(i,j) * col_sum_inv;
-                    if( !std::isfinite(weight)
-                    ||  !isininc(0.0, weight, 1.0) ){
-                        throw std::runtime_error("Encountered invalid weight. Is the point cloud degenerate? Refusing to continue.");
-                        // Note: this could happen if all points in the cloud occupy the same location (or are sufficiently
-                        // close together to allow floating-point imprecision to ruin the computation).
-                    }
-
-                }else{
-                    // Original formulation from Chui and Rangaran.
-                    weight = M(i,j);
+                const double weight = M(i,j) * row_sum_inv;
+                if( !std::isfinite(weight)
+                ||  !isininc(0.0, weight, 1.0) ){
+                    throw std::runtime_error("Encountered invalid weight. Is the point cloud degenerate? Refusing to continue.");
                 }
-
-                const auto weighted_P = P_stationary * weight;
-                c_x.Digest(weighted_P.x);
-                c_y.Digest(weighted_P.y);
-                c_z.Digest(weighted_P.z);
+                c_x.Digest(P_stationary.x * weight);
+                c_y.Digest(P_stationary.y * weight);
+                c_z.Digest(P_stationary.z * weight);
             }
-            Y(i, 0) = c_x.Current_Sum();
-            Y(i, 1) = c_y.Current_Sum();
-            Y(i, 2) = c_z.Current_Sum();
+            
+            // Blend between the prior (current position) and the correspondence-weighted target.
+            // Use the confidence to control the blend: low confidence -> stay at current position.
+            // This prevents point cloud collapse when correspondences are ambiguous.
+            const double blend = confidence;
+            Y(i, 0) = (1.0 - blend) * P_moved.x + blend * c_x.Current_Sum();
+            Y(i, 1) = (1.0 - blend) * P_moved.y + blend * c_y.Current_Sum();
+            Y(i, 2) = (1.0 - blend) * P_moved.z + blend * c_z.Current_Sum();
         }
 
         // Use pseudo-inverse method.
