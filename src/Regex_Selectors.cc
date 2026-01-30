@@ -10,6 +10,7 @@
 #include <optional>
 #include <utility>
 #include <cstdint>
+#include <unordered_set>
 
 #include "YgorString.h"
 #include "YgorMath.h"
@@ -41,9 +42,42 @@ Whitelist_Core( L lops,
         auto v_kvs = SplitStringToVector(Specifier, ';', 'd');
         if(v_kvs.size() <= 1) throw std::logic_error("Unable to separate multiple key@value specifiers");
 
+        // Because 'filtering' each selector will modify the positional selectors, we evaluate
+        // each selector on the full (unaltered) input list, then combine the selection, and finally
+        // de-duplicate the results.
+        using lops_t = decltype(lops);
+        lops_t all;
         for(auto & keyvalue : v_kvs){
-            lops = Whitelist(lops, keyvalue, Opts);
+            auto l_lops = Whitelist(lops, keyvalue, Opts);
+            all.splice(std::end(all), l_lops);
         }
+
+        // Deduplication (based on the address, since all selectors refer to the same input list).
+        YLOGDEBUG("Multiple selection: selected " << all.size() << " elements before deduplication");
+        all.sort( []( const auto &lhs, const auto &rhs ) -> bool {
+            if constexpr ( is_cc ){
+                const auto *lhs_a = std::addressof(lhs.get());
+                const auto *rhs_a = std::addressof(rhs.get());
+                return (lhs_a < rhs_a);
+            }else{
+                const auto *lhs_a = std::addressof(*lhs);
+                const auto *rhs_a = std::addressof(*rhs);
+                return (lhs_a < rhs_a);
+            }
+        });
+        all.unique( []( const auto &lhs, const auto &rhs ) -> bool {
+            if constexpr ( is_cc ){
+                const auto *lhs_a = std::addressof(lhs.get());
+                const auto *rhs_a = std::addressof(rhs.get());
+                return (lhs_a == rhs_a);
+            }else{
+                const auto *lhs_a = std::addressof(*lhs);
+                const auto *rhs_a = std::addressof(*rhs);
+                return (lhs_a == rhs_a);
+            }
+        });
+        lops = all;
+        YLOGDEBUG("Multiple selection: selected " << lops.size() << " elements after deduplication");
         return lops;
     }while(false);
 
