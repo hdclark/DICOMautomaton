@@ -186,6 +186,7 @@ add_library(Operations_objs OBJECT
     ResampleImages.cc
     RigidWarpImages.cc
     SamplePoints.cc
+    PerturbPoints.cc
     ScalePixels.cc
     SelectDirectory.cc
     SelectFilename.cc
