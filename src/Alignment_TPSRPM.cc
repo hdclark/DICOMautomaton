@@ -888,9 +888,10 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             // When correspondences are soft (uniform), confidence is low (1/N).
             // When correspondences are hard (one dominant), confidence is high (close to 1).
             // We include the outlier coefficient in the total to account for ambiguity with outliers.
-            // Note: max_coeff is one element of row_sum, and outlier_coeff is additional, so
-            // max_coeff <= total_weight should always hold. The std::min clamp handles any
-            // floating-point imprecision that might cause slight violations.
+            // Note: row_sum is the sum of all non-outlier coefficients in this row, and max_coeff
+            // is the largest of those coefficients. The outlier_coeff is then added to form
+            // total_weight, so max_coeff <= total_weight should always hold. The std::min clamp
+            // handles any floating-point imprecision that might cause slight violations.
             const double outlier_coeff = M(i, N_stat_points);
             const double total_weight = row_sum + outlier_coeff;
             double confidence = (total_weight > 0.0) ? (max_coeff / total_weight) : 0.0;
