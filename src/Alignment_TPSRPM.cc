@@ -698,26 +698,23 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
                                       com_moved_z.Current_Sum() / static_cast<double>(N_move_points) );
 
         // Moving outlier coefficients.
+        // According to the TPS-RPM algorithm (Chui & Rangarajan), outlier "gutter" coefficients
+        // should be uniform across all points, representing the cost of declaring a point an outlier.
         {
             const auto i = N_move_points; // row
-            const auto& P_moving = com_moved;
+            const double outlier_coeff = 1.0 / T_now;
             for(int64_t j = 0; j < N_stat_points; ++j){ // column
-                const auto P_stationary = stationary.points[j];
-                const auto dP = P_stationary - P_moving; // Note: intentionally not transformed.
-                M(i, j) = (1.0 / T_now)
-                        * std::exp( -dP.Dot(dP) / T_now);
+                M(i, j) = outlier_coeff;
             }
         }
 
         // Stationary outlier coefficients.
-        for(int64_t i = 0; i < N_move_points; ++i){ // row
-            const auto P_moving = moving.points[i];
-            const auto P_moved = t.transform(P_moving); // Transform the point.
+        {
             const auto j = N_stat_points; // column
-            const auto& P_stationary = com_stat;
-            const auto dP = P_stationary - P_moved;
-            M(i, j) = (1.0 / T_now)
-                    * std::exp( -dP.Dot(dP) / T_now);
+            const double outlier_coeff = 1.0 / T_now;
+            for(int64_t i = 0; i < N_move_points; ++i){ // row
+                M(i, j) = outlier_coeff;
+            }
         }
 
         // Override forced correspondences and disable outlier detection (iff user specifies to do so).
@@ -1199,4 +1196,128 @@ TEST_CASE( "thin_plate_spline class" ){
         REQUIRE( tps_B.kernel_dimension == kdim3 );
     }
 }
+
+#ifdef DCMA_USE_EIGEN
+TEST_CASE( "AlignViaTPSRPM prevents point cloud collapse" ){
+    // This test validates the critical temperature annealing fix for outlier correspondences.
+    // It ensures that TPS-RPM registration preserves point cloud variance and doesn't collapse
+    // the moving point set, even for nearly-aligned or identical point clouds.
+
+    // Create a simple point cloud (unit cube corners)
+    point_set<double> ps_moving;
+    ps_moving.points.emplace_back( vec3<double>( 0.0,  0.0,  0.0) );
+    ps_moving.points.emplace_back( vec3<double>( 1.0,  0.0,  0.0) );
+    ps_moving.points.emplace_back( vec3<double>( 0.0,  1.0,  0.0) );
+    ps_moving.points.emplace_back( vec3<double>( 0.0,  0.0,  1.0) );
+    ps_moving.points.emplace_back( vec3<double>( 1.0,  1.0,  0.0) );
+    ps_moving.points.emplace_back( vec3<double>( 1.0,  0.0,  1.0) );
+    ps_moving.points.emplace_back( vec3<double>( 0.0,  1.0,  1.0) );
+    ps_moving.points.emplace_back( vec3<double>( 1.0,  1.0,  1.0) );
+
+    // Compute original variance for validation
+    Stats::Running_Variance<double> orig_var_x, orig_var_y, orig_var_z;
+    for(const auto &p : ps_moving.points){
+        orig_var_x.Digest(p.x);
+        orig_var_y.Digest(p.y);
+        orig_var_z.Digest(p.z);
+    }
+    const double orig_total_variance = orig_var_x.Current_Variance() 
+                                     + orig_var_y.Current_Variance() 
+                                     + orig_var_z.Current_Variance();
+
+    SUBCASE("identical point clouds"){
+        // Test with identical point clouds - should result in near-identity transform
+        point_set<double> ps_stationary = ps_moving;
+
+        AlignViaTPSRPMParams params;
+        params.kernel_dimension = 2;
+        params.lambda_start = 0.001; // Use the updated default
+        params.T_end_scale = 0.001;  // Precise registration
+        params.N_iters_at_fixed_T = 3; // Fewer iterations for faster test
+        
+        auto result = AlignViaTPSRPM(params, ps_moving, ps_stationary);
+        REQUIRE( result.has_value() );
+
+        // Transform the moving points
+        point_set<double> ps_transformed;
+        for(const auto &p : ps_moving.points){
+            ps_transformed.points.emplace_back( result.value().transform(p) );
+        }
+
+        // Check that variance is preserved (no collapse)
+        Stats::Running_Variance<double> trans_var_x, trans_var_y, trans_var_z;
+        for(const auto &p : ps_transformed.points){
+            trans_var_x.Digest(p.x);
+            trans_var_y.Digest(p.y);
+            trans_var_z.Digest(p.z);
+        }
+        const double trans_total_variance = trans_var_x.Current_Variance() 
+                                          + trans_var_y.Current_Variance() 
+                                          + trans_var_z.Current_Variance();
+
+        // Variance should not collapse (should be at least 50% of original)
+        REQUIRE( trans_total_variance > 0.5 * orig_total_variance );
+
+        // Compute RMS error between transformed and stationary points
+        Stats::Running_Sum<double> sq_error;
+        for(size_t i = 0; i < ps_transformed.points.size(); ++i){
+            const auto diff = ps_transformed.points[i] - ps_stationary.points[i];
+            sq_error.Digest(diff.Dot(diff));
+        }
+        const double rms_error = std::sqrt(sq_error.Current_Sum() / static_cast<double>(ps_transformed.points.size()));
+
+        // RMS error should be small for identical point clouds
+        REQUIRE( rms_error < 0.1 );
+    }
+
+    SUBCASE("nearly-aligned point clouds"){
+        // Test with a small translation - should handle gracefully without collapse
+        point_set<double> ps_stationary;
+        const vec3<double> small_offset(0.05, 0.05, 0.05);
+        for(const auto &p : ps_moving.points){
+            ps_stationary.points.emplace_back( p + small_offset );
+        }
+
+        AlignViaTPSRPMParams params;
+        params.kernel_dimension = 2;
+        params.lambda_start = 0.001;
+        params.T_end_scale = 0.001;
+        params.N_iters_at_fixed_T = 3;
+        
+        auto result = AlignViaTPSRPM(params, ps_moving, ps_stationary);
+        REQUIRE( result.has_value() );
+
+        // Transform the moving points
+        point_set<double> ps_transformed;
+        for(const auto &p : ps_moving.points){
+            ps_transformed.points.emplace_back( result.value().transform(p) );
+        }
+
+        // Check that variance is preserved (no collapse)
+        Stats::Running_Variance<double> trans_var_x, trans_var_y, trans_var_z;
+        for(const auto &p : ps_transformed.points){
+            trans_var_x.Digest(p.x);
+            trans_var_y.Digest(p.y);
+            trans_var_z.Digest(p.z);
+        }
+        const double trans_total_variance = trans_var_x.Current_Variance() 
+                                          + trans_var_y.Current_Variance() 
+                                          + trans_var_z.Current_Variance();
+
+        // Variance should not collapse (should be at least 50% of original)
+        REQUIRE( trans_total_variance > 0.5 * orig_total_variance );
+
+        // Compute RMS error
+        Stats::Running_Sum<double> sq_error;
+        for(size_t i = 0; i < ps_transformed.points.size(); ++i){
+            const auto diff = ps_transformed.points[i] - ps_stationary.points[i];
+            sq_error.Digest(diff.Dot(diff));
+        }
+        const double rms_error = std::sqrt(sq_error.Current_Sum() / static_cast<double>(ps_transformed.points.size()));
+
+        // RMS error should be small (under 0.2 units) for small translation
+        REQUIRE( rms_error < 0.2 );
+    }
+}
+#endif // DCMA_USE_EIGEN
 
