@@ -866,8 +866,8 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
 
         // Fill the Y vector with the corresponding points.
         for(int64_t i = 0; i < N_move_points; ++i){
-            // Compute the sum of non-outlier correspondence coefficients for this moving point.
-            // This is needed for both the normalization and the confidence-weighted prior.
+            // Compute the sum and maximum of non-outlier correspondence coefficients for this moving point.
+            // Used for: weight normalization, confidence calculation, and the double_sided_outliers W matrix.
             Stats::Running_Sum<double> row_sum_rs;
             double max_coeff = 0.0;
             for(int64_t j = 0; j < N_stat_points; ++j){ // column
@@ -888,6 +888,9 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             // When correspondences are soft (uniform), confidence is low (1/N).
             // When correspondences are hard (one dominant), confidence is high (close to 1).
             // We include the outlier coefficient in the total to account for ambiguity with outliers.
+            // Note: max_coeff is one element of row_sum, and outlier_coeff is additional, so
+            // max_coeff <= total_weight should always hold. The std::min clamp handles any
+            // floating-point imprecision that might cause slight violations.
             const double outlier_coeff = M(i, N_stat_points);
             const double total_weight = row_sum + outlier_coeff;
             double confidence = (total_weight > 0.0) ? (max_coeff / total_weight) : 0.0;
@@ -900,6 +903,8 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             const auto P_moved = t.transform(P_moving);
 
             // Compute weighted average of stationary points (normalized).
+            // Note: Normalization is required to prevent collapse even when double_sided_outliers is false,
+            // because the Sinkhorn normalization causes non-outlier weights to sum to less than 1.
             Stats::Running_Sum<double> c_x;
             Stats::Running_Sum<double> c_y;
             Stats::Running_Sum<double> c_z;
@@ -918,10 +923,13 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
             // Blend between the prior (current position) and the correspondence-weighted target.
             // Use the confidence to control the blend: low confidence -> stay at current position.
             // This prevents point cloud collapse when correspondences are ambiguous.
-            const double blend = confidence;
-            Y(i, 0) = (1.0 - blend) * P_moved.x + blend * c_x.Current_Sum();
-            Y(i, 1) = (1.0 - blend) * P_moved.y + blend * c_y.Current_Sum();
-            Y(i, 2) = (1.0 - blend) * P_moved.z + blend * c_z.Current_Sum();
+            // A minimum blend factor ensures some movement even with uncertain correspondences,
+            // preventing the algorithm from stalling when initialized far from the solution.
+            const double min_blend = 0.01;
+            const double blend_factor = min_blend + (1.0 - min_blend) * confidence;
+            Y(i, 0) = (1.0 - blend_factor) * P_moved.x + blend_factor * c_x.Current_Sum();
+            Y(i, 1) = (1.0 - blend_factor) * P_moved.y + blend_factor * c_y.Current_Sum();
+            Y(i, 2) = (1.0 - blend_factor) * P_moved.z + blend_factor * c_z.Current_Sum();
         }
 
         // Use pseudo-inverse method.
