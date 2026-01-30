@@ -87,7 +87,7 @@ bool SamplePoints(Drover &DICOM_data,
         std::random_device rd;
         std::mt19937_64 gen(rd());
         std::uniform_int_distribution<int64_t> dist;
-        Seed = dist(gen);
+        Seed = std::abs(dist(gen));
         SeedStr = std::to_string(Seed);
     }
 
