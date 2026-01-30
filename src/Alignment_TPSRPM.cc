@@ -698,26 +698,23 @@ AlignViaTPSRPM(AlignViaTPSRPMParams & params,
                                       com_moved_z.Current_Sum() / static_cast<double>(N_move_points) );
 
         // Moving outlier coefficients.
+        // According to the TPS-RPM algorithm (Chui & Rangarajan), outlier "gutter" coefficients
+        // should be uniform across all points, representing the cost of declaring a point an outlier.
         {
             const auto i = N_move_points; // row
-            const auto& P_moving = com_moved;
+            const double outlier_coeff = 1.0 / T_now;
             for(int64_t j = 0; j < N_stat_points; ++j){ // column
-                const auto P_stationary = stationary.points[j];
-                const auto dP = P_stationary - P_moving; // Note: intentionally not transformed.
-                M(i, j) = (1.0 / T_now)
-                        * std::exp( -dP.Dot(dP) / T_now);
+                M(i, j) = outlier_coeff;
             }
         }
 
         // Stationary outlier coefficients.
-        for(int64_t i = 0; i < N_move_points; ++i){ // row
-            const auto P_moving = moving.points[i];
-            const auto P_moved = t.transform(P_moving); // Transform the point.
+        {
             const auto j = N_stat_points; // column
-            const auto& P_stationary = com_stat;
-            const auto dP = P_stationary - P_moved;
-            M(i, j) = (1.0 / T_now)
-                    * std::exp( -dP.Dot(dP) / T_now);
+            const double outlier_coeff = 1.0 / T_now;
+            for(int64_t i = 0; i < N_move_points; ++i){ // row
+                M(i, j) = outlier_coeff;
+            }
         }
 
         // Override forced correspondences and disable outlier detection (iff user specifies to do so).
