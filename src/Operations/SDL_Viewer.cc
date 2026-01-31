@@ -1802,6 +1802,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         int64_t score = 0;
         int64_t high_score = 0;
         int64_t low_score = 0;
+        bool low_score_initialized = false; // Track if low_score has been set
         int64_t streak = 0;
         int64_t best_streak = 0;
         bool paused = false;
@@ -6082,24 +6083,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     }
                 }
 
-                // Handle early key presses (no note in range)
-                for(int lane = 0; lane < 4; ++lane){
-                    if(gf_lane_pressed[lane]){
-                        bool found_note = false;
-                        for(const auto& note : gf_game.notes){
-                            if(note.lane == lane && note.active){
-                                double distance_from_hit = std::abs(note.y_pos - 0.9);
-                                if(distance_from_hit <= gf_game.hit_window_ok * 2){
-                                    found_note = true;
-                                    break;
-                                }
-                            }
-                        }
-                        // Penalty for pressing when no note is close
-                        // (Disabled to avoid frustration - only penalize explicit misses)
-                    }
-                }
-
                 // Update best streak
                 if(gf_game.streak > gf_game.best_streak){
                     gf_game.best_streak = gf_game.streak;
@@ -6109,14 +6092,15 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 if(gf_game.score > gf_game.high_score){
                     gf_game.high_score = gf_game.score;
                 }
-                if(gf_game.score < gf_game.low_score){
+                if(!gf_game.low_score_initialized || gf_game.score < gf_game.low_score){
                     gf_game.low_score = gf_game.score;
+                    gf_game.low_score_initialized = true;
                 }
 
                 // Remove inactive notes
                 gf_game.notes.erase(
                     std::remove_if(gf_game.notes.begin(), gf_game.notes.end(),
-                        [](const gf_note_t& n){ return !n.active && n.y_pos > 1.0; }),
+                        [](const gf_note_t& n){ return !n.active; }),
                     gf_game.notes.end());
             }
 
