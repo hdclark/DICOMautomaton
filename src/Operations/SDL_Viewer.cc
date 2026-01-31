@@ -1727,7 +1727,34 @@ bool SDL_Viewer(Drover &DICOM_data,
         return;
     };
 
-    // SkiFree state.
+    // SkiFree game state.
+    //
+    // A skiing game inspired by the classic Microsoft Windows SkiFree game.
+    //
+    // Controls:
+    //   - Left/Right arrow keys: move skier left/right
+    //   - Spacebar: jump over obstacles
+    //   - Double-tap spacebar (while in air): perform a flip for double points
+    //   - R key: reset the game
+    //
+    // Gameplay:
+    //   - The skier continuously moves downward (the world scrolls upward)
+    //   - Speed gradually increases over time until maximum is reached
+    //   - Avoid obstacles: trees, rocks, and other skiers
+    //   - Jump over rocks to score points (1 point normal, 2 points if flipping)
+    //   - Hit jumps while in the air to score points
+    //   - Hit jumps while on the ground for a speed boost
+    //   - Colliding with trees, rocks (when not jumping), or other skiers ends the game
+    //   - On game over, the screen twirls/jitters until reset
+    //   - After reset, a 3-second countdown gives the player time to prepare
+    //
+    // Visual elements:
+    //   - Player: red triangle (orange while jumping)
+    //   - Trees: green triangles
+    //   - Rocks: gray circles
+    //   - Jumps: brown/yellow ramps
+    //   - Other skiers: cyan triangles
+    //
     enum class sf_obj_type_t {
         skier,     // The player
         tree,      // Obstacle - collision ends game
