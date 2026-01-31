@@ -182,7 +182,7 @@ contains_gpx_gps_coords(dcma::xml::node &root){
                     const auto &p2 = points[i+1];
                     const double dx = p2.x - p1.x;
                     const double dy = p2.y - p1.y;
-                    const double dist = std::sqrt(dx*dx + dy*dy); // Distance in meters (Mercator projection)
+                    const double dist = std::sqrt(dx*dx + dy*dy); // Distance in projected coordinates (approximately meters for small distances)
                     const double dt = track_times[i+1].value() - track_times[i].value(); // Time in seconds
 
                     if(dt > 0.0){
@@ -198,6 +198,9 @@ contains_gpx_gps_coords(dcma::xml::node &root){
 
             // Detect split points based on major speed changes.
             // Use a threshold-based approach: split when speed changes by more than a factor.
+            // Note: speeds[i] represents the velocity from point[i] to point[i+1].
+            // When comparing speeds[i] and speeds[i+1], the transition occurs at point[i+1],
+            // but we split at point[i+2] to group points by their consistent speeds.
             std::vector<size_t> split_indices;
             const double speed_change_threshold = 3.0; // Split when speed changes by 3x or more
             const double min_speed_threshold = 0.5; // Minimum speed (m/s) to consider for splitting
@@ -238,7 +241,7 @@ contains_gpx_gps_coords(dcma::xml::node &root){
                     size_t segment_num = 0;
 
                     for(size_t split_idx : split_indices){
-                        if(split_idx > start_idx + 1){ // Ensure segment has at least 2 points
+                        if(split_idx > start_idx){ // Ensure segment has at least 1 point (will have 2+ since we're excluding single points)
                             contour_of_points<double> segment_contour;
                             segment_contour.closed = false;
                             segment_contour.metadata = original_contour.metadata;
@@ -255,7 +258,7 @@ contains_gpx_gps_coords(dcma::xml::node &root){
                     }
 
                     // Add the final segment.
-                    if(start_idx < N_points - 1){
+                    if(start_idx < N_points){
                         contour_of_points<double> segment_contour;
                         segment_contour.closed = false;
                         segment_contour.metadata = original_contour.metadata;
