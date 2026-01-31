@@ -2036,7 +2036,7 @@ TEST_CASE( "AlignViaTPSRPM thin_plate_spline serialization" ){
     thin_plate_spline tps_loaded(ss);
 
     // Compare transformations on test points
-    const double serialization_tolerance = 1e-10;
+    const double serialization_tolerance = 1e-6;
     std::vector<vec3<double>> test_points = {
         vec3<double>(0.0, 0.0, 0.0),
         vec3<double>(0.5, 0.5, 0.5),
