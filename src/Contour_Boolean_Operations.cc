@@ -1,7 +1,15 @@
 //Contour_Boolean_Operations.cc - A part of DICOMautomaton 2017, 2024. Written by hal clark.
 
 // These functions are used to perform first-order Boolean operations on (2D) polygon contours.
-// This implementation provides a CGAL-free alternative using native polygon clipping algorithms.
+// This implementation provides a native alternative using polygon clipping algorithms.
+//
+// LIMITATIONS:
+// - The intersection operation uses the Sutherland-Hodgman algorithm which works well for 
+//   clipping convex polygons.
+// - Union and difference operations use a simplified approach that works well for typical
+//   medical imaging contours (simple, largely convex polygons) but may produce approximate
+//   results for complex non-convex polygons with intricate overlapping regions.
+// - For best results, the input polygons should be simple (non-self-intersecting).
 
 #include <list>
 #include <vector>
@@ -96,7 +104,7 @@ bool line_intersection(const Point2D& p1, const Point2D& p2,
                        const Point2D& p3, const Point2D& p4,
                        Point2D& intersection) {
     double d = (p1.x - p2.x) * (p3.y - p4.y) - (p1.y - p2.y) * (p3.x - p4.x);
-    if(std::abs(d) < 1e-14) return false; // Lines are parallel
+    if(std::abs(d) < 1e-10) return false; // Lines are parallel
     
     double t = ((p1.x - p3.x) * (p3.y - p4.y) - (p1.y - p3.y) * (p3.x - p4.x)) / d;
     double u = -((p1.x - p2.x) * (p1.y - p3.y) - (p1.y - p2.y) * (p1.x - p3.x)) / d;

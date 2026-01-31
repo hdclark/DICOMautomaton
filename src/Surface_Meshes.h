@@ -80,7 +80,8 @@ namespace dcma_surface_meshes {
     Slice_Mesh(const fv_surface_mesh<double, uint64_t>& mesh,
                const std::list<plane<double>>& planes);
 
-    // Native Loop subdivision for triangle meshes.
+    // Native mesh subdivision for triangle meshes.
+    // This is a simplified subdivision that adds edge midpoints without smoothing.
     void
     Loop_Subdivide(fv_surface_mesh<double, uint64_t>& mesh, int64_t iterations);
 

@@ -1332,13 +1332,16 @@ Estimate_Surface_Mesh_Marching_Cubes(
 // ======================================== Native Mesh Processing ========================================
 // These functions provide native alternatives for common mesh operations.
 
-// Compute the signed volume of a mesh using the divergence theorem.
-// The mesh should be closed and consistently oriented (normals pointing outward).
-// For a closed mesh, the volume is positive if normals point outward.
+// Compute the volume of a closed mesh using the divergence theorem.
+// The mesh should be closed and consistently oriented for correct results.
+// Returns the absolute value of the signed volume, so the result is always positive
+// regardless of face winding order.
 double
 Mesh_Volume(const fv_surface_mesh<double, uint64_t>& mesh){
     // Use the divergence theorem: V = (1/6) * sum over all triangles of (v0 · (v1 × v2))
     // This computes the signed volume of the tetrahedra formed by each triangle and the origin.
+    // We return abs() to handle meshes with inconsistent winding order and to always give
+    // a positive volume for practical use.
     double volume = 0.0;
     for(const auto& face : mesh.faces){
         if(face.size() < 3) continue;
@@ -1391,6 +1394,8 @@ Slice_Mesh(const fv_surface_mesh<double, uint64_t>& mesh,
         // Map from face index to its intersection points
         std::map<uint64_t, std::vector<std::pair<std::pair<uint64_t, uint64_t>, vec3<double>>>> face_edge_intersections;
         
+        const double plane_eps = 1e-10; // Tolerance for determining if vertex is on the plane
+        
         for(uint64_t fi = 0; fi < mesh.faces.size(); ++fi){
             const auto& face = mesh.faces[fi];
             if(face.size() < 3) continue;
@@ -1407,14 +1412,29 @@ Slice_Mesh(const fv_surface_mesh<double, uint64_t>& mesh,
                 const double d0 = aplane.Get_Signed_Distance_To_Point(v0);
                 const double d1 = aplane.Get_Signed_Distance_To_Point(v1);
                 
-                // Check if edge crosses the plane (different signs)
-                if((d0 > 0.0 && d1 < 0.0) || (d0 < 0.0 && d1 > 0.0)){
+                // Handle case where vertex lies exactly on the plane
+                const bool v0_on_plane = std::abs(d0) < plane_eps;
+                const bool v1_on_plane = std::abs(d1) < plane_eps;
+                
+                // Create canonical edge identifier (smaller index first)
+                auto edge_id = std::make_pair(std::min(v0_idx, v1_idx), std::max(v0_idx, v1_idx));
+                
+                if(v0_on_plane && v1_on_plane){
+                    // Both vertices on plane - skip this edge as it lies in the plane
+                    continue;
+                }else if(v0_on_plane){
+                    // First vertex is on the plane - use it as intersection
+                    edge_intersections[edge_id] = v0;
+                    local_intersections.push_back({edge_id, v0});
+                }else if(v1_on_plane){
+                    // Second vertex is on the plane - use it as intersection
+                    edge_intersections[edge_id] = v1;
+                    local_intersections.push_back({edge_id, v1});
+                }else if((d0 > 0.0 && d1 < 0.0) || (d0 < 0.0 && d1 > 0.0)){
+                    // Edge crosses the plane (different signs)
                     // Compute intersection point via linear interpolation
                     const double t = d0 / (d0 - d1);
                     const auto intersection = v0 + (v1 - v0) * t;
-                    
-                    // Create canonical edge identifier (smaller index first)
-                    auto edge_id = std::make_pair(std::min(v0_idx, v1_idx), std::max(v0_idx, v1_idx));
                     
                     edge_intersections[edge_id] = intersection;
                     local_intersections.push_back({edge_id, intersection});
@@ -1506,7 +1526,12 @@ Slice_Mesh(const fv_surface_mesh<double, uint64_t>& mesh,
     return cc;
 }
 
-// Native Loop subdivision for triangle meshes.
+// Native mesh subdivision for triangle meshes.
+// This is a simplified subdivision that splits each triangle into 4 triangles by adding 
+// edge midpoints. Unlike full Loop subdivision, this does not apply weighted smoothing
+// to vertex positions, so it only refines the mesh geometry without smoothing.
+// For many practical applications (e.g., increasing mesh resolution for slicing),
+// this simpler approach is sufficient.
 // Each iteration quadruples the number of faces.
 void
 Loop_Subdivide(fv_surface_mesh<double, uint64_t>& mesh, int64_t iterations){
@@ -1528,7 +1553,7 @@ Loop_Subdivide(fv_surface_mesh<double, uint64_t>& mesh, int64_t iterations){
                 auto edge = std::make_pair(std::min(v0_idx, v1_idx), std::max(v0_idx, v1_idx));
                 
                 if(edge_to_new_vert.find(edge) == edge_to_new_vert.end()){
-                    // Create new midpoint vertex
+                    // Create new midpoint vertex (simple midpoint averaging)
                     const auto& v0 = mesh.vertices.at(v0_idx);
                     const auto& v1 = mesh.vertices.at(v1_idx);
                     const auto midpoint = (v0 + v1) * 0.5;
