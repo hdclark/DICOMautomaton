@@ -460,8 +460,10 @@ bool SimulateDose(Drover &DICOM_data,
         const auto ct_center = ct_img_arr_ptr->imagecoll.center();
         const auto dose_center = dose_img_arr_ptr->imagecoll.center();
         const double separation = (ct_center - dose_center).length();
-        // Use a heuristic threshold: if centers are more than 500mm apart, warn the user.
-        if(separation > 500.0){
+        // Heuristic threshold for warning about potential geometry mismatch.
+        // 500mm is approximately the diagonal of a typical CT scan volume.
+        constexpr double spatial_overlap_warning_threshold_mm = 500.0;
+        if(separation > spatial_overlap_warning_threshold_mm){
             YLOGWARN("CT and Dose image arrays appear to have limited spatial overlap. "
                      "Ensure the dose grid encompasses the relevant portion of the CT volume. "
                      "Center separation: " << separation << " mm.");
@@ -672,7 +674,10 @@ bool SimulateDose(Drover &DICOM_data,
 
                         // Skip voxels that are upstream of the isocenter (between source and isocenter).
                         // The divergence calculation would produce incorrect scaling for such voxels.
-                        if(src_to_voxel_depth < src_to_iso_dist * 0.1){
+                        // The 10% threshold provides a small margin past the isocenter plane to avoid
+                        // numerical issues when the voxel is very close to the isocenter.
+                        constexpr double upstream_margin_factor = 0.1;
+                        if(src_to_voxel_depth < src_to_iso_dist * upstream_margin_factor){
                             continue;
                         }
 
