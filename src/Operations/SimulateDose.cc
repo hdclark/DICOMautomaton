@@ -1,4 +1,4 @@
-//SimulateDose.cc - A part of DICOMautomaton 2025. Written by hal clark.
+//SimulateDose.cc - A part of DICOMautomaton 2026. Written by hal clark.
 //
 // This operation simulates radiation dose from an RT plan using a simplified pencil beam algorithm.
 // It calculates dose to a placeholder dose image array using CT density information and beam models.
@@ -151,7 +151,12 @@ double LinearInterpolate(const std::vector<double>& x_vals,
     // Find bracketing interval
     for(size_t i = 0; i + 1 < x_vals.size(); ++i){
         if(x >= x_vals[i] && x <= x_vals[i + 1]){
-            const double t = (x - x_vals[i]) / (x_vals[i + 1] - x_vals[i]);
+            const double dx = x_vals[i + 1] - x_vals[i];
+            // Guard against zero-width intervals to avoid division by zero on malformed input.
+            if(dx == 0.0){
+                return y_vals[i];
+            }
+            const double t = (x - x_vals[i]) / dx;
             return y_vals[i] + t * (y_vals[i + 1] - y_vals[i]);
         }
     }
@@ -324,7 +329,16 @@ OperationDoc OpArgDocSimulateDose(){
     out.args.back().default_val = "first";
     out.args.back().desc = "Optional: A table containing beam model parameters."
                            " If not provided or selection is empty, a default 6 MV photon beam model is used."
-                           " The table should contain depth-dose data in columns: depth_cm, pdd_percent.";
+                           " The table must at minimum provide central-axis percent-depth-dose (PDD) data with"
+                           " logical columns depth_cm and pdd_percent. The table may be any delimited text"
+                           " format supported by the table loader (for example comma-, tab-, or"
+                           " whitespace-separated). A header row is recommended; if present it must contain"
+                           " the column names depth_cm and pdd_percent. If no header row is present, the"
+                           " first column is interpreted as depth_cm and the second as pdd_percent."
+                           " Additional optional columns can be supplied to override other beam model"
+                           " components: tpr_depth_cm, tpr_value, oar_distance_cm, oar_value,"
+                           " field_size_cm, and output_factor. Any components not specified in the table"
+                           " fall back to the built-in default 6 MV beam model values.";
 
     out.args.emplace_back();
     out.args.back().name = "DoseUnits";
@@ -440,6 +454,20 @@ bool SimulateDose(Drover &DICOM_data,
         throw std::invalid_argument("CT and Dose image arrays must be different.");
     }
 
+    // Warn if CT and dose arrays have no spatial overlap (a likely user error).
+    // We compare bounding boxes of the two image collections.
+    {
+        const auto ct_center = ct_img_arr_ptr->imagecoll.center();
+        const auto dose_center = dose_img_arr_ptr->imagecoll.center();
+        const double separation = (ct_center - dose_center).length();
+        // Use a heuristic threshold: if centers are more than 500mm apart, warn the user.
+        if(separation > 500.0){
+            YLOGWARN("CT and Dose image arrays appear to have limited spatial overlap. "
+                     "Ensure the dose grid encompasses the relevant portion of the CT volume. "
+                     "Center separation: " << separation << " mm.");
+        }
+    }
+
     // Try to select a beam model table, or use defaults
     BeamModel beam_model;
     auto STs_all = All_STs(DICOM_data);
@@ -509,11 +537,8 @@ bool SimulateDose(Drover &DICOM_data,
         }
         const double gantry_angle_rad = gantry_angle_deg * M_PI / 180.0;
 
-        // Get collimator angle (in degrees)
-        double coll_angle_deg = first_cp.BeamLimitingDeviceAngle;
-        if(!std::isfinite(coll_angle_deg)){
-            coll_angle_deg = 0.0;
-        }
+        // Note: The collimator (beam limiting device) angle is currently ignored in this
+        // simplified model. Jaw positions are assumed to be aligned with the beam axes.
 
         // Get jaw positions (in mm)
         double jaw_x1 = -50.0, jaw_x2 = 50.0;  // Default 10x10 cm field
@@ -544,10 +569,16 @@ bool SimulateDose(Drover &DICOM_data,
             auto mu_opt = dyn_state.GetMetadataValueAs<double>("FinalCumulativeMetersetWeight");
             if(mu_opt.has_value()){
                 total_MU = mu_opt.value();
-            }else{
-                total_MU = 100.0;  // Default
-                YLOGWARN("Beam " << beam_number << ": MU not specified. Using default 100 MU.");
             }
+        }
+
+        if(!std::isfinite(total_MU) || total_MU <= 0.0){
+            std::ostringstream oss;
+            oss << "Beam " << beam_number
+                << ": Unable to determine a valid MU from RT plan or metadata "
+                << "(FinalCumulativeMetersetWeight).";
+            YLOGERR(oss.str());
+            throw std::runtime_error(oss.str());
         }
 
         YLOGINFO("Processing Beam " << beam_number
@@ -573,13 +604,35 @@ bool SimulateDose(Drover &DICOM_data,
         const vec3<double> beam_dir = (isocenter - source_pos).unit();
 
         // Calculate coordinate system for the beam (for off-axis calculations)
-        // beam_dir is the central axis, we need perpendicular directions
-        vec3<double> beam_up(0.0, 1.0, 0.0);  // Initial guess for "up"
-        if(std::abs(beam_dir.Dot(beam_up)) > 0.99){
-            beam_up = vec3<double>(1.0, 0.0, 0.0);  // Use different "up" if beam is mostly vertical
+        // beam_dir is the central axis, we need two perpendicular directions.
+        // Construct a robust orthonormal basis by choosing a helper vector that is
+        // least aligned with beam_dir, then using cross products.
+        vec3<double> helper_axis;
+        {
+            const double ax = std::abs(beam_dir.x);
+            const double ay = std::abs(beam_dir.y);
+            const double az = std::abs(beam_dir.z);
+
+            if (ax <= ay && ax <= az) {
+                // X component is smallest, use X-axis as helper.
+                helper_axis = vec3<double>(1.0, 0.0, 0.0);
+            } else if (ay <= ax && ay <= az) {
+                // Y component is smallest, use Y-axis as helper.
+                helper_axis = vec3<double>(0.0, 1.0, 0.0);
+            } else {
+                // Z component is smallest, use Z-axis as helper.
+                helper_axis = vec3<double>(0.0, 0.0, 1.0);
+            }
         }
-        vec3<double> beam_lateral = beam_dir.Cross(beam_up).unit();
-        beam_up = beam_lateral.Cross(beam_dir).unit();
+
+        vec3<double> beam_lateral = beam_dir.Cross(helper_axis).unit();
+        // In the unlikely event of numerical degeneracy, fall back to a fixed axis.
+        if (!std::isfinite(beam_lateral.x) || !std::isfinite(beam_lateral.y) || !std::isfinite(beam_lateral.z)) {
+            helper_axis = vec3<double>(0.0, 1.0, 0.0);
+            beam_lateral = beam_dir.Cross(helper_axis).unit();
+        }
+
+        vec3<double> beam_up = beam_lateral.Cross(beam_dir).unit();
 
         // Process each voxel in the dose grid
         std::mutex dose_mutex;
@@ -616,6 +669,12 @@ bool SimulateDose(Drover &DICOM_data,
                         // Scale to field edge coordinates at isocenter (accounting for divergence)
                         const double src_to_iso_dist = (isocenter - source_pos).length();
                         const double src_to_voxel_depth = src_to_iso_dist + depth_along_beam;
+
+                        // Skip voxels that are upstream of the isocenter (between source and isocenter).
+                        // The divergence calculation would produce incorrect scaling for such voxels.
+                        if(src_to_voxel_depth < src_to_iso_dist * 0.1){
+                            continue;
+                        }
 
                         // Divergence factor: positions at voxel depth vs at isocenter
                         const double divergence = src_to_voxel_depth / src_to_iso_dist;
@@ -659,8 +718,9 @@ bool SimulateDose(Drover &DICOM_data,
                                 const double hu = static_cast<double>(interp_result);
                                 const double rel_density = HU_to_RelativeElectronDensity(hu);
 
-                                // Mark entry into patient (first non-air voxel)
-                                if(!entered_patient && rel_density > 0.1){
+                                // Mark entry into patient (first non-air voxel).
+                                // Use a threshold of 0.2 to avoid triggering on noise or lung tissue edges.
+                                if(!entered_patient && rel_density > 0.2){
                                     entered_patient = true;
                                     entry_point = sample_pos;
                                 }
@@ -681,6 +741,20 @@ bool SimulateDose(Drover &DICOM_data,
                             continue;  // Ray never entered patient, no dose
                         }
 
+                        // Add radiological depth for the final segment up to the voxel position.
+                        // current_dist has been advanced past the last sample position by step_mm.
+                        const double last_sample_dist_mm = current_dist - step_mm;
+                        const double remaining_dist_mm = std::max(0.0, max_dist - last_sample_dist_mm);
+                        if(remaining_dist_mm > 0.0){
+                            const auto voxel_interp = ct_adj.trilinearly_interpolate(
+                                voxel_pos, 0, std::numeric_limits<float>::quiet_NaN());
+                            if(std::isfinite(voxel_interp)){
+                                const double voxel_hu = static_cast<double>(voxel_interp);
+                                const double voxel_rel_density = HU_to_RelativeElectronDensity(voxel_hu);
+                                radiological_depth_cm += voxel_rel_density * (remaining_dist_mm / 10.0);
+                            }
+                        }
+
                         // Final geometric depth at the voxel
                         geometric_depth_cm = (voxel_pos - entry_point).length() / 10.0;
 
@@ -689,8 +763,8 @@ bool SimulateDose(Drover &DICOM_data,
 
                         // 1. Inverse square factor (distance from source to calculation point vs reference)
                         const double ref_dist_cm = beam_model.reference_SSD_cm + beam_model.dmax_cm;
-                        const double calc_dist_cm = src_to_voxel_dist / 10.0;
-                        const double isf = (ref_dist_cm * ref_dist_cm) / (calc_dist_cm * calc_dist_cm);
+                        const double src_to_voxel_dist_cm = src_to_voxel_dist / 10.0;
+                        const double isf = (ref_dist_cm * ref_dist_cm) / (src_to_voxel_dist_cm * src_to_voxel_dist_cm);
 
                         // 2. Percent Depth Dose (using radiological depth for heterogeneity correction)
                         // Apply modified Batho power-law correction
@@ -698,17 +772,20 @@ bool SimulateDose(Drover &DICOM_data,
                                                                        beam_model.pdd_percent,
                                                                        geometric_depth_cm) / 100.0;
 
-                        // Simplified heterogeneity correction: ratio of radiological to geometric depth
+                        // Simplified heterogeneity correction: ratio of radiological to geometric depth.
+                        // Clamp density_ratio to a reasonable range [0.1, 3.0] to guard against
+                        // malformed CT data or numerical instabilities.
                         double hetero_correction = 1.0;
                         if(geometric_depth_cm > 0.01){
-                            const double density_ratio = radiological_depth_cm / geometric_depth_cm;
+                            double density_ratio = radiological_depth_cm / geometric_depth_cm;
+                            density_ratio = std::clamp(density_ratio, 0.1, 3.0);
                             // Power-law correction (approximate)
                             hetero_correction = std::pow(density_ratio, 0.65);
                         }
 
                         const double pdd = pdd_geometric * hetero_correction;
 
-                        // 3. Off-axis ratio
+                        // 3. Off-axis ratio (scaled_off_axis values are in mm; beam_model uses cm)
                         const double total_off_axis_cm = std::sqrt(scaled_off_axis_x * scaled_off_axis_x +
                                                                    scaled_off_axis_y * scaled_off_axis_y) / 10.0;
                         const double oar = LinearInterpolate(beam_model.oar_distance_cm,
@@ -728,8 +805,10 @@ bool SimulateDose(Drover &DICOM_data,
                             dose_value = dose_cGy / 100.0;
                         }
 
-                        // Add dose to this voxel (accumulate from multiple beams)
-                        std::lock_guard<std::mutex> lock(dose_mutex);
+                        // Add dose to this voxel (accumulate from multiple beams).
+                        // No mutex needed here because:
+                        // 1. Each slice is processed by exactly one thread within the work_queue.
+                        // 2. Beams are processed sequentially (work_queue destructor waits).
                         dose_img.reference(row, col, 0) += static_cast<float>(dose_value);
                     }
                 }
@@ -743,17 +822,42 @@ bool SimulateDose(Drover &DICOM_data,
                 }
             });
         }
-        // Synchronization point: work_queue destructor waits for all submitted tasks to complete
-        // before proceeding. This ensures all dose slices are processed for this beam.
+        // Synchronization point:
+        // The work_queue instance used for per-slice tasks is scoped inside this beam loop.
+        // Its destructor blocks until all submitted tasks for the current beam have completed
+        // before proceeding to the next iteration. This ensures all dose slices are processed
+        // for this beam and that dose accumulation into shared data is complete before the next
+        // beam starts. As a result, beams are processed sequentially (slices within a beam are
+        // parallelized, but different beams are not). Any future change to process beams in
+        // parallel must introduce explicit synchronization around dose accumulation.
     }
 
     // Update dose image metadata
     for(auto& dose_img : dose_img_arr_ptr->imagecoll.images){
-        dose_img.metadata["Modality"] = "RTDOSE";
-        dose_img.metadata["DoseUnits"] = units_cGy ? "cGy" : "Gy";
-        dose_img.metadata["DoseType"] = "PHYSICAL";
-        dose_img.metadata["DoseSummationType"] = "PLAN";
-        dose_img.metadata["Description"] = "Simulated dose from SimulateDose operation";
+        auto &md = dose_img.metadata;
+
+        // Ensure RTDOSE modality and dose units are set for all simulated dose images.
+        md["Modality"] = "RTDOSE";
+        md["DoseUnits"] = units_cGy ? "cGy" : "Gy";
+
+        // Provide sensible defaults for dose type and summation type, but do not
+        // overwrite any existing values that may have been set upstream.
+        if(md.find("DoseType") == md.end()){
+            md["DoseType"] = "PHYSICAL";
+        }
+        if(md.find("DoseSummationType") == md.end()){
+            md["DoseSummationType"] = "PLAN";
+        }
+
+        // Preserve any existing description; append a note indicating simulated dose
+        // unless it is already present.
+        const std::string sim_desc_suffix = "Simulated dose from SimulateDose operation";
+        auto desc_it = md.find("Description");
+        if(desc_it == md.end() || desc_it->second.empty()){
+            md["Description"] = sim_desc_suffix;
+        }else if(desc_it->second.find(sim_desc_suffix) == std::string::npos){
+            md["Description"] += " | " + sim_desc_suffix;
+        }
     }
 
     YLOGINFO("Dose simulation complete");
