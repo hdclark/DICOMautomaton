@@ -407,20 +407,34 @@ def get_conan_build_environment(build_root):
                 log_info("Using clang/clang++ as default compilers")
             else:
                 log_warn("No suitable C/C++ compiler found (gcc/g++ or clang/clang++)")
-        elif 'CC' not in env:
-            # CXX is set but CC is not - try to match the compiler family
+        elif 'CC' not in env and 'CXX' in env:
+            # CXX is set but CC is not - this is unusual
+            # Try to infer CC from CXX, but log a warning
             cxx_basename = os.path.basename(env.get('CXX', ''))
-            if 'g++' in cxx_basename and shutil.which('gcc'):
-                env['CC'] = 'gcc'
-            elif 'clang++' in cxx_basename and shutil.which('clang'):
-                env['CC'] = 'clang'
-        elif 'CXX' not in env:
-            # CC is set but CXX is not - try to match the compiler family
+            log_warn(f"CXX is set to '{cxx_basename}' but CC is not set")
+            # Conservative matching: only match common patterns
+            if cxx_basename in ['g++', 'c++'] or cxx_basename.startswith('g++-'):
+                if shutil.which('gcc'):
+                    env['CC'] = 'gcc'
+                    log_info("Inferred CC=gcc from CXX setting")
+            elif cxx_basename in ['clang++'] or cxx_basename.startswith('clang++-'):
+                if shutil.which('clang'):
+                    env['CC'] = 'clang'
+                    log_info("Inferred CC=clang from CXX setting")
+        elif 'CXX' not in env and 'CC' in env:
+            # CC is set but CXX is not - this is unusual
+            # Try to infer CXX from CC, but log a warning
             cc_basename = os.path.basename(env.get('CC', ''))
-            if 'gcc' in cc_basename and shutil.which('g++'):
-                env['CXX'] = 'g++'
-            elif 'clang' in cc_basename and shutil.which('clang++'):
-                env['CXX'] = 'clang++'
+            log_warn(f"CC is set to '{cc_basename}' but CXX is not set")
+            # Conservative matching: only match common patterns
+            if cc_basename in ['gcc', 'cc'] or cc_basename.startswith('gcc-'):
+                if shutil.which('g++'):
+                    env['CXX'] = 'g++'
+                    log_info("Inferred CXX=g++ from CC setting")
+            elif cc_basename in ['clang'] or cc_basename.startswith('clang-'):
+                if shutil.which('clang++'):
+                    env['CXX'] = 'clang++'
+                    log_info("Inferred CXX=clang++ from CC setting")
     
     return env
 
