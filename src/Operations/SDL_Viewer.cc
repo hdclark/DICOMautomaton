@@ -1052,6 +1052,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_triple_three_enabled = false;
         bool view_encompass_enabled = false;
         bool view_cube_enabled = false;
+        bool view_guitar_hero_enabled = false;
 
         bool view_guides_enabled = true;
     } view_toggles;
@@ -1784,6 +1785,80 @@ bool SDL_Viewer(Drover &DICOM_data,
         const auto n = static_cast<int64_t>(rc_game_move_history.size());
         rc_game_move_history_current = n;
         return;
+    };
+
+    // Guitar Hero game state.
+    struct gh_note_t {
+        int lane;          // 0=F1, 1=F2, 2=F3, 3=F4
+        double y_pos;      // Current Y position (top to bottom)
+        bool active;       // Whether note is still falling
+        bool was_hit;      // Whether note was successfully hit
+    };
+    
+    struct gh_game_t {
+        std::vector<gh_note_t> notes;
+        std::chrono::time_point<std::chrono::steady_clock> t_started;
+        std::chrono::time_point<std::chrono::steady_clock> t_updated;
+        std::chrono::time_point<std::chrono::steady_clock> t_last_note_spawn;
+        
+        int64_t score = 0;
+        int64_t highest_score = 0;
+        int64_t lowest_score = 0;
+        int64_t note_streak = 0;
+        int64_t max_note_streak = 0;
+        
+        bool paused = false;
+        int difficulty = 1;  // 1=easy, 2=medium, 3=hard
+        
+        double fall_speed = 200.0;      // pixels per second
+        double timing_window = 0.15;    // seconds (window to hit note correctly)
+        double spawn_interval = 1.0;    // seconds between note spawns
+        
+        double board_height = 600.0;
+        double board_width = 400.0;
+        double hit_zone_y = 550.0;      // Y position of the hit zone
+        double note_size = 40.0;
+        
+        std::mt19937 re;
+    } gh_game;
+    gh_game.re.seed( std::random_device()() );
+    
+    const auto reset_gh_game = [&](){
+        gh_game.notes.clear();
+        gh_game.score = 0;
+        gh_game.note_streak = 0;
+        gh_game.paused = false;
+        
+        const auto t_now = std::chrono::steady_clock::now();
+        gh_game.t_started = t_now;
+        gh_game.t_updated = t_now;
+        gh_game.t_last_note_spawn = t_now;
+        
+        // Adjust difficulty settings
+        if(gh_game.difficulty == 1){  // Easy
+            gh_game.fall_speed = 150.0;
+            gh_game.timing_window = 0.20;
+            gh_game.spawn_interval = 1.5;
+        }else if(gh_game.difficulty == 2){  // Medium
+            gh_game.fall_speed = 250.0;
+            gh_game.timing_window = 0.15;
+            gh_game.spawn_interval = 1.0;
+        }else{  // Hard
+            gh_game.fall_speed = 350.0;
+            gh_game.timing_window = 0.10;
+            gh_game.spawn_interval = 0.7;
+        }
+        return;
+    };
+    
+    const auto spawn_gh_note = [&](){
+        std::uniform_int_distribution<> lane_dist(0, 3);
+        gh_note_t note;
+        note.lane = lane_dist(gh_game.re);
+        note.y_pos = 0.0;
+        note.active = true;
+        note.was_hit = false;
+        gh_game.notes.push_back(note);
     };
 
     // Guide state.
@@ -5799,6 +5874,274 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             YLOGWARN("Exception in display_rc_game(): '" << e.what() << "'");
             throw;
         }
+
+
+        // Display the Guitar Hero game.
+        const auto display_gh_game = [&view_toggles,
+                                      &gh_game,
+                                      &reset_gh_game,
+                                      &spawn_gh_note ]() -> bool {
+            if( !view_toggles.view_guitar_hero_enabled ) return true;
+
+            // Reset the game with R key.
+            if( ImGui::IsKeyPressed(SDL_SCANCODE_R) ){
+                reset_gh_game();
+            }
+
+            // Pause/unpause with spacebar.
+            if( ImGui::IsKeyPressed(SDL_SCANCODE_SPACE) ){
+                gh_game.paused = !gh_game.paused;
+            }
+
+            const auto win_width  = static_cast<int>(gh_game.board_width + 50);
+            const auto win_height = static_cast<int>(gh_game.board_height + 150);
+            auto flags = ImGuiWindowFlags_AlwaysAutoResize
+                       | ImGuiWindowFlags_NoScrollWithMouse
+                       | ImGuiWindowFlags_NoNavInputs
+                       | ImGuiWindowFlags_NoScrollbar;
+            ImGui::SetNextWindowSize(ImVec2(win_width, win_height), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(200, 100), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Guitar Hero", &view_toggles.view_guitar_hero_enabled, flags );
+
+            const auto f = ImGui::IsWindowFocused();
+
+            // Update game state only if not paused
+            if(!gh_game.paused){
+                const auto t_now = std::chrono::steady_clock::now();
+                const auto dt = std::chrono::duration<double>(t_now - gh_game.t_updated).count();
+                gh_game.t_updated = t_now;
+
+                // Spawn new notes periodically
+                const auto spawn_dt = std::chrono::duration<double>(t_now - gh_game.t_last_note_spawn).count();
+                if(spawn_dt >= gh_game.spawn_interval){
+                    spawn_gh_note();
+                    gh_game.t_last_note_spawn = t_now;
+                }
+
+                // Update note positions
+                for(auto &note : gh_game.notes){
+                    if(!note.active) continue;
+                    note.y_pos += gh_game.fall_speed * dt;
+                    
+                    // Deactivate notes that have fallen too far past the hit zone
+                    if(note.y_pos > gh_game.hit_zone_y + 100.0){
+                        if(!note.was_hit){
+                            // Missed note - lose a point and reset streak
+                            gh_game.score -= 1;
+                            gh_game.note_streak = 0;
+                        }
+                        note.active = false;
+                    }
+                }
+
+                // Remove inactive notes
+                gh_game.notes.erase(
+                    std::remove_if(gh_game.notes.begin(), gh_game.notes.end(),
+                                   [](const gh_note_t& n){ return !n.active; }),
+                    gh_game.notes.end()
+                );
+            }
+
+            // Handle key presses
+            if(f && !gh_game.paused){
+                const auto check_key = [&](int scancode, int lane){
+                    if(!ImGui::IsKeyPressed(scancode)) return;
+                    
+                    // Find the closest active note in this lane
+                    gh_note_t* closest_note = nullptr;
+                    double closest_dist = std::numeric_limits<double>::max();
+                    
+                    for(auto &note : gh_game.notes){
+                        if(note.lane != lane || !note.active || note.was_hit) continue;
+                        double dist = std::abs(note.y_pos - gh_game.hit_zone_y);
+                        if(dist < closest_dist){
+                            closest_dist = dist;
+                            closest_note = &note;
+                        }
+                    }
+                    
+                    if(closest_note != nullptr){
+                        const double time_diff = closest_dist / gh_game.fall_speed;
+                        
+                        if(time_diff <= gh_game.timing_window){
+                            // Hit! Award a point
+                            gh_game.score += 1;
+                            gh_game.note_streak += 1;
+                            closest_note->was_hit = true;
+                            closest_note->active = false;
+                            
+                            // Update max streak
+                            if(gh_game.note_streak > gh_game.max_note_streak){
+                                gh_game.max_note_streak = gh_game.note_streak;
+                            }
+                        }else{
+                            // Too early - lose a point and reset streak
+                            gh_game.score -= 1;
+                            gh_game.note_streak = 0;
+                        }
+                    }
+                };
+                
+                check_key(SDL_SCANCODE_F1, 0);
+                check_key(SDL_SCANCODE_F2, 1);
+                check_key(SDL_SCANCODE_F3, 2);
+                check_key(SDL_SCANCODE_F4, 3);
+            }
+
+            // Update highest/lowest scores
+            if(gh_game.score > gh_game.highest_score){
+                gh_game.highest_score = gh_game.score;
+            }
+            if(gh_game.score < gh_game.lowest_score){
+                gh_game.lowest_score = gh_game.score;
+            }
+
+            // Display game info
+            ImGui::Text("Score: %lld", static_cast<long long>(gh_game.score));
+            ImGui::SameLine();
+            ImGui::Text("  Streak: %lld", static_cast<long long>(gh_game.note_streak));
+            ImGui::Text("High Score: %lld", static_cast<long long>(gh_game.highest_score));
+            ImGui::SameLine();
+            ImGui::Text("  Low Score: %lld", static_cast<long long>(gh_game.lowest_score));
+            ImGui::SameLine();
+            ImGui::Text("  Max Streak: %lld", static_cast<long long>(gh_game.max_note_streak));
+            
+            ImGui::SliderInt("Difficulty", &gh_game.difficulty, 1, 3);
+            if(ImGui::IsItemHovered()){
+                ImGui::SetTooltip("1=Easy, 2=Medium, 3=Hard");
+            }
+            
+            if(gh_game.paused){
+                ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "PAUSED (press SPACE to resume)");
+            }
+            ImGui::Text("Press R to reset, SPACE to pause");
+
+            // Get drawing context
+            ImVec2 curr_pos = ImGui::GetCursorScreenPos();
+            ImDrawList *window_draw_list = ImGui::GetWindowDrawList();
+
+            // Draw game board background
+            {
+                const auto c = ImColor(0.1f, 0.1f, 0.15f, 1.0f);
+                window_draw_list->AddRectFilled(
+                    curr_pos,
+                    ImVec2(curr_pos.x + gh_game.board_width, curr_pos.y + gh_game.board_height),
+                    c
+                );
+            }
+
+            // Define lane colors (different for each F-key)
+            const ImColor lane_colors[4] = {
+                ImColor(1.0f, 0.2f, 0.2f, 0.3f),  // Red - F1
+                ImColor(0.2f, 1.0f, 0.2f, 0.3f),  // Green - F2
+                ImColor(0.2f, 0.2f, 1.0f, 0.3f),  // Blue - F3
+                ImColor(1.0f, 1.0f, 0.2f, 0.3f)   // Yellow - F4
+            };
+
+            const ImColor note_colors[4] = {
+                ImColor(1.0f, 0.3f, 0.3f, 1.0f),  // Red - F1
+                ImColor(0.3f, 1.0f, 0.3f, 1.0f),  // Green - F2
+                ImColor(0.3f, 0.3f, 1.0f, 1.0f),  // Blue - F3
+                ImColor(1.0f, 1.0f, 0.3f, 1.0f)   // Yellow - F4
+            };
+
+            // Draw lane dividers and backgrounds
+            const double lane_width = gh_game.board_width / 4.0;
+            for(int i = 0; i < 4; ++i){
+                const double x = curr_pos.x + i * lane_width;
+                
+                // Draw lane background
+                window_draw_list->AddRectFilled(
+                    ImVec2(x, curr_pos.y),
+                    ImVec2(x + lane_width, curr_pos.y + gh_game.board_height),
+                    lane_colors[i]
+                );
+                
+                // Draw lane divider line
+                if(i > 0){
+                    const auto c = ImColor(0.5f, 0.5f, 0.5f, 1.0f);
+                    window_draw_list->AddLine(
+                        ImVec2(x, curr_pos.y),
+                        ImVec2(x, curr_pos.y + gh_game.board_height),
+                        c,
+                        2.0f
+                    );
+                }
+            }
+
+            // Draw hit zone marker (horizontal line near bottom)
+            {
+                const auto c = ImColor(1.0f, 1.0f, 1.0f, 0.8f);
+                const double y = curr_pos.y + gh_game.hit_zone_y;
+                window_draw_list->AddLine(
+                    ImVec2(curr_pos.x, y),
+                    ImVec2(curr_pos.x + gh_game.board_width, y),
+                    c,
+                    4.0f
+                );
+                
+                // Draw timing window indicator
+                const auto window_pixels = gh_game.timing_window * gh_game.fall_speed;
+                const auto c2 = ImColor(1.0f, 1.0f, 1.0f, 0.3f);
+                window_draw_list->AddRectFilled(
+                    ImVec2(curr_pos.x, y - window_pixels),
+                    ImVec2(curr_pos.x + gh_game.board_width, y + window_pixels),
+                    c2
+                );
+            }
+
+            // Draw falling notes
+            for(const auto &note : gh_game.notes){
+                if(!note.active) continue;
+                
+                const double x = curr_pos.x + note.lane * lane_width + lane_width * 0.5;
+                const double y = curr_pos.y + note.y_pos;
+                
+                window_draw_list->AddCircleFilled(
+                    ImVec2(x, y),
+                    gh_game.note_size * 0.5,
+                    note_colors[note.lane]
+                );
+                
+                // Draw note border
+                const auto border_c = ImColor(1.0f, 1.0f, 1.0f, 1.0f);
+                window_draw_list->AddCircle(
+                    ImVec2(x, y),
+                    gh_game.note_size * 0.5,
+                    border_c,
+                    0,
+                    2.0f
+                );
+            }
+
+            // Draw key labels at the bottom
+            for(int i = 0; i < 4; ++i){
+                const double x = curr_pos.x + i * lane_width + lane_width * 0.5;
+                const double y = curr_pos.y + gh_game.board_height - 20;
+                
+                std::string label = "F" + std::to_string(i + 1);
+                const auto text_size = ImGui::CalcTextSize(label.c_str());
+                window_draw_list->AddText(
+                    ImVec2(x - text_size.x * 0.5, y),
+                    ImColor(1.0f, 1.0f, 1.0f, 1.0f),
+                    label.c_str()
+                );
+            }
+
+            ImGui::SetCursorPos(ImVec2(0, gh_game.board_height + 10));
+            ImGui::Dummy(ImVec2(gh_game.board_width, gh_game.board_height));
+            ImGui::End();
+
+            return true;
+        };
+        try{
+            // Break from the main render loop if false is received.
+            if(!display_gh_game()) break;
+        }catch(const std::exception &e){
+            YLOGWARN("Exception in display_gh_game(): '" << e.what() << "'");
+            throw;
+        }
+
 
 
 
@@ -10390,6 +10733,12 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             if(ImGui::Button("Cube")){
                 view_toggles.view_cube_enabled = true;
                 reset_cube_game();
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Guitar Hero")){
+                view_toggles.view_guitar_hero_enabled = true;
+                reset_gh_game();
                 ImGui::CloseCurrentPopup();
             }
 
