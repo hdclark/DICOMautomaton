@@ -87,11 +87,15 @@ lp_result solve_lp(const lp_problem &prob) {
     // Validate constraint dimensions.
     for(int64_t i = 0; i < m; ++i) {
         if(static_cast<int64_t>(prob.constraints[i].size()) != n) {
-            return result; // numerical_error - dimension mismatch.
+            // Constraint row has wrong number of coefficients.
+            // Result status is already set to numerical_error.
+            return result;
         }
     }
     if(static_cast<int64_t>(prob.bounds.size()) != m) {
-        return result; // numerical_error - dimension mismatch.
+        // Bounds vector size does not match number of constraints.
+        // Result status is already set to numerical_error.
+        return result;
     }
 
     // Check for negative RHS values (infeasibility without Big-M or two-phase).
