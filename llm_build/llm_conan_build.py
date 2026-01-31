@@ -270,6 +270,7 @@ def create_conanfile(build_dir, features):
     conanfile_content += "\n[generators]\n"
     conanfile_content += "CMakeDeps\n"
     conanfile_content += "CMakeToolchain\n"
+    conanfile_content += "VirtualBuildEnv\n"  # Provides environment activation scripts with CC, CXX, etc.
     
     # Write the file
     conanfile_path = build_dir / "conanfile.txt"
@@ -295,6 +296,11 @@ def build_dependency(name, repo_url, install_prefix, build_root, cmake_prefix_pa
     cmake_env = update_build_environment(conan_build_env, install_prefix)
     cmake_env['CMAKE_PREFIX_PATH'] = cmake_prefix_path
     
+    # Debug: Print environment variables to verify they're set
+    log_info(f"Environment for {name} build:")
+    run_command(['bash', '-c', 'echo "CC=$CC" && echo "CXX=$CXX" && echo "CFLAGS=$CFLAGS" && echo "CXXFLAGS=$CXXFLAGS" && echo "LDFLAGS=$LDFLAGS"'], 
+                cwd=build_dir, env=cmake_env, check=False)
+    
     # Configure
     cmake_args = [
         'cmake',
@@ -317,52 +323,82 @@ def get_conan_build_environment(build_root):
     """
     Extract build environment from Conan installation.
     Conan 2.x generates environment files that we need to source.
+    Uses VirtualBuildEnv generator output to get CC, CXX, CFLAGS, etc.
     """
     env = os.environ.copy()
     
-    # Conan 2.x generates conanbuild.sh and conanrun.sh scripts
-    # We need to parse these to get the environment variables
-    conan_build_script = build_root / 'conanbuild.sh'
+    # Conan 2.x with VirtualBuildEnv generates conanbuildenv-*.sh scripts
+    # Look for these scripts to extract build environment
+    scripts_to_try = [
+        build_root / 'conanbuildenv-release.sh',  # Release build
+        build_root / 'conanbuildenv.sh',          # Generic
+        build_root / 'conanbuild.sh',             # Legacy/alternative name
+    ]
     
-    if conan_build_script.exists():
-        log_info("Extracting Conan build environment...")
-        
-        # Parse the conan build script to extract environment variables
-        try:
-            # Run a shell command that sources the script and prints the environment
-            # Use shlex.quote to prevent shell injection
-            script_path = shlex.quote(str(conan_build_script))
-            result = subprocess.run(
-                ['bash', '-c', f'source {script_path} && env'],
-                capture_output=True,
-                text=True,
-                check=False
-            )
+    script_found = False
+    for conan_build_script in scripts_to_try:
+        if conan_build_script.exists():
+            script_found = True
+            log_info(f"Extracting Conan build environment from {conan_build_script.name}...")
             
-            if result.returncode == 0:
-                # Parse environment variables from output
-                # Only accept variables from our whitelist to avoid injection issues
-                target_vars = {'PATH', 'LD_LIBRARY_PATH', 'PKG_CONFIG_PATH', 
-                               'CPATH', 'LIBRARY_PATH', 'CC', 'CXX', 'CFLAGS', 
-                               'CXXFLAGS', 'LDFLAGS'}
+            # Parse the conan build script to extract environment variables
+            try:
+                # Run a shell command that sources the script and prints the environment
+                # Use shlex.quote to prevent shell injection
+                script_path = shlex.quote(str(conan_build_script))
+                result = subprocess.run(
+                    ['bash', '-c', f'source {script_path} && env'],
+                    capture_output=True,
+                    text=True,
+                    check=False
+                )
                 
-                for line in result.stdout.split('\n'):
-                    if '=' not in line:
-                        continue
+                if result.returncode == 0:
+                    # Parse environment variables from output
+                    # Only accept variables from our whitelist to avoid injection issues
+                    target_vars = {'PATH', 'LD_LIBRARY_PATH', 'PKG_CONFIG_PATH', 
+                                   'CPATH', 'LIBRARY_PATH', 'CC', 'CXX', 'CFLAGS', 
+                                   'CXXFLAGS', 'LDFLAGS', 'AR', 'AS', 'RANLIB', 'STRIP'}
                     
-                    key, _, value = line.partition('=')
-                    # Only update if the key is in our whitelist and looks like a valid variable name
-                    if key in target_vars and key.isidentifier():
-                        env[key] = value
-                
-                log_success("Conan build environment extracted")
-            else:
-                log_warn("Could not source Conan build script, using basic environment")
-        except Exception as e:
-            log_warn(f"Failed to extract Conan environment: {e}")
-    else:
-        log_warn(f"Conan build script not found at {conan_build_script}")
+                    vars_found = []
+                    for line in result.stdout.split('\n'):
+                        if '=' not in line:
+                            continue
+                        
+                        key, _, value = line.partition('=')
+                        # Only update if the key is in our whitelist and looks like a valid variable name
+                        if key in target_vars and key.isidentifier():
+                            env[key] = value
+                            vars_found.append(key)
+                    
+                    if vars_found:
+                        log_success(f"Conan build environment extracted: {', '.join(sorted(vars_found))}")
+                    else:
+                        log_warn("No target environment variables found in Conan script")
+                    break  # Stop after first successful script
+                else:
+                    log_warn(f"Could not source {conan_build_script.name}, trying next...")
+            except Exception as e:
+                log_warn(f"Failed to extract Conan environment from {conan_build_script.name}: {e}")
+    
+    if not script_found:
+        log_warn("No Conan build environment scripts found")
+        log_warn("Expected scripts: conanbuildenv-release.sh, conanbuildenv.sh, or conanbuild.sh")
         log_warn("Build may fail if Conan dependencies are not found")
+        log_info("Setting default compiler environment variables...")
+        
+        # Set default compiler if not already set
+        if 'CC' not in env:
+            if shutil.which('gcc'):
+                env['CC'] = 'gcc'
+            elif shutil.which('clang'):
+                env['CC'] = 'clang'
+        
+        if 'CXX' not in env:
+            if shutil.which('g++'):
+                env['CXX'] = 'g++'
+            elif shutil.which('clang++'):
+                env['CXX'] = 'clang++'
     
     return env
 
