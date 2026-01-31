@@ -5628,12 +5628,14 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             if(sf_game.is_jumping){
                                 // Jumped over it - award points
                                 sf_game.score += sf_game.did_flip ? 2 : 1;
+                                // Remove the jump
+                                obj.pos.y = sf_game.world_scroll_y + sf_game.box_height + 100.0;
                             }else{
                                 // Hit it - speed boost
                                 sf_game.scroll_speed = std::min(sf_game.scroll_speed * 1.3, sf_game.max_scroll_speed);
+                                // Remove the jump
+                                obj.pos.y = sf_game.world_scroll_y + sf_game.box_height + 100.0;
                             }
-                            // Remove the jump
-                            obj.pos.y = sf_game.world_scroll_y + sf_game.box_height + 100.0;
                         }else if(obj.type == sf_obj_type_t::rock){
                             if(sf_game.is_jumping){
                                 // Jumped over rock - award points
