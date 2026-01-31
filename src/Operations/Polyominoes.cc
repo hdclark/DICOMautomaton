@@ -904,7 +904,10 @@ bool Polyominoes(Drover &DICOM_data,
             const auto& poly_coords = valid_ominoes.at(poly_family).at(poly_shape).at(target_orien);
             
             // Find the lowest valid row for this orientation and column.
-            int64_t landing_row = 0L;
+            // Search from top to bottom, tracking the last valid position before hitting
+            // an obstacle. Once we encounter an invalid position, stop searching since
+            // the piece cannot pass through obstacles.
+            int64_t landing_row = -1L; // -1 indicates no valid position found yet
             for(int64_t test_row = 0L; test_row < img.rows; ++test_row){
                 bool can_place = true;
                 for(const auto &c : poly_coords){
@@ -933,10 +936,15 @@ bool Polyominoes(Drover &DICOM_data,
                 }
                 if(can_place){
                     landing_row = test_row;
-                }else{
+                }else if(landing_row >= 0L){
+                    // We found a valid position earlier and now hit an obstacle.
+                    // The piece lands at the last valid row.
                     break;
                 }
             }
+            
+            // If no valid landing row was found, this placement is invalid.
+            if(landing_row < 0L) return std::nullopt;
             
             // Check if placement is valid.
             bool valid = true;
