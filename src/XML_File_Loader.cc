@@ -14,6 +14,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include <algorithm>
 //#include <cfenv>              //Needed for std::feclearexcept(FE_ALL_EXCEPT).
 
 #include <filesystem>
@@ -200,51 +201,63 @@ contains_gpx_gps_coords(dcma::xml::node &root){
                 if(s1 > min_speed_threshold && s2 > min_speed_threshold){
                     const double ratio = (s1 > s2) ? (s1 / s2) : (s2 / s1);
                     if(ratio >= speed_change_threshold){
-                        split_indices.push_back(i + 1); // Split after point i
+                        split_indices.push_back(i + 2); // Split at point i+2 (start of new speed segment)
                     }
                 }else if(s1 <= min_speed_threshold && s2 > min_speed_threshold * speed_change_threshold){
                     // Transition from stationary to moving
-                    split_indices.push_back(i + 1);
+                    split_indices.push_back(i + 2);
                 }else if(s1 > min_speed_threshold * speed_change_threshold && s2 <= min_speed_threshold){
                     // Transition from moving to stationary
-                    split_indices.push_back(i + 1);
+                    split_indices.push_back(i + 2);
                 }
             }
 
             // Create additional contours for each detected segment.
             if(!split_indices.empty()){
-                size_t start_idx = 0;
-                size_t segment_num = 0;
+                // Sort and remove duplicates
+                std::sort(split_indices.begin(), split_indices.end());
+                split_indices.erase(std::unique(split_indices.begin(), split_indices.end()), split_indices.end());
 
-                for(size_t split_idx : split_indices){
-                    if(split_idx > start_idx + 1){ // Ensure segment has at least 2 points
+                // Filter out invalid indices
+                split_indices.erase(
+                    std::remove_if(split_indices.begin(), split_indices.end(),
+                        [N_points](size_t idx){ return idx >= N_points; }),
+                    split_indices.end());
+
+                if(!split_indices.empty()){
+                    size_t start_idx = 0;
+                    size_t segment_num = 0;
+
+                    for(size_t split_idx : split_indices){
+                        if(split_idx > start_idx + 1){ // Ensure segment has at least 2 points
+                            contour_of_points<double> segment_contour;
+                            segment_contour.closed = false;
+                            segment_contour.metadata = original_contour.metadata;
+                            segment_contour.metadata["ActivitySegment"] = std::to_string(segment_num);
+
+                            for(size_t i = start_idx; i < split_idx; ++i){
+                                segment_contour.points.push_back(points[i]);
+                            }
+
+                            contours_out.back().contours.push_back(segment_contour);
+                            ++segment_num;
+                        }
+                        start_idx = split_idx;
+                    }
+
+                    // Add the final segment.
+                    if(start_idx < N_points - 1){
                         contour_of_points<double> segment_contour;
                         segment_contour.closed = false;
                         segment_contour.metadata = original_contour.metadata;
                         segment_contour.metadata["ActivitySegment"] = std::to_string(segment_num);
 
-                        for(size_t i = start_idx; i < split_idx; ++i){
+                        for(size_t i = start_idx; i < N_points; ++i){
                             segment_contour.points.push_back(points[i]);
                         }
 
                         contours_out.back().contours.push_back(segment_contour);
-                        ++segment_num;
                     }
-                    start_idx = split_idx;
-                }
-
-                // Add the final segment.
-                if(start_idx < N_points - 1){
-                    contour_of_points<double> segment_contour;
-                    segment_contour.closed = false;
-                    segment_contour.metadata = original_contour.metadata;
-                    segment_contour.metadata["ActivitySegment"] = std::to_string(segment_num);
-
-                    for(size_t i = start_idx; i < N_points; ++i){
-                        segment_contour.points.push_back(points[i]);
-                    }
-
-                    contours_out.back().contours.push_back(segment_contour);
                 }
             }
         }

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Test">
+  <metadata>
+    <name>Multi-Activity Test Track</name>
+  </metadata>
+  <trk>
+    <name>Walk-Stop-Run Test</name>
+    <trkseg>
+      <!-- Walking segment: ~5 km/h (1.4 m/s) -->
+      <trkpt lat="45.0000" lon="-75.0000">
+        <ele>100.0</ele>
+        <time>2024-01-01T10:00:00Z</time>
+      </trkpt>
+      <trkpt lat="45.0001" lon="-75.0000">
+        <ele>100.0</ele>
+        <time>2024-01-01T10:00:08Z</time>
+      </trkpt>
+      <trkpt lat="45.0002" lon="-75.0000">
+        <ele>100.0</ele>
+        <time>2024-01-01T10:00:16Z</time>
+      </trkpt>
+      <!-- Stopping segment: very slow ~0.1 m/s -->
+      <trkpt lat="45.0003" lon="-75.0000">
+        <ele>100.0</ele>
+        <time>2024-01-01T10:01:00Z</time>
+      </trkpt>
+      <trkpt lat="45.0003" lon="-75.0001">
+        <ele>100.0</ele>
+        <time>2024-01-01T10:02:00Z</time>
+      </trkpt>
+      <!-- Running segment: ~15 km/h (4.2 m/s) -->
+      <trkpt lat="45.0004" lon="-75.0001">
+        <ele>100.0</ele>
+        <time>2024-01-01T10:02:03Z</time>
+      </trkpt>
+      <trkpt lat="45.0005" lon="-75.0001">
+        <ele>100.0</ele>
+        <time>2024-01-01T10:02:06Z</time>
+      </trkpt>
+      <trkpt lat="45.0006" lon="-75.0001">
+        <ele>100.0</ele>
+        <time>2024-01-01T10:02:09Z</time>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>
