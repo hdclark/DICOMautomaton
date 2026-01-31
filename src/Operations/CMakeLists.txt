@@ -242,16 +242,9 @@ add_library(Operations_objs OBJECT
     $<$<BOOL:${WITH_GNU_GSL}>:CT_Liver_Perfusion_Pharmaco_1Compartment2Input_Reduced3Param.cc>
     $<$<BOOL:${WITH_GNU_GSL}>:DumpPerROIParams_KineticModel_1Compartment2Input_5Param.cc>
 
-    $<$<BOOL:${WITH_CGAL}>:BCCAExtractRadiomicFeatures.cc>
-    $<$<BOOL:${WITH_CGAL}>:ContourBooleanOperations.cc>
-    $<$<BOOL:${WITH_CGAL}>:ConvertMeshesToContours.cc>
-    $<$<BOOL:${WITH_CGAL}>:DumpROISurfaceMeshes.cc>
-    $<$<BOOL:${WITH_CGAL}>:ExtractRadiomicFeatures.cc>
-    $<$<BOOL:${WITH_CGAL}>:MakeMeshesManifold.cc>
-    $<$<BOOL:${WITH_CGAL}>:MinkowskiSum3D.cc>
-    $<$<BOOL:${WITH_CGAL}>:RemeshSurfaceMeshes.cc>
-    $<$<BOOL:${WITH_CGAL}>:SeamContours.cc>
-    $<$<BOOL:${WITH_CGAL}>:SubdivideSurfaceMeshes.cc>
+    # Contour operations - now work without CGAL using native implementations
+    ContourBooleanOperations.cc
+    SeamContours.cc
 
     $<$<BOOL:${WITH_THRIFT}>:ExportDrover.cc>
     $<$<BOOL:${WITH_THRIFT}>:ImportDrover.cc>
