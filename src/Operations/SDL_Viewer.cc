@@ -4468,6 +4468,11 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImGui::SameLine();
             if( ImGui::Button("Drop", ImVec2(window_extent.x/7, 0))
             ||  (f && ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_Space))) ) action = "drop";
+            if( ImGui::Button("Computer", ImVec2(window_extent.x/4, 0))
+            ||  (f && ImGui::IsKeyPressed(SDL_SCANCODE_C)) ) action = "computer";
+            if(ImGui::IsItemHovered()){
+                ImGui::SetTooltip("Let the computer select the next move using heuristics. Press 'C' as shortcut.");
+            }
             if( f && ImGui::IsKeyPressed(SDL_SCANCODE_P) ){
                 polyomino_paused = !polyomino_paused;
             }
@@ -4484,6 +4489,12 @@ bool SDL_Viewer(Drover &DICOM_data,
             
             ImGui::Text("Current Score: %s, Current Speed: %s%%", std::to_string(static_cast<int64_t>(score)).c_str(),
                                                                   std::to_string(static_cast<int64_t>(100.0 * speed)).c_str());
+            
+            // Display computer rationale if available.
+            const auto computer_rationale = polyomino_imgs.image_data.back()->imagecoll.images.back().GetMetadataValueAs<std::string>("PolyominoesComputerRationale");
+            if(computer_rationale){
+                ImGui::Text("Computer: %s", computer_rationale.value().c_str());
+            }
 
             // Run a simulation with the given action.
             const auto t_now = std::chrono::steady_clock::now();
