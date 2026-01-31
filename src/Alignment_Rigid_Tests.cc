@@ -1,4 +1,4 @@
-//Alignment_Rigid_Tests.cc - A part of DICOMautomaton 2020. Written by hal clark.
+//Alignment_Rigid_Tests.cc - A part of DICOMautomaton 2026. Written by hal clark.
 //
 // This file contains unit tests for the rigid alignment methods defined in Alignment_Rigid.cc.
 // These tests are separated into their own file because Alignment_Rigid_obj is linked into
