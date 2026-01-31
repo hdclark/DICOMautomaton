@@ -4491,6 +4491,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                                   std::to_string(static_cast<int64_t>(100.0 * speed)).c_str());
             
             // Display computer rationale if available.
+            // Note: polyomino_imgs structure is already validated by the score access above.
             const auto computer_rationale = polyomino_imgs.image_data.back()->imagecoll.images.back().GetMetadataValueAs<std::string>("PolyominoesComputerRationale");
             if(computer_rationale){
                 ImGui::Text("Computer: %s", computer_rationale.value().c_str());

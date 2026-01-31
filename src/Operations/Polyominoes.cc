@@ -897,7 +897,7 @@ bool Polyominoes(Drover &DICOM_data,
         // Returns: { action_to_take, rationale_string }
         
         // Evaluate a hypothetical placement by scoring the resulting board.
-        // Lower scores are better.
+        // Higher scores are better (we will maximize).
         const auto evaluate_placement = [&]( int64_t target_orien,
                                              int64_t target_col ) -> std::optional<double> {
             // Simulate the piece dropping to its landing position.
@@ -1028,11 +1028,13 @@ bool Polyominoes(Drover &DICOM_data,
                 bumpiness += std::abs(col_heights[c] - col_heights[c+1]);
             }
             
-            // Weighted score (lower is better). Weights based on common Tetris AI heuristics.
-            const double w_height = -0.510066;
-            const double w_lines = 0.760666;
-            const double w_holes = -0.35663;
-            const double w_bumpiness = -0.184483;
+            // Weighted score (higher is better). Weights are derived from common Tetris AI research
+            // (e.g., genetic algorithm optimization for piece placement heuristics).
+            // Negative weights penalize the metric; positive weights reward the metric.
+            const double w_height = -0.510066;    // Penalize taller stacks
+            const double w_lines = 0.760666;      // Reward completing lines
+            const double w_holes = -0.35663;      // Penalize holes (empty cells under filled cells)
+            const double w_bumpiness = -0.184483; // Penalize uneven column heights
             
             double score = w_height * static_cast<double>(aggregate_height)
                          + w_lines * static_cast<double>(completed_lines)
