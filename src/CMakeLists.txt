@@ -54,6 +54,11 @@ set_target_properties(  Alignment_TPSRPM_obj PROPERTIES POSITION_INDEPENDENT_COD
 add_library(            Alignment_Rigid_Tests_obj OBJECT Alignment_Rigid_Tests.cc )
 set_target_properties(  Alignment_Rigid_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+if(WITH_SDL)
+    add_library(            SDL_Viewer_Tests_obj OBJECT SDL_Viewer_Tests.cc )
+    set_target_properties(  SDL_Viewer_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+endif()
+
 add_library(            Alignment_Field_obj OBJECT Alignment_Field.cc )
 set_target_properties(  Alignment_Field_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -411,6 +416,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Alignment_Rigid_obj>
     $<TARGET_OBJECTS:Alignment_TPSRPM_obj>
     $<TARGET_OBJECTS:Alignment_Rigid_Tests_obj>
+    $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:SDL_Viewer_Tests_obj>>
     $<TARGET_OBJECTS:Alignment_Field_obj>
     $<TARGET_OBJECTS:Colour_Maps_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
@@ -517,6 +523,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Alignment_Rigid_obj>
         $<TARGET_OBJECTS:Alignment_TPSRPM_obj>
         $<TARGET_OBJECTS:Alignment_Rigid_Tests_obj>
+        $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:SDL_Viewer_Tests_obj>>
         $<TARGET_OBJECTS:Alignment_Field_obj>
         $<TARGET_OBJECTS:Colour_Maps_obj>
         $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
