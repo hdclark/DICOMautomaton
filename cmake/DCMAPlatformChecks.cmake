@@ -69,6 +69,7 @@ function(dcma_check_system_features)
     check_cxx_symbol_exists(VMIN      "termios.h"    DCMA_HAS_TERMIOS_VMIN)
     check_cxx_symbol_exists(VTIME     "termios.h"    DCMA_HAS_TERMIOS_VTIME)
     check_cxx_symbol_exists(TCSANOW   "termios.h"    DCMA_HAS_TERMIOS_TCSANOW)
+    # Note: Variable name intentionally uses TCGETADDR (not TCGETATTR) to match existing DCMA_Definitions.h.in
     check_cxx_symbol_exists(tcgetattr "termios.h"    DCMA_HAS_TERMIOS_TCGETADDR)
 
     # fcntl.h
