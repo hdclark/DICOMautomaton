@@ -2159,9 +2159,11 @@ TEST_CASE( "AlignViaTPSRPM benchmark" ){
 
         AlignViaTPSRPMParams params;
         params.kernel_dimension = 2;
-        params.lambda_start = 0.01;
-        params.T_end_scale = 0.05;   // Coarser for speed and stability
+        params.lambda_start = 0.05;          // Higher regularization for larger point clouds
+        params.T_end_scale = 0.1;            // Coarser for speed and stability
         params.N_iters_at_fixed_T = 2;
+        params.N_Sinkhorn_iters = 20000;     // More iterations for larger matrices
+        params.Sinkhorn_tolerance = 0.02;    // Slightly relaxed tolerance
         
         auto t_start = std::chrono::steady_clock::now();
         auto result = AlignViaTPSRPM(params, ps_moving, ps_stationary);
