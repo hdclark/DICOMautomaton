@@ -297,9 +297,10 @@ def build_dependency(name, repo_url, install_prefix, build_root, cmake_prefix_pa
     cmake_env['CMAKE_PREFIX_PATH'] = cmake_prefix_path
     
     # Debug: Print environment variables to verify they're set
-    log_info(f"Environment for {name} build:")
-    run_command(['bash', '-c', 'echo "CC=$CC" && echo "CXX=$CXX" && echo "CFLAGS=$CFLAGS" && echo "CXXFLAGS=$CXXFLAGS" && echo "LDFLAGS=$LDFLAGS"'], 
-                cwd=build_dir, env=cmake_env, check=False)
+    log_info(f"Compiler environment for {name}:")
+    for var in ['CC', 'CXX', 'CFLAGS', 'CXXFLAGS', 'LDFLAGS']:
+        value = cmake_env.get(var, '(not set)')
+        print(f"  {var}={value}")
     
     # Configure
     cmake_args = [
@@ -366,8 +367,9 @@ def get_conan_build_environment(build_root):
                             continue
                         
                         key, _, value = line.partition('=')
-                        # Only update if the key is in our whitelist and looks like a valid variable name
-                        if key in target_vars and key.isidentifier():
+                        # Only update if the key is in our whitelist
+                        # The whitelist itself ensures safety, no need for isidentifier() check
+                        if key in target_vars:
                             env[key] = value
                             vars_found.append(key)
                     
@@ -387,17 +389,30 @@ def get_conan_build_environment(build_root):
         log_warn("Build may fail if Conan dependencies are not found")
         log_info("Setting default compiler environment variables...")
         
-        # Set default compiler if not already set
-        if 'CC' not in env:
-            if shutil.which('gcc'):
+        # Set default compilers if not already set
+        # Prefer gcc/g++ as they're more common, but fall back to clang if gcc not available
+        if 'CC' not in env and 'CXX' not in env:
+            if shutil.which('gcc') and shutil.which('g++'):
                 env['CC'] = 'gcc'
-            elif shutil.which('clang'):
-                env['CC'] = 'clang'
-        
-        if 'CXX' not in env:
-            if shutil.which('g++'):
                 env['CXX'] = 'g++'
-            elif shutil.which('clang++'):
+                log_info("Using gcc/g++ as default compilers")
+            elif shutil.which('clang') and shutil.which('clang++'):
+                env['CC'] = 'clang'
+                env['CXX'] = 'clang++'
+                log_info("Using clang/clang++ as default compilers")
+            else:
+                log_warn("No suitable C/C++ compiler found (gcc/g++ or clang/clang++)")
+        elif 'CC' not in env:
+            # CXX is set but CC is not - try to match the compiler family
+            if 'g++' in env.get('CXX', '') and shutil.which('gcc'):
+                env['CC'] = 'gcc'
+            elif 'clang' in env.get('CXX', '') and shutil.which('clang'):
+                env['CC'] = 'clang'
+        elif 'CXX' not in env:
+            # CC is set but CXX is not - try to match the compiler family
+            if 'gcc' in env.get('CC', '') and shutil.which('g++'):
+                env['CXX'] = 'g++'
+            elif 'clang' in env.get('CC', '') and shutil.which('clang++'):
                 env['CXX'] = 'clang++'
     
     return env
