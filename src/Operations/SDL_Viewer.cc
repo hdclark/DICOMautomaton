@@ -1052,6 +1052,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_triple_three_enabled = false;
         bool view_encompass_enabled = false;
         bool view_cube_enabled = false;
+        bool view_tower_defense_enabled = false;
 
         bool view_guides_enabled = true;
     } view_toggles;
@@ -1783,6 +1784,105 @@ bool SDL_Viewer(Drover &DICOM_data,
         rc_game_move_history.emplace_back(x);
         const auto n = static_cast<int64_t>(rc_game_move_history.size());
         rc_game_move_history_current = n;
+        return;
+    };
+
+    // Tower Defense game state.
+    struct td_enemy_t {
+        double path_progress = 0.0;  // 0.0 = start, 1.0 = end of path.
+        double hp = 100.0;           // Hit points.
+        double max_hp = 100.0;       // Maximum hit points.
+    };
+
+    struct td_tower_t {
+        int64_t grid_x = 0;
+        int64_t grid_y = 0;
+        double range = 80.0;     // Attack range in pixels.
+        double damage = 15.0;    // Damage per shot.
+        double fire_rate = 1.0;  // Shots per second.
+        double cooldown = 0.0;   // Time until next shot.
+    };
+
+    struct td_projectile_t {
+        vec2<double> pos;
+        vec2<double> target_pos;
+        size_t target_enemy_idx;
+        double speed = 300.0;
+    };
+
+    std::vector<td_enemy_t> td_enemies;
+    std::vector<td_tower_t> td_towers;
+    std::vector<td_projectile_t> td_projectiles;
+    std::chrono::time_point<std::chrono::steady_clock> t_td_updated;
+
+    struct td_game_t {
+        int64_t grid_cols = 15;       // Number of columns in the grid.
+        int64_t grid_rows = 10;       // Number of rows in the grid.
+        double cell_size = 50.0;      // Size of each cell in pixels.
+
+        int64_t credits = 5;          // Number of towers the player can buy.
+        int64_t wave_number = 0;      // Current wave number.
+        int64_t enemies_in_wave = 0;  // Enemies remaining to spawn in this wave.
+        int64_t lives = 10;           // Player lives.
+        bool wave_active = false;     // Is a wave currently in progress?
+        double spawn_timer = 0.0;     // Time until next enemy spawn.
+        double spawn_interval = 1.0;  // Time between enemy spawns in seconds.
+        double enemy_speed = 0.4;     // How fast enemies move (path progress per second).
+
+        // Path waypoints define the white tiles path.
+        // These are grid coordinates that form a path from top-left to bottom-right.
+        std::vector<std::pair<int64_t, int64_t>> path_waypoints;
+
+        std::mt19937 re;
+    } td_game;
+    td_game.re.seed( std::random_device()() );
+
+    const auto reset_td_game = [&](){
+        td_enemies.clear();
+        td_towers.clear();
+        td_projectiles.clear();
+
+        td_game.credits = 5;
+        td_game.wave_number = 0;
+        td_game.enemies_in_wave = 0;
+        td_game.lives = 10;
+        td_game.wave_active = false;
+        td_game.spawn_timer = 0.0;
+
+        // Define path waypoints: starts at top-left, goes right, then down in a snake pattern.
+        td_game.path_waypoints.clear();
+        // Create a winding path from (0,0) to (grid_cols-1, grid_rows-1).
+        // Path goes: right across row 0, down to row 2, left across row 2, down to row 4, etc.
+        int64_t row = 0;
+        bool going_right = true;
+        while(row < td_game.grid_rows){
+            if(going_right){
+                for(int64_t col = 0; col < td_game.grid_cols; ++col){
+                    td_game.path_waypoints.emplace_back(col, row);
+                }
+            }else{
+                for(int64_t col = td_game.grid_cols - 1; col >= 0; --col){
+                    td_game.path_waypoints.emplace_back(col, row);
+                }
+            }
+            // Move down if there are more rows.
+            if(row + 1 < td_game.grid_rows){
+                row += 1;
+                // Add the connecting cell (going down).
+                if(going_right){
+                    td_game.path_waypoints.emplace_back(td_game.grid_cols - 1, row);
+                }else{
+                    td_game.path_waypoints.emplace_back(0, row);
+                }
+                row += 1;
+                going_right = !going_right;
+            }else{
+                break;
+            }
+        }
+
+        const auto t_now = std::chrono::steady_clock::now();
+        t_td_updated = t_now;
         return;
     };
 
@@ -5800,6 +5900,346 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             throw;
         }
 
+        // Tower Defense game display function.
+        const auto display_td_game = [&view_toggles,
+                                      &td_enemies,
+                                      &td_towers,
+                                      &td_projectiles,
+                                      &t_td_updated,
+                                      &td_game,
+                                      &reset_td_game ]() -> bool {
+            if( !view_toggles.view_tower_defense_enabled ) return true;
+
+            // Reset the game before any game state is used.
+            if( ImGui::IsKeyPressed(SDL_SCANCODE_R) ){
+                reset_td_game();
+            }
+
+            const auto box_width  = td_game.grid_cols * td_game.cell_size;
+            const auto box_height = td_game.grid_rows * td_game.cell_size;
+            const auto win_width  = static_cast<int>(box_width) + 220;
+            const auto win_height = static_cast<int>(box_height) + 80;
+
+            auto flags = ImGuiWindowFlags_AlwaysAutoResize
+                       | ImGuiWindowFlags_NoScrollWithMouse
+                       | ImGuiWindowFlags_NoNavInputs
+                       | ImGuiWindowFlags_NoScrollbar ;
+            ImGui::SetNextWindowSize(ImVec2(win_width, win_height), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Tower Defense", &view_toggles.view_tower_defense_enabled, flags );
+
+            // Helper to check if a grid cell is on the path.
+            const auto is_path_cell = [&](int64_t col, int64_t row) -> bool {
+                for(const auto& wp : td_game.path_waypoints){
+                    if(wp.first == col && wp.second == row) return true;
+                }
+                return false;
+            };
+
+            // Helper to check if a tower exists at grid cell.
+            const auto has_tower_at = [&](int64_t col, int64_t row) -> bool {
+                for(const auto& tower : td_towers){
+                    if(tower.grid_x == col && tower.grid_y == row) return true;
+                }
+                return false;
+            };
+
+            // Helper to get world position from path progress.
+            const auto get_path_position = [&](double progress) -> vec2<double> {
+                if(td_game.path_waypoints.empty()) return vec2<double>(0.0, 0.0);
+                const auto total_segments = static_cast<double>(td_game.path_waypoints.size() - 1);
+                if(total_segments <= 0.0){
+                    const auto& wp = td_game.path_waypoints[0];
+                    return vec2<double>(
+                        (static_cast<double>(wp.first) + 0.5) * td_game.cell_size,
+                        (static_cast<double>(wp.second) + 0.5) * td_game.cell_size
+                    );
+                }
+                const auto segment_progress = progress * total_segments;
+                const auto segment_idx = static_cast<size_t>(std::floor(segment_progress));
+                const auto t = segment_progress - static_cast<double>(segment_idx);
+                
+                size_t idx1 = std::min(segment_idx, td_game.path_waypoints.size() - 1);
+                size_t idx2 = std::min(segment_idx + 1, td_game.path_waypoints.size() - 1);
+                
+                const auto& wp1 = td_game.path_waypoints[idx1];
+                const auto& wp2 = td_game.path_waypoints[idx2];
+                
+                const double x1 = (static_cast<double>(wp1.first) + 0.5) * td_game.cell_size;
+                const double y1 = (static_cast<double>(wp1.second) + 0.5) * td_game.cell_size;
+                const double x2 = (static_cast<double>(wp2.first) + 0.5) * td_game.cell_size;
+                const double y2 = (static_cast<double>(wp2.second) + 0.5) * td_game.cell_size;
+                
+                return vec2<double>(x1 + t * (x2 - x1), y1 + t * (y2 - y1));
+            };
+
+            // Time update.
+            const auto t_now = std::chrono::steady_clock::now();
+            auto t_updated_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_td_updated).count();
+            if(50 < t_updated_diff) t_updated_diff = 50;  // Cap time step.
+            const double dt = static_cast<double>(t_updated_diff) / 1000.0;
+            t_td_updated = t_now;
+
+            // Display game info panel.
+            ImGui::BeginChild("GameInfo", ImVec2(200, box_height), true);
+            ImGui::Text("Wave: %ld", static_cast<long>(td_game.wave_number));
+            ImGui::Text("Lives: %ld", static_cast<long>(td_game.lives));
+            ImGui::Text("Credits: %ld", static_cast<long>(td_game.credits));
+            ImGui::Text("Towers: %zu", td_towers.size());
+            ImGui::Text("Enemies: %zu", td_enemies.size());
+            ImGui::Separator();
+
+            if(td_game.lives <= 0){
+                ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "GAME OVER!");
+                if(ImGui::Button("Restart", ImVec2(-1, 0))){
+                    reset_td_game();
+                }
+            }else if(!td_game.wave_active){
+                if(ImGui::Button("Launch Wave", ImVec2(-1, 0))){
+                    td_game.wave_number += 1;
+                    td_game.enemies_in_wave = td_game.wave_number;  // Wave N has N enemies.
+                    td_game.wave_active = true;
+                    td_game.spawn_timer = 0.0;
+                }
+            }else{
+                ImGui::Text("Wave in progress...");
+                ImGui::Text("Spawning: %ld left", static_cast<long>(td_game.enemies_in_wave));
+            }
+
+            ImGui::Separator();
+            ImGui::TextWrapped("Click gray tiles to place towers (%ld credits).", static_cast<long>(td_game.credits));
+            ImGui::TextWrapped("Press R to reset.");
+
+            ImGui::EndChild();
+            ImGui::SameLine();
+
+            // Game grid display.
+            ImVec2 grid_origin = ImGui::GetCursorScreenPos();
+            ImDrawList *draw_list = ImGui::GetWindowDrawList();
+
+            // Draw grid cells.
+            for(int64_t row = 0; row < td_game.grid_rows; ++row){
+                for(int64_t col = 0; col < td_game.grid_cols; ++col){
+                    const float x0 = grid_origin.x + static_cast<float>(col * td_game.cell_size);
+                    const float y0 = grid_origin.y + static_cast<float>(row * td_game.cell_size);
+                    const float x1 = x0 + static_cast<float>(td_game.cell_size);
+                    const float y1 = y0 + static_cast<float>(td_game.cell_size);
+
+                    ImU32 fill_color;
+                    if(is_path_cell(col, row)){
+                        fill_color = ImColor(1.0f, 1.0f, 1.0f, 1.0f);  // White for path.
+                    }else{
+                        fill_color = ImColor(0.6f, 0.6f, 0.6f, 1.0f);  // Gray for buildable.
+                    }
+                    draw_list->AddRectFilled(ImVec2(x0, y0), ImVec2(x1, y1), fill_color);
+                    draw_list->AddRect(ImVec2(x0, y0), ImVec2(x1, y1), ImColor(0.3f, 0.3f, 0.3f, 1.0f));
+                }
+            }
+
+            // Handle tower placement on mouse click.
+            if(ImGui::IsMouseClicked(0) && td_game.credits > 0 && td_game.lives > 0){
+                ImVec2 mouse_pos = ImGui::GetMousePos();
+                const float rel_x = mouse_pos.x - grid_origin.x;
+                const float rel_y = mouse_pos.y - grid_origin.y;
+                if(rel_x >= 0 && rel_y >= 0){
+                    const int64_t col = static_cast<int64_t>(rel_x / td_game.cell_size);
+                    const int64_t row = static_cast<int64_t>(rel_y / td_game.cell_size);
+                    if(col >= 0 && col < td_game.grid_cols && row >= 0 && row < td_game.grid_rows){
+                        if(!is_path_cell(col, row) && !has_tower_at(col, row)){
+                            td_tower_t new_tower;
+                            new_tower.grid_x = col;
+                            new_tower.grid_y = row;
+                            td_towers.push_back(new_tower);
+                            td_game.credits -= 1;
+                        }
+                    }
+                }
+            }
+
+            // Draw towers (blue squares with range indicator).
+            for(const auto& tower : td_towers){
+                const float cx = grid_origin.x + static_cast<float>((tower.grid_x + 0.5) * td_game.cell_size);
+                const float cy = grid_origin.y + static_cast<float>((tower.grid_y + 0.5) * td_game.cell_size);
+                const float half_size = static_cast<float>(td_game.cell_size * 0.35);
+
+                // Draw range circle (subtle).
+                draw_list->AddCircle(ImVec2(cx, cy), static_cast<float>(tower.range),
+                                     ImColor(0.2f, 0.2f, 0.8f, 0.3f), 32, 1.0f);
+                // Draw tower as a blue square.
+                draw_list->AddRectFilled(ImVec2(cx - half_size, cy - half_size),
+                                         ImVec2(cx + half_size, cy + half_size),
+                                         ImColor(0.2f, 0.3f, 0.9f, 1.0f));
+                draw_list->AddRect(ImVec2(cx - half_size, cy - half_size),
+                                   ImVec2(cx + half_size, cy + half_size),
+                                   ImColor(0.1f, 0.1f, 0.5f, 1.0f), 0.0f, 0, 2.0f);
+            }
+
+            // Update wave spawning.
+            if(td_game.wave_active && td_game.enemies_in_wave > 0){
+                td_game.spawn_timer -= dt;
+                if(td_game.spawn_timer <= 0.0){
+                    // Spawn a new enemy.
+                    td_enemy_t new_enemy;
+                    new_enemy.path_progress = 0.0;
+                    new_enemy.hp = 100.0 + static_cast<double>(td_game.wave_number - 1) * 20.0;  // More HP for later waves.
+                    new_enemy.max_hp = new_enemy.hp;
+                    td_enemies.push_back(new_enemy);
+                    td_game.enemies_in_wave -= 1;
+                    td_game.spawn_timer = td_game.spawn_interval;
+                }
+            }
+
+            // Check if wave is complete.
+            if(td_game.wave_active && td_game.enemies_in_wave <= 0 && td_enemies.empty()){
+                td_game.wave_active = false;
+            }
+
+            // Update enemies.
+            for(auto& enemy : td_enemies){
+                enemy.path_progress += td_game.enemy_speed * dt;
+            }
+
+            // Check for enemies reaching the end.
+            td_enemies.erase(
+                std::remove_if(td_enemies.begin(), td_enemies.end(),
+                    [&](const td_enemy_t& enemy) -> bool {
+                        if(enemy.path_progress >= 1.0){
+                            td_game.lives -= 1;
+                            return true;
+                        }
+                        return false;
+                    }),
+                td_enemies.end()
+            );
+
+            // Towers attack enemies.
+            for(auto& tower : td_towers){
+                tower.cooldown -= dt;
+                if(tower.cooldown <= 0.0){
+                    const double tower_x = (static_cast<double>(tower.grid_x) + 0.5) * td_game.cell_size;
+                    const double tower_y = (static_cast<double>(tower.grid_y) + 0.5) * td_game.cell_size;
+                    const vec2<double> tower_pos(tower_x, tower_y);
+
+                    // Find closest enemy in range.
+                    double closest_dist = tower.range + 1.0;
+                    size_t closest_idx = td_enemies.size();
+                    for(size_t i = 0; i < td_enemies.size(); ++i){
+                        const auto enemy_pos = get_path_position(td_enemies[i].path_progress);
+                        const double dist = tower_pos.distance(enemy_pos);
+                        if(dist <= tower.range && dist < closest_dist){
+                            closest_dist = dist;
+                            closest_idx = i;
+                        }
+                    }
+
+                    if(closest_idx < td_enemies.size()){
+                        // Fire at the enemy.
+                        td_projectile_t proj;
+                        proj.pos = tower_pos;
+                        proj.target_pos = get_path_position(td_enemies[closest_idx].path_progress);
+                        proj.target_enemy_idx = closest_idx;
+                        td_projectiles.push_back(proj);
+                        tower.cooldown = 1.0 / tower.fire_rate;
+                    }
+                }
+            }
+
+            // Update projectiles.
+            std::vector<size_t> hit_enemies;
+            for(auto& proj : td_projectiles){
+                const vec2<double> dir = (proj.target_pos - proj.pos);
+                const double dist = dir.length();
+                if(dist > 0.0){
+                    const vec2<double> move = dir.unit() * proj.speed * dt;
+                    if(move.length() >= dist){
+                        proj.pos = proj.target_pos;
+                    }else{
+                        proj.pos = proj.pos + move;
+                    }
+                }
+            }
+
+            // Check for projectile hits.
+            td_projectiles.erase(
+                std::remove_if(td_projectiles.begin(), td_projectiles.end(),
+                    [&](const td_projectile_t& proj) -> bool {
+                        const double dist_to_target = proj.pos.distance(proj.target_pos);
+                        if(dist_to_target < 5.0){
+                            // Hit! Apply damage.
+                            if(proj.target_enemy_idx < td_enemies.size()){
+                                td_enemies[proj.target_enemy_idx].hp -= 15.0;  // Tower damage.
+                            }
+                            return true;
+                        }
+                        return false;
+                    }),
+                td_projectiles.end()
+            );
+
+            // Remove dead enemies and grant credits.
+            size_t enemies_killed = 0;
+            td_enemies.erase(
+                std::remove_if(td_enemies.begin(), td_enemies.end(),
+                    [&](const td_enemy_t& enemy) -> bool {
+                        if(enemy.hp <= 0.0){
+                            ++enemies_killed;
+                            return true;
+                        }
+                        return false;
+                    }),
+                td_enemies.end()
+            );
+            td_game.credits += static_cast<int64_t>(enemies_killed);
+
+            // Draw enemies (red circles with health bars).
+            for(const auto& enemy : td_enemies){
+                const auto pos = get_path_position(enemy.path_progress);
+                const float ex = grid_origin.x + static_cast<float>(pos.x);
+                const float ey = grid_origin.y + static_cast<float>(pos.y);
+                const float enemy_radius = static_cast<float>(td_game.cell_size * 0.3);
+
+                // Draw enemy circle.
+                draw_list->AddCircleFilled(ImVec2(ex, ey), enemy_radius,
+                                           ImColor(0.9f, 0.2f, 0.2f, 1.0f));
+                draw_list->AddCircle(ImVec2(ex, ey), enemy_radius,
+                                     ImColor(0.5f, 0.1f, 0.1f, 1.0f), 0, 2.0f);
+
+                // Draw health bar above enemy.
+                const float bar_width = td_game.cell_size * 0.6f;
+                const float bar_height = 4.0f;
+                const float bar_x = ex - bar_width / 2.0f;
+                const float bar_y = ey - enemy_radius - 8.0f;
+                const float hp_ratio = static_cast<float>(enemy.hp / enemy.max_hp);
+
+                draw_list->AddRectFilled(ImVec2(bar_x, bar_y),
+                                         ImVec2(bar_x + bar_width, bar_y + bar_height),
+                                         ImColor(0.3f, 0.3f, 0.3f, 1.0f));
+                draw_list->AddRectFilled(ImVec2(bar_x, bar_y),
+                                         ImVec2(bar_x + bar_width * hp_ratio, bar_y + bar_height),
+                                         ImColor(0.0f, 0.8f, 0.0f, 1.0f));
+            }
+
+            // Draw projectiles (yellow circles).
+            for(const auto& proj : td_projectiles){
+                const float px = grid_origin.x + static_cast<float>(proj.pos.x);
+                const float py = grid_origin.y + static_cast<float>(proj.pos.y);
+                draw_list->AddCircleFilled(ImVec2(px, py), 4.0f, ImColor(1.0f, 1.0f, 0.0f, 1.0f));
+            }
+
+            // Create an invisible button to capture mouse input on the grid area.
+            ImGui::SetCursorScreenPos(grid_origin);
+            ImGui::InvisibleButton("td_grid", ImVec2(box_width, box_height));
+
+            ImGui::End();
+            return true;
+        };
+        try{
+            // Break from the main render loop if false is received.
+            if(!display_td_game()) break;
+        }catch(const std::exception &e){
+            YLOGWARN("Exception in display_td_game(): '" << e.what() << "'");
+            throw;
+        }
 
 
         // Display the shader editor dialog.
@@ -10390,6 +10830,12 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             if(ImGui::Button("Cube")){
                 view_toggles.view_cube_enabled = true;
                 reset_cube_game();
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Tower Defense")){
+                view_toggles.view_tower_defense_enabled = true;
+                reset_td_game();
                 ImGui::CloseCurrentPopup();
             }
 
