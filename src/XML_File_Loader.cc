@@ -12,7 +12,8 @@
 #include <map>
 #include <memory>
 #include <stdexcept>
-#include <string>    
+#include <string>
+#include <vector>
 //#include <cfenv>              //Needed for std::feclearexcept(FE_ALL_EXCEPT).
 
 #include <filesystem>
@@ -79,6 +80,10 @@ contains_gpx_gps_coords(dcma::xml::node &root){
         },
         disable_recursive_search );
 
+    // Temporary storage for time data associated with each track point.
+    // This enables speed-based splitting after all points are collected.
+    std::vector<std::optional<double>> track_times;
+
     // This callback is for handling individual track points (i.e., vertices).
     dcma::xml::search_callback_t f_trkpts = [&](const dcma::xml::node_chain_t &nc) -> bool {
         const auto lat_opt = get_as<double>(nc.back().get().metadata, "lat");
@@ -122,6 +127,9 @@ contains_gpx_gps_coords(dcma::xml::node &root){
             },
             disable_recursive_search);
 
+        // Store time data for speed-based splitting.
+        track_times.push_back(time_opt);
+
         if( ele_opt && time_opt ){
             const bool inhibit_sort = true;
             lines_out.back().push_back( time_opt.value(), ele_opt.value(), inhibit_sort );
@@ -139,10 +147,108 @@ contains_gpx_gps_coords(dcma::xml::node &root){
 
         lines_out.emplace_back();
 
+        // Clear time data for this track segment.
+        track_times.clear();
+
         dcma::xml::search_by_names(nc.back().get(),
                                    { "trkpt" },
                                    f_trkpts,
                                    disable_recursive_search);
+
+        // After collecting all points, analyze speeds and split based on major changes.
+        // The original contour is kept as-is. Additional contours are created for each detected activity segment.
+        auto &original_contour = contours_out.back().contours.back();
+        const auto &points = original_contour.points;
+        const size_t N_points = points.size();
+
+        if(N_points >= 2 && track_times.size() == N_points){
+            // Calculate instantaneous speeds between consecutive points.
+            std::vector<double> speeds;
+            speeds.reserve(N_points - 1);
+
+            for(size_t i = 0; i + 1 < N_points; ++i){
+                if(track_times[i] && track_times[i+1]){
+                    const auto &p1 = points[i];
+                    const auto &p2 = points[i+1];
+                    const double dx = p2.x - p1.x;
+                    const double dy = p2.y - p1.y;
+                    const double dist = std::sqrt(dx*dx + dy*dy); // Distance in meters (Mercator projection)
+                    const double dt = track_times[i+1].value() - track_times[i].value(); // Time in seconds
+
+                    if(dt > 0.0){
+                        const double speed = dist / dt; // Speed in m/s
+                        speeds.push_back(speed);
+                    }else{
+                        speeds.push_back(0.0);
+                    }
+                }else{
+                    speeds.push_back(0.0);
+                }
+            }
+
+            // Detect split points based on major speed changes.
+            // Use a threshold-based approach: split when speed changes by more than a factor.
+            std::vector<size_t> split_indices;
+            const double speed_change_threshold = 3.0; // Split when speed changes by 3x or more
+            const double min_speed_threshold = 0.5; // Minimum speed (m/s) to consider for splitting
+
+            for(size_t i = 0; i + 1 < speeds.size(); ++i){
+                const double s1 = speeds[i];
+                const double s2 = speeds[i+1];
+
+                // Avoid division by very small speeds, and check for significant changes
+                if(s1 > min_speed_threshold && s2 > min_speed_threshold){
+                    const double ratio = (s1 > s2) ? (s1 / s2) : (s2 / s1);
+                    if(ratio >= speed_change_threshold){
+                        split_indices.push_back(i + 1); // Split after point i
+                    }
+                }else if(s1 <= min_speed_threshold && s2 > min_speed_threshold * speed_change_threshold){
+                    // Transition from stationary to moving
+                    split_indices.push_back(i + 1);
+                }else if(s1 > min_speed_threshold * speed_change_threshold && s2 <= min_speed_threshold){
+                    // Transition from moving to stationary
+                    split_indices.push_back(i + 1);
+                }
+            }
+
+            // Create additional contours for each detected segment.
+            if(!split_indices.empty()){
+                size_t start_idx = 0;
+                size_t segment_num = 0;
+
+                for(size_t split_idx : split_indices){
+                    if(split_idx > start_idx + 1){ // Ensure segment has at least 2 points
+                        contour_of_points<double> segment_contour;
+                        segment_contour.closed = false;
+                        segment_contour.metadata = original_contour.metadata;
+                        segment_contour.metadata["ActivitySegment"] = std::to_string(segment_num);
+
+                        for(size_t i = start_idx; i < split_idx; ++i){
+                            segment_contour.points.push_back(points[i]);
+                        }
+
+                        contours_out.back().contours.push_back(segment_contour);
+                        ++segment_num;
+                    }
+                    start_idx = split_idx;
+                }
+
+                // Add the final segment.
+                if(start_idx < N_points - 1){
+                    contour_of_points<double> segment_contour;
+                    segment_contour.closed = false;
+                    segment_contour.metadata = original_contour.metadata;
+                    segment_contour.metadata["ActivitySegment"] = std::to_string(segment_num);
+
+                    for(size_t i = start_idx; i < N_points; ++i){
+                        segment_contour.points.push_back(points[i]);
+                    }
+
+                    contours_out.back().contours.push_back(segment_contour);
+                }
+            }
+        }
+
         return true;
     };
 
