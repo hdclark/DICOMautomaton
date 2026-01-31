@@ -1,0 +1,571 @@
+The system is: Linux - 6.11.0-1018-azure - x86_64
+Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+Compiler: /usr/sbin/c++ 
+Build flags: 
+Id flags:  
+
+The output was:
+0
+
+
+Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.out"
+
+The CXX compiler identification is GNU, found in "/src/build_docker/CMakeFiles/3.21.1/CompilerIdCXX/a.out"
+
+Detecting CXX compiler ABI info compiled with the following output:
+Change Dir: /src/build_docker/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/sbin/make -f Makefile cmTC_1f034/fast && /usr/sbin/make  -f CMakeFiles/cmTC_1f034.dir/build.make CMakeFiles/cmTC_1f034.dir/build
+make[1]: Entering directory '/src/build_docker/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_1f034.dir/CMakeCXXCompilerABI.cpp.o
+/usr/sbin/c++   -v -o CMakeFiles/cmTC_1f034.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-3.21/Modules/CMakeCXXCompilerABI.cpp
+Using built-in specs.
+COLLECT_GCC=/usr/sbin/c++
+Target: x86_64-pc-linux-gnu
+Configured with: /build/gcc/src/gcc/configure --prefix=/usr --libdir=/usr/lib --libexecdir=/usr/lib --mandir=/usr/share/man --infodir=/usr/share/info --with-bugurl=https://bugs.archlinux.org/ --enable-languages=c,c++,ada,fortran,go,lto,objc,obj-c++,d --with-isl --with-linker-hash-style=gnu --with-system-zlib --enable-__cxa_atexit --enable-cet=auto --enable-checking=release --enable-clocale=gnu --enable-default-pie --enable-default-ssp --enable-gnu-indirect-function --enable-gnu-unique-object --enable-install-libiberty --enable-linker-build-id --enable-lto --enable-multilib --enable-plugin --enable-shared --enable-threads=posix --disable-libssp --disable-libstdcxx-pch --disable-libunwind-exceptions --disable-werror gdc_include_dir=/usr/include/dlang/gdc
+Thread model: posix
+Supported LTO compression algorithms: zlib zstd
+gcc version 11.1.0 (GCC) 
+COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_1f034.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_1f034.dir/'
+ /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/cc1plus -quiet -v -D_GNU_SOURCE /usr/share/cmake-3.21/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_1f034.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -o /tmp/ccluALM0.s
+GNU C++17 (GCC) version 11.1.0 (x86_64-pc-linux-gnu)
+	compiled by GNU C version 11.1.0, GMP version 6.2.1, MPFR version 4.1.0, MPC version 1.2.1, isl version isl-0.24-GMP
+
+warning: MPFR header version 4.1.0 differs from library version 4.1.0-p13.
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+ignoring nonexistent directory "/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../x86_64-pc-linux-gnu/include"
+#include "..." search starts here:
+#include <...> search starts here:
+ /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0
+ /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0/x86_64-pc-linux-gnu
+ /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0/backward
+ /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/include
+ /usr/local/include
+ /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/include-fixed
+ /usr/include
+End of search list.
+GNU C++17 (GCC) version 11.1.0 (x86_64-pc-linux-gnu)
+	compiled by GNU C version 11.1.0, GMP version 6.2.1, MPFR version 4.1.0, MPC version 1.2.1, isl version isl-0.24-GMP
+
+warning: MPFR header version 4.1.0 differs from library version 4.1.0-p13.
+GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+Compiler executable checksum: 45eb9a71cc15bfdc579557bea4b77e51
+COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_1f034.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_1f034.dir/'
+ as -v --64 -o CMakeFiles/cmTC_1f034.dir/CMakeCXXCompilerABI.cpp.o /tmp/ccluALM0.s
+GNU assembler version 2.36.1 (x86_64-pc-linux-gnu) using BFD version (GNU Binutils) 2.36.1
+COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/:/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/:/usr/lib/gcc/x86_64-pc-linux-gnu/
+LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/:/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../:/lib/:/usr/lib/
+COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_1f034.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_1f034.dir/CMakeCXXCompilerABI.cpp.'
+Linking CXX executable cmTC_1f034
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1f034.dir/link.txt --verbose=1
+/usr/sbin/c++  -v CMakeFiles/cmTC_1f034.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_1f034 
+Using built-in specs.
+COLLECT_GCC=/usr/sbin/c++
+COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/lto-wrapper
+Target: x86_64-pc-linux-gnu
+Configured with: /build/gcc/src/gcc/configure --prefix=/usr --libdir=/usr/lib --libexecdir=/usr/lib --mandir=/usr/share/man --infodir=/usr/share/info --with-bugurl=https://bugs.archlinux.org/ --enable-languages=c,c++,ada,fortran,go,lto,objc,obj-c++,d --with-isl --with-linker-hash-style=gnu --with-system-zlib --enable-__cxa_atexit --enable-cet=auto --enable-checking=release --enable-clocale=gnu --enable-default-pie --enable-default-ssp --enable-gnu-indirect-function --enable-gnu-unique-object --enable-install-libiberty --enable-linker-build-id --enable-lto --enable-multilib --enable-plugin --enable-shared --enable-threads=posix --disable-libssp --disable-libstdcxx-pch --disable-libunwind-exceptions --disable-werror gdc_include_dir=/usr/include/dlang/gdc
+Thread model: posix
+Supported LTO compression algorithms: zlib zstd
+gcc version 11.1.0 (GCC) 
+COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/:/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/:/usr/lib/gcc/x86_64-pc-linux-gnu/
+LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/:/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../:/lib/:/usr/lib/
+COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_1f034' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_1f034.'
+ /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/collect2 -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccRh5PgN.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_1f034 /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0 -L/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../.. CMakeFiles/cmTC_1f034.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib/crtn.o
+COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_1f034' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_1f034.'
+make[1]: Leaving directory '/src/build_docker/CMakeFiles/CMakeTmp'
+
+
+
+Parsed CXX implicit include dir info from above output: rv=done
+  found start of include info
+  found start of implicit include info
+    add: [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0]
+    add: [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0/x86_64-pc-linux-gnu]
+    add: [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0/backward]
+    add: [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/include]
+    add: [/usr/local/include]
+    add: [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/include-fixed]
+    add: [/usr/include]
+  end of search list found
+  collapse include dir [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0] ==> [/usr/include/c++/11.1.0]
+  collapse include dir [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0/x86_64-pc-linux-gnu] ==> [/usr/include/c++/11.1.0/x86_64-pc-linux-gnu]
+  collapse include dir [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0/backward] ==> [/usr/include/c++/11.1.0/backward]
+  collapse include dir [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/include] ==> [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/include]
+  collapse include dir [/usr/local/include] ==> [/usr/local/include]
+  collapse include dir [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/include-fixed] ==> [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/include-fixed]
+  collapse include dir [/usr/include] ==> [/usr/include]
+  implicit include dirs: [/usr/include/c++/11.1.0;/usr/include/c++/11.1.0/x86_64-pc-linux-gnu;/usr/include/c++/11.1.0/backward;/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/include;/usr/local/include;/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/include-fixed;/usr/include]
+
+
+Parsed CXX implicit link information from above output:
+  link line regex: [^( *|.*[/\])(ld|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\]+-)?ld|collect2)[^/\]*( |$)]
+  ignore line: [Change Dir: /src/build_docker/CMakeFiles/CMakeTmp]
+  ignore line: []
+  ignore line: [Run Build Command(s):/usr/sbin/make -f Makefile cmTC_1f034/fast && /usr/sbin/make  -f CMakeFiles/cmTC_1f034.dir/build.make CMakeFiles/cmTC_1f034.dir/build]
+  ignore line: [make[1]: Entering directory '/src/build_docker/CMakeFiles/CMakeTmp']
+  ignore line: [Building CXX object CMakeFiles/cmTC_1f034.dir/CMakeCXXCompilerABI.cpp.o]
+  ignore line: [/usr/sbin/c++   -v -o CMakeFiles/cmTC_1f034.dir/CMakeCXXCompilerABI.cpp.o -c /usr/share/cmake-3.21/Modules/CMakeCXXCompilerABI.cpp]
+  ignore line: [Using built-in specs.]
+  ignore line: [COLLECT_GCC=/usr/sbin/c++]
+  ignore line: [Target: x86_64-pc-linux-gnu]
+  ignore line: [Configured with: /build/gcc/src/gcc/configure --prefix=/usr --libdir=/usr/lib --libexecdir=/usr/lib --mandir=/usr/share/man --infodir=/usr/share/info --with-bugurl=https://bugs.archlinux.org/ --enable-languages=c c++ ada fortran go lto objc obj-c++ d --with-isl --with-linker-hash-style=gnu --with-system-zlib --enable-__cxa_atexit --enable-cet=auto --enable-checking=release --enable-clocale=gnu --enable-default-pie --enable-default-ssp --enable-gnu-indirect-function --enable-gnu-unique-object --enable-install-libiberty --enable-linker-build-id --enable-lto --enable-multilib --enable-plugin --enable-shared --enable-threads=posix --disable-libssp --disable-libstdcxx-pch --disable-libunwind-exceptions --disable-werror gdc_include_dir=/usr/include/dlang/gdc]
+  ignore line: [Thread model: posix]
+  ignore line: [Supported LTO compression algorithms: zlib zstd]
+  ignore line: [gcc version 11.1.0 (GCC) ]
+  ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_1f034.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_1f034.dir/']
+  ignore line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/cc1plus -quiet -v -D_GNU_SOURCE /usr/share/cmake-3.21/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_1f034.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=generic -march=x86-64 -version -o /tmp/ccluALM0.s]
+  ignore line: [GNU C++17 (GCC) version 11.1.0 (x86_64-pc-linux-gnu)]
+  ignore line: [	compiled by GNU C version 11.1.0  GMP version 6.2.1  MPFR version 4.1.0  MPC version 1.2.1  isl version isl-0.24-GMP]
+  ignore line: []
+  ignore line: [warning: MPFR header version 4.1.0 differs from library version 4.1.0-p13.]
+  ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
+  ignore line: [ignoring nonexistent directory "/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../x86_64-pc-linux-gnu/include"]
+  ignore line: [#include "..." search starts here:]
+  ignore line: [#include <...> search starts here:]
+  ignore line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0]
+  ignore line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0/x86_64-pc-linux-gnu]
+  ignore line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../include/c++/11.1.0/backward]
+  ignore line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/include]
+  ignore line: [ /usr/local/include]
+  ignore line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/include-fixed]
+  ignore line: [ /usr/include]
+  ignore line: [End of search list.]
+  ignore line: [GNU C++17 (GCC) version 11.1.0 (x86_64-pc-linux-gnu)]
+  ignore line: [	compiled by GNU C version 11.1.0  GMP version 6.2.1  MPFR version 4.1.0  MPC version 1.2.1  isl version isl-0.24-GMP]
+  ignore line: []
+  ignore line: [warning: MPFR header version 4.1.0 differs from library version 4.1.0-p13.]
+  ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
+  ignore line: [Compiler executable checksum: 45eb9a71cc15bfdc579557bea4b77e51]
+  ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_1f034.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_1f034.dir/']
+  ignore line: [ as -v --64 -o CMakeFiles/cmTC_1f034.dir/CMakeCXXCompilerABI.cpp.o /tmp/ccluALM0.s]
+  ignore line: [GNU assembler version 2.36.1 (x86_64-pc-linux-gnu) using BFD version (GNU Binutils) 2.36.1]
+  ignore line: [COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/:/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/:/usr/lib/gcc/x86_64-pc-linux-gnu/]
+  ignore line: [LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/:/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../:/lib/:/usr/lib/]
+  ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'CMakeFiles/cmTC_1f034.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'CMakeFiles/cmTC_1f034.dir/CMakeCXXCompilerABI.cpp.']
+  ignore line: [Linking CXX executable cmTC_1f034]
+  ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1f034.dir/link.txt --verbose=1]
+  ignore line: [/usr/sbin/c++  -v CMakeFiles/cmTC_1f034.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_1f034 ]
+  ignore line: [Using built-in specs.]
+  ignore line: [COLLECT_GCC=/usr/sbin/c++]
+  ignore line: [COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/lto-wrapper]
+  ignore line: [Target: x86_64-pc-linux-gnu]
+  ignore line: [Configured with: /build/gcc/src/gcc/configure --prefix=/usr --libdir=/usr/lib --libexecdir=/usr/lib --mandir=/usr/share/man --infodir=/usr/share/info --with-bugurl=https://bugs.archlinux.org/ --enable-languages=c c++ ada fortran go lto objc obj-c++ d --with-isl --with-linker-hash-style=gnu --with-system-zlib --enable-__cxa_atexit --enable-cet=auto --enable-checking=release --enable-clocale=gnu --enable-default-pie --enable-default-ssp --enable-gnu-indirect-function --enable-gnu-unique-object --enable-install-libiberty --enable-linker-build-id --enable-lto --enable-multilib --enable-plugin --enable-shared --enable-threads=posix --disable-libssp --disable-libstdcxx-pch --disable-libunwind-exceptions --disable-werror gdc_include_dir=/usr/include/dlang/gdc]
+  ignore line: [Thread model: posix]
+  ignore line: [Supported LTO compression algorithms: zlib zstd]
+  ignore line: [gcc version 11.1.0 (GCC) ]
+  ignore line: [COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/:/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/:/usr/lib/gcc/x86_64-pc-linux-gnu/]
+  ignore line: [LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/:/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../:/lib/:/usr/lib/]
+  ignore line: [COLLECT_GCC_OPTIONS='-v' '-o' 'cmTC_1f034' '-shared-libgcc' '-mtune=generic' '-march=x86-64' '-dumpdir' 'cmTC_1f034.']
+  link line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/collect2 -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccRh5PgN.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_1f034 /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0 -L/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../.. CMakeFiles/cmTC_1f034.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib/crtn.o]
+    arg [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/collect2] ==> ignore
+    arg [-plugin] ==> ignore
+    arg [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/liblto_plugin.so] ==> ignore
+    arg [-plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/lto-wrapper] ==> ignore
+    arg [-plugin-opt=-fresolution=/tmp/ccRh5PgN.res] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+    arg [-plugin-opt=-pass-through=-lc] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
+    arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+    arg [--build-id] ==> ignore
+    arg [--eh-frame-hdr] ==> ignore
+    arg [--hash-style=gnu] ==> ignore
+    arg [-m] ==> ignore
+    arg [elf_x86_64] ==> ignore
+    arg [-dynamic-linker] ==> ignore
+    arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+    arg [-pie] ==> ignore
+    arg [-o] ==> ignore
+    arg [cmTC_1f034] ==> ignore
+    arg [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib/Scrt1.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib/Scrt1.o]
+    arg [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib/crti.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib/crti.o]
+    arg [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/crtbeginS.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/crtbeginS.o]
+    arg [-L/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0] ==> dir [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0]
+    arg [-L/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib] ==> dir [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib]
+    arg [-L/lib/../lib] ==> dir [/lib/../lib]
+    arg [-L/usr/lib/../lib] ==> dir [/usr/lib/../lib]
+    arg [-L/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../..] ==> dir [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../..]
+    arg [CMakeFiles/cmTC_1f034.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+    arg [-lstdc++] ==> lib [stdc++]
+    arg [-lm] ==> lib [m]
+    arg [-lgcc_s] ==> lib [gcc_s]
+    arg [-lgcc] ==> lib [gcc]
+    arg [-lc] ==> lib [c]
+    arg [-lgcc_s] ==> lib [gcc_s]
+    arg [-lgcc] ==> lib [gcc]
+    arg [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/crtendS.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/crtendS.o]
+    arg [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib/crtn.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib/crtn.o]
+  collapse obj [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib/Scrt1.o] ==> [/usr/lib/Scrt1.o]
+  collapse obj [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib/crti.o] ==> [/usr/lib/crti.o]
+  collapse obj [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib/crtn.o] ==> [/usr/lib/crtn.o]
+  collapse library dir [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0] ==> [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0]
+  collapse library dir [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../../../lib] ==> [/usr/lib]
+  collapse library dir [/lib/../lib] ==> [/lib]
+  collapse library dir [/usr/lib/../lib] ==> [/usr/lib]
+  collapse library dir [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/../../..] ==> [/usr/lib]
+  implicit libs: [stdc++;m;gcc_s;gcc;c;gcc_s;gcc]
+  implicit objs: [/usr/lib/Scrt1.o;/usr/lib/crti.o;/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/crtbeginS.o;/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0/crtendS.o;/usr/lib/crtn.o]
+  implicit dirs: [/usr/lib/gcc/x86_64-pc-linux-gnu/11.1.0;/usr/lib;/lib]
+  implicit fwks: []
+
+
+Determining if the include file pthread.h exists passed with the following output:
+Change Dir: /src/build_docker/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/sbin/make -f Makefile cmTC_58ac6/fast && /usr/sbin/make  -f CMakeFiles/cmTC_58ac6.dir/build.make CMakeFiles/cmTC_58ac6.dir/build
+make[1]: Entering directory '/src/build_docker/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_58ac6.dir/CheckIncludeFile.cxx.o
+/usr/sbin/c++   -std=c++17 -o CMakeFiles/cmTC_58ac6.dir/CheckIncludeFile.cxx.o -c /src/build_docker/CMakeFiles/CMakeTmp/CheckIncludeFile.cxx
+Linking CXX executable cmTC_58ac6
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_58ac6.dir/link.txt --verbose=1
+/usr/sbin/c++ CMakeFiles/cmTC_58ac6.dir/CheckIncludeFile.cxx.o -o cmTC_58ac6 
+make[1]: Leaving directory '/src/build_docker/CMakeFiles/CMakeTmp'
+
+
+
+Determining if the std::quick_exit exist passed with the following output:
+Change Dir: /src/build_docker/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/sbin/make -f Makefile cmTC_a3568/fast && /usr/sbin/make  -f CMakeFiles/cmTC_a3568.dir/build.make CMakeFiles/cmTC_a3568.dir/build
+make[1]: Entering directory '/src/build_docker/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_a3568.dir/CheckSymbolExists.cxx.o
+/usr/sbin/c++   -std=c++17 -o CMakeFiles/cmTC_a3568.dir/CheckSymbolExists.cxx.o -c /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+Linking CXX executable cmTC_a3568
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a3568.dir/link.txt --verbose=1
+/usr/sbin/c++ CMakeFiles/cmTC_a3568.dir/CheckSymbolExists.cxx.o -o cmTC_a3568 
+make[1]: Leaving directory '/src/build_docker/CMakeFiles/CMakeTmp'
+
+
+File /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <cstdlib>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+  return ((int*)(&std::quick_exit))[argc];
+}
+Determining if the select exist passed with the following output:
+Change Dir: /src/build_docker/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/sbin/make -f Makefile cmTC_f949e/fast && /usr/sbin/make  -f CMakeFiles/cmTC_f949e.dir/build.make CMakeFiles/cmTC_f949e.dir/build
+make[1]: Entering directory '/src/build_docker/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_f949e.dir/CheckSymbolExists.cxx.o
+/usr/sbin/c++   -std=c++17 -o CMakeFiles/cmTC_f949e.dir/CheckSymbolExists.cxx.o -c /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+Linking CXX executable cmTC_f949e
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_f949e.dir/link.txt --verbose=1
+/usr/sbin/c++ CMakeFiles/cmTC_f949e.dir/CheckSymbolExists.cxx.o -o cmTC_f949e 
+make[1]: Leaving directory '/src/build_docker/CMakeFiles/CMakeTmp'
+
+
+File /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <sys/select.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef select
+  return ((int*)(&select))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+Determining if the isatty exist passed with the following output:
+Change Dir: /src/build_docker/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/sbin/make -f Makefile cmTC_02e44/fast && /usr/sbin/make  -f CMakeFiles/cmTC_02e44.dir/build.make CMakeFiles/cmTC_02e44.dir/build
+make[1]: Entering directory '/src/build_docker/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_02e44.dir/CheckSymbolExists.cxx.o
+/usr/sbin/c++   -std=c++17 -o CMakeFiles/cmTC_02e44.dir/CheckSymbolExists.cxx.o -c /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+Linking CXX executable cmTC_02e44
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_02e44.dir/link.txt --verbose=1
+/usr/sbin/c++ CMakeFiles/cmTC_02e44.dir/CheckSymbolExists.cxx.o -o cmTC_02e44 
+make[1]: Leaving directory '/src/build_docker/CMakeFiles/CMakeTmp'
+
+
+File /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <unistd.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef isatty
+  return ((int*)(&isatty))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+Determining if the fileno exist passed with the following output:
+Change Dir: /src/build_docker/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/sbin/make -f Makefile cmTC_94587/fast && /usr/sbin/make  -f CMakeFiles/cmTC_94587.dir/build.make CMakeFiles/cmTC_94587.dir/build
+make[1]: Entering directory '/src/build_docker/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_94587.dir/CheckSymbolExists.cxx.o
+/usr/sbin/c++   -std=c++17 -o CMakeFiles/cmTC_94587.dir/CheckSymbolExists.cxx.o -c /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+Linking CXX executable cmTC_94587
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_94587.dir/link.txt --verbose=1
+/usr/sbin/c++ CMakeFiles/cmTC_94587.dir/CheckSymbolExists.cxx.o -o cmTC_94587 
+make[1]: Leaving directory '/src/build_docker/CMakeFiles/CMakeTmp'
+
+
+File /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <cstdio>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef fileno
+  return ((int*)(&fileno))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+Determining if the ICANON exist passed with the following output:
+Change Dir: /src/build_docker/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/sbin/make -f Makefile cmTC_3fd49/fast && /usr/sbin/make  -f CMakeFiles/cmTC_3fd49.dir/build.make CMakeFiles/cmTC_3fd49.dir/build
+make[1]: Entering directory '/src/build_docker/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_3fd49.dir/CheckSymbolExists.cxx.o
+/usr/sbin/c++   -std=c++17 -o CMakeFiles/cmTC_3fd49.dir/CheckSymbolExists.cxx.o -c /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+Linking CXX executable cmTC_3fd49
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_3fd49.dir/link.txt --verbose=1
+/usr/sbin/c++ CMakeFiles/cmTC_3fd49.dir/CheckSymbolExists.cxx.o -o cmTC_3fd49 
+make[1]: Leaving directory '/src/build_docker/CMakeFiles/CMakeTmp'
+
+
+File /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <termios.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef ICANON
+  return ((int*)(&ICANON))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+Determining if the ECHO exist passed with the following output:
+Change Dir: /src/build_docker/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/sbin/make -f Makefile cmTC_c9abe/fast && /usr/sbin/make  -f CMakeFiles/cmTC_c9abe.dir/build.make CMakeFiles/cmTC_c9abe.dir/build
+make[1]: Entering directory '/src/build_docker/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_c9abe.dir/CheckSymbolExists.cxx.o
+/usr/sbin/c++   -std=c++17 -o CMakeFiles/cmTC_c9abe.dir/CheckSymbolExists.cxx.o -c /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+Linking CXX executable cmTC_c9abe
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c9abe.dir/link.txt --verbose=1
+/usr/sbin/c++ CMakeFiles/cmTC_c9abe.dir/CheckSymbolExists.cxx.o -o cmTC_c9abe 
+make[1]: Leaving directory '/src/build_docker/CMakeFiles/CMakeTmp'
+
+
+File /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <termios.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef ECHO
+  return ((int*)(&ECHO))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+Determining if the VMIN exist passed with the following output:
+Change Dir: /src/build_docker/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/sbin/make -f Makefile cmTC_9153d/fast && /usr/sbin/make  -f CMakeFiles/cmTC_9153d.dir/build.make CMakeFiles/cmTC_9153d.dir/build
+make[1]: Entering directory '/src/build_docker/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_9153d.dir/CheckSymbolExists.cxx.o
+/usr/sbin/c++   -std=c++17 -o CMakeFiles/cmTC_9153d.dir/CheckSymbolExists.cxx.o -c /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+Linking CXX executable cmTC_9153d
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_9153d.dir/link.txt --verbose=1
+/usr/sbin/c++ CMakeFiles/cmTC_9153d.dir/CheckSymbolExists.cxx.o -o cmTC_9153d 
+make[1]: Leaving directory '/src/build_docker/CMakeFiles/CMakeTmp'
+
+
+File /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <termios.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef VMIN
+  return ((int*)(&VMIN))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+Determining if the VTIME exist passed with the following output:
+Change Dir: /src/build_docker/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/sbin/make -f Makefile cmTC_9be2c/fast && /usr/sbin/make  -f CMakeFiles/cmTC_9be2c.dir/build.make CMakeFiles/cmTC_9be2c.dir/build
+make[1]: Entering directory '/src/build_docker/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_9be2c.dir/CheckSymbolExists.cxx.o
+/usr/sbin/c++   -std=c++17 -o CMakeFiles/cmTC_9be2c.dir/CheckSymbolExists.cxx.o -c /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+Linking CXX executable cmTC_9be2c
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_9be2c.dir/link.txt --verbose=1
+/usr/sbin/c++ CMakeFiles/cmTC_9be2c.dir/CheckSymbolExists.cxx.o -o cmTC_9be2c 
+make[1]: Leaving directory '/src/build_docker/CMakeFiles/CMakeTmp'
+
+
+File /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <termios.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef VTIME
+  return ((int*)(&VTIME))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+Determining if the TCSANOW exist passed with the following output:
+Change Dir: /src/build_docker/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/sbin/make -f Makefile cmTC_9af7d/fast && /usr/sbin/make  -f CMakeFiles/cmTC_9af7d.dir/build.make CMakeFiles/cmTC_9af7d.dir/build
+make[1]: Entering directory '/src/build_docker/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_9af7d.dir/CheckSymbolExists.cxx.o
+/usr/sbin/c++   -std=c++17 -o CMakeFiles/cmTC_9af7d.dir/CheckSymbolExists.cxx.o -c /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+Linking CXX executable cmTC_9af7d
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_9af7d.dir/link.txt --verbose=1
+/usr/sbin/c++ CMakeFiles/cmTC_9af7d.dir/CheckSymbolExists.cxx.o -o cmTC_9af7d 
+make[1]: Leaving directory '/src/build_docker/CMakeFiles/CMakeTmp'
+
+
+File /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <termios.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef TCSANOW
+  return ((int*)(&TCSANOW))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+Determining if the tcgetattr exist passed with the following output:
+Change Dir: /src/build_docker/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/sbin/make -f Makefile cmTC_0fa56/fast && /usr/sbin/make  -f CMakeFiles/cmTC_0fa56.dir/build.make CMakeFiles/cmTC_0fa56.dir/build
+make[1]: Entering directory '/src/build_docker/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_0fa56.dir/CheckSymbolExists.cxx.o
+/usr/sbin/c++   -std=c++17 -o CMakeFiles/cmTC_0fa56.dir/CheckSymbolExists.cxx.o -c /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+Linking CXX executable cmTC_0fa56
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_0fa56.dir/link.txt --verbose=1
+/usr/sbin/c++ CMakeFiles/cmTC_0fa56.dir/CheckSymbolExists.cxx.o -o cmTC_0fa56 
+make[1]: Leaving directory '/src/build_docker/CMakeFiles/CMakeTmp'
+
+
+File /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <termios.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef tcgetattr
+  return ((int*)(&tcgetattr))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+Determining if the fcntl exist passed with the following output:
+Change Dir: /src/build_docker/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/sbin/make -f Makefile cmTC_a8de3/fast && /usr/sbin/make  -f CMakeFiles/cmTC_a8de3.dir/build.make CMakeFiles/cmTC_a8de3.dir/build
+make[1]: Entering directory '/src/build_docker/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_a8de3.dir/CheckSymbolExists.cxx.o
+/usr/sbin/c++   -std=c++17 -o CMakeFiles/cmTC_a8de3.dir/CheckSymbolExists.cxx.o -c /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+Linking CXX executable cmTC_a8de3
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a8de3.dir/link.txt --verbose=1
+/usr/sbin/c++ CMakeFiles/cmTC_a8de3.dir/CheckSymbolExists.cxx.o -o cmTC_a8de3 
+make[1]: Leaving directory '/src/build_docker/CMakeFiles/CMakeTmp'
+
+
+File /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <fcntl.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef fcntl
+  return ((int*)(&fcntl))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+Determining if the F_GETFL exist passed with the following output:
+Change Dir: /src/build_docker/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/sbin/make -f Makefile cmTC_c7ca0/fast && /usr/sbin/make  -f CMakeFiles/cmTC_c7ca0.dir/build.make CMakeFiles/cmTC_c7ca0.dir/build
+make[1]: Entering directory '/src/build_docker/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_c7ca0.dir/CheckSymbolExists.cxx.o
+/usr/sbin/c++   -std=c++17 -o CMakeFiles/cmTC_c7ca0.dir/CheckSymbolExists.cxx.o -c /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+Linking CXX executable cmTC_c7ca0
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_c7ca0.dir/link.txt --verbose=1
+/usr/sbin/c++ CMakeFiles/cmTC_c7ca0.dir/CheckSymbolExists.cxx.o -o cmTC_c7ca0 
+make[1]: Leaving directory '/src/build_docker/CMakeFiles/CMakeTmp'
+
+
+File /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <fcntl.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef F_GETFL
+  return ((int*)(&F_GETFL))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}
+Determining if the O_NONBLOCK exist passed with the following output:
+Change Dir: /src/build_docker/CMakeFiles/CMakeTmp
+
+Run Build Command(s):/usr/sbin/make -f Makefile cmTC_a4dfa/fast && /usr/sbin/make  -f CMakeFiles/cmTC_a4dfa.dir/build.make CMakeFiles/cmTC_a4dfa.dir/build
+make[1]: Entering directory '/src/build_docker/CMakeFiles/CMakeTmp'
+Building CXX object CMakeFiles/cmTC_a4dfa.dir/CheckSymbolExists.cxx.o
+/usr/sbin/c++   -std=c++17 -o CMakeFiles/cmTC_a4dfa.dir/CheckSymbolExists.cxx.o -c /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx
+Linking CXX executable cmTC_a4dfa
+/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_a4dfa.dir/link.txt --verbose=1
+/usr/sbin/c++ CMakeFiles/cmTC_a4dfa.dir/CheckSymbolExists.cxx.o -o cmTC_a4dfa 
+make[1]: Leaving directory '/src/build_docker/CMakeFiles/CMakeTmp'
+
+
+File /src/build_docker/CMakeFiles/CMakeTmp/CheckSymbolExists.cxx:
+/* */
+#include <fcntl.h>
+
+int main(int argc, char** argv)
+{
+  (void)argv;
+#ifndef O_NONBLOCK
+  return ((int*)(&O_NONBLOCK))[argc];
+#else
+  (void)argc;
+  return 0;
+#endif
+}

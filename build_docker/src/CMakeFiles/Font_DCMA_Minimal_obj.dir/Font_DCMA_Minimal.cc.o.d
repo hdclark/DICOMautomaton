@@ -1,0 +1,2 @@
+src/CMakeFiles/Font_DCMA_Minimal_obj.dir/Font_DCMA_Minimal.cc.o: \
+ /src/src/Font_DCMA_Minimal.cc /usr/include/stdc-predef.h
