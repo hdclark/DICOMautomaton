@@ -1052,6 +1052,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_triple_three_enabled = false;
         bool view_encompass_enabled = false;
         bool view_cube_enabled = false;
+        bool view_guitar_fret_enabled = false;
 
         bool view_guides_enabled = true;
     } view_toggles;
@@ -1783,6 +1784,75 @@ bool SDL_Viewer(Drover &DICOM_data,
         rc_game_move_history.emplace_back(x);
         const auto n = static_cast<int64_t>(rc_game_move_history.size());
         rc_game_move_history_current = n;
+        return;
+    };
+
+    // Guitar Fret game state.
+    struct gf_note_t {
+        int64_t lane;         // 0-3 for F1-F4
+        double y_pos;         // Current vertical position (0.0 = top, 1.0 = hit zone)
+        bool active;          // Whether note is still in play
+        bool hit;             // Whether note was successfully hit
+    };
+    struct gf_game_t {
+        std::vector<gf_note_t> notes;
+        double note_speed = 0.4;            // Units per second (1.0 = full screen height)
+        double hit_window_perfect = 0.05;   // Perfect hit if within this range of 1.0
+        double hit_window_ok = 0.10;        // OK hit if within this range of 1.0
+        int64_t score = 0;
+        int64_t high_score = 0;
+        int64_t low_score = 0;
+        int64_t streak = 0;
+        int64_t best_streak = 0;
+        bool paused = false;
+        bool game_over = false;
+        int64_t difficulty = 1;             // 0 = easy, 1 = medium, 2 = hard
+        double next_note_time = 0.0;        // Time until next note spawns
+        double elapsed_time = 0.0;          // Total game time
+        std::mt19937 re;
+
+        double box_width = 400.0;
+        double box_height = 600.0;
+    } gf_game;
+    gf_game.re.seed( std::random_device()() );
+    std::chrono::time_point<std::chrono::steady_clock> t_gf_updated;
+    std::chrono::time_point<std::chrono::steady_clock> t_gf_started;
+    std::array<bool, 4> gf_lane_pressed = {false, false, false, false};
+
+    const auto reset_guitar_game = [&](){
+        gf_game.notes.clear();
+        gf_game.score = 0;
+        gf_game.streak = 0;
+        gf_game.paused = false;
+        gf_game.game_over = false;
+        gf_game.next_note_time = 0.5;
+        gf_game.elapsed_time = 0.0;
+        gf_lane_pressed = {false, false, false, false};
+
+        // Adjust difficulty settings
+        switch(gf_game.difficulty){
+            case 0: // Easy
+                gf_game.note_speed = 0.25;
+                gf_game.hit_window_perfect = 0.08;
+                gf_game.hit_window_ok = 0.15;
+                break;
+            case 1: // Medium
+                gf_game.note_speed = 0.40;
+                gf_game.hit_window_perfect = 0.05;
+                gf_game.hit_window_ok = 0.10;
+                break;
+            case 2: // Hard
+                gf_game.note_speed = 0.60;
+                gf_game.hit_window_perfect = 0.03;
+                gf_game.hit_window_ok = 0.07;
+                break;
+            default:
+                break;
+        }
+
+        const auto t_now = std::chrono::steady_clock::now();
+        t_gf_updated = t_now;
+        t_gf_started = t_now;
         return;
     };
 
@@ -5800,6 +5870,293 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             throw;
         }
 
+
+        // Display the Guitar Fret game.
+        const auto display_guitar_game = [&view_toggles,
+                                          &gf_game,
+                                          &t_gf_updated,
+                                          &t_gf_started,
+                                          &gf_lane_pressed,
+                                          &reset_guitar_game ]() -> bool {
+            if( !view_toggles.view_guitar_fret_enabled ) return true;
+
+            // Lane colors: F1=Red, F2=Yellow, F3=Blue, F4=Green
+            const std::array<ImColor, 4> lane_colors = {
+                ImColor(1.0f, 0.2f, 0.2f, 1.0f),  // Red for F1
+                ImColor(1.0f, 1.0f, 0.2f, 1.0f),  // Yellow for F2
+                ImColor(0.2f, 0.5f, 1.0f, 1.0f),  // Blue for F3
+                ImColor(0.2f, 1.0f, 0.2f, 1.0f)   // Green for F4
+            };
+            const std::array<ImColor, 4> lane_colors_dim = {
+                ImColor(0.5f, 0.1f, 0.1f, 1.0f),
+                ImColor(0.5f, 0.5f, 0.1f, 1.0f),
+                ImColor(0.1f, 0.25f, 0.5f, 1.0f),
+                ImColor(0.1f, 0.5f, 0.1f, 1.0f)
+            };
+
+            const auto win_width  = static_cast<int>( std::ceil(gf_game.box_width) ) + 15;
+            const auto win_height = static_cast<int>( std::ceil(gf_game.box_height) ) + 120;
+            auto flags = ImGuiWindowFlags_AlwaysAutoResize
+                       | ImGuiWindowFlags_NoScrollWithMouse
+                       | ImGuiWindowFlags_NoNavInputs
+                       | ImGuiWindowFlags_NoScrollbar;
+            ImGui::SetNextWindowSize(ImVec2(win_width, win_height), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Guitar Fret", &view_toggles.view_guitar_fret_enabled, flags);
+
+            const auto f = ImGui::IsWindowFocused();
+
+            // Handle keyboard input only when window is focused
+            if(f){
+                // Reset game
+                if( ImGui::IsKeyPressed(SDL_SCANCODE_R) ){
+                    reset_guitar_game();
+                }
+
+                // Pause/unpause with spacebar
+                if( ImGui::IsKeyPressed(SDL_SCANCODE_SPACE) && !gf_game.game_over ){
+                    gf_game.paused = !gf_game.paused;
+                }
+
+                // Track F1-F4 key presses for this frame
+                gf_lane_pressed[0] = ImGui::IsKeyPressed(SDL_SCANCODE_F1);
+                gf_lane_pressed[1] = ImGui::IsKeyPressed(SDL_SCANCODE_F2);
+                gf_lane_pressed[2] = ImGui::IsKeyPressed(SDL_SCANCODE_F3);
+                gf_lane_pressed[3] = ImGui::IsKeyPressed(SDL_SCANCODE_F4);
+            }else{
+                gf_lane_pressed = {false, false, false, false};
+            }
+
+            // Display score and stats
+            ImGui::Text("Score: %ld", static_cast<long>(gf_game.score));
+            ImGui::SameLine();
+            ImGui::Text("  Streak: %ld", static_cast<long>(gf_game.streak));
+            ImGui::SameLine();
+            ImGui::Text("  Best: %ld", static_cast<long>(gf_game.best_streak));
+            ImGui::Text("High: %ld  Low: %ld", static_cast<long>(gf_game.high_score), static_cast<long>(gf_game.low_score));
+
+            // Difficulty selector
+            ImGui::SameLine();
+            ImGui::Text("   ");
+            ImGui::SameLine();
+            const char* diff_names[] = { "Easy", "Medium", "Hard" };
+            int diff = static_cast<int>(gf_game.difficulty);
+            ImGui::SetNextItemWidth(80);
+            if(ImGui::Combo("##Difficulty", &diff, diff_names, 3)){
+                gf_game.difficulty = static_cast<int64_t>(diff);
+                reset_guitar_game();
+            }
+
+            if(gf_game.paused){
+                ImGui::SameLine();
+                ImGui::Text("  PAUSED");
+            }
+
+            ImGui::Text("Controls: F1-F4 = Notes, Space = Pause, R = Reset");
+
+            // Get draw list and current position
+            ImVec2 curr_pos = ImGui::GetCursorScreenPos();
+            ImDrawList *window_draw_list = ImGui::GetWindowDrawList();
+
+            const float lane_width = gf_game.box_width / 4.0f;
+            const float hit_zone_y = gf_game.box_height * 0.9f;
+            const float hit_zone_height = 30.0f;
+            const float note_radius = lane_width * 0.35f;
+
+            // Draw background
+            {
+                const auto c = ImColor(0.1f, 0.1f, 0.15f, 1.0f);
+                window_draw_list->AddRectFilled(curr_pos, 
+                    ImVec2(curr_pos.x + gf_game.box_width, curr_pos.y + gf_game.box_height), c);
+            }
+
+            // Draw lane dividers
+            for(int i = 1; i < 4; ++i){
+                float x = curr_pos.x + i * lane_width;
+                window_draw_list->AddLine(
+                    ImVec2(x, curr_pos.y),
+                    ImVec2(x, curr_pos.y + gf_game.box_height),
+                    ImColor(0.3f, 0.3f, 0.35f, 1.0f), 1.0f);
+            }
+
+            // Draw hit zone with colored buttons
+            for(int i = 0; i < 4; ++i){
+                float lane_center = curr_pos.x + (i + 0.5f) * lane_width;
+                float hit_y = curr_pos.y + hit_zone_y;
+
+                // Draw hit zone marker (circle outline)
+                bool key_down = false;
+                if(f){
+                    switch(i){
+                        case 0: key_down = ImGui::IsKeyDown(SDL_SCANCODE_F1); break;
+                        case 1: key_down = ImGui::IsKeyDown(SDL_SCANCODE_F2); break;
+                        case 2: key_down = ImGui::IsKeyDown(SDL_SCANCODE_F3); break;
+                        case 3: key_down = ImGui::IsKeyDown(SDL_SCANCODE_F4); break;
+                    }
+                }
+                if(key_down){
+                    window_draw_list->AddCircleFilled(ImVec2(lane_center, hit_y), note_radius, lane_colors[i]);
+                }else{
+                    window_draw_list->AddCircleFilled(ImVec2(lane_center, hit_y), note_radius, lane_colors_dim[i]);
+                }
+                window_draw_list->AddCircle(ImVec2(lane_center, hit_y), note_radius + 3, 
+                    ImColor(0.8f, 0.8f, 0.8f, 0.8f), 0, 2.0f);
+
+                // Draw lane label
+                const char* labels[] = {"F1", "F2", "F3", "F4"};
+                ImVec2 text_size = ImGui::CalcTextSize(labels[i]);
+                window_draw_list->AddText(
+                    ImVec2(lane_center - text_size.x * 0.5f, curr_pos.y + gf_game.box_height + 5),
+                    ImColor(0.9f, 0.9f, 0.9f, 1.0f), labels[i]);
+            }
+
+            // Update game logic
+            const auto t_now = std::chrono::steady_clock::now();
+            auto t_diff_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_gf_updated).count();
+            if(t_diff_ms > 50) t_diff_ms = 50; // Cap delta time
+
+            if(!gf_game.paused && !gf_game.game_over){
+                double dt = t_diff_ms / 1000.0;
+                gf_game.elapsed_time += dt;
+
+                // Spawn new notes
+                gf_game.next_note_time -= dt;
+                if(gf_game.next_note_time <= 0.0){
+                    std::uniform_int_distribution<int64_t> lane_dist(0, 3);
+                    std::uniform_real_distribution<double> time_dist(0.5, 1.5);
+                    
+                    // Adjust spawn rate based on difficulty
+                    double spawn_mult = 1.0;
+                    switch(gf_game.difficulty){
+                        case 0: spawn_mult = 1.5; break;
+                        case 1: spawn_mult = 1.0; break;
+                        case 2: spawn_mult = 0.7; break;
+                    }
+
+                    gf_note_t new_note;
+                    new_note.lane = lane_dist(gf_game.re);
+                    new_note.y_pos = 0.0;
+                    new_note.active = true;
+                    new_note.hit = false;
+                    gf_game.notes.push_back(new_note);
+
+                    gf_game.next_note_time = time_dist(gf_game.re) * spawn_mult;
+                }
+
+                // Update note positions and check for hits/misses
+                for(auto& note : gf_game.notes){
+                    if(!note.active) continue;
+
+                    note.y_pos += gf_game.note_speed * dt;
+
+                    // Check if key was pressed for this lane
+                    if(gf_lane_pressed[note.lane] && !note.hit){
+                        double distance_from_hit = std::abs(note.y_pos - 0.9);
+                        
+                        if(distance_from_hit <= gf_game.hit_window_perfect){
+                            // Perfect hit
+                            gf_game.score += 2;
+                            gf_game.streak++;
+                            note.hit = true;
+                            note.active = false;
+                        }else if(distance_from_hit <= gf_game.hit_window_ok){
+                            // OK hit
+                            gf_game.score += 1;
+                            gf_game.streak++;
+                            note.hit = true;
+                            note.active = false;
+                        }else if(note.y_pos < 0.9 - gf_game.hit_window_ok){
+                            // Too early - penalty
+                            gf_game.score -= 1;
+                            gf_game.streak = 0;
+                            note.hit = true;
+                            note.active = false;
+                        }
+                    }
+
+                    // Note passed the hit zone without being hit
+                    if(note.y_pos > 0.9 + gf_game.hit_window_ok && !note.hit){
+                        gf_game.score -= 1;
+                        gf_game.streak = 0;
+                        note.active = false;
+                    }
+                }
+
+                // Handle early key presses (no note in range)
+                for(int lane = 0; lane < 4; ++lane){
+                    if(gf_lane_pressed[lane]){
+                        bool found_note = false;
+                        for(const auto& note : gf_game.notes){
+                            if(note.lane == lane && note.active){
+                                double distance_from_hit = std::abs(note.y_pos - 0.9);
+                                if(distance_from_hit <= gf_game.hit_window_ok * 2){
+                                    found_note = true;
+                                    break;
+                                }
+                            }
+                        }
+                        // Penalty for pressing when no note is close
+                        // (Disabled to avoid frustration - only penalize explicit misses)
+                    }
+                }
+
+                // Update best streak
+                if(gf_game.streak > gf_game.best_streak){
+                    gf_game.best_streak = gf_game.streak;
+                }
+
+                // Update high/low scores
+                if(gf_game.score > gf_game.high_score){
+                    gf_game.high_score = gf_game.score;
+                }
+                if(gf_game.score < gf_game.low_score){
+                    gf_game.low_score = gf_game.score;
+                }
+
+                // Remove inactive notes
+                gf_game.notes.erase(
+                    std::remove_if(gf_game.notes.begin(), gf_game.notes.end(),
+                        [](const gf_note_t& n){ return !n.active && n.y_pos > 1.0; }),
+                    gf_game.notes.end());
+            }
+
+            t_gf_updated = t_now;
+
+            // Draw falling notes
+            for(const auto& note : gf_game.notes){
+                if(!note.active) continue;
+
+                float lane_center = curr_pos.x + (note.lane + 0.5f) * lane_width;
+                float note_y = curr_pos.y + note.y_pos * gf_game.box_height;
+
+                // Only draw if in visible area
+                if(note_y >= curr_pos.y - note_radius && note_y <= curr_pos.y + gf_game.box_height + note_radius){
+                    window_draw_list->AddCircleFilled(
+                        ImVec2(lane_center, note_y), note_radius, lane_colors[note.lane]);
+                    window_draw_list->AddCircle(
+                        ImVec2(lane_center, note_y), note_radius, 
+                        ImColor(1.0f, 1.0f, 1.0f, 0.6f), 0, 2.0f);
+                }
+            }
+
+            // Draw border
+            {
+                const auto c = ImColor(0.5f, 0.5f, 0.6f, 1.0f);
+                window_draw_list->AddRect(curr_pos, 
+                    ImVec2(curr_pos.x + gf_game.box_width, curr_pos.y + gf_game.box_height), c, 0.0f, 0, 2.0f);
+            }
+
+            ImGui::Dummy(ImVec2(gf_game.box_width, gf_game.box_height + 25));
+            ImGui::End();
+            return true;
+        };
+        try{
+            // Break from the main render loop if false is received.
+            if(!display_guitar_game()) break;
+        }catch(const std::exception &e){
+            YLOGWARN("Exception in display_guitar_game(): '" << e.what() << "'");
+            throw;
+        }
 
 
         // Display the shader editor dialog.
@@ -10390,6 +10747,12 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             if(ImGui::Button("Cube")){
                 view_toggles.view_cube_enabled = true;
                 reset_cube_game();
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Guitar Fret")){
+                view_toggles.view_guitar_fret_enabled = true;
+                reset_guitar_game();
                 ImGui::CloseCurrentPopup();
             }
 
