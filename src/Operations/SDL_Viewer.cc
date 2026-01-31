@@ -24,7 +24,8 @@
 #include <numeric>
 #include <regex>
 #include <stdexcept>
-#include <string>    
+#include <string>
+#include <sstream>    
 #include <tuple>
 #include <type_traits>
 #include <utility>            //Needed for std::pair.
