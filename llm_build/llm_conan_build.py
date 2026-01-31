@@ -64,6 +64,15 @@ import multiprocessing
 DEFAULT_JOBS = 4  # Fallback when CPU detection fails (reasonable minimum for modern systems)
 MAX_JOBS = 8      # Maximum parallel jobs to avoid OOM on memory-constrained systems
 
+# Safe environment variables to extract from Conan build scripts
+# These are compiler, linker, and path variables that are safe to accept
+SAFE_BUILD_ENV_VARS = {
+    'PATH', 'LD_LIBRARY_PATH', 'PKG_CONFIG_PATH',
+    'CPATH', 'LIBRARY_PATH', 
+    'CC', 'CXX', 'CFLAGS', 'CXXFLAGS', 'LDFLAGS',
+    'AR', 'AS', 'RANLIB', 'STRIP'
+}
+
 # ANSI color codes for terminal output
 class Colors:
     RED = '\033[0;31m'
@@ -300,7 +309,7 @@ def build_dependency(name, repo_url, install_prefix, build_root, cmake_prefix_pa
     log_info(f"Compiler environment for {name}:")
     for var in ['CC', 'CXX', 'CFLAGS', 'CXXFLAGS', 'LDFLAGS']:
         value = cmake_env.get(var, '(not set)')
-        print(f"  {var}={value}")
+        log_info(f"  {var}={value}")
     
     # Configure
     cmake_args = [
@@ -357,10 +366,6 @@ def get_conan_build_environment(build_root):
                 if result.returncode == 0:
                     # Parse environment variables from output
                     # Only accept variables from our whitelist to avoid injection issues
-                    target_vars = {'PATH', 'LD_LIBRARY_PATH', 'PKG_CONFIG_PATH', 
-                                   'CPATH', 'LIBRARY_PATH', 'CC', 'CXX', 'CFLAGS', 
-                                   'CXXFLAGS', 'LDFLAGS', 'AR', 'AS', 'RANLIB', 'STRIP'}
-                    
                     vars_found = []
                     for line in result.stdout.split('\n'):
                         if '=' not in line:
@@ -368,8 +373,8 @@ def get_conan_build_environment(build_root):
                         
                         key, _, value = line.partition('=')
                         # Only update if the key is in our whitelist
-                        # The whitelist itself ensures safety, no need for isidentifier() check
-                        if key in target_vars:
+                        # The whitelist itself ensures safety
+                        if key in SAFE_BUILD_ENV_VARS:
                             env[key] = value
                             vars_found.append(key)
                     
