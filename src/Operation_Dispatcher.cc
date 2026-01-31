@@ -215,6 +215,7 @@
 #include "Operations/SelectSlicesIntersectingROI.h"
 #include "Operations/SimplifyContours.h"
 #include "Operations/SimplifySurfaceMeshes.h"
+#include "Operations/SimulateDose.h"
 #include "Operations/SimulateRadiograph.h"
 #include "Operations/Sleep.h"
 #include "Operations/SpatialBlur.h"
@@ -491,6 +492,7 @@ known_ops_t Known_Operations(){
     out["SelectSlicesIntersectingROI"] = std::make_pair(OpArgDocSelectSlicesIntersectingROI, SelectSlicesIntersectingROI);
     out["SimplifyContours"] = std::make_pair(OpArgDocSimplifyContours, SimplifyContours);
     out["SimplifySurfaceMeshes"] = std::make_pair(OpArgDocSimplifySurfaceMeshes, SimplifySurfaceMeshes);
+    out["SimulateDose"] = std::make_pair(OpArgDocSimulateDose, SimulateDose);
     out["SimulateRadiograph"] = std::make_pair(OpArgDocSimulateRadiograph, SimulateRadiograph);
     out["Sleep"] = std::make_pair(OpArgDocSleep, Sleep);
     out["SpatialBlur"] = std::make_pair(OpArgDocSpatialBlur, SpatialBlur);
