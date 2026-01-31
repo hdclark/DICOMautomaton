@@ -4,6 +4,7 @@
 // containing a well-defined, rigid schema.
 //
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <exception>
@@ -11,8 +12,10 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <numeric>
 #include <stdexcept>
-#include <string>    
+#include <string>
+#include <vector>
 //#include <cfenv>              //Needed for std::feclearexcept(FE_ALL_EXCEPT).
 
 #include <filesystem>
@@ -30,6 +33,167 @@
 #include "String_Parsing.h"
 #include "Structs.h"
 #include "GIS.h"
+
+
+// Helper structure to store track point data for speed-based splitting.
+struct gpx_track_point_t {
+    vec3<double> projected;  // Mercator-projected position (x, y, 0).
+    std::optional<double> time;  // UNIX timestamp, if available.
+    std::optional<double> elevation;  // Elevation, if available.
+};
+
+// Split a GPX trace into multiple activity segments based on speed changes.
+//
+// This function analyzes a sequence of track points with time data and detects major speed changes
+// that may indicate different activities (e.g., stopped vs. moving, walking vs. running).
+//
+// The algorithm works as follows:
+// 1. Compute speeds between consecutive points that have valid time data.
+// 2. Compute a reference speed (median of non-zero speeds).
+// 3. Identify split points where speed drops significantly (e.g., below a fraction of the reference)
+//    or where there is a significant time gap.
+// 4. Create separate contours for each detected activity segment.
+//
+// Parameters:
+// - points: The track points with position and time data.
+// - base_name: The base name to use for naming split activities.
+//
+// Returns:
+// - A list of contour collections, one for each detected activity segment.
+//   Each contour collection contains a single contour representing the activity.
+//
+static std::list<contour_collection<double>>
+split_gpx_by_speed(const std::vector<gpx_track_point_t> &points,
+                   const std::optional<std::string> &base_name){
+
+    std::list<contour_collection<double>> split_contours;
+
+    // Need at least 2 points with time data to compute speeds.
+    if(points.size() < 2){
+        return split_contours;
+    }
+
+    // Check if we have enough time data to perform speed-based splitting.
+    size_t points_with_time = 0;
+    for(const auto &pt : points){
+        if(pt.time.has_value()){
+            ++points_with_time;
+        }
+    }
+    if(points_with_time < 2){
+        return split_contours;
+    }
+
+    // Compute speeds between consecutive points with valid time data.
+    // Store (index, speed) pairs for analysis.
+    std::vector<std::pair<size_t, double>> speeds;
+    speeds.reserve(points.size());
+
+    for(size_t i = 1; i < points.size(); ++i){
+        if(points[i].time.has_value() && points[i-1].time.has_value()){
+            const double dt = points[i].time.value() - points[i-1].time.value();
+            if(dt > 0.0){
+                const double dx = points[i].projected.x - points[i-1].projected.x;
+                const double dy = points[i].projected.y - points[i-1].projected.y;
+                const double dist = std::sqrt(dx*dx + dy*dy);
+                const double speed = dist / dt;  // metres per second.
+                speeds.emplace_back(i, speed);
+            }
+        }
+    }
+
+    if(speeds.empty()){
+        return split_contours;
+    }
+
+    // Compute a reference speed (median of non-zero speeds).
+    std::vector<double> speed_values;
+    speed_values.reserve(speeds.size());
+    for(const auto &s : speeds){
+        if(s.second > 0.0){
+            speed_values.push_back(s.second);
+        }
+    }
+
+    if(speed_values.empty()){
+        return split_contours;
+    }
+
+    std::sort(speed_values.begin(), speed_values.end());
+    const double median_speed = speed_values[speed_values.size() / 2];
+
+    // Define thresholds for detecting activity splits.
+    // - Speed drop threshold: speed below 10% of median suggests a stop/pause.
+    // - Time gap threshold: gaps > 60 seconds suggest separate activities.
+    const double speed_drop_fraction = 0.10;
+    const double speed_drop_threshold = median_speed * speed_drop_fraction;
+    const double time_gap_threshold = 60.0;  // seconds.
+
+    // Find split points where speed drops significantly or there's a time gap.
+    std::vector<size_t> split_indices;
+    split_indices.push_back(0);  // Start of first segment.
+
+    for(size_t i = 1; i < points.size(); ++i){
+        bool should_split = false;
+
+        // Check for time gap.
+        if(points[i].time.has_value() && points[i-1].time.has_value()){
+            const double dt = points[i].time.value() - points[i-1].time.value();
+            if(dt > time_gap_threshold){
+                should_split = true;
+            }
+        }
+
+        // Check for speed drop (find the speed entry for this index).
+        for(const auto &s : speeds){
+            if(s.first == i && s.second < speed_drop_threshold){
+                should_split = true;
+                break;
+            }
+        }
+
+        if(should_split){
+            split_indices.push_back(i);
+        }
+    }
+
+    // Only create split contours if we found multiple segments.
+    if(split_indices.size() < 2){
+        return split_contours;
+    }
+
+    // Create contours for each segment.
+    for(size_t seg = 0; seg < split_indices.size(); ++seg){
+        const size_t start_idx = split_indices[seg];
+        const size_t end_idx = (seg + 1 < split_indices.size()) 
+                               ? split_indices[seg + 1] 
+                               : points.size();
+
+        // Need at least 2 points for a meaningful segment.
+        if(end_idx - start_idx < 2){
+            continue;
+        }
+
+        contour_collection<double> cc;
+        cc.contours.emplace_back();
+
+        for(size_t i = start_idx; i < end_idx; ++i){
+            cc.contours.back().points.push_back(points[i].projected);
+        }
+
+        // Set metadata for the split segment.
+        if(base_name.has_value()){
+            const std::string segment_name = base_name.value() + "_activity_" + std::to_string(seg + 1);
+            insert_if_new(cc.contours.back().metadata, "ROIName", segment_name);
+        }
+        insert_if_new(cc.contours.back().metadata, "ActivitySegment", std::to_string(seg + 1));
+        insert_if_new(cc.contours.back().metadata, "TotalActivitySegments", std::to_string(split_indices.size()));
+
+        split_contours.push_back(std::move(cc));
+    }
+
+    return split_contours;
+}
 
 bool contains_xml_signature(dcma::xml::node &root){
     bool contains_an_xml_named_node = false;
@@ -79,14 +243,20 @@ contains_gpx_gps_coords(dcma::xml::node &root){
         },
         disable_recursive_search );
 
+    // Temporary storage for track points with time data, used for speed-based splitting.
+    std::vector<gpx_track_point_t> track_points;
+
     // This callback is for handling individual track points (i.e., vertices).
     dcma::xml::search_callback_t f_trkpts = [&](const dcma::xml::node_chain_t &nc) -> bool {
         const auto lat_opt = get_as<double>(nc.back().get().metadata, "lat");
         const auto lon_opt = get_as<double>(nc.back().get().metadata, "lon");
 
+        gpx_track_point_t pt;
+
         if(lat_opt && lon_opt){
             // Mercator projection.
             const auto [x, y] = dcma::gis::project_mercator(lat_opt.value(), lon_opt.value());
+            pt.projected = vec3<double>(x, y, 0.0);
             contours_out.back().contours.back().points.emplace_back( x, y, 0.0 );
         }
 
@@ -127,22 +297,40 @@ contains_gpx_gps_coords(dcma::xml::node &root){
             lines_out.back().push_back( time_opt.value(), ele_opt.value(), inhibit_sort );
         }
 
+        // Store track point data for speed-based splitting.
+        pt.time = time_opt;
+        pt.elevation = ele_opt;
+        track_points.push_back(pt);
+
         return true;
     };
 
     // Callback for processing each track segment.
     //
     // For each track segment, create a new contour and then recursively search for track points (i.e., vertices).
+    // Additionally, analyze track points for speed-based activity splitting and create additional contours
+    // for detected activity segments.
     dcma::xml::search_callback_t f_trksegs = [&](const dcma::xml::node_chain_t &nc) -> bool {
         contours_out.emplace_back();
         contours_out.back().contours.emplace_back();
 
         lines_out.emplace_back();
 
+        // Clear track points from previous segment.
+        track_points.clear();
+
         dcma::xml::search_by_names(nc.back().get(),
                                    { "trkpt" },
                                    f_trkpts,
                                    disable_recursive_search);
+
+        // Attempt to split the trace based on speed changes.
+        // This creates additional contours for detected activity segments.
+        auto split_ccs = split_gpx_by_speed(track_points, name_opt);
+        for(auto &scc : split_ccs){
+            contours_out.push_back(std::move(scc));
+        }
+
         return true;
     };
 
