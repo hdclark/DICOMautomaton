@@ -611,6 +611,25 @@ bool PolyominoesAI(Drover &DICOM_data,
         }
 
         auto final_coords = resolve_abs_coords(img, poly_family, poly_shape, poly_orien, final_row, target_col);
+
+        // Ensure we do not return a colliding placement when no valid drop row exists.
+        // If any of the final coordinates overlap active cells, mark the placement as invalid
+        // by moving the coordinates out-of-bounds so that downstream bounds checks reject it.
+        bool placement_collides = false;
+        for(const auto& c : final_coords){
+            const auto row = c.at(0);
+            const auto col = c.at(1);
+            if(cell_is_active(img, chn, row, col)){
+                placement_collides = true;
+                break;
+            }
+        }
+        if(placement_collides){
+            final_row = -1;
+            for(auto& c : final_coords){
+                c.at(0) = -1; // row out-of-bounds; caller's abs_coords_valid should reject
+            }
+        }
         return {final_row, final_coords};
     };
 
