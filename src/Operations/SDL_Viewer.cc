@@ -4513,19 +4513,26 @@ bool SDL_Viewer(Drover &DICOM_data,
                 // If AI is enabled and there is no pending action from user, use AI-determined action.
                 std::string effective_action = action;
                 bool ai_already_ran_iteration = false;
+                
+                // Helper to extract the next action from a comma-delimited list.
+                const auto extract_next_action = [](std::string& pending_actions) -> std::string {
+                    if(pending_actions.empty()) return "";
+                    auto comma_pos = pending_actions.find(',');
+                    std::string next_action;
+                    if(comma_pos != std::string::npos){
+                        next_action = pending_actions.substr(0, comma_pos);
+                        pending_actions = pending_actions.substr(comma_pos + 1);
+                    }else{
+                        next_action = pending_actions;
+                        pending_actions.clear();
+                    }
+                    return next_action;
+                };
+                
                 if(polyomino_ai_enabled && action == "none" && polyomino_imgs.Has_Image_Data()){
-                    auto *img_ptr = &(polyomino_imgs.image_data.back()->imagecoll.images.back());
-                    
                     // If we have pending AI actions, execute the next one.
                     if(!polyomino_ai_pending_actions.empty()){
-                        auto comma_pos = polyomino_ai_pending_actions.find(',');
-                        if(comma_pos != std::string::npos){
-                            effective_action = polyomino_ai_pending_actions.substr(0, comma_pos);
-                            polyomino_ai_pending_actions = polyomino_ai_pending_actions.substr(comma_pos + 1);
-                        }else{
-                            effective_action = polyomino_ai_pending_actions;
-                            polyomino_ai_pending_actions.clear();
-                        }
+                        effective_action = extract_next_action(polyomino_ai_pending_actions);
                     }else{
                         // Run PolyominoesAI to compute the optimal action sequence.
                         std::list<OperationArgPkg> AIOperations;
@@ -4539,19 +4546,11 @@ bool SDL_Viewer(Drover &DICOM_data,
                             
                             // Get recommended actions from metadata.
                             if(polyomino_imgs.Has_Image_Data()){
-                                img_ptr = &(polyomino_imgs.image_data.back()->imagecoll.images.back());
+                                auto *img_ptr = &(polyomino_imgs.image_data.back()->imagecoll.images.back());
                                 auto ai_actions = img_ptr->GetMetadataValueAs<std::string>("PolyominoesAIRecommendedActions");
                                 if(ai_actions && !ai_actions.value().empty()){
                                     polyomino_ai_pending_actions = ai_actions.value();
-                                    // Extract first action.
-                                    auto comma_pos = polyomino_ai_pending_actions.find(',');
-                                    if(comma_pos != std::string::npos){
-                                        effective_action = polyomino_ai_pending_actions.substr(0, comma_pos);
-                                        polyomino_ai_pending_actions = polyomino_ai_pending_actions.substr(comma_pos + 1);
-                                    }else{
-                                        effective_action = polyomino_ai_pending_actions;
-                                        polyomino_ai_pending_actions.clear();
-                                    }
+                                    effective_action = extract_next_action(polyomino_ai_pending_actions);
                                 }
                                 // AI script already ran one iteration, so update texture.
                                 Free_OpenGL_Texture(polyomino_texture);
