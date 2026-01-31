@@ -174,7 +174,25 @@ split_gpx_by_speed(const std::vector<gpx_track_point_t> &points,
         return split_contours;
     }
 
-    // Create contours for each segment.
+    // First pass: count valid segments (with at least 2 points).
+    size_t valid_segment_count = 0;
+    for(size_t seg = 0; seg < split_indices.size(); ++seg){
+        const size_t start_idx = split_indices[seg];
+        const size_t end_idx = (seg + 1 < split_indices.size()) 
+                               ? split_indices[seg + 1] 
+                               : points.size();
+        if(end_idx - start_idx >= 2){
+            ++valid_segment_count;
+        }
+    }
+
+    // Only create split contours if we have at least 2 valid segments.
+    if(valid_segment_count < 2){
+        return split_contours;
+    }
+
+    // Second pass: create contours for each valid segment with proper numbering.
+    size_t segment_number = 0;
     for(size_t seg = 0; seg < split_indices.size(); ++seg){
         const size_t start_idx = split_indices[seg];
         const size_t end_idx = (seg + 1 < split_indices.size()) 
@@ -186,6 +204,8 @@ split_gpx_by_speed(const std::vector<gpx_track_point_t> &points,
             continue;
         }
 
+        ++segment_number;
+
         contour_collection<double> cc;
         cc.contours.emplace_back();
 
@@ -193,13 +213,13 @@ split_gpx_by_speed(const std::vector<gpx_track_point_t> &points,
             cc.contours.back().points.push_back(points[i].projected);
         }
 
-        // Set metadata for the split segment.
+        // Set metadata for the split segment using sequential segment numbering.
         if(base_name.has_value()){
-            const std::string segment_name = base_name.value() + "_activity_" + std::to_string(seg + 1);
+            const std::string segment_name = base_name.value() + "_activity_" + std::to_string(segment_number);
             insert_if_new(cc.contours.back().metadata, "ROIName", segment_name);
         }
-        insert_if_new(cc.contours.back().metadata, "ActivitySegment", std::to_string(seg + 1));
-        insert_if_new(cc.contours.back().metadata, "TotalActivitySegments", std::to_string(split_indices.size()));
+        insert_if_new(cc.contours.back().metadata, "ActivitySegment", std::to_string(segment_number));
+        insert_if_new(cc.contours.back().metadata, "TotalActivitySegments", std::to_string(valid_segment_count));
 
         split_contours.push_back(std::move(cc));
     }
