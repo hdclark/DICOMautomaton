@@ -5,36 +5,116 @@ project(DICOMautomaton LANGUAGES CXX)
 #set(DICOMautomaton_VERSION_MINOR 0)
 #set(DICOMautomaton_VERSION_PATCH 0)
 
+# Add cmake module path for our custom modules
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
 ####################################################################################
 #                                  User Options
 ####################################################################################
+# Note: Options use DCMA_ prefix for namespacing but support legacy names for backward
+# compatibility. The DCMA_ prefixed versions are the canonical names.
 
-option(MEMORY_CONSTRAINED_BUILD "Compile slowly, with minimal memory usage."    OFF)
-option(WITH_IWYU                "Compile using clang include-what-you-use."     OFF)
+option(DCMA_MEMORY_CONSTRAINED_BUILD "Compile slowly, with minimal memory usage."    OFF)
+option(DCMA_WITH_IWYU                "Compile using clang include-what-you-use."     OFF)
 
-option(WITH_ASAN                "Compile using ASan, LSan, & UBSan."            OFF)
-option(WITH_TSAN                "Compile using ThreadSanitizer."                OFF)
-option(WITH_MSAN                "Compile using MemorySanitizer."                OFF)
+option(DCMA_WITH_ASAN                "Compile using ASan, LSan, & UBSan."            OFF)
+option(DCMA_WITH_TSAN                "Compile using ThreadSanitizer."                OFF)
+option(DCMA_WITH_MSAN                "Compile using MemorySanitizer."                OFF)
 
-option(WITH_EIGEN     "Compile assuming Eigen is available."                    ON)
-option(WITH_CGAL      "Compile assuming CGAL is available."                     ON)
-option(WITH_NLOPT     "Compile assuming nlopt is available."                    ON)
-option(WITH_SFML      "Compile assuming SFML is available."                     ON)
-option(WITH_SDL       "Compile assuming SDL2 and glew are available."           ON)
-option(WITH_WT        "Compile assuming Wt is available."                       ON)
-option(WITH_GNU_GSL   "Compile assuming the GNU GSL is available."              ON)
-option(WITH_POSTGRES  "Compile assuming PostgreSQL libraries are available."    ON)
-option(WITH_JANSSON   "Compile assuming Jansson is available."                  ON)
-option(WITH_THRIFT    "Compile assuming Apache Thrift is available."            ON)
+option(DCMA_WITH_EIGEN     "Compile assuming Eigen is available."                    ON)
+option(DCMA_WITH_CGAL      "Compile assuming CGAL is available."                     ON)
+option(DCMA_WITH_NLOPT     "Compile assuming nlopt is available."                    ON)
+option(DCMA_WITH_SFML      "Compile assuming SFML is available."                     ON)
+option(DCMA_WITH_SDL       "Compile assuming SDL2 and glew are available."           ON)
+option(DCMA_WITH_WT        "Compile assuming Wt is available."                       ON)
+option(DCMA_WITH_GNU_GSL   "Compile assuming the GNU GSL is available."              ON)
+option(DCMA_WITH_POSTGRES  "Compile assuming PostgreSQL libraries are available."    ON)
+option(DCMA_WITH_JANSSON   "Compile assuming Jansson is available."                  ON)
+option(DCMA_WITH_THRIFT    "Compile assuming Apache Thrift is available."            ON)
 
-option(WITH_LTO       "Use link-time optimization when available."              OFF)
+option(DCMA_WITH_LTO       "Use link-time optimization when available."              OFF)
 
-option(BUILD_SHARED_LIBS "Build shared-object/dynamicly-loaded binaries."       ON)
+option(BUILD_SHARED_LIBS "Build shared-object/dynamically-loaded binaries."     ON)
+
+# Backward compatibility: Map legacy option names to new DCMA_ prefixed names
+# This allows existing build scripts to continue working
+if(DEFINED MEMORY_CONSTRAINED_BUILD)
+    set(DCMA_MEMORY_CONSTRAINED_BUILD ${MEMORY_CONSTRAINED_BUILD})
+endif()
+if(DEFINED WITH_IWYU)
+    set(DCMA_WITH_IWYU ${WITH_IWYU})
+endif()
+if(DEFINED WITH_ASAN)
+    set(DCMA_WITH_ASAN ${WITH_ASAN})
+endif()
+if(DEFINED WITH_TSAN)
+    set(DCMA_WITH_TSAN ${WITH_TSAN})
+endif()
+if(DEFINED WITH_MSAN)
+    set(DCMA_WITH_MSAN ${WITH_MSAN})
+endif()
+if(DEFINED WITH_EIGEN)
+    set(DCMA_WITH_EIGEN ${WITH_EIGEN})
+endif()
+if(DEFINED WITH_CGAL)
+    set(DCMA_WITH_CGAL ${WITH_CGAL})
+endif()
+if(DEFINED WITH_NLOPT)
+    set(DCMA_WITH_NLOPT ${WITH_NLOPT})
+endif()
+if(DEFINED WITH_SFML)
+    set(DCMA_WITH_SFML ${WITH_SFML})
+endif()
+if(DEFINED WITH_SDL)
+    set(DCMA_WITH_SDL ${WITH_SDL})
+endif()
+if(DEFINED WITH_WT)
+    set(DCMA_WITH_WT ${WITH_WT})
+endif()
+if(DEFINED WITH_GNU_GSL)
+    set(DCMA_WITH_GNU_GSL ${WITH_GNU_GSL})
+endif()
+if(DEFINED WITH_POSTGRES)
+    set(DCMA_WITH_POSTGRES ${WITH_POSTGRES})
+endif()
+if(DEFINED WITH_JANSSON)
+    set(DCMA_WITH_JANSSON ${WITH_JANSSON})
+endif()
+if(DEFINED WITH_THRIFT)
+    set(DCMA_WITH_THRIFT ${WITH_THRIFT})
+endif()
+if(DEFINED WITH_LTO)
+    set(DCMA_WITH_LTO ${WITH_LTO})
+endif()
+
+# Export legacy names for subdirectories that still use them
+set(MEMORY_CONSTRAINED_BUILD ${DCMA_MEMORY_CONSTRAINED_BUILD})
+set(WITH_IWYU ${DCMA_WITH_IWYU})
+set(WITH_ASAN ${DCMA_WITH_ASAN})
+set(WITH_TSAN ${DCMA_WITH_TSAN})
+set(WITH_MSAN ${DCMA_WITH_MSAN})
+set(WITH_EIGEN ${DCMA_WITH_EIGEN})
+set(WITH_CGAL ${DCMA_WITH_CGAL})
+set(WITH_NLOPT ${DCMA_WITH_NLOPT})
+set(WITH_SFML ${DCMA_WITH_SFML})
+set(WITH_SDL ${DCMA_WITH_SDL})
+set(WITH_WT ${DCMA_WITH_WT})
+set(WITH_GNU_GSL ${DCMA_WITH_GNU_GSL})
+set(WITH_POSTGRES ${DCMA_WITH_POSTGRES})
+set(WITH_JANSSON ${DCMA_WITH_JANSSON})
+set(WITH_THRIFT ${DCMA_WITH_THRIFT})
+set(WITH_LTO ${DCMA_WITH_LTO})
 
 
 ####################################################################################
 #                                  Configuration
 ####################################################################################
+
+# Include our modular CMake components
+include(DCMACompilerOptions)
+include(DCMAPlatformChecks)
+include(DCMADependencies)
+include(DCMADefines)
 
 # High-level configuration.
 if(NOT BUILD_SHARED_LIBS)
@@ -56,7 +136,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "default to debug" FORCE)
 endif()
 
-if(WITH_LTO)
+if(DCMA_WITH_LTO)
     include(CheckIPOSupported)
     check_ipo_supported(RESULT lto_avail OUTPUT lto_msg)
     if(lto_avail)
@@ -66,11 +146,18 @@ if(WITH_LTO)
     endif()
 endif()
 
+# Configure build types (uses functions from DCMACompilerOptions.cmake)
+dcma_configure_build_types()
+dcma_configure_iwyu()
+
 
 ####################################################################################
 #                                  Dependencies 
 ####################################################################################
 # Note: Dependencies are listed in CPACK list below.
+# Note: Modern CMake dependency finding is available in cmake/DCMADependencies.cmake
+#       which provides FetchContent fallbacks. The code below maintains backward
+#       compatibility with existing builds while optionally using the modular approach.
 
 find_package(Threads REQUIRED)
 
@@ -89,9 +176,16 @@ endif()
 include_directories(${Boost_INCLUDE_DIRS})
 
 if(WITH_EIGEN)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(EIGEN3 REQUIRED eigen3)
-    include_directories( ${EIGEN3_INCLUDE_DIRS} )
+    # Try modern CMake config first, then fall back to pkg-config
+    find_package(Eigen3 3.3 QUIET CONFIG)
+    if(NOT Eigen3_FOUND)
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(EIGEN3 REQUIRED eigen3)
+        include_directories( ${EIGEN3_INCLUDE_DIRS} )
+    else()
+        # Eigen3 modern CMake exports Eigen3::Eigen target
+        message(STATUS "Found Eigen3 via CMake config")
+    endif()
 endif()
 
 if(WITH_CGAL)
@@ -103,27 +197,36 @@ if(WITH_CGAL)
     if(WITH_EIGEN)
         add_definitions(-DCGAL_EIGEN3_ENABLED=1) # Explicitly instruct CGAL to use Eigen.
     endif()
-    find_package(CGAL REQUIRED COMPONENTS Core)
-
-    # This workaround is for a CGAL v4.13 class and file rename {Implicit,Labeled}_mesh_domain_3.h.
-    include(CheckIncludeFileCXX)
-    # Opt into the newer Labeled_mesh_domain_3.h when available.
-    #check_include_file_cxx("CGAL/Labeled_mesh_domain_3.h" DCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER)
-    #if(DCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER)
-    #    add_definitions(-DDCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER=1)
-    #endif()
-    #
-    # Alternatively, prefer to use the older Implicit_mesh_domain_3.h when available.
-    check_include_file_cxx("CGAL/Implicit_mesh_domain_3.h" DCMA_CGAL_HAS_IMPLICIT_MESH_DOMAIN_3_HEADER)
-    if(NOT DCMA_CGAL_HAS_IMPLICIT_MESH_DOMAIN_3_HEADER)
-        add_definitions(-DDCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER=1)
+    find_package(CGAL QUIET COMPONENTS Core)
+    if(NOT CGAL_FOUND)
+        message(STATUS "CGAL not found - disabling CGAL features")
+        set(WITH_CGAL OFF)
+    else()
+        # This workaround is for a CGAL v4.13 class and file rename {Implicit,Labeled}_mesh_domain_3.h.
+        include(CheckIncludeFileCXX)
+        # Alternatively, prefer to use the older Implicit_mesh_domain_3.h when available.
+        check_include_file_cxx("CGAL/Implicit_mesh_domain_3.h" DCMA_CGAL_HAS_IMPLICIT_MESH_DOMAIN_3_HEADER)
+        if(NOT DCMA_CGAL_HAS_IMPLICIT_MESH_DOMAIN_3_HEADER)
+            add_definitions(-DDCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER=1)
+        endif()
     endif()
 endif()
 
 if(WITH_NLOPT)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(NLOPT REQUIRED nlopt)
-    include_directories( ${NLOPT_INCLUDE_DIRS} )
+    # Try modern CMake config first, then fall back to pkg-config
+    find_package(NLopt QUIET CONFIG)
+    if(NOT NLopt_FOUND)
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(NLOPT QUIET nlopt)
+        if(NLOPT_FOUND)
+            include_directories( ${NLOPT_INCLUDE_DIRS} )
+        else()
+            message(STATUS "NLopt not found - disabling NLopt features")
+            set(WITH_NLOPT OFF)
+        endif()
+    else()
+        message(STATUS "Found NLopt via CMake config")
+    endif()
 endif()
 
 if(WITH_SFML)
@@ -133,62 +236,115 @@ if(WITH_SFML)
         set(SFML_STATIC_LIBRARIES TRUE)
         add_definitions(-DSFML_STATIC=1)
     endif()
-    pkg_check_modules(SFML REQUIRED sfml-graphics sfml-window sfml-system)
-    include_directories( ${SFML_INCLUDE_DIRS} )
+    pkg_check_modules(SFML QUIET sfml-graphics sfml-window sfml-system)
+    if(SFML_FOUND)
+        include_directories( ${SFML_INCLUDE_DIRS} )
+    else()
+        message(STATUS "SFML not found - disabling SFML features")
+        set(WITH_SFML OFF)
+    endif()
 endif()
 
 if(WITH_SDL)
     set(OpenGL_GL_PREFERENCE GLVND)
-    find_package(OpenGL REQUIRED COMPONENTS OpenGL) # Will help pick-up opengl32.a with MXE toolchain.
-    include_directories( ${OPENGL_INCLUDE_DIR} )
-    message(STATUS "Proceeding with OPENGL_LIBRARIES = '${OPENGL_LIBRARIES}'")
-    message(STATUS "Proceeding with OPENGL_INCLUDE_DIR = '${OPENGL_INCLUDE_DIR}'")
-    message(STATUS "Proceeding with OPENGL_CFLAGS = '${OPENGL_CFLAGS}'")
+    find_package(OpenGL QUIET COMPONENTS OpenGL) # Will help pick-up opengl32.a with MXE toolchain.
+    if(NOT OpenGL_FOUND)
+        message(STATUS "OpenGL not found - disabling SDL features")
+        set(WITH_SDL OFF)
+    else()
+        include_directories( ${OPENGL_INCLUDE_DIR} )
+        message(STATUS "Proceeding with OPENGL_LIBRARIES = '${OPENGL_LIBRARIES}'")
+        message(STATUS "Proceeding with OPENGL_INCLUDE_DIR = '${OPENGL_INCLUDE_DIR}'")
+        message(STATUS "Proceeding with OPENGL_CFLAGS = '${OPENGL_CFLAGS}'")
 
-    find_package(PkgConfig REQUIRED)
-    find_package(SDL2)
-    if(NOT SDL2_FOUND)
-        message(STATUS "find_package(SDL2) not found, attempting pkg-config instead")
-        pkg_check_modules(SDL2 REQUIRED sdl2)
-    endif()
-    include_directories( ${SDL2_INCLUDE_DIRS} )
-    message(STATUS "Proceeding with SDL2_LIBRARIES = '${SDL2_LIBRARIES}'")
-    message(STATUS "Proceeding with SDL2_INCLUDE_DIRS = '${SDL2_INCLUDE_DIRS}'")
-    message(STATUS "Proceeding with SDL2_CFLAGS = '${SDL2_CFLAGS}'")
-    if(NOT TARGET SDL2::SDL2)
-        message(STATUS "Simulating missing 'SDL2::SDL2' target")
-        add_library(SDL2::SDL2 INTERFACE IMPORTED)
-        target_link_libraries(SDL2::SDL2 INTERFACE "${SDL2_LIBRARIES}")
-    endif()
+        find_package(PkgConfig REQUIRED)
+        find_package(SDL2 QUIET)
+        if(NOT SDL2_FOUND)
+            message(STATUS "find_package(SDL2) not found, attempting pkg-config instead")
+            pkg_check_modules(SDL2 QUIET sdl2)
+        endif()
+        if(SDL2_FOUND)
+            include_directories( ${SDL2_INCLUDE_DIRS} )
+            message(STATUS "Proceeding with SDL2_LIBRARIES = '${SDL2_LIBRARIES}'")
+            message(STATUS "Proceeding with SDL2_INCLUDE_DIRS = '${SDL2_INCLUDE_DIRS}'")
+            message(STATUS "Proceeding with SDL2_CFLAGS = '${SDL2_CFLAGS}'")
+            if(NOT TARGET SDL2::SDL2)
+                message(STATUS "Simulating missing 'SDL2::SDL2' target")
+                add_library(SDL2::SDL2 INTERFACE IMPORTED)
+                target_link_libraries(SDL2::SDL2 INTERFACE "${SDL2_LIBRARIES}")
+            endif()
 
-    if(NOT BUILD_SHARED_LIBS)
-        add_definitions(-DGLEW_STATIC=1)
+            if(NOT BUILD_SHARED_LIBS)
+                add_definitions(-DGLEW_STATIC=1)
+            endif()
+            pkg_check_modules(GLEW QUIET glew)
+            if(NOT GLEW_FOUND)
+                message(STATUS "GLEW not found - disabling SDL features")
+                set(WITH_SDL OFF)
+            else()
+                include_directories( ${GLEW_INCLUDE_DIRS} )
+            endif()
+        else()
+            message(STATUS "SDL2 not found - disabling SDL features")
+            set(WITH_SDL OFF)
+        endif()
     endif()
-    pkg_check_modules(GLEW REQUIRED glew)
-    include_directories( ${GLEW_INCLUDE_DIRS} )
 endif()
 
 if(WITH_GNU_GSL)
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules(GNU_GSL REQUIRED gsl)
-    include_directories( ${GNU_GSL_INCLUDE_DIRS} )
+    pkg_check_modules(GNU_GSL QUIET gsl)
+    if(GNU_GSL_FOUND)
+        include_directories( ${GNU_GSL_INCLUDE_DIRS} )
+    else()
+        message(STATUS "GNU GSL not found - disabling GSL features")
+        set(WITH_GNU_GSL OFF)
+    endif()
 endif()
 
 if(WITH_POSTGRES)
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules(POSTGRES REQUIRED libpq libpqxx)
-    include_directories( ${POSTGRES_INCLUDE_DIRS} )
+    pkg_check_modules(POSTGRES QUIET libpq libpqxx)
+    if(POSTGRES_FOUND)
+        include_directories( ${POSTGRES_INCLUDE_DIRS} )
+    else()
+        message(STATUS "PostgreSQL not found - disabling PostgreSQL features")
+        set(WITH_POSTGRES OFF)
+    endif()
 endif()
 
 if(WITH_THRIFT)
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules(THRIFT REQUIRED thrift)
-    include_directories( ${THRIFT_INCLUDE_DIRS} )
+    pkg_check_modules(THRIFT QUIET thrift)
+    if(THRIFT_FOUND)
+        include_directories( ${THRIFT_INCLUDE_DIRS} )
+    else()
+        message(STATUS "Thrift not found - disabling Thrift features")
+        set(WITH_THRIFT OFF)
+    endif()
 endif()
+
+# Report final dependency status
+message(STATUS "=== Dependency Configuration Summary ===")
+message(STATUS "  Boost:      ENABLED")
+message(STATUS "  Eigen:      ${WITH_EIGEN}")
+message(STATUS "  CGAL:       ${WITH_CGAL}")
+message(STATUS "  NLopt:      ${WITH_NLOPT}")
+message(STATUS "  SFML:       ${WITH_SFML}")
+message(STATUS "  SDL/OpenGL: ${WITH_SDL}")
+message(STATUS "  Wt:         ${WITH_WT}")
+message(STATUS "  GNU GSL:    ${WITH_GNU_GSL}")
+message(STATUS "  PostgreSQL: ${WITH_POSTGRES}")
+message(STATUS "  Jansson:    ${WITH_JANSSON}")
+message(STATUS "  Thrift:     ${WITH_THRIFT}")
+message(STATUS "=========================================")
 
 ####################################################################################
 #                                  Compiler Flags
 ####################################################################################
+# Note: Target-based compiler options are available in cmake/DCMACompilerOptions.cmake
+#       which provides dcma_apply_compiler_options() for target-specific flags.
+#       The code below provides global defaults for backward compatibility.
 
 # Override the default CXX flags, which are controlled by the release type.
 #
@@ -201,7 +357,7 @@ set(CMAKE_CXX_FLAGS_MINSIZEREL      "-Os -DNDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE         "-O3 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  "-O3 -g")
 
-if(MEMORY_CONSTRAINED_BUILD)
+if(DCMA_MEMORY_CONSTRAINED_BUILD)
     # Do not overwrite user-provided flags, but do provide sane defaults.
     if(NOT CMAKE_CXX_FLAGS)
         set(CMAKE_CXX_FLAGS "-Os -DNDEBUG")
@@ -235,7 +391,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
                              -fstack-check )
     endif()
 
-    if(MEMORY_CONSTRAINED_BUILD)
+    if(DCMA_MEMORY_CONSTRAINED_BUILD)
         # Trigger garbage collection more frequently.
         add_compile_options( "SHELL:--param ggc-min-expand=10"
                              "SHELL:--param ggc-min-heapsize=32768" )
@@ -253,7 +409,7 @@ elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
                          -Wno-unused-parameter
                          -Wno-reserved-identifier )
 
-    if(WITH_IWYU)
+    if(DCMA_WITH_IWYU)
         set(IWYU_INVOCATION iwyu) # Location of the iwyu binary.
         list(APPEND IWYU_INVOCATION "-Xiwyu;--no_comments")
         set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${IWYU_INVOCATION})
@@ -262,7 +418,7 @@ endif()
 
 
 # Sanitizers.
-if(WITH_ASAN  OR  WITH_TSAN  OR  WITH_MSAN)
+if(DCMA_WITH_ASAN  OR  DCMA_WITH_TSAN  OR  DCMA_WITH_MSAN)
     add_compile_options( -O2
                          -g
                          -fno-omit-frame-pointer
@@ -281,7 +437,7 @@ if(WITH_ASAN  OR  WITH_TSAN  OR  WITH_MSAN)
 
     add_definitions(-U_FORTIFY_SOURCE)
 endif()
-if(WITH_ASAN)
+if(DCMA_WITH_ASAN)
     add_compile_options( -fsanitize=address
                          -fsanitize-address-use-after-scope )
     add_link_options(-fsanitize=address)
@@ -290,11 +446,11 @@ if(WITH_ASAN)
                          -fno-sanitize-recover=undefined )
     add_link_options(-fsanitize=undefined)
 
-elseif(WITH_TSAN)
+elseif(DCMA_WITH_TSAN)
     message(WARNING "TSan may not support exceptions (depends on the compiler version and platform).")
     add_compile_options(-fsanitize=thread)
     add_link_options(-fsanitize=thread)
-elseif(WITH_MSAN)
+elseif(DCMA_WITH_MSAN)
     message(WARNING "MSan may not be available on your system.")
     add_compile_options( -fsanitize=memory
                          -fPIE
@@ -304,7 +460,8 @@ elseif(WITH_MSAN)
 endif()
 
 
-
+# Platform detection and checks
+# Note: More comprehensive platform checks are available in cmake/DCMAPlatformChecks.cmake
 include(CheckCXXSymbolExists)
 check_cxx_symbol_exists(__arm__     "cstdio" ARCH_IS_ARM)
 check_cxx_symbol_exists(__aarch64__ "cstdio" ARCH_IS_ARM64)
@@ -341,6 +498,9 @@ endif()
 ####################################################################################
 #                                    Definitions
 ####################################################################################
+# Note: Feature definitions are now also available via cmake/DCMADefines.cmake
+#       which provides dcma_configure_feature_definitions() function.
+
 add_definitions(-DUSTREAM_H) # -DUSE_ICU_STRINGS
 
 if( (NOT DEFINED DCMA_VERSION) OR ("${DCMA_VERSION}" MATCHES "^$") )
@@ -355,91 +515,73 @@ if( "${DCMA_VERSION}" MATCHES "^$" )
     message(WARNING "Please supply a meaningful DCMA_VERSION when invoking CMake.")
     set(DCMA_VERSION "unknown")
 endif()
+message(STATUS "DCMA Version: ${DCMA_VERSION}")
 
 if(WITH_EIGEN)
-    message(STATUS "Assuming Eigen is available.")
     add_definitions(-DDCMA_USE_EIGEN=1)
 else()
-    message(STATUS "Assuming Eigen is not available.")
     add_definitions(-UDCMA_USE_EIGEN)
 endif()
 
 if(WITH_CGAL)
-    message(STATUS "Assuming CGAL is available.")
     add_definitions(-DDCMA_USE_CGAL=1)
 else()
-    message(STATUS "Assuming CGAL is not available.")
     add_definitions(-UDCMA_USE_CGAL)
 endif()
 
 if(WITH_NLOPT)
-    message(STATUS "Assuming NLOPT is available.")
     add_definitions(-DDCMA_USE_NLOPT=1)
 else()
-    message(STATUS "Assuming NLOPT is not available.")
     add_definitions(-UDCMA_USE_NLOPT)
 endif()
 
 if(WITH_SFML)
-    message(STATUS "Assuming SFML is available.")
     add_definitions(-DDCMA_USE_SFML=1)
 else()
-    message(STATUS "Assuming SFML is not available.")
     add_definitions(-UDCMA_USE_SFML)
 endif()
 
 if(WITH_SDL)
-    message(STATUS "Assuming SDL is available.")
     add_definitions(-DDCMA_USE_SDL=1)
     add_definitions(-DDCMA_USE_GLEW=1)
 else()
-    message(STATUS "Assuming SDL is not available.")
     add_definitions(-UDCMA_USE_SDL)
     add_definitions(-UDCMA_USE_GLEW)
 endif()
 
 if(WITH_WT)
-    message(STATUS "Assuming Wt is available.")
     add_definitions(-DDCMA_USE_WT=1)
 else()
-    message(STATUS "Assuming Wt is not available.")
     add_definitions(-UDCMA_USE_WT)
 endif()
 
 if(WITH_POSTGRES)
-    message(STATUS "Assuming PostgreSQL client libraries are available.")
     add_definitions(-DDCMA_USE_POSTGRES=1)
 else()
-    message(STATUS "Assuming PostgreSQL client libraries are not available.")
     add_definitions(-UDCMA_USE_POSTGRES)
 endif()
 
 if(WITH_JANSSON)
-    message(STATUS "Assuming Jansson is available.")
     add_definitions(-DDCMA_USE_JANSSON=1)
 else()
-    message(STATUS "Assuming Jansson is not available.")
     add_definitions(-UDCMA_USE_JANSSON)
 endif()
 
 if(WITH_GNU_GSL)
-    message(STATUS "Assuming the GNU GSL is available.")
     add_definitions(-DDCMA_USE_GNU_GSL=1)
 else()
-    message(STATUS "Assuming the GNU GSL is not available.")
     add_definitions(-UDCMA_USE_GNU_GSL)
 endif()
 
 if(WITH_THRIFT)
-    message(STATUS "Assuming Apache Thrift is available.")
     add_definitions(-DDCMA_USE_THRIFT=1)
 else()
-    message(STATUS "Assuming Apache Thrift is not available.")
     add_definitions(-UDCMA_USE_THRIFT)
 endif()
 
 # Detect whether specific functions/variable/macros are available.
 # Note: this method does not support structs. Best to find a function that accepts the struct instead.
+# Note: These checks are also available via dcma_check_system_features() in DCMAPlatformChecks.cmake
 check_cxx_symbol_exists(select    "sys/select.h" DCMA_HAS_SYS_SELECT)        # Function (nominally).
 
 check_cxx_symbol_exists(isatty    "unistd.h"     DCMA_HAS_UNISTD_ISATTY)     # Function (nominally).
@@ -461,6 +603,7 @@ configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/src/DCMA_Definitions.h.in
                 ${CMAKE_CURRENT_BINARY_DIR}/src/DCMA_Definitions.h )
 
 # mingw-w64 tweaks.
+# Note: These are also available via dcma_configure_windows_platform() in DCMAPlatformChecks.cmake
 if(MINGW OR WIN32)
     # Target Windows 7 features (need to specify for ASIO, maybe other libs).
     add_definitions(-D_WIN32_WINNT=0x0601)

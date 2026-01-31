@@ -1,0 +1,184 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 12,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "base",
+            "hidden": true,
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/${presetName}",
+            "cacheVariables": {
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+            }
+        },
+        {
+            "name": "debug",
+            "displayName": "Debug Build",
+            "description": "Debug build with full symbols",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "release",
+            "displayName": "Release Build",
+            "description": "Optimized release build",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release"
+            }
+        },
+        {
+            "name": "relwithdebinfo",
+            "displayName": "Release with Debug Info",
+            "description": "Optimized build with debug symbols",
+            "inherits": "base",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+            }
+        },
+        {
+            "name": "minimal",
+            "displayName": "Minimal Build",
+            "description": "Build with minimal optional dependencies",
+            "inherits": "release",
+            "cacheVariables": {
+                "DCMA_WITH_SFML": "OFF",
+                "DCMA_WITH_SDL": "OFF",
+                "DCMA_WITH_WT": "OFF",
+                "DCMA_WITH_POSTGRES": "OFF",
+                "DCMA_WITH_THRIFT": "OFF",
+                "DCMA_WITH_CGAL": "OFF"
+            }
+        },
+        {
+            "name": "full",
+            "displayName": "Full Build",
+            "description": "Build with all optional dependencies",
+            "inherits": "release",
+            "cacheVariables": {
+                "DCMA_WITH_EIGEN": "ON",
+                "DCMA_WITH_CGAL": "ON",
+                "DCMA_WITH_NLOPT": "ON",
+                "DCMA_WITH_SFML": "ON",
+                "DCMA_WITH_SDL": "ON",
+                "DCMA_WITH_WT": "ON",
+                "DCMA_WITH_GNU_GSL": "ON",
+                "DCMA_WITH_POSTGRES": "ON",
+                "DCMA_WITH_JANSSON": "ON",
+                "DCMA_WITH_THRIFT": "ON"
+            }
+        },
+        {
+            "name": "asan",
+            "displayName": "Address Sanitizer Build",
+            "description": "Build with Address Sanitizer enabled",
+            "inherits": "debug",
+            "cacheVariables": {
+                "DCMA_WITH_ASAN": "ON"
+            }
+        },
+        {
+            "name": "tsan",
+            "displayName": "Thread Sanitizer Build",
+            "description": "Build with Thread Sanitizer enabled",
+            "inherits": "debug",
+            "cacheVariables": {
+                "DCMA_WITH_TSAN": "ON"
+            }
+        },
+        {
+            "name": "msan",
+            "displayName": "Memory Sanitizer Build",
+            "description": "Build with Memory Sanitizer enabled",
+            "inherits": "debug",
+            "cacheVariables": {
+                "DCMA_WITH_MSAN": "ON"
+            }
+        },
+        {
+            "name": "static",
+            "displayName": "Static Build",
+            "description": "Build with static linking",
+            "inherits": "release",
+            "cacheVariables": {
+                "BUILD_SHARED_LIBS": "OFF"
+            }
+        },
+        {
+            "name": "memory-constrained",
+            "displayName": "Memory Constrained Build",
+            "description": "Build with reduced memory usage (slower compilation)",
+            "inherits": "release",
+            "cacheVariables": {
+                "DCMA_MEMORY_CONSTRAINED_BUILD": "ON"
+            }
+        },
+        {
+            "name": "mxe-windows",
+            "displayName": "MXE Cross-Compile for Windows",
+            "description": "Cross-compile for Windows using MXE toolchain",
+            "inherits": "static",
+            "toolchainFile": "${sourceDir}/cmake/toolchains/mxe-x86_64-w64-mingw32.cmake",
+            "cacheVariables": {
+                "DCMA_WITH_WT": "OFF",
+                "DCMA_WITH_GNU_GSL": "OFF",
+                "DCMA_WITH_POSTGRES": "OFF",
+                "DCMA_WITH_JANSSON": "OFF"
+            }
+        },
+        {
+            "name": "linux-aarch64",
+            "displayName": "Cross-Compile for ARM64 Linux",
+            "description": "Cross-compile for ARM64 (aarch64) Linux",
+            "inherits": "release",
+            "toolchainFile": "${sourceDir}/cmake/toolchains/linux-aarch64.cmake"
+        },
+        {
+            "name": "linux-musl",
+            "displayName": "Cross-Compile for musl libc",
+            "description": "Cross-compile with musl libc for static linking",
+            "inherits": "static",
+            "toolchainFile": "${sourceDir}/cmake/toolchains/linux-musl.cmake"
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "debug",
+            "configurePreset": "debug"
+        },
+        {
+            "name": "release",
+            "configurePreset": "release"
+        },
+        {
+            "name": "relwithdebinfo",
+            "configurePreset": "relwithdebinfo"
+        },
+        {
+            "name": "minimal",
+            "configurePreset": "minimal"
+        },
+        {
+            "name": "full",
+            "configurePreset": "full"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "unit-tests",
+            "configurePreset": "debug",
+            "output": {
+                "outputOnFailure": true
+            },
+            "execution": {
+                "noTestsAction": "error"
+            }
+        }
+    ]
+}
