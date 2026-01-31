@@ -106,6 +106,12 @@ split_gpx_by_speed(const std::vector<gpx_track_point_t> &points,
         return split_contours;
     }
 
+    // Build a map from point index to speed for O(1) lookups.
+    std::map<size_t, double> speed_map;
+    for(const auto &s : speeds){
+        speed_map[s.first] = s.second;
+    }
+
     // Compute a reference speed (median of non-zero speeds).
     std::vector<double> speed_values;
     speed_values.reserve(speeds.size());
@@ -120,7 +126,15 @@ split_gpx_by_speed(const std::vector<gpx_track_point_t> &points,
     }
 
     std::sort(speed_values.begin(), speed_values.end());
-    const double median_speed = speed_values[speed_values.size() / 2];
+    double median_speed = 0.0;
+    const size_t n = speed_values.size();
+    if(n % 2 == 0){
+        // Even number of elements: average of two middle values.
+        median_speed = (speed_values[n / 2 - 1] + speed_values[n / 2]) / 2.0;
+    }else{
+        // Odd number of elements: middle value.
+        median_speed = speed_values[n / 2];
+    }
 
     // Define thresholds for detecting activity splits.
     // - Speed drop threshold: speed below 10% of median suggests a stop/pause.
@@ -144,12 +158,10 @@ split_gpx_by_speed(const std::vector<gpx_track_point_t> &points,
             }
         }
 
-        // Check for speed drop (find the speed entry for this index).
-        for(const auto &s : speeds){
-            if(s.first == i && s.second < speed_drop_threshold){
-                should_split = true;
-                break;
-            }
+        // Check for speed drop using the speed map for O(1) lookup.
+        auto it = speed_map.find(i);
+        if(it != speed_map.end() && it->second < speed_drop_threshold){
+            should_split = true;
         }
 
         if(should_split){

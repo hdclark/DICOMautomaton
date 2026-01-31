@@ -3,6 +3,8 @@
 set -eux
 set -o pipefail
 
+# Initialize output file to avoid pollution from previous runs.
+> fullstdout
 
 # Create a test GPX file with a time gap that should trigger activity splitting.
 # The time gap of 105 seconds (between 08:00:15 and 08:02:00) exceeds the 60-second threshold.
@@ -65,6 +67,27 @@ printf 'Test 1: GPX activity splitting based on time gap\n' |
   grep . 
 
 
+# Test 2: Verify that activity segments have correct metadata.
+# Export contours and check for ActivitySegment metadata.
+printf 'Test 2: Verify activity segment metadata is set correctly\n' |
+  tee -a fullstdout
+"${DCMA_BIN}" \
+  test_gpx_with_activity_split.gpx \
+  -o ExportContours |
+  tee -a fullstdout
+# Find the most recent exported contours file and check for activity segment metadata.
+EXPORTED_FILE=$(ls -t dcma_exportcontours_*.dat 2>/dev/null | head -1)
+if [ -z "${EXPORTED_FILE}" ]; then
+  echo "Error: No exported contour file found" >&2
+  exit 1
+fi
+grep -q "ActivitySegment = 1" "${EXPORTED_FILE}"
+grep -q "ActivitySegment = 2" "${EXPORTED_FILE}"
+grep -q "TotalActivitySegments = 2" "${EXPORTED_FILE}"
+grep -q "ROIName = Test Activity_activity_1" "${EXPORTED_FILE}"
+grep -q "ROIName = Test Activity_activity_2" "${EXPORTED_FILE}"
+
+
 # Create a simple GPX file without time gaps (no splitting expected).
 cat > test_gpx_no_split.gpx << 'GPXEOF'
 <?xml version="1.0"?>
@@ -91,9 +114,9 @@ cat > test_gpx_no_split.gpx << 'GPXEOF'
 </gpx>
 GPXEOF
 
-# Test 2: Load a GPX file without significant time gaps (no splitting expected).
+# Test 3: Load a GPX file without significant time gaps (no splitting expected).
 # Only the original contour should be loaded (1 contour_collection).
-printf 'Test 2: GPX without time gaps (no splitting expected)\n' |
+printf 'Test 3: GPX without time gaps (no splitting expected)\n' |
   tee -a fullstdout
 "${DCMA_BIN}" \
   test_gpx_no_split.gpx \
@@ -104,8 +127,8 @@ printf 'Test 2: GPX without time gaps (no splitting expected)\n' |
   grep . 
 
 
-# Test 3: Verify that Line_Sample data (elevation over time) is also loaded.
-printf 'Test 3: Verify elevation data is loaded as Line_Sample\n' |
+# Test 4: Verify that Line_Sample data (elevation over time) is also loaded.
+printf 'Test 4: Verify elevation data is loaded as Line_Sample\n' |
   tee -a fullstdout
 "${DCMA_BIN}" \
   test_gpx_with_activity_split.gpx \
