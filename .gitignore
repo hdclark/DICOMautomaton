@@ -39,3 +39,4 @@ __pycache__/
 # vim temporary files.
 *.swp
 
+build_docker/

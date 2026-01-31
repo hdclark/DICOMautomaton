@@ -1,3 +1,0 @@
-# Hashes of file build rules.
-436475caad47121df68a0be4926322ab src/Standard_Guides.cc
-9343e736e9f5939df40d6d3bcd76b099 src/Standard_Scripts.cc

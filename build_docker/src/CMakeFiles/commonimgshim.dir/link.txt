@@ -1,1 +1,0 @@
-/usr/sbin/c++ -fPIC -O3 -DNDEBUG -shared -Wl,-soname,libcommonimgshim.so -o ../lib/libcommonimgshim.so CMakeFiles/commonimgshim.dir/STB_Shim.cc.o  -ldl -lmpfr -lgmp -lm -pthread 

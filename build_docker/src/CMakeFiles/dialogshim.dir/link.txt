@@ -1,1 +1,0 @@
-/usr/sbin/c++ -fPIC -O3 -DNDEBUG -shared -Wl,-soname,libdialogshim.so -o ../lib/libdialogshim.so CMakeFiles/dialogshim.dir/Dialogs.cc.o CMakeFiles/dialogshim.dir/Dialogs/Text_Query.cc.o CMakeFiles/dialogshim.dir/Dialogs/Tray_Notification.cc.o CMakeFiles/dialogshim.dir/Dialogs/Selectors.cc.o  -ldl -lmpfr -lgmp -lm -pthread 
