@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <functional>
 #include <filesystem>
+#include <limits>
 #include <list>
 #include <map>
 #include <set>
@@ -224,6 +225,18 @@ OperationDoc OpArgDocGenerateMapTiles(){
     out.args.back().examples = { "256", "512" };
 
     out.args.emplace_back();
+    out.args.back().name = "FetchMissingTiles";
+    out.args.back().desc = "Controls whether missing tiles are fetched from the remote server."
+                           " If 'true', missing tiles will be downloaded from the ProviderURL."
+                           " If 'false', missing tiles will not be downloaded, and pixels corresponding to missing"
+                           " tiles will be filled with quiet NaNs to denote missing data."
+                           "";
+    out.args.back().default_val = "true";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
+
+    out.args.emplace_back();
     out.args.back().name = "Simulate";
     out.args.back().desc = "Controls whether an image is generated. If 'true', then images are downloaded and loaded,"
                            " but not amalgamated into a single image. This option is useful to download tiles or verify"
@@ -276,12 +289,14 @@ bool GenerateMapTiles(Drover &DICOM_data,
     const auto TileHeight = std::stol( OptArgs.getValueStr("TileHeight").value() );
 
     const auto SimulateStr = OptArgs.getValueStr("Simulate").value();
+    const auto FetchMissingTilesStr = OptArgs.getValueStr("FetchMissingTiles").value();
 
     //-----------------------------------------------------------------------------------------------------------------
     YLOGINFO("Proceeding with TileCacheDirectory = '" << TileCacheDirectoryStr << "'");
 
     const auto regex_true = Compile_Regex("^tr?u?e?$");
     const auto Simulate = std::regex_match(SimulateStr, regex_true);
+    const auto FetchMissingTiles = std::regex_match(FetchMissingTilesStr, regex_true);
 
     auto cc_all = All_CCs( DICOM_data );
     auto cc_ROIs = Whitelist( cc_all, ROILabelRegex, NormalizedROILabelRegex, ROISelection );
@@ -384,30 +399,35 @@ bool GenerateMapTiles(Drover &DICOM_data,
                                                               / std::to_string(tile_y);
         f.replace_extension(".png");
         if( ! std::filesystem::exists(f) ){
-            // Attempt to insert the tile into the cache.
-            YLOGINFO("Tile '" + f.string() + "' was not found in the cache. Attempting to download.");
+            if(FetchMissingTiles){
+                // Attempt to insert the tile into the cache.
+                YLOGINFO("Tile '" + f.string() + "' was not found in the cache. Attempting to download.");
 
-            // Build the URL for this tile.
-            std::map<std::string, std::string> key_vals;
-            key_vals["ZOOM"] = escape_for_quotes(std::to_string(Zoom));
-            key_vals["TILEX"] = escape_for_quotes(std::to_string(tile_x));
-            key_vals["TILEY"] = escape_for_quotes(std::to_string(tile_y));
+                // Build the URL for this tile.
+                std::map<std::string, std::string> key_vals;
+                key_vals["ZOOM"] = escape_for_quotes(std::to_string(Zoom));
+                key_vals["TILEX"] = escape_for_quotes(std::to_string(tile_x));
+                key_vals["TILEY"] = escape_for_quotes(std::to_string(tile_y));
 
-            // Build the invocation.
-            const auto url = ExpandMacros(ProviderURLStr, key_vals, "$");
+                // Build the invocation.
+                const auto url = ExpandMacros(ProviderURLStr, key_vals, "$");
 
-            const auto dirs = f.parent_path();
-            if( !std::filesystem::exists(dirs) ){
-                std::filesystem::create_directories(dirs);
-            }
-            if( !std::filesystem::exists(dirs)
-            ||  !std::filesystem::is_directory(dirs) ){
-                YLOGWARN("Unable to create cache directory");
-            }
+                const auto dirs = f.parent_path();
+                if( !std::filesystem::exists(dirs) ){
+                    std::filesystem::create_directories(dirs);
+                }
+                if( !std::filesystem::exists(dirs)
+                ||  !std::filesystem::is_directory(dirs) ){
+                    YLOGWARN("Unable to create cache directory");
+                }
 
-            YLOGDEBUG("Attempting to download tile from '" << url << "'");
-            if( !download_url(url, f) ){
-                YLOGWARN("Unable to download tile");
+                YLOGDEBUG("Attempting to download tile from '" << url << "'");
+                if( !download_url(url, f) ){
+                    YLOGWARN("Unable to download tile");
+                }
+            }else{
+                // Tile is missing and fetching is disabled.
+                YLOGINFO("Tile '" + f.string() + "' was not found in the cache. Fetching is disabled.");
             }
         }
 
@@ -443,6 +463,22 @@ bool GenerateMapTiles(Drover &DICOM_data,
                 });
             }
 
+        }else if(!Simulate){
+            // Tile is not available. Fill the corresponding pixels with quiet NaNs to denote missing data.
+            YLOGDEBUG("Tile '" + f.string() + "' is not available. Filling with quiet NaNs.");
+            const auto nan_val = std::numeric_limits<float>::quiet_NaN();
+            for(int64_t l_row = 0; l_row < TileHeight; ++l_row){
+                for(int64_t l_col = 0; l_col < TileWidth; ++l_col){
+                    const auto col = l_col + (tile_x - NW_tile_x) * static_cast<double>(TileWidth);
+                    const auto row = l_row + (tile_y - NW_tile_y) * static_cast<double>(TileHeight);
+                    if( (0 <= row) && (row < NumberOfRows)
+                    &&  (0 <= col) && (col < NumberOfColumns) ){
+                        for(int64_t l_chn = 0; l_chn < NumberOfChannels; ++l_chn){
+                            img.reference(row, col, l_chn) = nan_val;
+                        }
+                    }
+                }
+            }
         }
     }
 
