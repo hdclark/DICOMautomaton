@@ -353,8 +353,7 @@ compile_shader_program(const std::array<char, 2048> &vert_shader_src,
     }catch(const std::exception &e){
         shader_log = string_to_array(ss.str());
         throw;
-    };
-    return nullptr;
+    }
 }
 
 

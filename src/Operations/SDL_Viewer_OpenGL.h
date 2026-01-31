@@ -5,11 +5,14 @@
 
 #pragma once
 
+#include <iostream>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <array>
 #include <ostream>
 #include <sstream>
+#include <stdexcept>
 
 #include <GL/glew.h>
 
