@@ -197,21 +197,6 @@ double EquivalentSquare(double field_x_cm, double field_y_cm) {
     return (2.0 * field_x_cm * field_y_cm) / (field_x_cm + field_y_cm);
 }
 
-// Get field size from jaw positions (in mm, convert to cm)
-double GetFieldSize(const std::vector<double>& jaws_mm) {
-    if(jaws_mm.size() < 2) return 10.0;  // Default
-    // Jaws are typically stored as [X1, X2] or [Y1, Y2] positions
-    // Field size = |X2 - X1| or total opening
-    double total = 0.0;
-    for(size_t i = 0; i + 1 < jaws_mm.size(); i += 2){
-        total += std::abs(jaws_mm[i + 1] - jaws_mm[i]);
-    }
-    if(jaws_mm.size() == 2){
-        total = std::abs(jaws_mm[1] - jaws_mm[0]);
-    }
-    return total / 10.0;  // Convert mm to cm
-}
-
 // Parse beam model from a Sparse_Table (if provided)
 // Expected format: Table with columns for "depth_cm", "pdd_percent", "oar_distance_cm", "oar_value", etc.
 std::optional<BeamModel> ParseBeamModelFromTable(const Sparse_Table& table) {
@@ -310,8 +295,8 @@ OperationDoc OpArgDocSimulateDose(){
         " geometry as (or encompass) the CT volume."
     );
     out.notes.emplace_back(
-        "The RT plan must contain valid beam geometries including gantry angles, jaw positions,"
-        " and MLC leaf positions."
+        "The RT plan must contain valid beam geometries including gantry angles and jaw positions."
+        " MLC leaf positions are read but not currently used for field shaping."
     );
 
     out.args.emplace_back();
