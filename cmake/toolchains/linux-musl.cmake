@@ -61,9 +61,10 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 
 # Musl-specific: Enable static linking by default
-set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
+# Default to building static libraries, but allow users to override
+if(NOT DEFINED BUILD_SHARED_LIBS)
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
+endif()
 
-# Flags for musl compatibility
-set(CMAKE_C_FLAGS_INIT "-static")
-set(CMAKE_CXX_FLAGS_INIT "-static")
-set(CMAKE_EXE_LINKER_FLAGS_INIT "-static")
+# Flags for musl compatibility - use add_link_options for proper propagation
+add_link_options(-static)

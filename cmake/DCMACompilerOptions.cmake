@@ -83,7 +83,7 @@ function(dcma_apply_sanitizers target)
         target_link_libraries(${target} PRIVATE gcov)
     endif()
 
-    target_compile_definitions(${target} PRIVATE -U_FORTIFY_SOURCE)
+    target_compile_options(${target} PRIVATE -U_FORTIFY_SOURCE)
 
     if(DCMA_WITH_ASAN)
         target_compile_options(${target} PRIVATE
@@ -107,10 +107,12 @@ function(dcma_apply_sanitizers target)
         target_compile_options(${target} PRIVATE
             -fsanitize=memory
             -fPIE
-            -pie
             -fsanitize-memory-track-origins
         )
-        target_link_options(${target} PRIVATE -fsanitize=memory)
+        target_link_options(${target} PRIVATE
+            -fsanitize=memory
+            -pie
+        )
     endif()
 endfunction()
 

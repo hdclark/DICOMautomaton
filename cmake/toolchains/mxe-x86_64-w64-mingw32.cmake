@@ -45,8 +45,15 @@ set(PKG_CONFIG_EXECUTABLE "${MXE_ROOT}/usr/bin/${TOOLCHAIN_PREFIX}-pkg-config")
 # Static linking for MXE static builds
 if(TOOLCHAIN_PREFIX MATCHES "static")
     set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
-    set(CMAKE_EXE_LINKER_FLAGS "-static")
-    set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries" FORCE)
+    # Prefer static linking for executables built with this static MXE toolchain;
+    # use add_link_options so that the flag propagates correctly to targets.
+    add_link_options(-static)
+
+    # Default to building static libraries, but allow users to override
+    # BUILD_SHARED_LIBS from the command line or presets.
+    if(NOT DEFINED BUILD_SHARED_LIBS)
+        set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build shared libraries")
+    endif()
 endif()
 
 # MinGW-specific settings
