@@ -557,7 +557,7 @@ bool PolyominoesAI(Drover &DICOM_data,
     };
 
     // Simulate dropping a piece at a given column and orientation.
-    // Returns the final row position, or -1 if invalid.
+    // Returns the final row position and the corresponding coordinates after dropping as far as possible.
     const auto simulate_drop = [&valid_ominoes,
                                 &resolve_abs_coords,
                                 &abs_coords_valid,
@@ -655,7 +655,7 @@ bool PolyominoesAI(Drover &DICOM_data,
         }else{
             for(int64_t i = 0; i < counter_rotations; ++i){
                 if(!actions.empty()) actions += ",";
-                actions += "rotate-counterclockwise";
+                actions += "rotate-counter-clockwise";
             }
         }
         

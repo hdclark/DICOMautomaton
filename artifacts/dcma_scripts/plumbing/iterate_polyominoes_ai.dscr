@@ -1,22 +1,13 @@
 #!/usr/bin/env -S dicomautomaton_dispatcher -v
 
-# Performs a single AI-controlled iteration of a polyomino game within the SDL_Viewer operation.
-# This script first runs PolyominoesAI to compute the optimal action, then executes it.
+# Computes the optimal action sequence for a polyomino game using PolyominoesAI.
+# This script only analyzes the current state and stores recommendations in metadata.
+# The actual game iteration should be performed separately using the iterate_polyominoes script.
 
-# First, compute the optimal action using the AI.
+# Compute the optimal action using the AI.
 PolyominoesAI(
     ImageSelection = 'last',
     Channel = '0',
-    Low = '0.0',
-    High = '1.0',
-){};
-
-# Execute the action determined by the AI (stored in metadata).
-Polyominoes(
-    ImageSelection = 'last',
-    Channel = '0',
-    Family = $poly_family,
-    Action = $action,
     Low = '0.0',
     High = '1.0',
 ){};

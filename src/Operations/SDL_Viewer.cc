@@ -4510,9 +4510,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                   ||  ( (action == "none") && (dt_polyomino_update <= (t_diff * speed)) ) ){
                 t_polyomino_updated = t_now;
 
+                // Clear pending AI actions when user manually controls the piece.
+                if(action != "none"){
+                    polyomino_ai_pending_actions.clear();
+                }
+
                 // If AI is enabled and there is no pending action from user, use AI-determined action.
                 std::string effective_action = action;
-                bool ai_already_ran_iteration = false;
                 
                 // Helper to extract the next action from a comma-delimited list.
                 const auto extract_next_action = [](std::string& pending_actions) -> std::string {
@@ -4540,7 +4544,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         if(ai_load_res){
                             metadata_map_t l_AIInvocationMetadata;
                             l_AIInvocationMetadata["poly_family"] = std::to_string(polyomino_family);
-                            l_AIInvocationMetadata["action"] = "none"; // Run AI first, then a regular iteration.
+                            l_AIInvocationMetadata["action"] = "none";
                             std::string l_AIFilenameLex;
                             Operation_Dispatcher(polyomino_imgs, l_AIInvocationMetadata, l_AIFilenameLex, AIOperations);
                             
@@ -4552,19 +4556,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     polyomino_ai_pending_actions = ai_actions.value();
                                     effective_action = extract_next_action(polyomino_ai_pending_actions);
                                 }
-                                // AI script already ran one iteration, so update texture.
-                                Free_OpenGL_Texture(polyomino_texture);
-                                const bool l_img_is_rgb = false;
-                                const bool l_use_texture_antialiasing = false;
-                                polyomino_texture = Load_OpenGL_Texture( *img_ptr, 0L, l_img_is_rgb, l_use_texture_antialiasing, {}, {} );
-                                ai_already_ran_iteration = true;
                             }
                         }
                     }
                 }
 
-                // Only run iteration if AI didn't already do it.
-                if(!ai_already_ran_iteration){
+                // Run the game iteration with the determined action.
+                {
                     // Loading the script and parsing into an op_list could be cached. Might speed this up slightly...
                     std::list<OperationArgPkg> Operations;
                     const bool op_load_res = Load_Standard_Script( Operations, "plumbing", "iterate polyominoes" );
