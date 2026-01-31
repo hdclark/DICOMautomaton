@@ -194,6 +194,7 @@
 #include "Operations/PointSeparation.h"
 #include "Operations/PollDirectories.h"
 #include "Operations/Polyominoes.h"
+#include "Operations/PolyominoesAI.h"
 #include "Operations/PreFilterEnormousCTValues.h"
 #include "Operations/PruneEmptyImageDoseArrays.h"
 #include "Operations/PrintMetadata.h"
@@ -470,6 +471,7 @@ known_ops_t Known_Operations(){
     out["PointSeparation"] = std::make_pair(OpArgDocPointSeparation, PointSeparation);
     out["PollDirectories"] = std::make_pair(OpArgDocPollDirectories, PollDirectories);
     out["Polyominoes"] = std::make_pair(OpArgDocPolyominoes, Polyominoes);
+    out["PolyominoesAI"] = std::make_pair(OpArgDocPolyominoesAI, PolyominoesAI);
     out["PreFilterEnormousCTValues"] = std::make_pair(OpArgDocPreFilterEnormousCTValues, PreFilterEnormousCTValues);
     out["PruneEmptyImageDoseArrays"] = std::make_pair(OpArgDocPruneEmptyImageDoseArrays, PruneEmptyImageDoseArrays);
     out["PrintMetadata"] = std::make_pair(OpArgDocPrintMetadata, PrintMetadata);

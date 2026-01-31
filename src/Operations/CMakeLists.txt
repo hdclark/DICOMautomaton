@@ -173,6 +173,7 @@ add_library(Operations_objs OBJECT
     PointSeparation.cc
     PollDirectories.cc
     Polyominoes.cc
+    PolyominoesAI.cc
     PreFilterEnormousCTValues.cc
     PruneEmptyImageDoseArrays.cc
     PrintMetadata.cc

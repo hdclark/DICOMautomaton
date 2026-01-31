@@ -1589,6 +1589,8 @@ bool SDL_Viewer(Drover &DICOM_data,
     double dt_polyomino_update = 500.0; // milliseconds
     bool polyomino_paused = false;
     int polyomino_family = 0;
+    bool polyomino_ai_enabled = false;
+    std::string polyomino_ai_pending_actions;
 
     // Triple-three state.
     tt_game_t tt_game;
@@ -4481,6 +4483,11 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImGui::Checkbox("Pause", &polyomino_paused);
             ImGui::SameLine();
             const auto reset = ImGui::Button("Reset", ImVec2(window_extent.x/6, 0));
+            ImGui::SameLine();
+            ImGui::Checkbox("AI", &polyomino_ai_enabled);
+            if(ImGui::IsItemHovered()){
+                ImGui::SetTooltip("Enable AI player to automatically choose optimal piece placements using heuristics.");
+            }
             
             ImGui::Text("Current Score: %s, Current Speed: %s%%", std::to_string(static_cast<int64_t>(score)).c_str(),
                                                                   std::to_string(static_cast<int64_t>(100.0 * speed)).c_str());
@@ -4493,6 +4500,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 polyomino_imgs = Drover();
                 t_polyomino_updated = t_now;
                 polyomino_paused = false;
+                polyomino_ai_pending_actions.clear();
 
             }else if( polyomino_paused ){
                 // Do not simulate or change the texture.
@@ -4502,27 +4510,84 @@ bool SDL_Viewer(Drover &DICOM_data,
                   ||  ( (action == "none") && (dt_polyomino_update <= (t_diff * speed)) ) ){
                 t_polyomino_updated = t_now;
 
-                // Loading the script and parsing into an op_list could be cached. Might speed this up slightly...
-                std::list<OperationArgPkg> Operations;
-                const bool op_load_res = Load_Standard_Script( Operations, "plumbing", "iterate polyominoes" );
-                if(!op_load_res){
-                    throw std::runtime_error("Unable to load polyominoes script");
-                }
-                metadata_map_t l_InvocationMetadata;
-                l_InvocationMetadata["poly_family"] = std::to_string(polyomino_family);
-                l_InvocationMetadata["action"] = action;
-                std::string l_FilenameLex;
-                const bool res = Operation_Dispatcher(polyomino_imgs, l_InvocationMetadata, l_FilenameLex, Operations);
-                if( res 
-                &&  polyomino_imgs.Has_Image_Data()){
+                // If AI is enabled and there is no pending action from user, use AI-determined action.
+                std::string effective_action = action;
+                bool ai_already_ran_iteration = false;
+                if(polyomino_ai_enabled && action == "none" && polyomino_imgs.Has_Image_Data()){
                     auto *img_ptr = &(polyomino_imgs.image_data.back()->imagecoll.images.back());
+                    
+                    // If we have pending AI actions, execute the next one.
+                    if(!polyomino_ai_pending_actions.empty()){
+                        auto comma_pos = polyomino_ai_pending_actions.find(',');
+                        if(comma_pos != std::string::npos){
+                            effective_action = polyomino_ai_pending_actions.substr(0, comma_pos);
+                            polyomino_ai_pending_actions = polyomino_ai_pending_actions.substr(comma_pos + 1);
+                        }else{
+                            effective_action = polyomino_ai_pending_actions;
+                            polyomino_ai_pending_actions.clear();
+                        }
+                    }else{
+                        // Run PolyominoesAI to compute the optimal action sequence.
+                        std::list<OperationArgPkg> AIOperations;
+                        const bool ai_load_res = Load_Standard_Script( AIOperations, "plumbing", "iterate polyominoes ai" );
+                        if(ai_load_res){
+                            metadata_map_t l_AIInvocationMetadata;
+                            l_AIInvocationMetadata["poly_family"] = std::to_string(polyomino_family);
+                            l_AIInvocationMetadata["action"] = "none"; // Run AI first, then a regular iteration.
+                            std::string l_AIFilenameLex;
+                            Operation_Dispatcher(polyomino_imgs, l_AIInvocationMetadata, l_AIFilenameLex, AIOperations);
+                            
+                            // Get recommended actions from metadata.
+                            if(polyomino_imgs.Has_Image_Data()){
+                                img_ptr = &(polyomino_imgs.image_data.back()->imagecoll.images.back());
+                                auto ai_actions = img_ptr->GetMetadataValueAs<std::string>("PolyominoesAIRecommendedActions");
+                                if(ai_actions && !ai_actions.value().empty()){
+                                    polyomino_ai_pending_actions = ai_actions.value();
+                                    // Extract first action.
+                                    auto comma_pos = polyomino_ai_pending_actions.find(',');
+                                    if(comma_pos != std::string::npos){
+                                        effective_action = polyomino_ai_pending_actions.substr(0, comma_pos);
+                                        polyomino_ai_pending_actions = polyomino_ai_pending_actions.substr(comma_pos + 1);
+                                    }else{
+                                        effective_action = polyomino_ai_pending_actions;
+                                        polyomino_ai_pending_actions.clear();
+                                    }
+                                }
+                                // AI script already ran one iteration, so update texture.
+                                Free_OpenGL_Texture(polyomino_texture);
+                                const bool l_img_is_rgb = false;
+                                const bool l_use_texture_antialiasing = false;
+                                polyomino_texture = Load_OpenGL_Texture( *img_ptr, 0L, l_img_is_rgb, l_use_texture_antialiasing, {}, {} );
+                                ai_already_ran_iteration = true;
+                            }
+                        }
+                    }
+                }
 
-                    Free_OpenGL_Texture(polyomino_texture);
-                    const bool l_img_is_rgb = false;
-                    const bool l_use_texture_antialiasing = false;
-                    polyomino_texture = Load_OpenGL_Texture( *img_ptr, 0L, l_img_is_rgb, l_use_texture_antialiasing, {}, {} );
-                }else{
-                    polyomino_paused = true;
+                // Only run iteration if AI didn't already do it.
+                if(!ai_already_ran_iteration){
+                    // Loading the script and parsing into an op_list could be cached. Might speed this up slightly...
+                    std::list<OperationArgPkg> Operations;
+                    const bool op_load_res = Load_Standard_Script( Operations, "plumbing", "iterate polyominoes" );
+                    if(!op_load_res){
+                        throw std::runtime_error("Unable to load polyominoes script");
+                    }
+                    metadata_map_t l_InvocationMetadata;
+                    l_InvocationMetadata["poly_family"] = std::to_string(polyomino_family);
+                    l_InvocationMetadata["action"] = effective_action;
+                    std::string l_FilenameLex;
+                    const bool res = Operation_Dispatcher(polyomino_imgs, l_InvocationMetadata, l_FilenameLex, Operations);
+                    if( res 
+                    &&  polyomino_imgs.Has_Image_Data()){
+                        auto *img_ptr = &(polyomino_imgs.image_data.back()->imagecoll.images.back());
+
+                        Free_OpenGL_Texture(polyomino_texture);
+                        const bool l_img_is_rgb = false;
+                        const bool l_use_texture_antialiasing = false;
+                        polyomino_texture = Load_OpenGL_Texture( *img_ptr, 0L, l_img_is_rgb, l_use_texture_antialiasing, {}, {} );
+                    }else{
+                        polyomino_paused = true;
+                    }
                 }
             }
 
