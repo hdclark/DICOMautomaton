@@ -217,6 +217,7 @@
 #include "Operations/SimplifySurfaceMeshes.h"
 #include "Operations/SimulateRadiograph.h"
 #include "Operations/Sleep.h"
+#include "Operations/SolveLinearProgram.h"
 #include "Operations/SpatialBlur.h"
 #include "Operations/SpatialDerivative.h"
 #include "Operations/SpatialSharpen.h"
@@ -493,6 +494,7 @@ known_ops_t Known_Operations(){
     out["SimplifySurfaceMeshes"] = std::make_pair(OpArgDocSimplifySurfaceMeshes, SimplifySurfaceMeshes);
     out["SimulateRadiograph"] = std::make_pair(OpArgDocSimulateRadiograph, SimulateRadiograph);
     out["Sleep"] = std::make_pair(OpArgDocSleep, Sleep);
+    out["SolveLinearProgram"] = std::make_pair(OpArgDocSolveLinearProgram, SolveLinearProgram);
     out["SpatialBlur"] = std::make_pair(OpArgDocSpatialBlur, SpatialBlur);
     out["SpatialDerivative"] = std::make_pair(OpArgDocSpatialDerivative, SpatialDerivative);
     out["SpatialSharpen"] = std::make_pair(OpArgDocSpatialSharpen, SpatialSharpen);
