@@ -427,7 +427,7 @@ bool GenerateMapTiles(Drover &DICOM_data,
                 }
             }else{
                 // Tile is missing and fetching is disabled.
-                YLOGINFO("Tile '" + f.string() + "' was not found in the cache. Fetching is disabled.");
+                YLOGDEBUG("Tile '" + f.string() + "' was not found in the cache. Fetching is disabled.");
             }
         }
 
