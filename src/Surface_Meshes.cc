@@ -1054,27 +1054,6 @@ Estimate_Surface_Mesh_Marching_Cubes(
     const auto unique_planar_separation_threshold = 0.005; // Contours separated by less are considered to be on the same plane.
     const auto ucp = Unique_Contour_Planes(cc_ROIs, est_cont_normal, unique_planar_separation_threshold);
 
-    // ============================================= Export the data ================================================
-    // Export the contour vertices for inspection or processing with other tools.
-    /*
-    {
-        std::vector<Point_3> verts;
-        std::ofstream out("/tmp/SurfaceMesh_ROI_vertices.xyz");
-
-        for(auto &cc_ref : cc_ROIs){
-            for(const auto &c : cc_ref.get().contours){
-                for(const auto &p : c.points){
-                    Point_3 cgal_p( p.x, p.y, p.z );
-                    verts.push_back(cgal_p);
-                }
-            }
-        }
-        if(!out || !CGAL::write_xyz_points(out, verts)){
-            throw std::runtime_error("Unable to write contour vertices.");
-        } 
-    }
-    */
-
 
     // ============================================== Generate a grid  ==============================================
 
@@ -1350,18 +1329,8 @@ Estimate_Surface_Mesh_Marching_Cubes(
 
 
 
-// This is a WIP surface meshing routine that may be removed some time in the future.
-
-
-// Convert from fv_surface_mesh to CGAL's Polyhedron class.
-//
-// The former can be non-manifold, but the latter cannot.
-// This routine attempts to correct non-manifoldness. It may not work, but could carry on silently.
-// If it matters, attempt a direct conversion without non-manifold correction.
-
-
 // ======================================== Native Mesh Processing ========================================
-// These functions provide CGAL-free alternatives for common mesh operations.
+// These functions provide native alternatives for common mesh operations.
 
 // Compute the signed volume of a mesh using the divergence theorem.
 // The mesh should be closed and consistently oriented (normals pointing outward).

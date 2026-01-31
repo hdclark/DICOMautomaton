@@ -133,7 +133,7 @@ bool SeamContours(Drover &DICOM_data,
                 throw std::logic_error("Found no contours incident on plane previously found to house contours.");
             }else if(copl.size() == 1){ // No Boolean operation needed. Copy as-is.
                 cc_new.contours.emplace_back( copl.front().get() );
-            }else{ // Possible overlap. Let CGAL work it out...
+            }else{ // Possible overlap. Use native Boolean operations to resolve.
                 const auto construct_op = ContourBooleanMethod::symmetric_difference;
                 const auto op = ContourBooleanMethod::noop;
                 auto cc_out = ContourBoolean(aplane, copl, {}, op, construct_op);
