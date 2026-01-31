@@ -158,6 +158,15 @@ contains_gpx_gps_coords(dcma::xml::node &root){
 
         // After collecting all points, analyze speeds and split based on major changes.
         // The original contour is kept as-is. Additional contours are created for each detected activity segment.
+        //
+        // Speed-based splitting algorithm:
+        // 1. Calculate instantaneous speeds between consecutive track points using position and time data.
+        // 2. Detect significant speed changes (3x or more) or transitions between stationary and moving states.
+        // 3. Split the trace at detected transition points to create separate contours for each activity.
+        // 4. Each split contour is tagged with "ActivitySegment" metadata for identification.
+        //
+        // This allows GPX files containing multiple activities (e.g., walk, stop, run) to be automatically
+        // segmented during loading, making it easier to analyze individual activities separately.
         auto &original_contour = contours_out.back().contours.back();
         const auto &points = original_contour.points;
         const size_t N_points = points.size();
