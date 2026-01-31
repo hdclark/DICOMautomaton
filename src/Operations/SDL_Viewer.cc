@@ -1808,6 +1808,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         vec2<double> target_pos;
         size_t target_enemy_idx;
         double speed = 300.0;
+        double damage = 15.0;
     };
 
     std::vector<td_enemy_t> td_enemies;
@@ -1832,10 +1833,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         // Path waypoints define the white tiles path.
         // These are grid coordinates that form a path from top-left to bottom-right.
         std::vector<std::pair<int64_t, int64_t>> path_waypoints;
-
-        std::mt19937 re;
     } td_game;
-    td_game.re.seed( std::random_device()() );
 
     const auto reset_td_game = [&](){
         td_enemies.clear();
@@ -1852,10 +1850,9 @@ bool SDL_Viewer(Drover &DICOM_data,
         // Define path waypoints: starts at top-left, goes right, then down in a snake pattern.
         td_game.path_waypoints.clear();
         // Create a winding path from (0,0) to (grid_cols-1, grid_rows-1).
-        // Path goes: right across row 0, down to row 2, left across row 2, down to row 4, etc.
-        int64_t row = 0;
-        bool going_right = true;
-        while(row < td_game.grid_rows){
+        // Path goes: right across row 0, down to row 1, left across row 1, down to row 2, etc.
+        for(int64_t row = 0; row < td_game.grid_rows; ++row){
+            const bool going_right = (row % 2 == 0);
             if(going_right){
                 for(int64_t col = 0; col < td_game.grid_cols; ++col){
                     td_game.path_waypoints.emplace_back(col, row);
@@ -1864,20 +1861,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                 for(int64_t col = td_game.grid_cols - 1; col >= 0; --col){
                     td_game.path_waypoints.emplace_back(col, row);
                 }
-            }
-            // Move down if there are more rows.
-            if(row + 1 < td_game.grid_rows){
-                row += 1;
-                // Add the connecting cell (going down).
-                if(going_right){
-                    td_game.path_waypoints.emplace_back(td_game.grid_cols - 1, row);
-                }else{
-                    td_game.path_waypoints.emplace_back(0, row);
-                }
-                row += 1;
-                going_right = !going_right;
-            }else{
-                break;
             }
         }
 
@@ -6137,7 +6120,8 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         td_projectile_t proj;
                         proj.pos = tower_pos;
                         proj.target_pos = get_path_position(td_enemies[closest_idx].path_progress);
-                        proj.target_enemy_idx = closest_idx;
+                        proj.target_enemy_idx = closest_idx;  // May become stale, use position-based hit detection.
+                        proj.damage = tower.damage;
                         td_projectiles.push_back(proj);
                         tower.cooldown = 1.0 / tower.fire_rate;
                     }
@@ -6145,7 +6129,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             }
 
             // Update projectiles.
-            std::vector<size_t> hit_enemies;
             for(auto& proj : td_projectiles){
                 const vec2<double> dir = (proj.target_pos - proj.pos);
                 const double dist = dir.length();
@@ -6159,15 +6142,21 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 }
             }
 
-            // Check for projectile hits.
+            // Check for projectile hits using position-based detection (not indices).
+            // When a projectile reaches its target, damage the closest enemy within hit radius.
+            const double hit_radius = td_game.cell_size * 0.4;
             td_projectiles.erase(
                 std::remove_if(td_projectiles.begin(), td_projectiles.end(),
                     [&](const td_projectile_t& proj) -> bool {
                         const double dist_to_target = proj.pos.distance(proj.target_pos);
                         if(dist_to_target < 5.0){
-                            // Hit! Apply damage.
-                            if(proj.target_enemy_idx < td_enemies.size()){
-                                td_enemies[proj.target_enemy_idx].hp -= 15.0;  // Tower damage.
+                            // Find the closest enemy to the projectile position and apply damage.
+                            for(auto& enemy : td_enemies){
+                                const auto enemy_pos = get_path_position(enemy.path_progress);
+                                if(proj.pos.distance(enemy_pos) < hit_radius){
+                                    enemy.hp -= proj.damage;
+                                    break;  // Only hit one enemy per projectile.
+                                }
                             }
                             return true;
                         }
