@@ -208,23 +208,23 @@ AlignViaPCA(const point_set<double> & moving,
                                                           pcomps_moving,
                                                           moving);
 
-    YLOGINFO("Stationary point cloud:");
-    YLOGINFO("    centroid             : " << centroid_s);
-    YLOGINFO("    pcomp_pc1            : " << pcomps_stationary.pc1);
-    YLOGINFO("    pcomp_pc2            : " << pcomps_stationary.pc2);
-    YLOGINFO("    pcomp_pc3            : " << pcomps_stationary.pc3);
-    YLOGINFO("    reoriented_pcomp_pc1 : " << reoriented_pcomps_stationary.pc1);
-    YLOGINFO("    reoriented_pcomp_pc2 : " << reoriented_pcomps_stationary.pc2);
-    YLOGINFO("    reoriented_pcomp_pc3 : " << reoriented_pcomps_stationary.pc3);
+    YLOGDEBUG("Stationary point cloud:");
+    YLOGDEBUG("    centroid             : " << centroid_s);
+    YLOGDEBUG("    pcomp_pc1            : " << pcomps_stationary.pc1);
+    YLOGDEBUG("    pcomp_pc2            : " << pcomps_stationary.pc2);
+    YLOGDEBUG("    pcomp_pc3            : " << pcomps_stationary.pc3);
+    YLOGDEBUG("    reoriented_pcomp_pc1 : " << reoriented_pcomps_stationary.pc1);
+    YLOGDEBUG("    reoriented_pcomp_pc2 : " << reoriented_pcomps_stationary.pc2);
+    YLOGDEBUG("    reoriented_pcomp_pc3 : " << reoriented_pcomps_stationary.pc3);
 
-    YLOGINFO("Moving point cloud:");
-    YLOGINFO("    centroid             : " << centroid_m);
-    YLOGINFO("    pcomp_pc1            : " << pcomps_moving.pc1);
-    YLOGINFO("    pcomp_pc2            : " << pcomps_moving.pc2);
-    YLOGINFO("    pcomp_pc3            : " << pcomps_moving.pc3);
-    YLOGINFO("    reoriented_pcomp_pc1 : " << reoriented_pcomps_moving.pc1);
-    YLOGINFO("    reoriented_pcomp_pc2 : " << reoriented_pcomps_moving.pc2);
-    YLOGINFO("    reoriented_pcomp_pc3 : " << reoriented_pcomps_moving.pc3);
+    YLOGDEBUG("Moving point cloud:");
+    YLOGDEBUG("    centroid             : " << centroid_m);
+    YLOGDEBUG("    pcomp_pc1            : " << pcomps_moving.pc1);
+    YLOGDEBUG("    pcomp_pc2            : " << pcomps_moving.pc2);
+    YLOGDEBUG("    pcomp_pc3            : " << pcomps_moving.pc3);
+    YLOGDEBUG("    reoriented_pcomp_pc1 : " << reoriented_pcomps_moving.pc1);
+    YLOGDEBUG("    reoriented_pcomp_pc2 : " << reoriented_pcomps_moving.pc2);
+    YLOGDEBUG("    reoriented_pcomp_pc3 : " << reoriented_pcomps_moving.pc3);
 
     // Determine the linear transformation that will align the reoriented principle components.
     //
@@ -294,15 +294,15 @@ AlignViaPCA(const point_set<double> & moving,
         }
     }
 
-    //YLOGINFO("Final linear transform:");
-    //YLOGINFO("    ( " << t.coeff(0,0) << "  " << t.coeff(0,1) << "  " << t.coeff(0,2) << " )");
-    //YLOGINFO("    ( " << t.coeff(1,0) << "  " << t.coeff(1,1) << "  " << t.coeff(1,2) << " )");
-    //YLOGINFO("    ( " << t.coeff(2,0) << "  " << t.coeff(2,1) << "  " << t.coeff(2,2) << " )");
-    //YLOGINFO("Final translation:");
-    //YLOGINFO("    ( " << t.coeff(0,3) << " )");
-    //YLOGINFO("    ( " << t.coeff(1,3) << " )");
-    //YLOGINFO("    ( " << t.coeff(2,3) << " )");
-    //YLOGINFO("Final Affine transformation:");
+    //YLOGDEBUG("Final linear transform:");
+    //YLOGDEBUG("    ( " << t.coeff(0,0) << "  " << t.coeff(0,1) << "  " << t.coeff(0,2) << " )");
+    //YLOGDEBUG("    ( " << t.coeff(1,0) << "  " << t.coeff(1,1) << "  " << t.coeff(1,2) << " )");
+    //YLOGDEBUG("    ( " << t.coeff(2,0) << "  " << t.coeff(2,1) << "  " << t.coeff(2,2) << " )");
+    //YLOGDEBUG("Final translation:");
+    //YLOGDEBUG("    ( " << t.coeff(0,3) << " )");
+    //YLOGDEBUG("    ( " << t.coeff(1,3) << " )");
+    //YLOGDEBUG("    ( " << t.coeff(2,3) << " )");
+    //YLOGDEBUG("Final Affine transformation:");
     //t.write_to(std::cout);
 
     // Test if the transformation is valid.
@@ -415,7 +415,7 @@ AlignViaOrthogonalProcrustes(AlignViaOrthogonalProcrustesParams & params,
         const auto numer = ( S.transpose() * (A * M) ).trace();
         const auto denom = ( (A * M).transpose() * (A * M) ).trace();
         const auto s = numer / denom;
-        YLOGINFO("Isotropic scale factor: " << s);
+        YLOGDEBUG("Isotropic scale factor: " << s);
         if(!std::isfinite(s)){
             throw std::runtime_error("Isotropic scaling factor is not finite");
         }
@@ -461,15 +461,15 @@ AlignViaOrthogonalProcrustes(AlignViaOrthogonalProcrustesParams & params,
         t.coeff(2,3) = centroid_s.z - A_e_centroid(2);
     }
 
-    YLOGINFO("Final linear transform:");
-    YLOGINFO("    ( " << t.coeff(0,0) << "  " << t.coeff(0,1) << "  " << t.coeff(0,2) << " )");
-    YLOGINFO("    ( " << t.coeff(1,0) << "  " << t.coeff(1,1) << "  " << t.coeff(1,2) << " )");
-    YLOGINFO("    ( " << t.coeff(2,0) << "  " << t.coeff(2,1) << "  " << t.coeff(2,2) << " )");
-    YLOGINFO("Final translation:");
-    YLOGINFO("    ( " << t.coeff(0,3) << " )");
-    YLOGINFO("    ( " << t.coeff(1,3) << " )");
-    YLOGINFO("    ( " << t.coeff(2,3) << " )");
-    //YLOGINFO("Final Affine transformation:");
+    YLOGDEBUG("Final linear transform:");
+    YLOGDEBUG("    ( " << t.coeff(0,0) << "  " << t.coeff(0,1) << "  " << t.coeff(0,2) << " )");
+    YLOGDEBUG("    ( " << t.coeff(1,0) << "  " << t.coeff(1,1) << "  " << t.coeff(1,2) << " )");
+    YLOGDEBUG("    ( " << t.coeff(2,0) << "  " << t.coeff(2,1) << "  " << t.coeff(2,2) << " )");
+    YLOGDEBUG("Final translation:");
+    YLOGDEBUG("    ( " << t.coeff(0,3) << " )");
+    YLOGDEBUG("    ( " << t.coeff(1,3) << " )");
+    YLOGDEBUG("    ( " << t.coeff(2,3) << " )");
+    //YLOGDEBUG("Final Affine transformation:");
     //t.write_to(std::cout);
 
     // Test if the transformation is valid.
@@ -664,7 +664,7 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
             f_curr += dist;
         }
 
-        YLOGINFO("Global distance using correspondence estimated during iteration " << icp_iter << " is " << f_curr);
+        YLOGDEBUG("Global distance using correspondence estimated during iteration " << icp_iter << " is " << f_curr);
 
         if(f_curr < f_best){
             f_best = f_curr;
@@ -674,7 +674,7 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
         &&  std::isfinite(f_curr)
         &&  std::isfinite(f_prev) ){
             const auto f_rel = std::fabs( (f_prev - f_curr) / f_prev );
-            YLOGINFO("The relative change in global distance compared to the last iteration is " << f_rel);
+            YLOGDEBUG("The relative change in global distance compared to the last iteration is " << f_rel);
             if(f_rel < f_rel_tol) break;
         }
         f_prev = f_curr;
@@ -691,7 +691,7 @@ AlignViaExhaustiveICP( const point_set<double> & moving,
     }
 
     // Report the transformation and pass it to the user.
-    //YLOGINFO("Final Affine transformation:");
+    //YLOGDEBUG("Final Affine transformation:");
     //t.write_to(std::cout);
     return t;
 }
