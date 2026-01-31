@@ -5597,6 +5597,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         sf_game.jump_height = 0.0;
                         sf_game.is_jumping = false;
                         sf_game.jump_velocity = 0.0;
+                        sf_game.can_double_tap = false; // Reset flip capability when landing
                     }
                 }
                 
@@ -5663,6 +5664,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                 // Remove the jump
                                 obj.pos.y = sf_game.world_scroll_y + sf_game.box_height + 100.0;
                             }
+                            continue; // Skip to next object
                         }else if(obj.type == sf_obj_type_t::rock){
                             if(sf_game.is_jumping){
                                 // Jumped over rock - award points
@@ -5674,11 +5676,13 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                 sf_game.game_over_time = 0.0;
                                 sf_game.scroll_speed = 0.0;
                             }
+                            continue; // Skip to next object
                         }else if(obj.type == sf_obj_type_t::tree || obj.type == sf_obj_type_t::other_skier){
                             // Hit tree or other skier - game over
                             sf_game.game_over = true;
                             sf_game.game_over_time = 0.0;
                             sf_game.scroll_speed = 0.0;
+                            continue; // Skip to next object
                         }
                     }
                 }
