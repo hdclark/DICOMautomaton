@@ -182,7 +182,7 @@ contains_gpx_gps_coords(dcma::xml::node &root){
                     const auto &p2 = points[i+1];
                     const double dx = p2.x - p1.x;
                     const double dy = p2.y - p1.y;
-                    const double dist = std::sqrt(dx*dx + dy*dy); // Distance in projected coordinates (approximately meters for small distances)
+                    const double dist = std::sqrt(dx*dx + dy*dy); // Distance in Mercator projection units (meters at equator, varies with latitude)
                     const double dt = track_times[i+1].value() - track_times[i].value(); // Time in seconds
 
                     if(dt > 0.0){
@@ -241,7 +241,7 @@ contains_gpx_gps_coords(dcma::xml::node &root){
                     size_t segment_num = 0;
 
                     for(size_t split_idx : split_indices){
-                        if(split_idx > start_idx){ // Ensure segment has at least 1 point (will have 2+ since we're excluding single points)
+                        if(split_idx > start_idx + 1){ // Ensure segment has at least 2 points
                             contour_of_points<double> segment_contour;
                             segment_contour.closed = false;
                             segment_contour.metadata = original_contour.metadata;
@@ -257,8 +257,8 @@ contains_gpx_gps_coords(dcma::xml::node &root){
                         start_idx = split_idx;
                     }
 
-                    // Add the final segment.
-                    if(start_idx < N_points){
+                    // Add the final segment (if it has at least 2 points).
+                    if(start_idx + 1 < N_points){
                         contour_of_points<double> segment_contour;
                         segment_contour.closed = false;
                         segment_contour.metadata = original_contour.metadata;
