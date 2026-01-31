@@ -137,6 +137,12 @@ histogram_match(
     const double ref_min = get_percentile(reference_values, outlier_fraction);
     const double ref_max = get_percentile(reference_values, 1.0 - outlier_fraction);
     
+    // Check for degenerate intensity ranges (constant images)
+    if(src_max <= src_min || ref_max <= ref_min){
+        YLOGWARN("Image has constant or near-constant intensity, histogram matching not applicable");
+        return source;
+    }
+    
     // Build cumulative histograms
     std::vector<double> src_cdf(num_bins, 0.0);
     std::vector<double> ref_cdf(num_bins, 0.0);
@@ -225,6 +231,11 @@ smooth_vector_field(
         return;
     }
     
+    // Early return if smoothing is disabled
+    if(sigma_mm <= 0.0){
+        return;
+    }
+    
     // Check that all images have 3 channels
     for(const auto &img : field.images){
         if(img.channels != 3){
@@ -272,7 +283,8 @@ smooth_vector_field(
         
         // Apply along x-direction (columns)
         planar_image_collection<double, double> temp_x = field;
-        for(auto &img : temp_x.images){
+        for(size_t img_idx = 0; img_idx < temp_x.images.size(); ++img_idx){
+            auto &img = temp_x.images[img_idx];
             const int64_t N_rows = img.rows;
             const int64_t N_cols = img.columns;
             
@@ -284,8 +296,6 @@ smooth_vector_field(
                     for(int64_t k = -kernel_radius_x; k <= kernel_radius_x; ++k){
                         const int64_t col_k = col + k;
                         if(col_k >= 0 && col_k < N_cols){
-                            // Calculate image index using distance from first image
-                            const size_t img_idx = static_cast<size_t>(&img - &field.images.front());
                             const double val = field.images[img_idx].value(row, col_k, chnl);
                             if(std::isfinite(val)){
                                 const double w = kernel_x[k + kernel_radius_x];
@@ -304,7 +314,8 @@ smooth_vector_field(
         
         // Apply along y-direction (rows)
         planar_image_collection<double, double> temp_y = temp_x;
-        for(auto &img : temp_y.images){
+        for(size_t img_idx = 0; img_idx < temp_y.images.size(); ++img_idx){
+            auto &img = temp_y.images[img_idx];
             const int64_t N_rows = img.rows;
             const int64_t N_cols = img.columns;
             
@@ -316,8 +327,6 @@ smooth_vector_field(
                     for(int64_t k = -kernel_radius_y; k <= kernel_radius_y; ++k){
                         const int64_t row_k = row + k;
                         if(row_k >= 0 && row_k < N_rows){
-                            // Calculate image index using distance from first image
-                            const size_t img_idx = static_cast<size_t>(&img - &temp_y.images.front());
                             const double val = temp_x.images[img_idx].value(row_k, col, chnl);
                             if(std::isfinite(val)){
                                 const double w = kernel_y[k + kernel_radius_y];
@@ -334,7 +343,7 @@ smooth_vector_field(
             }
         }
         
-        // Apply along z-direction (between images)
+        // Apply along z-direction (between images) and write back to field
         const int64_t N_imgs = field.images.size();
         for(int64_t img_idx = 0; img_idx < N_imgs; ++img_idx){
             auto &img = field.images[img_idx];
@@ -495,9 +504,6 @@ warp_image_with_field(
         const int64_t N_cols = img.columns;
         const int64_t N_chnls = img.channels;
         
-        // Create a temporary copy to read from
-        planar_image<float, double> original = img;
-        
         for(int64_t row = 0; row < N_rows; ++row){
             for(int64_t col = 0; col < N_cols; ++col){
                 // Get the current voxel position
@@ -572,10 +578,10 @@ AlignViaDemons(AlignViaDemonsParams & params,
         auto warped_moving = moving;
         double prev_mse = std::numeric_limits<double>::infinity();
         
+        // Precompute gradient of the stationary (fixed) image; it does not change across iterations.
+        auto gradient = compute_gradient(stationary);
+        
         for(int64_t iter = 0; iter < params.max_iterations; ++iter){
-            
-            // Compute gradient of the stationary (fixed) image
-            auto gradient = compute_gradient(stationary);
             
             // Compute intensity difference
             double mse = 0.0;
@@ -678,14 +684,45 @@ AlignViaDemons(AlignViaDemonsParams & params,
             
             // Add/compose update to deformation field
             if(params.use_diffeomorphic){
-                // Diffeomorphic: use exponential update (approximated by scaling and adding)
-                // This is a simplified version; full diffeomorphic demons would use exp(v) composition
+                // Diffeomorphic demons: compose the update with the current deformation field
+                // This implements d ← d ∘ u (composition of deformation with update)
+                // For each voxel position p in the deformation field, we compute:
+                //   new_d(p) = d(p) + u(p + d(p))
+                // This ensures the transformation remains diffeomorphic (invertible).
+                
+                // First, create a temporary deformation field from the update
+                planar_image_collection<double, double> update_field_copy = update_field_images;
+                deformation_field update_def_field(std::move(update_field_copy));
+                
+                // Now compose: for each position, add the update sampled at the deformed position
                 for(size_t img_idx = 0; img_idx < deformation_field_images.images.size(); ++img_idx){
                     auto &def_img = deformation_field_images.images[img_idx];
-                    const auto &upd_img = update_field_images.images[img_idx];
+                    const int64_t N_rows = def_img.rows;
+                    const int64_t N_cols = def_img.columns;
                     
-                    for(size_t i = 0; i < def_img.data.size(); ++i){
-                        def_img.data[i] += upd_img.data[i];
+                    for(int64_t row = 0; row < N_rows; ++row){
+                        for(int64_t col = 0; col < N_cols; ++col){
+                            // Get current position
+                            const auto pos = def_img.position(row, col);
+                            
+                            // Get current deformation at this position
+                            const double dx = def_img.value(row, col, 0);
+                            const double dy = def_img.value(row, col, 1);
+                            const double dz = def_img.value(row, col, 2);
+                            
+                            // Compute deformed position
+                            const vec3<double> deformed_pos = pos + vec3<double>(dx, dy, dz);
+                            
+                            // Sample update field at the deformed position
+                            const double upd_dx = update_def_field.get_imagecoll_crefw().get().trilinearly_interpolate(deformed_pos, 0, 0.0);
+                            const double upd_dy = update_def_field.get_imagecoll_crefw().get().trilinearly_interpolate(deformed_pos, 1, 0.0);
+                            const double upd_dz = update_def_field.get_imagecoll_crefw().get().trilinearly_interpolate(deformed_pos, 2, 0.0);
+                            
+                            // Compose: new deformation = current deformation + update at deformed position
+                            def_img.reference(row, col, 0) = dx + upd_dx;
+                            def_img.reference(row, col, 1) = dy + upd_dy;
+                            def_img.reference(row, col, 2) = dz + upd_dz;
+                        }
                     }
                 }
             }else{
