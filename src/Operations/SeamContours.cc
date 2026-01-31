@@ -1,9 +1,4 @@
-//SeamContours.cc - A part of DICOMautomaton 2017. Written by hal clark.
-
-#ifdef DCMA_USE_CGAL
-#else
-    #error "Attempted to compile without CGAL support, which is required."
-#endif
+//SeamContours.cc - A part of DICOMautomaton 2017, 2024. Written by hal clark.
 
 #include <algorithm>
 #include <cmath>

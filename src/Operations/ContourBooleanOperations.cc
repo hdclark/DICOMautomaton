@@ -1,4 +1,4 @@
-//ContourBooleanOperations.cc - A part of DICOMautomaton 2017. Written by hal clark.
+//ContourBooleanOperations.cc - A part of DICOMautomaton 2017, 2024. Written by hal clark.
 
 #include <algorithm>
 #include <cmath>
@@ -21,11 +21,6 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorLog.h"
-
-#ifdef DCMA_USE_CGAL
-#else
-    #error "Attempted to compile without CGAL support, which is required."
-#endif
 
 
 OperationDoc OpArgDocContourBooleanOperations(){

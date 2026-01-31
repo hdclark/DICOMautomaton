@@ -1,4 +1,6 @@
-//Surface_Meshes.h - A part of DICOMautomaton 2017. Written by hal clark.
+//Surface_Meshes.h - A part of DICOMautomaton 2017, 2024. Written by hal clark.
+//
+// CGAL has been removed - all mesh processing now uses native implementations.
 
 #pragma once
 
@@ -7,13 +9,6 @@
 #include <cstdint>
 
 #include "CSG_SDF.h"
-
-#ifdef DCMA_USE_CGAL
-    #include <CGAL/Exact_predicates_inexact_constructions_kernel.h>
-    #include <CGAL/Polyhedron_3.h>
-    #include <CGAL/Surface_mesh_default_triangulation_3.h>
-    #include <CGAL/boost/graph/graph_traits_Polyhedron_3.h>
-#endif // DCMA_USE_CGAL
 
 namespace dcma_surface_meshes {
 
@@ -70,93 +65,24 @@ namespace dcma_surface_meshes {
                                      // If false, anything >= is considered to be interior to the surface.
             Parameters p );
 
-#ifdef DCMA_USE_CGAL
-    using Kernel = CGAL::Exact_predicates_inexact_constructions_kernel;
-    using Polyhedron = CGAL::Polyhedron_3<Kernel>;
+    // ============== Native mesh processing functions ==============
+    
+    // Compute the volume of a closed mesh using the divergence theorem.
+    double
+    Mesh_Volume(const fv_surface_mesh<double, uint64_t>& mesh);
 
+    // Compute the surface area of a mesh by summing triangle areas.
+    double
+    Mesh_Surface_Area(const fv_surface_mesh<double, uint64_t>& mesh);
 
-    Polyhedron
-    Estimate_Surface_Mesh(
-            std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs,
-            Parameters p );
+    // Slice a mesh with planes to produce contours.
+    contour_collection<double>
+    Slice_Mesh(const fv_surface_mesh<double, uint64_t>& mesh,
+               const std::list<plane<double>>& planes);
 
-    Polyhedron
-    Estimate_Surface_Mesh_AdvancingFront(
-            std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs,
-            Parameters p );
-
-    Polyhedron
-    FVSMeshToPolyhedron(
-            const fv_surface_mesh<double, uint64_t> &mesh );
-#endif // DCMA_USE_CGAL
+    // Native Loop subdivision for triangle meshes.
+    void
+    Loop_Subdivide(fv_surface_mesh<double, uint64_t>& mesh, int64_t iterations);
 
 } // namespace dcma_surface_meshes
-
-
-
-#ifdef DCMA_USE_CGAL
-namespace polyhedron_processing {
-
-    using Kernel = CGAL::Exact_predicates_inexact_constructions_kernel;
-    using Polyhedron = CGAL::Polyhedron_3<Kernel>;
-
-
-    Polyhedron
-    Regular_Icosahedron(double radius = 1.0);
-
-    void
-    Subdivide(Polyhedron &mesh,
-              int64_t iters = 3);
-
-    void
-    Remesh(Polyhedron &mesh,
-              double target_edge_length = 1.0,
-              int64_t iters = 3);
-
-    void
-    Simplify(Polyhedron &mesh,
-             int64_t edge_count_limit);
-
-    bool
-    SaveAsOFF(Polyhedron &mesh,
-              const std::string& filename);
-
-
-    // Exact Minkowski dilation for meshes.
-    void
-    Dilate(Polyhedron &mesh,
-           const Polyhedron& sphere);
-
-    // Exact Minkowski dilation for contour vertex point clouds.
-    void
-    Dilate( Polyhedron &output_mesh, 
-            std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs,
-            const Polyhedron& sphere );
-
-    // Approximate dilation, erosion, or core/peel using approximate Minkowski sums/differences with a sphere-like shape.
-    enum class TransformOp {
-        Dilate,  // Grow the surface boundary.
-        Erode,   // Shrink the surface boundary.
-        Shell    // Keep only the outer shell (original - eroded_original).
-    };
-
-    void
-    Transform( Polyhedron &output_mesh,
-               double distance,
-               TransformOp op);
-
-    // Slice a polyhedron to produce planar contours on the given planes.
-    contour_collection<double> 
-    Slice_Polyhedron(
-            const Polyhedron &mesh,
-            std::list<plane<double>> planes );
-
-    double
-    Volume(const Polyhedron &mesh);
-
-    double
-    SurfaceArea(const Polyhedron &mesh);
-
-} // namespace polyhedron_processing
-#endif // DCMA_USE_CGAL
 

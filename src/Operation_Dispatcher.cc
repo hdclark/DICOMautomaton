@@ -272,18 +272,9 @@
     #include "Operations/DumpPerROIParams_KineticModel_1Compartment2Input_5Param.h"
 #endif // DCMA_USE_GNU_GSL
 
-#ifdef DCMA_USE_CGAL
-    #include "Operations/BCCAExtractRadiomicFeatures.h"
-    #include "Operations/ContourBooleanOperations.h"
-    #include "Operations/ConvertMeshesToContours.h"
-    #include "Operations/DumpROISurfaceMeshes.h"
-    #include "Operations/ExtractRadiomicFeatures.h"
-    #include "Operations/MakeMeshesManifold.h"
-    #include "Operations/MinkowskiSum3D.h"
-    #include "Operations/RemeshSurfaceMeshes.h"
-    #include "Operations/SeamContours.h"
-    #include "Operations/SubdivideSurfaceMeshes.h"
-#endif // DCMA_USE_CGAL
+// Contour operations - now work without CGAL using native implementations
+#include "Operations/ContourBooleanOperations.h"
+#include "Operations/SeamContours.h"
 
 #ifdef DCMA_USE_THRIFT
     #include "Operations/ExportDrover.h"
@@ -548,18 +539,9 @@ known_ops_t Known_Operations(){
     out["DumpPerROIParams_KineticModel_1C2I_5P"] = std::make_pair(OpArgDocDumpPerROIParams_KineticModel_1Compartment2Input_5Param, DumpPerROIParams_KineticModel_1Compartment2Input_5Param);
 #endif // DCMA_USE_GNU_GSL
 
-#ifdef DCMA_USE_CGAL
-    out["BCCAExtractRadiomicFeatures"] = std::make_pair(OpArgDocBCCAExtractRadiomicFeatures, BCCAExtractRadiomicFeatures);
+    // Contour operations - now work without CGAL using native implementations
     out["ContourBooleanOperations"] = std::make_pair(OpArgDocContourBooleanOperations, ContourBooleanOperations);
-    out["ConvertMeshesToContours"] = std::make_pair(OpArgDocConvertMeshesToContours, ConvertMeshesToContours);
-    out["DumpROISurfaceMeshes"] = std::make_pair(OpArgDocDumpROISurfaceMeshes, DumpROISurfaceMeshes);
-    out["ExtractRadiomicFeatures"] = std::make_pair(OpArgDocExtractRadiomicFeatures, ExtractRadiomicFeatures);
-    out["MakeMeshesManifold"] = std::make_pair(OpArgDocMakeMeshesManifold, MakeMeshesManifold);
-    out["MinkowskiSum3D"] = std::make_pair(OpArgDocMinkowskiSum3D, MinkowskiSum3D);
-    out["RemeshSurfaceMeshes"] = std::make_pair(OpArgDocRemeshSurfaceMeshes, RemeshSurfaceMeshes);
     out["SeamContours"] = std::make_pair(OpArgDocSeamContours, SeamContours);
-    out["SubdivideSurfaceMeshes"] = std::make_pair(OpArgDocSubdivideSurfaceMeshes, SubdivideSurfaceMeshes);
-#endif // DCMA_USE_CGAL
 
 #ifdef DCMA_USE_THRIFT
     out["ExportDrover"] = std::make_pair(OpArgDocExportDrover, ExportDrover);
