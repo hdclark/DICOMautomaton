@@ -297,6 +297,11 @@ OperationDoc OpArgDocSimulateDose(){
         " scatter kernels, or complex MLC modeling. For clinical accuracy, use a validated TPS."
     );
     out.notes.emplace_back(
+        "MLC leaf positions are not used in this simplified model - the beam is treated as an"
+        " open field defined only by the jaw positions. IMRT and VMAT plans will not be accurately"
+        " simulated."
+    );
+    out.notes.emplace_back(
         "The default beam model is based on published 6 MV photon beam data (BJR Supplement 25,"
         " typical clinical linac commissioning data)."
     );
@@ -489,9 +494,9 @@ bool SimulateDose(Drover &DICOM_data,
     }
 
     // Process each beam in the RT plan
-    int64_t beam_number = 0;
-    for(const auto& dyn_state : rtplan.dynamic_states){
-        ++beam_number;
+    for(size_t beam_idx = 0; beam_idx < rtplan.dynamic_states.size(); ++beam_idx){
+        const int64_t beam_number = static_cast<int64_t>(beam_idx + 1);  // 1-based for user display
+        const auto& dyn_state = rtplan.dynamic_states[beam_idx];
 
         // Normalize the dynamic state to fill in NaN values
         Dynamic_Machine_State norm_state = dyn_state;
@@ -638,7 +643,10 @@ bool SimulateDose(Drover &DICOM_data,
                             continue;  // Outside field, no dose contribution from this beam
                         }
 
-                        // TODO: Check MLC aperture (simplified - treat as fully open)
+                        // Note: MLC aperture checking is not implemented in this simplified model.
+                        // The beam is treated as if the MLC leaves are fully retracted (open field).
+                        // For clinical accuracy, MLC leaf positions should be checked against the
+                        // scaled_off_axis_x/y coordinates.
 
                         // Ray trace from source to voxel through CT to calculate:
                         // 1. Radiological depth (electron density integrated path length)
@@ -750,7 +758,8 @@ bool SimulateDose(Drover &DICOM_data,
                 }
             });
         }
-        // Wait for all tasks to complete (work_queue destructor handles this)
+        // Synchronization point: work_queue destructor waits for all submitted tasks to complete
+        // before proceeding. This ensures all dose slices are processed for this beam.
     }
 
     // Update dose image metadata
