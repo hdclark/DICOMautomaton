@@ -409,15 +409,17 @@ def get_conan_build_environment(build_root):
                 log_warn("No suitable C/C++ compiler found (gcc/g++ or clang/clang++)")
         elif 'CC' not in env:
             # CXX is set but CC is not - try to match the compiler family
-            if 'g++' in env.get('CXX', '') and shutil.which('gcc'):
+            cxx_basename = os.path.basename(env.get('CXX', ''))
+            if 'g++' in cxx_basename and shutil.which('gcc'):
                 env['CC'] = 'gcc'
-            elif 'clang' in env.get('CXX', '') and shutil.which('clang'):
+            elif 'clang++' in cxx_basename and shutil.which('clang'):
                 env['CC'] = 'clang'
         elif 'CXX' not in env:
             # CC is set but CXX is not - try to match the compiler family
-            if 'gcc' in env.get('CC', '') and shutil.which('g++'):
+            cc_basename = os.path.basename(env.get('CC', ''))
+            if 'gcc' in cc_basename and shutil.which('g++'):
                 env['CXX'] = 'g++'
-            elif 'clang' in env.get('CC', '') and shutil.which('clang++'):
+            elif 'clang' in cc_basename and shutil.which('clang++'):
                 env['CXX'] = 'clang++'
     
     return env
