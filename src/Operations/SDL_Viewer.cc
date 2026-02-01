@@ -24,7 +24,8 @@
 #include <numeric>
 #include <regex>
 #include <stdexcept>
-#include <string>    
+#include <string>
+#include <sstream>
 #include <tuple>
 #include <type_traits>
 #include <utility>            //Needed for std::pair.
@@ -1053,6 +1054,8 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_encompass_enabled = false;
         bool view_cube_enabled = false;
         bool view_guitar_hero_enabled = false;
+        bool view_tower_defence_enabled = false;
+        bool view_skifree_enabled = false;
 
         bool view_guides_enabled = true;
     } view_toggles;
@@ -1726,6 +1729,129 @@ bool SDL_Viewer(Drover &DICOM_data,
         return;
     };
 
+    // FreeSki game state.
+    //
+    // Controls:
+    //   - Left/Right arrow keys: move skier left/right
+    //   - Spacebar: jump over obstacles
+    //   - Double-tap spacebar (while in air): perform a flip for double points
+    //   - R key: reset the game
+    //
+    // Gameplay:
+    //   - The skier continuously moves downward (the world scrolls upward)
+    //   - Speed gradually increases over time until maximum is reached
+    //   - Avoid obstacles: trees, rocks, and other skiers
+    //   - Jump over rocks to score points (1 point normal, 2 points if flipping)
+    //   - Hit jumps while in the air to score points
+    //   - Hit jumps while on the ground for a speed boost
+    //   - Colliding with trees, rocks (when not jumping), or other skiers ends the game
+    //   - On game over, the screen twirls/jitters until reset
+    //   - After reset, a 3-second countdown gives the player time to prepare
+    //
+    // Visual elements:
+    //   - Player: red triangle (orange while jumping)
+    //   - Trees: green triangles
+    //   - Rocks: gray circles
+    //   - Jumps: brown/yellow ramps
+    //   - Other skiers: cyan triangles
+    //
+    enum class sf_obj_type_t {
+        skier,     // The player
+        tree,      // Obstacle - collision ends game
+        rock,      // Obstacle - collision ends game, can be jumped over
+        jump,      // Speed boost when hit, awards points when jumped
+        other_skier // Obstacle - collision ends game
+    };
+    
+    struct sf_game_obj_t {
+        vec2<double> pos;      // position
+        sf_obj_type_t type;
+        double size;           // radius/size for rendering
+    };
+    
+    std::vector< sf_game_obj_t > sf_game_objs;
+    std::chrono::time_point<std::chrono::steady_clock> t_sf_updated;
+    std::chrono::time_point<std::chrono::steady_clock> t_sf_started;
+    std::chrono::time_point<std::chrono::steady_clock> t_sf_last_spacebar;
+    
+    struct sf_game_t {
+        double box_width  = 800.0;    // World bounds width
+        double box_height = 600.0;    // World bounds height (visible area)
+        
+        double skier_x = 400.0;       // Skier x position (can move left/right)
+        double skier_y = 100.0;       // Skier y position (fixed on screen, world scrolls)
+        double skier_size = 12.0;     // Skier triangle size
+        
+        double scroll_speed = 50.0;   // Initial downward scroll speed (pixels/sec)
+        double max_scroll_speed = 1500.0; // Maximum scroll speed
+        double speed_increase_rate = 3.0; // Speed increase per second
+        
+        double world_scroll_y = 0.0;  // How far we've scrolled down
+        
+        bool is_jumping = false;
+        double jump_height = 0.0;     // Current height above ground
+        double jump_velocity = 0.0;   // Vertical velocity during jump
+        double jump_max_height = 80.0;
+        double jump_speed = 200.0;    // Initial upward velocity
+        
+        bool did_flip = false;        // Whether player did a flip during this jump
+        bool can_double_tap = false;  // Whether player can still double-tap
+        
+        bool game_over = false;
+        double game_over_time = 0.0;  // Time since game over
+        
+        bool countdown_active = true;
+        double countdown_remaining = 3.0; // Seconds until game starts
+        
+        int64_t score = 0;
+        
+        double tree_spawn_rate = 1.53;          // Average trees per second
+        double rock_spawn_rate = 1.05;          // Average rocks per second  
+        double jump_spawn_rate = 0.31;         // Average jumps per second
+        double other_skier_spawn_rate = 0.213; // Average other skiers per second
+        
+        double last_tree_spawn = 0.0;
+        double last_rock_spawn = 0.0;
+        double last_jump_spawn = 0.0;
+        double last_other_skier_spawn = 0.0;
+        
+        std::mt19937 re;
+    } sf_game;
+    sf_game.re.seed( std::random_device()() );
+    
+    const auto reset_sf_game = [&](){
+        sf_game_objs.clear();
+        
+        sf_game.skier_x = sf_game.box_width / 2.0;
+        sf_game.skier_y = sf_game.box_height * 0.15;
+        sf_game.scroll_speed = 50.0;
+        sf_game.world_scroll_y = 0.0;
+        sf_game.is_jumping = false;
+        sf_game.jump_height = 0.0;
+        sf_game.jump_velocity = 0.0;
+        sf_game.did_flip = false;
+        sf_game.can_double_tap = false;
+        sf_game.game_over = false;
+        sf_game.game_over_time = 0.0;
+        sf_game.countdown_active = true;
+        sf_game.countdown_remaining = 3.0;
+        sf_game.score = 0;
+        
+        sf_game.last_tree_spawn = 0.0;
+        sf_game.last_rock_spawn = 0.0;
+        sf_game.last_jump_spawn = 0.0;
+        sf_game.last_other_skier_spawn = 0.0;
+        
+        // Reset the update time.
+        const auto t_now = std::chrono::steady_clock::now();
+        t_sf_updated = t_now;
+        t_sf_started = t_now;
+        t_sf_last_spacebar = t_now;
+
+        sf_game.re.seed( std::random_device()() );
+        return;
+    };
+
     // Cube state.
     std::chrono::time_point<std::chrono::steady_clock> t_cube_updated;
 
@@ -1859,6 +1985,104 @@ bool SDL_Viewer(Drover &DICOM_data,
         note.active = true;
         note.was_hit = false;
         gh_game.notes.push_back(note);
+    };
+    // Tower Defence game state.
+    struct td_enemy_t {
+        double path_progress = 0.0;  // 0.0 = start, 1.0 = end of path.
+        double hp = 25.0;           // Hit points.
+        double max_hp = 25.0;       // Maximum hit points.
+    };
+
+    struct td_tower_t {
+        int64_t grid_x = 0;
+        int64_t grid_y = 0;
+        double range = 90.0;     // Attack range in pixels.
+        double damage = 15.0;    // Damage per shot.
+        double fire_rate = 2.0;  // Shots per second.
+        double cooldown = 0.0;   // Time until next shot.
+    };
+
+    struct td_projectile_t {
+        vec2<double> pos;
+        vec2<double> target_pos;
+        size_t target_enemy_idx;
+        double speed = 600.0;
+        double damage = 15.0;
+    };
+
+    std::vector<td_enemy_t> td_enemies;
+    std::vector<td_tower_t> td_towers;
+    std::vector<td_projectile_t> td_projectiles;
+    std::chrono::time_point<std::chrono::steady_clock> t_td_updated;
+
+    struct td_game_t {
+        int64_t grid_cols = 15;       // Number of columns in the grid.
+        int64_t grid_rows = 10;       // Number of rows in the grid.
+        double cell_size = 50.0;      // Size of each cell in pixels.
+
+        int64_t credits = 5;          // Number of towers the player can buy.
+        int64_t wave_number = 0;      // Current wave number.
+        int64_t enemies_in_wave = 0;  // Enemies remaining to spawn in this wave.
+        int64_t lives = 10;           // Player lives.
+        bool wave_active = false;     // Is a wave currently in progress?
+        double spawn_timer = 0.0;     // Time until next enemy spawn.
+        double spawn_interval = 1.0;  // Time between enemy spawns in seconds.
+        double enemy_speed = 0.01;    // How fast enemies move (path progress per second).
+
+        // Path waypoints define the white tiles path.
+        // These are grid coordinates that form a path from top-left to bottom-right.
+        std::vector<std::pair<int64_t, int64_t>> path_waypoints;
+
+        // Set of path cells for O(1) lookup during rendering.
+        std::set<std::pair<int64_t, int64_t>> path_cells_set;
+    } td_game;
+
+    const auto reset_td_game = [&](){
+        td_enemies.clear();
+        td_towers.clear();
+        td_projectiles.clear();
+
+        td_game.credits = 5;
+        td_game.wave_number = 0;
+        td_game.enemies_in_wave = 0;
+        td_game.lives = 10;
+        td_game.wave_active = false;
+        td_game.spawn_timer = 0.0;
+
+        // Define path waypoints: starts at top-left, goes right, then down in a snake pattern.
+        td_game.path_waypoints.clear();
+        td_game.path_cells_set.clear();
+        // Create a winding path from (0,0) to (grid_cols-1, grid_rows-1).
+        // Path goes: right across row 0, down to row 1, left across row 1, down to row 2, etc.
+        for(int64_t row = 0; row < td_game.grid_rows; ++row){
+            const bool going_right = (row % 2 == 0);
+//            if(going_right){
+//                for(int64_t col = 0; col < td_game.grid_cols; ++col){
+//                    td_game.path_waypoints.emplace_back(col, row);
+//                    td_game.path_cells_set.emplace(col, row);
+//                }
+//            }else{
+//                for(int64_t col = td_game.grid_cols - 1; col >= 0; --col){
+//                    td_game.path_waypoints.emplace_back(col, row);
+//                    td_game.path_cells_set.emplace(col, row);
+//                }
+//            }
+            if(going_right){
+                for(int64_t col = 2; col < (td_game.grid_cols - 2); ++col){
+                    td_game.path_waypoints.emplace_back(col, row);
+                    td_game.path_cells_set.emplace(col, row);
+                }
+            }else{
+                for(int64_t col = td_game.grid_cols - 3; col >= 2; --col){
+                    td_game.path_waypoints.emplace_back(col, row);
+                    td_game.path_cells_set.emplace(col, row);
+                }
+            }
+        }
+
+        const auto t_now = std::chrono::steady_clock::now();
+        t_td_updated = t_now;
+        return;
     };
 
     // Guide state.
@@ -5430,6 +5654,344 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             throw;
         }
 
+        const auto display_sf_game = [&view_toggles,
+                                      &sf_game_objs,
+                                      &t_sf_updated,
+                                      &t_sf_started,
+                                      &t_sf_last_spacebar,
+                                      &sf_game,
+                                      &reset_sf_game ]() -> bool {
+            if( !view_toggles.view_skifree_enabled ) return true;
+
+            // Reset the game before any game state is used.
+            if( ImGui::IsKeyPressed(SDL_SCANCODE_R) ){
+                reset_sf_game();
+            }
+
+            const auto win_width  = static_cast<int>( std::ceil(sf_game.box_width) ) + 15;
+            const auto win_height = static_cast<int>( std::ceil(sf_game.box_height) ) + 60;
+            auto flags = ImGuiWindowFlags_AlwaysAutoResize
+                       | ImGuiWindowFlags_NoScrollWithMouse
+                       | ImGuiWindowFlags_NoNavInputs
+                       | ImGuiWindowFlags_NoScrollbar ;
+            ImGui::SetNextWindowSize(ImVec2(win_width, win_height), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
+            ImGui::Begin("FreeSki", &view_toggles.view_skifree_enabled, flags );
+
+            // Display state.
+            ImVec2 curr_pos = ImGui::GetCursorScreenPos();
+            ImDrawList *window_draw_list = ImGui::GetWindowDrawList();
+            const auto f = ImGui::IsWindowFocused();
+
+            // Draw border
+            {
+                const auto c = ImColor(0.7f, 0.7f, 0.8f, 1.0f);
+                window_draw_list->AddRect(curr_pos, ImVec2( curr_pos.x + sf_game.box_width, 
+                                                            curr_pos.y + sf_game.box_height ), c);
+            }
+
+            const auto t_now = std::chrono::steady_clock::now();
+            auto t_updated_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_sf_updated).count();
+            
+            // Limit time steps to avoid simulation breakdown
+            if(30 < t_updated_diff) t_updated_diff = 30;
+            const auto dt = static_cast<double>(t_updated_diff) / 1000.0; // Delta time in seconds
+
+            // Handle countdown
+            if(sf_game.countdown_active){
+                sf_game.countdown_remaining -= dt;
+                if(sf_game.countdown_remaining <= 0.0){
+                    sf_game.countdown_active = false;
+                    sf_game.countdown_remaining = 0.0;
+                    // Initialize spawn timers when countdown finishes to prevent immediate burst
+                    const auto current_time = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_sf_started).count() / 1000.0;
+                    sf_game.last_tree_spawn = current_time;
+                    sf_game.last_rock_spawn = current_time;
+                    sf_game.last_jump_spawn = current_time;
+                    sf_game.last_other_skier_spawn = current_time;
+                }
+                
+                // Draw countdown
+                const auto countdown_text = std::to_string(static_cast<int>(std::ceil(sf_game.countdown_remaining)));
+                const auto text_size = ImGui::CalcTextSize(countdown_text.c_str());
+                const ImVec2 text_pos(curr_pos.x + sf_game.box_width/2.0 - text_size.x/2.0,
+                                      curr_pos.y + sf_game.box_height/2.0 - text_size.y/2.0);
+                window_draw_list->AddText(text_pos, ImColor(1.0f, 1.0f, 1.0f, 1.0f), countdown_text.c_str());
+            }
+
+            // Update game state when not in countdown and not game over
+            if(!sf_game.countdown_active && !sf_game.game_over){
+                // Gradually increase scroll speed
+                sf_game.scroll_speed += sf_game.speed_increase_rate * dt;
+                if(sf_game.scroll_speed > sf_game.max_scroll_speed){
+                    sf_game.scroll_speed = sf_game.max_scroll_speed;
+                }
+                
+                // Update world scroll
+                sf_game.world_scroll_y += sf_game.scroll_speed * dt;
+                
+                // Handle player left/right movement
+                if( f ){
+                    const auto move_speed = 200.0;
+                    if( ImGui::IsKeyDown(SDL_SCANCODE_LEFT) ){
+                        sf_game.skier_x -= move_speed * dt;
+                    }
+                    if( ImGui::IsKeyDown(SDL_SCANCODE_RIGHT) ){
+                        sf_game.skier_x += move_speed * dt;
+                    }
+                    // Clamp to bounds
+                    sf_game.skier_x = std::clamp(sf_game.skier_x, sf_game.skier_size, sf_game.box_width - sf_game.skier_size);
+                    
+                    // Handle jump
+                    if( ImGui::IsKeyPressed(SDL_SCANCODE_SPACE) ){
+                        if(!sf_game.is_jumping){
+                            // Start jump
+                            sf_game.is_jumping = true;
+                            sf_game.jump_velocity = sf_game.jump_speed;
+                            sf_game.did_flip = false;
+                            sf_game.can_double_tap = true;
+                            t_sf_last_spacebar = t_now;
+                        }else if(sf_game.can_double_tap){
+                            // Check if this is a double-tap while airborne
+                            const auto t_since_last_spacebar = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_sf_last_spacebar).count();
+                            if(t_since_last_spacebar > 50 && t_since_last_spacebar < 300){
+                                // Double tap detected - do a flip!
+                                sf_game.did_flip = true;
+                                sf_game.can_double_tap = false;
+                            }
+                            t_sf_last_spacebar = t_now;
+                        }
+                    }
+                }
+                
+                // Update jump physics
+                if(sf_game.is_jumping){
+                    const auto gravity = 400.0; // pixels/sec^2
+                    sf_game.jump_velocity -= gravity * dt;
+                    sf_game.jump_height += sf_game.jump_velocity * dt;
+                    
+                    if(sf_game.jump_height <= 0.0){
+                        sf_game.jump_height = 0.0;
+                        sf_game.is_jumping = false;
+                        sf_game.jump_velocity = 0.0;
+                        sf_game.can_double_tap = false; // Reset flip capability when landing
+                    }
+                }
+                
+                // Spawn new objects
+                const auto total_time = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_sf_started).count() / 1000.0;
+                std::uniform_real_distribution<> rd_x(20.0, sf_game.box_width - 20.0);
+                
+                // Trees
+                if((total_time - sf_game.last_tree_spawn) > (1.0 / sf_game.tree_spawn_rate)){
+                    sf_game_objs.emplace_back();
+                    sf_game_objs.back().type = sf_obj_type_t::tree;
+                    sf_game_objs.back().pos = vec2<double>(rd_x(sf_game.re), sf_game.world_scroll_y + sf_game.box_height + 50.0);
+                    sf_game_objs.back().size = 25.0;
+                    sf_game.last_tree_spawn = total_time;
+                }
+                
+                // Rocks
+                if((total_time - sf_game.last_rock_spawn) > (1.0 / sf_game.rock_spawn_rate)){
+                    sf_game_objs.emplace_back();
+                    sf_game_objs.back().type = sf_obj_type_t::rock;
+                    sf_game_objs.back().pos = vec2<double>(rd_x(sf_game.re), sf_game.world_scroll_y + sf_game.box_height + 50.0);
+                    sf_game_objs.back().size = 12.0;
+                    sf_game.last_rock_spawn = total_time;
+                }
+                
+                // Jumps
+                if((total_time - sf_game.last_jump_spawn) > (1.0 / sf_game.jump_spawn_rate)){
+                    sf_game_objs.emplace_back();
+                    sf_game_objs.back().type = sf_obj_type_t::jump;
+                    sf_game_objs.back().pos = vec2<double>(rd_x(sf_game.re), sf_game.world_scroll_y + sf_game.box_height + 50.0);
+                    sf_game_objs.back().size = 20.0;
+                    sf_game.last_jump_spawn = total_time;
+                }
+                
+                // Other skiers
+                if((total_time - sf_game.last_other_skier_spawn) > (1.0 / sf_game.other_skier_spawn_rate)){
+                    sf_game_objs.emplace_back();
+                    sf_game_objs.back().type = sf_obj_type_t::other_skier;
+                    sf_game_objs.back().pos = vec2<double>(rd_x(sf_game.re), sf_game.world_scroll_y + sf_game.box_height + 50.0);
+                    sf_game_objs.back().size = 12.0;
+                    sf_game.last_other_skier_spawn = total_time;
+                }
+                
+                // Check collisions with objects
+                const auto skier_world_y = sf_game.world_scroll_y + sf_game.skier_y;
+                for(auto &obj : sf_game_objs){
+                    const auto dx = obj.pos.x - sf_game.skier_x;
+                    const auto dy = obj.pos.y - skier_world_y;
+                    const auto dist = std::sqrt(dx*dx + dy*dy);
+                    const auto collision_dist = sf_game.skier_size + obj.size;
+                    
+                    if(dist < collision_dist){
+                        // Collision detected
+                        if(obj.type == sf_obj_type_t::jump){
+                            // Hit a jump
+                            if(sf_game.is_jumping){
+                                // Jumped over it - award points
+                                sf_game.score += sf_game.did_flip ? 2 : 1;
+                                // Remove the jump
+                                obj.pos.y = sf_game.world_scroll_y + sf_game.box_height + 100.0;
+                            }else{
+                                // Hit it - speed boost
+                                sf_game.scroll_speed = std::min(sf_game.scroll_speed * 1.15, sf_game.max_scroll_speed);
+                                // Remove the jump
+                                obj.pos.y = sf_game.world_scroll_y + sf_game.box_height + 100.0;
+                            }
+                            continue; // Skip to next object
+                        }else if(obj.type == sf_obj_type_t::rock){
+                            if(sf_game.is_jumping){
+                                // Jumped over rock - award points
+                                sf_game.score += sf_game.did_flip ? 2 : 1;
+                                obj.pos.y = sf_game.world_scroll_y + sf_game.box_height + 100.0;
+                            }else{
+                                // Hit rock - game over
+                                sf_game.game_over = true;
+                                sf_game.game_over_time = 0.0;
+                                sf_game.scroll_speed = 0.0;
+                            }
+                            continue; // Skip to next object
+                        }else if(obj.type == sf_obj_type_t::tree || obj.type == sf_obj_type_t::other_skier){
+                            // Hit tree or other skier - game over
+                            sf_game.game_over = true;
+                            sf_game.game_over_time = 0.0;
+                            sf_game.scroll_speed = 0.0;
+                            continue; // Skip to next object
+                        }
+                    }
+                }
+                
+                // Remove objects that are off screen
+                sf_game_objs.erase(
+                    std::remove_if(sf_game_objs.begin(), sf_game_objs.end(),
+                        [&](const sf_game_obj_t &obj) -> bool {
+                            const auto screen_y = obj.pos.y - sf_game.world_scroll_y;
+                            return screen_y < -50.0;
+                        }),
+                    sf_game_objs.end()
+                );
+            }
+
+            // Handle game over animation
+            if(sf_game.game_over){
+                sf_game.game_over_time += dt;
+            }
+
+            // Draw objects
+            for(const auto &obj : sf_game_objs){
+                const auto screen_y = obj.pos.y - sf_game.world_scroll_y;
+                
+                // Only draw if on screen
+                if(screen_y < -50.0 || screen_y > sf_game.box_height + 50.0) continue;
+                
+                ImVec2 obj_pos = curr_pos;
+                obj_pos.x = curr_pos.x + obj.pos.x;
+                obj_pos.y = curr_pos.y + screen_y;
+                
+                if(sf_game.game_over){
+                    // Apply jitter effect
+                    const auto jitter_amount = 3.0;
+                    std::uniform_real_distribution<> rd_jitter(-jitter_amount, jitter_amount);
+                    obj_pos.x += rd_jitter(sf_game.re);
+                    obj_pos.y += rd_jitter(sf_game.re);
+                }
+                
+                if(obj.type == sf_obj_type_t::tree){
+                    // Draw trees as a green triangle
+                    const auto c = ImColor(0.2f, 0.8f, 0.2f, 1.0f);
+                    const auto p1 = ImVec2(obj_pos.x, obj_pos.y - obj.size);
+                    const auto p2 = ImVec2(obj_pos.x - obj.size*0.7, obj_pos.y + obj.size*0.5);
+                    const auto p3 = ImVec2(obj_pos.x + obj.size*0.7, obj_pos.y + obj.size*0.5);
+                    window_draw_list->AddTriangleFilled(p1, p2, p3, c);
+                }else if(obj.type == sf_obj_type_t::rock){
+                    // Draw rocks as a gray circle
+                    const auto c = ImColor(0.5f, 0.5f, 0.5f, 1.0f);
+                    window_draw_list->AddCircleFilled(obj_pos, obj.size, c);
+                }else if(obj.type == sf_obj_type_t::jump){
+                    // Draw jumps as a brown/yellow box (rectangle)
+                    const auto c = ImColor(0.8f, 0.6f, 0.2f, 1.0f);
+                    const auto p1 = ImVec2(obj_pos.x - obj.size, obj_pos.y - obj.size*0.5);
+                    const auto p2 = ImVec2(obj_pos.x + obj.size, obj_pos.y + obj.size*0.5);
+                    window_draw_list->AddRectFilled(p1, p2, c);
+
+                }else if(obj.type == sf_obj_type_t::other_skier){
+                    // Draw other skiers as a cyan triangle
+                    const auto c = ImColor(0.0f, 0.8f, 0.8f, 1.0f);
+                    const auto p1 = ImVec2(obj_pos.x, obj_pos.y - obj.size);
+                    const auto p2 = ImVec2(obj_pos.x - obj.size*0.7, obj_pos.y + obj.size*0.5);
+                    const auto p3 = ImVec2(obj_pos.x + obj.size*0.7, obj_pos.y + obj.size*0.5);
+                    window_draw_list->AddTriangleFilled(p1, p2, p3, c);
+                }
+            }
+            
+            // Draw the player skier
+            {
+                ImVec2 skier_pos = curr_pos;
+                skier_pos.x = curr_pos.x + sf_game.skier_x;
+                skier_pos.y = curr_pos.y + sf_game.skier_y - sf_game.jump_height;
+                
+                if(sf_game.game_over){
+                    // Apply twirl effect
+                    const auto angle = sf_game.game_over_time * 10.0;
+                    const auto twirl_radius = 10.0;
+                    skier_pos.x += std::cos(angle) * twirl_radius;
+                    skier_pos.y += std::sin(angle) * twirl_radius;
+                }
+                
+                // Draw as red triangle
+                auto c = ImColor(1.0f, 0.2f, 0.2f, 1.0f);
+                if(sf_game.is_jumping){
+                    c = ImColor(1.0f, 0.5f, 0.0f, 1.0f); // Orange when jumping
+                }
+                const auto size = sf_game.skier_size;
+                const auto p1 = ImVec2(skier_pos.x, skier_pos.y - size);
+                const auto p2 = ImVec2(skier_pos.x - size*0.7, skier_pos.y + size*0.5);
+                const auto p3 = ImVec2(skier_pos.x + size*0.7, skier_pos.y + size*0.5);
+                window_draw_list->AddTriangleFilled(p1, p2, p3, c);
+                
+                // Draw flip indicator
+                if(sf_game.is_jumping && sf_game.did_flip){
+                    const auto flip_c = ImColor(1.0f, 1.0f, 0.0f, 1.0f);
+                    window_draw_list->AddCircle(skier_pos, size * 1.5, flip_c, 12, 2.0f);
+                }
+            }
+
+            // Draw score and speed
+            {
+                std::stringstream ss;
+                ss << "Score: " << sf_game.score;
+                ss << "  Speed: " << static_cast<int>(sf_game.scroll_speed);
+                const auto score_text = ss.str();
+                const ImVec2 text_pos(curr_pos.x + 10, curr_pos.y + 10);
+                window_draw_list->AddText(text_pos, ImColor(1.0f, 1.0f, 1.0f, 1.0f), score_text.c_str());
+            }
+            
+            // Draw game over message
+            if(sf_game.game_over){
+                const auto game_over_text = "GAME OVER! Press R to reset";
+                const auto text_size = ImGui::CalcTextSize(game_over_text);
+                const ImVec2 text_pos(curr_pos.x + sf_game.box_width/2.0 - text_size.x/2.0,
+                                      curr_pos.y + sf_game.box_height/2.0 - text_size.y/2.0);
+                window_draw_list->AddText(text_pos, ImColor(1.0f, 0.0f, 0.0f, 1.0f), game_over_text);
+            }
+
+            t_sf_updated = t_now;
+
+            ImGui::Dummy(ImVec2(sf_game.box_width, sf_game.box_height));
+            ImGui::End();
+            return true;
+        };
+        try{
+            // Break from the main render loop if false is received.
+            if(!display_sf_game()) break;
+        }catch(const std::exception &e){
+            YLOGWARN("Exception in display_sf_game(): '" << e.what() << "'");
+            throw;
+        }
+
         const auto display_rc_game = [&view_toggles,
                                       &t_cube_updated,
                                       &rc_game_size,
@@ -5875,6 +6437,363 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             throw;
         }
 
+        // Tower Defence game display function.
+        const auto display_td_game = [&view_toggles,
+                                      &td_enemies,
+                                      &td_towers,
+                                      &td_projectiles,
+                                      &t_td_updated,
+                                      &td_game,
+                                      &reset_td_game ]() -> bool {
+            if( !view_toggles.view_tower_defence_enabled ) return true;
+
+            // Reset the game before any game state is used.
+            if( ImGui::IsKeyPressed(SDL_SCANCODE_R) ){
+                reset_td_game();
+            }
+
+            const auto box_width  = td_game.grid_cols * td_game.cell_size;
+            const auto box_height = td_game.grid_rows * td_game.cell_size;
+            const auto win_width  = static_cast<int>(box_width) + 220;
+            const auto win_height = static_cast<int>(box_height) + 80;
+
+            const auto wn = static_cast<double>(td_game.wave_number);
+
+            auto flags = ImGuiWindowFlags_AlwaysAutoResize
+                       | ImGuiWindowFlags_NoScrollWithMouse
+                       | ImGuiWindowFlags_NoNavInputs
+                       | ImGuiWindowFlags_NoScrollbar ;
+            ImGui::SetNextWindowSize(ImVec2(win_width, win_height), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Tower Defence", &view_toggles.view_tower_defence_enabled, flags );
+
+            // Helper to check if a grid cell is on the path (O(1) lookup using set).
+            const auto is_path_cell = [&](int64_t col, int64_t row) -> bool {
+                return td_game.path_cells_set.count(std::make_pair(col, row)) > 0;
+            };
+
+            // Helper to check if a tower exists at grid cell.
+            const auto has_tower_at = [&](int64_t col, int64_t row) -> bool {
+                for(const auto& tower : td_towers){
+                    if(tower.grid_x == col && tower.grid_y == row) return true;
+                }
+                return false;
+            };
+
+            // Helper to get world position from path progress.
+            const auto get_path_position = [&](double progress) -> vec2<double> {
+                if(td_game.path_waypoints.empty()) return vec2<double>(0.0, 0.0);
+                const auto total_segments = static_cast<double>(td_game.path_waypoints.size() - 1);
+                if(total_segments <= 0.0){
+                    const auto& wp = td_game.path_waypoints[0];
+                    return vec2<double>(
+                        (static_cast<double>(wp.first) + 0.5) * td_game.cell_size,
+                        (static_cast<double>(wp.second) + 0.5) * td_game.cell_size
+                    );
+                }
+                const auto segment_progress = progress * total_segments;
+                const auto segment_idx = static_cast<size_t>(std::floor(segment_progress));
+                const auto t = segment_progress - static_cast<double>(segment_idx);
+                
+                size_t idx1 = std::min(segment_idx, td_game.path_waypoints.size() - 1);
+                size_t idx2 = std::min(segment_idx + 1, td_game.path_waypoints.size() - 1);
+                
+                const auto& wp1 = td_game.path_waypoints[idx1];
+                const auto& wp2 = td_game.path_waypoints[idx2];
+                
+                const double x1 = (static_cast<double>(wp1.first) + 0.5) * td_game.cell_size;
+                const double y1 = (static_cast<double>(wp1.second) + 0.5) * td_game.cell_size;
+                const double x2 = (static_cast<double>(wp2.first) + 0.5) * td_game.cell_size;
+                const double y2 = (static_cast<double>(wp2.second) + 0.5) * td_game.cell_size;
+                
+                return vec2<double>(x1 + t * (x2 - x1), y1 + t * (y2 - y1));
+            };
+
+            // Time update.
+            const auto t_now = std::chrono::steady_clock::now();
+            auto t_updated_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_td_updated).count();
+            if(50 < t_updated_diff) t_updated_diff = 50;  // Cap time step.
+            const double dt = static_cast<double>(t_updated_diff) / 1000.0;
+            t_td_updated = t_now;
+
+            // Display game info panel.
+            ImGui::BeginChild("GameInfo", ImVec2(200, box_height), true);
+            ImGui::Text("Wave: %ld", static_cast<long>(td_game.wave_number));
+            ImGui::Text("Lives: %ld", static_cast<long>(td_game.lives));
+            ImGui::Text("Credits: %ld", static_cast<long>(td_game.credits));
+            ImGui::Text("Towers: %zu", td_towers.size());
+            ImGui::Text("Enemies: %zu", td_enemies.size());
+            ImGui::Separator();
+
+            if(td_game.lives <= 0){
+                ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "GAME OVER!");
+                if(ImGui::Button("Restart", ImVec2(-1, 0))){
+                    reset_td_game();
+                }
+            }else if(!td_game.wave_active){
+                if(ImGui::Button("Launch Wave", ImVec2(-1, 0))){
+                    td_game.wave_number += 1;
+                    td_game.enemies_in_wave = td_game.wave_number;  // Wave N has N enemies.
+                    td_game.wave_active = true;
+                    td_game.spawn_timer = 0.0;
+                }
+            }else{
+                ImGui::Text("Wave in progress...");
+                ImGui::Text("Spawning: %ld left", static_cast<long>(td_game.enemies_in_wave));
+            }
+
+            ImGui::Separator();
+            ImGui::TextWrapped("Click gray tiles to place towers (%ld credits).", static_cast<long>(td_game.credits));
+            ImGui::TextWrapped("Press R to reset.");
+
+            //ImGui::Separator();
+            //for(const auto &enemy : td_enemies){
+            //    ImGui::TextWrapped("Enemy: progress = %.2f, hp = %.1f", enemy.path_progress, enemy.hp);
+            //}
+
+            ImGui::EndChild();
+            ImGui::SameLine();
+
+            // Game grid display.
+            ImVec2 grid_origin = ImGui::GetCursorScreenPos();
+            ImDrawList *draw_list = ImGui::GetWindowDrawList();
+
+            // Draw grid cells.
+            for(int64_t row = 0; row < td_game.grid_rows; ++row){
+                for(int64_t col = 0; col < td_game.grid_cols; ++col){
+                    const float x0 = grid_origin.x + static_cast<float>(col * td_game.cell_size);
+                    const float y0 = grid_origin.y + static_cast<float>(row * td_game.cell_size);
+                    const float x1 = x0 + static_cast<float>(td_game.cell_size);
+                    const float y1 = y0 + static_cast<float>(td_game.cell_size);
+
+                    ImU32 fill_color;
+                    if(is_path_cell(col, row)){
+                        fill_color = ImColor(1.0f, 1.0f, 1.0f, 1.0f);  // White for path.
+                    }else{
+                        fill_color = ImColor(0.6f, 0.6f, 0.6f, 1.0f);  // Gray for buildable.
+                    }
+                    draw_list->AddRectFilled(ImVec2(x0, y0), ImVec2(x1, y1), fill_color);
+                    draw_list->AddRect(ImVec2(x0, y0), ImVec2(x1, y1), ImColor(0.3f, 0.3f, 0.3f, 1.0f));
+                }
+            }
+
+            // Handle tower placement on mouse click.
+            if(ImGui::IsMouseClicked(0) && td_game.credits > 0 && td_game.lives > 0){
+                ImVec2 mouse_pos = ImGui::GetMousePos();
+                const float rel_x = mouse_pos.x - grid_origin.x;
+                const float rel_y = mouse_pos.y - grid_origin.y;
+                if(rel_x >= 0 && rel_y >= 0){
+                    const int64_t col = static_cast<int64_t>(rel_x / td_game.cell_size);
+                    const int64_t row = static_cast<int64_t>(rel_y / td_game.cell_size);
+                    if(col >= 0 && col < td_game.grid_cols && row >= 0 && row < td_game.grid_rows){
+                        if(!is_path_cell(col, row) && !has_tower_at(col, row)){
+                            td_tower_t new_tower;
+                            new_tower.grid_x = col;
+                            new_tower.grid_y = row;
+                            td_towers.push_back(new_tower);
+                            td_game.credits -= 1;
+                        }
+                    }
+                }
+            }
+
+            // Draw towers (blue squares with range indicator).
+            for(const auto& tower : td_towers){
+                const float cx = grid_origin.x + static_cast<float>((tower.grid_x + 0.5) * td_game.cell_size);
+                const float cy = grid_origin.y + static_cast<float>((tower.grid_y + 0.5) * td_game.cell_size);
+                const float half_size = static_cast<float>(td_game.cell_size * 0.35);
+
+                // Draw range circle (subtle).
+                draw_list->AddCircle(ImVec2(cx, cy), static_cast<float>(tower.range),
+                                     ImColor(0.2f, 0.2f, 0.8f, 0.3f), 32, 1.0f);
+                // Draw tower as a blue square.
+                draw_list->AddRectFilled(ImVec2(cx - half_size, cy - half_size),
+                                         ImVec2(cx + half_size, cy + half_size),
+                                         ImColor(0.2f, 0.3f, 0.9f, 1.0f));
+                draw_list->AddRect(ImVec2(cx - half_size, cy - half_size),
+                                   ImVec2(cx + half_size, cy + half_size),
+                                   ImColor(0.1f, 0.1f, 0.5f, 1.0f), 0.0f, 0, 2.0f);
+            }
+
+            // Update wave spawning.
+            if(td_game.wave_active && td_game.enemies_in_wave > 0){
+                td_game.spawn_timer -= dt;
+                if(td_game.spawn_timer <= 0.0){
+                    // Spawn a new enemy.
+                    td_enemy_t new_enemy;
+                    new_enemy.path_progress = 0.0;
+                    //new_enemy.hp = 100.0 + (wn - 1.0) * 20.0;  // More HP for later waves.
+                    new_enemy.hp += (wn - 1.0) * 20.0;  // More HP for later waves.
+                    new_enemy.max_hp = new_enemy.hp;
+                    td_enemies.push_back(new_enemy);
+                    td_game.enemies_in_wave -= 1;
+                    td_game.spawn_timer = td_game.spawn_interval;
+                }
+            }
+
+            // Check if wave is complete.
+            if(td_game.wave_active && td_game.enemies_in_wave <= 0 && td_enemies.empty()){
+                td_game.wave_active = false;
+            }
+
+            // Update enemies.
+            for(auto& enemy : td_enemies){
+                enemy.path_progress += (td_game.enemy_speed + wn/500.0) * dt;
+            }
+
+            // Check for enemies reaching the end.
+            td_enemies.erase(
+                std::remove_if(td_enemies.begin(), td_enemies.end(),
+                    [&](const td_enemy_t& enemy) -> bool {
+                        if(enemy.path_progress >= 1.0){
+                            td_game.lives -= 1;
+                            return true;
+                        }
+                        return false;
+                    }),
+                td_enemies.end()
+            );
+
+            // Towers attack enemies.
+            for(auto& tower : td_towers){
+                tower.cooldown -= dt;
+                if(tower.cooldown <= 0.0){
+                    const double tower_x = (static_cast<double>(tower.grid_x) + 0.5) * td_game.cell_size;
+                    const double tower_y = (static_cast<double>(tower.grid_y) + 0.5) * td_game.cell_size;
+                    const vec2<double> tower_pos(tower_x, tower_y);
+
+                    // Find closest enemy in range.
+                    double closest_dist = tower.range + 1.0;
+                    size_t closest_idx = td_enemies.size();
+                    for(size_t i = 0; i < td_enemies.size(); ++i){
+                        const auto enemy_pos = get_path_position(td_enemies[i].path_progress);
+                        const double dist = tower_pos.distance(enemy_pos);
+                        if(dist <= tower.range && dist < closest_dist){
+                            closest_dist = dist;
+                            closest_idx = i;
+                        }
+                    }
+
+                    if(closest_idx < td_enemies.size()){
+                        // Fire at the enemy.
+                        td_projectile_t proj;
+                        proj.pos = tower_pos;
+                        proj.target_pos = get_path_position(td_enemies[closest_idx].path_progress);
+                        proj.target_enemy_idx = closest_idx;  // May become stale, use position-based hit detection.
+                        proj.damage = tower.damage;
+                        td_projectiles.push_back(proj);
+                        tower.cooldown = 1.0 / tower.fire_rate;
+                    }
+                }
+            }
+
+            // Update projectiles.
+            for(auto& proj : td_projectiles){
+                const vec2<double> dir = (proj.target_pos - proj.pos);
+                const double dist = dir.length();
+                if(dist > 0.0){
+                    const vec2<double> move = dir.unit() * proj.speed * dt;
+                    if(move.length() >= dist){
+                        proj.pos = proj.target_pos;
+                    }else{
+                        proj.pos = proj.pos + move;
+                    }
+                }
+            }
+
+            // Check for projectile hits using position-based detection (not indices).
+            // When a projectile reaches its target, damage the closest enemy within hit radius.
+            const double hit_radius = td_game.cell_size * 0.4;
+            td_projectiles.erase(
+                std::remove_if(td_projectiles.begin(), td_projectiles.end(),
+                    [&](const td_projectile_t& proj) -> bool {
+                        const double dist_to_target = proj.pos.distance(proj.target_pos);
+                        if(dist_to_target < 5.0){
+                            // Find the closest enemy to the projectile position and apply damage.
+                            double closest_dist = hit_radius;
+                            td_enemy_t* closest_enemy = nullptr;
+                            for(auto& enemy : td_enemies){
+                                const auto enemy_pos = get_path_position(enemy.path_progress);
+                                const double dist = proj.pos.distance(enemy_pos);
+                                if(dist < closest_dist){
+                                    closest_dist = dist;
+                                    closest_enemy = &enemy;
+                                }
+                            }
+                            if(closest_enemy != nullptr){
+                                closest_enemy->hp -= proj.damage;  // Only hit one enemy per projectile.
+                            }
+                            return true;
+                        }
+                        return false;
+                    }),
+                td_projectiles.end()
+            );
+
+            // Remove dead enemies and grant credits.
+            size_t enemies_killed = 0;
+            td_enemies.erase(
+                std::remove_if(td_enemies.begin(), td_enemies.end(),
+                    [&](const td_enemy_t& enemy) -> bool {
+                        if(enemy.hp <= 0.0){
+                            ++enemies_killed;
+                            return true;
+                        }
+                        return false;
+                    }),
+                td_enemies.end()
+            );
+            td_game.credits += static_cast<int64_t>(enemies_killed);
+
+            // Draw enemies (red circles with health bars).
+            for(const auto& enemy : td_enemies){
+                const auto pos = get_path_position(enemy.path_progress);
+                const float ex = grid_origin.x + static_cast<float>(pos.x);
+                const float ey = grid_origin.y + static_cast<float>(pos.y);
+                const float enemy_radius = static_cast<float>(td_game.cell_size * 0.3);
+
+                // Draw enemy circle.
+                draw_list->AddCircleFilled(ImVec2(ex, ey), enemy_radius,
+                                           ImColor(0.9f, 0.2f, 0.2f, 1.0f));
+                draw_list->AddCircle(ImVec2(ex, ey), enemy_radius,
+                                     ImColor(0.5f, 0.1f, 0.1f, 1.0f), 0, 2.0f);
+
+                // Draw health bar above enemy.
+                const float bar_width = td_game.cell_size * 0.6f;
+                const float bar_height = 4.0f;
+                const float bar_x = ex - bar_width / 2.0f;
+                const float bar_y = ey - enemy_radius - 8.0f;
+                const float hp_ratio = static_cast<float>(enemy.hp / enemy.max_hp);
+
+                draw_list->AddRectFilled(ImVec2(bar_x, bar_y),
+                                         ImVec2(bar_x + bar_width, bar_y + bar_height),
+                                         ImColor(0.3f, 0.3f, 0.3f, 1.0f));
+                draw_list->AddRectFilled(ImVec2(bar_x, bar_y),
+                                         ImVec2(bar_x + bar_width * hp_ratio, bar_y + bar_height),
+                                         ImColor(0.0f, 0.8f, 0.0f, 1.0f));
+            }
+
+            // Draw projectiles (yellow circles).
+            for(const auto& proj : td_projectiles){
+                const float px = grid_origin.x + static_cast<float>(proj.pos.x);
+                const float py = grid_origin.y + static_cast<float>(proj.pos.y);
+                draw_list->AddCircleFilled(ImVec2(px, py), 4.0f, ImColor(1.0f, 1.0f, 0.0f, 1.0f));
+            }
+
+            // Create an invisible button to capture mouse input on the grid area.
+            ImGui::SetCursorScreenPos(grid_origin);
+            ImGui::InvisibleButton("td_grid", ImVec2(box_width, box_height));
+
+            ImGui::End();
+            return true;
+        };
+        try{
+            // Break from the main render loop if false is received.
+            if(!display_td_game()) break;
+        }catch(const std::exception &e){
+            YLOGWARN("Exception in display_td_game(): '" << e.what() << "'");
+            throw;
+        }
 
         // Display the Guitar Hero game.
         const auto display_gh_game = [&view_toggles,
@@ -10731,6 +11650,12 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
+            if(ImGui::Button("FreeSki")){
+                view_toggles.view_skifree_enabled = true;
+                reset_sf_game();
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
             if(ImGui::Button("Cube")){
                 view_toggles.view_cube_enabled = true;
                 reset_cube_game();
@@ -10740,6 +11665,12 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             if(ImGui::Button("Guitar Hero")){
                 view_toggles.view_guitar_hero_enabled = true;
                 reset_gh_game();
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Tower Defence")){
+                view_toggles.view_tower_defence_enabled = true;
+                reset_td_game();
                 ImGui::CloseCurrentPopup();
             }
 

@@ -67,8 +67,10 @@
 #include "Operations/CopyImages.h"
 #include "Operations/CopyLineSamples.h"
 #include "Operations/CopyMeshes.h"
-#include "Operations/CopyTables.h"
 #include "Operations/CopyPoints.h"
+#include "Operations/CopyRTPlans.h"
+#include "Operations/CopyTables.h"
+#include "Operations/CopyWarps.h"
 #include "Operations/CountObjects.h"
 #include "Operations/CountVoxels.h"
 #include "Operations/CropImageDoseToROIs.h"
@@ -88,8 +90,9 @@
 #include "Operations/DeleteImages.h"
 #include "Operations/DeleteLineSamples.h"
 #include "Operations/DeleteMeshes.h"
-#include "Operations/DeleteTables.h"
 #include "Operations/DeletePoints.h"
+#include "Operations/DeleteRTPlans.h"
+#include "Operations/DeleteTables.h"
 #include "Operations/DeleteWarps.h"
 #include "Operations/DetectShapes3D.h"
 #include "Operations/DrawGeometry.h"
@@ -175,9 +178,15 @@
 #include "Operations/MaxMinPixels.h"
 #include "Operations/MeldDose.h"
 #include "Operations/ModifyContourMetadata.h"
-#include "Operations/ModifyLineSamples.h"
 #include "Operations/ModifyImageMetadata.h"
+#include "Operations/ModifyLineSampleMetadata.h"
+#include "Operations/ModifyLineSamples.h"
+#include "Operations/ModifyMeshMetadata.h"
 #include "Operations/ModifyParameters.h"
+#include "Operations/ModifyPointMetadata.h"
+#include "Operations/ModifyRTPlanMetadata.h"
+#include "Operations/ModifyTableMetadata.h"
+#include "Operations/ModifyWarpMetadata.h"
 #include "Operations/NegatePixels.h"
 #include "Operations/NoOp.h"
 #include "Operations/NoneOf.h"
@@ -343,8 +352,10 @@ known_ops_t Known_Operations(){
     out["CopyImages"] = std::make_pair(OpArgDocCopyImages, CopyImages);
     out["CopyLineSamples"] = std::make_pair(OpArgDocCopyLineSamples, CopyLineSamples);
     out["CopyMeshes"] = std::make_pair(OpArgDocCopyMeshes, CopyMeshes);
-    out["CopyTables"] = std::make_pair(OpArgDocCopyTables, CopyTables);
     out["CopyPoints"] = std::make_pair(OpArgDocCopyPoints, CopyPoints);
+    out["CopyRTPlans"] = std::make_pair(OpArgDocCopyRTPlans, CopyRTPlans);
+    out["CopyTables"] = std::make_pair(OpArgDocCopyTables, CopyTables);
+    out["CopyWarps"] = std::make_pair(OpArgDocCopyWarps, CopyWarps);
     out["CountObjects"] = std::make_pair(OpArgDocCountObjects, CountObjects);
     out["CountVoxels"] = std::make_pair(OpArgDocCountVoxels, CountVoxels);
     out["CropImageDoseToROIs"] = std::make_pair(OpArgDocCropImageDoseToROIs, CropImageDoseToROIs);
@@ -360,8 +371,9 @@ known_ops_t Known_Operations(){
     out["DeleteImages"] = std::make_pair(OpArgDocDeleteImages, DeleteImages);
     out["DeleteLineSamples"] = std::make_pair(OpArgDocDeleteLineSamples, DeleteLineSamples);
     out["DeleteMeshes"] = std::make_pair(OpArgDocDeleteMeshes, DeleteMeshes);
-    out["DeleteTables"] = std::make_pair(OpArgDocDeleteTables, DeleteTables);
     out["DeletePoints"] = std::make_pair(OpArgDocDeletePoints, DeletePoints);
+    out["DeleteRTPlans"] = std::make_pair(OpArgDocDeleteRTPlans, DeleteRTPlans);
+    out["DeleteTables"] = std::make_pair(OpArgDocDeleteTables, DeleteTables);
     out["DeleteWarps"] = std::make_pair(OpArgDocDeleteWarps, DeleteWarps);
     out["DetectShapes3D"] = std::make_pair(OpArgDocDetectShapes3D, DetectShapes3D);
     out["DICOMExportContours"] = std::make_pair(OpArgDocDICOMExportContours, DICOMExportContours);
@@ -451,9 +463,15 @@ known_ops_t Known_Operations(){
     out["MaxMinPixels"] = std::make_pair(OpArgDocMaxMinPixels, MaxMinPixels);
     out["MeldDose"] = std::make_pair(OpArgDocMeldDose, MeldDose);
     out["ModifyContourMetadata"] = std::make_pair(OpArgDocModifyContourMetadata, ModifyContourMetadata);
-    out["ModifyLineSamples"] = std::make_pair(OpArgDocModifyLineSamples, ModifyLineSamples);
     out["ModifyImageMetadata"] = std::make_pair(OpArgDocModifyImageMetadata, ModifyImageMetadata);
+    out["ModifyLineSampleMetadata"] = std::make_pair(OpArgDocModifyLineSampleMetadata, ModifyLineSampleMetadata);
+    out["ModifyLineSamples"] = std::make_pair(OpArgDocModifyLineSamples, ModifyLineSamples);
+    out["ModifyMeshMetadata"] = std::make_pair(OpArgDocModifyMeshMetadata, ModifyMeshMetadata);
     out["ModifyParameters"] = std::make_pair(OpArgDocModifyParameters, ModifyParameters);
+    out["ModifyPointMetadata"] = std::make_pair(OpArgDocModifyPointMetadata, ModifyPointMetadata);
+    out["ModifyRTPlanMetadata"] = std::make_pair(OpArgDocModifyRTPlanMetadata, ModifyRTPlanMetadata);
+    out["ModifyTableMetadata"] = std::make_pair(OpArgDocModifyTableMetadata, ModifyTableMetadata);
+    out["ModifyWarpMetadata"] = std::make_pair(OpArgDocModifyWarpMetadata, ModifyWarpMetadata);
     out["NegatePixels"] = std::make_pair(OpArgDocNegatePixels, NegatePixels);
     out["NoneOf"] = std::make_pair(OpArgDocNoneOf, NoneOf);
     out["NoOp"] = std::make_pair(OpArgDocNoOp, NoOp);
