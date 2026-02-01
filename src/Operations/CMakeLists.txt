@@ -46,8 +46,10 @@ add_library(Operations_objs OBJECT
     CopyImages.cc
     CopyLineSamples.cc
     CopyMeshes.cc
-    CopyTables.cc
     CopyPoints.cc
+    CopyRTPlans.cc
+    CopyTables.cc
+    CopyWarps.cc
     CountObjects.cc
     CountVoxels.cc
     CropImageDoseToROIs.cc
@@ -67,8 +69,9 @@ add_library(Operations_objs OBJECT
     DeleteImages.cc
     DeleteLineSamples.cc
     DeleteMeshes.cc
-    DeleteTables.cc
     DeletePoints.cc
+    DeleteRTPlans.cc
+    DeleteTables.cc
     DeleteWarps.cc
     DetectShapes3D.cc
     DrawGeometry.cc
@@ -154,9 +157,15 @@ add_library(Operations_objs OBJECT
     MaxMinPixels.cc
     MeldDose.cc
     ModifyContourMetadata.cc
-    ModifyLineSamples.cc
     ModifyImageMetadata.cc
+    ModifyLineSampleMetadata.cc
+    ModifyLineSamples.cc
+    ModifyMeshMetadata.cc
     ModifyParameters.cc
+    ModifyPointMetadata.cc
+    ModifyRTPlanMetadata.cc
+    ModifyTableMetadata.cc
+    ModifyWarpMetadata.cc
     NegatePixels.cc
     NoOp.cc
     NoneOf.cc
