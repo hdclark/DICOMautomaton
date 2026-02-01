@@ -38,6 +38,7 @@
 // Helper structure to store track point data for speed-based splitting.
 struct gpx_track_point_t {
     vec3<double> projected;  // Mercator-projected position (x, y, 0).
+    bool has_valid_position = false;  // Whether projected coordinates are valid.
     std::optional<double> time;  // UNIX timestamp, if available.
     std::optional<double> elevation;  // Elevation, if available.
 };
@@ -84,12 +85,16 @@ split_gpx_by_speed(const std::vector<gpx_track_point_t> &points,
         return split_contours;
     }
 
-    // Compute speeds between consecutive points with valid time data.
+    // Compute speeds between consecutive points with valid time data and valid positions.
     // Store (index, speed) pairs for analysis.
     std::vector<std::pair<size_t, double>> speeds;
     speeds.reserve(points.size());
 
     for(size_t i = 1; i < points.size(); ++i){
+        // Skip speed calculation if either point lacks valid projected coordinates.
+        if(!points[i].has_valid_position || !points[i-1].has_valid_position){
+            continue;
+        }
         if(points[i].time.has_value() && points[i-1].time.has_value()){
             const double dt = points[i].time.value() - points[i-1].time.value();
             if(dt > 0.0){
@@ -174,14 +179,20 @@ split_gpx_by_speed(const std::vector<gpx_track_point_t> &points,
         return split_contours;
     }
 
-    // First pass: count valid segments (with at least 2 points).
+    // First pass: count valid segments (with at least 2 points that have valid positions).
     size_t valid_segment_count = 0;
     for(size_t seg = 0; seg < split_indices.size(); ++seg){
         const size_t start_idx = split_indices[seg];
         const size_t end_idx = (seg + 1 < split_indices.size()) 
                                ? split_indices[seg + 1] 
                                : points.size();
-        if(end_idx - start_idx >= 2){
+        size_t valid_points_in_segment = 0;
+        for(size_t i = start_idx; i < end_idx; ++i){
+            if(points[i].has_valid_position){
+                ++valid_points_in_segment;
+            }
+        }
+        if(valid_points_in_segment >= 2){
             ++valid_segment_count;
         }
     }
@@ -199,19 +210,22 @@ split_gpx_by_speed(const std::vector<gpx_track_point_t> &points,
                                ? split_indices[seg + 1] 
                                : points.size();
 
-        // Need at least 2 points for a meaningful segment.
-        if(end_idx - start_idx < 2){
+        contour_collection<double> cc;
+        cc.contours.emplace_back();
+
+        // Only add points that have valid projected coordinates.
+        for(size_t i = start_idx; i < end_idx; ++i){
+            if(points[i].has_valid_position){
+                cc.contours.back().points.push_back(points[i].projected);
+            }
+        }
+
+        // After filtering, ensure the segment still has at least 2 valid points.
+        if(cc.contours.back().points.size() < 2){
             continue;
         }
 
         ++segment_number;
-
-        contour_collection<double> cc;
-        cc.contours.emplace_back();
-
-        for(size_t i = start_idx; i < end_idx; ++i){
-            cc.contours.back().points.push_back(points[i].projected);
-        }
 
         // Set metadata for the split segment using sequential segment numbering.
         if(base_name.has_value()){
@@ -289,6 +303,7 @@ contains_gpx_gps_coords(dcma::xml::node &root){
             // Mercator projection.
             const auto [x, y] = dcma::gis::project_mercator(lat_opt.value(), lon_opt.value());
             pt.projected = vec3<double>(x, y, 0.0);
+            pt.has_valid_position = true;
             contours_out.back().contours.back().points.emplace_back( x, y, 0.0 );
         }
 
@@ -329,10 +344,13 @@ contains_gpx_gps_coords(dcma::xml::node &root){
             lines_out.back().push_back( time_opt.value(), ele_opt.value(), inhibit_sort );
         }
 
-        // Store track point data for speed-based splitting.
-        pt.time = time_opt;
-        pt.elevation = ele_opt;
-        track_points.push_back(pt);
+        // Store track point data for speed-based splitting only if it has valid position.
+        // Points without valid lat/lon are not useful for activity splitting.
+        if(pt.has_valid_position){
+            pt.time = time_opt;
+            pt.elevation = ele_opt;
+            track_points.push_back(pt);
+        }
 
         return true;
     };
