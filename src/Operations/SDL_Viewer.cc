@@ -1833,6 +1833,9 @@ bool SDL_Viewer(Drover &DICOM_data,
         // Path waypoints define the white tiles path.
         // These are grid coordinates that form a path from top-left to bottom-right.
         std::vector<std::pair<int64_t, int64_t>> path_waypoints;
+
+        // Set of path cells for O(1) lookup during rendering.
+        std::set<std::pair<int64_t, int64_t>> path_cells_set;
     } td_game;
 
     const auto reset_td_game = [&](){
@@ -1849,6 +1852,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         // Define path waypoints: starts at top-left, goes right, then down in a snake pattern.
         td_game.path_waypoints.clear();
+        td_game.path_cells_set.clear();
         // Create a winding path from (0,0) to (grid_cols-1, grid_rows-1).
         // Path goes: right across row 0, down to row 1, left across row 1, down to row 2, etc.
         for(int64_t row = 0; row < td_game.grid_rows; ++row){
@@ -1856,10 +1860,12 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(going_right){
                 for(int64_t col = 0; col < td_game.grid_cols; ++col){
                     td_game.path_waypoints.emplace_back(col, row);
+                    td_game.path_cells_set.emplace(col, row);
                 }
             }else{
                 for(int64_t col = td_game.grid_cols - 1; col >= 0; --col){
                     td_game.path_waypoints.emplace_back(col, row);
+                    td_game.path_cells_set.emplace(col, row);
                 }
             }
         }
@@ -5911,12 +5917,9 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
             ImGui::Begin("Tower Defense", &view_toggles.view_tower_defense_enabled, flags );
 
-            // Helper to check if a grid cell is on the path.
+            // Helper to check if a grid cell is on the path (O(1) lookup using set).
             const auto is_path_cell = [&](int64_t col, int64_t row) -> bool {
-                for(const auto& wp : td_game.path_waypoints){
-                    if(wp.first == col && wp.second == row) return true;
-                }
-                return false;
+                return td_game.path_cells_set.count(std::make_pair(col, row)) > 0;
             };
 
             // Helper to check if a tower exists at grid cell.
@@ -6151,12 +6154,18 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         const double dist_to_target = proj.pos.distance(proj.target_pos);
                         if(dist_to_target < 5.0){
                             // Find the closest enemy to the projectile position and apply damage.
+                            double closest_dist = hit_radius;
+                            td_enemy_t* closest_enemy = nullptr;
                             for(auto& enemy : td_enemies){
                                 const auto enemy_pos = get_path_position(enemy.path_progress);
-                                if(proj.pos.distance(enemy_pos) < hit_radius){
-                                    enemy.hp -= proj.damage;
-                                    break;  // Only hit one enemy per projectile.
+                                const double dist = proj.pos.distance(enemy_pos);
+                                if(dist < closest_dist){
+                                    closest_dist = dist;
+                                    closest_enemy = &enemy;
                                 }
+                            }
+                            if(closest_enemy != nullptr){
+                                closest_enemy->hp -= proj.damage;  // Only hit one enemy per projectile.
                             }
                             return true;
                         }
