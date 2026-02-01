@@ -120,13 +120,11 @@ bool InvokeStandardScript(Drover &DICOM_data,
     // Inject the new key-value pairs into the global parameter table.
     inject_metadata(InvocationMetadata, std::move(to_inject), metadata_preprocessing::none);
 
+    // Ensure the original key-value pairs are restored on scope exit (including exceptions).
+    metadata_stow_guard msg(InvocationMetadata, stowed);
 
     YLOGINFO("Invoking standard script '" << ScriptStr << "' now");
     const auto res = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, Operations);
-
-
-    // Restore the original key-value pairs.
-    restore_stowed(InvocationMetadata, stowed);
 
     return res;
 }
