@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 set -eux
+set -o pipefail
 
 # Move to a temporary directory.
 cd "$(mktemp -d)"
@@ -16,12 +17,12 @@ cd "$(mktemp -d)"
 grep -i "contour" output.txt || true
 grep -i "ActivitySegment" output.txt || true
 
-# Verify that we have more than one contour loaded.
+# Verify that we have multiple contours loaded.
 # The original implementation would create 1 contour, 
-# the new implementation should create the original + split segments.
+# the new implementation should create the original + split segments (at least 4 total).
 contour_count=$(grep -c "contour_of_points" output.txt || echo "0")
-if [ "$contour_count" -lt 1 ]; then
-    printf "Error: Expected at least 1 contour, got %s\n" "$contour_count"
+if [ "$contour_count" -lt 4 ]; then
+    printf "Error: Expected at least 4 contours (1 original + 3 segments), got %s\n" "$contour_count"
     exit 1
 fi
 

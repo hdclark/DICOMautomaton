@@ -182,7 +182,10 @@ contains_gpx_gps_coords(dcma::xml::node &root){
                     const auto &p2 = points[i+1];
                     const double dx = p2.x - p1.x;
                     const double dy = p2.y - p1.y;
-                    const double dist = std::sqrt(dx*dx + dy*dy); // Distance in Mercator projection units (meters at equator, varies with latitude)
+                    // Distance using Euclidean distance in Mercator projection coordinates.
+                    // Note: This provides approximate distances (meters at equator, distortion increases with latitude).
+                    // For more accurate geodesic distances over large areas or at high latitudes, consider Haversine formula.
+                    const double dist = std::sqrt(dx*dx + dy*dy);
                     const double dt = track_times[i+1].value() - track_times[i].value(); // Time in seconds
 
                     if(dt > 0.0){
@@ -199,8 +202,10 @@ contains_gpx_gps_coords(dcma::xml::node &root){
             // Detect split points based on major speed changes.
             // Use a threshold-based approach: split when speed changes by more than a factor.
             // Note: speeds[i] represents the velocity from point[i] to point[i+1].
-            // When comparing speeds[i] and speeds[i+1], the transition occurs at point[i+1],
-            // but we split at point[i+2] to group points by their consistent speeds.
+            // When comparing speeds[i] and speeds[i+1], the speed transition itself occurs at point[i+1]
+            // (between segments point[i]→point[i+1] and point[i+1]→point[i+2]). We intentionally place the
+            // split at point[i+2] so that point[i+1] is grouped with the preceding activity — effectively
+            // grouping points by their "arrival" speed rather than their "departure" speed.
             std::vector<size_t> split_indices;
             const double speed_change_threshold = 3.0; // Split when speed changes by 3x or more
             const double min_speed_threshold = 0.5; // Minimum speed (m/s) to consider for splitting
@@ -247,14 +252,19 @@ contains_gpx_gps_coords(dcma::xml::node &root){
                             segment_contour.metadata = original_contour.metadata;
                             segment_contour.metadata["ActivitySegment"] = std::to_string(segment_num);
 
+                            // Pre-allocate to improve performance for large traces
+                            segment_contour.points.reserve(split_idx - start_idx);
                             for(size_t i = start_idx; i < split_idx; ++i){
                                 segment_contour.points.push_back(points[i]);
                             }
 
                             contours_out.back().contours.push_back(segment_contour);
                             ++segment_num;
+                            start_idx = split_idx; // Advance only when a valid segment is created
+                        } else {
+                            // Segment too small, merge points into next segment by not advancing start_idx
+                            // This prevents discarding points from segments that don't meet the minimum size
                         }
-                        start_idx = split_idx;
                     }
 
                     // Add the final segment (if it has at least 2 points).
@@ -264,6 +274,8 @@ contains_gpx_gps_coords(dcma::xml::node &root){
                         segment_contour.metadata = original_contour.metadata;
                         segment_contour.metadata["ActivitySegment"] = std::to_string(segment_num);
 
+                        // Pre-allocate to improve performance for large traces
+                        segment_contour.points.reserve(N_points - start_idx);
                         for(size_t i = start_idx; i < N_points; ++i){
                             segment_contour.points.push_back(points[i]);
                         }

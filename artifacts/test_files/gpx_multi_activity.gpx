@@ -6,18 +6,18 @@
   <trk>
     <name>Walk-Stop-Run Test</name>
     <trkseg>
-      <!-- Walking segment: ~5 km/h (1.4 m/s) -->
+      <!-- Walking segment: ~5.7 km/h (1.6 m/s) -->
       <trkpt lat="45.0000" lon="-75.0000">
         <ele>100.0</ele>
         <time>2024-01-01T10:00:00Z</time>
       </trkpt>
       <trkpt lat="45.0001" lon="-75.0000">
         <ele>100.0</ele>
-        <time>2024-01-01T10:00:08Z</time>
+        <time>2024-01-01T10:00:07Z</time>
       </trkpt>
       <trkpt lat="45.0002" lon="-75.0000">
         <ele>100.0</ele>
-        <time>2024-01-01T10:00:16Z</time>
+        <time>2024-01-01T10:00:14Z</time>
       </trkpt>
       <!-- Stopping segment: very slow ~0.1 m/s -->
       <trkpt lat="45.0003" lon="-75.0000">
