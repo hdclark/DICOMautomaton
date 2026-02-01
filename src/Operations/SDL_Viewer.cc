@@ -6006,10 +6006,11 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             ImGui::SameLine();
             ImGui::Text("  Max Streak: %lld", static_cast<long long>(gh_game.max_note_streak));
             
-            ImGui::SliderInt("Difficulty", &gh_game.difficulty, 1, 3);
+            ImGui::SliderInt("Difficulty (applies after reset)", &gh_game.difficulty, 1, 3);
             if(ImGui::IsItemHovered()){
-                ImGui::SetTooltip("1=Easy, 2=Medium, 3=Hard");
+                ImGui::SetTooltip("1=Easy, 2=Medium, 3=Hard (changes take effect after pressing R to reset)");
             }
+            ImGui::Text("Note: Difficulty changes take effect after reset (press R).");
             
             if(gh_game.paused){
                 ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "PAUSED (press SPACE to resume)");
