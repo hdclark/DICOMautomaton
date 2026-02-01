@@ -6,7 +6,7 @@
   <trk>
     <name>Walk-Stop-Run Test</name>
     <trkseg>
-      <!-- Walking segment: ~5.7 km/h (1.6 m/s) -->
+      <!-- Walking segment: ~5.8 km/h (1.6 m/s) -->
       <trkpt lat="45.0000" lon="-75.0000">
         <ele>100.0</ele>
         <time>2024-01-01T10:00:00Z</time>
