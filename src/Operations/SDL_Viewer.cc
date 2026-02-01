@@ -1797,8 +1797,9 @@ bool SDL_Viewer(Drover &DICOM_data,
     struct gf_game_t {
         std::vector<gf_note_t> notes;
         double note_speed = 0.4;            // Units per second (1.0 = full screen height)
-        double hit_window_perfect = 0.05;   // Perfect hit if within this range of 1.0
-        double hit_window_ok = 0.10;        // OK hit if within this range of 1.0
+        double hit_zone_norm = 0.9;         // Normalized hit zone position (0.0 = top, 1.0 = bottom)
+        double hit_window_perfect = 0.05;   // Perfect hit if within this range of hit_zone_norm
+        double hit_window_ok = 0.10;        // OK hit if within this range of hit_zone_norm
         int64_t score = 0;
         int64_t high_score = 0;
         int64_t low_score = 0;
@@ -1806,7 +1807,6 @@ bool SDL_Viewer(Drover &DICOM_data,
         int64_t streak = 0;
         int64_t best_streak = 0;
         bool paused = false;
-        bool game_over = false;
         int64_t difficulty = 1;             // 0 = easy, 1 = medium, 2 = hard
         double next_note_time = 0.0;        // Time until next note spawns
         double elapsed_time = 0.0;          // Total game time
@@ -1817,7 +1817,6 @@ bool SDL_Viewer(Drover &DICOM_data,
     } gf_game;
     gf_game.re.seed( std::random_device()() );
     std::chrono::time_point<std::chrono::steady_clock> t_gf_updated;
-    std::chrono::time_point<std::chrono::steady_clock> t_gf_started;
     std::array<bool, 4> gf_lane_pressed = {false, false, false, false};
 
     const auto reset_guitar_game = [&](){
@@ -1825,7 +1824,6 @@ bool SDL_Viewer(Drover &DICOM_data,
         gf_game.score = 0;
         gf_game.streak = 0;
         gf_game.paused = false;
-        gf_game.game_over = false;
         gf_game.next_note_time = 0.5;
         gf_game.elapsed_time = 0.0;
         gf_lane_pressed = {false, false, false, false};
@@ -1853,7 +1851,6 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         const auto t_now = std::chrono::steady_clock::now();
         t_gf_updated = t_now;
-        t_gf_started = t_now;
         return;
     };
 
@@ -5876,7 +5873,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
         const auto display_guitar_game = [&view_toggles,
                                           &gf_game,
                                           &t_gf_updated,
-                                          &t_gf_started,
                                           &gf_lane_pressed,
                                           &reset_guitar_game ]() -> bool {
             if( !view_toggles.view_guitar_fret_enabled ) return true;
@@ -5915,7 +5911,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 }
 
                 // Pause/unpause with spacebar
-                if( ImGui::IsKeyPressed(SDL_SCANCODE_SPACE) && !gf_game.game_over ){
+                if( ImGui::IsKeyPressed(SDL_SCANCODE_SPACE) ){
                     gf_game.paused = !gf_game.paused;
                 }
 
@@ -5929,12 +5925,12 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             }
 
             // Display score and stats
-            ImGui::Text("Score: %ld", static_cast<long>(gf_game.score));
+            ImGui::Text("Score: %" PRId64, gf_game.score);
             ImGui::SameLine();
-            ImGui::Text("  Streak: %ld", static_cast<long>(gf_game.streak));
+            ImGui::Text("  Streak: %" PRId64, gf_game.streak);
             ImGui::SameLine();
-            ImGui::Text("  Best: %ld", static_cast<long>(gf_game.best_streak));
-            ImGui::Text("High: %ld  Low: %ld", static_cast<long>(gf_game.high_score), static_cast<long>(gf_game.low_score));
+            ImGui::Text("  Best: %" PRId64, gf_game.best_streak);
+            ImGui::Text("High: %" PRId64 "  Low: %" PRId64, gf_game.high_score, gf_game.low_score);
 
             // Difficulty selector
             ImGui::SameLine();
@@ -5960,8 +5956,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             ImDrawList *window_draw_list = ImGui::GetWindowDrawList();
 
             const float lane_width = gf_game.box_width / 4.0f;
-            const float hit_zone_y = gf_game.box_height * 0.9f;
-            const float hit_zone_height = 30.0f;
+            const float hit_zone_y = static_cast<float>(gf_game.box_height * gf_game.hit_zone_norm);
             const float note_radius = lane_width * 0.35f;
 
             // Draw background
@@ -6016,7 +6011,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             auto t_diff_ms = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_gf_updated).count();
             if(t_diff_ms > 50) t_diff_ms = 50; // Cap delta time
 
-            if(!gf_game.paused && !gf_game.game_over){
+            if(!gf_game.paused){
                 double dt = t_diff_ms / 1000.0;
                 gf_game.elapsed_time += dt;
 
@@ -6052,7 +6047,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
 
                     // Check if key was pressed for this lane
                     if(gf_lane_pressed[note.lane] && !note.hit){
-                        double distance_from_hit = std::abs(note.y_pos - 0.9);
+                        double distance_from_hit = std::abs(note.y_pos - gf_game.hit_zone_norm);
                         
                         if(distance_from_hit <= gf_game.hit_window_perfect){
                             // Perfect hit
@@ -6066,7 +6061,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             gf_game.streak++;
                             note.hit = true;
                             note.active = false;
-                        }else if(note.y_pos < 0.9 - gf_game.hit_window_ok){
+                        }else if(note.y_pos < gf_game.hit_zone_norm - gf_game.hit_window_ok){
                             // Too early - penalty
                             gf_game.score -= 1;
                             gf_game.streak = 0;
@@ -6076,7 +6071,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     }
 
                     // Note passed the hit zone without being hit
-                    if(note.y_pos > 0.9 + gf_game.hit_window_ok && !note.hit){
+                    if(note.y_pos > gf_game.hit_zone_norm + gf_game.hit_window_ok && !note.hit){
                         gf_game.score -= 1;
                         gf_game.streak = 0;
                         note.active = false;
