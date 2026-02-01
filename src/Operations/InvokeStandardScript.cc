@@ -30,6 +30,7 @@
 #include "../Script_Loader.h"
 #include "../Standard_Scripts.h"
 #include "../Operation_Dispatcher.h"
+#include "../Metadata.h"
 
 #include "InvokeStandardScript.h"
 
@@ -61,6 +62,23 @@ OperationDoc OpArgDocInvokeStandardScript(){
     }
     out.args.back().samples = OpArgSamples::Exhaustive;
 
+
+    out.args.emplace_back();
+    out.args.back() = MetadataInjectionOpArgDoc();
+    out.args.back().desc = "Key-value pairs in the form of 'key1@value1;key2@value2' that will be temporarily injected"
+                           " into the global parameter table prior to invoking the script."
+                           " After the script completes, the specified keys will be reset to their original values"
+                           " (or removed if they were not previously set)."
+                           "\n\n"
+                           "Existing conflicting parameters will be temporarily overwritten."
+                           " Both keys and values are case-sensitive."
+                           "";
+    out.args.back().default_val = "";
+    out.args.back().expected = false;
+    out.args.back().examples = { "key1@value1",
+                                 "key1@value1;key2@value2",
+                                 "key_with_underscores@'a value with spaces'" };
+
     return out;
 }
 
@@ -71,6 +89,7 @@ bool InvokeStandardScript(Drover &DICOM_data,
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto ScriptStr = OptArgs.getValueStr("Script").value();
+    const auto KeyValuesOpt = OptArgs.getValueStr("KeyValues");
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto tokens = SplitStringToVector(ScriptStr, '/', 'd');
@@ -86,8 +105,27 @@ bool InvokeStandardScript(Drover &DICOM_data,
     if(!op_load_res) throw std::runtime_error("Unable to load script");
 
 
+    // Parse the user-provided key-value pairs, if any.
+    metadata_map_t to_inject;
+    if(KeyValuesOpt){
+        to_inject = parse_key_values(KeyValuesOpt.value());
+    }
+
+    // Stow the original values for keys that will be injected.
+    metadata_stow_t stowed;
+    for(const auto &kvp : to_inject){
+        stowed = stow_metadata(InvocationMetadata, stowed, kvp.first);
+    }
+
+    // Inject the new key-value pairs into the global parameter table.
+    inject_metadata(InvocationMetadata, std::move(to_inject), metadata_preprocessing::none);
+
+    // Ensure the original key-value pairs are restored on scope exit (including exceptions).
+    metadata_stow_guard msg(InvocationMetadata, stowed);
+
     YLOGINFO("Invoking standard script '" << ScriptStr << "' now");
     const auto res = Operation_Dispatcher(DICOM_data, InvocationMetadata, FilenameLex, Operations);
+
     return res;
 }
 
