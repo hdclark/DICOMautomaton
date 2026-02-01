@@ -5131,11 +5131,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                                       &reset_en_game ]() -> bool {
             if( !view_toggles.view_encompass_enabled ) return true;
 
-            // Reset the game before any game state is used.
-            if( ImGui::IsKeyPressed(SDL_SCANCODE_R) ){
-                reset_en_game();
-            }
-
             const auto pi = std::acos(-1.0);
 
             const auto win_width  = static_cast<int>( std::ceil(en_game.box_width) ) + 15;
@@ -5147,6 +5142,13 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImGui::SetNextWindowSize(ImVec2(win_width, win_height), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
             ImGui::Begin("Encompass", &view_toggles.view_encompass_enabled, flags );
+
+            const auto f = ImGui::IsWindowFocused();
+
+            // Reset the game before any game state is used.
+            if( f && ImGui::IsKeyPressed(SDL_SCANCODE_R) ){
+                reset_en_game();
+            }
 
             //const auto intersects_horiz_wall = [&]( const vec2<double> &pos, double rad ) -> bool {
             //    return (pos.y <= (0.0 + rad))
@@ -5249,7 +5251,6 @@ bool SDL_Viewer(Drover &DICOM_data,
             ImVec2 curr_pos = ImGui::GetCursorScreenPos();
             //ImVec2 window_extent = ImGui::GetContentRegionAvail();
             ImDrawList *window_draw_list = ImGui::GetWindowDrawList();
-            const auto f = ImGui::IsWindowFocused();
 
             {
                 const auto c = ImColor(0.7f, 0.7f, 0.8f, 1.0f);
@@ -5682,11 +5683,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                       &reset_sf_game ]() -> bool {
             if( !view_toggles.view_skifree_enabled ) return true;
 
-            // Reset the game before any game state is used.
-            if( ImGui::IsKeyPressed(SDL_SCANCODE_R) ){
-                reset_sf_game();
-            }
-
             const auto win_width  = static_cast<int>( std::ceil(sf_game.box_width) ) + 15;
             const auto win_height = static_cast<int>( std::ceil(sf_game.box_height) ) + 60;
             auto flags = ImGuiWindowFlags_AlwaysAutoResize
@@ -5697,10 +5693,16 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
             ImGui::Begin("FreeSki", &view_toggles.view_skifree_enabled, flags );
 
+            const auto f = ImGui::IsWindowFocused();
+
+            // Reset the game before any game state is used.
+            if( f && ImGui::IsKeyPressed(SDL_SCANCODE_R) ){
+                reset_sf_game();
+            }
+
             // Display state.
             ImVec2 curr_pos = ImGui::GetCursorScreenPos();
             ImDrawList *window_draw_list = ImGui::GetWindowDrawList();
-            const auto f = ImGui::IsWindowFocused();
 
             // Draw border
             {
@@ -6024,7 +6026,20 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                       &append_cube_game_history ]() -> bool {
             if( !view_toggles.view_cube_enabled ) return true;
 
-            if( ImGui::IsKeyPressed(SDL_SCANCODE_R) ){
+            const auto win_width  = static_cast<int>(700);
+            const auto win_height = static_cast<int>(500);
+            auto flags = ImGuiWindowFlags_AlwaysAutoResize
+                       | ImGuiWindowFlags_NoScrollWithMouse
+                       | ImGuiWindowFlags_NoNavInputs
+                       | ImGuiWindowFlags_NoScrollbar ;
+            ImGui::SetNextWindowSize(ImVec2(win_width, win_height), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Cube", &view_toggles.view_cube_enabled, flags );
+
+            const auto f = ImGui::IsWindowFocused();
+
+            // Reset the game before any game state is used.
+            if( f && ImGui::IsKeyPressed(SDL_SCANCODE_R) ){
                 reset_cube_game();
             }
 
@@ -6045,17 +6060,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 return;
             };
 
-            const auto win_width  = static_cast<int>(700);
-            const auto win_height = static_cast<int>(500);
-            auto flags = ImGuiWindowFlags_AlwaysAutoResize
-                       | ImGuiWindowFlags_NoScrollWithMouse
-                       | ImGuiWindowFlags_NoNavInputs
-                       | ImGuiWindowFlags_NoScrollbar ;
-            ImGui::SetNextWindowSize(ImVec2(win_width, win_height), ImGuiCond_FirstUseEver);
-            ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
-            ImGui::Begin("Cube", &view_toggles.view_cube_enabled, flags );
-
-            {
+            if(f){
                 ImGuiIO &io = ImGui::GetIO();
                 const bool hotkey_ctrl_z = io.KeyCtrl && ImGui::IsKeyPressed(SDL_SCANCODE_Z);
                 const bool hotkey_ctrl_y = io.KeyCtrl && ImGui::IsKeyPressed(SDL_SCANCODE_Y);
@@ -6135,7 +6140,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             ImVec2 curr_window_pos = ImGui::GetCursorPos();
             //ImVec2 window_extent = ImGui::GetContentRegionAvail();
             ImDrawList *window_draw_list = ImGui::GetWindowDrawList();
-            const auto f = ImGui::IsWindowFocused();
 
             {
                 const auto c = ImColor(0.7f, 0.7f, 0.8f, 1.0f);
@@ -6466,11 +6470,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                       &reset_td_game ]() -> bool {
             if( !view_toggles.view_tower_defence_enabled ) return true;
 
-            // Reset the game before any game state is used.
-            if( ImGui::IsKeyPressed(SDL_SCANCODE_R) ){
-                reset_td_game();
-            }
-
             const auto box_width  = td_game.grid_cols * td_game.cell_size;
             const auto box_height = td_game.grid_rows * td_game.cell_size;
             const auto win_width  = static_cast<int>(box_width) + 220;
@@ -6485,6 +6484,13 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             ImGui::SetNextWindowSize(ImVec2(win_width, win_height), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
             ImGui::Begin("Tower Defence", &view_toggles.view_tower_defence_enabled, flags );
+
+            const auto f = ImGui::IsWindowFocused();
+
+            // Reset the game before any game state is used.
+            if( f && ImGui::IsKeyPressed(SDL_SCANCODE_R) ){
+                reset_td_game();
+            }
 
             // Helper to check if a grid cell is on the path (O(1) lookup using set).
             const auto is_path_cell = [&](int64_t col, int64_t row) -> bool {
