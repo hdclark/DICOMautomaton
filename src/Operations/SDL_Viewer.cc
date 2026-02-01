@@ -25,7 +25,7 @@
 #include <regex>
 #include <stdexcept>
 #include <string>
-#include <sstream>    
+#include <sstream>
 #include <tuple>
 #include <type_traits>
 #include <utility>            //Needed for std::pair.
@@ -1772,7 +1772,6 @@ bool SDL_Viewer(Drover &DICOM_data,
     std::vector< sf_game_obj_t > sf_game_objs;
     std::chrono::time_point<std::chrono::steady_clock> t_sf_updated;
     std::chrono::time_point<std::chrono::steady_clock> t_sf_started;
-    std::chrono::time_point<std::chrono::steady_clock> t_sf_last_jump;
     std::chrono::time_point<std::chrono::steady_clock> t_sf_last_spacebar;
     
     struct sf_game_t {
@@ -1847,7 +1846,6 @@ bool SDL_Viewer(Drover &DICOM_data,
         const auto t_now = std::chrono::steady_clock::now();
         t_sf_updated = t_now;
         t_sf_started = t_now;
-        t_sf_last_jump = t_now;
         t_sf_last_spacebar = t_now;
         return;
     };
@@ -5486,7 +5484,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                       &sf_game_objs,
                                       &t_sf_updated,
                                       &t_sf_started,
-                                      &t_sf_last_jump,
                                       &t_sf_last_spacebar,
                                       &sf_game,
                                       &reset_sf_game ]() -> bool {
@@ -5496,8 +5493,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             if( ImGui::IsKeyPressed(SDL_SCANCODE_R) ){
                 reset_sf_game();
             }
-
-            const auto pi = std::acos(-1.0);
 
             const auto win_width  = static_cast<int>( std::ceil(sf_game.box_width) ) + 15;
             const auto win_height = static_cast<int>( std::ceil(sf_game.box_height) ) + 60;
@@ -5534,6 +5529,12 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 if(sf_game.countdown_remaining <= 0.0){
                     sf_game.countdown_active = false;
                     sf_game.countdown_remaining = 0.0;
+                    // Initialize spawn timers when countdown finishes to prevent immediate burst
+                    const auto current_time = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_sf_started).count() / 1000.0;
+                    sf_game.last_tree_spawn = current_time;
+                    sf_game.last_rock_spawn = current_time;
+                    sf_game.last_jump_spawn = current_time;
+                    sf_game.last_other_skier_spawn = current_time;
                 }
                 
                 // Draw countdown
@@ -5568,7 +5569,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     sf_game.skier_x = std::clamp(sf_game.skier_x, sf_game.skier_size, sf_game.box_width - sf_game.skier_size);
                     
                     // Handle jump
-                    const auto t_since_last_spacebar = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_sf_last_spacebar).count();
                     if( ImGui::IsKeyPressed(SDL_SCANCODE_SPACE) ){
                         if(!sf_game.is_jumping){
                             // Start jump
@@ -5576,12 +5576,15 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             sf_game.jump_velocity = sf_game.jump_speed;
                             sf_game.did_flip = false;
                             sf_game.can_double_tap = true;
-                            t_sf_last_jump = t_now;
                             t_sf_last_spacebar = t_now;
-                        }else if(sf_game.can_double_tap && t_since_last_spacebar > 50 && t_since_last_spacebar < 300){
-                            // Double tap detected - do a flip!
-                            sf_game.did_flip = true;
-                            sf_game.can_double_tap = false;
+                        }else if(sf_game.can_double_tap){
+                            // Check if this is a double-tap while airborne
+                            const auto t_since_last_spacebar = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_sf_last_spacebar).count();
+                            if(t_since_last_spacebar > 50 && t_since_last_spacebar < 300){
+                                // Double tap detected - do a flip!
+                                sf_game.did_flip = true;
+                                sf_game.can_double_tap = false;
+                            }
                             t_sf_last_spacebar = t_now;
                         }
                     }
