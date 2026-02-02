@@ -2074,30 +2074,31 @@ bool SDL_Viewer(Drover &DICOM_data,
         // Define path waypoints: starts at top-left, goes right, then down in a snake pattern.
         td_game.path_waypoints.clear();
         td_game.path_cells_set.clear();
-        // Create a winding path from (0,0) to (grid_cols-1, grid_rows-1).
+
+        // Create a winding path for enemies to follow. Any square not on the path can be built upon.
         // Path goes: right across row 0, down to row 1, left across row 1, down to row 2, etc.
         for(int64_t row = 0; row < td_game.grid_rows; ++row){
-            const bool going_right = (row % 2 == 0);
-//            if(going_right){
-//                for(int64_t col = 0; col < td_game.grid_cols; ++col){
-//                    td_game.path_waypoints.emplace_back(col, row);
-//                    td_game.path_cells_set.emplace(col, row);
-//                }
-//            }else{
-//                for(int64_t col = td_game.grid_cols - 1; col >= 0; --col){
-//                    td_game.path_waypoints.emplace_back(col, row);
-//                    td_game.path_cells_set.emplace(col, row);
-//                }
-//            }
-            if(going_right){
-                for(int64_t col = 2; col < (td_game.grid_cols - 2); ++col){
-                    td_game.path_waypoints.emplace_back(col, row);
-                    td_game.path_cells_set.emplace(col, row);
-                }
+            //const bool even_row = (row % 2 == 0);
+            const bool odd_row = (row % 2 == 1);
+            if(odd_row){
+                // Connect the path to the row above.
+                const auto &lw = td_game.path_waypoints.back();
+                const auto prev_col = lw.first;
+                td_game.path_waypoints.emplace_back(prev_col, row);
+                td_game.path_cells_set.emplace(prev_col, row);
+
             }else{
-                for(int64_t col = td_game.grid_cols - 3; col >= 2; --col){
-                    td_game.path_waypoints.emplace_back(col, row);
-                    td_game.path_cells_set.emplace(col, row);
+                const bool going_right = ((row/2) % 2 == 0);
+                if(going_right){
+                    for(int64_t col = 2; col < (td_game.grid_cols - 2); ++col){
+                        td_game.path_waypoints.emplace_back(col, row);
+                        td_game.path_cells_set.emplace(col, row);
+                    }
+                }else{
+                    for(int64_t col = td_game.grid_cols - 3; col >= 2; --col){
+                        td_game.path_waypoints.emplace_back(col, row);
+                        td_game.path_cells_set.emplace(col, row);
+                    }
                 }
             }
         }
