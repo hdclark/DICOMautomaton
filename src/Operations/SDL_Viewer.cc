@@ -6764,12 +6764,13 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                      range_color, 32, 1.0f);
 
                 // Draw tower based on type.
+                constexpr float PI = 3.14159265f;
                 if(tower.tower_type == td_tower_type_t::RapidFire){
                     // RapidFire: Draw as a hexagon shape for distinction.
                     const int num_sides = 6;
                     ImVec2 hex_pts[6];
                     for(int i = 0; i < num_sides; ++i){
-                        const float angle = static_cast<float>(i) * 2.0f * 3.14159f / static_cast<float>(num_sides) - 3.14159f / 6.0f;
+                        const float angle = static_cast<float>(i) * 2.0f * PI / static_cast<float>(num_sides) - PI / 6.0f;
                         hex_pts[i] = ImVec2(cx + half_size * std::cos(angle), cy + half_size * std::sin(angle));
                     }
                     draw_list->AddConvexPolyFilled(hex_pts, num_sides, fill_color);
@@ -6781,7 +6782,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     const int num_sides = 8;
                     ImVec2 oct_pts[8];
                     for(int i = 0; i < num_sides; ++i){
-                        const float angle = static_cast<float>(i) * 2.0f * 3.14159f / static_cast<float>(num_sides);
+                        const float angle = static_cast<float>(i) * 2.0f * PI / static_cast<float>(num_sides);
                         oct_pts[i] = ImVec2(cx + half_size * std::cos(angle), cy + half_size * std::sin(angle));
                     }
                     draw_list->AddConvexPolyFilled(oct_pts, num_sides, fill_color);
@@ -6919,7 +6920,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         proj.target_enemy_idx = closest_idx;  // May become stale, use position-based hit detection.
                         proj.damage = tower.damage;
                         proj.source_tower_idx = tower_idx;
-                        // Set explosion radius for Boom towers.
+                        // Set explosion radius for Boom towers (base 0.8 cells + 0.2 per level).
                         if(tower.tower_type == td_tower_type_t::Boom){
                             proj.explosion_radius = td_game.cell_size * (0.8 + 0.2 * tower.level);
                         }else{
