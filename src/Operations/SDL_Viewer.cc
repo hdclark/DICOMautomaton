@@ -2013,6 +2013,13 @@ bool SDL_Viewer(Drover &DICOM_data,
         double path_progress = 0.0;  // 0.0 = start, 1.0 = end of path.
         double hp = 25.0;           // Hit points.
         double max_hp = 25.0;       // Maximum hit points.
+        double speed_multiplier = 1.0; // Speed multiplier for this enemy.
+    };
+
+    enum class td_tower_type_t {
+        Basic = 0,      // Standard tower.
+        RapidFire = 1,  // Lower damage, higher fire rate.
+        Boom = 2        // Explosive projectiles with AOE damage.
     };
 
     struct td_tower_t {
@@ -2022,6 +2029,9 @@ bool SDL_Viewer(Drover &DICOM_data,
         double damage = 15.0;    // Damage per shot.
         double fire_rate = 2.0;  // Shots per second.
         double cooldown = 0.0;   // Time until next shot.
+        int64_t level = 1;       // Tower level (1 = base, higher = upgraded).
+        td_tower_type_t tower_type = td_tower_type_t::Basic;  // Tower type.
+        double total_damage_dealt = 0.0;  // Cumulative lifetime damage dealt.
     };
 
     struct td_projectile_t {
@@ -2030,6 +2040,8 @@ bool SDL_Viewer(Drover &DICOM_data,
         size_t target_enemy_idx;
         double speed = 600.0;
         double damage = 15.0;
+        double explosion_radius = 0.0;  // For Boom towers: radius of AOE explosion (0 = single target).
+        size_t source_tower_idx = 0;    // Index of the tower that fired this projectile.
     };
 
     std::vector<td_enemy_t> td_enemies;
@@ -2057,6 +2069,10 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         // Set of path cells for O(1) lookup during rendering.
         std::set<std::pair<int64_t, int64_t>> path_cells_set;
+
+        // Tower upgrade dialog state.
+        bool show_upgrade_dialog = false;
+        size_t upgrade_tower_idx = 0;  // Index of tower being upgraded.
     } td_game;
 
     const auto reset_td_game = [&](){
@@ -2070,6 +2086,8 @@ bool SDL_Viewer(Drover &DICOM_data,
         td_game.lives = 10;
         td_game.wave_active = false;
         td_game.spawn_timer = 0.0;
+        td_game.show_upgrade_dialog = false;
+        td_game.upgrade_tower_idx = 0;
 
         // Define path waypoints: starts at top-left, goes right, then down in a snake pattern.
         td_game.path_waypoints.clear();
@@ -6552,6 +6570,44 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 return false;
             };
 
+            // Helper to get the index of a tower at a grid cell (returns td_towers.size() if none).
+            const auto get_tower_idx_at = [&](int64_t col, int64_t row) -> size_t {
+                for(size_t i = 0; i < td_towers.size(); ++i){
+                    if(td_towers[i].grid_x == col && td_towers[i].grid_y == row) return i;
+                }
+                return td_towers.size();
+            };
+
+            // Helper to compute the upgrade cost for a given level.
+            // Level 1->2 costs 5, Level 2->3 costs 8, Level 3->4 costs 12, etc.
+            const auto get_upgrade_cost = [](int64_t current_level) -> int64_t {
+                return 5 + (current_level - 1) * 3;
+            };
+
+            // Helper to compute the type upgrade cost (switching to RapidFire or Boom).
+            const auto get_type_upgrade_cost = [](td_tower_type_t new_type) -> int64_t {
+                switch(new_type){
+                    case td_tower_type_t::RapidFire: return 8;
+                    case td_tower_type_t::Boom: return 12;
+                    default: return 0;
+                }
+            };
+
+            // Helper to get a tower type name string.
+            const auto get_tower_type_name = [](td_tower_type_t t) -> const char* {
+                switch(t){
+                    case td_tower_type_t::Basic: return "Basic";
+                    case td_tower_type_t::RapidFire: return "Rapid Fire";
+                    case td_tower_type_t::Boom: return "Boom";
+                    default: return "Unknown";
+                }
+            };
+
+            // Helper to compute boom radius for projectiles.
+            const auto compute_boom_radius = [](double cell_size, int64_t tower_level) -> double {
+                return cell_size * (0.8 + 0.2 * tower_level);
+            };
+
             // Helper to get world position from path progress.
             const auto get_path_position = [&](double progress) -> vec2<double> {
                 if(td_game.path_waypoints.empty()) return vec2<double>(0.0, 0.0);
@@ -6616,12 +6672,8 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
 
             ImGui::Separator();
             ImGui::TextWrapped("Click gray tiles to place towers (%ld credits).", static_cast<long>(td_game.credits));
+            ImGui::TextWrapped("Click existing towers to upgrade.");
             ImGui::TextWrapped("Press R to reset.");
-
-            //ImGui::Separator();
-            //for(const auto &enemy : td_enemies){
-            //    ImGui::TextWrapped("Enemy: progress = %.2f, hp = %.1f", enemy.path_progress, enemy.hp);
-            //}
 
             ImGui::EndChild();
             ImGui::SameLine();
@@ -6649,8 +6701,8 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 }
             }
 
-            // Handle tower placement on mouse click.
-            if(ImGui::IsMouseClicked(0) && td_game.credits > 0 && td_game.lives > 0){
+            // Handle tower placement and upgrade on mouse click.
+            if(ImGui::IsMouseClicked(0) && td_game.lives > 0 && !td_game.show_upgrade_dialog){
                 ImVec2 mouse_pos = ImGui::GetMousePos();
                 const float rel_x = mouse_pos.x - grid_origin.x;
                 const float rel_y = mouse_pos.y - grid_origin.y;
@@ -6658,7 +6710,13 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     const int64_t col = static_cast<int64_t>(rel_x / td_game.cell_size);
                     const int64_t row = static_cast<int64_t>(rel_y / td_game.cell_size);
                     if(col >= 0 && col < td_game.grid_cols && row >= 0 && row < td_game.grid_rows){
-                        if(!is_path_cell(col, row) && !has_tower_at(col, row)){
+                        const size_t tower_idx = get_tower_idx_at(col, row);
+                        if(tower_idx < td_towers.size()){
+                            // Clicked on an existing tower - open upgrade dialog.
+                            td_game.show_upgrade_dialog = true;
+                            td_game.upgrade_tower_idx = tower_idx;
+                        }else if(!is_path_cell(col, row) && td_game.credits > 0){
+                            // Clicked on a buildable cell - place a new tower.
                             td_tower_t new_tower;
                             new_tower.grid_x = col;
                             new_tower.grid_y = row;
@@ -6669,22 +6727,154 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 }
             }
 
-            // Draw towers (blue squares with range indicator).
-            for(const auto& tower : td_towers){
+            // Draw towers with visual variations based on level and type.
+            for(size_t tower_idx = 0; tower_idx < td_towers.size(); ++tower_idx){
+                const auto& tower = td_towers[tower_idx];
                 const float cx = grid_origin.x + static_cast<float>((tower.grid_x + 0.5) * td_game.cell_size);
                 const float cy = grid_origin.y + static_cast<float>((tower.grid_y + 0.5) * td_game.cell_size);
-                const float half_size = static_cast<float>(td_game.cell_size * 0.35);
+                // Scale size slightly based on level: higher levels are larger and more menacing.
+                const float level_scale = 1.0f + 0.08f * static_cast<float>(tower.level - 1);
+                const float half_size = static_cast<float>(td_game.cell_size * 0.35) * level_scale;
 
-                // Draw range circle (subtle).
-                draw_list->AddCircle(ImVec2(cx, cy), static_cast<float>(tower.range),
-                                     ImColor(0.2f, 0.2f, 0.8f, 0.3f), 32, 1.0f);
-                // Draw tower as a blue square.
-                draw_list->AddRectFilled(ImVec2(cx - half_size, cy - half_size),
-                                         ImVec2(cx + half_size, cy + half_size),
-                                         ImColor(0.2f, 0.3f, 0.9f, 1.0f));
-                draw_list->AddRect(ImVec2(cx - half_size, cy - half_size),
-                                   ImVec2(cx + half_size, cy + half_size),
-                                   ImColor(0.1f, 0.1f, 0.5f, 1.0f), 0.0f, 0, 2.0f);
+                // Determine tower colors based on type and level.
+                ImU32 fill_color, border_color, range_color;
+                switch(tower.tower_type){
+                    case td_tower_type_t::RapidFire:
+                        // Green-cyan for rapid fire.
+                        fill_color = ImColor(0.1f + 0.1f * (tower.level - 1), 0.7f, 0.3f + 0.1f * (tower.level - 1), 1.0f);
+                        border_color = ImColor(0.05f, 0.5f, 0.2f, 1.0f);
+                        range_color = ImColor(0.1f, 0.8f, 0.3f, 0.3f);
+                        break;
+                    case td_tower_type_t::Boom:
+                        // Orange-red for boom (explosive).
+                        fill_color = ImColor(0.9f, 0.3f + 0.1f * (tower.level - 1), 0.1f, 1.0f);
+                        border_color = ImColor(0.6f, 0.2f, 0.05f, 1.0f);
+                        range_color = ImColor(0.9f, 0.4f, 0.1f, 0.3f);
+                        break;
+                    default:
+                        // Blue for basic tower, getting darker/more intense at higher levels.
+                        fill_color = ImColor(0.2f, 0.3f + 0.1f * (tower.level - 1), 0.9f, 1.0f);
+                        border_color = ImColor(0.1f, 0.1f, 0.5f + 0.1f * (tower.level - 1), 1.0f);
+                        range_color = ImColor(0.2f, 0.2f, 0.8f, 0.3f);
+                        break;
+                }
+
+                // Draw tower based on type.
+                constexpr float PI = 3.14159265f;
+                if(tower.tower_type == td_tower_type_t::RapidFire){
+                    // RapidFire: Draw as a hexagon shape for distinction.
+                    const int num_sides = 6;
+                    ImVec2 hex_pts[6];
+                    for(int i = 0; i < num_sides; ++i){
+                        const float angle = static_cast<float>(i) * 2.0f * PI / static_cast<float>(num_sides) - PI / 6.0f;
+                        hex_pts[i] = ImVec2(cx + half_size * std::cos(angle), cy + half_size * std::sin(angle));
+                    }
+                    draw_list->AddConvexPolyFilled(hex_pts, num_sides, fill_color);
+                    for(int i = 0; i < num_sides; ++i){
+                        draw_list->AddLine(hex_pts[i], hex_pts[(i + 1) % num_sides], border_color, 2.0f);
+                    }
+                }else if(tower.tower_type == td_tower_type_t::Boom){
+                    // Boom: Draw as an octagon (bigger, more menacing).
+                    const int num_sides = 8;
+                    ImVec2 oct_pts[8];
+                    for(int i = 0; i < num_sides; ++i){
+                        const float angle = static_cast<float>(i) * 2.0f * PI / static_cast<float>(num_sides);
+                        oct_pts[i] = ImVec2(cx + half_size * std::cos(angle), cy + half_size * std::sin(angle));
+                    }
+                    draw_list->AddConvexPolyFilled(oct_pts, num_sides, fill_color);
+                    for(int i = 0; i < num_sides; ++i){
+                        draw_list->AddLine(oct_pts[i], oct_pts[(i + 1) % num_sides], border_color, 2.0f);
+                    }
+                    // Add an inner circle to indicate explosive nature.
+                    draw_list->AddCircle(ImVec2(cx, cy), half_size * 0.5f, border_color, 16, 2.0f);
+                }else{
+                    // Basic: Draw as a square with spikes for higher levels.
+                    draw_list->AddRectFilled(ImVec2(cx - half_size, cy - half_size),
+                                             ImVec2(cx + half_size, cy + half_size),
+                                             fill_color);
+                    draw_list->AddRect(ImVec2(cx - half_size, cy - half_size),
+                                       ImVec2(cx + half_size, cy + half_size),
+                                       border_color, 0.0f, 0, 2.0f);
+
+                    // Add corner spikes for higher levels to look more menacing.
+                    if(tower.level >= 2){
+                        const float spike_len = half_size * 0.3f;
+                        // Top-left spike.
+                        draw_list->AddTriangleFilled(
+                            ImVec2(cx - half_size, cy - half_size),
+                            ImVec2(cx - half_size - spike_len, cy - half_size - spike_len),
+                            ImVec2(cx - half_size + spike_len * 0.5f, cy - half_size),
+                            fill_color);
+                        // Top-right spike.
+                        draw_list->AddTriangleFilled(
+                            ImVec2(cx + half_size, cy - half_size),
+                            ImVec2(cx + half_size + spike_len, cy - half_size - spike_len),
+                            ImVec2(cx + half_size - spike_len * 0.5f, cy - half_size),
+                            fill_color);
+                        // Bottom-left spike.
+                        draw_list->AddTriangleFilled(
+                            ImVec2(cx - half_size, cy + half_size),
+                            ImVec2(cx - half_size - spike_len, cy + half_size + spike_len),
+                            ImVec2(cx - half_size + spike_len * 0.5f, cy + half_size),
+                            fill_color);
+                        // Bottom-right spike.
+                        draw_list->AddTriangleFilled(
+                            ImVec2(cx + half_size, cy + half_size),
+                            ImVec2(cx + half_size + spike_len, cy + half_size + spike_len),
+                            ImVec2(cx + half_size - spike_len * 0.5f, cy + half_size),
+                            fill_color);
+                    }
+                }
+
+                // Draw level indicator (small number or dots above tower).
+                if(tower.level > 1){
+                    char level_str[30];
+                    std::snprintf(level_str, sizeof(level_str), "%ld", static_cast<long>(tower.level));
+                    //const ImVec2 text_pos(cx - 4.0f, cy - half_size - 12.0f);  // Hovering above the tower.
+                    const ImVec2 text_pos(cx - 3.0f, cy - 7.25f); // Centre of the tower.
+                    draw_list->AddText(text_pos, ImColor(0.0f, 0.0f, 0.0f, 1.0f), level_str);
+                }
+
+                // Handle tower tooltip on hover.
+                ImVec2 mouse_pos = ImGui::GetMousePos();
+                const float mouse_dist = std::sqrt((mouse_pos.x - cx) * (mouse_pos.x - cx) + (mouse_pos.y - cy) * (mouse_pos.y - cy));
+                if( (mouse_dist < (half_size * 1.5f))
+                &&  !td_game.show_upgrade_dialog){
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Tower: %s", get_tower_type_name(tower.tower_type));
+                    ImGui::Text("Level: %ld", static_cast<long>(tower.level));
+                    ImGui::Text("Damage: %.1f", tower.damage);
+                    ImGui::Text("Range: %.1f", tower.range);
+                    if(tower.tower_type == td_tower_type_t::Boom){
+                        ImGui::Text("Blast radius: %.1f", compute_boom_radius(td_game.cell_size, tower.level));
+                    }
+                    ImGui::Text("Fire Rate: %.1f/s", tower.fire_rate);
+                    ImGui::Text("Total Damage: %.0f", tower.total_damage_dealt);
+                    ImGui::EndTooltip();
+
+                    // Draw range circle (subtle).
+                    ImU32 range_colour;
+                    switch(tower.tower_type){
+                        case td_tower_type_t::RapidFire:
+                            range_colour = ImColor(0.1f, 0.8f, 0.3f, 0.6f);
+                            break;
+                        case td_tower_type_t::Boom:
+                            range_colour = ImColor(0.9f, 0.4f, 0.1f, 0.6f);
+                            break;
+                        default:
+                            range_colour = ImColor(0.2f, 0.2f, 0.8f, 0.5f);
+                            break;
+                    }
+                    draw_list->AddCircle(ImVec2(cx, cy), static_cast<float>(tower.range),
+                                         range_colour, 32, 1.0f);
+
+                    // Also draw the blast radius for boom towers.
+                    if(tower.tower_type == td_tower_type_t::Boom){
+                        ImU32 blast_colour = ImColor(1.0f, 0.1f, 0.1f, 0.6f);
+                        draw_list->AddCircle(ImVec2(cx, cy), static_cast<float>(compute_boom_radius(td_game.cell_size, tower.level)),
+                                             blast_colour, 32, 1.0f);
+                    }
+                }
             }
 
             // Update wave spawning.
@@ -6727,7 +6917,8 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             );
 
             // Towers attack enemies.
-            for(auto& tower : td_towers){
+            for(size_t tower_idx = 0; tower_idx < td_towers.size(); ++tower_idx){
+                auto& tower = td_towers[tower_idx];
                 tower.cooldown -= dt;
                 if(tower.cooldown <= 0.0){
                     const double tower_x = (static_cast<double>(tower.grid_x) + 0.5) * td_game.cell_size;
@@ -6753,6 +6944,12 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         proj.target_pos = get_path_position(td_enemies[closest_idx].path_progress);
                         proj.target_enemy_idx = closest_idx;  // May become stale, use position-based hit detection.
                         proj.damage = tower.damage;
+                        proj.source_tower_idx = tower_idx;
+                        if(tower.tower_type == td_tower_type_t::Boom){
+                            proj.explosion_radius = compute_boom_radius(td_game.cell_size, tower.level);
+                        }else{
+                            proj.explosion_radius = 0.0;
+                        }
                         td_projectiles.push_back(proj);
                         tower.cooldown = 1.0 / tower.fire_rate;
                     }
@@ -6774,26 +6971,48 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             }
 
             // Check for projectile hits using position-based detection (not indices).
-            // When a projectile reaches its target, damage the closest enemy within hit radius.
+            // When a projectile reaches its target, damage enemies within hit radius (or explosion radius for Boom).
             const double hit_radius = td_game.cell_size * 0.4;
             td_projectiles.erase(
                 std::remove_if(td_projectiles.begin(), td_projectiles.end(),
                     [&](const td_projectile_t& proj) -> bool {
                         const double dist_to_target = proj.pos.distance(proj.target_pos);
                         if(dist_to_target < 5.0){
-                            // Find the closest enemy to the projectile position and apply damage.
-                            double closest_dist = hit_radius;
-                            td_enemy_t* closest_enemy = nullptr;
-                            for(auto& enemy : td_enemies){
-                                const auto enemy_pos = get_path_position(enemy.path_progress);
-                                const double dist = proj.pos.distance(enemy_pos);
-                                if(dist < closest_dist){
-                                    closest_dist = dist;
-                                    closest_enemy = &enemy;
+                            double total_damage_dealt = 0.0;
+                            // Determine the damage radius: use explosion_radius for Boom, otherwise hit_radius.
+                            const double damage_radius = (proj.explosion_radius > 0.0) ? proj.explosion_radius : hit_radius;
+
+                            if(proj.explosion_radius > 0.0){
+                                // AOE damage: hit all enemies within the explosion radius.
+                                for(auto& enemy : td_enemies){
+                                    const auto enemy_pos = get_path_position(enemy.path_progress);
+                                    const double dist = proj.pos.distance(enemy_pos);
+                                    if(dist < damage_radius){
+                                        enemy.hp -= proj.damage;
+                                        total_damage_dealt += proj.damage;
+                                    }
+                                }
+                            }else{
+                                // Single-target damage: only hit the closest enemy.
+                                double closest_dist = damage_radius;
+                                td_enemy_t* closest_enemy = nullptr;
+                                for(auto& enemy : td_enemies){
+                                    const auto enemy_pos = get_path_position(enemy.path_progress);
+                                    const double dist = proj.pos.distance(enemy_pos);
+                                    if(dist < closest_dist){
+                                        closest_dist = dist;
+                                        closest_enemy = &enemy;
+                                    }
+                                }
+                                if(closest_enemy != nullptr){
+                                    closest_enemy->hp -= proj.damage;
+                                    total_damage_dealt += proj.damage;
                                 }
                             }
-                            if(closest_enemy != nullptr){
-                                closest_enemy->hp -= proj.damage;  // Only hit one enemy per projectile.
+
+                            // Track cumulative damage dealt by the source tower.
+                            if(proj.source_tower_idx < td_towers.size()){
+                                td_towers[proj.source_tower_idx].total_damage_dealt += total_damage_dealt;
                             }
                             return true;
                         }
@@ -6843,13 +7062,120 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 draw_list->AddRectFilled(ImVec2(bar_x, bar_y),
                                          ImVec2(bar_x + bar_width * hp_ratio, bar_y + bar_height),
                                          ImColor(0.0f, 0.8f, 0.0f, 1.0f));
+
+                // Handle enemy tooltip on hover.
+                ImVec2 mouse_pos = ImGui::GetMousePos();
+                const float mouse_dist = std::sqrt((mouse_pos.x - ex) * (mouse_pos.x - ex) + (mouse_pos.y - ey) * (mouse_pos.y - ey));
+                if(mouse_dist < enemy_radius * 1.5f && !td_game.show_upgrade_dialog){
+                    // Calculate enemy's current speed (base speed + wave scaling).
+                    const double current_speed = (td_game.enemy_speed + wn/500.0) * enemy.speed_multiplier;
+                    ImGui::BeginTooltip();
+                    ImGui::Text("Enemy");
+                    ImGui::Text("Health: %.0f / %.0f", enemy.hp, enemy.max_hp);
+                    ImGui::Text("Speed: %.3f", current_speed);
+                    ImGui::EndTooltip();
+                }
             }
 
-            // Draw projectiles (yellow circles).
+            // Draw projectiles (yellow circles, or orange for explosive).
             for(const auto& proj : td_projectiles){
                 const float px = grid_origin.x + static_cast<float>(proj.pos.x);
                 const float py = grid_origin.y + static_cast<float>(proj.pos.y);
-                draw_list->AddCircleFilled(ImVec2(px, py), 4.0f, ImColor(1.0f, 1.0f, 0.0f, 1.0f));
+                if(proj.explosion_radius > 0.0){
+                    // Explosive projectile: draw as orange.
+                    draw_list->AddCircleFilled(ImVec2(px, py), 5.0f, ImColor(1.0f, 0.5f, 0.0f, 1.0f));
+                }else{
+                    draw_list->AddCircleFilled(ImVec2(px, py), 4.0f, ImColor(1.0f, 1.0f, 0.0f, 1.0f));
+                }
+            }
+
+            // Tower upgrade dialog.
+            if(td_game.show_upgrade_dialog && td_game.upgrade_tower_idx < td_towers.size()){
+                auto& tower = td_towers[td_game.upgrade_tower_idx];
+                const float cx = grid_origin.x + static_cast<float>((tower.grid_x + 0.5) * td_game.cell_size);
+                const float cy = grid_origin.y + static_cast<float>((tower.grid_y + 0.5) * td_game.cell_size);
+
+                ImGui::SetNextWindowPos(ImVec2(cx + 30.0f, cy - 30.0f), ImGuiCond_Appearing);
+                ImGui::SetNextWindowSize(ImVec2(180, 0), ImGuiCond_Always);
+                bool dialog_open = true;
+                if(ImGui::Begin("Upgrade Tower", &dialog_open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize)){
+                    ImGui::SetWindowFocus();
+                    ImGui::Text("Tower: %s", get_tower_type_name(tower.tower_type));
+                    ImGui::Text("Level: %ld", static_cast<long>(tower.level));
+                    ImGui::Text("Damage: %.1f", tower.damage);
+                    ImGui::Text("Range: %.1f", tower.range);
+                    if(tower.tower_type == td_tower_type_t::Boom){
+                        ImGui::Text("Blast radius: %.1f", compute_boom_radius(td_game.cell_size, tower.level));
+                    }
+                    ImGui::Text("Fire Rate: %.1f/s", tower.fire_rate);
+                    ImGui::Text("Total Damage: %.0f", tower.total_damage_dealt);
+                    ImGui::Separator();
+
+                    // Level upgrade option.
+                    const int64_t upgrade_cost = get_upgrade_cost(tower.level);
+                    char upgrade_btn_label[64];
+                    std::snprintf(upgrade_btn_label, sizeof(upgrade_btn_label), "Upgrade Lvl (%ld credits)", static_cast<long>(upgrade_cost));
+                    const bool can_afford_upgrade = (td_game.credits >= upgrade_cost);
+                    if(!can_afford_upgrade) ImGui::BeginDisabled();
+                    if(ImGui::Button(upgrade_btn_label, ImVec2(-1, 0))){
+                        // Upgrade the tower.
+                        tower.level += 1;
+                        tower.damage += 5.0;  // Increase damage.
+                        tower.range += 10.0;  // Slight range increase.
+                        if(tower.tower_type == td_tower_type_t::RapidFire){
+                            tower.fire_rate += 0.5;  // RapidFire gets more fire rate per level.
+                        }else{
+                            tower.fire_rate += 0.25;  // Others get some fire rate increase.
+                        }
+                        td_game.credits -= upgrade_cost;
+                        td_game.show_upgrade_dialog = false;
+                    }
+                    if(!can_afford_upgrade) ImGui::EndDisabled();
+
+                    // Tower type upgrades (only available for Basic towers).
+                    if(tower.tower_type == td_tower_type_t::Basic){
+                        ImGui::Separator();
+                        ImGui::Text("Convert to:");
+
+                        // Rapid Fire upgrade.
+                        const int64_t rapidfire_cost = get_type_upgrade_cost(td_tower_type_t::RapidFire);
+                        char rapidfire_label[64];
+                        std::snprintf(rapidfire_label, sizeof(rapidfire_label), "Rapid Fire (%ld)", static_cast<long>(rapidfire_cost));
+                        const bool can_afford_rapidfire = (td_game.credits >= rapidfire_cost);
+                        if(!can_afford_rapidfire) ImGui::BeginDisabled();
+                        if(ImGui::Button(rapidfire_label, ImVec2(-1, 0))){
+                            tower.tower_type = td_tower_type_t::RapidFire;
+                            tower.fire_rate = 5.0;  // Higher fire rate.
+                            tower.damage = 8.0;     // Lower damage per shot.
+                            td_game.credits -= rapidfire_cost;
+                            td_game.show_upgrade_dialog = false;
+                        }
+                        if(!can_afford_rapidfire) ImGui::EndDisabled();
+
+                        // Boom upgrade.
+                        const int64_t boom_cost = get_type_upgrade_cost(td_tower_type_t::Boom);
+                        char boom_label[64];
+                        std::snprintf(boom_label, sizeof(boom_label), "Boom (%ld)", static_cast<long>(boom_cost));
+                        const bool can_afford_boom = (td_game.credits >= boom_cost);
+                        if(!can_afford_boom) ImGui::BeginDisabled();
+                        if(ImGui::Button(boom_label, ImVec2(-1, 0))){
+                            tower.tower_type = td_tower_type_t::Boom;
+                            tower.fire_rate = 1.0;  // Slower fire rate.
+                            tower.damage = 20.0;    // Higher damage.
+                            td_game.credits -= boom_cost;
+                            td_game.show_upgrade_dialog = false;
+                        }
+                        if(!can_afford_boom) ImGui::EndDisabled();
+                    }
+
+                    if(ImGui::Button("Close", ImVec2(-1, 0))){
+                        td_game.show_upgrade_dialog = false;
+                    }
+                }
+                ImGui::End();
+                if(!dialog_open){
+                    td_game.show_upgrade_dialog = false;
+                }
             }
 
             // Create an invisible button to capture mouse input on the grid area.
