@@ -13,6 +13,10 @@
 #include <string>    
 #include <random>
 #include <cstdint>
+#include <limits>
+#include <vector>
+#include <cmath>
+#include <utility>
 
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
@@ -85,9 +89,12 @@ OperationDoc OpArgDocPolyominoes(){
                            "\n\n"
                            " The 'none' action causes the moving polyomino to drop down one row, otherwise"
                            " any number of other actions can be taken to defer this movement."
-                           " For consitency with other implementations, the 'none' action should be performed"
+                           " For consistency with other implementations, the 'none' action should be performed"
                            " repeatedly approximately every second. Other actions should be performed in the"
                            " interim time between the 'none' action."
+                           "\n\n"
+                           " The 'computer' action causes the computer to select a single action using heuristics"
+                           " to make a good move. The rationale is stored in image metadata for display."
                            "\n\n"
                            " Note: actions that are not possible are ignored but still defer the 'none' action"
                            " movement.";
@@ -99,7 +106,8 @@ OperationDoc OpArgDocPolyominoes(){
                                  "translate-left",
                                  "translate-right",
                                  "translate-down",
-                                 "drop" };
+                                 "drop",
+                                 "computer" };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
     out.args.emplace_back();
@@ -150,6 +158,7 @@ bool Polyominoes(Drover &DICOM_data,
     const auto regex_shift_r   = Compile_Regex("^[ts][rh]?[ai]?[nf]?[st]?l?a?t?e?[-_]?ri?g?h?t?$");
     const auto regex_shift_d   = Compile_Regex("^[ts][rh]?[ai]?[nf]?[st]?l?a?t?e?[-_]?do?w?n?$");
     const auto regex_drop      = Compile_Regex("^dr?o?p?$");
+    const auto regex_computer  = Compile_Regex("^co?m?p?u?t?e?r?$");
 
     const bool action_none      = std::regex_match(ActionStr, regex_none);
     const bool action_clockwise = std::regex_match(ActionStr, regex_clockwise);
@@ -158,6 +167,7 @@ bool Polyominoes(Drover &DICOM_data,
     const bool action_shift_r   = std::regex_match(ActionStr, regex_shift_r);
     const bool action_shift_d   = std::regex_match(ActionStr, regex_shift_d);
     const bool action_drop      = std::regex_match(ActionStr, regex_drop);
+    const bool action_computer  = std::regex_match(ActionStr, regex_computer);
 
     const std::string moving_poly_pos_row_str = "MovingPolyominoPositionRow";
     const std::string moving_poly_pos_col_str = "MovingPolyominoPositionColumn";
@@ -165,6 +175,7 @@ bool Polyominoes(Drover &DICOM_data,
     const std::string moving_poly_shape_str   = "MovingPolyominoShape";
     const std::string moving_poly_orien_str   = "MovingPolyominoOrientation";
     const std::string omino_score_str         = "PolyominoesScore";
+    const std::string computer_rationale_str  = "PolyominoesComputerRationale";
     //-----------------------------------------------------------------------------------------------------------------
 
     auto IAs_all = All_IAs( DICOM_data );
@@ -874,6 +885,221 @@ bool Polyominoes(Drover &DICOM_data,
         return true;
     };
 
+    // Computer player heuristics: evaluates all possible landing positions and returns the best action.
+    // Uses a weighted scoring function based on common Tetris heuristics.
+    const auto compute_computer_action = [&]( const img_t& img,
+                                              int64_t chn,
+                                              int64_t poly_family,
+                                              int64_t poly_shape,
+                                              int64_t poly_orien,
+                                              int64_t poly_pos_row,
+                                              int64_t poly_pos_col ) -> std::pair<std::string, std::string> {
+        // Returns: { action_to_take, rationale_string }
+        
+        // Evaluate a hypothetical placement by scoring the resulting board.
+        // Higher scores are better (we will maximize).
+        const auto evaluate_placement = [&]( int64_t target_orien,
+                                             int64_t target_col ) -> std::optional<double> {
+            // Simulate the piece dropping to its landing position.
+            const auto& poly_coords = valid_ominoes.at(poly_family).at(poly_shape).at(target_orien);
+            
+            // Find the lowest valid row for this orientation and column.
+            // Search from top to bottom, tracking the last valid position before hitting
+            // an obstacle. Once we encounter an invalid position, stop searching since
+            // the piece cannot pass through obstacles.
+            int64_t landing_row = -1L; // -1 indicates no valid position found yet
+            for(int64_t test_row = 0L; test_row < img.rows; ++test_row){
+                bool can_place = true;
+                for(const auto &c : poly_coords){
+                    int64_t abs_row = test_row + c.at(0);
+                    int64_t abs_col = target_col + c.at(1);
+                    if( (abs_row < 0L) || (abs_row >= img.rows) ||
+                        (abs_col < 0L) || (abs_col >= img.columns) ){
+                        can_place = false;
+                        break;
+                    }
+                    // Check if cell is occupied (not by the moving piece).
+                    // The moving piece is currently on the board, so we must account for it.
+                    bool is_moving_piece_cell = false;
+                    const auto& curr_coords = valid_ominoes.at(poly_family).at(poly_shape).at(poly_orien);
+                    for(const auto &mc : curr_coords){
+                        if( (poly_pos_row + mc.at(0) == abs_row) &&
+                            (poly_pos_col + mc.at(1) == abs_col) ){
+                            is_moving_piece_cell = true;
+                            break;
+                        }
+                    }
+                    if( !is_moving_piece_cell && cell_is_active(img, abs_row, abs_col, chn) ){
+                        can_place = false;
+                        break;
+                    }
+                }
+                if(can_place){
+                    landing_row = test_row;
+                }else if(landing_row >= 0L){
+                    // We found a valid position earlier and now hit an obstacle.
+                    // The piece lands at the last valid row.
+                    break;
+                }
+            }
+            
+            // If no valid landing row was found, this placement is invalid.
+            if(landing_row < 0L) return std::nullopt;
+            
+            // Check if placement is valid.
+            bool valid = true;
+            for(const auto &c : poly_coords){
+                int64_t abs_row = landing_row + c.at(0);
+                int64_t abs_col = target_col + c.at(1);
+                if( (abs_row < 0L) || (abs_row >= img.rows) ||
+                    (abs_col < 0L) || (abs_col >= img.columns) ){
+                    valid = false;
+                    break;
+                }
+            }
+            if(!valid) return std::nullopt;
+            
+            // Create a simulated board with the piece placed.
+            std::vector<std::vector<bool>> sim_board(img.rows, std::vector<bool>(img.columns, false));
+            for(int64_t r = 0L; r < img.rows; ++r){
+                for(int64_t c = 0L; c < img.columns; ++c){
+                    // Check if this is a moving piece cell.
+                    bool is_moving_piece_cell = false;
+                    const auto& curr_coords = valid_ominoes.at(poly_family).at(poly_shape).at(poly_orien);
+                    for(const auto &mc : curr_coords){
+                        if( (poly_pos_row + mc.at(0) == r) &&
+                            (poly_pos_col + mc.at(1) == c) ){
+                            is_moving_piece_cell = true;
+                            break;
+                        }
+                    }
+                    if(!is_moving_piece_cell){
+                        sim_board[r][c] = cell_is_active(img, r, c, chn);
+                    }
+                }
+            }
+            // Place the piece at landing position.
+            for(const auto &c : poly_coords){
+                int64_t abs_row = landing_row + c.at(0);
+                int64_t abs_col = target_col + c.at(1);
+                if(abs_row >= 0L && abs_row < img.rows && abs_col >= 0L && abs_col < img.columns){
+                    sim_board[abs_row][abs_col] = true;
+                }
+            }
+            
+            // Calculate heuristics.
+            // 1. Aggregate height: sum of the heights of all columns.
+            // 2. Completed lines: number of full rows.
+            // 3. Holes: empty cells with filled cells above them.
+            // 4. Bumpiness: sum of absolute differences between adjacent column heights.
+            
+            // Compute column heights.
+            std::vector<int64_t> col_heights(img.columns, 0L);
+            for(int64_t c = 0L; c < img.columns; ++c){
+                for(int64_t r = 0L; r < img.rows; ++r){
+                    if(sim_board[r][c]){
+                        col_heights[c] = img.rows - r;
+                        break;
+                    }
+                }
+            }
+            
+            int64_t aggregate_height = 0L;
+            for(const auto &h : col_heights) aggregate_height += h;
+            
+            int64_t completed_lines = 0L;
+            for(int64_t r = 0L; r < img.rows; ++r){
+                bool full = true;
+                for(int64_t c = 0L; c < img.columns; ++c){
+                    if(!sim_board[r][c]){
+                        full = false;
+                        break;
+                    }
+                }
+                if(full) ++completed_lines;
+            }
+            
+            int64_t holes = 0L;
+            for(int64_t c = 0L; c < img.columns; ++c){
+                bool found_filled = false;
+                for(int64_t r = 0L; r < img.rows; ++r){
+                    if(sim_board[r][c]){
+                        found_filled = true;
+                    }else if(found_filled){
+                        ++holes;
+                    }
+                }
+            }
+            
+            int64_t bumpiness = 0L;
+            for(int64_t c = 0L; c < img.columns - 1L; ++c){
+                bumpiness += std::abs(col_heights[c] - col_heights[c+1]);
+            }
+            
+            // Weighted score (higher is better).
+            // Negative weights penalize the metric; positive weights reward the metric.
+            // TODO: weights are placeholders that need to be optimized for each combination of families.
+            const double w_height = -0.511;     // Penalize taller stacks
+            const double w_lines = 0.761;       // Reward completing lines
+            const double w_holes = -0.357;      // Penalize holes (empty cells under filled cells)
+            const double w_bumpiness = -0.184;  // Penalize uneven column heights
+            
+            double score = w_height * static_cast<double>(aggregate_height)
+                         + w_lines * static_cast<double>(completed_lines)
+                         + w_holes * static_cast<double>(holes)
+                         + w_bumpiness * static_cast<double>(bumpiness);
+            
+            return score;
+        };
+        
+        // Find the best target (orientation, column) by evaluating all possibilities.
+        const auto N_oriens = static_cast<int64_t>(valid_ominoes.at(poly_family).at(poly_shape).size());
+        double best_score = std::numeric_limits<double>::lowest();
+        int64_t best_orien = poly_orien;
+        int64_t best_col = poly_pos_col;
+        
+        for(int64_t orien = 0L; orien < N_oriens; ++orien){
+            for(int64_t col = 0L; col < img.columns; ++col){
+                auto score_opt = evaluate_placement(orien, col);
+                if(score_opt && *score_opt > best_score){
+                    best_score = *score_opt;
+                    best_orien = orien;
+                    best_col = col;
+                }
+            }
+        }
+        
+        // Determine the action to take to move towards the best placement.
+        // Priority: rotate to correct orientation first, then translate horizontally, then drop.
+        std::string action;
+        std::string rationale;
+        
+        if(poly_orien != best_orien){
+            // Need to rotate. Determine shortest path (clockwise vs counterclockwise).
+            int64_t cw_steps = (best_orien - poly_orien + N_oriens) % N_oriens;
+            int64_t ccw_steps = (poly_orien - best_orien + N_oriens) % N_oriens;
+            if(cw_steps <= ccw_steps){
+                action = "rotate-clockwise";
+                rationale = "Rotating to target orientation (column " + std::to_string(best_col) + ")";
+            }else{
+                action = "rotate-counterclockwise";
+                rationale = "Rotating to target orientation (column " + std::to_string(best_col) + ")";
+            }
+        }else if(poly_pos_col < best_col){
+            action = "translate-right";
+            rationale = "Moving right toward column " + std::to_string(best_col);
+        }else if(poly_pos_col > best_col){
+            action = "translate-left";
+            rationale = "Moving left toward column " + std::to_string(best_col);
+        }else{
+            // At correct position and orientation; drop the piece.
+            action = "drop";
+            rationale = "Dropping at column " + std::to_string(best_col);
+        }
+        
+        return { action, rationale };
+    };
+
 
     for(auto & iap_it : IAs){
         for(auto& img : (*iap_it)->imagecoll.images){
@@ -1159,6 +1385,97 @@ bool Polyominoes(Drover &DICOM_data,
                             break;
                         }
                     }
+
+                }else if(action_computer){
+                    // Let the computer select an action using heuristics.
+                    auto [chosen_action, rationale] = compute_computer_action(img, chn,
+                                                                              moving_poly_family.value(),
+                                                                              moving_poly_shape.value(),
+                                                                              moving_poly_orien.value(),
+                                                                              moving_poly_pos_row.value(),
+                                                                              moving_poly_pos_col.value() );
+                    
+                    // Store the rationale in metadata for display to the user.
+                    img.metadata[computer_rationale_str] = rationale;
+                    
+                    // Execute the chosen action.
+                    if(chosen_action == "rotate-clockwise"){
+                        const auto N_oriens = static_cast<int64_t>(valid_ominoes.at(moving_poly_family.value())
+                                                                                .at(moving_poly_shape.value())
+                                                                                .size());
+                        const auto new_orien = (moving_poly_orien.value() + 1L) % N_oriens;
+                        implement_poly_move(img, chn,
+                                            moving_poly_family.value(),
+                                            moving_poly_shape.value(),
+                                            moving_poly_orien.value(),
+                                            moving_poly_pos_row.value(),
+                                            moving_poly_pos_col.value(),
+                                            moving_poly_family.value(),
+                                            moving_poly_shape.value(),
+                                            new_orien,
+                                            moving_poly_pos_row.value(),
+                                            moving_poly_pos_col.value() );
+                    }else if(chosen_action == "rotate-counterclockwise"){
+                        const auto N_oriens = static_cast<int64_t>(valid_ominoes.at(moving_poly_family.value())
+                                                                                .at(moving_poly_shape.value())
+                                                                                .size());
+                        const auto new_orien = (moving_poly_orien.value() + N_oriens - 1L) % N_oriens;
+                        implement_poly_move(img, chn,
+                                            moving_poly_family.value(),
+                                            moving_poly_shape.value(),
+                                            moving_poly_orien.value(),
+                                            moving_poly_pos_row.value(),
+                                            moving_poly_pos_col.value(),
+                                            moving_poly_family.value(),
+                                            moving_poly_shape.value(),
+                                            new_orien,
+                                            moving_poly_pos_row.value(),
+                                            moving_poly_pos_col.value() );
+                    }else if(chosen_action == "translate-left"){
+                        implement_poly_move(img, chn,
+                                            moving_poly_family.value(),
+                                            moving_poly_shape.value(),
+                                            moving_poly_orien.value(),
+                                            moving_poly_pos_row.value(),
+                                            moving_poly_pos_col.value(),
+                                            moving_poly_family.value(),
+                                            moving_poly_shape.value(),
+                                            moving_poly_orien.value(),
+                                            moving_poly_pos_row.value(),
+                                            moving_poly_pos_col.value() - 1L );
+                    }else if(chosen_action == "translate-right"){
+                        implement_poly_move(img, chn,
+                                            moving_poly_family.value(),
+                                            moving_poly_shape.value(),
+                                            moving_poly_orien.value(),
+                                            moving_poly_pos_row.value(),
+                                            moving_poly_pos_col.value(),
+                                            moving_poly_family.value(),
+                                            moving_poly_shape.value(),
+                                            moving_poly_orien.value(),
+                                            moving_poly_pos_row.value(),
+                                            moving_poly_pos_col.value() + 1L );
+                    }else if(chosen_action == "drop"){
+                        for(auto i = 0L; i < img.rows; ++i){
+                            const bool moved = implement_poly_move(img, chn,
+                                                                   moving_poly_family.value(),
+                                                                   moving_poly_shape.value(),
+                                                                   moving_poly_orien.value(),
+                                                                   moving_poly_pos_row.value(),
+                                                                   moving_poly_pos_col.value(),
+                                                                   moving_poly_family.value(),
+                                                                   moving_poly_shape.value(),
+                                                                   moving_poly_orien.value(),
+                                                                   moving_poly_pos_row.value() + 1L,
+                                                                   moving_poly_pos_col.value() );
+                            if(moved){
+                                moving_poly_pos_row = moving_poly_pos_row.value() + 1L;
+                            }else{
+                                break;
+                            }
+                        }
+                    }
+
                 }else{
                     throw std::runtime_error("Unknown action, unable to continue");
                 }

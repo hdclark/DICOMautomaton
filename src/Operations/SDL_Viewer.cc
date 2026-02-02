@@ -1590,8 +1590,11 @@ bool SDL_Viewer(Drover &DICOM_data,
     opengl_texture_handle_t polyomino_texture;
     Drover polyomino_imgs;
     std::chrono::time_point<std::chrono::steady_clock> t_polyomino_updated;
+    std::chrono::time_point<std::chrono::steady_clock> t_polyomino_auto_updated;
     double dt_polyomino_update = 500.0; // milliseconds
+    double dt_polyomino_auto_update = 150.0; // milliseconds
     bool polyomino_paused = false;
+    bool polyomino_auto = false;
     int polyomino_family = 0;
 
     // Triple-three state.
@@ -4756,6 +4759,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 const bool l_use_texture_antialiasing = false;
                 polyomino_texture = Load_OpenGL_Texture( *img_ptr, 0L, l_img_is_rgb, l_use_texture_antialiasing, {}, {} );
                 t_polyomino_updated = std::chrono::steady_clock::now();
+                t_polyomino_auto_updated = std::chrono::steady_clock::now();
             }
             const auto score = polyomino_imgs.image_data.back()->imagecoll.images.back().GetMetadataValueAs<double>("PolyominoesScore").value_or(0.0);
             const auto speed_multiplier = 50.0; // Speed will have doubled when the score equals this factor.
@@ -4789,6 +4793,9 @@ bool SDL_Viewer(Drover &DICOM_data,
             if( f && ImGui::IsKeyPressed(SDL_SCANCODE_P) ){
                 polyomino_paused = !polyomino_paused;
             }
+            if( f && ImGui::IsKeyPressed(SDL_SCANCODE_A) ){
+                polyomino_auto = !polyomino_auto;
+            }
 
             ImGui::SliderInt("Polyomino Family", &polyomino_family, 0, 5);
             polyomino_family = std::clamp<int>(polyomino_family, 0, 5);
@@ -4798,14 +4805,41 @@ bool SDL_Viewer(Drover &DICOM_data,
 
             ImGui::Checkbox("Pause", &polyomino_paused);
             ImGui::SameLine();
+            ImGui::Checkbox("Auto", &polyomino_auto);
+            ImGui::SameLine();
             const auto reset = ImGui::Button("Reset", ImVec2(window_extent.x/6, 0));
             
             ImGui::Text("Current Score: %s, Current Speed: %s%%", std::to_string(static_cast<int64_t>(score)).c_str(),
                                                                   std::to_string(static_cast<int64_t>(100.0 * speed)).c_str());
+            
+//            // Display computer rationale if available.
+//            // Note: polyomino_imgs structure is already validated by the score access above.
+//            const auto computer_rationale = polyomino_imgs.image_data.back()->imagecoll.images.back().GetMetadataValueAs<std::string>("PolyominoesComputerRationale");
+//            if(computer_rationale){
+//                ImGui::Text("Computer: %s", computer_rationale.value().c_str());
+//            }
 
             // Run a simulation with the given action.
             const auto t_now = std::chrono::steady_clock::now();
             const auto t_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_polyomino_updated).count();
+            const bool none_move_due = (dt_polyomino_update <= (t_diff * speed));
+
+            // Override if the computer is playing, but only after delaying a bit (to avoid overwhelming the game).
+            // The delay time shrinks according to the current pace.
+            if( polyomino_auto ){
+                const auto t_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_polyomino_auto_updated).count();
+                const bool auto_move_due = (dt_polyomino_auto_update <= (t_diff * speed));
+                if(auto_move_due){
+                    action = "computer";
+                }
+            }
+
+            // Override if there has not been a 'none' action for a while, but not for a human player.
+            if( polyomino_auto
+            &&  none_move_due ){
+                action = "none";
+            }
+
             if(reset){
                 Free_OpenGL_Texture(polyomino_texture);
                 polyomino_imgs = Drover();
@@ -4817,8 +4851,20 @@ bool SDL_Viewer(Drover &DICOM_data,
                 t_polyomino_updated = t_now;
 
             }else if( (action != "none")
-                  ||  ( (action == "none") && (dt_polyomino_update <= (t_diff * speed)) ) ){
-                t_polyomino_updated = t_now;
+                  ||  ( (action == "none") && none_move_due ) ){
+
+                // Update the timestamps. We are more lenient here for a human player than a computer player.
+                if( polyomino_auto ){
+                    if(action == "none"){
+                        t_polyomino_updated = t_now;
+                    }
+                    if(action == "computer"){
+                        t_polyomino_auto_updated = t_now;
+                    }
+                }else{
+                    t_polyomino_updated = t_now;
+                }
+
 
                 // Loading the script and parsing into an op_list could be cached. Might speed this up slightly...
                 std::list<OperationArgPkg> Operations;
