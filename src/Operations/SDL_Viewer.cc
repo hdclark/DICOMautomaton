@@ -2189,7 +2189,6 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         std::mt19937 re;
     } lg_game;
-    lg_game.re.seed(std::random_device()());
 
     const auto reset_lg_game = [&](){
         lg_towers.clear();
@@ -7540,9 +7539,8 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             proj.lane = tower.lane;
                             proj.x = tower_x_center(tower.col) + 10.0;
                             proj.damage = 12.0;
-                            proj.speed = 220.0;
                             lg_projectiles.push_back(proj);
-                            tower.cooldown = 1.1;
+                            tower.cooldown = 1.0;
                         }
                     }
                 }
