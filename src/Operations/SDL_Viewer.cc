@@ -2134,27 +2134,31 @@ bool SDL_Viewer(Drover &DICOM_data,
         Blocker = 2
     };
 
+    constexpr double lg_default_tower_hp = 60.0;
+    constexpr double lg_default_enemy_hp = 80.0;
+    constexpr double lg_default_projectile_damage = 12.0;
+
     struct lg_tower_t {
         int64_t lane = 0;
         int64_t col = 0;
         lg_tower_type_t type = lg_tower_type_t::Sun;
-        double hp = 60.0;
-        double max_hp = 60.0;
+        double hp = lg_default_tower_hp;
+        double max_hp = lg_default_tower_hp;
         double cooldown = 0.0;
     };
 
     struct lg_enemy_t {
         int64_t lane = 0;
         double x = 0.0;
-        double hp = 80.0;
-        double max_hp = 80.0;
+        double hp = lg_default_enemy_hp;
+        double max_hp = lg_default_enemy_hp;
         double attack_cooldown = 0.0;
     };
 
     struct lg_projectile_t {
         int64_t lane = 0;
         double x = 0.0;
-        double damage = 12.0;
+        double damage = lg_default_projectile_damage;
         double speed = 200.0;
     };
 
@@ -7317,8 +7321,10 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             constexpr double enemy_block_tolerance = 5.0;
             constexpr double enemy_spawn_offset = 15.0;
             constexpr double projectile_hit_radius = 12.0;
-            constexpr double shooter_projectile_damage = 12.0;
+            constexpr double shooter_projectile_damage = lg_default_projectile_damage;
             constexpr double enemy_attack_damage = 12.0;
+            constexpr double default_enemy_hp = lg_default_enemy_hp;
+            constexpr double default_tower_hp = lg_default_tower_hp;
 
             // Control panel.
             ImGui::BeginChild("LawnInfo", ImVec2(240, lg_game.board_height), true);
@@ -7417,13 +7423,13 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             tower.type = lg_game.selected_tower;
                             switch(tower.type){
                                 case lg_tower_type_t::Sun:
-                                    tower.hp = 60.0;
-                                    tower.max_hp = 60.0;
+                                    tower.hp = default_tower_hp;
+                                    tower.max_hp = default_tower_hp;
                                     tower.cooldown = sun_initial_cooldown;
                                     break;
                                 case lg_tower_type_t::Shooter:
-                                    tower.hp = 60.0;
-                                    tower.max_hp = 60.0;
+                                    tower.hp = default_tower_hp;
+                                    tower.max_hp = default_tower_hp;
                                     tower.cooldown = 1.0;
                                     break;
                                 case lg_tower_type_t::Blocker:
@@ -7464,8 +7470,8 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     lg_enemy_t enemy;
                     enemy.lane = lane_dist(lg_game.re);
                     enemy.x = lg_game.board_width - enemy_spawn_offset;
-                    enemy.hp = 80.0;
-                    enemy.max_hp = 80.0;
+                    enemy.hp = default_enemy_hp;
+                    enemy.max_hp = default_enemy_hp;
                     enemy.attack_cooldown = 0.0;
                     lg_enemies.push_back(enemy);
                     lg_game.spawn_timer = lg_game.spawn_interval;
