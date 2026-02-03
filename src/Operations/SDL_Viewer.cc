@@ -7326,6 +7326,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             if(t_diff_ms > 50) t_diff_ms = 50;
             const double dt = static_cast<double>(t_diff_ms) / 1000.0;
             t_lg_updated = t_now;
+            constexpr double pi = 3.14159265358979323846;
             constexpr double sun_initial_cooldown = 2.0;
             constexpr double sun_token_cooldown_min = 8.0;
             constexpr double sun_token_cooldown_max = 15.0;
@@ -7340,6 +7341,8 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             constexpr double hp_regen_rate = 0.5; // HP regeneration per second (slow)
             constexpr double attack_animation_duration = 0.3; // Duration of attack animation
             constexpr double damage_animation_duration = 0.2; // Duration of damage animation
+            
+            std::uniform_real_distribution<double> sun_dist(sun_token_cooldown_min, sun_token_cooldown_max);
 
             // Control panel.
             ImGui::BeginChild("LawnInfo", ImVec2(240, lg_game.board_height), true);
@@ -7442,7 +7445,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                     tower.max_hp = default_tower_hp;
                                     tower.cooldown = sun_initial_cooldown;
                                     // Randomize sun production time between 8-15 seconds
-                                    std::uniform_real_distribution<double> sun_dist(sun_token_cooldown_min, sun_token_cooldown_max);
                                     tower.sun_production_time = sun_dist(lg_game.re);
                                     break;
                                 case lg_tower_type_t::Shooter:
@@ -7720,9 +7722,9 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     
                     // Draw sun rays
                     const int num_rays = 8;
-                    const float pi = static_cast<float>(std::acos(-1.0));
+                    const float pi_f = static_cast<float>(pi);
                     for(int i = 0; i < num_rays; ++i){
-                        const float angle = static_cast<float>(i) * 2.0f * pi / static_cast<float>(num_rays);
+                        const float angle = static_cast<float>(i) * 2.0f * pi_f / static_cast<float>(num_rays);
                         const float ray_start = radius;
                         const float ray_end = radius * 1.3f;
                         const float sx = cx_anim + ray_start * std::cos(angle);
@@ -7744,9 +7746,9 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     // Base (octagon)
                     const int base_sides = 6;
                     ImVec2 base_pts[base_sides];
-                    const float pi = static_cast<float>(std::acos(-1.0));
+                    const float pi_f = static_cast<float>(pi);
                     for(int i = 0; i < base_sides; ++i){
-                        const float angle = static_cast<float>(i) * 2.0f * pi / static_cast<float>(base_sides);
+                        const float angle = static_cast<float>(i) * 2.0f * pi_f / static_cast<float>(base_sides);
                         base_pts[i] = ImVec2(cx_anim + radius * 0.8f * std::cos(angle), 
                                             cy_anim + radius * 0.8f * std::sin(angle));
                     }
@@ -7781,9 +7783,9 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     // Outer octagon
                     const int sides = 8;
                     ImVec2 oct_pts[sides];
-                    const float pi = static_cast<float>(std::acos(-1.0));
+                    const float pi_f = static_cast<float>(pi);
                     for(int i = 0; i < sides; ++i){
-                        const float angle = static_cast<float>(i) * 2.0f * pi / static_cast<float>(sides);
+                        const float angle = static_cast<float>(i) * 2.0f * pi_f / static_cast<float>(sides);
                         oct_pts[i] = ImVec2(cx_anim + radius * std::cos(angle), cy_anim + radius * std::sin(angle));
                     }
                     draw_list->AddConvexPolyFilled(oct_pts, sides, fill_col);
@@ -7800,7 +7802,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                       ImVec2(cx_anim + inner_size, cy_anim + inner_size),
                                       border_col, 0.0f, 0, 2.0f);
                     
-                    // Draw battlements
+                    // Draw battlements (num_battlements must be >= 2 for spacing calculation)
                     const int num_battlements = 4;
                     const float battlement_w = inner_size * 0.4f;
                     const float battlement_h = radius * 0.3f;
@@ -7879,9 +7881,9 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 
                 // Draw spikes/details around the enemy
                 const int num_spikes = 6;
-                const float pi = static_cast<float>(std::acos(-1.0));
+                const float pi_f = static_cast<float>(pi);
                 for(int i = 0; i < num_spikes; ++i){
-                    const float angle = static_cast<float>(i) * 2.0f * pi / static_cast<float>(num_spikes);
+                    const float angle = static_cast<float>(i) * 2.0f * pi_f / static_cast<float>(num_spikes);
                     const float spike_base = radius * 0.8f;
                     const float spike_tip = radius * 1.15f;
                     const float sx = ex_anim + lean_offset + spike_base * std::cos(angle);
