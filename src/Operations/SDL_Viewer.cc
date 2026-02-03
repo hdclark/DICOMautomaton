@@ -2200,7 +2200,6 @@ bool SDL_Viewer(Drover &DICOM_data,
         lg_game.lives = 10;
         lg_game.spawn_timer = 0.0;
         lg_game.selected_tower = lg_tower_type_t::Sun;
-        lg_game.spawn_interval = 2.5;
 
         lg_game.board_width = lg_game.cols * lg_game.cell_width;
         lg_game.board_height = lg_game.lanes * lg_game.lane_height;
@@ -7314,6 +7313,8 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             if(t_diff_ms > 50) t_diff_ms = 50;
             const double dt = static_cast<double>(t_diff_ms) / 1000.0;
             t_lg_updated = t_now;
+            constexpr double sun_initial_cooldown = 2.0;
+            constexpr double sun_token_cooldown = 5.0;
 
             // Control panel.
             ImGui::BeginChild("LawnInfo", ImVec2(240, lg_game.board_height), true);
@@ -7414,7 +7415,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                 case lg_tower_type_t::Sun:
                                     tower.hp = 60.0;
                                     tower.max_hp = 60.0;
-                                    tower.cooldown = 2.0;
+                                    tower.cooldown = sun_initial_cooldown;
                                     break;
                                 case lg_tower_type_t::Shooter:
                                     tower.hp = 60.0;
@@ -7446,7 +7447,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         token.pos = vec2<double>(cx, cy - 12.0);
                         token.created = t_now;
                         lg_tokens.push_back(token);
-                        tower.cooldown = 5.0;
+                        tower.cooldown = sun_token_cooldown;
                     }
                 }
             }
