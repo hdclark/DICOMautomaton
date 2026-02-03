@@ -6702,7 +6702,10 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             }
 
             // Handle tower placement and upgrade on mouse click.
-            if(ImGui::IsMouseClicked(0) && td_game.lives > 0 && !td_game.show_upgrade_dialog){
+            if( f
+            &&  ImGui::IsMouseClicked(0)
+            &&  (td_game.lives > 0)
+            &&  !td_game.show_upgrade_dialog ){
                 ImVec2 mouse_pos = ImGui::GetMousePos();
                 const float rel_x = mouse_pos.x - grid_origin.x;
                 const float rel_y = mouse_pos.y - grid_origin.y;
@@ -6737,25 +6740,22 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 const float half_size = static_cast<float>(td_game.cell_size * 0.35) * level_scale;
 
                 // Determine tower colors based on type and level.
-                ImU32 fill_color, border_color, range_color;
+                ImU32 fill_color, border_color;
                 switch(tower.tower_type){
                     case td_tower_type_t::RapidFire:
                         // Green-cyan for rapid fire.
                         fill_color = ImColor(0.1f + 0.1f * (tower.level - 1), 0.7f, 0.3f + 0.1f * (tower.level - 1), 1.0f);
                         border_color = ImColor(0.05f, 0.5f, 0.2f, 1.0f);
-                        range_color = ImColor(0.1f, 0.8f, 0.3f, 0.3f);
                         break;
                     case td_tower_type_t::Boom:
                         // Orange-red for boom (explosive).
                         fill_color = ImColor(0.9f, 0.3f + 0.1f * (tower.level - 1), 0.1f, 1.0f);
                         border_color = ImColor(0.6f, 0.2f, 0.05f, 1.0f);
-                        range_color = ImColor(0.9f, 0.4f, 0.1f, 0.3f);
                         break;
                     default:
                         // Blue for basic tower, getting darker/more intense at higher levels.
                         fill_color = ImColor(0.2f, 0.3f + 0.1f * (tower.level - 1), 0.9f, 1.0f);
                         border_color = ImColor(0.1f, 0.1f, 0.5f + 0.1f * (tower.level - 1), 1.0f);
-                        range_color = ImColor(0.2f, 0.2f, 0.8f, 0.3f);
                         break;
                 }
 
@@ -6838,7 +6838,8 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 // Handle tower tooltip on hover.
                 ImVec2 mouse_pos = ImGui::GetMousePos();
                 const float mouse_dist = std::sqrt((mouse_pos.x - cx) * (mouse_pos.x - cx) + (mouse_pos.y - cy) * (mouse_pos.y - cy));
-                if( (mouse_dist < (half_size * 1.5f))
+                if( f
+                && (mouse_dist < (half_size * 1.5f))
                 &&  !td_game.show_upgrade_dialog){
                     ImGui::BeginTooltip();
                     ImGui::Text("Tower: %s", get_tower_type_name(tower.tower_type));
@@ -7066,7 +7067,9 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                 // Handle enemy tooltip on hover.
                 ImVec2 mouse_pos = ImGui::GetMousePos();
                 const float mouse_dist = std::sqrt((mouse_pos.x - ex) * (mouse_pos.x - ex) + (mouse_pos.y - ey) * (mouse_pos.y - ey));
-                if(mouse_dist < enemy_radius * 1.5f && !td_game.show_upgrade_dialog){
+                if( f
+                &&  (mouse_dist < (enemy_radius * 1.5f))
+                &&  !td_game.show_upgrade_dialog ){
                     // Calculate enemy's current speed (base speed + wave scaling).
                     const double current_speed = (td_game.enemy_speed + wn/500.0) * enemy.speed_multiplier;
                     ImGui::BeginTooltip();
@@ -7090,7 +7093,8 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             }
 
             // Tower upgrade dialog.
-            if(td_game.show_upgrade_dialog && td_game.upgrade_tower_idx < td_towers.size()){
+            if( td_game.show_upgrade_dialog
+            &&  (td_game.upgrade_tower_idx < td_towers.size()) ){
                 auto& tower = td_towers[td_game.upgrade_tower_idx];
                 const float cx = grid_origin.x + static_cast<float>((tower.grid_x + 0.5) * td_game.cell_size);
                 const float cy = grid_origin.y + static_cast<float>((tower.grid_y + 0.5) * td_game.cell_size);
