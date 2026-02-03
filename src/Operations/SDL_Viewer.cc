@@ -7289,8 +7289,6 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                       &reset_lg_game ]() -> bool {
             if(!view_toggles.view_lawn_game_enabled) return true;
 
-            lg_game.board_width = lg_game.cols * lg_game.cell_width;
-            lg_game.board_height = lg_game.lanes * lg_game.lane_height;
             const auto win_width = static_cast<int>(lg_game.board_width + 260.0);
             const auto win_height = static_cast<int>(lg_game.board_height + 90.0);
 
@@ -7317,6 +7315,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             constexpr double sun_token_cooldown = 5.0;
             constexpr double token_click_tolerance = 4.0;
             constexpr double enemy_block_tolerance = 5.0;
+            constexpr double enemy_spawn_offset = 15.0;
             constexpr double projectile_hit_radius = 12.0;
             constexpr double shooter_projectile_damage = 12.0;
             constexpr double enemy_attack_damage = 12.0;
@@ -7464,7 +7463,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     std::uniform_int_distribution<int64_t> lane_dist(0, lg_game.lanes - 1);
                     lg_enemy_t enemy;
                     enemy.lane = lane_dist(lg_game.re);
-                    enemy.x = lg_game.board_width - 15.0;
+                    enemy.x = lg_game.board_width - enemy_spawn_offset;
                     enemy.hp = 80.0;
                     enemy.max_hp = 80.0;
                     enemy.attack_cooldown = 0.0;
@@ -7535,7 +7534,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     if(tower.cooldown <= 0.0){
                         bool enemy_in_lane = false;
                         for(const auto& enemy : lg_enemies){
-                            if(enemy.lane == tower.lane && enemy.x > tower_x_center(tower.col)){
+                            if(enemy.lane == tower.lane && enemy.x >= tower_x_center(tower.col)){
                                 enemy_in_lane = true;
                                 break;
                             }
@@ -7646,7 +7645,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     label = 'B';
                     const int sides = 8;
                     ImVec2 oct_pts[sides];
-                    const float pi = static_cast<float>(std::acos(-1.0));
+                    constexpr float pi = 3.14159265359f;
                     for(int i = 0; i < sides; ++i){
                         const float angle = static_cast<float>(i) * 2.0f * pi / static_cast<float>(sides);
                         oct_pts[i] = ImVec2(cx + radius * std::cos(angle), cy + radius * std::sin(angle));
