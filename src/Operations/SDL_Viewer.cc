@@ -2179,7 +2179,6 @@ bool SDL_Viewer(Drover &DICOM_data,
         int64_t cols = 9;
         double lane_height = 70.0;
         double cell_width = 70.0;
-        double board_padding = 20.0;
         double board_width = 0.0;
         double board_height = 0.0;
 
@@ -7400,7 +7399,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             if(mouse_clicked && !clicked_token && lg_game.lives > 0){
                 const float rel_x = mouse_pos.x - board_origin.x;
                 const float rel_y = mouse_pos.y - board_origin.y;
-                if(rel_x >= 0 && rel_y >= 0 && rel_x <= lg_game.board_width && rel_y <= lg_game.board_height){
+                if(rel_x >= 0 && rel_y >= 0 && rel_x < lg_game.board_width && rel_y < lg_game.board_height){
                     const int64_t col = static_cast<int64_t>(rel_x / lg_game.cell_width);
                     const int64_t lane = static_cast<int64_t>(rel_y / lg_game.lane_height);
                     const auto has_tower = [&](int64_t lane_check, int64_t col_check){
