@@ -7315,6 +7315,11 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             t_lg_updated = t_now;
             constexpr double sun_initial_cooldown = 2.0;
             constexpr double sun_token_cooldown = 5.0;
+            constexpr double token_click_tolerance = 4.0;
+            constexpr double enemy_block_tolerance = 5.0;
+            constexpr double projectile_hit_radius = 12.0;
+            constexpr double shooter_projectile_damage = 12.0;
+            constexpr double enemy_attack_damage = 12.0;
 
             // Control panel.
             ImGui::BeginChild("LawnInfo", ImVec2(240, lg_game.board_height), true);
@@ -7379,7 +7384,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                            board_origin.y + static_cast<float>(token.pos.y));
                     const float dx = mouse_pos.x - token_pos.x;
                     const float dy = mouse_pos.y - token_pos.y;
-                    if(std::sqrt(dx * dx + dy * dy) < token.radius + 4.0){
+                    if(std::sqrt(dx * dx + dy * dy) < token.radius + token_click_tolerance){
                         clicked_token = true;
                         break;
                     }
@@ -7483,7 +7488,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     for(const auto& tower : lg_towers){
                         if(tower.lane != enemy.lane) continue;
                         const double tower_x = tower_x_center(tower.col);
-                        if(tower_x <= enemy.x + 5.0){
+                        if(tower_x <= enemy.x + enemy_block_tolerance){
                             if(blocking_col < 0 || tower.col > blocking_col){
                                 blocking_col = tower.col;
                             }
@@ -7504,7 +7509,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     if(is_blocked && target_tower != nullptr){
                         enemy.attack_cooldown -= dt;
                         if(enemy.attack_cooldown <= 0.0){
-                            target_tower->hp -= 12.0;
+                            target_tower->hp -= enemy_attack_damage;
                             enemy.attack_cooldown = 0.8;
                         }
                     }else{
@@ -7539,7 +7544,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                             lg_projectile_t proj;
                             proj.lane = tower.lane;
                             proj.x = tower_x_center(tower.col) + 10.0;
-                            proj.damage = 12.0;
+                            proj.damage = shooter_projectile_damage;
                             lg_projectiles.push_back(proj);
                             tower.cooldown = 1.0;
                         }
@@ -7557,7 +7562,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                         bool remove = false;
                         for(auto& enemy : lg_enemies){
                             if(enemy.lane != proj.lane) continue;
-                            if(std::abs(enemy.x - proj.x) < 12.0){
+                            if(std::abs(enemy.x - proj.x) < projectile_hit_radius){
                                 enemy.hp -= proj.damage;
                                 remove = true;
                                 break;
@@ -7595,13 +7600,13 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
             lg_tokens.erase(
                 std::remove_if(lg_tokens.begin(), lg_tokens.end(),
                     [&](const lg_token_t& token) -> bool {
-                        const auto age = std::chrono::duration_cast<std::chrono::seconds>(t_now - token.created).count();
-                        if(age > 8) return true;
+                        const auto age_seconds = std::chrono::duration_cast<std::chrono::seconds>(t_now - token.created).count();
+                        if(age_seconds > 8) return true;
                         const ImVec2 token_pos(board_origin.x + static_cast<float>(token.pos.x),
                                                board_origin.y + static_cast<float>(token.pos.y));
                         const float dx = mouse_pos.x - token_pos.x;
                         const float dy = mouse_pos.y - token_pos.y;
-                        if(mouse_clicked && std::sqrt(dx * dx + dy * dy) < token.radius + 4.0){
+                        if(mouse_clicked && std::sqrt(dx * dx + dy * dy) < token.radius + token_click_tolerance){
                             lg_game.tokens += 1;
                             return true;
                         }
@@ -7641,9 +7646,9 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     label = 'B';
                     const int sides = 8;
                     ImVec2 oct_pts[sides];
-                    constexpr float PI = 3.14159265f;
+                    const float pi = static_cast<float>(std::acos(-1.0));
                     for(int i = 0; i < sides; ++i){
-                        const float angle = static_cast<float>(i) * 2.0f * PI / static_cast<float>(sides);
+                        const float angle = static_cast<float>(i) * 2.0f * pi / static_cast<float>(sides);
                         oct_pts[i] = ImVec2(cx + radius * std::cos(angle), cy + radius * std::sin(angle));
                     }
                     draw_list->AddConvexPolyFilled(oct_pts, sides, fill_col);
