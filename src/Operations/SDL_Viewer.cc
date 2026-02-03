@@ -7361,16 +7361,16 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                                ImColor(0.1f, 0.2f, 0.1f, 1.0f), 0.0f, 0, 2.0f);
 
             // Lane lines.
-            for(int64_t lane = 1; lane < lg_game.lanes; ++lane){
-                const float y = board_origin.y + static_cast<float>(lane * lg_game.lane_height);
+            for(int64_t lane_idx = 1; lane_idx < lg_game.lanes; ++lane_idx){
+                const float y = board_origin.y + static_cast<float>(lane_idx * lg_game.lane_height);
                 draw_list->AddLine(ImVec2(board_origin.x, y),
                                    ImVec2(board_origin.x + lg_game.board_width, y),
                                    ImColor(0.12f, 0.25f, 0.12f, 1.0f), 1.0f);
             }
 
             // Column lines.
-            for(int64_t col = 1; col < lg_game.cols; ++col){
-                const float x = board_origin.x + static_cast<float>(col * lg_game.cell_width);
+            for(int64_t col_idx = 1; col_idx < lg_game.cols; ++col_idx){
+                const float x = board_origin.x + static_cast<float>(col_idx * lg_game.cell_width);
                 draw_list->AddLine(ImVec2(x, board_origin.y),
                                    ImVec2(x, board_origin.y + lg_game.board_height),
                                    ImColor(0.15f, 0.3f, 0.15f, 1.0f), 1.0f);
@@ -7645,7 +7645,7 @@ std::cout << "Collision detected between " << obj.pos << " and " << obj_j.pos
                     label = 'B';
                     const int sides = 8;
                     ImVec2 oct_pts[sides];
-                    constexpr float pi = 3.14159265359f;
+                    const float pi = static_cast<float>(std::acos(-1.0));
                     for(int i = 0; i < sides; ++i){
                         const float angle = static_cast<float>(i) * 2.0f * pi / static_cast<float>(sides);
                         oct_pts[i] = ImVec2(cx + radius * std::cos(angle), cy + radius * std::sin(angle));
