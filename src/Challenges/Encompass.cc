@@ -1,4 +1,4 @@
-// Encompass_Game.cc - extracted from SDL_Viewer.cc
+// Encompass.cc - A part of DICOMautomaton 2026. Written by hal clark.
 
 #include <vector>
 #include <random>
@@ -13,7 +13,7 @@
 #include <SDL.h>
 #include "../imgui20210904/imgui.h"
 
-#include "Encompass_Game.h"
+#include "Encompass.h"
 
 EncompassGame::EncompassGame(){
     en_game.re.seed( std::random_device()() );
@@ -111,7 +111,7 @@ void EncompassGame::Reset(){
     t_en_started = t_now;
 
     return;
-};
+}
 
 bool EncompassGame::Display(bool &enabled){
     if( !enabled ) return true;

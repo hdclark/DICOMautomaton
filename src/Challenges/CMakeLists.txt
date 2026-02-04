@@ -1,7 +1,7 @@
 
 add_library(Challenges_objs OBJECT
     Encompass.cc
-#    FreeSki.cc
+    FreeSki.cc
 #    Guitar_Fret.cc
 #    Lawn.cc
 #    Polyomino.cc

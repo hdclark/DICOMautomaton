@@ -1,4 +1,4 @@
-// Encompass_Game.h.
+// Encompass.h.
 
 #pragma once
 

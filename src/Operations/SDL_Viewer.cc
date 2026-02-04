@@ -93,6 +93,7 @@
 #include "../Surface_Meshes.h"
 
 #include "../Challenges/Encompass.h"
+#include "../Challenges/FreeSki.h"
 
 #include "SDL_Viewer.h"
 
@@ -1057,7 +1058,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_cube_enabled = false;
         bool view_guitar_fret_enabled = false;
         bool view_tower_defence_enabled = false;
-        bool view_skifree_enabled = false;
+        bool view_freeski_enabled = false;
         bool view_lawn_game_enabled = false;
 
         bool view_guides_enabled = true;
@@ -1614,128 +1615,9 @@ bool SDL_Viewer(Drover &DICOM_data,
     // Encompass state.
     EncompassGame en_game;
 
-    // FreeSki game state.
-    //
-    // Controls:
-    //   - Left/Right arrow keys: move skier left/right
-    //   - Spacebar: jump over obstacles
-    //   - Double-tap spacebar (while in air): perform a flip for double points
-    //   - R key: reset the game
-    //
-    // Gameplay:
-    //   - The skier continuously moves downward (the world scrolls upward)
-    //   - Speed gradually increases over time until maximum is reached
-    //   - Avoid obstacles: trees, rocks, and other skiers
-    //   - Jump over rocks to score points (1 point normal, 2 points if flipping)
-    //   - Hit jumps while in the air to score points
-    //   - Hit jumps while on the ground for a speed boost
-    //   - Colliding with trees, rocks (when not jumping), or other skiers ends the game
-    //   - On game over, the screen twirls/jitters until reset
-    //   - After reset, a 3-second countdown gives the player time to prepare
-    //
-    // Visual elements:
-    //   - Player: red triangle (orange while jumping)
-    //   - Trees: green triangles
-    //   - Rocks: gray circles
-    //   - Jumps: brown/yellow ramps
-    //   - Other skiers: cyan triangles
-    //
-    enum class sf_obj_type_t {
-        skier,     // The player
-        tree,      // Obstacle - collision ends game
-        rock,      // Obstacle - collision ends game, can be jumped over
-        jump,      // Speed boost when hit, awards points when jumped
-        other_skier // Obstacle - collision ends game
-    };
-    
-    struct sf_game_obj_t {
-        vec2<double> pos;      // position
-        sf_obj_type_t type;
-        double size;           // radius/size for rendering
-    };
-    
-    std::vector< sf_game_obj_t > sf_game_objs;
-    std::chrono::time_point<std::chrono::steady_clock> t_sf_updated;
-    std::chrono::time_point<std::chrono::steady_clock> t_sf_started;
-    std::chrono::time_point<std::chrono::steady_clock> t_sf_last_spacebar;
-    
-    struct sf_game_t {
-        double box_width  = 800.0;    // World bounds width
-        double box_height = 600.0;    // World bounds height (visible area)
-        
-        double skier_x = 400.0;       // Skier x position (can move left/right)
-        double skier_y = 100.0;       // Skier y position (fixed on screen, world scrolls)
-        double skier_size = 12.0;     // Skier triangle size
-        
-        double scroll_speed = 50.0;   // Initial downward scroll speed (pixels/sec)
-        double max_scroll_speed = 1500.0; // Maximum scroll speed
-        double speed_increase_rate = 3.0; // Speed increase per second
-        
-        double world_scroll_y = 0.0;  // How far we've scrolled down
-        
-        bool is_jumping = false;
-        double jump_height = 0.0;     // Current height above ground
-        double jump_velocity = 0.0;   // Vertical velocity during jump
-        double jump_max_height = 80.0;
-        double jump_speed = 200.0;    // Initial upward velocity
-        
-        bool did_flip = false;        // Whether player did a flip during this jump
-        bool can_double_tap = false;  // Whether player can still double-tap
-        
-        bool game_over = false;
-        double game_over_time = 0.0;  // Time since game over
-        
-        bool countdown_active = true;
-        double countdown_remaining = 3.0; // Seconds until game starts
-        
-        int64_t score = 0;
-        
-        double tree_spawn_rate = 1.53;          // Average trees per second
-        double rock_spawn_rate = 1.05;          // Average rocks per second  
-        double jump_spawn_rate = 0.31;         // Average jumps per second
-        double other_skier_spawn_rate = 0.213; // Average other skiers per second
-        
-        double last_tree_spawn = 0.0;
-        double last_rock_spawn = 0.0;
-        double last_jump_spawn = 0.0;
-        double last_other_skier_spawn = 0.0;
-        
-        std::mt19937 re;
-    } sf_game;
-    sf_game.re.seed( std::random_device()() );
-    
-    const auto reset_sf_game = [&](){
-        sf_game_objs.clear();
-        
-        sf_game.skier_x = sf_game.box_width / 2.0;
-        sf_game.skier_y = sf_game.box_height * 0.15;
-        sf_game.scroll_speed = 50.0;
-        sf_game.world_scroll_y = 0.0;
-        sf_game.is_jumping = false;
-        sf_game.jump_height = 0.0;
-        sf_game.jump_velocity = 0.0;
-        sf_game.did_flip = false;
-        sf_game.can_double_tap = false;
-        sf_game.game_over = false;
-        sf_game.game_over_time = 0.0;
-        sf_game.countdown_active = true;
-        sf_game.countdown_remaining = 3.0;
-        sf_game.score = 0;
-        
-        sf_game.last_tree_spawn = 0.0;
-        sf_game.last_rock_spawn = 0.0;
-        sf_game.last_jump_spawn = 0.0;
-        sf_game.last_other_skier_spawn = 0.0;
-        
-        // Reset the update time.
-        const auto t_now = std::chrono::steady_clock::now();
-        t_sf_updated = t_now;
-        t_sf_started = t_now;
-        t_sf_last_spacebar = t_now;
+    // FreeSki state.
+    FreeSkiGame fs_game;
 
-        sf_game.re.seed( std::random_device()() );
-        return;
-    };
 
     // Cube state.
     std::chrono::time_point<std::chrono::steady_clock> t_cube_updated;
@@ -5166,349 +5048,16 @@ bool SDL_Viewer(Drover &DICOM_data,
         }
 
         try{
-            // Break from the main render loop if false is received.
             if(!en_game.Display(view_toggles.view_encompass_enabled)) break;
         }catch(const std::exception &e){
             YLOGWARN("Exception in en_game.Display(): '" << e.what() << "'");
             throw;
         }
 
-        const auto display_sf_game = [&view_toggles,
-                                      &sf_game_objs,
-                                      &t_sf_updated,
-                                      &t_sf_started,
-                                      &t_sf_last_spacebar,
-                                      &sf_game,
-                                      &reset_sf_game ]() -> bool {
-            if( !view_toggles.view_skifree_enabled ) return true;
-
-            const auto win_width  = static_cast<int>( std::ceil(sf_game.box_width) ) + 15;
-            const auto win_height = static_cast<int>( std::ceil(sf_game.box_height) ) + 60;
-            auto flags = ImGuiWindowFlags_AlwaysAutoResize
-                       | ImGuiWindowFlags_NoScrollWithMouse
-                       | ImGuiWindowFlags_NoNavInputs
-                       | ImGuiWindowFlags_NoScrollbar ;
-            ImGui::SetNextWindowSize(ImVec2(win_width, win_height), ImGuiCond_FirstUseEver);
-            ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
-            ImGui::Begin("FreeSki", &view_toggles.view_skifree_enabled, flags );
-
-            const auto f = ImGui::IsWindowFocused();
-
-            // Reset the game before any game state is used.
-            if( f && ImGui::IsKeyPressed(SDL_SCANCODE_R) ){
-                reset_sf_game();
-            }
-
-            // Display state.
-            ImVec2 curr_pos = ImGui::GetCursorScreenPos();
-            ImDrawList *window_draw_list = ImGui::GetWindowDrawList();
-
-            // Draw border
-            {
-                const auto c = ImColor(0.7f, 0.7f, 0.8f, 1.0f);
-                window_draw_list->AddRect(curr_pos, ImVec2( curr_pos.x + sf_game.box_width, 
-                                                            curr_pos.y + sf_game.box_height ), c);
-            }
-
-            const auto t_now = std::chrono::steady_clock::now();
-            auto t_updated_diff = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_sf_updated).count();
-            
-            // Limit time steps to avoid simulation breakdown
-            if(30 < t_updated_diff) t_updated_diff = 30;
-            const auto dt = static_cast<double>(t_updated_diff) / 1000.0; // Delta time in seconds
-
-            // Handle countdown
-            if(sf_game.countdown_active){
-                sf_game.countdown_remaining -= dt;
-                if(sf_game.countdown_remaining <= 0.0){
-                    sf_game.countdown_active = false;
-                    sf_game.countdown_remaining = 0.0;
-                    // Initialize spawn timers when countdown finishes to prevent immediate burst
-                    const auto current_time = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_sf_started).count() / 1000.0;
-                    sf_game.last_tree_spawn = current_time;
-                    sf_game.last_rock_spawn = current_time;
-                    sf_game.last_jump_spawn = current_time;
-                    sf_game.last_other_skier_spawn = current_time;
-                }
-                
-                // Draw countdown
-                const auto countdown_text = std::to_string(static_cast<int>(std::ceil(sf_game.countdown_remaining)));
-                const auto text_size = ImGui::CalcTextSize(countdown_text.c_str());
-                const ImVec2 text_pos(curr_pos.x + sf_game.box_width/2.0 - text_size.x/2.0,
-                                      curr_pos.y + sf_game.box_height/2.0 - text_size.y/2.0);
-                window_draw_list->AddText(text_pos, ImColor(1.0f, 1.0f, 1.0f, 1.0f), countdown_text.c_str());
-            }
-
-            // Update game state when not in countdown and not game over
-            if(!sf_game.countdown_active && !sf_game.game_over){
-                // Gradually increase scroll speed
-                sf_game.scroll_speed += sf_game.speed_increase_rate * dt;
-                if(sf_game.scroll_speed > sf_game.max_scroll_speed){
-                    sf_game.scroll_speed = sf_game.max_scroll_speed;
-                }
-                
-                // Update world scroll
-                sf_game.world_scroll_y += sf_game.scroll_speed * dt;
-                
-                // Handle player left/right movement
-                if( f ){
-                    const auto move_speed = 200.0;
-                    if( ImGui::IsKeyDown(SDL_SCANCODE_LEFT) ){
-                        sf_game.skier_x -= move_speed * dt;
-                    }
-                    if( ImGui::IsKeyDown(SDL_SCANCODE_RIGHT) ){
-                        sf_game.skier_x += move_speed * dt;
-                    }
-                    // Clamp to bounds
-                    sf_game.skier_x = std::clamp(sf_game.skier_x, sf_game.skier_size, sf_game.box_width - sf_game.skier_size);
-                    
-                    // Handle jump
-                    if( ImGui::IsKeyPressed(SDL_SCANCODE_SPACE) ){
-                        if(!sf_game.is_jumping){
-                            // Start jump
-                            sf_game.is_jumping = true;
-                            sf_game.jump_velocity = sf_game.jump_speed;
-                            sf_game.did_flip = false;
-                            sf_game.can_double_tap = true;
-                            t_sf_last_spacebar = t_now;
-                        }else if(sf_game.can_double_tap){
-                            // Check if this is a double-tap while airborne
-                            const auto t_since_last_spacebar = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_sf_last_spacebar).count();
-                            if(t_since_last_spacebar > 50 && t_since_last_spacebar < 300){
-                                // Double tap detected - do a flip!
-                                sf_game.did_flip = true;
-                                sf_game.can_double_tap = false;
-                            }
-                            t_sf_last_spacebar = t_now;
-                        }
-                    }
-                }
-                
-                // Update jump physics
-                if(sf_game.is_jumping){
-                    const auto gravity = 400.0; // pixels/sec^2
-                    sf_game.jump_velocity -= gravity * dt;
-                    sf_game.jump_height += sf_game.jump_velocity * dt;
-                    
-                    if(sf_game.jump_height <= 0.0){
-                        sf_game.jump_height = 0.0;
-                        sf_game.is_jumping = false;
-                        sf_game.jump_velocity = 0.0;
-                        sf_game.can_double_tap = false; // Reset flip capability when landing
-                    }
-                }
-                
-                // Spawn new objects
-                const auto total_time = std::chrono::duration_cast<std::chrono::milliseconds>(t_now - t_sf_started).count() / 1000.0;
-                std::uniform_real_distribution<> rd_x(20.0, sf_game.box_width - 20.0);
-                
-                // Trees
-                if((total_time - sf_game.last_tree_spawn) > (1.0 / sf_game.tree_spawn_rate)){
-                    sf_game_objs.emplace_back();
-                    sf_game_objs.back().type = sf_obj_type_t::tree;
-                    sf_game_objs.back().pos = vec2<double>(rd_x(sf_game.re), sf_game.world_scroll_y + sf_game.box_height + 50.0);
-                    sf_game_objs.back().size = 25.0;
-                    sf_game.last_tree_spawn = total_time;
-                }
-                
-                // Rocks
-                if((total_time - sf_game.last_rock_spawn) > (1.0 / sf_game.rock_spawn_rate)){
-                    sf_game_objs.emplace_back();
-                    sf_game_objs.back().type = sf_obj_type_t::rock;
-                    sf_game_objs.back().pos = vec2<double>(rd_x(sf_game.re), sf_game.world_scroll_y + sf_game.box_height + 50.0);
-                    sf_game_objs.back().size = 12.0;
-                    sf_game.last_rock_spawn = total_time;
-                }
-                
-                // Jumps
-                if((total_time - sf_game.last_jump_spawn) > (1.0 / sf_game.jump_spawn_rate)){
-                    sf_game_objs.emplace_back();
-                    sf_game_objs.back().type = sf_obj_type_t::jump;
-                    sf_game_objs.back().pos = vec2<double>(rd_x(sf_game.re), sf_game.world_scroll_y + sf_game.box_height + 50.0);
-                    sf_game_objs.back().size = 20.0;
-                    sf_game.last_jump_spawn = total_time;
-                }
-                
-                // Other skiers
-                if((total_time - sf_game.last_other_skier_spawn) > (1.0 / sf_game.other_skier_spawn_rate)){
-                    sf_game_objs.emplace_back();
-                    sf_game_objs.back().type = sf_obj_type_t::other_skier;
-                    sf_game_objs.back().pos = vec2<double>(rd_x(sf_game.re), sf_game.world_scroll_y + sf_game.box_height + 50.0);
-                    sf_game_objs.back().size = 12.0;
-                    sf_game.last_other_skier_spawn = total_time;
-                }
-                
-                // Check collisions with objects
-                const auto skier_world_y = sf_game.world_scroll_y + sf_game.skier_y;
-                for(auto &obj : sf_game_objs){
-                    const auto dx = obj.pos.x - sf_game.skier_x;
-                    const auto dy = obj.pos.y - skier_world_y;
-                    const auto dist = std::sqrt(dx*dx + dy*dy);
-                    const auto collision_dist = sf_game.skier_size + obj.size;
-                    
-                    if(dist < collision_dist){
-                        // Collision detected
-                        if(obj.type == sf_obj_type_t::jump){
-                            // Hit a jump
-                            if(sf_game.is_jumping){
-                                // Jumped over it - award points
-                                sf_game.score += sf_game.did_flip ? 2 : 1;
-                                // Remove the jump
-                                obj.pos.y = sf_game.world_scroll_y + sf_game.box_height + 100.0;
-                            }else{
-                                // Hit it - speed boost
-                                sf_game.scroll_speed = std::min(sf_game.scroll_speed * 1.15, sf_game.max_scroll_speed);
-                                // Remove the jump
-                                obj.pos.y = sf_game.world_scroll_y + sf_game.box_height + 100.0;
-                            }
-                            continue; // Skip to next object
-                        }else if(obj.type == sf_obj_type_t::rock){
-                            if(sf_game.is_jumping){
-                                // Jumped over rock - award points
-                                sf_game.score += sf_game.did_flip ? 2 : 1;
-                                obj.pos.y = sf_game.world_scroll_y + sf_game.box_height + 100.0;
-                            }else{
-                                // Hit rock - game over
-                                sf_game.game_over = true;
-                                sf_game.game_over_time = 0.0;
-                                sf_game.scroll_speed = 0.0;
-                            }
-                            continue; // Skip to next object
-                        }else if(obj.type == sf_obj_type_t::tree || obj.type == sf_obj_type_t::other_skier){
-                            // Hit tree or other skier - game over
-                            sf_game.game_over = true;
-                            sf_game.game_over_time = 0.0;
-                            sf_game.scroll_speed = 0.0;
-                            continue; // Skip to next object
-                        }
-                    }
-                }
-                
-                // Remove objects that are off screen
-                sf_game_objs.erase(
-                    std::remove_if(sf_game_objs.begin(), sf_game_objs.end(),
-                        [&](const sf_game_obj_t &obj) -> bool {
-                            const auto screen_y = obj.pos.y - sf_game.world_scroll_y;
-                            return screen_y < -50.0;
-                        }),
-                    sf_game_objs.end()
-                );
-            }
-
-            // Handle game over animation
-            if(sf_game.game_over){
-                sf_game.game_over_time += dt;
-            }
-
-            // Draw objects
-            for(const auto &obj : sf_game_objs){
-                const auto screen_y = obj.pos.y - sf_game.world_scroll_y;
-                
-                // Only draw if on screen
-                if(screen_y < -50.0 || screen_y > sf_game.box_height + 50.0) continue;
-                
-                ImVec2 obj_pos = curr_pos;
-                obj_pos.x = curr_pos.x + obj.pos.x;
-                obj_pos.y = curr_pos.y + screen_y;
-                
-                if(sf_game.game_over){
-                    // Apply jitter effect
-                    const auto jitter_amount = 3.0;
-                    std::uniform_real_distribution<> rd_jitter(-jitter_amount, jitter_amount);
-                    obj_pos.x += rd_jitter(sf_game.re);
-                    obj_pos.y += rd_jitter(sf_game.re);
-                }
-                
-                if(obj.type == sf_obj_type_t::tree){
-                    // Draw trees as a green triangle
-                    const auto c = ImColor(0.2f, 0.8f, 0.2f, 1.0f);
-                    const auto p1 = ImVec2(obj_pos.x, obj_pos.y - obj.size);
-                    const auto p2 = ImVec2(obj_pos.x - obj.size*0.7, obj_pos.y + obj.size*0.5);
-                    const auto p3 = ImVec2(obj_pos.x + obj.size*0.7, obj_pos.y + obj.size*0.5);
-                    window_draw_list->AddTriangleFilled(p1, p2, p3, c);
-                }else if(obj.type == sf_obj_type_t::rock){
-                    // Draw rocks as a gray circle
-                    const auto c = ImColor(0.5f, 0.5f, 0.5f, 1.0f);
-                    window_draw_list->AddCircleFilled(obj_pos, obj.size, c);
-                }else if(obj.type == sf_obj_type_t::jump){
-                    // Draw jumps as a brown/yellow box (rectangle)
-                    const auto c = ImColor(0.8f, 0.6f, 0.2f, 1.0f);
-                    const auto p1 = ImVec2(obj_pos.x - obj.size, obj_pos.y - obj.size*0.5);
-                    const auto p2 = ImVec2(obj_pos.x + obj.size, obj_pos.y + obj.size*0.5);
-                    window_draw_list->AddRectFilled(p1, p2, c);
-
-                }else if(obj.type == sf_obj_type_t::other_skier){
-                    // Draw other skiers as a cyan triangle
-                    const auto c = ImColor(0.0f, 0.8f, 0.8f, 1.0f);
-                    const auto p1 = ImVec2(obj_pos.x, obj_pos.y - obj.size);
-                    const auto p2 = ImVec2(obj_pos.x - obj.size*0.7, obj_pos.y + obj.size*0.5);
-                    const auto p3 = ImVec2(obj_pos.x + obj.size*0.7, obj_pos.y + obj.size*0.5);
-                    window_draw_list->AddTriangleFilled(p1, p2, p3, c);
-                }
-            }
-            
-            // Draw the player skier
-            {
-                ImVec2 skier_pos = curr_pos;
-                skier_pos.x = curr_pos.x + sf_game.skier_x;
-                skier_pos.y = curr_pos.y + sf_game.skier_y - sf_game.jump_height;
-                
-                if(sf_game.game_over){
-                    // Apply twirl effect
-                    const auto angle = sf_game.game_over_time * 10.0;
-                    const auto twirl_radius = 10.0;
-                    skier_pos.x += std::cos(angle) * twirl_radius;
-                    skier_pos.y += std::sin(angle) * twirl_radius;
-                }
-                
-                // Draw as red triangle
-                auto c = ImColor(1.0f, 0.2f, 0.2f, 1.0f);
-                if(sf_game.is_jumping){
-                    c = ImColor(1.0f, 0.5f, 0.0f, 1.0f); // Orange when jumping
-                }
-                const auto size = sf_game.skier_size;
-                const auto p1 = ImVec2(skier_pos.x, skier_pos.y - size);
-                const auto p2 = ImVec2(skier_pos.x - size*0.7, skier_pos.y + size*0.5);
-                const auto p3 = ImVec2(skier_pos.x + size*0.7, skier_pos.y + size*0.5);
-                window_draw_list->AddTriangleFilled(p1, p2, p3, c);
-                
-                // Draw flip indicator
-                if(sf_game.is_jumping && sf_game.did_flip){
-                    const auto flip_c = ImColor(1.0f, 1.0f, 0.0f, 1.0f);
-                    window_draw_list->AddCircle(skier_pos, size * 1.5, flip_c, 12, 2.0f);
-                }
-            }
-
-            // Draw score and speed
-            {
-                std::stringstream ss;
-                ss << "Score: " << sf_game.score;
-                ss << "  Speed: " << static_cast<int>(sf_game.scroll_speed);
-                const auto score_text = ss.str();
-                const ImVec2 text_pos(curr_pos.x + 10, curr_pos.y + 10);
-                window_draw_list->AddText(text_pos, ImColor(1.0f, 1.0f, 1.0f, 1.0f), score_text.c_str());
-            }
-            
-            // Draw game over message
-            if(sf_game.game_over){
-                const auto game_over_text = "GAME OVER! Press R to reset";
-                const auto text_size = ImGui::CalcTextSize(game_over_text);
-                const ImVec2 text_pos(curr_pos.x + sf_game.box_width/2.0 - text_size.x/2.0,
-                                      curr_pos.y + sf_game.box_height/2.0 - text_size.y/2.0);
-                window_draw_list->AddText(text_pos, ImColor(1.0f, 0.0f, 0.0f, 1.0f), game_over_text);
-            }
-
-            t_sf_updated = t_now;
-
-            ImGui::Dummy(ImVec2(sf_game.box_width, sf_game.box_height));
-            ImGui::End();
-            return true;
-        };
         try{
-            // Break from the main render loop if false is received.
-            if(!display_sf_game()) break;
+            if(!fs_game.Display(view_toggles.view_freeski_enabled)) break;
         }catch(const std::exception &e){
-            YLOGWARN("Exception in display_sf_game(): '" << e.what() << "'");
+            YLOGWARN("Exception in fs_game.Display(): '" << e.what() << "'");
             throw;
         }
 
@@ -12228,8 +11777,8 @@ bool SDL_Viewer(Drover &DICOM_data,
             }
             ImGui::SameLine();
             if(ImGui::Button("FreeSki")){
-                view_toggles.view_skifree_enabled = true;
-                reset_sf_game();
+                view_toggles.view_freeski_enabled = true;
+                fs_game.Reset();
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
