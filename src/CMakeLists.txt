@@ -22,6 +22,9 @@ add_subdirectory(Operations)
 if(WITH_THRIFT)
     add_subdirectory(rpc)
 endif()
+if(WITH_SDL)
+    add_subdirectory(Challenges)
+endif()
 
 add_library(            DCMA_Version_obj OBJECT DCMA_Version.cc)
 set_target_properties(  DCMA_Version_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -425,6 +428,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Metadata_obj>
     $<TARGET_OBJECTS:CSG_SDF_obj>
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
+    $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:Challenges_objs>>
     $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
     $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:MRI_IVIM_obj>>
     $<TARGET_OBJECTS:File_Loader_obj>
@@ -531,6 +535,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Metadata_obj>
         $<TARGET_OBJECTS:CSG_SDF_obj>
         $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
+        $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:Challenges_objs>>
         $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
         $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:MRI_IVIM_obj>>
         $<TARGET_OBJECTS:File_Loader_obj>
