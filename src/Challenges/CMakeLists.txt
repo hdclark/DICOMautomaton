@@ -5,6 +5,7 @@ add_library(Challenges_objs OBJECT
     GuitarFret.cc
     Lawn.cc
     RotatingCube.cc
+    TacticalStealth.cc
     TowerDefence.cc
 #    Polyomino.cc
 #    TripleThree.cc
