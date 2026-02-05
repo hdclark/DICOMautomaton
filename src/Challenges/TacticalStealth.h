@@ -17,6 +17,7 @@
 // Controls:
 //   - Arrow keys: move the player circle through the maze
 //   - Spacebar (hold): move slowly and quietly (enemies can't hear you)
+//   - B key: hide in cardboard box for 5 seconds (once per round)
 //   - R key: reset the game
 //
 // Gameplay:
@@ -28,6 +29,8 @@
 //   - Enemies can also detect you by 'hearing' if you move too close
 //   - Hold spacebar to move quietly and avoid being heard
 //   - When detected, an exclamation mark appears above the enemy
+//   - Press B to hide in a cardboard box (enemies can't see/hear/catch you)
+//   - Hover over enemies to see their patrol path and status
 //
 // Level progression:
 //   - Each level increases enemy speed and FOV by 20%
@@ -123,11 +126,20 @@ class TacticalStealthGame {
         double fov_scale_per_level = 0.05;   // 5% increase per level
         int64_t base_enemies = 2;            // Starting number of enemies
         
+        // Cardboard box mechanic
+        double box_duration = 5.0;            // Duration of box hiding in seconds
+        double box_anim_duration = 0.5;       // Animation duration for don/doff
+        
         std::mt19937 re;
     } ts_game;
 
     vec2<double> player_pos;
     bool player_sneaking = false;
+    bool player_in_box = false;             // Currently hiding in cardboard box
+    bool box_used_this_round = false;       // Box can only be used once per round
+    double box_timer = 0.0;                 // Time remaining in box
+    double box_anim_timer = 0.0;            // Animation timer for don/doff
+    bool box_donning = false;               // True when putting on box, false when removing
     std::vector<ts_enemy_t> enemies;
 
     std::chrono::time_point<std::chrono::steady_clock> t_ts_updated;
