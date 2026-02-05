@@ -6,7 +6,7 @@ add_library(Challenges_objs OBJECT
     Lawn.cc
 #    Polyomino.cc
 #    RotatingCube.cc
-#    TowerDefence.cc
+    TowerDefence.cc
 #    TripleThree.cc
 )
 set_target_properties(Challenges_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
