@@ -55,15 +55,27 @@ void TacticalStealthGame::Reset(){
 void TacticalStealthGame::GenerateMaze(){
     // Initialize grid with all walls
     ts_game.walls.resize(ts_game.grid_cols * ts_game.grid_rows, true);
-    std::fill(ts_game.walls.begin(), ts_game.walls.end(), true);
+    // Reset all cells to walls (in case of replay with existing vector)
+    for(auto& w : ts_game.walls) w = true;
+    
+    // Ensure minimum grid dimensions for maze generation
+    if(ts_game.grid_cols < 5 || ts_game.grid_rows < 5){
+        // Grid too small for proper maze, just clear center
+        for(int64_t y = 1; y < ts_game.grid_rows - 1; ++y){
+            for(int64_t x = 1; x < ts_game.grid_cols - 1; ++x){
+                ts_game.walls[y * ts_game.grid_cols + x] = false;
+            }
+        }
+        return;
+    }
     
     // Use recursive backtracking to generate a maze
     std::vector<bool> visited(ts_game.grid_cols * ts_game.grid_rows, false);
     std::vector<std::pair<int64_t, int64_t>> stack;
     
     // Start from a random odd cell (to leave room for walls)
-    std::uniform_int_distribution<int64_t> col_dist(1, (ts_game.grid_cols - 2) / 2);
-    std::uniform_int_distribution<int64_t> row_dist(1, (ts_game.grid_rows - 2) / 2);
+    std::uniform_int_distribution<int64_t> col_dist(1, std::max<int64_t>(1, (ts_game.grid_cols - 2) / 2));
+    std::uniform_int_distribution<int64_t> row_dist(1, std::max<int64_t>(1, (ts_game.grid_rows - 2) / 2));
     
     int64_t start_col = col_dist(ts_game.re) * 2 - 1;
     int64_t start_row = row_dist(ts_game.re) * 2 - 1;
