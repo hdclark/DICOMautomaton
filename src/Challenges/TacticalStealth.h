@@ -17,6 +17,7 @@
 // Controls:
 //   - Arrow keys: move the player circle through the maze
 //   - Spacebar (hold): move slowly and quietly (enemies can't hear you)
+//   - B key: don a cardboard box (once per round, hides for 5 seconds)
 //   - R key: reset the game
 //
 // Gameplay:
@@ -28,6 +29,9 @@
 //   - Enemies can also detect you by 'hearing' if you move too close
 //   - Hold spacebar to move quietly and avoid being heard
 //   - When detected, an exclamation mark appears above the enemy
+//   - Press B to hide under a cardboard box - enemies cannot see, hear, or catch you
+//   - The cardboard box can only be used once per round
+//   - Hover over enemies to see their patrol path and status
 //
 // Level progression:
 //   - Each level increases enemy speed and FOV by 20%
@@ -47,10 +51,13 @@ class TacticalStealthGame {
     void PlaceEnemies();
     void PlacePlayer();
     bool IsWall(double x, double y) const;
+    bool IsBlocked(double x, double y, double radius) const;  // Check if position blocked by walls or bounds
+    vec2<double> TryMoveWithSlide(const vec2<double> &pos, const vec2<double> &desired_move, double radius) const;
     bool LineOfSight(const vec2<double> &from, const vec2<double> &to) const;
     bool IsInFieldOfView(const vec2<double> &enemy_pos, double enemy_facing, 
                          double fov_angle, double fov_range, 
                          const vec2<double> &target) const;
+    std::vector<vec2<double>> FindPath(const vec2<double> &from, const vec2<double> &to) const;  // BFS pathfinding
 
     enum class ts_enemy_state_t {
         Patrolling,     // Following patrol path
@@ -81,8 +88,8 @@ class TacticalStealthGame {
         double box_height = 500.0;
         
         // Grid-based maze
-        int64_t grid_cols = 20;
-        int64_t grid_rows = 16;
+        int64_t grid_cols = 21;
+        int64_t grid_rows = 17;
         double cell_size = 30.0;
         std::deque<bool> walls; // true = wall, false = walkable
         
@@ -109,7 +116,7 @@ class TacticalStealthGame {
         // Game state
         int64_t level = 1;
         int64_t score = 0;
-        double hide_time_base = 10.0;     // Base hide time for level 1
+        double hide_time_base = 10.0;      // Base hide time for level 1
         double hide_time_increment = 5.0;  // Additional hide time per level
         double current_hide_timer = 0.0;
         double level_complete_timer = 0.0;
@@ -120,8 +127,8 @@ class TacticalStealthGame {
         
         // Level scaling
         double speed_scale_per_level = 0.10;  // 10% increase per level
-        double fov_scale_per_level = 0.05;   // 5% increase per level
-        int64_t base_enemies = 2;            // Starting number of enemies
+        double fov_scale_per_level = 0.05;    // 5% increase per level
+        int64_t base_enemies = 2;             // Starting number of enemies
         
         std::mt19937 re;
     } ts_game;
@@ -129,6 +136,20 @@ class TacticalStealthGame {
     vec2<double> player_pos;
     bool player_sneaking = false;
     std::vector<ts_enemy_t> enemies;
+
+    // Cardboard box mechanic
+    bool box_available = true;        // Can only use once per round
+    bool box_active = false;          // Currently wearing box
+    double box_timer = 0.0;           // Time remaining in box
+    double box_anim_timer = 0.0;      // Animation timer for donning/doffing
+    enum class box_state_t {
+        Inactive,
+        Donning,      // Putting on the box
+        Active,       // Fully inside box
+        Doffing       // Taking off the box
+    } box_state = box_state_t::Inactive;
+    static constexpr double box_duration = 5.0;      // Duration inside box
+    static constexpr double box_anim_duration = 0.5; // Duration of don/doff animation
 
     std::chrono::time_point<std::chrono::steady_clock> t_ts_updated;
 };

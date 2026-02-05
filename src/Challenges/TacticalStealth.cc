@@ -38,6 +38,13 @@ void TacticalStealthGame::Reset(){
     ts_game.countdown_active = true;
     ts_game.countdown_remaining = 3.0;
     
+    // Reset cardboard box state
+    box_available = true;
+    box_active = false;
+    box_timer = 0.0;
+    box_anim_timer = 0.0;
+    box_state = box_state_t::Inactive;
+
     GenerateMaze();
     PlaceEnemies();
     PlacePlayer();
@@ -201,40 +208,41 @@ void TacticalStealthGame::PlaceEnemies(){
         enemy.patrol_forward = true;
         enemy.walk_anim = 0.0;
         
-        // Generate a patrol path using BFS to find nearby walkable cells
+        // Generate a patrol path by selecting random waypoints and using BFS to connect them
         enemy.patrol_path.clear();
         enemy.patrol_path.push_back(enemy.pos);
         
-        // Simple patrol: find 3-6 random nearby walkable cells
-        std::uniform_int_distribution<int64_t> path_len_dist(3, 6);
-        int64_t path_len = path_len_dist(ts_game.re);
-        
+        // Select 3-6 random waypoint targets
+        std::uniform_int_distribution<int64_t> num_waypoints_dist(3, 6);
+        int64_t num_waypoints = num_waypoints_dist(ts_game.re);
+
+        // Collect walkable cells that are at least 2 cells away from current path endpoints
         vec2<double> last_pos = enemy.pos;
-        for(int64_t p = 0; p < path_len; ++p){
-            // Find walkable neighbors of current position
-            std::vector<vec2<double>> candidates;
+        for(int64_t p = 0; p < num_waypoints; ++p){
+            std::vector<std::pair<int64_t, int64_t>> candidates;
             int64_t last_gx = static_cast<int64_t>(last_pos.x / ts_game.cell_size);
             int64_t last_gy = static_cast<int64_t>(last_pos.y / ts_game.cell_size);
-            
-            for(int64_t dy = -2; dy <= 2; ++dy){
-                for(int64_t dx = -2; dx <= 2; ++dx){
-                    if(dx == 0 && dy == 0) continue;
+
+            // Look for cells within 2-4 cells distance
+            for(int64_t dy = -4; dy <= 4; ++dy){
+                for(int64_t dx = -4; dx <= 4; ++dx){
+                    if(std::abs(dx) < 2 && std::abs(dy) < 2) continue; // Too close
                     int64_t nx = last_gx + dx;
                     int64_t ny = last_gy + dy;
                     if(nx > 0 && nx < ts_game.grid_cols - 1 &&
                        ny > 0 && ny < ts_game.grid_rows - 1 &&
                        !ts_game.walls[ny * ts_game.grid_cols + nx]){
                         vec2<double> cand((nx + 0.5) * ts_game.cell_size, (ny + 0.5) * ts_game.cell_size);
-                        // Check not too close to existing path points
+                        // Check not too close to existing path waypoints
                         bool too_close = false;
                         for(const auto& pp : enemy.patrol_path){
-                            if(cand.distance(pp) < ts_game.cell_size * 0.5){
+                            if(cand.distance(pp) < ts_game.cell_size * 1.5){
                                 too_close = true;
                                 break;
                             }
                         }
                         if(!too_close){
-                            candidates.push_back(cand);
+                            candidates.emplace_back(nx, ny);
                         }
                     }
                 }
@@ -242,8 +250,18 @@ void TacticalStealthGame::PlaceEnemies(){
             
             if(!candidates.empty()){
                 std::uniform_int_distribution<size_t> cand_dist(0, candidates.size() - 1);
-                last_pos = candidates[cand_dist(ts_game.re)];
-                enemy.patrol_path.push_back(last_pos);
+                auto [target_gx, target_gy] = candidates[cand_dist(ts_game.re)];
+                vec2<double> target_pos((target_gx + 0.5) * ts_game.cell_size, (target_gy + 0.5) * ts_game.cell_size);
+                
+                // Use BFS to find path from last_pos to target_pos
+                auto segment = FindPath(last_pos, target_pos);
+                for(const auto& pt : segment){
+                    // Avoid duplicating the start point
+                    if(enemy.patrol_path.empty() || pt.distance(enemy.patrol_path.back()) > ts_game.cell_size * 0.5){
+                        enemy.patrol_path.push_back(pt);
+                    }
+                }
+                last_pos = target_pos;
             }
         }
         
@@ -354,6 +372,142 @@ bool TacticalStealthGame::IsInFieldOfView(const vec2<double> &enemy_pos, double 
     return LineOfSight(enemy_pos, target);
 }
 
+bool TacticalStealthGame::IsBlocked(double x, double y, double radius) const {
+    // Check if a circular object at (x, y) with given radius is blocked by walls or bounds
+    if(IsWall(x - radius, y - radius) ||
+       IsWall(x + radius, y - radius) ||
+       IsWall(x - radius, y + radius) ||
+       IsWall(x + radius, y + radius) ||
+       IsWall(x, y)){
+        return true;
+    }
+    // Keep within bounds
+    if(x < radius || x > ts_game.box_width - radius ||
+       y < radius || y > ts_game.box_height - radius){
+        return true;
+    }
+    return false;
+}
+
+vec2<double> TacticalStealthGame::TryMoveWithSlide(const vec2<double> &pos, const vec2<double> &desired_move, double radius) const {
+    // Try to move, and if blocked, slide along walls by trying each axis separately
+    vec2<double> new_pos = pos + desired_move;
+
+    if(!IsBlocked(new_pos.x, new_pos.y, radius)){
+        // Full movement possible
+        return new_pos;
+    }
+
+    // Try moving only in X direction (drop Y component)
+    vec2<double> x_only = pos + vec2<double>(desired_move.x, 0.0);
+    bool x_ok = !IsBlocked(x_only.x, x_only.y, radius);
+
+    // Try moving only in Y direction (drop X component)
+    vec2<double> y_only = pos + vec2<double>(0.0, desired_move.y);
+    bool y_ok = !IsBlocked(y_only.x, y_only.y, radius);
+
+    if(x_ok && !y_ok){
+        return x_only;  // Slide along X axis
+    }else if(y_ok && !x_ok){
+        return y_only;  // Slide along Y axis
+    }else if(x_ok && y_ok){
+        // Both work, pick the one that moves us closer to intended position
+        double x_dist = (new_pos - x_only).length();
+        double y_dist = (new_pos - y_only).length();
+        return (x_dist < y_dist) ? x_only : y_only;
+    }
+
+    // Neither axis works, stay in place
+    return pos;
+}
+std::vector<vec2<double>> TacticalStealthGame::FindPath(const vec2<double> &from, const vec2<double> &to) const {
+    // BFS pathfinding from one position to another through walkable cells
+    std::vector<vec2<double>> path;
+
+    int64_t from_gx = static_cast<int64_t>(from.x / ts_game.cell_size);
+    int64_t from_gy = static_cast<int64_t>(from.y / ts_game.cell_size);
+    int64_t to_gx = static_cast<int64_t>(to.x / ts_game.cell_size);
+    int64_t to_gy = static_cast<int64_t>(to.y / ts_game.cell_size);
+
+    // Clamp to valid grid
+    from_gx = std::clamp<int64_t>(from_gx, 0, ts_game.grid_cols - 1);
+    from_gy = std::clamp<int64_t>(from_gy, 0, ts_game.grid_rows - 1);
+    to_gx = std::clamp<int64_t>(to_gx, 0, ts_game.grid_cols - 1);
+    to_gy = std::clamp<int64_t>(to_gy, 0, ts_game.grid_rows - 1);
+
+    // If same cell, return just the destination
+    if(from_gx == to_gx && from_gy == to_gy){
+        path.push_back(to);
+        return path;
+    }
+
+    // BFS
+    std::vector<int64_t> parent(ts_game.grid_cols * ts_game.grid_rows, -1);
+    std::deque<std::pair<int64_t, int64_t>> queue;
+    queue.emplace_back(from_gx, from_gy);
+    parent[from_gy * ts_game.grid_cols + from_gx] = from_gy * ts_game.grid_cols + from_gx;  // Mark as visited
+
+    const std::vector<std::pair<int64_t, int64_t>> directions = {{0, -1}, {0, 1}, {-1, 0}, {1, 0}};
+
+    bool found = false;
+    while(!queue.empty() && !found){
+        auto [cx, cy] = queue.front();
+        queue.pop_front();
+
+        for(const auto& [dx, dy] : directions){
+            int64_t nx = cx + dx;
+            int64_t ny = cy + dy;
+
+            if(nx < 0 || nx >= ts_game.grid_cols || ny < 0 || ny >= ts_game.grid_rows){
+                continue;
+            }
+
+            int64_t nidx = ny * ts_game.grid_cols + nx;
+            if(parent[nidx] != -1){
+                continue;  // Already visited
+            }
+            if(ts_game.walls[nidx]){
+                continue;  // Wall
+            }
+
+            parent[nidx] = cy * ts_game.grid_cols + cx;
+            queue.emplace_back(nx, ny);
+
+            if(nx == to_gx && ny == to_gy){
+                found = true;
+                break;
+            }
+        }
+    }
+
+    if(!found){
+        // No path found, return direct line (will be handled by wall sliding)
+        path.push_back(to);
+        return path;
+    }
+
+    // Reconstruct path from destination to source
+    std::vector<std::pair<int64_t, int64_t>> grid_path;
+    int64_t cidx = to_gy * ts_game.grid_cols + to_gx;
+    while(cidx != from_gy * ts_game.grid_cols + from_gx){
+        int64_t cx = cidx % ts_game.grid_cols;
+        int64_t cy = cidx / ts_game.grid_cols;
+        grid_path.emplace_back(cx, cy);
+        cidx = parent[cidx];
+    }
+
+    // Reverse to get from->to order
+    std::reverse(grid_path.begin(), grid_path.end());
+
+    // Convert grid positions to world coordinates (center of cells)
+    for(const auto& [gx, gy] : grid_path){
+        path.emplace_back((gx + 0.5) * ts_game.cell_size, (gy + 0.5) * ts_game.cell_size);
+    }
+
+    return path;
+}
+
+
 bool TacticalStealthGame::Display(bool &enabled){
     if( !enabled ) return true;
     
@@ -434,23 +588,6 @@ bool TacticalStealthGame::Display(bool &enabled){
     
     // Game logic (only when not in countdown and not game over)
     if(!ts_game.countdown_active && !ts_game.game_over && !ts_game.level_complete){
-        // Update hide timer, but only if all enemies are patrolling normally.
-        bool all_enemies_normal = true;
-        for(const auto &enemy : enemies){
-            if( (enemy.state != ts_enemy_state_t::Patrolling)
-            &&  (enemy.state != ts_enemy_state_t::Returning) ){
-                all_enemies_normal = false;
-            }
-        }
-        if(all_enemies_normal){
-            ts_game.current_hide_timer += dt;
-        }
-        if(ts_game.current_hide_timer >= hide_time){
-            ts_game.level_complete = true;
-            ts_game.score += ts_game.level;
-            ts_game.level_complete_timer = 0.0;
-        }
-        
         // Player input
         player_sneaking = f && ImGui::IsKeyDown(SDL_SCANCODE_SPACE);
         double player_speed = ts_game.base_speed * (player_sneaking ? ts_game.quiet_speed_mult : 1.0);
@@ -471,31 +608,78 @@ bool TacticalStealthGame::Display(bool &enabled){
             }
         }
         
-        bool player_moving = (input_dir.length() > 0.01);
+        // Handle cardboard box mechanic
+        if(f && ImGui::IsKeyPressed(SDL_SCANCODE_B) && box_available && box_state == box_state_t::Inactive){
+            // Start donning the box
+            box_state = box_state_t::Donning;
+            box_anim_timer = box_anim_duration;
+            box_available = false;
+        }
         
+        // Update cardboard box state machine
+        bool box_blocks_movement = false;
+        bool box_blocks_detection = false;
+        switch(box_state){
+            case box_state_t::Inactive:
+                // Normal state
+                break;
+            case box_state_t::Donning:
+                box_anim_timer -= dt;
+                box_blocks_movement = true;
+                if(box_anim_timer <= 0.0){
+                    box_state = box_state_t::Active;
+                    box_timer = box_duration;
+                }
+                break;
+            case box_state_t::Active:
+                box_timer -= dt;
+                box_blocks_movement = true;
+                box_blocks_detection = true;
+                box_active = true;
+                if(box_timer <= 0.0){
+                    box_state = box_state_t::Doffing;
+                    box_anim_timer = box_anim_duration;
+                }
+                break;
+            case box_state_t::Doffing:
+                box_anim_timer -= dt;
+                box_blocks_movement = true;
+                if(box_anim_timer <= 0.0){
+                    box_state = box_state_t::Inactive;
+                    box_active = false;
+                }
+                break;
+        }
+        
+        // Update hide timer, but only if all enemies are patrolling normally and not in cardboard box.
+        bool all_enemies_normal = true;
+        for(const auto &enemy : enemies){
+            if( (enemy.state != ts_enemy_state_t::Patrolling)
+            &&  (enemy.state != ts_enemy_state_t::Returning) ){
+                all_enemies_normal = false;
+            }
+        }
+        // Hide timer stops while in cardboard box (box_blocks_detection is true when active)
+        if(all_enemies_normal && !box_blocks_detection){
+            ts_game.current_hide_timer += dt;
+        }
+        if(ts_game.current_hide_timer >= hide_time){
+            ts_game.level_complete = true;
+            ts_game.score += ts_game.level;
+            ts_game.level_complete_timer = 0.0;
+        }
+   
+        bool player_moving = (input_dir.length() > 0.01) && !box_blocks_movement;
+
         if(player_moving){
             input_dir = input_dir.unit();
-            vec2<double> new_pos = player_pos + input_dir * player_speed * dt;
-            
-            // Collision check with walls
-            bool blocked = false;
-            // Check corners of player bounding box
+            vec2<double> desired_move = input_dir * player_speed * dt;
             double r = ts_game.player_radius * 0.8;
-            if(IsWall(new_pos.x - r, new_pos.y - r) ||
-               IsWall(new_pos.x + r, new_pos.y - r) ||
-               IsWall(new_pos.x - r, new_pos.y + r) ||
-               IsWall(new_pos.x + r, new_pos.y + r) ||
-               IsWall(new_pos.x, new_pos.y)){
-                blocked = true;
-            }
+
+            // Use wall sliding for smooth movement
+            vec2<double> new_pos = TryMoveWithSlide(player_pos, desired_move, r);            
             
-            // Keep within bounds
-            if(new_pos.x < ts_game.player_radius || new_pos.x > ts_game.box_width - ts_game.player_radius ||
-               new_pos.y < ts_game.player_radius || new_pos.y > ts_game.box_height - ts_game.player_radius){
-                blocked = true;
-            }
-            
-            if(!blocked){
+            if(new_pos.distance(player_pos) > 0.01){
                 player_pos = new_pos;
                 ts_game.walk_anim += dt * 15.0;
             }
@@ -510,12 +694,12 @@ bool TacticalStealthGame::Display(bool &enabled){
                 enemy.exclaim_timer -= dt;
             }
             
-            // Check if can see player
-            bool can_see_player = IsInFieldOfView(enemy.pos, enemy.facing, fov_angle, fov_range, player_pos);
-            
-            // Check if can hear player (moving, not sneaking, within hearing range)
+            // Check if can see player (blocked by cardboard box)
+            bool can_see_player = !box_blocks_detection && IsInFieldOfView(enemy.pos, enemy.facing, fov_angle, fov_range, player_pos);
+
+            // Check if can hear player (moving, not sneaking, within hearing range; blocked by cardboard box)
             double hearing_dist = ts_game.hearing_range * level_mult;
-            bool can_hear_player = player_moving && !player_sneaking && 
+            bool can_hear_player = !box_blocks_detection && player_moving && !player_sneaking && 
                                    player_pos.distance(enemy.pos) < hearing_dist;
             
             // State transitions
@@ -620,8 +804,8 @@ bool TacticalStealthGame::Display(bool &enabled){
                         enemy.pursuit_timer = 0.0;
                     }
                     
-                    // Check if caught player
-                    {
+                    // Check if caught player (blocked by cardboard box)
+                    if(!box_blocks_detection){
                         double catch_dist = ts_game.player_radius * ts_game.catch_distance_mult * 2.0;
                         if(enemy.pos.distance(player_pos) < catch_dist){
                             ts_game.game_over = true;
@@ -646,22 +830,23 @@ bool TacticalStealthGame::Display(bool &enabled){
             // Move enemy toward target (if not looking around)
             if(!enemy.is_looking || enemy.state != ts_enemy_state_t::Patrolling){
                 vec2<double> dir = target_pos - enemy.pos;
-                if(dir.length() > 1.0){
+//                if(dir.length() > 1.0){
+                if(dir.length() > 0.1){
                     dir = dir.unit();
-                    vec2<double> new_pos = enemy.pos + dir * current_speed * dt;
-                    
-                    // Simple collision check
+                    vec2<double> desired_move = dir * current_speed * dt;
                     double r = ts_game.enemy_size * 0.4;
-                    if(!IsWall(new_pos.x - r, new_pos.y - r) &&
-                       !IsWall(new_pos.x + r, new_pos.y - r) &&
-                       !IsWall(new_pos.x - r, new_pos.y + r) &&
-                       !IsWall(new_pos.x + r, new_pos.y + r) &&
-                       !IsWall(new_pos.x, new_pos.y)){
+                    
+                    // Use wall sliding for smooth movement
+                    vec2<double> new_pos = TryMoveWithSlide(enemy.pos, desired_move, r);
+                    
+                    if(new_pos.distance(enemy.pos) > 0.01){
+                        // Update facing direction based on actual movement
+                        vec2<double> actual_dir = new_pos - enemy.pos;
+                        if(actual_dir.length() > 0.001){
+                            enemy.facing = std::atan2(actual_dir.y, actual_dir.x);
+                        }
                         enemy.pos = new_pos;
                         enemy.walk_anim += dt * 12.0;
-                        
-                        // Update facing direction
-                        enemy.facing = std::atan2(dir.y, dir.x);
                     }
                 }
             }
@@ -678,6 +863,13 @@ bool TacticalStealthGame::Display(bool &enabled){
             ts_game.level_complete = false;
             ts_game.countdown_active = true;
             ts_game.countdown_remaining = 3.0;
+            
+            // Reset cardboard box for new round
+            box_available = true;
+            box_active = false;
+            box_timer = 0.0;
+            box_anim_timer = 0.0;
+            box_state = box_state_t::Inactive;
             
             // Regenerate maze and enemies for new level
             GenerateMaze();
@@ -715,18 +907,105 @@ bool TacticalStealthGame::Display(bool &enabled){
         }
     }
     
-    // Draw player (circle)
+    // Draw player (circle) and cardboard box if active
     {
         ImVec2 player_screen_pos(curr_pos.x + player_pos.x, curr_pos.y + player_pos.y);
         
-        // Walking animation - subtle size pulsing
-        double anim_offset = std::sin(ts_game.walk_anim) * 1.5;
-        double draw_radius = ts_game.player_radius + (player_sneaking ? 0 : anim_offset);
+        // Check if we should draw the cardboard box
+        bool draw_box = (box_state == box_state_t::Active || 
+                        box_state == box_state_t::Donning || 
+                        box_state == box_state_t::Doffing);
         
-        ImU32 player_color = player_sneaking ? ImColor(0.3f, 0.7f, 0.3f, 0.8f) 
-                                             : ImColor(0.3f, 0.8f, 1.0f, 1.0f);
-        window_draw_list->AddCircleFilled(player_screen_pos, draw_radius, player_color);
-        window_draw_list->AddCircle(player_screen_pos, draw_radius, ImColor(1.0f, 1.0f, 1.0f, 0.5f));
+        if(draw_box){
+            // Calculate animation progress for donning/doffing
+            double anim_progress = 1.0;
+            if(box_state == box_state_t::Donning){
+                anim_progress = 1.0 - (box_anim_timer / box_anim_duration);  // 0 to 1 as donning
+            }else if(box_state == box_state_t::Doffing){
+                anim_progress = box_anim_timer / box_anim_duration;  // 1 to 0 as doffing
+            }
+            
+            // Cardboard color (tan/brown)
+            ImU32 cardboard_color = ImColor(0.82f, 0.68f, 0.47f, 1.0f);
+            ImU32 cardboard_dark = ImColor(0.65f, 0.50f, 0.35f, 1.0f);
+            ImU32 cardboard_line = ImColor(0.45f, 0.35f, 0.25f, 1.0f);
+            
+            double box_size = ts_game.player_radius * 2.0;
+            double box_y_offset = (1.0 - anim_progress) * box_size * 1.5;  // Box comes down from above
+            
+            // Draw the main box body
+            ImVec2 box_tl(player_screen_pos.x - box_size, player_screen_pos.y - box_size + box_y_offset);
+            ImVec2 box_br(player_screen_pos.x + box_size, player_screen_pos.y + box_size + box_y_offset);
+            window_draw_list->AddRectFilled(box_tl, box_br, cardboard_color);
+            window_draw_list->AddRect(box_tl, box_br, cardboard_line, 0.0f, 0, 1.5f);
+            
+            // Draw horizontal tape/seam line
+            double seam_y = player_screen_pos.y + box_y_offset;
+            window_draw_list->AddLine(
+                ImVec2(box_tl.x, seam_y), 
+                ImVec2(box_br.x, seam_y), 
+                cardboard_dark, 1.5f);
+            
+            // Draw the four open flaps on top
+            double flap_height = box_size * 0.6 * anim_progress;  // Flaps open during animation
+            double flap_angle = anim_progress * 0.5;  // Flaps tilt outward
+            
+            // Left flap
+            {
+                ImVec2 flap_base_l(box_tl.x, box_tl.y);
+                ImVec2 flap_base_r(player_screen_pos.x - box_size * 0.1, box_tl.y);
+                ImVec2 flap_top_l(flap_base_l.x - flap_height * flap_angle, flap_base_l.y - flap_height);
+                ImVec2 flap_top_r(flap_base_r.x - flap_height * flap_angle * 0.3, flap_base_r.y - flap_height);
+                window_draw_list->AddQuadFilled(flap_base_l, flap_base_r, flap_top_r, flap_top_l, cardboard_dark);
+                window_draw_list->AddQuad(flap_base_l, flap_base_r, flap_top_r, flap_top_l, cardboard_line);
+            }
+            // Right flap
+            {
+                ImVec2 flap_base_l(player_screen_pos.x + box_size * 0.1, box_tl.y);
+                ImVec2 flap_base_r(box_br.x, box_tl.y);
+                ImVec2 flap_top_l(flap_base_l.x + flap_height * flap_angle * 0.3, flap_base_l.y - flap_height);
+                ImVec2 flap_top_r(flap_base_r.x + flap_height * flap_angle, flap_base_r.y - flap_height);
+                window_draw_list->AddQuadFilled(flap_base_l, flap_base_r, flap_top_r, flap_top_l, cardboard_dark);
+                window_draw_list->AddQuad(flap_base_l, flap_base_r, flap_top_r, flap_top_l, cardboard_line);
+            }
+            // Front flap (smaller, partially visible)
+            {
+                ImVec2 flap_base_l(box_tl.x + box_size * 0.2, box_tl.y);
+                ImVec2 flap_base_r(box_br.x - box_size * 0.2, box_tl.y);
+                ImVec2 flap_top_l(flap_base_l.x, flap_base_l.y - flap_height * 0.7);
+                ImVec2 flap_top_r(flap_base_r.x, flap_base_r.y - flap_height * 0.7);
+                window_draw_list->AddQuadFilled(flap_base_l, flap_base_r, flap_top_r, flap_top_l, cardboard_color);
+                window_draw_list->AddQuad(flap_base_l, flap_base_r, flap_top_r, flap_top_l, cardboard_line);
+            }
+            // Back flap (behind, slightly taller)
+            {
+                double back_flap_height = flap_height * 0.9;
+                ImVec2 flap_base_l(box_tl.x + box_size * 0.15, box_tl.y);
+                ImVec2 flap_base_r(box_br.x - box_size * 0.15, box_tl.y);
+                ImVec2 flap_top_l(flap_base_l.x, flap_base_l.y - back_flap_height);
+                ImVec2 flap_top_r(flap_base_r.x, flap_base_r.y - back_flap_height);
+                window_draw_list->AddQuadFilled(flap_base_l, flap_base_r, flap_top_r, flap_top_l, cardboard_dark);
+                window_draw_list->AddQuad(flap_base_l, flap_base_r, flap_top_r, flap_top_l, cardboard_line);
+            }
+            
+            // If player is partially visible (during animation), draw them underneath
+            if(anim_progress < 0.8){
+                double player_alpha = 1.0 - anim_progress;
+                double draw_radius = ts_game.player_radius;
+                ImU32 player_color = ImColor(0.3f, 0.8f, 1.0f, static_cast<float>(player_alpha));
+                window_draw_list->AddCircleFilled(player_screen_pos, draw_radius, player_color);
+            }
+        }else{
+            // Normal player drawing
+            // Walking animation - subtle size pulsing
+            double anim_offset = std::sin(ts_game.walk_anim) * 1.5;
+            double draw_radius = ts_game.player_radius + (player_sneaking ? 0 : anim_offset);
+            
+            ImU32 player_color = player_sneaking ? ImColor(0.3f, 0.7f, 0.3f, 0.8f) 
+                                                 : ImColor(0.3f, 0.8f, 1.0f, 1.0f);
+            window_draw_list->AddCircleFilled(player_screen_pos, draw_radius, player_color);
+            window_draw_list->AddCircle(player_screen_pos, draw_radius, ImColor(1.0f, 1.0f, 1.0f, 0.5f));
+        }
     }
     
     // Draw enemies (squares)
@@ -773,10 +1052,70 @@ bool TacticalStealthGame::Display(bool &enabled){
         }
     }
     
+    // Check for mouse hover over enemies and display patrol path + tooltip
+    {
+        ImVec2 mouse_pos = ImGui::GetMousePos();
+        for(size_t ei = 0; ei < enemies.size(); ++ei){
+            const auto& enemy = enemies[ei];
+            ImVec2 enemy_screen_pos(curr_pos.x + enemy.pos.x, curr_pos.y + enemy.pos.y);
+            double size = ts_game.enemy_size;
+            
+            // Check if mouse is within enemy bounding box (approximately)
+            double dx = mouse_pos.x - enemy_screen_pos.x;
+            double dy = mouse_pos.y - enemy_screen_pos.y;
+            double dist = std::hypot(dx, dy);
+            
+            if(dist < size * 2.0){
+                // Draw patrol path
+                if(enemy.patrol_path.size() >= 2){
+                    for(size_t pi = 0; pi + 1 < enemy.patrol_path.size(); ++pi){
+                        ImVec2 p1(curr_pos.x + enemy.patrol_path[pi].x, curr_pos.y + enemy.patrol_path[pi].y);
+                        ImVec2 p2(curr_pos.x + enemy.patrol_path[pi + 1].x, curr_pos.y + enemy.patrol_path[pi + 1].y);
+                        window_draw_list->AddLine(p1, p2, ImColor(0.5f, 0.5f, 1.0f, 0.7f), 2.0f);
+                    }
+                    // Draw waypoints
+                    for(size_t pi = 0; pi < enemy.patrol_path.size(); ++pi){
+                        ImVec2 wp(curr_pos.x + enemy.patrol_path[pi].x, curr_pos.y + enemy.patrol_path[pi].y);
+                        ImU32 wp_color = (pi == enemy.patrol_idx) ? ImColor(0.0f, 1.0f, 0.0f, 0.8f) : ImColor(0.5f, 0.5f, 1.0f, 0.5f);
+                        window_draw_list->AddCircleFilled(wp, 4.0f, wp_color);
+                    }
+                }
+                
+                // Draw tooltip with enemy status
+                std::stringstream tooltip_ss;
+                tooltip_ss << "Enemy " << (ei + 1) << "\n";
+                tooltip_ss << "State: ";
+                switch(enemy.state){
+                    case ts_enemy_state_t::Patrolling: tooltip_ss << "Patrolling"; break;
+                    case ts_enemy_state_t::Alerted: tooltip_ss << "Alerted"; break;
+                    case ts_enemy_state_t::Pursuing: tooltip_ss << "Pursuing"; break;
+                    case ts_enemy_state_t::Returning: tooltip_ss << "Returning"; break;
+                }
+                tooltip_ss << "\n";
+                tooltip_ss << std::fixed << std::setprecision(1);
+                tooltip_ss << "Look Timer: " << enemy.look_timer << "s\n";
+                tooltip_ss << "Alert Timer: " << enemy.alert_timer << "s\n";
+                tooltip_ss << "Pursuit Timer: " << enemy.pursuit_timer << "s";
+                
+                ImGui::SetTooltip("%s", tooltip_ss.str().c_str());
+                break; // Only show tooltip for one enemy at a time
+            }
+        }
+    }
+  
+
     // Draw HUD
     {
         std::stringstream ss;
         ss << "Level: " << ts_game.level << "  Score: " << ts_game.score;
+        // Add box status indicator
+        if(box_state == box_state_t::Active){
+            ss << "  [BOX: " << std::fixed << std::setprecision(1) << box_timer << "s]";
+        }else if(box_available){
+            ss << "  [BOX: Ready]";
+        }else{
+            ss << "  [BOX: Used]";
+        }
         const ImVec2 level_pos(curr_pos.x + 10, curr_pos.y + ts_game.box_height + 5);
         window_draw_list->AddText(level_pos, ImColor(1.0f, 1.0f, 1.0f, 1.0f), ss.str().c_str());
         
@@ -821,7 +1160,7 @@ bool TacticalStealthGame::Display(bool &enabled){
     
     // Draw instructions
     if(ts_game.countdown_active){
-        const char* instructions = "Arrow keys: move | Space: sneak | R: reset";
+        const char* instructions = "Arrow keys: move | Space: sneak | B: box | R: reset";
         auto text_size = ImGui::CalcTextSize(instructions);
         ImVec2 inst_pos(curr_pos.x + ts_game.box_width/2.0 - text_size.x/2.0,
                         curr_pos.y + ts_game.box_height - 30);
