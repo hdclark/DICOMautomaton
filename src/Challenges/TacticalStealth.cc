@@ -17,6 +17,10 @@
 
 #include "TacticalStealth.h"
 
+namespace {
+    constexpr double pi = 3.14159265358979323846;
+}
+
 TacticalStealthGame::TacticalStealthGame(){
     ts_game.re.seed( std::random_device()() );
     Reset();
@@ -148,7 +152,7 @@ void TacticalStealthGame::PlaceEnemies(){
     }
     
     std::uniform_int_distribution<size_t> cell_dist(0, walkable_cells.size() - 1);
-    std::uniform_real_distribution<double> angle_dist(0.0, 2.0 * 3.14159265358979323846);
+    std::uniform_real_distribution<double> angle_dist(0.0, 2.0 * pi);
     
     std::vector<size_t> used_cells;
     
@@ -331,8 +335,8 @@ bool TacticalStealthGame::IsInFieldOfView(const vec2<double> &enemy_pos, double 
     double angle_diff = angle_to_target - enemy_facing;
     
     // Normalize angle difference to [-pi, pi]
-    while(angle_diff > 3.14159265358979323846) angle_diff -= 2.0 * 3.14159265358979323846;
-    while(angle_diff < -3.14159265358979323846) angle_diff += 2.0 * 3.14159265358979323846;
+    while(angle_diff > pi) angle_diff -= 2.0 * pi;
+    while(angle_diff < -pi) angle_diff += 2.0 * pi;
     
     if(std::abs(angle_diff) > fov_angle) return false;
     
@@ -342,8 +346,6 @@ bool TacticalStealthGame::IsInFieldOfView(const vec2<double> &enemy_pos, double 
 
 bool TacticalStealthGame::Display(bool &enabled){
     if( !enabled ) return true;
-    
-    const double pi = 3.14159265358979323846;
     
     const auto win_width  = static_cast<int>( ts_game.box_width ) + 20;
     const auto win_height = static_cast<int>( ts_game.box_height ) + 80;
