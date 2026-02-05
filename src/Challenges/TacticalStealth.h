@@ -133,4 +133,4 @@ class TacticalStealthGame {
     std::chrono::time_point<std::chrono::steady_clock> t_ts_updated;
     std::chrono::time_point<std::chrono::steady_clock> t_ts_started;
 };
-    
+
