@@ -1,5 +1,4 @@
-    // FreeSki.h.
-
+// FreeSki.h.
 
 #pragma once
 

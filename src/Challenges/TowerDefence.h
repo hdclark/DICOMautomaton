@@ -14,7 +14,6 @@
 
 #include "../imgui20210904/imgui.h"
 
-
 class TowerDefenceGame {
   public:
     TowerDefenceGame();

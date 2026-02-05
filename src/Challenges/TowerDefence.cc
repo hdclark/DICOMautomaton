@@ -16,8 +16,6 @@
 #include "TowerDefence.h"
 
 TowerDefenceGame::TowerDefenceGame(){
-
-    //fs_game.re.seed( std::random_device()() );
     Reset();
 }
 
