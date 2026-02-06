@@ -95,6 +95,7 @@
 #include "../Challenges/FreeSki.h"
 #include "../Challenges/GuitarFret.h"
 #include "../Challenges/Lawn.h"
+#include "../Challenges/MoonRun.h"
 #include "../Challenges/TacticalStealth.h"
 #include "../Challenges/TowerDefence.h"
 #include "../Challenges/RotatingCube.h"
@@ -1036,6 +1037,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_tower_defence_enabled = false;
         bool view_freeski_enabled = false;
         bool view_lawn_game_enabled = false;
+        bool view_moon_run_enabled = false;
         bool view_tactical_stealth_enabled = false;
 
         bool view_guides_enabled = true;
@@ -1594,6 +1596,9 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // FreeSki state.
     FreeSkiGame fs_game;
+
+    // Moon Run state.
+    MoonRunGame mr_game;
 
     // Cube state.
     RotatingCubeGame rc_game;
@@ -4683,6 +4688,13 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(!fs_game.Display(view_toggles.view_freeski_enabled)) break;
         }catch(const std::exception &e){
             YLOGWARN("Exception in fs_game.Display(): '" << e.what() << "'");
+            throw;
+        }
+
+        try{
+            if(!mr_game.Display(view_toggles.view_moon_run_enabled)) break;
+        }catch(const std::exception &e){
+            YLOGWARN("Exception in mr_game.Display(): '" << e.what() << "'");
             throw;
         }
 
@@ -9309,6 +9321,12 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(ImGui::Button("FreeSki")){
                 view_toggles.view_freeski_enabled = true;
                 fs_game.Reset();
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Moon Run")){
+                view_toggles.view_moon_run_enabled = true;
+                mr_game.Reset();
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();

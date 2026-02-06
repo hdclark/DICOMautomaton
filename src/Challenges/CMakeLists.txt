@@ -4,6 +4,7 @@ add_library(Challenges_objs OBJECT
     FreeSki.cc
     GuitarFret.cc
     Lawn.cc
+    MoonRun.cc
     RotatingCube.cc
     TacticalStealth.cc
     TowerDefence.cc
@@ -11,4 +12,3 @@ add_library(Challenges_objs OBJECT
 #    TripleThree.cc
 )
 set_target_properties(Challenges_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE)
-
