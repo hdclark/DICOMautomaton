@@ -84,7 +84,7 @@ class TacticalStealthGame {
 
     struct ts_game_t {
         // Game area
-        double box_width = 600.0;
+        double box_width = 628.0;
         double box_height = 500.0;
         
         // Grid-based maze
