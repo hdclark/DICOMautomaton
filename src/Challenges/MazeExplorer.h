@@ -64,7 +64,7 @@ class MazeExplorerGame {
         int64_t grid_rows = 17;
         int64_t num_floors = 3;
 
-        double fov = 1.05; // ~60 degrees in radians.
+        double fov = 1.047; // ~60 degrees in radians.
         double max_view_distance = 18.0;
 
         double move_speed = 2.5;
