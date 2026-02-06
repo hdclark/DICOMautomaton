@@ -304,7 +304,7 @@ void Emit_Documentation(std::ostream &os,
         " naming conventions) and in the ```CMakeLists.txt``` file (Debian package naming"
         " conventions) bundled with the source code. See"
         " <https://github.com/hdclark/DICOMautomaton>."
-        " Broadly, DICOMautomaton depends on Boost, CGAL, SFML, SDL2, glew, Eigen, Asio,"
+        " Broadly, DICOMautomaton depends on Boost, SFML, SDL2, glew, Eigen, Asio,"
         " Wt, NLopt, and PostgreSQL. Disabling some functionality at compile time can"
         " eliminate some dependencies. This instance has been compiled with the following"
         " functionality."
@@ -326,11 +326,6 @@ void Emit_Documentation(std::ostream &os,
        << "  Eigen            true"                                         << std::endl
 #else       
        << "  Eigen            false"                                        << std::endl
-#endif       
-#ifdef DCMA_USE_CGAL
-       << "  CGAL             true"                                         << std::endl
-#else       
-       << "  CGAL             false"                                        << std::endl
 #endif       
 #ifdef DCMA_USE_NLOPT
        << "  NLOpt            true"                                         << std::endl
