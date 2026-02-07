@@ -1297,6 +1297,7 @@ void WerewolfGame::ProcessVoting(){
     }
 
     if(last_eliminated >= 0 && last_was_werewolf){
+        // Clear any prior night attack markers when the werewolf is eliminated.
         last_attacked = -1;
         last_attack_round = -1;
         phase = game_phase_t::VoteResults;
