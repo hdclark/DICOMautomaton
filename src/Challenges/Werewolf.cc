@@ -28,6 +28,14 @@ namespace {
     constexpr float human_player_angle = static_cast<float>(pi / 2.0);  // Bottom center of circle
     constexpr float ai_arc_start = static_cast<float>(-5.0 * pi / 6.0); // -150 degrees
     constexpr float ai_arc_end = static_cast<float>(5.0 * pi / 6.0);    // +150 degrees
+
+    std::string ExtractFirstName(const std::string& full_name){
+        size_t space_pos = full_name.find(' ');
+        if(space_pos != std::string::npos){
+            return full_name.substr(0, space_pos);
+        }
+        return full_name;
+    }
 }
 
 WerewolfGame::WerewolfGame(){
@@ -427,11 +435,7 @@ void WerewolfGame::AssignRoles(){
     // Assign personas to players (ensure unique first names)
     for(size_t idx = 0; idx < persona_indices.size() && assigned_count < num_players; ++idx){
         const auto& persona = persona_pool[persona_indices[idx]];
-        std::string first_name = persona.name;
-        size_t space_pos = first_name.find(' ');
-        if(space_pos != std::string::npos){
-            first_name = first_name.substr(0, space_pos);
-        }
+        std::string first_name = ExtractFirstName(persona.name);
         if(used_first_names.count(first_name) > 0){
             continue;
         }
@@ -1365,11 +1369,7 @@ bool WerewolfGame::Display(bool &enabled){
         }
         
         // Get first name only for display
-        std::string display_name = players[i].persona.name;
-        size_t space_pos = display_name.find(' ');
-        if(space_pos != std::string::npos){
-            display_name = display_name.substr(0, space_pos);
-        }
+        std::string display_name = ExtractFirstName(players[i].persona.name);
         
         float lynch_progress = 0.0f;
         float attack_progress = 0.0f;
@@ -1463,9 +1463,7 @@ bool WerewolfGame::Display(bool &enabled){
         for(int i = 0; i < num_players; ++i){
             // Extract first name from persona for matching
             const std::string& full_name = players[i].persona.name;
-            size_t space_pos = full_name.find(' ');
-            std::string first_name = (space_pos != std::string::npos) ? 
-                full_name.substr(0, space_pos) : full_name;
+            std::string first_name = ExtractFirstName(full_name);
             
             if(full_name.find(current_speaker) != std::string::npos ||
                current_speaker.find(first_name) != std::string::npos){
