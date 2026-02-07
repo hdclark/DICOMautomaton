@@ -421,11 +421,11 @@ void WerewolfGame::AssignRoles(){
     std::iota(persona_indices.begin(), persona_indices.end(), 0);
     std::shuffle(persona_indices.begin(), persona_indices.end(), rng);
     
-    int assigned = 0;
+    int assigned_count = 0;
     std::set<std::string> used_first_names;
 
     // Assign personas to players (ensure unique first names)
-    for(size_t idx = 0; idx < persona_indices.size() && assigned < num_players; ++idx){
+    for(size_t idx = 0; idx < persona_indices.size() && assigned_count < num_players; ++idx){
         const auto& persona = persona_pool[persona_indices[idx]];
         std::string first_name = persona.name;
         size_t space_pos = first_name.find(' ');
@@ -438,11 +438,11 @@ void WerewolfGame::AssignRoles(){
 
         used_first_names.insert(first_name);
 
-        player_t& player = players[assigned];
+        player_t& player = players[assigned_count];
         player.persona = persona;
         player.is_alive = true;
         player.is_werewolf = false;
-        player.is_human = (assigned == 0);  // First player is human
+        player.is_human = (assigned_count == 0);  // First player is human
         player.was_lynched = false;
         player.was_attacked = false;
         player.firm_suspicion_target = -1;
@@ -452,7 +452,7 @@ void WerewolfGame::AssignRoles(){
 
         // Initialize suspicion levels
         for(int j = 0; j < num_players; ++j){
-            if(assigned != j){
+            if(assigned_count != j){
                 player.suspicion_levels[j] = 0.15;  // Start with slight suspicion of everyone
             }
         }
@@ -461,7 +461,7 @@ void WerewolfGame::AssignRoles(){
         std::uniform_real_distribution<double> phase_dist(0.0, 2.0 * pi);
         player.bob_phase = phase_dist(rng);
 
-        ++assigned;
+        ++assigned_count;
     }
     
     // Randomly assign werewolf
