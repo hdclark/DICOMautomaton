@@ -21,6 +21,11 @@
 
 namespace {
     constexpr double pi = 3.14159265358979323846;
+    
+    // Player positioning constants for circle arrangement
+    constexpr float human_player_angle = static_cast<float>(pi / 2.0);  // Bottom center of circle
+    constexpr float ai_arc_start = static_cast<float>(-5.0 * pi / 6.0); // -150 degrees
+    constexpr float ai_arc_end = static_cast<float>(5.0 * pi / 6.0);    // +150 degrees
 }
 
 WerewolfGame::WerewolfGame(){
@@ -661,6 +666,22 @@ bool WerewolfGame::CheckGameOver(){
     return false;
 }
 
+void WerewolfGame::CalculatePlayerPosition(int player_idx, float& angle, float& radius) const{
+    // Calculate the angle and radius for a player's position in the circle
+    if(player_idx == human_player_idx){
+        // Human player at bottom center
+        angle = human_player_angle;
+        radius = circle_radius + 50.0f;
+    }else{
+        // Other players in upper arc
+        int other_idx = (player_idx < human_player_idx) ? player_idx : player_idx - 1;
+        int num_others = num_players - 1;
+        float arc_span = ai_arc_end - ai_arc_start;
+        angle = ai_arc_start + (static_cast<float>(other_idx) / static_cast<float>(num_others - 1)) * arc_span - static_cast<float>(pi/2);
+        radius = circle_radius;
+    }
+}
+
 void WerewolfGame::DrawMonolith(ImDrawList* draw_list, ImVec2 center, float height, float width, 
                                  ImU32 color, const std::string& name, bool is_selected, bool is_dead){
     // Draw a monolith (tall rectangle with slight taper)
@@ -781,22 +802,7 @@ bool WerewolfGame::Display(bool &enabled){
     for(int i = 0; i < num_players; ++i){
         float angle;
         float radius;
-        
-        if(i == human_player_idx){
-            // Human player at bottom center
-            angle = static_cast<float>(pi / 2.0);  // Bottom
-            radius = circle_radius + 50.0f;
-        }else{
-            // Other players in circle, starting from top-left
-            int other_idx = (i < human_player_idx) ? i : i - 1;
-            int num_others = num_players - 1;
-            // Distribute evenly in upper arc (from -150 to +150 degrees)
-            float arc_start = static_cast<float>(-5.0 * pi / 6.0);  // -150 degrees
-            float arc_end = static_cast<float>(5.0 * pi / 6.0);     // +150 degrees
-            float arc_span = arc_end - arc_start;
-            angle = arc_start + (static_cast<float>(other_idx) / static_cast<float>(num_others - 1)) * arc_span - static_cast<float>(pi/2);
-            radius = circle_radius;
-        }
+        CalculatePlayerPosition(i, angle, radius);
         
         // Add bobbing animation
         float bob = static_cast<float>(std::sin(players[i].bob_phase) * 3.0);
@@ -848,18 +854,7 @@ bool WerewolfGame::Display(bool &enabled){
                current_speaker.find(players[i].persona.name.substr(0, players[i].persona.name.find(' '))) != std::string::npos){
                 float angle;
                 float radius;
-                if(i == human_player_idx){
-                    angle = static_cast<float>(pi / 2.0);
-                    radius = circle_radius + 50.0f;
-                }else{
-                    int other_idx = (i < human_player_idx) ? i : i - 1;
-                    int num_others = num_players - 1;
-                    float arc_start = static_cast<float>(-5.0 * pi / 6.0);
-                    float arc_end = static_cast<float>(5.0 * pi / 6.0);
-                    float arc_span = arc_end - arc_start;
-                    angle = arc_start + (static_cast<float>(other_idx) / static_cast<float>(num_others - 1)) * arc_span - static_cast<float>(pi/2);
-                    radius = circle_radius;
-                }
+                CalculatePlayerPosition(i, angle, radius);
                 ImVec2 pos(center.x + radius * std::cos(angle),
                            center.y + radius * std::sin(angle) - monolith_height);
                 DrawSpeechBubble(draw_list, pos, current_message, true);

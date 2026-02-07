@@ -120,6 +120,7 @@ class WerewolfGame {
     void UpdateSuspicions(int observer_idx, int responder_idx, int question_idx, int response_idx);
     
     // Rendering helpers
+    void CalculatePlayerPosition(int player_idx, float& angle, float& radius) const;
     void DrawMonolith(ImDrawList* draw_list, ImVec2 center, float height, float width, 
                       ImU32 color, const std::string& name, bool is_selected, bool is_dead);
     void DrawSpeechBubble(ImDrawList* draw_list, ImVec2 anchor, const std::string& text, bool is_question);
