@@ -350,15 +350,17 @@ void WerewolfGame::BuildResponseCompatibility(){
     compatible_responses.resize(all_questions.size());
 
     const int total_responses = static_cast<int>(all_responses.size());
+    if(total_responses <= 0) return;
+
     const int honest_start = 0;
-    const int honest_end = std::min(9, total_responses - 1);
-    const int deflect_start = std::min(10, total_responses);
-    const int deflect_end = std::min(19, total_responses - 1);
-    const int nervous_start = std::min(20, total_responses);
-    const int nervous_end = std::min(27, total_responses - 1);
-    const int confident_start = std::min(28, total_responses);
-    const int confident_end = std::min(35, total_responses - 1);
-    const int helpful_start = std::min(36, total_responses);
+    const int honest_end = std::min(total_responses, 10) - 1;
+    const int deflect_start = std::min(total_responses, 10);
+    const int deflect_end = std::min(total_responses, 20) - 1;
+    const int nervous_start = std::min(total_responses, 20);
+    const int nervous_end = std::min(total_responses, 28) - 1;
+    const int confident_start = std::min(total_responses, 28);
+    const int confident_end = std::min(total_responses, 36) - 1;
+    const int helpful_start = std::min(total_responses, 36);
     const int helpful_end = total_responses - 1;
 
     auto append_range = [&](std::vector<int>& dest, int start, int end){
@@ -805,11 +807,6 @@ void WerewolfGame::ProcessAITurn(){
 int WerewolfGame::AISelectQuestionTarget(int asker_idx){
     // Select target based on suspicion levels
     std::vector<int> candidates;
-    int difficulty = 1;
-    if(question_idx >= 0 && question_idx < static_cast<int>(all_questions.size())){
-        difficulty = all_questions[question_idx].difficulty;
-    }
-
     std::vector<double> weights;
     
     for(int i = 0; i < num_players; ++i){
@@ -857,6 +854,11 @@ int WerewolfGame::AISelectResponse(int responder_idx, int question_idx, bool as_
     if(candidates.empty()){
         candidates.resize(all_responses.size());
         std::iota(candidates.begin(), candidates.end(), 0);
+    }
+
+    int difficulty = 1;
+    if(question_idx >= 0 && question_idx < static_cast<int>(all_questions.size())){
+        difficulty = all_questions[question_idx].difficulty;
     }
 
     std::vector<int> filtered_candidates;
