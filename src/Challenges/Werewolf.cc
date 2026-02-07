@@ -680,6 +680,8 @@ void WerewolfGame::CalculatePlayerPosition(int player_idx, float& angle, float& 
         // Guard against division by zero when only 1 AI player
         float position_ratio = (num_others > 1) ? 
             static_cast<float>(other_idx) / static_cast<float>(num_others - 1) : 0.5f;
+        // Subtract pi/2 to rotate coordinate system so 0 degrees points upward
+        // (ImGui uses +Y downward, so top of screen is negative Y)
         angle = ai_arc_start + position_ratio * arc_span - static_cast<float>(pi/2);
         radius = circle_radius;
     }
