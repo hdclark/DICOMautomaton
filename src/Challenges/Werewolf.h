@@ -91,6 +91,13 @@ class WerewolfGame {
         std::chrono::time_point<std::chrono::steady_clock> timestamp;
     };
 
+    struct suspicion_change_t {
+        int observer_idx;
+        int responder_idx;
+        double delta;
+        std::chrono::time_point<std::chrono::steady_clock> timestamp;
+    };
+
     // Game phases
     enum class game_phase_t {
         Intro,              // Show intro text
@@ -139,14 +146,16 @@ class WerewolfGame {
     int AISelectResponse(int responder_idx, int question_idx, bool as_werewolf);
     int AISelectVoteTarget(int voter_idx);
     void UpdateSuspicions(int observer_idx, int responder_idx, int question_idx, int response_idx);
+    void UpdateFirmSuspicionTarget(int observer_idx);
     int SelectAnnouncementTarget(int announcer_idx);
     std::string BuildAnnouncementText(int announcer_idx, int target_idx);
     void ApplyAnnouncementEffects(int announcer_idx, int target_idx, bool is_werewolf);
     
     // Rendering helpers
     void CalculatePlayerPosition(int player_idx, float& angle, float& radius) const;
-    void DrawMonolith(ImDrawList* draw_list, ImVec2 center, float height, float width, 
-                      ImU32 color, const std::string& name, bool is_selected, bool is_lynched, bool is_attacked);
+    void DrawMonolith(ImDrawList* draw_list, ImVec2 center, float height, float width,
+                      ImU32 color, const std::string& name, bool is_selected,
+                      float lynch_progress, float attack_progress, bool is_dead);
     void DrawSpeechBubble(ImDrawList* draw_list, ImVec2 anchor, const std::string& text, speech_kind_t kind);
     
     // Game state
@@ -187,6 +196,7 @@ class WerewolfGame {
     int last_eliminated = -1;
     bool last_was_werewolf = false;
     int last_attacked = -1;
+    int last_attack_round = -1;
     
     // Data
     std::vector<player_t> players;
@@ -196,7 +206,8 @@ class WerewolfGame {
     std::vector<std::vector<int>> compatible_responses;
     std::vector<std::string> event_log;
     std::vector<persona_t> persona_pool;
-    std::vector<int> available_question_indices;  // Questions available this round
+    std::vector<std::vector<int>> per_player_question_options;
+    std::vector<suspicion_change_t> suspicion_changes;
     int active_asker_idx = -1;
     int active_target_idx = -1;
     
@@ -207,6 +218,13 @@ class WerewolfGame {
     static constexpr double elimination_time = 5.0;
     static constexpr double intro_time = 15.0;
     static constexpr double ai_message_display_time = 5.0;  // Seconds to display AI Q&A bubbles
+    static constexpr double elimination_indicator_fade_time = 1.1;
+    static constexpr double attack_indicator_delay = 1.4;
+    static constexpr double suspicion_change_duration = 5.0;
+    static constexpr double werewolf_skip_attack_probability = 0.18;
+    static constexpr double accused_innocent_suspicion_delta = 0.08;
+    static constexpr double accused_werewolf_suspicion_delta = -0.05;
+    static constexpr size_t max_questions_per_player = 5;
     
     // Display parameters
     static constexpr float window_width = 1000.0f;
@@ -216,9 +234,35 @@ class WerewolfGame {
     static constexpr float monolith_width = 35.0f;
     static constexpr float circle_radius = 180.0f;
     static constexpr size_t max_log_entries = 1000;
+    // Controls horizontal spacing for suspicion-change annotations above a player.
+    static constexpr float suspicion_change_horizontal_offset = 8.0f;
+    static constexpr int suspicion_change_offset_slots = 3;
+
+    static inline const ImVec4 instruction_text_color = ImVec4(1.0f, 1.0f, 0.3f, 1.0f);
+    static inline const ImVec4 role_werewolf_text_color = ImVec4(1.0f, 0.3f, 0.3f, 1.0f);
+    static inline const ImVec4 role_town_text_color = ImVec4(0.3f, 0.8f, 0.3f, 1.0f);
+    static inline const ImVec4 warning_text_color = ImVec4(1.0f, 0.5f, 0.5f, 1.0f);
+    static inline const ImVec4 success_text_color = ImVec4(0.3f, 1.0f, 0.3f, 1.0f);
+    static inline const ImVec4 night_attack_text_color = ImVec4(0.7f, 0.6f, 1.0f, 1.0f);
+    static inline const ImVec4 suspicion_increase_color = role_werewolf_text_color;
+    static inline const ImVec4 suspicion_decrease_color = success_text_color;
+
+    static constexpr ImU32 background_color = IM_COL32(20, 25, 35, 255);
+    static constexpr ImU32 monolith_human_color = IM_COL32(100, 120, 140, 255);
+    static constexpr ImU32 monolith_ai_color = IM_COL32(110, 110, 110, 255);
+    static constexpr ImU32 monolith_dead_color = IM_COL32(80, 80, 80, 200);
+    static constexpr ImU32 monolith_outline_color = IM_COL32(40, 40, 40, 255);
+    static constexpr ImU32 monolith_outline_selected_color = IM_COL32(255, 255, 0, 255);
+    static constexpr ImU32 monolith_name_color = IM_COL32(255, 255, 255, 255);
+    static constexpr ImU32 lynch_line_color = IM_COL32(180, 0, 0, 255);
+    static constexpr ImU32 attack_line_color = IM_COL32(120, 100, 200, 255);
+    static constexpr ImU32 werewolf_label_color = IM_COL32(255, 100, 100, 255);
+    static constexpr ImU32 speech_response_color = IM_COL32(60, 120, 60, 230);
+    static constexpr ImU32 speech_question_color = IM_COL32(60, 60, 120, 230);
+    static constexpr ImU32 speech_announcement_color = IM_COL32(120, 90, 40, 235);
+    static constexpr ImU32 speech_border_color = IM_COL32(200, 200, 200, 255);
     
     // Time tracking
     std::chrono::time_point<std::chrono::steady_clock> t_updated;
     std::mt19937 rng;
 };
-
