@@ -64,6 +64,7 @@ class WerewolfGame {
     struct player_t {
         persona_t persona;
         bool is_werewolf = false;
+        bool is_seer = false;
         bool is_alive = true;
         bool is_human = false;  // The player controlled by the user
         bool was_lynched = false;
@@ -111,6 +112,9 @@ class WerewolfGame {
         AIQuestion,         // Showing AI's question
         AIResponse,         // Showing AI's response
         Voting,             // Players vote
+        SelectAttack,       // Human werewolf selects attack target
+        SelectSeerTarget,   // Human seer selects vision target
+        SeerVision,         // Show seer vision result
         VoteResults,        // Show vote results
         Elimination,        // Someone is eliminated
         GameOver            // Show winner
@@ -134,7 +138,9 @@ class WerewolfGame {
     void ProcessAITurn();
     void ProcessVoting();
     void EliminatePlayer(int idx, bool attacked);
-    void ResolveWerewolfAttack();
+    void ResolveWerewolfAttack(int forced_target = -1, bool force_skip = false);
+    void ProceedAfterWerewolfAttack();
+    void AdjustSuspicionsAfterAttack(int attacked_idx);
     bool CheckGameOver();
     void AssignRoundGossip();
     void LogEvent(const std::string& entry);
@@ -145,11 +151,15 @@ class WerewolfGame {
     int AISelectQuestion(int asker_idx, int target_idx);
     int AISelectResponse(int responder_idx, int question_idx, bool as_werewolf);
     int AISelectVoteTarget(int voter_idx);
-    void UpdateSuspicions(int observer_idx, int responder_idx, int question_idx, int response_idx);
+    int AISelectSeerTarget(int seer_idx);
+    void ResolveSeerVision(int seer_idx, int target_idx, bool reveal_to_player);
+    void UpdateSuspicions(int observer_idx, int responder_idx, int question_idx, int response_idx,
+                          double display_delay = 0.0);
     void UpdateFirmSuspicionTarget(int observer_idx);
     int SelectAnnouncementTarget(int announcer_idx);
     std::string BuildAnnouncementText(int announcer_idx, int target_idx);
     void ApplyAnnouncementEffects(int announcer_idx, int target_idx, bool is_werewolf);
+    void QueueSuspicionChange(int observer_idx, int responder_idx, double delta, double display_delay);
     
     // Rendering helpers
     void CalculatePlayerPosition(int player_idx, float& angle, float& radius) const;
@@ -164,6 +174,7 @@ class WerewolfGame {
     int current_player_turn = 0;
     int human_player_idx = 0;
     int werewolf_idx = -1;
+    int seer_idx = -1;
     bool game_over = false;
     bool townspeople_won = false;
     
@@ -172,6 +183,8 @@ class WerewolfGame {
     int selected_question = -1;
     int selected_response = -1;
     int selected_announcement_target = -1;
+    int selected_attack_target = -1;
+    int selected_seer_target = -1;
     int hovered_player = -1;
     
     // Animation state
