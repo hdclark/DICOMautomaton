@@ -43,8 +43,9 @@ void WerewolfGame::Reset(){
     players.clear();
     round_exchanges.clear();
     votes.clear();
-    available_question_indices.clear();
+    question_options.clear();
     event_log.clear();
+    suspicion_changes.clear();
     
     phase = game_phase_t::Intro;
     round_number = 0;
@@ -419,28 +420,47 @@ void WerewolfGame::AssignRoles(){
     std::iota(persona_indices.begin(), persona_indices.end(), 0);
     std::shuffle(persona_indices.begin(), persona_indices.end(), rng);
     
-    // Assign personas to players
-    for(int i = 0; i < num_players && i < static_cast<int>(persona_indices.size()); ++i){
-        players[i].persona = persona_pool[persona_indices[i]];
-        players[i].is_alive = true;
-        players[i].is_werewolf = false;
-        players[i].is_human = (i == 0);  // First player is human
-        players[i].was_lynched = false;
-        players[i].was_attacked = false;
-        players[i].firm_suspicion_target = -1;
-        players[i].made_announcement_this_round = false;
-        players[i].gossip.clear();
-        
+    int assigned = 0;
+    std::set<std::string> used_first_names;
+
+    // Assign personas to players (ensure unique first names)
+    for(size_t idx = 0; idx < persona_indices.size() && assigned < num_players; ++idx){
+        const auto& persona = persona_pool[persona_indices[idx]];
+        std::string first_name = persona.name;
+        size_t space_pos = first_name.find(' ');
+        if(space_pos != std::string::npos){
+            first_name = first_name.substr(0, space_pos);
+        }
+        if(used_first_names.count(first_name) > 0){
+            continue;
+        }
+
+        used_first_names.insert(first_name);
+
+        player_t& player = players[assigned];
+        player.persona = persona;
+        player.is_alive = true;
+        player.is_werewolf = false;
+        player.is_human = (assigned == 0);  // First player is human
+        player.was_lynched = false;
+        player.was_attacked = false;
+        player.firm_suspicion_target = -1;
+        player.made_announcement_this_round = false;
+        player.gossip.clear();
+        player.suspicion_levels.clear();
+
         // Initialize suspicion levels
         for(int j = 0; j < num_players; ++j){
-            if(i != j){
-                players[i].suspicion_levels[j] = 0.15;  // Start with slight suspicion of everyone
+            if(assigned != j){
+                player.suspicion_levels[j] = 0.15;  // Start with slight suspicion of everyone
             }
         }
-        
+
         // Random animation phase
         std::uniform_real_distribution<double> phase_dist(0.0, 2.0 * pi);
-        players[i].bob_phase = phase_dist(rng);
+        player.bob_phase = phase_dist(rng);
+
+        ++assigned;
     }
     
     // Randomly assign werewolf
@@ -470,18 +490,21 @@ void WerewolfGame::StartRound(){
         p.selected_vote_target = -1;
         p.made_announcement_this_round = false;
     }
-    
-    // Select available questions for this round (random subset)
-    available_question_indices.clear();
+
+    // Select available questions for each player this round (random subset)
+    question_options.clear();
+    question_options.resize(num_players);
     std::vector<int> all_indices(all_questions.size());
     std::iota(all_indices.begin(), all_indices.end(), 0);
-    std::shuffle(all_indices.begin(), all_indices.end(), rng);
-    
-    // Take about 60% of questions for this round
-    size_t num_available = std::max(size_t(10), all_questions.size() * 6 / 10);
-    for(size_t i = 0; i < num_available && i < all_indices.size(); ++i){
-        available_question_indices.push_back(all_indices[i]);
+    for(int i = 0; i < num_players; ++i){
+        question_options[i] = all_indices;
+        std::shuffle(question_options[i].begin(), question_options[i].end(), rng);
+        if(question_options[i].size() > max_questions_per_player){
+            question_options[i].resize(max_questions_per_player);
+        }
     }
+
+    suspicion_changes.clear();
     
     // Reset votes
     std::fill(votes.begin(), votes.end(), -1);
@@ -666,12 +689,40 @@ void WerewolfGame::ApplyAnnouncementEffects(int announcer_idx, int target_idx, b
         players[i].firm_suspicion_target =
             (best_susp >= firm_suspicion_threshold) ? best_target : -1;
     }
+
+    if(target_idx != announcer_idx && players[target_idx].is_alive){
+        auto it = players[target_idx].suspicion_levels.find(announcer_idx);
+        if(it != players[target_idx].suspicion_levels.end()){
+            double accused_delta = players[target_idx].is_werewolf ? -0.05 : 0.08;
+            it->second = std::clamp(it->second + accused_delta, 0.0, 1.0);
+
+            int best_target = -1;
+            double best_susp = 0.0;
+            for(int j = 0; j < num_players; ++j){
+                if(j != target_idx && players[j].is_alive){
+                    double susp = players[target_idx].suspicion_levels[j];
+                    if(susp > best_susp){
+                        best_susp = susp;
+                        best_target = j;
+                    }
+                }
+            }
+            players[target_idx].firm_suspicion_target =
+                (best_susp >= firm_suspicion_threshold) ? best_target : -1;
+        }
+    }
 }
 
 void WerewolfGame::ResolveWerewolfAttack(){
     last_attacked = -1;
     if(werewolf_idx < 0 || werewolf_idx >= num_players) return;
     if(!players[werewolf_idx].is_alive) return;
+
+    std::uniform_real_distribution<double> skip_dist(0.0, 1.0);
+    if(skip_dist(rng) < 0.18){
+        LogEvent("The werewolf did not attack this round.");
+        return;
+    }
 
     std::vector<int> candidates;
     for(int i = 0; i < num_players; ++i){
@@ -828,13 +879,23 @@ int WerewolfGame::AISelectQuestionTarget(int asker_idx){
 }
 
 int WerewolfGame::AISelectQuestion(int asker_idx, int target_idx){
-    if(available_question_indices.empty()) return 0;
+    const std::vector<int>* options = nullptr;
+    std::vector<int> fallback_questions;
+    if(asker_idx >= 0 && asker_idx < num_players &&
+       asker_idx < static_cast<int>(question_options.size())){
+        options = &question_options[asker_idx];
+    }
+    if(options == nullptr || options->empty()){
+        fallback_questions.resize(all_questions.size());
+        std::iota(fallback_questions.begin(), fallback_questions.end(), 0);
+        options = &fallback_questions;
+    }
     
     // Prefer harder questions for more suspicious targets
     double susp = players[asker_idx].suspicion_levels[target_idx];
     
     std::vector<double> weights;
-    for(int idx : available_question_indices){
+    for(int idx : *options){
         double w = 1.0;
         // Higher suspicion -> prefer harder questions
         if(susp > 0.5 && all_questions[idx].difficulty >= 2) w *= 2.0;
@@ -843,7 +904,7 @@ int WerewolfGame::AISelectQuestion(int asker_idx, int target_idx){
     }
     
     std::discrete_distribution<int> dist(weights.begin(), weights.end());
-    return available_question_indices[dist(rng)];
+    return (*options)[dist(rng)];
 }
 
 int WerewolfGame::AISelectResponse(int responder_idx, int question_idx, bool as_werewolf){
@@ -949,6 +1010,7 @@ void WerewolfGame::UpdateSuspicions(int observer_idx, int responder_idx, int que
     if(observer_idx == responder_idx) return;
     if(observer_idx < 0 || observer_idx >= num_players) return;
     if(response_idx < 0 || response_idx >= static_cast<int>(all_responses.size())) return;
+    if(!players[observer_idx].is_alive || !players[responder_idx].is_alive) return;
     
     double delta = all_responses[response_idx].suspicion_delta;
     
@@ -956,12 +1018,24 @@ void WerewolfGame::UpdateSuspicions(int observer_idx, int responder_idx, int que
     double diff_mult = 1.0 + (all_questions[question_idx].difficulty - 1) * 0.3;
     delta *= diff_mult;
     
+    double before = players[observer_idx].suspicion_levels[responder_idx];
+    
     // Apply change
     players[observer_idx].suspicion_levels[responder_idx] += delta;
     
     // Clamp to valid range
-    players[observer_idx].suspicion_levels[responder_idx] = 
+    players[observer_idx].suspicion_levels[responder_idx] =
         std::clamp(players[observer_idx].suspicion_levels[responder_idx], 0.0, 1.0);
+
+    double actual_delta = players[observer_idx].suspicion_levels[responder_idx] - before;
+    if(std::abs(actual_delta) > 0.0001 && players[observer_idx].is_alive && players[responder_idx].is_alive){
+        suspicion_change_t change;
+        change.observer_idx = observer_idx;
+        change.responder_idx = responder_idx;
+        change.delta = actual_delta;
+        change.timestamp = std::chrono::steady_clock::now();
+        suspicion_changes.push_back(change);
+    }
 
     int best_target = -1;
     double best_susp = 0.0;
@@ -1022,11 +1096,53 @@ void WerewolfGame::ProcessVoting(){
             LogEvent(players[eliminated].persona.name + " was lynched (werewolf).");
         }else{
             LogEvent(players[eliminated].persona.name + " was lynched (innocent).");
+
+            for(int i = 0; i < num_players; ++i){
+                if(!players[i].is_alive || i == eliminated) continue;
+                auto it = players[i].suspicion_levels.find(eliminated);
+                double redistributed = 0.0;
+                if(it != players[i].suspicion_levels.end()){
+                    redistributed = it->second;
+                    it->second = 0.0;
+                }
+
+                int remaining_targets = 0;
+                for(int j = 0; j < num_players; ++j){
+                    if(j != i && j != eliminated && players[j].is_alive){
+                        remaining_targets++;
+                    }
+                }
+
+                if(remaining_targets > 0 && redistributed > 0.0){
+                    double bump = redistributed / static_cast<double>(remaining_targets);
+                    for(int j = 0; j < num_players; ++j){
+                        if(j != i && j != eliminated && players[j].is_alive){
+                            players[i].suspicion_levels[j] =
+                                std::clamp(players[i].suspicion_levels[j] + bump, 0.0, 1.0);
+                        }
+                    }
+                }
+
+                int best_target = -1;
+                double best_susp = 0.0;
+                for(int j = 0; j < num_players; ++j){
+                    if(j != i && players[j].is_alive){
+                        double susp = players[i].suspicion_levels[j];
+                        if(susp > best_susp){
+                            best_susp = susp;
+                            best_target = j;
+                        }
+                    }
+                }
+                players[i].firm_suspicion_target =
+                    (best_susp >= firm_suspicion_threshold) ? best_target : -1;
+            }
         }
-        ResolveWerewolfAttack();
     }else{
         LogEvent("The vote was tied. No one was lynched.");
     }
+
+    ResolveWerewolfAttack();
     
     phase = game_phase_t::VoteResults;
     phase_timer = 0.0;
@@ -1092,9 +1208,9 @@ void WerewolfGame::CalculatePlayerPosition(int player_idx, float& angle, float& 
     }
 }
 
-void WerewolfGame::DrawMonolith(ImDrawList* draw_list, ImVec2 center, float height, float width, 
-                                 ImU32 color, const std::string& name, bool is_selected, bool is_lynched,
-                                 bool is_attacked){
+void WerewolfGame::DrawMonolith(ImDrawList* draw_list, ImVec2 center, float height, float width,
+                                 ImU32 color, const std::string& name, bool is_selected,
+                                 float lynch_progress, float attack_progress, bool is_dead){
     // Draw a monolith (tall rectangle with slight taper)
     float top_width = width * 0.85f;
     
@@ -1103,42 +1219,49 @@ void WerewolfGame::DrawMonolith(ImDrawList* draw_list, ImVec2 center, float heig
     ImVec2 tr(center.x + top_width/2, center.y - height);
     ImVec2 tl(center.x - top_width/2, center.y - height);
     
-    bool is_dead = is_lynched || is_attacked;
     if(is_dead){
         // Draw fallen/crossed out
-        color = IM_COL32(80, 80, 80, 200);
+        color = monolith_dead_color;
     }
     
     // Main body
     draw_list->AddQuadFilled(bl, br, tr, tl, color);
     
     // Outline
-    ImU32 outline_color = is_selected ? IM_COL32(255, 255, 0, 255) : IM_COL32(40, 40, 40, 255);
+    ImU32 outline_color = is_selected ? monolith_outline_selected_color : monolith_outline_color;
     float outline_thickness = is_selected ? 3.0f : 1.5f;
     draw_list->AddQuad(bl, br, tr, tl, outline_color, outline_thickness);
     
     // Name label below
     ImVec2 text_size = ImGui::CalcTextSize(name.c_str());
     ImVec2 text_pos(center.x - text_size.x/2, center.y + 5);
-    draw_list->AddText(text_pos, IM_COL32(255, 255, 255, 255), name.c_str());
-    
-    if(is_lynched){
+    draw_list->AddText(text_pos, monolith_name_color, name.c_str());
+
+    auto apply_alpha = [](ImU32 base_color, float alpha){
+        ImVec4 rgba = ImGui::ColorConvertU32ToFloat4(base_color);
+        rgba.w *= std::clamp(alpha, 0.0f, 1.0f);
+        return ImGui::ColorConvertFloat4ToU32(rgba);
+    };
+
+    if(lynch_progress > 0.0f){
         // Draw X over it for lynching
+        ImU32 line_color = apply_alpha(lynch_line_color, lynch_progress);
         draw_list->AddLine(ImVec2(center.x - width, center.y - height - 10),
                           ImVec2(center.x + width, center.y + 10),
-                          IM_COL32(180, 0, 0, 255), 3.0f);
+                          line_color, 3.0f);
         draw_list->AddLine(ImVec2(center.x + width, center.y - height - 10),
                           ImVec2(center.x - width, center.y + 10),
-                          IM_COL32(180, 0, 0, 255), 3.0f);
+                          line_color, 3.0f);
     }
-    if(is_attacked){
+    if(attack_progress > 0.0f){
         // Draw slashes for werewolf attack
+        ImU32 line_color = apply_alpha(attack_line_color, attack_progress);
         draw_list->AddLine(ImVec2(center.x - width, center.y - height + 10),
                           ImVec2(center.x + width, center.y - 10),
-                          IM_COL32(120, 100, 200, 255), 3.0f);
+                          line_color, 3.0f);
         draw_list->AddLine(ImVec2(center.x - width, center.y - height - 10),
                           ImVec2(center.x + width, center.y - height + 30),
-                          IM_COL32(120, 100, 200, 255), 3.0f);
+                          line_color, 3.0f);
     }
 }
 
@@ -1150,13 +1273,13 @@ void WerewolfGame::DrawSpeechBubble(ImDrawList* draw_list, ImVec2 anchor, const 
     
     ImVec2 bubble_pos(anchor.x - bubble_w/2, anchor.y - bubble_h - 20);
     
-    ImU32 bg_color = IM_COL32(60, 120, 60, 230);
+    ImU32 bg_color = speech_response_color;
     if(kind == speech_kind_t::Question){
-        bg_color = IM_COL32(60, 60, 120, 230);
+        bg_color = speech_question_color;
     }else if(kind == speech_kind_t::Announcement){
-        bg_color = IM_COL32(120, 90, 40, 235);
+        bg_color = speech_announcement_color;
     }
-    ImU32 border_color = IM_COL32(200, 200, 200, 255);
+    ImU32 border_color = speech_border_color;
     
     draw_list->AddRectFilled(bubble_pos, ImVec2(bubble_pos.x + bubble_w, bubble_pos.y + bubble_h), 
                              bg_color, 8.0f);
@@ -1173,7 +1296,7 @@ void WerewolfGame::DrawSpeechBubble(ImDrawList* draw_list, ImVec2 anchor, const 
     
     // Text
     draw_list->AddText(ImVec2(bubble_pos.x + padding, bubble_pos.y + padding),
-                       IM_COL32(255, 255, 255, 255), text.c_str());
+                       monolith_name_color, text.c_str());
 }
 
 bool WerewolfGame::Display(bool &enabled){
@@ -1198,6 +1321,16 @@ bool WerewolfGame::Display(bool &enabled){
     
     anim_timer += dt;
     phase_timer += dt;
+
+    if(!suspicion_changes.empty()){
+        suspicion_changes.erase(
+            std::remove_if(suspicion_changes.begin(), suspicion_changes.end(),
+                           [&](const suspicion_change_t& change){
+                               double age = std::chrono::duration<double>(t_now - change.timestamp).count();
+                               return age > suspicion_change_duration;
+                           }),
+            suspicion_changes.end());
+    }
     
     // Update animation for all players
     for(auto& p : players){
@@ -1212,7 +1345,7 @@ bool WerewolfGame::Display(bool &enabled){
     // Background
     draw_list->AddRectFilled(canvas_pos, 
                              ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y),
-                             IM_COL32(20, 25, 35, 255));
+                             background_color);
     
     // Calculate center for circle arrangement
     ImVec2 center(canvas_pos.x + canvas_size.x * 0.5f,
@@ -1221,6 +1354,7 @@ bool WerewolfGame::Display(bool &enabled){
     // Draw players in circle, with human player at bottom center
     hovered_player = -1;
     ImVec2 mouse_pos = ImGui::GetMousePos();
+    std::vector<ImVec2> player_positions(num_players);
     bool focus_pair_active = (active_asker_idx >= 0 && active_target_idx >= 0) &&
                              (phase == game_phase_t::AIQuestion ||
                               phase == game_phase_t::AIResponse ||
@@ -1237,6 +1371,7 @@ bool WerewolfGame::Display(bool &enabled){
         
         ImVec2 pos(center.x + radius * std::cos(angle),
                    center.y + radius * std::sin(angle) + bob);
+        player_positions[i] = pos;
         
         // Check for hover
         float dx = mouse_pos.x - pos.x;
@@ -1248,9 +1383,9 @@ bool WerewolfGame::Display(bool &enabled){
         // Determine color
         ImU32 color;
         if(players[i].is_human){
-            color = IM_COL32(100, 120, 140, 255);  // Slightly blue for human
+            color = monolith_human_color;  // Slightly blue for human
         }else{
-            color = IM_COL32(110, 110, 110, 255);  // Gray for AI
+            color = monolith_ai_color;  // Gray for AI
         }
         
         // Highlight if selected or hovered
@@ -1272,14 +1407,60 @@ bool WerewolfGame::Display(bool &enabled){
             display_name = display_name.substr(0, space_pos);
         }
         
-        DrawMonolith(draw_list, pos, monolith_height, monolith_width, color, 
-                     display_name, is_selected, players[i].was_lynched, players[i].was_attacked);
+        float lynch_progress = 0.0f;
+        float attack_progress = 0.0f;
+        if(players[i].was_lynched){
+            if(phase == game_phase_t::VoteResults && last_eliminated == i){
+                lynch_progress = static_cast<float>(
+                    std::clamp(phase_timer / lynch_indicator_fade_time, 0.0, 1.0));
+            }else{
+                lynch_progress = 1.0f;
+            }
+        }
+        if(players[i].was_attacked){
+            if(phase == game_phase_t::VoteResults && last_attacked == i){
+                double delay = (last_eliminated >= 0) ? attack_indicator_delay : 0.0;
+                double attack_raw = (phase_timer - delay) / attack_indicator_fade_time;
+                attack_progress = static_cast<float>(std::clamp(attack_raw, 0.0, 1.0));
+            }else{
+                attack_progress = 1.0f;
+            }
+        }
+
+        DrawMonolith(draw_list, pos, monolith_height, monolith_width, color,
+                     display_name, is_selected, lynch_progress, attack_progress, !players[i].is_alive);
         
         // If werewolf and game over, show indicator
         if(game_over && players[i].is_werewolf){
             ImVec2 wolf_pos(pos.x, pos.y - monolith_height - 30);
             draw_list->AddText(ImVec2(wolf_pos.x - 25, wolf_pos.y), 
-                              IM_COL32(255, 100, 100, 255), "WEREWOLF");
+                              werewolf_label_color, "WEREWOLF");
+        }
+    }
+
+    if(!suspicion_changes.empty()){
+        for(const auto& change : suspicion_changes){
+            if(change.responder_idx < 0 || change.responder_idx >= num_players) continue;
+            double age = std::chrono::duration<double>(t_now - change.timestamp).count();
+            if(age < 0.0 || age > suspicion_change_duration) continue;
+            float progress = static_cast<float>(age / suspicion_change_duration);
+            float alpha = 1.0f - progress;
+            float rise = progress * 20.0f;
+            float offset_x = static_cast<float>((change.observer_idx % 3) - 1) * 8.0f;
+
+            ImVec2 base = player_positions[change.responder_idx];
+            ImVec2 text_pos(base.x + offset_x, base.y - monolith_height - 25.0f - rise);
+
+            std::ostringstream oss;
+            oss << std::fixed << std::setprecision(2);
+            if(change.delta >= 0.0){
+                oss << "+";
+            }
+            oss << change.delta;
+
+            ImVec4 color = (change.delta >= 0.0) ? role_werewolf_text_color : success_text_color;
+            color.w *= alpha;
+            draw_list->AddText(text_pos, ImGui::ColorConvertFloat4ToU32(color), oss.str().c_str());
         }
     }
 
@@ -1352,12 +1533,14 @@ bool WerewolfGame::Display(bool &enabled){
     // Handle click on players
     if(ImGui::IsMouseClicked(0) && hovered_player >= 0){
         if(phase == game_phase_t::Discussion && 
+           players[human_player_idx].is_alive &&
            players[human_player_idx].questions_asked_this_round == 0 &&
            hovered_player != human_player_idx &&
            players[hovered_player].is_alive){
             selected_target = hovered_player;
             phase = game_phase_t::SelectQuestion;
-        }else if(phase == game_phase_t::Voting && 
+        }else if(phase == game_phase_t::Voting &&
+                 players[human_player_idx].is_alive &&
                  hovered_player != human_player_idx &&
                  players[hovered_player].is_alive){
             votes[human_player_idx] = hovered_player;
@@ -1369,7 +1552,7 @@ bool WerewolfGame::Display(bool &enabled){
         case game_phase_t::Intro:{
             ImGui::TextWrapped("Welcome to Werewolf!");
             ImGui::TextWrapped("One among us is a werewolf in disguise. Find and eliminate them before it's too late!");
-            ImGui::TextWrapped("Press Space to continue, or wait a moment...");
+            ImGui::TextColored(instruction_text_color, "Press Space to continue, or wait a moment...");
             
             if(phase_timer > intro_time || ImGui::IsKeyPressed(SDL_SCANCODE_SPACE)){
                 phase = game_phase_t::AssignRoles;
@@ -1380,10 +1563,10 @@ bool WerewolfGame::Display(bool &enabled){
         
         case game_phase_t::AssignRoles:{
             if(players[human_player_idx].is_werewolf){
-                ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "You are the WEREWOLF!");
+                ImGui::TextColored(role_werewolf_text_color, "You are the WEREWOLF!");
                 ImGui::TextWrapped("Survive until only one townsperson remains. Vote strategically to avoid detection!");
             }else{
-                ImGui::TextColored(ImVec4(0.3f, 0.8f, 0.3f, 1.0f), "You are a TOWNSPERSON.");
+                ImGui::TextColored(role_town_text_color, "You are a TOWNSPERSON.");
                 ImGui::TextWrapped("Find the werewolf among us! Ask questions and vote wisely.");
             }
             
@@ -1404,9 +1587,15 @@ bool WerewolfGame::Display(bool &enabled){
             int alive_count = 0;
             for(const auto& p : players) if(p.is_alive) alive_count++;
             ImGui::Text("Players remaining: %d", alive_count);
+
+            if(!players[human_player_idx].is_alive){
+                ImGui::Text("You have been eliminated and can only observe.");
+                ProcessAITurn();
+                break;
+            }
             
             if(players[human_player_idx].questions_asked_this_round == 0){
-                ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.3f, 1.0f), 
+                ImGui::TextColored(instruction_text_color,
                                   "Click on a player to ask them a question");
                 if(ImGui::Button("Skip Question")){
                     players[human_player_idx].questions_asked_this_round = 1;
@@ -1424,11 +1613,33 @@ bool WerewolfGame::Display(bool &enabled){
         }
         
         case game_phase_t::SelectQuestion:{
-            ImGui::Text("Select a question to ask %s:", players[selected_target].persona.name.c_str());
+            if(!players[human_player_idx].is_alive ||
+               selected_target < 0 || selected_target >= num_players ||
+               !players[selected_target].is_alive){
+                selected_target = -1;
+                selected_question = -1;
+                phase = game_phase_t::Discussion;
+                phase_timer = 0.0;
+                break;
+            }
+
+            ImGui::TextColored(instruction_text_color, "Select a question to ask %s:",
+                               players[selected_target].persona.name.c_str());
+
+            const std::vector<int>* options = nullptr;
+            std::vector<int> fallback_questions;
+            if(human_player_idx >= 0 && human_player_idx < num_players &&
+               human_player_idx < static_cast<int>(question_options.size())){
+                options = &question_options[human_player_idx];
+            }
+            if(options == nullptr || options->empty()){
+                fallback_questions.resize(all_questions.size());
+                std::iota(fallback_questions.begin(), fallback_questions.end(), 0);
+                options = &fallback_questions;
+            }
             
             ImGui::BeginChild("QuestionList", ImVec2(0, interaction_panel_height/6.0f), true);
-            for(size_t i = 0; i < available_question_indices.size(); ++i){
-                int q_idx = available_question_indices[i];
+            for(int q_idx : *options){
                 if(ImGui::Selectable(all_questions[q_idx].text.c_str(), selected_question == q_idx)){
                     selected_question = q_idx;
                 }
@@ -1511,6 +1722,16 @@ bool WerewolfGame::Display(bool &enabled){
         }
 
         case game_phase_t::SelectResponse:{
+            if(!players[human_player_idx].is_alive){
+                pending_asker_idx = -1;
+                pending_target_idx = -1;
+                pending_question_idx = -1;
+                pending_response_idx = -1;
+                phase = game_phase_t::Discussion;
+                phase_timer = 0.0;
+                break;
+            }
+
             if(pending_question_idx < 0 || pending_question_idx >= static_cast<int>(all_questions.size()) ||
                pending_asker_idx < 0){
                 phase = game_phase_t::Discussion;
@@ -1518,7 +1739,7 @@ bool WerewolfGame::Display(bool &enabled){
                 break;
             }
 
-            ImGui::Text("Respond to %s:", players[pending_asker_idx].persona.name.c_str());
+            ImGui::TextColored(instruction_text_color, "Respond to %s:", players[pending_asker_idx].persona.name.c_str());
             ImGui::TextWrapped("Question: %s", all_questions[pending_question_idx].text.c_str());
 
             const std::vector<int>* responses = nullptr;
@@ -1571,14 +1792,22 @@ bool WerewolfGame::Display(bool &enabled){
                     selected_response = -1;
                 }
             }else{
-                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f),
+                ImGui::TextColored(instruction_text_color,
                                    "Select a response to continue.");
             }
             break;
         }
 
         case game_phase_t::SelectAnnouncement:{
-            ImGui::Text("Make an announcement about your suspicions?");
+            if(!players[human_player_idx].is_alive){
+                selected_announcement_target = -1;
+                phase = game_phase_t::Discussion;
+                current_player_turn = 0;
+                phase_timer = 0.0;
+                break;
+            }
+
+            ImGui::TextColored(instruction_text_color, "Make an announcement about your suspicions?");
 
             ImGui::BeginChild("AnnouncementTargets", ImVec2(0, interaction_panel_height/6.0f), true);
             for(int i = 0; i < num_players; ++i){
@@ -1691,7 +1920,16 @@ bool WerewolfGame::Display(bool &enabled){
         
         case game_phase_t::Voting:{
             ImGui::Text("Round %d - Voting Phase", round_number);
-            ImGui::TextWrapped("Click on a player to vote for their elimination");
+
+            if(!players[human_player_idx].is_alive){
+                ImGui::Text("You have been eliminated and can only observe.");
+                if(phase_timer > 1.0){
+                    ProcessVoting();
+                }
+                break;
+            }
+
+            ImGui::TextColored(instruction_text_color, "Click on a player to vote for their elimination");
             
             if(votes[human_player_idx] >= 0){
                 ImGui::Text("You voted for: %s", players[votes[human_player_idx]].persona.name.c_str());
@@ -1704,7 +1942,7 @@ bool WerewolfGame::Display(bool &enabled){
                     votes[human_player_idx] = -1;
                 }
             }else{
-                ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f), "Select someone to vote for");
+                ImGui::TextColored(instruction_text_color, "Select someone to vote for");
             }
             break;
         }
@@ -1729,19 +1967,19 @@ bool WerewolfGame::Display(bool &enabled){
             if(last_eliminated >= 0){
                 ImGui::Separator();
                 if(last_was_werewolf){
-                    ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), 
+                    ImGui::TextColored(success_text_color,
                                       "%s was the WEREWOLF!", players[last_eliminated].persona.name.c_str());
                 }else{
-                    ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.5f, 1.0f),
+                    ImGui::TextColored(warning_text_color,
                                       "%s was innocent...", players[last_eliminated].persona.name.c_str());
                 }
             }else{
                 ImGui::Text("Vote was tied - no one eliminated.");
             }
 
-            if(last_attacked >= 0){
+            if(last_attacked >= 0 && (last_eliminated < 0 || phase_timer >= attack_indicator_delay)){
                 ImGui::Separator();
-                ImGui::TextColored(ImVec4(0.7f, 0.6f, 1.0f, 1.0f),
+                ImGui::TextColored(night_attack_text_color,
                                   "%s was attacked during the night.",
                                   players[last_attacked].persona.name.c_str());
             }
@@ -1759,10 +1997,10 @@ bool WerewolfGame::Display(bool &enabled){
         
         case game_phase_t::GameOver:{
             if(townspeople_won){
-                ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.3f, 1.0f), "TOWNSPEOPLE WIN!");
+                ImGui::TextColored(success_text_color, "TOWNSPEOPLE WIN!");
                 ImGui::TextWrapped("The werewolf has been eliminated. The town is safe once more.");
             }else{
-                ImGui::TextColored(ImVec4(1.0f, 0.3f, 0.3f, 1.0f), "WEREWOLF WINS!");
+                ImGui::TextColored(role_werewolf_text_color, "WEREWOLF WINS!");
                 ImGui::TextWrapped("The werewolf has eliminated enough townspeople. Darkness falls upon the village.");
             }
             
