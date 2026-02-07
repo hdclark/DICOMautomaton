@@ -146,6 +146,7 @@ class WerewolfGame {
     int AISelectResponse(int responder_idx, int question_idx, bool as_werewolf);
     int AISelectVoteTarget(int voter_idx);
     void UpdateSuspicions(int observer_idx, int responder_idx, int question_idx, int response_idx);
+    void UpdateFirmSuspicionTarget(int observer_idx);
     int SelectAnnouncementTarget(int announcer_idx);
     std::string BuildAnnouncementText(int announcer_idx, int target_idx);
     void ApplyAnnouncementEffects(int announcer_idx, int target_idx, bool is_werewolf);
@@ -217,9 +218,8 @@ class WerewolfGame {
     static constexpr double elimination_time = 5.0;
     static constexpr double intro_time = 15.0;
     static constexpr double ai_message_display_time = 5.0;  // Seconds to display AI Q&A bubbles
-    static constexpr double lynch_indicator_fade_time = 1.1;
+    static constexpr double elimination_indicator_fade_time = 1.1;
     static constexpr double attack_indicator_delay = 1.4;
-    static constexpr double attack_indicator_fade_time = 1.1;
     static constexpr double suspicion_change_duration = 2.2;
     static constexpr double werewolf_skip_attack_probability = 0.18;
     static constexpr double accused_innocent_suspicion_delta = 0.08;

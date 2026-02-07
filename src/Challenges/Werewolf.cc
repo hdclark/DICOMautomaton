@@ -553,19 +553,7 @@ void WerewolfGame::AssignRoundGossip(){
             continue;
         }
 
-        int best_target = -1;
-        double best_susp = 0.0;
-        for(int j = 0; j < num_players; ++j){
-            if(i != j && players[j].is_alive){
-                double susp = players[i].suspicion_levels[j];
-                if(susp > best_susp){
-                    best_susp = susp;
-                    best_target = j;
-                }
-            }
-        }
-
-        players[i].firm_suspicion_target = (best_susp >= firm_suspicion_threshold) ? best_target : -1;
+        UpdateFirmSuspicionTarget(i);
 
         if(players[i].is_werewolf){
             players[i].gossip = ambiguous_gossip[ambig_dist(rng)];
@@ -677,19 +665,7 @@ void WerewolfGame::ApplyAnnouncementEffects(int announcer_idx, int target_idx, b
             players[i].suspicion_levels[target_idx] =
                 std::clamp(players[i].suspicion_levels[target_idx], 0.0, 1.0);
         }
-        int best_target = -1;
-        double best_susp = 0.0;
-        for(int j = 0; j < num_players; ++j){
-            if(j != i && players[j].is_alive){
-                double susp = players[i].suspicion_levels[j];
-                if(susp > best_susp){
-                    best_susp = susp;
-                    best_target = j;
-                }
-            }
-        }
-        players[i].firm_suspicion_target =
-            (best_susp >= firm_suspicion_threshold) ? best_target : -1;
+        UpdateFirmSuspicionTarget(i);
     }
 
     if(target_idx != announcer_idx && players[target_idx].is_alive){
@@ -699,19 +675,7 @@ void WerewolfGame::ApplyAnnouncementEffects(int announcer_idx, int target_idx, b
                 accused_werewolf_suspicion_delta : accused_innocent_suspicion_delta;
             it->second = std::clamp(it->second + accused_delta, 0.0, 1.0);
 
-            int best_target = -1;
-            double best_susp = 0.0;
-            for(int j = 0; j < num_players; ++j){
-                if(j != target_idx && players[j].is_alive){
-                    double susp = players[target_idx].suspicion_levels[j];
-                    if(susp > best_susp){
-                        best_susp = susp;
-                        best_target = j;
-                    }
-                }
-            }
-            players[target_idx].firm_suspicion_target =
-                (best_susp >= firm_suspicion_threshold) ? best_target : -1;
+            UpdateFirmSuspicionTarget(target_idx);
         }
     }
 }
@@ -1041,6 +1005,13 @@ void WerewolfGame::UpdateSuspicions(int observer_idx, int responder_idx, int que
         suspicion_changes.push_back(change);
     }
 
+    UpdateFirmSuspicionTarget(observer_idx);
+}
+
+void WerewolfGame::UpdateFirmSuspicionTarget(int observer_idx){
+    if(observer_idx < 0 || observer_idx >= num_players) return;
+    if(!players[observer_idx].is_alive) return;
+
     int best_target = -1;
     double best_susp = 0.0;
     for(int i = 0; i < num_players; ++i){
@@ -1052,6 +1023,7 @@ void WerewolfGame::UpdateSuspicions(int observer_idx, int responder_idx, int que
             }
         }
     }
+
     players[observer_idx].firm_suspicion_target =
         (best_susp >= firm_suspicion_threshold) ? best_target : -1;
 }
@@ -1127,19 +1099,7 @@ void WerewolfGame::ProcessVoting(){
                     }
                 }
 
-                int best_target = -1;
-                double best_susp = 0.0;
-                for(int j = 0; j < num_players; ++j){
-                    if(j != i && players[j].is_alive){
-                        double susp = players[i].suspicion_levels[j];
-                        if(susp > best_susp){
-                            best_susp = susp;
-                            best_target = j;
-                        }
-                    }
-                }
-                players[i].firm_suspicion_target =
-                    (best_susp >= firm_suspicion_threshold) ? best_target : -1;
+                UpdateFirmSuspicionTarget(i);
             }
         }
     }else{
@@ -1416,7 +1376,7 @@ bool WerewolfGame::Display(bool &enabled){
         if(players[i].was_lynched){
             if(phase == game_phase_t::VoteResults && last_eliminated == i){
                 lynch_progress = static_cast<float>(
-                    std::clamp(phase_timer / lynch_indicator_fade_time, 0.0, 1.0));
+                    std::clamp(phase_timer / elimination_indicator_fade_time, 0.0, 1.0));
             }else{
                 lynch_progress = 1.0f;
             }
@@ -1424,7 +1384,7 @@ bool WerewolfGame::Display(bool &enabled){
         if(players[i].was_attacked){
             if(phase == game_phase_t::VoteResults && last_attacked == i && last_attack_round == round_number){
                 double delay = (last_eliminated >= 0) ? attack_indicator_delay : 0.0;
-                double attack_raw = (phase_timer - delay) / attack_indicator_fade_time;
+                double attack_raw = (phase_timer - delay) / elimination_indicator_fade_time;
                 attack_progress = static_cast<float>(std::clamp(attack_raw, 0.0, 1.0));
             }else{
                 attack_progress = 1.0f;
