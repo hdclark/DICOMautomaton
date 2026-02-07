@@ -677,7 +677,10 @@ void WerewolfGame::CalculatePlayerPosition(int player_idx, float& angle, float& 
         int other_idx = (player_idx < human_player_idx) ? player_idx : player_idx - 1;
         int num_others = num_players - 1;
         float arc_span = ai_arc_end - ai_arc_start;
-        angle = ai_arc_start + (static_cast<float>(other_idx) / static_cast<float>(num_others - 1)) * arc_span - static_cast<float>(pi/2);
+        // Guard against division by zero when only 1 AI player
+        float position_ratio = (num_others > 1) ? 
+            static_cast<float>(other_idx) / static_cast<float>(num_others - 1) : 0.5f;
+        angle = ai_arc_start + position_ratio * arc_span - static_cast<float>(pi/2);
         radius = circle_radius;
     }
 }
@@ -850,8 +853,14 @@ bool WerewolfGame::Display(bool &enabled){
     if(!current_message.empty() && !current_speaker.empty()){
         // Find speaker position
         for(int i = 0; i < num_players; ++i){
-            if(players[i].persona.name.find(current_speaker) != std::string::npos ||
-               current_speaker.find(players[i].persona.name.substr(0, players[i].persona.name.find(' '))) != std::string::npos){
+            // Extract first name from persona for matching
+            const std::string& full_name = players[i].persona.name;
+            size_t space_pos = full_name.find(' ');
+            std::string first_name = (space_pos != std::string::npos) ? 
+                full_name.substr(0, space_pos) : full_name;
+            
+            if(full_name.find(current_speaker) != std::string::npos ||
+               current_speaker.find(first_name) != std::string::npos){
                 float angle;
                 float radius;
                 CalculatePlayerPosition(i, angle, radius);
