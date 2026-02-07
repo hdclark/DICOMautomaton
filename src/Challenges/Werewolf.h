@@ -243,6 +243,8 @@ class WerewolfGame {
     static inline const ImVec4 warning_text_color = ImVec4(1.0f, 0.5f, 0.5f, 1.0f);
     static inline const ImVec4 success_text_color = ImVec4(0.3f, 1.0f, 0.3f, 1.0f);
     static inline const ImVec4 night_attack_text_color = ImVec4(0.7f, 0.6f, 1.0f, 1.0f);
+    static inline const ImVec4 suspicion_increase_color = role_werewolf_text_color;
+    static inline const ImVec4 suspicion_decrease_color = success_text_color;
 
     static constexpr ImU32 background_color = IM_COL32(20, 25, 35, 255);
     static constexpr ImU32 monolith_human_color = IM_COL32(100, 120, 140, 255);

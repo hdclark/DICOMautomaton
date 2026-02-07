@@ -1424,7 +1424,7 @@ bool WerewolfGame::Display(bool &enabled){
             }
             oss << change.delta;
 
-            ImVec4 color = (change.delta >= 0.0) ? role_werewolf_text_color : success_text_color;
+            ImVec4 color = (change.delta >= 0.0) ? suspicion_increase_color : suspicion_decrease_color;
             color.w *= alpha;
             draw_list->AddText(text_pos, ImGui::ColorConvertFloat4ToU32(color), oss.str().c_str());
         }
