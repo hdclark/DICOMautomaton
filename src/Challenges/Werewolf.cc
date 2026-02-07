@@ -66,6 +66,7 @@ void WerewolfGame::Reset(){
     current_player_turn = 0;
     human_player_idx = 0;
     werewolf_idx = -1;
+    seer_idx = -1;
     game_over = false;
     townspeople_won = false;
     
@@ -73,6 +74,8 @@ void WerewolfGame::Reset(){
     selected_question = -1;
     selected_response = -1;
     selected_announcement_target = -1;
+    selected_attack_target = -1;
+    selected_seer_target = -1;
     hovered_player = -1;
     active_asker_idx = -1;
     active_target_idx = -1;
@@ -452,6 +455,7 @@ void WerewolfGame::AssignRoles(){
         player.persona = persona;
         player.is_alive = true;
         player.is_werewolf = false;
+        player.is_seer = false;
         player.is_human = (assigned_count == 0);  // First player is human
         player.was_lynched = false;
         player.was_attacked = false;
@@ -496,6 +500,7 @@ void WerewolfGame::AssignRoles(){
             player.persona = persona;
             player.is_alive = true;
             player.is_werewolf = false;
+            player.is_seer = false;
             player.is_human = (assigned_count == 0);
             player.was_lynched = false;
             player.was_attacked = false;
@@ -520,6 +525,21 @@ void WerewolfGame::AssignRoles(){
     std::uniform_int_distribution<int> wolf_dist(0, num_players - 1);
     werewolf_idx = wolf_dist(rng);
     players[werewolf_idx].is_werewolf = true;
+
+    // Randomly assign seer to a townsperson
+    seer_idx = -1;
+    std::vector<int> seer_candidates;
+    seer_candidates.reserve(num_players);
+    for(int i = 0; i < num_players; ++i){
+        if(!players[i].is_werewolf){
+            seer_candidates.push_back(i);
+        }
+    }
+    if(!seer_candidates.empty()){
+        std::uniform_int_distribution<int> seer_dist(0, static_cast<int>(seer_candidates.size()) - 1);
+        seer_idx = seer_candidates[seer_dist(rng)];
+        players[seer_idx].is_seer = true;
+    }
     
     human_player_idx = 0;
     
@@ -533,6 +553,8 @@ void WerewolfGame::StartRound(){
     current_player_turn = 0;
     selected_response = -1;
     selected_announcement_target = -1;
+    selected_attack_target = -1;
+    selected_seer_target = -1;
     active_asker_idx = -1;
     active_target_idx = -1;
     last_attacked = -1;
@@ -692,8 +714,13 @@ std::string WerewolfGame::BuildAnnouncementText(int announcer_idx, int target_id
         "Something about %s feels off.",
         "Keep an eye on %s.",
         "I can't ignore the way %s acts.",
-        "Maybe we should question %s next."
+        "Maybe we should question %s next.",
+        "I am the seer, and I have seen that %s is the werewolf!"
     };
+
+    if(players[announcer_idx].is_seer){
+        town_templates.push_back("I am the seer, and I have seen that %s is the werewolf!");
+    }
 
     const auto& templates = players[announcer_idx].is_werewolf ? wolf_templates : town_templates;
     std::uniform_int_distribution<size_t> dist(0, templates.size() - 1);
@@ -713,9 +740,12 @@ void WerewolfGame::ApplyAnnouncementEffects(int announcer_idx, int target_idx, b
     for(int i = 0; i < num_players; ++i){
         if(i == announcer_idx || i == target_idx || !players[i].is_alive) continue;
         if(use_dist(rng) < 0.55){
+            double before = players[i].suspicion_levels[target_idx];
             players[i].suspicion_levels[target_idx] += delta;
             players[i].suspicion_levels[target_idx] =
                 std::clamp(players[i].suspicion_levels[target_idx], 0.0, 1.0);
+            double actual_delta = players[i].suspicion_levels[target_idx] - before;
+            QueueSuspicionChange(i, target_idx, actual_delta, ai_message_display_time);
         }
         UpdateFirmSuspicionTarget(i);
     }
@@ -723,19 +753,116 @@ void WerewolfGame::ApplyAnnouncementEffects(int announcer_idx, int target_idx, b
     if(target_idx != announcer_idx && players[target_idx].is_alive){
         auto it = players[target_idx].suspicion_levels.find(announcer_idx);
         if(it != players[target_idx].suspicion_levels.end()){
+            double before = it->second;
             double accused_delta = players[target_idx].is_werewolf ?
                 accused_werewolf_suspicion_delta : accused_innocent_suspicion_delta;
             it->second = std::clamp(it->second + accused_delta, 0.0, 1.0);
+            double actual_delta = it->second - before;
+            QueueSuspicionChange(target_idx, announcer_idx, actual_delta, ai_message_display_time);
 
             UpdateFirmSuspicionTarget(target_idx);
         }
     }
 }
 
-void WerewolfGame::ResolveWerewolfAttack(){
+int WerewolfGame::AISelectSeerTarget(int seer_idx){
+    if(seer_idx < 0 || seer_idx >= num_players) return -1;
+
+    std::vector<int> candidates;
+    std::vector<double> weights;
+    for(int i = 0; i < num_players; ++i){
+        if(i == seer_idx || !players[i].is_alive) continue;
+        candidates.push_back(i);
+        auto it = players[seer_idx].suspicion_levels.find(i);
+        double susp = (it != players[seer_idx].suspicion_levels.end()) ? it->second : 0.0;
+        weights.push_back(0.1 + susp);
+    }
+
+    if(candidates.empty()) return -1;
+    std::discrete_distribution<int> dist(weights.begin(), weights.end());
+    return candidates[dist(rng)];
+}
+
+void WerewolfGame::ResolveSeerVision(int seer_idx, int target_idx, bool reveal_to_player){
+    if(seer_idx < 0 || seer_idx >= num_players) return;
+    if(target_idx < 0 || target_idx >= num_players) return;
+    if(!players[target_idx].is_alive) return;
+
+    bool is_werewolf = players[target_idx].is_werewolf;
+    players[seer_idx].suspicion_levels[target_idx] = is_werewolf ? 1.0 : 0.0;
+    UpdateFirmSuspicionTarget(seer_idx);
+
+    if(reveal_to_player){
+        std::ostringstream oss;
+        if(is_werewolf){
+            oss << "Your vision reveals that " << players[target_idx].persona.name
+                << " IS the werewolf!";
+        }else{
+            oss << "Your vision reveals that " << players[target_idx].persona.name
+                << " is not the werewolf.";
+        }
+        current_speaker = players[seer_idx].persona.name;
+        current_message = oss.str();
+        current_message_kind = speech_kind_t::Announcement;
+        LogEvent(oss.str());
+    }
+}
+
+void WerewolfGame::ProceedAfterWerewolfAttack(){
+    if(seer_idx < 0 || seer_idx >= num_players || !players[seer_idx].is_alive){
+        phase = game_phase_t::VoteResults;
+        phase_timer = 0.0;
+        return;
+    }
+
+    if(players[seer_idx].is_human){
+        selected_seer_target = -1;
+        phase = game_phase_t::SelectSeerTarget;
+        phase_timer = 0.0;
+        return;
+    }
+
+    int target = AISelectSeerTarget(seer_idx);
+    if(target >= 0){
+        ResolveSeerVision(seer_idx, target, false);
+    }
+
+    phase = game_phase_t::VoteResults;
+    phase_timer = 0.0;
+}
+
+void WerewolfGame::AdjustSuspicionsAfterAttack(int attacked_idx){
+    if(attacked_idx < 0 || attacked_idx >= num_players) return;
+    for(int i = 0; i < num_players; ++i){
+        if(i == attacked_idx || !players[i].is_alive) continue;
+        auto it = players[i].suspicion_levels.find(attacked_idx);
+        if(it == players[i].suspicion_levels.end()) continue;
+        it->second = 0.0;
+        UpdateFirmSuspicionTarget(i);
+    }
+}
+
+void WerewolfGame::ResolveWerewolfAttack(int forced_target, bool force_skip){
     last_attacked = -1;
     if(werewolf_idx < 0 || werewolf_idx >= num_players) return;
     if(!players[werewolf_idx].is_alive) return;
+
+    if(force_skip){
+        LogEvent("The werewolf did not attack this round.");
+        return;
+    }
+
+    if(forced_target >= 0){
+        if(forced_target >= num_players) return;
+        if(!players[forced_target].is_alive) return;
+        if(players[forced_target].is_werewolf) return;
+        EliminatePlayer(forced_target, true);
+        last_attacked = forced_target;
+        last_attack_round = round_number;
+        AdjustSuspicionsAfterAttack(forced_target);
+        LogEvent(players[forced_target].persona.name + " was attacked during the night.");
+        return;
+    }
 
     std::uniform_real_distribution<double> skip_dist(0.0, 1.0);
     if(skip_dist(rng) < werewolf_skip_attack_probability){
@@ -757,6 +884,7 @@ void WerewolfGame::ResolveWerewolfAttack(){
     EliminatePlayer(target, true);
     last_attacked = target;
     last_attack_round = round_number;
+    AdjustSuspicionsAfterAttack(target);
     LogEvent(players[target].persona.name + " was attacked during the night.");
 }
 
@@ -851,7 +979,7 @@ void WerewolfGame::ProcessAITurn(){
         // Update suspicions for all observers
         for(int i = 0; i < num_players; ++i){
             if(players[i].is_alive && i != target){
-                UpdateSuspicions(i, target, question, response);
+                UpdateSuspicions(i, target, question, response, 2.0 * ai_message_display_time);
             }
         }
         RecordExchange(asker, target, question, response);
@@ -1026,7 +1154,24 @@ int WerewolfGame::AISelectVoteTarget(int voter_idx){
     }
 }
 
-void WerewolfGame::UpdateSuspicions(int observer_idx, int responder_idx, int question_idx, int response_idx){
+void WerewolfGame::QueueSuspicionChange(int observer_idx, int responder_idx, double delta, double display_delay){
+    if(observer_idx < 0 || observer_idx >= num_players) return;
+    if(responder_idx < 0 || responder_idx >= num_players) return;
+    if(std::abs(delta) <= 0.0001) return;
+
+    suspicion_change_t change;
+    change.observer_idx = observer_idx;
+    change.responder_idx = responder_idx;
+    change.delta = delta;
+//    change.timestamp = std::chrono::steady_clock::now()
+//        + std::chrono::duration<double>(display_delay);
+    std::chrono::milliseconds display_delay_ms( static_cast<long int>(display_delay * 1000.0) );
+    change.timestamp = std::chrono::steady_clock::now() + display_delay_ms;
+    suspicion_changes.push_back(change);
+}
+
+void WerewolfGame::UpdateSuspicions(int observer_idx, int responder_idx, int question_idx, int response_idx,
+                                    double display_delay){
     if(observer_idx == responder_idx) return;
     if(observer_idx < 0 || observer_idx >= num_players) return;
     if(response_idx < 0 || response_idx >= static_cast<int>(all_responses.size())) return;
@@ -1048,13 +1193,8 @@ void WerewolfGame::UpdateSuspicions(int observer_idx, int responder_idx, int que
         std::clamp(players[observer_idx].suspicion_levels[responder_idx], 0.0, 1.0);
 
     double actual_delta = players[observer_idx].suspicion_levels[responder_idx] - before;
-    if(std::abs(actual_delta) > 0.0001 && players[observer_idx].is_alive && players[responder_idx].is_alive){
-        suspicion_change_t change;
-        change.observer_idx = observer_idx;
-        change.responder_idx = responder_idx;
-        change.delta = actual_delta;
-        change.timestamp = std::chrono::steady_clock::now();
-        suspicion_changes.push_back(change);
+    if(players[observer_idx].is_alive && players[responder_idx].is_alive){
+        QueueSuspicionChange(observer_idx, responder_idx, actual_delta, display_delay);
     }
 
     UpdateFirmSuspicionTarget(observer_idx);
@@ -1158,10 +1298,25 @@ void WerewolfGame::ProcessVoting(){
         LogEvent("The vote was tied. No one was lynched.");
     }
 
+    if(last_eliminated >= 0 && last_was_werewolf){
+        // Clear any prior night attack markers when the werewolf is eliminated.
+        last_attacked = -1;
+        last_attack_round = -1;
+        phase = game_phase_t::VoteResults;
+        phase_timer = 0.0;
+        return;
+    }
+
+    if(werewolf_idx >= 0 && werewolf_idx < num_players &&
+       players[werewolf_idx].is_human && players[werewolf_idx].is_alive){
+        selected_attack_target = -1;
+        phase = game_phase_t::SelectAttack;
+        phase_timer = 0.0;
+        return;
+    }
+
     ResolveWerewolfAttack();
-    
-    phase = game_phase_t::VoteResults;
-    phase_timer = 0.0;
+    ProceedAfterWerewolfAttack();
 }
 
 void WerewolfGame::EliminatePlayer(int idx, bool attacked){
@@ -1309,6 +1464,95 @@ void WerewolfGame::DrawSpeechBubble(ImDrawList* draw_list, ImVec2 anchor, const 
                        monolith_name_color, text.c_str());
 }
 
+std::string WerewolfGame::GetPhaseName(game_phase_t phase) const {
+    std::string phase_str;
+    switch(phase){
+        case game_phase_t::Intro:{
+            phase_str = "Intro";
+            break;
+        }
+        
+        case game_phase_t::AssignRoles:{
+            phase_str = "AssignRoles";
+            break;
+        }
+        
+        case game_phase_t::Discussion:{
+            phase_str = "Discussion";
+            break;
+        }
+        
+        case game_phase_t::SelectQuestion:{
+            phase_str = "SelectQuestion";
+            break;
+        }
+        
+        case game_phase_t::WaitingResponse:{
+            phase_str = "WaitingResponse";
+            break;
+        }
+
+        case game_phase_t::SelectResponse:{
+            phase_str = "SelectResponse";
+            break;
+        }
+
+        case game_phase_t::SelectAnnouncement:{
+            phase_str = "SelectAnnouncement";
+            break;
+        }
+
+        case game_phase_t::Announcement:{
+            phase_str = "Announcement";
+            break;
+        }
+        
+        case game_phase_t::AIQuestion:{
+            phase_str = "AIQuestion";
+            break;
+        }
+        
+        case game_phase_t::AIResponse:{
+            phase_str = "AIResponse";
+            break;
+        }
+        
+        case game_phase_t::Voting:{
+            phase_str = "Voting";
+            break;
+        }
+
+        case game_phase_t::SelectAttack:{
+            phase_str = "SelectAttack";
+            break;
+        }
+
+        case game_phase_t::SelectSeerTarget:{
+            phase_str = "SelectSeerTarget";
+            break;
+        }
+
+        case game_phase_t::SeerVision:{
+            phase_str = "SeerVision";
+            break;
+        }
+        
+        case game_phase_t::VoteResults:{
+            phase_str = "VoteResults";
+            break;
+        }
+        
+        case game_phase_t::GameOver:{
+            phase_str = "GameOver";
+            break;
+        }
+        
+        default:
+            break;
+    }
+    return phase_str;
+}
+
 bool WerewolfGame::Display(bool &enabled){
     if(!enabled) return true;
     
@@ -1449,6 +1693,7 @@ bool WerewolfGame::Display(bool &enabled){
         for(const auto& change : suspicion_changes){
             if(change.responder_idx < 0 || change.responder_idx >= num_players) continue;
             double age = std::chrono::duration<double>(t_now - change.timestamp).count();
+            if(age < 0.0) continue;
             if(age > suspicion_change_duration) continue;
             float progress = static_cast<float>(age / suspicion_change_duration);
             float alpha = 1.0f - progress;
@@ -1475,6 +1720,29 @@ bool WerewolfGame::Display(bool &enabled){
             ImVec4 color = (change.delta >= 0.0) ? suspicion_increase_color : suspicion_decrease_color;
             color.w *= alpha;
             draw_list->AddText(text_pos, ImGui::ColorConvertFloat4ToU32(color), oss.str().c_str());
+        }
+    }
+
+    if(phase == game_phase_t::VoteResults){
+        std::string center_text;
+        if(phase_timer <= ai_message_display_time){
+            if(last_eliminated >= 0){
+                center_text = players[last_eliminated].persona.name + " was lynched.";
+            }else{
+                center_text = "Tie. No one was lynched.";
+            }
+        }else if(phase_timer <= 2.0 * ai_message_display_time){
+            if(last_attacked >= 0){
+                center_text = players[last_attacked].persona.name + " was attacked during the night.";
+            }else{
+                center_text = "No one was attacked during the night.";
+            }
+        }
+
+        if(!center_text.empty()){
+            ImVec2 text_size = ImGui::CalcTextSize(center_text.c_str());
+            ImVec2 text_pos(center.x - text_size.x / 2.0f, center.y - text_size.y / 2.0f);
+            draw_list->AddText(text_pos, monolith_name_color, center_text.c_str());
         }
     }
 
@@ -1530,11 +1798,18 @@ bool WerewolfGame::Display(bool &enabled){
     ImGui::Dummy(ImVec2(canvas_size.x,
                  canvas_size.y - interaction_panel_height + 80));
 
+    {
+        std::string phase_str = GetPhaseName(phase);
+        ImGui::Text("Current phase: %s", phase_str.c_str());
+    }
     ImGui::Text("Game Log");
+
     ImGui::BeginChild("GameLog", ImVec2(0, interaction_panel_height/8.0f), true);
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.60f, 0.60f, 0.60f, 1.0f));
     for(const auto& entry : event_log){
         ImGui::TextWrapped("%s", entry.c_str());
     }
+    ImGui::PopStyleColor();
     if(log_scroll_to_bottom){
         ImGui::SetScrollHereY(1.0f);
         log_scroll_to_bottom = false;
@@ -1556,6 +1831,18 @@ bool WerewolfGame::Display(bool &enabled){
                  hovered_player != human_player_idx &&
                  players[hovered_player].is_alive){
             votes[human_player_idx] = hovered_player;
+        }else if(phase == game_phase_t::SelectAttack &&
+                 players[human_player_idx].is_alive &&
+                 players[human_player_idx].is_werewolf &&
+                 hovered_player != human_player_idx &&
+                 players[hovered_player].is_alive){
+            selected_attack_target = hovered_player;
+        }else if(phase == game_phase_t::SelectSeerTarget &&
+                 players[human_player_idx].is_alive &&
+                 players[human_player_idx].is_seer &&
+                 hovered_player != human_player_idx &&
+                 players[hovered_player].is_alive){
+            selected_seer_target = hovered_player;
         }
     }
     
@@ -1580,6 +1867,10 @@ bool WerewolfGame::Display(bool &enabled){
             }else{
                 ImGui::TextColored(role_town_text_color, "You are a TOWNSPERSON.");
                 ImGui::TextWrapped("Find the werewolf among us! Ask questions and vote wisely.");
+                if(players[human_player_idx].is_seer){
+                    ImGui::TextColored(role_town_text_color, "You are the SEER.");
+                    ImGui::TextWrapped("Each night, you will glimpse the truth about one player.");
+                }
             }
             
             ImGui::Text("  Your persona: %s, the %s", 
@@ -1683,7 +1974,9 @@ bool WerewolfGame::Display(bool &enabled){
                     // Update all players' suspicions
                     for(int i = 0; i < num_players; ++i){
                         if(players[i].is_alive && i != selected_target){
-                            UpdateSuspicions(i, selected_target, selected_question, response);
+                            UpdateSuspicions(i, selected_target, selected_question, response,
+//                                             2.0 * ai_message_display_time);
+                                             0.5 * ai_message_display_time);
                         }
                     }
                     RecordExchange(human_player_idx, selected_target, selected_question, response);
@@ -1789,7 +2082,9 @@ bool WerewolfGame::Display(bool &enabled){
 
                     for(int i = 0; i < num_players; ++i){
                         if(players[i].is_alive && i != human_player_idx){
-                            UpdateSuspicions(i, human_player_idx, pending_question_idx, selected_response);
+                            UpdateSuspicions(i, human_player_idx, pending_question_idx, selected_response,
+//                                             2.0 * ai_message_display_time);
+                                             0.0);
                         }
                     }
                     RecordExchange(pending_asker_idx, human_player_idx, pending_question_idx, selected_response);
@@ -1958,6 +2253,85 @@ bool WerewolfGame::Display(bool &enabled){
             }
             break;
         }
+
+        case game_phase_t::SelectAttack:{
+            ImGui::Text("Night falls...");
+
+            if(!players[human_player_idx].is_alive || !players[human_player_idx].is_werewolf){
+                ResolveWerewolfAttack();
+                ProceedAfterWerewolfAttack();
+                break;
+            }
+
+            ImGui::TextColored(instruction_text_color,
+                               "Click on a player to attack, or choose to skip.");
+
+            if(selected_attack_target >= 0){
+                ImGui::Text("Selected target: %s",
+                            players[selected_attack_target].persona.name.c_str());
+                if(ImGui::Button("Attack")){
+                    ResolveWerewolfAttack(selected_attack_target);
+                    selected_attack_target = -1;
+                    ProceedAfterWerewolfAttack();
+                }
+                ImGui::SameLine();
+            }
+            if(ImGui::Button("Skip Attack")){
+                ResolveWerewolfAttack(-1, true);
+                selected_attack_target = -1;
+                ProceedAfterWerewolfAttack();
+            }
+            break;
+        }
+
+        case game_phase_t::SelectSeerTarget:{
+            if(!players[human_player_idx].is_alive || !players[human_player_idx].is_seer){
+                phase = game_phase_t::VoteResults;
+                phase_timer = 0.0;
+                break;
+            }
+
+            int available_targets = 0;
+            for(int i = 0; i < num_players; ++i){
+                if(i != human_player_idx && players[i].is_alive){
+                    available_targets++;
+                }
+            }
+            if(available_targets == 0){
+                phase = game_phase_t::VoteResults;
+                phase_timer = 0.0;
+                break;
+            }
+
+            ImGui::Text("Seer Vision");
+            ImGui::TextColored(instruction_text_color,
+                               "Click on a player to reveal their true nature.");
+
+            if(selected_seer_target >= 0){
+                ImGui::Text("Vision target: %s",
+                            players[selected_seer_target].persona.name.c_str());
+                if(ImGui::Button("Use Vision")){
+                    ResolveSeerVision(human_player_idx, selected_seer_target, true);
+                    selected_seer_target = -1;
+                    phase = game_phase_t::SeerVision;
+                    phase_timer = 0.0;
+                }
+            }
+            break;
+        }
+
+        case game_phase_t::SeerVision:{
+            ImGui::Text("Seer Vision:");
+            ImGui::TextWrapped("%s", current_message.c_str());
+
+            if(phase_timer > ai_message_display_time){
+                current_message.clear();
+                current_speaker.clear();
+                phase = game_phase_t::VoteResults;
+                phase_timer = 0.0;
+            }
+            break;
+        }
         
         case game_phase_t::VoteResults:{
             ImGui::Text("Vote Results:");
@@ -1970,11 +2344,13 @@ bool WerewolfGame::Display(bool &enabled){
                 }
             }
             
+            ImGui::BeginChild("VoteResults", ImVec2(0, interaction_panel_height/8.0f), true);
             for(int i = 0; i < num_players; ++i){
                 if(players[i].is_alive && vote_counts[i] > 0){
-                    ImGui::Text("  %s: %d votes", players[i].persona.name.c_str(), vote_counts[i]);
+                    ImGui::TextWrapped("  %s: %d votes", players[i].persona.name.c_str(), vote_counts[i]);
                 }
             }
+            ImGui::EndChild();
             
             if(last_eliminated >= 0){
                 ImGui::Separator();
