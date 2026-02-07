@@ -99,6 +99,7 @@
 #include "../Challenges/TacticalStealth.h"
 #include "../Challenges/TowerDefence.h"
 #include "../Challenges/RotatingCube.h"
+#include "../Challenges/Werewolf.h"
 
 
 #include "SDL_Viewer.h"
@@ -1039,6 +1040,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_maze_explorer_enabled = false;
         bool view_lawn_game_enabled = false;
         bool view_tactical_stealth_enabled = false;
+        bool view_werewolf_enabled = false;
 
         bool view_guides_enabled = true;
     } view_toggles;
@@ -1614,6 +1616,9 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // Tactical Stealth game state.
     TacticalStealthGame tsg_game;
+
+    // Werewolf game state.
+    WerewolfGame ww_game;
 
     // Guide state.
     std::shared_timed_mutex guide_mutex;
@@ -4730,6 +4735,13 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(!tsg_game.Display(view_toggles.view_tactical_stealth_enabled)) break;
         }catch(const std::exception &e){
             YLOGWARN("Exception in tsg_game.Display(): '" << e.what() << "'");
+            throw;
+        }
+
+        try{
+            if(!ww_game.Display(view_toggles.view_werewolf_enabled)) break;
+        }catch(const std::exception &e){
+            YLOGWARN("Exception in ww_game.Display(): '" << e.what() << "'");
             throw;
         }
 
@@ -9357,6 +9369,12 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(ImGui::Button("Stealth")){
                 view_toggles.view_tactical_stealth_enabled = true;
                 tsg_game.Reset();
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Werewolf")){
+                view_toggles.view_werewolf_enabled = true;
+                ww_game.Reset();
                 ImGui::CloseCurrentPopup();
             }
 
