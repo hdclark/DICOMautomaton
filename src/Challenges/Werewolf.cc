@@ -707,8 +707,7 @@ std::string WerewolfGame::BuildAnnouncementText(int announcer_idx, int target_id
         "I'm sure %s is the werewolf.",
         "We should watch %s closely.",
         "I believe %s is our culprit.",
-        "My vote is leaning toward %s.",
-        "I am the seer, and I have seen that %s is the werewolf!"
+        "My vote is leaning toward %s."
     };
 
     std::vector<std::string> wolf_templates = {
@@ -718,6 +717,10 @@ std::string WerewolfGame::BuildAnnouncementText(int announcer_idx, int target_id
         "Maybe we should question %s next.",
         "I am the seer, and I have seen that %s is the werewolf!"
     };
+
+    if(players[announcer_idx].is_seer){
+        town_templates.push_back("I am the seer, and I have seen that %s is the werewolf!");
+    }
 
     const auto& templates = players[announcer_idx].is_werewolf ? wolf_templates : town_templates;
     std::uniform_int_distribution<size_t> dist(0, templates.size() - 1);
@@ -1291,6 +1294,14 @@ void WerewolfGame::ProcessVoting(){
         }
     }else{
         LogEvent("The vote was tied. No one was lynched.");
+    }
+
+    if(last_eliminated >= 0 && last_was_werewolf){
+        last_attacked = -1;
+        last_attack_round = -1;
+        phase = game_phase_t::VoteResults;
+        phase_timer = 0.0;
+        return;
     }
 
     if(werewolf_idx >= 0 && werewolf_idx < num_players &&
