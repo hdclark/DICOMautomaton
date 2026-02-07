@@ -708,7 +708,7 @@ std::string WerewolfGame::BuildAnnouncementText(int announcer_idx, int target_id
         "We should watch %s closely.",
         "I believe %s is our culprit.",
         "My vote is leaning toward %s.",
-        "I am the seer, and I have seen that %s is the Werewolf!"
+        "I am the seer, and I have seen that %s is the werewolf!"
     };
 
     std::vector<std::string> wolf_templates = {
@@ -716,7 +716,7 @@ std::string WerewolfGame::BuildAnnouncementText(int announcer_idx, int target_id
         "Keep an eye on %s.",
         "I can't ignore the way %s acts.",
         "Maybe we should question %s next.",
-        "I am the seer, and I have seen that %s is the Werewolf!"
+        "I am the seer, and I have seen that %s is the werewolf!"
     };
 
     const auto& templates = players[announcer_idx].is_werewolf ? wolf_templates : town_templates;
