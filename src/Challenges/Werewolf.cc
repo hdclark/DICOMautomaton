@@ -27,14 +27,21 @@ namespace {
     constexpr float human_player_angle = static_cast<float>(pi / 2.0);  // Bottom center of circle
     constexpr float ai_arc_start = static_cast<float>(-5.0 * pi / 6.0); // -150 degrees
     constexpr float ai_arc_end = static_cast<float>(5.0 * pi / 6.0);    // +150 degrees
-    constexpr double firm_suspicion_threshold = 0.75;
+    constexpr double suspicion_threshold_for_announcement = 0.75;
     constexpr double announcement_influence = 0.12;
     constexpr double announcement_acceptance_chance = 0.65;
     constexpr double ai_skip_question_chance = 0.15;
-    constexpr double ai_skip_announcement_chance = 0.2;
-    constexpr double gossip_vote_hint_threshold = 0.35;
+    constexpr double ai_announcement_probability = 0.8;
+    constexpr double gossip_vote_hint_probability = 0.65;
+    constexpr size_t min_compatible_responses = 2;
+    constexpr size_t format_token_length = sizeof("%s") - 1;
+    constexpr float inactive_player_dim_factor = 0.35f;
+    constexpr int auto_circle_segments = 0;
+    constexpr float attack_indicator_height_factor = 0.5f;
+    constexpr float attack_indicator_width_factor = 0.6f;
+    constexpr float attack_indicator_thickness = 2.5f;
 
-    std::string FirstName(const std::string& full_name){
+    std::string ExtractFirstName(const std::string& full_name){
         size_t space_pos = full_name.find(' ');
         if(space_pos != std::string::npos){
             return full_name.substr(0, space_pos);
@@ -42,7 +49,7 @@ namespace {
         return full_name;
     }
 
-    ImU32 DimColor(ImU32 color, float factor){
+    ImU32 DimColorBy(ImU32 color, float factor){
         ImVec4 rgba = ImGui::ColorConvertU32ToFloat4(color);
         rgba.x *= factor;
         rgba.y *= factor;
@@ -387,7 +394,7 @@ void WerewolfGame::InitializeResponseCompatibility(){
                 responses.push_back(static_cast<int>(r_idx));
             }
         }
-        if(responses.size() < 2){
+        if(responses.size() < min_compatible_responses){
             responses.clear();
             for(size_t r_idx = 0; r_idx < all_responses.size(); ++r_idx){
                 responses.push_back(static_cast<int>(r_idx));
@@ -464,16 +471,16 @@ void WerewolfGame::AssignRoundGossip(){
         "The truth will surface eventually."
     };
 
-    std::uniform_int_distribution<size_t> town_dist(0, town_gossip.size() - 1);
-    std::uniform_int_distribution<size_t> ambiguous_dist(0, ambiguous_gossip.size() - 1);
+    std::uniform_int_distribution<int> town_dist(0, static_cast<int>(town_gossip.size()) - 1);
+    std::uniform_int_distribution<int> ambiguous_dist(0, static_cast<int>(ambiguous_gossip.size()) - 1);
     std::uniform_real_distribution<double> hint_chance(0.0, 1.0);
 
     for(int i = 0; i < num_players; ++i){
-        players[i].round_gossip.clear();
         if(!players[i].is_alive) continue;
+        players[i].round_gossip.clear();
 
         if(players[i].is_werewolf){
-            players[i].round_gossip = ambiguous_gossip[ambiguous_dist(rng)];
+            players[i].round_gossip = ambiguous_gossip[static_cast<size_t>(ambiguous_dist(rng))];
             continue;
         }
 
@@ -489,11 +496,11 @@ void WerewolfGame::AssignRoundGossip(){
             }
         }
 
-        if(top_suspect >= 0 && max_susp >= firm_suspicion_threshold &&
-           hint_chance(rng) > gossip_vote_hint_threshold){
+        if(top_suspect >= 0 && max_susp >= suspicion_threshold_for_announcement &&
+           hint_chance(rng) < gossip_vote_hint_probability){
             players[i].round_gossip = "I'm leaning toward voting for " + players[top_suspect].persona.name + ".";
         }else{
-            players[i].round_gossip = town_gossip[town_dist(rng)];
+            players[i].round_gossip = town_gossip[static_cast<size_t>(town_dist(rng))];
         }
     }
 }
@@ -522,17 +529,17 @@ void WerewolfGame::QueueAnnouncement(int announcer_idx, int target_idx, bool is_
         "Let's not trust %s too quickly."
     };
 
-    std::uniform_int_distribution<size_t> town_dist(0, town_announcements.size() - 1);
-    std::uniform_int_distribution<size_t> deflect_dist(0, deflection_announcements.size() - 1);
+    std::uniform_int_distribution<int> town_dist(0, static_cast<int>(town_announcements.size()) - 1);
+    std::uniform_int_distribution<int> deflect_dist(0, static_cast<int>(deflection_announcements.size()) - 1);
 
     const std::string& target_name = players[target_idx].persona.name;
-    std::string tmpl = is_deflection ? deflection_announcements[deflect_dist(rng)]
-                                     : town_announcements[town_dist(rng)];
+    std::string tmpl = is_deflection
+        ? deflection_announcements[static_cast<size_t>(deflect_dist(rng))]
+        : town_announcements[static_cast<size_t>(town_dist(rng))];
     size_t pos = tmpl.find("%s");
-    std::string text = tmpl;
-    if(pos != std::string::npos){
-        text = tmpl.substr(0, pos) + target_name + tmpl.substr(pos + 2);
-    }
+    std::string text = (pos != std::string::npos)
+        ? tmpl.substr(0, pos) + target_name + tmpl.substr(pos + format_token_length)
+        : tmpl;
 
     announcement_t announcement;
     announcement.announcer_idx = announcer_idx;
@@ -569,10 +576,9 @@ void WerewolfGame::ApplyAnnouncement(const announcement_t& announcement){
     for(int i = 0; i < num_players; ++i){
         if(!players[i].is_alive || i == announcement.announcer_idx) continue;
         if(accept_dist(rng) > announcement_acceptance_chance) continue;
-
-        players[i].suspicion_levels[announcement.target_idx] += announcement_influence;
-        players[i].suspicion_levels[announcement.target_idx] =
-            std::clamp(players[i].suspicion_levels[announcement.target_idx], 0.0, 1.0);
+        auto it = players[i].suspicion_levels.find(announcement.target_idx);
+        if(it == players[i].suspicion_levels.end()) continue;
+        it->second = std::clamp(it->second + announcement_influence, 0.0, 1.0);
     }
 }
 
@@ -684,7 +690,7 @@ void WerewolfGame::ProcessAITurn(){
 
     std::uniform_real_distribution<double> skip_dist(0.0, 1.0);
 
-    while(true){
+    while(current_player_turn < num_players){
         // Find next alive AI player
         while(current_player_turn < num_players){
             if(players[current_player_turn].is_alive && 
@@ -694,14 +700,9 @@ void WerewolfGame::ProcessAITurn(){
             }
             current_player_turn++;
         }
-        
+
         if(current_player_turn >= num_players){
-            // All players have asked, move to voting
-            phase = game_phase_t::Voting;
-            phase_timer = 0.0;
-            current_message.clear();
-            current_speaker.clear();
-            return;
+            break;
         }
         
         int asker = current_player_turn;
@@ -728,6 +729,9 @@ void WerewolfGame::ProcessAITurn(){
 
         if(target != human_player_idx){
             response = AISelectResponse(target, question, players[target].is_werewolf);
+            if(response < 0 && !all_responses.empty()){
+                response = 0;
+            }
             pending_response_idx = response;
 
             // Record exchange
@@ -750,11 +754,10 @@ void WerewolfGame::ProcessAITurn(){
                     UpdateSuspicions(i, target, question, response);
                 }
             }
-
         }
 
         if(players[asker].is_werewolf && !players[asker].announced_this_round &&
-           skip_dist(rng) > ai_skip_announcement_chance){
+           skip_dist(rng) < ai_announcement_probability){
             int deflect_target = SelectDeflectionTarget(asker);
             if(deflect_target >= 0){
                 QueueAnnouncement(asker, deflect_target, true);
@@ -770,8 +773,14 @@ void WerewolfGame::ProcessAITurn(){
         // Move to AIQuestion phase to show question, then AIResponse for response
         phase = game_phase_t::AIQuestion;
         phase_timer = 0.0;
-        break;
+        return;
     }
+
+    // All players have asked, move to voting
+    phase = game_phase_t::Voting;
+    phase_timer = 0.0;
+    current_message.clear();
+    current_speaker.clear();
 }
 
 int WerewolfGame::AISelectQuestionTarget(int asker_idx){
@@ -820,7 +829,7 @@ int WerewolfGame::AISelectResponse(int responder_idx, int question_idx, bool as_
     
     std::vector<double> weights;
     const auto& candidates = GetCompatibleResponses(question_idx);
-    if(candidates.empty()) return 0;
+    if(candidates.empty()) return -1;
 
     for(int idx : candidates){
         double w = 1.0;
@@ -921,9 +930,9 @@ void WerewolfGame::UpdateSuspicions(int observer_idx, int responder_idx, int que
     double updated = players[observer_idx].suspicion_levels[responder_idx];
     if(!players[observer_idx].is_human && players[observer_idx].is_alive &&
        !players[observer_idx].announced_this_round &&
-       prior < firm_suspicion_threshold && updated >= firm_suspicion_threshold){
+       prior < suspicion_threshold_for_announcement && updated >= suspicion_threshold_for_announcement){
         std::uniform_real_distribution<double> announce_dist(0.0, 1.0);
-        if(announce_dist(rng) > ai_skip_announcement_chance){
+        if(announce_dist(rng) < ai_announcement_probability){
             bool is_deflection = players[observer_idx].is_werewolf;
             int announcement_target = responder_idx;
             if(is_deflection){
@@ -1106,8 +1115,9 @@ void WerewolfGame::DrawMonolith(ImDrawList* draw_list, ImVec2 center, float heig
             draw_list->AddLine(ImVec2(center.x - width, center.y - height - 5),
                                ImVec2(center.x + width, center.y + 5),
                                attack_color, 3.0f);
-            draw_list->AddCircle(ImVec2(center.x, center.y - height * 0.5f),
-                                 width * 0.6f, attack_color, 0, 2.5f);
+            draw_list->AddCircle(ImVec2(center.x, center.y - height * attack_indicator_height_factor),
+                                 width * attack_indicator_width_factor, attack_color,
+                                 auto_circle_segments, attack_indicator_thickness);
         }else{
             // Draw X over it
             draw_list->AddLine(ImVec2(center.x - width, center.y - height - 10),
@@ -1147,6 +1157,14 @@ void WerewolfGame::DrawSpeechBubble(ImDrawList* draw_list, ImVec2 anchor, const 
     // Text
     draw_list->AddText(ImVec2(bubble_pos.x + padding, bubble_pos.y + padding),
                        IM_COL32(255, 255, 255, 255), text.c_str());
+}
+
+bool WerewolfGame::IsQuestionPhase(game_phase_t phase) const{
+    return phase == game_phase_t::AIQuestion ||
+           phase == game_phase_t::AIResponse ||
+           phase == game_phase_t::WaitingResponse ||
+           phase == game_phase_t::SelectResponse ||
+           phase == game_phase_t::HumanResponse;
 }
 
 bool WerewolfGame::Display(bool &enabled){
@@ -1200,11 +1218,7 @@ bool WerewolfGame::Display(bool &enabled){
     hovered_player = -1;
     ImVec2 mouse_pos = ImGui::GetMousePos();
     bool dim_others = (active_question_asker_idx >= 0 && active_question_target_idx >= 0) &&
-                      (phase == game_phase_t::AIQuestion ||
-                       phase == game_phase_t::AIResponse ||
-                       phase == game_phase_t::WaitingResponse ||
-                       phase == game_phase_t::SelectResponse ||
-                       phase == game_phase_t::HumanResponse);
+                      IsQuestionPhase(phase);
     
     for(int i = 0; i < num_players; ++i){
         float angle;
@@ -1236,14 +1250,14 @@ bool WerewolfGame::Display(bool &enabled){
         bool is_selected = (i == selected_target) || (i == hovered_player);
         bool is_active_question = dim_others && (i == active_question_asker_idx || i == active_question_target_idx);
         if(dim_others && !is_active_question){
-            color = DimColor(color, 0.35f);
+            color = DimColorBy(color, inactive_player_dim_factor);
         }
         if(is_active_question){
             is_selected = true;
         }
         
         // Get first name only for display
-        std::string display_name = FirstName(players[i].persona.name);
+        std::string display_name = ExtractFirstName(players[i].persona.name);
         
         DrawMonolith(draw_list, pos, monolith_height, monolith_width, color, 
                      display_name, is_selected, !players[i].is_alive, players[i].eliminated_by_attack);
@@ -1404,6 +1418,9 @@ bool WerewolfGame::Display(bool &enabled){
                     // Get response
                     int response = AISelectResponse(selected_target, selected_question, 
                                                     players[selected_target].is_werewolf);
+                    if(response < 0 && !all_responses.empty()){
+                        response = 0;
+                    }
                     
                     // Record exchange
                     exchange_t ex;

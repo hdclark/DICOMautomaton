@@ -8,9 +8,9 @@
 #include <chrono>
 #include <algorithm>
 #include <cmath>
+#include <deque>
 #include <map>
 #include <set>
-#include <deque>
 
 #include "YgorMath.h"
 #include "YgorMisc.h"
@@ -160,6 +160,7 @@ class WerewolfGame {
     void DrawMonolith(ImDrawList* draw_list, ImVec2 center, float height, float width, 
                       ImU32 color, const std::string& name, bool is_selected, bool is_dead, bool was_attacked);
     void DrawSpeechBubble(ImDrawList* draw_list, ImVec2 anchor, const std::string& text, bool is_question);
+    bool IsQuestionPhase(game_phase_t phase) const;
     
     // Game state
     game_phase_t phase = game_phase_t::Intro;
