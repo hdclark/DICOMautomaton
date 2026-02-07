@@ -66,11 +66,16 @@ class WerewolfGame {
         bool is_werewolf = false;
         bool is_alive = true;
         bool is_human = false;  // The player controlled by the user
+        bool was_lynched = false;
+        bool was_attacked = false;
         
         // AI state
         std::map<int, double> suspicion_levels;  // Index -> suspicion (0.0 to 1.0)
         int questions_asked_this_round = 0;
         int selected_vote_target = -1;
+        int firm_suspicion_target = -1;
+        bool made_announcement_this_round = false;
+        std::string gossip;
         
         // Animation state
         double bob_phase = 0.0;
@@ -93,6 +98,9 @@ class WerewolfGame {
         Discussion,         // Players ask questions
         SelectQuestion,     // Human player selecting a question
         WaitingResponse,    // Waiting for AI response (with pause)
+        SelectResponse,     // Human player selecting a response
+        SelectAnnouncement, // Human player selecting announcement
+        Announcement,       // Showing an announcement
         AIQuestion,         // Showing AI's question
         AIResponse,         // Showing AI's response
         Voting,             // Players vote
@@ -101,18 +109,29 @@ class WerewolfGame {
         GameOver            // Show winner
     };
 
+    enum class speech_kind_t {
+        Question,
+        Response,
+        Announcement
+    };
+
     // Initialize persona data
     void InitializePersonas();
     void InitializeQuestions();
     void InitializeResponses();
+    void BuildResponseCompatibility();
     
     // Game logic
     void AssignRoles();
     void StartRound();
     void ProcessAITurn();
     void ProcessVoting();
-    void EliminatePlayer(int idx);
+    void EliminatePlayer(int idx, bool attacked);
+    void ResolveWerewolfAttack();
     bool CheckGameOver();
+    void AssignRoundGossip();
+    void LogEvent(const std::string& entry);
+    void RecordExchange(int asker_idx, int target_idx, int question_idx, int response_idx);
     
     // AI logic
     int AISelectQuestionTarget(int asker_idx);
@@ -120,12 +139,15 @@ class WerewolfGame {
     int AISelectResponse(int responder_idx, int question_idx, bool as_werewolf);
     int AISelectVoteTarget(int voter_idx);
     void UpdateSuspicions(int observer_idx, int responder_idx, int question_idx, int response_idx);
+    int SelectAnnouncementTarget(int announcer_idx);
+    std::string BuildAnnouncementText(int announcer_idx, int target_idx);
+    void ApplyAnnouncementEffects(int announcer_idx, int target_idx, bool is_werewolf);
     
     // Rendering helpers
     void CalculatePlayerPosition(int player_idx, float& angle, float& radius) const;
     void DrawMonolith(ImDrawList* draw_list, ImVec2 center, float height, float width, 
-                      ImU32 color, const std::string& name, bool is_selected, bool is_dead);
-    void DrawSpeechBubble(ImDrawList* draw_list, ImVec2 anchor, const std::string& text, bool is_question);
+                      ImU32 color, const std::string& name, bool is_selected, bool is_lynched, bool is_attacked);
+    void DrawSpeechBubble(ImDrawList* draw_list, ImVec2 anchor, const std::string& text, speech_kind_t kind);
     
     // Game state
     game_phase_t phase = game_phase_t::Intro;
@@ -139,6 +161,8 @@ class WerewolfGame {
     // Selection state
     int selected_target = -1;
     int selected_question = -1;
+    int selected_response = -1;
+    int selected_announcement_target = -1;
     int hovered_player = -1;
     
     // Animation state
@@ -148,9 +172,12 @@ class WerewolfGame {
     bool waiting_for_pause = false;
     std::string current_message;
     std::string current_speaker;
-    bool current_message_is_question = true;  // Track if current bubble is question or response
+    speech_kind_t current_message_kind = speech_kind_t::Question;
+    bool waiting_response_from_human_question = false;
     
     // Pending AI exchange (for showing question then response)
+    int pending_asker_idx = -1;
+    int pending_question_idx = -1;
     int pending_target_idx = -1;
     int pending_response_idx = -1;
     
@@ -158,14 +185,19 @@ class WerewolfGame {
     std::vector<int> votes;  // votes[i] = who player i voted for
     int last_eliminated = -1;
     bool last_was_werewolf = false;
+    int last_attacked = -1;
     
     // Data
     std::vector<player_t> players;
     std::vector<exchange_t> round_exchanges;
     std::vector<question_t> all_questions;
     std::vector<response_t> all_responses;
+    std::vector<std::vector<int>> compatible_responses;
+    std::vector<std::string> event_log;
     std::vector<persona_t> persona_pool;
     std::vector<int> available_question_indices;  // Questions available this round
+    int active_asker_idx = -1;
+    int active_target_idx = -1;
     
     // Configuration
     static constexpr int num_players = 7;  // Including human player
@@ -182,6 +214,7 @@ class WerewolfGame {
     static constexpr float monolith_height = 80.0f;
     static constexpr float monolith_width = 40.0f;
     static constexpr float circle_radius = 200.0f;
+    static constexpr size_t max_log_entries = 200;
     
     // Time tracking
     std::chrono::time_point<std::chrono::steady_clock> t_updated;
