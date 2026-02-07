@@ -695,7 +695,8 @@ void WerewolfGame::ApplyAnnouncementEffects(int announcer_idx, int target_idx, b
     if(target_idx != announcer_idx && players[target_idx].is_alive){
         auto it = players[target_idx].suspicion_levels.find(announcer_idx);
         if(it != players[target_idx].suspicion_levels.end()){
-            double accused_delta = players[target_idx].is_werewolf ? -0.05 : 0.08;
+            double accused_delta = players[target_idx].is_werewolf ?
+                accused_werewolf_suspicion_delta : accused_innocent_suspicion_delta;
             it->second = std::clamp(it->second + accused_delta, 0.0, 1.0);
 
             int best_target = -1;
@@ -721,7 +722,7 @@ void WerewolfGame::ResolveWerewolfAttack(){
     if(!players[werewolf_idx].is_alive) return;
 
     std::uniform_real_distribution<double> skip_dist(0.0, 1.0);
-    if(skip_dist(rng) < 0.18){
+    if(skip_dist(rng) < werewolf_skip_attack_probability){
         LogEvent("The werewolf did not attack this round.");
         return;
     }
@@ -1449,7 +1450,9 @@ bool WerewolfGame::Display(bool &enabled){
             float progress = static_cast<float>(age / suspicion_change_duration);
             float alpha = 1.0f - progress;
             float rise = progress * 20.0f;
-            float offset_x = static_cast<float>((change.observer_idx % 3) - 1) * suspicion_change_horizontal_offset;
+            int offset_slot = change.observer_idx % suspicion_change_offset_slots;
+            float offset_x = static_cast<float>(offset_slot - (suspicion_change_offset_slots / 2)) *
+                             suspicion_change_horizontal_offset;
 
             ImVec2 base = player_positions[change.responder_idx];
             ImVec2 text_pos(base.x + offset_x, base.y - monolith_height - 25.0f - rise);

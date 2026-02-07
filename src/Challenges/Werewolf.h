@@ -221,6 +221,9 @@ class WerewolfGame {
     static constexpr double attack_indicator_delay = 1.4;
     static constexpr double attack_indicator_fade_time = 1.1;
     static constexpr double suspicion_change_duration = 2.2;
+    static constexpr double werewolf_skip_attack_probability = 0.18;
+    static constexpr double accused_innocent_suspicion_delta = 0.08;
+    static constexpr double accused_werewolf_suspicion_delta = -0.05;
     static constexpr size_t max_questions_per_player = 5;
     
     // Display parameters
@@ -232,6 +235,7 @@ class WerewolfGame {
     static constexpr float circle_radius = 180.0f;
     static constexpr size_t max_log_entries = 1000;
     static constexpr float suspicion_change_horizontal_offset = 8.0f;
+    static constexpr int suspicion_change_offset_slots = 3;
 
     static inline const ImVec4 instruction_text_color = ImVec4(1.0f, 1.0f, 0.3f, 1.0f);
     static inline const ImVec4 role_werewolf_text_color = ImVec4(1.0f, 0.3f, 0.3f, 1.0f);
