@@ -36,6 +36,12 @@ namespace {
         }
         return full_name;
     }
+
+    ImU32 ApplyAlpha(ImU32 base_color, float alpha){
+        ImVec4 rgba = ImGui::ColorConvertU32ToFloat4(base_color);
+        rgba.w *= std::clamp(alpha, 0.0f, 1.0f);
+        return ImGui::ColorConvertFloat4ToU32(rgba);
+    }
 }
 
 WerewolfGame::WerewolfGame(){
@@ -1205,15 +1211,9 @@ void WerewolfGame::DrawMonolith(ImDrawList* draw_list, ImVec2 center, float heig
     ImVec2 text_pos(center.x - text_size.x/2, center.y + 5);
     draw_list->AddText(text_pos, monolith_name_color, name.c_str());
 
-    auto apply_alpha = [](ImU32 base_color, float alpha){
-        ImVec4 rgba = ImGui::ColorConvertU32ToFloat4(base_color);
-        rgba.w *= std::clamp(alpha, 0.0f, 1.0f);
-        return ImGui::ColorConvertFloat4ToU32(rgba);
-    };
-
     if(lynch_progress > 0.0f){
         // Draw X over it for lynching
-        ImU32 line_color = apply_alpha(lynch_line_color, lynch_progress);
+        ImU32 line_color = ApplyAlpha(lynch_line_color, lynch_progress);
         draw_list->AddLine(ImVec2(center.x - width, center.y - height - 10),
                           ImVec2(center.x + width, center.y + 10),
                           line_color, 3.0f);
@@ -1223,7 +1223,7 @@ void WerewolfGame::DrawMonolith(ImDrawList* draw_list, ImVec2 center, float heig
     }
     if(attack_progress > 0.0f){
         // Draw slashes for werewolf attack
-        ImU32 line_color = apply_alpha(attack_line_color, attack_progress);
+        ImU32 line_color = ApplyAlpha(attack_line_color, attack_progress);
         draw_list->AddLine(ImVec2(center.x - width, center.y - height + 10),
                           ImVec2(center.x + width, center.y - 10),
                           line_color, 3.0f);
@@ -1403,14 +1403,15 @@ bool WerewolfGame::Display(bool &enabled){
     }
 
     if(!suspicion_changes.empty()){
-        for(const auto& change : suspicion_changes){
+        for(size_t idx = 0; idx < suspicion_changes.size(); ++idx){
+            const auto& change = suspicion_changes[idx];
             if(change.responder_idx < 0 || change.responder_idx >= num_players) continue;
             double age = std::chrono::duration<double>(t_now - change.timestamp).count();
             if(age > suspicion_change_duration) continue;
             float progress = static_cast<float>(age / suspicion_change_duration);
             float alpha = 1.0f - progress;
             float rise = progress * 20.0f;
-            int offset_slot = change.observer_idx % suspicion_change_offset_slots;
+            int offset_slot = static_cast<int>(idx % suspicion_change_offset_slots);
             float offset_x = static_cast<float>(offset_slot - (suspicion_change_offset_slots / 2)) *
                              suspicion_change_horizontal_offset;
 
@@ -1418,7 +1419,7 @@ bool WerewolfGame::Display(bool &enabled){
             ImVec2 text_pos(base.x + offset_x, base.y - monolith_height - 25.0f - rise);
 
             std::ostringstream oss;
-            oss << std::fixed << std::setprecision(2);
+            oss << "Δ" << std::fixed << std::setprecision(2);
             if(change.delta >= 0.0){
                 oss << "+";
             }
