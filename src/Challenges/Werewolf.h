@@ -206,7 +206,7 @@ class WerewolfGame {
     std::vector<std::vector<int>> compatible_responses;
     std::vector<std::string> event_log;
     std::vector<persona_t> persona_pool;
-    std::vector<std::vector<int>> question_options;
+    std::vector<std::vector<int>> per_player_question_options;
     std::vector<suspicion_change_t> suspicion_changes;
     int active_asker_idx = -1;
     int active_target_idx = -1;
@@ -234,6 +234,7 @@ class WerewolfGame {
     static constexpr float monolith_width = 35.0f;
     static constexpr float circle_radius = 180.0f;
     static constexpr size_t max_log_entries = 1000;
+    // Controls horizontal spacing for suspicion-change annotations above a player.
     static constexpr float suspicion_change_horizontal_offset = 8.0f;
     static constexpr int suspicion_change_offset_slots = 3;
 

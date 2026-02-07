@@ -57,7 +57,7 @@ void WerewolfGame::Reset(){
     players.clear();
     round_exchanges.clear();
     votes.clear();
-    question_options.clear();
+    per_player_question_options.clear();
     event_log.clear();
     suspicion_changes.clear();
     
@@ -473,6 +473,48 @@ void WerewolfGame::AssignRoles(){
 
         ++assigned_count;
     }
+
+    if(assigned_count < num_players){
+        for(size_t idx = 0; idx < persona_indices.size() && assigned_count < num_players; ++idx){
+            persona_t persona = persona_pool[persona_indices[idx]];
+            std::string first_name = ExtractFirstName(persona.name);
+            std::string unique_first = first_name;
+            int suffix = 2;
+            while(used_first_names.count(unique_first) > 0){
+                unique_first = first_name + "-" + std::to_string(suffix++);
+            }
+
+            if(unique_first != first_name){
+                size_t space_pos = persona.name.find(' ');
+                std::string last_name = (space_pos != std::string::npos) ? persona.name.substr(space_pos) : "";
+                persona.name = unique_first + last_name;
+            }
+
+            used_first_names.insert(unique_first);
+
+            player_t& player = players[assigned_count];
+            player.persona = persona;
+            player.is_alive = true;
+            player.is_werewolf = false;
+            player.is_human = (assigned_count == 0);
+            player.was_lynched = false;
+            player.was_attacked = false;
+            player.firm_suspicion_target = -1;
+            player.made_announcement_this_round = false;
+            player.gossip.clear();
+            player.suspicion_levels.clear();
+
+            for(int j = 0; j < num_players; ++j){
+                if(assigned_count != j){
+                    player.suspicion_levels[j] = 0.15;
+                }
+            }
+
+            std::uniform_real_distribution<double> phase_dist(0.0, 2.0 * pi);
+            player.bob_phase = phase_dist(rng);
+            ++assigned_count;
+        }
+    }
     
     // Randomly assign werewolf
     std::uniform_int_distribution<int> wolf_dist(0, num_players - 1);
@@ -504,15 +546,15 @@ void WerewolfGame::StartRound(){
     }
 
     // Select available questions for each player this round (random subset)
-    question_options.clear();
-    question_options.resize(num_players);
+    per_player_question_options.clear();
+    per_player_question_options.resize(num_players);
     std::vector<int> all_indices(all_questions.size());
     std::iota(all_indices.begin(), all_indices.end(), 0);
     for(int i = 0; i < num_players; ++i){
-        question_options[i] = all_indices;
-        std::shuffle(question_options[i].begin(), question_options[i].end(), rng);
-        if(question_options[i].size() > max_questions_per_player){
-            question_options[i].resize(max_questions_per_player);
+        per_player_question_options[i] = all_indices;
+        std::shuffle(per_player_question_options[i].begin(), per_player_question_options[i].end(), rng);
+        if(per_player_question_options[i].size() > max_questions_per_player){
+            per_player_question_options[i].resize(max_questions_per_player);
         }
     }
 
@@ -860,8 +902,8 @@ int WerewolfGame::AISelectQuestion(int asker_idx, int target_idx){
     const std::vector<int>* options = nullptr;
     std::vector<int> fallback_questions;
     if(asker_idx >= 0 && asker_idx < num_players &&
-       asker_idx < static_cast<int>(question_options.size())){
-        options = &question_options[asker_idx];
+       asker_idx < static_cast<int>(per_player_question_options.size())){
+        options = &per_player_question_options[asker_idx];
     }
     if(options == nullptr || options->empty()){
         fallback_questions.resize(all_questions.size());
@@ -1403,15 +1445,16 @@ bool WerewolfGame::Display(bool &enabled){
     }
 
     if(!suspicion_changes.empty()){
-        for(size_t idx = 0; idx < suspicion_changes.size(); ++idx){
-            const auto& change = suspicion_changes[idx];
+        std::vector<int> responder_offsets(num_players, 0);
+        for(const auto& change : suspicion_changes){
             if(change.responder_idx < 0 || change.responder_idx >= num_players) continue;
             double age = std::chrono::duration<double>(t_now - change.timestamp).count();
             if(age > suspicion_change_duration) continue;
             float progress = static_cast<float>(age / suspicion_change_duration);
             float alpha = 1.0f - progress;
             float rise = progress * 20.0f;
-            int offset_slot = static_cast<int>(idx % suspicion_change_offset_slots);
+            int offset_slot = responder_offsets[change.responder_idx] % suspicion_change_offset_slots;
+            responder_offsets[change.responder_idx] += 1;
             float offset_x = static_cast<float>(offset_slot - (suspicion_change_offset_slots / 2)) *
                              suspicion_change_horizontal_offset;
 
@@ -1594,8 +1637,8 @@ bool WerewolfGame::Display(bool &enabled){
             const std::vector<int>* options = nullptr;
             std::vector<int> fallback_questions;
             if(human_player_idx >= 0 && human_player_idx < num_players &&
-               human_player_idx < static_cast<int>(question_options.size())){
-                options = &question_options[human_player_idx];
+               human_player_idx < static_cast<int>(per_player_question_options.size())){
+                options = &per_player_question_options[human_player_idx];
             }
             if(options == nullptr || options->empty()){
                 fallback_questions.resize(all_questions.size());
