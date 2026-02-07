@@ -27,6 +27,27 @@ namespace {
     constexpr float human_player_angle = static_cast<float>(pi / 2.0);  // Bottom center of circle
     constexpr float ai_arc_start = static_cast<float>(-5.0 * pi / 6.0); // -150 degrees
     constexpr float ai_arc_end = static_cast<float>(5.0 * pi / 6.0);    // +150 degrees
+    constexpr double firm_suspicion_threshold = 0.75;
+    constexpr double announcement_influence = 0.12;
+    constexpr double announcement_acceptance_chance = 0.65;
+    constexpr double ai_skip_question_chance = 0.15;
+    constexpr double ai_skip_announcement_chance = 0.2;
+
+    std::string FirstName(const std::string& full_name){
+        size_t space_pos = full_name.find(' ');
+        if(space_pos != std::string::npos){
+            return full_name.substr(0, space_pos);
+        }
+        return full_name;
+    }
+
+    ImU32 DimColor(ImU32 color, float factor){
+        ImVec4 rgba = ImGui::ColorConvertU32ToFloat4(color);
+        rgba.x *= factor;
+        rgba.y *= factor;
+        rgba.z *= factor;
+        return ImGui::ColorConvertFloat4ToU32(rgba);
+    }
 }
 
 WerewolfGame::WerewolfGame(){
@@ -34,6 +55,7 @@ WerewolfGame::WerewolfGame(){
     InitializePersonas();
     InitializeQuestions();
     InitializeResponses();
+    InitializeResponseCompatibility();
     Reset();
 }
 
@@ -42,6 +64,9 @@ void WerewolfGame::Reset(){
     round_exchanges.clear();
     votes.clear();
     available_question_indices.clear();
+    announcement_queue.clear();
+    event_log.clear();
+    log_scroll_to_bottom = false;
     
     phase = game_phase_t::Intro;
     round_number = 0;
@@ -53,6 +78,8 @@ void WerewolfGame::Reset(){
     
     selected_target = -1;
     selected_question = -1;
+    selected_response = -1;
+    selected_announcement_target = -1;
     hovered_player = -1;
     
     anim_timer = 0.0;
@@ -61,12 +88,24 @@ void WerewolfGame::Reset(){
     waiting_for_pause = false;
     current_message.clear();
     current_speaker.clear();
+    current_message_is_question = true;
+    announcement_applied = false;
+    active_question_asker_idx = -1;
+    active_question_target_idx = -1;
     
     last_eliminated = -1;
     last_was_werewolf = false;
+    last_attacked = -1;
+    attack_processed = false;
+    pending_asker_idx = -1;
+    pending_question_idx = -1;
+    pending_target_idx = -1;
+    pending_response_idx = -1;
     
     // Assign personas to players
     AssignRoles();
+
+    AddLogEvent("A new game begins.");
     
     t_updated = std::chrono::steady_clock::now();
 }
@@ -275,60 +314,278 @@ void WerewolfGame::InitializeQuestions(){
 
 void WerewolfGame::InitializeResponses(){
     all_responses.clear();
+
+    auto add_response = [&](const std::string& text, bool is_deflection, double suspicion_delta, response_tone_t tone){
+        all_responses.push_back({text, is_deflection, suspicion_delta, tone});
+    };
     
     // Honest/straightforward responses
-    all_responses.push_back({"I have nothing to hide.", false, -0.1});
-    all_responses.push_back({"I'm just a simple townsperson.", false, -0.05});
-    all_responses.push_back({"You can trust me completely.", false, -0.05});
-    all_responses.push_back({"I've lived here peacefully for years.", false, -0.1});
-    all_responses.push_back({"I was at home, as always.", false, -0.05});
-    all_responses.push_back({"I'm as worried as everyone else.", false, -0.05});
-    all_responses.push_back({"I hope we find the werewolf soon.", false, -0.1});
-    all_responses.push_back({"My conscience is clear.", false, -0.1});
-    all_responses.push_back({"I've done nothing wrong.", false, -0.05});
-    all_responses.push_back({"I'm just tired, that's all.", false, 0.0});
+    add_response("I have nothing to hide.", false, -0.1, response_tone_t::Honest);
+    add_response("I'm just a simple townsperson.", false, -0.05, response_tone_t::Honest);
+    add_response("You can trust me completely.", false, -0.05, response_tone_t::Honest);
+    add_response("I've lived here peacefully for years.", false, -0.1, response_tone_t::Honest);
+    add_response("I was at home, as always.", false, -0.05, response_tone_t::Honest);
+    add_response("I'm as worried as everyone else.", false, -0.05, response_tone_t::Honest);
+    add_response("I hope we find the werewolf soon.", false, -0.1, response_tone_t::Honest);
+    add_response("My conscience is clear.", false, -0.1, response_tone_t::Honest);
+    add_response("I've done nothing wrong.", false, -0.05, response_tone_t::Honest);
+    add_response("I'm just tired, that's all.", false, 0.0, response_tone_t::Honest);
     
     // Deflecting responses
-    all_responses.push_back({"Why are you asking me?", true, 0.1});
-    all_responses.push_back({"That's none of your business.", true, 0.15});
-    all_responses.push_back({"Maybe YOU should answer that.", true, 0.2});
-    all_responses.push_back({"I don't have to explain myself.", true, 0.15});
-    all_responses.push_back({"What about everyone else?", true, 0.1});
-    all_responses.push_back({"Let's focus on someone else.", true, 0.2});
-    all_responses.push_back({"I find your questions suspicious.", true, 0.15});
-    all_responses.push_back({"Perhaps you're deflecting.", true, 0.2});
-    all_responses.push_back({"Look at their behavior instead!", true, 0.15});
-    all_responses.push_back({"I don't trust your motives.", true, 0.1});
+    add_response("Why are you asking me?", true, 0.1, response_tone_t::Deflecting);
+    add_response("That's none of your business.", true, 0.15, response_tone_t::Deflecting);
+    add_response("Maybe YOU should answer that.", true, 0.2, response_tone_t::Deflecting);
+    add_response("I don't have to explain myself.", true, 0.15, response_tone_t::Deflecting);
+    add_response("What about everyone else?", true, 0.1, response_tone_t::Deflecting);
+    add_response("Let's focus on someone else.", true, 0.2, response_tone_t::Deflecting);
+    add_response("I find your questions suspicious.", true, 0.15, response_tone_t::Deflecting);
+    add_response("Perhaps you're deflecting.", true, 0.2, response_tone_t::Deflecting);
+    add_response("Look at their behavior instead!", true, 0.15, response_tone_t::Deflecting);
+    add_response("I don't trust your motives.", true, 0.1, response_tone_t::Deflecting);
     
     // Nervous responses
-    all_responses.push_back({"I... I'm not sure what you mean.", true, 0.1});
-    all_responses.push_back({"W-why would you ask that?", true, 0.15});
-    all_responses.push_back({"I don't remember exactly...", true, 0.1});
-    all_responses.push_back({"It's complicated to explain.", true, 0.1});
-    all_responses.push_back({"Can we talk about this later?", true, 0.2});
-    all_responses.push_back({"I'd rather not say.", true, 0.25});
-    all_responses.push_back({"That's... a difficult question.", true, 0.1});
-    all_responses.push_back({"I need time to think about that.", true, 0.15});
+    add_response("I... I'm not sure what you mean.", true, 0.1, response_tone_t::Nervous);
+    add_response("W-why would you ask that?", true, 0.15, response_tone_t::Nervous);
+    add_response("I don't remember exactly...", true, 0.1, response_tone_t::Nervous);
+    add_response("It's complicated to explain.", true, 0.1, response_tone_t::Nervous);
+    add_response("Can we talk about this later?", true, 0.2, response_tone_t::Nervous);
+    add_response("I'd rather not say.", true, 0.25, response_tone_t::Nervous);
+    add_response("That's... a difficult question.", true, 0.1, response_tone_t::Nervous);
+    add_response("I need time to think about that.", true, 0.15, response_tone_t::Nervous);
     
     // Confident responses
-    all_responses.push_back({"Absolutely! Ask anyone here.", false, -0.15});
-    all_responses.push_back({"I swear on my family's honor.", false, -0.1});
-    all_responses.push_back({"Look into my eyes - I'm honest.", false, -0.1});
-    all_responses.push_back({"I've nothing to fear from truth.", false, -0.15});
-    all_responses.push_back({"My record speaks for itself.", false, -0.1});
-    all_responses.push_back({"Everyone knows I'm trustworthy.", false, -0.1});
-    all_responses.push_back({"I've helped this town for years.", false, -0.1});
-    all_responses.push_back({"My hands are clean.", false, -0.1});
+    add_response("Absolutely! Ask anyone here.", false, -0.15, response_tone_t::Confident);
+    add_response("I swear on my family's honor.", false, -0.1, response_tone_t::Confident);
+    add_response("Look into my eyes - I'm honest.", false, -0.1, response_tone_t::Confident);
+    add_response("I've nothing to fear from truth.", false, -0.15, response_tone_t::Confident);
+    add_response("My record speaks for itself.", false, -0.1, response_tone_t::Confident);
+    add_response("Everyone knows I'm trustworthy.", false, -0.1, response_tone_t::Confident);
+    add_response("I've helped this town for years.", false, -0.1, response_tone_t::Confident);
+    add_response("My hands are clean.", false, -0.1, response_tone_t::Confident);
     
     // Helpful/cooperative responses
-    all_responses.push_back({"I'll help find the real threat.", false, -0.1});
-    all_responses.push_back({"Let's work together on this.", false, -0.1});
-    all_responses.push_back({"I want the werewolf caught too.", false, -0.1});
-    all_responses.push_back({"We must protect each other.", false, -0.05});
-    all_responses.push_back({"Ask me anything you need.", false, -0.15});
-    all_responses.push_back({"I'll answer honestly.", false, -0.1});
-    all_responses.push_back({"For the town's safety, I'll comply.", false, -0.1});
-    all_responses.push_back({"United we stand against evil.", false, -0.05});
+    add_response("I'll help find the real threat.", false, -0.1, response_tone_t::Cooperative);
+    add_response("Let's work together on this.", false, -0.1, response_tone_t::Cooperative);
+    add_response("I want the werewolf caught too.", false, -0.1, response_tone_t::Cooperative);
+    add_response("We must protect each other.", false, -0.05, response_tone_t::Cooperative);
+    add_response("Ask me anything you need.", false, -0.15, response_tone_t::Cooperative);
+    add_response("I'll answer honestly.", false, -0.1, response_tone_t::Cooperative);
+    add_response("For the town's safety, I'll comply.", false, -0.1, response_tone_t::Cooperative);
+    add_response("United we stand against evil.", false, -0.05, response_tone_t::Cooperative);
+}
+
+void WerewolfGame::InitializeResponseCompatibility(){
+    compatible_responses.clear();
+    compatible_responses.resize(all_questions.size());
+
+    for(size_t q_idx = 0; q_idx < all_questions.size(); ++q_idx){
+        auto& responses = compatible_responses[q_idx];
+        responses.clear();
+        for(size_t r_idx = 0; r_idx < all_responses.size(); ++r_idx){
+            if(IsResponseCompatible(static_cast<int>(q_idx), static_cast<int>(r_idx))){
+                responses.push_back(static_cast<int>(r_idx));
+            }
+        }
+        if(responses.size() < 2){
+            responses.clear();
+            for(size_t r_idx = 0; r_idx < all_responses.size(); ++r_idx){
+                responses.push_back(static_cast<int>(r_idx));
+            }
+        }
+    }
+}
+
+bool WerewolfGame::IsResponseCompatible(int question_idx, int response_idx) const{
+    if(question_idx < 0 || question_idx >= static_cast<int>(all_questions.size())) return false;
+    if(response_idx < 0 || response_idx >= static_cast<int>(all_responses.size())) return false;
+
+    const auto& question = all_questions[question_idx];
+    const auto& response = all_responses[response_idx];
+
+    if(question.category == "profession" || question.category == "history"){
+        if(response.tone == response_tone_t::Honest ||
+           response.tone == response_tone_t::Confident ||
+           response.tone == response_tone_t::Cooperative){
+            return true;
+        }
+        if(question.difficulty >= 2 && response.tone == response_tone_t::Nervous){
+            return true;
+        }
+        return false;
+    }
+
+    if(question.category == "personal"){
+        if(response.tone == response_tone_t::Honest ||
+           response.tone == response_tone_t::Confident ||
+           response.tone == response_tone_t::Cooperative ||
+           response.tone == response_tone_t::Nervous){
+            return true;
+        }
+        if(question.difficulty >= 3 && response.tone == response_tone_t::Deflecting){
+            return true;
+        }
+        return false;
+    }
+
+    if(question.category == "accusation"){
+        return true;
+    }
+
+    return true;
+}
+
+const std::vector<int>& WerewolfGame::GetCompatibleResponses(int question_idx) const{
+    static const std::vector<int> empty;
+    if(question_idx < 0 || question_idx >= static_cast<int>(compatible_responses.size())){
+        return empty;
+    }
+    return compatible_responses[question_idx];
+}
+
+void WerewolfGame::AssignRoundGossip(){
+    std::vector<std::string> town_gossip = {
+        "The market was lively this morning.",
+        "I heard the tavern ran out of ale again.",
+        "The woods feel darker than usual.",
+        "The livestock have been restless.",
+        "Someone mentioned strange tracks near the creek.",
+        "The bellringer seems unusually quiet.",
+        "The fog rolled in early today.",
+        "People are keeping their doors barred.",
+        "The baker swore the ovens flickered on their own.",
+        "Everyone seems on edge after sundown."
+    };
+    std::vector<std::string> ambiguous_gossip = {
+        "We should all keep an eye on each other.",
+        "It's hard to know who to trust anymore.",
+        "Anyone could be hiding something in times like this.",
+        "All I know is that fear makes fools of us.",
+        "The truth will surface eventually."
+    };
+
+    std::uniform_int_distribution<size_t> town_dist(0, town_gossip.size() - 1);
+    std::uniform_int_distribution<size_t> ambiguous_dist(0, ambiguous_gossip.size() - 1);
+    std::uniform_real_distribution<double> hint_chance(0.0, 1.0);
+
+    for(int i = 0; i < num_players; ++i){
+        players[i].round_gossip.clear();
+        if(!players[i].is_alive) continue;
+
+        if(players[i].is_werewolf){
+            players[i].round_gossip = ambiguous_gossip[ambiguous_dist(rng)];
+            continue;
+        }
+
+        int top_suspect = -1;
+        double max_susp = 0.0;
+        for(int j = 0; j < num_players; ++j){
+            if(i == j || !players[j].is_alive) continue;
+            auto it = players[i].suspicion_levels.find(j);
+            double susp = (it != players[i].suspicion_levels.end()) ? it->second : 0.0;
+            if(susp > max_susp){
+                max_susp = susp;
+                top_suspect = j;
+            }
+        }
+
+        if(top_suspect >= 0 && max_susp >= firm_suspicion_threshold && hint_chance(rng) > 0.35){
+            players[i].round_gossip = "I'm leaning toward voting for " + players[top_suspect].persona.name + ".";
+        }else{
+            players[i].round_gossip = town_gossip[town_dist(rng)];
+        }
+    }
+}
+
+void WerewolfGame::AddLogEvent(const std::string& entry){
+    event_log.push_back(entry);
+    log_scroll_to_bottom = true;
+}
+
+void WerewolfGame::QueueAnnouncement(int announcer_idx, int target_idx, bool is_deflection){
+    if(announcer_idx < 0 || announcer_idx >= num_players) return;
+    if(target_idx < 0 || target_idx >= num_players) return;
+
+    std::vector<std::string> town_announcements = {
+        "I'm convinced %s is the werewolf.",
+        "I can't shake the feeling about %s.",
+        "All signs point to %s.",
+        "I'd be willing to vote against %s.",
+        "We should focus on %s."
+    };
+    std::vector<std::string> deflection_announcements = {
+        "Something about %s seems off.",
+        "We shouldn't ignore %s.",
+        "I worry that %s is distracting us.",
+        "Keep an eye on %s.",
+        "Let's not trust %s too quickly."
+    };
+
+    std::uniform_int_distribution<size_t> town_dist(0, town_announcements.size() - 1);
+    std::uniform_int_distribution<size_t> deflect_dist(0, deflection_announcements.size() - 1);
+
+    const std::string& target_name = players[target_idx].persona.name;
+    std::string tmpl = is_deflection ? deflection_announcements[deflect_dist(rng)]
+                                     : town_announcements[town_dist(rng)];
+    size_t pos = tmpl.find("%s");
+    std::string text = tmpl;
+    if(pos != std::string::npos){
+        text = tmpl.substr(0, pos) + target_name + tmpl.substr(pos + 2);
+    }
+
+    announcement_t announcement;
+    announcement.announcer_idx = announcer_idx;
+    announcement.target_idx = target_idx;
+    announcement.text = text;
+    announcement.is_deflection = is_deflection;
+
+    announcement_queue.push_back(announcement);
+    AddLogEvent(players[announcer_idx].persona.name + " announced: \"" + text + "\"");
+}
+
+bool WerewolfGame::StartNextAnnouncement(){
+    if(announcement_queue.empty()){
+        return false;
+    }
+
+    active_announcement = announcement_queue.front();
+    announcement_queue.pop_front();
+    current_speaker = players[active_announcement.announcer_idx].persona.name;
+    current_message = active_announcement.text;
+    current_message_is_question = false;
+    announcement_applied = false;
+    phase = game_phase_t::Announcement;
+    phase_timer = 0.0;
+    return true;
+}
+
+void WerewolfGame::ApplyAnnouncement(const announcement_t& announcement){
+    if(announcement.announcer_idx < 0 || announcement.target_idx < 0) return;
+    if(!players[announcement.announcer_idx].is_alive) return;
+
+    std::uniform_real_distribution<double> accept_dist(0.0, 1.0);
+
+    for(int i = 0; i < num_players; ++i){
+        if(!players[i].is_alive || i == announcement.announcer_idx) continue;
+        if(accept_dist(rng) > announcement_acceptance_chance) continue;
+
+        players[i].suspicion_levels[announcement.target_idx] += announcement_influence;
+        players[i].suspicion_levels[announcement.target_idx] =
+            std::clamp(players[i].suspicion_levels[announcement.target_idx], 0.0, 1.0);
+    }
+}
+
+int WerewolfGame::SelectDeflectionTarget(int announcer_idx){
+    std::vector<int> candidates;
+    for(int i = 0; i < num_players; ++i){
+        if(i != announcer_idx && players[i].is_alive && !players[i].is_werewolf){
+            candidates.push_back(i);
+        }
+    }
+    if(candidates.empty()){
+        return -1;
+    }
+    std::uniform_int_distribution<int> dist(0, static_cast<int>(candidates.size()) - 1);
+    return candidates[dist(rng)];
 }
 
 void WerewolfGame::AssignRoles(){
@@ -346,6 +603,9 @@ void WerewolfGame::AssignRoles(){
         players[i].is_alive = true;
         players[i].is_werewolf = false;
         players[i].is_human = (i == 0);  // First player is human
+        players[i].eliminated_by_attack = false;
+        players[i].announced_this_round = false;
+        players[i].round_gossip.clear();
         
         // Initialize suspicion levels
         for(int j = 0; j < num_players; ++j){
@@ -374,11 +634,17 @@ void WerewolfGame::StartRound(){
     round_number++;
     round_exchanges.clear();
     current_player_turn = 0;
+    announcement_queue.clear();
+    last_attacked = -1;
+    attack_processed = false;
+    active_question_asker_idx = -1;
+    active_question_target_idx = -1;
     
     // Reset questions asked this round
     for(auto& p : players){
         p.questions_asked_this_round = 0;
         p.selected_vote_target = -1;
+        p.announced_this_round = false;
     }
     
     // Select available questions for this round (random subset)
@@ -395,12 +661,25 @@ void WerewolfGame::StartRound(){
     
     // Reset votes
     std::fill(votes.begin(), votes.end(), -1);
+
+    AssignRoundGossip();
+
+    {
+        std::ostringstream oss;
+        oss << "Round " << round_number << " begins.";
+        AddLogEvent(oss.str());
+    }
     
     phase = game_phase_t::Discussion;
     phase_timer = 0.0;
 }
 
 void WerewolfGame::ProcessAITurn(){
+    if(!announcement_queue.empty()){
+        StartNextAnnouncement();
+        return;
+    }
+
     // Find next alive AI player
     while(current_player_turn < num_players){
         if(players[current_player_turn].is_alive && 
@@ -421,31 +700,63 @@ void WerewolfGame::ProcessAITurn(){
     }
     
     int asker = current_player_turn;
+    std::uniform_real_distribution<double> skip_dist(0.0, 1.0);
+    if(skip_dist(rng) < ai_skip_question_chance){
+        players[asker].questions_asked_this_round = 1;
+        AddLogEvent(players[asker].persona.name + " skipped asking a question.");
+        current_player_turn++;
+        return;
+    }
+
     int target = AISelectQuestionTarget(asker);
     int question = AISelectQuestion(asker, target);
-    int response = AISelectResponse(target, question, players[target].is_werewolf);
-    
-    // Record exchange
-    exchange_t ex;
-    ex.asker_idx = asker;
-    ex.target_idx = target;
-    ex.question_idx = question;
-    ex.response_idx = response;
-    ex.timestamp = std::chrono::steady_clock::now();
-    round_exchanges.push_back(ex);
-    
-    // Update suspicions for all observers
-    for(int i = 0; i < num_players; ++i){
-        if(players[i].is_alive && i != target){
-            UpdateSuspicions(i, target, question, response);
-        }
-    }
+    int response = -1;
     
     players[asker].questions_asked_this_round = 1;
     
     // Store pending response to show after question
     pending_target_idx = target;
-    pending_response_idx = response;
+    pending_response_idx = -1;
+    pending_asker_idx = asker;
+    pending_question_idx = question;
+    active_question_asker_idx = asker;
+    active_question_target_idx = target;
+
+    if(target != human_player_idx){
+        response = AISelectResponse(target, question, players[target].is_werewolf);
+        pending_response_idx = response;
+
+        // Record exchange
+        exchange_t ex;
+        ex.asker_idx = asker;
+        ex.target_idx = target;
+        ex.question_idx = question;
+        ex.response_idx = response;
+        ex.timestamp = std::chrono::steady_clock::now();
+        round_exchanges.push_back(ex);
+
+        std::string log_entry = players[asker].persona.name + " asked " +
+            players[target].persona.name + ": \"" + all_questions[question].text + "\" -> \"" +
+            all_responses[response].text + "\"";
+        AddLogEvent(log_entry);
+
+        // Update suspicions for all observers
+        for(int i = 0; i < num_players; ++i){
+            if(players[i].is_alive && i != target){
+                UpdateSuspicions(i, target, question, response);
+            }
+        }
+
+    }
+
+    if(players[asker].is_werewolf && !players[asker].announced_this_round &&
+       skip_dist(rng) > ai_skip_announcement_chance){
+        int deflect_target = SelectDeflectionTarget(asker);
+        if(deflect_target >= 0){
+            QueueAnnouncement(asker, deflect_target, true);
+        }
+        players[asker].announced_this_round = true;
+    }
     
     // Show the question first
     current_speaker = players[asker].persona.name;
@@ -502,12 +813,15 @@ int WerewolfGame::AISelectResponse(int responder_idx, int question_idx, bool as_
     // Townspeople respond more honestly
     
     std::vector<double> weights;
-    for(size_t i = 0; i < all_responses.size(); ++i){
+    const auto& candidates = GetCompatibleResponses(question_idx);
+    if(candidates.empty()) return 0;
+
+    for(int idx : candidates){
         double w = 1.0;
         
         if(as_werewolf){
             // Werewolf prefers confident responses but sometimes deflects
-            if(!all_responses[i].is_deflection){
+            if(!all_responses[idx].is_deflection){
                 w *= 2.0;  // Prefer non-deflecting
             }else{
                 w *= 0.5;  // But sometimes deflect (suspicious behavior)
@@ -517,12 +831,12 @@ int WerewolfGame::AISelectResponse(int responder_idx, int question_idx, bool as_
             w *= noise(rng);
         }else{
             // Townsperson responds naturally
-            if(!all_responses[i].is_deflection){
+            if(!all_responses[idx].is_deflection){
                 w *= 3.0;
             }
             // Question difficulty affects nervousness
             if(all_questions[question_idx].difficulty >= 3){
-                if(all_responses[i].is_deflection){
+                if(all_responses[idx].is_deflection){
                     w *= 1.5;  // Hard questions make even innocents nervous
                 }
             }
@@ -532,7 +846,7 @@ int WerewolfGame::AISelectResponse(int responder_idx, int question_idx, bool as_
     }
     
     std::discrete_distribution<int> dist(weights.begin(), weights.end());
-    return dist(rng);
+    return candidates[dist(rng)];
 }
 
 int WerewolfGame::AISelectVoteTarget(int voter_idx){
@@ -584,6 +898,7 @@ void WerewolfGame::UpdateSuspicions(int observer_idx, int responder_idx, int que
     if(observer_idx < 0 || observer_idx >= num_players) return;
     if(response_idx < 0 || response_idx >= static_cast<int>(all_responses.size())) return;
     
+    double prior = players[observer_idx].suspicion_levels[responder_idx];
     double delta = all_responses[response_idx].suspicion_delta;
     
     // Question difficulty affects impact
@@ -596,6 +911,24 @@ void WerewolfGame::UpdateSuspicions(int observer_idx, int responder_idx, int que
     // Clamp to valid range
     players[observer_idx].suspicion_levels[responder_idx] = 
         std::clamp(players[observer_idx].suspicion_levels[responder_idx], 0.0, 1.0);
+
+    double updated = players[observer_idx].suspicion_levels[responder_idx];
+    if(!players[observer_idx].is_human && players[observer_idx].is_alive &&
+       !players[observer_idx].announced_this_round &&
+       prior < firm_suspicion_threshold && updated >= firm_suspicion_threshold){
+        std::uniform_real_distribution<double> announce_dist(0.0, 1.0);
+        if(announce_dist(rng) > ai_skip_announcement_chance){
+            bool is_deflection = players[observer_idx].is_werewolf;
+            int announcement_target = responder_idx;
+            if(is_deflection){
+                announcement_target = SelectDeflectionTarget(observer_idx);
+            }
+            if(announcement_target >= 0){
+                QueueAnnouncement(observer_idx, announcement_target, is_deflection);
+            }
+        }
+        players[observer_idx].announced_this_round = true;
+    }
 }
 
 void WerewolfGame::ProcessVoting(){
@@ -637,16 +970,47 @@ void WerewolfGame::ProcessVoting(){
     last_eliminated = eliminated;
     if(eliminated >= 0){
         last_was_werewolf = players[eliminated].is_werewolf;
-        EliminatePlayer(eliminated);
+        EliminatePlayer(eliminated, false);
+        if(last_was_werewolf){
+            AddLogEvent(players[eliminated].persona.name + " was lynched and revealed as the werewolf.");
+        }else{
+            AddLogEvent(players[eliminated].persona.name + " was lynched by the town.");
+        }
+    }else{
+        AddLogEvent("The vote was tied. No one was lynched.");
     }
     
+    attack_processed = false;
+    last_attacked = -1;
     phase = game_phase_t::VoteResults;
     phase_timer = 0.0;
 }
 
-void WerewolfGame::EliminatePlayer(int idx){
+void WerewolfGame::ProcessWerewolfAttack(){
+    if(last_eliminated < 0) return;
+    if(werewolf_idx < 0 || werewolf_idx >= num_players) return;
+    if(!players[werewolf_idx].is_alive) return;
+
+    std::vector<int> candidates;
+    for(int i = 0; i < num_players; ++i){
+        if(players[i].is_alive && !players[i].is_werewolf){
+            candidates.push_back(i);
+        }
+    }
+
+    if(candidates.empty()) return;
+
+    std::uniform_int_distribution<int> dist(0, static_cast<int>(candidates.size()) - 1);
+    int target = candidates[dist(rng)];
+    EliminatePlayer(target, true);
+    last_attacked = target;
+    AddLogEvent(players[target].persona.name + " was attacked during the night.");
+}
+
+void WerewolfGame::EliminatePlayer(int idx, bool attacked){
     if(idx >= 0 && idx < num_players){
         players[idx].is_alive = false;
+        players[idx].eliminated_by_attack = attacked;
     }
 }
 
@@ -703,7 +1067,7 @@ void WerewolfGame::CalculatePlayerPosition(int player_idx, float& angle, float& 
 }
 
 void WerewolfGame::DrawMonolith(ImDrawList* draw_list, ImVec2 center, float height, float width, 
-                                 ImU32 color, const std::string& name, bool is_selected, bool is_dead){
+                                 ImU32 color, const std::string& name, bool is_selected, bool is_dead, bool was_attacked){
     // Draw a monolith (tall rectangle with slight taper)
     float top_width = width * 0.85f;
     
@@ -731,13 +1095,22 @@ void WerewolfGame::DrawMonolith(ImDrawList* draw_list, ImVec2 center, float heig
     draw_list->AddText(text_pos, IM_COL32(255, 255, 255, 255), name.c_str());
     
     if(is_dead){
-        // Draw X over it
-        draw_list->AddLine(ImVec2(center.x - width, center.y - height - 10),
-                          ImVec2(center.x + width, center.y + 10),
-                          IM_COL32(180, 0, 0, 255), 3.0f);
-        draw_list->AddLine(ImVec2(center.x + width, center.y - height - 10),
-                          ImVec2(center.x - width, center.y + 10),
-                          IM_COL32(180, 0, 0, 255), 3.0f);
+        if(was_attacked){
+            ImU32 attack_color = IM_COL32(80, 180, 255, 255);
+            draw_list->AddLine(ImVec2(center.x - width, center.y - height - 5),
+                               ImVec2(center.x + width, center.y + 5),
+                               attack_color, 3.0f);
+            draw_list->AddCircle(ImVec2(center.x, center.y - height * 0.5f),
+                                 width * 0.6f, attack_color, 0, 2.5f);
+        }else{
+            // Draw X over it
+            draw_list->AddLine(ImVec2(center.x - width, center.y - height - 10),
+                               ImVec2(center.x + width, center.y + 10),
+                               IM_COL32(180, 0, 0, 255), 3.0f);
+            draw_list->AddLine(ImVec2(center.x + width, center.y - height - 10),
+                               ImVec2(center.x - width, center.y + 10),
+                               IM_COL32(180, 0, 0, 255), 3.0f);
+        }
     }
 }
 
@@ -820,6 +1193,12 @@ bool WerewolfGame::Display(bool &enabled){
     // Draw players in circle, with human player at bottom center
     hovered_player = -1;
     ImVec2 mouse_pos = ImGui::GetMousePos();
+    bool dim_others = (active_question_asker_idx >= 0 && active_question_target_idx >= 0) &&
+                      (phase == game_phase_t::AIQuestion ||
+                       phase == game_phase_t::AIResponse ||
+                       phase == game_phase_t::WaitingResponse ||
+                       phase == game_phase_t::SelectResponse ||
+                       phase == game_phase_t::HumanResponse);
     
     for(int i = 0; i < num_players; ++i){
         float angle;
@@ -849,16 +1228,19 @@ bool WerewolfGame::Display(bool &enabled){
         
         // Highlight if selected or hovered
         bool is_selected = (i == selected_target) || (i == hovered_player);
-        
-        // Get first name only for display
-        std::string display_name = players[i].persona.name;
-        size_t space_pos = display_name.find(' ');
-        if(space_pos != std::string::npos){
-            display_name = display_name.substr(0, space_pos);
+        bool is_active_question = dim_others && (i == active_question_asker_idx || i == active_question_target_idx);
+        if(dim_others && !is_active_question){
+            color = DimColor(color, 0.35f);
+        }
+        if(is_active_question){
+            is_selected = true;
         }
         
+        // Get first name only for display
+        std::string display_name = FirstName(players[i].persona.name);
+        
         DrawMonolith(draw_list, pos, monolith_height, monolith_width, color, 
-                     display_name, is_selected, !players[i].is_alive);
+                     display_name, is_selected, !players[i].is_alive, players[i].eliminated_by_attack);
         
         // If werewolf and game over, show indicator
         if(game_over && players[i].is_werewolf){
@@ -866,6 +1248,25 @@ bool WerewolfGame::Display(bool &enabled){
             draw_list->AddText(ImVec2(wolf_pos.x - 25, wolf_pos.y), 
                               IM_COL32(255, 100, 100, 255), "WEREWOLF");
         }
+    }
+
+    if(hovered_player >= 0 && hovered_player < num_players &&
+       hovered_player != human_player_idx){
+        ImGui::BeginTooltip();
+        ImGui::Text("%s", players[hovered_player].persona.name.c_str());
+        if(!players[hovered_player].round_gossip.empty()){
+            ImGui::Separator();
+            ImGui::TextWrapped("Gossip: %s", players[hovered_player].round_gossip.c_str());
+        }
+        ImGui::Separator();
+        ImGui::Text("Suspicions:");
+        for(int i = 0; i < num_players; ++i){
+            if(i == hovered_player || !players[i].is_alive) continue;
+            auto it = players[hovered_player].suspicion_levels.find(i);
+            double susp = (it != players[hovered_player].suspicion_levels.end()) ? it->second : 0.0;
+            ImGui::Text("%s: %.2f", players[i].persona.name.c_str(), susp);
+        }
+        ImGui::EndTooltip();
     }
     
     // Draw current message/speech bubble
@@ -957,6 +1358,11 @@ bool WerewolfGame::Display(bool &enabled){
             if(players[human_player_idx].questions_asked_this_round == 0){
                 ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.3f, 1.0f), 
                                   "Click on a player to ask them a question");
+                if(ImGui::Button("Skip Question")){
+                    players[human_player_idx].questions_asked_this_round = 1;
+                    AddLogEvent(players[human_player_idx].persona.name + " skipped asking a question.");
+                    current_player_turn = 0;
+                }
             }else{
                 ImGui::Text("Waiting for other players...");
                 
@@ -1001,6 +1407,11 @@ bool WerewolfGame::Display(bool &enabled){
                     ex.response_idx = response;
                     ex.timestamp = std::chrono::steady_clock::now();
                     round_exchanges.push_back(ex);
+
+                    std::string log_entry = players[human_player_idx].persona.name + " asked " +
+                        players[selected_target].persona.name + ": \"" + all_questions[selected_question].text +
+                        "\" -> \"" + all_responses[response].text + "\"";
+                    AddLogEvent(log_entry);
                     
                     // Update all players' suspicions
                     for(int i = 0; i < num_players; ++i){
@@ -1010,6 +1421,9 @@ bool WerewolfGame::Display(bool &enabled){
                     }
                     
                     players[human_player_idx].questions_asked_this_round = 1;
+
+                    active_question_asker_idx = human_player_idx;
+                    active_question_target_idx = selected_target;
                     
                     // Show response
                     current_speaker = players[selected_target].persona.name;
@@ -1035,11 +1449,18 @@ bool WerewolfGame::Display(bool &enabled){
             ImGui::Text("Response: %s", current_message.c_str());
             
             if(phase_timer > 2.0){
-                phase = game_phase_t::Discussion;
                 current_player_turn = 0;
                 current_message.clear();
                 current_speaker.clear();
+                active_question_asker_idx = -1;
+                active_question_target_idx = -1;
                 phase_timer = 0.0;
+                if(!players[human_player_idx].announced_this_round){
+                    selected_announcement_target = -1;
+                    phase = game_phase_t::SelectAnnouncement;
+                }else if(!StartNextAnnouncement()){
+                    phase = game_phase_t::Discussion;
+                }
             }
             break;
         }
@@ -1051,6 +1472,12 @@ bool WerewolfGame::Display(bool &enabled){
             
             if(phase_timer > ai_message_display_time){
                 // Switch to showing the response
+                if(pending_target_idx == human_player_idx){
+                    selected_response = -1;
+                    phase = game_phase_t::SelectResponse;
+                    phase_timer = 0.0;
+                    break;
+                }
                 if(pending_target_idx >= 0 && pending_response_idx >= 0){
                     current_speaker = players[pending_target_idx].persona.name;
                     current_message = all_responses[pending_response_idx].text;
@@ -1074,7 +1501,132 @@ bool WerewolfGame::Display(bool &enabled){
                 current_speaker.clear();
                 pending_target_idx = -1;
                 pending_response_idx = -1;
-                phase = game_phase_t::Discussion;
+                pending_asker_idx = -1;
+                pending_question_idx = -1;
+                active_question_asker_idx = -1;
+                active_question_target_idx = -1;
+                if(!StartNextAnnouncement()){
+                    phase = game_phase_t::Discussion;
+                }
+                phase_timer = 0.0;
+            }
+            break;
+        }
+
+        case game_phase_t::SelectResponse:{
+            ImGui::Text("%s asked you:", players[pending_asker_idx].persona.name.c_str());
+            ImGui::TextWrapped("%s", all_questions[pending_question_idx].text.c_str());
+
+            ImGui::BeginChild("ResponseList", ImVec2(0, interaction_panel_height), true);
+            const auto& responses = GetCompatibleResponses(pending_question_idx);
+            for(int response_idx : responses){
+                if(ImGui::Selectable(all_responses[response_idx].text.c_str(),
+                                     selected_response == response_idx)){
+                    selected_response = response_idx;
+                }
+            }
+            ImGui::EndChild();
+
+            if(selected_response >= 0 && ImGui::Button("Respond")){
+                exchange_t ex;
+                ex.asker_idx = pending_asker_idx;
+                ex.target_idx = human_player_idx;
+                ex.question_idx = pending_question_idx;
+                ex.response_idx = selected_response;
+                ex.timestamp = std::chrono::steady_clock::now();
+                round_exchanges.push_back(ex);
+
+                std::string log_entry = players[pending_asker_idx].persona.name + " asked " +
+                    players[human_player_idx].persona.name + ": \"" +
+                    all_questions[pending_question_idx].text + "\" -> \"" +
+                    all_responses[selected_response].text + "\"";
+                AddLogEvent(log_entry);
+
+                for(int i = 0; i < num_players; ++i){
+                    if(players[i].is_alive && i != human_player_idx){
+                        UpdateSuspicions(i, human_player_idx, pending_question_idx, selected_response);
+                    }
+                }
+
+                current_speaker = players[human_player_idx].persona.name;
+                current_message = all_responses[selected_response].text;
+                current_message_is_question = false;
+                phase = game_phase_t::HumanResponse;
+                phase_timer = 0.0;
+                selected_response = -1;
+            }
+            break;
+        }
+
+        case game_phase_t::HumanResponse:{
+            ImGui::Text("Round %d - Discussion Phase", round_number);
+            ImGui::Text("Waiting for other players...");
+
+            if(phase_timer > ai_message_display_time){
+                current_message.clear();
+                current_speaker.clear();
+                pending_target_idx = -1;
+                pending_response_idx = -1;
+                pending_asker_idx = -1;
+                pending_question_idx = -1;
+                active_question_asker_idx = -1;
+                active_question_target_idx = -1;
+                current_player_turn++;
+                if(!StartNextAnnouncement()){
+                    phase = game_phase_t::Discussion;
+                }
+                phase_timer = 0.0;
+            }
+            break;
+        }
+
+        case game_phase_t::SelectAnnouncement:{
+            ImGui::Text("Share an announcement with the town?");
+
+            ImGui::BeginChild("AnnouncementTargets", ImVec2(0, interaction_panel_height), true);
+            for(int i = 0; i < num_players; ++i){
+                if(i == human_player_idx || !players[i].is_alive) continue;
+                if(ImGui::Selectable(players[i].persona.name.c_str(), selected_announcement_target == i)){
+                    selected_announcement_target = i;
+                }
+            }
+            ImGui::EndChild();
+
+            if(selected_announcement_target >= 0 && ImGui::Button("Make Announcement")){
+                QueueAnnouncement(human_player_idx, selected_announcement_target, false);
+                players[human_player_idx].announced_this_round = true;
+                if(!StartNextAnnouncement()){
+                    phase = game_phase_t::Discussion;
+                }
+                phase_timer = 0.0;
+            }
+
+            if(ImGui::Button("Skip Announcement")){
+                players[human_player_idx].announced_this_round = true;
+                AddLogEvent(players[human_player_idx].persona.name + " stayed silent.");
+                if(!StartNextAnnouncement()){
+                    phase = game_phase_t::Discussion;
+                }
+                phase_timer = 0.0;
+            }
+            break;
+        }
+
+        case game_phase_t::Announcement:{
+            ImGui::Text("Announcement:");
+            ImGui::TextWrapped("%s", current_message.c_str());
+
+            if(!announcement_applied){
+                ApplyAnnouncement(active_announcement);
+                announcement_applied = true;
+            }
+
+            if(phase_timer > ai_message_display_time){
+                current_message.clear();
+                current_speaker.clear();
+                if(!StartNextAnnouncement()){
+                    phase = game_phase_t::Discussion;
+                }
                 phase_timer = 0.0;
             }
             break;
@@ -1128,6 +1680,17 @@ bool WerewolfGame::Display(bool &enabled){
             }else{
                 ImGui::Text("Vote was tied - no one eliminated.");
             }
+
+            if(!attack_processed && phase_timer > vote_reveal_time){
+                ProcessWerewolfAttack();
+                attack_processed = true;
+            }
+
+            if(last_attacked >= 0){
+                ImGui::Separator();
+                ImGui::TextColored(ImVec4(0.4f, 0.7f, 1.0f, 1.0f),
+                                   "%s was attacked during the night.", players[last_attacked].persona.name.c_str());
+            }
             
             if(phase_timer > vote_reveal_time + elimination_time){
                 if(CheckGameOver()){
@@ -1166,6 +1729,18 @@ bool WerewolfGame::Display(bool &enabled){
         default:
             break;
     }
+
+    ImGui::Separator();
+    ImGui::Text("Event Log");
+    ImGui::BeginChild("EventLog", ImVec2(0, 140), true);
+    for(const auto& entry : event_log){
+        ImGui::TextWrapped("%s", entry.c_str());
+    }
+    if(log_scroll_to_bottom){
+        ImGui::SetScrollHereY(1.0f);
+        log_scroll_to_bottom = false;
+    }
+    ImGui::EndChild();
     
     ImGui::End();
     return true;

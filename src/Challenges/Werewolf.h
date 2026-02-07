@@ -10,6 +10,7 @@
 #include <cmath>
 #include <map>
 #include <set>
+#include <deque>
 
 #include "YgorMath.h"
 #include "YgorMisc.h"
@@ -53,11 +54,20 @@ class WerewolfGame {
         int difficulty;        // 1-3, how hard it is to detect lies
     };
 
+    enum class response_tone_t {
+        Honest,
+        Deflecting,
+        Nervous,
+        Confident,
+        Cooperative
+    };
+
     // Predetermined responses
     struct response_t {
         std::string text;
         bool is_deflection;    // If true, might indicate werewolf behavior
         double suspicion_delta; // How much this response changes suspicion
+        response_tone_t tone;
     };
 
     // Player state
@@ -66,6 +76,9 @@ class WerewolfGame {
         bool is_werewolf = false;
         bool is_alive = true;
         bool is_human = false;  // The player controlled by the user
+        bool eliminated_by_attack = false;
+        bool announced_this_round = false;
+        std::string round_gossip;
         
         // AI state
         std::map<int, double> suspicion_levels;  // Index -> suspicion (0.0 to 1.0)
@@ -86,6 +99,13 @@ class WerewolfGame {
         std::chrono::time_point<std::chrono::steady_clock> timestamp;
     };
 
+    struct announcement_t {
+        int announcer_idx = -1;
+        int target_idx = -1;
+        std::string text;
+        bool is_deflection = false;
+    };
+
     // Game phases
     enum class game_phase_t {
         Intro,              // Show intro text
@@ -95,6 +115,10 @@ class WerewolfGame {
         WaitingResponse,    // Waiting for AI response (with pause)
         AIQuestion,         // Showing AI's question
         AIResponse,         // Showing AI's response
+        SelectResponse,     // Human player selecting a response
+        HumanResponse,      // Showing human's response to AI
+        SelectAnnouncement, // Human player selecting an announcement
+        Announcement,       // Showing announcement
         Voting,             // Players vote
         VoteResults,        // Show vote results
         Elimination,        // Someone is eliminated
@@ -105,13 +129,17 @@ class WerewolfGame {
     void InitializePersonas();
     void InitializeQuestions();
     void InitializeResponses();
+    void InitializeResponseCompatibility();
+    void AssignRoundGossip();
+    void AddLogEvent(const std::string& entry);
     
     // Game logic
     void AssignRoles();
     void StartRound();
     void ProcessAITurn();
     void ProcessVoting();
-    void EliminatePlayer(int idx);
+    void ProcessWerewolfAttack();
+    void EliminatePlayer(int idx, bool attacked);
     bool CheckGameOver();
     
     // AI logic
@@ -120,11 +148,17 @@ class WerewolfGame {
     int AISelectResponse(int responder_idx, int question_idx, bool as_werewolf);
     int AISelectVoteTarget(int voter_idx);
     void UpdateSuspicions(int observer_idx, int responder_idx, int question_idx, int response_idx);
+    bool IsResponseCompatible(int question_idx, int response_idx) const;
+    const std::vector<int>& GetCompatibleResponses(int question_idx) const;
+    void QueueAnnouncement(int announcer_idx, int target_idx, bool is_deflection);
+    bool StartNextAnnouncement();
+    void ApplyAnnouncement(const announcement_t& announcement);
+    int SelectDeflectionTarget(int announcer_idx);
     
     // Rendering helpers
     void CalculatePlayerPosition(int player_idx, float& angle, float& radius) const;
     void DrawMonolith(ImDrawList* draw_list, ImVec2 center, float height, float width, 
-                      ImU32 color, const std::string& name, bool is_selected, bool is_dead);
+                      ImU32 color, const std::string& name, bool is_selected, bool is_dead, bool was_attacked);
     void DrawSpeechBubble(ImDrawList* draw_list, ImVec2 anchor, const std::string& text, bool is_question);
     
     // Game state
@@ -139,6 +173,8 @@ class WerewolfGame {
     // Selection state
     int selected_target = -1;
     int selected_question = -1;
+    int selected_response = -1;
+    int selected_announcement_target = -1;
     int hovered_player = -1;
     
     // Animation state
@@ -149,15 +185,23 @@ class WerewolfGame {
     std::string current_message;
     std::string current_speaker;
     bool current_message_is_question = true;  // Track if current bubble is question or response
+    bool announcement_applied = false;
+    bool log_scroll_to_bottom = false;
+    int active_question_asker_idx = -1;
+    int active_question_target_idx = -1;
     
     // Pending AI exchange (for showing question then response)
     int pending_target_idx = -1;
     int pending_response_idx = -1;
+    int pending_asker_idx = -1;
+    int pending_question_idx = -1;
+    bool attack_processed = false;
     
     // Vote tracking
     std::vector<int> votes;  // votes[i] = who player i voted for
     int last_eliminated = -1;
     bool last_was_werewolf = false;
+    int last_attacked = -1;
     
     // Data
     std::vector<player_t> players;
@@ -166,6 +210,10 @@ class WerewolfGame {
     std::vector<response_t> all_responses;
     std::vector<persona_t> persona_pool;
     std::vector<int> available_question_indices;  // Questions available this round
+    std::vector<std::vector<int>> compatible_responses;
+    std::deque<announcement_t> announcement_queue;
+    std::vector<std::string> event_log;
+    announcement_t active_announcement;
     
     // Configuration
     static constexpr int num_players = 7;  // Including human player
@@ -187,4 +235,3 @@ class WerewolfGame {
     std::chrono::time_point<std::chrono::steady_clock> t_updated;
     std::mt19937 rng;
 };
-
