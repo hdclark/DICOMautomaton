@@ -182,12 +182,16 @@ void WerewolfGame::InitializePersonas(){
     size_t persona_count = 0;
     const size_t target_personas = 200;
     
+    // Sampling interval: With 112 first names and 48 last names (5376 total combinations),
+    // taking every 3rd combination gives us approximately 1792 candidates, which is 
+    // more than enough to reach our target of 200 diverse personas.
+    const int persona_sampling_interval = 3;
+    
     // Iterate through combinations of first and last names
     for(size_t fi = 0; fi < first_names.size() && persona_count < target_personas; ++fi){
         for(size_t li = 0; li < last_names.size() && persona_count < target_personas; ++li){
-            // Only use some combinations to reach ~200 (not all 112*48)
-            // Use every 3rd last name to spread combinations
-            if((fi + li) % 3 != 0) continue;
+            // Sample combinations to avoid using all 5376 possibilities
+            if((fi + li) % persona_sampling_interval != 0) continue;
             
             persona_t p;
             p.name = first_names[fi] + " " + last_names[li];
@@ -1038,11 +1042,11 @@ bool WerewolfGame::Display(bool &enabled){
         }
         
         case game_phase_t::AIQuestion:{
-            // Showing AI's question - display for 1.5 seconds then show response
+            // Showing AI's question - display then show response
             ImGui::Text("Round %d - Discussion Phase", round_number);
             ImGui::Text("Waiting for other players...");
             
-            if(phase_timer > 1.5){
+            if(phase_timer > ai_message_display_time){
                 // Switch to showing the response
                 if(pending_target_idx >= 0 && pending_response_idx >= 0){
                     current_speaker = players[pending_target_idx].persona.name;
@@ -1056,11 +1060,11 @@ bool WerewolfGame::Display(bool &enabled){
         }
         
         case game_phase_t::AIResponse:{
-            // Showing AI's response - display for 1.5 seconds then continue
+            // Showing AI's response - display then continue
             ImGui::Text("Round %d - Discussion Phase", round_number);
             ImGui::Text("Waiting for other players...");
             
-            if(phase_timer > 1.5){
+            if(phase_timer > ai_message_display_time){
                 // Move to next AI player
                 current_player_turn++;
                 current_message.clear();

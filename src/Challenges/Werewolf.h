@@ -173,6 +173,7 @@ class WerewolfGame {
     static constexpr double vote_reveal_time = 1.5;
     static constexpr double elimination_time = 2.5;
     static constexpr double intro_time = 3.0;
+    static constexpr double ai_message_display_time = 1.5;  // Seconds to display AI Q&A bubbles
     
     // Display parameters
     static constexpr float window_width = 900.0f;
