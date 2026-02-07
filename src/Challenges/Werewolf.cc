@@ -80,6 +80,7 @@ void WerewolfGame::Reset(){
     last_eliminated = -1;
     last_was_werewolf = false;
     last_attacked = -1;
+    last_attack_round = -1;
     
     // Assign personas to players
     AssignRoles();
@@ -483,6 +484,7 @@ void WerewolfGame::StartRound(){
     active_asker_idx = -1;
     active_target_idx = -1;
     last_attacked = -1;
+    last_attack_round = -1;
     
     // Reset questions asked this round
     for(auto& p : players){
@@ -737,6 +739,7 @@ void WerewolfGame::ResolveWerewolfAttack(){
     int target = candidates[dist(rng)];
     EliminatePlayer(target, true);
     last_attacked = target;
+    last_attack_round = round_number;
     LogEvent(players[target].persona.name + " was attacked during the night.");
 }
 
@@ -1418,7 +1421,7 @@ bool WerewolfGame::Display(bool &enabled){
             }
         }
         if(players[i].was_attacked){
-            if(phase == game_phase_t::VoteResults && last_attacked == i){
+            if(phase == game_phase_t::VoteResults && last_attacked == i && last_attack_round == round_number){
                 double delay = (last_eliminated >= 0) ? attack_indicator_delay : 0.0;
                 double attack_raw = (phase_timer - delay) / attack_indicator_fade_time;
                 attack_progress = static_cast<float>(std::clamp(attack_raw, 0.0, 1.0));
@@ -1442,11 +1445,11 @@ bool WerewolfGame::Display(bool &enabled){
         for(const auto& change : suspicion_changes){
             if(change.responder_idx < 0 || change.responder_idx >= num_players) continue;
             double age = std::chrono::duration<double>(t_now - change.timestamp).count();
-            if(age < 0.0 || age > suspicion_change_duration) continue;
+            if(age > suspicion_change_duration) continue;
             float progress = static_cast<float>(age / suspicion_change_duration);
             float alpha = 1.0f - progress;
             float rise = progress * 20.0f;
-            float offset_x = static_cast<float>((change.observer_idx % 3) - 1) * 8.0f;
+            float offset_x = static_cast<float>((change.observer_idx % 3) - 1) * suspicion_change_horizontal_offset;
 
             ImVec2 base = player_positions[change.responder_idx];
             ImVec2 text_pos(base.x + offset_x, base.y - monolith_height - 25.0f - rise);

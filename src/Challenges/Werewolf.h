@@ -195,6 +195,7 @@ class WerewolfGame {
     int last_eliminated = -1;
     bool last_was_werewolf = false;
     int last_attacked = -1;
+    int last_attack_round = -1;
     
     // Data
     std::vector<player_t> players;
@@ -230,6 +231,7 @@ class WerewolfGame {
     static constexpr float monolith_width = 35.0f;
     static constexpr float circle_radius = 180.0f;
     static constexpr size_t max_log_entries = 1000;
+    static constexpr float suspicion_change_horizontal_offset = 8.0f;
 
     static inline const ImVec4 instruction_text_color = ImVec4(1.0f, 1.0f, 0.3f, 1.0f);
     static inline const ImVec4 role_werewolf_text_color = ImVec4(1.0f, 0.3f, 0.3f, 1.0f);
