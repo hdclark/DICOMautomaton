@@ -93,6 +93,8 @@ class WerewolfGame {
         Discussion,         // Players ask questions
         SelectQuestion,     // Human player selecting a question
         WaitingResponse,    // Waiting for AI response (with pause)
+        AIQuestion,         // Showing AI's question
+        AIResponse,         // Showing AI's response
         Voting,             // Players vote
         VoteResults,        // Show vote results
         Elimination,        // Someone is eliminated
@@ -146,6 +148,11 @@ class WerewolfGame {
     bool waiting_for_pause = false;
     std::string current_message;
     std::string current_speaker;
+    bool current_message_is_question = true;  // Track if current bubble is question or response
+    
+    // Pending AI exchange (for showing question then response)
+    int pending_target_idx = -1;
+    int pending_response_idx = -1;
     
     // Vote tracking
     std::vector<int> votes;  // votes[i] = who player i voted for

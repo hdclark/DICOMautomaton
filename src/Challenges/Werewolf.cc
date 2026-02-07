@@ -9,6 +9,7 @@
 #include <cmath>
 #include <sstream>
 #include <iomanip>
+#include <numeric>
 
 #include "YgorMath.h"
 #include "YgorMisc.h"
@@ -176,39 +177,43 @@ void WerewolfGame::InitializePersonas(){
     std::uniform_int_distribution<size_t> quirk_dist(0, quirks.size() - 1);
     std::uniform_int_distribution<size_t> secret_dist(0, secrets.size() - 1);
     
-    // Create 200 unique personas
+    // Create ~200 unique personas by combining first and last names
     std::set<std::string> used_names;
-    for(size_t i = 0; i < 200 && i < first_names.size(); ++i){
-        persona_t p;
-        
-        // Generate unique name
-        size_t last_idx = i % last_names.size();
-        p.name = first_names[i] + " " + last_names[last_idx];
-        
-        if(used_names.count(p.name) > 0){
-            // Try with different last name
-            last_idx = (last_idx + 1) % last_names.size();
-            p.name = first_names[i] + " " + last_names[last_idx];
+    size_t persona_count = 0;
+    const size_t target_personas = 200;
+    
+    // Iterate through combinations of first and last names
+    for(size_t fi = 0; fi < first_names.size() && persona_count < target_personas; ++fi){
+        for(size_t li = 0; li < last_names.size() && persona_count < target_personas; ++li){
+            // Only use some combinations to reach ~200 (not all 112*48)
+            // Use every 3rd last name to spread combinations
+            if((fi + li) % 3 != 0) continue;
+            
+            persona_t p;
+            p.name = first_names[fi] + " " + last_names[li];
+            
+            if(used_names.count(p.name) > 0) continue;
+            used_names.insert(p.name);
+            
+            p.profession = professions[prof_dist(rng)];
+            p.years_in_town = years_options[years_dist(rng)];
+            
+            // Generate backstory
+            std::string tmpl = backstory_templates[backstory_dist(rng)];
+            std::string event = backstory_events[event_dist(rng)];
+            size_t pos = tmpl.find("%s");
+            if(pos != std::string::npos){
+                p.backstory = tmpl.substr(0, pos) + event + tmpl.substr(pos + 2);
+            }else{
+                p.backstory = tmpl;
+            }
+            
+            p.quirk = quirks[quirk_dist(rng)];
+            p.secret = secrets[secret_dist(rng)];
+            
+            persona_pool.push_back(p);
+            ++persona_count;
         }
-        used_names.insert(p.name);
-        
-        p.profession = professions[prof_dist(rng)];
-        p.years_in_town = years_options[years_dist(rng)];
-        
-        // Generate backstory
-        std::string tmpl = backstory_templates[backstory_dist(rng)];
-        std::string event = backstory_events[event_dist(rng)];
-        size_t pos = tmpl.find("%s");
-        if(pos != std::string::npos){
-            p.backstory = tmpl.substr(0, pos) + event + tmpl.substr(pos + 2);
-        }else{
-            p.backstory = tmpl;
-        }
-        
-        p.quirk = quirks[quirk_dist(rng)];
-        p.secret = secrets[secret_dist(rng)];
-        
-        persona_pool.push_back(p);
     }
 }
 
@@ -406,6 +411,8 @@ void WerewolfGame::ProcessAITurn(){
         // All players have asked, move to voting
         phase = game_phase_t::Voting;
         phase_timer = 0.0;
+        current_message.clear();
+        current_speaker.clear();
         return;
     }
     
@@ -432,13 +439,17 @@ void WerewolfGame::ProcessAITurn(){
     
     players[asker].questions_asked_this_round = 1;
     
-    // Set up display message
+    // Store pending response to show after question
+    pending_target_idx = target;
+    pending_response_idx = response;
+    
+    // Show the question first
     current_speaker = players[asker].persona.name;
     current_message = all_questions[question].text;
+    current_message_is_question = true;
     
-    // Move to next player after pause
-    waiting_for_pause = true;
-    pause_duration = discussion_time_per_player;
+    // Move to AIQuestion phase to show question, then AIResponse for response
+    phase = game_phase_t::AIQuestion;
     phase_timer = 0.0;
 }
 
@@ -868,7 +879,7 @@ bool WerewolfGame::Display(bool &enabled){
                 CalculatePlayerPosition(i, angle, radius);
                 ImVec2 pos(center.x + radius * std::cos(angle),
                            center.y + radius * std::sin(angle) - monolith_height);
-                DrawSpeechBubble(draw_list, pos, current_message, true);
+                DrawSpeechBubble(draw_list, pos, current_message, current_message_is_question);
                 break;
             }
         }
@@ -900,7 +911,7 @@ bool WerewolfGame::Display(bool &enabled){
         case game_phase_t::Intro:{
             ImGui::TextWrapped("Welcome to Werewolf!");
             ImGui::TextWrapped("One among us is a werewolf in disguise. Find and eliminate them before it's too late!");
-            ImGui::TextWrapped("Press any key to continue...");
+            ImGui::TextWrapped("Press Space to continue, or wait a moment...");
             
             if(phase_timer > intro_time || ImGui::IsKeyPressed(SDL_SCANCODE_SPACE)){
                 phase = game_phase_t::AssignRoles;
@@ -942,18 +953,8 @@ bool WerewolfGame::Display(bool &enabled){
             }else{
                 ImGui::Text("Waiting for other players...");
                 
-                // Process AI turns
-                if(waiting_for_pause){
-                    if(phase_timer >= pause_duration){
-                        waiting_for_pause = false;
-                        current_player_turn++;
-                        current_message.clear();
-                        current_speaker.clear();
-                        phase_timer = 0.0;
-                    }
-                }else{
-                    ProcessAITurn();
-                }
+                // Process AI turns (will transition to AIQuestion/AIResponse phases)
+                ProcessAITurn();
             }
             
             // Show hovered player info
@@ -1006,6 +1007,7 @@ bool WerewolfGame::Display(bool &enabled){
                     // Show response
                     current_speaker = players[selected_target].persona.name;
                     current_message = all_responses[response].text;
+                    current_message_is_question = false;  // This is a response
                     
                     phase = game_phase_t::WaitingResponse;
                     phase_timer = 0.0;
@@ -1028,6 +1030,44 @@ bool WerewolfGame::Display(bool &enabled){
             if(phase_timer > 2.0){
                 phase = game_phase_t::Discussion;
                 current_player_turn = 0;
+                current_message.clear();
+                current_speaker.clear();
+                phase_timer = 0.0;
+            }
+            break;
+        }
+        
+        case game_phase_t::AIQuestion:{
+            // Showing AI's question - display for 1.5 seconds then show response
+            ImGui::Text("Round %d - Discussion Phase", round_number);
+            ImGui::Text("Waiting for other players...");
+            
+            if(phase_timer > 1.5){
+                // Switch to showing the response
+                if(pending_target_idx >= 0 && pending_response_idx >= 0){
+                    current_speaker = players[pending_target_idx].persona.name;
+                    current_message = all_responses[pending_response_idx].text;
+                    current_message_is_question = false;  // Now showing response
+                }
+                phase = game_phase_t::AIResponse;
+                phase_timer = 0.0;
+            }
+            break;
+        }
+        
+        case game_phase_t::AIResponse:{
+            // Showing AI's response - display for 1.5 seconds then continue
+            ImGui::Text("Round %d - Discussion Phase", round_number);
+            ImGui::Text("Waiting for other players...");
+            
+            if(phase_timer > 1.5){
+                // Move to next AI player
+                current_player_turn++;
+                current_message.clear();
+                current_speaker.clear();
+                pending_target_idx = -1;
+                pending_response_idx = -1;
+                phase = game_phase_t::Discussion;
                 phase_timer = 0.0;
             }
             break;
