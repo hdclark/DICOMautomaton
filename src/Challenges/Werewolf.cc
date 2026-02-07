@@ -28,7 +28,7 @@
 
 void WerewolfGame::InitPersonas(){
     all_personas.clear();
-    // ~10 personas for now; more to be added later.
+    // ~15 personas for now; more to be added later.
     all_personas.push_back({"Aldric",    "Blacksmith",   "Born and raised in the village, forged the town bell.",             "Some say Aldric never sleeps—his forge glows at all hours.",         32});
     all_personas.push_back({"Berta",     "Herbalist",    "Moved from the eastern marshes five years ago.",                     "Berta keeps strange dried plants hanging in her window.",            5});
     all_personas.push_back({"Cedric",    "Innkeeper",    "Third-generation innkeeper; knows everyone's drink order.",          "Cedric waters down the ale when he thinks no one notices.",          45});
@@ -217,7 +217,7 @@ void WerewolfGame::AssignRoles(){
         p.vote_target = -1;
         p.monolith_bob = static_cast<double>(i) * 0.7;
         p.glow_alpha = 0.0f;
-        p.suspicion.assign(static_cast<size_t>(N), 1.0 / static_cast<double>(N - 1));
+        p.suspicion.assign(static_cast<size_t>(N), (N > 1) ? 1.0 / static_cast<double>(N - 1) : 0.0);
     }
 
     // Pick a random werewolf (could be the human).
@@ -298,7 +298,7 @@ void WerewolfGame::SelectRoundQuestions(){
     std::iota(indices.begin(), indices.end(), 0);
     std::shuffle(indices.begin(), indices.end(), ww_game.re);
     const size_t count = std::min(indices.size(), static_cast<size_t>(6));
-    ww_game.round_question_indices.assign(indices.begin(), indices.begin() + static_cast<int64_t>(count));
+    ww_game.round_question_indices.assign(indices.begin(), indices.begin() + static_cast<std::ptrdiff_t>(count));
 }
 
 void WerewolfGame::AIAskQuestions(){
