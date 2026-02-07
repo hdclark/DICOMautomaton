@@ -32,6 +32,7 @@ namespace {
     constexpr double announcement_acceptance_chance = 0.65;
     constexpr double ai_skip_question_chance = 0.15;
     constexpr double ai_skip_announcement_chance = 0.2;
+    constexpr double gossip_vote_hint_threshold = 0.35;
 
     std::string FirstName(const std::string& full_name){
         size_t space_pos = full_name.find(' ');
@@ -488,7 +489,8 @@ void WerewolfGame::AssignRoundGossip(){
             }
         }
 
-        if(top_suspect >= 0 && max_susp >= firm_suspicion_threshold && hint_chance(rng) > 0.35){
+        if(top_suspect >= 0 && max_susp >= firm_suspicion_threshold &&
+           hint_chance(rng) > gossip_vote_hint_threshold){
             players[i].round_gossip = "I'm leaning toward voting for " + players[top_suspect].persona.name + ".";
         }else{
             players[i].round_gossip = town_gossip[town_dist(rng)];
@@ -680,92 +682,96 @@ void WerewolfGame::ProcessAITurn(){
         return;
     }
 
-    // Find next alive AI player
-    while(current_player_turn < num_players){
-        if(players[current_player_turn].is_alive && 
-           !players[current_player_turn].is_human &&
-           players[current_player_turn].questions_asked_this_round == 0){
-            break;
-        }
-        current_player_turn++;
-    }
-    
-    if(current_player_turn >= num_players){
-        // All players have asked, move to voting
-        phase = game_phase_t::Voting;
-        phase_timer = 0.0;
-        current_message.clear();
-        current_speaker.clear();
-        return;
-    }
-    
-    int asker = current_player_turn;
     std::uniform_real_distribution<double> skip_dist(0.0, 1.0);
-    if(skip_dist(rng) < ai_skip_question_chance){
-        players[asker].questions_asked_this_round = 1;
-        AddLogEvent(players[asker].persona.name + " skipped asking a question.");
-        current_player_turn++;
-        return;
-    }
 
-    int target = AISelectQuestionTarget(asker);
-    int question = AISelectQuestion(asker, target);
-    int response = -1;
-    
-    players[asker].questions_asked_this_round = 1;
-    
-    // Store pending response to show after question
-    pending_target_idx = target;
-    pending_response_idx = -1;
-    pending_asker_idx = asker;
-    pending_question_idx = question;
-    active_question_asker_idx = asker;
-    active_question_target_idx = target;
-
-    if(target != human_player_idx){
-        response = AISelectResponse(target, question, players[target].is_werewolf);
-        pending_response_idx = response;
-
-        // Record exchange
-        exchange_t ex;
-        ex.asker_idx = asker;
-        ex.target_idx = target;
-        ex.question_idx = question;
-        ex.response_idx = response;
-        ex.timestamp = std::chrono::steady_clock::now();
-        round_exchanges.push_back(ex);
-
-        std::string log_entry = players[asker].persona.name + " asked " +
-            players[target].persona.name + ": \"" + all_questions[question].text + "\" -> \"" +
-            all_responses[response].text + "\"";
-        AddLogEvent(log_entry);
-
-        // Update suspicions for all observers
-        for(int i = 0; i < num_players; ++i){
-            if(players[i].is_alive && i != target){
-                UpdateSuspicions(i, target, question, response);
+    while(true){
+        // Find next alive AI player
+        while(current_player_turn < num_players){
+            if(players[current_player_turn].is_alive && 
+               !players[current_player_turn].is_human &&
+               players[current_player_turn].questions_asked_this_round == 0){
+                break;
             }
+            current_player_turn++;
+        }
+        
+        if(current_player_turn >= num_players){
+            // All players have asked, move to voting
+            phase = game_phase_t::Voting;
+            phase_timer = 0.0;
+            current_message.clear();
+            current_speaker.clear();
+            return;
+        }
+        
+        int asker = current_player_turn;
+        if(skip_dist(rng) < ai_skip_question_chance){
+            players[asker].questions_asked_this_round = 1;
+            AddLogEvent(players[asker].persona.name + " skipped asking a question.");
+            current_player_turn++;
+            continue;
         }
 
-    }
+        int target = AISelectQuestionTarget(asker);
+        int question = AISelectQuestion(asker, target);
+        int response = -1;
+        
+        players[asker].questions_asked_this_round = 1;
+        
+        // Store pending response to show after question
+        pending_target_idx = target;
+        pending_response_idx = -1;
+        pending_asker_idx = asker;
+        pending_question_idx = question;
+        active_question_asker_idx = asker;
+        active_question_target_idx = target;
 
-    if(players[asker].is_werewolf && !players[asker].announced_this_round &&
-       skip_dist(rng) > ai_skip_announcement_chance){
-        int deflect_target = SelectDeflectionTarget(asker);
-        if(deflect_target >= 0){
-            QueueAnnouncement(asker, deflect_target, true);
+        if(target != human_player_idx){
+            response = AISelectResponse(target, question, players[target].is_werewolf);
+            pending_response_idx = response;
+
+            // Record exchange
+            exchange_t ex;
+            ex.asker_idx = asker;
+            ex.target_idx = target;
+            ex.question_idx = question;
+            ex.response_idx = response;
+            ex.timestamp = std::chrono::steady_clock::now();
+            round_exchanges.push_back(ex);
+
+            std::string log_entry = players[asker].persona.name + " asked " +
+                players[target].persona.name + ": \"" + all_questions[question].text + "\" -> \"" +
+                all_responses[response].text + "\"";
+            AddLogEvent(log_entry);
+
+            // Update suspicions for all observers
+            for(int i = 0; i < num_players; ++i){
+                if(players[i].is_alive && i != target){
+                    UpdateSuspicions(i, target, question, response);
+                }
+            }
+
         }
-        players[asker].announced_this_round = true;
+
+        if(players[asker].is_werewolf && !players[asker].announced_this_round &&
+           skip_dist(rng) > ai_skip_announcement_chance){
+            int deflect_target = SelectDeflectionTarget(asker);
+            if(deflect_target >= 0){
+                QueueAnnouncement(asker, deflect_target, true);
+            }
+            players[asker].announced_this_round = true;
+        }
+        
+        // Show the question first
+        current_speaker = players[asker].persona.name;
+        current_message = all_questions[question].text;
+        current_message_is_question = true;
+        
+        // Move to AIQuestion phase to show question, then AIResponse for response
+        phase = game_phase_t::AIQuestion;
+        phase_timer = 0.0;
+        break;
     }
-    
-    // Show the question first
-    current_speaker = players[asker].persona.name;
-    current_message = all_questions[question].text;
-    current_message_is_question = true;
-    
-    // Move to AIQuestion phase to show question, then AIResponse for response
-    phase = game_phase_t::AIQuestion;
-    phase_timer = 0.0;
 }
 
 int WerewolfGame::AISelectQuestionTarget(int asker_idx){
@@ -968,6 +974,7 @@ void WerewolfGame::ProcessVoting(){
     }
     
     last_eliminated = eliminated;
+    last_was_werewolf = false;
     if(eliminated >= 0){
         last_was_werewolf = players[eliminated].is_werewolf;
         EliminatePlayer(eliminated, false);
@@ -987,7 +994,6 @@ void WerewolfGame::ProcessVoting(){
 }
 
 void WerewolfGame::ProcessWerewolfAttack(){
-    if(last_eliminated < 0) return;
     if(werewolf_idx < 0 || werewolf_idx >= num_players) return;
     if(!players[werewolf_idx].is_alive) return;
 
@@ -1682,7 +1688,9 @@ bool WerewolfGame::Display(bool &enabled){
             }
 
             if(!attack_processed && phase_timer > vote_reveal_time){
-                ProcessWerewolfAttack();
+                if(!last_was_werewolf){
+                    ProcessWerewolfAttack();
+                }
                 attack_processed = true;
             }
 
