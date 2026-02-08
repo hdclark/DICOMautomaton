@@ -800,6 +800,7 @@ make_test_image_collection(
     int64_t rows,
     int64_t cols,
     const std::function<float(int64_t, int64_t, int64_t)> &value_fn,
+    const vec3<double> &anchor = vec3<double>(0.0, 0.0, 0.0),
     const vec3<double> &offset = vec3<double>(0.0, 0.0, 0.0),
     double pxl_dx = 1.0,
     double pxl_dy = 1.0,
@@ -808,13 +809,13 @@ make_test_image_collection(
     planar_image_collection<float, double> coll;
     const vec3<double> row_unit(1.0, 0.0, 0.0);
     const vec3<double> col_unit(0.0, 1.0, 0.0);
-    const vec3<double> anchor(0.0, 0.0, 0.0);
+    const vec3<double> z_unit(0.0, 0.0, 1.0);
 
     for(int64_t slice = 0; slice < slices; ++slice){
         planar_image<float, double> img;
         img.init_orientation(row_unit, col_unit);
         img.init_buffer(rows, cols, 1);
-        const vec3<double> slice_offset = offset + vec3<double>(0.0, 0.0, static_cast<double>(slice) * pxl_dz);
+        const vec3<double> slice_offset = offset + z_unit * (static_cast<double>(slice) * pxl_dz);
         img.init_spatial(pxl_dx, pxl_dy, pxl_dz, anchor, slice_offset);
 
         for(int64_t row = 0; row < rows; ++row){
@@ -835,6 +836,7 @@ make_test_vector_field(
     int64_t rows,
     int64_t cols,
     const std::function<vec3<double>(int64_t, int64_t, int64_t)> &value_fn,
+    const vec3<double> &anchor = vec3<double>(0.0, 0.0, 0.0),
     const vec3<double> &offset = vec3<double>(0.0, 0.0, 0.0),
     double pxl_dx = 1.0,
     double pxl_dy = 1.0,
@@ -843,13 +845,13 @@ make_test_vector_field(
     planar_image_collection<double, double> coll;
     const vec3<double> row_unit(1.0, 0.0, 0.0);
     const vec3<double> col_unit(0.0, 1.0, 0.0);
-    const vec3<double> anchor(0.0, 0.0, 0.0);
+    const vec3<double> z_unit(0.0, 0.0, 1.0);
 
     for(int64_t slice = 0; slice < slices; ++slice){
         planar_image<double, double> img;
         img.init_orientation(row_unit, col_unit);
         img.init_buffer(rows, cols, 3);
-        const vec3<double> slice_offset = offset + vec3<double>(0.0, 0.0, static_cast<double>(slice) * pxl_dz);
+        const vec3<double> slice_offset = offset + z_unit * (static_cast<double>(slice) * pxl_dz);
         img.init_spatial(pxl_dx, pxl_dy, pxl_dz, anchor, slice_offset);
 
         for(int64_t row = 0; row < rows; ++row){
@@ -967,14 +969,49 @@ TEST_CASE( "histogram_match maps quantiles and handles constants" ){
     CHECK(matched_img.value(1, 0, 0) == doctest::Approx(25.0));
     CHECK(matched_img.value(1, 1, 0) == doctest::Approx(32.5));
 
-    auto constant_source = make_test_image_collection(1, 2, 2,
+    auto uniform_source = make_test_image_collection(1, 2, 2,
         [](int64_t, int64_t, int64_t){ return 5.0f; });
-    auto constant_reference = make_test_image_collection(1, 2, 2,
+    auto uniform_reference = make_test_image_collection(1, 2, 2,
         [](int64_t, int64_t, int64_t){ return 10.0f; });
-    auto constant_matched = histogram_match(constant_source, constant_reference, 8, 0.0);
+    auto constant_matched = histogram_match(uniform_source, uniform_reference, 8, 0.0);
     const auto &constant_img = get_image(constant_matched.images, 0);
     CHECK(constant_img.value(0, 0, 0) == doctest::Approx(5.0));
     CHECK(constant_img.value(1, 1, 0) == doctest::Approx(5.0));
+
+    auto matched_constant_reference = histogram_match(source, uniform_reference, 8, 0.0);
+    const auto &matched_constant_ref_img = get_image(matched_constant_reference.images, 0);
+    const auto &source_img = get_image(source.images, 0);
+    CHECK(matched_constant_ref_img.value(0, 0, 0) == doctest::Approx(source_img.value(0, 0, 0)));
+    CHECK(matched_constant_ref_img.value(1, 1, 0) == doctest::Approx(source_img.value(1, 1, 0)));
+
+    auto collect_values = [](const planar_image_collection<float, double> &coll){
+        std::vector<double> values;
+        for(const auto &img : coll.images){
+            for(const auto &val : img.data){
+                if(std::isfinite(val)){
+                    values.push_back(val);
+                }
+            }
+        }
+        std::sort(values.begin(), values.end());
+        return values;
+    };
+
+    auto median = [](const std::vector<double> &values){
+        const size_t mid = values.size() / 2;
+        if(values.size() % 2 == 0){
+            return 0.5 * (values[mid - 1] + values[mid]);
+        }
+        return values[mid];
+    };
+
+    const auto source_vals = collect_values(source);
+    const auto reference_vals = collect_values(reference);
+    const auto matched_vals = collect_values(matched);
+    const double source_median = median(source_vals);
+    const double reference_median = median(reference_vals);
+    const double matched_median = median(matched_vals);
+    CHECK(std::abs(matched_median - reference_median) < std::abs(source_median - reference_median));
 }
 
 TEST_CASE( "histogram_match rejects empty collections" ){
@@ -1011,6 +1048,28 @@ TEST_CASE( "smooth_vector_field respects sigma and channel count" ){
     CHECK(smooth_img.value(1, 1, 1) == doctest::Approx(0.0));
     CHECK(smooth_img.value(1, 1, 2) == doctest::Approx(0.0));
 
+    auto uniform_field = make_test_vector_field(1, 3, 3,
+        [](int64_t, int64_t, int64_t){
+            return vec3<double>(1.5, -2.0, 0.5);
+        });
+    smooth_vector_field(uniform_field, 1.0);
+    const auto &uniform_img = get_image(uniform_field.images, 0);
+    CHECK(uniform_img.value(0, 0, 0) == doctest::Approx(1.5));
+    CHECK(uniform_img.value(2, 2, 1) == doctest::Approx(-2.0));
+    CHECK(uniform_img.value(1, 1, 2) == doctest::Approx(0.5));
+
+    auto multi_slice = make_test_vector_field(2, 2, 2,
+        [](int64_t slice, int64_t, int64_t){
+            return vec3<double>(slice == 0 ? 0.0 : 2.0, 0.0, 0.0);
+        });
+    smooth_vector_field(multi_slice, 1.0);
+    const auto &slice0 = get_image(multi_slice.images, 0);
+    const auto &slice1 = get_image(multi_slice.images, 1);
+    CHECK(slice0.value(0, 0, 0) > 0.0);
+    CHECK(slice0.value(0, 0, 0) < 2.0);
+    CHECK(slice1.value(0, 0, 0) > 0.0);
+    CHECK(slice1.value(0, 0, 0) < 2.0);
+
     planar_image_collection<double, double> invalid_field;
     planar_image<double, double> invalid_img;
     invalid_img.init_orientation(vec3<double>(1.0, 0.0, 0.0), vec3<double>(0.0, 1.0, 0.0));
@@ -1042,6 +1101,16 @@ TEST_CASE( "compute_gradient captures z differences" ){
     auto gradient = compute_gradient(img);
     const auto &grad_img = get_image(gradient.images, 1);
     CHECK(grad_img.value(0, 0, 2) == doctest::Approx(1.0));
+}
+
+TEST_CASE( "compute_gradient handles 1x1 single-slice images" ){
+    auto img = make_test_image_collection(1, 1, 1,
+        [](int64_t, int64_t, int64_t){ return 42.0f; });
+    auto gradient = compute_gradient(img);
+    const auto &grad_img = get_image(gradient.images, 0);
+    CHECK(grad_img.value(0, 0, 0) == doctest::Approx(0.0));
+    CHECK(grad_img.value(0, 0, 1) == doctest::Approx(0.0));
+    CHECK(grad_img.value(0, 0, 2) == doctest::Approx(0.0));
 }
 
 TEST_CASE( "compute_gradient rejects empty collections" ){
@@ -1103,14 +1172,17 @@ TEST_CASE( "AlignViaDemons returns zero field for identical images" ){
 }
 
 TEST_CASE( "AlignViaDemons improves MSE for shifted image" ){
-    auto stationary = make_test_image_collection(1, 5, 5,
+    const int64_t rows = 5;
+    const int64_t cols = 5;
+
+    auto stationary = make_test_image_collection(1, rows, cols,
         [](int64_t, int64_t, int64_t col){
             return static_cast<float>(col);
         });
 
-    auto moving = make_test_image_collection(1, 5, 5,
-        [](int64_t, int64_t, int64_t col){
-            const int64_t shifted = std::min<int64_t>(4, col + 1);
+    auto moving = make_test_image_collection(1, rows, cols,
+        [cols](int64_t, int64_t, int64_t col){
+            const int64_t shifted = std::min<int64_t>(cols - 1, col + 1);
             return static_cast<float>(shifted);
         });
 
@@ -1123,6 +1195,7 @@ TEST_CASE( "AlignViaDemons improves MSE for shifted image" ){
     base_params.update_field_smoothing_sigma = 0.0;
     base_params.max_update_magnitude = 1.0;
     base_params.verbosity = 0;
+    const int64_t max_sample_loss_tolerance = std::max(rows, cols); // Allow up to one edge row/column to drop out after warping.
 
     SUBCASE("standard demons"){
         auto params = base_params;
@@ -1131,7 +1204,7 @@ TEST_CASE( "AlignViaDemons improves MSE for shifted image" ){
         REQUIRE(result.has_value());
         auto warped = warp_image_with_field(moving, *result);
         const auto [mse_after, count_after] = compute_mse_and_count(stationary, warped);
-        CHECK(count_after >= count_before - 5);
+        CHECK(count_after >= count_before - max_sample_loss_tolerance);
         CHECK(mse_after < mse_before);
     }
 
@@ -1142,7 +1215,7 @@ TEST_CASE( "AlignViaDemons improves MSE for shifted image" ){
         REQUIRE(result.has_value());
         auto warped = warp_image_with_field(moving, *result);
         const auto [mse_after, count_after] = compute_mse_and_count(stationary, warped);
-        CHECK(count_after >= count_before - 5);
+        CHECK(count_after >= count_before - max_sample_loss_tolerance);
         CHECK(mse_after < mse_before);
     }
 }
