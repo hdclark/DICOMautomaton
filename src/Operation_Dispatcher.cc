@@ -215,6 +215,7 @@
 #include "Operations/Repeat.h"
 #include "Operations/ReportROIData.h"
 #include "Operations/ResampleImages.h"
+#include "Operations/RegisterImagesDemons.h"
 #include "Operations/RigidWarpImages.h"
 #include "Operations/SamplePoints.h"
 #include "Operations/ScalePixels.h"
@@ -500,6 +501,7 @@ known_ops_t Known_Operations(){
     out["Repeat"] = std::make_pair(OpArgDocRepeat, Repeat);
     out["ReportROIData"] = std::make_pair(OpArgDocReportROIData, ReportROIData);
     out["ResampleImages"] = std::make_pair(OpArgDocResampleImages, ResampleImages);
+    out["RegisterImagesDemons"] = std::make_pair(OpArgDocRegisterImagesDemons, RegisterImagesDemons);
     out["RigidWarpImages"] = std::make_pair(OpArgDocRigidWarpImages, RigidWarpImages);
     out["SamplePoints"] = std::make_pair(OpArgDocSamplePoints, SamplePoints);
     out["ScalePixels"] = std::make_pair(OpArgDocScalePixels, ScalePixels);

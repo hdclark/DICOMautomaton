@@ -60,6 +60,9 @@ set_target_properties(  Alignment_Rigid_Tests_obj PROPERTIES POSITION_INDEPENDEN
 add_library(            Alignment_Field_obj OBJECT Alignment_Field.cc )
 set_target_properties(  Alignment_Field_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            Alignment_Demons_obj OBJECT Alignment_Demons.cc )
+set_target_properties(  Alignment_Demons_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Colour_Maps_obj OBJECT Colour_Maps.cc )
 set_target_properties(  Colour_Maps_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -235,6 +238,7 @@ add_library (imebrashim
     $<TARGET_OBJECTS:Tables_obj>
     $<TARGET_OBJECTS:Alignment_Rigid_obj>
     $<TARGET_OBJECTS:Alignment_Field_obj>
+    $<TARGET_OBJECTS:Alignment_Demons_obj>
     $<TARGET_OBJECTS:DCMA_DICOM_obj>
     imebra20121219/library/imebra/src/dataHandlerStringUT.cpp
     imebra20121219/library/imebra/src/data.cpp
@@ -412,6 +416,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Alignment_TPSRPM_obj>
     $<TARGET_OBJECTS:Alignment_Rigid_Tests_obj>
     $<TARGET_OBJECTS:Alignment_Field_obj>
+    $<TARGET_OBJECTS:Alignment_Demons_obj>
     $<TARGET_OBJECTS:Colour_Maps_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Common_Plotting_obj>
@@ -518,6 +523,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Alignment_TPSRPM_obj>
         $<TARGET_OBJECTS:Alignment_Rigid_Tests_obj>
         $<TARGET_OBJECTS:Alignment_Field_obj>
+        $<TARGET_OBJECTS:Alignment_Demons_obj>
         $<TARGET_OBJECTS:Colour_Maps_obj>
         $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
         $<TARGET_OBJECTS:Common_Plotting_obj>
