@@ -198,6 +198,13 @@ TEST_CASE( "deformation_field write_to and read_from roundtrip" ){
         [](int64_t slice, int64_t row, int64_t col){
             return vec3<double>(0.1 * col, -0.2 * row, 0.05 * slice);
         });
+
+    // Add metadata (including special characters) to test serialization.
+    for(auto &img : field_imgs.images){
+        img.metadata["PatientID"] = "test_patient_001";
+        img.metadata["key with spaces"] = "value;with@special=chars";
+    }
+
     deformation_field field(std::move(field_imgs));
 
     std::stringstream ss;
@@ -221,6 +228,13 @@ TEST_CASE( "deformation_field write_to and read_from roundtrip" ){
         CHECK(it1->pxl_dz == doctest::Approx(it2->pxl_dz));
         for(size_t i = 0; i < it1->data.size(); ++i){
             CHECK(it1->data[i] == doctest::Approx(it2->data[i]));
+        }
+        // Verify metadata roundtrip.
+        CHECK(it1->metadata.size() == it2->metadata.size());
+        for(const auto &mp : it1->metadata){
+            auto it_m = it2->metadata.find(mp.first);
+            REQUIRE(it_m != it2->metadata.end());
+            CHECK(it_m->second == mp.second);
         }
     }
 

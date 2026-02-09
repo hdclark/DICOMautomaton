@@ -365,7 +365,10 @@ bool RegisterImagesDemons(Drover &DICOM_data,
     // Optionally keep a copy of the warped moving images for debugging.
     if(KeepDeformedImages){
         YLOGINFO("Warping moving images with computed deformation field");
-        auto warped = AlignViaDemonsHelpers::warp_image_with_field(moving_img_arr, deform_field_opt.value());
+        // Resample the moving image onto the fixed grid first, since the deformation field
+        // is defined on the stationary image's grid.
+        auto resampled = AlignViaDemonsHelpers::resample_image_to_reference_grid(moving_img_arr, fixed_img_arr);
+        auto warped = AlignViaDemonsHelpers::warp_image_with_field(resampled, deform_field_opt.value());
 
         auto warped_img_arr = std::make_shared<Image_Array>();
         warped_img_arr->imagecoll = warped;

@@ -138,7 +138,10 @@ warp_image_with_field(
 // The basic algorithm:
 // 1. Compute the gradient of the fixed image
 // 2. Compute the intensity difference between fixed and (warped) moving image
-// 3. Compute update field: displacement = - (difference * gradient) / (gradient_magnitude^2 + difference^2)
+// 3. Compute update field: displacement = (difference * gradient) / (gradient_magnitude^2 + difference^2)
+//    where difference = fixed - moving. The resulting displacement points from
+//    positions in the fixed image grid toward corresponding positions in the
+//    moving image, suitable for pull-based warping where warped(x) = moving(x + d(x)).
 // 4. Smooth the update field (optional, primarily for diffeomorphic variant)
 // 5. Add/compose the update to the deformation field
 // 6. Smooth the deformation field for regularization
