@@ -219,36 +219,6 @@ AlignViaDemonsHelpers::histogram_match(
     return matched;
 }
 
-// // Helper functions to emulate random-access to a std::list.
-// //
-// // BEWARE that references can become stale due to scope, deletion, etc. No images are allocated in this helper.
-// //
-// // TODO: replace callsites with cached image index, e.g., using planar_image_adjacency, which will be much more
-// // efficient. Alternatively, for visiting all images in order, just using image iterators directly and iterating once
-// // per loop will be best.
-// 
-// template <class T,class R>
-// planar_image<T, R> &
-// get_image( std::list<planar_image<T, R>> &imgs, size_t i){
-//     const size_t N_imgs = imgs.size();
-//     if(!isininc(0,i,N_imgs)){
-//         throw std::runtime_error("Requested image index not present, unable to continue");
-//     }
-//     auto it = std::next( std::begin(imgs), i );
-//     return *it;
-// }
-// 
-// template <class T,class R>
-// const planar_image<T, R> &
-// get_image( const std::list<planar_image<T, R>> &imgs, size_t i){
-//     const size_t N_imgs = imgs.size();
-//     if(!isininc(0,i,N_imgs)){
-//         throw std::runtime_error("Requested image index not present, unable to continue");
-//     }
-//     auto it = std::next( std::begin(imgs), i );
-//     return *it;
-// }
-
 // Helper function to apply 3D Gaussian smoothing to a vector field.
 // The field should have 3 channels representing dx, dy, dz displacements.
 void

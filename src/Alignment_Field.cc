@@ -30,6 +30,16 @@
 #include "Alignment_Rigid.h"
 #include "Alignment_Field.h"
 
+using namespace AlignViaFieldHelpers;
+
+// Helper functions.
+//
+// Don't forget to prefix helper definitions here with AlignViaDemonsHelpers namespace if needed.
+//
+// ...
+
+
+// Class members.
 
 deformation_field::deformation_field(std::istream &is){
     if(!this->read_from(is)){

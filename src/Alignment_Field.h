@@ -12,6 +12,12 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorImages.h"       //Needed for vec3 class.
 
+namespace AlignViaFieldHelpers {
+
+// Helper functions that are semi-private can be added here instead of as class members,
+// which will simplify testing and linking with tests included.
+
+};
 
 class deformation_field {
     private:
