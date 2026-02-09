@@ -60,6 +60,75 @@ struct AlignViaDemonsParams {
     int64_t verbosity = 1;
 };
 
+namespace AlignViaDemonsHelpers {
+
+// Helper function to resample a moving image onto a reference image's grid.
+// This is needed to handle images with different orientations or alignments.
+planar_image_collection<float, double>
+resample_image_to_reference_grid(
+    const planar_image_collection<float, double> & moving,
+    const planar_image_collection<float, double> & reference );
+
+
+// Helper function to perform histogram matching.
+// Maps the intensity distribution of the source to match the reference.
+planar_image_collection<float, double>
+histogram_match(
+    const planar_image_collection<float, double> & source,
+    const planar_image_collection<float, double> & reference,
+    int64_t num_bins,
+    double outlier_fraction );
+
+// Helper functions to emulate random-access to a std::list.
+//
+// BEWARE that references can become stale due to scope, deletion, etc. No images are allocated in this helper.
+//
+// TODO: replace callsites with cached image index, e.g., using planar_image_adjacency, which will be much more
+// efficient. Alternatively, for visiting all images in order, just using image iterators directly and iterating once
+// per loop will be best.
+template <class T,class R>
+planar_image<T, R> &
+get_image( std::list<planar_image<T, R>> &imgs, size_t i){
+    const size_t N_imgs = imgs.size();
+    if(!isininc(0,i,N_imgs)){
+        throw std::runtime_error("Requested image index not present, unable to continue");
+    }
+    auto it = std::next( std::begin(imgs), i );
+    return *it;
+}
+
+template <class T,class R>
+const planar_image<T, R> &
+get_image( const std::list<planar_image<T, R>> &imgs, size_t i){
+    const size_t N_imgs = imgs.size();
+    if(!isininc(0,i,N_imgs)){
+        throw std::runtime_error("Requested image index not present, unable to continue");
+    }
+    auto it = std::next( std::begin(imgs), i );
+    return *it;
+}
+
+// Helper function to apply 3D Gaussian smoothing to a vector field.
+// The field should have 3 channels representing dx, dy, dz displacements.
+void
+smooth_vector_field(
+    planar_image_collection<double, double> & field,
+    double sigma_mm );
+
+
+// Helper function to compute the gradient of an image collection.
+// Returns a 3-channel image where channels represent gradients in x, y, z directions.
+planar_image_collection<double, double>
+compute_gradient(const planar_image_collection<float, double> & img_coll);
+
+// Helper function to warp an image using a deformation field.
+planar_image_collection<float, double>
+warp_image_with_field(
+    const planar_image_collection<float, double> & img_coll,
+    const deformation_field & def_field );
+
+} // namespace AlignViaDemonsHelpers
+
 
 // This routine performs deformable image registration using the demons algorithm.
 //
