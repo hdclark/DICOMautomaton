@@ -628,14 +628,17 @@ AlignViaDemons(AlignViaDemonsParams & params,
                         // Compute gradient magnitude squared
                         const double grad_mag_sq = grad_x * grad_x + grad_y * grad_y + grad_z * grad_z;
                         
-                        // Demons force: u = - (diff * gradient) / (grad_mag^2 + diff^2 / normalization)
-                        // This is the classic demons formulation
+                        // Demons force: u = (diff * gradient) / (grad_mag^2 + diff^2 / normalization)
+                        // where diff = fixed - moving. The displacement u points from
+                        // positions in the fixed image grid toward corresponding positions
+                        // in the moving image, suitable for pull-based warping where
+                        // warped(x) = moving(x + u(x)).
                         const double denom = grad_mag_sq + (diff * diff) / (params.normalization_factor + epsilon);
                         
                         if(denom > epsilon){
-                            double update_x = - diff * grad_x / denom;
-                            double update_y = - diff * grad_y / denom;
-                            double update_z = - diff * grad_z / denom;
+                            double update_x = diff * grad_x / denom;
+                            double update_y = diff * grad_y / denom;
+                            double update_z = diff * grad_z / denom;
                             
                             // Clamp update magnitude
                             const double update_mag = std::sqrt(update_x * update_x + 
