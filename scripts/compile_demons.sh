@@ -30,6 +30,7 @@ mkdir -p build
 # Download Ygor.
 rm -rf build/ygor
 git clone --depth=1 'https://github.com/hdclark/Ygor.git' build/ygor
+touch build/ygor/src/YgorDefinitions.h
 
 # Generate a minimal file to run the relevant unit tests.
 cat <<EOF > build/demons.cc
