@@ -32,7 +32,6 @@
 #include "YgorString.h"
 
 #include "Structs.h"
-#include "Regex_Selectors.h"
 #include "Thread_Pool.h"
 
 #include "Alignment_Rigid.h"
