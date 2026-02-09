@@ -12,6 +12,18 @@
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorImages.h"       //Needed for vec3 class.
 
+// Controls how the deformation field is applied when warping images.
+enum class deformation_field_warp_method {
+    // Pull-based: for each output voxel, look up the source position using the inverse of the field.
+    // The inverse is approximated by iterative fixed-point inversion.
+    // This is the default and generally preferred method.
+    pull,
+
+    // Push-based: for each input voxel, push its value to the displaced position.
+    // This can leave gaps in the output image and may require post-processing.
+    push,
+};
+
 namespace AlignViaFieldHelpers {
 
 // Helper functions that are semi-private can be added here instead of as class members,
@@ -42,8 +54,10 @@ class deformation_field {
         void apply_to(point_set<double> &ps) const; // Included for parity with affine_transform class.
         void apply_to(vec3<double> &v) const;       // Included for parity with affine_transform class.
 
-        void apply_to(planar_image<float, double> &img) const;
-        void apply_to(planar_image_collection<float, double> &img) const;
+        void apply_to(planar_image<float, double> &img,
+                      deformation_field_warp_method method = deformation_field_warp_method::pull) const;
+        void apply_to(planar_image_collection<float, double> &img,
+                      deformation_field_warp_method method = deformation_field_warp_method::pull) const;
 
         // Serialize and deserialize to a human- and machine-readable format.
         bool write_to( std::ostream &os ) const;
