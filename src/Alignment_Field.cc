@@ -114,8 +114,9 @@ void
 deformation_field::apply_to(planar_image<float, double> &img,
                             deformation_field_warp_method method) const {
     // Single-image version: wrap in a temporary collection so the implementation
-    // can sample using 3D trilinear interpolation (important if the deformation
-    // field has a through-slice/z component, though it's limited to one slice here).
+    // can sample using 3D trilinear interpolation. Although only one slice is
+    // provided, the deformation field itself may span multiple slices, and the
+    // collection version handles all the sampling logic.
     planar_image_collection<float, double> tmp_coll;
     tmp_coll.images.push_back(std::move(img));
     this->apply_to(tmp_coll, method);
@@ -334,9 +335,9 @@ deformation_field::read_from( std::istream &is ){
             img.init_spatial(pxl_dx, pxl_dy, pxl_dz, anchor, offset);
 
             // Read metadata (base64-encoded).
-            std::string shtl;
+            std::string label;
             int64_t N_metadata = 0;
-            is >> shtl; // 'num_metadata='
+            is >> label; // 'num_metadata='
             is >> N_metadata;
             if( is.fail() || N_metadata < 0 ){
                 YLOGWARN("Metadata count could not be read.");
