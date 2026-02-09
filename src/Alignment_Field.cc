@@ -252,7 +252,7 @@ bool
 deformation_field::read_from( std::istream &is ){
     int64_t N_imgs = 0;
     is >> N_imgs;
-    if( is.fail() || !isininc(1, N_imgs, 1'000'000'000) ){
+    if( is.fail() || !isininc(1, N_imgs, 10'000) ){
         YLOGWARN("Number of images could not be read, or is invalid.");
         return false;
     }

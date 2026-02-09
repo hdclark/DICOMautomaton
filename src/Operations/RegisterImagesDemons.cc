@@ -369,7 +369,9 @@ bool RegisterImagesDemons(Drover &DICOM_data,
 
         auto warped_img_arr = std::make_shared<Image_Array>();
         warped_img_arr->imagecoll = warped;
-        warped_img_arr->imagecoll.images.front().metadata["Description"] = "Demons-warped moving image";
+        for(auto &img : warped_img_arr->imagecoll.images){
+            img.metadata["Description"] = "Demons-warped moving image";
+        }
         DICOM_data.image_data.emplace_back(warped_img_arr);
 
         YLOGINFO("Warped moving images added to image collection");
