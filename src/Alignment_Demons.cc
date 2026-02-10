@@ -497,6 +497,15 @@ AlignViaDemonsHelpers::warp_image_with_field(
         throw std::invalid_argument("Cannot warp: image collection is empty");
     }
     
+    // Build a spatial index for the source images so that trilinear interpolation
+    // (with proper bilinear in-plane sampling) is used instead of the
+    // planar_image_collection::trilinearly_interpolate() fallback, which degrades
+    // to nearest-neighbour when only one image plane is present.
+    const auto img_unit = img_coll.images.front().ortho_unit();
+    // img_coll is const, but planar_image_adjacency needs non-const refs internally.
+    // We cast away const only for the index — no mutation occurs during interpolation.
+    auto &img_coll_nc = const_cast<planar_image_collection<float, double> &>(img_coll);
+    planar_image_adjacency<float, double> img_adj( {}, { { std::ref(img_coll_nc) } }, img_unit );
 
     planar_image_collection<float, double> warped = img_coll;
     const float oob = std::numeric_limits<float>::quiet_NaN();
@@ -516,7 +525,7 @@ AlignViaDemonsHelpers::warp_image_with_field(
                 
                 // Sample from the original image at the warped position
                 for(int64_t chnl = 0; chnl < N_chnls; ++chnl){
-                    const auto val = img_coll.trilinearly_interpolate(warped_pos, chnl, oob);
+                    const auto val = img_adj.trilinearly_interpolate(warped_pos, chnl, oob);
                     img.reference(row, col, chnl) = val;
                 }
             }
@@ -699,8 +708,7 @@ AlignViaDemons(AlignViaDemonsParams & params,
                 deformation_field update_def_field(std::move(update_field_copy));
                 
                 // Now compose: for each position, add the update sampled at the deformed position
-                //const double oob = 0.0;
-                const double oob = std::numeric_limits<double>::quiet_NaN();
+                const double oob = 0.0;
                 for(size_t img_idx = 0; img_idx < deformation_field_images.images.size(); ++img_idx){
                     auto &def_img = get_image(deformation_field_images.images,img_idx);
                     const int64_t N_rows = def_img.rows;
@@ -719,10 +727,12 @@ AlignViaDemons(AlignViaDemonsParams & params,
                             // Compute deformed position
                             const vec3<double> deformed_pos = pos + vec3<double>(dx, dy, dz);
                             
-                            // Sample update field at the deformed position
-                            const double upd_dx = update_def_field.get_imagecoll_crefw().get().trilinearly_interpolate(deformed_pos, 0, oob);
-                            const double upd_dy = update_def_field.get_imagecoll_crefw().get().trilinearly_interpolate(deformed_pos, 1, oob);
-                            const double upd_dz = update_def_field.get_imagecoll_crefw().get().trilinearly_interpolate(deformed_pos, 2, oob);
+                            // Sample update field at the deformed position using
+                            // adjacency-based interpolation for proper bilinear sampling.
+                            const auto &upd_adj = update_def_field.get_adjacency_crefw().get();
+                            const double upd_dx = upd_adj.trilinearly_interpolate(deformed_pos, 0, oob);
+                            const double upd_dy = upd_adj.trilinearly_interpolate(deformed_pos, 1, oob);
+                            const double upd_dz = upd_adj.trilinearly_interpolate(deformed_pos, 2, oob);
                             
                             // Compose: new deformation = current deformation + update at deformed position
                             def_img.reference(row, col, 0) = dx + upd_dx;

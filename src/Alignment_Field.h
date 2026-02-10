@@ -43,12 +43,24 @@ class deformation_field {
         deformation_field(std::istream &is); // Defers to read_from(), but throws on errors.
         deformation_field(planar_image_collection<double,double> &&);
 
+        // Move constructor and assignment: rebuild the adjacency index after moving,
+        // since the index holds pointers to images and those addresses change on move.
+        deformation_field(deformation_field &&other);
+        deformation_field& operator=(deformation_field &&other);
+
+        // Copy constructor and assignment: rebuild the adjacency index after copying.
+        deformation_field(const deformation_field &other);
+        deformation_field& operator=(const deformation_field &other);
+
         // Re-constructor.
         void swap_and_rebuild(planar_image_collection<double,double> &);
 
         // Member functions.
         std::reference_wrapper< const planar_image_collection<double,double> >
             get_imagecoll_crefw() const; // Image array accessor.
+
+        std::reference_wrapper< const planar_image_adjacency<double,double> >
+            get_adjacency_crefw() const; // Adjacency index accessor.
 
         vec3<double> transform(const vec3<double> &v) const;
         void apply_to(point_set<double> &ps) const; // Included for parity with affine_transform class.

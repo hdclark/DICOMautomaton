@@ -52,6 +52,44 @@ deformation_field::deformation_field(planar_image_collection<double,double> &&in
     this->swap_and_rebuild(in);
 }
 
+deformation_field::deformation_field(deformation_field &&other)
+    : field(std::move(other.field)), adj(std::nullopt) {
+    // Rebuild the adjacency index since image addresses changed during the move.
+    const auto img_unit = this->field.images.front().ortho_unit();
+    planar_image_adjacency<double,double> img_adj( {}, { { std::ref(this->field) } }, img_unit );
+    this->adj = img_adj;
+}
+
+deformation_field& deformation_field::operator=(deformation_field &&other){
+    if(this != &other){
+        this->field = std::move(other.field);
+        // Rebuild the adjacency index since image addresses changed during the move.
+        const auto img_unit = this->field.images.front().ortho_unit();
+        planar_image_adjacency<double,double> img_adj( {}, { { std::ref(this->field) } }, img_unit );
+        this->adj = img_adj;
+    }
+    return *this;
+}
+
+deformation_field::deformation_field(const deformation_field &other)
+    : field(other.field), adj(std::nullopt) {
+    // Rebuild the adjacency index since image addresses differ from the source.
+    const auto img_unit = this->field.images.front().ortho_unit();
+    planar_image_adjacency<double,double> img_adj( {}, { { std::ref(this->field) } }, img_unit );
+    this->adj = img_adj;
+}
+
+deformation_field& deformation_field::operator=(const deformation_field &other){
+    if(this != &other){
+        this->field = other.field;
+        // Rebuild the adjacency index since image addresses differ from the source.
+        const auto img_unit = this->field.images.front().ortho_unit();
+        planar_image_adjacency<double,double> img_adj( {}, { { std::ref(this->field) } }, img_unit );
+        this->adj = img_adj;
+    }
+    return *this;
+}
+
 void
 deformation_field::swap_and_rebuild(planar_image_collection<double,double> &in){
 
@@ -89,20 +127,28 @@ deformation_field::get_imagecoll_crefw() const {
     return std::cref(this->field);
 };
 
+std::reference_wrapper<const planar_image_adjacency<double,double>>
+deformation_field::get_adjacency_crefw() const {
+    if(!this->adj){
+        throw std::runtime_error("Invalid planar_adjacency cache");
+    }
+    return std::cref(this->adj.value());
+};
+
 vec3<double> 
 deformation_field::transform(const vec3<double> &v) const {
     const auto oob = std::numeric_limits<double>::quiet_NaN();
 
-// TODO: the planar_adjacency here can be invalid or stale. Investigate why.
-//if(!this->adj){
-//    throw std::runtime_error("Invalid planar_adjacency cache");
-//}
-//const auto dx = this->adj.value().trilinearly_interpolate(v, 0, oob);
-//const auto dy = this->adj.value().trilinearly_interpolate(v, 1, oob);
-//const auto dz = this->adj.value().trilinearly_interpolate(v, 2, oob);
-    const auto dx = this->field.trilinearly_interpolate(v, 0, oob);
-    const auto dy = this->field.trilinearly_interpolate(v, 1, oob);
-    const auto dz = this->field.trilinearly_interpolate(v, 2, oob);
+    if(!this->adj){
+        throw std::runtime_error("Invalid planar_adjacency cache");
+    }
+    // Use the adjacency-based trilinear interpolation, which properly falls back
+    // to bilinear in-plane interpolation when only a single image plane is present.
+    // The planar_image_collection::trilinearly_interpolate() method degrades to
+    // nearest-neighbour in the single-plane case, which introduces artifacts.
+    const auto dx = this->adj.value().trilinearly_interpolate(v, 0, oob);
+    const auto dy = this->adj.value().trilinearly_interpolate(v, 1, oob);
+    const auto dz = this->adj.value().trilinearly_interpolate(v, 2, oob);
     return v + vec3<double>(dx, dy, dz);
 }
 
