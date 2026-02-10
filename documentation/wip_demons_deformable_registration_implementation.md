@@ -127,7 +127,9 @@ dicomautomaton_dispatcher \
 3. **Iterative Registration**:
    - Compute image gradients (of fixed image)
    - Compute intensity differences (fixed - warped moving)
-   - Calculate demons force: `u = -diff·∇ / (|∇|² + diff²/α)`
+   - Calculate demons force: `u = diff·∇ / (|∇|² + diff²/α)` where `diff = fixed - moving`.
+     The resulting displacement points from positions in the fixed image grid toward
+     corresponding positions in the moving image, suitable for pull-based warping.
    - Smooth update field (for diffeomorphic variant)
    - Add/compose update to deformation field
    - Smooth deformation field for regularization

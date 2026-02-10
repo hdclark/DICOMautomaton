@@ -48,13 +48,14 @@ AlignViaDemonsHelpers::resample_image_to_reference_grid(
     // Create output image collection matching reference geometry
     planar_image_collection<float, double> resampled;
     
+    const float oob = std::numeric_limits<float>::quiet_NaN();
     for(const auto &ref_img : reference.images){
         // Create a new image with the same geometry as the reference
         planar_image<float, double> new_img = ref_img;
         
         // Clear the pixel data and initialize to zero (or NaN for out-of-bounds)
         for(auto &val : new_img.data){
-            val = std::numeric_limits<float>::quiet_NaN();
+            val = oob;
         }
         
         // Sample from the moving image at each voxel position in the reference grid
@@ -69,7 +70,7 @@ AlignViaDemonsHelpers::resample_image_to_reference_grid(
                 
                 // Try to sample this position from the moving image using trilinear interpolation
                 for(int64_t chnl = 0; chnl < N_chnls; ++chnl){
-                    const auto val = moving.trilinearly_interpolate(pos, chnl, std::numeric_limits<float>::quiet_NaN());
+                    const auto val = moving.trilinearly_interpolate(pos, chnl, oob);
                     if(std::isfinite(val)){
                         new_img.reference(row, col, chnl) = val;
                     }
@@ -496,7 +497,9 @@ AlignViaDemonsHelpers::warp_image_with_field(
         throw std::invalid_argument("Cannot warp: image collection is empty");
     }
     
+
     planar_image_collection<float, double> warped = img_coll;
+    const float oob = std::numeric_limits<float>::quiet_NaN();
     
     for(auto &img : warped.images){
         const int64_t N_rows = img.rows;
@@ -513,8 +516,7 @@ AlignViaDemonsHelpers::warp_image_with_field(
                 
                 // Sample from the original image at the warped position
                 for(int64_t chnl = 0; chnl < N_chnls; ++chnl){
-                    const auto val = img_coll.trilinearly_interpolate(warped_pos, chnl, 
-                                                                       std::numeric_limits<float>::quiet_NaN());
+                    const auto val = img_coll.trilinearly_interpolate(warped_pos, chnl, oob);
                     img.reference(row, col, chnl) = val;
                 }
             }
@@ -628,14 +630,17 @@ AlignViaDemons(AlignViaDemonsParams & params,
                         // Compute gradient magnitude squared
                         const double grad_mag_sq = grad_x * grad_x + grad_y * grad_y + grad_z * grad_z;
                         
-                        // Demons force: u = - (diff * gradient) / (grad_mag^2 + diff^2 / normalization)
-                        // This is the classic demons formulation
+                        // Demons force: u = (diff * gradient) / (grad_mag^2 + diff^2 / normalization)
+                        // where diff = fixed - moving. The displacement u points from
+                        // positions in the fixed image grid toward corresponding positions
+                        // in the moving image, suitable for pull-based warping where
+                        // warped(x) = moving(x + u(x)).
                         const double denom = grad_mag_sq + (diff * diff) / (params.normalization_factor + epsilon);
                         
                         if(denom > epsilon){
-                            double update_x = - diff * grad_x / denom;
-                            double update_y = - diff * grad_y / denom;
-                            double update_z = - diff * grad_z / denom;
+                            double update_x = diff * grad_x / denom;
+                            double update_y = diff * grad_y / denom;
+                            double update_z = diff * grad_z / denom;
                             
                             // Clamp update magnitude
                             const double update_mag = std::sqrt(update_x * update_x + 
@@ -694,6 +699,8 @@ AlignViaDemons(AlignViaDemonsParams & params,
                 deformation_field update_def_field(std::move(update_field_copy));
                 
                 // Now compose: for each position, add the update sampled at the deformed position
+                //const double oob = 0.0;
+                const double oob = std::numeric_limits<double>::quiet_NaN();
                 for(size_t img_idx = 0; img_idx < deformation_field_images.images.size(); ++img_idx){
                     auto &def_img = get_image(deformation_field_images.images,img_idx);
                     const int64_t N_rows = def_img.rows;
@@ -713,9 +720,9 @@ AlignViaDemons(AlignViaDemonsParams & params,
                             const vec3<double> deformed_pos = pos + vec3<double>(dx, dy, dz);
                             
                             // Sample update field at the deformed position
-                            const double upd_dx = update_def_field.get_imagecoll_crefw().get().trilinearly_interpolate(deformed_pos, 0, 0.0);
-                            const double upd_dy = update_def_field.get_imagecoll_crefw().get().trilinearly_interpolate(deformed_pos, 1, 0.0);
-                            const double upd_dz = update_def_field.get_imagecoll_crefw().get().trilinearly_interpolate(deformed_pos, 2, 0.0);
+                            const double upd_dx = update_def_field.get_imagecoll_crefw().get().trilinearly_interpolate(deformed_pos, 0, oob);
+                            const double upd_dy = update_def_field.get_imagecoll_crefw().get().trilinearly_interpolate(deformed_pos, 1, oob);
+                            const double upd_dz = update_def_field.get_imagecoll_crefw().get().trilinearly_interpolate(deformed_pos, 2, oob);
                             
                             // Compose: new deformation = current deformation + update at deformed position
                             def_img.reference(row, col, 0) = dx + upd_dx;

@@ -55,6 +55,8 @@ OperationDoc OpArgDocRegisterImagesDemons(){
         "The 'moving' image is *not* warped by this operation -- this operation merely identifies a suitable"
         " transformation. Separation of the identification and application of a warp allows the warp to more easily"
         " be re-used and applied to multiple objects."
+        " However, the KeepDeformedImages option can be used to also store a copy of the warped moving images"
+        " for debugging and visual inspection."
     );
     out.notes.emplace_back(
         "The output of this operation is a deformation field transformation that can later be applied to"
@@ -214,6 +216,16 @@ OperationDoc OpArgDocRegisterImagesDemons(){
     out.args.back().expected = false;
     out.args.back().examples = { "keyA@valueA;keyB@valueB" };
 
+    out.args.emplace_back();
+    out.args.back().name = "KeepDeformedImages";
+    out.args.back().desc = "Whether to keep a copy of the deformed (warped) moving images for debugging purposes."
+                           " If true, the moving images are warped using the computed deformation field and"
+                           " stored as a new image array. This is useful for visually inspecting registration quality.";
+    out.args.back().default_val = "false";
+    out.args.back().expected = true;
+    out.args.back().examples = { "true", "false" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
+
     return out;
 }
 
@@ -239,6 +251,7 @@ bool RegisterImagesDemons(Drover &DICOM_data,
     const auto Verbosity = std::stol(OptArgs.getValueStr("Verbosity").value());
     const auto TransformName = OptArgs.getValueStr("TransformName").value();
     const auto MetadataOpt = OptArgs.getValueStr("Metadata");
+    const auto KeepDeformedImagesStr = OptArgs.getValueStr("KeepDeformedImages").value();
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_true = Compile_Regex("^tr?u?e?$");
@@ -246,6 +259,7 @@ bool RegisterImagesDemons(Drover &DICOM_data,
 
     const bool UseDiffeomorphic = std::regex_match(UseDiffeomorphicStr, regex_true);
     const bool UseHistogramMatching = std::regex_match(UseHistogramMatchingStr, regex_true);
+    const bool KeepDeformedImages = std::regex_match(KeepDeformedImagesStr, regex_true);
 
     // Parse user-provided metadata.
     std::map<std::string, std::string> Metadata;
@@ -347,6 +361,24 @@ bool RegisterImagesDemons(Drover &DICOM_data,
     DICOM_data.trans_data.emplace_back(transform);
 
     YLOGINFO("Deformation field added to transformation collection");
+
+    // Optionally keep a copy of the warped moving images for debugging.
+    if(KeepDeformedImages){
+        YLOGINFO("Warping moving images with computed deformation field");
+        // Resample the moving image onto the fixed grid first, since the deformation field
+        // is defined on the stationary image's grid.
+        auto resampled = AlignViaDemonsHelpers::resample_image_to_reference_grid(moving_img_arr, fixed_img_arr);
+        auto warped = AlignViaDemonsHelpers::warp_image_with_field(resampled, deform_field_opt.value());
+
+        auto warped_img_arr = std::make_shared<Image_Array>();
+        warped_img_arr->imagecoll = warped;
+        for(auto &img : warped_img_arr->imagecoll.images){
+            img.metadata["Description"] = "Demons-warped moving image";
+        }
+        DICOM_data.image_data.emplace_back(warped_img_arr);
+
+        YLOGINFO("Warped moving images added to image collection");
+    }
 
     return true;
 }
