@@ -469,3 +469,283 @@ TEST_CASE( "AlignViaDemons improves MSE for shifted image" ){
         CHECK(mse_after < mse_before);
     }
 }
+
+
+TEST_CASE( "warp_image_with_field uses bilinear interpolation not nearest-neighbour" ){
+    // Verify that warping uses sub-pixel interpolation. With nearest-neighbour
+    // a half-pixel displacement would snap back to the original pixel position.
+    const int64_t N = 10;
+    auto img = make_test_image_collection(1, N, N,
+        [](int64_t, int64_t, int64_t col){
+            return static_cast<float>(col);
+        });
+
+    // Create a uniform +0.5 pixel displacement in x (column direction).
+    auto field_images = make_test_vector_field(1, N, N,
+        [](int64_t, int64_t, int64_t){
+            return vec3<double>(0.5, 0.0, 0.0);
+        });
+    deformation_field field(std::move(field_images));
+
+    auto warped = warp_image_with_field(img, field);
+    const auto &warped_img = get_image(warped.images, 0);
+
+    // With proper bilinear interpolation, warped(row, col) = moving(col + 0.5)
+    // which should be (col + 0.5) for interior pixels.
+    // With nearest-neighbour, the value would snap to either col or col+1.
+    for(int64_t col = 1; col < N - 2; ++col){
+        const float expected = static_cast<float>(col) + 0.5f;
+        CHECK(warped_img.value(5, col, 0) == doctest::Approx(expected).epsilon(0.01));
+    }
+}
+
+
+TEST_CASE( "AlignViaDemons converges for Gaussian blob shift" ){
+    // A Gaussian blob shifted by a known amount should converge with decreasing MSE.
+    const int64_t N = 20;
+
+    auto stationary = make_test_image_collection(1, N, N,
+        [](int64_t, int64_t row, int64_t col){
+            const double dr = row - 10.0;
+            const double dc = col - 10.0;
+            return static_cast<float>(100.0 * std::exp(-(dr * dr + dc * dc) / 8.0));
+        });
+
+    auto moving = make_test_image_collection(1, N, N,
+        [](int64_t, int64_t row, int64_t col){
+            const double dr = row - 10.0;
+            const double dc = col - 10.0 - 2.0;
+            return static_cast<float>(100.0 * std::exp(-(dr * dr + dc * dc) / 8.0));
+        });
+
+    const auto [mse_before, count_before] = compute_mse_and_count(stationary, moving);
+
+    AlignViaDemonsParams params;
+    params.max_iterations = 200;
+    params.convergence_threshold = 0.0;
+    params.deformation_field_smoothing_sigma = 1.0;
+    params.update_field_smoothing_sigma = 0.0;
+    params.use_diffeomorphic = false;
+    params.max_update_magnitude = 2.0;
+    params.verbosity = 0;
+
+    auto result = AlignViaDemons(params, moving, stationary);
+    REQUIRE(result.has_value());
+    auto warped = warp_image_with_field(moving, *result);
+    const auto [mse_after, count_after] = compute_mse_and_count(stationary, warped);
+
+    // MSE should drop significantly (more than 10x).
+    CHECK(mse_after < mse_before * 0.1);
+    // Should not lose too many samples. A 2-pixel shift can push up to 2 edge
+    // rows/columns out of bounds, so allow loss of up to 3*N pixels.
+    CHECK(count_after >= count_before - 3 * N);
+}
+
+
+TEST_CASE( "AlignViaDemons does not drift for identical images" ){
+    // Running the algorithm on identical images should not cause the warped
+    // image to drift away from the original. The center-of-mass should stay put.
+    const int64_t N = 16;
+
+    auto img = make_test_image_collection(1, N, N,
+        [](int64_t, int64_t row, int64_t col){
+            const double dr = row - 8.0;
+            const double dc = col - 8.0;
+            return static_cast<float>(100.0 * std::exp(-(dr * dr + dc * dc) / 6.0));
+        });
+
+    AlignViaDemonsParams params;
+    params.max_iterations = 200;
+    params.convergence_threshold = 0.0;
+    params.deformation_field_smoothing_sigma = 1.0;
+    params.update_field_smoothing_sigma = 0.0;
+    params.use_diffeomorphic = false;
+    params.max_update_magnitude = 2.0;
+    params.verbosity = 0;
+
+    auto result = AlignViaDemons(params, img, img);
+    REQUIRE(result.has_value());
+
+    // Deformation should be essentially zero.
+    CHECK(max_abs_displacement(*result) < 1e-6);
+
+    // Warped image should be identical to the original.
+    auto warped = warp_image_with_field(img, *result);
+    const auto [mse, count] = compute_mse_and_count(img, warped);
+    CHECK(mse < 1e-6);
+    CHECK(count == N * N);
+}
+
+
+TEST_CASE( "AlignViaDemons MSE monotonically decreases" ){
+    // Verify that the algorithm does not increase MSE on any iteration.
+    // We run a few iterations and check intermediate MSE values.
+    const int64_t N = 16;
+
+    auto stationary = make_test_image_collection(1, N, N,
+        [](int64_t, int64_t row, int64_t col){
+            const double dr = row - 8.0;
+            const double dc = col - 8.0;
+            return static_cast<float>(100.0 * std::exp(-(dr * dr + dc * dc) / 6.0));
+        });
+
+    auto moving = make_test_image_collection(1, N, N,
+        [](int64_t, int64_t row, int64_t col){
+            const double dr = row - 8.0;
+            const double dc = col - 8.0 - 1.0;
+            return static_cast<float>(100.0 * std::exp(-(dr * dr + dc * dc) / 6.0));
+        });
+
+    AlignViaDemonsParams params;
+    params.convergence_threshold = 0.0;
+    params.deformation_field_smoothing_sigma = 0.5;
+    params.update_field_smoothing_sigma = 0.0;
+    params.use_diffeomorphic = false;
+    params.max_update_magnitude = 2.0;
+    params.verbosity = 0;
+
+    double prev_mse = std::numeric_limits<double>::infinity();
+    for(int iters : {5, 20, 50, 100}){
+        params.max_iterations = iters;
+        auto result = AlignViaDemons(params, moving, stationary);
+        REQUIRE(result.has_value());
+        auto warped = warp_image_with_field(moving, *result);
+        const auto [mse, count] = compute_mse_and_count(stationary, warped);
+        CHECK(mse < prev_mse);
+        prev_mse = mse;
+    }
+}
+
+
+TEST_CASE( "AlignViaDemons Gaussian blob shift does not introduce y drift" ){
+    // A pure x-shift should not cause drift in the y (row) direction.
+    const int64_t N = 20;
+
+    auto stationary = make_test_image_collection(1, N, N,
+        [](int64_t, int64_t row, int64_t col){
+            const double dr = row - 10.0;
+            const double dc = col - 10.0;
+            return static_cast<float>(100.0 * std::exp(-(dr * dr + dc * dc) / 8.0));
+        });
+
+    auto moving = make_test_image_collection(1, N, N,
+        [](int64_t, int64_t row, int64_t col){
+            const double dr = row - 10.0;
+            const double dc = col - 10.0 - 2.0;
+            return static_cast<float>(100.0 * std::exp(-(dr * dr + dc * dc) / 8.0));
+        });
+
+    AlignViaDemonsParams params;
+    params.max_iterations = 200;
+    params.convergence_threshold = 0.0;
+    params.deformation_field_smoothing_sigma = 1.0;
+    params.update_field_smoothing_sigma = 0.0;
+    params.use_diffeomorphic = false;
+    params.max_update_magnitude = 2.0;
+    params.verbosity = 0;
+
+    auto result = AlignViaDemons(params, moving, stationary);
+    REQUIRE(result.has_value());
+    auto warped = warp_image_with_field(moving, *result);
+
+    // Compute weighted center of mass in the row direction for the warped image.
+    // It should be close to that of the stationary image.
+    double stat_row_com = 0.0, stat_sum = 0.0;
+    double warp_row_com = 0.0, warp_sum = 0.0;
+    for(int64_t row = 0; row < N; ++row){
+        for(int64_t col = 0; col < N; ++col){
+            const float sv = get_image(stationary.images, 0).value(row, col, 0);
+            const float wv = get_image(warped.images, 0).value(row, col, 0);
+            if(std::isfinite(sv) && sv > 0.0f){
+                stat_row_com += sv * row;
+                stat_sum += sv;
+            }
+            if(std::isfinite(wv) && wv > 0.0f){
+                warp_row_com += wv * row;
+                warp_sum += wv;
+            }
+        }
+    }
+    const double stat_row_mean = stat_row_com / stat_sum;
+    const double warp_row_mean = warp_row_com / warp_sum;
+
+    // Row CoM should not drift more than 0.1 pixels.
+    CHECK(std::abs(warp_row_mean - stat_row_mean) < 0.1);
+}
+
+
+TEST_CASE( "AlignViaDemons diffeomorphic converges for Gaussian blob shift" ){
+    const int64_t N = 20;
+
+    auto stationary = make_test_image_collection(1, N, N,
+        [](int64_t, int64_t row, int64_t col){
+            const double dr = row - 10.0;
+            const double dc = col - 10.0;
+            return static_cast<float>(100.0 * std::exp(-(dr * dr + dc * dc) / 8.0));
+        });
+
+    auto moving = make_test_image_collection(1, N, N,
+        [](int64_t, int64_t row, int64_t col){
+            const double dr = row - 10.0;
+            const double dc = col - 10.0 - 2.0;
+            return static_cast<float>(100.0 * std::exp(-(dr * dr + dc * dc) / 8.0));
+        });
+
+    const auto [mse_before, count_before] = compute_mse_and_count(stationary, moving);
+
+    AlignViaDemonsParams params;
+    params.max_iterations = 200;
+    params.convergence_threshold = 0.0;
+    params.deformation_field_smoothing_sigma = 1.0;
+    params.update_field_smoothing_sigma = 0.5;
+    params.use_diffeomorphic = true;
+    params.max_update_magnitude = 2.0;
+    params.verbosity = 0;
+
+    auto result = AlignViaDemons(params, moving, stationary);
+    REQUIRE(result.has_value());
+    auto warped = warp_image_with_field(moving, *result);
+    const auto [mse_after, count_after] = compute_mse_and_count(stationary, warped);
+
+    // MSE should drop significantly.
+    CHECK(mse_after < mse_before * 0.1);
+    CHECK(count_after >= count_before - 3 * N);
+}
+
+
+TEST_CASE( "AlignViaDemons convergence threshold stops iteration" ){
+    const int64_t N = 16;
+
+    auto stationary = make_test_image_collection(1, N, N,
+        [](int64_t, int64_t row, int64_t col){
+            const double dr = row - 8.0;
+            const double dc = col - 8.0;
+            return static_cast<float>(100.0 * std::exp(-(dr * dr + dc * dc) / 6.0));
+        });
+
+    auto moving = make_test_image_collection(1, N, N,
+        [](int64_t, int64_t row, int64_t col){
+            const double dr = row - 8.0;
+            const double dc = col - 8.0 - 1.0;
+            return static_cast<float>(100.0 * std::exp(-(dr * dr + dc * dc) / 6.0));
+        });
+
+    const auto [mse_before, count_before] = compute_mse_and_count(stationary, moving);
+
+    AlignViaDemonsParams params;
+    params.max_iterations = 10000;
+    params.convergence_threshold = 0.001;
+    params.deformation_field_smoothing_sigma = 0.5;
+    params.update_field_smoothing_sigma = 0.0;
+    params.use_diffeomorphic = false;
+    params.max_update_magnitude = 2.0;
+    params.verbosity = 0;
+
+    auto result = AlignViaDemons(params, moving, stationary);
+    REQUIRE(result.has_value());
+    auto warped = warp_image_with_field(moving, *result);
+    const auto [mse_after, count_after] = compute_mse_and_count(stationary, warped);
+
+    // Should have converged, with MSE substantially reduced.
+    CHECK(mse_after < mse_before * 0.5);
+}

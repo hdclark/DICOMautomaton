@@ -200,6 +200,11 @@ deformation_field::apply_to(planar_image_collection<float, double> &img_coll,
         // Make a full copy so trilinear sampling can pull from adjacent slices.
         const planar_image_collection<float, double> orig_coll = img_coll;
 
+        // Build an adjacency index for proper bilinear in-plane interpolation.
+        const auto orig_img_unit = orig_coll.images.front().ortho_unit();
+        auto &orig_coll_nc = const_cast<planar_image_collection<float, double> &>(orig_coll);
+        planar_image_adjacency<float, double> orig_adj( {}, { { std::ref(orig_coll_nc) } }, orig_img_unit );
+
         for(auto &img : img_coll.images){
             const int64_t N_rows = img.rows;
             const int64_t N_cols = img.columns;
@@ -219,7 +224,7 @@ deformation_field::apply_to(planar_image_collection<float, double> &img_coll,
                     }
 
                     for(int64_t chnl = 0; chnl < N_chnls; ++chnl){
-                        const auto val = orig_coll.trilinearly_interpolate(source_pos, chnl, oob);
+                        const auto val = orig_adj.trilinearly_interpolate(source_pos, chnl, oob);
                         img.reference(row, col, chnl) = val;
                     }
                 }
