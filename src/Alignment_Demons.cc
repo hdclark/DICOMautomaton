@@ -400,6 +400,9 @@ AlignViaDemonsHelpers::compute_gradient(const planar_image_collection<float, dou
         
         const int64_t N_rows = img.rows;
         const int64_t N_cols = img.columns;
+        const auto row_unit = img.row_unit.unit();
+        const auto col_unit = img.col_unit.unit();
+        const auto ortho_unit = img.ortho_unit();
         
         // Compute gradients using central differences (where possible)
         for(int64_t row = 0; row < N_rows; ++row){
@@ -474,9 +477,10 @@ AlignViaDemonsHelpers::compute_gradient(const planar_image_collection<float, dou
                     }
                 }
                 
-                grad_img.reference(row, col, 0) = grad_x;
-                grad_img.reference(row, col, 1) = grad_y;
-                grad_img.reference(row, col, 2) = grad_z;
+                const auto grad_vec = row_unit * grad_x + col_unit * grad_y + ortho_unit * grad_z;
+                grad_img.reference(row, col, 0) = grad_vec.x;
+                grad_img.reference(row, col, 1) = grad_vec.y;
+                grad_img.reference(row, col, 2) = grad_vec.z;
             }
         }
         
@@ -764,4 +768,3 @@ AlignViaDemons(AlignViaDemonsParams & params,
         return std::nullopt;
     }
 }
-

@@ -342,6 +342,28 @@ TEST_CASE( "compute_gradient captures linear ramps" ){
     CHECK(grad_img.value(1, 1, 2) == doctest::Approx(0.0));
 }
 
+TEST_CASE( "compute_gradient respects image orientation" ){
+    planar_image_collection<float, double> coll;
+    planar_image<float, double> img;
+    const vec3<double> row_unit(-1.0, 0.0, 0.0);
+    const vec3<double> col_unit(0.0, -1.0, 0.0);
+    img.init_orientation(row_unit, col_unit);
+    img.init_buffer(3, 3, 1);
+    img.init_spatial(1.0, 1.0, 1.0, vec3<double>(0.0, 0.0, 0.0), vec3<double>(0.0, 0.0, 0.0));
+    for(int64_t row = 0; row < img.rows; ++row){
+        for(int64_t col = 0; col < img.columns; ++col){
+            img.reference(row, col, 0) = static_cast<float>(2.0 * row + col);
+        }
+    }
+    coll.images.push_back(img);
+
+    auto gradient = compute_gradient(coll);
+    const auto &grad_img = get_image(gradient.images, 0);
+    CHECK(grad_img.value(1, 1, 0) == doctest::Approx(-1.0));
+    CHECK(grad_img.value(1, 1, 1) == doctest::Approx(-2.0));
+    CHECK(grad_img.value(1, 1, 2) == doctest::Approx(0.0));
+}
+
 TEST_CASE( "compute_gradient captures z differences" ){
     auto img = make_test_image_collection(3, 1, 1,
         [](int64_t slice, int64_t, int64_t){
