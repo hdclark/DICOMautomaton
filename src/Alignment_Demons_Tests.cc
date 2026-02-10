@@ -346,9 +346,9 @@ TEST_CASE( "compute_gradient respects image orientation" ){
     planar_image_collection<float, double> coll;
     planar_image<float, double> img;
     // Flip row/column orientation to ensure gradient is expressed in world coordinates.
-    const vec3<double> row_unit(-1.0, 0.0, 0.0);
-    const vec3<double> col_unit(0.0, -1.0, 0.0);
-    img.init_orientation(row_unit, col_unit);
+    const vec3<double> flipped_row_unit(-1.0, 0.0, 0.0);
+    const vec3<double> flipped_col_unit(0.0, -1.0, 0.0);
+    img.init_orientation(flipped_row_unit, flipped_col_unit);
     img.init_buffer(3, 3, 1);
     img.init_spatial(1.0, 1.0, 1.0, vec3<double>(0.0, 0.0, 0.0), vec3<double>(0.0, 0.0, 0.0));
     for(int64_t row = 0; row < img.rows; ++row){
@@ -368,9 +368,9 @@ TEST_CASE( "compute_gradient respects image orientation" ){
 TEST_CASE( "compute_gradient handles rotated orientation" ){
     planar_image_collection<float, double> coll;
     planar_image<float, double> img;
-    const vec3<double> row_unit(0.0, 1.0, 0.0);
-    const vec3<double> col_unit(1.0, 0.0, 0.0);
-    img.init_orientation(row_unit, col_unit);
+    const vec3<double> rotated_row_unit(0.0, 1.0, 0.0);
+    const vec3<double> rotated_col_unit(1.0, 0.0, 0.0);
+    img.init_orientation(rotated_row_unit, rotated_col_unit);
     img.init_buffer(3, 3, 1);
     img.init_spatial(1.0, 1.0, 1.0, vec3<double>(0.0, 0.0, 0.0), vec3<double>(0.0, 0.0, 0.0));
     for(int64_t row = 0; row < img.rows; ++row){
