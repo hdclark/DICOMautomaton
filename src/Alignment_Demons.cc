@@ -400,8 +400,8 @@ AlignViaDemonsHelpers::compute_gradient(const planar_image_collection<float, dou
         
         const int64_t N_rows = img.rows;
         const int64_t N_cols = img.columns;
-        const auto row_unit = img.row_unit.unit();
-        const auto col_unit = img.col_unit.unit();
+        const auto row_unit = img.row_unit;
+        const auto col_unit = img.col_unit;
         const auto ortho_unit = img.ortho_unit();
         
         // Compute gradients using central differences (where possible)

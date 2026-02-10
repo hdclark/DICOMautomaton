@@ -345,6 +345,7 @@ TEST_CASE( "compute_gradient captures linear ramps" ){
 TEST_CASE( "compute_gradient respects image orientation" ){
     planar_image_collection<float, double> coll;
     planar_image<float, double> img;
+    // Flip row/column orientation to ensure gradient is expressed in world coordinates.
     const vec3<double> row_unit(-1.0, 0.0, 0.0);
     const vec3<double> col_unit(0.0, -1.0, 0.0);
     img.init_orientation(row_unit, col_unit);
