@@ -633,6 +633,8 @@ add_executable(dicomautomaton_bsarchive_convert
     Boost_Serialization_Archive_Converter.cc
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Tables_obj>
+    $<TARGET_OBJECTS:Alignment_Rigid_obj>
+    $<TARGET_OBJECTS:Alignment_Field_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
@@ -662,6 +664,8 @@ if(WITH_POSTGRES)
         PACS_Ingress.cc
         $<TARGET_OBJECTS:Structs_obj>
         $<TARGET_OBJECTS:Tables_obj>
+        $<TARGET_OBJECTS:Alignment_Rigid_obj>
+        $<TARGET_OBJECTS:Alignment_Field_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
         $<TARGET_OBJECTS:String_Parsing_obj>
@@ -682,6 +686,8 @@ if(WITH_POSTGRES)
         PACS_Duplicate_Cleaner.cc
         $<TARGET_OBJECTS:Structs_obj>
         $<TARGET_OBJECTS:Tables_obj>
+        $<TARGET_OBJECTS:Alignment_Rigid_obj>
+        $<TARGET_OBJECTS:Alignment_Field_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
         $<TARGET_OBJECTS:String_Parsing_obj>
@@ -702,6 +708,8 @@ if(WITH_POSTGRES)
         PACS_Refresh.cc
         $<TARGET_OBJECTS:Structs_obj>
         $<TARGET_OBJECTS:Tables_obj>
+        $<TARGET_OBJECTS:Alignment_Rigid_obj>
+        $<TARGET_OBJECTS:Alignment_Field_obj>
         $<TARGET_OBJECTS:Dose_Meld_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
         $<TARGET_OBJECTS:String_Parsing_obj>
@@ -724,6 +732,8 @@ add_executable(dicomautomaton_dump
     DICOMautomaton_Dump.cc
     $<TARGET_OBJECTS:Structs_obj>
     $<TARGET_OBJECTS:Tables_obj>
+    $<TARGET_OBJECTS:Alignment_Rigid_obj>
+    $<TARGET_OBJECTS:Alignment_Field_obj>
     $<TARGET_OBJECTS:Dose_Meld_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
     $<TARGET_OBJECTS:String_Parsing_obj>

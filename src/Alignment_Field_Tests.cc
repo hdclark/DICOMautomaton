@@ -424,3 +424,55 @@ TEST_CASE( "deformation_field::apply_to default method is pull" ){
         }
     }
 }
+
+
+TEST_CASE( "deformation_field move and copy preserve transform" ){
+    // After a move or copy, the adjacency index must be rebuilt so that
+    // transform() continues to work correctly with bilinear interpolation.
+    auto field_images = make_field_test_vector_field(1, 5, 5,
+        [](int64_t, int64_t, int64_t){
+            return vec3<double>(0.5, -0.25, 0.0);
+        });
+
+    deformation_field original(std::move(field_images));
+    const vec3<double> p(2.0, 2.0, 0.0);
+    const auto orig_result = original.transform(p);
+
+    SUBCASE("move constructor"){
+        deformation_field moved(std::move(original));
+        const auto moved_result = moved.transform(p);
+        CHECK(moved_result.x == doctest::Approx(orig_result.x).epsilon(1e-9));
+        CHECK(moved_result.y == doctest::Approx(orig_result.y).epsilon(1e-9));
+        CHECK(moved_result.z == doctest::Approx(orig_result.z).epsilon(1e-9));
+    }
+
+    SUBCASE("copy constructor"){
+        deformation_field copied(original);
+        const auto copy_result = copied.transform(p);
+        CHECK(copy_result.x == doctest::Approx(orig_result.x).epsilon(1e-9));
+        CHECK(copy_result.y == doctest::Approx(orig_result.y).epsilon(1e-9));
+        CHECK(copy_result.z == doctest::Approx(orig_result.z).epsilon(1e-9));
+    }
+}
+
+
+TEST_CASE( "deformation_field transform uses bilinear interpolation" ){
+    // Verify that transform() uses proper bilinear interpolation, not
+    // nearest-neighbour. A query at a half-pixel position should return
+    // an interpolated displacement, not a snapped value.
+    auto field_images = make_field_test_vector_field(1, 5, 5,
+        [](int64_t, int64_t, int64_t col){
+            // Displacement linearly varies with column: dx = col
+            return vec3<double>(static_cast<double>(col), 0.0, 0.0);
+        });
+
+    deformation_field field(std::move(field_images));
+
+    // Query at position (1.5, 2, 0) which is between col=1 (dx=1) and col=2 (dx=2).
+    // With bilinear interpolation, dx should be 1.5.
+    // With nearest-neighbour, dx would snap to either 1.0 or 2.0.
+    const vec3<double> p(1.5, 2.0, 0.0);
+    const auto result = field.transform(p);
+    const double displacement_x = result.x - p.x;
+    CHECK(displacement_x == doctest::Approx(1.5).epsilon(0.01));
+}
