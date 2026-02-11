@@ -1,6 +1,7 @@
 // GenerateVirtualDataSinusoidalFieldV1.cc - A part of DICOMautomaton 2026. Written by hal clark.
 
 #include <cmath>
+#include <limits>
 #include <list>
 #include <map>
 #include <memory>
@@ -71,7 +72,6 @@ bool GenerateVirtualDataSinusoidalFieldV1(Drover &DICOM_data,
     
     // Sinusoidal wave parameters
     // Use different wavelengths in each direction to create an interesting 3D pattern
-    const double pi = 3.14159265358979323846;
     const double wavelength_x = (x_max - x_min) / 2.0;  // 2 complete waves in x
     const double wavelength_y = (y_max - y_min) / 3.0;  // 3 complete waves in y
     const double wavelength_z = (z_max - z_min) / 1.5;  // 1.5 complete waves in z
@@ -107,26 +107,26 @@ bool GenerateVirtualDataSinusoidalFieldV1(Drover &DICOM_data,
             for(int64_t col = 0; col < N_cols; ++col){
                 const auto pos = img.position(row, col);
                 
-                // Normalize position to [0, 1] in each dimension
-                const double x_norm = (pos.x - x_min) / (x_max - x_min);
-                const double y_norm = (pos.y - y_min) / (y_max - y_min);
-                const double z_norm = (pos.z - z_min) / (z_max - z_min);
+                // Get position relative to origin for sinusoidal calculations
+                const double x_rel = pos.x - x_min;
+                const double y_rel = pos.y - y_min;
+                const double z_rel = pos.z - z_min;
                 
                 // Create sinusoidal displacements
                 // The displacement in each direction is a function of position in other directions
                 // This creates a 3D wave pattern
                 
                 // dx varies sinusoidally with y and z
-                const double disp_x = std::sin(2.0 * pi * y_norm * (y_max - y_min) / wavelength_y) *
-                                     std::cos(2.0 * pi * z_norm * (z_max - z_min) / wavelength_z);
+                const double disp_x = std::sin(2.0 * M_PI * y_rel / wavelength_y) *
+                                     std::cos(2.0 * M_PI * z_rel / wavelength_z);
                 
                 // dy varies sinusoidally with x and z
-                const double disp_y = std::sin(2.0 * pi * x_norm * (x_max - x_min) / wavelength_x) *
-                                     std::cos(2.0 * pi * z_norm * (z_max - z_min) / wavelength_z);
+                const double disp_y = std::sin(2.0 * M_PI * x_rel / wavelength_x) *
+                                     std::cos(2.0 * M_PI * z_rel / wavelength_z);
                 
                 // dz varies sinusoidally with x and y
-                const double disp_z = std::sin(2.0 * pi * x_norm * (x_max - x_min) / wavelength_x) *
-                                     std::sin(2.0 * pi * y_norm * (y_max - y_min) / wavelength_y);
+                const double disp_z = std::sin(2.0 * M_PI * x_rel / wavelength_x) *
+                                     std::sin(2.0 * M_PI * y_rel / wavelength_y);
                 
                 // Track maximum displacement magnitude
                 const double magnitude = std::sqrt(disp_x * disp_x + 
