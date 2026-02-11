@@ -37,6 +37,7 @@
 #include "Alignment_Rigid.h"
 #include "Alignment_Field.h"
 #include "Alignment_Demons.h"
+#include "Alignment_Buffer3.h"
 
 
 using namespace AlignViaDemonsHelpers;
@@ -748,4 +749,301 @@ TEST_CASE( "AlignViaDemons convergence threshold stops iteration" ){
 
     // Should have converged, with MSE substantially reduced.
     CHECK(mse_after < mse_before * 0.5);
+}
+
+
+// ---- buffer3 unit tests ----
+
+TEST_CASE( "buffer3 construction and element access" ){
+    buffer3<double> buf(2, 3, 4, 1);
+
+    CHECK(buf.N_slices == 2);
+    CHECK(buf.N_rows == 3);
+    CHECK(buf.N_cols == 4);
+    CHECK(buf.N_channels == 1);
+    CHECK(buf.data.size() == static_cast<size_t>(2 * 3 * 4 * 1));
+
+    // All values should be zero-initialized.
+    for(const auto &v : buf.data){
+        CHECK(v == 0.0);
+    }
+
+    buf.reference(0, 1, 2) = 42.0;
+    CHECK(buf.value(0, 1, 2) == doctest::Approx(42.0));
+
+    buf.reference(1, 2, 3) = -7.5;
+    CHECK(buf.value(1, 2, 3) == doctest::Approx(-7.5));
+}
+
+TEST_CASE( "buffer3 multi-channel access" ){
+    buffer3<double> buf(1, 2, 2, 3);
+    buf.reference(0, 0, 0, 0) = 1.0;
+    buf.reference(0, 0, 0, 1) = 2.0;
+    buf.reference(0, 0, 0, 2) = 3.0;
+    CHECK(buf.value(0, 0, 0, 0) == doctest::Approx(1.0));
+    CHECK(buf.value(0, 0, 0, 1) == doctest::Approx(2.0));
+    CHECK(buf.value(0, 0, 0, 2) == doctest::Approx(3.0));
+}
+
+TEST_CASE( "buffer3 in_bounds" ){
+    buffer3<double> buf(3, 4, 5, 1);
+    CHECK(buf.in_bounds(0, 0, 0));
+    CHECK(buf.in_bounds(2, 3, 4));
+    CHECK_FALSE(buf.in_bounds(-1, 0, 0));
+    CHECK_FALSE(buf.in_bounds(3, 0, 0));
+    CHECK_FALSE(buf.in_bounds(0, -1, 0));
+    CHECK_FALSE(buf.in_bounds(0, 4, 0));
+    CHECK_FALSE(buf.in_bounds(0, 0, -1));
+    CHECK_FALSE(buf.in_bounds(0, 0, 5));
+}
+
+TEST_CASE( "buffer3 visitor patterns" ){
+    buffer3<double> buf(2, 3, 4, 1);
+    int64_t count = 0;
+    buf.visit_all([&](int64_t, int64_t, int64_t){ ++count; });
+    CHECK(count == 2 * 3 * 4);
+
+    count = 0;
+    buf.visit_slice_xy(0, [&](int64_t, int64_t){ ++count; });
+    CHECK(count == 3 * 4);
+}
+
+TEST_CASE( "buffer3 marshalling round-trip with planar_image_collection" ){
+    // Create a test collection.
+    auto coll = make_test_vector_field(3, 4, 5,
+        [](int64_t s, int64_t r, int64_t c){
+            return vec3<double>(s * 100.0 + r * 10.0 + c, -(s + r + c), 0.5 * (s + r));
+        });
+
+    // Convert to buffer3.
+    auto buf = buffer3<double>::from_planar_image_collection(coll);
+
+    CHECK(buf.N_slices == 3);
+    CHECK(buf.N_rows == 4);
+    CHECK(buf.N_cols == 5);
+    CHECK(buf.N_channels == 3);
+
+    // Check data is correctly loaded (first slice, first voxel).
+    CHECK(buf.value(0, 0, 0, 0) == doctest::Approx(0.0));
+    CHECK(buf.value(0, 0, 0, 1) == doctest::Approx(0.0));
+    CHECK(buf.value(0, 0, 0, 2) == doctest::Approx(0.0));
+
+    // Check a middle voxel.
+    CHECK(buf.value(1, 2, 3, 0) == doctest::Approx(1 * 100.0 + 2 * 10.0 + 3));
+    CHECK(buf.value(1, 2, 3, 1) == doctest::Approx(-(1 + 2 + 3)));
+
+    // Convert back to planar_image_collection.
+    auto coll2 = buf.to_planar_image_collection();
+    CHECK(coll2.images.size() == 3);
+
+    // Verify data matches original by checking the sorted collection values.
+    auto buf2 = buffer3<double>::from_planar_image_collection(coll2);
+    for(int64_t s = 0; s < buf.N_slices; ++s){
+        for(int64_t r = 0; r < buf.N_rows; ++r){
+            for(int64_t c = 0; c < buf.N_cols; ++c){
+                for(int64_t ch = 0; ch < buf.N_channels; ++ch){
+                    CHECK(buf2.value(s, r, c, ch) == doctest::Approx(buf.value(s, r, c, ch)));
+                }
+            }
+        }
+    }
+}
+
+TEST_CASE( "buffer3 write_to_planar_image_collection preserves data" ){
+    auto coll = make_test_vector_field(2, 3, 3,
+        [](int64_t s, int64_t r, int64_t c){
+            return vec3<double>(s + r + c, 0.0, 0.0);
+        });
+
+    auto buf = buffer3<double>::from_planar_image_collection(coll);
+
+    // Modify the buffer.
+    buf.reference(0, 1, 1, 0) = 999.0;
+
+    // Write back.
+    buf.write_to_planar_image_collection(coll);
+
+    // Read back to verify.
+    auto buf2 = buffer3<double>::from_planar_image_collection(coll);
+    CHECK(buf2.value(0, 1, 1, 0) == doctest::Approx(999.0));
+}
+
+TEST_CASE( "buffer3 Gaussian smoothing preserves uniform field" ){
+    auto coll = make_test_vector_field(2, 5, 5,
+        [](int64_t, int64_t, int64_t){
+            return vec3<double>(3.0, -1.0, 0.5);
+        });
+
+    auto buf = buffer3<double>::from_planar_image_collection(coll);
+    buf.gaussian_smooth(1.0);
+
+    // A uniform field should remain unchanged after smoothing.
+    for(int64_t s = 0; s < buf.N_slices; ++s){
+        for(int64_t r = 0; r < buf.N_rows; ++r){
+            for(int64_t c = 0; c < buf.N_cols; ++c){
+                CHECK(buf.value(s, r, c, 0) == doctest::Approx(3.0).epsilon(1e-6));
+                CHECK(buf.value(s, r, c, 1) == doctest::Approx(-1.0).epsilon(1e-6));
+                CHECK(buf.value(s, r, c, 2) == doctest::Approx(0.5).epsilon(1e-6));
+            }
+        }
+    }
+}
+
+TEST_CASE( "buffer3 Gaussian smoothing diffuses a spike" ){
+    buffer3<double> buf(1, 5, 5, 1);
+    buf.reference(0, 2, 2) = 10.0;
+
+    buf.gaussian_smooth(1.0);
+
+    // Center should have decreased.
+    CHECK(buf.value(0, 2, 2) < 10.0);
+    CHECK(buf.value(0, 2, 2) > 0.0);
+
+    // Neighbours should have received some of the energy.
+    CHECK(buf.value(0, 2, 1) > 0.0);
+    CHECK(buf.value(0, 1, 2) > 0.0);
+}
+
+TEST_CASE( "buffer3 Gaussian smoothing with work_queue" ){
+    auto coll = make_test_vector_field(3, 5, 5,
+        [](int64_t s, int64_t, int64_t){
+            return vec3<double>(s == 1 ? 10.0 : 0.0, 0.0, 0.0);
+        });
+
+    auto buf = buffer3<double>::from_planar_image_collection(coll);
+
+    work_queue<std::function<void()>> wq(2);
+    buf.gaussian_smooth(1.0, 1.0, 1.0, wq);
+
+    // The spike in slice 1 should have diffused to slices 0 and 2.
+    CHECK(buf.value(0, 2, 2, 0) > 0.0);
+    CHECK(buf.value(1, 2, 2, 0) < 10.0);
+    CHECK(buf.value(1, 2, 2, 0) > 0.0);
+    CHECK(buf.value(2, 2, 2, 0) > 0.0);
+}
+
+TEST_CASE( "buffer3 parallel_visit_slices" ){
+    buffer3<double> buf(4, 3, 3, 1);
+
+    work_queue<std::function<void()>> wq(2);
+    buf.parallel_visit_slices(wq, [&](int64_t s){
+        for(int64_t r = 0; r < buf.N_rows; ++r){
+            for(int64_t c = 0; c < buf.N_cols; ++c){
+                buf.reference(s, r, c) = static_cast<double>(s);
+            }
+        }
+    });
+
+    for(int64_t s = 0; s < buf.N_slices; ++s){
+        for(int64_t r = 0; r < buf.N_rows; ++r){
+            for(int64_t c = 0; c < buf.N_cols; ++c){
+                CHECK(buf.value(s, r, c) == doctest::Approx(static_cast<double>(s)));
+            }
+        }
+    }
+}
+
+TEST_CASE( "buffer3 parallel_even_odd_slices" ){
+    buffer3<double> buf(6, 2, 2, 1);
+
+    work_queue<std::function<void()>> wq(2);
+    buf.parallel_even_odd_slices(wq, [&](int64_t s){
+        for(int64_t r = 0; r < buf.N_rows; ++r){
+            for(int64_t c = 0; c < buf.N_cols; ++c){
+                buf.reference(s, r, c) = static_cast<double>(s * 10);
+            }
+        }
+    });
+
+    for(int64_t s = 0; s < buf.N_slices; ++s){
+        for(int64_t r = 0; r < buf.N_rows; ++r){
+            for(int64_t c = 0; c < buf.N_cols; ++c){
+                CHECK(buf.value(s, r, c) == doctest::Approx(static_cast<double>(s * 10)));
+            }
+        }
+    }
+}
+
+TEST_CASE( "buffer3 convolve_separable identity kernel" ){
+    buffer3<double> buf(1, 3, 3, 1);
+    buf.reference(0, 1, 1) = 5.0;
+
+    // Identity kernel: {1.0}
+    work_queue<std::function<void()>> wq(1);
+    buf.convolve_separable({1.0}, {1.0}, {1.0}, wq);
+
+    CHECK(buf.value(0, 1, 1) == doctest::Approx(5.0));
+    CHECK(buf.value(0, 0, 0) == doctest::Approx(0.0));
+}
+
+TEST_CASE( "buffer3 from_planar_image_collection rejects empty" ){
+    planar_image_collection<double, double> empty;
+    CHECK_THROWS_AS(buffer3<double>::from_planar_image_collection(empty), std::invalid_argument);
+}
+
+TEST_CASE( "buffer3 write_to_planar_image_collection rejects size mismatch" ){
+    auto coll = make_test_vector_field(2, 3, 3,
+        [](int64_t, int64_t, int64_t){ return vec3<double>(0.0, 0.0, 0.0); });
+    auto buf = buffer3<double>::from_planar_image_collection(coll);
+
+    // Create a collection with a different number of images.
+    auto coll2 = make_test_vector_field(1, 3, 3,
+        [](int64_t, int64_t, int64_t){ return vec3<double>(0.0, 0.0, 0.0); });
+    CHECK_THROWS_AS(buf.write_to_planar_image_collection(coll2), std::invalid_argument);
+}
+
+TEST_CASE( "buffer3 spatial ordering during marshalling" ){
+    // Create images that are NOT in spatial order (reverse z).
+    planar_image_collection<double, double> coll;
+    const vec3<double> row_unit(1.0, 0.0, 0.0);
+    const vec3<double> col_unit(0.0, 1.0, 0.0);
+
+    // Add slices in reverse order: z=2, z=1, z=0.
+    for(int64_t s = 2; s >= 0; --s){
+        planar_image<double, double> img;
+        img.init_orientation(row_unit, col_unit);
+        img.init_buffer(2, 2, 1);
+        const vec3<double> offset(0.0, 0.0, static_cast<double>(s));
+        img.init_spatial(1.0, 1.0, 1.0, vec3<double>(0.0, 0.0, 0.0), offset);
+        img.reference(0, 0, 0) = static_cast<double>(s * 100);
+        coll.images.push_back(img);
+    }
+
+    // buffer3 should sort them spatially.
+    auto buf = buffer3<double>::from_planar_image_collection(coll);
+
+    // Slice 0 (lowest z) should contain value 0.
+    CHECK(buf.value(0, 0, 0) == doctest::Approx(0.0));
+    // Slice 1 should contain value 100.
+    CHECK(buf.value(1, 0, 0) == doctest::Approx(100.0));
+    // Slice 2 should contain value 200.
+    CHECK(buf.value(2, 0, 0) == doctest::Approx(200.0));
+}
+
+TEST_CASE( "buffer3 Gaussian smoothing sigma zero is identity" ){
+    buffer3<double> buf(1, 3, 3, 1);
+    buf.reference(0, 1, 1) = 5.0;
+    buf.reference(0, 0, 0) = 1.0;
+
+    buf.gaussian_smooth(0.0);
+
+    CHECK(buf.value(0, 1, 1) == doctest::Approx(5.0));
+    CHECK(buf.value(0, 0, 0) == doctest::Approx(1.0));
+}
+
+TEST_CASE( "buffer3 indexing is consistent" ){
+    buffer3<double> buf(2, 3, 4, 2);
+
+    // Verify linear index matches expected layout: [slice][row][col][channel]
+    int64_t idx = 0;
+    for(int64_t s = 0; s < 2; ++s){
+        for(int64_t r = 0; r < 3; ++r){
+            for(int64_t c = 0; c < 4; ++c){
+                for(int64_t ch = 0; ch < 2; ++ch){
+                    CHECK(buf.index(s, r, c, ch) == idx);
+                    ++idx;
+                }
+            }
+        }
+    }
 }

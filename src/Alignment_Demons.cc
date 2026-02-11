@@ -31,6 +31,7 @@
 #include "Alignment_Rigid.h"
 #include "Alignment_Field.h"
 #include "Alignment_Demons.h"
+#include "Alignment_Buffer3.h"
 
 using namespace AlignViaDemonsHelpers;
 
@@ -243,137 +244,10 @@ AlignViaDemonsHelpers::smooth_vector_field(
         }
     }
     
-    // Simple Gaussian smoothing using a separable 3D kernel
-    // This is a basic implementation; more sophisticated methods could be used
-    
-    // Determine the kernel size based on sigma (3-sigma rule)
-    const auto &ref_img = field.images.front();
-    const double pxl_dx = ref_img.pxl_dx;
-    const double pxl_dy = ref_img.pxl_dy;
-    const double pxl_dz = ref_img.pxl_dz;
-    
-    const int64_t kernel_radius_x = std::max<int64_t>(1, static_cast<int64_t>(3.0 * sigma_mm / pxl_dx));
-    const int64_t kernel_radius_y = std::max<int64_t>(1, static_cast<int64_t>(3.0 * sigma_mm / pxl_dy));
-    const int64_t kernel_radius_z = std::max<int64_t>(1, static_cast<int64_t>(3.0 * sigma_mm / pxl_dz));
-    
-    // Create 1D Gaussian kernels for each direction
-    auto create_1d_gaussian = [](int64_t radius, double sigma_pixels) -> std::vector<double> {
-        std::vector<double> kernel(2 * radius + 1);
-        double sum = 0.0;
-        for(int64_t i = -radius; i <= radius; ++i){
-            const double val = std::exp(-0.5 * (i * i) / (sigma_pixels * sigma_pixels));
-            kernel[i + radius] = val;
-            sum += val;
-        }
-        // Normalize
-        for(auto &val : kernel) val /= sum;
-        return kernel;
-    };
-    
-    const double sigma_x = sigma_mm / pxl_dx;
-    const double sigma_y = sigma_mm / pxl_dy;
-    const double sigma_z = sigma_mm / pxl_dz;
-    
-    const auto kernel_x = create_1d_gaussian(kernel_radius_x, sigma_x);
-    const auto kernel_y = create_1d_gaussian(kernel_radius_y, sigma_y);
-    const auto kernel_z = create_1d_gaussian(kernel_radius_z, sigma_z);
-    
-    // Apply separable filtering for each channel
-    for(int64_t chnl = 0; chnl < 3; ++chnl){
-        
-        // Apply along x-direction (columns)
-        planar_image_collection<double, double> temp_x = field;
-        for(size_t img_idx = 0; img_idx < temp_x.images.size(); ++img_idx){
-            auto &img = get_image(temp_x.images,img_idx);
-            const int64_t N_rows = img.rows;
-            const int64_t N_cols = img.columns;
-            
-            for(int64_t row = 0; row < N_rows; ++row){
-                for(int64_t col = 0; col < N_cols; ++col){
-                    double sum = 0.0;
-                    double weight_sum = 0.0;
-                    
-                    for(int64_t k = -kernel_radius_x; k <= kernel_radius_x; ++k){
-                        const int64_t col_k = col + k;
-                        if(col_k >= 0 && col_k < N_cols){
-                            const double val = get_image(field.images,img_idx).value(row, col_k, chnl);
-                            if(std::isfinite(val)){
-                                const double w = kernel_x[k + kernel_radius_x];
-                                sum += w * val;
-                                weight_sum += w;
-                            }
-                        }
-                    }
-                    
-                    if(weight_sum > 0.0){
-                        img.reference(row, col, chnl) = sum / weight_sum;
-                    }
-                }
-            }
-        }
-        
-        // Apply along y-direction (rows)
-        planar_image_collection<double, double> temp_y = temp_x;
-        for(size_t img_idx = 0; img_idx < temp_y.images.size(); ++img_idx){
-            auto &img = get_image(temp_y.images,img_idx);
-            const int64_t N_rows = img.rows;
-            const int64_t N_cols = img.columns;
-            
-            for(int64_t row = 0; row < N_rows; ++row){
-                for(int64_t col = 0; col < N_cols; ++col){
-                    double sum = 0.0;
-                    double weight_sum = 0.0;
-                    
-                    for(int64_t k = -kernel_radius_y; k <= kernel_radius_y; ++k){
-                        const int64_t row_k = row + k;
-                        if(row_k >= 0 && row_k < N_rows){
-                            const double val = get_image(temp_x.images,img_idx).value(row_k, col, chnl);
-                            if(std::isfinite(val)){
-                                const double w = kernel_y[k + kernel_radius_y];
-                                sum += w * val;
-                                weight_sum += w;
-                            }
-                        }
-                    }
-                    
-                    if(weight_sum > 0.0){
-                        img.reference(row, col, chnl) = sum / weight_sum;
-                    }
-                }
-            }
-        }
-        
-        // Apply along z-direction (between images) and write back to field
-        const int64_t N_imgs = field.images.size();
-        for(int64_t img_idx = 0; img_idx < N_imgs; ++img_idx){
-            auto &img = get_image(field.images,img_idx);
-            const int64_t N_rows = img.rows;
-            const int64_t N_cols = img.columns;
-            
-            for(int64_t row = 0; row < N_rows; ++row){
-                for(int64_t col = 0; col < N_cols; ++col){
-                    double sum = 0.0;
-                    double weight_sum = 0.0;
-                    
-                    for(int64_t k = -kernel_radius_z; k <= kernel_radius_z; ++k){
-                        const int64_t img_k = img_idx + k;
-                        if(img_k >= 0 && img_k < N_imgs){
-                            const double val = get_image(temp_y.images,img_k).value(row, col, chnl);
-                            if(std::isfinite(val)){
-                                const double w = kernel_z[k + kernel_radius_z];
-                                sum += w * val;
-                                weight_sum += w;
-                            }
-                        }
-                    }
-                    
-                    if(weight_sum > 0.0){
-                        img.reference(row, col, chnl) = sum / weight_sum;
-                    }
-                }
-            }
-        }
-    }
+    // Use buffer3 for O(1) random access and multithreaded smoothing.
+    auto buf = buffer3<double>::from_planar_image_collection(field);
+    buf.gaussian_smooth(sigma_mm);
+    buf.write_to_planar_image_collection(field);
 }
 
 
@@ -386,104 +260,108 @@ AlignViaDemonsHelpers::compute_gradient(const planar_image_collection<float, dou
         throw std::invalid_argument("Cannot compute gradient: image collection is empty");
     }
     
-    // Create output image collection with 3 channels (for gradients in x, y, z)
-    planar_image_collection<double, double> gradient;
-    
-    for(size_t img_idx = 0; img_idx < img_coll.images.size(); ++img_idx){
-        const auto &img = get_image(img_coll.images,img_idx);
-        
-        planar_image<double, double> grad_img;
-        grad_img.init_orientation(img.row_unit, img.col_unit);
-        grad_img.init_buffer(img.rows, img.columns, 3); // 3 channels for dx, dy, dz
-        grad_img.init_spatial(img.pxl_dx, img.pxl_dy, img.pxl_dz, img.anchor, img.offset);
-        grad_img.metadata = img.metadata;
-        
-        const int64_t N_rows = img.rows;
-        const int64_t N_cols = img.columns;
-        
-        // Compute gradients using central differences (where possible)
+    // Load into a buffer3 for O(1) random access to adjacent slices.
+    auto buf = buffer3<float>::from_planar_image_collection(img_coll);
+    const int64_t N_slices = buf.N_slices;
+    const int64_t N_rows = buf.N_rows;
+    const int64_t N_cols = buf.N_cols;
+
+    // Create output buffer3 with 3 channels (for gradients in x, y, z).
+    buffer3<double> grad;
+    grad.N_slices = N_slices;
+    grad.N_rows = N_rows;
+    grad.N_cols = N_cols;
+    grad.N_channels = 3;
+    grad.pxl_dx = buf.pxl_dx;
+    grad.pxl_dy = buf.pxl_dy;
+    grad.pxl_dz = buf.pxl_dz;
+    grad.anchor = buf.anchor;
+    grad.offset = buf.offset;
+    grad.row_unit = buf.row_unit;
+    grad.col_unit = buf.col_unit;
+    grad.slice_offsets = buf.slice_offsets;
+    grad.data.resize(static_cast<size_t>(N_slices) * N_rows * N_cols * 3, 0.0);
+
+    for(int64_t s = 0; s < N_slices; ++s){
         for(int64_t row = 0; row < N_rows; ++row){
             for(int64_t col = 0; col < N_cols; ++col){
                 
                 // Gradient in x-direction (along columns)
                 double grad_x = 0.0;
                 if(col > 0 && col < N_cols - 1){
-                    const double val_left = img.value(row, col - 1, 0);
-                    const double val_right = img.value(row, col + 1, 0);
+                    const double val_left = buf.value(s, row, col - 1, 0);
+                    const double val_right = buf.value(s, row, col + 1, 0);
                     if(std::isfinite(val_left) && std::isfinite(val_right)){
-                        grad_x = (val_right - val_left) / (2.0 * img.pxl_dx);
+                        grad_x = (val_right - val_left) / (2.0 * buf.pxl_dx);
                     }
                 }else if(col == 0 && N_cols > 1){
-                    const double val_curr = img.value(row, col, 0);
-                    const double val_right = img.value(row, col + 1, 0);
+                    const double val_curr = buf.value(s, row, col, 0);
+                    const double val_right = buf.value(s, row, col + 1, 0);
                     if(std::isfinite(val_curr) && std::isfinite(val_right)){
-                        grad_x = (val_right - val_curr) / img.pxl_dx;
+                        grad_x = (val_right - val_curr) / buf.pxl_dx;
                     }
                 }else if(col == N_cols - 1 && N_cols > 1){
-                    const double val_left = img.value(row, col - 1, 0);
-                    const double val_curr = img.value(row, col, 0);
+                    const double val_left = buf.value(s, row, col - 1, 0);
+                    const double val_curr = buf.value(s, row, col, 0);
                     if(std::isfinite(val_left) && std::isfinite(val_curr)){
-                        grad_x = (val_curr - val_left) / img.pxl_dx;
+                        grad_x = (val_curr - val_left) / buf.pxl_dx;
                     }
                 }
                 
                 // Gradient in y-direction (along rows)
                 double grad_y = 0.0;
                 if(row > 0 && row < N_rows - 1){
-                    const double val_up = img.value(row - 1, col, 0);
-                    const double val_down = img.value(row + 1, col, 0);
+                    const double val_up = buf.value(s, row - 1, col, 0);
+                    const double val_down = buf.value(s, row + 1, col, 0);
                     if(std::isfinite(val_up) && std::isfinite(val_down)){
-                        grad_y = (val_down - val_up) / (2.0 * img.pxl_dy);
+                        grad_y = (val_down - val_up) / (2.0 * buf.pxl_dy);
                     }
                 }else if(row == 0 && N_rows > 1){
-                    const double val_curr = img.value(row, col, 0);
-                    const double val_down = img.value(row + 1, col, 0);
+                    const double val_curr = buf.value(s, row, col, 0);
+                    const double val_down = buf.value(s, row + 1, col, 0);
                     if(std::isfinite(val_curr) && std::isfinite(val_down)){
-                        grad_y = (val_down - val_curr) / img.pxl_dy;
+                        grad_y = (val_down - val_curr) / buf.pxl_dy;
                     }
                 }else if(row == N_rows - 1 && N_rows > 1){
-                    const double val_up = img.value(row - 1, col, 0);
-                    const double val_curr = img.value(row, col, 0);
+                    const double val_up = buf.value(s, row - 1, col, 0);
+                    const double val_curr = buf.value(s, row, col, 0);
                     if(std::isfinite(val_up) && std::isfinite(val_curr)){
-                        grad_y = (val_curr - val_up) / img.pxl_dy;
+                        grad_y = (val_curr - val_up) / buf.pxl_dy;
                     }
                 }
                 
                 // Gradient in z-direction (between slices)
                 double grad_z = 0.0;
-                const int64_t N_imgs = img_coll.images.size();
-                if(N_imgs > 1){
-                    if( (img_idx > 0UL) && (img_idx < (N_imgs - 1UL)) ){
-                        const double val_prev = get_image(img_coll.images,img_idx - 1).value(row, col, 0);
-                        const double val_next = get_image(img_coll.images,img_idx + 1).value(row, col, 0);
+                if(N_slices > 1){
+                    if(s > 0 && s < N_slices - 1){
+                        const double val_prev = buf.value(s - 1, row, col, 0);
+                        const double val_next = buf.value(s + 1, row, col, 0);
                         if(std::isfinite(val_prev) && std::isfinite(val_next)){
-                            grad_z = (val_next - val_prev) / (2.0 * img.pxl_dz);
+                            grad_z = (val_next - val_prev) / (2.0 * buf.pxl_dz);
                         }
-                    }else if(img_idx == 0UL){
-                        const double val_curr = img.value(row, col, 0);
-                        const double val_next = get_image(img_coll.images,img_idx + 1).value(row, col, 0);
+                    }else if(s == 0){
+                        const double val_curr = buf.value(s, row, col, 0);
+                        const double val_next = buf.value(s + 1, row, col, 0);
                         if(std::isfinite(val_curr) && std::isfinite(val_next)){
-                            grad_z = (val_next - val_curr) / img.pxl_dz;
+                            grad_z = (val_next - val_curr) / buf.pxl_dz;
                         }
-                    }else if(img_idx == (N_imgs - 1UL)){
-                        const double val_prev = get_image(img_coll.images,img_idx - 1).value(row, col, 0);
-                        const double val_curr = img.value(row, col, 0);
+                    }else if(s == N_slices - 1){
+                        const double val_prev = buf.value(s - 1, row, col, 0);
+                        const double val_curr = buf.value(s, row, col, 0);
                         if(std::isfinite(val_prev) && std::isfinite(val_curr)){
-                            grad_z = (val_curr - val_prev) / img.pxl_dz;
+                            grad_z = (val_curr - val_prev) / buf.pxl_dz;
                         }
                     }
                 }
                 
-                grad_img.reference(row, col, 0) = grad_x;
-                grad_img.reference(row, col, 1) = grad_y;
-                grad_img.reference(row, col, 2) = grad_z;
+                grad.reference(s, row, col, 0) = grad_x;
+                grad.reference(s, row, col, 1) = grad_y;
+                grad.reference(s, row, col, 2) = grad_z;
             }
         }
-        
-        gradient.images.push_back(grad_img);
     }
     
-    return gradient;
+    return grad.to_planar_image_collection();
 }
 
 
@@ -599,10 +477,15 @@ AlignViaDemons(AlignViaDemonsParams & params,
             
             planar_image_collection<double, double> update_field_images;
             
-            for(size_t img_idx = 0; img_idx < stationary.images.size(); ++img_idx){
-                const auto &fixed_img = get_image(stationary.images,img_idx);
-                const auto &warped_img = get_image(warped_moving.images,img_idx);
-                const auto &grad_img = get_image(gradient.images,img_idx);
+            // Use iterators to traverse all three collections in lockstep,
+            // avoiding O(N) get_image calls.
+            auto fixed_it = stationary.images.begin();
+            auto warped_it = warped_moving.images.begin();
+            auto grad_it = gradient.images.begin();
+            for(; fixed_it != stationary.images.end(); ++fixed_it, ++warped_it, ++grad_it){
+                const auto &fixed_img = *fixed_it;
+                const auto &warped_img = *warped_it;
+                const auto &grad_img = *grad_it;
                 
                 planar_image<double, double> update_img;
                 update_img.init_orientation(fixed_img.row_unit, fixed_img.col_unit);
@@ -709,8 +592,7 @@ AlignViaDemons(AlignViaDemonsParams & params,
                 
                 // Now compose: for each position, add the update sampled at the deformed position
                 const double oob = 0.0;
-                for(size_t img_idx = 0; img_idx < deformation_field_images.images.size(); ++img_idx){
-                    auto &def_img = get_image(deformation_field_images.images,img_idx);
+                for(auto &def_img : deformation_field_images.images){
                     const int64_t N_rows = def_img.rows;
                     const int64_t N_cols = def_img.columns;
                     
@@ -742,13 +624,12 @@ AlignViaDemons(AlignViaDemonsParams & params,
                     }
                 }
             }else{
-                // Standard demons: simple addition
-                for(size_t img_idx = 0; img_idx < deformation_field_images.images.size(); ++img_idx){
-                    auto &def_img = get_image(deformation_field_images.images,img_idx);
-                    const auto &upd_img = get_image(update_field_images.images,img_idx);
-                    
-                    for(size_t i = 0; i < def_img.data.size(); ++i){
-                        def_img.data[i] += upd_img.data[i];
+                // Standard demons: simple addition using iterators
+                auto def_it = deformation_field_images.images.begin();
+                auto upd_it = update_field_images.images.begin();
+                for(; def_it != deformation_field_images.images.end(); ++def_it, ++upd_it){
+                    for(size_t i = 0; i < def_it->data.size(); ++i){
+                        def_it->data[i] += upd_it->data[i];
                     }
                 }
             }
