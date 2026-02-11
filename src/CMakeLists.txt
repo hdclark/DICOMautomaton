@@ -200,6 +200,9 @@ set_target_properties(  Write_File_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE
 add_library(            Operation_Dispatcher_obj OBJECT Operation_Dispatcher.cc )
 set_target_properties(  Operation_Dispatcher_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            Perlin_Noise_obj OBJECT Perlin_Noise.cc )
+set_target_properties(  Perlin_Noise_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Documentation_obj OBJECT Documentation.cc )
 set_target_properties(  Documentation_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -470,6 +473,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Triple_Three_obj>
     $<TARGET_OBJECTS:Write_File_obj>
     $<TARGET_OBJECTS:Operation_Dispatcher_obj>
+    $<TARGET_OBJECTS:Perlin_Noise_obj>
     $<TARGET_OBJECTS:Documentation_obj>
     $<TARGET_OBJECTS:Font_DCMA_Minimal_obj>
 
@@ -579,6 +583,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Triple_Three_obj>
         $<TARGET_OBJECTS:Write_File_obj>
         $<TARGET_OBJECTS:Operation_Dispatcher_obj>
+        $<TARGET_OBJECTS:Perlin_Noise_obj>
         $<TARGET_OBJECTS:Documentation_obj>
         $<TARGET_OBJECTS:Font_DCMA_Minimal_obj>
 

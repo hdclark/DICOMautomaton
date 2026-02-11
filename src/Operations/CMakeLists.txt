@@ -175,6 +175,7 @@ add_library(Operations_objs OBJECT
     OptimizeStaticBeams.cc
     OrderImages.cc
     PartitionContours.cc
+    PerlinImages.cc
     PerturbPixels.cc
     PerturbPoints.cc
     PlotLineSamples.cc

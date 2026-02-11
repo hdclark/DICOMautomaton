@@ -196,6 +196,7 @@
 #include "Operations/OptimizeStaticBeams.h"
 #include "Operations/OrderImages.h"
 #include "Operations/PartitionContours.h"
+#include "Operations/PerlinImages.h"
 #include "Operations/PerturbPixels.h"
 #include "Operations/PerturbPoints.h"
 #include "Operations/PlotPerROITimeCourses.h"
@@ -482,6 +483,7 @@ known_ops_t Known_Operations(){
     out["OptimizeStaticBeams"] = std::make_pair(OpArgDocOptimizeStaticBeams, OptimizeStaticBeams);
     out["OrderImages"] = std::make_pair(OpArgDocOrderImages, OrderImages);
     out["PartitionContours"] = std::make_pair(OpArgDocPartitionContours, PartitionContours);
+    out["PerlinImages"] = std::make_pair(OpArgDocPerlinImages, PerlinImages);
     out["PerturbPixels"] = std::make_pair(OpArgDocPerturbPixels, PerturbPixels);
     out["PerturbPoints"] = std::make_pair(OpArgDocPerturbPoints, PerturbPoints);
     out["PlotLineSamples"] = std::make_pair(OpArgDocPlotLineSamples, PlotLineSamples);
