@@ -346,7 +346,9 @@ bool WarpImages(Drover &DICOM_data,
 
                 // Deformation field transformations.
                 }else if constexpr (std::is_same_v<V, deformation_field>){
-                    throw std::invalid_argument("Inverting a deformation field is not yet supported. Unable to continue.");
+                   // This transform is already a 'pull' transform, not a 'push' transform.
+                   // So it does not need to be inverted (because it already is an inverse).
+                   t_inv.transform = t;
 
                 }else{
                     static_assert(std::is_same_v<V,void>, "Transformation not understood.");
@@ -438,7 +440,7 @@ bool WarpImages(Drover &DICOM_data,
 
                             // Deformation field transformations.
                             }else if constexpr (std::is_same_v<V, deformation_field>){
-                                throw std::invalid_argument("Inverting a deformation field is not yet supported. Unable to continue.");
+                                t.apply_to(corr_p);
 
                             }else{
                                 static_assert(std::is_same_v<V,void>, "Transformation not understood.");
