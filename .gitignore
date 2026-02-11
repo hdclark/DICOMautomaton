@@ -25,6 +25,7 @@ rpc_example_server
 
 # Typical build directory and artifacts.
 build/
+build_test/
 compile_commands.json
 dcma_integration_testing/
 
