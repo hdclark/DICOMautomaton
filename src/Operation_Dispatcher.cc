@@ -152,6 +152,8 @@
 #include "Operations/GenerateVirtualDataImageSphereV1.h"
 #include "Operations/GenerateVirtualDataPerfusionV1.h"
 #include "Operations/GenerateVirtualDataPointCloudV1.h"
+#include "Operations/GenerateVirtualDataSinusoidalFieldV1.h"
+#include "Operations/GenerateVirtualDataVortexFieldV1.h"
 #include "Operations/GiveWholeImageArrayABoneWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAHeadAndNeckWindowLevel.h"
 #include "Operations/GiveWholeImageArrayAThoraxWindowLevel.h"
@@ -438,6 +440,8 @@ known_ops_t Known_Operations(){
     out["GenerateVirtualDataImageSphereV1"] = std::make_pair(OpArgDocGenerateVirtualDataImageSphereV1, GenerateVirtualDataImageSphereV1);
     out["GenerateVirtualDataPerfusionV1"] = std::make_pair(OpArgDocGenerateVirtualDataPerfusionV1, GenerateVirtualDataPerfusionV1);
     out["GenerateVirtualDataPointCloudV1"] = std::make_pair(OpArgDocGenerateVirtualDataPointCloudV1, GenerateVirtualDataPointCloudV1);
+    out["GenerateVirtualDataSinusoidalFieldV1"] = std::make_pair(OpArgDocGenerateVirtualDataSinusoidalFieldV1, GenerateVirtualDataSinusoidalFieldV1);
+    out["GenerateVirtualDataVortexFieldV1"] = std::make_pair(OpArgDocGenerateVirtualDataVortexFieldV1, GenerateVirtualDataVortexFieldV1);
     out["GenerateWarp"] = std::make_pair(OpArgDocGenerateWarp, GenerateWarp);
     out["GiveWholeImageArrayABoneWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayABoneWindowLevel, GiveWholeImageArrayABoneWindowLevel);
     out["GiveWholeImageArrayAHeadAndNeckWindowLevel"] = std::make_pair(OpArgDocGiveWholeImageArrayAHeadAndNeckWindowLevel, GiveWholeImageArrayAHeadAndNeckWindowLevel);

@@ -130,6 +130,8 @@ add_library(Operations_objs OBJECT
     GenerateVirtualDataLineSampleV1.cc
     GenerateVirtualDataPerfusionV1.cc
     GenerateVirtualDataPointCloudV1.cc
+    GenerateVirtualDataSinusoidalFieldV1.cc
+    GenerateVirtualDataVortexFieldV1.cc
     GenerateWarp.cc
     GiveWholeImageArrayABoneWindowLevel.cc
     GiveWholeImageArrayAHeadAndNeckWindowLevel.cc
