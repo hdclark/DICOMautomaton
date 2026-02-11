@@ -1003,8 +1003,8 @@ TEST_CASE( "buffer3 spatial ordering during marshalling" ){
         planar_image<double, double> img;
         img.init_orientation(row_unit, col_unit);
         img.init_buffer(2, 2, 1);
-        const vec3<double> offset(0.0, 0.0, static_cast<double>(s));
-        img.init_spatial(1.0, 1.0, 1.0, vec3<double>(0.0, 0.0, 0.0), offset);
+        const vec3<double> slice_offset(0.0, 0.0, static_cast<double>(s));
+        img.init_spatial(1.0, 1.0, 1.0, vec3<double>(0.0, 0.0, 0.0), slice_offset);
         img.reference(0, 0, 0) = static_cast<double>(s * 100);
         coll.images.push_back(img);
     }

@@ -596,17 +596,10 @@ class buffer3 {
         const auto ort = ortho_unit();
         const auto diff = pos - anchor - slice_offsets[0];
 
-        // Compute fractional coordinates.
-        const double fc = diff.Dot(row_unit) / pxl_dx - 0.5;
-        const double fr = diff.Dot(col_unit) / pxl_dy - 0.5;
-        const double fs = diff.Dot(ort) / pxl_dz;
-
-        // But we need to account for non-zero slice_offsets[0] in z direction.
-        // Actually, slice_offsets already encode the offset, so we should compute
-        // the z-position relative to the first slice.
+        // Compute the z-position relative to the first slice centre.
         // For a regular grid, slices are at z = slice_offsets[s].Dot(ort) + anchor.Dot(ort).
         // The fractional slice index is:
-        //   fs = (pos.Dot(ort) - first_slice_centre.Dot(ort)) / pxl_dz
+        //   frac_s = (pos.Dot(ort) - first_slice_centre.Dot(ort)) / pxl_dz
         const double pos_z = pos.Dot(ort);
         const vec3<double> first_centre = anchor + slice_offsets[0]
                                         + row_unit * (pxl_dx * 0.5)
