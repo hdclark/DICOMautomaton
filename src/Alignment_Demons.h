@@ -14,6 +14,7 @@
 #include "YgorImages.h"
 
 #include "Alignment_Field.h"
+#include "Alignment_Buffer3.h"
 
 
 // Parameters for controlling the demons registration algorithm.
@@ -107,6 +108,31 @@ get_image( const std::list<planar_image<T, R>> &imgs, size_t i){
     auto it = std::next( std::begin(imgs), i );
     return *it;
 }
+
+// ---- buffer3-native internal helpers ----
+// These operate on buffer3 directly to avoid repeated marshalling overhead.
+
+// Apply 3D Gaussian smoothing in-place to a 3-channel vector field buffer.
+void
+smooth_vector_field(
+    buffer3<double> & field_buf,
+    double sigma_mm,
+    work_queue<std::function<void()>> &wq );
+
+// Compute gradient of a single-channel image buffer.
+// Returns a 3-channel buffer with gradients in x, y, z directions.
+buffer3<double>
+compute_gradient(const buffer3<float> & img_buf);
+
+// Warp an image buffer using a deformation field buffer (3-channel displacement).
+// Uses trilinear interpolation from the source buffer at displaced positions.
+buffer3<float>
+warp_image_with_field(
+    const buffer3<float> & img_buf,
+    const buffer3<double> & def_field_buf );
+
+
+// ---- planar_image_collection wrappers (for external callers) ----
 
 // Helper function to apply 3D Gaussian smoothing to a vector field.
 // The field should have 3 channels representing dx, dy, dz displacements.

@@ -22,6 +22,9 @@
 #include <limits>
 #include <list>
 #include <mutex>
+#include <atomic>
+#include <condition_variable>
+#include <thread>
 
 #include "YgorMath.h"
 #include "YgorImages.h"
@@ -131,6 +134,9 @@ class buffer3 {
     // ----- Visitor: visit a single XY slice -----
 
     void visit_slice_xy(int64_t slice, const std::function<void(int64_t row, int64_t col)> &f) {
+        if(slice < 0 || slice >= N_slices){
+            throw std::out_of_range("Slice index out of range in visit_slice_xy");
+        }
         for(int64_t r = 0; r < N_rows; ++r){
             for(int64_t c = 0; c < N_cols; ++c){
                 f(r, c);
@@ -335,9 +341,10 @@ class buffer3 {
         }
     }
 
-    // Single-threaded Gaussian smoothing (for small buffers or when no work_queue is available).
+    // Gaussian smoothing without explicit work_queue. Uses hardware_concurrency threads.
     void gaussian_smooth(double sigma_x_mm, double sigma_y_mm, double sigma_z_mm) {
-        work_queue<std::function<void()>> wq(1);
+        const auto n_threads = std::max(1u, std::thread::hardware_concurrency());
+        work_queue<std::function<void()>> wq(n_threads);
         gaussian_smooth(sigma_x_mm, sigma_y_mm, sigma_z_mm, wq);
     }
 
