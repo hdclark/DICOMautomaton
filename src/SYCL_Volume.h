@@ -8,11 +8,13 @@
 #include <cstdint>
 #include <cmath>
 #include <vector>
+#include <list>
+#include <functional>
 #include <stdexcept>
 #include <limits>
 
-// When SYCL is available, include the SYCL header; otherwise use mock.
-#if defined(DCMA_USE_SYCL) && DCMA_USE_SYCL
+// When external SYCL is available, include the real SYCL header; otherwise use mock.
+#if defined(DCMA_USE_EXT_SYCL) && DCMA_USE_EXT_SYCL
     #include <sycl/sycl.hpp>
 #else
     #include "Mock_SYCL.h"
@@ -150,6 +152,17 @@ public:
             throw std::invalid_argument("Cannot create SyclVolume from empty image collection");
         }
 
+        // Validate grid geometry upfront.
+        // Note: Images_Form_Regular_Grid takes non-const references but doesn't modify images,
+        // so const_cast is safe here.
+        std::list<std::reference_wrapper<planar_image<T, double>>> selected_imgs;
+        for (const auto &img : pic.images) {
+            selected_imgs.push_back(std::ref(const_cast<planar_image<T, double>&>(img)));
+        }
+        if (!Images_Form_Regular_Grid(selected_imgs)) {
+            throw std::invalid_argument("Images do not form a rectilinear grid. Cannot create SyclVolume.");
+        }
+
         // Verify all images have the same dimensions and spacing.
         const auto &first_img = pic.images.front();
         meta.dim_x = first_img.columns;
@@ -191,6 +204,17 @@ public:
     static SyclVolume from_vector_field(const planar_image_collection<T, double> &pic) {
         if (pic.images.empty()) {
             throw std::invalid_argument("Cannot create SyclVolume from empty image collection");
+        }
+
+        // Validate grid geometry upfront.
+        // Note: Images_Form_Regular_Grid takes non-const references but doesn't modify images,
+        // so const_cast is safe here.
+        std::list<std::reference_wrapper<planar_image<T, double>>> selected_imgs;
+        for (const auto &img : pic.images) {
+            selected_imgs.push_back(std::ref(const_cast<planar_image<T, double>&>(img)));
+        }
+        if (!Images_Form_Regular_Grid(selected_imgs)) {
+            throw std::invalid_argument("Images do not form a rectilinear grid. Cannot create SyclVolume.");
         }
 
         SyclVolume vol;

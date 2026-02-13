@@ -27,7 +27,7 @@ option(WITH_POSTGRES  "Compile assuming PostgreSQL libraries are available."    
 option(WITH_JANSSON   "Compile assuming Jansson is available."                  ON)
 option(WITH_THRIFT    "Compile assuming Apache Thrift is available."            ON)
 
-option(WITH_SYCL      "Compile with SYCL support via AdaptiveCpp."              OFF)
+option(WITH_EXT_SYCL  "Compile with external SYCL support via AdaptiveCpp."     OFF)
 
 option(WITH_LTO       "Use link-time optimization when available."              OFF)
 
@@ -188,17 +188,24 @@ if(WITH_THRIFT)
     include_directories( ${THRIFT_INCLUDE_DIRS} )
 endif()
 
-if(WITH_SYCL)
+if(WITH_EXT_SYCL)
     # SYCL support via AdaptiveCpp (formerly hipSYCL).
     # AdaptiveCpp provides the acpp compiler wrapper and CMake integration.
     # See https://github.com/AdaptiveCpp/AdaptiveCpp for installation instructions.
+    
+    # Set default ACPP_TARGETS if not already specified by user.
+    if(NOT DEFINED ACPP_TARGETS)
+        set(ACPP_TARGETS "omp.library-only" CACHE STRING "AdaptiveCpp backend target")
+        message(STATUS "ACPP_TARGETS not specified; defaulting to 'omp.library-only' for maximum portability.")
+    endif()
+    
     find_package(AdaptiveCpp CONFIG)
     if(NOT AdaptiveCpp_FOUND)
         # Fall back to checking for hipSYCL (older name)
         find_package(hipSYCL CONFIG)
         if(NOT hipSYCL_FOUND)
-            message(WARNING "WITH_SYCL enabled but AdaptiveCpp/hipSYCL not found. Disabling SYCL support.")
-            set(WITH_SYCL OFF)
+            message(WARNING "WITH_EXT_SYCL enabled but AdaptiveCpp/hipSYCL not found. Disabling external SYCL support.")
+            set(WITH_EXT_SYCL OFF)
         endif()
     endif()
 endif()
@@ -455,13 +462,17 @@ else()
     add_definitions(-UDCMA_USE_THRIFT)
 endif()
 
-if(WITH_SYCL)
-    message(STATUS "SYCL support enabled via AdaptiveCpp.")
-    add_definitions(-DDCMA_USE_SYCL=1)
+if(WITH_EXT_SYCL)
+    message(STATUS "External SYCL support enabled via AdaptiveCpp.")
+    add_definitions(-DDCMA_USE_EXT_SYCL=1)
 else()
-    message(STATUS "SYCL support is not available.")
-    add_definitions(-UDCMA_USE_SYCL)
+    message(STATUS "External SYCL support is not available.")
+    add_definitions(-UDCMA_USE_EXT_SYCL)
 endif()
+
+# Note: DCMA_USE_SYCL is always defined when Mock_SYCL.h is available as a fallback.
+# This enables SYCL code paths to work even without external SYCL support.
+add_definitions(-DDCMA_USE_SYCL=1)
 
 # Detect whether specific functions/variable/macros are available.
 # Note: this method does not support structs. Best to find a function that accepts the struct instead.
@@ -583,7 +594,7 @@ endif()
 if(WITH_THRIFT)
     list(APPEND BUILD_DEPENDENCY_PACKAGES "libthrift-dev")
 endif()
-if(WITH_SYCL)
+if(WITH_EXT_SYCL)
     list(APPEND BUILD_DEPENDENCY_PACKAGES "adaptivecpp")
 endif()
 list(JOIN BUILD_DEPENDENCY_PACKAGES ", " CPACK_DEBIAN_PACKAGE_DEPENDS)

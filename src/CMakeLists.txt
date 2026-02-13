@@ -69,20 +69,21 @@ set_target_properties(  Alignment_Demons_obj PROPERTIES POSITION_INDEPENDENT_COD
 add_library(            Alignment_Demons_Tests_obj OBJECT Alignment_Demons_Tests.cc )
 set_target_properties(  Alignment_Demons_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-if(WITH_SYCL)
-    add_library(            Alignment_Demons_SYCL_obj OBJECT Alignment_Demons_SYCL.cc )
-    set_target_properties(  Alignment_Demons_SYCL_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
-    target_compile_definitions(Alignment_Demons_SYCL_obj PRIVATE DCMA_FULL_BUILD=1)
+# SYCL-based Demons implementation. Always compiled since Mock_SYCL.h provides CPU fallback.
+add_library(            Alignment_Demons_SYCL_obj OBJECT Alignment_Demons_SYCL.cc )
+set_target_properties(  Alignment_Demons_SYCL_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+target_compile_definitions(Alignment_Demons_SYCL_obj PRIVATE DCMA_FULL_BUILD=1)
+if(WITH_EXT_SYCL)
     if(AdaptiveCpp_FOUND)
         add_sycl_to_target(TARGET Alignment_Demons_SYCL_obj SOURCES Alignment_Demons_SYCL.cc)
     elseif(hipSYCL_FOUND)
         add_sycl_to_target(TARGET Alignment_Demons_SYCL_obj SOURCES Alignment_Demons_SYCL.cc)
     endif()
-
-    add_library(            Alignment_Demons_SYCL_Tests_obj OBJECT Alignment_Demons_SYCL_Tests.cc )
-    set_target_properties(  Alignment_Demons_SYCL_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
-    target_compile_definitions(Alignment_Demons_SYCL_Tests_obj PRIVATE DCMA_FULL_BUILD=1)
 endif()
+
+add_library(            Alignment_Demons_SYCL_Tests_obj OBJECT Alignment_Demons_SYCL_Tests.cc )
+set_target_properties(  Alignment_Demons_SYCL_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+target_compile_definitions(Alignment_Demons_SYCL_Tests_obj PRIVATE DCMA_FULL_BUILD=1)
 
 add_library(            Colour_Maps_obj OBJECT Colour_Maps.cc )
 set_target_properties(  Colour_Maps_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -263,7 +264,7 @@ add_library (imebrashim
     $<TARGET_OBJECTS:Alignment_Rigid_obj>
     $<TARGET_OBJECTS:Alignment_Field_obj>
     $<TARGET_OBJECTS:Alignment_Demons_obj>
-    $<$<BOOL:${WITH_SYCL}>:$<TARGET_OBJECTS:Alignment_Demons_SYCL_obj>>
+    $<TARGET_OBJECTS:Alignment_Demons_SYCL_obj>
     $<TARGET_OBJECTS:DCMA_DICOM_obj>
     imebra20121219/library/imebra/src/dataHandlerStringUT.cpp
     imebra20121219/library/imebra/src/data.cpp
@@ -444,8 +445,8 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Alignment_Field_Tests_obj>
     $<TARGET_OBJECTS:Alignment_Demons_obj>
     $<TARGET_OBJECTS:Alignment_Demons_Tests_obj>
-    $<$<BOOL:${WITH_SYCL}>:$<TARGET_OBJECTS:Alignment_Demons_SYCL_obj>>
-    $<$<BOOL:${WITH_SYCL}>:$<TARGET_OBJECTS:Alignment_Demons_SYCL_Tests_obj>>
+    $<TARGET_OBJECTS:Alignment_Demons_SYCL_obj>
+    $<TARGET_OBJECTS:Alignment_Demons_SYCL_Tests_obj>
     $<TARGET_OBJECTS:Colour_Maps_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Common_Plotting_obj>
@@ -556,8 +557,8 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Alignment_Field_Tests_obj>
         $<TARGET_OBJECTS:Alignment_Demons_obj>
         $<TARGET_OBJECTS:Alignment_Demons_Tests_obj>
-        $<$<BOOL:${WITH_SYCL}>:$<TARGET_OBJECTS:Alignment_Demons_SYCL_obj>>
-        $<$<BOOL:${WITH_SYCL}>:$<TARGET_OBJECTS:Alignment_Demons_SYCL_Tests_obj>>
+        $<TARGET_OBJECTS:Alignment_Demons_SYCL_obj>
+        $<TARGET_OBJECTS:Alignment_Demons_SYCL_Tests_obj>
         $<TARGET_OBJECTS:Colour_Maps_obj>
         $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
         $<TARGET_OBJECTS:Common_Plotting_obj>

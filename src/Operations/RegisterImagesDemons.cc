@@ -32,6 +32,7 @@
 #include "../Alignment_Rigid.h"
 #include "../Alignment_Field.h"
 #include "../Alignment_Demons.h"
+#include "../Alignment_Demons_SYCL.h"
 
 #include "RegisterImagesDemons.h"
 
@@ -226,6 +227,17 @@ OperationDoc OpArgDocRegisterImagesDemons(){
     out.args.back().examples = { "true", "false" };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
+    out.args.emplace_back();
+    out.args.back().name = "Backend";
+    out.args.back().desc = "The computational backend to use for registration."
+                           " 'cpu' uses the original single-threaded CPU implementation."
+                           " 'sycl' uses the SYCL-based implementation which can leverage GPUs and parallel hardware"
+                           " when external SYCL support is available, but falls back to CPU-based Mock_SYCL otherwise.";
+    out.args.back().default_val = "cpu";
+    out.args.back().expected = true;
+    out.args.back().examples = { "cpu", "sycl" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
+
     return out;
 }
 
@@ -252,14 +264,24 @@ bool RegisterImagesDemons(Drover &DICOM_data,
     const auto TransformName = OptArgs.getValueStr("TransformName").value();
     const auto MetadataOpt = OptArgs.getValueStr("Metadata");
     const auto KeepDeformedImagesStr = OptArgs.getValueStr("KeepDeformedImages").value();
+    const auto BackendStr = OptArgs.getValueStr("Backend").value();
 
     //-----------------------------------------------------------------------------------------------------------------
     const auto regex_true = Compile_Regex("^tr?u?e?$");
     const auto regex_false = Compile_Regex("^fa?l?s?e?$");
+    const auto regex_cpu = Compile_Regex("^cp?u?$");
+    const auto regex_sycl = Compile_Regex("^sy?c?l?$");
 
     const bool UseDiffeomorphic = std::regex_match(UseDiffeomorphicStr, regex_true);
     const bool UseHistogramMatching = std::regex_match(UseHistogramMatchingStr, regex_true);
     const bool KeepDeformedImages = std::regex_match(KeepDeformedImagesStr, regex_true);
+
+    const bool UseCPUBackend = std::regex_match(BackendStr, regex_cpu);
+    const bool UseSYCLBackend = std::regex_match(BackendStr, regex_sycl);
+
+    if(!UseCPUBackend && !UseSYCLBackend){
+        throw std::invalid_argument("Invalid backend specified: '"_s + BackendStr + "'. Use 'cpu' or 'sycl'.");
+    }
 
     // Parse user-provided metadata.
     std::map<std::string, std::string> Metadata;
@@ -332,9 +354,15 @@ bool RegisterImagesDemons(Drover &DICOM_data,
     params.max_update_magnitude = MaxUpdateMagnitude;
     params.verbosity = Verbosity;
 
-    // Perform the registration.
-    YLOGINFO("Starting demons registration");
-    auto deform_field_opt = AlignViaDemons(params, moving_img_arr, fixed_img_arr);
+    // Perform the registration using the selected backend.
+    std::optional<deformation_field> deform_field_opt;
+    if(UseSYCLBackend){
+        YLOGINFO("Starting demons registration using SYCL backend");
+        deform_field_opt = AlignViaDemonsSYCL::AlignViaDemons_SYCL(params, moving_img_arr, fixed_img_arr);
+    }else{
+        YLOGINFO("Starting demons registration using CPU backend");
+        deform_field_opt = AlignViaDemons(params, moving_img_arr, fixed_img_arr);
+    }
 
     if(!deform_field_opt){
         throw std::runtime_error("Demons registration failed");
@@ -352,6 +380,7 @@ bool RegisterImagesDemons(Drover &DICOM_data,
     // Add metadata about the registration
     transform->metadata["RegistrationMethod"] = "Demons";
     transform->metadata["RegistrationName"] = TransformName;
+    transform->metadata["RegistrationBackend"] = UseSYCLBackend ? "sycl" : "cpu";
     transform->metadata["UseDiffeomorphic"] = UseDiffeomorphic ? "true" : "false";
     transform->metadata["UseHistogramMatching"] = UseHistogramMatching ? "true" : "false";
     transform->metadata["MaxIterations"] = std::to_string(MaxIterations);

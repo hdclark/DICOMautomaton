@@ -10,7 +10,7 @@
 #include <cstdint>
 
 // Include SYCL header (real or mock).
-#if defined(DCMA_USE_SYCL) && DCMA_USE_SYCL
+#if defined(DCMA_USE_EXT_SYCL) && DCMA_USE_EXT_SYCL
     #include <sycl/sycl.hpp>
 #else
     #include "Mock_SYCL.h"
