@@ -470,8 +470,9 @@ else()
     add_definitions(-UDCMA_USE_EXT_SYCL)
 endif()
 
-# Note: DCMA_USE_SYCL is always defined when Mock_SYCL.h is available as a fallback.
-# This enables SYCL code paths to work even without external SYCL support.
+# DCMA_USE_SYCL is always defined because Mock_SYCL.h is always present and provides
+# a CPU fallback implementation. This enables SYCL code paths to work even without
+# external SYCL support (AdaptiveCpp/hipSYCL).
 add_definitions(-DDCMA_USE_SYCL=1)
 
 # Detect whether specific functions/variable/macros are available.
