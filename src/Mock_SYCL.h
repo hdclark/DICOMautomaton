@@ -142,9 +142,9 @@ class accessor {
 
 public:
     // Update: Accept a reference to the handler
-    accessor(buffer<T, Dims>& buf, handler& h) 
+    accessor(buffer<T, Dims>& buf, handler& /*h*/) 
         : ptr(buf.get_pointer()), r(buf.get_range()) {
-        h.require(*this); // Register the dependency (even if it's a no-op)
+        // No-op: Registration is not needed in the mock implementation.
     }
 
     // 1D Access

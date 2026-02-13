@@ -23,8 +23,13 @@
 
 #include "Alignment_Demons.h"
 #include "Alignment_Demons_SYCL.h"
-#include "Alignment_Field.h"
 #include "SYCL_Volume.h"
+
+// Alignment_Field.h is only needed for the full AlignViaDemons_SYCL function.
+// When building standalone tests, this may not be available.
+#ifdef DCMA_FULL_BUILD
+#include "Alignment_Field.h"
+#endif
 
 namespace AlignViaDemonsSYCL {
 
@@ -45,8 +50,8 @@ SyclVolume<double> compute_gradient_sycl(const SyclVolume<float> &vol) {
 
     sycl::queue q;
 
-    // Create buffers.
-    sycl::buffer<float, 1> src_buf(vol.data.data(), sycl::range<1>(vol.data.size()));
+    // Create buffers. Cast away const for read-only buffer (safe since we only read).
+    sycl::buffer<float, 1> src_buf(const_cast<float*>(vol.data.data()), sycl::range<1>(vol.data.size()));
     sycl::buffer<double, 1> grad_buf(gradient.data.data(), sycl::range<1>(gradient.data.size()));
 
     q.submit([&](sycl::handler &h) {
@@ -179,7 +184,7 @@ void smooth_vector_field_sycl(SyclVolume<double> &field, double sigma_mm) {
     {
         sycl::buffer<double, 1> src_buf(field.data.data(), sycl::range<1>(field.data.size()));
         sycl::buffer<double, 1> dst_buf(temp.data(), sycl::range<1>(temp.size()));
-        sycl::buffer<double, 1> kern_buf(kernel_x.data(), sycl::range<1>(kernel_x.size()));
+        sycl::buffer<double, 1> kern_buf(const_cast<double*>(kernel_x.data()), sycl::range<1>(kernel_x.size()));
 
         q.submit([&](sycl::handler &h) {
             sycl::accessor src(src_buf, h);
@@ -222,7 +227,7 @@ void smooth_vector_field_sycl(SyclVolume<double> &field, double sigma_mm) {
     {
         sycl::buffer<double, 1> src_buf(temp.data(), sycl::range<1>(temp.size()));
         sycl::buffer<double, 1> dst_buf(field.data.data(), sycl::range<1>(field.data.size()));
-        sycl::buffer<double, 1> kern_buf(kernel_y.data(), sycl::range<1>(kernel_y.size()));
+        sycl::buffer<double, 1> kern_buf(const_cast<double*>(kernel_y.data()), sycl::range<1>(kernel_y.size()));
 
         q.submit([&](sycl::handler &h) {
             sycl::accessor src(src_buf, h);
@@ -265,7 +270,7 @@ void smooth_vector_field_sycl(SyclVolume<double> &field, double sigma_mm) {
     {
         sycl::buffer<double, 1> src_buf(field.data.data(), sycl::range<1>(field.data.size()));
         sycl::buffer<double, 1> dst_buf(temp.data(), sycl::range<1>(temp.size()));
-        sycl::buffer<double, 1> kern_buf(kernel_z.data(), sycl::range<1>(kernel_z.size()));
+        sycl::buffer<double, 1> kern_buf(const_cast<double*>(kernel_z.data()), sycl::range<1>(kernel_z.size()));
 
         q.submit([&](sycl::handler &h) {
             sycl::accessor src(src_buf, h);
@@ -329,8 +334,9 @@ SyclVolume<float> warp_image_sycl(
 
     sycl::queue q;
 
-    sycl::buffer<float, 1> src_buf(source_vol.data.data(), sycl::range<1>(source_vol.data.size()));
-    sycl::buffer<double, 1> def_buf(deformation_vol.data.data(), sycl::range<1>(deformation_vol.data.size()));
+    // Cast away const for read-only buffers (safe since we only read from them).
+    sycl::buffer<float, 1> src_buf(const_cast<float*>(source_vol.data.data()), sycl::range<1>(source_vol.data.size()));
+    sycl::buffer<double, 1> def_buf(const_cast<double*>(deformation_vol.data.data()), sycl::range<1>(deformation_vol.data.size()));
     sycl::buffer<float, 1> out_buf(warped.data.data(), sycl::range<1>(warped.data.size()));
 
     q.submit([&](sycl::handler &h) {
@@ -467,9 +473,10 @@ double compute_demons_iteration_sycl(
 
     // Compute update field and MSE.
     {
-        sycl::buffer<float, 1> stat_buf(stationary_vol.data.data(), sycl::range<1>(stationary_vol.data.size()));
+        // Cast away const for read-only buffers (safe since we only read from them).
+        sycl::buffer<float, 1> stat_buf(const_cast<float*>(stationary_vol.data.data()), sycl::range<1>(stationary_vol.data.size()));
         sycl::buffer<float, 1> mov_buf(warped_moving_vol.data.data(), sycl::range<1>(warped_moving_vol.data.size()));
-        sycl::buffer<double, 1> grad_buf(gradient_vol.data.data(), sycl::range<1>(gradient_vol.data.size()));
+        sycl::buffer<double, 1> grad_buf(const_cast<double*>(gradient_vol.data.data()), sycl::range<1>(gradient_vol.data.size()));
         sycl::buffer<double, 1> upd_buf(update_field.data.data(), sycl::range<1>(update_field.data.size()));
         sycl::buffer<double, 1> mse_buf(mse_accum.data(), sycl::range<1>(mse_accum.size()));
         sycl::buffer<int64_t, 1> cnt_buf(count_accum.data(), sycl::range<1>(count_accum.size()));
@@ -591,6 +598,8 @@ double compute_demons_iteration_sycl(
 
 
 // Complete SYCL-accelerated demons registration.
+// This function requires the full DICOMautomaton build environment.
+#ifdef DCMA_FULL_BUILD
 std::optional<deformation_field> AlignViaDemons_SYCL(
     AlignViaDemonsParams &params,
     const planar_image_collection<float, double> &moving_in,
@@ -682,6 +691,7 @@ std::optional<deformation_field> AlignViaDemons_SYCL(
         return std::nullopt;
     }
 }
+#endif // DCMA_FULL_BUILD
 
 } // namespace AlignViaDemonsSYCL
 

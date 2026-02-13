@@ -11,9 +11,10 @@
 #include "YgorImages.h"
 
 #include "Alignment_Demons.h"
-#include "Alignment_Field.h"
 #include "SYCL_Volume.h"
 
+// Forward declaration. Only needed for full build.
+class deformation_field;
 
 namespace AlignViaDemonsSYCL {
 
@@ -59,12 +60,14 @@ SyclVolume<float> warp_image_sycl(
 // Complete SYCL-accelerated demons registration.
 // This function marshals planar_image_collection data to SyclVolume, performs
 // the registration on device, and marshals the result back.
+// Note: This function is only available when DCMA_FULL_BUILD is defined.
 //
 // Returns std::nullopt if registration fails.
+#ifdef DCMA_FULL_BUILD
 std::optional<deformation_field> AlignViaDemons_SYCL(
     AlignViaDemonsParams &params,
     const planar_image_collection<float, double> &moving,
     const planar_image_collection<float, double> &stationary);
+#endif
 
 } // namespace AlignViaDemonsSYCL
-

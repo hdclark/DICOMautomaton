@@ -1,6 +1,9 @@
 //Alignment_Demons_SYCL_Tests.cc - A part of DICOMautomaton 2026. Written by hal clark.
 //
 // Unit tests for the SYCL-accelerated demons registration implementation.
+// 
+// Note: Some tests require the full DICOMautomaton build environment (Alignment_Demons.cc, Structs.cc, etc.)
+// and will be conditionally compiled based on whether DCMA_FULL_BUILD is defined.
 
 #include <algorithm>
 #include <optional>
@@ -25,14 +28,15 @@
 #include "YgorMath.h"
 #include "YgorMisc.h"
 #include "YgorLog.h"
-#include "YgorStats.h"
-#include "YgorString.h"
 
-#include "Structs.h"
 #include "SYCL_Volume.h"
 #include "Alignment_Demons.h"
 #include "Alignment_Demons_SYCL.h"
+
+#ifdef DCMA_FULL_BUILD
+#include "Structs.h"
 #include "Alignment_Field.h"
+#endif
 
 
 // Helper function to create a test image collection.
@@ -229,6 +233,10 @@ TEST_CASE("SYCL warp_image_sycl identity") {
 }
 
 
+// The following tests require the full DICOMautomaton build environment
+// (Alignment_Demons.cc, Alignment_Field.cc, Structs.cc, etc.)
+#ifdef DCMA_FULL_BUILD
+
 TEST_CASE("SYCL AlignViaDemons_SYCL identical images") {
     auto img = make_sycl_test_image_collection(1, 5, 5,
         [](int64_t, int64_t row, int64_t col) {
@@ -338,4 +346,6 @@ TEST_CASE("SYCL AlignViaDemons_SYCL handles empty inputs") {
     auto result = AlignViaDemonsSYCL::AlignViaDemons_SYCL(params, empty, stationary);
     CHECK_FALSE(result.has_value());
 }
+
+#endif // DCMA_FULL_BUILD
 

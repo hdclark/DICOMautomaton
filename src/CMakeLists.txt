@@ -72,6 +72,7 @@ set_target_properties(  Alignment_Demons_Tests_obj PROPERTIES POSITION_INDEPENDE
 if(WITH_SYCL)
     add_library(            Alignment_Demons_SYCL_obj OBJECT Alignment_Demons_SYCL.cc )
     set_target_properties(  Alignment_Demons_SYCL_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+    target_compile_definitions(Alignment_Demons_SYCL_obj PRIVATE DCMA_FULL_BUILD=1)
     if(AdaptiveCpp_FOUND)
         add_sycl_to_target(TARGET Alignment_Demons_SYCL_obj SOURCES Alignment_Demons_SYCL.cc)
     elseif(hipSYCL_FOUND)
@@ -80,6 +81,7 @@ if(WITH_SYCL)
 
     add_library(            Alignment_Demons_SYCL_Tests_obj OBJECT Alignment_Demons_SYCL_Tests.cc )
     set_target_properties(  Alignment_Demons_SYCL_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+    target_compile_definitions(Alignment_Demons_SYCL_Tests_obj PRIVATE DCMA_FULL_BUILD=1)
 endif()
 
 add_library(            Colour_Maps_obj OBJECT Colour_Maps.cc )
