@@ -1,6 +1,7 @@
 //Alignment_Demons.cc - A part of DICOMautomaton 2026. Written by hal clark.
 
 #include <algorithm>
+#include <exception>
 #include <optional>
 #include <fstream>
 #include <iterator>
@@ -34,12 +35,19 @@
 
 using namespace AlignViaDemonsHelpers;
 
-#ifdef DCMA_USE_SYCL
-#if !__has_include(<sycl/sycl.hpp>)
-#error "DCMA_USE_SYCL is enabled, but no SYCL 2020 header <sycl/sycl.hpp> was found. Verify AdaptiveCpp installation and compiler include paths."
-#endif
+#ifdef DCMA_WHICH_SYCL
+#if defined(DCMA_USE_SYCL_FALLBACK)
+#include "SYCL_Fallback.h"
+namespace dcma_sycl = sycl;
+#elif __has_include(<sycl/sycl.hpp>)
 #include <sycl/sycl.hpp>
 namespace dcma_sycl = sycl;
+#elif __has_include(<CL/sycl.hpp>)
+#include <CL/sycl.hpp>
+namespace dcma_sycl = cl::sycl;
+#else
+#error "External SYCL backend was selected, but no SYCL header was found."
+#endif
 
 namespace {
 
@@ -66,9 +74,9 @@ marshal_collection_to_volume(const planar_image_collection<T, double> &coll){
     if(coll.images.empty()){
         throw std::invalid_argument("Cannot marshal empty image collection");
     }
-    auto coll_copy = coll;
+    auto &nonconst_coll = const_cast<planar_image_collection<T, double> &>(coll);
     std::list<std::reference_wrapper<planar_image<T, double>>> selected_imgs;
-    for(auto &img : coll_copy.images){
+    for(auto &img : nonconst_coll.images){
         selected_imgs.push_back(std::ref(img));
     }
     if(!Images_Form_Regular_Grid(selected_imgs)){
@@ -86,8 +94,8 @@ marshal_collection_to_volume(const planar_image_collection<T, double> &coll){
     out.pxl_dz = img0.pxl_dz;
     out.data.resize(static_cast<size_t>(out.slices * out.rows * out.cols * out.channels), T{});
 
-    for(int64_t z = 0; z < out.slices; ++z){
-        const auto &img = get_image(coll.images, static_cast<size_t>(z));
+    int64_t z = 0;
+    for(const auto &img : coll.images){
         if(img.rows != out.rows || img.columns != out.cols || img.channels != out.channels){
             throw std::invalid_argument("Image collection has inconsistent rows/columns/channels and cannot be marshaled as a rectilinear volume");
         }
@@ -98,6 +106,7 @@ marshal_collection_to_volume(const planar_image_collection<T, double> &coll){
                 }
             }
         }
+        ++z;
     }
     return out;
 }
@@ -136,9 +145,10 @@ public:
         , warped(moving_in)
         , params(params_in)
         , q(dcma_sycl::default_selector_v,
-            [](dcma_sycl::exception_list exceptions){
-                for(const auto &ex : exceptions){
-                    std::rethrow_exception(ex);
+            [this](dcma_sycl::exception_list exceptions){
+                if(!exceptions.empty()){
+                    std::lock_guard<std::mutex> lock(this->async_exception_mutex);
+                    this->async_exception = exceptions.front();
                 }
             }){
         this->initialize_geometry();
@@ -204,6 +214,20 @@ private:
     double *deformation_dev = nullptr;
     double *mse_term_dev = nullptr;
     int64_t *valid_dev = nullptr;
+    std::exception_ptr async_exception = nullptr;
+    std::mutex async_exception_mutex;
+
+    void wait_and_rethrow(){
+        q.wait_and_throw();
+        {
+            std::lock_guard<std::mutex> lock(this->async_exception_mutex);
+            if(this->async_exception){
+                const auto ex = this->async_exception;
+                this->async_exception = nullptr;
+                std::rethrow_exception(ex);
+            }
+        }
+    }
 
     void initialize_geometry(){
         this->scalar_voxel_count = static_cast<size_t>(fixed.slices * fixed.rows * fixed.cols);
@@ -321,7 +345,7 @@ private:
             gradient_dev[out_idx(1)] = gy;
             gradient_dev[out_idx(2)] = gz;
         });
-        q.wait_and_throw();
+        this->wait_and_rethrow();
     }
 
     void compute_update_and_mse(double &mse, int64_t &n_voxels){
@@ -382,7 +406,7 @@ private:
             update_dev[g_idx + 1] = uy;
             update_dev[g_idx + 2] = uz;
         });
-        q.wait_and_throw();
+        this->wait_and_rethrow();
 
         mse = 0.0;
         n_voxels = 0;
@@ -400,7 +424,7 @@ private:
         q.parallel_for(dcma_sycl::range<1>(N), [=](dcma_sycl::id<1> i){
             deformation_dev[i[0]] += update_dev[i[0]];
         });
-        q.wait_and_throw();
+        this->wait_and_rethrow();
     }
 
     void warp_moving(){
@@ -478,7 +502,7 @@ private:
                 warped_dev[vidx(z, y, x, c, channels)] = static_cast<float>(c0 * (1.0 - tz) + c1 * tz);
             }
         });
-        q.wait_and_throw();
+        this->wait_and_rethrow();
     }
 
     void copy_device_vector_to_host(const double *dev, demons_volume<double> &host){
@@ -1009,7 +1033,7 @@ AlignViaDemons(AlignViaDemonsParams & params,
         return std::nullopt;
     }
     
-#ifdef DCMA_USE_SYCL
+#ifdef DCMA_WHICH_SYCL
     try {
         if(params.verbosity >= 1){
             YLOGINFO("Using SYCL Demons implementation");
@@ -1046,7 +1070,7 @@ AlignViaDemons(AlignViaDemonsParams & params,
         return deformation_field(std::move(def_coll));
     }catch(const std::exception &e){
         YLOGWARN("SYCL Demons path failed (" << e.what() << "). Falling back to CPU implementation. "
-                 "WITH_ADAPTIVECPP_SYCL is a build-time CMake option.");
+                 "Selected SYCL backend: " << DCMA_WHICH_SYCL << ".");
     }
 #endif
 

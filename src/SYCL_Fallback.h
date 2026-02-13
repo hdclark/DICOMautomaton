@@ -1,12 +1,12 @@
-// Mock_SYCL.h.
+// SYCL_Fallback.h.
 
 // This is a *mock*, minimal, CPU-only implementation of SYCL.hpp.
 // It is meant to help compile and run SYCL code when the compiler or toolchain lacks support.
 // Code compiled with this mock header will NOT have any runtime support.
 // Based on the SYCL 2020 standard (but missing a lot of functionality!).
 
-#ifndef MOCK_SYCL_HPP
-#define MOCK_SYCL_HPP
+#ifndef SYCL_FALLBACK_HPP
+#define SYCL_FALLBACK_HPP
 
 #include <vector>
 #include <array>
@@ -16,6 +16,8 @@
 #include <memory>
 #include <iostream>
 #include <type_traits> // Required for std::enable_if and std::is_integral
+#include <exception>
+#include <cmath>
 
 namespace sycl {
 
@@ -37,6 +39,9 @@ template <typename T, int Dims, access::mode Mode, access::target Target> class 
 
 class handler;
 class queue;
+struct default_selector_t {};
+inline constexpr default_selector_t default_selector_v{};
+using exception_list = std::vector<std::exception_ptr>;
 
 
 // =============================================================================
@@ -233,9 +238,13 @@ public:
 };
 
 class queue {
+    std::function<void(exception_list)> async_handler;
 public:
     // Simple constructor
     queue() {} 
+    queue(default_selector_t) {}
+    template <class Handler>
+    queue(default_selector_t, Handler h) : async_handler(h) {}
 
     // Submit a command group function (CGF)
     template <typename T>
@@ -248,11 +257,45 @@ public:
     void wait() {
         // No-op: execution is already done
     }
+    void wait_and_throw() {
+        // No-op: execution is already done and no async backend exists.
+    }
+
+    template <typename Func>
+    void parallel_for(range<1> r, Func kernel){
+        handler h;
+        h.parallel_for(r, kernel);
+    }
+    template <typename Func>
+    void parallel_for(range<2> r, Func kernel){
+        handler h;
+        h.parallel_for(r, kernel);
+    }
+    template <typename Func>
+    void parallel_for(range<3> r, Func kernel){
+        handler h;
+        h.parallel_for(r, kernel);
+    }
 };
+
+template <class T>
+T* malloc_shared(size_t count, queue&){
+    return new T[count];
+}
+
+template <class T>
+inline void free(T *ptr, queue&){
+    delete[] ptr;
+}
+
+inline bool isfinite(float v){ return std::isfinite(v); }
+inline bool isfinite(double v){ return std::isfinite(v); }
+inline double floor(double v){ return std::floor(v); }
+inline double sqrt(double v){ return std::sqrt(v); }
 
 } // namespace sycl
 
-#endif // MOCK_SYCL_HPP
+#endif // SYCL_FALLBACK_HPP
 
 
 //// =============================================================================
