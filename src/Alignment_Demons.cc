@@ -66,9 +66,9 @@ marshal_collection_to_volume(const planar_image_collection<T, double> &coll){
     if(coll.images.empty()){
         throw std::invalid_argument("Cannot marshal empty image collection");
     }
-    auto &coll_nc = const_cast<planar_image_collection<T, double>&>(coll);
+    auto coll_copy = coll;
     std::list<std::reference_wrapper<planar_image<T, double>>> selected_imgs;
-    for(auto &img : coll_nc.images){
+    for(auto &img : coll_copy.images){
         selected_imgs.push_back(std::ref(img));
     }
     if(!Images_Form_Regular_Grid(selected_imgs)){
@@ -428,6 +428,13 @@ private:
             const double dx = deformation_dev[vidx(z, y, x, 0, 3)];
             const double dy = deformation_dev[vidx(z, y, x, 1, 3)];
             const double dz = deformation_dev[vidx(z, y, x, 2, 3)];
+            if(!(dcma_sycl::isfinite(dx) && dcma_sycl::isfinite(dy) && dcma_sycl::isfinite(dz))){
+                // If any component is invalid, the full displacement vector is unusable for interpolation.
+                for(int64_t c = 0; c < channels; ++c){
+                    warped_dev[vidx(z, y, x, c, channels)] = out_of_bounds_value;
+                }
+                return;
+            }
             const double sx = static_cast<double>(x) + dx / pxl_dx;
             const double sy = static_cast<double>(y) + dy / pxl_dy;
             const double sz = static_cast<double>(z) + dz / pxl_dz;
