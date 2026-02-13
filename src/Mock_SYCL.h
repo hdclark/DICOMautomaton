@@ -15,8 +15,29 @@
 #include <algorithm>
 #include <memory>
 #include <iostream>
+#include <type_traits> // Required for std::enable_if and std::is_integral
 
 namespace sycl {
+
+namespace access {
+    enum class mode { read, write, read_write, discard_write, discard_read_write, atomic };
+    enum class target { global_buffer, constant_buffer, local, image, host_buffer };
+    enum class placeholder { false_t, true_t };
+}
+
+
+// Forward declarations.
+
+template <int Dims> struct range;
+template <int Dims> struct id;
+template <int Dims> struct item;
+
+template <typename T, int Dims> class buffer;
+template <typename T, int Dims, access::mode Mode, access::target Target> class accessor;
+
+class handler;
+class queue;
+
 
 // =============================================================================
 // 1. Basic Identifiers: id, range, item
@@ -26,13 +47,14 @@ template <int Dims>
 struct range {
     std::array<size_t, Dims> dims;
 
+    // Use SFINAE to ensure we only catch integer types
+    template<typename... Args, 
+             typename = std::enable_if_t<(std::is_integral_v<Args> && ...)>>
+    range(Args... args) : dims{static_cast<size_t>(args)...} {}
+
     range(std::initializer_list<size_t> list) {
         std::copy(list.begin(), list.end(), dims.begin());
     }
-    
-    // Variadic constructor to allow range(x, y, z)
-    template<typename... Args>
-    range(Args... args) : dims{static_cast<size_t>(args)...} {}
 
     size_t operator[](int i) const { return dims[i]; }
     size_t size() const {
@@ -46,9 +68,11 @@ template <int Dims>
 struct id {
     std::array<size_t, Dims> val;
 
-    id() = default;
+    id() : val{} {}
     
-    template<typename... Args>
+    // Use SFINAE to ensure we only catch integer types
+    template<typename... Args, 
+             typename = std::enable_if_t<(std::is_integral_v<Args> && ...)>>
     id(Args... args) : val{static_cast<size_t>(args)...} {}
     
     // Allow implicit conversion from array for internal loop logic
@@ -56,6 +80,8 @@ struct id {
 
     size_t operator[](int i) const { return val[i]; }
 };
+
+
 
 template <int Dims>
 struct item {
@@ -82,12 +108,6 @@ struct item {
 // =============================================================================
 // 2. Memory Model: buffer, accessor
 // =============================================================================
-
-namespace access {
-    enum class mode { read, write, read_write, discard_write, discard_read_write, atomic };
-    enum class target { global_buffer, constant_buffer, local, image, host_buffer };
-    enum class placeholder { false_t, true_t };
-}
 
 // Minimal buffer: Manages ownership or wraps existing pointers
 template <typename T, int Dims = 1>
@@ -121,8 +141,11 @@ class accessor {
     range<Dims> r;
 
 public:
-    accessor(buffer<T, Dims>& buf, const std::shared_ptr<void>&) 
-        : ptr(buf.get_pointer()), r(buf.get_range()) {}
+    // Update: Accept a reference to the handler
+    accessor(buffer<T, Dims>& buf, handler& h) 
+        : ptr(buf.get_pointer()), r(buf.get_range()) {
+        h.require(*this); // Register the dependency (even if it's a no-op)
+    }
 
     // 1D Access
     T& operator[](id<1> index) const {
@@ -134,16 +157,21 @@ public:
 
     // 2D Access
     T& operator[](id<2> index) const {
-        // Flatten: y * width + x (assuming row-major matches standard C++)
         return ptr[index[0] * r[1] + index[1]];
     }
 
     // 3D Access
     T& operator[](id<3> index) const {
-        // Flatten: z * (height * width) + y * width + x
         return ptr[index[0] * (r[1] * r[2]) + index[1] * r[2] + index[2]];
     }
 };
+
+// =============================================================================
+// Deduction Guides (Required for C++17 CTAD)
+// =============================================================================
+template <typename T, int Dims>
+accessor(buffer<T, Dims>&, handler&) -> accessor<T, Dims, access::mode::read_write, access::target::global_buffer>;
+
 
 // =============================================================================
 // 3. Execution Model: handler, queue
