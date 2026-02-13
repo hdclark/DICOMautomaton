@@ -192,6 +192,10 @@ if(WITH_ADAPTIVECPP_SYCL)
     if(NOT AdaptiveCpp_FOUND)
         message(FATAL_ERROR "WITH_ADAPTIVECPP_SYCL=ON requires AdaptiveCpp CMake package configuration")
     endif()
+    get_filename_component(DCMA_CXX_COMPILER_BASENAME "${CMAKE_CXX_COMPILER}" NAME)
+    if(NOT DCMA_CXX_COMPILER_BASENAME MATCHES "^acpp(\\.exe)?$")
+        message(FATAL_ERROR "WITH_ADAPTIVECPP_SYCL=ON requires CMAKE_CXX_COMPILER to be AdaptiveCpp's 'acpp' driver")
+    endif()
 endif()
 
 ####################################################################################
@@ -587,4 +591,3 @@ list(APPEND RECOMMENDED_PACKAGES "patchelf")
 list(JOIN RECOMMENDED_PACKAGES ", " CPACK_DEBIAN_PACKAGE_RECOMMENDS)
 
 include(CPack)
-
