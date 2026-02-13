@@ -27,6 +27,8 @@ option(WITH_POSTGRES  "Compile assuming PostgreSQL libraries are available."    
 option(WITH_JANSSON   "Compile assuming Jansson is available."                  ON)
 option(WITH_THRIFT    "Compile assuming Apache Thrift is available."            ON)
 
+option(WITH_SYCL      "Compile with SYCL support via AdaptiveCpp."              OFF)
+
 option(WITH_LTO       "Use link-time optimization when available."              OFF)
 
 option(BUILD_SHARED_LIBS "Build shared-object/dynamicly-loaded binaries."       ON)
@@ -184,6 +186,21 @@ if(WITH_THRIFT)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(THRIFT REQUIRED thrift)
     include_directories( ${THRIFT_INCLUDE_DIRS} )
+endif()
+
+if(WITH_SYCL)
+    # SYCL support via AdaptiveCpp (formerly hipSYCL).
+    # AdaptiveCpp provides the acpp compiler wrapper and CMake integration.
+    # See https://github.com/AdaptiveCpp/AdaptiveCpp for installation instructions.
+    find_package(AdaptiveCpp CONFIG)
+    if(NOT AdaptiveCpp_FOUND)
+        # Fall back to checking for hipSYCL (older name)
+        find_package(hipSYCL CONFIG)
+        if(NOT hipSYCL_FOUND)
+            message(WARNING "WITH_SYCL enabled but AdaptiveCpp/hipSYCL not found. Disabling SYCL support.")
+            set(WITH_SYCL OFF)
+        endif()
+    endif()
 endif()
 
 ####################################################################################
@@ -438,6 +455,14 @@ else()
     add_definitions(-UDCMA_USE_THRIFT)
 endif()
 
+if(WITH_SYCL)
+    message(STATUS "SYCL support enabled via AdaptiveCpp.")
+    add_definitions(-DDCMA_USE_SYCL=1)
+else()
+    message(STATUS "SYCL support is not available.")
+    add_definitions(-UDCMA_USE_SYCL)
+endif()
+
 # Detect whether specific functions/variable/macros are available.
 # Note: this method does not support structs. Best to find a function that accepts the struct instead.
 check_cxx_symbol_exists(select    "sys/select.h" DCMA_HAS_SYS_SELECT)        # Function (nominally).
@@ -557,6 +582,9 @@ if(WITH_JANSSON)
 endif()
 if(WITH_THRIFT)
     list(APPEND BUILD_DEPENDENCY_PACKAGES "libthrift-dev")
+endif()
+if(WITH_SYCL)
+    list(APPEND BUILD_DEPENDENCY_PACKAGES "adaptivecpp")
 endif()
 list(JOIN BUILD_DEPENDENCY_PACKAGES ", " CPACK_DEBIAN_PACKAGE_DEPENDS)
 
