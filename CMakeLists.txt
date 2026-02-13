@@ -26,6 +26,7 @@ option(WITH_GNU_GSL   "Compile assuming the GNU GSL is available."              
 option(WITH_POSTGRES  "Compile assuming PostgreSQL libraries are available."    ON)
 option(WITH_JANSSON   "Compile assuming Jansson is available."                  ON)
 option(WITH_THRIFT    "Compile assuming Apache Thrift is available."            ON)
+option(WITH_ADAPTIVECPP_SYCL "Compile Demons support with AdaptiveCpp SYCL."    OFF)
 
 option(WITH_LTO       "Use link-time optimization when available."              OFF)
 
@@ -184,6 +185,13 @@ if(WITH_THRIFT)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(THRIFT REQUIRED thrift)
     include_directories( ${THRIFT_INCLUDE_DIRS} )
+endif()
+
+if(WITH_ADAPTIVECPP_SYCL)
+    find_package(AdaptiveCpp QUIET CONFIG)
+    if(NOT AdaptiveCpp_FOUND)
+        message(FATAL_ERROR "WITH_ADAPTIVECPP_SYCL=ON requires AdaptiveCpp CMake package configuration")
+    endif()
 endif()
 
 ####################################################################################
@@ -438,6 +446,16 @@ else()
     add_definitions(-UDCMA_USE_THRIFT)
 endif()
 
+if(WITH_ADAPTIVECPP_SYCL)
+    message(STATUS "Assuming AdaptiveCpp SYCL is available.")
+    add_definitions(-DDCMA_USE_SYCL=1)
+    set(DCMA_ADAPTIVECPP_TARGETS "omp.library-only" CACHE STRING "AdaptiveCpp targets")
+    add_compile_options("SHELL:--acpp-targets=${DCMA_ADAPTIVECPP_TARGETS}")
+else()
+    message(STATUS "Assuming AdaptiveCpp SYCL is not available.")
+    add_definitions(-UDCMA_USE_SYCL)
+endif()
+
 # Detect whether specific functions/variable/macros are available.
 # Note: this method does not support structs. Best to find a function that accepts the struct instead.
 check_cxx_symbol_exists(select    "sys/select.h" DCMA_HAS_SYS_SELECT)        # Function (nominally).
@@ -569,5 +587,4 @@ list(APPEND RECOMMENDED_PACKAGES "patchelf")
 list(JOIN RECOMMENDED_PACKAGES ", " CPACK_DEBIAN_PACKAGE_RECOMMENDS)
 
 include(CPack)
-
 

@@ -34,6 +34,384 @@
 
 using namespace AlignViaDemonsHelpers;
 
+#ifdef DCMA_USE_SYCL
+#if __has_include(<sycl/sycl.hpp>)
+#include <sycl/sycl.hpp>
+namespace dcma_sycl = sycl;
+#elif __has_include(<CL/sycl.hpp>)
+#include <CL/sycl.hpp>
+namespace dcma_sycl = cl::sycl;
+#else
+#error "DCMA_USE_SYCL is enabled, but no SYCL header was found"
+#endif
+
+namespace {
+
+template <class T>
+struct demons_volume {
+    int64_t slices = 0;
+    int64_t rows = 0;
+    int64_t cols = 0;
+    int64_t channels = 0;
+    double pxl_dx = 1.0;
+    double pxl_dy = 1.0;
+    double pxl_dz = 1.0;
+    std::vector<T> data;
+};
+
+template <class T>
+inline size_t vol_idx(const demons_volume<T> &v, int64_t z, int64_t y, int64_t x, int64_t c){
+    return static_cast<size_t>((((z * v.rows + y) * v.cols + x) * v.channels) + c);
+}
+
+template <class T>
+demons_volume<T>
+marshal_collection_to_volume(const planar_image_collection<T, double> &coll){
+    if(coll.images.empty()){
+        throw std::invalid_argument("Cannot marshal empty image collection");
+    }
+
+    const auto &img0 = coll.images.front();
+    demons_volume<T> out;
+    out.slices = static_cast<int64_t>(coll.images.size());
+    out.rows = img0.rows;
+    out.cols = img0.columns;
+    out.channels = img0.channels;
+    out.pxl_dx = img0.pxl_dx;
+    out.pxl_dy = img0.pxl_dy;
+    out.pxl_dz = img0.pxl_dz;
+    out.data.resize(static_cast<size_t>(out.slices * out.rows * out.cols * out.channels), T{});
+
+    for(int64_t z = 0; z < out.slices; ++z){
+        const auto &img = get_image(coll.images, static_cast<size_t>(z));
+        if(img.rows != out.rows || img.columns != out.cols || img.channels != out.channels){
+            throw std::invalid_argument("Image collection is not rectilinear/consistent");
+        }
+        for(int64_t y = 0; y < out.rows; ++y){
+            for(int64_t x = 0; x < out.cols; ++x){
+                for(int64_t c = 0; c < out.channels; ++c){
+                    out.data[vol_idx(out, z, y, x, c)] = static_cast<T>(img.value(y, x, c));
+                }
+            }
+        }
+    }
+    return out;
+}
+
+template <class T>
+planar_image_collection<T, double>
+marshal_volume_to_collection(const demons_volume<T> &vol,
+                             const planar_image_collection<float, double> &reference_geometry){
+    planar_image_collection<T, double> out;
+    for(int64_t z = 0; z < vol.slices; ++z){
+        const auto &ref_img = get_image(reference_geometry.images, static_cast<size_t>(z));
+        planar_image<T, double> img;
+        img.init_orientation(ref_img.row_unit, ref_img.col_unit);
+        img.init_buffer(vol.rows, vol.cols, vol.channels);
+        img.init_spatial(ref_img.pxl_dx, ref_img.pxl_dy, ref_img.pxl_dz, ref_img.anchor, ref_img.offset);
+        img.metadata = ref_img.metadata;
+        for(int64_t y = 0; y < vol.rows; ++y){
+            for(int64_t x = 0; x < vol.cols; ++x){
+                for(int64_t c = 0; c < vol.channels; ++c){
+                    img.reference(y, x, c) = vol.data[vol_idx(vol, z, y, x, c)];
+                }
+            }
+        }
+        out.images.push_back(img);
+    }
+    return out;
+}
+
+static void compute_gradient_device(const demons_volume<float> &fixed,
+                                    demons_volume<double> &gradient){
+    gradient = demons_volume<double>{};
+    gradient.slices = fixed.slices;
+    gradient.rows = fixed.rows;
+    gradient.cols = fixed.cols;
+    gradient.channels = 3;
+    gradient.pxl_dx = fixed.pxl_dx;
+    gradient.pxl_dy = fixed.pxl_dy;
+    gradient.pxl_dz = fixed.pxl_dz;
+    gradient.data.assign(static_cast<size_t>(gradient.slices * gradient.rows * gradient.cols * gradient.channels), 0.0);
+
+    dcma_sycl::queue q(dcma_sycl::default_selector_v);
+    auto *in = dcma_sycl::malloc_shared<float>(fixed.data.size(), q);
+    auto *out = dcma_sycl::malloc_shared<double>(gradient.data.size(), q);
+    std::copy(fixed.data.begin(), fixed.data.end(), in);
+
+    const int64_t slices = fixed.slices;
+    const int64_t rows = fixed.rows;
+    const int64_t cols = fixed.cols;
+    const int64_t channels = fixed.channels;
+    const double pxl_dx = fixed.pxl_dx;
+    const double pxl_dy = fixed.pxl_dy;
+    const double pxl_dz = fixed.pxl_dz;
+    q.parallel_for(dcma_sycl::range<3>(static_cast<size_t>(slices),
+                                       static_cast<size_t>(rows),
+                                       static_cast<size_t>(cols)),
+                   [=](dcma_sycl::id<3> id){
+        const int64_t z = static_cast<int64_t>(id[0]);
+        const int64_t y = static_cast<int64_t>(id[1]);
+        const int64_t x = static_cast<int64_t>(id[2]);
+
+        const auto in_idx = [=](int64_t zz, int64_t yy, int64_t xx){
+            return (((zz * rows + yy) * cols + xx) * channels);
+        };
+        const auto out_idx = [=](int64_t c){
+            return (((z * rows + y) * cols + x) * 3 + c);
+        };
+
+        double gx = 0.0, gy = 0.0, gz = 0.0;
+        if(cols > 1){
+            const int64_t xl = (x > 0) ? (x - 1) : x;
+            const int64_t xr = (x + 1 < cols) ? (x + 1) : x;
+            const float vl = in[in_idx(z, y, xl)];
+            const float vr = in[in_idx(z, y, xr)];
+            if(dcma_sycl::isfinite(vl) && dcma_sycl::isfinite(vr) && xr != xl){
+                gx = (static_cast<double>(vr) - static_cast<double>(vl))
+                   / (static_cast<double>(xr - xl) * pxl_dx);
+            }
+        }
+        if(rows > 1){
+            const int64_t yu = (y > 0) ? (y - 1) : y;
+            const int64_t yd = (y + 1 < rows) ? (y + 1) : y;
+            const float vu = in[in_idx(z, yu, x)];
+            const float vd = in[in_idx(z, yd, x)];
+            if(dcma_sycl::isfinite(vu) && dcma_sycl::isfinite(vd) && yd != yu){
+                gy = (static_cast<double>(vd) - static_cast<double>(vu))
+                   / (static_cast<double>(yd - yu) * pxl_dy);
+            }
+        }
+        if(slices > 1){
+            const int64_t zp = (z > 0) ? (z - 1) : z;
+            const int64_t zn = (z + 1 < slices) ? (z + 1) : z;
+            const float vp = in[in_idx(zp, y, x)];
+            const float vn = in[in_idx(zn, y, x)];
+            if(dcma_sycl::isfinite(vp) && dcma_sycl::isfinite(vn) && zn != zp){
+                gz = (static_cast<double>(vn) - static_cast<double>(vp))
+                   / (static_cast<double>(zn - zp) * pxl_dz);
+            }
+        }
+
+        out[out_idx(0)] = gx;
+        out[out_idx(1)] = gy;
+        out[out_idx(2)] = gz;
+    }).wait();
+
+    std::copy(out, out + gradient.data.size(), gradient.data.begin());
+    dcma_sycl::free(in, q);
+    dcma_sycl::free(out, q);
+}
+
+static void add_update_device(demons_volume<double> &field,
+                              const demons_volume<double> &update){
+    dcma_sycl::queue q(dcma_sycl::default_selector_v);
+    auto *f = dcma_sycl::malloc_shared<double>(field.data.size(), q);
+    auto *u = dcma_sycl::malloc_shared<double>(update.data.size(), q);
+    std::copy(field.data.begin(), field.data.end(), f);
+    std::copy(update.data.begin(), update.data.end(), u);
+    q.parallel_for(dcma_sycl::range<1>(field.data.size()), [=](dcma_sycl::id<1> i){
+        f[i[0]] += u[i[0]];
+    }).wait();
+    std::copy(f, f + field.data.size(), field.data.begin());
+    dcma_sycl::free(f, q);
+    dcma_sycl::free(u, q);
+}
+
+static void warp_volume_device(const demons_volume<float> &moving,
+                               const demons_volume<double> &deformation,
+                               demons_volume<float> &warped){
+    warped = moving;
+    dcma_sycl::queue q(dcma_sycl::default_selector_v);
+    auto *mv = dcma_sycl::malloc_shared<float>(moving.data.size(), q);
+    auto *def = dcma_sycl::malloc_shared<double>(deformation.data.size(), q);
+    auto *out = dcma_sycl::malloc_shared<float>(warped.data.size(), q);
+    std::copy(moving.data.begin(), moving.data.end(), mv);
+    std::copy(deformation.data.begin(), deformation.data.end(), def);
+
+    const float oob = std::numeric_limits<float>::quiet_NaN();
+    const int64_t slices = moving.slices;
+    const int64_t rows = moving.rows;
+    const int64_t cols = moving.cols;
+    const int64_t channels = moving.channels;
+    const double pxl_dx = moving.pxl_dx;
+    const double pxl_dy = moving.pxl_dy;
+    const double pxl_dz = moving.pxl_dz;
+    q.parallel_for(dcma_sycl::range<3>(static_cast<size_t>(slices),
+                                       static_cast<size_t>(rows),
+                                       static_cast<size_t>(cols)),
+                   [=](dcma_sycl::id<3> id){
+        const int64_t z = static_cast<int64_t>(id[0]);
+        const int64_t y = static_cast<int64_t>(id[1]);
+        const int64_t x = static_cast<int64_t>(id[2]);
+
+        const auto vidx = [=](int64_t zz, int64_t yy, int64_t xx, int64_t c, int64_t chnl_count){
+            return (((zz * rows + yy) * cols + xx) * chnl_count) + c;
+        };
+
+        const double dx = def[vidx(z, y, x, 0, 3)];
+        const double dy = def[vidx(z, y, x, 1, 3)];
+        const double dz = def[vidx(z, y, x, 2, 3)];
+
+        const double sx = static_cast<double>(x) + dx / pxl_dx;
+        const double sy = static_cast<double>(y) + dy / pxl_dy;
+        const double sz = static_cast<double>(z) + dz / pxl_dz;
+
+        const int64_t x0 = static_cast<int64_t>(dcma_sycl::floor(sx));
+        const int64_t y0 = static_cast<int64_t>(dcma_sycl::floor(sy));
+        const int64_t z0 = static_cast<int64_t>(dcma_sycl::floor(sz));
+        const int64_t x1 = x0 + 1;
+        const int64_t y1 = y0 + 1;
+        const int64_t z1 = z0 + 1;
+
+        const double tx = sx - static_cast<double>(x0);
+        const double ty = sy - static_cast<double>(y0);
+        const double tz = sz - static_cast<double>(z0);
+
+        for(int64_t c = 0; c < channels; ++c){
+            auto sample = [&](int64_t zz, int64_t yy, int64_t xx) -> float {
+                if(xx < 0 || xx >= cols || yy < 0 || yy >= rows || zz < 0 || zz >= slices){
+                    return oob;
+                }
+                return mv[vidx(zz, yy, xx, c, channels)];
+            };
+            const float c000 = sample(z0, y0, x0);
+            const float c100 = sample(z0, y0, x1);
+            const float c010 = sample(z0, y1, x0);
+            const float c110 = sample(z0, y1, x1);
+            const float c001 = sample(z1, y0, x0);
+            const float c101 = sample(z1, y0, x1);
+            const float c011 = sample(z1, y1, x0);
+            const float c111 = sample(z1, y1, x1);
+            if(!(dcma_sycl::isfinite(c000) && dcma_sycl::isfinite(c100) && dcma_sycl::isfinite(c010) && dcma_sycl::isfinite(c110)
+              && dcma_sycl::isfinite(c001) && dcma_sycl::isfinite(c101) && dcma_sycl::isfinite(c011) && dcma_sycl::isfinite(c111))){
+                out[vidx(z, y, x, c, channels)] = oob;
+                continue;
+            }
+            const double c00 = static_cast<double>(c000) * (1.0 - tx) + static_cast<double>(c100) * tx;
+            const double c10 = static_cast<double>(c010) * (1.0 - tx) + static_cast<double>(c110) * tx;
+            const double c01 = static_cast<double>(c001) * (1.0 - tx) + static_cast<double>(c101) * tx;
+            const double c11 = static_cast<double>(c011) * (1.0 - tx) + static_cast<double>(c111) * tx;
+            const double c0 = c00 * (1.0 - ty) + c10 * ty;
+            const double c1 = c01 * (1.0 - ty) + c11 * ty;
+            out[vidx(z, y, x, c, channels)] = static_cast<float>(c0 * (1.0 - tz) + c1 * tz);
+        }
+    }).wait();
+
+    std::copy(out, out + warped.data.size(), warped.data.begin());
+    dcma_sycl::free(mv, q);
+    dcma_sycl::free(def, q);
+    dcma_sycl::free(out, q);
+}
+
+static void compute_update_device(const demons_volume<float> &fixed,
+                                  const demons_volume<float> &warped,
+                                  const demons_volume<double> &gradient,
+                                  const AlignViaDemonsParams &params,
+                                  demons_volume<double> &update,
+                                  double &mse,
+                                  int64_t &n_voxels){
+    constexpr double epsilon = 1.0e-10;
+    update = demons_volume<double>{};
+    update.slices = fixed.slices;
+    update.rows = fixed.rows;
+    update.cols = fixed.cols;
+    update.channels = 3;
+    update.pxl_dx = fixed.pxl_dx;
+    update.pxl_dy = fixed.pxl_dy;
+    update.pxl_dz = fixed.pxl_dz;
+    update.data.assign(static_cast<size_t>(update.slices * update.rows * update.cols * update.channels), 0.0);
+
+    const size_t voxels = static_cast<size_t>(fixed.slices * fixed.rows * fixed.cols);
+    dcma_sycl::queue q(dcma_sycl::default_selector_v);
+    auto *fx = dcma_sycl::malloc_shared<float>(fixed.data.size(), q);
+    auto *mv = dcma_sycl::malloc_shared<float>(warped.data.size(), q);
+    auto *gr = dcma_sycl::malloc_shared<double>(gradient.data.size(), q);
+    auto *upd = dcma_sycl::malloc_shared<double>(update.data.size(), q);
+    auto *mse_term = dcma_sycl::malloc_shared<double>(voxels, q);
+    auto *valid = dcma_sycl::malloc_shared<int64_t>(voxels, q);
+    std::copy(fixed.data.begin(), fixed.data.end(), fx);
+    std::copy(warped.data.begin(), warped.data.end(), mv);
+    std::copy(gradient.data.begin(), gradient.data.end(), gr);
+
+    const int64_t slices = fixed.slices;
+    const int64_t rows = fixed.rows;
+    const int64_t cols = fixed.cols;
+    const int64_t channels = fixed.channels;
+    const double normalization = params.normalization_factor;
+    const double max_update = params.max_update_magnitude;
+    q.parallel_for(dcma_sycl::range<3>(static_cast<size_t>(slices),
+                                       static_cast<size_t>(rows),
+                                       static_cast<size_t>(cols)),
+                   [=](dcma_sycl::id<3> id){
+        const int64_t z = static_cast<int64_t>(id[0]);
+        const int64_t y = static_cast<int64_t>(id[1]);
+        const int64_t x = static_cast<int64_t>(id[2]);
+
+        const auto vox_idx = static_cast<size_t>((z * rows + y) * cols + x);
+        const auto f_idx = static_cast<size_t>(((z * rows + y) * cols + x) * channels);
+        const auto g_idx = static_cast<size_t>(((z * rows + y) * cols + x) * 3);
+        const float fixed_val = fx[f_idx];
+        const float moving_val = mv[f_idx];
+
+        if(!(dcma_sycl::isfinite(fixed_val) && dcma_sycl::isfinite(moving_val))){
+            mse_term[vox_idx] = 0.0;
+            valid[vox_idx] = 0;
+            upd[g_idx + 0] = 0.0;
+            upd[g_idx + 1] = 0.0;
+            upd[g_idx + 2] = 0.0;
+            return;
+        }
+
+        const double diff = static_cast<double>(fixed_val) - static_cast<double>(moving_val);
+        mse_term[vox_idx] = diff * diff;
+        valid[vox_idx] = 1;
+
+        double ux = 0.0, uy = 0.0, uz = 0.0;
+        const double gx = gr[g_idx + 0];
+        const double gy = gr[g_idx + 1];
+        const double gz = gr[g_idx + 2];
+        const double gmag_sq = gx * gx + gy * gy + gz * gz;
+        const double denom = gmag_sq + (diff * diff) / (normalization + epsilon);
+        if(denom > epsilon){
+            ux = diff * gx / denom;
+            uy = diff * gy / denom;
+            uz = diff * gz / denom;
+            const double mag = dcma_sycl::sqrt(ux * ux + uy * uy + uz * uz);
+            if(mag > max_update){
+                const double scale = max_update / mag;
+                ux *= scale;
+                uy *= scale;
+                uz *= scale;
+            }
+        }
+        upd[g_idx + 0] = ux;
+        upd[g_idx + 1] = uy;
+        upd[g_idx + 2] = uz;
+    }).wait();
+
+    std::copy(upd, upd + update.data.size(), update.data.begin());
+    mse = 0.0;
+    n_voxels = 0;
+    for(size_t i = 0; i < voxels; ++i){
+        mse += mse_term[i];
+        n_voxels += valid[i];
+    }
+    if(n_voxels > 0){
+        mse /= static_cast<double>(n_voxels);
+    }
+
+    dcma_sycl::free(fx, q);
+    dcma_sycl::free(mv, q);
+    dcma_sycl::free(gr, q);
+    dcma_sycl::free(upd, q);
+    dcma_sycl::free(mse_term, q);
+    dcma_sycl::free(valid, q);
+}
+
+} // namespace
+#endif
+
 // Helper function to resample a moving image onto a reference image's grid.
 // This is needed to handle images with different orientations or alignments.
 planar_image_collection<float, double>
@@ -550,6 +928,77 @@ AlignViaDemons(AlignViaDemonsParams & params,
         return std::nullopt;
     }
     
+#ifdef DCMA_USE_SYCL
+    try {
+        if(params.verbosity >= 1){
+            YLOGINFO("Using SYCL Demons implementation");
+        }
+
+        auto moving = resample_image_to_reference_grid(moving_in, stationary);
+        if(params.use_histogram_matching){
+            moving = histogram_match(moving, stationary, params.histogram_bins, params.histogram_outlier_fraction);
+        }
+
+        auto fixed_vol = marshal_collection_to_volume(stationary);
+        auto moving_vol = marshal_collection_to_volume(moving);
+        auto warped_vol = moving_vol;
+
+        demons_volume<double> deformation_vol;
+        deformation_vol.slices = fixed_vol.slices;
+        deformation_vol.rows = fixed_vol.rows;
+        deformation_vol.cols = fixed_vol.cols;
+        deformation_vol.channels = 3;
+        deformation_vol.pxl_dx = fixed_vol.pxl_dx;
+        deformation_vol.pxl_dy = fixed_vol.pxl_dy;
+        deformation_vol.pxl_dz = fixed_vol.pxl_dz;
+        deformation_vol.data.assign(static_cast<size_t>(deformation_vol.slices * deformation_vol.rows * deformation_vol.cols * 3), 0.0);
+
+        demons_volume<double> gradient_vol;
+        compute_gradient_device(fixed_vol, gradient_vol);
+
+        double prev_mse = std::numeric_limits<double>::infinity();
+        for(int64_t iter = 0; iter < params.max_iterations; ++iter){
+            demons_volume<double> update_vol;
+            double mse = 0.0;
+            int64_t n_voxels = 0;
+            compute_update_device(fixed_vol, warped_vol, gradient_vol, params, update_vol, mse, n_voxels);
+            if(params.verbosity >= 1){
+                YLOGINFO("Iteration " << iter << ": MSE = " << mse);
+            }
+
+            const double mse_change = std::abs(prev_mse - mse);
+            if(mse_change < params.convergence_threshold && iter > 0){
+                if(params.verbosity >= 1){
+                    YLOGINFO("Converged after " << iter << " iterations");
+                }
+                break;
+            }
+            prev_mse = mse;
+
+            if(params.use_diffeomorphic && params.update_field_smoothing_sigma > 0.0){
+                auto update_coll = marshal_volume_to_collection(update_vol, stationary);
+                smooth_vector_field(update_coll, params.update_field_smoothing_sigma);
+                update_vol = marshal_collection_to_volume(update_coll);
+            }
+
+            add_update_device(deformation_vol, update_vol);
+
+            if(params.deformation_field_smoothing_sigma > 0.0){
+                auto def_coll = marshal_volume_to_collection(deformation_vol, stationary);
+                smooth_vector_field(def_coll, params.deformation_field_smoothing_sigma);
+                deformation_vol = marshal_collection_to_volume(def_coll);
+            }
+
+            warp_volume_device(moving_vol, deformation_vol, warped_vol);
+        }
+
+        auto def_coll = marshal_volume_to_collection(deformation_vol, stationary);
+        return deformation_field(std::move(def_coll));
+    }catch(const std::exception &e){
+        YLOGWARN("SYCL Demons registration path failed, falling back to CPU path: " << e.what());
+    }
+#endif
+
     try {
         // Step 1: Resample moving image to stationary image's grid
         // This handles different orientations and alignments
@@ -774,4 +1223,3 @@ AlignViaDemons(AlignViaDemonsParams & params,
         return std::nullopt;
     }
 }
-
