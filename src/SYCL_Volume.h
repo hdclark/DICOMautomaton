@@ -337,10 +337,13 @@ inline T sycl_trilinear_interp(
         return oob_val;
     }
 
-    // Clamp.
-    fx = (fx < 0.0) ? 0.0 : (fx >= meta.dim_x - 1 ? meta.dim_x - 1 : fx);
-    fy = (fy < 0.0) ? 0.0 : (fy >= meta.dim_y - 1 ? meta.dim_y - 1 : fy);
-    fz = (fz < 0.0) ? 0.0 : (fz >= meta.dim_z - 1 ? meta.dim_z - 1 : fz);
+    // Clamp to valid range for interpolation.
+    const double max_x = static_cast<double>(meta.dim_x - 1);
+    const double max_y = static_cast<double>(meta.dim_y - 1);
+    const double max_z = static_cast<double>(meta.dim_z - 1);
+    fx = std::max(0.0, std::min(fx, max_x));
+    fy = std::max(0.0, std::min(fy, max_y));
+    fz = std::max(0.0, std::min(fz, max_z));
 
     const int64_t x0 = static_cast<int64_t>(fx);
     const int64_t y0 = static_cast<int64_t>(fy);

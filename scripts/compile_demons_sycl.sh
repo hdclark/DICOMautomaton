@@ -76,5 +76,6 @@ g++ \
   -o build/demons_sycl
 
 # Run the tests.
+# --success: Print output for all assertions, not just failures.
 ./build/demons_sycl --success
 

@@ -396,9 +396,16 @@ SyclVolume<float> warp_image_sycl(
                 return;
             }
 
-            const double cfx = (fx < 0.0) ? 0.0 : (fx >= dim_x - 1 ? dim_x - 1 : fx);
-            const double cfy = (fy < 0.0) ? 0.0 : (fy >= dim_y - 1 ? dim_y - 1 : fy);
-            const double cfz = (fz < 0.0) ? 0.0 : (fz >= dim_z - 1 ? dim_z - 1 : fz);
+            // Clamp to valid range for interpolation.
+            auto clamp_val = [](double v, double lo, double hi) {
+                return (v < lo) ? lo : ((v > hi) ? hi : v);
+            };
+            const double max_x = static_cast<double>(dim_x - 1);
+            const double max_y = static_cast<double>(dim_y - 1);
+            const double max_z = static_cast<double>(dim_z - 1);
+            const double cfx = clamp_val(fx, 0.0, max_x);
+            const double cfy = clamp_val(fy, 0.0, max_y);
+            const double cfz = clamp_val(fz, 0.0, max_z);
 
             const int64_t x0 = static_cast<int64_t>(cfx);
             const int64_t y0 = static_cast<int64_t>(cfy);
@@ -590,8 +597,9 @@ double compute_demons_iteration_sycl(
         smooth_vector_field_sycl(deformation_vol, params.deformation_field_smoothing_sigma);
     }
 
-    // Warp moving image with updated deformation field.
-    warped_moving_vol = warp_image_sycl(warped_moving_vol, deformation_vol);
+    // Note: The caller is responsible for warping the moving image using the updated
+    // deformation field before the next iteration. This should warp from the original
+    // moving image, not the already-warped image, to avoid accumulating interpolation errors.
 
     return mse;
 }
@@ -653,13 +661,6 @@ std::optional<deformation_field> AlignViaDemons_SYCL(
         double prev_mse = std::numeric_limits<double>::infinity();
 
         for (int64_t iter = 0; iter < params.max_iterations; ++iter) {
-            // Create a fresh copy of moving_vol for warping (the current state of moving).
-            // After the first iteration, warped_moving contains the result of the previous warp.
-            // We need to warp from the original moving image, not chain warps.
-            if (iter > 0) {
-                warped_moving = warp_image_sycl(moving_vol, deformation_vol);
-            }
-
             const double mse = compute_demons_iteration_sycl(
                 stationary_vol, warped_moving, gradient_vol, deformation_vol, params);
 
@@ -676,6 +677,11 @@ std::optional<deformation_field> AlignViaDemons_SYCL(
                 break;
             }
             prev_mse = mse;
+
+            // Warp the original moving image using the updated deformation field.
+            // This is done from the original moving_vol to avoid accumulating
+            // interpolation errors from chaining warps.
+            warped_moving = warp_image_sycl(moving_vol, deformation_vol);
         }
 
         // Marshal deformation field back to planar_image_collection.

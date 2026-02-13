@@ -23,7 +23,7 @@ namespace AlignViaDemonsSYCL {
 //
 // Inputs:
 //   - stationary_vol: The fixed/target image volume.
-//   - warped_moving_vol: The current warped moving image.
+//   - warped_moving_vol: The current warped moving image (read-only during iteration).
 //   - gradient_vol: Precomputed gradient of the stationary image (3 channels: dx, dy, dz).
 //   - deformation_vol: Current deformation field (3 channels: dx, dy, dz).
 //   - params: Algorithm parameters.
@@ -31,6 +31,10 @@ namespace AlignViaDemonsSYCL {
 // Outputs:
 //   - deformation_vol is updated in-place with the new deformation field.
 //   - Returns the mean squared error between stationary and warped_moving after this iteration.
+//
+// Note: The caller is responsible for warping the moving image using the updated
+// deformation field before the next iteration. This should warp from the original
+// moving image, not the already-warped image, to avoid accumulating interpolation errors.
 //
 double compute_demons_iteration_sycl(
     const SyclVolume<float> &stationary_vol,
