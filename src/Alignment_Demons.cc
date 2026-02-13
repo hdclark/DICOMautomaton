@@ -42,7 +42,7 @@ namespace dcma_sycl = sycl;
 #include <CL/sycl.hpp>
 namespace dcma_sycl = cl::sycl;
 #else
-#error "DCMA_USE_SYCL is enabled, but no SYCL header was found"
+#error "DCMA_USE_SYCL is enabled, but no SYCL header was found. Verify AdaptiveCpp installation and compiler include paths."
 #endif
 
 namespace {
@@ -85,7 +85,7 @@ marshal_collection_to_volume(const planar_image_collection<T, double> &coll){
     for(int64_t z = 0; z < out.slices; ++z){
         const auto &img = get_image(coll.images, static_cast<size_t>(z));
         if(img.rows != out.rows || img.columns != out.cols || img.channels != out.channels){
-            throw std::invalid_argument("Image collection is not rectilinear/consistent");
+            throw std::invalid_argument("Image collection has inconsistent rows/columns/channels and cannot be marshaled as a rectilinear volume");
         }
         for(int64_t y = 0; y < out.rows; ++y){
             for(int64_t x = 0; x < out.cols; ++x){
@@ -229,7 +229,7 @@ static void warp_volume_device(const demons_volume<float> &moving,
     std::copy(moving.data.begin(), moving.data.end(), mv);
     std::copy(deformation.data.begin(), deformation.data.end(), def);
 
-    const float oob = std::numeric_limits<float>::quiet_NaN();
+    const float out_of_bounds_value = std::numeric_limits<float>::quiet_NaN();
     const int64_t slices = moving.slices;
     const int64_t rows = moving.rows;
     const int64_t cols = moving.cols;
@@ -271,7 +271,7 @@ static void warp_volume_device(const demons_volume<float> &moving,
         for(int64_t c = 0; c < channels; ++c){
             auto sample = [&](int64_t zz, int64_t yy, int64_t xx) -> float {
                 if(xx < 0 || xx >= cols || yy < 0 || yy >= rows || zz < 0 || zz >= slices){
-                    return oob;
+                    return out_of_bounds_value;
                 }
                 return mv[vidx(zz, yy, xx, c, channels)];
             };
@@ -285,7 +285,7 @@ static void warp_volume_device(const demons_volume<float> &moving,
             const float c111 = sample(z1, y1, x1);
             if(!(dcma_sycl::isfinite(c000) && dcma_sycl::isfinite(c100) && dcma_sycl::isfinite(c010) && dcma_sycl::isfinite(c110)
               && dcma_sycl::isfinite(c001) && dcma_sycl::isfinite(c101) && dcma_sycl::isfinite(c011) && dcma_sycl::isfinite(c111))){
-                out[vidx(z, y, x, c, channels)] = oob;
+                out[vidx(z, y, x, c, channels)] = out_of_bounds_value;
                 continue;
             }
             const double c00 = static_cast<double>(c000) * (1.0 - tx) + static_cast<double>(c100) * tx;
@@ -995,7 +995,8 @@ AlignViaDemons(AlignViaDemonsParams & params,
         auto def_coll = marshal_volume_to_collection(deformation_vol, stationary);
         return deformation_field(std::move(def_coll));
     }catch(const std::exception &e){
-        YLOGWARN("SYCL Demons registration path failed, falling back to CPU path: " << e.what());
+        YLOGWARN("SYCL Demons path failed (" << e.what() << "). Falling back to CPU implementation. "
+                 "WITH_ADAPTIVECPP_SYCL is a build-time CMake option.");
     }
 #endif
 
