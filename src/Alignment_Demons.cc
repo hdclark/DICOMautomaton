@@ -514,7 +514,9 @@ private:
                 const float c010 = sample(z0, y1, x0);
                 const float c110 = sample(z0, y1, x1);
                 
-                // For 2D images, c001/c101/c011/c111 use same z slice as c000/etc.
+                // For 2D images (single slice), reuse z0-plane values for z1-plane.
+                // Combined with tz=0.0 above, the trilinear formula degrades to bilinear:
+                // result = c0*(1-tz) + c1*tz = c0*1 + c1*0 = c0 (no z-blending).
                 const float c001 = is_2d ? c000 : sample(z1, y0, x0);
                 const float c101 = is_2d ? c100 : sample(z1, y0, x1);
                 const float c011 = is_2d ? c010 : sample(z1, y1, x0);
