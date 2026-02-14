@@ -64,7 +64,7 @@ EOF
 g++ \
   --std=c++17 \
   -I"${REPOROOT}" \
-  src/Mock_SYCL_Tests.cc \
+  src/SYCL_Fallback_Tests.cc \
   build/sycl.cc \
   -o build/sycl
 

@@ -26,6 +26,7 @@ option(WITH_GNU_GSL   "Compile assuming the GNU GSL is available."              
 option(WITH_POSTGRES  "Compile assuming PostgreSQL libraries are available."    ON)
 option(WITH_JANSSON   "Compile assuming Jansson is available."                  ON)
 option(WITH_THRIFT    "Compile assuming Apache Thrift is available."            ON)
+option(WITH_EXT_SYCL  "Compile assuming external SYCL support is available."    ON)
 
 option(WITH_LTO       "Use link-time optimization when available."              OFF)
 
@@ -184,6 +185,56 @@ if(WITH_THRIFT)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(THRIFT REQUIRED thrift)
     include_directories( ${THRIFT_INCLUDE_DIRS} )
+endif()
+
+set(DCMA_SYCL_FALLBACK "Fallback")
+set(DCMA_SYCL_BACKEND "${DCMA_SYCL_FALLBACK}")
+if(WITH_EXT_SYCL)
+    # AdaptiveCPP
+    if("${DCMA_SYCL_BACKEND}" STREQUAL "${DCMA_SYCL_FALLBACK}")
+        # SYCL support via AdaptiveCpp (formerly hipSYCL).
+        # AdaptiveCpp provides the acpp compiler wrapper and CMake integration.
+        # See https://github.com/AdaptiveCpp/AdaptiveCpp for installation instructions.
+        
+        # Set default ACPP_TARGETS if not already specified by user.
+        if(NOT DEFINED ACPP_TARGETS)
+            set(ACPP_TARGETS "omp.library-only" CACHE STRING "AdaptiveCpp backend target")
+            message(STATUS "ACPP_TARGETS not specified; defaulting to 'omp.library-only' for maximum portability.")
+        endif()
+
+        find_package(AdaptiveCpp CONFIG)
+        if(AdaptiveCpp_FOUND)
+            get_filename_component(DCMA_CXX_COMPILER_BASENAME "${CMAKE_CXX_COMPILER}" NAME)
+            if(NOT DCMA_CXX_COMPILER_BASENAME MATCHES "^acpp([-.][0-9][0-9A-Za-z._-]*)?(\\.exe)?$")
+                message(FATAL_ERROR "WITH_EXT_SYCL=ON and AdaptiveCpp detected require CMAKE_CXX_COMPILER to be AdaptiveCpp's 'acpp' driver")
+            endif()
+            set(DCMA_SYCL_BACKEND "AdaptiveCPP")
+        endif()
+    endif()
+
+    # HipSYCL
+    if("${DCMA_SYCL_BACKEND}" STREQUAL "${DCMA_SYCL_FALLBACK}")
+        find_package(hipSYCL CONFIG)
+        if(hipSYCL_FOUND)
+            set(DCMA_SYCL_BACKEND "HipSYCL")
+        endif()
+    endif()
+
+    # TriSYCL (option 1 of 2)
+    if("${DCMA_SYCL_BACKEND}" STREQUAL "${DCMA_SYCL_FALLBACK}")
+        find_package(trisycl CONFIG)
+        if(trisycl_FOUND)
+            set(DCMA_SYCL_BACKEND "TriSYCL")
+        endif()
+    endif()
+
+    # TriSYCL (option 2 of 2)
+    if("${DCMA_SYCL_BACKEND}" STREQUAL "${DCMA_SYCL_FALLBACK}")
+        find_package(TriSYCL CONFIG)
+        if(TriSYCL_FOUND)
+            set(DCMA_SYCL_BACKEND "TriSYCL")
+        endif()
+    endif()
 endif()
 
 ####################################################################################
@@ -438,6 +489,37 @@ else()
     add_definitions(-UDCMA_USE_THRIFT)
 endif()
 
+if("${DCMA_SYCL_BACKEND}" STREQUAL "AdaptiveCPP")
+    message(STATUS "Using SYCL backend: AdaptiveCPP")
+    add_definitions(-DDCMA_WHICH_SYCL=\"AdaptiveCPP\")
+    add_definitions(-DDCMA_USE_SYCL_ADAPTIVECPP=1)
+    add_definitions(-DDCMA_USE_EXT_SYCL=1)
+    add_definitions(-UDCMA_USE_SYCL_FALLBACK)
+    set(WITH_SYCL_FALLBACK OFF)
+    set(DCMA_ADAPTIVECPP_TARGETS "omp.library-only" CACHE STRING "AdaptiveCpp targets")
+    add_compile_options("SHELL:--acpp-targets=${DCMA_ADAPTIVECPP_TARGETS}")
+elseif("${DCMA_SYCL_BACKEND}" STREQUAL "HipSYCL")
+    message(STATUS "Using SYCL backend: HipSYCL")
+    add_definitions(-DDCMA_WHICH_SYCL=\"HipSYCL\")
+    add_definitions(-DDCMA_USE_SYCL_HIPSYCL=1)
+    add_definitions(-DDCMA_USE_EXT_SYCL=1)
+    add_definitions(-UDCMA_USE_SYCL_FALLBACK)
+    set(WITH_SYCL_FALLBACK OFF)
+elseif("${DCMA_SYCL_BACKEND}" STREQUAL "TriSYCL")
+    message(STATUS "Using SYCL backend: TriSYCL")
+    add_definitions(-DDCMA_WHICH_SYCL=\"TriSYCL\")
+    add_definitions(-DDCMA_USE_SYCL_TRISYCL=1)
+    add_definitions(-DDCMA_USE_EXT_SYCL=1)
+    add_definitions(-UDCMA_USE_SYCL_FALLBACK)
+    set(WITH_SYCL_FALLBACK OFF)
+else()
+    message(STATUS "Using SYCL backend: Fallback")
+    add_definitions(-DDCMA_WHICH_SYCL=\"Fallback\")
+    add_definitions(-DDCMA_USE_SYCL_FALLBACK=1)
+    add_definitions(-UDCMA_USE_EXT_SYCL)
+    set(WITH_SYCL_FALLBACK ON)
+endif()
+
 # Detect whether specific functions/variable/macros are available.
 # Note: this method does not support structs. Best to find a function that accepts the struct instead.
 check_cxx_symbol_exists(select    "sys/select.h" DCMA_HAS_SYS_SELECT)        # Function (nominally).
@@ -558,6 +640,9 @@ endif()
 if(WITH_THRIFT)
     list(APPEND BUILD_DEPENDENCY_PACKAGES "libthrift-dev")
 endif()
+#
+# Note: none of the SYCL external dependencies seem to be packaged for Debian (yet).
+#
 list(JOIN BUILD_DEPENDENCY_PACKAGES ", " CPACK_DEBIAN_PACKAGE_DEPENDS)
 
 # Recommended or optional packages, e.g., "liboptional-dev (>= 1.2.3-1), libmaybe-dev (>= 1:1.3.2-10)"
@@ -569,5 +654,3 @@ list(APPEND RECOMMENDED_PACKAGES "patchelf")
 list(JOIN RECOMMENDED_PACKAGES ", " CPACK_DEBIAN_PACKAGE_RECOMMENDS)
 
 include(CPack)
-
-

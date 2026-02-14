@@ -217,6 +217,12 @@ if(WITH_EIGEN)
     set_target_properties(  MRI_IVIM_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 endif()
 
+if(WITH_SYCL_FALLBACK)
+    add_library(            SYCL_Fallback_Tests_obj OBJECT SYCL_Fallback_Tests.cc )
+    set_target_properties(  SYCL_Fallback_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+endif()
+
+
 FILE(GLOB ygorimaging_functors "./YgorImages_Functors/*/*cc")
 add_library( YgorImaging_Functor_objs OBJECT ${ygorimaging_functors} )
 set_target_properties( YgorImaging_Functor_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -428,6 +434,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Alignment_Field_Tests_obj>
     $<TARGET_OBJECTS:Alignment_Demons_obj>
     $<TARGET_OBJECTS:Alignment_Demons_Tests_obj>
+    $<$<BOOL:${WITH_SYCL_FALLBACK}>:$<TARGET_OBJECTS:SYCL_Fallback_Tests_obj>>
     $<TARGET_OBJECTS:Colour_Maps_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Common_Plotting_obj>
@@ -538,6 +545,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Alignment_Field_Tests_obj>
         $<TARGET_OBJECTS:Alignment_Demons_obj>
         $<TARGET_OBJECTS:Alignment_Demons_Tests_obj>
+        $<$<BOOL:${WITH_SYCL_FALLBACK}>:$<TARGET_OBJECTS:SYCL_Fallback_Tests_obj>>
         $<TARGET_OBJECTS:Colour_Maps_obj>
         $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
         $<TARGET_OBJECTS:Common_Plotting_obj>

@@ -1,4 +1,4 @@
-// Mock_SYCL_Tests.cc -- Written by hal clark, 2026.
+// SYCL_Fallback_Tests.cc -- Written by hal clark, 2026.
 
 #include <vector>
 #include <numeric>
@@ -6,7 +6,7 @@
 
 #include "doctest20251212/doctest.h"
 
-#include "Mock_SYCL.h"
+#include "SYCL_Fallback.h"
 
 
 TEST_CASE("SYCL 1D: Simple Vector Scaling") {
@@ -114,4 +114,3 @@ TEST_CASE("SYCL Linear ID Calculation") {
     // Row-major: 2 * 20 + 5 = 45
     CHECK(it.get_linear_id() == 45);
 }
-
