@@ -18,6 +18,11 @@
 #include <type_traits> // Required for std::enable_if and std::is_integral
 #include <exception>
 #include <cmath>
+#include <condition_variable>
+#include <mutex>
+#include <thread>
+
+#include "Thread_Pool.h"
 
 namespace sycl {
 
@@ -183,7 +188,54 @@ accessor(buffer<T, Dims>&, handler&) -> accessor<T, Dims, access::mode::read_wri
 // =============================================================================
 
 class handler {
+    work_queue<std::function<void(void)>>* task_queue = nullptr;
+    size_t worker_hint = 1;
+
+    template <typename Submitter>
+    void run_chunks(size_t total_work_items, Submitter submitter){
+        if(total_work_items == 0){
+            return;
+        }
+
+        const size_t desired_chunks = std::min(total_work_items, std::max<size_t>(worker_hint * 4U, 1U));
+        if((task_queue == nullptr) || (desired_chunks <= 1U)){
+            submitter(0U, total_work_items);
+            return;
+        }
+
+        std::mutex completion_mutex;
+        std::condition_variable completion_cv;
+        size_t completed_chunks = 0;
+
+        for(size_t chunk = 0; chunk < desired_chunks; ++chunk){
+            const size_t begin = (total_work_items * chunk) / desired_chunks;
+            const size_t end = (total_work_items * (chunk + 1U)) / desired_chunks;
+            if(begin >= end){
+                std::lock_guard<std::mutex> lock(completion_mutex);
+                ++completed_chunks;
+                continue;
+            }
+
+            task_queue->submit_task([&, begin, end](){
+                try{
+                    submitter(begin, end);
+                }catch(...){}
+                std::lock_guard<std::mutex> lock(completion_mutex);
+                ++completed_chunks;
+                completion_cv.notify_one();
+            });
+        }
+
+        std::unique_lock<std::mutex> lock(completion_mutex);
+        completion_cv.wait(lock, [&](){ return completed_chunks == desired_chunks; });
+    }
+
 public:
+    handler() = default;
+
+    handler(work_queue<std::function<void(void)>>* q, size_t n_workers)
+        : task_queue(q), worker_hint(std::max<size_t>(n_workers, 1U)) {}
+
     // Factory for creating accessors from buffers within a command group
     template <typename T, int Dims, access::mode Mode, access::target Target>
     void require(const accessor<T, Dims, Mode, Target>& acc) {
@@ -195,20 +247,25 @@ public:
     // 1D
     template <typename KernelName = void, typename Func>
     void parallel_for(range<1> r, Func kernel) {
-        for (size_t i = 0; i < r[0]; ++i) {
-            if constexpr (std::is_invocable_v<Func, item<1>>) {
-                kernel(item<1>(r, id<1>(i)));
-            } else {
-                kernel(id<1>(i));
+        this->run_chunks(r[0], [&](size_t begin, size_t end){
+            for (size_t i = begin; i < end; ++i) {
+                if constexpr (std::is_invocable_v<Func, item<1>>) {
+                    kernel(item<1>(r, id<1>(i)));
+                } else {
+                    kernel(id<1>(i));
+                }
             }
-        }
+        });
     }
 
     // 2D
     template <typename KernelName = void, typename Func>
     void parallel_for(range<2> r, Func kernel) {
-        for (size_t i = 0; i < r[0]; ++i) {
-            for (size_t j = 0; j < r[1]; ++j) {
+        const size_t total = r[0] * r[1];
+        this->run_chunks(total, [&](size_t begin, size_t end){
+            for (size_t linear = begin; linear < end; ++linear) {
+                const size_t i = linear / r[1];
+                const size_t j = linear % r[1];
                 id<2> idx(i, j);
                 if constexpr (std::is_invocable_v<Func, item<2>>) {
                     kernel(item<2>(r, idx));
@@ -216,41 +273,54 @@ public:
                     kernel(idx);
                 }
             }
-        }
+        });
     }
 
     // 3D
     template <typename KernelName = void, typename Func>
     void parallel_for(range<3> r, Func kernel) {
-        for (size_t i = 0; i < r[0]; ++i) {
-            for (size_t j = 0; j < r[1]; ++j) {
-                for (size_t k = 0; k < r[2]; ++k) {
-                    id<3> idx(i, j, k);
-                    if constexpr (std::is_invocable_v<Func, item<3>>) {
-                        kernel(item<3>(r, idx));
-                    } else {
-                        kernel(idx);
-                    }
+        const size_t row_size = r[2];
+        const size_t plane_size = r[1] * r[2];
+        const size_t total = r[0] * plane_size;
+        this->run_chunks(total, [&](size_t begin, size_t end){
+            for (size_t linear = begin; linear < end; ++linear) {
+                const size_t i = linear / plane_size;
+                const size_t rem = linear % plane_size;
+                const size_t j = rem / row_size;
+                const size_t k = rem % row_size;
+                id<3> idx(i, j, k);
+                if constexpr (std::is_invocable_v<Func, item<3>>) {
+                    kernel(item<3>(r, idx));
+                } else {
+                    kernel(idx);
                 }
             }
-        }
+        });
     }
 };
 
 class queue {
     std::function<void(exception_list)> async_handler;
+    size_t worker_count = 1;
+    std::shared_ptr<work_queue<std::function<void(void)>>> task_queue;
+
+    void initialize_task_queue(){
+        const unsigned int hw = std::thread::hardware_concurrency();
+        this->worker_count = (hw == 0U) ? 2U : static_cast<size_t>(hw);
+        this->task_queue = std::make_shared<work_queue<std::function<void(void)>>>(static_cast<unsigned int>(this->worker_count));
+    }
+
 public:
     // Simple constructor
-    queue() {} 
-    queue(default_selector_t) {}
-    template <class Handler>
-    queue(default_selector_t, Handler h) : async_handler(h) {}
+    queue() { this->initialize_task_queue(); } 
+    queue(default_selector_t) { this->initialize_task_queue(); }
+    template <class AsyncHandler>
+    queue(default_selector_t, AsyncHandler h) : async_handler(h) { this->initialize_task_queue(); }
 
     // Submit a command group function (CGF)
     template <typename T>
     void submit(T cgf) {
-        handler h;
-        // Execute the command group immediately (synchronous fallback)
+        handler h(this->task_queue.get(), this->worker_count);
         cgf(h);
     }
 
@@ -263,17 +333,17 @@ public:
 
     template <typename Func>
     void parallel_for(range<1> r, Func kernel){
-        handler h;
+        handler h(this->task_queue.get(), this->worker_count);
         h.parallel_for(r, kernel);
     }
     template <typename Func>
     void parallel_for(range<2> r, Func kernel){
-        handler h;
+        handler h(this->task_queue.get(), this->worker_count);
         h.parallel_for(r, kernel);
     }
     template <typename Func>
     void parallel_for(range<3> r, Func kernel){
-        handler h;
+        handler h(this->task_queue.get(), this->worker_count);
         h.parallel_for(r, kernel);
     }
 };

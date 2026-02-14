@@ -69,6 +69,7 @@ EOF
 # Compile (only) the relevant sources.
 g++ \
   --std=c++17 \
+  -pthread \
   -U YGOR_USE_LINUX_SYS \
   -U YGOR_USE_EIGEN \
   -U YGOR_USE_GNU_GSL \
@@ -91,5 +92,4 @@ g++ \
 # Run the tests.
 #./build/demons --success  # verbose output.
 ./build/demons
-
 
