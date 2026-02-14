@@ -193,11 +193,12 @@ class handler {
 
     template <typename Submitter>
     void run_chunks(size_t total_work_items, Submitter submitter){
+        constexpr size_t chunks_per_worker = 4U;
         if(total_work_items == 0){
             return;
         }
 
-        const size_t desired_chunks = std::min(total_work_items, std::max<size_t>(worker_hint * 4U, 1U));
+        const size_t desired_chunks = std::min(total_work_items, std::max<size_t>(worker_hint * chunks_per_worker, 1U));
         if((task_queue == nullptr) || (desired_chunks <= 1U)){
             submitter(0U, total_work_items);
             return;
@@ -206,6 +207,8 @@ class handler {
         std::mutex completion_mutex;
         std::condition_variable completion_cv;
         size_t completed_chunks = 0;
+        std::mutex exception_mutex;
+        std::exception_ptr captured_exception = nullptr;
 
         for(size_t chunk = 0; chunk < desired_chunks; ++chunk){
             const size_t begin = (total_work_items * chunk) / desired_chunks;
@@ -219,7 +222,12 @@ class handler {
             task_queue->submit_task([&, begin, end](){
                 try{
                     submitter(begin, end);
-                }catch(...){}
+                }catch(...){
+                    std::lock_guard<std::mutex> lock(exception_mutex);
+                    if(!captured_exception){
+                        captured_exception = std::current_exception();
+                    }
+                }
                 std::lock_guard<std::mutex> lock(completion_mutex);
                 ++completed_chunks;
                 completion_cv.notify_one();
@@ -228,6 +236,11 @@ class handler {
 
         std::unique_lock<std::mutex> lock(completion_mutex);
         completion_cv.wait(lock, [&](){ return completed_chunks == desired_chunks; });
+        lock.unlock();
+
+        if(captured_exception){
+            std::rethrow_exception(captured_exception);
+        }
     }
 
 public:
@@ -305,8 +318,9 @@ class queue {
     std::shared_ptr<work_queue<std::function<void(void)>>> task_queue;
 
     void initialize_task_queue(){
+        constexpr unsigned int fallback_worker_count = 2U;
         const unsigned int hw = std::thread::hardware_concurrency();
-        this->worker_count = (hw == 0U) ? 2U : static_cast<size_t>(hw);
+        this->worker_count = (hw == 0U) ? fallback_worker_count : static_cast<size_t>(hw);
         this->task_queue = std::make_shared<work_queue<std::function<void(void)>>>(static_cast<unsigned int>(this->worker_count));
     }
 

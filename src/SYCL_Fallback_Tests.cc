@@ -165,9 +165,10 @@ TEST_CASE("SYCL Parallel Execution Uses Multiple Worker Threads") {
         thread_ids.insert(std::this_thread::get_id());
     });
 
-    CHECK(thread_ids.size() >= 1U);
     if(std::thread::hardware_concurrency() > 1U){
         CHECK(thread_ids.size() > 1U);
+    }else{
+        CHECK(thread_ids.size() == 1U);
     }
 }
 
