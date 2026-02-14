@@ -160,19 +160,27 @@ public:
         this->release_device_memory();
     }
 
-    double compute_single_iteration(const planar_image_collection<float, double> & /*stationary*/){
+    double compute_single_iteration(const planar_image_collection<float, double> &stationary){
         double mse = 0.0;
         int64_t n_voxels = 0;
         this->compute_update_and_mse(mse, n_voxels);
 
         if(params.use_diffeomorphic && params.update_field_smoothing_sigma > 0.0){
-            this->smooth_on_device(this->update_dev, params.update_field_smoothing_sigma);
+            this->copy_device_vector_to_host(this->update_dev, update);
+            auto update_coll = marshal_volume_to_collection(update, stationary);
+            smooth_vector_field(update_coll, params.update_field_smoothing_sigma);
+            update = marshal_collection_to_volume(update_coll);
+            this->copy_host_vector_to_device(update, this->update_dev);
         }
 
         this->add_update();
 
         if(params.deformation_field_smoothing_sigma > 0.0){
-            this->smooth_on_device(this->deformation_dev, params.deformation_field_smoothing_sigma);
+            this->copy_device_vector_to_host(this->deformation_dev, deformation);
+            auto def_coll = marshal_volume_to_collection(deformation, stationary);
+            smooth_vector_field(def_coll, params.deformation_field_smoothing_sigma);
+            deformation = marshal_collection_to_volume(def_coll);
+            this->copy_host_vector_to_device(deformation, this->deformation_dev);
         }
 
         this->warp_moving();
@@ -503,162 +511,6 @@ private:
 
     void copy_host_vector_to_device(const demons_volume<double> &host, double *dev){
         std::copy(host.data.begin(), host.data.end(), dev);
-    }
-
-    // Smooth a vector field on device using separable 3D Gaussian filtering.
-    // Allocates a temporary buffer, applies smoothing along each axis in sequence,
-    // and writes the result back to the input buffer.
-    void smooth_on_device(double *field_dev, double sigma_mm){
-        if(sigma_mm <= 0.0){
-            return;
-        }
-
-        const int64_t slices = fixed.slices;
-        const int64_t rows = fixed.rows;
-        const int64_t cols = fixed.cols;
-        const double pxl_dx = fixed.pxl_dx;
-        const double pxl_dy = fixed.pxl_dy;
-        const double pxl_dz = fixed.pxl_dz;
-
-        // Compute kernel radii based on 3-sigma rule.
-        const int64_t rad_x = std::max<int64_t>(1, static_cast<int64_t>(3.0 * sigma_mm / pxl_dx));
-        const int64_t rad_y = std::max<int64_t>(1, static_cast<int64_t>(3.0 * sigma_mm / pxl_dy));
-        const int64_t rad_z = std::max<int64_t>(1, static_cast<int64_t>(3.0 * sigma_mm / pxl_dz));
-
-        // Sigma in pixel units for each axis.
-        const double sigma_x = sigma_mm / pxl_dx;
-        const double sigma_y = sigma_mm / pxl_dy;
-        const double sigma_z = sigma_mm / pxl_dz;
-
-        // Allocate temporary buffer on device for intermediate results.
-        double *temp_dev = dcma_sycl::malloc_shared<double>(this->vector_volume_size, q);
-        if(temp_dev == nullptr){
-            throw std::runtime_error("Failed to allocate temporary device buffer for smoothing");
-        }
-
-        // Helper lambda to create 1D Gaussian weights (precomputed on host, copied to device).
-        auto make_kernel = [](int64_t radius, double sigma_pix) -> std::vector<double> {
-            std::vector<double> k(2 * radius + 1);
-            double sum = 0.0;
-            for(int64_t i = -radius; i <= radius; ++i){
-                double v = dcma_sycl::exp(-0.5 * (static_cast<double>(i * i)) / (sigma_pix * sigma_pix));
-                k[static_cast<size_t>(i + radius)] = v;
-                sum += v;
-            }
-            for(auto &v : k) v /= sum;
-            return k;
-        };
-
-        const auto kernel_x = make_kernel(rad_x, sigma_x);
-        const auto kernel_y = make_kernel(rad_y, sigma_y);
-        const auto kernel_z = make_kernel(rad_z, sigma_z);
-
-        // Copy kernels to device (using shared memory for simplicity).
-        double *kx_dev = dcma_sycl::malloc_shared<double>(kernel_x.size(), q);
-        double *ky_dev = dcma_sycl::malloc_shared<double>(kernel_y.size(), q);
-        double *kz_dev = dcma_sycl::malloc_shared<double>(kernel_z.size(), q);
-        std::copy(kernel_x.begin(), kernel_x.end(), kx_dev);
-        std::copy(kernel_y.begin(), kernel_y.end(), ky_dev);
-        std::copy(kernel_z.begin(), kernel_z.end(), kz_dev);
-
-        // Pass 1: smooth along x (columns).
-        q.parallel_for(dcma_sycl::range<3>(static_cast<size_t>(slices),
-                                           static_cast<size_t>(rows),
-                                           static_cast<size_t>(cols)),
-                       [=](dcma_sycl::id<3> id){
-            const int64_t z = static_cast<int64_t>(id[0]);
-            const int64_t y = static_cast<int64_t>(id[1]);
-            const int64_t x = static_cast<int64_t>(id[2]);
-            const auto vidx = [=](int64_t zz, int64_t yy, int64_t xx, int64_t c) -> size_t {
-                return static_cast<size_t>(((zz * rows + yy) * cols + xx) * 3 + c);
-            };
-            for(int64_t c = 0; c < 3; ++c){
-                double sum = 0.0;
-                double wsum = 0.0;
-                for(int64_t k = -rad_x; k <= rad_x; ++k){
-                    int64_t xx = x + k;
-                    if(xx >= 0 && xx < cols){
-                        double v = field_dev[vidx(z, y, xx, c)];
-                        if(dcma_sycl::isfinite(v)){
-                            double w = kx_dev[static_cast<size_t>(k + rad_x)];
-                            sum += w * v;
-                            wsum += w;
-                        }
-                    }
-                }
-                temp_dev[vidx(z, y, x, c)] = (wsum > 0.0) ? (sum / wsum) : field_dev[vidx(z, y, x, c)];
-            }
-        });
-        this->wait_and_rethrow();
-
-        // Pass 2: smooth along y (rows), reading from temp_dev, writing to field_dev.
-        q.parallel_for(dcma_sycl::range<3>(static_cast<size_t>(slices),
-                                           static_cast<size_t>(rows),
-                                           static_cast<size_t>(cols)),
-                       [=](dcma_sycl::id<3> id){
-            const int64_t z = static_cast<int64_t>(id[0]);
-            const int64_t y = static_cast<int64_t>(id[1]);
-            const int64_t x = static_cast<int64_t>(id[2]);
-            const auto vidx = [=](int64_t zz, int64_t yy, int64_t xx, int64_t c) -> size_t {
-                return static_cast<size_t>(((zz * rows + yy) * cols + xx) * 3 + c);
-            };
-            for(int64_t c = 0; c < 3; ++c){
-                double sum = 0.0;
-                double wsum = 0.0;
-                for(int64_t k = -rad_y; k <= rad_y; ++k){
-                    int64_t yy = y + k;
-                    if(yy >= 0 && yy < rows){
-                        double v = temp_dev[vidx(z, yy, x, c)];
-                        if(dcma_sycl::isfinite(v)){
-                            double w = ky_dev[static_cast<size_t>(k + rad_y)];
-                            sum += w * v;
-                            wsum += w;
-                        }
-                    }
-                }
-                field_dev[vidx(z, y, x, c)] = (wsum > 0.0) ? (sum / wsum) : temp_dev[vidx(z, y, x, c)];
-            }
-        });
-        this->wait_and_rethrow();
-
-        // Pass 3: smooth along z (slices), reading from field_dev, writing to temp_dev.
-        q.parallel_for(dcma_sycl::range<3>(static_cast<size_t>(slices),
-                                           static_cast<size_t>(rows),
-                                           static_cast<size_t>(cols)),
-                       [=](dcma_sycl::id<3> id){
-            const int64_t z = static_cast<int64_t>(id[0]);
-            const int64_t y = static_cast<int64_t>(id[1]);
-            const int64_t x = static_cast<int64_t>(id[2]);
-            const auto vidx = [=](int64_t zz, int64_t yy, int64_t xx, int64_t c) -> size_t {
-                return static_cast<size_t>(((zz * rows + yy) * cols + xx) * 3 + c);
-            };
-            for(int64_t c = 0; c < 3; ++c){
-                double sum = 0.0;
-                double wsum = 0.0;
-                for(int64_t k = -rad_z; k <= rad_z; ++k){
-                    int64_t zz = z + k;
-                    if(zz >= 0 && zz < slices){
-                        double v = field_dev[vidx(zz, y, x, c)];
-                        if(dcma_sycl::isfinite(v)){
-                            double w = kz_dev[static_cast<size_t>(k + rad_z)];
-                            sum += w * v;
-                            wsum += w;
-                        }
-                    }
-                }
-                temp_dev[vidx(z, y, x, c)] = (wsum > 0.0) ? (sum / wsum) : field_dev[vidx(z, y, x, c)];
-            }
-        });
-        this->wait_and_rethrow();
-
-        // Copy result back to field_dev.
-        std::copy(temp_dev, temp_dev + this->vector_volume_size, field_dev);
-
-        // Free temporary buffers.
-        dcma_sycl::free(temp_dev, q);
-        dcma_sycl::free(kx_dev, q);
-        dcma_sycl::free(ky_dev, q);
-        dcma_sycl::free(kz_dev, q);
     }
 };
 
