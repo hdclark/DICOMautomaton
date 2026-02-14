@@ -60,7 +60,27 @@ struct AlignViaDemonsParams {
     int64_t verbosity = 1;
 };
 
+// Object meant to serve as proxy for planar_image_collection with regular image array.
+template <class T>
+struct demons_volume {
+    int64_t slices = 0;
+    int64_t rows = 0;
+    int64_t cols = 0;
+    int64_t channels = 0;
+    double pxl_dx = 1.0;
+    double pxl_dy = 1.0;
+    double pxl_dz = 1.0;
+    std::vector<T> data;
+};
+
+template <class T>
+inline size_t vol_idx(const demons_volume<T> &v, int64_t z, int64_t y, int64_t x, int64_t c){
+    return static_cast<size_t>((((z * v.rows + y) * v.cols + x) * v.channels) + c);
+}
+
+
 namespace AlignViaDemonsHelpers {
+
 
 // Helper function to resample a moving image onto a reference image's grid.
 // This is needed to handle images with different orientations or alignments.
@@ -108,24 +128,80 @@ get_image( const std::list<planar_image<T, R>> &imgs, size_t i){
     return *it;
 }
 
-// Helper function to apply 3D Gaussian smoothing to a vector field.
-// The field should have 3 channels representing dx, dy, dz displacements.
-void
-smooth_vector_field(
-    planar_image_collection<double, double> & field,
-    double sigma_mm );
-
-
-// Helper function to compute the gradient of an image collection.
-// Returns a 3-channel image where channels represent gradients in x, y, z directions.
-planar_image_collection<double, double>
-compute_gradient(const planar_image_collection<float, double> & img_coll);
-
 // Helper function to warp an image using a deformation field.
 planar_image_collection<float, double>
 warp_image_with_field(
     const planar_image_collection<float, double> & img_coll,
     const deformation_field & def_field );
+
+
+// Helper functions to marshal back-and-forth planar_image_collection (for Drover) <--> demons_volume (for SYCL).
+template <class T>
+demons_volume<T>
+marshal_collection_to_volume(const planar_image_collection<T, double> &coll){
+    if(coll.images.empty()){
+        throw std::invalid_argument("Cannot marshal empty image collection");
+    }
+    auto &nonconst_coll = const_cast<planar_image_collection<T, double> &>(coll);
+    std::list<std::reference_wrapper<planar_image<T, double>>> selected_imgs;
+    for(auto &img : nonconst_coll.images){
+        selected_imgs.push_back(std::ref(img));
+    }
+    if(!Images_Form_Regular_Grid(selected_imgs)){
+        throw std::invalid_argument("Image collection is not a regular rectilinear grid and cannot be marshaled as a dense SYCL volume");
+    }
+
+    const auto &img0 = coll.images.front();
+    demons_volume<T> out;
+    out.slices = static_cast<int64_t>(coll.images.size());
+    out.rows = img0.rows;
+    out.cols = img0.columns;
+    out.channels = img0.channels;
+    out.pxl_dx = img0.pxl_dx;
+    out.pxl_dy = img0.pxl_dy;
+    out.pxl_dz = img0.pxl_dz;
+    out.data.resize(static_cast<size_t>(out.slices * out.rows * out.cols * out.channels), T{});
+
+    int64_t z = 0;
+    for(const auto &img : coll.images){
+        if(img.rows != out.rows || img.columns != out.cols || img.channels != out.channels){
+            throw std::invalid_argument("Image collection has inconsistent rows/columns/channels and cannot be marshaled as a rectilinear volume");
+        }
+        for(int64_t y = 0; y < out.rows; ++y){
+            for(int64_t x = 0; x < out.cols; ++x){
+                for(int64_t c = 0; c < out.channels; ++c){
+                    out.data[vol_idx(out, z, y, x, c)] = static_cast<T>(img.value(y, x, c));
+                }
+            }
+        }
+        ++z;
+    }
+    return out;
+}
+
+template <class T>
+planar_image_collection<T, double>
+marshal_volume_to_collection(const demons_volume<T> &vol,
+                             const planar_image_collection<float, double> &reference_geometry){
+    planar_image_collection<T, double> out;
+    for(int64_t z = 0; z < vol.slices; ++z){
+        const auto &ref_img = get_image(reference_geometry.images, static_cast<size_t>(z));
+        planar_image<T, double> img;
+        img.init_orientation(ref_img.row_unit, ref_img.col_unit);
+        img.init_buffer(vol.rows, vol.cols, vol.channels);
+        img.init_spatial(ref_img.pxl_dx, ref_img.pxl_dy, ref_img.pxl_dz, ref_img.anchor, ref_img.offset);
+        img.metadata = ref_img.metadata;
+        for(int64_t y = 0; y < vol.rows; ++y){
+            for(int64_t x = 0; x < vol.cols; ++x){
+                for(int64_t c = 0; c < vol.channels; ++c){
+                    img.reference(y, x, c) = vol.data[vol_idx(vol, z, y, x, c)];
+                }
+            }
+        }
+        out.images.push_back(img);
+    }
+    return out;
+}
 
 } // namespace AlignViaDemonsHelpers
 

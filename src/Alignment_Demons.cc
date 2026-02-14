@@ -33,107 +33,21 @@
 #include "Alignment_Field.h"
 #include "Alignment_Demons.h"
 
-using namespace AlignViaDemonsHelpers;
-
-#ifdef DCMA_WHICH_SYCL
-#if defined(DCMA_USE_SYCL_FALLBACK)
-#include "SYCL_Fallback.h"
-namespace dcma_sycl = sycl;
-#elif __has_include(<sycl/sycl.hpp>)
-#include <sycl/sycl.hpp>
-namespace dcma_sycl = sycl;
+#if __has_include(<sycl/sycl.hpp>)
+    #include <sycl/sycl.hpp>
+    namespace dcma_sycl = sycl;
 #elif __has_include(<CL/sycl.hpp>)
-#include <CL/sycl.hpp>
-namespace dcma_sycl = cl::sycl;
+    #include <CL/sycl.hpp>
+    namespace dcma_sycl = cl::sycl;
+#elif __has_include("SYCL_Fallback.h")
+    #include "SYCL_Fallback.h"
+    namespace dcma_sycl = sycl;
 #else
-#error "External SYCL backend was selected, but no SYCL header was found."
+    #error "Unable to find suitable SYCL header file."
 #endif
 
-namespace {
+using namespace AlignViaDemonsHelpers;
 
-template <class T>
-struct demons_volume {
-    int64_t slices = 0;
-    int64_t rows = 0;
-    int64_t cols = 0;
-    int64_t channels = 0;
-    double pxl_dx = 1.0;
-    double pxl_dy = 1.0;
-    double pxl_dz = 1.0;
-    std::vector<T> data;
-};
-
-template <class T>
-inline size_t vol_idx(const demons_volume<T> &v, int64_t z, int64_t y, int64_t x, int64_t c){
-    return static_cast<size_t>((((z * v.rows + y) * v.cols + x) * v.channels) + c);
-}
-
-template <class T>
-demons_volume<T>
-marshal_collection_to_volume(const planar_image_collection<T, double> &coll){
-    if(coll.images.empty()){
-        throw std::invalid_argument("Cannot marshal empty image collection");
-    }
-    auto &nonconst_coll = const_cast<planar_image_collection<T, double> &>(coll);
-    std::list<std::reference_wrapper<planar_image<T, double>>> selected_imgs;
-    for(auto &img : nonconst_coll.images){
-        selected_imgs.push_back(std::ref(img));
-    }
-    if(!Images_Form_Regular_Grid(selected_imgs)){
-        throw std::invalid_argument("Image collection is not a regular rectilinear grid and cannot be marshaled as a dense SYCL volume");
-    }
-
-    const auto &img0 = coll.images.front();
-    demons_volume<T> out;
-    out.slices = static_cast<int64_t>(coll.images.size());
-    out.rows = img0.rows;
-    out.cols = img0.columns;
-    out.channels = img0.channels;
-    out.pxl_dx = img0.pxl_dx;
-    out.pxl_dy = img0.pxl_dy;
-    out.pxl_dz = img0.pxl_dz;
-    out.data.resize(static_cast<size_t>(out.slices * out.rows * out.cols * out.channels), T{});
-
-    int64_t z = 0;
-    for(const auto &img : coll.images){
-        if(img.rows != out.rows || img.columns != out.cols || img.channels != out.channels){
-            throw std::invalid_argument("Image collection has inconsistent rows/columns/channels and cannot be marshaled as a rectilinear volume");
-        }
-        for(int64_t y = 0; y < out.rows; ++y){
-            for(int64_t x = 0; x < out.cols; ++x){
-                for(int64_t c = 0; c < out.channels; ++c){
-                    out.data[vol_idx(out, z, y, x, c)] = static_cast<T>(img.value(y, x, c));
-                }
-            }
-        }
-        ++z;
-    }
-    return out;
-}
-
-template <class T>
-planar_image_collection<T, double>
-marshal_volume_to_collection(const demons_volume<T> &vol,
-                             const planar_image_collection<float, double> &reference_geometry){
-    planar_image_collection<T, double> out;
-    for(int64_t z = 0; z < vol.slices; ++z){
-        const auto &ref_img = get_image(reference_geometry.images, static_cast<size_t>(z));
-        planar_image<T, double> img;
-        img.init_orientation(ref_img.row_unit, ref_img.col_unit);
-        img.init_buffer(vol.rows, vol.cols, vol.channels);
-        img.init_spatial(ref_img.pxl_dx, ref_img.pxl_dy, ref_img.pxl_dz, ref_img.anchor, ref_img.offset);
-        img.metadata = ref_img.metadata;
-        for(int64_t y = 0; y < vol.rows; ++y){
-            for(int64_t x = 0; x < vol.cols; ++x){
-                for(int64_t c = 0; c < vol.channels; ++c){
-                    img.reference(y, x, c) = vol.data[vol_idx(vol, z, y, x, c)];
-                }
-            }
-        }
-        out.images.push_back(img);
-    }
-    return out;
-}
 
 class sycl_demons_engine {
 public:
@@ -160,27 +74,62 @@ public:
         this->release_device_memory();
     }
 
-    double compute_single_iteration(const planar_image_collection<float, double> &stationary){
+    double compute_single_iteration(){
         double mse = 0.0;
         int64_t n_voxels = 0;
         this->compute_update_and_mse(mse, n_voxels);
 
         if(params.use_diffeomorphic && params.update_field_smoothing_sigma > 0.0){
-            this->copy_device_vector_to_host(this->update_dev, update);
-            auto update_coll = marshal_volume_to_collection(update, stationary);
-            smooth_vector_field(update_coll, params.update_field_smoothing_sigma);
-            update = marshal_collection_to_volume(update_coll);
-            this->copy_host_vector_to_device(update, this->update_dev);
+            this->smooth_on_device(this->update_dev, params.update_field_smoothing_sigma);
         }
 
-        this->add_update();
+        // TODO: this step assumes the 'normal' Demons algorithm. However, we need to perform regularization here for
+        // Diffeomorphic Demons.
+        if(!params.use_diffeomorphic){
+            this->add_update();
+        }else{
+
+            // Diffeomorphic demons: compose the update with the current deformation field.
+            // This implements d ← d ∘ u (composition of deformation with update).
+            // For each voxel position p in the deformation field, we compute:
+            //   new_d(p) = d(p) + u(p + d(p))
+            // This ensures the transformation remains diffeomorphic (invertible).
+            
+            // For each position, add the update sampled at the deformed position.
+            //
+            // TODO!
+            //
+            // Here is pseudo-code (which should be used to create a corresponding add_update_diffeomorphic() member.
+            //
+            //         for( each 2D image slice in the displacement field ){
+            //            for( each row ){
+            //                for( each column ){
+            //                    // Get the current position of this voxel.
+            //                    // ...
+            //                    
+            //                    // Get the deformation values dx, dy, dz at this voxel.
+            //                    // ...
+            //                    
+            //                    // Compute deformed position.
+            //                    // ...
+            //                    
+            //                    // Sample update field at the deformed position using
+            //                    // adjacency-based interpolation for proper bilinear sampling.
+            //                    // ...
+            //                    
+            //                    // Compose: new deformation = current deformation + update at deformed position
+            //                    // Write the deformation to the displacement field.
+            //                    // ...
+            //                    
+            //                }
+            //            }
+            //        }
+            //                
+
+        }
 
         if(params.deformation_field_smoothing_sigma > 0.0){
-            this->copy_device_vector_to_host(this->deformation_dev, deformation);
-            auto def_coll = marshal_volume_to_collection(deformation, stationary);
-            smooth_vector_field(def_coll, params.deformation_field_smoothing_sigma);
-            deformation = marshal_collection_to_volume(def_coll);
-            this->copy_host_vector_to_device(deformation, this->deformation_dev);
+            this->smooth_on_device(this->deformation_dev, params.deformation_field_smoothing_sigma);
         }
 
         this->warp_moving();
@@ -512,10 +461,153 @@ private:
     void copy_host_vector_to_device(const demons_volume<double> &host, double *dev){
         std::copy(host.data.begin(), host.data.end(), dev);
     }
+
+    // Smooth a vector field on device using separable 3D Gaussian filtering.
+    // Allocates a temporary buffer, applies smoothing along each axis in sequence,
+    // and writes the result back to the input buffer.
+    void smooth_on_device(double *field_dev, double sigma_mm){
+        if(sigma_mm <= 0.0){
+            return;
+        }
+        const int64_t slices = fixed.slices;
+        const int64_t rows = fixed.rows;
+        const int64_t cols = fixed.cols;
+        const double pxl_dx = fixed.pxl_dx;
+        const double pxl_dy = fixed.pxl_dy;
+        const double pxl_dz = fixed.pxl_dz;
+        // Compute kernel radii based on 3-sigma rule.
+        const int64_t rad_x = std::max<int64_t>(1, static_cast<int64_t>(3.0 * sigma_mm / pxl_dx));
+        const int64_t rad_y = std::max<int64_t>(1, static_cast<int64_t>(3.0 * sigma_mm / pxl_dy));
+        const int64_t rad_z = std::max<int64_t>(1, static_cast<int64_t>(3.0 * sigma_mm / pxl_dz));
+        // Sigma in pixel units for each axis.
+        const double sigma_x = sigma_mm / pxl_dx;
+        const double sigma_y = sigma_mm / pxl_dy;
+        const double sigma_z = sigma_mm / pxl_dz;
+        // Allocate temporary buffer on device for intermediate results.
+        double *temp_dev = dcma_sycl::malloc_shared<double>(this->vector_volume_size, q);
+        if(temp_dev == nullptr){
+            throw std::runtime_error("Failed to allocate temporary device buffer for smoothing");
+        }
+        // Helper lambda to create 1D Gaussian weights (precomputed on host, copied to device).
+        auto make_kernel = [](int64_t radius, double sigma_pix) -> std::vector<double> {
+            std::vector<double> k(2 * radius + 1);
+            double sum = 0.0;
+            for(int64_t i = -radius; i <= radius; ++i){
+                double v = dcma_sycl::exp(-0.5 * (static_cast<double>(i * i)) / (sigma_pix * sigma_pix));
+                k[static_cast<size_t>(i + radius)] = v;
+                sum += v;
+            }
+            for(auto &v : k) v /= sum;
+            return k;
+        };
+        const auto kernel_x = make_kernel(rad_x, sigma_x);
+        const auto kernel_y = make_kernel(rad_y, sigma_y);
+        const auto kernel_z = make_kernel(rad_z, sigma_z);
+        // Copy kernels to device (using shared memory for simplicity).
+        double *kx_dev = dcma_sycl::malloc_shared<double>(kernel_x.size(), q);
+        double *ky_dev = dcma_sycl::malloc_shared<double>(kernel_y.size(), q);
+        double *kz_dev = dcma_sycl::malloc_shared<double>(kernel_z.size(), q);
+        std::copy(kernel_x.begin(), kernel_x.end(), kx_dev);
+        std::copy(kernel_y.begin(), kernel_y.end(), ky_dev);
+        std::copy(kernel_z.begin(), kernel_z.end(), kz_dev);
+        // Pass 1: smooth along x (columns).
+        q.parallel_for(dcma_sycl::range<3>(static_cast<size_t>(slices),
+                                           static_cast<size_t>(rows),
+                                           static_cast<size_t>(cols)),
+                       [=](dcma_sycl::id<3> id){
+            const int64_t z = static_cast<int64_t>(id[0]);
+            const int64_t y = static_cast<int64_t>(id[1]);
+            const int64_t x = static_cast<int64_t>(id[2]);
+            const auto vidx = [=](int64_t zz, int64_t yy, int64_t xx, int64_t c) -> size_t {
+                return static_cast<size_t>(((zz * rows + yy) * cols + xx) * 3 + c);
+            };
+            for(int64_t c = 0; c < 3; ++c){
+                double sum = 0.0;
+                double wsum = 0.0;
+                for(int64_t k = -rad_x; k <= rad_x; ++k){
+                    int64_t xx = x + k;
+                    if(xx >= 0 && xx < cols){
+                        double v = field_dev[vidx(z, y, xx, c)];
+                        if(dcma_sycl::isfinite(v)){
+                            double w = kx_dev[static_cast<size_t>(k + rad_x)];
+                            sum += w * v;
+                            wsum += w;
+                        }
+                    }
+                }
+                temp_dev[vidx(z, y, x, c)] = (wsum > 0.0) ? (sum / wsum) : field_dev[vidx(z, y, x, c)];
+            }
+        });
+        this->wait_and_rethrow();
+        // Pass 2: smooth along y (rows), reading from temp_dev, writing to field_dev.
+        q.parallel_for(dcma_sycl::range<3>(static_cast<size_t>(slices),
+                                           static_cast<size_t>(rows),
+                                           static_cast<size_t>(cols)),
+                       [=](dcma_sycl::id<3> id){
+            const int64_t z = static_cast<int64_t>(id[0]);
+            const int64_t y = static_cast<int64_t>(id[1]);
+            const int64_t x = static_cast<int64_t>(id[2]);
+            const auto vidx = [=](int64_t zz, int64_t yy, int64_t xx, int64_t c) -> size_t {
+                return static_cast<size_t>(((zz * rows + yy) * cols + xx) * 3 + c);
+            };
+            for(int64_t c = 0; c < 3; ++c){
+                double sum = 0.0;
+                double wsum = 0.0;
+                for(int64_t k = -rad_y; k <= rad_y; ++k){
+                    int64_t yy = y + k;
+                    if(yy >= 0 && yy < rows){
+                        double v = temp_dev[vidx(z, yy, x, c)];
+                        if(dcma_sycl::isfinite(v)){
+                            double w = ky_dev[static_cast<size_t>(k + rad_y)];
+                            sum += w * v;
+                            wsum += w;
+                        }
+                    }
+                }
+                field_dev[vidx(z, y, x, c)] = (wsum > 0.0) ? (sum / wsum) : temp_dev[vidx(z, y, x, c)];
+            }
+        });
+        this->wait_and_rethrow();
+        // Pass 3: smooth along z (slices), reading from field_dev, writing to temp_dev.
+        q.parallel_for(dcma_sycl::range<3>(static_cast<size_t>(slices),
+                                           static_cast<size_t>(rows),
+                                           static_cast<size_t>(cols)),
+                       [=](dcma_sycl::id<3> id){
+            const int64_t z = static_cast<int64_t>(id[0]);
+            const int64_t y = static_cast<int64_t>(id[1]);
+            const int64_t x = static_cast<int64_t>(id[2]);
+            const auto vidx = [=](int64_t zz, int64_t yy, int64_t xx, int64_t c) -> size_t {
+                return static_cast<size_t>(((zz * rows + yy) * cols + xx) * 3 + c);
+            };
+            for(int64_t c = 0; c < 3; ++c){
+                double sum = 0.0;
+                double wsum = 0.0;
+                for(int64_t k = -rad_z; k <= rad_z; ++k){
+                    int64_t zz = z + k;
+                    if(zz >= 0 && zz < slices){
+                        double v = field_dev[vidx(zz, y, x, c)];
+                        if(dcma_sycl::isfinite(v)){
+                            double w = kz_dev[static_cast<size_t>(k + rad_z)];
+                            sum += w * v;
+                            wsum += w;
+                        }
+                    }
+                }
+                temp_dev[vidx(z, y, x, c)] = (wsum > 0.0) ? (sum / wsum) : field_dev[vidx(z, y, x, c)];
+            }
+        });
+        this->wait_and_rethrow();
+        // Copy result back to field_dev.
+        std::copy(temp_dev, temp_dev + this->vector_volume_size, field_dev);
+        // Free temporary buffers.
+        dcma_sycl::free(temp_dev, q);
+        dcma_sycl::free(kx_dev, q);
+        dcma_sycl::free(ky_dev, q);
+        dcma_sycl::free(kz_dev, q);
+    }
+
 };
 
-} // namespace
-#endif
 
 // Helper function to resample a moving image onto a reference image's grid.
 // This is needed to handle images with different orientations or alignments.
@@ -703,271 +795,6 @@ AlignViaDemonsHelpers::histogram_match(
     return matched;
 }
 
-// Helper function to apply 3D Gaussian smoothing to a vector field.
-// The field should have 3 channels representing dx, dy, dz displacements.
-void
-AlignViaDemonsHelpers::smooth_vector_field(
-    planar_image_collection<double, double> & field,
-    double sigma_mm ){
-    
-    if(field.images.empty()){
-        return;
-    }
-    
-    // Early return if smoothing is disabled
-    if(sigma_mm <= 0.0){
-        return;
-    }
-    
-    // Check that all images have 3 channels
-    for(const auto &img : field.images){
-        if(img.channels != 3){
-            throw std::invalid_argument("Vector field smoothing requires 3-channel images");
-        }
-    }
-    
-    // Simple Gaussian smoothing using a separable 3D kernel
-    // This is a basic implementation; more sophisticated methods could be used
-    
-    // Determine the kernel size based on sigma (3-sigma rule)
-    const auto &ref_img = field.images.front();
-    const double pxl_dx = ref_img.pxl_dx;
-    const double pxl_dy = ref_img.pxl_dy;
-    const double pxl_dz = ref_img.pxl_dz;
-    
-    const int64_t kernel_radius_x = std::max<int64_t>(1, static_cast<int64_t>(3.0 * sigma_mm / pxl_dx));
-    const int64_t kernel_radius_y = std::max<int64_t>(1, static_cast<int64_t>(3.0 * sigma_mm / pxl_dy));
-    const int64_t kernel_radius_z = std::max<int64_t>(1, static_cast<int64_t>(3.0 * sigma_mm / pxl_dz));
-    
-    // Create 1D Gaussian kernels for each direction
-    auto create_1d_gaussian = [](int64_t radius, double sigma_pixels) -> std::vector<double> {
-        std::vector<double> kernel(2 * radius + 1);
-        double sum = 0.0;
-        for(int64_t i = -radius; i <= radius; ++i){
-            const double val = std::exp(-0.5 * (i * i) / (sigma_pixels * sigma_pixels));
-            kernel[i + radius] = val;
-            sum += val;
-        }
-        // Normalize
-        for(auto &val : kernel) val /= sum;
-        return kernel;
-    };
-    
-    const double sigma_x = sigma_mm / pxl_dx;
-    const double sigma_y = sigma_mm / pxl_dy;
-    const double sigma_z = sigma_mm / pxl_dz;
-    
-    const auto kernel_x = create_1d_gaussian(kernel_radius_x, sigma_x);
-    const auto kernel_y = create_1d_gaussian(kernel_radius_y, sigma_y);
-    const auto kernel_z = create_1d_gaussian(kernel_radius_z, sigma_z);
-    
-    // Apply separable filtering for each channel
-    for(int64_t chnl = 0; chnl < 3; ++chnl){
-        
-        // Apply along x-direction (columns)
-        planar_image_collection<double, double> temp_x = field;
-        for(size_t img_idx = 0; img_idx < temp_x.images.size(); ++img_idx){
-            auto &img = get_image(temp_x.images,img_idx);
-            const int64_t N_rows = img.rows;
-            const int64_t N_cols = img.columns;
-            
-            for(int64_t row = 0; row < N_rows; ++row){
-                for(int64_t col = 0; col < N_cols; ++col){
-                    double sum = 0.0;
-                    double weight_sum = 0.0;
-                    
-                    for(int64_t k = -kernel_radius_x; k <= kernel_radius_x; ++k){
-                        const int64_t col_k = col + k;
-                        if(col_k >= 0 && col_k < N_cols){
-                            const double val = get_image(field.images,img_idx).value(row, col_k, chnl);
-                            if(std::isfinite(val)){
-                                const double w = kernel_x[k + kernel_radius_x];
-                                sum += w * val;
-                                weight_sum += w;
-                            }
-                        }
-                    }
-                    
-                    if(weight_sum > 0.0){
-                        img.reference(row, col, chnl) = sum / weight_sum;
-                    }
-                }
-            }
-        }
-        
-        // Apply along y-direction (rows)
-        planar_image_collection<double, double> temp_y = temp_x;
-        for(size_t img_idx = 0; img_idx < temp_y.images.size(); ++img_idx){
-            auto &img = get_image(temp_y.images,img_idx);
-            const int64_t N_rows = img.rows;
-            const int64_t N_cols = img.columns;
-            
-            for(int64_t row = 0; row < N_rows; ++row){
-                for(int64_t col = 0; col < N_cols; ++col){
-                    double sum = 0.0;
-                    double weight_sum = 0.0;
-                    
-                    for(int64_t k = -kernel_radius_y; k <= kernel_radius_y; ++k){
-                        const int64_t row_k = row + k;
-                        if(row_k >= 0 && row_k < N_rows){
-                            const double val = get_image(temp_x.images,img_idx).value(row_k, col, chnl);
-                            if(std::isfinite(val)){
-                                const double w = kernel_y[k + kernel_radius_y];
-                                sum += w * val;
-                                weight_sum += w;
-                            }
-                        }
-                    }
-                    
-                    if(weight_sum > 0.0){
-                        img.reference(row, col, chnl) = sum / weight_sum;
-                    }
-                }
-            }
-        }
-        
-        // Apply along z-direction (between images) and write back to field
-        const int64_t N_imgs = field.images.size();
-        for(int64_t img_idx = 0; img_idx < N_imgs; ++img_idx){
-            auto &img = get_image(field.images,img_idx);
-            const int64_t N_rows = img.rows;
-            const int64_t N_cols = img.columns;
-            
-            for(int64_t row = 0; row < N_rows; ++row){
-                for(int64_t col = 0; col < N_cols; ++col){
-                    double sum = 0.0;
-                    double weight_sum = 0.0;
-                    
-                    for(int64_t k = -kernel_radius_z; k <= kernel_radius_z; ++k){
-                        const int64_t img_k = img_idx + k;
-                        if(img_k >= 0 && img_k < N_imgs){
-                            const double val = get_image(temp_y.images,img_k).value(row, col, chnl);
-                            if(std::isfinite(val)){
-                                const double w = kernel_z[k + kernel_radius_z];
-                                sum += w * val;
-                                weight_sum += w;
-                            }
-                        }
-                    }
-                    
-                    if(weight_sum > 0.0){
-                        img.reference(row, col, chnl) = sum / weight_sum;
-                    }
-                }
-            }
-        }
-    }
-}
-
-
-// Helper function to compute the gradient of an image collection.
-// Returns a 3-channel image where channels represent gradients in x, y, z directions.
-planar_image_collection<double, double>
-AlignViaDemonsHelpers::compute_gradient(const planar_image_collection<float, double> & img_coll){
-    
-    if(img_coll.images.empty()){
-        throw std::invalid_argument("Cannot compute gradient: image collection is empty");
-    }
-    
-    // Create output image collection with 3 channels (for gradients in x, y, z)
-    planar_image_collection<double, double> gradient;
-    
-    for(size_t img_idx = 0; img_idx < img_coll.images.size(); ++img_idx){
-        const auto &img = get_image(img_coll.images,img_idx);
-        
-        planar_image<double, double> grad_img;
-        grad_img.init_orientation(img.row_unit, img.col_unit);
-        grad_img.init_buffer(img.rows, img.columns, 3); // 3 channels for dx, dy, dz
-        grad_img.init_spatial(img.pxl_dx, img.pxl_dy, img.pxl_dz, img.anchor, img.offset);
-        grad_img.metadata = img.metadata;
-        
-        const int64_t N_rows = img.rows;
-        const int64_t N_cols = img.columns;
-        
-        // Compute gradients using central differences (where possible)
-        for(int64_t row = 0; row < N_rows; ++row){
-            for(int64_t col = 0; col < N_cols; ++col){
-                
-                // Gradient in x-direction (along columns)
-                double grad_x = 0.0;
-                if(col > 0 && col < N_cols - 1){
-                    const double val_left = img.value(row, col - 1, 0);
-                    const double val_right = img.value(row, col + 1, 0);
-                    if(std::isfinite(val_left) && std::isfinite(val_right)){
-                        grad_x = (val_right - val_left) / (2.0 * img.pxl_dx);
-                    }
-                }else if(col == 0 && N_cols > 1){
-                    const double val_curr = img.value(row, col, 0);
-                    const double val_right = img.value(row, col + 1, 0);
-                    if(std::isfinite(val_curr) && std::isfinite(val_right)){
-                        grad_x = (val_right - val_curr) / img.pxl_dx;
-                    }
-                }else if(col == N_cols - 1 && N_cols > 1){
-                    const double val_left = img.value(row, col - 1, 0);
-                    const double val_curr = img.value(row, col, 0);
-                    if(std::isfinite(val_left) && std::isfinite(val_curr)){
-                        grad_x = (val_curr - val_left) / img.pxl_dx;
-                    }
-                }
-                
-                // Gradient in y-direction (along rows)
-                double grad_y = 0.0;
-                if(row > 0 && row < N_rows - 1){
-                    const double val_up = img.value(row - 1, col, 0);
-                    const double val_down = img.value(row + 1, col, 0);
-                    if(std::isfinite(val_up) && std::isfinite(val_down)){
-                        grad_y = (val_down - val_up) / (2.0 * img.pxl_dy);
-                    }
-                }else if(row == 0 && N_rows > 1){
-                    const double val_curr = img.value(row, col, 0);
-                    const double val_down = img.value(row + 1, col, 0);
-                    if(std::isfinite(val_curr) && std::isfinite(val_down)){
-                        grad_y = (val_down - val_curr) / img.pxl_dy;
-                    }
-                }else if(row == N_rows - 1 && N_rows > 1){
-                    const double val_up = img.value(row - 1, col, 0);
-                    const double val_curr = img.value(row, col, 0);
-                    if(std::isfinite(val_up) && std::isfinite(val_curr)){
-                        grad_y = (val_curr - val_up) / img.pxl_dy;
-                    }
-                }
-                
-                // Gradient in z-direction (between slices)
-                double grad_z = 0.0;
-                const int64_t N_imgs = img_coll.images.size();
-                if(N_imgs > 1){
-                    if( (img_idx > 0UL) && (img_idx < (N_imgs - 1UL)) ){
-                        const double val_prev = get_image(img_coll.images,img_idx - 1).value(row, col, 0);
-                        const double val_next = get_image(img_coll.images,img_idx + 1).value(row, col, 0);
-                        if(std::isfinite(val_prev) && std::isfinite(val_next)){
-                            grad_z = (val_next - val_prev) / (2.0 * img.pxl_dz);
-                        }
-                    }else if(img_idx == 0UL){
-                        const double val_curr = img.value(row, col, 0);
-                        const double val_next = get_image(img_coll.images,img_idx + 1).value(row, col, 0);
-                        if(std::isfinite(val_curr) && std::isfinite(val_next)){
-                            grad_z = (val_next - val_curr) / img.pxl_dz;
-                        }
-                    }else if(img_idx == (N_imgs - 1UL)){
-                        const double val_prev = get_image(img_coll.images,img_idx - 1).value(row, col, 0);
-                        const double val_curr = img.value(row, col, 0);
-                        if(std::isfinite(val_prev) && std::isfinite(val_curr)){
-                            grad_z = (val_curr - val_prev) / img.pxl_dz;
-                        }
-                    }
-                }
-                
-                grad_img.reference(row, col, 0) = grad_x;
-                grad_img.reference(row, col, 1) = grad_y;
-                grad_img.reference(row, col, 2) = grad_z;
-            }
-        }
-        
-        gradient.images.push_back(grad_img);
-    }
-    
-    return gradient;
-}
 
 
 // Helper function to warp an image using a deformation field.
@@ -1033,24 +860,33 @@ AlignViaDemons(AlignViaDemonsParams & params,
         return std::nullopt;
     }
     
-#ifdef DCMA_WHICH_SYCL
     try {
-        if(params.verbosity >= 1){
-            YLOGINFO("Using SYCL Demons implementation");
-        }
+        YLOGINFO("Using SYCL Demons implementation");
 
+        // Step 1: Resample moving image to stationary image's grid
+        // This handles different orientations and alignments
+        if(params.verbosity >= 1){
+            YLOGINFO("Resampling moving image to reference grid");
+        }
         auto moving = resample_image_to_reference_grid(moving_in, stationary);
+
+        // Step 2: Apply histogram matching if requested
         if(params.use_histogram_matching){
+            if(params.verbosity >= 1){
+                YLOGINFO("Applying histogram matching");
+            }
             moving = histogram_match(moving, stationary, params.histogram_bins, params.histogram_outlier_fraction);
         }
 
+        // Step 3: Initialize demons algorithm
         const auto fixed_vol = marshal_collection_to_volume(stationary);
         const auto moving_vol = marshal_collection_to_volume(moving);
         sycl_demons_engine engine(fixed_vol, moving_vol, params);
 
+        // Step 4: Iterative demons algorithm
         double prev_mse = std::numeric_limits<double>::infinity();
         for(int64_t iter = 0; iter < params.max_iterations; ++iter){
-            const double mse = engine.compute_single_iteration(stationary);
+            const double mse = engine.compute_single_iteration();
             if(params.verbosity >= 1){
                 YLOGINFO("Iteration " << iter << ": MSE = " << mse);
             }
@@ -1068,233 +904,9 @@ AlignViaDemons(AlignViaDemonsParams & params,
         auto deformation_vol = engine.export_deformation_volume();
         auto def_coll = marshal_volume_to_collection(deformation_vol, stationary);
         return deformation_field(std::move(def_coll));
-    }catch(const std::exception &e){
-        YLOGWARN("SYCL Demons path failed (" << e.what() << "). Falling back to CPU implementation. "
-                 "Selected SYCL backend: " << DCMA_WHICH_SYCL << ".");
-    }
-#endif
 
-    try {
-        // Step 1: Resample moving image to stationary image's grid
-        // This handles different orientations and alignments
-        if(params.verbosity >= 1){
-            YLOGINFO("Resampling moving image to reference grid");
-        }
-        auto moving = resample_image_to_reference_grid(moving_in, stationary);
-        
-        // Step 2: Apply histogram matching if requested
-        if(params.use_histogram_matching){
-            if(params.verbosity >= 1){
-                YLOGINFO("Applying histogram matching");
-            }
-            moving = histogram_match(moving, stationary, params.histogram_bins, params.histogram_outlier_fraction);
-        }
-        
-        // Step 3: Initialize deformation field (zero displacement)
-        planar_image_collection<double, double> deformation_field_images;
-        
-        for(const auto &img : stationary.images){
-            planar_image<double, double> def_img;
-            def_img.init_orientation(img.row_unit, img.col_unit);
-            def_img.init_buffer(img.rows, img.columns, 3); // 3 channels for dx, dy, dz
-            def_img.init_spatial(img.pxl_dx, img.pxl_dy, img.pxl_dz, img.anchor, img.offset);
-            def_img.metadata = img.metadata;
-            
-            // Initialize to zero displacement
-            for(auto &val : def_img.data){
-                val = 0.0;
-            }
-            
-            deformation_field_images.images.push_back(def_img);
-        }
-        
-        // Step 4: Iterative demons algorithm
-        auto warped_moving = moving;
-        double prev_mse = std::numeric_limits<double>::infinity();
-        
-        // Precompute gradient of the stationary (fixed) image; it does not change across iterations.
-        auto gradient = compute_gradient(stationary);
-        
-        for(int64_t iter = 0; iter < params.max_iterations; ++iter){
-            
-            // Compute intensity difference
-            double mse = 0.0;
-            int64_t n_voxels = 0;
-            
-            planar_image_collection<double, double> update_field_images;
-            
-            for(size_t img_idx = 0; img_idx < stationary.images.size(); ++img_idx){
-                const auto &fixed_img = get_image(stationary.images,img_idx);
-                const auto &warped_img = get_image(warped_moving.images,img_idx);
-                const auto &grad_img = get_image(gradient.images,img_idx);
-                
-                planar_image<double, double> update_img;
-                update_img.init_orientation(fixed_img.row_unit, fixed_img.col_unit);
-                update_img.init_buffer(fixed_img.rows, fixed_img.columns, 3);
-                update_img.init_spatial(fixed_img.pxl_dx, fixed_img.pxl_dy, fixed_img.pxl_dz, 
-                                       fixed_img.anchor, fixed_img.offset);
-                update_img.metadata = fixed_img.metadata;
-                
-                // Initialize update to zero
-                for(auto &val : update_img.data){
-                    val = 0.0;
-                }
-                
-                const int64_t N_rows = fixed_img.rows;
-                const int64_t N_cols = fixed_img.columns;
-                
-                for(int64_t row = 0; row < N_rows; ++row){
-                    for(int64_t col = 0; col < N_cols; ++col){
-                        const double fixed_val = fixed_img.value(row, col, 0);
-                        const double moving_val = warped_img.value(row, col, 0);
-                        
-                        if(!std::isfinite(fixed_val) || !std::isfinite(moving_val)){
-                            continue;
-                        }
-                        
-                        const double diff = fixed_val - moving_val;
-                        mse += diff * diff;
-                        ++n_voxels;
-                        
-                        const double grad_x = grad_img.value(row, col, 0);
-                        const double grad_y = grad_img.value(row, col, 1);
-                        const double grad_z = grad_img.value(row, col, 2);
-                        
-                        // Compute gradient magnitude squared
-                        const double grad_mag_sq = grad_x * grad_x + grad_y * grad_y + grad_z * grad_z;
-                        
-                        // Demons force: u = (diff * gradient) / (grad_mag^2 + diff^2 / normalization)
-                        // where diff = fixed - moving. The displacement u points from
-                        // positions in the fixed image grid toward corresponding positions
-                        // in the moving image, suitable for pull-based warping where
-                        // warped(x) = moving(x + u(x)).
-                        const double denom = grad_mag_sq + (diff * diff) / (params.normalization_factor + epsilon);
-                        
-                        if(denom > epsilon){
-                            double update_x = diff * grad_x / denom;
-                            double update_y = diff * grad_y / denom;
-                            double update_z = diff * grad_z / denom;
-                            
-                            // Clamp update magnitude
-                            const double update_mag = std::sqrt(update_x * update_x + 
-                                                               update_y * update_y + 
-                                                               update_z * update_z);
-                            if(update_mag > params.max_update_magnitude){
-                                const double scale = params.max_update_magnitude / update_mag;
-                                update_x *= scale;
-                                update_y *= scale;
-                                update_z *= scale;
-                            }
-                            
-                            update_img.reference(row, col, 0) = update_x;
-                            update_img.reference(row, col, 1) = update_y;
-                            update_img.reference(row, col, 2) = update_z;
-                        }
-                    }
-                }
-                
-                update_field_images.images.push_back(update_img);
-            }
-            
-            if(n_voxels > 0){
-                mse /= n_voxels;
-            }
-            
-            if(params.verbosity >= 1){
-                YLOGINFO("Iteration " << iter << ": MSE = " << mse);
-            }
-            
-            // Check for convergence
-            const double mse_change = std::abs(prev_mse - mse);
-            if(mse_change < params.convergence_threshold && iter > 0){
-                if(params.verbosity >= 1){
-                    YLOGINFO("Converged after " << iter << " iterations");
-                }
-                break;
-            }
-            prev_mse = mse;
-            
-            // Smooth update field (for diffeomorphic variant)
-            if(params.use_diffeomorphic && params.update_field_smoothing_sigma > 0.0){
-                smooth_vector_field(update_field_images, params.update_field_smoothing_sigma);
-            }
-            
-            // Add/compose update to deformation field
-            if(params.use_diffeomorphic){
-                // Diffeomorphic demons: compose the update with the current deformation field
-                // This implements d ← d ∘ u (composition of deformation with update)
-                // For each voxel position p in the deformation field, we compute:
-                //   new_d(p) = d(p) + u(p + d(p))
-                // This ensures the transformation remains diffeomorphic (invertible).
-                
-                // First, create a temporary deformation field from the update
-                planar_image_collection<double, double> update_field_copy = update_field_images;
-                deformation_field update_def_field(std::move(update_field_copy));
-                
-                // Now compose: for each position, add the update sampled at the deformed position
-                const double oob = 0.0;
-                for(size_t img_idx = 0; img_idx < deformation_field_images.images.size(); ++img_idx){
-                    auto &def_img = get_image(deformation_field_images.images,img_idx);
-                    const int64_t N_rows = def_img.rows;
-                    const int64_t N_cols = def_img.columns;
-                    
-                    for(int64_t row = 0; row < N_rows; ++row){
-                        for(int64_t col = 0; col < N_cols; ++col){
-                            // Get current position
-                            const auto pos = def_img.position(row, col);
-                            
-                            // Get current deformation at this position
-                            const double dx = def_img.value(row, col, 0);
-                            const double dy = def_img.value(row, col, 1);
-                            const double dz = def_img.value(row, col, 2);
-                            
-                            // Compute deformed position
-                            const vec3<double> deformed_pos = pos + vec3<double>(dx, dy, dz);
-                            
-                            // Sample update field at the deformed position using
-                            // adjacency-based interpolation for proper bilinear sampling.
-                            const auto &upd_adj = update_def_field.get_adjacency_crefw().get();
-                            const double upd_dx = upd_adj.trilinearly_interpolate(deformed_pos, 0, oob);
-                            const double upd_dy = upd_adj.trilinearly_interpolate(deformed_pos, 1, oob);
-                            const double upd_dz = upd_adj.trilinearly_interpolate(deformed_pos, 2, oob);
-                            
-                            // Compose: new deformation = current deformation + update at deformed position
-                            def_img.reference(row, col, 0) = dx + upd_dx;
-                            def_img.reference(row, col, 1) = dy + upd_dy;
-                            def_img.reference(row, col, 2) = dz + upd_dz;
-                        }
-                    }
-                }
-            }else{
-                // Standard demons: simple addition
-                for(size_t img_idx = 0; img_idx < deformation_field_images.images.size(); ++img_idx){
-                    auto &def_img = get_image(deformation_field_images.images,img_idx);
-                    const auto &upd_img = get_image(update_field_images.images,img_idx);
-                    
-                    for(size_t i = 0; i < def_img.data.size(); ++i){
-                        def_img.data[i] += upd_img.data[i];
-                    }
-                }
-            }
-            
-            // Smooth deformation field for regularization
-            if(params.deformation_field_smoothing_sigma > 0.0){
-                smooth_vector_field(deformation_field_images, params.deformation_field_smoothing_sigma);
-            }
-            
-            // Create a copy for warping (to avoid move semantics issues)
-            planar_image_collection<double, double> def_field_copy = deformation_field_images;
-            deformation_field temp_def_field(std::move(def_field_copy));
-            
-            // Warp moving image with updated deformation field
-            warped_moving = warp_image_with_field(moving, temp_def_field);
-        }
-        
-        // Return final deformation field
-        return deformation_field(std::move(deformation_field_images));
-        
     }catch(const std::exception &e){
         YLOGWARN("Demons registration failed: " << e.what());
-        return std::nullopt;
     }
+    return std::nullopt;
 }
