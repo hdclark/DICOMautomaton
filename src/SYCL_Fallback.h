@@ -292,6 +292,187 @@ inline bool isfinite(float v){ return std::isfinite(v); }
 inline bool isfinite(double v){ return std::isfinite(v); }
 inline double floor(double v){ return std::floor(v); }
 inline double sqrt(double v){ return std::sqrt(v); }
+inline double exp(double v){ return std::exp(v); }
+
+
+// =============================================================================
+// 4. Image Sampling Support (fallback implementation)
+// =============================================================================
+
+// Coordinate normalization mode for image samplers.
+enum class coordinate_normalization_mode {
+    unnormalized,  // Coordinates are in pixel indices (0 to N-1)
+    normalized     // Coordinates are normalized to [0, 1]
+};
+
+// Addressing mode for out-of-bounds access.
+enum class addressing_mode {
+    none,           // Undefined behavior for out-of-bounds
+    clamp_to_edge,  // Clamp to valid range
+    clamp,          // Same as clamp_to_edge
+    repeat,         // Wrap around
+    mirrored_repeat // Mirror at edges
+};
+
+// Filtering mode for interpolation.
+enum class filtering_mode {
+    nearest,  // Nearest-neighbor sampling
+    linear    // Linear interpolation
+};
+
+// Image sampler configuration.
+// In the SYCL 2020 standard, image_sampler is a class that configures how images are sampled.
+struct image_sampler {
+    coordinate_normalization_mode coord_mode = coordinate_normalization_mode::unnormalized;
+    addressing_mode addr_mode = addressing_mode::clamp_to_edge;
+    filtering_mode filter_mode = filtering_mode::linear;
+
+    image_sampler() = default;
+    image_sampler(coordinate_normalization_mode cm, addressing_mode am, filtering_mode fm)
+        : coord_mode(cm), addr_mode(am), filter_mode(fm) {}
+};
+
+// 4-component float vector type for image sampling results.
+struct float4 {
+    float x = 0.0f, y = 0.0f, z = 0.0f, w = 0.0f;
+    float4() = default;
+    float4(float x_, float y_, float z_, float w_) : x(x_), y(y_), z(z_), w(w_) {}
+};
+
+// Sampled image class for 3D images.
+// This is a fallback CPU implementation that provides trilinear interpolation.
+// In real SYCL, hardware-accelerated texture sampling would be used.
+template <typename DataT, int Dims>
+class sampled_image {
+    static_assert(Dims == 3, "Only 3D sampled images are supported in this fallback");
+    
+    const DataT* data_ptr;
+    size_t width, height, depth;
+    size_t channels;
+    image_sampler sampler;
+
+public:
+    sampled_image(const DataT* data, size_t w, size_t h, size_t d, size_t ch, const image_sampler& s)
+        : data_ptr(data), width(w), height(h), depth(d), channels(ch), sampler(s) {}
+
+    // Read/sample from the image at given coordinates.
+    // Coordinates are in the format (x, y, z) where each can be fractional.
+    float4 read(double x, double y, double z) const {
+        // Handle coordinate normalization
+        if(sampler.coord_mode == coordinate_normalization_mode::normalized){
+            x *= static_cast<double>(width);
+            y *= static_cast<double>(height);
+            z *= static_cast<double>(depth);
+        }
+
+        // Handle addressing mode for out-of-bounds coordinates
+        auto clamp_coord = [](double c, size_t max_val) -> double {
+            if(c < 0.0) return 0.0;
+            if(c >= static_cast<double>(max_val)) return static_cast<double>(max_val) - 1.0;
+            return c;
+        };
+
+        auto apply_addressing = [&](double c, size_t max_val) -> double {
+            switch(sampler.addr_mode){
+                case addressing_mode::clamp_to_edge:
+                case addressing_mode::clamp:
+                    return clamp_coord(c, max_val);
+                case addressing_mode::repeat:
+                    c = std::fmod(c, static_cast<double>(max_val));
+                    if(c < 0) c += static_cast<double>(max_val);
+                    return c;
+                case addressing_mode::mirrored_repeat: {
+                    double period = static_cast<double>(max_val);
+                    c = std::fmod(c, 2.0 * period);
+                    if(c < 0) c += 2.0 * period;
+                    if(c >= period) c = 2.0 * period - c;
+                    return clamp_coord(c, max_val);
+                }
+                default:
+                    return c;
+            }
+        };
+
+        x = apply_addressing(x, width);
+        y = apply_addressing(y, height);
+        z = apply_addressing(z, depth);
+
+        if(sampler.filter_mode == filtering_mode::nearest){
+            // Nearest-neighbor sampling
+            int64_t ix = static_cast<int64_t>(std::round(x));
+            int64_t iy = static_cast<int64_t>(std::round(y));
+            int64_t iz = static_cast<int64_t>(std::round(z));
+            ix = std::max<int64_t>(0, std::min<int64_t>(ix, static_cast<int64_t>(width) - 1));
+            iy = std::max<int64_t>(0, std::min<int64_t>(iy, static_cast<int64_t>(height) - 1));
+            iz = std::max<int64_t>(0, std::min<int64_t>(iz, static_cast<int64_t>(depth) - 1));
+            
+            float4 result;
+            size_t idx = static_cast<size_t>(((iz * static_cast<int64_t>(height) + iy) * static_cast<int64_t>(width) + ix) * static_cast<int64_t>(channels));
+            result.x = (channels > 0) ? static_cast<float>(data_ptr[idx + 0]) : 0.0f;
+            result.y = (channels > 1) ? static_cast<float>(data_ptr[idx + 1]) : 0.0f;
+            result.z = (channels > 2) ? static_cast<float>(data_ptr[idx + 2]) : 0.0f;
+            result.w = (channels > 3) ? static_cast<float>(data_ptr[idx + 3]) : 0.0f;
+            return result;
+        }
+        
+        // Linear (trilinear) interpolation
+        int64_t x0 = static_cast<int64_t>(std::floor(x));
+        int64_t y0 = static_cast<int64_t>(std::floor(y));
+        int64_t z0 = static_cast<int64_t>(std::floor(z));
+        int64_t x1 = x0 + 1;
+        int64_t y1 = y0 + 1;
+        int64_t z1 = z0 + 1;
+
+        double tx = x - static_cast<double>(x0);
+        double ty = y - static_cast<double>(y0);
+        double tz = z - static_cast<double>(z0);
+
+        // Clamp indices to valid range
+        auto clamp_idx = [](int64_t i, size_t max_val) -> size_t {
+            if(i < 0) return 0;
+            if(i >= static_cast<int64_t>(max_val)) return max_val - 1;
+            return static_cast<size_t>(i);
+        };
+
+        auto sample_at = [&](int64_t ix, int64_t iy, int64_t iz, int64_t ch) -> float {
+            size_t cix = clamp_idx(ix, width);
+            size_t ciy = clamp_idx(iy, height);
+            size_t ciz = clamp_idx(iz, depth);
+            size_t idx = ((ciz * height + ciy) * width + cix) * channels + static_cast<size_t>(ch);
+            return static_cast<float>(data_ptr[idx]);
+        };
+
+        float4 result;
+        for(int64_t ch = 0; ch < static_cast<int64_t>(std::min<size_t>(channels, 4)); ++ch){
+            // Sample the 8 corner voxels
+            float c000 = sample_at(x0, y0, z0, ch);
+            float c100 = sample_at(x1, y0, z0, ch);
+            float c010 = sample_at(x0, y1, z0, ch);
+            float c110 = sample_at(x1, y1, z0, ch);
+            float c001 = sample_at(x0, y0, z1, ch);
+            float c101 = sample_at(x1, y0, z1, ch);
+            float c011 = sample_at(x0, y1, z1, ch);
+            float c111 = sample_at(x1, y1, z1, ch);
+
+            // Trilinear interpolation
+            float c00 = c000 * (1.0f - static_cast<float>(tx)) + c100 * static_cast<float>(tx);
+            float c10 = c010 * (1.0f - static_cast<float>(tx)) + c110 * static_cast<float>(tx);
+            float c01 = c001 * (1.0f - static_cast<float>(tx)) + c101 * static_cast<float>(tx);
+            float c11 = c011 * (1.0f - static_cast<float>(tx)) + c111 * static_cast<float>(tx);
+            float c0 = c00 * (1.0f - static_cast<float>(ty)) + c10 * static_cast<float>(ty);
+            float c1 = c01 * (1.0f - static_cast<float>(ty)) + c11 * static_cast<float>(ty);
+            float val = c0 * (1.0f - static_cast<float>(tz)) + c1 * static_cast<float>(tz);
+
+            switch(ch){
+                case 0: result.x = val; break;
+                case 1: result.y = val; break;
+                case 2: result.z = val; break;
+                case 3: result.w = val; break;
+            }
+        }
+        return result;
+    }
+};
 
 } // namespace sycl
 

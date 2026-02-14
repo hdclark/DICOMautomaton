@@ -8,6 +8,7 @@
 #  - g++
 #  - git
 #  - gsl
+#  - boost
 
 set -eux
 
@@ -72,6 +73,8 @@ g++ \
   -U YGOR_USE_EIGEN \
   -U YGOR_USE_GNU_GSL \
   -U YGOR_USE_BOOST \
+  -D DCMA_WHICH_SYCL=\"Fallback\" \
+  -D DCMA_USE_SYCL_FALLBACK=1 \
   -I"${REPOROOT}" \
   -I"${REPOROOT}"/build/ygor/src/ \
   src/Alignment*cc \
@@ -86,6 +89,7 @@ g++ \
   -o build/demons
 
 # Run the tests.
-./build/demons --success
+#./build/demons --success  # verbose output.
+./build/demons
 
 
