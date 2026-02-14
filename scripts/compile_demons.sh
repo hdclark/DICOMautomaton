@@ -67,8 +67,9 @@ EOF
 
 # Compile (only) the relevant sources.
 # Note: SYCL is disabled by default for testing because the SYCL engine has a known
-# convergence issue (Issue 4) that causes some tests to fail. When DCMA_WHICH_SYCL
-# is not defined, the CPU fallback path is used which passes all tests.
+# convergence issue that causes some tests to fail (MSE increases after many iterations
+# instead of decreasing). When DCMA_WHICH_SYCL is not defined, the CPU fallback path
+# is used which passes all tests.
 # To test the SYCL engine, uncomment the -DDCMA_WHICH_SYCL and -DDCMA_USE_SYCL_FALLBACK lines.
 g++ \
   --std=c++17 \

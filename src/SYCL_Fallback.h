@@ -332,7 +332,7 @@ struct image_sampler {
         : coord_mode(cm), addr_mode(am), filter_mode(fm) {}
 };
 
-// 3D float4 type for image sampling results.
+// 4-component float vector type for image sampling results.
 struct float4 {
     float x = 0.0f, y = 0.0f, z = 0.0f, w = 0.0f;
     float4() = default;
