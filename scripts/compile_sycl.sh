@@ -63,6 +63,7 @@ EOF
 # Compile (only) the relevant sources.
 g++ \
   --std=c++17 \
+  -pthread \
   -I"${REPOROOT}" \
   src/SYCL_Fallback_Tests.cc \
   build/sycl.cc \
@@ -70,5 +71,4 @@ g++ \
 
 # Run the tests.
 ./build/sycl --success
-
 

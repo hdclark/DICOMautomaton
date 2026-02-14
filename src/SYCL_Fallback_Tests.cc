@@ -3,6 +3,10 @@
 #include <vector>
 #include <numeric>
 #include <iostream>
+#include <atomic>
+#include <set>
+#include <mutex>
+#include <thread>
 
 #include "doctest20251212/doctest.h"
 
@@ -113,4 +117,80 @@ TEST_CASE("SYCL Linear ID Calculation") {
 
     // Row-major: 2 * 20 + 5 = 45
     CHECK(it.get_linear_id() == 45);
+}
+
+TEST_CASE("SYCL 1D: Each Index Executed Exactly Once") {
+    const size_t N = 4096;
+    std::vector<std::atomic<int>> counts(N);
+    for(auto &v : counts){
+        v.store(0);
+    }
+
+    sycl::queue q;
+    q.parallel_for(sycl::range<1>(N), [&](sycl::id<1> idx) {
+        counts[idx[0]].fetch_add(1, std::memory_order_relaxed);
+    });
+
+    size_t n_incorrect = 0;
+    for(const auto &v : counts){
+        if(v.load(std::memory_order_relaxed) != 1){
+            ++n_incorrect;
+        }
+    }
+    CHECK(n_incorrect == 0U);
+}
+
+TEST_CASE("SYCL 2D: parallel_for Direct Queue API") {
+    const size_t rows = 32;
+    const size_t cols = 64;
+    std::vector<int> matrix(rows * cols, 0);
+
+    sycl::queue q;
+    q.parallel_for(sycl::range<2>(rows, cols), [&](sycl::id<2> idx) {
+        matrix[idx[0] * cols + idx[1]] = static_cast<int>((idx[0] + 1U) * (idx[1] + 1U));
+    });
+
+    CHECK(matrix[0] == 1);
+    CHECK(matrix[(rows - 1U) * cols + (cols - 1U)] == static_cast<int>(rows * cols));
+}
+
+TEST_CASE("SYCL Parallel Execution Uses Multiple Worker Threads") {
+    const size_t N = 8192;
+    std::set<std::thread::id> thread_ids;
+    std::mutex thread_ids_mutex;
+
+    sycl::queue q;
+    q.parallel_for(sycl::range<1>(N), [&](sycl::id<1>) {
+        std::lock_guard<std::mutex> lock(thread_ids_mutex);
+        thread_ids.insert(std::this_thread::get_id());
+    });
+
+    if(std::thread::hardware_concurrency() > 1U){
+        CHECK(thread_ids.size() > 1U);
+    }else{
+        CHECK(thread_ids.size() == 1U);
+    }
+}
+
+TEST_CASE("SYCL Sampled Image Nearest and Linear Modes") {
+    std::vector<float> data = {
+        0.0f, 10.0f,
+        20.0f, 30.0f
+    }; // depth=1, height=2, width=2, channels=1
+
+    sycl::image_sampler nearest_sampler(
+        sycl::coordinate_normalization_mode::unnormalized,
+        sycl::addressing_mode::clamp_to_edge,
+        sycl::filtering_mode::nearest
+    );
+    sycl::sampled_image<float, 3> nearest_img(data.data(), 2, 2, 1, 1, nearest_sampler);
+    CHECK(nearest_img.read(1.0, 1.0, 0.0).x == doctest::Approx(30.0f));
+
+    sycl::image_sampler linear_sampler(
+        sycl::coordinate_normalization_mode::unnormalized,
+        sycl::addressing_mode::clamp_to_edge,
+        sycl::filtering_mode::linear
+    );
+    sycl::sampled_image<float, 3> linear_img(data.data(), 2, 2, 1, 1, linear_sampler);
+    CHECK(linear_img.read(0.5, 0.5, 0.0).x == doctest::Approx(15.0f));
 }
