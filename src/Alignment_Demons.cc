@@ -83,49 +83,16 @@ public:
             this->smooth_on_device(this->update_dev, params.update_field_smoothing_sigma);
         }
 
-        // TODO: this step assumes the 'normal' Demons algorithm. However, we need to perform regularization here for
-        // Diffeomorphic Demons.
         if(!params.use_diffeomorphic){
+            // Standard demons: simply add the update to the deformation field.
             this->add_update();
         }else{
-
             // Diffeomorphic demons: compose the update with the current deformation field.
             // This implements d ← d ∘ u (composition of deformation with update).
             // For each voxel position p in the deformation field, we compute:
             //   new_d(p) = d(p) + u(p + d(p))
             // This ensures the transformation remains diffeomorphic (invertible).
-            
-            // For each position, add the update sampled at the deformed position.
-            //
-            // TODO!
-            //
-            // Here is pseudo-code (which should be used to create a corresponding add_update_diffeomorphic() member.
-            //
-            //         for( each 2D image slice in the displacement field ){
-            //            for( each row ){
-            //                for( each column ){
-            //                    // Get the current position of this voxel.
-            //                    // ...
-            //                    
-            //                    // Get the deformation values dx, dy, dz at this voxel.
-            //                    // ...
-            //                    
-            //                    // Compute deformed position.
-            //                    // ...
-            //                    
-            //                    // Sample update field at the deformed position using
-            //                    // adjacency-based interpolation for proper bilinear sampling.
-            //                    // ...
-            //                    
-            //                    // Compose: new deformation = current deformation + update at deformed position
-            //                    // Write the deformation to the displacement field.
-            //                    // ...
-            //                    
-            //                }
-            //            }
-            //        }
-            //                
-
+            this->add_update_diffeomorphic();
         }
 
         if(params.deformation_field_smoothing_sigma > 0.0){
@@ -235,13 +202,13 @@ private:
     }
 
     void compute_gradient(){
+        // Compute gradient in index space (intensity per pixel), not physical space.
+        // This ensures dimensional consistency in the demons update formula.
+        // The update is later scaled by pixel spacing when stored in the deformation field.
         const int64_t slices = fixed.slices;
         const int64_t rows = fixed.rows;
         const int64_t cols = fixed.cols;
         const int64_t channels = fixed.channels;
-        const double pxl_dx = fixed.pxl_dx;
-        const double pxl_dy = fixed.pxl_dy;
-        const double pxl_dz = fixed.pxl_dz;
 
         q.parallel_for(dcma_sycl::range<3>(static_cast<size_t>(slices),
                                            static_cast<size_t>(rows),
@@ -265,8 +232,9 @@ private:
                 const float vl = fixed_dev[in_idx(z, y, xl)];
                 const float vr = fixed_dev[in_idx(z, y, xr)];
                 if(dcma_sycl::isfinite(vl) && dcma_sycl::isfinite(vr) && xr != xl){
+                    // Gradient in index space (intensity per pixel)
                     gx = (static_cast<double>(vr) - static_cast<double>(vl))
-                       / (static_cast<double>(xr - xl) * pxl_dx);
+                       / static_cast<double>(xr - xl);
                 }
             }
             if(rows > 1){
@@ -275,8 +243,9 @@ private:
                 const float vu = fixed_dev[in_idx(z, yu, x)];
                 const float vd = fixed_dev[in_idx(z, yd, x)];
                 if(dcma_sycl::isfinite(vu) && dcma_sycl::isfinite(vd) && yd != yu){
+                    // Gradient in index space (intensity per pixel)
                     gy = (static_cast<double>(vd) - static_cast<double>(vu))
-                       / (static_cast<double>(yd - yu) * pxl_dy);
+                       / static_cast<double>(yd - yu);
                 }
             }
             if(slices > 1){
@@ -285,8 +254,9 @@ private:
                 const float vp = fixed_dev[in_idx(zp, y, x)];
                 const float vn = fixed_dev[in_idx(zn, y, x)];
                 if(dcma_sycl::isfinite(vp) && dcma_sycl::isfinite(vn) && zn != zp){
+                    // Gradient in index space (intensity per pixel)
                     gz = (static_cast<double>(vn) - static_cast<double>(vp))
-                       / (static_cast<double>(zn - zp) * pxl_dz);
+                       / static_cast<double>(zn - zp);
                 }
             }
 
@@ -369,9 +339,117 @@ private:
     }
 
     void add_update(){
-        const size_t N = this->vector_volume_size;
-        q.parallel_for(dcma_sycl::range<1>(N), [=](dcma_sycl::id<1> i){
-            deformation_dev[i[0]] += update_dev[i[0]];
+        // Scale the update from index space (pixels) to physical space (mm) and add to deformation.
+        const int64_t slices = fixed.slices;
+        const int64_t rows = fixed.rows;
+        const int64_t cols = fixed.cols;
+        const double pxl_dx = fixed.pxl_dx;
+        const double pxl_dy = fixed.pxl_dy;
+        const double pxl_dz = fixed.pxl_dz;
+
+        q.parallel_for(dcma_sycl::range<3>(static_cast<size_t>(slices),
+                                           static_cast<size_t>(rows),
+                                           static_cast<size_t>(cols)),
+                       [=](dcma_sycl::id<3> id){
+            const int64_t z = static_cast<int64_t>(id[0]);
+            const int64_t y = static_cast<int64_t>(id[1]);
+            const int64_t x = static_cast<int64_t>(id[2]);
+            const auto idx = static_cast<size_t>(((z * rows + y) * cols + x) * 3);
+
+            // Update is in index space; convert to physical units before adding.
+            deformation_dev[idx + 0] += update_dev[idx + 0] * pxl_dx;
+            deformation_dev[idx + 1] += update_dev[idx + 1] * pxl_dy;
+            deformation_dev[idx + 2] += update_dev[idx + 2] * pxl_dz;
+        });
+        this->wait_and_rethrow();
+    }
+
+    void add_update_diffeomorphic(){
+        // Diffeomorphic demons: compose the update with the current deformation field.
+        // For each voxel position p, compute: new_d(p) = d(p) + u(p + d(p))
+        // where u is sampled at the deformed position using trilinear interpolation.
+        // The update field is in index space and must be scaled to physical units.
+        const int64_t slices = fixed.slices;
+        const int64_t rows = fixed.rows;
+        const int64_t cols = fixed.cols;
+        const double pxl_dx = fixed.pxl_dx;
+        const double pxl_dy = fixed.pxl_dy;
+        const double pxl_dz = fixed.pxl_dz;
+
+        q.parallel_for(dcma_sycl::range<3>(static_cast<size_t>(slices),
+                                           static_cast<size_t>(rows),
+                                           static_cast<size_t>(cols)),
+                       [=](dcma_sycl::id<3> id){
+            const int64_t z = static_cast<int64_t>(id[0]);
+            const int64_t y = static_cast<int64_t>(id[1]);
+            const int64_t x = static_cast<int64_t>(id[2]);
+            const auto vidx = [=](int64_t zz, int64_t yy, int64_t xx, int64_t c) -> size_t {
+                return static_cast<size_t>(((zz * rows + yy) * cols + xx) * 3 + c);
+            };
+
+            // Get the current deformation at this voxel (in physical units, mm).
+            const double dx = deformation_dev[vidx(z, y, x, 0)];
+            const double dy = deformation_dev[vidx(z, y, x, 1)];
+            const double dz = deformation_dev[vidx(z, y, x, 2)];
+
+            // Compute the deformed position in index space.
+            // The deformation is in physical units; convert to index space for sampling.
+            const double sx = static_cast<double>(x) + dx / pxl_dx;
+            const double sy = static_cast<double>(y) + dy / pxl_dy;
+            const double sz = static_cast<double>(z) + dz / pxl_dz;
+
+            // Sample the update field at the deformed position using trilinear interpolation.
+            // If the deformed position is out of bounds, use zero update.
+            auto sample_update = [&](int64_t c) -> double {
+                // Floor and ceiling indices for interpolation.
+                const int64_t x0 = static_cast<int64_t>(dcma_sycl::floor(sx));
+                const int64_t y0 = static_cast<int64_t>(dcma_sycl::floor(sy));
+                const int64_t z0 = static_cast<int64_t>(dcma_sycl::floor(sz));
+                const int64_t x1 = x0 + 1;
+                const int64_t y1 = y0 + 1;
+                const int64_t z1 = z0 + 1;
+
+                // Interpolation weights.
+                const double tx = sx - static_cast<double>(x0);
+                const double ty = sy - static_cast<double>(y0);
+                const double tz = sz - static_cast<double>(z0);
+
+                // Fetch values at the 8 corners, with bounds checking.
+                auto fetch = [&](int64_t zz, int64_t yy, int64_t xx) -> double {
+                    if(xx < 0 || xx >= cols || yy < 0 || yy >= rows || zz < 0 || zz >= slices){
+                        return 0.0;  // Out of bounds: zero update contribution.
+                    }
+                    return update_dev[vidx(zz, yy, xx, c)];
+                };
+
+                const double c000 = fetch(z0, y0, x0);
+                const double c100 = fetch(z0, y0, x1);
+                const double c010 = fetch(z0, y1, x0);
+                const double c110 = fetch(z0, y1, x1);
+                const double c001 = fetch(z1, y0, x0);
+                const double c101 = fetch(z1, y0, x1);
+                const double c011 = fetch(z1, y1, x0);
+                const double c111 = fetch(z1, y1, x1);
+
+                // Trilinear interpolation.
+                const double c00 = c000 * (1.0 - tx) + c100 * tx;
+                const double c10 = c010 * (1.0 - tx) + c110 * tx;
+                const double c01 = c001 * (1.0 - tx) + c101 * tx;
+                const double c11 = c011 * (1.0 - tx) + c111 * tx;
+                const double c0 = c00 * (1.0 - ty) + c10 * ty;
+                const double c1 = c01 * (1.0 - ty) + c11 * ty;
+                return c0 * (1.0 - tz) + c1 * tz;
+            };
+
+            // Sample update at deformed position (in index space).
+            const double ux = sample_update(0);
+            const double uy = sample_update(1);
+            const double uz = sample_update(2);
+
+            // Compose: add the sampled update (scaled to physical units) to the deformation.
+            deformation_dev[vidx(z, y, x, 0)] += ux * pxl_dx;
+            deformation_dev[vidx(z, y, x, 1)] += uy * pxl_dy;
+            deformation_dev[vidx(z, y, x, 2)] += uz * pxl_dz;
         });
         this->wait_and_rethrow();
     }
@@ -385,6 +463,8 @@ private:
         const double pxl_dx = fixed.pxl_dx;
         const double pxl_dy = fixed.pxl_dy;
         const double pxl_dz = fixed.pxl_dz;
+        // For 2D images (single slice), skip z interpolation and use bilinear only.
+        const bool is_2d = (slices == 1);
 
         q.parallel_for(dcma_sycl::range<3>(static_cast<size_t>(slices),
                                            static_cast<size_t>(rows),
@@ -410,17 +490,17 @@ private:
             }
             const double sx = static_cast<double>(x) + dx / pxl_dx;
             const double sy = static_cast<double>(y) + dy / pxl_dy;
-            const double sz = static_cast<double>(z) + dz / pxl_dz;
+            const double sz = is_2d ? static_cast<double>(z) : (static_cast<double>(z) + dz / pxl_dz);
 
             const int64_t x0 = static_cast<int64_t>(dcma_sycl::floor(sx));
             const int64_t y0 = static_cast<int64_t>(dcma_sycl::floor(sy));
             const int64_t z0 = static_cast<int64_t>(dcma_sycl::floor(sz));
             const int64_t x1 = x0 + 1;
             const int64_t y1 = y0 + 1;
-            const int64_t z1 = z0 + 1;
+            const int64_t z1 = is_2d ? z0 : (z0 + 1);  // For 2D, z1 = z0 (no z interpolation)
             const double tx = sx - static_cast<double>(x0);
             const double ty = sy - static_cast<double>(y0);
-            const double tz = sz - static_cast<double>(z0);
+            const double tz = is_2d ? 0.0 : (sz - static_cast<double>(z0));
 
             for(int64_t c = 0; c < channels; ++c){
                 auto sample = [&](int64_t zz, int64_t yy, int64_t xx) -> float {
@@ -433,10 +513,13 @@ private:
                 const float c100 = sample(z0, y0, x1);
                 const float c010 = sample(z0, y1, x0);
                 const float c110 = sample(z0, y1, x1);
-                const float c001 = sample(z1, y0, x0);
-                const float c101 = sample(z1, y0, x1);
-                const float c011 = sample(z1, y1, x0);
-                const float c111 = sample(z1, y1, x1);
+                
+                // For 2D images, c001/c101/c011/c111 use same z slice as c000/etc.
+                const float c001 = is_2d ? c000 : sample(z1, y0, x0);
+                const float c101 = is_2d ? c100 : sample(z1, y0, x1);
+                const float c011 = is_2d ? c010 : sample(z1, y1, x0);
+                const float c111 = is_2d ? c110 : sample(z1, y1, x1);
+                
                 if(!(dcma_sycl::isfinite(c000) && dcma_sycl::isfinite(c100) && dcma_sycl::isfinite(c010) && dcma_sycl::isfinite(c110)
                   && dcma_sycl::isfinite(c001) && dcma_sycl::isfinite(c101) && dcma_sycl::isfinite(c011) && dcma_sycl::isfinite(c111))){
                     warped_dev[vidx(z, y, x, c, channels)] = out_of_bounds_value;
