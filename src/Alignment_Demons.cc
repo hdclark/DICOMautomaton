@@ -65,6 +65,10 @@ public:
                     this->async_exception = exceptions.front();
                 }
             }){
+
+        dcma_sycl::device dev = q.get_device();
+        YLOGINFO("Running on device: " << dev.get_info<dcma_sycl::info::device::name>());
+
         this->initialize_geometry();
         this->allocate_device_memory();
         this->compute_gradient();
@@ -952,8 +956,6 @@ AlignViaDemons(AlignViaDemonsParams & params,
     }
     
     try {
-        YLOGINFO("Using SYCL Demons implementation");
-
         // Step 1: Resample moving image to stationary image's grid
         // This handles different orientations and alignments
         if(params.verbosity >= 1){

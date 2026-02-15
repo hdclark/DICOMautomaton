@@ -493,7 +493,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Doctest_impl_obj>
     $<$<BOOL:${MINGW}>:$<TARGET_OBJECTS:WindowsIcon_obj>>
 )
-target_link_libraries (dicomautomaton_dispatcher
+target_link_libraries (dicomautomaton_dispatcher PUBLIC
     imebrashim
     dialogshim
     commonimgshim
@@ -520,7 +520,6 @@ target_link_libraries (dicomautomaton_dispatcher
     "$<$<BOOL:${Boost_system_FOUND}>:Boost::system>"
     "$<$<BOOL:${MINGW}>:ws2_32>"
     "$<$<BOOL:${MINGW}>:wsock32>"
-    $<$<BOOL:${OpenMP_CXX_FOUND}>:OpenMP::OpenMP_CXX>
     z
     "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
     mpfr
@@ -528,6 +527,10 @@ target_link_libraries (dicomautomaton_dispatcher
     m
     Threads::Threads
 )
+if("${DCMA_SYCL_BACKEND}" STREQUAL "AdaptiveCPP")
+    add_sycl_to_target( TARGET dicomautomaton_dispatcher )
+endif()
+
 
 if(WITH_WT)
     # Executable.
@@ -604,7 +607,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:DCMA_Version_obj>
         $<TARGET_OBJECTS:Doctest_impl_obj>
     )
-    target_link_libraries(dicomautomaton_webserver
+    target_link_libraries(dicomautomaton_webserver PUBLIC
         imebrashim
         dialogshim
         commonimgshim
@@ -633,7 +636,6 @@ if(WITH_WT)
         "$<$<BOOL:${Boost_system_FOUND}>:Boost::system>"
         "$<$<BOOL:${MINGW}>:ws2_32>"
         "$<$<BOOL:${MINGW}>:wsock32>"
-        $<$<BOOL:${OpenMP_CXX_FOUND}>:OpenMP::OpenMP_CXX>
         z
         "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
         mpfr
@@ -641,6 +643,9 @@ if(WITH_WT)
         m
         Threads::Threads
     )
+    if("${DCMA_SYCL_BACKEND}" STREQUAL "AdaptiveCPP")
+        add_sycl_to_target( TARGET dicomautomaton_webserver )
+    endif()
 endif()
 
 # Executable.
@@ -668,7 +673,6 @@ target_link_libraries(dicomautomaton_bsarchive_convert
     "$<$<BOOL:${Boost_system_FOUND}>:Boost::system>"
     "$<$<BOOL:${MINGW}>:ws2_32>"
     "$<$<BOOL:${MINGW}>:wsock32>"
-    $<$<BOOL:${OpenMP_CXX_FOUND}>:OpenMP::OpenMP_CXX>
     z
     m
     Threads::Threads

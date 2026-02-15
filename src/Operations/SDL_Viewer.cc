@@ -8038,8 +8038,11 @@ bool SDL_Viewer(Drover &DICOM_data,
                 "rigid (orthogonal procrustes without isotropic scaling)",
 #endif // DCMA_USE_EIGEN
                 "centroid translation",
+#ifdef DCMA_USE_EIGEN
                 "PCA",
-                "ICP", };
+                "ICP",
+#endif // DCMA_USE_EIGEN
+            };
             const size_t N_tforms = tform_names.size();
             feature_transform_num = std::clamp<size_t>(feature_transform_num, 0U, N_tforms - 1U);
 
@@ -8088,11 +8091,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                     }else if(i++ == feature_transform_num){
                         tform = AlignViaCentroid(img_features.features_A, img_features.features_B);
 
+#ifdef DCMA_USE_EIGEN
                     }else if(i++ == feature_transform_num){
                         tform = AlignViaPCA(img_features.features_A, img_features.features_B);
 
                     }else if(i++ == feature_transform_num){
                         tform = AlignViaExhaustiveICP(img_features.features_A, img_features.features_B);
+#endif // DCMA_USE_EIGEN
 
                     }else{
                         // This is just to help keep the tform list and implementation synchronized.

@@ -1,6 +1,6 @@
 # Maintainer: Hal Clark <gmail.com[at]hdeanclark>
 pkgname=dicomautomaton
-pkgver=20190713_202000
+pkgver=20250215_083412
 pkgver() {
   date +%Y%m%d_%H%M%S
 }
@@ -39,6 +39,7 @@ optdepends=(
    'patchelf'
    'bash-completion'
    'ttf-computer-modern-fonts'
+   'adaptivecpp' # + other optional hw accel components for SYCL.
 )
 makedepends=(
    'cmake'
@@ -93,6 +94,8 @@ build() {
     -DWITH_GNU_GSL=ON \
     -DWITH_POSTGRES=OFF \
     -DWITH_JANSSON=ON \
+    -DAdaptiveCpp_DIR="/usr/include/AdaptiveCPP/" \
+    \
     ../
 
   ## Debug build with default compiler flags.

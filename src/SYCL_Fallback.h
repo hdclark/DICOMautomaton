@@ -26,6 +26,17 @@
 
 namespace sycl {
 
+// =============================================================================
+// Enums for template tagging.
+// =============================================================================
+namespace info {
+    enum class device : int {
+        name,
+        vendor,
+        version
+    };
+}
+
 namespace access {
     enum class mode { read, write, read_write, discard_write, discard_read_write, atomic };
     enum class target { global_buffer, constant_buffer, local, image, host_buffer };
@@ -33,8 +44,9 @@ namespace access {
 }
 
 
-// Forward declarations.
-
+// =============================================================================
+// Forward declarations
+// =============================================================================
 template <int Dims> struct range;
 template <int Dims> struct id;
 template <int Dims> struct item;
@@ -44,13 +56,15 @@ template <typename T, int Dims, access::mode Mode, access::target Target> class 
 
 class handler;
 class queue;
+class device;
 struct default_selector_t {};
 inline constexpr default_selector_t default_selector_v{};
 using exception_list = std::vector<std::exception_ptr>;
 
 
+
 // =============================================================================
-// 1. Basic Identifiers: id, range, item
+// Basic Identifiers: id, range, item
 // =============================================================================
 
 template <int Dims>
@@ -115,8 +129,22 @@ struct item {
     }
 };
 
+class device {
+public:
+    // SYCL 2020 get_info uses template specialization
+    template <info::device Param>
+    auto get_info() const {
+        if constexpr (Param == info::device::name) {
+            return std::string("DICOMautomaton host-only fallback device");
+        } else if constexpr (Param == info::device::vendor) {
+            return std::string("DICOMautomaton");
+        }
+        return std::string("DICOMautomaton");
+    }
+};
+
 // =============================================================================
-// 2. Memory Model: buffer, accessor
+// Memory Model: buffer, accessor
 // =============================================================================
 
 // Minimal buffer: Manages ownership or wraps existing pointers
@@ -179,12 +207,13 @@ public:
 // =============================================================================
 // Deduction Guides (Required for C++17 CTAD)
 // =============================================================================
+
 template <typename T, int Dims>
 accessor(buffer<T, Dims>&, handler&) -> accessor<T, Dims, access::mode::read_write, access::target::global_buffer>;
 
 
 // =============================================================================
-// 3. Execution Model: handler, queue
+// Execution Model: handler, queue
 // =============================================================================
 
 class handler {
@@ -316,6 +345,7 @@ class queue {
     std::function<void(exception_list)> async_handler;
     size_t worker_count = 1;
     std::shared_ptr<work_queue<std::function<void(void)>>> task_queue;
+    device dev_instance;
 
     void initialize_task_queue(){
         constexpr unsigned int fallback_worker_count = 2U;
@@ -326,10 +356,10 @@ class queue {
 
 public:
     // Simple constructor
-    queue() { this->initialize_task_queue(); } 
-    queue(default_selector_t) { this->initialize_task_queue(); }
+    queue() : dev_instance() { this->initialize_task_queue(); } 
+    queue(default_selector_t) : dev_instance() { this->initialize_task_queue(); }
     template <class AsyncHandler>
-    queue(default_selector_t, AsyncHandler h) : async_handler(h) { this->initialize_task_queue(); }
+    queue(default_selector_t, AsyncHandler h) : async_handler(h), dev_instance() { this->initialize_task_queue(); }
 
     // Submit a command group function (CGF)
     template <typename T>
@@ -360,6 +390,12 @@ public:
         handler h(this->task_queue.get(), this->worker_count);
         h.parallel_for(r, kernel);
     }
+
+    // Other helpers
+    device get_device() const {
+        return dev_instance;
+    }
+
 };
 
 template <class T>
@@ -380,7 +416,7 @@ inline double exp(double v){ return std::exp(v); }
 
 
 // =============================================================================
-// 4. Image Sampling Support (fallback implementation)
+// Image Sampling Support (fallback implementation)
 // =============================================================================
 
 // Coordinate normalization mode for image samplers.
@@ -564,7 +600,7 @@ public:
 
 
 //// =============================================================================
-//// 4. Example usage
+////  Example usage
 //// =============================================================================
 //#include <iostream>
 //#include "SYCL.hpp"

@@ -66,8 +66,21 @@ cat <<EOF > build/demons.cc
 
 EOF
 
+# Use the AdaptiveCpp toolchain's SYCL, if available.
+CXX='g++'
+if command -v acpp >/dev/null 2>&1; then
+    CXX='acpp'
+fi
+
+ACPP_DIR='/usr/include/AdaptiveCpp/'
+ACPP_INCLUDE=''
+if [ -d "$ACPP_DIR" ] ; then
+    ACPP_INCLUDE="-I${ACPP_DIR}"
+fi
+
 # Compile (only) the relevant sources.
-g++ \
+ACPP_TARGETS='omp;generic' \
+"$CXX" \
   --std=c++17 \
   -pthread \
   -U YGOR_USE_LINUX_SYS \
@@ -78,6 +91,8 @@ g++ \
   -D DCMA_USE_SYCL_FALLBACK=1 \
   -I"${REPOROOT}" \
   -I"${REPOROOT}"/build/ygor/src/ \
+  -I/usr/include/AdaptiveCpp/ \
+  ${ACPP_INCLUDE} \
   src/Alignment*cc \
   src/Structs.cc \
   src/Tables.cc \
