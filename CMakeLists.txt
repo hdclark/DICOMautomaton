@@ -205,6 +205,7 @@ if(WITH_EXT_SYCL)
         find_package(AdaptiveCpp CONFIG)
         if(AdaptiveCpp_FOUND)
             get_filename_component(DCMA_CXX_COMPILER_BASENAME "${CMAKE_CXX_COMPILER}" NAME)
+            message(STATUS "CXX compiler: ${DCMA_CXX_COMPILER_BASENAME} (Note: can be set via environment flag 'CXX')")
             if(NOT DCMA_CXX_COMPILER_BASENAME MATCHES "^acpp([-.][0-9][0-9A-Za-z._-]*)?(\\.exe)?$")
                 message(FATAL_ERROR "WITH_EXT_SYCL=ON and AdaptiveCpp detected require CMAKE_CXX_COMPILER to be AdaptiveCpp's 'acpp' driver")
             endif()
@@ -235,6 +236,11 @@ if(WITH_EXT_SYCL)
             set(DCMA_SYCL_BACKEND "TriSYCL")
         endif()
     endif()
+endif()
+
+if(NOT "${DCMA_SYCL_BACKEND}" STREQUAL "${DCMA_SYCL_FALLBACK}")
+    # Assume that OpenMP is needed if any external SYCL components are being used.
+    find_package(OpenMP REQUIRED)
 endif()
 
 ####################################################################################
