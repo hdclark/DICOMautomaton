@@ -1,4 +1,6 @@
-//SimplifySurfaceMeshes.cc - A part of DICOMautomaton 2022. Written by hal clark.
+//SimplifySurfaceMeshes.cc - A part of DICOMautomaton 2022, 2024. Written by hal clark.
+//
+// CGAL edge-collapse has been removed. Only the native 'flat' algorithm is available.
 
 #include <algorithm>
 #include <optional>
@@ -29,9 +31,6 @@
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
-#ifdef DCMA_USE_CGAL
-    #include "../Surface_Meshes.h"
-#endif //DCMA_USE_CGAL
 
 #include "SimplifySurfaceMeshes.h"
 
@@ -59,11 +58,7 @@ OperationDoc OpArgDocSimplifySurfaceMeshes(){
     out.args.emplace_back();
     out.args.back().name = "Method";
     out.args.back().desc = "Controls which simplification algorithm is used."
-                           " Currently supported are 'flat'"
-#ifdef DCMA_USE_CGAL
-                           " and 'edge-collapse'"
-#endif //DCMA_USE_CGAL
-                           "."
+                           " Currently supported is 'flat'."
                            "\n\n"
                            "'flat' removes vertices when the immediate surrounding patch is uniformly"
                            " flat within a given tolerance distance. Border and non-manifold vertices"
@@ -71,40 +66,11 @@ OperationDoc OpArgDocSimplifySurfaceMeshes(){
                            " The 'flat' algorithm works best on redundant, flat meshes, like those produced"
                            " by marching cubes."
                            " Choosing a small tolerance distance should result in a nearly lossless simplification,"
-                           " but will only be applicable for meshes with redundant flat sections."
-#ifdef DCMA_USE_CGAL
-                           "\n\n"
-                           "'edge-collapse' builds a priority queue of edges that can be collapsed"
-                           " (converting two vertices into one) one at a time"
-                           " with minimal impact on the surface."
-                           " Collapse stops when a given edge count limit is reached."
-                           " 'edge-collapse' is a general-purpose simplification algorithm that works well on"
-                           " a variety of meshes."
-#endif //DCMA_USE_CGAL
-                           "";
-#ifdef DCMA_USE_CGAL
-    out.args.back().default_val = "edge-collapse";
-#else
+                           " but will only be applicable for meshes with redundant flat sections.";
     out.args.back().default_val = "flat";
-#endif //DCMA_USE_CGAL
     out.args.back().expected = true;
-    out.args.back().examples = { "flat",
-#ifdef DCMA_USE_CGAL
-                                 "edge-collapse",
-#endif //DCMA_USE_CGAL
-                                 };
+    out.args.back().examples = { "flat" };
     out.args.back().samples = OpArgSamples::Exhaustive;
-
-
-#ifdef DCMA_USE_CGAL
-    out.args.emplace_back();
-    out.args.back().name = "EdgeCountLimit";
-    out.args.back().desc = "Needed for 'edge-collapse' algorithm."
-                           " The maximum number of edges simplified meshes should contain.";
-    out.args.back().default_val = "250000";
-    out.args.back().expected = true;
-    out.args.back().examples = { "20000", "100000", "500000", "5000000" };
-#endif //DCMA_USE_CGAL
 
 
     out.args.emplace_back();
@@ -156,14 +122,10 @@ bool SimplifySurfaceMeshes(Drover &DICOM_data,
 
     const auto MethodStr = OptArgs.getValueStr("Method").value();
 
-#ifdef DCMA_USE_CGAL
-    const auto MeshEdgeCountLimit = std::stol( OptArgs.getValueStr("EdgeCountLimit").value() );
-#endif //DCMA_USE_CGAL
     const auto ToleranceDistance = std::stod(OptArgs.getValueStr("ToleranceDistance").value());
     const auto MinAlignAngle = std::stod(OptArgs.getValueStr("MinAlignAngle").value());
 
     //-----------------------------------------------------------------------------------------------------------------
-    const auto regex_edge_collapse = Compile_Regex("^ed?g?e?[-_]?c?o?l?l?a?p?s?e?$");
     const auto regex_flat = Compile_Regex("^fl?a?t?$");
 
     auto SMs_all = All_SMs( DICOM_data );
@@ -177,39 +139,8 @@ bool SimplifySurfaceMeshes(Drover &DICOM_data,
             (*smp_it)->meshes.simplify_inner_triangles(ToleranceDistance, 
                                                        MinAlignAngle);
 
-#ifdef DCMA_USE_CGAL
-        }else if(std::regex_match(MethodStr, regex_edge_collapse)){
-            const auto orig_metadata = (*smp_it)->meshes.metadata;
-
-            // Convert to a CGAL mesh.
-            std::stringstream ss_i;
-            if(!WriteFVSMeshToOFF( (*smp_it)->meshes, ss_i )){
-                throw std::runtime_error("Unable to write mesh in OFF format. Cannot continue.");
-            }
-
-            dcma_surface_meshes::Polyhedron surface_mesh;
-            if(!( ss_i >> surface_mesh )){
-                throw std::runtime_error("Mesh could not be treated as a polyhedron. (Is it manifold?)");
-            }
-
-            // Simplify.
-            polyhedron_processing::Simplify(surface_mesh, MeshEdgeCountLimit);
-
-            // Convert back from CGAL mesh.
-            std::stringstream ss_o;
-            if(!( ss_o << surface_mesh )){
-                throw std::runtime_error("Simplified mesh could not be treated as a polyhedron. (Is it manifold?)");
-            }
-
-            if(!ReadFVSMeshFromOFF( (*smp_it)->meshes, ss_o )){
-                throw std::runtime_error("Unable to read mesh in OFF format. Cannot continue.");
-            }
-
-            (*smp_it)->meshes.metadata = orig_metadata;
-#endif //DCMA_USE_CGAL
-
         }else{
-            throw std::invalid_argument("Method argument '"_s + MethodStr + "' is not valid");
+            throw std::invalid_argument("Method argument '"_s + MethodStr + "' is not valid. Only 'flat' is supported.");
         }
 
         ++completed;

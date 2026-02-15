@@ -18,44 +18,7 @@
 #include <utility>            //Needed for std::pair.
 #include <algorithm>
 
-#ifdef DCMA_USE_CGAL
-    #define BOOST_PARAMETER_MAX_ARITY 12
-
-    #include <CGAL/subdivision_method_3.h>
-    #include <CGAL/OFF_to_nef_3.h>
-    #include <CGAL/Min_sphere_of_spheres_d.h>
-
-    #include <CGAL/Polygon_mesh_slicer.h>
-    #include <CGAL/Polygon_mesh_processing/orientation.h>
-    #include <CGAL/Polygon_mesh_processing/remesh.h>
-    #include <CGAL/Polygon_mesh_processing/repair.h>
-
-    #include <CGAL/Surface_mesh_simplification/edge_collapse.h>
-    #include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Count_stop_predicate.h>
-    #include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Edge_length_cost.h>
-    #include <CGAL/Surface_mesh_simplification/Policies/Edge_collapse/Midpoint_placement.h>
-
-    #include <CGAL/Advancing_front_surface_reconstruction.h>
-    #include <CGAL/Surface_mesh.h>
-    //#include <CGAL/disable_warnings.h>
-
-    #include <CGAL/minkowski_sum_3.h>
-
-    #include <CGAL/boost/graph/convert_nef_polyhedron_to_polygon_mesh.h>
-
-    #include <CGAL/Mesh_triangulation_3.h>
-    #include <CGAL/Mesh_complex_3_in_triangulation_3.h>
-    #include <CGAL/Mesh_criteria_3.h>
-
-#ifdef DCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER
-    #include <CGAL/Labeled_mesh_domain_3.h>  // Deprecation handling: for CGAL v4.13 and later.
-#else
-    #include <CGAL/Implicit_mesh_domain_3.h> // Deprecation handling: for CGAL v4.13 and earlier.
-#endif
-
-    #include <CGAL/Mesh_domain_with_polyline_features_3.h>
-    #include <CGAL/make_mesh_3.h>
-#endif // DCMA_USE_CGAL
+// CGAL has been removed - all mesh processing now uses native implementations
 
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorLog.h"
@@ -1091,27 +1054,6 @@ Estimate_Surface_Mesh_Marching_Cubes(
     const auto unique_planar_separation_threshold = 0.005; // Contours separated by less are considered to be on the same plane.
     const auto ucp = Unique_Contour_Planes(cc_ROIs, est_cont_normal, unique_planar_separation_threshold);
 
-    // ============================================= Export the data ================================================
-    // Export the contour vertices for inspection or processing with other tools.
-    /*
-    {
-        std::vector<Point_3> verts;
-        std::ofstream out("/tmp/SurfaceMesh_ROI_vertices.xyz");
-
-        for(auto &cc_ref : cc_ROIs){
-            for(const auto &c : cc_ref.get().contours){
-                for(const auto &p : c.points){
-                    Point_3 cgal_p( p.x, p.y, p.z );
-                    verts.push_back(cgal_p);
-                }
-            }
-        }
-        if(!out || !CGAL::write_xyz_points(out, verts)){
-            throw std::runtime_error("Unable to write contour vertices.");
-        } 
-    }
-    */
-
 
     // ============================================== Generate a grid  ==============================================
 
@@ -1383,1218 +1325,293 @@ Estimate_Surface_Mesh_Marching_Cubes(
 // NOTE: This routine does not handle ROIs with several disconnected components (e.g., "eyes"). In such cases 
 //       it is best to individually process each component (e.g., "left eye" and "right eye").
 //
-#ifdef DCMA_USE_CGAL
-Polyhedron Estimate_Surface_Mesh(
-        std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs,
-        Parameters params ){
 
-    // Figure out plane alignment and work out spacing. (Spacing is twice the thickness.)
-    const auto est_cont_normal = cc_ROIs.front().get().contours.front().Estimate_Planar_Normal();
-    const auto unique_planar_separation_threshold = 0.005; // Contours separated by less are considered to be on the same plane.
-    const auto ucp = Unique_Contour_Planes(cc_ROIs, est_cont_normal, unique_planar_separation_threshold);
-    
-    // CGAL types.
-    using STr = CGAL::Surface_mesh_default_triangulation_3;
-    //using C2t3 = CGAL::Surface_mesh_complex_2_in_triangulation_3<STr>;
 
-    using GT = STr::Geom_traits;
-    using Sphere_3 = GT::Sphere_3;
-    using Point_3 = GT::Point_3;
-    using FT = GT::FT;
 
-    // Construct a sphere surrounding the vertices to bound the surface.
-    vec3<double> bounding_sphere_center;
-    double bounding_sphere_radius; 
-    const double extra_space = 1.0; //Extra space around each point, in DICOM coords.
-    {
-        using FT = double;
-        using K = CGAL::Cartesian<FT>;
-        using UseSqrts = CGAL::Tag_true;
-        using Traits = CGAL::Min_sphere_of_spheres_d_traits_3<K,FT,UseSqrts>;
-        using Min_sphere = CGAL::Min_sphere_of_spheres_d<Traits>;
-        using Point = K::Point_3;
-        using Sphere = Traits::Sphere;
 
-        std::vector<Sphere> spheres;
-        for(auto &cc_ref : cc_ROIs){
-            for(const auto &c : cc_ref.get().contours){
-                for(const auto &p : c.points){
-                    Point cgal_p( p.x, p.y, p.z );
-                    spheres.emplace_back(cgal_p,extra_space);
-                }
-            }
-        }
+// ======================================== Native Mesh Processing ========================================
+// These functions provide native alternatives for common mesh operations.
 
-        Min_sphere ms(spheres.begin(),spheres.end());
-        if(!ms.is_valid()) throw std::runtime_error("Unable to compute a bounding sphere. Cannot continue.");
-
-        auto center_coord_it = ms.center_cartesian_begin();
-        bounding_sphere_center.x = *(center_coord_it++);
-        bounding_sphere_center.y = *(center_coord_it++);
-        bounding_sphere_center.z = *(center_coord_it);
-        bounding_sphere_radius = ms.radius();
-
-// TODO: find vertex nearest to the bounding sphere centre and shift+grow the sphere so it is centred on a vertex.
-
+// Compute the volume of a closed mesh using the divergence theorem.
+// The mesh should be closed and consistently oriented for correct results.
+// Returns the absolute value of the signed volume, so the result is always positive
+// regardless of face winding order.
+double
+Mesh_Volume(const fv_surface_mesh<double, uint64_t>& mesh){
+    // Use the divergence theorem: V = (1/6) * sum over all triangles of (v0 · (v1 × v2))
+    // This computes the signed volume of the tetrahedra formed by each triangle and the origin.
+    // We return abs() to handle meshes with inconsistent winding order and to always give
+    // a positive volume for practical use.
+    double volume = 0.0;
+    for(const auto& face : mesh.faces){
+        if(face.size() < 3) continue;
+        
+        const auto& v0 = mesh.vertices.at(face[0]);
+        const auto& v1 = mesh.vertices.at(face[1]);
+        const auto& v2 = mesh.vertices.at(face[2]);
+        
+        // Signed volume of tetrahedron with one vertex at origin
+        volume += v0.Dot(v1.Cross(v2));
     }
-    YLOGINFO("Finished computing bounding sphere for selected ROIs; centre, radius = " << bounding_sphere_center << ", " << bounding_sphere_radius);
-
-    // ============================================= Export the data ================================================
-    // Export the contour vertices for inspection or processing with other tools.
-/*    
-    if(!params.OutfileBase.empty()){
-        std::vector<Point_3> verts;
-        std::ofstream out(params.OutfileBase + "_contour_vertices.xyz");
-
-        for(auto &cc_ref : cc_ROIs){
-            for(const auto &c : cc_ref.get().contours){
-                for(const auto &p : c.points){
-                    Point_3 cgal_p( p.x, p.y, p.z );
-                    verts.push_back(cgal_p);
-                }
-            }
-        }
-        if(!out || !CGAL::write_xyz_points(out, verts)){
-            throw std::runtime_error("Unable to write contour vertices.");
-        } 
-    }
-*/
-
-    // ============================================== Generate a grid  ==============================================
-
-    // Compute the number of images to make into the grid: number of unique contour planes + 2.
-    // The extra two help provide a buffer that simplifies interpolation.
-    if(params.NumberOfImages <= 0) params.NumberOfImages = (ucp.size() + 2);
-    YLOGINFO("Number of images: " << params.NumberOfImages);
-
-    // Find grid alignment vectors.
-    //
-    // Note: Because we want to be able to compare images from different scans, we use a deterministic technique for
-    //       generating two orthogonal directions involving the cardinal directions and Gram-Schmidt
-    //       orthogonalization.
-    const auto GridZ = est_cont_normal.unit();
-    const auto pi = std::acos(-1.0);
-    vec3<double> GridX = GridZ.rotate_around_z(pi * 0.5); // Try Z. Will often be idempotent.
-    if(GridX.Dot(GridZ) > 0.25){
-        GridX = GridZ.rotate_around_y(pi * 0.5);  //Should always work since GridZ is parallel to Z.
-    }
-    vec3<double> GridY = GridZ.Cross(GridX);
-    if(!GridZ.GramSchmidt_orthogonalize(GridX, GridY)){
-        throw std::runtime_error("Unable to find grid orientation vectors.");
-    }
-    GridX = GridX.unit();
-    GridY = GridY.unit();
-
-    // Figure out what z-margin is needed so the extra two images do not interfere with the grid lining up with the
-    // contours. (Want exactly one contour plane per image.) So the margin should be large enough so the empty
-    // images have no contours inside them, but small enough so that it doesn't affect the location of contours in the
-    // other image slices. The ideal is if each image slice has the same thickness so contours are all separated by some
-    // constant separation -- in this case we make the margin exactly as big as if two images were also included.
-    double z_margin = 0.0;
-    if(ucp.size() > 1){
-        // Compute the total distance between the (centre of the) top and (centre of the) bottom planes.
-        // (Note: the images associated with these contours will usually extend further. This is dealt with below.)
-        const auto total_sep =  std::abs(ucp.front().Get_Signed_Distance_To_Point(ucp.back().R_0));
-        const auto sep_per_plane = total_sep / static_cast<double>(ucp.size()-1);
-
-        // Alternative computation of separations. It is more robust, but the whole procedure falls apart if the slices
-        // are not regularly separated. Leaving here to potentially incorporate into Ygor or elsewhere at a later date.
-        //std::vector<double> seps;
-        //for(auto itA = std::begin(ucp); ; ++itA){
-        //    auto itB = std::next(itA);
-        //    if(itB == std::end(ucp)) break;
-        //    seps.emplace_back( std::abs(itA->Get_Signed_Distance_To_Point(itB->R_0)) );
-        //}
-        //const auto sep_per_plane = Stats::YgorMedian(seps);
-
-        // Add TOTAL zmargin of 1*sep_per_plane each for each extra images, and 0.5*sep_per_plane for each of the images
-        // which will stick out beyond the contour planes. However, the margin is added to both the top and the bottom so
-        // halve the total amount.
-        z_margin = sep_per_plane * 1.5;
-
-    }else{
-        YLOGWARN("Only a single contour plane was detected. Guessing its thickness.."); 
-        z_margin = 5.0;
-    }
-
-    // Figure out what a reasonable x-margin and y-margin are. 
-    //
-    // NOTE: Could also use (median? maximum?) distance from centroid to vertex.
-    double x_margin = z_margin;
-    double y_margin = z_margin;
-
-    // Generate a grid volume bounding the ROI(s).
-    const int64_t NumberOfChannels = 1;
-    const double PixelFill = std::numeric_limits<double>::quiet_NaN();
-    const bool OnlyExtremeSlices = false;
-    auto grid_image_collection = Contiguously_Grid_Volume<float,double>(
-             cc_ROIs, 
-             x_margin, y_margin, z_margin,
-             params.GridRows, params.GridColumns, 
-             NumberOfChannels, params.NumberOfImages,
-             GridX, GridY, GridZ,
-             PixelFill, OnlyExtremeSlices );
-
-    // Generate an ROI inclusivity voxel map.
-    const auto InteriorVal = -1.0;
-    const auto ExteriorVal = -InteriorVal;
-    {
-        PartitionedImageVoxelVisitorMutatorUserData ud;
-
-        ud.mutation_opts.editstyle = Mutate_Voxels_Opts::EditStyle::InPlace;
-        ud.mutation_opts.aggregate = Mutate_Voxels_Opts::Aggregate::First;
-        ud.mutation_opts.adjacency = Mutate_Voxels_Opts::Adjacency::SingleVoxel;
-        ud.mutation_opts.maskmod   = Mutate_Voxels_Opts::MaskMod::Noop;
-        ud.mutation_opts.inclusivity = Mutate_Voxels_Opts::Inclusivity::Centre;
-        ud.description = "ROI Inclusivity";
-
-        /*
-        if( std::regex_match(ContourOverlapStr, regex_ignore) ){
-            ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
-        }else if( std::regex_match(ContourOverlapStr, regex_honopps) ){
-            ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::HonourOppositeOrientations;
-        }else if( std::regex_match(ContourOverlapStr, regex_cancel) ){
-            ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::ImplicitOrientations;
-        }else{
-            throw std::invalid_argument("ContourOverlap argument '"_s + ContourOverlapStr + "' is not valid");
-        }
-        */
-        ud.mutation_opts.contouroverlap = Mutate_Voxels_Opts::ContourOverlap::Ignore;
-
-        ud.f_bounded = [&](int64_t /*row*/, int64_t /*col*/, int64_t /*chan*/,
-                           std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
-                           std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
-                           float &voxel_val) {
-            voxel_val = InteriorVal;
-        };
-        ud.f_unbounded = [&](int64_t /*row*/, int64_t /*col*/, int64_t /*chan*/,
-                             std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
-                             std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
-                             float &voxel_val) {
-            voxel_val = ExteriorVal;
-        };
-
-        if(!grid_image_collection.Process_Images_Parallel( GroupIndividualImages,
-                                                           PartitionedImageVoxelVisitorMutator,
-                                                           {}, cc_ROIs, &ud )){
-            throw std::runtime_error("Unable to create an ROI inclusivity map.");
-        }
-    }
-    
-    // Inspect the grid by exporting since injecting into DICOM_data is not possible.
-    //for(auto & img : grid_image_collection.images){
-    //    const auto filename = Get_Unique_Sequential_Filename("./inspect_", 6, ".fits");
-    //    WriteToFITS(img, filename);
-    //}
-    //for(auto & img : grid_image_collection.images){
-    //    std::cout << "Image z: " << img.center() << std::endl;
-    //}
-
-
-    // ============================================== Modify the mask ==============================================
-/*
-    // Gaussian blur to help smooth the sharp edges.
-    grid_image_collection.Gaussian_Pixel_Blur( {}, 2.0 ); // Sigma in terms of pixel count.
-
-    // Supersample the surface mask.
-    {
-        InImagePlaneBicubicSupersampleUserData bicub_ud;
-        bicub_ud.RowScaleFactor    = 3;
-        bicub_ud.ColumnScaleFactor = 3;
-
-        if(!grid_arr_ptr->imagecoll.Process_Images_Parallel( GroupIndividualImages,
-                                                             InImagePlaneBicubicSupersample,
-                                                             {}, {}, &bicub_ud )){
-            YLOGERR("Unable to bicubically supersample surface mask");
-        }
-    }
-
-    // Threshold the surface mask.
-    grid_arr_ptr->imagecoll.apply_to_pixels([=](int64_t, int64_t, int64_t, float &val) -> void {
-            if(!isininc(void_mask_val, val, surface_mask_val)){
-                val = void_mask_val;
-                return;
-            }
-
-            if( (val - void_mask_val) > 0.25*(surface_mask_val - void_mask_val) ){
-                val = surface_mask_val;
-            }else{
-                val = void_mask_val;
-            }
-            return;
-    });
-*/
-
-
-    // ============================================ Sample the surface  =============================================
-
-    // This routine is an 'oracle' that reports if a given point is inside or outside the surface to be triangulated.
-    // The surface is implicitly defined by the isosurface(s) where this function is zero.
-    // This oracle uses contour inclusivity pre-computed over a grid to speed up the surface probing process.
-    auto surface_oracle = [&](Point_3 p) -> FT {
-        const vec3<double> P(static_cast<double>(CGAL::to_double(p.x())), 
-                             static_cast<double>(CGAL::to_double(p.y())),
-                             static_cast<double>(CGAL::to_double(p.z())) );
-        const int64_t channel = 0;
-        const double out_of_bounds = ExteriorVal;
-
-        return static_cast<FT>( grid_image_collection.trilinearly_interpolate(P, channel, out_of_bounds) );
-    };
-
-    const Point_3 cgal_bounding_sphere_center(bounding_sphere_center.x, bounding_sphere_center.y, bounding_sphere_center.z );
-    const Sphere_3 cgal_bounding_sphere( cgal_bounding_sphere_center, std::pow(bounding_sphere_radius,2.0) );
-
-    // Define some CGAL types for meshing purposes.
-
-#ifdef DCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER
-    // Deprecation handling: for CGAL v4.13 and later.
-    using Mesh_domain = CGAL::Mesh_domain_with_polyline_features_3< CGAL::Labeled_mesh_domain_3<Kernel> >;
-#else
-    // Deprecation handling: for CGAL v4.13 and earlier.
-    using Implicit_Function = decltype(surface_oracle);
-    using Mesh_domain = CGAL::Mesh_domain_with_polyline_features_3< CGAL::Implicit_mesh_domain_3<Implicit_Function,Kernel> >;
-#endif
-
-    using Polyline_3 = std::vector<Point_3>;
-
-    //using Concurrency_tag = CGAL::Parallel_tag;
-    using Concurrency_tag = CGAL::Sequential_tag; // CGAL::Parallel_tag; // <-- requires Intel TBB library.
-
-    using Tr = CGAL::Mesh_triangulation_3<Mesh_domain,CGAL::Default,Concurrency_tag>::type;
-    using C3t3 = CGAL::Mesh_complex_3_in_triangulation_3<Tr,Mesh_domain::Corner_index,Mesh_domain::Curve_index>;
-
-    using Mesh_criteria = CGAL::Mesh_criteria_3<Tr>;
-
-
-    // --- Request that the input contours be protected in the final mesh. ---
-    //
-    // For fast-quality meshing, no contours are protected.
-    // For medium-quality meshing, all contours are protected but might be extremely thin and likely to be smoothed.
-    // For high-quality meshing, all contours are protected and smoothing is protected against by extruding the contours.
-  
-    std::vector<double> dUs; // Extrusion distances along the contour normal.
-    if(params.RQ == ReproductionQuality::Fast){
-        dUs.push_back(0.0);
-    }else if(params.RQ == ReproductionQuality::Medium){
-        dUs.push_back(0.0);
-    }else if(params.RQ == ReproductionQuality::High){
-        if(ucp.size() > 1){
-            // Compute the total distance between the (centre of the) top and (centre of the) bottom planes.
-            const auto total_sep =  std::abs(ucp.front().Get_Signed_Distance_To_Point(ucp.back().R_0));
-            const auto sep_per_plane = total_sep / static_cast<double>(ucp.size()-1);
-  
-            dUs.push_back(-0.25*sep_per_plane);
-            dUs.push_back( 0.25*sep_per_plane);
-        }else{
-            // If there is no scale available, guess something reasonable.
-            dUs.push_back(-0.1);
-            dUs.push_back( 0.1);
-        }
-    }
-  
-    std::list<Polyline_3> polylines; // Convert extruded contours to CGAL polyline format.
-    for(auto &cc_ref : cc_ROIs){
-        for(const auto &c : cc_ref.get().contours){
-            for(const auto &dU : dUs){
-                polylines.emplace_back();
-                for(const auto &p : c.points){
-                    auto shifted_p = p + est_cont_normal * dU; 
-                    Point_3 cgal_p( shifted_p.x, shifted_p.y, shifted_p.z );
-                    polylines.back().push_back( cgal_p );
-                }
-                if(polylines.back().empty()){
-                    polylines.pop_back();
-                }else{
-                    polylines.back().push_back( polylines.back().front() ); // Close the loop.
-                }
-            }
-        }
-    }
-  
-   
-    // Purge some contours and rely on interpolation for faster meshing.
-    //
-    // NOTE: Should rather purge unique contour planes, because this approach can lead to pathologically missing whole
-    //       subvolumes when there are %2=0 contours on each plane.
-    if(params.RQ == ReproductionQuality::Fast){
-        size_t count = 0;
-        polylines.remove_if( [&](const Polyline_3 &) -> bool {
-            return ( (++count % 2) == 0 );
-        });
-    }
-  
-  
-    // Create the meshing domain using a bounding sphere.
-    double err_bound;
-    if(params.RQ == ReproductionQuality::Fast){
-        err_bound = 0.50 / bounding_sphere_radius;
-    }else if(params.RQ == ReproductionQuality::Medium){
-        err_bound = 0.15 / bounding_sphere_radius;
-    }else if(params.RQ == ReproductionQuality::High){
-        err_bound = 0.05 / bounding_sphere_radius;
-    }
-
-#ifdef DCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER
-    // Deprecation handling: for CGAL v4.13 and later.
-    Mesh_domain domain = Mesh_domain::create_implicit_mesh_domain(
-                           CGAL::parameters::function = surface_oracle,
-                           CGAL::parameters::bounding_object = cgal_bounding_sphere,
-                           CGAL::parameters::relative_error_bound = err_bound);
-#else
-    // Deprecation handling: for CGAL v4.13 and earlier.
-    Mesh_domain domain(surface_oracle,
-                       cgal_bounding_sphere, 
-                       err_bound);
-#endif
-
-    domain.add_features(polylines.begin(), polylines.end());
-  
-  
-    // Attach meshing criteria.
-    Mesh_criteria criteria( 
-                            // For 1D features.
-                            //
-                            // Maximum sampling distance along 1D features.                                 
-                            // Setting below the smallest contour vertex-to-vertex spacing will result                                                   
-                            // in interpolation between the vertices. It probably won't increase overall
-                            // mesh quality, but will add additional complexity to the mesh.
-                            CGAL::parameters::edge_size = 1.0, 
-  
-                            // For surfaces.
-                            //
-                            // Facet angle is a lower bound, in degrees. Should be <=30.
-                            // High angles mostly relevant for visual quality.
-                            CGAL::parameters::facet_angle = 15.0, 
-  
-                            CGAL::parameters::facet_size = 2.0, 
-                            CGAL::parameters::facet_distance = 0.5,
-                            //CGAL::parameters::facet_topology = CGAL::FACET_VERTICES_ON_SAME_SURFACE_PATCH,
-  
-                            // For tetrahedra.
-                            //
-                            // Cell radius edge ratio should be >= 2.
-                            CGAL::parameters::cell_radius_edge_ratio = 5.0,
-                            CGAL::parameters::cell_size = 5.0 );
-  
-  
-    // Perform the meshing.
-    YLOGINFO("Beginning meshing. This may take a while");
-    C3t3 c3t3 = CGAL::make_mesh_3<C3t3>(domain, 
-                                        criteria, 
-                                        //CGAL::parameters::lloyd(CGAL::parameters::time_limit=10.0),
-                                        CGAL::parameters::no_lloyd(),
-                                        CGAL::parameters::no_odt(), 
-                                        //CGAL::parameters::exude(CGAL::parameters::time_limit=10.0), 
-                                        CGAL::parameters::no_exude(), 
-                                        CGAL::parameters::no_perturb(),
-                                        CGAL::parameters::manifold());
-  
-    // Output the mesh for inspection.
-    //std::ofstream off_file("/tmp/out.off");
-    //c3t3.output_boundary_to_off(off_file);
-  
-    // Refine the mesh with additional optimization passes.
-    //
-    // NOTE: This optimization might not be appropriate for our use-cases. In particular the refine may invalidate
-    //       meshing criteria by optimizing connectivity.
-    if(params.RQ == ReproductionQuality::High){
-        YLOGINFO("Refining mesh. This may take a while");
-        CGAL::refine_mesh_3(c3t3, 
-                            domain, 
-                            criteria,
-                            CGAL::parameters::lloyd(CGAL::parameters::time_limit=10.0),
-                            //CGAL::parameters::no_lloyd(),
-                            CGAL::parameters::no_odt(), 
-                            CGAL::parameters::exude(CGAL::parameters::time_limit=10.0), 
-                            //CGAL::parameters::no_exude(), 
-                            CGAL::parameters::no_perturb(),
-                            CGAL::parameters::manifold());
-    }
-  
-  
-    // Extract the polyhedral surface.
-    Polyhedron output_mesh;
-    try{
-        CGAL::facets_in_complex_3_to_triangle_mesh(c3t3, output_mesh);
-    }catch(const std::exception &e){
-        throw std::runtime_error(std::string("Could not convert surface mesh to a polyhedron representation: ") + e.what());
-    }
-    YLOGINFO("The triangulated surface has " << output_mesh.size_of_vertices() << " vertices"
-             " and " << output_mesh.size_of_facets() << " faces");
-  
-    // Remove disconnected vertices, if there are any.
-    const auto removed_verts = CGAL::Polygon_mesh_processing::remove_isolated_vertices(output_mesh);
-    if(removed_verts != 0){
-        YLOGWARN(removed_verts << " isolated vertices were removed");
-    }
-  
-    return output_mesh;
+    return std::abs(volume) / 6.0;
 }
-#endif // DCMA_USE_CGAL
 
+// Compute the surface area of a mesh by summing triangle areas.
+double
+Mesh_Surface_Area(const fv_surface_mesh<double, uint64_t>& mesh){
+    double area = 0.0;
+    for(const auto& face : mesh.faces){
+        if(face.size() < 3) continue;
+        
+        const auto& v0 = mesh.vertices.at(face[0]);
+        const auto& v1 = mesh.vertices.at(face[1]);
+        const auto& v2 = mesh.vertices.at(face[2]);
+        
+        // Area of triangle = 0.5 * ||(v1-v0) × (v2-v0)||
+        const auto edge1 = v1 - v0;
+        const auto edge2 = v2 - v0;
+        area += edge1.Cross(edge2).length() * 0.5;
+    }
+    return area;
+}
 
-
-
-// This is a WIP surface meshing routine that may be removed some time in the future.
-#ifdef DCMA_USE_CGAL
-Polyhedron Estimate_Surface_Mesh_AdvancingFront(
-        std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs,
-        Parameters ){
+// Slice a mesh with a plane to produce contours.
+// Returns a contour_collection containing all intersection contours.
+contour_collection<double>
+Slice_Mesh(const fv_surface_mesh<double, uint64_t>& mesh,
+           const std::list<plane<double>>& planes){
     
-    // Perform an advancing-front surface reconstruction from a point-set.
-    using Facet = CGAL::cpp11::array<std::size_t,3>;
-    using Point_3 = Kernel::Point_3;
-    using Mesh = CGAL::Surface_mesh<Point_3>;
-    using PointList = std::vector<Point_3>;
-    using PointIterator = PointList::iterator;
-
-    struct Construct{
-        Mesh& mesh;
-
-        Construct(Mesh& mesh, PointIterator a, PointIterator b) : mesh(mesh){
-            for( ; a != b; ++a){
-                boost::graph_traits<Mesh>::vertex_descriptor v;
-                v = add_vertex(mesh);
-                mesh.point(v) = *a;
+    contour_collection<double> cc;
+    
+    for(const auto& aplane : planes){
+        // For each plane, find all edge-plane intersections
+        // Build contours by connecting intersection points
+        
+        // Store edge intersections as pairs of (intersection_point, edge_id)
+        // where edge_id = (min_vertex_index, max_vertex_index)
+        std::map<std::pair<uint64_t, uint64_t>, vec3<double>> edge_intersections;
+        
+        // Map from face index to its intersection points
+        std::map<uint64_t, std::vector<std::pair<std::pair<uint64_t, uint64_t>, vec3<double>>>> face_edge_intersections;
+        
+        const double plane_eps = 1e-10; // Tolerance for determining if vertex is on the plane
+        
+        for(uint64_t fi = 0; fi < mesh.faces.size(); ++fi){
+            const auto& face = mesh.faces[fi];
+            if(face.size() < 3) continue;
+            
+            std::vector<std::pair<std::pair<uint64_t, uint64_t>, vec3<double>>> local_intersections;
+            
+            for(size_t i = 0; i < face.size(); ++i){
+                const auto v0_idx = face[i];
+                const auto v1_idx = face[(i + 1) % face.size()];
+                
+                const auto& v0 = mesh.vertices.at(v0_idx);
+                const auto& v1 = mesh.vertices.at(v1_idx);
+                
+                const double d0 = aplane.Get_Signed_Distance_To_Point(v0);
+                const double d1 = aplane.Get_Signed_Distance_To_Point(v1);
+                
+                // Handle case where vertex lies exactly on the plane
+                const bool v0_on_plane = std::abs(d0) < plane_eps;
+                const bool v1_on_plane = std::abs(d1) < plane_eps;
+                
+                // Create canonical edge identifier (smaller index first)
+                auto edge_id = std::make_pair(std::min(v0_idx, v1_idx), std::max(v0_idx, v1_idx));
+                
+                if(v0_on_plane && v1_on_plane){
+                    // Both vertices on plane - skip this edge as it lies in the plane
+                    continue;
+                }else if(v0_on_plane){
+                    // First vertex is on the plane - use it as intersection
+                    edge_intersections[edge_id] = v0;
+                    local_intersections.push_back({edge_id, v0});
+                }else if(v1_on_plane){
+                    // Second vertex is on the plane - use it as intersection
+                    edge_intersections[edge_id] = v1;
+                    local_intersections.push_back({edge_id, v1});
+                }else if((d0 > 0.0 && d1 < 0.0) || (d0 < 0.0 && d1 > 0.0)){
+                    // Edge crosses the plane (different signs)
+                    // Compute intersection point via linear interpolation
+                    const double t = d0 / (d0 - d1);
+                    const auto intersection = v0 + (v1 - v0) * t;
+                    
+                    edge_intersections[edge_id] = intersection;
+                    local_intersections.push_back({edge_id, intersection});
+                }
+            }
+            
+            if(local_intersections.size() == 2){
+                face_edge_intersections[fi] = local_intersections;
             }
         }
-
-        Construct& operator=(const Facet f){
-            using vertex_descriptor = boost::graph_traits<Mesh>::vertex_descriptor;
-            using size_type = boost::graph_traits<Mesh>::vertices_size_type;
-            mesh.add_face( vertex_descriptor(static_cast<size_type>(f[0])),
-                           vertex_descriptor(static_cast<size_type>(f[1])),
-                           vertex_descriptor(static_cast<size_type>(f[2])) );
-            return *this;
-        }
-
-        Construct& operator*() { return *this; }
-        Construct& operator++() { return *this; }
-        Construct operator++(int) { return *this; }
-    };
-
-
-    PointList points;
-    auto Feq = [](const vec3<double> &a, const vec3<double> &b) -> bool {
-        return (a.distance(b) < 1E-3);
-    };
-    for(auto &cc_ref : cc_ROIs){
-        for(const auto &c : cc_ref.get().contours){
-            auto clean = c;
-            clean.Remove_Sequential_Duplicate_Points(Feq);
-            clean.Remove_Extraneous_Points(Feq);
-            clean.Remove_Needles(Feq);
-            clean.Remove_Extraneous_Points(Feq);
-            clean.Remove_Sequential_Duplicate_Points(Feq);
-
-            for(const auto &p : clean.points){
-                Point_3 cgal_p( p.x, p.y, p.z );
-                points.push_back(cgal_p);
+        
+        if(edge_intersections.empty()) continue;
+        
+        // Build contours by following edge intersections through faces
+        std::set<uint64_t> visited_faces;
+        
+        for(const auto& [start_face, start_intersections] : face_edge_intersections){
+            if(visited_faces.count(start_face) > 0) continue;
+            
+            contour_of_points<double> contour;
+            contour.closed = true;
+            
+            // Start a new contour
+            uint64_t current_face = start_face;
+            auto current_edge = start_intersections[0].first;
+            auto current_pt = start_intersections[0].second;
+            
+            contour.points.push_back(current_pt);
+            
+            // Walk through connected faces
+            size_t max_iterations = mesh.faces.size() + 1;
+            size_t iter = 0;
+            
+            while(iter < max_iterations){
+                ++iter;
+                visited_faces.insert(current_face);
+                
+                const auto& intersections = face_edge_intersections.at(current_face);
+                
+                // Find the other edge in this face
+                std::pair<uint64_t, uint64_t> next_edge;
+                vec3<double> next_pt;
+                bool found = false;
+                
+                for(const auto& [edge_id, pt] : intersections){
+                    if(edge_id != current_edge){
+                        next_edge = edge_id;
+                        next_pt = pt;
+                        found = true;
+                        break;
+                    }
+                }
+                
+                if(!found) break;
+                
+                contour.points.push_back(next_pt);
+                
+                // Find the next face that shares this edge
+                uint64_t next_face = static_cast<uint64_t>(-1);
+                for(const auto& [fi, intersects] : face_edge_intersections){
+                    if(fi == current_face) continue;
+                    if(visited_faces.count(fi) > 0) continue;
+                    
+                    for(const auto& [edge_id, pt] : intersects){
+                        if(edge_id == next_edge){
+                            next_face = fi;
+                            break;
+                        }
+                    }
+                    if(next_face != static_cast<uint64_t>(-1)) break;
+                }
+                
+                if(next_face == static_cast<uint64_t>(-1)){
+                    // Check if we've completed a loop back to start
+                    break;
+                }
+                
+                current_face = next_face;
+                current_edge = next_edge;
+            }
+            
+            // Only add contours with enough points
+            if(contour.points.size() >= 3){
+                cc.contours.push_back(contour);
             }
         }
     }
-
-    // ============================================= Export the data ================================================
-    // Export the contour vertices for inspection or processing with other tools.
-/*    
-    if(!params.OutfileBase.empty()){
-        std::ofstream out(params.OutfileBase + "_contour_vertices.xyz");
-        if(!out || !CGAL::write_xyz_points(out, points)){
-            throw std::runtime_error("Unable to write contour vertices.");
-        } 
-    }
-*/
-
-    const double radius_ratio_bound = 0.1;
-    const auto pi = std::acos(-1.0);
-    const double beta = pi*0.05/6.0;
-
-    Mesh output_mesh;
-    Construct construct(output_mesh, points.begin(), points.end());
-    CGAL::advancing_front_surface_reconstruction(points.begin(), points.end(), construct, radius_ratio_bound, beta);
     
-    // Remove disconnected vertices.
-    const auto removed_verts = CGAL::Polygon_mesh_processing::remove_isolated_vertices(output_mesh);
-    if(removed_verts != 0){
-        YLOGWARN(removed_verts << " isolated vertices were removed");
-    }
-
-    // Retain only the largest surface component.
-/*    
-    const auto removed_components = output_mesh.keep_largest_connected_components(1);
-    if(removed_components != 0){
-        YLOGWARN(removed_components << " of the smallest mesh components were removed");
-    }
-*/
-
-    YLOGERR("This routine is not complete. Need to convert mesh types");
-    return Polyhedron();
+    return cc;
 }
-#endif // DCMA_USE_CGAL
 
-
-// Convert from fv_surface_mesh to CGAL's Polyhedron class.
-//
-// The former can be non-manifold, but the latter cannot.
-// This routine attempts to correct non-manifoldness. It may not work, but could carry on silently.
-// If it matters, attempt a direct conversion without non-manifold correction.
-#ifdef DCMA_USE_CGAL
-Polyhedron
-FVSMeshToPolyhedron(
-        const fv_surface_mesh<double, uint64_t> &in ){
-
-    
-    std::vector<Kernel::Point_3>         triangle_verts;
-    std::vector< std::array<size_t, 3> > triangle_faces;
-
-
-    // Populate the triangle soup.
-    for(const auto &v : in.vertices){
-        triangle_verts.emplace_back( Kernel::Point_3( v.x, v.y, v.z ) );
-    }
-    std::array<size_t, 3> shtl;
-    for(const auto &f : in.faces){
-        if(f.size() == 3){
-            shtl[0] = f[0];
-            shtl[1] = f[1];
-            shtl[2] = f[2];
-            triangle_faces.emplace_back( shtl );
-        }else if(f.size() == 4){
-            shtl[0] = f[0];
-            shtl[1] = f[1];
-            shtl[2] = f[2];
-            triangle_faces.emplace_back( shtl );
-            shtl[0] = f[0];
-            shtl[1] = f[2];
-            shtl[2] = f[3];
-            triangle_faces.emplace_back( shtl );
-        }else{
-            throw std::runtime_error("This routine only supports triangle and quad faces. Cannot continue.");
+// Native mesh subdivision for triangle meshes.
+// This is a simplified subdivision that splits each triangle into 4 triangles by adding 
+// edge midpoints. Unlike full Loop subdivision, this does not apply weighted smoothing
+// to vertex positions, so it only refines the mesh geometry without smoothing.
+// For many practical applications (e.g., increasing mesh resolution for slicing),
+// this simpler approach is sufficient.
+// Each iteration quadruples the number of faces.
+void
+Loop_Subdivide(fv_surface_mesh<double, uint64_t>& mesh, int64_t iterations){
+    for(int64_t iter = 0; iter < iterations; ++iter){
+        const auto N_orig_verts = mesh.vertices.size();
+        const auto N_orig_faces = mesh.faces.size();
+        
+        // Map from edge (pair of vertex indices) to new midpoint vertex index
+        std::map<std::pair<uint64_t, uint64_t>, uint64_t> edge_to_new_vert;
+        
+        // First pass: create edge midpoints
+        for(const auto& face : mesh.faces){
+            if(face.size() != 3) continue;
+            
+            for(size_t i = 0; i < 3; ++i){
+                const auto v0_idx = face[i];
+                const auto v1_idx = face[(i + 1) % 3];
+                
+                auto edge = std::make_pair(std::min(v0_idx, v1_idx), std::max(v0_idx, v1_idx));
+                
+                if(edge_to_new_vert.find(edge) == edge_to_new_vert.end()){
+                    // Create new midpoint vertex (simple midpoint averaging)
+                    const auto& v0 = mesh.vertices.at(v0_idx);
+                    const auto& v1 = mesh.vertices.at(v1_idx);
+                    const auto midpoint = (v0 + v1) * 0.5;
+                    
+                    const auto new_idx = static_cast<uint64_t>(mesh.vertices.size());
+                    mesh.vertices.push_back(midpoint);
+                    edge_to_new_vert[edge] = new_idx;
+                }
+            }
         }
+        
+        // Second pass: create new faces (each triangle becomes 4 triangles)
+        std::vector<std::array<uint64_t, 3>> new_faces;
+        new_faces.reserve(N_orig_faces * 4);
+        
+        for(const auto& face : mesh.faces){
+            if(face.size() != 3) continue;
+            
+            const auto v0 = face[0];
+            const auto v1 = face[1];
+            const auto v2 = face[2];
+            
+            // Get edge midpoint vertices
+            auto e01 = std::make_pair(std::min(v0, v1), std::max(v0, v1));
+            auto e12 = std::make_pair(std::min(v1, v2), std::max(v1, v2));
+            auto e20 = std::make_pair(std::min(v2, v0), std::max(v2, v0));
+            
+            const auto m01 = edge_to_new_vert.at(e01);
+            const auto m12 = edge_to_new_vert.at(e12);
+            const auto m20 = edge_to_new_vert.at(e20);
+            
+            // Create 4 new triangles
+            new_faces.push_back({v0, m01, m20});   // Corner triangle at v0
+            new_faces.push_back({v1, m12, m01});   // Corner triangle at v1
+            new_faces.push_back({v2, m20, m12});   // Corner triangle at v2
+            new_faces.push_back({m01, m12, m20});  // Center triangle
+        }
+        
+        // Replace faces
+        mesh.faces.clear();
+        mesh.faces.reserve(new_faces.size());
+        for(const auto& f : new_faces){
+            mesh.faces.push_back({f[0], f[1], f[2]});
+        }
+        
+        // Clear and rebuild involved_faces index
+        mesh.involved_faces.clear();
+        
+        YLOGINFO("Subdivision iteration " << (iter + 1) << ": " 
+                 << mesh.vertices.size() << " vertices, "
+                 << mesh.faces.size() << " faces");
     }
-
-    YLOGINFO("Orienting face normals..");
-    CGAL::Polygon_mesh_processing::orient_polygon_soup(triangle_verts, triangle_faces);
-
-    // Output the mesh for inspection.
-    //std::ofstream off_file("/tmp/out.off");
-    //c3t3.output_boundary_to_off(off_file);
-  
-    // Extract the polyhedral surface.
-    YLOGINFO("Extracting the polyhedral surface..");
-    Polyhedron output_mesh;
-    CGAL::Polygon_mesh_processing::polygon_soup_to_polygon_mesh(triangle_verts, triangle_faces, output_mesh);
-
-//    if(!CGAL::is_closed(output_mesh)){
-//        std::ofstream openmesh("/tmp/open_mesh.off");
-//        openmesh << output_mesh;
-//        throw std::runtime_error("Mesh not closed but should be. Verify vector equality is not too loose. Dumped to /tmp/open_mesh.off.");
-//    }
-    if(!CGAL::Polygon_mesh_processing::is_outward_oriented(output_mesh)){
-        YLOGINFO("Reorienting face orientation so faces face outward..");
-        CGAL::Polygon_mesh_processing::reverse_face_orientations(output_mesh);
-    }
-
-    YLOGINFO("The triangulated surface has " << output_mesh.size_of_vertices() << " vertices"
-             " and " << output_mesh.size_of_facets() << " faces");
-  
-    // Remove disconnected vertices, if there are any.
-    const auto removed_verts = CGAL::Polygon_mesh_processing::remove_isolated_vertices(output_mesh);
-    if(removed_verts != 0){
-        YLOGWARN(removed_verts << " isolated vertices were removed");
-    }
-
-    return output_mesh;
 }
-#endif // DCMA_USE_CGAL
-
 
 } // namespace dcma_surface_meshes.
 
 
 
-#ifdef DCMA_USE_CGAL
-namespace polyhedron_processing {
-
-using Kernel = CGAL::Exact_predicates_inexact_constructions_kernel;
-using Polyhedron = CGAL::Polyhedron_3<Kernel>;
-
-// This routine is a factory function for a regular icosahedron surface mesh.
-// It can be subdivided to quickly approach a spherical surface.
-// This routine is meant to assist surface mesh dilation and Minkowski sums.
-Polyhedron
-Regular_Icosahedron(double radius){
-    std::stringstream ss;
-    ss << "OFF" << std::endl
-       << "12 20 0" << std::endl
-       << "0 1.618034 1 " << std::endl  // The vertices.
-       << "0 1.618034 -1 " << std::endl
-       << "0 -1.618034 1 " << std::endl
-       << "0 -1.618034 -1 " << std::endl
-       << "1.618034 1 0 " << std::endl
-       << "1.618034 -1 0 " << std::endl
-       << "-1.618034 1 0 " << std::endl
-       << "-1.618034 -1 0 " << std::endl
-       << "1 0 1.618034 " << std::endl
-       << "-1 0 1.618034 " << std::endl
-       << "1 0 -1.618034 " << std::endl
-       << "-1 0 -1.618034 " << std::endl
-       << "3 1 0 4" << std::endl          // The faces.
-       << "3 0 1 6" << std::endl
-       << "3 2 3 5" << std::endl
-       << "3 3 2 7" << std::endl
-       << "3 4 5 10" << std::endl
-       << "3 5 4 8" << std::endl
-       << "3 6 7 9" << std::endl
-       << "3 7 6 11" << std::endl
-       << "3 8 9 2" << std::endl
-       << "3 9 8 0" << std::endl
-       << "3 10 11 1" << std::endl
-       << "3 11 10 3" << std::endl
-       << "3 0 8 4" << std::endl
-       << "3 0 6 9" << std::endl
-       << "3 1 4 10" << std::endl
-       << "3 1 11 6" << std::endl
-       << "3 2 5 8" << std::endl
-       << "3 2 9 7" << std::endl
-       << "3 3 10 5" << std::endl
-       << "3 3 7 11" << std::endl;
-
-    Polyhedron output_mesh;
-    ss >> output_mesh;
-
-    CGAL::Aff_transformation_3<Kernel> Aff(CGAL::SCALING, radius);
-    std::transform( output_mesh.points_begin(), output_mesh.points_end(),
-                    output_mesh.points_begin(), Aff );
-
-    return output_mesh;
-}
-
-
-void
-Subdivide(Polyhedron &mesh,
-          int64_t iters){
-
-    if(!mesh.is_pure_triangle()) throw std::runtime_error("Mesh is not purely triangular.");
-    if(!mesh.is_valid()) throw std::runtime_error("Mesh is not combinatorially valid.");
-    //if(!mesh.is_closed()) throw std::runtime_error("Mesh is not closed; it has a boundary")
-
-    YLOGINFO("About to perform mesh subdivision. If this fails, the mesh topology is probably incompatible");
-    for(int64_t i = 0; i < iters; ++i){
-        // Note: the following takes a parameter indicating the number of interations to perform, but seems to ignore
-        // it. (Perhaps the interface has changed?)
-        CGAL::Subdivision_method_3::Loop_subdivision(mesh);
-        //CGAL::Subdivision_method_3::DooSabin_subdivision(output_mesh,params.MeshingSubdivisionIterations);
-        //CGAL::Subdivision_method_3::Sqrt3_subdivision(output_mesh,params.MeshingSubdivisionIterations);
-        YLOGINFO("The subdivided surface has " << mesh.size_of_vertices() << " vertices"
-                 " and " << mesh.size_of_facets() << " faces");
-    }
-    return;
-}
-
-void
-Remesh(Polyhedron &mesh,
-       double target_edge_length,
-       int64_t iters){
-
-    // This function remeshes a given mesh to improve the triangle quality. From the CGAL documentation:
-    //    "The incremental triangle-based isotropic remeshing algorithm introduced by Botsch et al [2], [4] is implemented
-    //     in this package. This algorithm incrementally performs simple operations such as edge splits, edge collapses,
-    //     edge flips, and Laplacian smoothing. All the vertices of the remeshed patch are reprojected to the original
-    //     surface to keep a good approximation of the input."
-    if(!mesh.is_pure_triangle()) throw std::runtime_error("Mesh is not purely triangular.");
-    if(!mesh.is_valid()) throw std::runtime_error("Mesh is not combinatorially valid.");
-    if(!mesh.is_closed()) throw std::runtime_error("Mesh is not closed; it has a boundary. Refusing to continue.");
-
-    if(iters > 0){
-        // Polyhedron_3 do not have a queryable face_index_map, so we need to provide one.
-        using face_descriptor = boost::graph_traits<Polyhedron>::face_descriptor;
-        std::map<face_descriptor, std::size_t> fi_map;
-        std::size_t id = 0;
-        for(auto &f : faces(mesh)){
-            fi_map[f] = id++;
-        }
-    
-        CGAL::Polygon_mesh_processing::isotropic_remeshing(
-                faces(mesh),
-                target_edge_length,
-                mesh,
-                CGAL::Polygon_mesh_processing::parameters::number_of_iterations(iters)
-                  .face_index_map(boost::make_assoc_property_map(fi_map))
-        );
-        YLOGINFO("The remeshed surface has " << mesh.size_of_vertices() << " vertices"
-                 " and " << mesh.size_of_facets() << " faces");
-    }
-    return;
-}    
-
-void
-Simplify(Polyhedron &mesh,
-         int64_t edge_count_limit){
-
-    // The required parameter is the upper limit to the number of faces remaining after mesh simplification.
-    // For a genus 0 surface mesh (i.e., topologically euivalent to a sphere without holes like a torus)
-    // the number of faces (f), edges (e), and vertices (v) are related via the Euler relation for convex
-    // 3D polyhedra: v + f - e = 2. 
-    // If the mesh is purely triangle, e ~= 3*v and f ~= 2*v so e ~= 3*v ~= 1.5*f. So the number of faces
-    // and vertices can be controlled by limiting the number of edges.
-
-    if(!mesh.is_pure_triangle()) throw std::runtime_error("Mesh is not purely triangular.");
-    if(!mesh.is_valid()) throw std::runtime_error("Mesh is not combinatorially valid.");
-    //if(!mesh.is_closed()) throw std::runtime_error("Mesh is not closed; it has a boundary");
-
-    YLOGINFO("About to perform mesh simplification. If this fails, the mesh topology is probably incompatible");
-    if(edge_count_limit > 0){
-        CGAL::Surface_mesh_simplification::Count_stop_predicate<Polyhedron> stop_crit(edge_count_limit);
-  
-        const auto rem = CGAL::Surface_mesh_simplification::edge_collapse(
-                                 mesh, 
-                                 stop_crit,
-                                 CGAL::parameters::vertex_index_map(get(CGAL::vertex_external_index, mesh))
-                                                  .halfedge_index_map(get(CGAL::halfedge_external_index, mesh))
-                                                  .get_cost(CGAL::Surface_mesh_simplification::Edge_length_cost<Polyhedron>())
-                                                  .get_placement(CGAL::Surface_mesh_simplification::Midpoint_placement<Polyhedron>()) );
-
-        YLOGINFO("Removed " << rem << " edges (" << edge_count_limit << " remain)");
-        YLOGINFO("The simplified surface now has " << mesh.size_of_vertices() << " vertices"
-                 " and " << mesh.size_of_facets() << " faces");
-    }
-
-    return;
-}
-
-
-bool
-SaveAsOFF(Polyhedron &mesh,
-          const std::string& filename){
-    
-    if(!filename.empty()){
-        std::ofstream out(filename);
-        if(!( out << mesh )) return false;
-    }
-
-    return true;
-}
-
-
-
-// This routine uses the divide-and-conquer strategy to compute full 3D Minkowski sum of arbitrary nef polyhedra,
-// breaking them into sets of connected convex sub-polyhedra and performing a convex Minkowski sum for every pair. 
-// It has bad algorithmic complexity: O(m^{3} n^{3}) where n and m are the complexity of the input polyhedra.
-// Expect to wait for several tens of seconds, even with small meshes. The first mesh is dilated in-place and should 
-// have around 750 faces or less. The 'sphere' mesh should also be small, probably 50 faces or less for a reasonable
-// runtime. Refer to the CGAL user guide for timing information.
-void Dilate( Polyhedron &mesh, 
-             const Polyhedron& sphere ){
-
-    if(!mesh.is_closed()){
-        throw std::invalid_argument("Mesh is not closed. Unable to handle meshes with boundaries. Cannot continue.");
-    }
-    if(!sphere.is_closed()){
-        throw std::invalid_argument("Sphere mesh is not closed. Unable to handle meshes with boundaries. Cannot continue.");
-    }
-
-    using NefKernel = CGAL::Exact_predicates_exact_constructions_kernel;
-    using Nef_polyhedron = CGAL::Nef_polyhedron_3<NefKernel>;
-
-    // Convert between Polyhedra (with EPIC kernel) and Nef_Polyhedra (with EPEC kernel) via conversion to OFF and back.
-    //
-    // Note: This is obviously not ideal, but it severs the coupling between polyhedra and it was not possible to have
-    //       a uniform kernel for both.
-    Nef_polyhedron nef_mesh;
-    std::stringstream ss_mesh_off;
-    ss_mesh_off << mesh;
-    CGAL::OFF_to_nef_3(ss_mesh_off, nef_mesh);
-    ss_mesh_off.clear();
-
-    Nef_polyhedron nef_sphere;
-    std::stringstream ss_sphere_off;
-    ss_sphere_off << sphere;
-    CGAL::OFF_to_nef_3(ss_sphere_off, nef_sphere);
-    ss_sphere_off.clear();
-
-    YLOGINFO("About to compute 3D Minkowski sum");
-    Nef_polyhedron result = CGAL::minkowski_sum_3(nef_mesh, nef_sphere);
-
-    if(!result.is_simple()){
-        throw std::invalid_argument("Dilated mesh is not simple. Unable to convert to polyhedron. Cannot continue.");
-    }
-    const bool triangulate_all_faces = true;
-    CGAL::convert_nef_polyhedron_to_polygon_mesh(result, mesh, triangulate_all_faces);
-    
-    return;
-}
-
-
-
-// This routine is similar to the other Dilate() but operates on contour vertices. It may be faster, but conversely if
-// the dilation is too small relative to the maximum vertex-vertex distance, the resulting mesh may be incomplete or
-// have holes.
-void Dilate( Polyhedron &output_mesh, 
-             std::list<std::reference_wrapper<contour_collection<double>>> cc_ROIs,
-             const Polyhedron& sphere ){
-
-    if(!sphere.is_closed()){
-        throw std::invalid_argument("Sphere mesh is not closed. Unable to handle meshes with boundaries. Cannot continue.");
-    }
-
-    //using NefKernel = CGAL::Exact_predicates_exact_constructions_kernel;
-    using NefKernel = CGAL::Exact_predicates_exact_constructions_kernel;
-    using Nef_polyhedron = CGAL::Nef_polyhedron_3<NefKernel>;
-    using Point_3 = NefKernel::Point_3;
-    using Polyline_3 = std::vector<Point_3>;
-
-    auto Feq = [](const vec3<double> &a, const vec3<double> &b) -> bool {
-        return (a.distance(b) < 1E-3);
-    };
-
-
-    // Convert between Polyhedra (with EPIC kernel) and Nef_Polyhedra (with EPEC kernel) via conversion to OFF and back.
-    //
-    // Note: This is obviously not ideal, but it severs the coupling between polyhedra and it was not possible to have
-    //       a uniform kernel for both.
-    Nef_polyhedron nef_sphere;
-    std::stringstream ss_sphere_off;
-    ss_sphere_off << sphere;
-    CGAL::OFF_to_nef_3(ss_sphere_off, nef_sphere);
-    ss_sphere_off.clear();
-
-
-/*
-    // Vertex-based Nef polyhedron.
-    std::vector<Point_3> points;
-    for(auto &cc_ref : cc_ROIs){
-        for(const auto &c : cc_ref.get().contours){
-            auto clean = c;
-            clean.Remove_Sequential_Duplicate_Points(Feq);
-            clean.Remove_Extraneous_Points(Feq);
-            clean.Remove_Needles(Feq);
-            clean.Remove_Extraneous_Points(Feq);
-            clean.Remove_Sequential_Duplicate_Points(Feq);
-
-            for(const auto &p : clean.points){
-                Point_3 cgal_p( p.x, p.y, p.z );
-                points.push_back(cgal_p);
-            }
-        }
-    }
-
-    Nef_polyhedron nef_mesh(points.begin(), points.end(), Nef_polyhedron::Points_tag());
-*/
-
-
-/*
-    // Use Nef Boolean operations to combine individual polygons.
-    Nef_polyhedron nef_mesh;
-    for(auto &cc_ref : cc_ROIs){
-        for(const auto &c : cc_ref.get().contours){
-            auto clean = c;
-            clean.Remove_Sequential_Duplicate_Points(Feq);
-            clean.Remove_Extraneous_Points(Feq);
-            clean.Remove_Needles(Feq);
-            clean.Remove_Extraneous_Points(Feq);
-            clean.Remove_Sequential_Duplicate_Points(Feq);
-
-            Polyline_3 polyline; // Convert extruded contours to CGAL polyline format.
-            for(const auto &p : clean.points){
-                Point_3 cgal_p( p.x, p.y, p.z );
-                polyline.push_back( cgal_p );
-            }
-            if(!polyline.empty()){
-                polyline.push_back( polyline.front() ); // Close the loop.
-                Nef_polyhedron loop( polyline.begin(), polyline.end() );
-                nef_mesh += loop;
-            }
-        }
-    }
-
-
-    // Use polylines directly from the ROIs.
-    std::list<Polyline_3> polylines; // Convert extruded contours to CGAL polyline format.
-    for(auto &cc_ref : cc_ROIs){
-        for(const auto &c : cc_ref.get().contours){
-            auto clean = c;
-            clean.Remove_Sequential_Duplicate_Points(Feq);
-            clean.Remove_Extraneous_Points(Feq);
-            clean.Remove_Needles(Feq);
-            clean.Remove_Extraneous_Points(Feq);
-            clean.Remove_Sequential_Duplicate_Points(Feq);
-
-            polylines.emplace_back();
-            for(const auto &p : clean.points){
-                Point_3 cgal_p( p.x, p.y, p.z );
-                polylines.back().push_back( cgal_p );
-            }
-            if(polylines.back().size() >= 3){
-                polylines.back().push_back( polylines.back().front() ); // Close the loop.
-            }else{
-                polylines.pop_back(); // Purge the contour.
-            }
-        }
-    }
-    using Polyline_iter = Polyline_3::iterator;
-    std::list<std::pair<Polyline_iter,Polyline_iter>> polylines_first_end;
-    for(auto &p : polylines) polylines_first_end.emplace_back( std::make_pair( p.begin(), p.end() ) );
-    Nef_polyhedron nef_mesh(polylines_first_end.begin(), polylines_first_end.end(), Nef_polyhedron::Polylines_tag());
-
-*/
-
-
-    Nef_polyhedron amal;
-
-
-    // Use polylines directly from the ROIs, but process them one-at-a-time.
-    //
-    // Note: CGAL was occasionally seg faulting when all contours were processed in a single attempt.
-    //       Exposing in a loop also permits easier concurrency.
-    for(auto &cc_ref : cc_ROIs){
-        for(const auto &c : cc_ref.get().contours){
-
-            std::list<Polyline_3> polylines; // Convert extruded contours to CGAL polyline format.
-
-            auto clean = c;
-            clean.Remove_Sequential_Duplicate_Points(Feq);
-            clean.Remove_Extraneous_Points(Feq);
-            clean.Remove_Needles(Feq);
-            clean.Remove_Extraneous_Points(Feq);
-            clean.Remove_Sequential_Duplicate_Points(Feq);
-
-            polylines.emplace_back();
-            for(const auto &p : clean.points){
-                Point_3 cgal_p( p.x, p.y, p.z );
-                polylines.back().push_back( cgal_p );
-            }
-            if(polylines.back().size() >= 3){
-                polylines.back().push_back( polylines.back().front() ); // Close the loop.
-
-                using Polyline_iter = Polyline_3::iterator;
-                std::list<std::pair<Polyline_iter,Polyline_iter>> polylines_first_end;
-                for(auto &p : polylines) polylines_first_end.emplace_back( std::make_pair( p.begin(), p.end() ) );
-                Nef_polyhedron nef_mesh(polylines_first_end.begin(), polylines_first_end.end(), Nef_polyhedron::Polylines_tag());
-
-                YLOGINFO("About to compute 3D Minkowski sum for a single contour");
-                Nef_polyhedron result = CGAL::minkowski_sum_3(nef_mesh, nef_sphere);
-
-                // TODO: select outer or inner contours for dilation and erosion, respectively.
-
-                amal += result;
-            }
-
-        }
-    }
-
-    const bool triangulate_all_faces = true;
-    CGAL::convert_nef_polyhedron_to_polygon_mesh(amal, output_mesh, triangulate_all_faces);
-
-    return;
-
-
-    // TODO: to compute the erosion, take the complement of the nef_mesh, perform a Minkowski sum, and then complement again.
-
-/*
-    YLOGINFO("About to compute 3D Minkowski sum");
-    Nef_polyhedron result = CGAL::minkowski_sum_3(nef_mesh, nef_sphere);
-
-    //if(!result.is_simple()){
-    //    throw std::invalid_argument("Dilated mesh is not simple. Unable to convert to polyhedron. Cannot continue.");
-    //}
-    const bool triangulate_all_faces = true;
-    CGAL::convert_nef_polyhedron_to_polygon_mesh(result, output_mesh, triangulate_all_faces);
-*/
-
-
-    return;
-}
-
-// Approximate dilation, erosion, or core/peel using approximate Minkowski sums/differences with a sphere-like shape.
-void
-Transform( Polyhedron &output_mesh,
-           double distance,
-           TransformOp op){
-
-
-    const auto N_edges = output_mesh.size_of_halfedges() / 2;
-
-    //Generate a Nef polyhedron from the surface mesh.
-    using NefKernel = CGAL::Exact_predicates_exact_constructions_kernel;
-    using Nef_polyhedron = CGAL::Nef_polyhedron_3<NefKernel>;
-    using Vector_3 = NefKernel::Vector_3;
-
-
-    const auto Poly_to_NefPoly = [=]( const Polyhedron &poly ) -> Nef_polyhedron {
-        Nef_polyhedron nef_poly;
-        std::stringstream ss_off;
-        ss_off << poly;
-
-        CGAL::OFF_to_nef_3(ss_off, nef_poly);
-        ss_off.clear();
-        return nef_poly;
-    };
-
-    const auto NefPoly_to_Poly = [=]( const Nef_polyhedron &nef_poly ) -> Polyhedron {
-        Polyhedron poly;
-
-//        if(!nef_poly.is_simple()){
-//            throw std::invalid_argument("Transformed mesh is not simple. Unable to convert to polyhedron. Cannot continue.");
-//        }
-//        nef_poly.convert_to_polyhedron( poly );
-
-        const bool triangulate_all_faces = true;
-        CGAL::convert_nef_polyhedron_to_polygon_mesh(nef_poly, poly, triangulate_all_faces);
-        return poly;
-    };
-
-
-    Nef_polyhedron orig = Poly_to_NefPoly(output_mesh);
-    Nef_polyhedron amal(orig); // Amalgamated mesh -- the working mesh that is repeatedly Booleaned.
-
-    //For a variety of orientations, translate a copy of the original mesh and boolean with the amalgamated mesh.
-    std::list< vec3<double> > dUs {
-        vec3<double>( 1.0, 0.0, 0.0 ).unit(),
-        vec3<double>( 0.0, 1.0, 0.0 ).unit(),
-        vec3<double>( 0.0, 0.0, 1.0 ).unit(),
-
-        vec3<double>(-1.0, 0.0, 0.0 ).unit(),
-        vec3<double>( 0.0,-1.0, 0.0 ).unit(),
-        vec3<double>( 0.0, 0.0,-1.0 ).unit(),
-
-        vec3<double>( 1.0, 1.0, 0.0 ).unit(),
-        vec3<double>( 0.0, 1.0, 1.0 ).unit(),
-        vec3<double>( 1.0, 0.0, 1.0 ).unit(),
-
-        vec3<double>(-1.0, 1.0, 0.0 ).unit(),
-        vec3<double>( 0.0,-1.0, 1.0 ).unit(),
-        vec3<double>(-1.0, 0.0, 1.0 ).unit(),
-
-        vec3<double>( 1.0,-1.0, 0.0 ).unit(),
-        vec3<double>( 0.0, 1.0,-1.0 ).unit(),
-        vec3<double>( 1.0, 0.0,-1.0 ).unit(),
-
-        vec3<double>(-1.0,-1.0, 0.0 ).unit(),
-        vec3<double>( 0.0,-1.0,-1.0 ).unit(),
-        vec3<double>(-1.0, 0.0,-1.0 ).unit() };
-
-    for(const auto& dU : dUs){
-        auto u = dU * std::abs(distance);
-        
-        auto cgal_u = Vector_3(u.x, u.y, u.z);
-        Nef_polyhedron::Aff_transformation_3 trans(CGAL::TRANSLATION, cgal_u);;
-
-        Nef_polyhedron shifted(orig);
-        shifted.transform(trans);
-        
-        YLOGINFO("Performing Boolean operation round now");
-        if(op == TransformOp::Dilate){
-            amal += shifted;
-        }else if(op == TransformOp::Erode){
-            amal ^= shifted;  // Symmetric difference.
-        }else if(op == TransformOp::Shell){ 
-            amal ^= shifted;
-        }
-
-        YLOGINFO("Amalgam mesh currently has " << amal.number_of_vertices() << " vertices");
-
-/*
-        // Simplify the mesh to reduce the complexity of future Boolean operations.
-        YLOGINFO("About to simplify surface mesh");
-        output_mesh = NefPoly_to_Poly(amal);
-        Simplify(output_mesh, N_edges * 2);
-        amal = Poly_to_NefPoly(output_mesh);
-*/        
-    }
-
-    Nef_polyhedron result(amal);
-    if(op == TransformOp::Shell) result = orig - amal;
-
-    YLOGINFO("About to simplify surface mesh final time");
-    output_mesh = NefPoly_to_Poly(result);
-    Simplify(output_mesh, N_edges);
-
-    return;
-}
-
-// This routine returns contours generated by slicing a mesh along the given planes.
-contour_collection<double> Slice_Polyhedron(
-        const Polyhedron &mesh,
-        std::list<plane<double>> planes ){
-
-    using Plane_3 = Kernel::Plane_3;
-    using Polyline = std::vector<Kernel::Point_3>;
-    using Polylines = std::list<Polyline>;
-
-    CGAL::Polygon_mesh_slicer<Polyhedron, Kernel> slicer(mesh); 
-    contour_collection<double> cc;
-
-    for(auto &aplane : planes){
-        const auto a = aplane.N_0.x;
-        const auto b = aplane.N_0.y;
-        const auto c = aplane.N_0.z;
-        const auto d = -1.0 * (aplane.N_0.Dot(aplane.R_0));
-        Plane_3 p3(a, b, c, d); // In form a*x + b*y + c*z + d = 0.
-
-        Polylines polylines;
-        slicer(p3, std::back_inserter(polylines));
-
-        // Convert any polylines found and insert them into the contour_collection.
-        if(!polylines.empty()){
-            for(auto &apl : polylines){
-                if(apl.size() < 3) continue; // Disregard degenerate cases.
-
-                cc.contours.emplace_back();
-                cc.contours.back().closed = true;
-                for(auto &v : apl){
-                    const vec3<double> p( static_cast<double>(CGAL::to_double(v.x())), 
-                                          static_cast<double>(CGAL::to_double(v.y())),
-                                          static_cast<double>(CGAL::to_double(v.z())) );
-                    cc.contours.back().points.emplace_back(p);
-                }
-            }
-        }
-    }
-
-/*    
-    // Write the contours to a file.
-    {
-        std::vector<Kernel::Point_3> verts;
-        std::ofstream out(Get_Unique_Sequential_Filename("/tmp/roi_verts_",3, ".xyz"));
-
-        for(const auto &c : cc.contours){
-            for(const auto &p : c.points){
-                Kernel::Point_3 cgal_p( p.x, p.y, p.z );
-                verts.push_back(cgal_p);
-            }
-        }
-        if(!out || !CGAL::write_xyz_points(out, verts)){
-            throw std::runtime_error("Unable to write contour vertices.");
-        } 
-    }
-*/
-
-    return cc;
-}        
-
-
-double
-Volume(const Polyhedron &mesh){
-    double volume = std::numeric_limits<double>::quiet_NaN();
-    if(mesh.is_closed()){
-        volume = static_cast<double>( CGAL::Polygon_mesh_processing::volume(mesh) );
-    }
-    return volume;
-}
-
-double
-SurfaceArea(const Polyhedron &mesh){
-    double sarea = std::numeric_limits<double>::quiet_NaN();
-    if(mesh.is_closed()){
-        sarea = static_cast<double>( CGAL::Polygon_mesh_processing::area(mesh) );
-    }
-    return sarea;
-}
-
-
-} // namespace polyhedron_processing
-#endif // DCMA_USE_CGAL
 
 
 

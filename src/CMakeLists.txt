@@ -93,10 +93,9 @@ set_target_properties(  CSG_SDF_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 add_library(            Common_Boost_Serialization_obj OBJECT Common_Boost_Serialization.cc )
 set_target_properties(  Common_Boost_Serialization_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
-if(WITH_CGAL)
-    add_library(            Contour_Boolean_Operations_obj OBJECT Contour_Boolean_Operations.cc )
-    set_target_properties(  Contour_Boolean_Operations_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
-endif()
+# Contour Boolean Operations - now implemented natively without CGAL
+add_library(            Contour_Boolean_Operations_obj OBJECT Contour_Boolean_Operations.cc )
+set_target_properties(  Contour_Boolean_Operations_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
 add_library(            Dose_Meld_obj OBJECT Dose_Meld.cc )
 set_target_properties(  Dose_Meld_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -438,7 +437,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Colour_Maps_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Common_Plotting_obj>
-    $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Contour_Boolean_Operations_obj>>
+    $<TARGET_OBJECTS:Contour_Boolean_Operations_obj>
     $<TARGET_OBJECTS:Contour_Collection_Estimates_obj>
     $<TARGET_OBJECTS:Insert_Contours_obj>
     $<TARGET_OBJECTS:Surface_Meshes_obj>
@@ -503,8 +502,6 @@ target_link_libraries (dicomautomaton_dispatcher PUBLIC
     $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_freeformoptimization>
     explicator 
     ygor 
-    $<$<BOOL:${WITH_CGAL}>:CGAL::CGAL>
-    $<$<BOOL:${WITH_CGAL}>:CGAL::CGAL_Core>
     "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
     $<$<BOOL:${WITH_JANSSON}>:jansson>
     "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
@@ -553,7 +550,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Colour_Maps_obj>
         $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
         $<TARGET_OBJECTS:Common_Plotting_obj>
-        $<$<BOOL:${WITH_CGAL}>:$<TARGET_OBJECTS:Contour_Boolean_Operations_obj>>
+        $<TARGET_OBJECTS:Contour_Boolean_Operations_obj>
         $<TARGET_OBJECTS:Contour_Collection_Estimates_obj>
         $<TARGET_OBJECTS:Insert_Contours_obj>
         $<TARGET_OBJECTS:Surface_Meshes_obj>
@@ -617,8 +614,6 @@ if(WITH_WT)
         $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_freeformoptimization>
         explicator 
         ygor 
-        $<$<BOOL:${WITH_CGAL}>:CGAL::CGAL>
-        $<$<BOOL:${WITH_CGAL}>:CGAL::CGAL_Core>
         "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
         $<$<BOOL:${WITH_JANSSON}>:jansson>
         "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"

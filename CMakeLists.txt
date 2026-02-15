@@ -17,7 +17,6 @@ option(WITH_TSAN                "Compile using ThreadSanitizer."                
 option(WITH_MSAN                "Compile using MemorySanitizer."                OFF)
 
 option(WITH_EIGEN     "Compile assuming Eigen is available."                    ON)
-option(WITH_CGAL      "Compile assuming CGAL is available."                     ON)
 option(WITH_NLOPT     "Compile assuming nlopt is available."                    ON)
 option(WITH_SFML      "Compile assuming SFML is available."                     ON)
 option(WITH_SDL       "Compile assuming SDL2 and glew are available."           ON)
@@ -95,31 +94,7 @@ if(WITH_EIGEN)
     include_directories( ${EIGEN3_INCLUDE_DIRS} )
 endif()
 
-if(WITH_CGAL)
-    if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-        set(CGAL_DO_NOT_WARN_ABOUT_CMAKE_BUILD_TYPE TRUE)
-        add_definitions(-DCGAL_DISABLE_ROUNDING_MATH_CHECK=1) # May be needed for Valgrind debugging.
-        message(WARNING "If profiling/debugging on Arch Linux, disable binary stripping in PKGBUILD.")
-    endif()
-    if(WITH_EIGEN)
-        add_definitions(-DCGAL_EIGEN3_ENABLED=1) # Explicitly instruct CGAL to use Eigen.
-    endif()
-    find_package(CGAL REQUIRED COMPONENTS Core)
-
-    # This workaround is for a CGAL v4.13 class and file rename {Implicit,Labeled}_mesh_domain_3.h.
-    include(CheckIncludeFileCXX)
-    # Opt into the newer Labeled_mesh_domain_3.h when available.
-    #check_include_file_cxx("CGAL/Labeled_mesh_domain_3.h" DCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER)
-    #if(DCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER)
-    #    add_definitions(-DDCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER=1)
-    #endif()
-    #
-    # Alternatively, prefer to use the older Implicit_mesh_domain_3.h when available.
-    check_include_file_cxx("CGAL/Implicit_mesh_domain_3.h" DCMA_CGAL_HAS_IMPLICIT_MESH_DOMAIN_3_HEADER)
-    if(NOT DCMA_CGAL_HAS_IMPLICIT_MESH_DOMAIN_3_HEADER)
-        add_definitions(-DDCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER=1)
-    endif()
-endif()
+# CGAL has been removed - mesh processing now uses native implementations.
 
 if(WITH_NLOPT)
     find_package(PkgConfig REQUIRED)
@@ -413,13 +388,7 @@ else()
     add_definitions(-UDCMA_USE_EIGEN)
 endif()
 
-if(WITH_CGAL)
-    message(STATUS "Assuming CGAL is available.")
-    add_definitions(-DDCMA_USE_CGAL=1)
-else()
-    message(STATUS "Assuming CGAL is not available.")
-    add_definitions(-UDCMA_USE_CGAL)
-endif()
+# CGAL has been removed - mesh processing now uses native implementations.
 
 if(WITH_NLOPT)
     message(STATUS "Assuming NLOPT is available.")
@@ -606,9 +575,7 @@ if(WITH_SDL)
     list(APPEND BUILD_DEPENDENCY_PACKAGES "libsdl2-dev")
     list(APPEND BUILD_DEPENDENCY_PACKAGES "libglew-dev")
 endif()
-if(WITH_CGAL)
-    list(APPEND BUILD_DEPENDENCY_PACKAGES "libcgal-dev")
-endif()
+# CGAL dependency removed - mesh processing now uses native implementations.
 if(WITH_WT)
     list(APPEND BUILD_DEPENDENCY_PACKAGES "libwt-dev")
     list(APPEND BUILD_DEPENDENCY_PACKAGES "libwthttp-dev")

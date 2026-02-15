@@ -29,9 +29,7 @@
 #include "../Regex_Selectors.h"
 #include "../Thread_Pool.h"
 #include "../Metadata.h"
-#ifdef DCMA_USE_CGAL
-    #include "../Surface_Meshes.h"
-#endif // DCMA_USE_CGAL
+#include "../Surface_Meshes.h"
 
 #include "ContourViaThreshold.h"
 
@@ -139,16 +137,9 @@ OperationDoc OpArgDocContourViaThreshold(){
                            " the most complicated topologies, but is considerably slower than the binary method."
                            " It may produce worse on boundaries, though otherwise it should produce the same"
                            " contours as marching-squares.";
-#ifdef DCMA_USE_CGAL
     out.args.back().examples = { "binary",
                                  "marching-squares",
                                  "marching-cubes" };
-#else
-    out.args.back().desc += " Note that the 'marching' option is only available when CGAL support is enabled."
-                            " This instance does not have CGAL support.";
-    out.args.back().examples = { "binary",
-                                 "marching-squares" };
-#endif // DCMA_USE_CGAL
     out.args.back().default_val = "binary";
     out.args.back().expected = true;
     out.args.back().samples = OpArgSamples::Exhaustive;
@@ -866,7 +857,6 @@ bool ContourViaThreshold(Drover &DICOM_data,
                         YLOGINFO("Completed " << completed << " of " << img_count
                               << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "% done");
                     }
-#ifdef DCMA_USE_CGAL
                 // ---------------------------------------------------
                 // The marching cubes method.
                 }else if(std::regex_match(MethodStr, marching_cubes_regex)){
@@ -937,11 +927,10 @@ bool ContourViaThreshold(Drover &DICOM_data,
                                                                     inclusion_threshold, 
                                                                     below_is_interior,
                                                                     meshing_params );
-                    auto polyhedron = dcma_surface_meshes::FVSMeshToPolyhedron( surface_mesh );
 
-                    // Slice the mesh along the image plane.
-                    auto lcc = polyhedron_processing::Slice_Polyhedron( polyhedron,
-                                                                        {{ mask.image_plane() }} );
+                    // Slice the mesh along the image plane using native implementation.
+                    auto lcc = dcma_surface_meshes::Slice_Mesh( surface_mesh,
+                                                                {{ mask.image_plane() }} );
 
                     // Tag the contours with metadata.
                     for(auto &cop : lcc.contours){
@@ -977,7 +966,6 @@ bool ContourViaThreshold(Drover &DICOM_data,
                         YLOGINFO("Completed " << completed << " of " << img_count
                               << " --> " << static_cast<int>(1000.0*(completed)/img_count)/10.0 << "% done");
                     }
-#endif //DCMA_USE_CGAL
 
                 }else{
                     throw std::invalid_argument("The contouring method is not understood. Cannot continue.");
