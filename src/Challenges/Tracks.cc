@@ -308,16 +308,27 @@ void TracksGame::DealInitialCards(){
     for(auto& player : players){
         player.hand.clear();
         int dealt = 0;
-        while(dealt < initial_hand_size && !deck.empty()){
+        int attempts = 0;
+        const int max_attempts = 100;  // Prevent infinite loop
+        while(dealt < initial_hand_size && !deck.empty() && attempts < max_attempts){
+            attempts++;
             auto& card = deck.back();
             if(card.color != card_color_t::Rainbow){
                 player.hand.push_back(card);
                 deck.pop_back();
                 dealt++;
             } else {
-                // Put wildcard back in deck and shuffle
+                // Put wildcard in discard pile and shuffle deck to get new cards
                 discard_pile.push_back(card);
                 deck.pop_back();
+                // Reshuffle if deck is running low to avoid getting stuck
+                if(deck.size() < 5 && !discard_pile.empty()){
+                    for(auto& c : discard_pile){
+                        deck.push_back(c);
+                    }
+                    discard_pile.clear();
+                    ShuffleDeck();
+                }
             }
         }
     }
@@ -400,16 +411,21 @@ void TracksGame::DealObjectives(){
 }
 
 void TracksGame::RefillCollection(){
+    // First check if we need to reshuffle the discard pile into the deck
+    size_t cards_needed = collection_size - collection.size();
+    if(deck.size() < cards_needed && !discard_pile.empty()){
+        // Shuffle discard pile back into deck before attempting refill
+        for(auto& c : discard_pile){
+            deck.push_back(c);
+        }
+        discard_pile.clear();
+        ShuffleDeck();
+    }
+
+    // Now refill the collection
     while(collection.size() < collection_size && !deck.empty()){
         collection.push_back(deck.back());
         deck.pop_back();
-    }
-
-    // If deck is empty, shuffle discard pile
-    if(deck.empty() && !discard_pile.empty()){
-        deck = std::move(discard_pile);
-        discard_pile.clear();
-        ShuffleDeck();
     }
 }
 
@@ -499,14 +515,22 @@ void TracksGame::AISelectCards(int player_idx){
     // Simple strategy: prefer cards that match objectives or existing routes
     std::map<card_color_t, int> useful_colors;
 
-    // Count colors needed for objectives
+    // Count colors needed for objectives - only consider paths that touch objective endpoints
     for(const auto& obj : player.objectives){
         if(obj.completed) continue;
-        // Find paths that could help this objective
+        // Find paths that could help this objective (paths adjacent to either endpoint)
         for(size_t pi = 0; pi < track_paths.size(); ++pi){
             const auto& path = track_paths[pi];
             if(path.owner_player_idx != -1) continue;
-            useful_colors[path.color]++;
+
+            // A path is relevant if it touches either endpoint city of the objective
+            bool relevant = (path.city_a_idx == obj.city_a_idx ||
+                           path.city_a_idx == obj.city_b_idx ||
+                           path.city_b_idx == obj.city_a_idx ||
+                           path.city_b_idx == obj.city_b_idx);
+            if(relevant){
+                useful_colors[path.color]++;
+            }
         }
     }
 
@@ -1251,33 +1275,44 @@ bool TracksGame::Display(bool &enabled){
     draw_list->AddText(ImVec2(curr_pos.x + 10, cards_y), IM_COL32(255, 220, 100, 255), "CARD COLLECTION");
     cards_y += 20;
 
+    bool can_draw = (phase == game_phase_t::PlayerTurn_Draw && cards_drawn_this_turn < 2);
+
     ImGui::SetCursorScreenPos(ImVec2(curr_pos.x + 10, cards_y));
     for(size_t ci = 0; ci < collection.size(); ++ci){
         const auto& card = collection[ci];
         ImU32 card_col = GetCardColor(card.color);
 
+        // Gray out cards when player can't draw
+        if(!can_draw){
+            card_col = IM_COL32(80, 80, 80, 200);
+        }
+
         std::string btn_label = GetCardColorName(card.color) + "##col" + std::to_string(ci);
         ImGui::PushStyleColor(ImGuiCol_Button, card_col);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(
+        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, can_draw ? IM_COL32(
             std::min(255, static_cast<int>((card_col >> 0) & 0xFF) + 40),
             std::min(255, static_cast<int>((card_col >> 8) & 0xFF) + 40),
             std::min(255, static_cast<int>((card_col >> 16) & 0xFF) + 40),
-            255));
+            255) : card_col);
         ImGui::PushStyleColor(ImGuiCol_Text,
-            (card.color == card_color_t::White || card.color == card_color_t::Yellow) ?
+            can_draw && (card.color == card_color_t::White || card.color == card_color_t::Yellow) ?
                 IM_COL32(0, 0, 0, 255) : IM_COL32(255, 255, 255, 255));
 
-        bool can_draw = (phase == game_phase_t::PlayerTurn_Draw && cards_drawn_this_turn < 2);
-        if(can_draw && ImGui::Button(btn_label.c_str(), ImVec2(card_width, card_height))){
-            DrawCard(0, card.color);
-            collection.erase(collection.begin() + static_cast<long>(ci));
-            RefillCollection();
-            cards_drawn_this_turn++;
-            if(cards_drawn_this_turn >= 2){
-                phase = game_phase_t::PlayerTurn_Build;
-                message = "You may build a track or end your turn.";
-                message_timer = message_display_time;
+        if(can_draw){
+            if(ImGui::Button(btn_label.c_str(), ImVec2(card_width, card_height))){
+                DrawCard(0, card.color);
+                collection.erase(collection.begin() + static_cast<long>(ci));
+                RefillCollection();
+                cards_drawn_this_turn++;
+                if(cards_drawn_this_turn >= 2){
+                    phase = game_phase_t::PlayerTurn_Build;
+                    message = "You may build a track or end your turn.";
+                    message_timer = message_display_time;
+                }
             }
+        } else {
+            // Render disabled button (no click action)
+            ImGui::Button(btn_label.c_str(), ImVec2(card_width, card_height));
         }
 
         ImGui::PopStyleColor(3);
@@ -1285,7 +1320,7 @@ bool TracksGame::Display(bool &enabled){
     }
 
     // Random draw button
-    if(phase == game_phase_t::PlayerTurn_Draw){
+    if(can_draw){
         ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(100, 100, 100, 255));
         if(ImGui::Button("Random", ImVec2(card_width, card_height))){
             DrawRandomCard(0);
