@@ -265,6 +265,9 @@ class TracksGame {
     static constexpr float slot_width = 16.0f;
     static constexpr float slot_height = 10.0f;
 
+    // UI interaction constants
+    static constexpr float mouse_track_hover_dist = 10.0f;
+
     // UI position constants
     static constexpr float map_offset_x = 10.0f;
     static constexpr float map_offset_y = 10.0f;

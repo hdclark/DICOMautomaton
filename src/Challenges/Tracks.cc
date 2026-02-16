@@ -73,7 +73,8 @@ vec2<double> TracksGame::NormalizeLongLat(double lon, double lat){
     // Helper to convert (longitude, latitude) to normalized coords
     //
     // Top-left map corner is ~1 degree NW of Atlin (-133.7, 59.6).
-    double x = (lon - (-134.7)) / (134.7 - 109.0);  // 0 at west, 1 at east
+    //double x = (lon - (-134.7)) / (134.7 - 109.0);  // 0 at west, 1 at east
+    double x = (lon - (-133.2)) / (133.2 - 109.0);  // 0 at west, 1 at east
     double y = (lat - 47.4) / (60.6 - 47.4);        // 0 at south, 1 at north
     return {x, y};
 }
@@ -83,57 +84,59 @@ void TracksGame::InitializeCities(){
     // Position cities.
     //
     // Note: y is inverted during rendering (1-y) since screen y increases downward
+    //
+    // Note: the position of cites and towns are tweaked below to avoid crowding.
 
     cities.clear();
 
     // British Columbia - Coast
     cities.push_back({"Vancouver", NormalizeLongLat(-123.1, 49.3)});      // ~49.3°N, 123.1°W
-    cities.push_back({"Whistler", NormalizeLongLat(-123.1, 50.1)});       // ~50.1°N, 123.1°W
+    cities.push_back({"Whistler", NormalizeLongLat(-123.1 - 0.2, 50.1 + 0.3)});       // ~50.1°N, 123.1°W
     cities.push_back({"Victoria", NormalizeLongLat(-123.4, 48.4)});       // ~48.4°N, 123.4°W
-    cities.push_back({"Nanaimo", NormalizeLongLat(-123.9, 49.2)});        // ~49.2°N, 123.9°W
+    cities.push_back({"Nanaimo", NormalizeLongLat(-123.9 - 0.8, 49.2)});        // ~49.2°N, 123.9°W
     cities.push_back({"Prince Rupert", NormalizeLongLat(-130.3, 54.3)});  // ~54.3°N, 130.3°W
     cities.push_back({"Smithers", NormalizeLongLat(-127.2, 54.8)});       // ~54.8°N, 127.2°W
 
     // British Columbia - Interior
-    cities.push_back({"Kamloops", NormalizeLongLat(-120.3, 50.7)});       // ~50.7°N, 120.3°W
-    cities.push_back({"Kelowna", NormalizeLongLat(-119.5, 49.9)});        // ~49.9°N, 119.5°W
-    cities.push_back({"Vernon", NormalizeLongLat(-119.3, 50.3)});         // ~50.3°N, 119.3°W
-    cities.push_back({"Penticton", NormalizeLongLat(-119.6, 49.5)});      // ~49.5°N, 119.6°W
-    cities.push_back({"Cranbrook", NormalizeLongLat(-115.8, 49.5)});      // ~49.5°N, 115.8°W
-    cities.push_back({"Nelson", NormalizeLongLat(-117.3, 49.5)});         // ~49.5°N, 117.3°W
-    cities.push_back({"Trail", NormalizeLongLat(-117.7, 49.1)});          // ~49.1°N, 117.7°W
+    cities.push_back({"Kamloops", NormalizeLongLat(-120.3, 50.7 + 0.3)});       // ~50.7°N, 120.3°W
+    cities.push_back({"Kelowna", NormalizeLongLat(-119.5 - 0.3, 49.9)});        // ~49.9°N, 119.5°W
+    cities.push_back({"Vernon", NormalizeLongLat(-119.3 + 0.5, 50.3)});         // ~50.3°N, 119.3°W
+    cities.push_back({"Penticton", NormalizeLongLat(-119.6 - 1.0, 49.5 - 0.3)});      // ~49.5°N, 119.6°W
+    cities.push_back({"Cranbrook", NormalizeLongLat(-115.8, 49.5 + 0.3)});      // ~49.5°N, 115.8°W
+    cities.push_back({"Nelson", NormalizeLongLat(-117.3, 49.5 - 0.2)});         // ~49.5°N, 117.3°W
+    cities.push_back({"Trail", NormalizeLongLat(-117.7 - 0.8, 49.1)});          // ~49.1°N, 117.7°W
     cities.push_back({"Revelstoke", NormalizeLongLat(-118.2, 51.0)});     // ~51.0°N, 118.2°W
 
     // British Columbia - North
     cities.push_back({"Prince George", NormalizeLongLat(-122.8, 53.9)});  // ~53.9°N, 122.8°W
     cities.push_back({"Quesnel", NormalizeLongLat(-122.5, 52.9)});        // ~52.9°N, 122.5°W
     cities.push_back({"Williams Lake", NormalizeLongLat(-122.1, 52.1)});  // ~52.1°N, 122.1°W
-    cities.push_back({"Fort St. John", NormalizeLongLat(-120.8, 56.2)});  // ~56.2°N, 120.8°W
-    cities.push_back({"Dawson Creek", NormalizeLongLat(-120.2, 55.8)});   // ~55.8°N, 120.2°W
+    cities.push_back({"Fort St. John", NormalizeLongLat(-120.8 - 0.3, 56.2 + 0.5)});  // ~56.2°N, 120.8°W
+    cities.push_back({"Dawson Creek", NormalizeLongLat(-120.2, 55.8 - 0.5)});   // ~55.8°N, 120.2°W
     cities.push_back({"Fort Nelson", NormalizeLongLat(-122.7, 58.8)});    // ~58.8°N, 122.7°W
-    cities.push_back({"Atlin", NormalizeLongLat(-133.7, 59.6)});          // ~59.6°N, 133.7°W
+    cities.push_back({"Atlin", NormalizeLongLat(-133.7 + 1.5, 59.6)});          // ~59.6°N, 133.7°W
 
     // Alberta - South
     cities.push_back({"Calgary", NormalizeLongLat(-114.1, 51.0)});        // ~51.0°N, 114.1°W
     cities.push_back({"Lethbridge", NormalizeLongLat(-112.8, 49.7)});     // ~49.7°N, 112.8°W
     cities.push_back({"Medicine Hat", NormalizeLongLat(-110.7, 50.0)});   // ~50.0°N, 110.7°W
-    cities.push_back({"Red Deer", NormalizeLongLat(-113.8, 52.3)});       // ~52.3°N, 113.8°W
-    cities.push_back({"Banff", NormalizeLongLat(-115.6, 51.2)});          // ~51.2°N, 115.6°W
+    cities.push_back({"Red Deer", NormalizeLongLat(-113.8 - 0.4, 52.3 - 0.2)});       // ~52.3°N, 113.8°W
+    cities.push_back({"Banff", NormalizeLongLat(-115.6, 51.2 - 0.3)});          // ~51.2°N, 115.6°W
 
     // Alberta - Central/North
     cities.push_back({"Edmonton", NormalizeLongLat(-113.5, 53.5)});       // ~53.5°N, 113.5°W
-    cities.push_back({"Grande Prairie", NormalizeLongLat(-118.8, 55.2)}); // ~55.2°N, 118.8°W
+    cities.push_back({"Grande Prairie", NormalizeLongLat(-118.8, 55.2 + 0.7)}); // ~55.2°N, 118.8°W
     cities.push_back({"Fort McMurray", NormalizeLongLat(-111.4, 56.7)});  // ~56.7°N, 111.4°W
     cities.push_back({"Jasper", NormalizeLongLat(-118.1, 52.9)});         // ~52.9°N, 118.1°W
     cities.push_back({"Lloydminster", NormalizeLongLat(-110.0, 53.3)});   // ~53.3°N, 110.0°W
-    cities.push_back({"Wetaskiwin", NormalizeLongLat(-113.4, 53.0)});     // ~53.0°N, 113.4°W
+    cities.push_back({"Wetaskiwin", NormalizeLongLat(-113.4 + 0.9, 53.0 - 0.3)});     // ~53.0°N, 113.4°W
 
     // Additional connection points
     cities.push_back({"Golden", NormalizeLongLat(-117.0, 51.3)});         // ~51.3°N, 117.0°W
-    cities.push_back({"Fernie", NormalizeLongLat(-115.1, 49.5)});         // ~49.5°N, 115.1°W
-    cities.push_back({"Hinton", NormalizeLongLat(-117.6, 53.4)});         // ~53.4°N, 117.6°W
-    cities.push_back({"Whitecourt", NormalizeLongLat(-115.7, 54.1)});     // ~54.1°N, 115.7°W
-    cities.push_back({"Slave Lake", NormalizeLongLat(-114.8, 55.3)});     // ~55.3°N, 114.8°W
+    cities.push_back({"Fernie", NormalizeLongLat(-115.1, 49.5 - 0.3)});         // ~49.5°N, 115.1°W
+    cities.push_back({"Hinton", NormalizeLongLat(-117.6 + 0.5, 53.4 - 0.2)});         // ~53.4°N, 117.6°W
+    cities.push_back({"Whitecourt", NormalizeLongLat(-115.7 - 0.3, 54.1 + 0.3)});     // ~54.1°N, 115.7°W
+    cities.push_back({"Slave Lake", NormalizeLongLat(-114.8, 55.3 + 0.3)});     // ~55.3°N, 114.8°W
     cities.push_back({"High Level", NormalizeLongLat(-117.1, 58.5)});     // ~58.5°N, 117.1°W
 }
 
@@ -161,12 +164,12 @@ void TracksGame::InitializeTrackPaths(){
     std::vector<conn_def> connections = {
         // Vancouver area connections
         {"Vancouver", "Victoria", 2, card_color_t::Blue, false},
-        {"Vancouver", "Whistler", 1, card_color_t::Black, false},
+        {"Vancouver", "Whistler", 2, card_color_t::Black, false},
         {"Vancouver", "Nanaimo", 1, card_color_t::White, false},
         {"Victoria", "Nanaimo", 2, card_color_t::Green, false},
         {"Vancouver", "Kamloops", 4, card_color_t::Red, false},
         {"Vancouver", "Kamloops", 4, card_color_t::Yellow, true},
-        {"Whistler", "Kamloops", 6, card_color_t::Yellow, false},
+        {"Whistler", "Kamloops", 5, card_color_t::Blue, false},
 
         // Interior BC connections
         {"Kamloops", "Kelowna", 2, card_color_t::Orange, false},
@@ -176,7 +179,7 @@ void TracksGame::InitializeTrackPaths(){
         {"Penticton", "Trail", 3, card_color_t::Black, false},
         {"Trail", "Nelson", 1, card_color_t::Red, false},
         {"Nelson", "Cranbrook", 2, card_color_t::Orange, false},
-        {"Cranbrook", "Fernie", 2, card_color_t::Blue, false},
+        {"Cranbrook", "Fernie", 1, card_color_t::Blue, false},
 
         // Central BC
         {"Kamloops", "Revelstoke", 3, card_color_t::Yellow, false},
@@ -193,12 +196,12 @@ void TracksGame::InitializeTrackPaths(){
         {"Smithers", "Prince Rupert", 3, card_color_t::Blue, false},
 
         // Far North BC
-        {"Prince George", "Dawson Creek", 5, card_color_t::Black, false},
+        {"Prince George", "Dawson Creek", 5, card_color_t::Red, false},
         {"Dawson Creek", "Fort St. John", 1, card_color_t::White, false},
         {"Fort St. John", "Fort Nelson", 4, card_color_t::Black, false},
         {"Fort Nelson", "High Level", 5, card_color_t::Orange, false},
         {"Atlin", "Fort Nelson", 6, card_color_t::White, false},
-        {"Atlin", "Smithers", 6, card_color_t::Orange, false},
+        {"Atlin", "Smithers", 6, card_color_t::Yellow, false},
 
         // BC to Alberta main corridors
         {"Jasper", "Hinton", 1, card_color_t::Yellow, false},
@@ -1381,7 +1384,7 @@ bool TracksGame::Display(bool &enabled){
             float closest_y = pos_a.y + t * dy;
             float dist = std::sqrt((mouse.x - closest_x) * (mouse.x - closest_x) +
                                    (mouse.y - closest_y) * (mouse.y - closest_y));
-            if(dist < 15.0f){
+            if(dist < mouse_track_hover_dist){
                 hovering = true;
                 hovered_path_idx = static_cast<int>(pi);
 
