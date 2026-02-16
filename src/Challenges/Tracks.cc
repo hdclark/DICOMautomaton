@@ -78,7 +78,7 @@ vec2<double> TracksGame::NormalizeLongLat(double lon, double lat){
 //    double x = (lon - (-139.1)) / 29.1;  // 0 at west, 1 at east
 //    double y = (lat - 48.3) / 11.7;      // 0 at south, 1 at north
     double x = (lon - (-131.3)) / (131.3 - 109.0);  // 0 at west, 1 at east
-    double y = (lat - 47.4) / 12.0;      // 0 at south, 1 at north
+    double y = (lat - 47.4) / (59.4 - 47.4);        // 0 at south, 1 at north
     return {x, y};
 }
 
