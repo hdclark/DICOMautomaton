@@ -98,6 +98,7 @@
 #include "../Challenges/Lawn.h"
 #include "../Challenges/TacticalStealth.h"
 #include "../Challenges/TowerDefence.h"
+#include "../Challenges/Tracks.h"
 #include "../Challenges/RotatingCube.h"
 #include "../Challenges/Werewolf.h"
 
@@ -1036,6 +1037,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_cube_enabled = false;
         bool view_guitar_fret_enabled = false;
         bool view_tower_defence_enabled = false;
+        bool view_tracks_enabled = false;
         bool view_freeski_enabled = false;
         bool view_maze_explorer_enabled = false;
         bool view_lawn_game_enabled = false;
@@ -1610,6 +1612,9 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // Tower Defence game state.
     TowerDefenceGame td_game;
+
+    // Tracks game state.
+    TracksGame tracks_game;
 
     // Lawn game (simplified tower defense) state.
     LawnGame lg_game;
@@ -4714,6 +4719,13 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(!td_game.Display(view_toggles.view_tower_defence_enabled)) break;
         }catch(const std::exception &e){
             YLOGWARN("Exception in td_game.Display(): '" << e.what() << "'");
+            throw;
+        }
+
+        try{
+            if(!tracks_game.Display(view_toggles.view_tracks_enabled)) break;
+        }catch(const std::exception &e){
+            YLOGWARN("Exception in tracks_game.Display(): '" << e.what() << "'");
             throw;
         }
 
@@ -9356,6 +9368,12 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(ImGui::Button("Tower Defence")){
                 view_toggles.view_tower_defence_enabled = true;
                 td_game.Reset();
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Tracks")){
+                view_toggles.view_tracks_enabled = true;
+                tracks_game.Reset();
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();
