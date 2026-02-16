@@ -1408,7 +1408,7 @@ bool TracksGame::Display(bool &enabled){
             draw_list->AddRectFilled(
                 ImVec2(panel_x - 2, panel_y - 1),
                 ImVec2(panel_x + text_size.x + 2, panel_y + score_line_height - 1),
-                IM_COL32(100, 100, 100, 80));
+                color_hover_background);
         }
 
         draw_list->AddText(ImVec2(panel_x, panel_y), GetPlayerColor(player.color), score_text.c_str());
@@ -1450,7 +1450,7 @@ bool TracksGame::Display(bool &enabled){
                 draw_list->AddRectFilled(
                     ImVec2(panel_x - 2, panel_y - 1),
                     ImVec2(panel_x + obj_size.x + 2, panel_y + objective_line_height - 1),
-                    IM_COL32(100, 100, 100, 80));
+                    color_hover_background);
             }
 
             draw_list->AddText(ImVec2(panel_x, panel_y), obj_color, obj_text.c_str());
@@ -1479,7 +1479,11 @@ bool TracksGame::Display(bool &enabled){
     float cards_y = map_pos.y + map_height + cards_section_offset_y;
 
     // Card collection (face-up cards)
-    draw_list->AddText(ImVec2(curr_pos.x + map_offset_x, cards_y), color_title, "CARD COLLECTION (select 1 to end draw phase)");
+    std::string collection_label = "CARD COLLECTION";
+    if(phase == game_phase_t::PlayerTurn_Draw && cards_drawn_this_turn == 0){
+        collection_label += " (select 1 ends draw)";
+    }
+    draw_list->AddText(ImVec2(curr_pos.x + map_offset_x, cards_y), color_title, collection_label.c_str());
     cards_y += cards_header_height;
 
     // FIX for issue #2: Player can EITHER select 1 card from collection OR draw 2 random
@@ -1527,10 +1531,10 @@ bool TracksGame::Display(bool &enabled){
         ImGui::SameLine();
     }
 
-    // Random draw button - draws 2 random cards
+    // Random draw button - draws up to 2 random cards
     if(can_draw_random && cards_drawn_this_turn < 2){
         ImGui::PushStyleColor(ImGuiCol_Button, color_button_random);
-        std::string random_label = (cards_drawn_this_turn == 0) ? "Draw 2\nRandom" : "Draw 1\nMore";
+        std::string random_label = (cards_drawn_this_turn == 0) ? "Draw\nRandom" : "Draw 1\nMore";
         if(ImGui::Button(random_label.c_str(), ImVec2(card_width, card_height))){
             DrawRandomCard(0);
             cards_drawn_this_turn++;
@@ -1539,7 +1543,7 @@ bool TracksGame::Display(bool &enabled){
                 message = "You drew 2 random cards. You may build a track or end your turn.";
                 message_timer = message_display_time;
             } else {
-                message = "Drew 1 random card. Draw 1 more or select from collection.";
+                message = "Drew 1 random card. Click 'Draw 1 More' for your second card.";
                 message_timer = message_display_time;
             }
         }
@@ -1651,12 +1655,12 @@ bool TracksGame::Display(bool &enabled){
         // Semi-transparent overlay
         draw_list->AddRectFilled(curr_pos,
             ImVec2(curr_pos.x + window_width, curr_pos.y + window_height),
-            IM_COL32(0, 0, 0, 180));
+            color_game_over_overlay);
 
         // Title
         const char* select_title = "SELECT AN OBJECTIVE";
         ImVec2 title_size = ImGui::CalcTextSize(select_title);
-        draw_list->AddText(ImVec2(curr_pos.x + window_width/2 - title_size.x/2, curr_pos.y + 150),
+        draw_list->AddText(ImVec2(curr_pos.x + window_width/2 - title_size.x/2, curr_pos.y + game_over_title_y),
             color_title, select_title);
 
         const char* select_subtitle = "You must choose one of these objectives:";

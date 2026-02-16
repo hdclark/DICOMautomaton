@@ -363,9 +363,12 @@ class TracksGame {
     static constexpr ImU32 color_province_border    = IM_COL32(180, 160, 140, 120);
     static constexpr ImU32 color_text_light_bg      = IM_COL32(0, 0, 0, 255);
     static constexpr ImU32 color_text_dark_bg       = IM_COL32(255, 255, 255, 255);
+    static constexpr ImU32 color_hover_background   = IM_COL32(100, 100, 100, 80);
 
-    // Province boundary polylines (normalized coordinates, x: west-east [0,1], y: south-north [0,1])
-    // Note: y is inverted for screen rendering (multiply by -1 and add 1)
+    // Province boundary polylines for BC and Alberta
+    // Coordinates are normalized: x in [0,1] (west to east), y in [0,1] (south to north)
+    // Longitude range: -139.1°W to -110.0°W, Latitude range: 48.3°N to 60.0°N
+    // Note: y is inverted during rendering since screen y increases downward
     static constexpr std::pair<double, double> bc_mainland[] = {
         {0.8625, 0.0598}, {0.8454, 0.1026}, {0.8282, 0.1538}, {0.811, 0.1966},
         {0.7869, 0.2564}, {0.7663, 0.2991}, {0.7423, 0.3333}, {0.7182, 0.3846},
