@@ -242,6 +242,9 @@ add_library(Operations_objs OBJECT
     $<$<BOOL:${WITH_SFML}>:PresentationImage.cc>
     $<$<BOOL:${WITH_SFML}>:SFML_Viewer.cc>
     $<$<BOOL:${WITH_SDL}>:SDL_Viewer.cc>
+    $<$<BOOL:${WITH_SDL}>:SDL_Viewer_OpenGL.cc>
+    $<$<BOOL:${WITH_SDL}>:SDL_Viewer_Brushes.cc>
+    $<$<BOOL:${WITH_SDL}>:SDL_Viewer_Utils.cc>
 
     $<$<BOOL:${WITH_EIGEN}>:DetectGrid3D.cc>
     $<$<BOOL:${WITH_EIGEN}>:ModelIVIM.cc>
