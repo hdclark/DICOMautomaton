@@ -14,7 +14,6 @@ depends=(
    'gcc-libs'
    'gnu-free-fonts'
    'zenity'
-   'sfml<3.0'
    'sdl2'
    'glew'
    'glu'
@@ -31,6 +30,7 @@ depends=(
    'ygor'
 )
 optdepends=(
+   'sfml2'
    'libnotify'
    'dunst' # Or any other notification server compatible with libnotify.
    'zenity'
@@ -89,7 +89,7 @@ build() {
     -DWITH_EIGEN=ON \
     -DWITH_CGAL=ON \
     -DWITH_NLOPT=ON \
-    -DWITH_SFML=ON \
+    -DWITH_SFML=OFF \
     -DWITH_WT=ON \
     -DWITH_GNU_GSL=ON \
     -DWITH_POSTGRES=OFF \
