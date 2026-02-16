@@ -545,7 +545,8 @@ void TracksGame::AISelectCards(int player_idx){
             if(dist(rng) == 0 || collection.empty()){
                 DrawRandomCard(player_idx);
             } else {
-                idx = col_dist(rng) % static_cast<int>(collection.size());
+                std::uniform_int_distribution<> col_dist2(0, static_cast<int>(collection.size()) - 1);
+                idx = col_dist2(rng);
                 DrawCard(player_idx, collection[idx].color);
                 collection.erase(collection.begin() + idx);
                 RefillCollection();
@@ -789,11 +790,11 @@ bool TracksGame::CheckObjectiveCompleted(int player_idx, const objective_t& obj)
 }
 
 void TracksGame::UpdateAllObjectives(){
-    for(auto& player : players){
+    for(size_t player_idx = 0; player_idx < players.size(); ++player_idx){
+        auto& player = players[player_idx];
         for(auto& obj : player.objectives){
             if(!obj.completed){
-                obj.completed = CheckObjectiveCompleted(
-                    static_cast<int>(&player - &players[0]), obj);
+                obj.completed = CheckObjectiveCompleted(static_cast<int>(player_idx), obj);
             }
         }
     }
