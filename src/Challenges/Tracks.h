@@ -144,6 +144,7 @@ class TracksGame {
     };
 
     // Initialize game data
+    vec2<double> NormalizeLongLat(double lon, double lat);
     void InitializeCities();
     void InitializeTrackPaths();
     void InitializeDeck();
@@ -198,6 +199,9 @@ class TracksGame {
     int CountCardsOfColor(int player_idx, card_color_t color);
     int CountWildcards(int player_idx);
     std::vector<size_t> FindPath(int player_idx, size_t from_city, size_t to_city);
+    std::vector<size_t> GetCardsToSpendForPath(int player_idx, size_t path_idx);
+    void DrawProvinceBoundaries(ImDrawList* draw_list, ImVec2 map_pos);
+    void PresentObjectiveChoices();
 
     // Game state
     game_phase_t phase = game_phase_t::SelectDifficulty;
@@ -228,6 +232,14 @@ class TracksGame {
     bool show_build_confirmation = false;
     std::string message;
     double message_timer = 0.0;
+    int hovered_objective_idx = -1;   // Index of objective being hovered in YOUR OBJECTIVES
+    int hovered_player_idx = -1;      // Index of player being hovered in SCORES
+    std::vector<size_t> highlighted_cards;  // Indices of cards to highlight when hovering buildable track
+
+    // Objective selection state (for "add objective" feature)
+    bool selecting_objective = false;
+    bool has_added_objective_this_turn = false;
+    std::vector<objective_t> objective_choices;  // 3 choices presented to player
 
     // Configuration
     static constexpr int max_trains_per_player = 50;
@@ -252,6 +264,151 @@ class TracksGame {
     static constexpr float city_radius = 5.0f;
     static constexpr float slot_width = 16.0f;
     static constexpr float slot_height = 10.0f;
+
+    // UI position constants
+    static constexpr float map_offset_x = 10.0f;
+    static constexpr float map_offset_y = 10.0f;
+    static constexpr float panel_offset_x = 20.0f;  // Distance from map to right panel
+    static constexpr float turn_indicator_height = 25.0f;
+    static constexpr float phase_indicator_height = 25.0f;
+    static constexpr float score_header_height = 20.0f;
+    static constexpr float score_line_height = 18.0f;
+    static constexpr float score_section_spacing = 15.0f;
+    static constexpr float objective_header_height = 20.0f;
+    static constexpr float objective_line_height = 18.0f;
+    static constexpr float objective_section_spacing = 15.0f;
+    static constexpr float message_height = 25.0f;
+    static constexpr float cards_section_offset_y = 20.0f;
+    static constexpr float cards_header_height = 20.0f;
+    static constexpr float cards_hand_offset_y = 30.0f;
+    static constexpr float card_spacing = 10.0f;
+    static constexpr float end_turn_button_offset_y = 50.0f;
+    static constexpr float end_turn_button_width = 100.0f;
+    static constexpr float end_turn_button_height = 35.0f;
+    static constexpr float difficulty_title_y = 80.0f;
+    static constexpr float difficulty_subtitle_y = 110.0f;
+    static constexpr float difficulty_text_y = 200.0f;
+    static constexpr float difficulty_buttons_y = 250.0f;
+    static constexpr float difficulty_button_width = 120.0f;
+    static constexpr float difficulty_button_height = 40.0f;
+    static constexpr float instructions_start_y = 350.0f;
+    static constexpr float instruction_line_height = 20.0f;
+    static constexpr float build_info_offset_y = 30.0f;
+    static constexpr float game_over_overlay_alpha = 180;
+    static constexpr float game_over_title_y = 150.0f;
+    static constexpr float game_over_winner_y = 200.0f;
+    static constexpr float game_over_scores_header_y = 260.0f;
+    static constexpr float game_over_scores_line_height = 30.0f;
+    static constexpr float game_over_score_line_height = 25.0f;
+    static constexpr float game_over_objectives_offset_y = 20.0f;
+    static constexpr float game_over_objective_line_height = 22.0f;
+    static constexpr float restart_button_offset_y = 30.0f;
+    static constexpr float restart_button_width = 120.0f;
+    static constexpr float restart_button_height = 40.0f;
+    static constexpr float add_objective_button_width = 120.0f;
+    static constexpr float add_objective_button_height = 30.0f;
+    static constexpr float objective_choice_button_width = 350.0f;
+    static constexpr float objective_choice_button_height = 35.0f;
+    static constexpr float objective_choice_spacing = 10.0f;
+    static constexpr float difficulty_buttons_start_x = 200.0f;  // X offset for difficulty buttons
+    static constexpr float objective_selection_subtitle_y = 180.0f;
+    static constexpr float objective_selection_choices_y = 230.0f;
+
+    // Color constants (ImU32 values) - Card colors
+    static constexpr ImU32 color_card_white   = IM_COL32(240, 240, 240, 255);
+    static constexpr ImU32 color_card_black   = IM_COL32(40, 40, 40, 255);
+    static constexpr ImU32 color_card_red     = IM_COL32(220, 50, 50, 255);
+    static constexpr ImU32 color_card_orange  = IM_COL32(240, 140, 40, 255);
+    static constexpr ImU32 color_card_yellow  = IM_COL32(240, 220, 40, 255);
+    static constexpr ImU32 color_card_green   = IM_COL32(50, 180, 50, 255);
+    static constexpr ImU32 color_card_blue    = IM_COL32(50, 100, 220, 255);
+    static constexpr ImU32 color_card_rainbow = IM_COL32(200, 100, 200, 255);
+    static constexpr ImU32 color_card_unknown = IM_COL32(128, 128, 128, 255);
+
+    // Color constants - Player colors
+    static constexpr ImU32 color_player_crimson = IM_COL32(180, 30, 30, 255);
+    static constexpr ImU32 color_player_navy    = IM_COL32(30, 50, 140, 255);
+    static constexpr ImU32 color_player_forest  = IM_COL32(30, 100, 30, 255);
+    static constexpr ImU32 color_player_purple  = IM_COL32(120, 40, 160, 255);
+    static constexpr ImU32 color_player_teal    = IM_COL32(30, 140, 140, 255);
+    static constexpr ImU32 color_player_bronze  = IM_COL32(160, 100, 40, 255);
+    static constexpr ImU32 color_player_magenta = IM_COL32(180, 50, 130, 255);
+    static constexpr ImU32 color_player_unknown = IM_COL32(128, 128, 128, 255);
+
+    // Color constants - UI colors
+    static constexpr ImU32 color_background         = IM_COL32(40, 50, 60, 255);
+    static constexpr ImU32 color_map_background     = IM_COL32(60, 80, 70, 255);
+    static constexpr ImU32 color_map_border         = IM_COL32(100, 120, 110, 255);
+    static constexpr ImU32 color_difficulty_bg      = IM_COL32(30, 40, 50, 255);
+    static constexpr ImU32 color_title              = IM_COL32(255, 220, 100, 255);
+    static constexpr ImU32 color_subtitle           = IM_COL32(180, 180, 180, 255);
+    static constexpr ImU32 color_text               = IM_COL32(220, 220, 220, 255);
+    static constexpr ImU32 color_text_dim           = IM_COL32(180, 180, 180, 255);
+    static constexpr ImU32 color_instructions       = IM_COL32(200, 200, 200, 255);
+    static constexpr ImU32 color_city_fill          = IM_COL32(220, 200, 180, 255);
+    static constexpr ImU32 color_city_border        = IM_COL32(60, 40, 30, 255);
+    static constexpr ImU32 color_city_name          = IM_COL32(255, 255, 255, 220);
+    static constexpr ImU32 color_slot_hover         = IM_COL32(255, 255, 150, 255);
+    static constexpr ImU32 color_slot_border        = IM_COL32(0, 0, 0, 180);
+    static constexpr ImU32 color_message            = IM_COL32(255, 255, 150, 255);
+    static constexpr ImU32 color_objective_complete = IM_COL32(100, 255, 100, 255);
+    static constexpr ImU32 color_objective_pending  = IM_COL32(200, 200, 200, 255);
+    static constexpr ImU32 color_objective_failed   = IM_COL32(255, 100, 100, 255);
+    static constexpr ImU32 color_button_disabled    = IM_COL32(80, 80, 80, 255);
+    static constexpr ImU32 color_text_disabled      = IM_COL32(140, 140, 140, 255);
+    static constexpr ImU32 color_button_random      = IM_COL32(100, 100, 100, 255);
+    static constexpr ImU32 color_card_border        = IM_COL32(0, 0, 0, 200);
+    static constexpr ImU32 color_game_over_overlay  = IM_COL32(0, 0, 0, 180);
+    static constexpr ImU32 color_win_text           = IM_COL32(100, 255, 100, 255);
+    static constexpr ImU32 color_lose_text          = IM_COL32(255, 100, 100, 255);
+    static constexpr ImU32 color_build_info         = IM_COL32(255, 255, 200, 255);
+    static constexpr ImU32 color_card_highlight     = IM_COL32(255, 255, 0, 200);
+    static constexpr ImU32 color_track_dimmed       = IM_COL32(60, 60, 60, 150);
+    static constexpr ImU32 color_city_dimmed        = IM_COL32(80, 80, 80, 100);
+    static constexpr ImU32 color_city_highlighted   = IM_COL32(255, 255, 100, 255);
+    static constexpr ImU32 color_province_border    = IM_COL32(180, 160, 140, 120);
+    static constexpr ImU32 color_text_light_bg      = IM_COL32(0, 0, 0, 255);
+    static constexpr ImU32 color_text_dark_bg       = IM_COL32(255, 255, 255, 255);
+    static constexpr ImU32 color_hover_background   = IM_COL32(100, 100, 100, 80);
+
+    // Province boundary polylines for BC and Alberta
+    // Longitude range: -139.1°W to -110.0°W, Latitude range: 48.3°N to 60.0°N
+    // Note: y is inverted during rendering since screen y increases downward
+    static constexpr std::pair<double, double> bc_mainland[] = {
+        {-114.0, 49.0}, {-114.5, 49.5}, {-115.0, 50.1}, {-115.5, 50.6}, 
+        {-116.2, 51.3}, {-116.8, 51.8}, {-117.5, 52.2}, {-118.2, 52.8}, 
+        {-118.8, 53.1}, {-119.5, 53.4}, {-120.0, 53.7}, {-120.0, 60.0}, 
+        {-139.1, 60.0}, {-138.0, 59.5}, {-136.5, 59.3}, {-135.5, 58.8}, 
+        {-134.5, 58.2}, {-133.5, 57.5}, {-132.0, 56.5}, {-130.5, 55.5}, 
+        {-130.0, 55.0}, {-130.5, 54.4}, {-129.5, 54.0}, {-128.8, 53.2}, 
+        {-128.2, 52.4}, {-127.8, 51.5}, {-127.2, 50.8}, {-126.5, 50.4}, 
+        {-124.8, 50.1}, {-123.8, 49.5}, {-123.2, 49.1}, {-123.0, 49.0}, 
+        {-114.0, 49.0}
+    };
+    static constexpr size_t bc_mainland_size = sizeof(bc_mainland) / sizeof(bc_mainland[0]);
+
+    static constexpr std::pair<double, double> bc_vancouver_island[] = {
+        {-128.4, 50.8}, {-127.5, 50.5}, {-126.5, 50.0}, {-125.8, 49.5}, 
+        {-124.5, 49.2}, {-123.5, 48.5}, {-123.3, 48.4}, {-123.8, 48.3}, 
+        {-124.8, 48.4}, {-125.8, 48.8}, {-127.0, 49.5}, {-128.0, 50.2}, 
+        {-128.4, 50.8}
+    };
+    static constexpr size_t bc_vancouver_island_size = sizeof(bc_vancouver_island) / sizeof(bc_vancouver_island[0]);
+
+    static constexpr std::pair<double, double> bc_haida_gwaii[] = {
+        {-133.0, 54.2}, {-132.0, 54.1}, {-131.6, 53.5}, {-131.1, 52.8}, 
+        {-131.0, 52.0}, {-131.3, 52.0}, {-132.0, 52.6}, {-133.0, 53.5}, 
+        {-133.3, 54.0}, {-133.0, 54.2}
+    };
+    static constexpr size_t bc_haida_gwaii_size = sizeof(bc_haida_gwaii) / sizeof(bc_haida_gwaii[0]);
+
+    static constexpr std::pair<double, double> alberta[] = {
+        {-110.0, 49.0}, {-110.0, 60.0}, {-120.0, 60.0}, {-120.0, 53.7}, 
+        {-119.5, 53.4}, {-118.8, 53.1}, {-118.2, 52.8}, {-117.5, 52.2}, 
+        {-116.8, 51.8}, {-116.2, 51.3}, {-115.5, 50.6}, {-115.0, 50.1}, 
+        {-114.5, 49.5}, {-114.0, 49.0}, {-110.0, 49.0}
+    };
+    static constexpr size_t alberta_size = sizeof(alberta) / sizeof(alberta[0]);
 
     // Time tracking
     std::chrono::time_point<std::chrono::steady_clock> t_updated;
