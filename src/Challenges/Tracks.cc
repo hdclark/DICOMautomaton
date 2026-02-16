@@ -1675,9 +1675,13 @@ bool TracksGame::Display(bool &enabled){
             std::stringstream ss;
             ss << cities[obj.city_a_idx].name << " to " << cities[obj.city_b_idx].name;
             ss << " (+" << obj.points << " points)";
+            // Ensure ImGui widget IDs are unique even if labels collide
+            std::string button_label = ss.str();
+            button_label += "##";
+            button_label += std::to_string(i);
 
             ImGui::SetCursorScreenPos(ImVec2(curr_pos.x + window_width/2 - objective_choice_button_width/2, choice_y));
-            if(ImGui::Button(ss.str().c_str(), ImVec2(objective_choice_button_width, objective_choice_button_height))){
+            if(ImGui::Button(button_label.c_str(), ImVec2(objective_choice_button_width, objective_choice_button_height))){
                 // Player selected this objective
                 if(!players.empty()){
                     players[0].objectives.push_back(obj);
