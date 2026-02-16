@@ -309,6 +309,9 @@ class TracksGame {
     static constexpr float objective_choice_button_width = 350.0f;
     static constexpr float objective_choice_button_height = 35.0f;
     static constexpr float objective_choice_spacing = 10.0f;
+    static constexpr float difficulty_buttons_start_x = 200.0f;  // X offset for difficulty buttons
+    static constexpr float objective_selection_subtitle_y = 180.0f;
+    static constexpr float objective_selection_choices_y = 230.0f;
 
     // Color constants (ImU32 values) - Card colors
     static constexpr ImU32 color_card_white   = IM_COL32(240, 240, 240, 255);
@@ -360,6 +363,8 @@ class TracksGame {
     static constexpr ImU32 color_build_info         = IM_COL32(255, 255, 200, 255);
     static constexpr ImU32 color_card_highlight     = IM_COL32(255, 255, 0, 200);
     static constexpr ImU32 color_track_dimmed       = IM_COL32(60, 60, 60, 150);
+    static constexpr ImU32 color_city_dimmed        = IM_COL32(80, 80, 80, 100);
+    static constexpr ImU32 color_city_highlighted   = IM_COL32(255, 255, 100, 255);
     static constexpr ImU32 color_province_border    = IM_COL32(180, 160, 140, 120);
     static constexpr ImU32 color_text_light_bg      = IM_COL32(0, 0, 0, 255);
     static constexpr ImU32 color_text_dark_bg       = IM_COL32(255, 255, 255, 255);

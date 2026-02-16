@@ -70,59 +70,69 @@ void TracksGame::Reset(){
 }
 
 void TracksGame::InitializeCities(){
-    // Cities positioned to reflect geography of BC and Alberta
-    // Coordinates are normalized (0-1) and will be scaled during rendering
-    // X increases eastward, Y increases southward
+    // Cities positioned to match province boundary coordinate system
+    // x: normalized longitude where 0 = -139.1°W, 1 = -110.0°W  
+    // y: normalized latitude where 0 = 48.3°N (south), 1 = 60.0°N (north)
+    // Note: y is inverted during rendering (1-y) since screen y increases downward
 
     cities.clear();
 
+    // Helper to convert (longitude, latitude) to normalized coords
+    // lon_range: -139.1 to -110.0 (29.1 degrees)
+    // lat_range: 48.3 to 60.0 (11.7 degrees)
+    auto normalize = [](double lon, double lat) -> vec2<double> {
+        double x = (lon - (-139.1)) / 29.1;  // 0 at west, 1 at east
+        double y = (lat - 48.3) / 11.7;      // 0 at south, 1 at north
+        return {x, y};
+    };
+
     // British Columbia - Coast
-    cities.push_back({"Vancouver", {0.12, 0.72}});
-    cities.push_back({"Victoria", {0.08, 0.82}});
-    cities.push_back({"Nanaimo", {0.10, 0.68}});
-    cities.push_back({"Prince Rupert", {0.05, 0.22}});
-    cities.push_back({"Kitimat", {0.10, 0.28}});
+    cities.push_back({"Vancouver", normalize(-123.1, 49.3)});      // ~49.3°N, 123.1°W
+    cities.push_back({"Victoria", normalize(-123.4, 48.4)});       // ~48.4°N, 123.4°W
+    cities.push_back({"Nanaimo", normalize(-123.9, 49.2)});        // ~49.2°N, 123.9°W
+    cities.push_back({"Prince Rupert", normalize(-130.3, 54.3)});  // ~54.3°N, 130.3°W
+    cities.push_back({"Kitimat", normalize(-128.7, 54.1)});        // ~54.1°N, 128.7°W
 
     // British Columbia - Interior
-    cities.push_back({"Kamloops", {0.25, 0.62}});
-    cities.push_back({"Kelowna", {0.30, 0.70}});
-    cities.push_back({"Vernon", {0.32, 0.64}});
-    cities.push_back({"Penticton", {0.30, 0.76}});
-    cities.push_back({"Cranbrook", {0.45, 0.78}});
-    cities.push_back({"Nelson", {0.40, 0.75}});
-    cities.push_back({"Trail", {0.38, 0.80}});
-    cities.push_back({"Revelstoke", {0.38, 0.58}});
+    cities.push_back({"Kamloops", normalize(-120.3, 50.7)});       // ~50.7°N, 120.3°W
+    cities.push_back({"Kelowna", normalize(-119.5, 49.9)});        // ~49.9°N, 119.5°W
+    cities.push_back({"Vernon", normalize(-119.3, 50.3)});         // ~50.3°N, 119.3°W
+    cities.push_back({"Penticton", normalize(-119.6, 49.5)});      // ~49.5°N, 119.6°W
+    cities.push_back({"Cranbrook", normalize(-115.8, 49.5)});      // ~49.5°N, 115.8°W
+    cities.push_back({"Nelson", normalize(-117.3, 49.5)});         // ~49.5°N, 117.3°W
+    cities.push_back({"Trail", normalize(-117.7, 49.1)});          // ~49.1°N, 117.7°W
+    cities.push_back({"Revelstoke", normalize(-118.2, 51.0)});     // ~51.0°N, 118.2°W
 
     // British Columbia - North
-    cities.push_back({"Prince George", {0.22, 0.38}});
-    cities.push_back({"Quesnel", {0.20, 0.45}});
-    cities.push_back({"Williams Lake", {0.18, 0.52}});
-    cities.push_back({"Fort St. John", {0.45, 0.15}});
-    cities.push_back({"Dawson Creek", {0.48, 0.18}});
-    cities.push_back({"Fort Nelson", {0.42, 0.05}});
+    cities.push_back({"Prince George", normalize(-122.8, 53.9)});  // ~53.9°N, 122.8°W
+    cities.push_back({"Quesnel", normalize(-122.5, 52.9)});        // ~52.9°N, 122.5°W
+    cities.push_back({"Williams Lake", normalize(-122.1, 52.1)});  // ~52.1°N, 122.1°W
+    cities.push_back({"Fort St. John", normalize(-120.8, 56.2)});  // ~56.2°N, 120.8°W
+    cities.push_back({"Dawson Creek", normalize(-120.2, 55.8)});   // ~55.8°N, 120.2°W
+    cities.push_back({"Fort Nelson", normalize(-122.7, 58.8)});    // ~58.8°N, 122.7°W
 
     // Alberta - South
-    cities.push_back({"Calgary", {0.62, 0.65}});
-    cities.push_back({"Lethbridge", {0.65, 0.80}});
-    cities.push_back({"Medicine Hat", {0.78, 0.78}});
-    cities.push_back({"Red Deer", {0.60, 0.52}});
-    cities.push_back({"Banff", {0.52, 0.62}});
+    cities.push_back({"Calgary", normalize(-114.1, 51.0)});        // ~51.0°N, 114.1°W
+    cities.push_back({"Lethbridge", normalize(-112.8, 49.7)});     // ~49.7°N, 112.8°W
+    cities.push_back({"Medicine Hat", normalize(-110.7, 50.0)});   // ~50.0°N, 110.7°W
+    cities.push_back({"Red Deer", normalize(-113.8, 52.3)});       // ~52.3°N, 113.8°W
+    cities.push_back({"Banff", normalize(-115.6, 51.2)});          // ~51.2°N, 115.6°W
 
     // Alberta - Central/North
-    cities.push_back({"Edmonton", {0.65, 0.40}});
-    cities.push_back({"Grande Prairie", {0.55, 0.22}});
-    cities.push_back({"Fort McMurray", {0.75, 0.18}});
-    cities.push_back({"Jasper", {0.48, 0.48}});
-    cities.push_back({"Lloydminster", {0.82, 0.42}});
-    cities.push_back({"Wetaskiwin", {0.63, 0.46}});
+    cities.push_back({"Edmonton", normalize(-113.5, 53.5)});       // ~53.5°N, 113.5°W
+    cities.push_back({"Grande Prairie", normalize(-118.8, 55.2)}); // ~55.2°N, 118.8°W
+    cities.push_back({"Fort McMurray", normalize(-111.4, 56.7)});  // ~56.7°N, 111.4°W
+    cities.push_back({"Jasper", normalize(-118.1, 52.9)});         // ~52.9°N, 118.1°W
+    cities.push_back({"Lloydminster", normalize(-110.0, 53.3)});   // ~53.3°N, 110.0°W
+    cities.push_back({"Wetaskiwin", normalize(-113.4, 53.0)});     // ~53.0°N, 113.4°W
 
     // Additional connection points
-    cities.push_back({"Golden", {0.42, 0.60}});
-    cities.push_back({"Fernie", {0.48, 0.75}});
-    cities.push_back({"Hinton", {0.52, 0.45}});
-    cities.push_back({"Whitecourt", {0.55, 0.35}});
-    cities.push_back({"Slave Lake", {0.62, 0.28}});
-    cities.push_back({"High Level", {0.58, 0.08}});
+    cities.push_back({"Golden", normalize(-117.0, 51.3)});         // ~51.3°N, 117.0°W
+    cities.push_back({"Fernie", normalize(-115.1, 49.5)});         // ~49.5°N, 115.1°W
+    cities.push_back({"Hinton", normalize(-117.6, 53.4)});         // ~53.4°N, 117.6°W
+    cities.push_back({"Whitecourt", normalize(-115.7, 54.1)});     // ~54.1°N, 115.7°W
+    cities.push_back({"Slave Lake", normalize(-114.8, 55.3)});     // ~55.3°N, 114.8°W
+    cities.push_back({"High Level", normalize(-117.1, 58.5)});     // ~58.5°N, 117.1°W
 }
 
 
@@ -494,6 +504,7 @@ void TracksGame::NextTurn(){
 }
 
 bool TracksGame::CheckGameEnd(){
+    // Check if any player has low trains (triggers final round)
     for(size_t i = 0; i < players.size(); ++i){
         if(players[i].trains_remaining <= 2){
             if(!final_round){
@@ -505,6 +516,22 @@ bool TracksGame::CheckGameEnd(){
             }
         }
     }
+
+    // Check if all tracks have been built (game should end)
+    bool all_tracks_built = true;
+    for(const auto& path : track_paths){
+        if(path.owner_player_idx == -1){
+            all_tracks_built = false;
+            break;
+        }
+    }
+    if(all_tracks_built && !final_round){
+        final_round = true;
+        turns_until_end = static_cast<int>(players.size());
+        message = "All tracks have been built! Final round!";
+        message_timer = message_display_time;
+    }
+
     return game_over;
 }
 
@@ -1136,7 +1163,7 @@ bool TracksGame::Display(bool &enabled){
             color_text, diff_text);
 
         // Draw buttons using ImGui
-        ImGui::SetCursorScreenPos(ImVec2(curr_pos.x + 200, curr_pos.y + difficulty_buttons_y));
+        ImGui::SetCursorScreenPos(ImVec2(curr_pos.x + difficulty_buttons_start_x, curr_pos.y + difficulty_buttons_y));
         if(ImGui::Button("Easy (3 AI)", ImVec2(difficulty_button_width, difficulty_button_height))){
             StartGame(3);
         }
@@ -1197,6 +1224,59 @@ bool TracksGame::Display(bool &enabled){
         ImVec2(map_pos.x + map_width, map_pos.y + map_height),
         color_map_border, 0.0f, 0, 2.0f);
 
+    // ==================== HOVER DETECTION (before rendering to avoid 1-frame lag) ====================
+    float panel_x = map_pos.x + map_width + panel_offset_x;
+    float panel_y_for_hover = curr_pos.y + map_offset_y;
+    ImVec2 mouse = ImGui::GetMousePos();
+
+    // Reset hover states
+    hovered_player_idx = -1;
+    hovered_objective_idx = -1;
+
+    // Detect player hover (SCORES section)
+    if(!game_over && current_player_idx >= 0 && current_player_idx < static_cast<int>(players.size())){
+        panel_y_for_hover += turn_indicator_height + phase_indicator_height;
+    }
+    panel_y_for_hover += score_header_height;  // Skip "SCORES" header
+
+    for(size_t player_i = 0; player_i < players.size(); ++player_i){
+        const auto& player = players[player_i];
+        std::stringstream ss;
+        ss << player.name << ": " << player.score << " pts (" << player.trains_remaining << " trains)";
+        std::string score_text = ss.str();
+        ImVec2 text_size = ImGui::CalcTextSize(score_text.c_str());
+
+        ImVec2 line_tl(panel_x, panel_y_for_hover);
+        ImVec2 line_br(panel_x + text_size.x, panel_y_for_hover + score_line_height);
+        if(mouse.x >= line_tl.x && mouse.x <= line_br.x &&
+           mouse.y >= line_tl.y && mouse.y <= line_br.y){
+            hovered_player_idx = static_cast<int>(player_i);
+        }
+        panel_y_for_hover += score_line_height;
+    }
+    panel_y_for_hover += score_section_spacing + objective_header_height;  // Skip spacing and "YOUR OBJECTIVES" header
+
+    // Detect objective hover (YOUR OBJECTIVES section)
+    if(!players.empty()){
+        for(size_t obj_i = 0; obj_i < players[0].objectives.size(); ++obj_i){
+            const auto& obj = players[0].objectives[obj_i];
+            std::stringstream ss;
+            ss << cities[obj.city_a_idx].name << " - " << cities[obj.city_b_idx].name;
+            ss << " (+" << obj.points << ")";
+            if(obj.completed) ss << " [DONE]";
+            std::string obj_text = ss.str();
+            ImVec2 obj_size = ImGui::CalcTextSize(obj_text.c_str());
+
+            ImVec2 obj_tl(panel_x, panel_y_for_hover);
+            ImVec2 obj_br(panel_x + obj_size.x, panel_y_for_hover + objective_line_height);
+            if(mouse.x >= obj_tl.x && mouse.x <= obj_br.x &&
+               mouse.y >= obj_tl.y && mouse.y <= obj_br.y){
+                hovered_objective_idx = static_cast<int>(obj_i);
+            }
+            panel_y_for_hover += objective_line_height;
+        }
+    }
+
     // Draw province boundaries
     DrawProvinceBoundaries(draw_list, map_pos);
 
@@ -1218,10 +1298,11 @@ bool TracksGame::Display(bool &enabled){
         const auto& city_a = cities[path.city_a_idx];
         const auto& city_b = cities[path.city_b_idx];
 
+        // Note: y is inverted (1-y) since city coords have y=0 at south, y=1 at north
         ImVec2 pos_a(map_pos.x + static_cast<float>(city_a.pos.x) * map_width,
-                     map_pos.y + static_cast<float>(city_a.pos.y) * map_height);
+                     map_pos.y + static_cast<float>(1.0 - city_a.pos.y) * map_height);
         ImVec2 pos_b(map_pos.x + static_cast<float>(city_b.pos.x) * map_width,
-                     map_pos.y + static_cast<float>(city_b.pos.y) * map_height);
+                     map_pos.y + static_cast<float>(1.0 - city_b.pos.y) * map_height);
 
         // Offset parallel routes
         if(path.is_parallel){
@@ -1239,13 +1320,9 @@ bool TracksGame::Display(bool &enabled){
         // Determine if this track should be dimmed
         bool should_dim = false;
 
-        // Dim if hovering over an objective and this path is not connected to it
+        // Dim ALL tracks if hovering over an objective (only cities are highlighted)
         if(hovered_objective_idx >= 0){
-            bool path_relevant = (highlighted_objective_cities.count(path.city_a_idx) > 0 ||
-                                 highlighted_objective_cities.count(path.city_b_idx) > 0);
-            if(!path_relevant){
-                should_dim = true;
-            }
+            should_dim = true;
         }
 
         // Dim if hovering over a player and this path is not owned by them
@@ -1270,8 +1347,8 @@ bool TracksGame::Display(bool &enabled){
 
         // Draw track line
         float thickness = (path.owner_player_idx >= 0) ? 4.0f : 2.0f;
-        // Emphasize highlighted tracks
-        if((hovered_objective_idx >= 0 || hovered_player_idx >= 0) && !should_dim){
+        // Emphasize highlighted tracks (only for player hover, not objective hover)
+        if(hovered_player_idx >= 0 && !should_dim){
             thickness += 1.0f;
         }
         draw_list->AddLine(pos_a, pos_b, line_color, thickness);
@@ -1341,28 +1418,43 @@ bool TracksGame::Display(bool &enabled){
     // Draw cities
     for(size_t ci = 0; ci < cities.size(); ++ci){
         const auto& city = cities[ci];
+        // Note: y is inverted (1-y) since city coords have y=0 at south, y=1 at north
         ImVec2 pos(map_pos.x + static_cast<float>(city.pos.x) * map_width,
-                   map_pos.y + static_cast<float>(city.pos.y) * map_height);
+                   map_pos.y + static_cast<float>(1.0 - city.pos.y) * map_height);
 
-        // Determine if city should be highlighted (part of hovered objective)
+        // Determine if city should be highlighted or dimmed (for objective hover)
         bool city_highlighted = (highlighted_objective_cities.count(ci) > 0);
+        bool city_dimmed = (hovered_objective_idx >= 0 && !city_highlighted);
+
         float radius = city_radius;
+        ImU32 fill_color = color_city_fill;
+        ImU32 border_color = color_city_border;
+        ImU32 name_color = color_city_name;
+
         if(city_highlighted){
-            radius = city_radius + 3.0f;
+            radius = city_radius + 4.0f;
+            fill_color = color_city_highlighted;
+            border_color = IM_COL32(80, 60, 0, 255);  // Darker border for highlighted
+        } else if(city_dimmed){
+            fill_color = color_city_dimmed;
+            border_color = color_city_dimmed;
+            name_color = IM_COL32(100, 100, 100, 150);
         }
 
-        draw_list->AddCircleFilled(pos, radius, color_city_fill);
-        draw_list->AddCircle(pos, radius, color_city_border, 0, 2.0f);
+        draw_list->AddCircleFilled(pos, radius, fill_color);
+        draw_list->AddCircle(pos, radius, border_color, 0, 2.0f);
 
-        // City name
-        ImVec2 name_size = ImGui::CalcTextSize(city.name.c_str());
-        draw_list->AddText(ImVec2(pos.x - name_size.x/2, pos.y + radius + 2),
-            color_city_name, city.name.c_str());
+        // City name (skip for dimmed cities to reduce clutter, show for highlighted)
+        if(!city_dimmed || city_highlighted){
+            ImVec2 name_size = ImGui::CalcTextSize(city.name.c_str());
+            draw_list->AddText(ImVec2(pos.x - name_size.x/2, pos.y + radius + 2),
+                name_color, city.name.c_str());
+        }
     }
 
 
     // ==================== RIGHT PANEL ====================
-    float panel_x = map_pos.x + map_width + panel_offset_x;
+    // Note: panel_x already calculated during hover detection above
     float panel_y = curr_pos.y + map_offset_y;
 
     // Current player indicator
@@ -1384,12 +1476,9 @@ bool TracksGame::Display(bool &enabled){
         panel_y += phase_indicator_height;
     }
 
-    // Scoreboard with hover detection
+    // Scoreboard (hover already detected above)
     draw_list->AddText(ImVec2(panel_x, panel_y), color_title, "SCORES");
     panel_y += score_header_height;
-
-    hovered_player_idx = -1;  // Reset at start of frame
-    ImVec2 mouse = ImGui::GetMousePos();
 
     for(size_t player_i = 0; player_i < players.size(); ++player_i){
         const auto& player = players[player_i];
@@ -1398,13 +1487,8 @@ bool TracksGame::Display(bool &enabled){
         std::string score_text = ss.str();
         ImVec2 text_size = ImGui::CalcTextSize(score_text.c_str());
 
-        // Check if mouse is hovering this score line
-        ImVec2 line_tl(panel_x, panel_y);
-        ImVec2 line_br(panel_x + text_size.x, panel_y + score_line_height);
-        if(mouse.x >= line_tl.x && mouse.x <= line_br.x &&
-           mouse.y >= line_tl.y && mouse.y <= line_br.y){
-            hovered_player_idx = static_cast<int>(player_i);
-            // Draw highlight background
+        // Draw highlight background if hovering
+        if(hovered_player_idx == static_cast<int>(player_i)){
             draw_list->AddRectFilled(
                 ImVec2(panel_x - 2, panel_y - 1),
                 ImVec2(panel_x + text_size.x + 2, panel_y + score_line_height - 1),
@@ -1416,11 +1500,9 @@ bool TracksGame::Display(bool &enabled){
     }
     panel_y += score_section_spacing;
 
-    // Human player's objectives with hover detection
+    // Human player's objectives (hover already detected above)
     draw_list->AddText(ImVec2(panel_x, panel_y), color_title, "YOUR OBJECTIVES");
     panel_y += objective_header_height;
-
-    hovered_objective_idx = -1;  // Reset at start of frame
 
     if(!players.empty()){
         for(size_t obj_i = 0; obj_i < players[0].objectives.size(); ++obj_i){
@@ -1440,13 +1522,8 @@ bool TracksGame::Display(bool &enabled){
             std::string obj_text = ss.str();
             ImVec2 obj_size = ImGui::CalcTextSize(obj_text.c_str());
 
-            // Check if mouse is hovering this objective line
-            ImVec2 obj_tl(panel_x, panel_y);
-            ImVec2 obj_br(panel_x + obj_size.x, panel_y + objective_line_height);
-            if(mouse.x >= obj_tl.x && mouse.x <= obj_br.x &&
-               mouse.y >= obj_tl.y && mouse.y <= obj_br.y){
-                hovered_objective_idx = static_cast<int>(obj_i);
-                // Draw highlight background
+            // Draw highlight background if hovering
+            if(hovered_objective_idx == static_cast<int>(obj_i)){
                 draw_list->AddRectFilled(
                     ImVec2(panel_x - 2, panel_y - 1),
                     ImVec2(panel_x + obj_size.x + 2, panel_y + objective_line_height - 1),
@@ -1488,8 +1565,9 @@ bool TracksGame::Display(bool &enabled){
 
     // FIX for issue #2: Player can EITHER select 1 card from collection OR draw 2 random
     // Selecting from collection immediately ends the draw phase
-    bool can_select_from_collection = (phase == game_phase_t::PlayerTurn_Draw && cards_drawn_this_turn == 0);
-    bool can_draw_random = (phase == game_phase_t::PlayerTurn_Draw);
+    // Also block card selection when objective selection overlay is active (modal)
+    bool can_select_from_collection = (phase == game_phase_t::PlayerTurn_Draw && cards_drawn_this_turn == 0 && !selecting_objective);
+    bool can_draw_random = (phase == game_phase_t::PlayerTurn_Draw && !selecting_objective);
 
     ImGui::SetCursorScreenPos(ImVec2(curr_pos.x + map_offset_x, cards_y));
     for(size_t ci = 0; ci < collection.size(); ++ci){
@@ -1665,11 +1743,11 @@ bool TracksGame::Display(bool &enabled){
 
         const char* select_subtitle = "You must choose one of these objectives:";
         ImVec2 sub_size = ImGui::CalcTextSize(select_subtitle);
-        draw_list->AddText(ImVec2(curr_pos.x + window_width/2 - sub_size.x/2, curr_pos.y + 180),
+        draw_list->AddText(ImVec2(curr_pos.x + window_width/2 - sub_size.x/2, curr_pos.y + objective_selection_subtitle_y),
             color_text, select_subtitle);
 
         // Display 3 objective choices as buttons
-        float choice_y = curr_pos.y + 230;
+        float choice_y = curr_pos.y + objective_selection_choices_y;
         for(size_t i = 0; i < objective_choices.size(); ++i){
             const auto& obj = objective_choices[i];
             std::stringstream ss;
@@ -1692,6 +1770,8 @@ bool TracksGame::Display(bool &enabled){
                             break;
                         }
                     }
+                    // Check if the newly added objective is already completed
+                    UpdateAllObjectives();
                 }
                 selecting_objective = false;
                 has_added_objective_this_turn = true;
