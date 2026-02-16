@@ -45,7 +45,6 @@ until
       eigen \
       boost-libs \
       gnu-free-fonts \
-      sfml \
       sdl2 \
       glew \
       glu \
@@ -71,6 +70,7 @@ until
       bash-completion \
       libnotify \
       dunst \
+      zenity \
     && \
        \
     ` # Install SYCL components ` \
@@ -141,6 +141,15 @@ git clone --depth=1 'https://aur.archlinux.org/trizen.git'
 #su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm example-git"
 #trizen --nocolors --quiet --noconfirm -S example-git
 
+# Install older SFML2.
+retry_count=0
+retry_limit=5
+until
+    su - builduser -c "cd /tmp && trizen --nocolors --quiet --noconfirm -S sfml2"
+do
+    (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
+    printf 'Waiting to retry.\n' && sleep 5
+done
 
 # Install AdaptiveCpp for optional SYCL toolchain.
 retry_count=0
