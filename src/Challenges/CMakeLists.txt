@@ -8,6 +8,7 @@ add_library(Challenges_objs OBJECT
     RotatingCube.cc
     TacticalStealth.cc
     TowerDefence.cc
+    Tracks.cc
     Werewolf.cc
 #    Polyomino.cc
 #    TripleThree.cc
