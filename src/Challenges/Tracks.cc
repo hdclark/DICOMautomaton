@@ -1281,24 +1281,22 @@ bool TracksGame::Display(bool &enabled){
     for(size_t ci = 0; ci < collection.size(); ++ci){
         const auto& card = collection[ci];
         ImU32 card_col = GetCardColor(card.color);
-
-        // Gray out cards when player can't draw
-        if(!can_draw){
-            card_col = IM_COL32(80, 80, 80, 200);
-        }
+        ImU32 disabled_col = IM_COL32(80, 80, 80, 255);
 
         std::string btn_label = GetCardColorName(card.color) + "##col" + std::to_string(ci);
-        ImGui::PushStyleColor(ImGuiCol_Button, card_col);
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, can_draw ? IM_COL32(
-            std::min(255, static_cast<int>((card_col >> 0) & 0xFF) + 40),
-            std::min(255, static_cast<int>((card_col >> 8) & 0xFF) + 40),
-            std::min(255, static_cast<int>((card_col >> 16) & 0xFF) + 40),
-            255) : card_col);
-        ImGui::PushStyleColor(ImGuiCol_Text,
-            can_draw && (card.color == card_color_t::White || card.color == card_color_t::Yellow) ?
-                IM_COL32(0, 0, 0, 255) : IM_COL32(255, 255, 255, 255));
 
         if(can_draw){
+            // Normal button colors
+            ImGui::PushStyleColor(ImGuiCol_Button, card_col);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, IM_COL32(
+                std::min(255, static_cast<int>((card_col >> 0) & 0xFF) + 40),
+                std::min(255, static_cast<int>((card_col >> 8) & 0xFF) + 40),
+                std::min(255, static_cast<int>((card_col >> 16) & 0xFF) + 40),
+                255));
+            ImGui::PushStyleColor(ImGuiCol_Text,
+                (card.color == card_color_t::White || card.color == card_color_t::Yellow) ?
+                    IM_COL32(0, 0, 0, 255) : IM_COL32(255, 255, 255, 255));
+
             if(ImGui::Button(btn_label.c_str(), ImVec2(card_width, card_height))){
                 DrawCard(0, card.color);
                 collection.erase(collection.begin() + static_cast<long>(ci));
@@ -1311,7 +1309,10 @@ bool TracksGame::Display(bool &enabled){
                 }
             }
         } else {
-            // Render disabled button (no click action)
+            // Disabled button - grayed out with matching hover state
+            ImGui::PushStyleColor(ImGuiCol_Button, disabled_col);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, disabled_col);
+            ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(140, 140, 140, 255));
             ImGui::Button(btn_label.c_str(), ImVec2(card_width, card_height));
         }
 
