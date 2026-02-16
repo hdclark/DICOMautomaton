@@ -14,6 +14,9 @@ cd "${REPOROOT}"
 ( ./docker/build_bases/arch/build.sh          2>&1 &&
   ./docker/builders/arch/build.sh             2>&1 ) | tee /tmp/dcma_docker_arch.log
 
+( ./docker/build_bases/arch_sycl/build.sh     2>&1 &&
+  ./docker/builders/arch_sycl/build.sh        2>&1 ) | tee /tmp/dcma_docker_arch_sycl.log
+
 ( ./docker/build_bases/void/build.sh          2>&1 &&
   ./docker/builders/void/build.sh             2>&1 ) | tee /tmp/dcma_docker_void.log
 
@@ -36,6 +39,7 @@ cd "${REPOROOT}"
 grep '^Successfully built' \
   /tmp/dcma_docker_debian_buster.log \
   /tmp/dcma_docker_arch.log \
+  /tmp/dcma_docker_arch_sycl.log \
   /tmp/dcma_docker_void.log \
   /tmp/dcma_docker_mxe.log \
   /tmp/dcma_docker_alpine_armv7.log \
