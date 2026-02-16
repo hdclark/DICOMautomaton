@@ -72,13 +72,9 @@ void TracksGame::Reset(){
 vec2<double> TracksGame::NormalizeLongLat(double lon, double lat){
     // Helper to convert (longitude, latitude) to normalized coords
     //
-    // BC and AB border min/max:
-    // - lon_range: -139.1 to -110.0 (29.1 degrees)
-    // - lat_range: 48.3 to 60.0 (11.7 degrees)
-//    double x = (lon - (-139.1)) / 29.1;  // 0 at west, 1 at east
-//    double y = (lat - 48.3) / 11.7;      // 0 at south, 1 at north
-    double x = (lon - (-131.3)) / (131.3 - 109.0);  // 0 at west, 1 at east
-    double y = (lat - 47.4) / (59.4 - 47.4);        // 0 at south, 1 at north
+    // Top-left map corner is ~1 degree NW of Atlin (-133.7, 59.6).
+    double x = (lon - (-134.7)) / (134.7 - 109.0);  // 0 at west, 1 at east
+    double y = (lat - 47.4) / (60.6 - 47.4);        // 0 at south, 1 at north
     return {x, y};
 }
 
@@ -92,10 +88,11 @@ void TracksGame::InitializeCities(){
 
     // British Columbia - Coast
     cities.push_back({"Vancouver", NormalizeLongLat(-123.1, 49.3)});      // ~49.3°N, 123.1°W
+    cities.push_back({"Whistler", NormalizeLongLat(-123.1, 50.1)});       // ~50.1°N, 123.1°W
     cities.push_back({"Victoria", NormalizeLongLat(-123.4, 48.4)});       // ~48.4°N, 123.4°W
     cities.push_back({"Nanaimo", NormalizeLongLat(-123.9, 49.2)});        // ~49.2°N, 123.9°W
     cities.push_back({"Prince Rupert", NormalizeLongLat(-130.3, 54.3)});  // ~54.3°N, 130.3°W
-    cities.push_back({"Kitimat", NormalizeLongLat(-128.7, 54.1)});        // ~54.1°N, 128.7°W
+    cities.push_back({"Smithers", NormalizeLongLat(-127.2, 54.8)});       // ~54.8°N, 127.2°W
 
     // British Columbia - Interior
     cities.push_back({"Kamloops", NormalizeLongLat(-120.3, 50.7)});       // ~50.7°N, 120.3°W
@@ -114,6 +111,7 @@ void TracksGame::InitializeCities(){
     cities.push_back({"Fort St. John", NormalizeLongLat(-120.8, 56.2)});  // ~56.2°N, 120.8°W
     cities.push_back({"Dawson Creek", NormalizeLongLat(-120.2, 55.8)});   // ~55.8°N, 120.2°W
     cities.push_back({"Fort Nelson", NormalizeLongLat(-122.7, 58.8)});    // ~58.8°N, 122.7°W
+    cities.push_back({"Atlin", NormalizeLongLat(-133.7, 59.6)});          // ~59.6°N, 133.7°W
 
     // Alberta - South
     cities.push_back({"Calgary", NormalizeLongLat(-114.1, 51.0)});        // ~51.0°N, 114.1°W
@@ -163,10 +161,12 @@ void TracksGame::InitializeTrackPaths(){
     std::vector<conn_def> connections = {
         // Vancouver area connections
         {"Vancouver", "Victoria", 2, card_color_t::Blue, false},
+        {"Vancouver", "Whistler", 1, card_color_t::Black, false},
         {"Vancouver", "Nanaimo", 1, card_color_t::White, false},
         {"Victoria", "Nanaimo", 2, card_color_t::Green, false},
         {"Vancouver", "Kamloops", 4, card_color_t::Red, false},
-        {"Vancouver", "Kamloops", 4, card_color_t::Blue, true},
+        {"Vancouver", "Kamloops", 4, card_color_t::Yellow, true},
+        {"Whistler", "Kamloops", 6, card_color_t::Yellow, false},
 
         // Interior BC connections
         {"Kamloops", "Kelowna", 2, card_color_t::Orange, false},
@@ -189,15 +189,16 @@ void TracksGame::InitializeTrackPaths(){
         {"Kamloops", "Williams Lake", 3, card_color_t::Black, false},
         {"Williams Lake", "Quesnel", 2, card_color_t::Orange, false},
         {"Quesnel", "Prince George", 2, card_color_t::White, false},
-        {"Prince George", "Kitimat", 5, card_color_t::Green, false},
-        {"Kitimat", "Prince Rupert", 3, card_color_t::Blue, false},
-        {"Prince George", "Prince Rupert", 6, card_color_t::Yellow, false},
+        {"Prince George", "Smithers", 5, card_color_t::Green, false},
+        {"Smithers", "Prince Rupert", 3, card_color_t::Blue, false},
 
         // Far North BC
-        {"Prince George", "Dawson Creek", 5, card_color_t::Red, false},
+        {"Prince George", "Dawson Creek", 5, card_color_t::Black, false},
         {"Dawson Creek", "Fort St. John", 1, card_color_t::White, false},
         {"Fort St. John", "Fort Nelson", 4, card_color_t::Black, false},
         {"Fort Nelson", "High Level", 5, card_color_t::Orange, false},
+        {"Atlin", "Fort Nelson", 6, card_color_t::White, false},
+        {"Atlin", "Smithers", 6, card_color_t::Orange, false},
 
         // BC to Alberta main corridors
         {"Jasper", "Hinton", 1, card_color_t::Yellow, false},
@@ -218,6 +219,7 @@ void TracksGame::InitializeTrackPaths(){
         {"Calgary", "Lethbridge", 3, card_color_t::Blue, false},
         {"Lethbridge", "Medicine Hat", 3, card_color_t::Red, false},
         {"Medicine Hat", "Calgary", 4, card_color_t::Yellow, false},
+        {"Lloydminster", "Medicine Hat", 6, card_color_t::Green, false},
 
         // Northern Alberta
         {"Edmonton", "Whitecourt", 2, card_color_t::Orange, false},
@@ -388,7 +390,8 @@ void TracksGame::DealObjectives(){
         {"Dawson Creek", "Vancouver"},
         {"Fort Nelson", "Calgary"},
         {"Fort St. John", "Kelowna"},
-        {"Kitimat", "Calgary"},
+        {"Atlin", "Calgary"},
+        {"Atlin", "Edmonton"},
         {"Prince Rupert", "Medicine Hat"},
         {"Grande Prairie", "Vancouver"},
         {"Fort McMurray", "Vancouver"},
@@ -1904,4 +1907,3 @@ bool TracksGame::Display(bool &enabled){
     ImGui::End();
     return true;
 }
-
