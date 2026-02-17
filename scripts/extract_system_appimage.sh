@@ -118,7 +118,8 @@ elif [ "$ARCH" == "aarch64" ] || [ "$ARCH" == "armhf" ] ; then
     # Use the provided AppRun program, which is more sophisticated than a shell script.
     #wget "https://github.com/AppImage/AppImageKit/releases/download/13/AppRun-${ARCH}" -O ./AppDir/AppRun
     wget "https://github.com/AppImage/AppImageKit/releases/download/13/obsolete-AppRun-${ARCH}" -O ./AppDir/AppRun
-    chmod 777 ./AppDir/AppRun
+    find ./AppDir -type d -exec chmod -R 755 '{}' \+
+    find ./AppDir -type f -exec chmod -R 644 '{}' \+
 
     # Bundle required libraries, but exclude libraries known to be problematic.
     #wget 'https://raw.githubusercontent.com/AppImage/pkg2appimage/master/excludelist' -O - |

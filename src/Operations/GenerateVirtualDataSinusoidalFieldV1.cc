@@ -44,7 +44,7 @@ bool GenerateVirtualDataSinusoidalFieldV1(Drover &DICOM_data,
                                           std::map<std::string, std::string>& /*InvocationMetadata*/,
                                           const std::string& /*FilenameLex*/){
 
-    constexpr auto pi = std::acos(-1.0);
+    const auto pi = std::acos(-1.0);
 
     // Parameters fixed for V1 virtual phantom.
     const double x_min = 0.0;
