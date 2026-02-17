@@ -119,7 +119,7 @@ elif [ "$ARCH" == "aarch64" ] || [ "$ARCH" == "armhf" ] ; then
     #wget "https://github.com/AppImage/AppImageKit/releases/download/13/AppRun-${ARCH}" -O ./AppDir/AppRun
     wget "https://github.com/AppImage/AppImageKit/releases/download/13/obsolete-AppRun-${ARCH}" -O ./AppDir/AppRun
     find ./AppDir -type d -exec chmod -R 755 '{}' \+
-    find ./AppDir -type f -exec chmod -R 644 '{}' \+
+    find ./AppDir -type f -exec chmod 644 '{}' \+
 
     # Bundle required libraries, but exclude libraries known to be problematic.
     #wget 'https://raw.githubusercontent.com/AppImage/pkg2appimage/master/excludelist' -O - |

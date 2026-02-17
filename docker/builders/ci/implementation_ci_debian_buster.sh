@@ -164,6 +164,9 @@ cp /scratch/xpra-xorg.conf /etc/X11/xorg.conf || true
 # This function either freshly clones a git repository, or pulls from upstream remotes.
 # The return value can be used to determine whether recompilation is required.
 function clone_or_pull {
+    find ./ -type d -exec chmod -R 755 '{}' \+
+    find ./ -type f -exec chmod 644 '{}' \+
+
     if git clone "$@" . ; then
         return 0 # Requires compilation.
     fi
