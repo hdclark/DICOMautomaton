@@ -428,7 +428,7 @@ jobs:
           path: "dcma.AppImage"
       - name: prep_2
         run: |
-             chmod u+x dcma.AppImage 
+             chmod 777 dcma.AppImage || true
              ./dcma.AppImage --appimage-extract
              rsync -a ./squashfs-root/usr/ /usr/
              ldd $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher || true

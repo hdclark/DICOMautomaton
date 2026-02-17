@@ -44,6 +44,8 @@ bool GenerateVirtualDataSinusoidalFieldV1(Drover &DICOM_data,
                                           std::map<std::string, std::string>& /*InvocationMetadata*/,
                                           const std::string& /*FilenameLex*/){
 
+    constexpr auto pi = std::acos(-1.0);
+
     // Parameters fixed for V1 virtual phantom.
     const double x_min = 0.0;
     const double x_max = 512.0;
@@ -117,16 +119,16 @@ bool GenerateVirtualDataSinusoidalFieldV1(Drover &DICOM_data,
                 // This creates a 3D wave pattern
                 
                 // dx varies sinusoidally with y and z
-                const double disp_x = std::sin(2.0 * M_PI * y_rel / wavelength_y) *
-                                     std::cos(2.0 * M_PI * z_rel / wavelength_z);
+                const double disp_x = std::sin(2.0 * pi * y_rel / wavelength_y) *
+                                     std::cos(2.0 * pi * z_rel / wavelength_z);
                 
                 // dy varies sinusoidally with x and z
-                const double disp_y = std::sin(2.0 * M_PI * x_rel / wavelength_x) *
-                                     std::cos(2.0 * M_PI * z_rel / wavelength_z);
+                const double disp_y = std::sin(2.0 * pi * x_rel / wavelength_x) *
+                                     std::cos(2.0 * pi * z_rel / wavelength_z);
                 
                 // dz varies sinusoidally with x and y
-                const double disp_z = std::sin(2.0 * M_PI * x_rel / wavelength_x) *
-                                     std::sin(2.0 * M_PI * y_rel / wavelength_y);
+                const double disp_z = std::sin(2.0 * pi * x_rel / wavelength_x) *
+                                     std::sin(2.0 * pi * y_rel / wavelength_y);
                 
                 // Track maximum displacement magnitude
                 const double magnitude = std::sqrt(disp_x * disp_x + 
