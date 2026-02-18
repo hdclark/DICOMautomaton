@@ -115,6 +115,10 @@ if [[ -z "$OS" ]]; then
     error_exit "Missing required argument: --os"
 fi
 
+# Ensure mutually exclusive flags are not used together
+if [[ "$REQUIRED_ONLY" == true && "$OPTIONAL_ONLY" == true ]]; then
+    error_exit "Cannot use --required-only and --optional-only together"
+fi
 # --- Package definitions ---
 # Each function outputs space-separated package names.
 # The naming convention is: get_<os>_<tier>_<required|optional>
