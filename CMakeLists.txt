@@ -1,9 +1,12 @@
 
 cmake_minimum_required(VERSION 3.12.0 FATAL_ERROR)
-project(DICOMautomaton LANGUAGES CXX)
-#set(DICOMautomaton_VERSION_MAJOR 0)
-#set(DICOMautomaton_VERSION_MINOR 0)
-#set(DICOMautomaton_VERSION_PATCH 0)
+project(DICOMautomaton VERSION 0.0.1 LANGUAGES CXX)
+
+# Add cmake/ to module search path so includes like include(PackageLists) work.
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+
+# Centralized package-name lists for various package managers.
+include(cmake/PackageLists.cmake)
 
 ####################################################################################
 #                                  User Options
@@ -32,6 +35,11 @@ option(WITH_LTO       "Use link-time optimization when available."              
 
 option(BUILD_SHARED_LIBS "Build shared-object/dynamicly-loaded binaries."       ON)
 
+# When ON, attempt to download missing dependencies via CMake FetchContent
+# before raising a fatal error. Useful for environments without system packages
+# but NOT recommended when integrating with OS/third-party package managers.
+option(WITH_FETCHCONTENT_FALLBACK "Download missing dependencies if not found." OFF)
+
 
 ####################################################################################
 #                                  Configuration
@@ -44,8 +52,7 @@ if(NOT BUILD_SHARED_LIBS)
     set(CMAKE_EXE_LINKER_FLAGS "-static")
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_EXTENSIONS OFF) # Disable GNU extensions (e.g., std=gnu++14).
+set(CMAKE_CXX_EXTENSIONS OFF) # Disable GNU extensions (e.g., std=gnu++14). Enforced via target_compile_features.
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For use with clang-tidy et al.
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -67,15 +74,33 @@ if(WITH_LTO)
     endif()
 endif()
 
+# Bring in standard install directory variables (CMAKE_INSTALL_LIBDIR etc.)
+# early so they can be referenced in FetchContent and dependency detection
+# blocks. This is safe to call multiple times.
+include(GNUInstallDirs)
+
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+set(BASH_COMPLETION_INSTALL_DIR    "${CMAKE_INSTALL_DATAROOTDIR}/bash-completion/completions/")
+# Use the directory where CMakeLists.txt is for inclusions.
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE ON)
+
+# FetchContent is available in CMake 3.11+. We require 3.12+ so it is always available.
+include(FetchContent)
+
 
 ####################################################################################
 #                                  Dependencies 
 ####################################################################################
-# Note: Dependencies are listed in CPACK list below.
 
 find_package(Threads REQUIRED)
 
-set(Boost_DEBUG ON)
+# Enable verbose Boost find_package output only for Debug builds.
+if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+    set(Boost_DEBUG ON)
+endif()
 if(NOT BUILD_SHARED_LIBS)
     #set(Boost_USE_STATIC_RUNTIME ON)
     set(Boost_USE_STATIC_LIBS ON)
@@ -87,72 +112,86 @@ if(NOT Boost_FOUND)
     find_package(Boost REQUIRED COMPONENTS serialization iostreams thread
                                 OPTIONAL_COMPONENTS system)
 endif()
-include_directories(${Boost_INCLUDE_DIRS})
 
 if(WITH_EIGEN)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(EIGEN3 REQUIRED eigen3)
-    include_directories( ${EIGEN3_INCLUDE_DIRS} )
+    find_package(Eigen3 CONFIG QUIET)
+    if(NOT Eigen3_FOUND)
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(EIGEN3 eigen3)
+    endif()
+    if(NOT Eigen3_FOUND AND NOT EIGEN3_FOUND)
+        if(WITH_FETCHCONTENT_FALLBACK)
+            message(STATUS "Eigen3 not found via find_package/pkg-config; fetching via FetchContent.")
+            FetchContent_Declare(
+                Eigen3
+                GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+                # Pin to the immutable commit SHA for Eigen 3.4.0 to prevent supply-chain
+                # attacks via tag mutation. Verify: git ls-remote --tags on the upstream repo.
+                GIT_TAG        3147391d946bb4b6c68edd901f2add6ac1f31f8c
+            )
+            FetchContent_MakeAvailable(Eigen3)
+            set(Eigen3_FOUND TRUE)
+        else()
+            message(FATAL_ERROR "Eigen3 not found. Install libeigen3-dev or set WITH_FETCHCONTENT_FALLBACK=ON.")
+        endif()
+    endif()
 endif()
 
 if(WITH_CGAL)
     if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
         set(CGAL_DO_NOT_WARN_ABOUT_CMAKE_BUILD_TYPE TRUE)
-        add_definitions(-DCGAL_DISABLE_ROUNDING_MATH_CHECK=1) # May be needed for Valgrind debugging.
         message(WARNING "If profiling/debugging on Arch Linux, disable binary stripping in PKGBUILD.")
-    endif()
-    if(WITH_EIGEN)
-        add_definitions(-DCGAL_EIGEN3_ENABLED=1) # Explicitly instruct CGAL to use Eigen.
     endif()
     find_package(CGAL REQUIRED COMPONENTS Core)
 
     # This workaround is for a CGAL v4.13 class and file rename {Implicit,Labeled}_mesh_domain_3.h.
     include(CheckIncludeFileCXX)
-    # Opt into the newer Labeled_mesh_domain_3.h when available.
-    #check_include_file_cxx("CGAL/Labeled_mesh_domain_3.h" DCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER)
-    #if(DCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER)
-    #    add_definitions(-DDCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER=1)
-    #endif()
-    #
     # Alternatively, prefer to use the older Implicit_mesh_domain_3.h when available.
     check_include_file_cxx("CGAL/Implicit_mesh_domain_3.h" DCMA_CGAL_HAS_IMPLICIT_MESH_DOMAIN_3_HEADER)
-    if(NOT DCMA_CGAL_HAS_IMPLICIT_MESH_DOMAIN_3_HEADER)
-        add_definitions(-DDCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER=1)
-    endif()
 endif()
 
 if(WITH_NLOPT)
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules(NLOPT REQUIRED nlopt)
-    include_directories( ${NLOPT_INCLUDE_DIRS} )
+    pkg_check_modules(NLOPT nlopt)
+    if(NOT NLOPT_FOUND)
+        if(WITH_FETCHCONTENT_FALLBACK)
+            message(STATUS "nlopt not found via pkg-config; fetching via FetchContent.")
+            FetchContent_Declare(
+                nlopt
+                GIT_REPOSITORY https://github.com/stevengj/nlopt.git
+                # Pin to the immutable commit SHA for nlopt v2.7.1 to prevent supply-chain
+                # attacks via tag mutation. Verify: git ls-remote --tags on the upstream repo.
+                GIT_TAG        9c7018f617dcf74a6e42f67e0a14869f10e5c957
+            )
+            FetchContent_MakeAvailable(nlopt)
+            set(NLOPT_FOUND TRUE)
+        else()
+            message(FATAL_ERROR "nlopt not found. Install libnlopt-dev or set WITH_FETCHCONTENT_FALLBACK=ON.")
+        endif()
+    endif()
 endif()
 
 if(WITH_SFML)
-    #find_package(SFML COMPONENTS graphics window system main REQUIRED)
     find_package(PkgConfig REQUIRED)
     if(NOT BUILD_SHARED_LIBS)
         set(SFML_STATIC_LIBRARIES TRUE)
-        add_definitions(-DSFML_STATIC=1)
     endif()
     pkg_check_modules(SFML REQUIRED sfml-graphics sfml-window sfml-system)
-    include_directories( ${SFML_INCLUDE_DIRS} )
 endif()
 
 if(WITH_SDL)
     set(OpenGL_GL_PREFERENCE GLVND)
     find_package(OpenGL REQUIRED COMPONENTS OpenGL) # Will help pick-up opengl32.a with MXE toolchain.
-    include_directories( ${OPENGL_INCLUDE_DIR} )
     message(STATUS "Proceeding with OPENGL_LIBRARIES = '${OPENGL_LIBRARIES}'")
     message(STATUS "Proceeding with OPENGL_INCLUDE_DIR = '${OPENGL_INCLUDE_DIR}'")
     message(STATUS "Proceeding with OPENGL_CFLAGS = '${OPENGL_CFLAGS}'")
 
     find_package(PkgConfig REQUIRED)
-    find_package(SDL2)
+    find_package(SDL2 QUIET)
     if(NOT SDL2_FOUND)
         message(STATUS "find_package(SDL2) not found, attempting pkg-config instead")
         pkg_check_modules(SDL2 REQUIRED sdl2)
     endif()
-    include_directories( ${SDL2_INCLUDE_DIRS} )
     message(STATUS "Proceeding with SDL2_LIBRARIES = '${SDL2_LIBRARIES}'")
     message(STATUS "Proceeding with SDL2_INCLUDE_DIRS = '${SDL2_INCLUDE_DIRS}'")
     message(STATUS "Proceeding with SDL2_CFLAGS = '${SDL2_CFLAGS}'")
@@ -162,35 +201,30 @@ if(WITH_SDL)
         target_link_libraries(SDL2::SDL2 INTERFACE "${SDL2_LIBRARIES}")
     endif()
 
-    if(NOT BUILD_SHARED_LIBS)
-        add_definitions(-DGLEW_STATIC=1)
-    endif()
     pkg_check_modules(GLEW REQUIRED glew)
-    include_directories( ${GLEW_INCLUDE_DIRS} )
 endif()
 
 if(WITH_GNU_GSL)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(GNU_GSL REQUIRED gsl)
-    include_directories( ${GNU_GSL_INCLUDE_DIRS} )
 endif()
 
 if(WITH_POSTGRES)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(POSTGRES REQUIRED libpq libpqxx)
-    include_directories( ${POSTGRES_INCLUDE_DIRS} )
 endif()
 
 if(WITH_THRIFT)
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(THRIFT REQUIRED thrift)
-    include_directories( ${THRIFT_INCLUDE_DIRS} )
 endif()
 
 set(DCMA_SYCL_FALLBACK "Fallback")
 set(DCMA_SYCL_BACKEND "${DCMA_SYCL_FALLBACK}")
 if(WITH_EXT_SYCL)
     # AdaptiveCPP
+    # For best results use the provided toolchain file:
+    #   cmake -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/sycl-adaptivecpp.cmake ...
     if("${DCMA_SYCL_BACKEND}" STREQUAL "${DCMA_SYCL_FALLBACK}")
         # SYCL support via AdaptiveCpp (formerly hipSYCL).
         # AdaptiveCpp provides the acpp compiler wrapper and CMake integration.
@@ -206,9 +240,6 @@ if(WITH_EXT_SYCL)
         if(AdaptiveCpp_FOUND)
             get_filename_component(DCMA_CXX_COMPILER_BASENAME "${CMAKE_CXX_COMPILER}" NAME)
             message(STATUS "CXX compiler: ${DCMA_CXX_COMPILER_BASENAME} (Note: can be set via environment flag 'CXX')")
-#            if(NOT DCMA_CXX_COMPILER_BASENAME MATCHES "^acpp([-.][0-9][0-9A-Za-z._-]*)?(\\.exe)?$")
-#                message(FATAL_ERROR "WITH_EXT_SYCL=ON and AdaptiveCpp detected require CMAKE_CXX_COMPILER to be AdaptiveCpp's 'acpp' driver")
-#            endif()
             set(DCMA_SYCL_BACKEND "AdaptiveCPP")
         endif()
     endif()
@@ -236,162 +267,8 @@ endif()
 #endif()
 
 ####################################################################################
-#                                  Compiler Flags
+#                         DCMA_VERSION detection
 ####################################################################################
-
-# Override the default CXX flags, which are controlled by the release type.
-#
-# Note: The '_DEBUG' flags are only applied when the release mode is 'Debug' -- likewise for the other flags.
-#
-# Note: If you want to fully override the CXX_FLAGS, then do not supply a build type and specify your CXX_FLAGS by
-#       defining CMAKE_CXX_FLAGS when calling cmake.
-set(CMAKE_CXX_FLAGS_DEBUG           "-O2 -g")
-set(CMAKE_CXX_FLAGS_MINSIZEREL      "-Os -DNDEBUG")
-set(CMAKE_CXX_FLAGS_RELEASE         "-O3 -DNDEBUG")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  "-O3 -g")
-
-if(MEMORY_CONSTRAINED_BUILD)
-    # Do not overwrite user-provided flags, but do provide sane defaults.
-    if(NOT CMAKE_CXX_FLAGS)
-        set(CMAKE_CXX_FLAGS "-Os -DNDEBUG")
-    endif()
-    set(CMAKE_CXX_FLAGS_DEBUG           "-Os -DNDEBUG")
-    set(CMAKE_CXX_FLAGS_MINSIZEREL      "-Os -DNDEBUG")
-    set(CMAKE_CXX_FLAGS_RELEASE         "-Os -DNDEBUG")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  "-Os -DNDEBUG")
-endif()
-
-
-# Add other appropriate CXX flags.
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    add_compile_options( -fdiagnostics-color=always
-                         -fno-var-tracking-assignments
-                         #-ftrivial-auto-var-init=pattern
-                         -Wno-deprecated
-                         -Wall
-                         -Wextra
-                         -Wpedantic
-                         -Wdeprecated
-                         -Wno-unused-variable
-                         -Wno-unused-parameter
-                         -Wno-unused-but-set-variable
-                         -Wno-maybe-initialized )
-
-    if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-        # Add gprof profiling flag.
-        add_compile_options( -pg
-                             -fno-omit-frame-pointer
-                             -fstack-check )
-    endif()
-
-    if(MEMORY_CONSTRAINED_BUILD)
-        # Trigger garbage collection more frequently.
-        add_compile_options( "SHELL:--param ggc-min-expand=10"
-                             "SHELL:--param ggc-min-heapsize=32768" )
-    endif()
-
-elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    add_compile_options( -fdiagnostics-color=always
-                         -Wall
-                         -Wextra
-                         -Wpedantic
-                         -Wdeprecated
-                         #-Wno-ignored-optimization-argument
-                         -Wno-unused-lambda-capture
-                         -Wno-unused-variable
-                         -Wno-unused-parameter
-                         -Wno-reserved-identifier )
-
-    if(WITH_IWYU)
-        set(IWYU_INVOCATION iwyu) # Location of the iwyu binary.
-        list(APPEND IWYU_INVOCATION "-Xiwyu;--no_comments")
-        set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${IWYU_INVOCATION})
-    endif()
-endif()
-
-
-# Sanitizers.
-if(WITH_ASAN  OR  WITH_TSAN  OR  WITH_MSAN)
-    add_compile_options( -O2
-                         -g
-                         -fno-omit-frame-pointer
-                         -fno-common )
-
-    # Also enable coverage instrumentation, since sanitizers will typically be used for testing.
-    add_compile_options( --coverage
-                         # Clang only? Need to confirm ... TODO
-                         #-fsanitize-coverage=trace-pc-guard
-                         #-fprofile-instr-generate
-                         #-fcoverage-mapping
-    )
-    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-        link_libraries(gcov)
-    endif()
-
-    add_definitions(-U_FORTIFY_SOURCE)
-endif()
-if(WITH_ASAN)
-    add_compile_options( -fsanitize=address
-                         -fsanitize-address-use-after-scope )
-    add_link_options(-fsanitize=address)
-
-    add_compile_options( -fsanitize=undefined
-                         -fno-sanitize-recover=undefined )
-    add_link_options(-fsanitize=undefined)
-
-elseif(WITH_TSAN)
-    message(WARNING "TSan may not support exceptions (depends on the compiler version and platform).")
-    add_compile_options(-fsanitize=thread)
-    add_link_options(-fsanitize=thread)
-elseif(WITH_MSAN)
-    message(WARNING "MSan may not be available on your system.")
-    add_compile_options( -fsanitize=memory
-                         -fPIE
-                         -pie
-                         -fsanitize-memory-track-origins )
-    add_link_options(-fsanitize=memory)
-endif()
-
-
-
-include(CheckCXXSymbolExists)
-check_cxx_symbol_exists(__arm__     "cstdio" ARCH_IS_ARM)
-check_cxx_symbol_exists(__aarch64__ "cstdio" ARCH_IS_ARM64)
-if(ARCH_IS_ARM OR ARCH_IS_ARM64)
-    message(STATUS "Detected ARM architecture.")
-    if(CMAKE_CXX_FLAGS MATCHES "-march=|-mcpu=|-mtune=")
-        message(STATUS "Architecture set by user.")
-    else()
-        if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-            # Enable to fix linking errors for toolchains that do not auto-detect atomic intrinsics (e.g., some ARM systems).
-            # Note: Binaries built this way should not be distributed.
-            message(STATUS "No architecture set, adding march=native flag")
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
-        elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-            message(STATUS "No architecture set, adding mcpu=generic flag")
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=generic")
-        else()
-            message(WARNING "Not able to set architecture, if compilation errors occur set architecture manually")
-        endif()
-    endif()
-endif()
-
-check_cxx_symbol_exists(std::regex::multiline "regex" HAS_REGEX_MULTILINE)
-if(HAS_REGEX_MULTILINE)
-    add_definitions(-DDCMA_CPPSTDLIB_HAS_REGEX_MULTILINE=1)
-endif()
-
-# C++11 feature currently missing from macos libc.
-check_cxx_symbol_exists(std::quick_exit "cstdlib" HAS_QUICK_EXIT)
-if(HAS_QUICK_EXIT)
-    add_definitions(-DDCMA_CPPSTDLIB_HAS_QUICK_EXIT=1)
-endif()
-
-####################################################################################
-#                                    Definitions
-####################################################################################
-add_definitions(-DUSTREAM_H) # -DUSE_ICU_STRINGS
-
 if( (NOT DEFINED DCMA_VERSION) OR ("${DCMA_VERSION}" MATCHES "^$") )
     execute_process( COMMAND
         ./scripts/extract_dcma_version.sh
@@ -405,114 +282,12 @@ if( "${DCMA_VERSION}" MATCHES "^$" )
     set(DCMA_VERSION "unknown")
 endif()
 
-if(WITH_EIGEN)
-    message(STATUS "Assuming Eigen is available.")
-    add_definitions(-DDCMA_USE_EIGEN=1)
-else()
-    message(STATUS "Assuming Eigen is not available.")
-    add_definitions(-UDCMA_USE_EIGEN)
-endif()
-
-if(WITH_CGAL)
-    message(STATUS "Assuming CGAL is available.")
-    add_definitions(-DDCMA_USE_CGAL=1)
-else()
-    message(STATUS "Assuming CGAL is not available.")
-    add_definitions(-UDCMA_USE_CGAL)
-endif()
-
-if(WITH_NLOPT)
-    message(STATUS "Assuming NLOPT is available.")
-    add_definitions(-DDCMA_USE_NLOPT=1)
-else()
-    message(STATUS "Assuming NLOPT is not available.")
-    add_definitions(-UDCMA_USE_NLOPT)
-endif()
-
-if(WITH_SFML)
-    message(STATUS "Assuming SFML is available.")
-    add_definitions(-DDCMA_USE_SFML=1)
-else()
-    message(STATUS "Assuming SFML is not available.")
-    add_definitions(-UDCMA_USE_SFML)
-endif()
-
-if(WITH_SDL)
-    message(STATUS "Assuming SDL is available.")
-    add_definitions(-DDCMA_USE_SDL=1)
-    add_definitions(-DDCMA_USE_GLEW=1)
-else()
-    message(STATUS "Assuming SDL is not available.")
-    add_definitions(-UDCMA_USE_SDL)
-    add_definitions(-UDCMA_USE_GLEW)
-endif()
-
-if(WITH_WT)
-    message(STATUS "Assuming Wt is available.")
-    add_definitions(-DDCMA_USE_WT=1)
-else()
-    message(STATUS "Assuming Wt is not available.")
-    add_definitions(-UDCMA_USE_WT)
-endif()
-
-if(WITH_POSTGRES)
-    message(STATUS "Assuming PostgreSQL client libraries are available.")
-    add_definitions(-DDCMA_USE_POSTGRES=1)
-else()
-    message(STATUS "Assuming PostgreSQL client libraries are not available.")
-    add_definitions(-UDCMA_USE_POSTGRES)
-endif()
-
-if(WITH_JANSSON)
-    message(STATUS "Assuming Jansson is available.")
-    add_definitions(-DDCMA_USE_JANSSON=1)
-else()
-    message(STATUS "Assuming Jansson is not available.")
-    add_definitions(-UDCMA_USE_JANSSON)
-endif()
-
-if(WITH_GNU_GSL)
-    message(STATUS "Assuming the GNU GSL is available.")
-    add_definitions(-DDCMA_USE_GNU_GSL=1)
-else()
-    message(STATUS "Assuming the GNU GSL is not available.")
-    add_definitions(-UDCMA_USE_GNU_GSL)
-endif()
-
-if(WITH_THRIFT)
-    message(STATUS "Assuming Apache Thrift is available.")
-    add_definitions(-DDCMA_USE_THRIFT=1)
-else()
-    message(STATUS "Assuming Apache Thrift is not available.")
-    add_definitions(-UDCMA_USE_THRIFT)
-endif()
-
-if("${DCMA_SYCL_BACKEND}" STREQUAL "AdaptiveCPP")
-    message(STATUS "Using SYCL backend: AdaptiveCPP")
-    add_definitions(-DDCMA_WHICH_SYCL=\"AdaptiveCPP\")
-    add_definitions(-DDCMA_USE_SYCL_ADAPTIVECPP=1)
-    add_definitions(-DDCMA_USE_EXT_SYCL=1)
-    add_definitions(-UDCMA_USE_SYCL_FALLBACK)
-    set(WITH_SYCL_FALLBACK OFF)
-#    set(DCMA_ADAPTIVECPP_TARGETS "generic" CACHE STRING "AdaptiveCpp targets")
-#    add_compile_options("SHELL:--acpp-targets=${DCMA_ADAPTIVECPP_TARGETS}")
-elseif("${DCMA_SYCL_BACKEND}" STREQUAL "TriSYCL")
-    message(STATUS "Using SYCL backend: TriSYCL")
-    add_definitions(-DDCMA_WHICH_SYCL=\"TriSYCL\")
-    add_definitions(-DDCMA_USE_SYCL_TRISYCL=1)
-    add_definitions(-DDCMA_USE_EXT_SYCL=1)
-    add_definitions(-UDCMA_USE_SYCL_FALLBACK)
-    set(WITH_SYCL_FALLBACK OFF)
-else()
-    message(STATUS "Using SYCL backend: Fallback")
-    add_definitions(-DDCMA_WHICH_SYCL=\"Fallback\")
-    add_definitions(-DDCMA_USE_SYCL_FALLBACK=1)
-    add_definitions(-UDCMA_USE_EXT_SYCL)
-    set(WITH_SYCL_FALLBACK ON)
-endif()
-
-# Detect whether specific functions/variable/macros are available.
+####################################################################################
+#                    Platform Feature Detection (for DCMA_Definitions.h)
+####################################################################################
+# Detect whether specific functions/variables/macros are available.
 # Note: this method does not support structs. Best to find a function that accepts the struct instead.
+include(CheckCXXSymbolExists)
 check_cxx_symbol_exists(select    "sys/select.h" DCMA_HAS_SYS_SELECT)        # Function (nominally).
 
 check_cxx_symbol_exists(isatty    "unistd.h"     DCMA_HAS_UNISTD_ISATTY)     # Function (nominally).
@@ -533,27 +308,23 @@ check_cxx_symbol_exists(O_NONBLOCK "fcntl.h"     DCMA_HAS_FCNTL_O_NONBLOCK)  # M
 configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/src/DCMA_Definitions.h.in
                 ${CMAKE_CURRENT_BINARY_DIR}/src/DCMA_Definitions.h )
 
-# mingw-w64 tweaks.
-if(MINGW OR WIN32)
-    # Target Windows 7 features (need to specify for ASIO, maybe other libs).
-    add_definitions(-D_WIN32_WINNT=0x0601)
-    # Create 'console' applications, so a terminal will appear when running.
-    link_libraries("-mconsole")
-    # Override IFileDialogs check to disable.
-    # See https://github.com/samhocevar/portable-file-dialogs/issues/50
-    add_definitions(-DPFD_HAS_IFILEDIALOG=0)
-endif()
+####################################################################################
+#                     Global Options Target (dcma_compile_settings)
+####################################################################################
+# The 'dcma_compile_settings' INTERFACE library is the project-wide "Global Options
+# Target". Every DICOMautomaton target links against it to inherit compiler flags,
+# compile definitions, and include directories.
+#
+# The definition is in cmake/CompileSettings.cmake for clean separation of concerns.
+#
+# Downstream CMake consumer usage after install:
+#   find_package(DICOMautomaton REQUIRED)
+#   target_link_libraries(my_target PRIVATE DICOMautomaton::dcma_compile_settings)
 
-# Use the directory where CMakeLists.txt is for inclusions.
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE ON)
+include(cmake/CompileSettings.cmake)
 
-include(GNUInstallDirs)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
-# The following should match the system directory:
-set(BASH_COMPLETION_INSTALL_DIR   "${CMAKE_INSTALL_DATAROOTDIR}/bash-completion/completions/")
+# Apply dcma_compile_settings to all targets defined in subdirectories.
+link_libraries(dcma_compile_settings)
 
 
 ####################################################################################
@@ -563,6 +334,50 @@ set(BASH_COMPLETION_INSTALL_DIR   "${CMAKE_INSTALL_DATAROOTDIR}/bash-completion/
 add_subdirectory(src)
 add_subdirectory(config-files)
 add_subdirectory(scripts)
+
+
+####################################################################################
+#                    CMake Package Config Support
+####################################################################################
+# Install CMake package config files so downstream projects can use:
+#   find_package(DICOMautomaton REQUIRED)
+#   target_link_libraries(my_target PRIVATE DICOMautomaton::imebrashim)
+#
+# This makes DICOMautomaton compatible with CMake-based consumers, as well as
+# third-party C++ package managers (Conan, vcpkg) that rely on CMake config files.
+
+include(CMakePackageConfigHelpers)
+
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/DICOMautomatonConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/DICOMautomatonConfig.cmake"
+    INSTALL_DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/DICOMautomaton"
+)
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/DICOMautomatonConfigVersion.cmake"
+    VERSION "${CMAKE_PROJECT_VERSION}"
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/DICOMautomatonConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/DICOMautomatonConfigVersion.cmake"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/DICOMautomaton"
+)
+
+# Export dcma_compile_settings INTERFACE library so downstream consumers can inherit
+# compile settings simply by linking against it.
+install(TARGETS dcma_compile_settings
+    EXPORT DICOMautomatonTargets
+)
+
+# The installed DICOMautomatonTargets.cmake is generated by the src/CMakeLists.txt
+# install(TARGETS ... EXPORT DICOMautomatonTargets ...) calls.
+install(EXPORT DICOMautomatonTargets
+    NAMESPACE   DICOMautomaton::
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/cmake/DICOMautomaton"
+)
 
 
 ####################################################################################
@@ -583,65 +398,12 @@ set(CPACK_PACKAGE_MAINTAINER "Haley Clark <hdeanclark@gmail.com>")
 set(CPACK_DEBIAN_PACKAGE_SECTION "Science")
 
 
-# Ygor build dependencies, e.g., "libc6 (>= 2.3.1-6), libgcc1 (>= 1:3.4.2-12)"
-set(BUILD_DEPENDENCY_PACKAGES "")
-list(APPEND BUILD_DEPENDENCY_PACKAGES "explicator")
-list(APPEND BUILD_DEPENDENCY_PACKAGES "ygorclustering")
-list(APPEND BUILD_DEPENDENCY_PACKAGES "ygor")
-list(APPEND BUILD_DEPENDENCY_PACKAGES "libz-dev")
-list(APPEND BUILD_DEPENDENCY_PACKAGES "libboost-dev")
-list(APPEND BUILD_DEPENDENCY_PACKAGES "libboost-iostreams-dev")
-list(APPEND BUILD_DEPENDENCY_PACKAGES "libboost-program-options-dev")
-list(APPEND BUILD_DEPENDENCY_PACKAGES "libboost-thread-dev")
-list(APPEND BUILD_DEPENDENCY_PACKAGES "libasio-dev")
-if(WITH_EIGEN)
-    list(APPEND BUILD_DEPENDENCY_PACKAGES "libeigen3-dev")
-endif()
-if(WITH_SFML)
-    list(APPEND BUILD_DEPENDENCY_PACKAGES "libsfml-dev")
-    list(APPEND BUILD_DEPENDENCY_PACKAGES "fonts-freefont-ttf")
-    list(APPEND BUILD_DEPENDENCY_PACKAGES "fonts-cmu")
-endif()
-if(WITH_SDL)
-    list(APPEND BUILD_DEPENDENCY_PACKAGES "libsdl2-dev")
-    list(APPEND BUILD_DEPENDENCY_PACKAGES "libglew-dev")
-endif()
-if(WITH_CGAL)
-    list(APPEND BUILD_DEPENDENCY_PACKAGES "libcgal-dev")
-endif()
-if(WITH_WT)
-    list(APPEND BUILD_DEPENDENCY_PACKAGES "libwt-dev")
-    list(APPEND BUILD_DEPENDENCY_PACKAGES "libwthttp-dev")
-endif()
-if(WITH_NLOPT)
-    list(APPEND BUILD_DEPENDENCY_PACKAGES "libnlopt-dev")
-    list(APPEND BUILD_DEPENDENCY_PACKAGES "libnlopt-cxx-dev")
-endif()
-if(WITH_GNU_GSL)
-    list(APPEND BUILD_DEPENDENCY_PACKAGES "libgsl-dev")
-endif()
-if(WITH_POSTGRES)
-    list(APPEND BUILD_DEPENDENCY_PACKAGES "libpqxx-dev")
-    list(APPEND BUILD_DEPENDENCY_PACKAGES "libpq-dev")
-    list(APPEND BUILD_DEPENDENCY_PACKAGES "postgresql-client")
-endif()
-if(WITH_JANSSON)
-    list(APPEND BUILD_DEPENDENCY_PACKAGES "libjansson-dev")
-endif()
-if(WITH_THRIFT)
-    list(APPEND BUILD_DEPENDENCY_PACKAGES "libthrift-dev")
-endif()
+# Build and runtime dependency package lists are defined centrally in
+# cmake/PackageLists.cmake. The DCMA_DEBIAN_BUILD_DEPS variable
+# is populated there and used here directly.
 #
 # Note: none of the SYCL external dependencies seem to be packaged for Debian (yet).
-#
-list(JOIN BUILD_DEPENDENCY_PACKAGES ", " CPACK_DEBIAN_PACKAGE_DEPENDS)
-
-# Recommended or optional packages, e.g., "liboptional-dev (>= 1.2.3-1), libmaybe-dev (>= 1:1.3.2-10)"
-set(RECOMMENDED_PACKAGES "")
-list(APPEND RECOMMENDED_PACKAGES "gnuplot")
-list(APPEND RECOMMENDED_PACKAGES "zenity")
-list(APPEND RECOMMENDED_PACKAGES "libboost-all-dev")
-list(APPEND RECOMMENDED_PACKAGES "patchelf")
-list(JOIN RECOMMENDED_PACKAGES ", " CPACK_DEBIAN_PACKAGE_RECOMMENDS)
+list(JOIN DCMA_DEBIAN_BUILD_DEPS ", " CPACK_DEBIAN_PACKAGE_DEPENDS)
+list(JOIN DCMA_DEBIAN_RECOMMENDED_DEPS ", " CPACK_DEBIAN_PACKAGE_RECOMMENDS)
 
 include(CPack)
