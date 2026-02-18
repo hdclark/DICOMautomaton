@@ -5,6 +5,9 @@
 -keep class com.google.androidgamesdk.GameActivity { *; }
 -keep class ca.halclark.dicomautomaton.MainActivity { *; }
 
+# Keep SDL2 Java-side classes called from native code via JNI.
+-keep class org.libsdl.app.** { *; }
+
 # Keep JNI entry points called from native code.
 -keepclassmembers class * {
     native <methods>;

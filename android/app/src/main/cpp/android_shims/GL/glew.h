@@ -19,14 +19,13 @@
 #include <GLES3/gl3.h>
 #include <GLES3/gl3ext.h>
 
-// GLEW return type and status codes.
-typedef unsigned int GLenum;
-typedef unsigned int GLuint;
+// GLenum, GLuint, GLboolean etc. are already defined by GLES3/gl3.h.
 
 #define GLEW_OK 0
 
-// glewExperimental is a global flag; provide a stub variable.
-static GLboolean glewExperimental = GL_FALSE;
+// glewExperimental is a global flag; use inline to avoid ODR violations when
+// this header is included in multiple translation units.
+inline GLboolean glewExperimental = GL_FALSE;
 
 // glewInit() is a no-op on Android because OpenGL ES loaders are not needed —
 // all ES function pointers are resolved at link time by the NDK.

@@ -31,9 +31,22 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Root of the DICOMautomaton repository (i.e., the directory containing src/).
 if(NOT DEFINED DCMA_REPO_ROOT)
-    # When invoked by Gradle the source dir is android/app/src/main/cpp,
-    # so the repo root is five levels up.
-    get_filename_component(DCMA_REPO_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../../../../.." ABSOLUTE)
+    # Prefer CMAKE_SOURCE_DIR if it already points at the repo root.
+    if(EXISTS "${CMAKE_SOURCE_DIR}/src")
+        set(DCMA_REPO_ROOT "${CMAKE_SOURCE_DIR}")
+    else()
+        # When invoked by Gradle the source dir is android/app/src/main/cpp,
+        # so the repo root is five levels up.
+        get_filename_component(_candidate_root "${CMAKE_CURRENT_SOURCE_DIR}/../../../../.." ABSOLUTE)
+        if(EXISTS "${_candidate_root}/src")
+            set(DCMA_REPO_ROOT "${_candidate_root}")
+        else()
+            message(FATAL_ERROR
+                "Unable to determine DCMA_REPO_ROOT automatically. "
+                "Please pass -DDCMA_REPO_ROOT=<path> pointing to the "
+                "DICOMautomaton repository root (the directory containing src/).")
+        endif()
+    endif()
 endif()
 set(DCMA_SRC_DIR "${DCMA_REPO_ROOT}/src")
 
@@ -156,7 +169,6 @@ find_package(Boost QUIET COMPONENTS
     filesystem
     iostreams
     serialization
-    program_options
     thread
 )
 if(Boost_FOUND)
@@ -168,7 +180,7 @@ else()
         message(STATUS "Using Boost headers at ${ANDROID_DEPS_PREFIX}/include")
         include_directories("${ANDROID_DEPS_PREFIX}/include")
         # Provide stub link targets for Boost component libraries.
-        foreach(_boost_comp filesystem iostreams serialization program_options thread)
+        foreach(_boost_comp filesystem iostreams serialization thread)
             set(_lib "${ANDROID_DEPS_PREFIX}/lib/libboost_${_boost_comp}.a")
             if(EXISTS "${_lib}")
                 add_library("Boost::${_boost_comp}" STATIC IMPORTED)

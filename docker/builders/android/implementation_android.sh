@@ -22,7 +22,27 @@ export ANDROID_NDK_ROOT="${ANDROID_NDK_ROOT:-${ANDROID_HOME}/ndk/26.3.11579264}"
 export JAVA_HOME="${JAVA_HOME:-$(dirname $(dirname $(readlink -f $(which javac))))}"
 
 TARGET_ABIS="${TARGET_ABIS:-arm64-v8a x86_64}"
-ANDROID_API=26
+ANDROID_API="${ANDROID_API:-26}"
+
+# Validate that ANDROID_API is within the range supported by the installed NDK.
+validate_android_api() {
+    local platforms_json="${ANDROID_NDK_ROOT}/meta/platforms.json"
+    if [ ! -f "${platforms_json}" ]; then
+        printf 'WARNING: %s not found; skipping API level compatibility check.\n' "${platforms_json}" >&2
+        return 0
+    fi
+    local min_api max_api
+    min_api=$(grep -o '"apiLevel":[[:space:]]*[0-9]\+' "${platforms_json}" | sed 's/[^0-9]//g' | sort -n | head -1)
+    max_api=$(grep -o '"apiLevel":[[:space:]]*[0-9]\+' "${platforms_json}" | sed 's/[^0-9]//g' | sort -n | tail -1)
+    if [ -n "${min_api}" ] && [ -n "${max_api}" ]; then
+        if [ "${ANDROID_API}" -lt "${min_api}" ] || [ "${ANDROID_API}" -gt "${max_api}" ]; then
+            printf 'ERROR: ANDROID_API=%s is outside NDK-supported range [%s, %s].\n' \
+                "${ANDROID_API}" "${min_api}" "${max_api}" >&2
+            exit 1
+        fi
+    fi
+}
+validate_android_api
 
 JOBS=$(nproc)
 JOBS=$(( JOBS < 8 ? JOBS : 8 ))
@@ -95,10 +115,17 @@ build_boost() {
 
     BOOST_VERSION="1.83.0"
     BOOST_DIR="/tmp/boost_$(echo ${BOOST_VERSION} | tr . _)"
+    # SHA256 of the official boost_1_83_0.tar.bz2 tarball.
+    BOOST_SHA256="6478edfe2f3305127cffe8caf73ea0176c53769f4bf1585be237eb30798c3b8e"
 
     if [ ! -d "${BOOST_DIR}" ]; then
         BOOST_URL="https://boostorg.jfrog.io/artifactory/main/release/${BOOST_VERSION}/source/boost_$(echo ${BOOST_VERSION} | tr . _).tar.bz2"
         wget --quiet -O /tmp/boost.tar.bz2 "${BOOST_URL}"
+        # Verify checksum before extraction to guard against corrupted/tampered archives.
+        echo "${BOOST_SHA256}  /tmp/boost.tar.bz2" | sha256sum -c - || {
+            printf 'ERROR: Boost tarball SHA256 mismatch. Refusing to continue.\n' >&2
+            exit 1
+        }
         tar -xjf /tmp/boost.tar.bz2 -C /tmp/
     fi
 
@@ -141,7 +168,7 @@ JAM_EOF
         --with-thread \
         --with-system \
         -j "${JOBS}" \
-        install 2>&1 | tail -40 || true
+        install
 }
 
 # ---------------------------------------------------------------------------

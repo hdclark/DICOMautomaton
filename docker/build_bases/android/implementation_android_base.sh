@@ -54,8 +54,9 @@ rm -rf /tmp/cmdline-tools.zip /tmp/cmdline-tools-extract
 
 export PATH="${ANDROID_HOME}/cmdline-tools/latest/bin:${PATH}"
 
-# Accept all SDK licenses non-interactively.
-yes | sdkmanager --licenses || true
+# Accept all SDK licenses non-interactively and warn if acceptance appears to fail.
+yes | sdkmanager --licenses 2>&1 | grep -q "All SDK package licenses accepted" \
+    || echo "Warning: Android SDK license acceptance may have failed"
 
 # ---------------------------------------------------------------------------
 # Android SDK build-tools and platform

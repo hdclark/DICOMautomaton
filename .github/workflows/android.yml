@@ -19,8 +19,8 @@ on:
     branches: [ master ]
     paths:
       - 'android/**'
-      - 'src/Operations/SDL_Viewer.cc'
-      - 'src/Operations/SDL_Viewer.h'
+      - 'src/Operations/SDL_Viewer*'
+      - 'src/Challenges/*'
       - 'src/imgui20210904/**'
       - 'src/implot20210904/**'
       - 'docker/builders/android/**'
@@ -32,7 +32,7 @@ jobs:
   build_android_apk:
     name: Build Android APK (arm64-v8a + x86_64)
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 60
     permissions:
       contents: read
 
@@ -64,12 +64,19 @@ jobs:
                  git \
                  rsync
 
+      - name: Prepare Android dependencies directory
+        run: |
+             # Create /android-deps as user-writable so subsequent build steps
+             # do not need sudo for mkdir or cmake --install.
+             sudo mkdir -p /android-deps
+             sudo chown -R "$USER:$USER" /android-deps
+
       - name: Cache cross-compiled Android dependencies
         uses: actions/cache@v4
         id: deps-cache
         with:
           path: /android-deps
-          key: android-deps-v2-${{ runner.os }}-${{ hashFiles('docker/builders/android/implementation_android.sh') }}
+          key: android-deps-v3-${{ runner.os }}-${{ hashFiles('docker/builders/android/**', 'docker/build_bases/android/**', '.github/workflows/android.yml') }}
 
       - name: Cross-compile SDL2 for Android
         if: steps.deps-cache.outputs.cache-hit != 'true'
@@ -80,7 +87,7 @@ jobs:
 
              for abi in arm64-v8a x86_64 ; do
                  prefix="/android-deps/${abi}"
-                 sudo mkdir -p "${prefix}"
+                 mkdir -p "${prefix}"
 
                  cmake -S /tmp/sdl2 -B "/tmp/sdl2_build_${abi}" \
                      -DCMAKE_TOOLCHAIN_FILE="${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake" \
@@ -93,18 +100,19 @@ jobs:
                      -GNinja
 
                  cmake --build "/tmp/sdl2_build_${abi}" --parallel "$(nproc)"
-                 sudo cmake --install "/tmp/sdl2_build_${abi}"
+                 cmake --install "/tmp/sdl2_build_${abi}"
              done
 
       - name: Cross-compile Boost for Android
         if: steps.deps-cache.outputs.cache-hit != 'true'
         run: |
              set -eux
-             # Download Boost source (header-only approach for most features;
-             # compiled for filesystem, iostreams, serialization, thread).
+             # Download Boost source (compiled for filesystem, iostreams, serialization, thread).
              BOOST_VERSION="1.83.0"
+             BOOST_SHA256="6478edfe2f3305127cffe8caf73ea0176c53769f4bf1585be237eb30798c3b8e"
              BOOST_URL="https://boostorg.jfrog.io/artifactory/main/release/${BOOST_VERSION}/source/boost_$(echo ${BOOST_VERSION} | tr . _).tar.bz2"
              wget --quiet -O /tmp/boost.tar.bz2 "${BOOST_URL}"
+             echo "${BOOST_SHA256}  /tmp/boost.tar.bz2" | sha256sum -c -
              tar -xjf /tmp/boost.tar.bz2 -C /tmp/
              BOOST_SRC="/tmp/boost_$(echo ${BOOST_VERSION} | tr . _)"
 
@@ -114,7 +122,7 @@ jobs:
 
              for abi in arm64-v8a x86_64 ; do
                  prefix="/android-deps/${abi}"
-                 sudo mkdir -p "${prefix}"
+                 mkdir -p "${prefix}"
 
                  case "${abi}" in
                      arm64-v8a)
@@ -140,7 +148,7 @@ jobs:
                  ;
              JAM_EOF
 
-                 sudo ./b2 \
+                 ./b2 \
                      --user-config=/tmp/boost_user_config_${abi}.jam \
                      toolset="clang-android_${ndk_arch}" \
                      target-os=android \
@@ -154,7 +162,7 @@ jobs:
                      --with-thread \
                      --with-system \
                      -j "$(nproc)" \
-                     install 2>&1 | tail -30 || true
+                     install 2>&1 | tail -30
              done
 
       - name: Cross-compile Ygor for Android
@@ -165,7 +173,7 @@ jobs:
 
              for abi in arm64-v8a x86_64 ; do
                  prefix="/android-deps/${abi}"
-                 sudo mkdir -p "${prefix}"
+                 mkdir -p "${prefix}"
 
                  cmake -S /tmp/ygor -B "/tmp/ygor_build_${abi}" \
                      -DCMAKE_TOOLCHAIN_FILE="${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake" \
@@ -179,7 +187,7 @@ jobs:
                      -GNinja
 
                  cmake --build "/tmp/ygor_build_${abi}" --parallel "$(nproc)"
-                 sudo cmake --install "/tmp/ygor_build_${abi}"
+                 cmake --install "/tmp/ygor_build_${abi}"
              done
 
       - name: Cross-compile Explicator for Android
@@ -190,7 +198,7 @@ jobs:
 
              for abi in arm64-v8a x86_64 ; do
                  prefix="/android-deps/${abi}"
-                 sudo mkdir -p "${prefix}"
+                 mkdir -p "${prefix}"
 
                  cmake -S /tmp/explicator -B "/tmp/explicator_build_${abi}" \
                      -DCMAKE_TOOLCHAIN_FILE="${ANDROID_NDK_ROOT}/build/cmake/android.toolchain.cmake" \
@@ -202,7 +210,7 @@ jobs:
                      -GNinja
 
                  cmake --build "/tmp/explicator_build_${abi}" --parallel "$(nproc)"
-                 sudo cmake --install "/tmp/explicator_build_${abi}"
+                 cmake --install "/tmp/explicator_build_${abi}"
              done
 
       - name: Write local.properties for Gradle
@@ -214,6 +222,7 @@ jobs:
 
       - name: Build debug APK with Gradle
         run: |
+             set -o pipefail
              cd android
              chmod +x gradlew
              ./gradlew assembleDebug \

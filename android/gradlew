@@ -1,33 +1,22 @@
 #!/bin/sh
-# Gradle wrapper bootstrap script.
-# This script downloads the Gradle wrapper jar if it is not already present,
-# then invokes Gradle with the specified arguments.
-#
-# Generated for DICOMautomaton Android build.
+# Gradle wrapper script for DICOMautomaton Android build.
+# The Gradle wrapper jar (gradle/wrapper/gradle-wrapper.jar) must be present
+# in the repository.  If it is missing, regenerate it with:
+#   gradle wrapper --gradle-version 8.4
+# and commit the result.
 
 set -e
 
 # Determine script location (supports symlinks).
 APP_HOME="$(cd "$(dirname "$0")" && pwd)"
 GRADLE_WRAPPER_JAR="${APP_HOME}/gradle/wrapper/gradle-wrapper.jar"
-GRADLE_PROPERTIES="${APP_HOME}/gradle/wrapper/gradle-wrapper.properties"
 
-# Read distribution URL from properties.
-GRADLE_DIST_URL=$(grep '^distributionUrl=' "${GRADLE_PROPERTIES}" | sed 's/distributionUrl=//' | sed 's/\\//g')
-
-# If the wrapper jar is missing, download it.
+# The wrapper jar must be committed alongside this script.
 if [ ! -f "${GRADLE_WRAPPER_JAR}" ]; then
-    JAR_VERSION="3.5.3"
-    JAR_URL="https://github.com/gradle/gradle/raw/v${JAR_VERSION}/gradle/wrapper/gradle-wrapper.jar"
-    echo "Downloading Gradle wrapper jar from ${JAR_URL} ..."
-    if command -v curl >/dev/null 2>&1; then
-        curl -fsSL -o "${GRADLE_WRAPPER_JAR}" "${JAR_URL}"
-    elif command -v wget >/dev/null 2>&1; then
-        wget -q -O "${GRADLE_WRAPPER_JAR}" "${JAR_URL}"
-    else
-        echo "ERROR: Neither curl nor wget found. Cannot download Gradle wrapper." >&2
-        exit 1
-    fi
+    echo "ERROR: Gradle wrapper JAR not found at '${GRADLE_WRAPPER_JAR}'." >&2
+    echo "Regenerate it with: gradle wrapper --gradle-version 8.4" >&2
+    echo "Then commit the generated 'gradle/wrapper/gradle-wrapper.jar' file." >&2
+    exit 1
 fi
 
 # Locate Java.

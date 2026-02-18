@@ -77,11 +77,23 @@ extern "C" int SDL_main(int /*argc*/, char** /*argv*/) {
         }
 
     } catch(const std::exception& e) {
+#ifdef __ANDROID__
+        // Use __android_log_assert so that the exception appears as a fatal
+        // native crash in logcat with a visible tag, rather than a silent exit.
+        __android_log_assert("SDL_main", "DICOMautomaton",
+                             "Fatal std::exception: %s", e.what());
+#else
         DCMA_ANDROID_LOG(e.what());
         return 1;
+#endif
     } catch(...) {
+#ifdef __ANDROID__
+        __android_log_assert("SDL_main", "DICOMautomaton",
+                             "Fatal unknown exception in SDL_main");
+#else
         DCMA_ANDROID_LOG("Unknown exception in SDL_main");
         return 1;
+#endif
     }
 
     DCMA_ANDROID_LOG("DICOMautomaton SDL Viewer exiting");
