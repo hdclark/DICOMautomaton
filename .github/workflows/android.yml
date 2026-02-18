@@ -110,7 +110,7 @@ jobs:
              # Download Boost source (compiled for filesystem, iostreams, serialization, thread).
              BOOST_VERSION="1.83.0"
              BOOST_SHA256="6478edfe2f3305127cffe8caf73ea0176c53769f4bf1585be237eb30798c3b8e"
-             BOOST_URL="https://boostorg.jfrog.io/artifactory/main/release/${BOOST_VERSION}/source/boost_$(echo ${BOOST_VERSION} | tr . _).tar.bz2"
+             BOOST_URL="https://archives.boost.io/release/${BOOST_VERSION}/source/boost_$(echo ${BOOST_VERSION} | tr . _).tar.bz2"
              wget --quiet -O /tmp/boost.tar.bz2 "${BOOST_URL}"
              tar -xjf /tmp/boost.tar.bz2 -C /tmp/
              BOOST_SRC="/tmp/boost_$(echo ${BOOST_VERSION} | tr . _)"
