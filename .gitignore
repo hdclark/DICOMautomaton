@@ -39,3 +39,10 @@ __pycache__/
 # vim temporary files.
 *.swp
 
+# Android Gradle build cache and generated files.
+android/.gradle/
+android/local.properties
+android/app/build/
+android/.idea/
+android/*.iml
+android/app/*.iml
