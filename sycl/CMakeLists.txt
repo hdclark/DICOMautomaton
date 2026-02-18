@@ -154,7 +154,8 @@ target_compile_options(sycl_compile_settings INTERFACE
     -fsanitize=address -fsanitize-address-use-after-scope
     -fsanitize=pointer-compare -fsanitize=pointer-subtract
     -fsanitize=undefined -fno-sanitize-recover=undefined )
-target_compile_definitions(sycl_compile_settings INTERFACE -U_FORTIFY_SOURCE)
+# -U_FORTIFY_SOURCE is a compiler flag (undefine), not a #define, so use target_compile_options.
+target_compile_options(sycl_compile_settings INTERFACE -U_FORTIFY_SOURCE)
 
 # Definitions (Issue 3).
 if(WITH_EIGEN)

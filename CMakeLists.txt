@@ -380,7 +380,8 @@ if(WITH_ASAN  OR  WITH_TSAN  OR  WITH_MSAN)
         link_libraries(gcov)
     endif()
 
-    target_compile_definitions(dcma_compile_settings INTERFACE -U_FORTIFY_SOURCE)
+    # -U_FORTIFY_SOURCE is a compiler flag (undefine), not a #define, so use target_compile_options.
+    target_compile_options(dcma_compile_settings INTERFACE -U_FORTIFY_SOURCE)
 endif()
 if(WITH_ASAN)
     target_compile_options(dcma_compile_settings INTERFACE
