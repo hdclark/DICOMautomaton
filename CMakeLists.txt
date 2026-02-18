@@ -5,7 +5,7 @@ project(DICOMautomaton VERSION 0.0.1 LANGUAGES CXX)
 # Add cmake/ to module search path so includes like include(PackageLists) work.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-# Centralized package-name lists for various package managers (Issue 1).
+# Centralized package-name lists for various package managers.
 include(cmake/PackageLists.cmake)
 
 ####################################################################################
@@ -37,8 +37,7 @@ option(BUILD_SHARED_LIBS "Build shared-object/dynamicly-loaded binaries."       
 
 # When ON, attempt to download missing dependencies via CMake FetchContent
 # before raising a fatal error. Useful for environments without system packages
-# but NOT recommended when integrating with OS/third-party package managers
-# (Issue 4).
+# but NOT recommended when integrating with OS/third-party package managers.
 option(WITH_FETCHCONTENT_FALLBACK "Download missing dependencies if not found." OFF)
 
 
@@ -53,8 +52,7 @@ if(NOT BUILD_SHARED_LIBS)
     set(CMAKE_EXE_LINKER_FLAGS "-static")
 endif()
 
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_EXTENSIONS OFF) # Disable GNU extensions (e.g., std=gnu++14).
+set(CMAKE_CXX_EXTENSIONS OFF) # Disable GNU extensions (e.g., std=gnu++14). Enforced via target_compile_features.
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For use with clang-tidy et al.
 set(THREADS_PREFER_PTHREAD_FLAG ON)
@@ -89,19 +87,20 @@ set(BASH_COMPLETION_INSTALL_DIR    "${CMAKE_INSTALL_DATAROOTDIR}/bash-completion
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE ON)
 
-# FetchContent is available in CMake 3.11+. We require 3.12+ so it is always
-# available (Issue 4).
+# FetchContent is available in CMake 3.11+. We require 3.12+ so it is always available.
 include(FetchContent)
 
 
 ####################################################################################
 #                                  Dependencies 
 ####################################################################################
-# Note: Package names for various package managers are centralized in cmake/PackageLists.cmake (Issue 1).
 
 find_package(Threads REQUIRED)
 
-set(Boost_DEBUG ON)
+# Enable verbose Boost find_package output only for Debug builds.
+if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
+    set(Boost_DEBUG ON)
+endif()
 if(NOT BUILD_SHARED_LIBS)
     #set(Boost_USE_STATIC_RUNTIME ON)
     set(Boost_USE_STATIC_LIBS ON)
@@ -122,12 +121,13 @@ if(WITH_EIGEN)
     endif()
     if(NOT Eigen3_FOUND AND NOT EIGEN3_FOUND)
         if(WITH_FETCHCONTENT_FALLBACK)
-            message(STATUS "Eigen3 not found via find_package/pkg-config; fetching via FetchContent (Issue 4).")
+            message(STATUS "Eigen3 not found via find_package/pkg-config; fetching via FetchContent.")
             FetchContent_Declare(
                 Eigen3
                 GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-                GIT_TAG        3.4.0
-                GIT_SHALLOW    TRUE
+                # Pin to the immutable commit SHA for Eigen 3.4.0 to prevent supply-chain
+                # attacks via tag mutation. Verify: git ls-remote --tags on the upstream repo.
+                GIT_TAG        3147391d946bb4b6c68edd901f2add6ac1f31f8c
             )
             FetchContent_MakeAvailable(Eigen3)
             set(Eigen3_FOUND TRUE)
@@ -155,14 +155,16 @@ if(WITH_NLOPT)
     pkg_check_modules(NLOPT nlopt)
     if(NOT NLOPT_FOUND)
         if(WITH_FETCHCONTENT_FALLBACK)
-            message(STATUS "nlopt not found via pkg-config; fetching via FetchContent (Issue 4).")
+            message(STATUS "nlopt not found via pkg-config; fetching via FetchContent.")
             FetchContent_Declare(
                 nlopt
                 GIT_REPOSITORY https://github.com/stevengj/nlopt.git
-                GIT_TAG        v2.7.1
-                GIT_SHALLOW    TRUE
+                # Pin to the immutable commit SHA for nlopt v2.7.1 to prevent supply-chain
+                # attacks via tag mutation. Verify: git ls-remote --tags on the upstream repo.
+                GIT_TAG        9c7018f617dcf74a6e42f67e0a14869f10e5c957
             )
             FetchContent_MakeAvailable(nlopt)
+            set(NLOPT_FOUND TRUE)
         else()
             message(FATAL_ERROR "nlopt not found. Install libnlopt-dev or set WITH_FETCHCONTENT_FALLBACK=ON.")
         endif()
@@ -223,7 +225,6 @@ if(WITH_EXT_SYCL)
     # AdaptiveCPP
     # For best results use the provided toolchain file:
     #   cmake -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/sycl-adaptivecpp.cmake ...
-    # (Issue 2: toolchain file support)
     if("${DCMA_SYCL_BACKEND}" STREQUAL "${DCMA_SYCL_FALLBACK}")
         # SYCL support via AdaptiveCpp (formerly hipSYCL).
         # AdaptiveCpp provides the acpp compiler wrapper and CMake integration.
@@ -266,187 +267,8 @@ endif()
 #endif()
 
 ####################################################################################
-#                          Compiler Flags & Compile Settings (Issue 3)
+#                         DCMA_VERSION detection
 ####################################################################################
-# Instead of using global add_compile_options() / add_definitions() / include_directories(),
-# we create an INTERFACE library 'dcma_compile_settings' that bundles all compile options,
-# compile definitions, and include directories for DCMA targets.
-#
-# This INTERFACE library is:
-#  - Applied to all targets defined in subdirectories via link_libraries() below.
-#  - Exported and installed so downstream CMake consumers can use it directly.
-#
-# Downstream usage after install:
-#   find_package(DICOMautomaton REQUIRED)
-#   target_link_libraries(my_target PRIVATE DICOMautomaton::dcma_compile_settings)
-
-add_library(dcma_compile_settings INTERFACE)
-
-# C++ standard: use compile_features for portability across CMake versions.
-target_compile_features(dcma_compile_settings INTERFACE cxx_std_17)
-
-# Override the default CXX flags, which are controlled by the release type.
-#
-# Note: The '_DEBUG' flags are only applied when the release mode is 'Debug' -- likewise for the other flags.
-#
-# Note: If you want to fully override the CXX_FLAGS, then do not supply a build type and specify your CXX_FLAGS by
-#       defining CMAKE_CXX_FLAGS when calling cmake.
-set(CMAKE_CXX_FLAGS_DEBUG           "-O2 -g")
-set(CMAKE_CXX_FLAGS_MINSIZEREL      "-Os -DNDEBUG")
-set(CMAKE_CXX_FLAGS_RELEASE         "-O3 -DNDEBUG")
-set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  "-O3 -g")
-
-if(MEMORY_CONSTRAINED_BUILD)
-    # Do not overwrite user-provided flags, but do provide sane defaults.
-    if(NOT CMAKE_CXX_FLAGS)
-        set(CMAKE_CXX_FLAGS "-Os -DNDEBUG")
-    endif()
-    set(CMAKE_CXX_FLAGS_DEBUG           "-Os -DNDEBUG")
-    set(CMAKE_CXX_FLAGS_MINSIZEREL      "-Os -DNDEBUG")
-    set(CMAKE_CXX_FLAGS_RELEASE         "-Os -DNDEBUG")
-    set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  "-Os -DNDEBUG")
-endif()
-
-
-# Add compiler-specific flags via the INTERFACE library (Issue 3: target-specific, not global).
-if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    target_compile_options(dcma_compile_settings INTERFACE
-                           -fdiagnostics-color=always
-                           -fno-var-tracking-assignments
-                           #-ftrivial-auto-var-init=pattern
-                           -Wno-deprecated
-                           -Wall
-                           -Wextra
-                           -Wpedantic
-                           -Wdeprecated
-                           -Wno-unused-variable
-                           -Wno-unused-parameter
-                           -Wno-unused-but-set-variable
-                           -Wno-maybe-initialized )
-
-    if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-        # Add gprof profiling flag.
-        target_compile_options(dcma_compile_settings INTERFACE
-                               -pg
-                               -fno-omit-frame-pointer
-                               -fstack-check )
-    endif()
-
-    if(MEMORY_CONSTRAINED_BUILD)
-        # Trigger garbage collection more frequently.
-        target_compile_options(dcma_compile_settings INTERFACE
-                               "SHELL:--param ggc-min-expand=10"
-                               "SHELL:--param ggc-min-heapsize=32768" )
-    endif()
-
-elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    target_compile_options(dcma_compile_settings INTERFACE
-                           -fdiagnostics-color=always
-                           -Wall
-                           -Wextra
-                           -Wpedantic
-                           -Wdeprecated
-                           #-Wno-ignored-optimization-argument
-                           -Wno-unused-lambda-capture
-                           -Wno-unused-variable
-                           -Wno-unused-parameter
-                           -Wno-reserved-identifier )
-
-    if(WITH_IWYU)
-        set(IWYU_INVOCATION iwyu) # Location of the iwyu binary.
-        list(APPEND IWYU_INVOCATION "-Xiwyu;--no_comments")
-        set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${IWYU_INVOCATION})
-    endif()
-endif()
-
-
-# Sanitizers.
-if(WITH_ASAN  OR  WITH_TSAN  OR  WITH_MSAN)
-    target_compile_options(dcma_compile_settings INTERFACE
-                           -O2
-                           -g
-                           -fno-omit-frame-pointer
-                           -fno-common )
-
-    # Also enable coverage instrumentation, since sanitizers will typically be used for testing.
-    target_compile_options(dcma_compile_settings INTERFACE
-                           --coverage
-                           # Clang only? Need to confirm ... TODO
-                           #-fsanitize-coverage=trace-pc-guard
-                           #-fprofile-instr-generate
-                           #-fcoverage-mapping
-    )
-    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-        link_libraries(gcov)
-    endif()
-
-    # -U_FORTIFY_SOURCE is a compiler flag (undefine), not a #define, so use target_compile_options.
-    target_compile_options(dcma_compile_settings INTERFACE -U_FORTIFY_SOURCE)
-endif()
-if(WITH_ASAN)
-    target_compile_options(dcma_compile_settings INTERFACE
-                           -fsanitize=address
-                           -fsanitize-address-use-after-scope )
-    add_link_options(-fsanitize=address)
-
-    target_compile_options(dcma_compile_settings INTERFACE
-                           -fsanitize=undefined
-                           -fno-sanitize-recover=undefined )
-    add_link_options(-fsanitize=undefined)
-
-elseif(WITH_TSAN)
-    message(WARNING "TSan may not support exceptions (depends on the compiler version and platform).")
-    target_compile_options(dcma_compile_settings INTERFACE -fsanitize=thread)
-    add_link_options(-fsanitize=thread)
-elseif(WITH_MSAN)
-    message(WARNING "MSan may not be available on your system.")
-    target_compile_options(dcma_compile_settings INTERFACE
-                           -fsanitize=memory
-                           -fPIE
-                           -pie
-                           -fsanitize-memory-track-origins )
-    add_link_options(-fsanitize=memory)
-endif()
-
-
-include(CheckCXXSymbolExists)
-check_cxx_symbol_exists(__arm__     "cstdio" ARCH_IS_ARM)
-check_cxx_symbol_exists(__aarch64__ "cstdio" ARCH_IS_ARM64)
-if(ARCH_IS_ARM OR ARCH_IS_ARM64)
-    message(STATUS "Detected ARM architecture.")
-    if(CMAKE_CXX_FLAGS MATCHES "-march=|-mcpu=|-mtune=")
-        message(STATUS "Architecture set by user.")
-    else()
-        if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-            # Enable to fix linking errors for toolchains that do not auto-detect atomic intrinsics (e.g., some ARM systems).
-            # Note: Binaries built this way should not be distributed.
-            message(STATUS "No architecture set, adding march=native flag")
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
-        elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-            message(STATUS "No architecture set, adding mcpu=generic flag")
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mcpu=generic")
-        else()
-            message(WARNING "Not able to set architecture, if compilation errors occur set architecture manually")
-        endif()
-    endif()
-endif()
-
-check_cxx_symbol_exists(std::regex::multiline "regex" HAS_REGEX_MULTILINE)
-check_cxx_symbol_exists(std::quick_exit "cstdlib" HAS_QUICK_EXIT)  # C++11 feature currently missing from macos libc.
-
-####################################################################################
-#                            Definitions (Issue 3)
-####################################################################################
-# All DCMA compile definitions are attached to the dcma_compile_settings INTERFACE
-# library rather than applied globally via add_definitions(). This enables proper
-# per-target scoping and correct propagation to downstream CMake consumers (Issue 5).
-
-target_compile_definitions(dcma_compile_settings INTERFACE
-    USTREAM_H   # -DUSE_ICU_STRINGS
-    $<$<BOOL:${HAS_REGEX_MULTILINE}>:DCMA_CPPSTDLIB_HAS_REGEX_MULTILINE=1>
-    $<$<BOOL:${HAS_QUICK_EXIT}>:DCMA_CPPSTDLIB_HAS_QUICK_EXIT=1>
-)
-
 if( (NOT DEFINED DCMA_VERSION) OR ("${DCMA_VERSION}" MATCHES "^$") )
     execute_process( COMMAND
         ./scripts/extract_dcma_version.sh
@@ -460,115 +282,12 @@ if( "${DCMA_VERSION}" MATCHES "^$" )
     set(DCMA_VERSION "unknown")
 endif()
 
-if(WITH_EIGEN)
-    message(STATUS "Assuming Eigen is available.")
-    target_compile_definitions(dcma_compile_settings INTERFACE DCMA_USE_EIGEN=1)
-    if(WITH_CGAL)
-        target_compile_definitions(dcma_compile_settings INTERFACE CGAL_EIGEN3_ENABLED=1) # Explicitly instruct CGAL to use Eigen.
-    endif()
-else()
-    message(STATUS "Assuming Eigen is not available.")
-endif()
-
-if(WITH_CGAL)
-    message(STATUS "Assuming CGAL is available.")
-    target_compile_definitions(dcma_compile_settings INTERFACE DCMA_USE_CGAL=1)
-    if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-        target_compile_definitions(dcma_compile_settings INTERFACE CGAL_DISABLE_ROUNDING_MATH_CHECK=1) # May be needed for Valgrind debugging.
-    endif()
-    if(NOT DCMA_CGAL_HAS_IMPLICIT_MESH_DOMAIN_3_HEADER)
-        target_compile_definitions(dcma_compile_settings INTERFACE DCMA_CGAL_HAS_LABELED_MESH_DOMAIN_3_HEADER=1)
-    endif()
-else()
-    message(STATUS "Assuming CGAL is not available.")
-endif()
-
-if(WITH_NLOPT)
-    message(STATUS "Assuming NLOPT is available.")
-    target_compile_definitions(dcma_compile_settings INTERFACE DCMA_USE_NLOPT=1)
-else()
-    message(STATUS "Assuming NLOPT is not available.")
-endif()
-
-if(WITH_SFML)
-    message(STATUS "Assuming SFML is available.")
-    target_compile_definitions(dcma_compile_settings INTERFACE DCMA_USE_SFML=1)
-    if(NOT BUILD_SHARED_LIBS)
-        target_compile_definitions(dcma_compile_settings INTERFACE SFML_STATIC=1)
-    endif()
-else()
-    message(STATUS "Assuming SFML is not available.")
-endif()
-
-if(WITH_SDL)
-    message(STATUS "Assuming SDL is available.")
-    target_compile_definitions(dcma_compile_settings INTERFACE DCMA_USE_SDL=1 DCMA_USE_GLEW=1)
-    if(NOT BUILD_SHARED_LIBS)
-        target_compile_definitions(dcma_compile_settings INTERFACE GLEW_STATIC=1)
-    endif()
-else()
-    message(STATUS "Assuming SDL is not available.")
-endif()
-
-if(WITH_WT)
-    message(STATUS "Assuming Wt is available.")
-    target_compile_definitions(dcma_compile_settings INTERFACE DCMA_USE_WT=1)
-else()
-    message(STATUS "Assuming Wt is not available.")
-endif()
-
-if(WITH_POSTGRES)
-    message(STATUS "Assuming PostgreSQL client libraries are available.")
-    target_compile_definitions(dcma_compile_settings INTERFACE DCMA_USE_POSTGRES=1)
-else()
-    message(STATUS "Assuming PostgreSQL client libraries are not available.")
-endif()
-
-if(WITH_JANSSON)
-    message(STATUS "Assuming Jansson is available.")
-    target_compile_definitions(dcma_compile_settings INTERFACE DCMA_USE_JANSSON=1)
-else()
-    message(STATUS "Assuming Jansson is not available.")
-endif()
-
-if(WITH_GNU_GSL)
-    message(STATUS "Assuming the GNU GSL is available.")
-    target_compile_definitions(dcma_compile_settings INTERFACE DCMA_USE_GNU_GSL=1)
-else()
-    message(STATUS "Assuming the GNU GSL is not available.")
-endif()
-
-if(WITH_THRIFT)
-    message(STATUS "Assuming Apache Thrift is available.")
-    target_compile_definitions(dcma_compile_settings INTERFACE DCMA_USE_THRIFT=1)
-else()
-    message(STATUS "Assuming Apache Thrift is not available.")
-endif()
-
-if("${DCMA_SYCL_BACKEND}" STREQUAL "AdaptiveCPP")
-    message(STATUS "Using SYCL backend: AdaptiveCPP")
-    target_compile_definitions(dcma_compile_settings INTERFACE
-        DCMA_WHICH_SYCL="AdaptiveCPP"
-        DCMA_USE_SYCL_ADAPTIVECPP=1
-        DCMA_USE_EXT_SYCL=1)
-    set(WITH_SYCL_FALLBACK OFF)
-elseif("${DCMA_SYCL_BACKEND}" STREQUAL "TriSYCL")
-    message(STATUS "Using SYCL backend: TriSYCL")
-    target_compile_definitions(dcma_compile_settings INTERFACE
-        DCMA_WHICH_SYCL="TriSYCL"
-        DCMA_USE_SYCL_TRISYCL=1
-        DCMA_USE_EXT_SYCL=1)
-    set(WITH_SYCL_FALLBACK OFF)
-else()
-    message(STATUS "Using SYCL backend: Fallback")
-    target_compile_definitions(dcma_compile_settings INTERFACE
-        DCMA_WHICH_SYCL="Fallback"
-        DCMA_USE_SYCL_FALLBACK=1)
-    set(WITH_SYCL_FALLBACK ON)
-endif()
-
-# Detect whether specific functions/variable/macros are available.
+####################################################################################
+#                    Platform Feature Detection (for DCMA_Definitions.h)
+####################################################################################
+# Detect whether specific functions/variables/macros are available.
 # Note: this method does not support structs. Best to find a function that accepts the struct instead.
+include(CheckCXXSymbolExists)
 check_cxx_symbol_exists(select    "sys/select.h" DCMA_HAS_SYS_SELECT)        # Function (nominally).
 
 check_cxx_symbol_exists(isatty    "unistd.h"     DCMA_HAS_UNISTD_ISATTY)     # Function (nominally).
@@ -589,60 +308,22 @@ check_cxx_symbol_exists(O_NONBLOCK "fcntl.h"     DCMA_HAS_FCNTL_O_NONBLOCK)  # M
 configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/src/DCMA_Definitions.h.in
                 ${CMAKE_CURRENT_BINARY_DIR}/src/DCMA_Definitions.h )
 
-# mingw-w64 tweaks.
-if(MINGW OR WIN32)
-    # Target Windows 7 features (need to specify for ASIO, maybe other libs).
-    target_compile_definitions(dcma_compile_settings INTERFACE _WIN32_WINNT=0x0601)
-    # Create 'console' applications, so a terminal will appear when running.
-    link_libraries("-mconsole")
-    # Override IFileDialogs check to disable.
-    # See https://github.com/samhocevar/portable-file-dialogs/issues/50
-    target_compile_definitions(dcma_compile_settings INTERFACE PFD_HAS_IFILEDIALOG=0)
-endif()
+####################################################################################
+#                     Global Options Target (dcma_compile_settings)
+####################################################################################
+# The 'dcma_compile_settings' INTERFACE library is the project-wide "Global Options
+# Target". Every DICOMautomaton target links against it to inherit compiler flags,
+# compile definitions, and include directories.
+#
+# The definition is in cmake/CompileSettings.cmake for clean separation of concerns.
+#
+# Downstream CMake consumer usage after install:
+#   find_package(DICOMautomaton REQUIRED)
+#   target_link_libraries(my_target PRIVATE DICOMautomaton::dcma_compile_settings)
 
-# Attach all include directories to the INTERFACE library (Issue 3).
-target_include_directories(dcma_compile_settings INTERFACE
-    ${Boost_INCLUDE_DIRS}
-    # The generated DCMA_Definitions.h lives here:
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/src>
-    # Allow source-relative includes:
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-)
-if(WITH_EIGEN)
-    if(TARGET Eigen3::Eigen)
-        target_link_libraries(dcma_compile_settings INTERFACE Eigen3::Eigen)
-    else()
-        target_include_directories(dcma_compile_settings INTERFACE ${EIGEN3_INCLUDE_DIRS})
-    endif()
-endif()
-if(WITH_NLOPT)
-    target_include_directories(dcma_compile_settings INTERFACE ${NLOPT_INCLUDE_DIRS})
-endif()
-if(WITH_SFML)
-    target_include_directories(dcma_compile_settings INTERFACE ${SFML_INCLUDE_DIRS})
-endif()
-if(WITH_SDL)
-    target_include_directories(dcma_compile_settings INTERFACE
-        ${SDL2_INCLUDE_DIRS}
-        ${OPENGL_INCLUDE_DIR}
-        ${GLEW_INCLUDE_DIRS}
-    )
-endif()
-if(WITH_GNU_GSL)
-    target_include_directories(dcma_compile_settings INTERFACE ${GNU_GSL_INCLUDE_DIRS})
-endif()
-if(WITH_POSTGRES)
-    target_include_directories(dcma_compile_settings INTERFACE ${POSTGRES_INCLUDE_DIRS})
-endif()
-if(WITH_THRIFT)
-    target_include_directories(dcma_compile_settings INTERFACE ${THRIFT_INCLUDE_DIRS})
-endif()
+include(cmake/CompileSettings.cmake)
 
 # Apply dcma_compile_settings to all targets defined in subdirectories.
-# Using link_libraries() here is equivalent to add_definitions() / add_compile_options()
-# in terms of scope, but properly encapsulates settings in an INTERFACE library that
-# can be exported and consumed by downstream projects (Issue 3 / Issue 5).
 link_libraries(dcma_compile_settings)
 
 
@@ -656,15 +337,14 @@ add_subdirectory(scripts)
 
 
 ####################################################################################
-#                    CMake Package Config Support (Issue 5)
+#                    CMake Package Config Support
 ####################################################################################
 # Install CMake package config files so downstream projects can use:
 #   find_package(DICOMautomaton REQUIRED)
 #   target_link_libraries(my_target PRIVATE DICOMautomaton::imebrashim)
 #
 # This makes DICOMautomaton compatible with CMake-based consumers, as well as
-# third-party C++ package managers (Conan, vcpkg) that rely on CMake config files
-# (Issue 6).
+# third-party C++ package managers (Conan, vcpkg) that rely on CMake config files.
 
 include(CMakePackageConfigHelpers)
 
@@ -687,7 +367,7 @@ install(FILES
 )
 
 # Export dcma_compile_settings INTERFACE library so downstream consumers can inherit
-# compile settings simply by linking against it (Issue 5).
+# compile settings simply by linking against it.
 install(TARGETS dcma_compile_settings
     EXPORT DICOMautomatonTargets
 )
@@ -719,7 +399,7 @@ set(CPACK_DEBIAN_PACKAGE_SECTION "Science")
 
 
 # Build and runtime dependency package lists are defined centrally in
-# cmake/PackageLists.cmake (Issue 1). The DCMA_DEBIAN_BUILD_DEPS variable
+# cmake/PackageLists.cmake. The DCMA_DEBIAN_BUILD_DEPS variable
 # is populated there and used here directly.
 #
 # Note: none of the SYCL external dependencies seem to be packaged for Debian (yet).

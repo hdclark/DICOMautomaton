@@ -783,7 +783,7 @@ target_link_libraries(dicomautomaton_dump
 # Note: The EXPORT keyword adds targets to the DICOMautomatonTargets export set,
 # which is written to disk by the install(EXPORT ...) call in the top-level
 # CMakeLists.txt. This enables 'find_package(DICOMautomaton)' for downstream
-# consumers (Issue 5).
+# consumers.
 install(TARGETS dicomautomaton_dispatcher
                 dicomautomaton_bsarchive_convert
                 dicomautomaton_dump

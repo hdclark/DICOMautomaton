@@ -14,7 +14,7 @@ option(MEMORY_CONSTRAINED_BUILD "Compile slowly, with minimal memory usage."    
 option(WITH_EIGEN     "Compile assuming Eigen is available."                    ON)
 option(WITH_NLOPT     "Compile assuming nlopt is available."                    ON)
 
-# When ON, attempt to download missing dependencies via CMake FetchContent (Issue 4).
+# When ON, attempt to download missing dependencies via CMake FetchContent.
 option(WITH_FETCHCONTENT_FALLBACK "Download missing dependencies if not found." OFF)
 
 
@@ -61,12 +61,13 @@ if(WITH_EIGEN)
     endif()
     if(NOT Eigen3_FOUND AND NOT EIGEN3_FOUND)
         if(WITH_FETCHCONTENT_FALLBACK)
-            message(STATUS "Eigen3 not found; fetching via FetchContent (Issue 4).")
+            message(STATUS "Eigen3 not found; fetching via FetchContent.")
             FetchContent_Declare(
                 Eigen3
                 GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-                GIT_TAG        3.4.0
-                GIT_SHALLOW    TRUE
+                # Pin to the immutable commit SHA for Eigen 3.4.0 to prevent supply-chain
+                # attacks via tag mutation. Verify: git ls-remote --tags on the upstream repo.
+                GIT_TAG        3147391d946bb4b6c68edd901f2add6ac1f31f8c
             )
             FetchContent_MakeAvailable(Eigen3)
             set(Eigen3_FOUND TRUE)
@@ -81,14 +82,16 @@ if(WITH_NLOPT)
     pkg_check_modules(NLOPT nlopt)
     if(NOT NLOPT_FOUND)
         if(WITH_FETCHCONTENT_FALLBACK)
-            message(STATUS "nlopt not found; fetching via FetchContent (Issue 4).")
+            message(STATUS "nlopt not found; fetching via FetchContent.")
             FetchContent_Declare(
                 nlopt
                 GIT_REPOSITORY https://github.com/stevengj/nlopt.git
-                GIT_TAG        v2.7.1
-                GIT_SHALLOW    TRUE
+                # Pin to the immutable commit SHA for nlopt v2.7.1 to prevent supply-chain
+                # attacks via tag mutation. Verify: git ls-remote --tags on the upstream repo.
+                GIT_TAG        9c7018f617dcf74a6e42f67e0a14869f10e5c957
             )
             FetchContent_MakeAvailable(nlopt)
+            set(NLOPT_FOUND TRUE)
         else()
             message(FATAL_ERROR "nlopt not found. Install libnlopt-dev or set WITH_FETCHCONTENT_FALLBACK=ON.")
         endif()
@@ -97,7 +100,7 @@ endif()
 
 
 ####################################################################################
-#                       Compile Settings INTERFACE Library (Issue 3)
+#                       Compile Settings INTERFACE Library
 ####################################################################################
 # Bundle all compile options, definitions, and include directories in an
 # INTERFACE library so they are properly scoped to targets rather than applied
@@ -155,10 +158,10 @@ check_cxx_symbol_exists(__arm__     "cstdio" ARCH_IS_ARM)
 check_cxx_symbol_exists(__aarch64__ "cstdio" ARCH_IS_ARM64)
 if(ARCH_IS_ARM OR ARCH_IS_ARM64)
     message(STATUS "Detected ARM architecture.")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+    target_compile_options(reg_compile_settings INTERFACE -march=native)
 endif()
 
-# Compile definitions (Issue 3).
+# Compile definitions.
 if(WITH_EIGEN)
     message(STATUS "Assuming Eigen is available.")
     target_compile_definitions(reg_compile_settings INTERFACE DCMA_USE_EIGEN=1)
@@ -173,7 +176,7 @@ else()
     message(STATUS "Assuming NLOPT is not available.")
 endif()
 
-# Include directories (Issue 3).
+# Include directories.
 target_include_directories(reg_compile_settings INTERFACE ${Boost_INCLUDE_DIRS})
 if(WITH_EIGEN)
     if(TARGET Eigen3::Eigen)
@@ -186,7 +189,7 @@ if(WITH_NLOPT)
     target_include_directories(reg_compile_settings INTERFACE ${NLOPT_INCLUDE_DIRS})
 endif()
 
-# Apply to all targets defined in subdirectories (Issue 3).
+# Apply to all targets defined in subdirectories.
 link_libraries(reg_compile_settings)
 
 

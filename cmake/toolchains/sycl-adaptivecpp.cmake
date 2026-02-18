@@ -13,30 +13,45 @@
 #   - See https://github.com/AdaptiveCpp/AdaptiveCpp for installation instructions.
 #
 # Notes:
+#   - Use CMAKE_CXX_FLAGS_INIT (not CMAKE_CXX_FLAGS) to set default compiler flags from
+#     a toolchain file. This allows users to still append their own flags on the command
+#     line without overwriting the toolchain defaults.
 #   - The 'acpp' driver wraps the host C++ compiler and handles SYCL offloading.
-#   - This toolchain only sets the compiler; all other CMake settings are
-#     inherited from the main CMakeLists.txt.
-#   - For native (non-cross) SYCL builds, this toolchain file changes only the
-#     compiler driver; the target architecture is the host architecture.
+#   - This toolchain targets the host architecture (native SYCL build, not cross-compiling).
 
-# Locate the acpp compiler driver.
-find_program(ACPP_COMPILER acpp
+# Locate the acpp compiler driver using an absolute path to avoid PATH poisoning.
+# Prefer the location specified by ACPP_ROOT or ADAPTIVECPP_ROOT environment variables.
+# find_program() always returns an absolute path when it succeeds.
+find_program(ACPP_COMPILER
+    NAMES acpp
     HINTS
-        /usr/bin
-        /usr/local/bin
         "$ENV{ACPP_ROOT}/bin"
         "$ENV{ADAPTIVECPP_ROOT}/bin"
-    DOC "AdaptiveCpp (acpp) SYCL compiler driver"
+        /usr/local/bin
+        /usr/bin
+    NO_DEFAULT_PATH   # Search only the explicit HINTS; do not use $PATH implicitly.
+    DOC "AdaptiveCpp (acpp) SYCL compiler driver (absolute path)"
 )
+# Fall back to a PATH search if the hints didn't find it.
+if(NOT ACPP_COMPILER)
+    find_program(ACPP_COMPILER
+        NAMES acpp
+        DOC "AdaptiveCpp (acpp) SYCL compiler driver"
+    )
+endif()
 
 if(NOT ACPP_COMPILER)
     message(FATAL_ERROR
         "AdaptiveCpp 'acpp' compiler driver not found. "
-        "Please install AdaptiveCpp or set ACPP_ROOT to its install prefix, "
-        "or specify CMAKE_CXX_COMPILER manually."
+        "Set ACPP_ROOT (or ADAPTIVECPP_ROOT) to the AdaptiveCpp install prefix, "
+        "or specify CMAKE_CXX_COMPILER=/path/to/acpp manually."
     )
 endif()
 
+# Set the C++ compiler to the absolute path returned by find_program().
 set(CMAKE_CXX_COMPILER "${ACPP_COMPILER}")
-# Optionally set the C compiler to the same driver if needed.
-# set(CMAKE_C_COMPILER "${ACPP_COMPILER}")
+
+# Restrict CMake package search to the target sysroot only.
+# For native SYCL builds this prevents accidentally finding a mismatched host
+# library copy; for future cross-compilation scenarios it is essential.
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)

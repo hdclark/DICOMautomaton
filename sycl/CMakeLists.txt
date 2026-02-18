@@ -1,7 +1,7 @@
 
 cmake_minimum_required(VERSION 3.12.0 FATAL_ERROR)
 
-# SYCL compiler selection (Issue 2: toolchain file support).
+# SYCL compiler selection.
 #
 # The preferred approach is to use a CMake toolchain file to select the SYCL
 # compiler driver rather than hardcoding CMAKE_CXX_COMPILER here. For example:
@@ -91,7 +91,7 @@ endif()
 
 
 ####################################################################################
-#                       Compile Settings INTERFACE Library (Issue 3)
+#                       Compile Settings INTERFACE Library
 ####################################################################################
 
 add_library(sycl_compile_settings INTERFACE)
@@ -145,7 +145,7 @@ check_cxx_symbol_exists(__arm__     "cstdio" ARCH_IS_ARM)
 check_cxx_symbol_exists(__aarch64__ "cstdio" ARCH_IS_ARM64)
 if(ARCH_IS_ARM OR ARCH_IS_ARM64)
     message(STATUS "Detected ARM architecture.")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+    target_compile_options(sycl_compile_settings INTERFACE -march=native)
 endif()
 
 # Sanitizers (enabled for SYCL builds).
@@ -157,7 +157,7 @@ target_compile_options(sycl_compile_settings INTERFACE
 # -U_FORTIFY_SOURCE is a compiler flag (undefine), not a #define, so use target_compile_options.
 target_compile_options(sycl_compile_settings INTERFACE -U_FORTIFY_SOURCE)
 
-# Definitions (Issue 3).
+# Definitions.
 if(WITH_EIGEN)
     message(STATUS "Assuming Eigen is available.")
     target_compile_definitions(sycl_compile_settings INTERFACE DCMA_USE_EIGEN=1)
@@ -172,7 +172,7 @@ else()
     message(STATUS "Assuming NLOPT is not available.")
 endif()
 
-# Include directories (Issue 3).
+# Include directories.
 target_include_directories(sycl_compile_settings INTERFACE ${Boost_INCLUDE_DIRS})
 if(WITH_EIGEN)
     target_include_directories(sycl_compile_settings INTERFACE ${EIGEN3_INCLUDE_DIRS})
@@ -181,7 +181,7 @@ if(WITH_NLOPT)
     target_include_directories(sycl_compile_settings INTERFACE ${NLOPT_INCLUDE_DIRS})
 endif()
 
-# Apply to all targets defined in subdirectories (Issue 3).
+# Apply to all targets defined in subdirectories.
 link_libraries(sycl_compile_settings)
 
 
