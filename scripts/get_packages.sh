@@ -478,6 +478,28 @@ main() {
         TIERS=("build_tools" "extra_toolchains" "ygor_deps" "dcma_deps" "headless_rendering" "optional")
     fi
 
+    # Validate requested tiers against the known allowlist
+    local valid_tiers_str
+    valid_tiers_str="$(get_valid_tiers "$normalized_os")"
+    local -a valid_tiers
+    # shellcheck disable=SC2206  # intentional word-splitting into array
+    valid_tiers=($valid_tiers_str)
+
+    local tier is_valid
+    for tier in "${TIERS[@]}"; do
+        is_valid=false
+        for valid_tier in "${valid_tiers[@]}"; do
+            if [[ "$tier" == "$valid_tier" ]]; then
+                is_valid=true
+                break
+            fi
+        done
+        if [[ "$is_valid" != true ]]; then
+            echo "Error: Unknown tier '${tier}'. Valid tiers are: ${valid_tiers[*]}" >&2
+            exit 1
+        fi
+    done
+
     for tier in "${TIERS[@]}"; do
         all_packages+="$(get_packages_for_tier "$normalized_os" "$tier") "
     done
