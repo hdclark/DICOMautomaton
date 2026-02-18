@@ -421,18 +421,18 @@ jobs:
         run: |
              cp -R ./docker/builders/ci /scratch
              cp -R . /dcma
+             mkdir -pv /artifacts/
       - name: acquire_build_artifacts
         uses: actions/download-artifact@v4
         with:
           name: "DICOMautomaton-debian-buster-x86_64-AppImage"
-          path: "dcma.AppImage"
-      - name: prep_2
+          path: "/artifacts/"
+      - name: prep_3
         run: |
+             cd /artifacts/
              pwd
-             cp dcma.AppImage /dcma/
-             cd /dcma/
-             chmod 777 ./dcma.AppImage || true
-             ./dcma.AppImage --appimage-extract
+             chmod 777 ./*.AppImage || true
+             ./*.AppImage --appimage-extract
              rsync -a ./squashfs-root/usr/ /usr/
              ldd $(pwd)/squashfs-root/usr/bin/dicomautomaton_dispatcher || true
              dicomautomaton_dispatcher -h
