@@ -62,6 +62,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_FLAGS_INIT "")
 set(CMAKE_C_FLAGS_INIT "")
 
-# Restrict CMake package search to the target sysroot only.
-# For native builds this prevents accidentally finding a mismatched library copy.
-set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+# Control how CMake searches for packages relative to any configured root path.
+# For native builds (no explicit CMAKE_FIND_ROOT_PATH), allow searching both the
+# host system and any root paths so that system-installed dependencies are found.
+if(CMAKE_FIND_ROOT_PATH)
+    # When a sysroot/root path is explicitly configured, restrict searches to it.
+    set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
+else()
+    # Native build without a sysroot: search both root paths (if any) and the host.
+    set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE BOTH)
+endif()
