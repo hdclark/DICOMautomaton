@@ -17,22 +17,22 @@
 #     line without overwriting the toolchain defaults.
 #   - This toolchain targets the host architecture (native build, not cross-compiling).
 
-# Locate the g++ compiler using an absolute path to avoid PATH poisoning.
+# Locate the g++ compiler and record its absolute path.
 find_program(GCC_CXX_COMPILER
     NAMES g++ g++-13 g++-12 g++-11 g++-10 g++-9 g++-8 g++-7
     HINTS
         /usr/local/bin
         /usr/bin
-    DOC "GNU GCC C++ compiler (absolute path)"
+    DOC "GNU GCC C++ compiler"
 )
 
-# Locate the gcc compiler for C sources.
+# Locate the gcc compiler for C sources and record its absolute path.
 find_program(GCC_C_COMPILER
     NAMES gcc gcc-13 gcc-12 gcc-11 gcc-10 gcc-9 gcc-8 gcc-7
     HINTS
         /usr/local/bin
         /usr/bin
-    DOC "GNU GCC C compiler (absolute path)"
+    DOC "GNU GCC C compiler"
 )
 
 if(NOT GCC_CXX_COMPILER)
