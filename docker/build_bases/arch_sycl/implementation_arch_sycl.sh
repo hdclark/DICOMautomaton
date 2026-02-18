@@ -17,72 +17,32 @@ sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
 sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' \
        -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf
 
+# Source the centralized package list script.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GET_PACKAGES="${SCRIPT_DIR}/../../../scripts/get_packages.sh"
+
+# Get packages from the centralized script.
+PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os arch_sycl --tier build_tools)"
+PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os arch_sycl --tier ygor_deps)"
+PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os arch_sycl --tier dcma_deps)"
+PKGS_HEADLESS="$("${GET_PACKAGES}" --os arch_sycl --tier headless_rendering)"
+PKGS_OPTIONAL="$("${GET_PACKAGES}" --os arch_sycl --tier optional)"
+PKGS_EXTRA_TOOLCHAINS="$("${GET_PACKAGES}" --os arch_sycl --tier extra_toolchains)"
+PKGS_EXTERNAL="$("${GET_PACKAGES}" --os arch_sycl --tier external_third_party)"
 
 # Install core packages.
 retry_count=0
 retry_limit=5
 until
-    pacman -Syu --noconfirm --needed \
-      base-devel \
-      git \
-      cmake \
-      gcc \
-      vim \
-      gdb \
-      screen \
-      wget \
-      rsync \
-      which \
-      ` # Needed for 'yay' AUR helper ` \
-      sudo \
-      pyalpm \
-    && \
-       \
-    ` # Install known official dependencies. ` \
-    pacman -S --noconfirm --needed  \
-      gcc-libs \
-      gsl \
-      eigen \
-      boost-libs \
-      gnu-free-fonts \
-      sdl2 \
-      glew \
-      glu \
-      jansson \
-      libpqxx \
-      postgresql \
-      zlib \
-      cgal \
-      wt \
-      asio \
-      nlopt \
-      patchelf \
-      freeglut \
-      libxi \
-      libxmu \
-      thrift \
-      ` # Additional dependencies for headless OpenGL rendering with SFML ` \
-      xorg-server \
-      xorg-apps \
-      mesa \
-      xf86-video-dummy \
-      ` # Other optional dependencies ` \
-      bash-completion \
-      libnotify \
-      dunst \
-      zenity \
-    && \
-       \
-    ` # Install SYCL components ` \
-    pacman -S --noconfirm --needed  \
-      clang \
-      libclc \
-      ocl-icd \
-      opencl-mesa \
-      pocl \
-      clinfo
-      # These conflict with later adaptivecpp pkg: opencl-clhpp opencl-headers
-
+    # shellcheck disable=SC2086
+    pacman -Syu --noconfirm --needed ${PKGS_BUILD_TOOLS} && \
+    # Install known official dependencies.
+    # shellcheck disable=SC2086
+    pacman -S --noconfirm --needed ${PKGS_YGOR_DEPS} ${PKGS_DCMA_DEPS} ${PKGS_HEADLESS} ${PKGS_OPTIONAL} && \
+    # Install SYCL components.
+    # Note: These conflict with later adaptivecpp pkg: opencl-clhpp opencl-headers
+    # shellcheck disable=SC2086
+    pacman -S --noconfirm --needed ${PKGS_EXTRA_TOOLCHAINS}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5

@@ -10,49 +10,19 @@ sed -i -e 's@oldoldstable@bullseye@g' \
        -e 's@oldstable@bullseye@g' \
        -e 's@stable@bullseye@g'  /etc/apt/sources.list
 
+# Source the centralized package list script.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GET_PACKAGES="${SCRIPT_DIR}/../../../scripts/get_packages.sh"
+
+# Get packages from the centralized script.
+PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os mxe --tier build_tools)"
 
 retry_count=0
 retry_limit=5
 until
     apt-get -y update && \
-    apt-get -y install \
-      autoconf \
-      automake \
-      autopoint \
-      bash \
-      bison \
-      bzip2 \
-      flex \
-      g++ \
-      g++-multilib \
-      gettext \
-      git \
-      gperf \
-      intltool \
-      libc6-dev-i386 \
-      libgdk-pixbuf2.0-dev \
-      libltdl-dev \
-      libssl-dev \
-      libtool-bin \
-      libxml-parser-perl \
-      lzip \
-      make \
-      openssl \
-      p7zip-full \
-      patch \
-      perl \
-      python3 \
-      python3-mako \
-      python-is-python3 \
-      ruby \
-      sed \
-      unzip \
-      wget \
-      xz-utils \
-      ca-certificates \
-      rsync \
-      sudo \
-      gnupg
+    # shellcheck disable=SC2086
+    apt-get -y install ${PKGS_BUILD_TOOLS}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5

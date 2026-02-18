@@ -9,66 +9,25 @@ cd /scratch_base
 
 export DEBIAN_FRONTEND="noninteractive"
 
+# Source the centralized package list script.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GET_PACKAGES="${SCRIPT_DIR}/../../../scripts/get_packages.sh"
+
+# Get packages from the centralized script.
+PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os debian_bookworm --tier build_tools)"
+PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os debian_bookworm --tier ygor_deps)"
+PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os debian_bookworm --tier dcma_deps)"
+PKGS_HEADLESS="$("${GET_PACKAGES}" --os debian_bookworm --tier headless_rendering)"
+PKGS_OPTIONAL="$("${GET_PACKAGES}" --os debian_bookworm --tier optional)"
 
 retry_count=0
 retry_limit=5
 until
     apt-get update --yes && \
-    apt-get install --yes --no-install-recommends \
-        git \
-        cmake \
-        make \
-        g++ \
-        vim \
-        ncurses-term \
-        gdb \
-        rsync \
-        wget \
-        ca-certificates \
-    && \
-       \
-    apt-get install --yes --no-install-recommends \
-        ` # Ygor dependencies ` \
-        libboost-dev \
-        libgsl-dev \
-        libeigen3-dev \
-        ` # DICOMautomaton dependencies ` \
-        libeigen3-dev \
-        libboost-dev \
-        libboost-filesystem-dev \
-        libboost-iostreams-dev \
-        libboost-program-options-dev \
-        libboost-thread-dev \
-        libz-dev \
-        libsfml-dev \
-        libsdl2-dev \
-        libglew-dev \
-        libjansson-dev \
-        libpqxx-dev \
-        postgresql-client \
-        libcgal-dev \
-        libnlopt-dev \
-        libnlopt-cxx-dev \
-        libasio-dev \
-        fonts-freefont-ttf \
-        fonts-cmu \
-        freeglut3-dev \
-        libxi-dev \
-        libxmu-dev \
-        libthrift-dev \
-        thrift-compiler \
-        patchelf \
-        ` # Additional dependencies for headless OpenGL rendering with SFML ` \
-        x-window-system \
-        mesa-utils \
-        xserver-xorg-video-dummy \
-        x11-apps \
-        ` # Other optional dependencies ` \
-        libnotify-dev \
-        dunst \
-        bash-completion \
-        gnuplot \
-        zenity 
+    # shellcheck disable=SC2086
+    apt-get install --yes --no-install-recommends ${PKGS_BUILD_TOOLS} && \
+    # shellcheck disable=SC2086
+    apt-get install --yes --no-install-recommends ${PKGS_YGOR_DEPS} ${PKGS_DCMA_DEPS} ${PKGS_HEADLESS} ${PKGS_OPTIONAL}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5

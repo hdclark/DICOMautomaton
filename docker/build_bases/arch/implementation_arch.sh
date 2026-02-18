@@ -17,58 +17,26 @@ sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
 sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' \
        -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf
 
+# Source the centralized package list script.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GET_PACKAGES="${SCRIPT_DIR}/../../../scripts/get_packages.sh"
+
+# Get packages from the centralized script.
+PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os arch --tier build_tools)"
+PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os arch --tier ygor_deps)"
+PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os arch --tier dcma_deps)"
+PKGS_HEADLESS="$("${GET_PACKAGES}" --os arch --tier headless_rendering)"
+PKGS_OPTIONAL="$("${GET_PACKAGES}" --os arch --tier optional)"
+
 retry_count=0
 retry_limit=5
 until
-    `# Install build dependencies. ` \
-    pacman -Syu --noconfirm --needed \
-      base-devel \
-      git \
-      cmake \
-      gcc \
-      vim \
-      gdb \
-      screen \
-      ` # Needed for an AUR helper ` \
-      sudo \
-      pyalpm \
-      wget \
-      rsync \
-    && \
-       \
-    ` # Install known official dependencies. ` \
-    pacman -S --noconfirm --needed  \
-      gcc-libs \
-      gsl \
-      eigen \
-      boost-libs \
-      gnu-free-fonts \
-      sfml \
-      sdl2 \
-      glew \
-      glu \
-      jansson \
-      libpqxx \
-      postgresql \
-      zlib \
-      cgal \
-      wt \
-      asio \
-      nlopt \
-      patchelf \
-      freeglut \
-      libxi \
-      libxmu \
-      thrift \
-      ` # Additional dependencies for headless OpenGL rendering with SFML ` \
-      xorg-server \
-      xorg-apps \
-      mesa \
-      xf86-video-dummy \
-      ` # Other optional dependencies ` \
-      bash-completion \
-      libnotify \
-      dunst
+    # Install build dependencies.
+    # shellcheck disable=SC2086
+    pacman -Syu --noconfirm --needed ${PKGS_BUILD_TOOLS} && \
+    # Install known official dependencies.
+    # shellcheck disable=SC2086
+    pacman -S --noconfirm --needed ${PKGS_YGOR_DEPS} ${PKGS_DCMA_DEPS} ${PKGS_HEADLESS} ${PKGS_OPTIONAL}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5

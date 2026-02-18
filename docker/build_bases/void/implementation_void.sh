@@ -7,58 +7,27 @@ set -eux
 mkdir -pv /scratch_base
 cd /scratch_base
 
+# Source the centralized package list script.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GET_PACKAGES="${SCRIPT_DIR}/../../../scripts/get_packages.sh"
+
+# Get packages from the centralized script.
+PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os void --tier build_tools)"
+PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os void --tier ygor_deps)"
+PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os void --tier dcma_deps)"
+PKGS_HEADLESS="$("${GET_PACKAGES}" --os void --tier headless_rendering)"
+PKGS_OPTIONAL="$("${GET_PACKAGES}" --os void --tier optional)"
+
 retry_count=0
 retry_limit=5
 until 
     # Install build dependencies.
     xbps-install -y -Su xbps && \
     xbps-install -y -Su && \
-    xbps-install -y -S \
-        base-devel \
-        bash \
-        git \
-        cmake \
-        vim \
-        ncurses-term \
-        gdb \
-        rsync \
-        wget \
-    && \
-       \
-    xbps-install -y -S \
-        ` # Ygor dependencies ` \
-        boost-devel \
-        gsl-devel \
-        eigen \
-        ` # DICOMautomaton dependencies ` \
-        eigen \
-        boost-devel \
-        zlib-devel \
-        SFML-devel \
-        SDL2-devel \
-        glew-devel \
-        jansson-devel \
-        libpqxx-devel \
-        postgresql-client \
-        cgal-devel \
-        nlopt-devel \
-        asio \
-        freefont-ttf \
-        patchelf \
-        thrift \
-        thrift-devel \
-        ` # Additional dependencies for headless OpenGL rendering with SFML ` \
-        xorg-minimal \
-        glu-devel \
-        xorg-video-drivers \
-        xf86-video-dummy \
-        xorg-apps \
-        ` # Other optional dependencies ` \
-        libnotify \
-        dunst \
-        bash-completion \
-        gnuplot \
-        zenity 
+    # shellcheck disable=SC2086
+    xbps-install -y -S ${PKGS_BUILD_TOOLS} && \
+    # shellcheck disable=SC2086
+    xbps-install -y -S ${PKGS_YGOR_DEPS} ${PKGS_DCMA_DEPS} ${PKGS_HEADLESS} ${PKGS_OPTIONAL}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5

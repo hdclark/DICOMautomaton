@@ -15,23 +15,21 @@ sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
 sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' \
        -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf
 
+# Source the centralized package list script.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GET_PACKAGES="${SCRIPT_DIR}/../../../scripts/get_packages.sh"
+
+# Get packages from the centralized script.
+PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os arch --tier build_tools)"
+PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os arch --tier ygor_deps)"
+PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os arch --tier dcma_deps)"
+
 retry_count=0
 retry_limit=5
 until
     # Install build dependencies.
-    #pacman -Sy --noconfirm archlinux-keyring
-    pacman -Syu --noconfirm --needed \
-      base-devel \
-      git \
-      cmake \
-      gcc \
-      ` # Needed for an AUR helper ` \
-      sudo \
-      pyalpm \
-      wget \
-      ca-certificates \
-      rsync \
-      patchelf
+    # shellcheck disable=SC2086
+    pacman -Syu --noconfirm --needed ${PKGS_BUILD_TOOLS}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5
@@ -50,24 +48,9 @@ retry_count=0
 retry_limit=5
 until
     # Install hard build dependencies.
-    pacman -S --noconfirm --needed \
-      gcc-libs \
-      gnu-free-fonts \
-      `#sfml   # Need SFML2 but no compat pkg available yet...` \
-      sdl2 \
-      glew \
-      glu \
-      jansson \
-      libpqxx \
-      postgresql \
-      gsl \
-      boost-libs \
-      zlib \
-      cgal \
-      wt \
-      asio \
-      nlopt \
-      thrift
+    # Note: sfml needs SFML2 but no compat pkg available yet, so handled separately below.
+    # shellcheck disable=SC2086
+    pacman -S --noconfirm --needed ${PKGS_YGOR_DEPS} ${PKGS_DCMA_DEPS}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5
