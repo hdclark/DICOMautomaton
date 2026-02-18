@@ -166,7 +166,7 @@ cp /scratch/xpra-xorg.conf /etc/X11/xorg.conf || true
 function clone_or_pull {
     printf 'Attempting clone_or_pull in "%s"\n' "$(pwd)"
     find . -type d -exec chmod -R 755 '{}' \+
-    find . -type f -exec chmod 644 '{}' \+
+    #find . -type f -exec chmod 644 '{}' \+
 
     if git clone "$@" . ; then
         return 0 # Requires compilation.
