@@ -42,7 +42,7 @@ OperationDoc OpArgDocCountObjects() {
 
     out.tags.emplace_back("category: meta");
 
-    out.desc = "This operation is a meta-operatio that counts the number of selected objects and stores the result"
+    out.desc = "This operation is a meta-operation that counts the number of selected objects and stores the result"
                " in the global parameter table. It can be used to control for loops and test for the presence of"
                " data to make conditional program flows.";
 
