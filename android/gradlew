@@ -1,0 +1,46 @@
+#!/bin/sh
+# Gradle wrapper bootstrap script.
+# This script downloads the Gradle wrapper jar if it is not already present,
+# then invokes Gradle with the specified arguments.
+#
+# Generated for DICOMautomaton Android build.
+
+set -e
+
+# Determine script location (supports symlinks).
+APP_HOME="$(cd "$(dirname "$0")" && pwd)"
+GRADLE_WRAPPER_JAR="${APP_HOME}/gradle/wrapper/gradle-wrapper.jar"
+GRADLE_PROPERTIES="${APP_HOME}/gradle/wrapper/gradle-wrapper.properties"
+
+# Read distribution URL from properties.
+GRADLE_DIST_URL=$(grep '^distributionUrl=' "${GRADLE_PROPERTIES}" | sed 's/distributionUrl=//' | sed 's/\\//g')
+
+# If the wrapper jar is missing, download it.
+if [ ! -f "${GRADLE_WRAPPER_JAR}" ]; then
+    JAR_VERSION="3.5.3"
+    JAR_URL="https://github.com/gradle/gradle/raw/v${JAR_VERSION}/gradle/wrapper/gradle-wrapper.jar"
+    echo "Downloading Gradle wrapper jar from ${JAR_URL} ..."
+    if command -v curl >/dev/null 2>&1; then
+        curl -fsSL -o "${GRADLE_WRAPPER_JAR}" "${JAR_URL}"
+    elif command -v wget >/dev/null 2>&1; then
+        wget -q -O "${GRADLE_WRAPPER_JAR}" "${JAR_URL}"
+    else
+        echo "ERROR: Neither curl nor wget found. Cannot download Gradle wrapper." >&2
+        exit 1
+    fi
+fi
+
+# Locate Java.
+if [ -n "${JAVA_HOME}" ] && [ -x "${JAVA_HOME}/bin/java" ]; then
+    JAVACMD="${JAVA_HOME}/bin/java"
+elif command -v java >/dev/null 2>&1; then
+    JAVACMD=java
+else
+    echo "ERROR: Java not found. Please set JAVA_HOME or ensure 'java' is on PATH." >&2
+    exit 1
+fi
+
+# Invoke Gradle.
+exec "${JAVACMD}" \
+    -classpath "${GRADLE_WRAPPER_JAR}" \
+    org.gradle.wrapper.GradleWrapperMain "$@"
