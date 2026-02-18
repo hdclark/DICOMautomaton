@@ -65,14 +65,23 @@ error_exit() {
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --os)
+            if [[ $# -lt 2 ]]; then
+                error_exit "--os requires an argument. See --help for usage."
+            fi
             OS="$2"
             shift 2
             ;;
         --arch)
+            if [[ $# -lt 2 ]]; then
+                error_exit "--arch requires an argument. See --help for usage."
+            fi
             ARCH="$2"
             shift 2
             ;;
         --tier)
+            if [[ $# -lt 2 ]]; then
+                error_exit "--tier requires an argument. See --help for usage."
+            fi
             TIERS+=("$2")
             shift 2
             ;;
