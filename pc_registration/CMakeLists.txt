@@ -2,9 +2,6 @@
 cmake_minimum_required(VERSION 3.12.0 FATAL_ERROR)
 
 project(DICOMautomaton_Registration LANGUAGES CXX)
-#set(DICOMautomaton_VERSION_MAJOR 0)
-#set(DICOMautomaton_VERSION_MINOR 0)
-#set(DICOMautomaton_VERSION_PATCH 0)
 
 
 ####################################################################################
@@ -16,12 +13,14 @@ option(MEMORY_CONSTRAINED_BUILD "Compile slowly, with minimal memory usage."    
 option(WITH_EIGEN     "Compile assuming Eigen is available."                    ON)
 option(WITH_NLOPT     "Compile assuming nlopt is available."                    ON)
 
+# When ON, attempt to download missing dependencies via CMake FetchContent (Issue 4).
+option(WITH_FETCHCONTENT_FALLBACK "Download missing dependencies if not found." OFF)
+
 
 ####################################################################################
 #                                  Configuration
 ####################################################################################
 
-set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_EXTENSIONS OFF) # Disable GNU extensions (e.g., std=gnu++14).
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For use with clang-tidy et al.
@@ -35,6 +34,15 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "default to debug" FORCE)
 endif()
 
+include(GNUInstallDirs)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE ON)
+
+include(FetchContent)
+
 
 ####################################################################################
 #                                  Dependencies 
@@ -43,38 +51,68 @@ endif()
 find_package(Threads REQUIRED)
 
 find_package(Boost REQUIRED COMPONENTS filesystem serialization iostreams thread system)
-include_directories(${Boost_INCLUDE_DIRS})
 
 if(WITH_EIGEN)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(EIGEN3 REQUIRED eigen3)
-    include_directories( ${EIGEN3_INCLUDE_DIRS} )
+    find_package(Eigen3 CONFIG QUIET)
+    if(NOT Eigen3_FOUND)
+        find_package(PkgConfig REQUIRED)
+        pkg_check_modules(EIGEN3 eigen3)
+    endif()
+    if(NOT Eigen3_FOUND AND NOT EIGEN3_FOUND)
+        if(WITH_FETCHCONTENT_FALLBACK)
+            message(STATUS "Eigen3 not found; fetching via FetchContent (Issue 4).")
+            FetchContent_Declare(
+                Eigen3
+                GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
+                GIT_TAG        3.4.0
+                GIT_SHALLOW    TRUE
+            )
+            FetchContent_MakeAvailable(Eigen3)
+            set(Eigen3_FOUND TRUE)
+        else()
+            message(FATAL_ERROR "Eigen3 not found. Install libeigen3-dev or set WITH_FETCHCONTENT_FALLBACK=ON.")
+        endif()
+    endif()
 endif()
 
 if(WITH_NLOPT)
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules(NLOPT REQUIRED nlopt)
-    include_directories( ${NLOPT_INCLUDE_DIRS} )
+    pkg_check_modules(NLOPT nlopt)
+    if(NOT NLOPT_FOUND)
+        if(WITH_FETCHCONTENT_FALLBACK)
+            message(STATUS "nlopt not found; fetching via FetchContent (Issue 4).")
+            FetchContent_Declare(
+                nlopt
+                GIT_REPOSITORY https://github.com/stevengj/nlopt.git
+                GIT_TAG        v2.7.1
+                GIT_SHALLOW    TRUE
+            )
+            FetchContent_MakeAvailable(nlopt)
+        else()
+            message(FATAL_ERROR "nlopt not found. Install libnlopt-dev or set WITH_FETCHCONTENT_FALLBACK=ON.")
+        endif()
+    endif()
 endif()
 
 
 ####################################################################################
-#                                  Compiler Flags
+#                       Compile Settings INTERFACE Library (Issue 3)
 ####################################################################################
+# Bundle all compile options, definitions, and include directories in an
+# INTERFACE library so they are properly scoped to targets rather than applied
+# globally via add_compile_options() / add_definitions() / include_directories().
 
-# Override the default CXX flags, which are controlled by the release type.
-#
-# Note: The '_DEBUG' flags are only applied when the release mode is 'Debug' -- likewise for the other flags.
-#
-# Note: If you want to fully override the CXX_FLAGS, then do not supply a build type and specify your CXX_FLAGS by
-#       defining CMAKE_CXX_FLAGS when calling cmake.
+add_library(reg_compile_settings INTERFACE)
+
+target_compile_features(reg_compile_settings INTERFACE cxx_std_17)
+
+# Build-type flags.
 set(CMAKE_CXX_FLAGS_DEBUG           "-O2 -g")
 set(CMAKE_CXX_FLAGS_MINSIZEREL      "-Os -DNDEBUG")
 set(CMAKE_CXX_FLAGS_RELEASE         "-O3 -DNDEBUG")
 set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  "-O3 -g")
 
 if(MEMORY_CONSTRAINED_BUILD)
-    # Do not overwrite user-provided flags, but do provide sane defaults.
     if(NOT CMAKE_CXX_FLAGS)
         set(CMAKE_CXX_FLAGS "-O0 -DNDEBUG")
     endif()
@@ -84,84 +122,66 @@ if(MEMORY_CONSTRAINED_BUILD)
     set(CMAKE_CXX_FLAGS_RELWITHDEBINFO  "-O0 -DNDEBUG")
 endif()
 
-
-# Add other appropriate CXX flags.
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-var-tracking-assignments")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpedantic")
-
+    target_compile_options(reg_compile_settings INTERFACE
+        -fdiagnostics-color=always
+        -fno-var-tracking-assignments
+        -Wno-deprecated
+        -Wall -Wextra -Wpedantic)
     if("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-        # Add gprof profiling flag.
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pg")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-omit-frame-pointer")
+        target_compile_options(reg_compile_settings INTERFACE
+            -pg -fno-omit-frame-pointer)
     endif()
-
     if(MEMORY_CONSTRAINED_BUILD)
-        # Trigger garbage collection more frequently.
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --param ggc-min-expand=10")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --param ggc-min-heapsize=32768")
+        target_compile_options(reg_compile_settings INTERFACE
+            "SHELL:--param ggc-min-expand=10"
+            "SHELL:--param ggc-min-heapsize=32768")
     endif()
-
 elseif("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fdiagnostics-color=always")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wextra")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wpedantic")
-    #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-ignored-optimization-argument")
-
-    if(WITH_IWYU)
-        set(IWYU_INVOCATION iwyu) # Location of the iwyu binary.
-        list(APPEND IWYU_INVOCATION "-Xiwyu;--no_comments")
-        set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${IWYU_INVOCATION})
-    endif()
+    target_compile_options(reg_compile_settings INTERFACE
+        -fdiagnostics-color=always
+        -Wno-deprecated
+        -Wall -Wextra -Wpedantic)
 endif()
-
 
 include(CheckCXXSymbolExists)
 check_cxx_symbol_exists(__arm__     "cstdio" ARCH_IS_ARM)
 check_cxx_symbol_exists(__aarch64__ "cstdio" ARCH_IS_ARM64)
 if(ARCH_IS_ARM OR ARCH_IS_ARM64)
     message(STATUS "Detected ARM architecture.")
-
-    # Enable to fix linking errors for toolchains that do not auto-detect atomic intrinsics (e.g., some ARM systems).
-    # Note: Binaries built this way should not be distributed.
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 endif()
 
-
-####################################################################################
-#                                    Definitions
-####################################################################################
+# Compile definitions (Issue 3).
 if(WITH_EIGEN)
     message(STATUS "Assuming Eigen is available.")
-    add_definitions(-DDCMA_USE_EIGEN=1)
+    target_compile_definitions(reg_compile_settings INTERFACE DCMA_USE_EIGEN=1)
 else()
     message(STATUS "Assuming Eigen is not available.")
-    add_definitions(-UDCMA_USE_EIGEN)
 endif()
 
 if(WITH_NLOPT)
     message(STATUS "Assuming NLOPT is available.")
-    add_definitions(-DDCMA_USE_NLOPT=1)
+    target_compile_definitions(reg_compile_settings INTERFACE DCMA_USE_NLOPT=1)
 else()
     message(STATUS "Assuming NLOPT is not available.")
-    add_definitions(-UDCMA_USE_NLOPT)
 endif()
 
+# Include directories (Issue 3).
+target_include_directories(reg_compile_settings INTERFACE ${Boost_INCLUDE_DIRS})
+if(WITH_EIGEN)
+    if(TARGET Eigen3::Eigen)
+        target_link_libraries(reg_compile_settings INTERFACE Eigen3::Eigen)
+    else()
+        target_include_directories(reg_compile_settings INTERFACE ${EIGEN3_INCLUDE_DIRS})
+    endif()
+endif()
+if(WITH_NLOPT)
+    target_include_directories(reg_compile_settings INTERFACE ${NLOPT_INCLUDE_DIRS})
+endif()
 
-# Use the directory where CMakeLists.txt is for inclusions.
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_INCLUDE_CURRENT_DIR_IN_INTERFACE ON)
-
-include(GNUInstallDirs)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_LIBDIR})
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_INSTALL_BINDIR})
+# Apply to all targets defined in subdirectories (Issue 3).
+link_libraries(reg_compile_settings)
 
 
 ####################################################################################

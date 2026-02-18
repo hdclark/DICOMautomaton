@@ -324,7 +324,8 @@ add_library (imebrashim
     imebra20121219/library/base/src/huffmanTable.cpp 
 )
 target_include_directories(imebrashim SYSTEM PUBLIC 
-    ./imebra20121219/library/imebra/include/ 
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/imebra20121219/library/imebra/include/>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
 target_compile_options(imebrashim PUBLIC -w) # Inhibit imebra-related warnings.
 target_link_libraries(imebrashim
@@ -385,19 +386,28 @@ if(WITH_GNU_GSL)
         KineticModel_1Compartment2Input_5Param_LinearInterp_Common.cc
         KineticModel_1Compartment2Input_5Param_LinearInterp_LevenbergMarquardt.cc
     )
-    target_include_directories(kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt SYSTEM PUBLIC ./ )
+    target_include_directories(kineticmodel_1c2i_5param_linearinterp_levenbergmarquardt SYSTEM PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    )
 
     add_library (kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
         KineticModel_1Compartment2Input_5Param_Chebyshev_Common.cc
         KineticModel_1Compartment2Input_5Param_Chebyshev_LevenbergMarquardt.cc
     )
-    target_include_directories(kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt SYSTEM PUBLIC ./ )
+    target_include_directories(kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt SYSTEM PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    )
 
     add_library (kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization
         KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_Common.cc
         KineticModel_1Compartment2Input_Reduced3Param_Chebyshev_FreeformOptimization.cc
     )
-    target_include_directories(kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization SYSTEM PUBLIC ./ )
+    target_include_directories(kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization SYSTEM PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    )
 
     # Note: GSL is not actually needed for this routine, but it doesn't make much sense to try separate the
     # functionality.
@@ -405,7 +415,10 @@ if(WITH_GNU_GSL)
         KineticModel_1Compartment2Input_5Param_Chebyshev_Common.cc
         KineticModel_1Compartment2Input_5Param_Chebyshev_FreeformOptimization.cc
     )
-    target_include_directories(kineticmodel_1c2i_5param_chebyshev_freeformoptimization SYSTEM PUBLIC ./ )
+    target_include_directories(kineticmodel_1c2i_5param_chebyshev_freeformoptimization SYSTEM PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    )
 
 endif()
 
@@ -767,18 +780,24 @@ target_link_libraries(dicomautomaton_dump
 )
 
 # Installation info.
+# Note: The EXPORT keyword adds targets to the DICOMautomatonTargets export set,
+# which is written to disk by the install(EXPORT ...) call in the top-level
+# CMakeLists.txt. This enables 'find_package(DICOMautomaton)' for downstream
+# consumers (Issue 5).
 install(TARGETS dicomautomaton_dispatcher
                 dicomautomaton_bsarchive_convert
                 dicomautomaton_dump
                 imebrashim
                 dialogshim
                 commonimgshim
+        EXPORT  DICOMautomatonTargets
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 if(WITH_WT)
     install(TARGETS dicomautomaton_webserver
+            EXPORT  DICOMautomatonTargets
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -788,6 +807,7 @@ if(WITH_POSTGRES)
     install(TARGETS pacs_ingress
                     pacs_duplicate_cleaner
                     pacs_refresh
+            EXPORT  DICOMautomatonTargets
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -798,6 +818,7 @@ if(WITH_GNU_GSL)
                     kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt
                     kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization
                     kineticmodel_1c2i_5param_chebyshev_freeformoptimization
+            EXPORT  DICOMautomatonTargets
             ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
             LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
