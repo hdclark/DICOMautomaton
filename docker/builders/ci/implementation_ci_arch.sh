@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2086
+# SC2086: Double quote to prevent globbing and word splitting - intentionally disabled for package lists.
 
 # This script installs dependencies and then builds and installs DICOMautomaton.
 # It can be used for continuous integration (CI), development, and deployment (CD).
@@ -15,9 +17,8 @@ sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
 sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' \
        -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf
 
-# Source the centralized package list script.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GET_PACKAGES="${SCRIPT_DIR}/../../../scripts/get_packages.sh"
+# Use the centralized package list script (copied to /dcma_scripts by Dockerfile).
+GET_PACKAGES="/dcma_scripts/get_packages.sh"
 
 # Get packages from the centralized script.
 PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os arch --tier build_tools)"
@@ -27,8 +28,7 @@ PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os arch --tier dcma_deps)"
 retry_count=0
 retry_limit=5
 until
-    # Install build dependencies.
-    # shellcheck disable=SC2086
+    `# Install build dependencies ` \
     pacman -Syu --noconfirm --needed ${PKGS_BUILD_TOOLS}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
@@ -47,9 +47,8 @@ printf '\n''builduser ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
 retry_count=0
 retry_limit=5
 until
-    # Install hard build dependencies.
-    # Note: sfml needs SFML2 but no compat pkg available yet, so handled separately below.
-    # shellcheck disable=SC2086
+    `# Install hard build dependencies ` \
+    `# Note: sfml needs SFML2 but no compat pkg available yet, so handled separately below ` \
     pacman -S --noconfirm --needed ${PKGS_YGOR_DEPS} ${PKGS_DCMA_DEPS}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1

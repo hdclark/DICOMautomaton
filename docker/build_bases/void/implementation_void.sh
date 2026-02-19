@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2086
+# SC2086: Double quote to prevent globbing and word splitting - intentionally disabled for package lists.
 
 # This script installs all dependencies needed to build DICOMautomaton starting with a minimal Void Linux system.
 
@@ -7,9 +9,8 @@ set -eux
 mkdir -pv /scratch_base
 cd /scratch_base
 
-# Source the centralized package list script.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GET_PACKAGES="${SCRIPT_DIR}/../../../scripts/get_packages.sh"
+# Use the centralized package list script (copied to /dcma_scripts by Dockerfile).
+GET_PACKAGES="/dcma_scripts/get_packages.sh"
 
 # Get packages from the centralized script.
 PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os void --tier build_tools)"
@@ -21,13 +22,18 @@ PKGS_OPTIONAL="$("${GET_PACKAGES}" --os void --tier optional)"
 retry_count=0
 retry_limit=5
 until 
-    # Install build dependencies.
     xbps-install -y -Su xbps && \
     xbps-install -y -Su && \
-    # shellcheck disable=SC2086
+    `# Install build dependencies ` \
     xbps-install -y -S ${PKGS_BUILD_TOOLS} && \
-    # shellcheck disable=SC2086
-    xbps-install -y -S ${PKGS_YGOR_DEPS} ${PKGS_DCMA_DEPS} ${PKGS_HEADLESS} ${PKGS_OPTIONAL}
+    `# Ygor dependencies ` \
+    xbps-install -y -S ${PKGS_YGOR_DEPS} && \
+    `# DCMA dependencies ` \
+    xbps-install -y -S ${PKGS_DCMA_DEPS} && \
+    `# Additional dependencies for headless OpenGL rendering with SFML ` \
+    xbps-install -y -S ${PKGS_HEADLESS} && \
+    `# Other optional dependencies ` \
+    xbps-install -y -S ${PKGS_OPTIONAL}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5

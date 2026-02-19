@@ -16,22 +16,13 @@
 #     line without overwriting the toolchain defaults.
 #   - This toolchain targets the host architecture (native build, not cross-compiling).
 
-# Locate the clang++ compiler using an absolute path to avoid PATH poisoning.
+# Locate the clang++ compiler. The search includes PATH to adapt to various environments.
 find_program(CLANG_CXX_COMPILER
     NAMES clang++ clang++-18 clang++-17 clang++-16 clang++-15 clang++-14 clang++-13 clang++-12 clang++-11 clang++-10 clang++-9 clang++-8 clang++-7 clang++-6.0 clang++-5.0
     HINTS
         /usr/local/bin
         /usr/bin
-    DOC "Clang C++ compiler (absolute path)"
-)
-
-# Locate the clang compiler for C sources.
-find_program(CLANG_C_COMPILER
-    NAMES clang clang-18 clang-17 clang-16 clang-15 clang-14 clang-13 clang-12 clang-11 clang-10 clang-9 clang-8 clang-7 clang-6.0 clang-5.0
-    HINTS
-        /usr/local/bin
-        /usr/bin
-    DOC "Clang C compiler (absolute path)"
+    DOC "Clang C++ compiler"
 )
 
 if(NOT CLANG_CXX_COMPILER)
@@ -41,14 +32,24 @@ if(NOT CLANG_CXX_COMPILER)
     )
 endif()
 
-if(NOT CLANG_C_COMPILER)
+# Derive the matching clang from the found clang++ to ensure version coherence.
+# Remove '+' characters to transform clang++ -> clang (e.g., clang++-17 -> clang-17).
+get_filename_component(_clangxx_dir "${CLANG_CXX_COMPILER}" DIRECTORY)
+get_filename_component(_clangxx_name "${CLANG_CXX_COMPILER}" NAME)
+string(REPLACE "++" "" _clang_name "${_clangxx_name}")
+set(_derived_clang "${_clangxx_dir}/${_clang_name}")
+
+# Verify the derived clang exists
+if(EXISTS "${_derived_clang}")
+    set(CLANG_C_COMPILER "${_derived_clang}")
+else()
     message(FATAL_ERROR
-        "Clang C compiler (clang) not found. "
-        "Install Clang or specify CMAKE_C_COMPILER=/path/to/clang manually."
+        "Could not find matching Clang C compiler '${_derived_clang}' for clang++ '${CLANG_CXX_COMPILER}'. "
+        "Install the matching Clang version or specify CMAKE_C_COMPILER=/path/to/clang manually."
     )
 endif()
 
-# Set the compilers to the absolute paths returned by find_program().
+# Set the compilers to the absolute paths.
 set(CMAKE_C_COMPILER "${CLANG_C_COMPILER}")
 set(CMAKE_CXX_COMPILER "${CLANG_CXX_COMPILER}")
 

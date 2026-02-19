@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2086
+# SC2086: Double quote to prevent globbing and word splitting - intentionally disabled for package lists.
 
 # This script installs dependencies and then builds and installs DICOMautomaton.
 # It can be used for continuous integration (CI), development, and deployment (CD).
@@ -48,9 +50,8 @@ chmod 777 "${l_orig_apt}"
 
 apt-get update --yes || true
 
-# Source the centralized package list script.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GET_PACKAGES="${SCRIPT_DIR}/../../../scripts/get_packages.sh"
+# Use the centralized package list script (copied to /dcma_scripts by Dockerfile).
+GET_PACKAGES="/dcma_scripts/get_packages.sh"
 
 # Get packages from the centralized script.
 PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os debian_buster --tier build_tools)"
@@ -64,16 +65,17 @@ PKGS_DEV_EXTRA="$("${GET_PACKAGES}" --os debian_buster --tier optional --optiona
 retry_count=0
 retry_limit=5
 until
-    # shellcheck disable=SC2086
+    `# Install build dependencies ` \
     apt-get install --yes --no-install-recommends ${PKGS_BUILD_TOOLS} && \
-    # shellcheck disable=SC2086
-    apt-get install --yes --no-install-recommends ${PKGS_YGOR_DEPS} ${PKGS_DCMA_DEPS} && \
-    # shellcheck disable=SC2086
+    `# Ygor dependencies ` \
+    apt-get install --yes --no-install-recommends ${PKGS_YGOR_DEPS} && \
+    `# DCMA dependencies ` \
+    apt-get install --yes --no-install-recommends ${PKGS_DCMA_DEPS} && \
+    `# Other optional dependencies ` \
     apt-get install --yes --no-install-recommends ${PKGS_OPTIONAL} && \
-    # shellcheck disable=SC2086
+    `# Additional dependencies for headless OpenGL rendering with SFML ` \
     apt-get install --yes --no-install-recommends ${PKGS_HEADLESS} && \
-    # Additional packages prospectively added in case needed for future development
-    # shellcheck disable=SC2086
+    `# Additional packages prospectively added in case needed for future development ` \
     apt-get install --yes --no-install-recommends ${PKGS_DEV_EXTRA} ${PKGS_EXTRA_TOOLCHAINS}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1

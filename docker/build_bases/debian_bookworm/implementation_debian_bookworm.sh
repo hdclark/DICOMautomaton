@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2086
+# SC2086: Double quote to prevent globbing and word splitting - intentionally disabled for package lists.
 
 # This script installs all dependencies needed to build DICOMautomaton starting with a minimal Debian bookworm system.
 
@@ -9,9 +11,8 @@ cd /scratch_base
 
 export DEBIAN_FRONTEND="noninteractive"
 
-# Source the centralized package list script.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GET_PACKAGES="${SCRIPT_DIR}/../../../scripts/get_packages.sh"
+# Use the centralized package list script (copied to /dcma_scripts by Dockerfile).
+GET_PACKAGES="/dcma_scripts/get_packages.sh"
 
 # Get packages from the centralized script.
 PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os debian_bookworm --tier build_tools)"
@@ -24,10 +25,16 @@ retry_count=0
 retry_limit=5
 until
     apt-get update --yes && \
-    # shellcheck disable=SC2086
+    `# Install build dependencies ` \
     apt-get install --yes --no-install-recommends ${PKGS_BUILD_TOOLS} && \
-    # shellcheck disable=SC2086
-    apt-get install --yes --no-install-recommends ${PKGS_YGOR_DEPS} ${PKGS_DCMA_DEPS} ${PKGS_HEADLESS} ${PKGS_OPTIONAL}
+    `# Ygor dependencies ` \
+    apt-get install --yes --no-install-recommends ${PKGS_YGOR_DEPS} && \
+    `# DCMA dependencies ` \
+    apt-get install --yes --no-install-recommends ${PKGS_DCMA_DEPS} && \
+    `# Additional dependencies for headless OpenGL rendering with SFML ` \
+    apt-get install --yes --no-install-recommends ${PKGS_HEADLESS} && \
+    `# Other optional dependencies ` \
+    apt-get install --yes --no-install-recommends ${PKGS_OPTIONAL}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5

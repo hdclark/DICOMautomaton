@@ -127,264 +127,765 @@ fi
 #                               Alpine Linux
 ####################################################################################
 get_alpine_build_tools_required() {
-    echo "alpine-sdk bash git cmake vim gdb rsync openssh wget unzip"
+    printf "alpine-sdk "
+    printf "bash "
+    printf "git "
+    printf "cmake "
+    printf "vim "
+    printf "gdb "
+    printf "rsync "
+    printf "openssh "
+    printf "wget "
+    printf "unzip "
+    printf '\n'
 }
 
 get_alpine_extra_toolchains_required() {
-    echo "clang clang-headers clang-libs clang-extra-tools llvm libc++ lld musl-dev compiler-rt"
+    printf "clang "
+    printf "clang-headers "
+    printf "clang-libs "
+    printf "clang-extra-tools "
+    printf "llvm "
+    printf "libc++ "
+    printf "lld "
+    printf "musl-dev "
+    printf "compiler-rt "
+    printf '\n'
 }
 
 get_alpine_ygor_deps_required() {
-    echo "gsl-static gsl-dev eigen-dev"
+    printf "gsl-static "
+    printf "gsl-dev "
+    printf "eigen-dev "
+    printf '\n'
 }
 
 get_alpine_dcma_deps_required() {
-    echo "openssl-libs-static zlib-static zlib-dev sfml-dev sdl2-dev glew-dev jansson-dev patchelf"
+    printf "openssl-libs-static "
+    printf "zlib-static "
+    printf "zlib-dev "
+    printf "sfml-dev "
+    printf "sdl2-dev "
+    printf "glew-dev "
+    printf "jansson-dev "
+    printf "patchelf "
+    printf '\n'
 }
 
 get_alpine_headless_rendering_required() {
-    echo "libx11-dev libx11-static glu-dev glu mesa mesa-dev xorg-server-dev xf86-video-dummy"
+    printf "libx11-dev "
+    printf "libx11-static "
+    printf "glu-dev "
+    printf "glu "
+    printf "mesa "
+    printf "mesa-dev "
+    printf "xorg-server-dev "
+    printf "xf86-video-dummy "
+    printf '\n'
 }
 
 get_alpine_optional_required() {
-    echo "libnotify-dev dunst"
+    printf "libnotify-dev "
+    printf "dunst "
+    printf '\n'
 }
 
 ####################################################################################
 #                               Arch Linux
 ####################################################################################
 get_arch_build_tools_required() {
-    echo "base-devel git cmake gcc vim gdb screen sudo pyalpm wget rsync"
+    printf "base-devel "
+    printf "git "
+    printf "cmake "
+    printf "gcc "
+    printf "vim "
+    printf "gdb "
+    printf "screen "
+    printf "sudo "
+    printf "pyalpm "
+    printf "wget "
+    printf "rsync "
+    printf '\n'
 }
 
 get_arch_ygor_deps_required() {
-    echo "gsl eigen boost-libs"
+    printf "gsl "
+    printf "eigen "
+    printf "boost-libs "
+    printf '\n'
 }
 
 get_arch_dcma_deps_required() {
-    echo "gcc-libs gnu-free-fonts sfml sdl2 glew glu jansson libpqxx postgresql zlib cgal wt asio nlopt patchelf freeglut libxi libxmu thrift"
+    printf "gcc-libs "
+    printf "gnu-free-fonts "
+    printf "sfml "
+    printf "sdl2 "
+    printf "glew "
+    printf "glu "
+    printf "jansson "
+    printf "libpqxx "
+    printf "postgresql "
+    printf "zlib "
+    printf "cgal "
+    printf "wt "
+    printf "asio "
+    printf "nlopt "
+    printf "patchelf "
+    printf "freeglut "
+    printf "libxi "
+    printf "libxmu "
+    printf "thrift "
+    printf '\n'
 }
 
 get_arch_headless_rendering_required() {
-    echo "xorg-server xorg-apps mesa xf86-video-dummy"
+    printf "xorg-server "
+    printf "xorg-apps "
+    printf "mesa "
+    printf "xf86-video-dummy "
+    printf '\n'
 }
 
 get_arch_optional_required() {
-    echo "bash-completion libnotify dunst"
+    printf "bash-completion "
+    printf "libnotify "
+    printf "dunst "
+    printf '\n'
 }
 
 ####################################################################################
 #                           Arch Linux with SYCL
 ####################################################################################
 get_arch_sycl_build_tools_required() {
-    echo "base-devel git cmake gcc vim gdb screen wget rsync which sudo pyalpm"
+    printf "base-devel "
+    printf "git "
+    printf "cmake "
+    printf "gcc "
+    printf "vim "
+    printf "gdb "
+    printf "screen "
+    printf "wget "
+    printf "rsync "
+    printf "which "
+    printf "sudo "
+    printf "pyalpm "
+    printf '\n'
 }
 
 get_arch_sycl_ygor_deps_required() {
-    echo "gsl eigen boost-libs"
+    printf "gsl "
+    printf "eigen "
+    printf "boost-libs "
+    printf '\n'
 }
 
 get_arch_sycl_dcma_deps_required() {
-    echo "gcc-libs gnu-free-fonts sdl2 glew glu jansson libpqxx postgresql zlib cgal wt asio nlopt patchelf freeglut libxi libxmu thrift"
+    printf "gcc-libs "
+    printf "gnu-free-fonts "
+    printf "sdl2 "
+    printf "glew "
+    printf "glu "
+    printf "jansson "
+    printf "libpqxx "
+    printf "postgresql "
+    printf "zlib "
+    printf "cgal "
+    printf "wt "
+    printf "asio "
+    printf "nlopt "
+    printf "patchelf "
+    printf "freeglut "
+    printf "libxi "
+    printf "libxmu "
+    printf "thrift "
+    printf '\n'
 }
 
 get_arch_sycl_headless_rendering_required() {
-    echo "xorg-server xorg-apps mesa xf86-video-dummy"
+    printf "xorg-server "
+    printf "xorg-apps "
+    printf "mesa "
+    printf "xf86-video-dummy "
+    printf '\n'
 }
 
 get_arch_sycl_optional_required() {
-    echo "bash-completion libnotify dunst zenity"
+    printf "bash-completion "
+    printf "libnotify "
+    printf "dunst "
+    printf "zenity "
+    printf '\n'
 }
 
 get_arch_sycl_extra_toolchains_required() {
-    echo "clang libclc ocl-icd opencl-mesa pocl clinfo"
+    printf "clang "
+    printf "libclc "
+    printf "ocl-icd "
+    printf "opencl-mesa "
+    printf "pocl "
+    printf "clinfo "
+    printf '\n'
 }
 
 get_arch_sycl_external_third_party_required() {
     # AUR packages - sfml2 and adaptivecpp
-    echo "sfml2 adaptivecpp"
+    printf "sfml2 "
+    printf "adaptivecpp "
+    printf '\n'
 }
 
 ####################################################################################
 #                               Debian Buster
 ####################################################################################
 get_debian_buster_build_tools_required() {
-    echo "git cmake make g++ ncurses-term gdb rsync wget ca-certificates file coreutils binutils findutils openssh-client"
+    printf "git "
+    printf "cmake "
+    printf "make "
+    printf "g++ "
+    printf "ncurses-term "
+    printf "gdb "
+    printf "rsync "
+    printf "wget "
+    printf "ca-certificates "
+    printf "file "
+    printf "coreutils "
+    printf "binutils "
+    printf "findutils "
+    printf "openssh-client "
+    printf '\n'
 }
 
 get_debian_buster_ygor_deps_required() {
-    echo "libboost-dev libgsl-dev libeigen3-dev"
+    printf "libboost-dev "
+    printf "libgsl-dev "
+    printf "libeigen3-dev "
+    printf '\n'
 }
 
 get_debian_buster_dcma_deps_required() {
-    echo "libeigen3-dev libboost-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev libboost-thread-dev libz-dev libsfml-dev libsdl2-dev libglew-dev libjansson-dev libpqxx-dev postgresql-client libcgal-dev libnlopt-dev libnlopt-cxx-dev libasio-dev fonts-freefont-ttf fonts-cmu freeglut3 freeglut3-dev libxi-dev libxmu-dev libthrift-dev thrift-compiler patchelf"
+    printf "libeigen3-dev "
+    printf "libboost-dev "
+    printf "libboost-filesystem-dev "
+    printf "libboost-iostreams-dev "
+    printf "libboost-program-options-dev "
+    printf "libboost-thread-dev "
+    printf "libz-dev "
+    printf "libsfml-dev "
+    printf "libsdl2-dev "
+    printf "libglew-dev "
+    printf "libjansson-dev "
+    printf "libpqxx-dev "
+    printf "postgresql-client "
+    printf "libcgal-dev "
+    printf "libnlopt-dev "
+    printf "libnlopt-cxx-dev "
+    printf "libasio-dev "
+    printf "fonts-freefont-ttf "
+    printf "fonts-cmu "
+    printf "freeglut3 "
+    printf "freeglut3-dev "
+    printf "libxi-dev "
+    printf "libxmu-dev "
+    printf "libthrift-dev "
+    printf "thrift-compiler "
+    printf "patchelf "
+    printf '\n'
 }
 
 get_debian_buster_headless_rendering_required() {
-    echo "x-window-system mesa-utils xserver-xorg-video-dummy x11-apps"
+    printf "x-window-system "
+    printf "mesa-utils "
+    printf "xserver-xorg-video-dummy "
+    printf "x11-apps "
+    printf '\n'
 }
 
 get_debian_buster_optional_required() {
-    echo "libnotify-dev dunst bash-completion gnuplot zenity"
+    printf "libnotify-dev "
+    printf "dunst "
+    printf "bash-completion "
+    printf "gnuplot "
+    printf "zenity "
+    printf '\n'
 }
 
 get_debian_buster_extra_toolchains_optional() {
-    echo "clang clang-format clang-tidy clang-tools"
+    printf "clang "
+    printf "clang-format "
+    printf "clang-tidy "
+    printf "clang-tools "
+    printf '\n'
 }
 
 get_debian_buster_optional_optional() {
     # Additional packages prospectively added for future development
-    echo "libsqlite3-dev sqlite3 liblua5.3-dev libpython3-dev libprotobuf-dev protobuf-compiler"
+    printf "libsqlite3-dev "
+    printf "sqlite3 "
+    printf "liblua5.3-dev "
+    printf "libpython3-dev "
+    printf "libprotobuf-dev "
+    printf "protobuf-compiler "
+    printf '\n'
 }
 
 ####################################################################################
 #                               Debian Bookworm
 ####################################################################################
 get_debian_bookworm_build_tools_required() {
-    echo "git cmake make g++ vim ncurses-term gdb rsync wget ca-certificates"
+    printf "git "
+    printf "cmake "
+    printf "make "
+    printf "g++ "
+    printf "vim "
+    printf "ncurses-term "
+    printf "gdb "
+    printf "rsync "
+    printf "wget "
+    printf "ca-certificates "
+    printf '\n'
 }
 
 get_debian_bookworm_ygor_deps_required() {
-    echo "libboost-dev libgsl-dev libeigen3-dev"
+    printf "libboost-dev "
+    printf "libgsl-dev "
+    printf "libeigen3-dev "
+    printf '\n'
 }
 
 get_debian_bookworm_dcma_deps_required() {
-    echo "libeigen3-dev libboost-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev libboost-thread-dev libz-dev libsfml-dev libsdl2-dev libglew-dev libjansson-dev libpqxx-dev postgresql-client libcgal-dev libnlopt-dev libnlopt-cxx-dev libasio-dev fonts-freefont-ttf fonts-cmu freeglut3-dev libxi-dev libxmu-dev libthrift-dev thrift-compiler patchelf"
+    printf "libeigen3-dev "
+    printf "libboost-dev "
+    printf "libboost-filesystem-dev "
+    printf "libboost-iostreams-dev "
+    printf "libboost-program-options-dev "
+    printf "libboost-thread-dev "
+    printf "libz-dev "
+    printf "libsfml-dev "
+    printf "libsdl2-dev "
+    printf "libglew-dev "
+    printf "libjansson-dev "
+    printf "libpqxx-dev "
+    printf "postgresql-client "
+    printf "libcgal-dev "
+    printf "libnlopt-dev "
+    printf "libnlopt-cxx-dev "
+    printf "libasio-dev "
+    printf "fonts-freefont-ttf "
+    printf "fonts-cmu "
+    printf "freeglut3-dev "
+    printf "libxi-dev "
+    printf "libxmu-dev "
+    printf "libthrift-dev "
+    printf "thrift-compiler "
+    printf "patchelf "
+    printf '\n'
 }
 
 get_debian_bookworm_headless_rendering_required() {
-    echo "x-window-system mesa-utils xserver-xorg-video-dummy x11-apps"
+    printf "x-window-system "
+    printf "mesa-utils "
+    printf "xserver-xorg-video-dummy "
+    printf "x11-apps "
+    printf '\n'
 }
 
 get_debian_bookworm_optional_required() {
-    echo "libnotify-dev dunst bash-completion gnuplot zenity"
+    printf "libnotify-dev "
+    printf "dunst "
+    printf "bash-completion "
+    printf "gnuplot "
+    printf "zenity "
+    printf '\n'
 }
 
 ####################################################################################
 #                               Debian Bullseye
 ####################################################################################
 get_debian_bullseye_build_tools_required() {
-    echo "git cmake make g++ vim ncurses-term gdb rsync wget ca-certificates"
+    printf "git "
+    printf "cmake "
+    printf "make "
+    printf "g++ "
+    printf "vim "
+    printf "ncurses-term "
+    printf "gdb "
+    printf "rsync "
+    printf "wget "
+    printf "ca-certificates "
+    printf '\n'
 }
 
 get_debian_bullseye_ygor_deps_required() {
-    echo "libboost-dev libgsl-dev libeigen3-dev"
+    printf "libboost-dev "
+    printf "libgsl-dev "
+    printf "libeigen3-dev "
+    printf '\n'
 }
 
 get_debian_bullseye_dcma_deps_required() {
-    echo "libeigen3-dev libboost-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev libboost-thread-dev libz-dev libsfml-dev libsdl2-dev libglew-dev libjansson-dev libpqxx-dev postgresql-client libcgal-dev libnlopt-dev libnlopt-cxx-dev libasio-dev fonts-freefont-ttf fonts-cmu freeglut3 freeglut3-dev libxi-dev libxmu-dev libthrift-dev thrift-compiler patchelf"
+    printf "libeigen3-dev "
+    printf "libboost-dev "
+    printf "libboost-filesystem-dev "
+    printf "libboost-iostreams-dev "
+    printf "libboost-program-options-dev "
+    printf "libboost-thread-dev "
+    printf "libz-dev "
+    printf "libsfml-dev "
+    printf "libsdl2-dev "
+    printf "libglew-dev "
+    printf "libjansson-dev "
+    printf "libpqxx-dev "
+    printf "postgresql-client "
+    printf "libcgal-dev "
+    printf "libnlopt-dev "
+    printf "libnlopt-cxx-dev "
+    printf "libasio-dev "
+    printf "fonts-freefont-ttf "
+    printf "fonts-cmu "
+    printf "freeglut3 "
+    printf "freeglut3-dev "
+    printf "libxi-dev "
+    printf "libxmu-dev "
+    printf "libthrift-dev "
+    printf "thrift-compiler "
+    printf "patchelf "
+    printf '\n'
 }
 
 get_debian_bullseye_headless_rendering_required() {
-    echo "x-window-system mesa-utils xserver-xorg-video-dummy x11-apps"
+    printf "x-window-system "
+    printf "mesa-utils "
+    printf "xserver-xorg-video-dummy "
+    printf "x11-apps "
+    printf '\n'
 }
 
 get_debian_bullseye_optional_required() {
-    echo "libnotify-dev dunst bash-completion gnuplot zenity"
+    printf "libnotify-dev "
+    printf "dunst "
+    printf "bash-completion "
+    printf "gnuplot "
+    printf "zenity "
+    printf '\n'
 }
 
 ####################################################################################
 #                               Debian Stretch
 ####################################################################################
 get_debian_stretch_build_tools_required() {
-    echo "git cmake make g++ vim ncurses-term gdb rsync wget ca-certificates"
+    printf "git "
+    printf "cmake "
+    printf "make "
+    printf "g++ "
+    printf "vim "
+    printf "ncurses-term "
+    printf "gdb "
+    printf "rsync "
+    printf "wget "
+    printf "ca-certificates "
+    printf '\n'
 }
 
 get_debian_stretch_ygor_deps_required() {
-    echo "libboost-dev libgsl-dev libeigen3-dev"
+    printf "libboost-dev "
+    printf "libgsl-dev "
+    printf "libeigen3-dev "
+    printf '\n'
 }
 
 get_debian_stretch_dcma_deps_required() {
-    echo "libeigen3-dev libboost-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev libboost-thread-dev libz-dev libsfml-dev libsdl2-dev libglew-dev libjansson-dev libpqxx-dev postgresql-client libcgal-dev libnlopt-dev libasio-dev fonts-freefont-ttf fonts-cmu freeglut3 freeglut3-dev libxi-dev libxmu-dev xz-utils libthrift-dev thrift-compiler patchelf"
+    printf "libeigen3-dev "
+    printf "libboost-dev "
+    printf "libboost-filesystem-dev "
+    printf "libboost-iostreams-dev "
+    printf "libboost-program-options-dev "
+    printf "libboost-thread-dev "
+    printf "libz-dev "
+    printf "libsfml-dev "
+    printf "libsdl2-dev "
+    printf "libglew-dev "
+    printf "libjansson-dev "
+    printf "libpqxx-dev "
+    printf "postgresql-client "
+    printf "libcgal-dev "
+    printf "libnlopt-dev "
+    printf "libasio-dev "
+    printf "fonts-freefont-ttf "
+    printf "fonts-cmu "
+    printf "freeglut3 "
+    printf "freeglut3-dev "
+    printf "libxi-dev "
+    printf "libxmu-dev "
+    printf "xz-utils "
+    printf "libthrift-dev "
+    printf "thrift-compiler "
+    printf "patchelf "
+    printf '\n'
 }
 
 get_debian_stretch_headless_rendering_required() {
-    echo "x-window-system mesa-utils xserver-xorg-video-dummy x11-apps"
+    printf "x-window-system "
+    printf "mesa-utils "
+    printf "xserver-xorg-video-dummy "
+    printf "x11-apps "
+    printf '\n'
 }
 
 get_debian_stretch_optional_required() {
-    echo "libnotify dunst bash-completion gnuplot zenity"
+    printf "libnotify "
+    printf "dunst "
+    printf "bash-completion "
+    printf "gnuplot "
+    printf "zenity "
+    printf '\n'
 }
 
 ####################################################################################
 #                               macOS
 ####################################################################################
 get_macos_build_tools_required() {
-    echo "git svn coreutils cmake make vim rsync wget"
+    printf "git "
+    printf "svn "
+    printf "coreutils "
+    printf "cmake "
+    printf "make "
+    printf "vim "
+    printf "rsync "
+    printf "wget "
+    printf '\n'
 }
 
 get_macos_ygor_deps_required() {
-    echo "gsl eigen boost"
+    printf "gsl "
+    printf "eigen "
+    printf "boost "
+    printf '\n'
 }
 
 get_macos_dcma_deps_required() {
-    echo "sdl2 zlib sfml glew jansson libpq nlopt asio thrift gcc llvm"
+    printf "sdl2 "
+    printf "zlib "
+    printf "sfml "
+    printf "glew "
+    printf "jansson "
+    printf "libpq "
+    printf "nlopt "
+    printf "asio "
+    printf "thrift "
+    printf "gcc "
+    printf "llvm "
+    printf '\n'
 }
 
 get_macos_optional_required() {
-    echo "cgal libpqxx libnotify zenity"
+    printf "cgal "
+    printf "libpqxx "
+    printf "libnotify "
+    printf "zenity "
+    printf '\n'
 }
 
 get_macos_headless_rendering_required() {
-    echo "mesa freeglut"
+    printf "mesa "
+    printf "freeglut "
+    printf '\n'
 }
 
 ####################################################################################
 #                               MXE (Cross-compile for Windows)
 ####################################################################################
 get_mxe_build_tools_required() {
-    echo "autoconf automake autopoint bash bison bzip2 flex g++ g++-multilib gettext git gperf intltool libc6-dev-i386 libgdk-pixbuf2.0-dev libltdl-dev libssl-dev libtool-bin libxml-parser-perl lzip make openssl p7zip-full patch perl python3 python3-mako python-is-python3 ruby sed unzip wget xz-utils ca-certificates rsync sudo gnupg"
+    printf "autoconf "
+    printf "automake "
+    printf "autopoint "
+    printf "bash "
+    printf "bison "
+    printf "bzip2 "
+    printf "flex "
+    printf "g++ "
+    printf "g++-multilib "
+    printf "gettext "
+    printf "git "
+    printf "gperf "
+    printf "intltool "
+    printf "libc6-dev-i386 "
+    printf "libgdk-pixbuf2.0-dev "
+    printf "libltdl-dev "
+    printf "libssl-dev "
+    printf "libtool-bin "
+    printf "libxml-parser-perl "
+    printf "lzip "
+    printf "make "
+    printf "openssl "
+    printf "p7zip-full "
+    printf "patch "
+    printf "perl "
+    printf "python3 "
+    printf "python3-mako "
+    printf "python-is-python3 "
+    printf "ruby "
+    printf "sed "
+    printf "unzip "
+    printf "wget "
+    printf "xz-utils "
+    printf "ca-certificates "
+    printf "rsync "
+    printf "sudo "
+    printf "gnupg "
+    printf '\n'
 }
 
 get_mxe_external_third_party_required() {
     # These packages are built from source via MXE build system
-    echo "gmp mpfr boost eigen sfml sdl2 glew nlopt mesa cgal thrift"
+    printf "gmp "
+    printf "mpfr "
+    printf "boost "
+    printf "eigen "
+    printf "sfml "
+    printf "sdl2 "
+    printf "glew "
+    printf "nlopt "
+    printf "mesa "
+    printf "cgal "
+    printf "thrift "
+    printf '\n'
 }
 
 ####################################################################################
 #                               Ubuntu
 ####################################################################################
 get_ubuntu_build_tools_required() {
-    echo "bash git cmake make g++ vim ncurses-term gdb rsync wget ca-certificates"
+    printf "bash "
+    printf "git "
+    printf "cmake "
+    printf "make "
+    printf "g++ "
+    printf "vim "
+    printf "ncurses-term "
+    printf "gdb "
+    printf "rsync "
+    printf "wget "
+    printf "ca-certificates "
+    printf '\n'
 }
 
 get_ubuntu_ygor_deps_required() {
-    echo "libboost-dev libgsl-dev libeigen3-dev"
+    printf "libboost-dev "
+    printf "libgsl-dev "
+    printf "libeigen3-dev "
+    printf '\n'
 }
 
 get_ubuntu_dcma_deps_required() {
-    echo "libeigen3-dev libboost-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev libboost-thread-dev libz-dev libsfml-dev libsdl2-dev libglew-dev libjansson-dev libpqxx-dev postgresql-client libcgal-dev libnlopt-dev libnlopt-cxx-dev libasio-dev fonts-freefont-ttf fonts-cmu freeglut3 freeglut3-dev libxi-dev libxmu-dev patchelf libthrift-dev thrift-compiler"
+    printf "libeigen3-dev "
+    printf "libboost-dev "
+    printf "libboost-filesystem-dev "
+    printf "libboost-iostreams-dev "
+    printf "libboost-program-options-dev "
+    printf "libboost-thread-dev "
+    printf "libz-dev "
+    printf "libsfml-dev "
+    printf "libsdl2-dev "
+    printf "libglew-dev "
+    printf "libjansson-dev "
+    printf "libpqxx-dev "
+    printf "postgresql-client "
+    printf "libcgal-dev "
+    printf "libnlopt-dev "
+    printf "libnlopt-cxx-dev "
+    printf "libasio-dev "
+    printf "fonts-freefont-ttf "
+    printf "fonts-cmu "
+    printf "freeglut3 "
+    printf "freeglut3-dev "
+    printf "libxi-dev "
+    printf "libxmu-dev "
+    printf "patchelf "
+    printf "libthrift-dev "
+    printf "thrift-compiler "
+    printf '\n'
 }
 
 get_ubuntu_headless_rendering_required() {
-    echo "x-window-system mesa-utils x11-apps libfreetype6 libsdl2-dev libice-dev libsm-dev libopengl0"
+    printf "x-window-system "
+    printf "mesa-utils "
+    printf "x11-apps "
+    printf "libfreetype6 "
+    printf "libsdl2-dev "
+    printf "libice-dev "
+    printf "libsm-dev "
+    printf "libopengl0 "
+    printf '\n'
 }
 
 get_ubuntu_optional_required() {
-    echo "libnotify-dev dunst bash-completion gnuplot zenity"
+    printf "libnotify-dev "
+    printf "dunst "
+    printf "bash-completion "
+    printf "gnuplot "
+    printf "zenity "
+    printf '\n'
 }
 
 ####################################################################################
 #                               Void Linux
 ####################################################################################
 get_void_build_tools_required() {
-    echo "base-devel bash git cmake vim ncurses-term gdb rsync wget"
+    printf "base-devel "
+    printf "bash "
+    printf "git "
+    printf "cmake "
+    printf "vim "
+    printf "ncurses-term "
+    printf "gdb "
+    printf "rsync "
+    printf "wget "
+    printf '\n'
 }
 
 get_void_ygor_deps_required() {
-    echo "boost-devel gsl-devel eigen"
+    printf "boost-devel "
+    printf "gsl-devel "
+    printf "eigen "
+    printf '\n'
 }
 
 get_void_dcma_deps_required() {
-    echo "eigen boost-devel zlib-devel SFML-devel SDL2-devel glew-devel jansson-devel libpqxx-devel postgresql-client cgal-devel nlopt-devel asio freefont-ttf patchelf thrift thrift-devel"
+    printf "eigen "
+    printf "boost-devel "
+    printf "zlib-devel "
+    printf "SFML-devel "
+    printf "SDL2-devel "
+    printf "glew-devel "
+    printf "jansson-devel "
+    printf "libpqxx-devel "
+    printf "postgresql-client "
+    printf "cgal-devel "
+    printf "nlopt-devel "
+    printf "asio "
+    printf "freefont-ttf "
+    printf "patchelf "
+    printf "thrift "
+    printf "thrift-devel "
+    printf '\n'
 }
 
 get_void_headless_rendering_required() {
-    echo "xorg-minimal glu-devel xorg-video-drivers xf86-video-dummy xorg-apps"
+    printf "xorg-minimal "
+    printf "glu-devel "
+    printf "xorg-video-drivers "
+    printf "xf86-video-dummy "
+    printf "xorg-apps "
+    printf '\n'
 }
 
 get_void_optional_required() {
-    echo "libnotify dunst bash-completion gnuplot zenity"
+    printf "libnotify "
+    printf "dunst "
+    printf "bash-completion "
+    printf "gnuplot "
+    printf "zenity "
+    printf '\n'
 }
 
 ####################################################################################
@@ -440,6 +941,59 @@ get_valid_tiers() {
     echo "build_tools extra_toolchains ygor_deps dcma_deps headless_rendering optional external_third_party"
 }
 
+# Architecture-specific package adjustments
+# This function modifies the package list based on architecture constraints.
+# Most packages are architecture-agnostic, but some need adjustment for non-x86_64.
+adjust_packages_for_arch() {
+    local os="$1"
+    local arch="$2"
+    local packages="$3"
+
+    # For x86_64, no adjustments needed
+    if [[ "$arch" == "x86_64" ]]; then
+        echo "$packages"
+        return
+    fi
+
+    # For non-x86_64 architectures, remove/replace packages that are not available
+    case "$os" in
+        mxe)
+            # MXE cross-compilation is x86_64 specific
+            if [[ "$arch" != "x86_64" ]]; then
+                # Remove i386-specific packages for non-x86 hosts
+                packages="${packages//libc6-dev-i386 /}"
+                packages="${packages//g++-multilib /}"
+            fi
+            ;;
+        debian_*|ubuntu)
+            # Some Debian/Ubuntu packages may differ by architecture
+            case "$arch" in
+                aarch64|arm64)
+                    # ARM64 adjustments - remove any x86-specific packages
+                    packages="${packages//libc6-dev-i386 /}"
+                    ;;
+                armv7l|armhf)
+                    # ARM32 adjustments
+                    packages="${packages//libc6-dev-i386 /}"
+                    ;;
+            esac
+            ;;
+        alpine)
+            # Alpine uses different package naming for some arch-specific packages
+            case "$arch" in
+                aarch64|arm64)
+                    # Most Alpine packages are arch-agnostic in naming
+                    ;;
+                armv7|armhf)
+                    # ARM32 adjustments
+                    ;;
+            esac
+            ;;
+    esac
+
+    echo "$packages"
+}
+
 # Collect packages for a given OS and tier
 get_packages_for_tier() {
     local os="$1"
@@ -461,6 +1015,9 @@ get_packages_for_tier() {
             packages+="$(${func_optional}) "
         fi
     fi
+
+    # Apply architecture-specific adjustments
+    packages="$(adjust_packages_for_arch "$os" "$ARCH" "$packages")"
 
     echo "$packages"
 }

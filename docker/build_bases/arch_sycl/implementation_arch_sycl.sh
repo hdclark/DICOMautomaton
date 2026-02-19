@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2086
+# SC2086: Double quote to prevent globbing and word splitting - intentionally disabled for package lists.
 
 # This script installs all dependencies needed to build DICOMautomaton starting with a minimal Arch Linux system.
 
@@ -17,9 +19,8 @@ sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
 sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' \
        -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf
 
-# Source the centralized package list script.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GET_PACKAGES="${SCRIPT_DIR}/../../../scripts/get_packages.sh"
+# Use the centralized package list script (copied to /dcma_scripts by Dockerfile).
+GET_PACKAGES="/dcma_scripts/get_packages.sh"
 
 # Get packages from the centralized script.
 PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os arch_sycl --tier build_tools)"
@@ -34,14 +35,17 @@ PKGS_EXTERNAL="$("${GET_PACKAGES}" --os arch_sycl --tier external_third_party)"
 retry_count=0
 retry_limit=5
 until
-    # shellcheck disable=SC2086
+    `# Install build dependencies ` \
     pacman -Syu --noconfirm --needed ${PKGS_BUILD_TOOLS} && \
-    # Install known official dependencies.
-    # shellcheck disable=SC2086
-    pacman -S --noconfirm --needed ${PKGS_YGOR_DEPS} ${PKGS_DCMA_DEPS} ${PKGS_HEADLESS} ${PKGS_OPTIONAL} && \
-    # Install SYCL components.
-    # Note: These conflict with later adaptivecpp pkg: opencl-clhpp opencl-headers
-    # shellcheck disable=SC2086
+    `# Ygor dependencies ` \
+    pacman -S --noconfirm --needed ${PKGS_YGOR_DEPS} && \
+    `# DCMA dependencies ` \
+    pacman -S --noconfirm --needed ${PKGS_DCMA_DEPS} && \
+    `# Additional dependencies for headless OpenGL rendering with SFML ` \
+    pacman -S --noconfirm --needed ${PKGS_HEADLESS} && \
+    `# Other optional dependencies ` \
+    pacman -S --noconfirm --needed ${PKGS_OPTIONAL} && \
+    `# Install SYCL components - Note: opencl-clhpp opencl-headers conflict with later adaptivecpp pkg ` \
     pacman -S --noconfirm --needed ${PKGS_EXTRA_TOOLCHAINS}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
@@ -101,24 +105,16 @@ git clone --depth=1 'https://aur.archlinux.org/trizen.git'
 #su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm example-git"
 #trizen --nocolors --quiet --noconfirm -S example-git
 
-# Install older SFML2.
-retry_count=0
-retry_limit=5
-until
-    su - builduser -c "cd /tmp && trizen --nocolors --quiet --noconfirm -S sfml2"
-do
-    (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
-    printf 'Waiting to retry.\n' && sleep 5
-done
-
-# Install AdaptiveCpp for optional SYCL toolchain.
-retry_count=0
-retry_limit=5
-until
-    su - builduser -c "cd /tmp && trizen --nocolors --quiet --noconfirm -S adaptivecpp"
-do
-    (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
-    printf 'Waiting to retry.\n' && sleep 5
+# Install external/third-party packages from AUR (sfml2 and adaptivecpp).
+for pkg in ${PKGS_EXTERNAL}; do
+    retry_count=0
+    retry_limit=5
+    until
+        su - builduser -c "cd /tmp && trizen --nocolors --quiet --noconfirm -S ${pkg}"
+    do
+        (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
+        printf 'Waiting to retry.\n' && sleep 5
+    done
 done
 
 ## Install TriSYCL for optional SYCL toolchain.

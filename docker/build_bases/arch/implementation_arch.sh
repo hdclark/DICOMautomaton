@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2086
+# SC2086: Double quote to prevent globbing and word splitting - intentionally disabled for package lists.
 
 # This script installs all dependencies needed to build DICOMautomaton starting with a minimal Arch Linux system.
 
@@ -17,9 +19,8 @@ sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
 sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' \
        -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf
 
-# Source the centralized package list script.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GET_PACKAGES="${SCRIPT_DIR}/../../../scripts/get_packages.sh"
+# Use the centralized package list script (copied to /dcma_scripts by Dockerfile).
+GET_PACKAGES="/dcma_scripts/get_packages.sh"
 
 # Get packages from the centralized script.
 PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os arch --tier build_tools)"
@@ -31,12 +32,16 @@ PKGS_OPTIONAL="$("${GET_PACKAGES}" --os arch --tier optional)"
 retry_count=0
 retry_limit=5
 until
-    # Install build dependencies.
-    # shellcheck disable=SC2086
+    `# Install build dependencies ` \
     pacman -Syu --noconfirm --needed ${PKGS_BUILD_TOOLS} && \
-    # Install known official dependencies.
-    # shellcheck disable=SC2086
-    pacman -S --noconfirm --needed ${PKGS_YGOR_DEPS} ${PKGS_DCMA_DEPS} ${PKGS_HEADLESS} ${PKGS_OPTIONAL}
+    `# Ygor dependencies ` \
+    pacman -S --noconfirm --needed ${PKGS_YGOR_DEPS} && \
+    `# DCMA dependencies ` \
+    pacman -S --noconfirm --needed ${PKGS_DCMA_DEPS} && \
+    `# Additional dependencies for headless OpenGL rendering with SFML ` \
+    pacman -S --noconfirm --needed ${PKGS_HEADLESS} && \
+    `# Other optional dependencies ` \
+    pacman -S --noconfirm --needed ${PKGS_OPTIONAL}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2086
+# SC2086: Double quote to prevent globbing and word splitting - intentionally disabled for package lists.
 
 # This script installs packages needed to compile DICOMautomaton on MacOSX 10.15.4 (Catalina).
 #
@@ -18,7 +20,8 @@ sleep 30
 export HOMEBREW_NO_ANALYTICS=1
 brew analytics off
 
-# Source the centralized package list script.
+# Use the centralized package list script.
+# For macOS, the script is invoked directly from the repository (not Docker).
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 GET_PACKAGES="${SCRIPT_DIR}/../../../scripts/get_packages.sh"
 
@@ -30,13 +33,12 @@ PKGS_OPTIONAL="$("${GET_PACKAGES}" --os macos --tier optional)"
 PKGS_HEADLESS="$("${GET_PACKAGES}" --os macos --tier headless_rendering)"
 
 # Install build tools first (git and svn needed for further package installs)
-# shellcheck disable=SC2086
 brew install ${PKGS_BUILD_TOOLS}
 
-# shellcheck disable=SC2086
+`# Ygor and DCMA dependencies `
 brew install ${PKGS_YGOR_DEPS} ${PKGS_DCMA_DEPS}
 
-# shellcheck disable=SC2086
+`# Other optional dependencies `
 brew install ${PKGS_OPTIONAL}
 
 # Alter mesa formula before installing because it fails to build on catalina.
@@ -62,7 +64,7 @@ EOF
 #brew install --build-from-source /usr/local/Homebrew/Library/Taps/homebrew/homebrew-core/Formula/mesa.rb
 brew install --build-from-source ./mesa.rb
 #HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_UPGRADE=1 HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1 brew install freeglut 
-# shellcheck disable=SC2086
+`# Additional dependencies for headless OpenGL rendering with SFML `
 brew install ${PKGS_HEADLESS}
 
 # There should now be a lot of compilers available.

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2086
+# SC2086: Double quote to prevent globbing and word splitting - intentionally disabled for package lists.
 
 # This script installs all dependencies needed to build DICOMautomaton on Alpine Linux.
 
@@ -9,9 +11,8 @@ cd /scratch_base
 
 source /scratch_base/set_environment.sh
 
-# Source the centralized package list script.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GET_PACKAGES="${SCRIPT_DIR}/../../../scripts/get_packages.sh"
+# Use the centralized package list script (copied to /dcma_scripts by Dockerfile).
+GET_PACKAGES="/dcma_scripts/get_packages.sh"
 
 # Get packages from the centralized script.
 PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os alpine --tier build_tools)"
@@ -24,13 +25,19 @@ PKGS_OPTIONAL="$("${GET_PACKAGES}" --os alpine --tier optional)"
 retry_count=0
 retry_limit=5
 until
-    # Install build dependencies.
-    # shellcheck disable=SC2086
-    apk add --no-cache --update ${PKGS_BUILD_TOOLS} && \
-    # shellcheck disable=SC2086
-    apk add --no-cache --update ${PKGS_EXTRA_TOOLCHAINS} && \
-    # shellcheck disable=SC2086
-    apk add --no-cache ${PKGS_YGOR_DEPS} ${PKGS_DCMA_DEPS} ${PKGS_HEADLESS} ${PKGS_OPTIONAL}
+    apk add --no-cache --update && \
+    `# Install build dependencies ` \
+    apk add --no-cache ${PKGS_BUILD_TOOLS} && \
+    `# Additional toolchain` \
+    apk add --no-cache ${PKGS_EXTRA_TOOLCHAINS} && \
+    `# Ygor dependencies` \
+    apk add --no-cache ${PKGS_YGOR_DEPS} && \
+    `# DCMA dependencies` \
+    apk add --no-cache ${PKGS_DCMA_DEPS} && \
+    `# Additional dependencies for headless OpenGL rendering with SFML` \
+    apk add --no-cache ${PKGS_HEADLESS} && \
+    `# Other optional dependencies` \
+    apk add --no-cache ${PKGS_OPTIONAL}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5

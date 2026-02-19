@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2086
+# SC2086: Double quote to prevent globbing and word splitting - intentionally disabled for package lists.
 
 # This script prepares a build environment using MXE and then cross-compiles DICOMautomaton dependencies.
 
@@ -10,9 +12,8 @@ sed -i -e 's@oldoldstable@bullseye@g' \
        -e 's@oldstable@bullseye@g' \
        -e 's@stable@bullseye@g'  /etc/apt/sources.list
 
-# Source the centralized package list script.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-GET_PACKAGES="${SCRIPT_DIR}/../../../scripts/get_packages.sh"
+# Use the centralized package list script (copied to /dcma_scripts by Dockerfile).
+GET_PACKAGES="/dcma_scripts/get_packages.sh"
 
 # Get packages from the centralized script.
 PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os mxe --tier build_tools)"
@@ -21,7 +22,7 @@ retry_count=0
 retry_limit=5
 until
     apt-get -y update && \
-    # shellcheck disable=SC2086
+    `# Install MXE build dependencies ` \
     apt-get -y install ${PKGS_BUILD_TOOLS}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
