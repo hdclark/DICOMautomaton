@@ -127,7 +127,9 @@ elif [[ "${DISTRIBUTION}" =~ .*[fF]edora.* ]] ; then
     printf 'Installing dependencies for Fedora...\n'
 
     # Fedora uses a different package manager (dnf) and package names.
-    # These are maintained separately since Fedora is not in the centralized get_packages.sh.
+    # Fedora support is not included in the centralized get_packages.sh because
+    # DICOMautomaton is primarily built and distributed on Debian/Ubuntu/Arch systems.
+    # Fedora packages are maintained separately here for AppImage runtime compatibility.
     until $SUDO dnf -y upgrade && \
           $SUDO dnf -y install \
             bash git rsync \
