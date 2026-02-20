@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2086
+# SC2086: Double quote to prevent globbing and word splitting - intentionally disabled for package lists.
 
 # This script installs packages needed to compile DICOMautomaton on MacOSX 10.15.4 (Catalina).
 #
@@ -18,37 +20,26 @@ sleep 30
 export HOMEBREW_NO_ANALYTICS=1
 brew analytics off
 
-brew install \
-  git \
-  svn
+# Use the centralized package list script.
+# For macOS, the script is invoked directly from the repository (not Docker).
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GET_PACKAGES="${SCRIPT_DIR}/../../../scripts/get_packages.sh"
 
-brew install \
-  coreutils \
-  cmake \
-  make \
-  vim \
-  sdl2 \
-  rsync \
-  wget \
-  gsl \
-  eigen \
-  boost \
-  zlib \
-  sfml \
-  glew \
-  jansson \
-  libpq \
-  nlopt \
-  asio \
-  thrift \
-  gcc \
-  llvm
+# Get packages from the centralized script.
+PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os macos --tier build_tools)"
+PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os macos --tier ygor_deps)"
+PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os macos --tier dcma_deps)"
+PKGS_OPTIONAL="$("${GET_PACKAGES}" --os macos --tier optional)"
+PKGS_HEADLESS="$("${GET_PACKAGES}" --os macos --tier headless_rendering)"
 
-brew install \
-  cgal \
-  libpqxx \
-  libnotify \
-  zenity \
+# Install build tools first (git and svn needed for further package installs)
+brew install ${PKGS_BUILD_TOOLS}
+
+`# Ygor and DCMA dependencies `
+brew install ${PKGS_YGOR_DEPS} ${PKGS_DCMA_DEPS}
+
+`# Other optional dependencies `
+brew install ${PKGS_OPTIONAL}
 
 # Alter mesa formula before installing because it fails to build on catalina.
 EDITOR=true brew edit mesa  # Add '-Wno-register' {C,CPP,CXX}FLAGS env variables.
@@ -73,11 +64,13 @@ EOF
 #brew install --build-from-source /usr/local/Homebrew/Library/Taps/homebrew/homebrew-core/Formula/mesa.rb
 brew install --build-from-source ./mesa.rb
 #HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_UPGRADE=1 HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1 brew install freeglut 
-brew install freeglut 
+`# Additional dependencies for headless OpenGL rendering with SFML `
+brew install ${PKGS_HEADLESS}
 
 # There should now be a lot of compilers available.
 gcc --version    # System-provided clang (not gcc!)
 /Library/Developer/CommandLineTools/usr/bin/clang++ --version  # System-provided clang.
 /usr/local/bin/gcc-12 --version   # Homebrew-install gcc.
 clang++ --version   # Homebrew-installed clang.
+
 

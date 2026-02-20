@@ -8,6 +8,7 @@ LABEL maintainer="https://www.halclark.ca" \
 
 WORKDIR /scratch_base
 COPY docker/build_bases/void /scratch_base
+COPY scripts /dcma_scripts
 
 # Ensure something in the image can interpret bash she-bangs.
 RUN xbps-install -y -S xbps && \

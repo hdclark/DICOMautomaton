@@ -45,6 +45,12 @@ option(WITH_FETCHCONTENT_FALLBACK "Download missing dependencies if not found." 
 #                                  Configuration
 ####################################################################################
 
+# Set the C++ standard (DICOMautomaton requires C++17).
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+
 # High-level configuration.
 if(NOT BUILD_SHARED_LIBS)
     #set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")

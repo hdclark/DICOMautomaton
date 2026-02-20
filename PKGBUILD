@@ -1,6 +1,6 @@
 # Maintainer: Hal Clark <gmail.com[at]hdeanclark>
 pkgname=dicomautomaton
-pkgver=20250215_083412
+pkgver=20260215_083412
 pkgver() {
   date +%Y%m%d_%H%M%S
 }
@@ -10,43 +10,61 @@ pkgdesc="Various tools for medical physics applications."
 url="https://www.halclark.ca"
 arch=('x86_64' 'i686' 'armv7h')
 license=('unknown')
-depends=(
-   'gcc-libs'
-   'gnu-free-fonts'
-   'zenity'
-   'sdl2'
-   'glew'
-   'glu'
-   'jansson'
-   'libpqxx'
-   'postgresql'
-   'nlopt' 
-   'gsl'
-   'boost-libs'
-   'zlib'
-   'cgal>=4.8'
-   'wt'
-   'explicator'
-   'ygor'
-)
-optdepends=(
-   'sfml2'
-   'libnotify'
-   'dunst' # Or any other notification server compatible with libnotify.
-   'zenity'
-   'dialog'
-   'gnuplot'
-   'patchelf'
-   'bash-completion'
-   'ttf-computer-modern-fonts'
-   'adaptivecpp' # + other optional hw accel components for SYCL.
-)
-makedepends=(
-   'cmake'
-   'git'
-   'asio'
-   'ygorclustering'
-)
+
+# Build the dependencies dynamically from the get_packages() script.
+depends=()
+while IFS= read -r line; do
+    depends+=( "$line" )
+done < <( scripts/get_packages.sh --os arch --tier ygor_deps --tier dcma_deps --required-only --newline )
+
+optdepends=()
+while IFS= read -r line; do
+    optdepends+=( "$line" )
+done < <( scripts/get_packages.sh --os arch --tier ygor_deps --tier dcma_deps --optional-only --newline )
+
+makedepends=()
+while IFS= read -r line; do
+    makedepends+=( "$line" )
+done < <( scripts/get_packages.sh --os arch --tier build_tools --newline )
+
+#depends=(
+#   'gcc-libs'
+#   'gnu-free-fonts'
+#   'zenity'
+#   'sdl2'
+#   'glew'
+#   'glu'
+#   'jansson'
+#   'libpqxx'
+#   'postgresql'
+#   'nlopt' 
+#   'gsl'
+#   'boost-libs'
+#   'zlib'
+#   'cgal>=4.8'
+#   'wt'
+#   'explicator'
+#   'ygor'
+#)
+#optdepends=(
+#   'sfml2'
+#   'libnotify'
+#   'dunst' # Or any other notification server compatible with libnotify.
+#   'zenity'
+#   'dialog'
+#   'gnuplot'
+#   'patchelf'
+#   'bash-completion'
+#   'ttf-computer-modern-fonts'
+#   'adaptivecpp' # + other optional hw accel components for SYCL.
+#)
+#makedepends=(
+#   'cmake'
+#   'git'
+#   'asio'
+#   'ygorclustering'
+#)
+
 # conflicts=()
 # replaces=()
 # backup=()
@@ -97,6 +115,13 @@ build() {
     -DAdaptiveCpp_DIR="/usr/include/AdaptiveCPP/" \
     \
     ../
+
+  ## Use custom toolchain.
+  #cmake \
+  #  -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/clang.cmake \
+  #  -DCMAKE_TOOLCHAIN_FILE=cmake/toolchains/gnu-gcc.cmake \
+  #  -DCMAKE_INSTALL_PREFIX=/usr \
+  #  ../
 
   ## Debug build with default compiler flags.
   #cmake \

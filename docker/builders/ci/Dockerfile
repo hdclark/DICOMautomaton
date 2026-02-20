@@ -7,6 +7,7 @@ LABEL maintainer="https://www.halclark.ca" \
 
 WORKDIR /scratch
 COPY docker/builders/ci /scratch
+COPY scripts /dcma_scripts
 COPY . /dcma
 
 #RUN /scratch/implementation_ci_arch.sh

@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2086
+# SC2086: Double quote to prevent globbing and word splitting - intentionally disabled for package lists.
 
 # This script installs all dependencies needed to build DICOMautomaton starting with a minimal Arch Linux system.
 
@@ -17,72 +19,34 @@ sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
 sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' \
        -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf
 
+# Use the centralized package list script (copied to /dcma_scripts by Dockerfile).
+GET_PACKAGES="/dcma_scripts/get_packages.sh"
+
+# Get packages from the centralized script.
+PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os arch_sycl --tier build_tools)"
+PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os arch_sycl --tier ygor_deps)"
+PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os arch_sycl --tier dcma_deps)"
+PKGS_HEADLESS="$("${GET_PACKAGES}" --os arch_sycl --tier headless_rendering)"
+PKGS_OPTIONAL="$("${GET_PACKAGES}" --os arch_sycl --tier optional)"
+PKGS_EXTRA_TOOLCHAINS="$("${GET_PACKAGES}" --os arch_sycl --tier extra_toolchains)"
+PKGS_EXTERNAL="$("${GET_PACKAGES}" --os arch_sycl --tier external_third_party)"
 
 # Install core packages.
 retry_count=0
 retry_limit=5
 until
-    pacman -Syu --noconfirm --needed \
-      base-devel \
-      git \
-      cmake \
-      gcc \
-      vim \
-      gdb \
-      screen \
-      wget \
-      rsync \
-      which \
-      ` # Needed for 'yay' AUR helper ` \
-      sudo \
-      pyalpm \
-    && \
-       \
-    ` # Install known official dependencies. ` \
-    pacman -S --noconfirm --needed  \
-      gcc-libs \
-      gsl \
-      eigen \
-      boost-libs \
-      gnu-free-fonts \
-      sdl2 \
-      glew \
-      glu \
-      jansson \
-      libpqxx \
-      postgresql \
-      zlib \
-      cgal \
-      wt \
-      asio \
-      nlopt \
-      patchelf \
-      freeglut \
-      libxi \
-      libxmu \
-      thrift \
-      ` # Additional dependencies for headless OpenGL rendering with SFML ` \
-      xorg-server \
-      xorg-apps \
-      mesa \
-      xf86-video-dummy \
-      ` # Other optional dependencies ` \
-      bash-completion \
-      libnotify \
-      dunst \
-      zenity \
-    && \
-       \
-    ` # Install SYCL components ` \
-    pacman -S --noconfirm --needed  \
-      clang \
-      libclc \
-      ocl-icd \
-      opencl-mesa \
-      pocl \
-      clinfo
-      # These conflict with later adaptivecpp pkg: opencl-clhpp opencl-headers
-
+    `# Install build dependencies ` \
+    pacman -Syu --noconfirm --needed ${PKGS_BUILD_TOOLS} && \
+    `# Ygor dependencies ` \
+    pacman -S --noconfirm --needed ${PKGS_YGOR_DEPS} && \
+    `# DCMA dependencies ` \
+    pacman -S --noconfirm --needed ${PKGS_DCMA_DEPS} && \
+    `# Additional dependencies for headless OpenGL rendering with SFML ` \
+    pacman -S --noconfirm --needed ${PKGS_HEADLESS} && \
+    `# Other optional dependencies ` \
+    pacman -S --noconfirm --needed ${PKGS_OPTIONAL} && \
+    `# Install SYCL components - Note: opencl-clhpp opencl-headers conflict with later adaptivecpp pkg ` \
+    pacman -S --noconfirm --needed ${PKGS_EXTRA_TOOLCHAINS}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5
@@ -141,24 +105,16 @@ git clone --depth=1 'https://aur.archlinux.org/trizen.git'
 #su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm example-git"
 #trizen --nocolors --quiet --noconfirm -S example-git
 
-# Install older SFML2.
-retry_count=0
-retry_limit=5
-until
-    su - builduser -c "cd /tmp && trizen --nocolors --quiet --noconfirm -S sfml2"
-do
-    (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
-    printf 'Waiting to retry.\n' && sleep 5
-done
-
-# Install AdaptiveCpp for optional SYCL toolchain.
-retry_count=0
-retry_limit=5
-until
-    su - builduser -c "cd /tmp && trizen --nocolors --quiet --noconfirm -S adaptivecpp"
-do
-    (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
-    printf 'Waiting to retry.\n' && sleep 5
+# Install external/third-party packages from AUR (sfml2 and adaptivecpp).
+for pkg in ${PKGS_EXTERNAL}; do
+    retry_count=0
+    retry_limit=5
+    until
+        su - builduser -c "cd /tmp && trizen --nocolors --quiet --noconfirm -S ${pkg}"
+    do
+        (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
+        printf 'Waiting to retry.\n' && sleep 5
+    done
 done
 
 ## Install TriSYCL for optional SYCL toolchain.

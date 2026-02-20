@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2086
+# SC2086: Double quote to prevent globbing and word splitting - intentionally disabled for package lists.
 
 # This script installs dependencies and then builds and installs DICOMautomaton.
 # It can be used for continuous integration (CI), development, and deployment (CD).
@@ -45,73 +47,30 @@ chmod 777 "${l_orig_apt}"
 
 apt-get update --yes || true
 
+# Use the centralized package list script (copied to /dcma_scripts by Dockerfile).
+GET_PACKAGES="/dcma_scripts/get_packages.sh"
+
+# Get packages from the centralized script.
+PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os debian_buster --tier build_tools)"
+PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os debian_buster --tier ygor_deps)"
+PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os debian_buster --tier dcma_deps)"
+PKGS_HEADLESS="$("${GET_PACKAGES}" --os debian_buster --tier headless_rendering)"
+PKGS_EXTRA_TOOLCHAINS="$("${GET_PACKAGES}" --os debian_buster --tier extra_toolchains --optional-only)"
+PKGS_DEV_EXTRA="$("${GET_PACKAGES}" --os debian_buster --tier optional --optional-only)"
+
 retry_count=0
 retry_limit=5
 until
-    apt-get install --yes --no-install-recommends \
-      git \
-      cmake \
-      make \
-      g++ \
-      ncurses-term \
-      gdb \
-      rsync \
-      wget \
-      ca-certificates \
-      file \
-      coreutils \
-      binutils \
-      findutils \
-      openssh-client \
-      ` # Ygor dependencies ` \
-      libboost-dev \
-      libgsl-dev \
-      libeigen3-dev \
-      ` # DICOMautomaton dependencies ` \
-      libeigen3-dev \
-      libboost-dev \
-      libboost-filesystem-dev \
-      libboost-iostreams-dev \
-      libboost-program-options-dev \
-      libboost-thread-dev \
-      libz-dev \
-      libsfml-dev \
-      libsdl2-dev \
-      libglew-dev \
-      libjansson-dev \
-      libpqxx-dev \
-      postgresql-client \
-      libcgal-dev \
-      libnlopt-dev \
-      libnlopt-cxx-dev \
-      libasio-dev \
-      fonts-freefont-ttf \
-      fonts-cmu \
-      freeglut3 \
-      freeglut3-dev \
-      libxi-dev \
-      libxmu-dev \
-      libthrift-dev \
-      thrift-compiler \
-      patchelf \
-      ` # Additional packages prospectively added in case needed for future development ` \
-      libsqlite3-dev \
-      sqlite3 \
-      liblua5.3-dev \
-      libpython3-dev \
-      libprotobuf-dev \
-      protobuf-compiler \
-      clang \
-      clang-format \
-      clang-tidy \
-      clang-tools \
-     && \
-     ` # Additional dependencies for headless OpenGL rendering with SFML ` \
-     apt-get install --yes --no-install-recommends \
-      x-window-system \
-      mesa-utils \
-      xserver-xorg-video-dummy \
-      x11-apps
+    `# Install build dependencies ` \
+    apt-get install --yes --no-install-recommends ${PKGS_BUILD_TOOLS} && \
+    `# Ygor dependencies ` \
+    apt-get install --yes --no-install-recommends ${PKGS_YGOR_DEPS} && \
+    `# DCMA dependencies ` \
+    apt-get install --yes --no-install-recommends ${PKGS_DCMA_DEPS} && \
+    `# Additional packages prospectively added in case needed for future development ` \
+    apt-get install --yes --no-install-recommends ${PKGS_DEV_EXTRA} ${PKGS_EXTRA_TOOLCHAINS} && \
+    `# Additional dependencies for headless OpenGL rendering with SFML ` \
+    apt-get install --yes --no-install-recommends ${PKGS_HEADLESS}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5

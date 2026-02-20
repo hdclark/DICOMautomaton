@@ -8,6 +8,7 @@ LABEL maintainer="https://www.halclark.ca" \
 
 WORKDIR /scratch_base
 COPY docker/build_bases/ubuntu /scratch_base
+COPY scripts /dcma_scripts
 
 RUN /scratch_base/implementation_ubuntu.sh
 
