@@ -16,11 +16,9 @@ GET_PACKAGES="/dcma_scripts/get_packages.sh"
 
 # Get packages from the centralized script.
 PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os alpine --tier build_tools)"
-PKGS_EXTRA_TOOLCHAINS="$("${GET_PACKAGES}" --os alpine --tier extra_toolchains)"
+PKGS_DEVELOPMENT="$("${GET_PACKAGES}" --os alpine --tier development)"
 PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os alpine --tier ygor_deps)"
 PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os alpine --tier dcma_deps)"
-PKGS_HEADLESS="$("${GET_PACKAGES}" --os alpine --tier headless_rendering)"
-PKGS_OPTIONAL="$("${GET_PACKAGES}" --os alpine --tier optional)"
 
 retry_count=0
 retry_limit=5
@@ -28,16 +26,12 @@ until
     apk add --no-cache --update && \
     `# Install build dependencies ` \
     apk add --no-cache ${PKGS_BUILD_TOOLS} && \
-    `# Additional toolchain` \
-    apk add --no-cache ${PKGS_EXTRA_TOOLCHAINS} && \
+    `# Development tools ` \
+    apk add --no-cache ${PKGS_DEVELOPMENT} && \
     `# Ygor dependencies` \
     apk add --no-cache ${PKGS_YGOR_DEPS} && \
     `# DCMA dependencies` \
-    apk add --no-cache ${PKGS_DCMA_DEPS} && \
-    `# Additional dependencies for headless OpenGL rendering with SFML` \
-    apk add --no-cache ${PKGS_HEADLESS} && \
-    `# Other optional dependencies` \
-    apk add --no-cache ${PKGS_OPTIONAL}
+    apk add --no-cache ${PKGS_DCMA_DEPS}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5

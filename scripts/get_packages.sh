@@ -18,8 +18,8 @@
 #   --arch <arch>       CPU architecture (optional, default: x86_64)
 #                       Values: x86_64, aarch64, armv7l, etc.
 #   --tier <tier>       Installation tier (optional, can be repeated)
-#                       Values: build_tools, extra_toolchains, ygor_deps, dcma_deps,
-#                               headless_rendering, optional, external_third_party
+#                       Values: build_tools, development, ygor_deps, dcma_deps,
+#                               appimage_runtime
 #   --required-only     Only list required packages (no optional dependencies)
 #   --optional-only     Only list optional packages
 #   --list              Output packages as a space-separated list (default)
@@ -131,16 +131,7 @@ get_alpine_build_tools_required() {
     printf "bash "
     printf "git "
     printf "cmake "
-    printf "vim "
-    printf "gdb "
     printf "rsync "
-    printf "openssh "
-    printf "wget "
-    printf "unzip "
-    printf '\n'
-}
-
-get_alpine_extra_toolchains_required() {
     printf "clang "
     printf "clang-headers "
     printf "clang-libs "
@@ -153,10 +144,32 @@ get_alpine_extra_toolchains_required() {
     printf '\n'
 }
 
+get_alpine_build_tools_optional() {
+    printf '\n'
+}
+
+get_alpine_development_required() {
+    printf "gdb "
+    printf "patchelf "
+    printf '\n'
+}
+
+get_alpine_development_optional() {
+    printf "vim "
+    printf "openssh "
+    printf "wget "
+    printf "unzip "
+    printf '\n'
+}
+
 get_alpine_ygor_deps_required() {
     printf "gsl-static "
     printf "gsl-dev "
     printf "eigen-dev "
+    printf '\n'
+}
+
+get_alpine_ygor_deps_optional() {
     printf '\n'
 }
 
@@ -168,11 +181,11 @@ get_alpine_dcma_deps_required() {
     printf "sdl2-dev "
     printf "glew-dev "
     printf "jansson-dev "
-    printf "patchelf "
     printf '\n'
 }
 
-get_alpine_headless_rendering_required() {
+get_alpine_dcma_deps_optional() {
+    # Headless/graphical components.
     printf "libx11-dev "
     printf "libx11-static "
     printf "glu-dev "
@@ -181,12 +194,27 @@ get_alpine_headless_rendering_required() {
     printf "mesa-dev "
     printf "xorg-server-dev "
     printf "xf86-video-dummy "
+
+    # Runtime components.
+    printf "libnotify-dev "
+    printf "dunst " # Or any other notification server compatible with libnotify.
     printf '\n'
 }
 
-get_alpine_optional_required() {
-    printf "libnotify-dev "
-    printf "dunst " # Or any other notification server compatible with libnotify.
+get_alpine_appimage_runtime_required() {
+    printf "coreutils "
+    printf "binutils "
+    printf "findutils "
+    printf "grep "
+    printf "sed "
+    printf "curl "
+    printf "wget "
+    printf "git "
+    printf "ca-certificates "
+    printf '\n'
+}
+
+get_alpine_appimage_runtime_optional() {
     printf '\n'
 }
 
@@ -228,6 +256,10 @@ get_arch_ygor_deps_required() {
     printf "gsl "
     printf "eigen "
     printf "boost-libs "
+    printf '\n'
+}
+
+get_arch_ygor_deps_optional() {
     printf '\n'
 }
 
@@ -300,13 +332,37 @@ get_arch_sycl_build_tools_required() {
     printf "git "
     printf "cmake "
     printf "gcc "
-    printf "vim "
-    printf "gdb "
-    printf "screen "
-    printf "wget "
     printf "rsync "
     printf "which "
+    printf "asio "
+    printf '\n'
+}
+
+get_arch_sycl_build_tools_optional() {
+    # SYCL components.
+    printf "clang "
+    printf "libclc "
+    printf "ocl-icd "
+    printf "opencl-mesa "
+    printf "pocl "
+    printf "clinfo "
+    # AUR packages - sfml2 and adaptivecpp
+    printf "sfml2 "
+    printf "adaptivecpp "
+    printf '\n'
+}
+
+get_arch_sycl_development_required() {
+    printf "gdb "
     printf "sudo "
+    printf "patchelf "
+    printf '\n'
+}
+
+get_arch_sycl_development_optional() {
+    printf "vim "
+    printf "screen "
+    printf "wget "
     printf "pyalpm "
     printf '\n'
 }
@@ -318,37 +374,40 @@ get_arch_sycl_ygor_deps_required() {
     printf '\n'
 }
 
+get_arch_sycl_ygor_deps_optional() {
+    printf '\n'
+}
+
 get_arch_sycl_dcma_deps_required() {
     printf "gcc-libs "
     printf "gnu-free-fonts "
+    printf "zlib "
+    printf '\n'
+}
+
+get_arch_sycl_dcma_deps_optional() {
+    # Optional buildtime components.
     printf "sdl2 "
     printf "glew "
     printf "glu "
     printf "jansson "
     printf "libpqxx "
     printf "postgresql "
-    printf "zlib "
     printf "cgal "
     printf "wt "
-    printf "asio "
     printf "nlopt "
-    printf "patchelf "
     printf "freeglut "
     printf "libxi "
     printf "libxmu "
     printf "thrift "
-    printf '\n'
-}
 
-get_arch_sycl_headless_rendering_required() {
+    # Optional graphical components.
     printf "xorg-server "
     printf "xorg-apps "
     printf "mesa "
     printf "xf86-video-dummy "
-    printf '\n'
-}
 
-get_arch_sycl_optional_required() {
+    # Runtime components.
     printf "bash-completion "
     printf "libnotify "
     printf "dunst "
@@ -356,20 +415,20 @@ get_arch_sycl_optional_required() {
     printf '\n'
 }
 
-get_arch_sycl_extra_toolchains_required() {
-    printf "clang "
-    printf "libclc "
-    printf "ocl-icd "
-    printf "opencl-mesa "
-    printf "pocl "
-    printf "clinfo "
+get_arch_sycl_appimage_runtime_required() {
+    printf "coreutils "
+    printf "binutils "
+    printf "findutils "
+    printf "grep "
+    printf "sed "
+    printf "curl "
+    printf "wget "
+    printf "git "
+    printf "ca-certificates "
     printf '\n'
 }
 
-get_arch_sycl_external_third_party_required() {
-    # AUR packages - sfml2 and adaptivecpp
-    printf "sfml2 "
-    printf "adaptivecpp "
+get_arch_sycl_appimage_runtime_optional() {
     printf '\n'
 }
 
@@ -381,16 +440,37 @@ get_debian_buster_build_tools_required() {
     printf "cmake "
     printf "make "
     printf "g++ "
-    printf "ncurses-term "
-    printf "gdb "
     printf "rsync "
+    printf '\n'
+}
+
+get_debian_buster_build_tools_optional() {
+    printf "clang "
+    printf "clang-format "
+    printf "clang-tidy "
+    printf "clang-tools "
+    printf '\n'
+}
+
+get_debian_buster_development_required() {
+    printf "gdb "
+    printf "patchelf "
+    printf '\n'
+}
+
+get_debian_buster_development_optional() {
+    printf "ncurses-term "
     printf "wget "
     printf "ca-certificates "
     printf "file "
-    printf "coreutils "
-    printf "binutils "
-    printf "findutils "
     printf "openssh-client "
+    # Additional packages prospectively added for future development
+    printf "libsqlite3-dev "
+    printf "sqlite3 "
+    printf "liblua5.3-dev "
+    printf "libpython3-dev "
+    printf "libprotobuf-dev "
+    printf "protobuf-compiler "
     printf '\n'
 }
 
@@ -398,6 +478,10 @@ get_debian_buster_ygor_deps_required() {
     printf "libboost-dev "
     printf "libgsl-dev "
     printf "libeigen3-dev "
+    printf '\n'
+}
+
+get_debian_buster_ygor_deps_optional() {
     printf '\n'
 }
 
@@ -409,6 +493,14 @@ get_debian_buster_dcma_deps_required() {
     printf "libboost-program-options-dev "
     printf "libboost-thread-dev "
     printf "libz-dev "
+    printf "libasio-dev "
+    printf "fonts-freefont-ttf "
+    printf "fonts-cmu "
+    printf '\n'
+}
+
+get_debian_buster_dcma_deps_optional() {
+    # Optional buildtime components.
     printf "libsfml-dev "
     printf "libsdl2-dev "
     printf "libglew-dev "
@@ -418,28 +510,20 @@ get_debian_buster_dcma_deps_required() {
     printf "libcgal-dev "
     printf "libnlopt-dev "
     printf "libnlopt-cxx-dev "
-    printf "libasio-dev "
-    printf "fonts-freefont-ttf "
-    printf "fonts-cmu "
     printf "freeglut3 "
     printf "freeglut3-dev "
     printf "libxi-dev "
     printf "libxmu-dev "
     printf "libthrift-dev "
     printf "thrift-compiler "
-    printf "patchelf "
-    printf '\n'
-}
 
-get_debian_buster_headless_rendering_required() {
+    # Optional graphical components.
     printf "x-window-system "
     printf "mesa-utils "
     printf "xserver-xorg-video-dummy "
     printf "x11-apps "
-    printf '\n'
-}
 
-get_debian_buster_optional_required() {
+    # Runtime components.
     printf "libnotify-dev "
     printf "dunst "
     printf "bash-completion "
@@ -448,22 +532,29 @@ get_debian_buster_optional_required() {
     printf '\n'
 }
 
-get_debian_buster_extra_toolchains_optional() {
-    printf "clang "
-    printf "clang-format "
-    printf "clang-tidy "
-    printf "clang-tools "
+get_debian_buster_appimage_runtime_required() {
+    printf "coreutils "
+    printf "binutils "
+    printf "findutils "
+    printf "grep "
+    printf "sed "
+    printf "curl "
+    printf "wget "
+    printf "git "
+    printf "ca-certificates "
+    printf "openssl "
+    printf "libgpg-error0 "
+    printf "mesa-utils "
+    printf "libfreetype6 "
+    printf "libsdl2-dev "
+    printf "libice-dev "
+    printf "libsm-dev "
+    printf "libopengl0 "
+    printf "g++ "
     printf '\n'
 }
 
-get_debian_buster_optional_optional() {
-    # Additional packages prospectively added for future development
-    printf "libsqlite3-dev "
-    printf "sqlite3 "
-    printf "liblua5.3-dev "
-    printf "libpython3-dev "
-    printf "libprotobuf-dev "
-    printf "protobuf-compiler "
+get_debian_buster_appimage_runtime_optional() {
     printf '\n'
 }
 
@@ -475,10 +566,23 @@ get_debian_bookworm_build_tools_required() {
     printf "cmake "
     printf "make "
     printf "g++ "
+    printf "rsync "
+    printf '\n'
+}
+
+get_debian_bookworm_build_tools_optional() {
+    printf '\n'
+}
+
+get_debian_bookworm_development_required() {
+    printf "gdb "
+    printf "patchelf "
+    printf '\n'
+}
+
+get_debian_bookworm_development_optional() {
     printf "vim "
     printf "ncurses-term "
-    printf "gdb "
-    printf "rsync "
     printf "wget "
     printf "ca-certificates "
     printf '\n'
@@ -491,6 +595,10 @@ get_debian_bookworm_ygor_deps_required() {
     printf '\n'
 }
 
+get_debian_bookworm_ygor_deps_optional() {
+    printf '\n'
+}
+
 get_debian_bookworm_dcma_deps_required() {
     printf "libeigen3-dev "
     printf "libboost-dev "
@@ -499,6 +607,14 @@ get_debian_bookworm_dcma_deps_required() {
     printf "libboost-program-options-dev "
     printf "libboost-thread-dev "
     printf "libz-dev "
+    printf "libasio-dev "
+    printf "fonts-freefont-ttf "
+    printf "fonts-cmu "
+    printf '\n'
+}
+
+get_debian_bookworm_dcma_deps_optional() {
+    # Optional buildtime components.
     printf "libsfml-dev "
     printf "libsdl2-dev "
     printf "libglew-dev "
@@ -508,32 +624,50 @@ get_debian_bookworm_dcma_deps_required() {
     printf "libcgal-dev "
     printf "libnlopt-dev "
     printf "libnlopt-cxx-dev "
-    printf "libasio-dev "
-    printf "fonts-freefont-ttf "
-    printf "fonts-cmu "
     printf "freeglut3-dev "
     printf "libxi-dev "
     printf "libxmu-dev "
     printf "libthrift-dev "
     printf "thrift-compiler "
-    printf "patchelf "
-    printf '\n'
-}
 
-get_debian_bookworm_headless_rendering_required() {
+    # Optional graphical components.
     printf "x-window-system "
     printf "mesa-utils "
     printf "xserver-xorg-video-dummy "
     printf "x11-apps "
-    printf '\n'
-}
 
-get_debian_bookworm_optional_required() {
+    # Runtime components.
     printf "libnotify-dev "
     printf "dunst "
     printf "bash-completion "
     printf "gnuplot "
     printf "zenity "
+    printf '\n'
+}
+
+get_debian_bookworm_appimage_runtime_required() {
+    printf "coreutils "
+    printf "binutils "
+    printf "findutils "
+    printf "grep "
+    printf "sed "
+    printf "curl "
+    printf "wget "
+    printf "git "
+    printf "ca-certificates "
+    printf "openssl "
+    printf "libgpg-error0 "
+    printf "mesa-utils "
+    printf "libfreetype6 "
+    printf "libsdl2-dev "
+    printf "libice-dev "
+    printf "libsm-dev "
+    printf "libopengl0 "
+    printf "g++ "
+    printf '\n'
+}
+
+get_debian_bookworm_appimage_runtime_optional() {
     printf '\n'
 }
 
@@ -545,10 +679,23 @@ get_debian_bullseye_build_tools_required() {
     printf "cmake "
     printf "make "
     printf "g++ "
+    printf "rsync "
+    printf '\n'
+}
+
+get_debian_bullseye_build_tools_optional() {
+    printf '\n'
+}
+
+get_debian_bullseye_development_required() {
+    printf "gdb "
+    printf "patchelf "
+    printf '\n'
+}
+
+get_debian_bullseye_development_optional() {
     printf "vim "
     printf "ncurses-term "
-    printf "gdb "
-    printf "rsync "
     printf "wget "
     printf "ca-certificates "
     printf '\n'
@@ -561,6 +708,10 @@ get_debian_bullseye_ygor_deps_required() {
     printf '\n'
 }
 
+get_debian_bullseye_ygor_deps_optional() {
+    printf '\n'
+}
+
 get_debian_bullseye_dcma_deps_required() {
     printf "libeigen3-dev "
     printf "libboost-dev "
@@ -569,6 +720,14 @@ get_debian_bullseye_dcma_deps_required() {
     printf "libboost-program-options-dev "
     printf "libboost-thread-dev "
     printf "libz-dev "
+    printf "libasio-dev "
+    printf "fonts-freefont-ttf "
+    printf "fonts-cmu "
+    printf '\n'
+}
+
+get_debian_bullseye_dcma_deps_optional() {
+    # Optional buildtime components.
     printf "libsfml-dev "
     printf "libsdl2-dev "
     printf "libglew-dev "
@@ -578,33 +737,51 @@ get_debian_bullseye_dcma_deps_required() {
     printf "libcgal-dev "
     printf "libnlopt-dev "
     printf "libnlopt-cxx-dev "
-    printf "libasio-dev "
-    printf "fonts-freefont-ttf "
-    printf "fonts-cmu "
     printf "freeglut3 "
     printf "freeglut3-dev "
     printf "libxi-dev "
     printf "libxmu-dev "
     printf "libthrift-dev "
     printf "thrift-compiler "
-    printf "patchelf "
-    printf '\n'
-}
 
-get_debian_bullseye_headless_rendering_required() {
+    # Optional graphical components.
     printf "x-window-system "
     printf "mesa-utils "
     printf "xserver-xorg-video-dummy "
     printf "x11-apps "
-    printf '\n'
-}
 
-get_debian_bullseye_optional_required() {
+    # Runtime components.
     printf "libnotify-dev "
     printf "dunst "
     printf "bash-completion "
     printf "gnuplot "
     printf "zenity "
+    printf '\n'
+}
+
+get_debian_bullseye_appimage_runtime_required() {
+    printf "coreutils "
+    printf "binutils "
+    printf "findutils "
+    printf "grep "
+    printf "sed "
+    printf "curl "
+    printf "wget "
+    printf "git "
+    printf "ca-certificates "
+    printf "openssl "
+    printf "libgpg-error0 "
+    printf "mesa-utils "
+    printf "libfreetype6 "
+    printf "libsdl2-dev "
+    printf "libice-dev "
+    printf "libsm-dev "
+    printf "libopengl0 "
+    printf "g++ "
+    printf '\n'
+}
+
+get_debian_bullseye_appimage_runtime_optional() {
     printf '\n'
 }
 
@@ -616,10 +793,23 @@ get_debian_stretch_build_tools_required() {
     printf "cmake "
     printf "make "
     printf "g++ "
+    printf "rsync "
+    printf '\n'
+}
+
+get_debian_stretch_build_tools_optional() {
+    printf '\n'
+}
+
+get_debian_stretch_development_required() {
+    printf "gdb "
+    printf "patchelf "
+    printf '\n'
+}
+
+get_debian_stretch_development_optional() {
     printf "vim "
     printf "ncurses-term "
-    printf "gdb "
-    printf "rsync "
     printf "wget "
     printf "ca-certificates "
     printf '\n'
@@ -632,6 +822,10 @@ get_debian_stretch_ygor_deps_required() {
     printf '\n'
 }
 
+get_debian_stretch_ygor_deps_optional() {
+    printf '\n'
+}
+
 get_debian_stretch_dcma_deps_required() {
     printf "libeigen3-dev "
     printf "libboost-dev "
@@ -640,6 +834,14 @@ get_debian_stretch_dcma_deps_required() {
     printf "libboost-program-options-dev "
     printf "libboost-thread-dev "
     printf "libz-dev "
+    printf "libasio-dev "
+    printf "fonts-freefont-ttf "
+    printf "fonts-cmu "
+    printf '\n'
+}
+
+get_debian_stretch_dcma_deps_optional() {
+    # Optional buildtime components.
     printf "libsfml-dev "
     printf "libsdl2-dev "
     printf "libglew-dev "
@@ -648,9 +850,6 @@ get_debian_stretch_dcma_deps_required() {
     printf "postgresql-client "
     printf "libcgal-dev "
     printf "libnlopt-dev "
-    printf "libasio-dev "
-    printf "fonts-freefont-ttf "
-    printf "fonts-cmu "
     printf "freeglut3 "
     printf "freeglut3-dev "
     printf "libxi-dev "
@@ -658,24 +857,36 @@ get_debian_stretch_dcma_deps_required() {
     printf "xz-utils "
     printf "libthrift-dev "
     printf "thrift-compiler "
-    printf "patchelf "
-    printf '\n'
-}
 
-get_debian_stretch_headless_rendering_required() {
+    # Optional graphical components.
     printf "x-window-system "
     printf "mesa-utils "
     printf "xserver-xorg-video-dummy "
     printf "x11-apps "
-    printf '\n'
-}
 
-get_debian_stretch_optional_required() {
+    # Runtime components.
     printf "libnotify "
     printf "dunst "
     printf "bash-completion "
     printf "gnuplot "
     printf "zenity "
+    printf '\n'
+}
+
+get_debian_stretch_appimage_runtime_required() {
+    printf "coreutils "
+    printf "binutils "
+    printf "findutils "
+    printf "grep "
+    printf "sed "
+    printf "curl "
+    printf "wget "
+    printf "git "
+    printf "ca-certificates "
+    printf '\n'
+}
+
+get_debian_stretch_appimage_runtime_optional() {
     printf '\n'
 }
 
@@ -688,8 +899,20 @@ get_macos_build_tools_required() {
     printf "coreutils "
     printf "cmake "
     printf "make "
-    printf "vim "
     printf "rsync "
+    printf '\n'
+}
+
+get_macos_build_tools_optional() {
+    printf '\n'
+}
+
+get_macos_development_required() {
+    printf '\n'
+}
+
+get_macos_development_optional() {
+    printf "vim "
     printf "wget "
     printf '\n'
 }
@@ -701,32 +924,44 @@ get_macos_ygor_deps_required() {
     printf '\n'
 }
 
+get_macos_ygor_deps_optional() {
+    printf '\n'
+}
+
 get_macos_dcma_deps_required() {
-    printf "sdl2 "
     printf "zlib "
-    printf "sfml "
-    printf "glew "
-    printf "jansson "
-    printf "libpq "
-    printf "nlopt "
     printf "asio "
-    printf "thrift "
     printf "gcc "
     printf "llvm "
     printf '\n'
 }
 
-get_macos_optional_required() {
+get_macos_dcma_deps_optional() {
+    printf "sdl2 "
+    printf "sfml "
+    printf "glew "
+    printf "jansson "
+    printf "libpq "
+    printf "nlopt "
+    printf "thrift "
     printf "cgal "
     printf "libpqxx "
+
+    # Optional graphical components.
+    printf "mesa "
+    printf "freeglut "
+
+    # Runtime components.
     printf "libnotify "
     printf "zenity "
     printf '\n'
 }
 
-get_macos_headless_rendering_required() {
-    printf "mesa "
-    printf "freeglut "
+get_macos_appimage_runtime_required() {
+    printf '\n'
+}
+
+get_macos_appimage_runtime_optional() {
     printf '\n'
 }
 
@@ -774,12 +1009,37 @@ get_mxe_build_tools_required() {
     printf '\n'
 }
 
-get_mxe_external_third_party_required() {
+get_mxe_build_tools_optional() {
+    printf '\n'
+}
+
+get_mxe_development_required() {
+    printf '\n'
+}
+
+get_mxe_development_optional() {
+    printf '\n'
+}
+
+get_mxe_ygor_deps_required() {
     # These packages are built from source via MXE build system
     printf "gmp "
     printf "mpfr "
     printf "boost "
     printf "eigen "
+    printf '\n'
+}
+
+get_mxe_ygor_deps_optional() {
+    printf '\n'
+}
+
+get_mxe_dcma_deps_required() {
+    printf '\n'
+}
+
+get_mxe_dcma_deps_optional() {
+    # These packages are built from source via MXE build system
     printf "sfml "
     printf "sdl2 "
     printf "glew "
@@ -787,6 +1047,14 @@ get_mxe_external_third_party_required() {
     printf "mesa "
     printf "cgal "
     printf "thrift "
+    printf '\n'
+}
+
+get_mxe_appimage_runtime_required() {
+    printf '\n'
+}
+
+get_mxe_appimage_runtime_optional() {
     printf '\n'
 }
 
@@ -799,10 +1067,23 @@ get_ubuntu_build_tools_required() {
     printf "cmake "
     printf "make "
     printf "g++ "
+    printf "rsync "
+    printf '\n'
+}
+
+get_ubuntu_build_tools_optional() {
+    printf '\n'
+}
+
+get_ubuntu_development_required() {
+    printf "gdb "
+    printf "patchelf "
+    printf '\n'
+}
+
+get_ubuntu_development_optional() {
     printf "vim "
     printf "ncurses-term "
-    printf "gdb "
-    printf "rsync "
     printf "wget "
     printf "ca-certificates "
     printf '\n'
@@ -815,6 +1096,10 @@ get_ubuntu_ygor_deps_required() {
     printf '\n'
 }
 
+get_ubuntu_ygor_deps_optional() {
+    printf '\n'
+}
+
 get_ubuntu_dcma_deps_required() {
     printf "libeigen3-dev "
     printf "libboost-dev "
@@ -823,6 +1108,14 @@ get_ubuntu_dcma_deps_required() {
     printf "libboost-program-options-dev "
     printf "libboost-thread-dev "
     printf "libz-dev "
+    printf "libasio-dev "
+    printf "fonts-freefont-ttf "
+    printf "fonts-cmu "
+    printf '\n'
+}
+
+get_ubuntu_dcma_deps_optional() {
+    # Optional buildtime components.
     printf "libsfml-dev "
     printf "libsdl2-dev "
     printf "libglew-dev "
@@ -832,37 +1125,53 @@ get_ubuntu_dcma_deps_required() {
     printf "libcgal-dev "
     printf "libnlopt-dev "
     printf "libnlopt-cxx-dev "
-    printf "libasio-dev "
-    printf "fonts-freefont-ttf "
-    printf "fonts-cmu "
     printf "freeglut3 "
     printf "freeglut3-dev "
     printf "libxi-dev "
     printf "libxmu-dev "
-    printf "patchelf "
     printf "libthrift-dev "
     printf "thrift-compiler "
-    printf '\n'
-}
 
-get_ubuntu_headless_rendering_required() {
+    # Optional graphical components.
     printf "x-window-system "
     printf "mesa-utils "
     printf "x11-apps "
     printf "libfreetype6 "
-    printf "libsdl2-dev "
     printf "libice-dev "
     printf "libsm-dev "
     printf "libopengl0 "
-    printf '\n'
-}
 
-get_ubuntu_optional_required() {
+    # Runtime components.
     printf "libnotify-dev "
     printf "dunst "
     printf "bash-completion "
     printf "gnuplot "
     printf "zenity "
+    printf '\n'
+}
+
+get_ubuntu_appimage_runtime_required() {
+    printf "coreutils "
+    printf "binutils "
+    printf "findutils "
+    printf "grep "
+    printf "sed "
+    printf "curl "
+    printf "wget "
+    printf "git "
+    printf "ca-certificates "
+    printf "libssl-dev "
+    printf "mesa-utils "
+    printf "libfreetype6 "
+    printf "libsdl2-dev "
+    printf "libice-dev "
+    printf "libsm-dev "
+    printf "libopengl0 "
+    printf "g++ "
+    printf '\n'
+}
+
+get_ubuntu_appimage_runtime_optional() {
     printf '\n'
 }
 
@@ -874,10 +1183,23 @@ get_void_build_tools_required() {
     printf "bash "
     printf "git "
     printf "cmake "
+    printf "rsync "
+    printf '\n'
+}
+
+get_void_build_tools_optional() {
+    printf '\n'
+}
+
+get_void_development_required() {
+    printf "gdb "
+    printf "patchelf "
+    printf '\n'
+}
+
+get_void_development_optional() {
     printf "vim "
     printf "ncurses-term "
-    printf "gdb "
-    printf "rsync "
     printf "wget "
     printf '\n'
 }
@@ -889,10 +1211,21 @@ get_void_ygor_deps_required() {
     printf '\n'
 }
 
+get_void_ygor_deps_optional() {
+    printf '\n'
+}
+
 get_void_dcma_deps_required() {
     printf "eigen "
     printf "boost-devel "
     printf "zlib-devel "
+    printf "asio "
+    printf "freefont-ttf "
+    printf '\n'
+}
+
+get_void_dcma_deps_optional() {
+    # Optional buildtime components.
     printf "SFML-devel "
     printf "SDL2-devel "
     printf "glew-devel "
@@ -901,29 +1234,39 @@ get_void_dcma_deps_required() {
     printf "postgresql-client "
     printf "cgal-devel "
     printf "nlopt-devel "
-    printf "asio "
-    printf "freefont-ttf "
-    printf "patchelf "
     printf "thrift "
     printf "thrift-devel "
-    printf '\n'
-}
 
-get_void_headless_rendering_required() {
+    # Optional graphical components.
     printf "xorg-minimal "
     printf "glu-devel "
     printf "xorg-video-drivers "
     printf "xf86-video-dummy "
     printf "xorg-apps "
-    printf '\n'
-}
 
-get_void_optional_required() {
+    # Runtime components.
     printf "libnotify "
     printf "dunst "
     printf "bash-completion "
     printf "gnuplot "
     printf "zenity "
+    printf '\n'
+}
+
+get_void_appimage_runtime_required() {
+    printf "coreutils "
+    printf "binutils "
+    printf "findutils "
+    printf "grep "
+    printf "sed "
+    printf "curl "
+    printf "wget "
+    printf "git "
+    printf "ca-certificates "
+    printf '\n'
+}
+
+get_void_appimage_runtime_optional() {
     printf '\n'
 }
 
@@ -977,7 +1320,7 @@ normalize_os() {
 # Get all valid tiers for an OS
 get_valid_tiers() {
     local os="$1"
-    echo "build_tools extra_toolchains ygor_deps dcma_deps headless_rendering optional external_third_party"
+    echo "build_tools development ygor_deps dcma_deps appimage_runtime"
 }
 
 # Architecture-specific package adjustments
@@ -1070,8 +1413,8 @@ main() {
 
     # If no tiers specified, use all tiers
     if [[ ${#TIERS[@]} -eq 0 ]]; then
-        # Default tiers for most platforms (excluding external_third_party by default)
-        TIERS=("build_tools" "extra_toolchains" "ygor_deps" "dcma_deps" "headless_rendering" "optional")
+        # Default tiers for most platforms
+        TIERS=("build_tools" "development" "ygor_deps" "dcma_deps" "appimage_runtime")
     fi
 
     # Validate requested tiers against the known allowlist

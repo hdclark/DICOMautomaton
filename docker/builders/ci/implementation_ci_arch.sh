@@ -17,11 +17,16 @@ sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
 sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' \
        -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf
 
-# Use the centralized package list script (copied to /dcma_scripts by Dockerfile).
-GET_PACKAGES="/dcma_scripts/get_packages.sh"
+# Use the centralized package list script.
+# In CI context, the script is available from the repository.
+GET_PACKAGES="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../../../scripts/get_packages.sh"
+if [ ! -f "${GET_PACKAGES}" ]; then
+    GET_PACKAGES="/dcma_scripts/get_packages.sh"
+fi
 
 # Get packages from the centralized script.
 PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os arch --tier build_tools)"
+PKGS_DEVELOPMENT="$("${GET_PACKAGES}" --os arch --tier development)"
 PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os arch --tier ygor_deps)"
 PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os arch --tier dcma_deps)"
 
@@ -47,7 +52,9 @@ printf '\n''builduser ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
 retry_count=0
 retry_limit=5
 until
-    `# Install hard build dependencies ` \
+    `# Install development tools ` \
+    pacman -S --noconfirm --needed ${PKGS_DEVELOPMENT} && \
+    `# Install build dependencies ` \
     `# Note: sfml needs SFML2 but no compat pkg available yet, so handled separately below ` \
     pacman -S --noconfirm --needed ${PKGS_YGOR_DEPS} ${PKGS_DCMA_DEPS}
 do

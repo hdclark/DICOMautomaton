@@ -23,30 +23,24 @@ sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' \
 GET_PACKAGES="/dcma_scripts/get_packages.sh"
 
 # Get packages from the centralized script.
-PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os arch_sycl --tier build_tools)"
+PKGS_BUILD_TOOLS_REQ="$("${GET_PACKAGES}" --os arch_sycl --tier build_tools --required-only)"
+PKGS_BUILD_TOOLS_OPT="$("${GET_PACKAGES}" --os arch_sycl --tier build_tools --optional-only)"
+PKGS_DEVELOPMENT="$("${GET_PACKAGES}" --os arch_sycl --tier development)"
 PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os arch_sycl --tier ygor_deps)"
 PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os arch_sycl --tier dcma_deps)"
-PKGS_HEADLESS="$("${GET_PACKAGES}" --os arch_sycl --tier headless_rendering)"
-PKGS_OPTIONAL="$("${GET_PACKAGES}" --os arch_sycl --tier optional)"
-PKGS_EXTRA_TOOLCHAINS="$("${GET_PACKAGES}" --os arch_sycl --tier extra_toolchains)"
-PKGS_EXTERNAL="$("${GET_PACKAGES}" --os arch_sycl --tier external_third_party)"
 
 # Install core packages.
 retry_count=0
 retry_limit=5
 until
     `# Install build dependencies ` \
-    pacman -Syu --noconfirm --needed ${PKGS_BUILD_TOOLS} && \
+    pacman -Syu --noconfirm --needed ${PKGS_BUILD_TOOLS_REQ} && \
+    `# Development tools ` \
+    pacman -S --noconfirm --needed ${PKGS_DEVELOPMENT} && \
     `# Ygor dependencies ` \
     pacman -S --noconfirm --needed ${PKGS_YGOR_DEPS} && \
     `# DCMA dependencies ` \
-    pacman -S --noconfirm --needed ${PKGS_DCMA_DEPS} && \
-    `# Additional dependencies for headless OpenGL rendering with SFML ` \
-    pacman -S --noconfirm --needed ${PKGS_HEADLESS} && \
-    `# Other optional dependencies ` \
-    pacman -S --noconfirm --needed ${PKGS_OPTIONAL} && \
-    `# Install SYCL components - Note: opencl-clhpp opencl-headers conflict with later adaptivecpp pkg ` \
-    pacman -S --noconfirm --needed ${PKGS_EXTRA_TOOLCHAINS}
+    pacman -S --noconfirm --needed ${PKGS_DCMA_DEPS}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5
@@ -105,8 +99,8 @@ git clone --depth=1 'https://aur.archlinux.org/trizen.git'
 #su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm example-git"
 #trizen --nocolors --quiet --noconfirm -S example-git
 
-# Install external/third-party packages from AUR (sfml2 and adaptivecpp).
-for pkg in ${PKGS_EXTERNAL}; do
+# Install external/third-party packages from AUR (sfml2 and adaptivecpp - from build_tools optional).
+for pkg in ${PKGS_BUILD_TOOLS_OPT}; do
     retry_count=0
     retry_limit=5
     until

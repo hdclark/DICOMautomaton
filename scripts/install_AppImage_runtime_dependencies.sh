@@ -64,6 +64,9 @@ if [ ! -d "${REPOROOT}" ] ; then
 fi
 cd "${REPOROOT}"
 
+# Use the centralized package list script.
+GET_PACKAGES="${REPOROOT}/scripts/get_packages.sh"
+
 # Determine how we will escalate privileges.
 SUDO="sudo"
 if [[ $EUID -eq 0 ]] ; then
@@ -77,16 +80,16 @@ fi
 retry_count=0
 retry_limit=5
 
+# shellcheck disable=SC2086
+# SC2086: Double quote to prevent globbing and word splitting - intentionally disabled for package lists.
 if [[ "${DISTRIBUTION}" =~ .*[dD]ebian.* ]] ; then
     printf 'Installing dependencies for Debian...\n'
     export DEBIAN_FRONTEND='noninteractive'
 
+    PKGS_APPIMAGE_RUNTIME="$("${GET_PACKAGES}" --os debian_buster --tier appimage_runtime)"
+
     until $SUDO apt-get update --yes && \
-          $SUDO apt-get install --yes --no-install-recommends \
-            bash git rsync \
-            wget ca-certificates openssl \
-            libgpg-error0 \
-            mesa-utils libfreetype6 libsdl2-dev libice-dev libsm-dev libopengl0 g++
+          $SUDO apt-get install --yes --no-install-recommends ${PKGS_APPIMAGE_RUNTIME}
     do
         (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
         printf 'Waiting to retry.\n' && sleep 5
@@ -96,11 +99,10 @@ elif [[ "${DISTRIBUTION}" =~ .*[uU]buntu.* ]] ; then
     printf 'Installing dependencies for Ubuntu...\n'
     export DEBIAN_FRONTEND='noninteractive'
 
+    PKGS_APPIMAGE_RUNTIME="$("${GET_PACKAGES}" --os ubuntu --tier appimage_runtime)"
+
     until $SUDO apt-get update --yes && \
-          $SUDO apt-get install --yes --no-install-recommends \
-            bash git rsync \
-            wget ca-certificates libssl-dev \
-            mesa-utils libfreetype6 libsdl2-dev libice-dev libsm-dev libopengl0 g++
+          $SUDO apt-get install --yes --no-install-recommends ${PKGS_APPIMAGE_RUNTIME}
     do
         (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
         printf 'Waiting to retry.\n' && sleep 5
@@ -109,14 +111,13 @@ elif [[ "${DISTRIBUTION}" =~ .*[uU]buntu.* ]] ; then
 elif [[ "${DISTRIBUTION}" =~ .*[aA]rch.* ]] ; then
     printf 'Installing dependencies for Arch Linux...\n'
 
+    PKGS_APPIMAGE_RUNTIME="$("${GET_PACKAGES}" --os arch --tier appimage_runtime)"
+
     # NOTE: may be required for older Arch Linux images.
     #- "curl -o /etc/pacman.d/mirrorlist 'https://archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4&use_mirror_status=on'"
     #- "sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist"
     #- "sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf"
-    until $SUDO pacman -Syu --noconfirm --needed \
-            bash git rsync \
-            wget ca-certificates openssl \
-            mesa freetype2 sdl2 alsa-lib libice libsm libglvnd gcc-libs
+    until $SUDO pacman -Syu --noconfirm --needed ${PKGS_APPIMAGE_RUNTIME}
     do
         (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
         printf 'Waiting to retry.\n' && sleep 5
@@ -125,6 +126,8 @@ elif [[ "${DISTRIBUTION}" =~ .*[aA]rch.* ]] ; then
 elif [[ "${DISTRIBUTION}" =~ .*[fF]edora.* ]] ; then
     printf 'Installing dependencies for Fedora...\n'
 
+    # Fedora uses a different package manager (dnf) and package names.
+    # These are maintained separately since Fedora is not in the centralized get_packages.sh.
     until $SUDO dnf -y upgrade && \
           $SUDO dnf -y install \
             bash git rsync \
