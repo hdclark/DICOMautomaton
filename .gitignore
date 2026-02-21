@@ -39,3 +39,7 @@ __pycache__/
 # vim temporary files.
 *.swp
 
+# Directories with cached AppImage tooling artifacts.
+appimagekit_artifacts/
+linuxdeploy_artifacts/
+
