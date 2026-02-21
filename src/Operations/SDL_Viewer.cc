@@ -91,6 +91,7 @@
 #include "../STB_Shim.h"
 #include "../Surface_Meshes.h"
 
+#include "../Challenges/Clicker.h"
 #include "../Challenges/Encompass.h"
 #include "../Challenges/FreeSki.h"
 #include "../Challenges/MazeExplorer.h"
@@ -1035,6 +1036,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         bool view_triple_three_enabled = false;
         bool view_encompass_enabled = false;
         bool view_cube_enabled = false;
+        bool view_clicker_enabled = false;
         bool view_guitar_fret_enabled = false;
         bool view_tower_defence_enabled = false;
         bool view_tracks_enabled = false;
@@ -1606,6 +1608,9 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // Cube state.
     RotatingCubeGame rc_game;
+
+    // Clicker game state.
+    ClickerGame clicker_game;
 
     // Guitar Fret game state.
     GuitarFretGame gf_game;
@@ -4740,6 +4745,13 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(!rc_game.Display(view_toggles.view_cube_enabled)) break;
         }catch(const std::exception &e){
             YLOGWARN("Exception in rc_game.Display(): '" << e.what() << "'");
+            throw;
+        }
+
+        try{
+            if(!clicker_game.Display(view_toggles.view_clicker_enabled)) break;
+        }catch(const std::exception &e){
+            YLOGWARN("Exception in clicker_game.Display(): '" << e.what() << "'");
             throw;
         }
 
@@ -9392,6 +9404,12 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(ImGui::Button("Stealth")){
                 view_toggles.view_tactical_stealth_enabled = true;
                 tsg_game.Reset();
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Clicker")){
+                view_toggles.view_clicker_enabled = true;
+                clicker_game.Reset();
                 ImGui::CloseCurrentPopup();
             }
             ImGui::SameLine();

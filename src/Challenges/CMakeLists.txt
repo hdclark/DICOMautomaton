@@ -1,5 +1,6 @@
 
 add_library(Challenges_objs OBJECT
+    Clicker.cc
     Encompass.cc
     FreeSki.cc
     MazeExplorer.cc
