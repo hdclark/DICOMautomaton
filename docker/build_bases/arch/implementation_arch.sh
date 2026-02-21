@@ -22,9 +22,6 @@ sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' \
 
 cp /scratch_base/xpra-xorg.conf /etc/X11/xorg.conf
 
-# Neuter makepkg so it can build packages as root (note: still emits a futile error though).
-sed -i -e 's/.*exit.*E_ROOT.*//g' $(which makepkg)
-
 
 # Create an unprivileged user for building packages.
 # 
@@ -38,13 +35,16 @@ printf '\n''builduser ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
 retry_count=0
 retry_limit=5
 until
-    pacman -Syu --noconfirm --needed git
+    pacman -Syu --noconfirm --needed git which sed
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5
 done
 
 git config --global --add safe.directory "*"
+
+# Neuter makepkg so it can build packages as root (note: still emits a futile error though).
+sed -i -e 's/.*exit.*E_ROOT.*//g' $(which makepkg)
 
 ## Download an AUR helper in case it is needed later.
 ##
