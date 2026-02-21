@@ -19,32 +19,6 @@ sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
 sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' \
        -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf
 
-# Use the centralized package list script (copied to /dcma_scripts by Dockerfile).
-GET_PACKAGES="/dcma_scripts/get_packages.sh"
-
-# Get packages from the centralized script.
-PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os arch --tier build_tools)"
-PKGS_DEVELOPMENT="$("${GET_PACKAGES}" --os arch --tier development)"
-PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os arch --tier ygor_deps)"
-PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os arch --tier dcma_deps)"
-
-retry_count=0
-retry_limit=5
-until
-    `# Install build dependencies ` \
-    pacman -Syu --noconfirm --needed ${PKGS_BUILD_TOOLS} && \
-    `# Development tools ` \
-    pacman -S --noconfirm --needed ${PKGS_DEVELOPMENT} && \
-    `# Ygor dependencies ` \
-    pacman -S --noconfirm --needed ${PKGS_YGOR_DEPS} && \
-    `# DCMA dependencies ` \
-    pacman -S --noconfirm --needed ${PKGS_DCMA_DEPS}
-do
-    (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
-    printf 'Waiting to retry.\n' && sleep 5
-done
-
-rm -f /var/cache/pacman/pkg/*
 
 cp /scratch_base/xpra-xorg.conf /etc/X11/xorg.conf
 
@@ -61,8 +35,16 @@ mkdir -p /var/empty/.config/yay
 chown -R builduser:builduser /var/empty
 printf '\n''builduser ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
 
-git config --global --add safe.directory "*"
+retry_count=0
+retry_limit=5
+until
+    pacman -Syu --noconfirm --needed git
+do
+    (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
+    printf 'Waiting to retry.\n' && sleep 5
+done
 
+git config --global --add safe.directory "*"
 
 ## Download an AUR helper in case it is needed later.
 ##
@@ -96,6 +78,32 @@ git clone --depth=1 'https://aur.archlinux.org/trizen.git'
 #su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm example-git"
 #trizen --nocolors --quiet --noconfirm -S example-git
 
+
+# Use the centralized package list script (copied to /dcma_scripts by Dockerfile).
+GET_PACKAGES="/dcma_scripts/get_packages.sh"
+
+# Get packages from the centralized script.
+PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os arch --tier build_tools)"
+PKGS_DEVELOPMENT="$("${GET_PACKAGES}" --os arch --tier development)"
+PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os arch --tier ygor_deps)"
+PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os arch --tier dcma_deps)"
+
+retry_count=0
+retry_limit=5
+until
+    `# Install build dependencies ` \
+    trizen --nocolors --quiet --noconfirm -S ${PKGS_BUILD_TOOLS} && \
+    `# Development tools ` \
+    trizen --nocolors --quiet --noconfirm -S ${PKGS_DEVELOPMENT} && \
+    `# Ygor dependencies ` \
+    trizen --nocolors --quiet --noconfirm -S ${PKGS_YGOR_DEPS} && \
+    `# DCMA dependencies ` \
+    trizen --nocolors --quiet --noconfirm -S ${PKGS_DCMA_DEPS}
+do
+    (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
+    printf 'Waiting to retry.\n' && sleep 5
+done
+rm -f /var/cache/pacman/pkg/*
 
 
 # Install Ygor.
