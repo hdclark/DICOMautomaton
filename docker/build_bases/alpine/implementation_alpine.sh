@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2086
+# SC2086: Double quote to prevent globbing and word splitting - intentionally disabled for package lists.
 
 # This script installs all dependencies needed to build DICOMautomaton on Alpine Linux.
 
@@ -9,55 +11,27 @@ cd /scratch_base
 
 source /scratch_base/set_environment.sh
 
+# Use the centralized package list script (copied to /dcma_scripts by Dockerfile).
+GET_PACKAGES="/dcma_scripts/get_packages.sh"
+
+# Get packages from the centralized script.
+PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os alpine --tier build_tools)"
+PKGS_DEVELOPMENT="$("${GET_PACKAGES}" --os alpine --tier development)"
+PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os alpine --tier ygor_deps)"
+PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os alpine --tier dcma_deps)"
 
 retry_count=0
 retry_limit=5
 until
-    # Install build dependencies.
-    apk add --no-cache --update \
-        alpine-sdk \
-        bash \
-        git \
-        cmake \
-        vim \
-        gdb \
-        rsync \
-        openssh \
-        wget \
-        unzip \
-    && \
-    apk add --no-cache --update \
-        ` # Additional toolchain ` \
-        clang \
-        clang-headers \
-        clang-libs \
-        clang-extra-tools \
-        llvm \
-        libc++ \
-        lld \
-        musl-dev \
-        compiler-rt \
-    && \
-    apk add --no-cache \
-        ` # Ygor dependencies ` \
-        gsl-static gsl-dev \
-        eigen-dev \
-        ` # DICOMautomaton dependencies ` \
-        openssl-libs-static \
-        zlib-static zlib-dev \
-        sfml-dev \
-        sdl2-dev \
-        glew-dev \
-        jansson-dev \
-        patchelf \
-        ` # Additional dependencies for headless OpenGL rendering with SFML ` \
-        libx11-dev libx11-static \
-        glu-dev glu \
-        mesa mesa-dev \
-        xorg-server-dev \
-        xf86-video-dummy \
-        ` # Other optional dependencies ` \
-        libnotify-dev dunst
+    apk update && \
+    `# Install build dependencies ` \
+    apk add --no-cache ${PKGS_BUILD_TOOLS} && \
+    `# Development tools ` \
+    apk add --no-cache ${PKGS_DEVELOPMENT} && \
+    `# Ygor dependencies` \
+    apk add --no-cache ${PKGS_YGOR_DEPS} && \
+    `# DCMA dependencies` \
+    apk add --no-cache ${PKGS_DCMA_DEPS}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5

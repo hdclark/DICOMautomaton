@@ -79,7 +79,8 @@ if [ "$ARCH" == "x86_64" ] || [ "$ARCH" == "i686" ] ; then
     find AppDir/usr/lib/ -type f -exec strip '{}' \; || true
 
     # Use continuous artifacts.
-    wget "https://halclark.ca/linuxdeploy-${ARCH}.AppImage" ||
+    cp "/linuxdeploy_artifacts/linuxdeploy-${ARCH}.AppImage" ./ ||
+      wget "https://halclark.ca/linuxdeploy-${ARCH}.AppImage" ||
       wget "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-${ARCH}.AppImage"
     chmod 777 ./linuxdeploy-${ARCH}.AppImage
     ./linuxdeploy-${ARCH}.AppImage --appimage-extract # Unpack because FUSE cannot be used in Docker.
@@ -117,13 +118,19 @@ elif [ "$ARCH" == "aarch64" ] || [ "$ARCH" == "armhf" ] ; then
 
     # Use the provided AppRun program, which is more sophisticated than a shell script.
     #wget "https://github.com/AppImage/AppImageKit/releases/download/13/AppRun-${ARCH}" -O ./AppDir/AppRun
-    wget "https://github.com/AppImage/AppImageKit/releases/download/13/obsolete-AppRun-${ARCH}" -O ./AppDir/AppRun
+
+    cp "/appimagekit_artifacts/obsolete-AppRun-${ARCH}" ./AppDir/AppRun ||
+      wget "https://halclark.ca/obsolete-AppRun-${ARCH}" -O ./AppDir/AppRun ||
+      wget "https://github.com/AppImage/AppImageKit/releases/download/13/obsolete-AppRun-${ARCH}" -O ./AppDir/AppRun
     find ./AppDir -type d -exec chmod -R 755 '{}' \+
     find ./AppDir -type f -exec chmod 644 '{}' \+
 
     # Bundle required libraries, but exclude libraries known to be problematic.
     #wget 'https://raw.githubusercontent.com/AppImage/pkg2appimage/master/excludelist' -O - |
-    wget 'https://raw.githubusercontent.com/AppImage/pkg2appimage/f2df956789f36204213876c96500c8b05595e43b/excludelist' -O - |
+    cp "/linuxdeploy_artifacts/f2df956789f36204213876c96500c8b05595e43b_excludelist" excludelist_proto ||
+      wget "https://halclark.ca/f2df956789f36204213876c96500c8b05595e43b_excludelist" -O excludelist_proto ||
+      wget 'https://raw.githubusercontent.com/AppImage/pkg2appimage/f2df956789f36204213876c96500c8b05595e43b/excludelist' -O excludelist_proto 
+    cat excludelist_proto |
       sed -e 's/[ ]*[#].*//' |
       sed -e 's/[.]/[.]/g' |
       grep -v '^$' |
@@ -146,7 +153,9 @@ elif [ "$ARCH" == "aarch64" ] || [ "$ARCH" == "armhf" ] ; then
                                  -exec patchelf --set-rpath '$ORIGIN/../lib/' '{}' \; || true
 
     #wget "https://github.com/AppImage/AppImageKit/releases/download/13/appimagetool-${ARCH}.AppImage"
-    wget "https://github.com/AppImage/AppImageKit/releases/download/13/obsolete-appimagetool-${ARCH}.AppImage"
+    cp "/appimagekit_artifacts/obsolete-appimagetool-${ARCH}.AppImage" ./appimagetool-${ARCH}.AppImage ||
+      wget "https://halclark.ca/obsolete-appimagetool-${ARCH}.AppImage" -O ./appimagetool-${ARCH}.AppImage ||
+      wget "https://github.com/AppImage/AppImageKit/releases/download/13/obsolete-appimagetool-${ARCH}.AppImage" -O ./appimagetool-${ARCH}.AppImage 
     chmod 777 ./appimagetool-${ARCH}.AppImage
     ./appimagetool-${ARCH}.AppImage --appimage-extract # Unpack because FUSE cannot be used in Docker.
     ./squashfs-root/AppRun -v ./AppDir

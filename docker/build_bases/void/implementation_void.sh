@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2086
+# SC2086: Double quote to prevent globbing and word splitting - intentionally disabled for package lists.
 
 # This script installs all dependencies needed to build DICOMautomaton starting with a minimal Void Linux system.
 
@@ -7,58 +9,28 @@ set -eux
 mkdir -pv /scratch_base
 cd /scratch_base
 
+# Use the centralized package list script (copied to /dcma_scripts by Dockerfile).
+GET_PACKAGES="/dcma_scripts/get_packages.sh"
+
+# Get packages from the centralized script.
+PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os void --tier build_tools)"
+PKGS_DEVELOPMENT="$("${GET_PACKAGES}" --os void --tier development)"
+PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os void --tier ygor_deps)"
+PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os void --tier dcma_deps)"
+
 retry_count=0
 retry_limit=5
 until 
-    # Install build dependencies.
     xbps-install -y -Su xbps && \
     xbps-install -y -Su && \
-    xbps-install -y -S \
-        base-devel \
-        bash \
-        git \
-        cmake \
-        vim \
-        ncurses-term \
-        gdb \
-        rsync \
-        wget \
-    && \
-       \
-    xbps-install -y -S \
-        ` # Ygor dependencies ` \
-        boost-devel \
-        gsl-devel \
-        eigen \
-        ` # DICOMautomaton dependencies ` \
-        eigen \
-        boost-devel \
-        zlib-devel \
-        SFML-devel \
-        SDL2-devel \
-        glew-devel \
-        jansson-devel \
-        libpqxx-devel \
-        postgresql-client \
-        cgal-devel \
-        nlopt-devel \
-        asio \
-        freefont-ttf \
-        patchelf \
-        thrift \
-        thrift-devel \
-        ` # Additional dependencies for headless OpenGL rendering with SFML ` \
-        xorg-minimal \
-        glu-devel \
-        xorg-video-drivers \
-        xf86-video-dummy \
-        xorg-apps \
-        ` # Other optional dependencies ` \
-        libnotify \
-        dunst \
-        bash-completion \
-        gnuplot \
-        zenity 
+    `# Install build dependencies ` \
+    xbps-install -y -S ${PKGS_BUILD_TOOLS} && \
+    `# Development tools ` \
+    xbps-install -y -S ${PKGS_DEVELOPMENT} && \
+    `# Ygor dependencies ` \
+    xbps-install -y -S ${PKGS_YGOR_DEPS} && \
+    `# DCMA dependencies ` \
+    xbps-install -y -S ${PKGS_DCMA_DEPS}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5

@@ -8,6 +8,16 @@ if [ ! -d "${REPOROOT}" ] ; then
 fi
 cd "${REPOROOT}"
 
+if [ ! -d "appimagekit_artifacts" ] ; then
+    printf 'Expected appimagekit_artifacts at repo root. Refusing to continue,\n' 1>&2
+    exit 1
+fi
+if [ ! -d "linuxdeploy_artifacts" ] ; then
+    printf 'Expected linuxdeploy_artifacts at repo root. Refusing to continue,\n' 1>&2
+    exit 1
+fi
+
+
 ( ./docker/build_bases/debian_buster/build.sh 2>&1 && 
   ./docker/builders/debian_buster/build.sh    2>&1 ) | tee /tmp/dcma_docker_debian_buster.log
 

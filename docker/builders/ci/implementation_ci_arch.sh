@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2086
+# SC2086: Double quote to prevent globbing and word splitting - intentionally disabled for package lists.
 
 # This script installs dependencies and then builds and installs DICOMautomaton.
 # It can be used for continuous integration (CI), development, and deployment (CD).
@@ -15,69 +17,87 @@ sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
 sed -i -e 's/SigLevel[ ]*=.*/SigLevel = Never/g' \
        -e 's/.*IgnorePkg[ ]*=.*/IgnorePkg = archlinux-keyring/g' /etc/pacman.conf
 
-retry_count=0
-retry_limit=5
-until
-    # Install build dependencies.
-    #pacman -Sy --noconfirm archlinux-keyring
-    pacman -Syu --noconfirm --needed \
-      base-devel \
-      git \
-      cmake \
-      gcc \
-      ` # Needed for an AUR helper ` \
-      sudo \
-      pyalpm \
-      wget \
-      ca-certificates \
-      rsync \
-      patchelf
-do
-    (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
-    printf 'Waiting to retry.\n' && sleep 5
-done
-rm -f /var/cache/pacman/pkg/*
 
-
-# Create a temporary user for building AUR packages.
+# Create an unprivileged user for building packages.
+# 
+# Note: The 'archlinux' Docker container currently contains user 'aurbuild' and has yay installed already.
+#       It won't hurt to add a new build user in case it is missing.
 useradd -m -r -d /var/empty builduser
 mkdir -p /var/empty/
 chown -R builduser:builduser /var/empty/
 printf '\n''builduser ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
-
+printf '\n''root ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
 
 retry_count=0
 retry_limit=5
 until
-    # Install hard build dependencies.
-    pacman -S --noconfirm --needed \
-      gcc-libs \
-      gnu-free-fonts \
-      `#sfml   # Need SFML2 but no compat pkg available yet...` \
-      sdl2 \
-      glew \
-      glu \
-      jansson \
-      libpqxx \
-      postgresql \
-      gsl \
-      boost-libs \
-      zlib \
-      cgal \
-      wt \
-      asio \
-      nlopt \
-      thrift
+    pacman -Syu --noconfirm --needed git which sed debugedit fakeroot sudo
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5
 done
 
-# Use snapshot of SFML2 package until something more permanent is available.
-wget 'https://www.halclark.ca/sfml-2.6.1-1-x86_64.pkg.tar.zst' -O sfml-2.6.1-1-x86_64.pkg.tar.zst
-pacman -U --noconfirm --needed ./sfml-2.6.1-1-x86_64.pkg.tar.zst
+git config --global --add safe.directory "*"
 
-rm -f /var/cache/pacman/pkg/*
+# Neuter makepkg so it can build packages as root (note: still emits a futile error though).
+sed -i -e 's/.*exit.*E_ROOT.*//g' $(which makepkg)
+
+## Download an AUR helper in case it is needed later.
+##
+## Usage: `su - builduser -c "yay -S --noconfirm packageA packageB ..."`
+##
+## Note: later versions of yay seem to require systemd components, so harder to run inside unprivileged docker :(.
+#if ! command -v yay &>/dev/null ; then
+#    cd /tmp
+#    yay_version='12.4.2'
+#    yay_arch="$(uname -m)"
+#    wget "https://github.com/Jguer/yay/releases/download/v${yay_version}/yay_${yay_version}_${yay_arch}.tar.gz"
+#    tar -axf yay_*tar.gz
+#    mv yay_*/yay /tmp/
+#    rm -rf yay_*
+#    chmod 777 yay
+#    su - builduser -c "cd /tmp && ./yay -S --mflags --skipinteg --noconfirm yay-bin"
+#    rm -rf /tmp/yay
+#fi
+
+git clone --depth=1 'https://aur.archlinux.org/trizen.git'
+( cd trizen &&
+  makepkg -si --noconfirm --needed --noprogressbar --skipchecksums --skipinteg --skippgpcheck --force --nocolor &&
+  cd .. &&
+  rm -rf trizen
+
+  trizen --nocolors --quiet --noconfirm -S trizen
+)
+# Examples of building something from the AUR:
+#su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm example-git"
+#trizen --nocolors --quiet --noconfirm -S example-git
+
+
+# Use the centralized package list script (copied to /dcma_scripts by Dockerfile).
+GET_PACKAGES="/dcma_scripts/get_packages.sh"
+
+# Get packages from the centralized script.
+PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os arch --tier build_tools)"
+PKGS_DEVELOPMENT="$("${GET_PACKAGES}" --os arch --tier development)"
+PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os arch --tier ygor_deps)"
+PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os arch --tier dcma_deps)"
+
+retry_count=0
+retry_limit=5
+until
+    `# Install build dependencies ` \
+    trizen --nocolors --quiet --noconfirm -S ${PKGS_BUILD_TOOLS} && \
+    `# Development tools ` \
+    trizen --nocolors --quiet --noconfirm -S ${PKGS_DEVELOPMENT} && \
+    `# Ygor dependencies ` \
+    trizen --nocolors --quiet --noconfirm -S ${PKGS_YGOR_DEPS} && \
+    `# DCMA dependencies ` \
+    trizen --nocolors --quiet --noconfirm -S ${PKGS_DCMA_DEPS}
+do
+    (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
+    printf 'Waiting to retry.\n' && sleep 5
+done
+rm -rf /var/cache/pacman/pkg/* || true
 
 
 # Install Ygor.

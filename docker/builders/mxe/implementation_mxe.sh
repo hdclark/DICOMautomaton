@@ -63,9 +63,9 @@ for repo_dir in /ygor /ygorclustering /explicator /dcma ; do
       -DCMAKE_BUILD_TYPE=Release \
       -DWITH_LINUX_SYS=OFF \
       -DWITH_EIGEN=ON \
-      -DWITH_CGAL=ON \
+      -DWITH_CGAL=OFF \
       -DWITH_NLOPT=ON \
-      -DWITH_SFML=ON \
+      -DWITH_SFML=OFF \
       -DWITH_SDL=ON \
       -DWITH_WT=OFF \
       -DWITH_GNU_GSL=OFF \

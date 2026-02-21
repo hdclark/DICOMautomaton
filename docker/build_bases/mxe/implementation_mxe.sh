@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# shellcheck disable=SC2086
+# SC2086: Double quote to prevent globbing and word splitting - intentionally disabled for package lists.
 
 # This script prepares a build environment using MXE and then cross-compiles DICOMautomaton dependencies.
 
@@ -10,49 +12,18 @@ sed -i -e 's@oldoldstable@bullseye@g' \
        -e 's@oldstable@bullseye@g' \
        -e 's@stable@bullseye@g'  /etc/apt/sources.list
 
+# Use the centralized package list script (copied to /dcma_scripts by Dockerfile).
+GET_PACKAGES="/dcma_scripts/get_packages.sh"
+
+# Get packages from the centralized script.
+PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os mxe --tier build_tools)"
 
 retry_count=0
 retry_limit=5
 until
     apt-get -y update && \
-    apt-get -y install \
-      autoconf \
-      automake \
-      autopoint \
-      bash \
-      bison \
-      bzip2 \
-      flex \
-      g++ \
-      g++-multilib \
-      gettext \
-      git \
-      gperf \
-      intltool \
-      libc6-dev-i386 \
-      libgdk-pixbuf2.0-dev \
-      libltdl-dev \
-      libssl-dev \
-      libtool-bin \
-      libxml-parser-perl \
-      lzip \
-      make \
-      openssl \
-      p7zip-full \
-      patch \
-      perl \
-      python3 \
-      python3-mako \
-      python-is-python3 \
-      ruby \
-      sed \
-      unzip \
-      wget \
-      xz-utils \
-      ca-certificates \
-      rsync \
-      sudo \
-      gnupg
+    `# Install MXE build dependencies ` \
+    apt-get -y install ${PKGS_BUILD_TOOLS}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5
@@ -67,8 +38,11 @@ git clone 'https://github.com/mxe/mxe.git' /mxe
 cd /mxe
 
 # Add custom package.
-git clone 'https://github.com/hdclark/mxe.git' /mxe_custom
-cp /mxe{_custom,}/src/thrift.mk
+#git clone 'https://github.com/hdclark/mxe.git' /mxe_custom
+#cp /mxe{_custom,}/src/thrift.mk
+mkdir -p /mxe/pkg/ /mxe/src/
+mv /thrift-0.18.1.tar.gz /mxe/pkg/
+mv /thrift.mk /mxe/src/
 
 # Remove components we won't need to reduce setup time.
 rm -rf src/qt* src/ocaml* src/sdl2_* || true
@@ -96,35 +70,7 @@ make -j"$(nproc)" --keep-going \
   `# MXE_SILENT_NO_NETWORK="1" ` `# Workaround for qtbase build fail. See https://github.com/mxe/mxe/issues/2590 ` \
   MXE_TARGETS="${TOOLCHAIN}" \
   MXE_PLUGIN_DIRS=plugins/gcc12 \
-  gmp mpfr boost eigen sfml sdl2 glew nlopt mesa cgal thrift #wt
-
-## Download pre-compiled binaries to speed up toolchain prep.
-##
-## Note: sadly, gcc9 is not available this way -- only the default (gcc5.5) is available.
-##
-## Note: files are installed with root /usr/lib/mxe/usr/"${TOOLCHAIN}"/ so that
-##   root@trip:/mxe# dpkg-query -L mxe-x86-64-w64-mingw32.static-sfml
-##   ...
-##   /usr/lib/mxe/usr/x86-64-w64-mingw32.static/lib/libsfml-window-s.a
-##   /usr/lib/mxe/usr/x86-64-w64-mingw32.static/lib/pkgconfig
-##   /usr/lib/mxe/usr/x86-64-w64-mingw32.static/lib/pkgconfig/sfml.pc
-#echo "deb http://mirror.mxe.cc/repos/apt stretch main" \
-#    | tee /etc/apt/sources.list.d/mxeapt.list
-#apt-key adv \
-#  --keyserver keyserver.ubuntu.com \
-#  --recv-keys C6BF758A33A3A276
-#apt-get -y update
-#apt-get -y install \
-#  mxe-"${TOOLCHAIN}"-boost \
-#  mxe-"${TOOLCHAIN}"-cgal \
-#  mxe-"${TOOLCHAIN}"-eigen \
-#  mxe-"${TOOLCHAIN}"-gmp \
-#  mxe-"${TOOLCHAIN}"-mpfr \
-#  mxe-"${TOOLCHAIN}"-nlopt \
-#  mxe-"${TOOLCHAIN}"-sfml \
-#  mxe-"${TOOLCHAIN}"-wt
-# Note: trying to mix these files will fail:
-#rsync -avP /usr/lib/mxe/usr/"${TOOLCHAIN}"/ /mxe/usr/"${TOOLCHAIN}"/ # <-- Will fail!
+  gmp mpfr boost eigen sdl2 glew nlopt mesa cgal thrift sqlite lua protobuf #wt
 
 export PATH="/mxe/usr/bin:$PATH"
 
@@ -182,11 +128,7 @@ fi
 #  cp -v -R lib/cmake/CGAL /mxe/usr/"${TOOLCHAIN}"/lib/cmake/ )
 
 # Workaround for MXE's SFML pkg-config files missing the standard modules.
-cp "/mxe/usr/${TOOLCHAIN}/lib/pkgconfig/"sfml{,-graphics}.pc
-cp "/mxe/usr/${TOOLCHAIN}/lib/pkgconfig/"sfml{,-window}.pc
-cp "/mxe/usr/${TOOLCHAIN}/lib/pkgconfig/"sfml{,-system}.pc
-
-"${TOOLCHAIN}-pkg-config" --cflags --libs sfml-graphics sfml-window sfml-system sdl2 glew
+"${TOOLCHAIN}-pkg-config" --cflags --libs sdl2 glew
 
 # Compile the portable pieces.
 for repo_dir in /ygor /ygorclustering /explicator ; do

@@ -44,7 +44,11 @@ fi
 #       Otherwise, bundle the host's glibc distribution and hope that patching the binary will suffice!
 #
 # Note: added an exclusion list from another project which seems to help.
-wget 'https://raw.githubusercontent.com/AppImage/pkg2appimage/master/excludelist' -O - |
+#wget 'https://raw.githubusercontent.com/AppImage/pkg2appimage/master/excludelist' -O - |
+cp "/linuxdeploy_artifacts/f2df956789f36204213876c96500c8b05595e43b_excludelist" excludelist_proto ||
+  wget "https://halclark.ca/f2df956789f36204213876c96500c8b05595e43b_excludelist" -O excludelist_proto ||
+  wget 'https://raw.githubusercontent.com/AppImage/pkg2appimage/f2df956789f36204213876c96500c8b05595e43b/excludelist' -O excludelist_proto
+cat excludelist_proto |
   sed -e 's/[ ]*[#].*//' |
   sed -e 's/[.]/[.]/g' |
   grep -v '^$' |

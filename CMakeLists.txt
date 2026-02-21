@@ -22,7 +22,7 @@ option(WITH_MSAN                "Compile using MemorySanitizer."                
 option(WITH_EIGEN     "Compile assuming Eigen is available."                    ON)
 option(WITH_CGAL      "Compile assuming CGAL is available."                     ON)
 option(WITH_NLOPT     "Compile assuming nlopt is available."                    ON)
-option(WITH_SFML      "Compile assuming SFML is available."                     ON)
+option(WITH_SFML      "Compile assuming SFML is available."                     OFF)
 option(WITH_SDL       "Compile assuming SDL2 and glew are available."           ON)
 option(WITH_WT        "Compile assuming Wt is available."                       ON)
 option(WITH_GNU_GSL   "Compile assuming the GNU GSL is available."              ON)
@@ -45,6 +45,12 @@ option(WITH_FETCHCONTENT_FALLBACK "Download missing dependencies if not found." 
 #                                  Configuration
 ####################################################################################
 
+# Set the C++ standard (DICOMautomaton requires C++17).
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF) # Disable GNU extensions (e.g., std=gnu++14). Enforced via target_compile_features.
+
+
 # High-level configuration.
 if(NOT BUILD_SHARED_LIBS)
     #set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
@@ -52,7 +58,6 @@ if(NOT BUILD_SHARED_LIBS)
     set(CMAKE_EXE_LINKER_FLAGS "-static")
 endif()
 
-set(CMAKE_CXX_EXTENSIONS OFF) # Disable GNU extensions (e.g., std=gnu++14). Enforced via target_compile_features.
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON) # For use with clang-tidy et al.
 set(THREADS_PREFER_PTHREAD_FLAG ON)
