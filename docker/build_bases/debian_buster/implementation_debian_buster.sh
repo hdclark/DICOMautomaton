@@ -55,28 +55,21 @@ GET_PACKAGES="/dcma_scripts/get_packages.sh"
 
 # Get packages from the centralized script.
 PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os debian_buster --tier build_tools)"
+PKGS_DEVELOPMENT="$("${GET_PACKAGES}" --os debian_buster --tier development)"
 PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os debian_buster --tier ygor_deps)"
 PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os debian_buster --tier dcma_deps)"
-PKGS_HEADLESS="$("${GET_PACKAGES}" --os debian_buster --tier headless_rendering)"
-PKGS_OPTIONAL="$("${GET_PACKAGES}" --os debian_buster --tier optional)"
-PKGS_EXTRA_TOOLCHAINS="$("${GET_PACKAGES}" --os debian_buster --tier extra_toolchains --optional-only)"
-PKGS_DEV_EXTRA="$("${GET_PACKAGES}" --os debian_buster --tier optional --optional-only)"
 
 retry_count=0
 retry_limit=5
 until
     `# Install build dependencies ` \
     apt-get install --yes --no-install-recommends ${PKGS_BUILD_TOOLS} && \
+    `# Development tools ` \
+    apt-get install --yes --no-install-recommends ${PKGS_DEVELOPMENT} && \
     `# Ygor dependencies ` \
     apt-get install --yes --no-install-recommends ${PKGS_YGOR_DEPS} && \
     `# DCMA dependencies ` \
-    apt-get install --yes --no-install-recommends ${PKGS_DCMA_DEPS} && \
-    `# Other optional dependencies ` \
-    apt-get install --yes --no-install-recommends ${PKGS_OPTIONAL} && \
-    `# Additional dependencies for headless OpenGL rendering with SFML ` \
-    apt-get install --yes --no-install-recommends ${PKGS_HEADLESS} && \
-    `# Additional packages prospectively added in case needed for future development ` \
-    apt-get install --yes --no-install-recommends ${PKGS_DEV_EXTRA} ${PKGS_EXTRA_TOOLCHAINS}
+    apt-get install --yes --no-install-recommends ${PKGS_DCMA_DEPS}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5

@@ -27,19 +27,18 @@ GET_PACKAGES="${SCRIPT_DIR}/../../../scripts/get_packages.sh"
 
 # Get packages from the centralized script.
 PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os macos --tier build_tools)"
+PKGS_DEVELOPMENT="$("${GET_PACKAGES}" --os macos --tier development)"
 PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os macos --tier ygor_deps)"
 PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os macos --tier dcma_deps)"
-PKGS_OPTIONAL="$("${GET_PACKAGES}" --os macos --tier optional)"
-PKGS_HEADLESS="$("${GET_PACKAGES}" --os macos --tier headless_rendering)"
 
 # Install build tools first (git and svn needed for further package installs)
 brew install ${PKGS_BUILD_TOOLS}
 
+`# Development tools `
+brew install ${PKGS_DEVELOPMENT}
+
 `# Ygor and DCMA dependencies `
 brew install ${PKGS_YGOR_DEPS} ${PKGS_DCMA_DEPS}
-
-`# Other optional dependencies `
-brew install ${PKGS_OPTIONAL}
 
 # Alter mesa formula before installing because it fails to build on catalina.
 EDITOR=true brew edit mesa  # Add '-Wno-register' {C,CPP,CXX}FLAGS env variables.
@@ -63,9 +62,7 @@ EOF
 
 #brew install --build-from-source /usr/local/Homebrew/Library/Taps/homebrew/homebrew-core/Formula/mesa.rb
 brew install --build-from-source ./mesa.rb
-#HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_UPGRADE=1 HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1 brew install freeglut 
-`# Additional dependencies for headless OpenGL rendering with SFML `
-brew install ${PKGS_HEADLESS}
+#HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALL_UPGRADE=1 HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1 brew install freeglut
 
 # There should now be a lot of compilers available.
 gcc --version    # System-provided clang (not gcc!)

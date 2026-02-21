@@ -14,10 +14,9 @@ GET_PACKAGES="/dcma_scripts/get_packages.sh"
 
 # Get packages from the centralized script.
 PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os void --tier build_tools)"
+PKGS_DEVELOPMENT="$("${GET_PACKAGES}" --os void --tier development)"
 PKGS_YGOR_DEPS="$("${GET_PACKAGES}" --os void --tier ygor_deps)"
 PKGS_DCMA_DEPS="$("${GET_PACKAGES}" --os void --tier dcma_deps)"
-PKGS_HEADLESS="$("${GET_PACKAGES}" --os void --tier headless_rendering)"
-PKGS_OPTIONAL="$("${GET_PACKAGES}" --os void --tier optional)"
 
 retry_count=0
 retry_limit=5
@@ -26,14 +25,12 @@ until
     xbps-install -y -Su && \
     `# Install build dependencies ` \
     xbps-install -y -S ${PKGS_BUILD_TOOLS} && \
+    `# Development tools ` \
+    xbps-install -y -S ${PKGS_DEVELOPMENT} && \
     `# Ygor dependencies ` \
     xbps-install -y -S ${PKGS_YGOR_DEPS} && \
     `# DCMA dependencies ` \
-    xbps-install -y -S ${PKGS_DCMA_DEPS} && \
-    `# Additional dependencies for headless OpenGL rendering with SFML ` \
-    xbps-install -y -S ${PKGS_HEADLESS} && \
-    `# Other optional dependencies ` \
-    xbps-install -y -S ${PKGS_OPTIONAL}
+    xbps-install -y -S ${PKGS_DCMA_DEPS}
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5
