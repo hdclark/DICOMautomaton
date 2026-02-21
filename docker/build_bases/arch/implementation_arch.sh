@@ -31,11 +31,12 @@ useradd -r -d /var/empty builduser
 mkdir -p /var/empty/.config/yay
 chown -R builduser:builduser /var/empty
 printf '\n''builduser ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
+printf '\n''root ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
 
 retry_count=0
 retry_limit=5
 until
-    pacman -Syu --noconfirm --needed git which sed debugedit fakeroot
+    pacman -Syu --noconfirm --needed git which sed debugedit fakeroot sudo
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5
@@ -73,7 +74,6 @@ git clone --depth=1 'https://aur.archlinux.org/trizen.git'
 
   trizen --nocolors --quiet --noconfirm -S trizen
 )
-
 # Examples of building something from the AUR:
 #su - builduser -c "cd /tmp && yay -S --mflags --skipinteg --nopgpfetch --noconfirm example-git"
 #trizen --nocolors --quiet --noconfirm -S example-git

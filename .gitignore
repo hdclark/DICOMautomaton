@@ -43,3 +43,8 @@ __pycache__/
 appimagekit_artifacts/
 linuxdeploy_artifacts/
 
+# MXE packages used for building Docker images.
+thrift-0.18.1.tar.gz
+thrift.mk
+
+

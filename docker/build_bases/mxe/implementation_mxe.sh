@@ -38,8 +38,11 @@ git clone 'https://github.com/mxe/mxe.git' /mxe
 cd /mxe
 
 # Add custom package.
-git clone 'https://github.com/hdclark/mxe.git' /mxe_custom
-cp /mxe{_custom,}/src/thrift.mk
+#git clone 'https://github.com/hdclark/mxe.git' /mxe_custom
+#cp /mxe{_custom,}/src/thrift.mk
+mkdir -p /mxe/pkg/ /mxe/src/
+mv /thrift-0.18.1.tar.gz /mxe/pkg/
+mv /thrift.mk /mxe/src/
 
 # Remove components we won't need to reduce setup time.
 rm -rf src/qt* src/ocaml* src/sdl2_* || true
