@@ -35,7 +35,7 @@ printf '\n''builduser ALL=(ALL) NOPASSWD: ALL''\n' >> /etc/sudoers
 retry_count=0
 retry_limit=5
 until
-    pacman -Syu --noconfirm --needed git which sed
+    pacman -Syu --noconfirm --needed git which sed debugedit fakeroot
 do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5
