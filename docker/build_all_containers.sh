@@ -17,9 +17,6 @@ if [ ! -d "linuxdeploy_artifacts" ] ; then
     exit 1
 fi
 
-	20260217_AppImageKit_GitHub_Releases_v13_from_20201231_now_obsolete/
-	20260220_DCMA_Docker_AppImage_pkg2appimage_snapshots/
-
 
 ( ./docker/build_bases/debian_buster/build.sh 2>&1 && 
   ./docker/builders/debian_buster/build.sh    2>&1 ) | tee /tmp/dcma_docker_debian_buster.log
