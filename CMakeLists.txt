@@ -22,7 +22,7 @@ option(WITH_MSAN                "Compile using MemorySanitizer."                
 option(WITH_EIGEN     "Compile assuming Eigen is available."                    ON)
 option(WITH_CGAL      "Compile assuming CGAL is available."                     ON)
 option(WITH_NLOPT     "Compile assuming nlopt is available."                    ON)
-option(WITH_SFML      "Compile assuming SFML is available."                     ON)
+option(WITH_SFML      "Compile assuming SFML is available."                     OFF)
 option(WITH_SDL       "Compile assuming SDL2 and glew are available."           ON)
 option(WITH_WT        "Compile assuming Wt is available."                       ON)
 option(WITH_GNU_GSL   "Compile assuming the GNU GSL is available."              ON)

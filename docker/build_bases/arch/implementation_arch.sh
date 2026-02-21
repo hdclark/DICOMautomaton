@@ -103,7 +103,7 @@ do
     (( retry_limit < retry_count++ )) && printf 'Exceeded retry limit\n' && exit 1
     printf 'Waiting to retry.\n' && sleep 5
 done
-rm -f /var/cache/pacman/pkg/*
+rm -rf /var/cache/pacman/pkg/* || true
 
 
 # Install Ygor.
