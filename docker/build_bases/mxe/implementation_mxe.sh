@@ -70,35 +70,7 @@ make -j"$(nproc)" --keep-going \
   `# MXE_SILENT_NO_NETWORK="1" ` `# Workaround for qtbase build fail. See https://github.com/mxe/mxe/issues/2590 ` \
   MXE_TARGETS="${TOOLCHAIN}" \
   MXE_PLUGIN_DIRS=plugins/gcc12 \
-  gmp mpfr boost eigen sfml sdl2 glew nlopt mesa cgal thrift #wt
-
-## Download pre-compiled binaries to speed up toolchain prep.
-##
-## Note: sadly, gcc9 is not available this way -- only the default (gcc5.5) is available.
-##
-## Note: files are installed with root /usr/lib/mxe/usr/"${TOOLCHAIN}"/ so that
-##   root@trip:/mxe# dpkg-query -L mxe-x86-64-w64-mingw32.static-sfml
-##   ...
-##   /usr/lib/mxe/usr/x86-64-w64-mingw32.static/lib/libsfml-window-s.a
-##   /usr/lib/mxe/usr/x86-64-w64-mingw32.static/lib/pkgconfig
-##   /usr/lib/mxe/usr/x86-64-w64-mingw32.static/lib/pkgconfig/sfml.pc
-#echo "deb http://mirror.mxe.cc/repos/apt stretch main" \
-#    | tee /etc/apt/sources.list.d/mxeapt.list
-#apt-key adv \
-#  --keyserver keyserver.ubuntu.com \
-#  --recv-keys C6BF758A33A3A276
-#apt-get -y update
-#apt-get -y install \
-#  mxe-"${TOOLCHAIN}"-boost \
-#  mxe-"${TOOLCHAIN}"-cgal \
-#  mxe-"${TOOLCHAIN}"-eigen \
-#  mxe-"${TOOLCHAIN}"-gmp \
-#  mxe-"${TOOLCHAIN}"-mpfr \
-#  mxe-"${TOOLCHAIN}"-nlopt \
-#  mxe-"${TOOLCHAIN}"-sfml \
-#  mxe-"${TOOLCHAIN}"-wt
-# Note: trying to mix these files will fail:
-#rsync -avP /usr/lib/mxe/usr/"${TOOLCHAIN}"/ /mxe/usr/"${TOOLCHAIN}"/ # <-- Will fail!
+  gmp mpfr boost eigen sdl2 glew nlopt mesa cgal thrift sqlite lua protobuf #wt
 
 export PATH="/mxe/usr/bin:$PATH"
 
@@ -156,11 +128,7 @@ fi
 #  cp -v -R lib/cmake/CGAL /mxe/usr/"${TOOLCHAIN}"/lib/cmake/ )
 
 # Workaround for MXE's SFML pkg-config files missing the standard modules.
-cp "/mxe/usr/${TOOLCHAIN}/lib/pkgconfig/"sfml{,-graphics}.pc
-cp "/mxe/usr/${TOOLCHAIN}/lib/pkgconfig/"sfml{,-window}.pc
-cp "/mxe/usr/${TOOLCHAIN}/lib/pkgconfig/"sfml{,-system}.pc
-
-"${TOOLCHAIN}-pkg-config" --cflags --libs sfml-graphics sfml-window sfml-system sdl2 glew
+"${TOOLCHAIN}-pkg-config" --cflags --libs sdl2 glew
 
 # Compile the portable pieces.
 for repo_dir in /ygor /ygorclustering /explicator ; do
