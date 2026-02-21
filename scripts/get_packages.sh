@@ -359,8 +359,7 @@ get_arch_sycl_build_tools_required() {
 }
 
 get_arch_sycl_build_tools_optional() {
-    # AUR packages - sfml2 and adaptivecpp
-    printf "sfml2 "
+    # AUR packages - adaptivecpp
     printf "adaptivecpp "
     printf '\n'
 }
@@ -1118,7 +1117,6 @@ get_mxe_dcma_deps_required() {
 
 get_mxe_dcma_deps_optional() {
     # These packages are built from source via MXE build system
-    printf "sfml2 "
     printf "sdl2 "
     printf "glew "
     printf "nlopt "
