@@ -235,8 +235,7 @@ get_arch_build_tools_required() {
 }
 
 get_arch_build_tools_optional() {
-    printf "adaptivecpp " # + other optional hw accel components for SYCL.
-    printf "sfml2 "
+    printf "sfml2 "  # In the AUR only now.
     printf '\n'
 }
 
@@ -323,7 +322,6 @@ get_arch_appimage_runtime_required() {
     printf 'gcc-libs '
     printf '\n'
 }
-
 
 get_arch_appimage_runtime_optional() {
     printf 'mesa '
