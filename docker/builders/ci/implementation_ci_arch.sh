@@ -166,7 +166,7 @@ cd /dcma
 chown -R builduser:builduser .
 git config --global --add safe.directory /dcma
 sed -i -e 's@MEMORY_CONSTRAINED_BUILD=OFF@MEMORY_CONSTRAINED_BUILD=ON@' /dcma/PKGBUILD
-su - builduser -c "cd /dcma && makepkg --syncdeps --install --clean --needed --noconfirm"
+su - builduser -c "cd /dcma && REPOROOT='/dcma/' makepkg --syncdeps --install --clean --needed --noconfirm"
 git reset --hard
 git clean -fxd :/ 
 

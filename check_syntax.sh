@@ -43,7 +43,6 @@ check_cpp_syntax () {
           ` pkg-config thrift  &>/dev/null && printf -- "-DDCMA_USE_THRIFT=1  $(pkg-config --cflags thrift)" ` \
           ` pkg-config glew sdl2 &>/dev/null && printf -- "-DDCMA_USE_SDL=1   $(pkg-config --cflags glew sdl2  )" ` \
           ` pkg-config libpq libpqxx &>/dev/null && printf -- "-DDCMA_USE_POSTGRES=1 $(pkg-config --cflags libpq libpqxx )" ` \
-          ` pkg-config glew sfml-window sfml-graphics sfml-system &>/dev/null && printf -- "-DDCMA_USE_SFML=1 $(pkg-config --cflags glew sfml-window sfml-graphics sfml-system)" ` \
           `# Check for 'helper' programs that indicate the presence of a package.` \
           ` command -v cgal_create_CMakeLists &>/dev/null && printf -- "-DDCMA_USE_CGAL=1" ` \
           `# Some dependencies don't use pkg-config, so include them and hope for the best.` \

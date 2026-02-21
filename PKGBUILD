@@ -12,22 +12,32 @@ arch=('x86_64' 'i686' 'armv7h')
 license=('unknown')
 
 # Build the dependencies dynamically from the get_packages() script.
+if [ ! -n "$REPOROOT" ] ; then
+    printf 'REPOROOT environment variable not set. It is needed to dynamically generate the package dependency list.\n' 2>&1
+    exit 1
+fi
+if [ ! -d "${REPOROOT}" ] ; then
+    printf 'REPOROOT ("%s") is not accessible. It is needed to dynamically generate the package dependency list.\n' "${REPOROOT}" 2>&1
+    exit 1
+fi
+printf 'Note: REPOROOT set to "%s"\n' "${REPOROOT}"
+
 depends=()
 while IFS= read -r line; do
     depends+=( "$line" )
-done < <( scripts/get_packages.sh --os arch --tier ygor_deps --tier dcma_deps --required-only --newline )
+done < <( "${REPOROOT}"/scripts/get_packages.sh --os arch --tier ygor_deps --tier dcma_deps --required-only --newline )
 depends+=( 'ygor' )
 depends+=( 'explicator' )
 
 optdepends=()
 while IFS= read -r line; do
     optdepends+=( "$line" )
-done < <( scripts/get_packages.sh --os arch --tier ygor_deps --tier dcma_deps --optional-only --newline )
+done < <( "${REPOROOT}"/scripts/get_packages.sh --os arch --tier ygor_deps --tier dcma_deps --optional-only --newline )
 
 makedepends=()
 while IFS= read -r line; do
     makedepends+=( "$line" )
-done < <( scripts/get_packages.sh --os arch --tier build_tools --newline )
+done < <( "${REPOROOT}"/scripts/get_packages.sh --os arch --tier build_tools --newline )
 makedepends+=( 'ygorclustering' )
 
 # conflicts=()

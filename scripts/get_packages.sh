@@ -235,7 +235,7 @@ get_arch_build_tools_required() {
 }
 
 get_arch_build_tools_optional() {
-    printf "sfml2 "  # In the AUR only now.
+    #printf "sfml2 "  # In the AUR only now.
     printf '\n'
 }
 

@@ -211,16 +211,16 @@ elif [[ "${DISTRIBUTION}" =~ .*arch.* ]] ; then
     if [[ $EUID -eq 0 ]] ; then
         useradd -M --shell /bin/bash dummy_build_user || true
         chown -R dummy_build_user .
-        runuser dummy_build_user -c "INSTALL_PREFIX='$INSTALLPREFIX' makepkg --syncdeps --needed --noconfirm"
+        runuser dummy_build_user -c "INSTALL_PREFIX='$INSTALLPREFIX' REPOROOT='$REPOROOT' makepkg --syncdeps --needed --noconfirm"
         if [[ "${ALSOINSTALL}" =~ ^y.* ]] ; then
             pacman --noconfirm -U "$( ls -t ./*pkg.tar* | head -n 1 )"
         fi
         userdel dummy_build_user
 
     else
-        INSTALL_PREFIX="$INSTALLPREFIX" makepkg --syncdeps --needed --noconfirm
+        INSTALL_PREFIX="$INSTALLPREFIX" REPOROOT="${REPOROOT}" makepkg --syncdeps --needed --noconfirm
         if [[ "${ALSOINSTALL}" =~ ^y.* ]] ; then
-            INSTALL_PREFIX="$INSTALLPREFIX" makepkg --syncdeps --needed --noconfirm --install
+            INSTALL_PREFIX="$INSTALLPREFIX" REPOROOT="${REPOROOT}" makepkg --syncdeps --needed --noconfirm --install
         fi
     fi
 
