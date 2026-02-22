@@ -30,6 +30,10 @@ namespace dcma_stb {
     #define STB_IMAGE_STATIC
     #define STB_IMAGE_IMPLEMENTATION
     #include "stbnothings20230607/stb_image.h"
+
+    #define STB_IMAGE_WRITE_STATIC
+    #define STB_IMAGE_WRITE_IMPLEMENTATION
+    #include "stbnothings20230607/stb_image_write.h"
 } // namespace dcma_stb.
 
 
@@ -125,3 +129,45 @@ ReadImageUsingSTB(const std::vector<uint8_t> &blob){
 	return cc;
 }
 
+
+
+bool
+WriteImageUsingSTB(const std::string &fname,
+                   int width,
+                   int height,
+                   int channels,
+                   const unsigned char *pixels){
+    if( (width <= 0)
+    ||  (height <= 0)
+    ||  (channels <= 0)
+    ||  (pixels == nullptr) ){
+        return false;
+    }
+    const int stride = width * channels;
+    const int result = dcma_stb::stbi_write_png(fname.c_str(), width, height, channels, pixels, stride);
+    return (result != 0);
+}
+
+
+bool
+WriteImageUsingSTB(std::vector<uint8_t> &out_blob,
+                   int width,
+                   int height,
+                   int channels,
+                   const unsigned char *pixels){
+    if( (width <= 0)
+    ||  (height <= 0)
+    ||  (channels <= 0)
+    ||  (pixels == nullptr) ){
+        return false;
+    }
+    out_blob.clear();
+    const auto png_write_func = [](void *context, void *data, int size) -> void {
+        auto *vec = reinterpret_cast<std::vector<uint8_t>*>(context);
+        const auto *bytes = reinterpret_cast<const uint8_t*>(data);
+        vec->insert(vec->end(), bytes, bytes + size);
+    };
+    const int stride = width * channels;
+    const int result = dcma_stb::stbi_write_png_to_func(png_write_func, &out_blob, width, height, channels, pixels, stride);
+    return (result != 0) && !out_blob.empty();
+}

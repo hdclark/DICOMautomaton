@@ -91,14 +91,6 @@
 #include "../STB_Shim.h"
 #include "../Surface_Meshes.h"
 
-// Include stb_image_write for PNG screenshot functionality.
-// Wrapped in a namespace to avoid potential multiple definition issues with external dependencies.
-namespace dcma_stb_write {
-    #define STB_IMAGE_WRITE_STATIC
-    #define STB_IMAGE_WRITE_IMPLEMENTATION
-    #include "../stbnothings20230607/stb_image_write.h"
-} // namespace dcma_stb_write.
-
 #include "../Challenges/Clicker.h"
 #include "../Challenges/Encompass.h"
 #include "../Challenges/FreeSki.h"
@@ -3648,6 +3640,12 @@ bool SDL_Viewer(Drover &DICOM_data,
             const bool hotkey_ctrl_q = io.KeyCtrl && ImGui::IsKeyPressed(SDL_SCANCODE_Q);
             const bool hotkey_ctrl_h = io.KeyCtrl && ImGui::IsKeyPressed(SDL_SCANCODE_H);
             const bool hotkey_ctrl_p = io.KeyCtrl && ImGui::IsKeyPressed(SDL_SCANCODE_P);
+
+            // Consume the 'P' keystroke when Ctrl+P is used so other handlers that react to plain 'P'
+            // do not also trigger when Ctrl+P is used for screenshots.
+            if(hotkey_ctrl_p){
+                io.AddKeyEvent(ImGuiKey_P, false);
+            }
 
             const auto implement_file_open = [&]() -> void {
                 loaded_files.emplace_back(std::async(std::launch::async, launch_file_open_dialog, open_file_root));
@@ -9496,21 +9494,21 @@ bool SDL_Viewer(Drover &DICOM_data,
                     // Copy to clipboard as base64-encoded PNG data.
                     // Note: SDL2 primarily supports text clipboard. For image data, we encode as base64.
                     {
-                        std::vector<unsigned char> png_data;
-                        const auto png_write_func = [](void *context, void *data, int size) -> void {
-                            auto *vec = reinterpret_cast<std::vector<unsigned char>*>(context);
-                            const auto *bytes = reinterpret_cast<const unsigned char*>(data);
-                            vec->insert(vec->end(), bytes, bytes + size);
-                        };
-                        const int stride = width * channels;
-                        dcma_stb_write::stbi_write_png_to_func(png_write_func, &png_data, width, height, channels, flipped.data(), stride);
-                        if(!png_data.empty()){
+                        std::vector<uint8_t> png_data;
+                        const bool png_ok = WriteImageUsingSTB(png_data, width, height, channels, flipped.data());
+                        if(png_ok && !png_data.empty()){
                             // Convert bytes to string for Base64 encoding.
                             const std::string png_string(png_data.begin(), png_data.end());
                             const auto b64 = Base64::EncodeFromString(png_string);
                             const std::string clipboard_text = "data:image/png;base64,"_s + b64;
-                            SDL_SetClipboardText(clipboard_text.c_str());
-                            YLOGINFO("Screenshot copied to clipboard as base64 PNG (" << png_data.size() << " bytes)");
+                            const int sdl_res = SDL_SetClipboardText(clipboard_text.c_str());
+                            if(sdl_res == 0){
+                                YLOGINFO("Screenshot copied to clipboard as base64 PNG (" << png_data.size() << " bytes)");
+                            }else{
+                                YLOGWARN("Failed to set screenshot PNG to clipboard: SDL_SetClipboardText error: " << SDL_GetError());
+                            }
+                        }else{
+                            YLOGWARN("Failed to encode screenshot as PNG for clipboard");
                         }
                     }
 
@@ -9578,10 +9576,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 filepath.replace_extension(".png");
                             }
 
-                            // Write the PNG file.
-                            const int stride = width * channels;
-                            const int result = dcma_stb_write::stbi_write_png(filepath.string().c_str(), width, height, channels, flipped_data.data(), stride);
-                            if(result != 0){
+                            // Write the PNG file using STB_Shim wrapper.
+                            const bool ok = WriteImageUsingSTB(filepath.string(), width, height, channels, flipped_data.data());
+                            if(ok){
                                 YLOGINFO("Screenshot saved to file: " << filepath.string());
                             }else{
                                 YLOGWARN("Failed to save screenshot to file: " << filepath.string());
