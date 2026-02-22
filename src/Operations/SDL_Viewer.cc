@@ -3641,12 +3641,6 @@ bool SDL_Viewer(Drover &DICOM_data,
             const bool hotkey_ctrl_h = io.KeyCtrl && ImGui::IsKeyPressed(SDL_SCANCODE_H);
             const bool hotkey_ctrl_p = io.KeyCtrl && ImGui::IsKeyPressed(SDL_SCANCODE_P);
 
-            // Consume the 'P' keystroke when Ctrl+P is used so other handlers that react to plain 'P'
-            // do not also trigger when Ctrl+P is used for screenshots.
-            if(hotkey_ctrl_p){
-                io.AddKeyEvent(ImGuiKey_P, false);
-            }
-
             const auto implement_file_open = [&]() -> void {
                 loaded_files.emplace_back(std::async(std::launch::async, launch_file_open_dialog, open_file_root));
                 return;

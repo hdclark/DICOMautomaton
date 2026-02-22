@@ -132,6 +132,8 @@ ReadImageUsingSTB(const std::vector<uint8_t> &blob){
 
 
 // Helper function to convert planar_image to 8-bit pixel buffer for PNG writing.
+// Note: This function expects pixel values in the [0, 255] range (as from 8-bit images or screenshots).
+// Pixel values are clamped to [0, 255] before conversion to uint8_t.
 static
 std::vector<uint8_t>
 ConvertPlanarImageToPixelBuffer(const planar_image<float, double> &img){
