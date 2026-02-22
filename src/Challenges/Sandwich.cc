@@ -127,12 +127,12 @@ void SandwichGame::DrawIngredient(ImDrawList* draw_list, sw_ingredient_t ingredi
             const auto center_x = pos.x + width / 2.0;
             const auto radius = scaled_width / 2.0;
             draw_list->AddCircleFilled(ImVec2(center_x, pos.y + scaled_height), radius, color, 32);
-            // Add sesame seeds
+            // Add sesame seeds as small circles
             const auto seed_color = ImColor(0.95f, 0.95f, 0.85f, 1.0f);
             for(int i = 0; i < 5; ++i){
                 double seed_x = center_x - radius * 0.6 + (radius * 1.2 * i / 4.0);
                 double seed_y = pos.y + scaled_height - radius * 0.3;
-                draw_list->AddEllipseFilled(ImVec2(seed_x, seed_y), ImVec2(3, 2), seed_color);
+                draw_list->AddCircleFilled(ImVec2(seed_x, seed_y), 2.0f, seed_color);
             }
             break;
         }
@@ -160,7 +160,6 @@ void SandwichGame::DrawIngredient(ImDrawList* draw_list, sw_ingredient_t ingredi
             draw_list->AddRectFilled(p1, p2, color);
             // Swiss has holes
             if(ingredient == sw_ingredient_t::Swiss){
-                const auto hole_color = ImColor(0.0f, 0.0f, 0.0f, 0.0f);
                 draw_list->AddCircleFilled(ImVec2(pos.x + width * 0.3, pos.y + scaled_height * 0.5), 3, ImColor(0.8f, 0.8f, 0.6f, 1.0f));
                 draw_list->AddCircleFilled(ImVec2(pos.x + width * 0.6, pos.y + scaled_height * 0.6), 2, ImColor(0.8f, 0.8f, 0.6f, 1.0f));
             }
@@ -240,11 +239,14 @@ void SandwichGame::DrawIngredient(ImDrawList* draw_list, sw_ingredient_t ingredi
             break;
         }
         case sw_ingredient_t::Egg:{
-            // Draw fried egg
+            // Draw fried egg using rectangles since AddEllipseFilled is not available
             const auto white_color = ImColor(0.98f, 0.98f, 0.95f, 1.0f);
             const auto yolk_color = ImColor(1.0f, 0.85f, 0.2f, 1.0f);
-            draw_list->AddEllipseFilled(ImVec2(pos.x + width / 2.0, pos.y + scaled_height / 2.0), 
-                                         ImVec2(scaled_width * 0.45, scaled_height * 0.45), white_color);
+            // Draw egg white as a rounded rectangle
+            ImVec2 white_p1(pos.x + width * 0.1, pos.y + scaled_height * 0.1);
+            ImVec2 white_p2(pos.x + width * 0.9, pos.y + scaled_height * 0.9);
+            draw_list->AddRectFilled(white_p1, white_p2, white_color, scaled_height * 0.3f);
+            // Draw yolk as a circle
             draw_list->AddCircleFilled(ImVec2(pos.x + width / 2.0, pos.y + scaled_height / 2.0), 
                                         scaled_height * 0.25, yolk_color);
             break;
@@ -292,9 +294,10 @@ void SandwichGame::GenerateOrder(){
     // Cheese (round 2+)
     if(round >= 2){
         std::uniform_int_distribution<int> cheese_dist(0, 2);
-        if(cheese_dist(sw_game.re) != 0){  // 66% chance of cheese
+        const int cheese_roll = cheese_dist(sw_game.re);
+        if(cheese_roll != 0){  // 66% chance of cheese
             sw_order_requirement_t cheese;
-            cheese.ingredient = (cheese_dist(sw_game.re) == 1) ? sw_ingredient_t::Cheddar : sw_ingredient_t::Swiss;
+            cheese.ingredient = (cheese_roll == 1) ? sw_ingredient_t::Cheddar : sw_ingredient_t::Swiss;
             cheese.count = 1;
             cheese.is_special = false;
             sw_game.current_order.push_back(cheese);
@@ -581,11 +584,11 @@ bool SandwichGame::Display(bool &enabled){
 
     const auto win_width  = static_cast<int>( std::ceil(sw_game.box_width) ) + 15;
     const auto win_height = static_cast<int>( std::ceil(sw_game.box_height) ) + 60;
-    auto flags = ImGuiWindowFlags_AlwaysAutoResize
+    auto flags = ImGuiWindowFlags_NoResize
                | ImGuiWindowFlags_NoScrollWithMouse
                | ImGuiWindowFlags_NoNavInputs
                | ImGuiWindowFlags_NoScrollbar ;
-    ImGui::SetNextWindowSize(ImVec2(win_width, win_height), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(win_width, win_height), ImGuiCond_Always);
     ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
     ImGui::Begin("Sandwich Shop", &enabled, flags );
 
@@ -659,6 +662,67 @@ bool SandwichGame::Display(bool &enabled){
             ImVec2 item_pos(curr_pos.x + 50, y_offset);
             window_draw_list->AddText(item_pos, text_color, ss.str().c_str());
             y_offset += 25;
+        }
+        
+        // Distracting animations on the right side (don't obscure the order)
+        {
+            const double anim_time = 5.0 - sw_game.phase_timer;  // Time elapsed since phase start
+            const double distraction_x = curr_pos.x + sw_game.box_width * 0.65;
+            const double distraction_y = content_y + 80;
+            
+            // Bouncing circles
+            for(int i = 0; i < 5; ++i){
+                const double phase_offset = i * 1.2;
+                const double bounce = std::abs(std::sin((anim_time + phase_offset) * 3.0)) * 60.0;
+                const double x = distraction_x + i * 35.0;
+                const double y = distraction_y + 100 - bounce;
+                const float hue = std::fmod((anim_time * 0.3f + i * 0.2f), 1.0f);
+                ImColor color = ImColor::HSV(hue, 0.7f, 0.9f);
+                window_draw_list->AddCircleFilled(ImVec2(x, y), 12.0f, color);
+            }
+            
+            // Spinning rectangle
+            {
+                const double spin_cx = distraction_x + 85;
+                const double spin_cy = distraction_y + 200;
+                const double angle = anim_time * 2.5;
+                const double size = 25.0;
+                ImVec2 corners[4];
+                for(int i = 0; i < 4; ++i){
+                    double corner_angle = angle + i * (3.14159 / 2.0);
+                    corners[i] = ImVec2(spin_cx + std::cos(corner_angle) * size,
+                                        spin_cy + std::sin(corner_angle) * size);
+                }
+                ImColor spin_color = ImColor::HSV(std::fmod(anim_time * 0.5f, 1.0f), 0.6f, 0.8f);
+                window_draw_list->AddQuadFilled(corners[0], corners[1], corners[2], corners[3], spin_color);
+            }
+            
+            // Pulsating circles
+            for(int i = 0; i < 3; ++i){
+                const double pulse_x = distraction_x + 30 + i * 60;
+                const double pulse_y = distraction_y + 300;
+                const double pulse_phase = anim_time * 4.0 + i * 1.0;
+                const double pulse_size = 8.0 + 8.0 * std::sin(pulse_phase);
+                const float alpha = 0.4f + 0.4f * std::sin(pulse_phase);
+                ImColor pulse_color = ImColor(0.8f, 0.5f, 0.9f, alpha);
+                window_draw_list->AddCircleFilled(ImVec2(pulse_x, pulse_y), pulse_size, pulse_color);
+            }
+            
+            // Zigzag line
+            {
+                const double zigzag_x = distraction_x;
+                const double zigzag_y = distraction_y + 380;
+                const int num_segments = 8;
+                ImVec2 prev_point(zigzag_x, zigzag_y);
+                for(int i = 1; i <= num_segments; ++i){
+                    const double t = anim_time * 2.0 + i * 0.5;
+                    const double zig = (i % 2 == 0) ? 15.0 : -15.0;
+                    ImVec2 next_point(zigzag_x + i * 20, zigzag_y + zig * std::sin(t));
+                    ImColor line_color = ImColor::HSV(std::fmod(t * 0.1f, 1.0f), 0.8f, 0.9f);
+                    window_draw_list->AddLine(prev_point, next_point, line_color, 3.0f);
+                    prev_point = next_point;
+                }
+            }
         }
         
         // Timer display
@@ -766,7 +830,7 @@ bool SandwichGame::Display(bool &enabled){
         
         // Timer bar at bottom
         {
-            double timer_pct = sw_game.phase_timer / sw_game.build_time;
+            double timer_pct = std::clamp(sw_game.phase_timer / sw_game.build_time, 0.0, 1.0);
             ImVec2 bar_start(curr_pos.x + 10, curr_pos.y + sw_game.box_height - 25);
             ImVec2 bar_end(curr_pos.x + sw_game.box_width - 10, curr_pos.y + sw_game.box_height - 10);
             
