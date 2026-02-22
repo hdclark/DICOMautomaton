@@ -73,8 +73,11 @@ git clone --depth=1 'https://aur.archlinux.org/trizen.git'
 #trizen --nocolors --quiet --noconfirm -S example-git
 
 
-# Use the centralized package list script (copied to /dcma_scripts by Dockerfile).
-GET_PACKAGES="/dcma_scripts/get_packages.sh"
+# Use the centralized package list script.
+GET_PACKAGES="/dcma/scripts/get_packages.sh"
+if [ ! -f "${GET_PACKAGES}" ] ; then
+    GET_PACKAGES="/dcma_scripts/get_packages.sh"
+fi
 
 # Get packages from the centralized script.
 PKGS_BUILD_TOOLS="$("${GET_PACKAGES}" --os arch --tier build_tools)"
