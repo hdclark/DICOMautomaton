@@ -158,10 +158,11 @@ void SandwichGame::DrawIngredient(ImDrawList* draw_list, sw_ingredient_t ingredi
         case sw_ingredient_t::Swiss:{
             // Draw cheese slice
             draw_list->AddRectFilled(p1, p2, color);
-            // Swiss has holes
+            // Swiss has holes (darker color to show as holes)
             if(ingredient == sw_ingredient_t::Swiss){
-                draw_list->AddCircleFilled(ImVec2(pos.x + width * 0.3, pos.y + scaled_height * 0.5), 3, ImColor(0.8f, 0.8f, 0.6f, 1.0f));
-                draw_list->AddCircleFilled(ImVec2(pos.x + width * 0.6, pos.y + scaled_height * 0.6), 2, ImColor(0.8f, 0.8f, 0.6f, 1.0f));
+                const auto hole_color = ImColor(0.7f, 0.7f, 0.5f, 1.0f);  // Slightly darker than cheese
+                draw_list->AddCircleFilled(ImVec2(pos.x + width * 0.3, pos.y + scaled_height * 0.5), 3, hole_color);
+                draw_list->AddCircleFilled(ImVec2(pos.x + width * 0.6, pos.y + scaled_height * 0.6), 2, hole_color);
             }
             break;
         }
