@@ -9478,7 +9478,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 if( (0 < width) && (0 < height) ){
                     // Read pixels from framebuffer (RGBA format).
                     const int channels = 4;
-                    std::vector<unsigned char> pixels(static_cast<size_t>(width * height * channels), 0);
+                    std::vector<unsigned char> pixels(static_cast<size_t>(width * height * channels));
                     glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
                     CHECK_FOR_GL_ERRORS();
 
@@ -9533,11 +9533,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                             img.init_buffer(rows, cols, chns);
                             img.init_spatial(pxl_dx, pxl_dy, pxl_dz, anchor, offset);
                             img.init_orientation(row_unit, col_unit);
+                            // Copy pixels using pointer iteration (matches STB_Shim.cc pattern).
+                            const unsigned char *l_pixels = flipped.data();
                             for(int64_t row = 0; row < rows; ++row){
                                 for(int64_t col = 0; col < cols; ++col){
                                     for(int64_t chn = 0; chn < chns; ++chn){
-                                        const size_t idx = static_cast<size_t>((row * cols + col) * chns + chn);
-                                        img.reference(row, col, chn) = static_cast<float>(flipped[idx]);
+                                        img.reference(row, col, chn) = static_cast<float>(*l_pixels);
+                                        ++l_pixels;
                                     }
                                 }
                             }
@@ -9551,7 +9553,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                     // Query user for filename and write PNG file.
                     {
-                        const auto worker = [flipped, width, height, channels](){
+                        // Move flipped data into lambda to avoid extra copy (Drover save already completed above).
+                        auto worker = [flipped_data = std::move(flipped), width, height, channels](){
                             // Prompt for filename.
                             std::optional<select_filename> selector_opt;
                             selector_opt.emplace("Save screenshot as PNG"_s,
@@ -9577,14 +9580,14 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                             // Write the PNG file.
                             const int stride = width * channels;
-                            const int result = dcma_stb_write::stbi_write_png(filepath.string().c_str(), width, height, channels, flipped.data(), stride);
+                            const int result = dcma_stb_write::stbi_write_png(filepath.string().c_str(), width, height, channels, flipped_data.data(), stride);
                             if(result != 0){
                                 YLOGINFO("Screenshot saved to file: " << filepath.string());
                             }else{
                                 YLOGWARN("Failed to save screenshot to file: " << filepath.string());
                             }
                         };
-                        wq.submit_task(worker);
+                        wq.submit_task(std::move(worker));
                     }
                 }else{
                     YLOGWARN("Screenshot failed: invalid viewport dimensions");
