@@ -15,20 +15,15 @@ planar_image_collection<float, double>
 ReadImageUsingSTB(const std::vector<uint8_t> &blob);
 
 
-// Write image data to a PNG file. Returns true on success, false on failure.
+// Write a planar_image to a PNG file. Returns true on success, false on failure.
+// The image pixel values are clamped to [0, 255] and converted to 8-bit unsigned.
 bool
-WriteImageUsingSTB(const std::string &fname,
-                   int width,
-                   int height,
-                   int channels,
-                   const unsigned char *pixels);
+WriteImageUsingSTB(const planar_image<float, double> &img,
+                   const std::string &fname);
 
 
-// Write image data to a PNG blob in memory. Returns true on success, false on failure.
+// Write a planar_image to a PNG blob in memory. Returns true on success, false on failure.
+// The image pixel values are clamped to [0, 255] and converted to 8-bit unsigned.
 bool
-WriteImageUsingSTB(std::vector<uint8_t> &out_blob,
-                   int width,
-                   int height,
-                   int channels,
-                   const unsigned char *pixels);
-
+WriteImageUsingSTB(const planar_image<float, double> &img,
+                   std::vector<uint8_t> &out_blob);

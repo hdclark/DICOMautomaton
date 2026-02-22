@@ -8763,7 +8763,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     }else if( ImGui::IsKeyPressed( SDL_SCANCODE_N)
                           ||  ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_RightArrow)) ){
                         scroll_images = std::clamp<int>((scroll_images + N_images + 1) % N_images, 0, N_images - 1);
-                    }else if( ImGui::IsKeyPressed( SDL_SCANCODE_P)
+                    }else if( (!io.KeyCtrl && ImGui::IsKeyPressed( SDL_SCANCODE_P))
                           ||  ImGui::IsKeyPressed( ImGui::GetKeyIndex(ImGuiKey_LeftArrow)) ){
                         scroll_images = std::clamp<int>((scroll_images + N_images - 1) % N_images, 0, N_images - 1);
 
@@ -9480,22 +9480,40 @@ bool SDL_Viewer(Drover &DICOM_data,
                     glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
                     CHECK_FOR_GL_ERRORS();
 
-                    // Flip the image vertically (OpenGL has origin at bottom-left, images have origin at top-left).
-                    const size_t row_size = static_cast<size_t>(width * channels);
-                    std::vector<unsigned char> flipped(pixels.size());
-                    for(int row = 0; row < height; ++row){
-                        const size_t src_offset = static_cast<size_t>(row) * row_size;
-                        const size_t dst_offset = static_cast<size_t>(height - 1 - row) * row_size;
-                        std::copy(pixels.begin() + static_cast<std::ptrdiff_t>(src_offset),
-                                  pixels.begin() + static_cast<std::ptrdiff_t>(src_offset + row_size),
-                                  flipped.begin() + static_cast<std::ptrdiff_t>(dst_offset));
+                    // Create a planar_image from the framebuffer data.
+                    // Note: OpenGL has origin at bottom-left, so we flip while copying.
+                    planar_image<float, double> screenshot_img;
+                    const int64_t rows = static_cast<int64_t>(height);
+                    const int64_t cols = static_cast<int64_t>(width);
+                    const int64_t chns = static_cast<int64_t>(channels);
+                    const double pxl_dx = 1.0;
+                    const double pxl_dy = 1.0;
+                    const double pxl_dz = 1.0;
+                    const vec3<double> anchor(0.0, 0.0, 0.0);
+                    const vec3<double> offset(0.0, 0.0, 0.0);
+                    const vec3<double> row_unit(1.0, 0.0, 0.0);
+                    const vec3<double> col_unit(0.0, 1.0, 0.0);
+                    screenshot_img.init_buffer(rows, cols, chns);
+                    screenshot_img.init_spatial(pxl_dx, pxl_dy, pxl_dz, anchor, offset);
+                    screenshot_img.init_orientation(row_unit, col_unit);
+                    // Copy pixels with vertical flip (OpenGL origin is bottom-left).
+                    for(int64_t row = 0; row < rows; ++row){
+                        const int64_t src_row = rows - 1 - row; // Flip vertically.
+                        for(int64_t col = 0; col < cols; ++col){
+                            for(int64_t chn = 0; chn < chns; ++chn){
+                                const size_t src_idx = static_cast<size_t>((src_row * cols + col) * chns + chn);
+                                screenshot_img.reference(row, col, chn) = static_cast<float>(pixels[src_idx]);
+                            }
+                        }
                     }
+                    screenshot_img.metadata["Modality"] = "screenshot";
+                    screenshot_img.metadata["Description"] = "SDL_Viewer screenshot";
 
                     // Copy to clipboard as base64-encoded PNG data.
                     // Note: SDL2 primarily supports text clipboard. For image data, we encode as base64.
                     {
                         std::vector<uint8_t> png_data;
-                        const bool png_ok = WriteImageUsingSTB(png_data, width, height, channels, flipped.data());
+                        const bool png_ok = WriteImageUsingSTB(screenshot_img, png_data);
                         if(png_ok && !png_data.empty()){
                             // Convert bytes to string for Base64 encoding.
                             const std::string png_string(png_data.begin(), png_data.end());
@@ -9517,32 +9535,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
                         if(drover_lock.owns_lock()){
                             DICOM_data.image_data.push_back(std::make_unique<Image_Array>());
-                            auto &img = DICOM_data.image_data.back()->imagecoll.images.emplace_back();
-                            const int64_t rows = static_cast<int64_t>(height);
-                            const int64_t cols = static_cast<int64_t>(width);
-                            const int64_t chns = static_cast<int64_t>(channels);
-                            const double pxl_dx = 1.0;
-                            const double pxl_dy = 1.0;
-                            const double pxl_dz = 1.0;
-                            const vec3<double> anchor(0.0, 0.0, 0.0);
-                            const vec3<double> offset(0.0, 0.0, 0.0);
-                            const vec3<double> row_unit(1.0, 0.0, 0.0);
-                            const vec3<double> col_unit(0.0, 1.0, 0.0);
-                            img.init_buffer(rows, cols, chns);
-                            img.init_spatial(pxl_dx, pxl_dy, pxl_dz, anchor, offset);
-                            img.init_orientation(row_unit, col_unit);
-                            // Copy pixels using pointer iteration (matches STB_Shim.cc pattern).
-                            const unsigned char *l_pixels = flipped.data();
-                            for(int64_t row = 0; row < rows; ++row){
-                                for(int64_t col = 0; col < cols; ++col){
-                                    for(int64_t chn = 0; chn < chns; ++chn){
-                                        img.reference(row, col, chn) = static_cast<float>(*l_pixels);
-                                        ++l_pixels;
-                                    }
-                                }
-                            }
-                            img.metadata["Modality"] = "screenshot";
-                            img.metadata["Description"] = "SDL_Viewer screenshot";
+                            DICOM_data.image_data.back()->imagecoll.images.emplace_back(screenshot_img);
                             YLOGINFO("Screenshot saved to Drover as new Image_Array");
                         }else{
                             YLOGWARN("Unable to acquire drover lock to save screenshot");
@@ -9551,8 +9544,8 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                     // Query user for filename and write PNG file.
                     {
-                        // Move flipped data into lambda to avoid extra copy (Drover save already completed above).
-                        auto worker = [flipped_data = std::move(flipped), width, height, channels](){
+                        // Move screenshot_img into lambda to avoid extra copy (Drover save already completed above).
+                        auto worker = [screenshot_img_copy = std::move(screenshot_img)](){
                             // Prompt for filename.
                             std::optional<select_filename> selector_opt;
                             selector_opt.emplace("Save screenshot as PNG"_s,
@@ -9577,7 +9570,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                             }
 
                             // Write the PNG file using STB_Shim wrapper.
-                            const bool ok = WriteImageUsingSTB(filepath.string(), width, height, channels, flipped_data.data());
+                            const bool ok = WriteImageUsingSTB(screenshot_img_copy, filepath.string());
                             if(ok){
                                 YLOGINFO("Screenshot saved to file: " << filepath.string());
                             }else{

@@ -2,6 +2,7 @@
 //
 // This program loads many common 8-bit image files (jpg, png, bmp, etc.) using the stb/nothings image loader.
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <exception>
@@ -130,37 +131,63 @@ ReadImageUsingSTB(const std::vector<uint8_t> &blob){
 }
 
 
+// Helper function to convert planar_image to 8-bit pixel buffer for PNG writing.
+static
+std::vector<uint8_t>
+ConvertPlanarImageToPixelBuffer(const planar_image<float, double> &img){
+    const int64_t rows = img.rows;
+    const int64_t cols = img.columns;
+    const int64_t chns = img.channels;
+    std::vector<uint8_t> pixels;
+    pixels.reserve(static_cast<size_t>(rows * cols * chns));
+    
+    for(int64_t row = 0; row < rows; ++row){
+        for(int64_t col = 0; col < cols; ++col){
+            for(int64_t chn = 0; chn < chns; ++chn){
+                const float val = img.value(row, col, chn);
+                // Clamp to [0, 255] and convert to 8-bit.
+                const uint8_t byte_val = static_cast<uint8_t>(std::clamp(val, 0.0f, 255.0f));
+                pixels.push_back(byte_val);
+            }
+        }
+    }
+    return pixels;
+}
+
 
 bool
-WriteImageUsingSTB(const std::string &fname,
-                   int width,
-                   int height,
-                   int channels,
-                   const unsigned char *pixels){
-    if( (width <= 0)
-    ||  (height <= 0)
-    ||  (channels <= 0)
-    ||  (pixels == nullptr) ){
+WriteImageUsingSTB(const planar_image<float, double> &img,
+                   const std::string &fname){
+    if( (img.rows <= 0)
+    ||  (img.columns <= 0)
+    ||  (img.channels <= 0) ){
         return false;
     }
+    
+    const auto pixels = ConvertPlanarImageToPixelBuffer(img);
+    const int width = static_cast<int>(img.columns);
+    const int height = static_cast<int>(img.rows);
+    const int channels = static_cast<int>(img.channels);
     const int stride = width * channels;
-    const int result = dcma_stb::stbi_write_png(fname.c_str(), width, height, channels, pixels, stride);
+    const int result = dcma_stb::stbi_write_png(fname.c_str(), width, height, channels, pixels.data(), stride);
     return (result != 0);
 }
 
 
 bool
-WriteImageUsingSTB(std::vector<uint8_t> &out_blob,
-                   int width,
-                   int height,
-                   int channels,
-                   const unsigned char *pixels){
-    if( (width <= 0)
-    ||  (height <= 0)
-    ||  (channels <= 0)
-    ||  (pixels == nullptr) ){
+WriteImageUsingSTB(const planar_image<float, double> &img,
+                   std::vector<uint8_t> &out_blob){
+    if( (img.rows <= 0)
+    ||  (img.columns <= 0)
+    ||  (img.channels <= 0) ){
         return false;
     }
+    
+    const auto pixels = ConvertPlanarImageToPixelBuffer(img);
+    const int width = static_cast<int>(img.columns);
+    const int height = static_cast<int>(img.rows);
+    const int channels = static_cast<int>(img.channels);
+    
     out_blob.clear();
     const auto png_write_func = [](void *context, void *data, int size) -> void {
         auto *vec = reinterpret_cast<std::vector<uint8_t>*>(context);
@@ -168,6 +195,6 @@ WriteImageUsingSTB(std::vector<uint8_t> &out_blob,
         vec->insert(vec->end(), bytes, bytes + size);
     };
     const int stride = width * channels;
-    const int result = dcma_stb::stbi_write_png_to_func(png_write_func, &out_blob, width, height, channels, pixels, stride);
+    const int result = dcma_stb::stbi_write_png_to_func(png_write_func, &out_blob, width, height, channels, pixels.data(), stride);
     return (result != 0) && !out_blob.empty();
 }
