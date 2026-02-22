@@ -266,13 +266,15 @@ bool FindFiles(Drover& DICOM_data,
 
     // Helpers for file metadata.
     //
-    // Note: On POSIX (Linux), std::filesystem::file_time_type::clock and std::chrono::system_clock
-    //       share the same epoch (1970-01-01T00:00:00Z), allowing direct duration arithmetic.
+    // Note: In C++17 the epoch of std::filesystem::file_time_type::clock is unspecified
+    //       and may not match std::chrono::system_clock, so we translate between the
+    //       clocks rather than assuming a shared epoch.
     const auto get_mod_time_t = [](const std::filesystem::path& p) -> std::time_t {
-        auto ft  = std::filesystem::last_write_time(p);
-        auto dur = ft.time_since_epoch();
-        auto sec = std::chrono::duration_cast<std::chrono::seconds>(dur);
-        return static_cast<std::time_t>(sec.count());
+        auto ft = std::filesystem::last_write_time(p);
+        using file_clock = std::filesystem::file_time_type::clock;
+        auto sctp = std::chrono::time_point_cast<std::chrono::system_clock::duration>(
+            ft - file_clock::now() + std::chrono::system_clock::now());
+        return std::chrono::system_clock::to_time_t(sctp);
     };
 
     const auto format_time_t = [](std::time_t t) -> std::string {
