@@ -91,6 +91,14 @@
 #include "../STB_Shim.h"
 #include "../Surface_Meshes.h"
 
+// Include stb_image_write for PNG screenshot functionality.
+// Wrapped in a namespace to avoid potential multiple definition issues with external dependencies.
+namespace dcma_stb_write {
+    #define STB_IMAGE_WRITE_STATIC
+    #define STB_IMAGE_WRITE_IMPLEMENTATION
+    #include "../stbnothings20230607/stb_image_write.h"
+} // namespace dcma_stb_write.
+
 #include "../Challenges/Clicker.h"
 #include "../Challenges/Encompass.h"
 #include "../Challenges/FreeSki.h"
@@ -1054,6 +1062,10 @@ bool SDL_Viewer(Drover &DICOM_data,
     // Documentation state.
     std::string docs_str;
     std::map<std::string, std::string> docs_ops; // op_name, text documentation.
+
+    // Screenshot state.
+    // When set, indicates that a screenshot should be taken at or after the specified time.
+    std::optional<std::chrono::time_point<std::chrono::steady_clock>> screenshot_trigger_time;
 
     // Plot viewer state.
     std::map<int64_t, bool> lsamps_visible;
@@ -3626,13 +3638,16 @@ bool SDL_Viewer(Drover &DICOM_data,
                                             &register_guide_textures,
                                             &reset_guide,
 
-                                            &img_features ](void) -> bool {
+                                            &img_features,
+
+                                            &screenshot_trigger_time ](void) -> bool {
 
             // Check for hot keys.
             ImGuiIO &io = ImGui::GetIO();
             const bool hotkey_ctrl_o = io.KeyCtrl && ImGui::IsKeyPressed(SDL_SCANCODE_O);
             const bool hotkey_ctrl_q = io.KeyCtrl && ImGui::IsKeyPressed(SDL_SCANCODE_Q);
             const bool hotkey_ctrl_h = io.KeyCtrl && ImGui::IsKeyPressed(SDL_SCANCODE_H);
+            const bool hotkey_ctrl_p = io.KeyCtrl && ImGui::IsKeyPressed(SDL_SCANCODE_P);
 
             const auto implement_file_open = [&]() -> void {
                 loaded_files.emplace_back(std::async(std::launch::async, launch_file_open_dialog, open_file_root));
@@ -3642,10 +3657,21 @@ bool SDL_Viewer(Drover &DICOM_data,
                 view_toggles.set_about_popup = true;
                 return;
             };
+            const auto implement_screenshot_immediate = [&]() -> void {
+                // Trigger screenshot capture immediately.
+                screenshot_trigger_time = std::chrono::steady_clock::now();
+                return;
+            };
+            const auto implement_screenshot_delayed = [&]() -> void {
+                // Trigger screenshot capture after 3 second delay.
+                screenshot_trigger_time = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+                return;
+            };
 
             if( hotkey_ctrl_o ) implement_file_open();
             if( hotkey_ctrl_q ) return false;
             if( hotkey_ctrl_h ) implement_show_help();
+            if( hotkey_ctrl_p ) implement_screenshot_immediate();
 
             if(ImGui::BeginMainMenuBar()){
                 if(ImGui::BeginMenu("File")){
@@ -3655,6 +3681,15 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if( ImGui::IsItemHovered()){
                         ImGui::BeginTooltip();
                         ImGui::Text("Note: your system might support drag-and-drop for files and directories.");
+                        ImGui::EndTooltip();
+                    }
+                    ImGui::Separator();
+                    if( ImGui::MenuItem("Screenshot (3s delay)") ){
+                        implement_screenshot_delayed();
+                    }
+                    if( ImGui::IsItemHovered()){
+                        ImGui::BeginTooltip();
+                        ImGui::Text("Take a screenshot after 3 seconds. Use ctrl+p for immediate capture.");
                         ImGui::EndTooltip();
                     }
                     ImGui::Separator();
@@ -9426,6 +9461,136 @@ bool SDL_Viewer(Drover &DICOM_data,
         // Render the ImGui components and swap OpenGL buffers.
         ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        // Screenshot capture logic.
+        // Check if a screenshot has been triggered and the delay has elapsed.
+        if( screenshot_trigger_time.has_value() ){
+            const auto t_now = std::chrono::steady_clock::now();
+            if(t_now >= screenshot_trigger_time.value()){
+                screenshot_trigger_time.reset();
+
+                // Get viewport dimensions.
+                GLint viewport[4];
+                glGetIntegerv(GL_VIEWPORT, viewport);
+                const int width = viewport[2];
+                const int height = viewport[3];
+
+                if( (0 < width) && (0 < height) ){
+                    // Read pixels from framebuffer (RGBA format).
+                    const int channels = 4;
+                    std::vector<unsigned char> pixels(static_cast<size_t>(width * height * channels), 0);
+                    glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+                    CHECK_FOR_GL_ERRORS();
+
+                    // Flip the image vertically (OpenGL has origin at bottom-left, images have origin at top-left).
+                    const size_t row_size = static_cast<size_t>(width * channels);
+                    std::vector<unsigned char> flipped(pixels.size());
+                    for(int row = 0; row < height; ++row){
+                        const size_t src_offset = static_cast<size_t>(row) * row_size;
+                        const size_t dst_offset = static_cast<size_t>(height - 1 - row) * row_size;
+                        std::copy(pixels.begin() + static_cast<std::ptrdiff_t>(src_offset),
+                                  pixels.begin() + static_cast<std::ptrdiff_t>(src_offset + row_size),
+                                  flipped.begin() + static_cast<std::ptrdiff_t>(dst_offset));
+                    }
+
+                    // Copy to clipboard as base64-encoded PNG data.
+                    // Note: SDL2 primarily supports text clipboard. For image data, we encode as base64.
+                    {
+                        std::vector<unsigned char> png_data;
+                        const auto png_write_func = [](void *context, void *data, int size) -> void {
+                            auto *vec = reinterpret_cast<std::vector<unsigned char>*>(context);
+                            const auto *bytes = reinterpret_cast<const unsigned char*>(data);
+                            vec->insert(vec->end(), bytes, bytes + size);
+                        };
+                        const int stride = width * channels;
+                        dcma_stb_write::stbi_write_png_to_func(png_write_func, &png_data, width, height, channels, flipped.data(), stride);
+                        if(!png_data.empty()){
+                            // Convert bytes to string for Base64 encoding.
+                            const std::string png_string(png_data.begin(), png_data.end());
+                            const auto b64 = Base64::EncodeFromString(png_string);
+                            const std::string clipboard_text = "data:image/png;base64,"_s + b64;
+                            SDL_SetClipboardText(clipboard_text.c_str());
+                            YLOGINFO("Screenshot copied to clipboard as base64 PNG (" << png_data.size() << " bytes)");
+                        }
+                    }
+
+                    // Save in Drover object as a new Image_Array.
+                    {
+                        std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
+                        if(drover_lock.owns_lock()){
+                            DICOM_data.image_data.push_back(std::make_unique<Image_Array>());
+                            auto &img = DICOM_data.image_data.back()->imagecoll.images.emplace_back();
+                            const int64_t rows = static_cast<int64_t>(height);
+                            const int64_t cols = static_cast<int64_t>(width);
+                            const int64_t chns = static_cast<int64_t>(channels);
+                            const double pxl_dx = 1.0;
+                            const double pxl_dy = 1.0;
+                            const double pxl_dz = 1.0;
+                            const vec3<double> anchor(0.0, 0.0, 0.0);
+                            const vec3<double> offset(0.0, 0.0, 0.0);
+                            const vec3<double> row_unit(1.0, 0.0, 0.0);
+                            const vec3<double> col_unit(0.0, 1.0, 0.0);
+                            img.init_buffer(rows, cols, chns);
+                            img.init_spatial(pxl_dx, pxl_dy, pxl_dz, anchor, offset);
+                            img.init_orientation(row_unit, col_unit);
+                            for(int64_t row = 0; row < rows; ++row){
+                                for(int64_t col = 0; col < cols; ++col){
+                                    for(int64_t chn = 0; chn < chns; ++chn){
+                                        const size_t idx = static_cast<size_t>((row * cols + col) * chns + chn);
+                                        img.reference(row, col, chn) = static_cast<float>(flipped[idx]);
+                                    }
+                                }
+                            }
+                            img.metadata["Modality"] = "screenshot";
+                            img.metadata["Description"] = "SDL_Viewer screenshot";
+                            YLOGINFO("Screenshot saved to Drover as new Image_Array");
+                        }else{
+                            YLOGWARN("Unable to acquire drover lock to save screenshot");
+                        }
+                    }
+
+                    // Query user for filename and write PNG file.
+                    {
+                        const auto worker = [flipped, width, height, channels](){
+                            // Prompt for filename.
+                            std::optional<select_filename> selector_opt;
+                            selector_opt.emplace("Save screenshot as PNG"_s,
+                                                 std::filesystem::path(),
+                                                 std::vector<std::string>{ "PNG Files"_s, "*.png *.PNG"_s,
+                                                                           "All Files"_s, "*"_s });
+
+                            // Wait for the user to provide input.
+                            const auto filename = selector_opt.value().get_selection();
+                            selector_opt.reset();
+
+                            // If no filename provided, skip saving.
+                            if(filename.empty()){
+                                YLOGINFO("Screenshot file save cancelled (no filename provided)");
+                                return;
+                            }
+
+                            // Ensure .png extension.
+                            std::filesystem::path filepath(filename);
+                            if(filepath.extension() != ".png" && filepath.extension() != ".PNG"){
+                                filepath.replace_extension(".png");
+                            }
+
+                            // Write the PNG file.
+                            const int stride = width * channels;
+                            const int result = dcma_stb_write::stbi_write_png(filepath.string().c_str(), width, height, channels, flipped.data(), stride);
+                            if(result != 0){
+                                YLOGINFO("Screenshot saved to file: " << filepath.string());
+                            }else{
+                                YLOGWARN("Failed to save screenshot to file: " << filepath.string());
+                            }
+                        };
+                        wq.submit_task(worker);
+                    }
+                }else{
+                    YLOGWARN("Screenshot failed: invalid viewport dimensions");
+                }
+            }
+        }
 
         SDL_GL_SwapWindow(window);
     }
