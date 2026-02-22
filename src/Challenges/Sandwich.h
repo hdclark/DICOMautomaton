@@ -139,8 +139,7 @@ class SandwichGame {
     double GetIngredientHeight(sw_ingredient_t ingredient);
     void DrawIngredient(ImDrawList* draw_list, sw_ingredient_t ingredient, 
                         ImVec2 pos, double width, double height, double scale);
-    void DrawSandwich(ImDrawList* draw_list, ImVec2 base_pos);
+    void DrawSandwich(ImDrawList* draw_list, ImVec2 base_pos, double dt);
     void StartNextRound();
     void StartBuildPhase();
 };
-    

@@ -541,7 +541,7 @@ void SandwichGame::StartBuildPhase(){
     sw_game.sandwich_layers.clear();
 }
 
-void SandwichGame::DrawSandwich(ImDrawList* draw_list, ImVec2 base_pos){
+void SandwichGame::DrawSandwich(ImDrawList* draw_list, ImVec2 base_pos, double dt){
     const double sandwich_width = 150.0;
     
     // Update animations
@@ -550,14 +550,15 @@ void SandwichGame::DrawSandwich(ImDrawList* draw_list, ImVec2 base_pos){
             // Animate y position
             const double anim_speed = 200.0;
             if(layer.y_offset > layer.target_y){
-                layer.y_offset -= anim_speed * 0.016; // Approximate 60fps
+                layer.y_offset -= anim_speed * dt;
                 if(layer.y_offset < layer.target_y){
                     layer.y_offset = layer.target_y;
                 }
             }
             // Animate scale
+            const double scale_speed = 3.0;  // Scale units per second
             if(layer.scale < 1.0){
-                layer.scale += 0.05;
+                layer.scale += scale_speed * dt;
                 if(layer.scale > 1.0) layer.scale = 1.0;
             }
             // Check if animation complete
@@ -761,7 +762,7 @@ bool SandwichGame::Display(bool &enabled){
         // Draw sandwich preview on the right
         ImVec2 sandwich_base(curr_pos.x + split_x + (sw_game.box_width - split_x) / 2.0, 
                              curr_pos.y + sw_game.box_height - 60);
-        DrawSandwich(window_draw_list, sandwich_base);
+        DrawSandwich(window_draw_list, sandwich_base, dt);
         
         // Timer bar at bottom
         {
@@ -809,14 +810,12 @@ bool SandwichGame::Display(bool &enabled){
         items_to_show = std::min(items_to_show, static_cast<int>(sw_game.score_feedback.size()));
         
         double y_offset = content_y + 40;
-        int running_score = 0;
         
         for(int i = 0; i < items_to_show; ++i){
             const auto& feedback = sw_game.score_feedback[i];
             
             // Calculate animation for this item
             double item_age = sw_game.score_reveal_timer - (i * reveal_delay);
-            double scale = std::min(1.0, item_age * 3.0);  // Quick scale-in
             float alpha = std::min(1.0f, static_cast<float>(item_age * 2.0));
             
             // Draw feedback text
@@ -830,15 +829,11 @@ bool SandwichGame::Display(bool &enabled){
             
             ImVec2 text_pos(curr_pos.x + 30, y_offset);
             
-            // Apply scale animation (text gets bigger then settles)
-            float font_scale = 1.0f + std::max(0.0f, 0.3f - static_cast<float>(item_age));
-            
             ImColor color = feedback.color;
             color.Value.w = alpha;
             
             window_draw_list->AddText(text_pos, color, ss.str().c_str());
             
-            running_score += feedback.points;
             y_offset += 28;
         }
         
@@ -866,7 +861,7 @@ bool SandwichGame::Display(bool &enabled){
         
         // Draw the completed sandwich on the right
         ImVec2 sandwich_pos(curr_pos.x + sw_game.box_width * 0.75, curr_pos.y + sw_game.box_height - 100);
-        DrawSandwich(window_draw_list, sandwich_pos);
+        DrawSandwich(window_draw_list, sandwich_pos, dt);
         
     } else if(sw_game.phase == sw_game_phase_t::GameOver){
         // This phase isn't really used in this version, but kept for potential future use
