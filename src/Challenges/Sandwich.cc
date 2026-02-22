@@ -688,8 +688,9 @@ bool SandwichGame::Display(bool &enabled){
                 const double angle = anim_time * 2.5;
                 const double size = 25.0;
                 ImVec2 corners[4];
+                const double pi = std::acos(-1.0);
                 for(int i = 0; i < 4; ++i){
-                    double corner_angle = angle + i * (3.14159 / 2.0);
+                    double corner_angle = angle + i * (pi / 2.0);
                     corners[i] = ImVec2(spin_cx + std::cos(corner_angle) * size,
                                         spin_cy + std::sin(corner_angle) * size);
                 }
@@ -830,7 +831,9 @@ bool SandwichGame::Display(bool &enabled){
         
         // Timer bar at bottom
         {
-            double timer_pct = std::clamp(sw_game.phase_timer / sw_game.build_time, 0.0, 1.0);
+            double timer_pct = (sw_game.build_time > 0.0) 
+                             ? std::clamp(sw_game.phase_timer / sw_game.build_time, 0.0, 1.0) 
+                             : 0.0;
             ImVec2 bar_start(curr_pos.x + 10, curr_pos.y + sw_game.box_height - 25);
             ImVec2 bar_end(curr_pos.x + sw_game.box_width - 10, curr_pos.y + sw_game.box_height - 10);
             
