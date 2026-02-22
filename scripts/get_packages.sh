@@ -215,6 +215,7 @@ get_alpine_appimage_runtime_required() {
     printf "wget "
     printf "git "
     printf "ca-certificates "
+    printf "rsync "
     printf '\n'
 }
 
@@ -438,6 +439,7 @@ get_arch_sycl_appimage_runtime_required() {
     printf "wget "
     printf "git "
     printf "ca-certificates "
+    printf "rsync "
     printf '\n'
 }
 
@@ -566,6 +568,7 @@ get_debian_buster_appimage_runtime_required() {
     printf "libsm-dev "
     printf "libopengl0 "
     printf "g++ "
+    printf "rsync "
     printf '\n'
 }
 
@@ -680,6 +683,7 @@ get_debian_bookworm_appimage_runtime_required() {
     printf "libsm-dev "
     printf "libopengl0 "
     printf "g++ "
+    printf "rsync "
     printf '\n'
 }
 
@@ -795,6 +799,7 @@ get_debian_bullseye_appimage_runtime_required() {
     printf "libsm-dev "
     printf "libopengl0 "
     printf "g++ "
+    printf "rsync "
     printf '\n'
 }
 
@@ -901,6 +906,7 @@ get_debian_stretch_appimage_runtime_required() {
     printf "wget "
     printf "git "
     printf "ca-certificates "
+    printf "rsync "
     printf '\n'
 }
 
@@ -959,6 +965,7 @@ get_fedora_appimage_runtime_required() {
     printf 'libSM '
     printf 'libgcc '
     printf 'libglvnd-opengl '
+    printf 'libwayland-client '
     printf 'libstdc++ '
     printf '\n'
 }
@@ -1245,6 +1252,7 @@ get_ubuntu_appimage_runtime_required() {
     printf "libsm-dev "
     printf "libopengl0 "
     printf "g++ "
+    printf "rsync "
     printf '\n'
 }
 
