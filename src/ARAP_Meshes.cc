@@ -79,6 +79,12 @@ std::map<std::pair<uint64_t, uint64_t>, double> ComputeCotangentWeights(
             const uint64_t i1 = face[1];
             const uint64_t i2 = face[2];
 
+            // Validate indices before accessing vertices.
+            const size_t N = mesh.vertices.size();
+            if(i0 >= N || i1 >= N || i2 >= N){
+                continue; // Skip faces with invalid vertex indices.
+            }
+
             const vec3<double> &p0 = mesh.vertices.at(i0);
             const vec3<double> &p1 = mesh.vertices.at(i1);
             const vec3<double> &p2 = mesh.vertices.at(i2);
@@ -279,13 +285,34 @@ fv_surface_mesh<double, uint64_t> DeformMeshesARAP(
     }
 
     // Add soft constraint contributions to the matrix.
+    // Validate stiffness values and compute weighted-average targets for multiple constraints.
     std::map<uint64_t, double> soft_constraint_stiffness;
     std::map<uint64_t, vec3<double>> soft_constraint_target;
     for(const auto &c : params.soft_constraints){
         if(c.vertex_index < N && vertex_to_row[c.vertex_index] >= 0){
-            soft_constraint_stiffness[c.vertex_index] += c.stiffness;
-            // Weighted average of targets if multiple soft constraints on same vertex.
-            soft_constraint_target[c.vertex_index] = c.target_position;
+            // Validate stiffness (must be non-negative to maintain SPD matrix).
+            if(c.stiffness < 0.0){
+                params.error_message = "Soft constraint stiffness must be non-negative.";
+                YLOGWARN(params.error_message);
+                return result;
+            }
+
+            auto it = soft_constraint_stiffness.find(c.vertex_index);
+            if(it == soft_constraint_stiffness.end()){
+                // First soft constraint for this vertex: initialize stiffness and target.
+                soft_constraint_stiffness[c.vertex_index] = c.stiffness;
+                soft_constraint_target[c.vertex_index] = c.target_position;
+            }else{
+                // Accumulate stiffness and maintain a stiffness-weighted average of targets.
+                const double prev_stiff = it->second;
+                const double new_total_stiff = prev_stiff + c.stiffness;
+                if(new_total_stiff > 0.0){
+                    const vec3<double> prev_target = soft_constraint_target[c.vertex_index];
+                    soft_constraint_target[c.vertex_index] =
+                        (prev_target * prev_stiff + c.target_position * c.stiffness) / new_total_stiff;
+                }
+                it->second = new_total_stiff;
+            }
         }
     }
 
@@ -462,34 +489,40 @@ fv_surface_mesh<double, uint64_t> DeformMeshesARAP(
         params.final_energy = energy;
     }
 
-    // Recompute vertex normals if they existed.
-    if(!result.vertex_normals.empty()){
-        result.vertex_normals.clear();
-        result.vertex_normals.resize(N, vec3<double>(0.0, 0.0, 0.0));
+    // Recompute vertex normals unconditionally for the deformed mesh.
+    result.vertex_normals.clear();
+    result.vertex_normals.resize(N, vec3<double>(0.0, 0.0, 0.0));
 
-        for(const auto &face : result.faces){
-            if(face.size() < 3) continue;
+    for(const auto &face : result.faces){
+        if(face.size() < 3) continue;
 
-            // Compute face normal.
-            const vec3<double> &p0 = result.vertices.at(face[0]);
-            const vec3<double> &p1 = result.vertices.at(face[1]);
-            const vec3<double> &p2 = result.vertices.at(face[2]);
-            const vec3<double> normal = (p1 - p0).Cross(p2 - p0);
-
-            // Accumulate to all vertices of the face.
-            for(const auto &vi : face){
-                if(vi < N){
-                    result.vertex_normals[vi] += normal;
-                }
+        // Validate face indices.
+        bool valid_face = true;
+        for(const auto &vi : face){
+            if(vi >= N){
+                valid_face = false;
+                break;
             }
         }
+        if(!valid_face) continue;
 
-        // Normalize.
-        for(auto &n : result.vertex_normals){
-            const double len = n.length();
-            if(len > 1e-12){
-                n = n / len;
-            }
+        // Compute face normal.
+        const vec3<double> &p0 = result.vertices.at(face[0]);
+        const vec3<double> &p1 = result.vertices.at(face[1]);
+        const vec3<double> &p2 = result.vertices.at(face[2]);
+        const vec3<double> normal = (p1 - p0).Cross(p2 - p0);
+
+        // Accumulate to all vertices of the face.
+        for(const auto &vi : face){
+            result.vertex_normals[vi] += normal;
+        }
+    }
+
+    // Normalize.
+    for(auto &n : result.vertex_normals){
+        const double len = n.length();
+        if(len > 1e-12){
+            n = n / len;
         }
     }
 

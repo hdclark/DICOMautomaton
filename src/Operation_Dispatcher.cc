@@ -274,6 +274,7 @@
     #include "Operations/ModelIVIM.h"
     #include "Operations/VoxelRANSAC.h"
     #include "Operations/DecomposeImagesSVD.h"
+    #include "Operations/DeformMeshesARAP.h"
 #endif // DCMA_USE_EIGEN
 
 #ifdef DCMA_USE_GNU_GSL
@@ -563,6 +564,7 @@ known_ops_t Known_Operations(){
     out["ModelIVIM"] = std::make_pair(OpArgDocModelIVIM, ModelIVIM);
     out["VoxelRANSAC"] = std::make_pair(OpArgDocVoxelRANSAC, VoxelRANSAC);
     out["DecomposeImagesSVD"] = std::make_pair(OpArgDocDecomposeImagesSVD, DecomposeImagesSVD);
+    out["DeformMeshesARAP"] = std::make_pair(OpArgDocDeformMeshesARAP, DeformMeshesARAP);
 #endif // DCMA_USE_EIGEN
 
 #ifdef DCMA_USE_GNU_GSL

@@ -51,6 +51,10 @@ struct DeformMeshesARAPParams {
     double convergence_threshold = 1e-6; // Stop when energy change is below this threshold.
 
     // Edge weights: if true, use cotangent weights; otherwise, use uniform weights.
+    // Note: Cotangent weights are clamped to be strictly positive (minimum 1e-12) to ensure
+    // the system matrix remains positive semi-definite. This differs from standard cotangent
+    // weights which can be negative for obtuse triangles. The clamping improves numerical
+    // stability but may slightly alter the geometric behavior for meshes with obtuse angles.
     bool use_cotangent_weights = true;
 
     // ---- Output Statistics (filled by DeformMeshesARAP) ----
