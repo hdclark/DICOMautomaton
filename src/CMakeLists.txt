@@ -69,6 +69,14 @@ set_target_properties(  Alignment_Demons_obj PROPERTIES POSITION_INDEPENDENT_COD
 add_library(            Alignment_Demons_Tests_obj OBJECT Alignment_Demons_Tests.cc )
 set_target_properties(  Alignment_Demons_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+if(WITH_EIGEN)
+    add_library(            ARAP_Meshes_obj OBJECT ARAP_Meshes.cc )
+    set_target_properties(  ARAP_Meshes_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+    add_library(            ARAP_Meshes_Tests_obj OBJECT ARAP_Meshes_Tests.cc )
+    set_target_properties(  ARAP_Meshes_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+endif()
+
 add_library(            Colour_Maps_obj OBJECT Colour_Maps.cc )
 set_target_properties(  Colour_Maps_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -447,6 +455,8 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Alignment_Field_Tests_obj>
     $<TARGET_OBJECTS:Alignment_Demons_obj>
     $<TARGET_OBJECTS:Alignment_Demons_Tests_obj>
+    $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:ARAP_Meshes_obj>>
+    $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:ARAP_Meshes_Tests_obj>>
     $<$<BOOL:${WITH_SYCL_FALLBACK}>:$<TARGET_OBJECTS:SYCL_Fallback_Tests_obj>>
     $<TARGET_OBJECTS:Colour_Maps_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
@@ -562,6 +572,8 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Alignment_Field_Tests_obj>
         $<TARGET_OBJECTS:Alignment_Demons_obj>
         $<TARGET_OBJECTS:Alignment_Demons_Tests_obj>
+        $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:ARAP_Meshes_obj>>
+        $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:ARAP_Meshes_Tests_obj>>
         $<$<BOOL:${WITH_SYCL_FALLBACK}>:$<TARGET_OBJECTS:SYCL_Fallback_Tests_obj>>
         $<TARGET_OBJECTS:Colour_Maps_obj>
         $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
