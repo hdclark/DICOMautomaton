@@ -307,11 +307,14 @@ fv_surface_mesh<double, uint64_t> DeformMeshesARAP(
     }
 
     // Function to compute ARAP energy.
+    // The energy is the sum over all edges of the weighted squared difference between the
+    // deformed edge and the rotated original edge.
     auto compute_energy = [&]() -> double {
         double energy = 0.0;
         for(size_t i = 0; i < N; ++i){
             for(const auto &j : neighbors[i]){
-                if(i < j) continue; // Count each edge once.
+                // Process each undirected edge only once (avoid double-counting).
+                if(i < j) continue;
                 const double w = get_weight(i, j);
                 const vec3<double> &e_orig = original_edges[i].at(j);
                 const vec3<double> e_deformed = result.vertices[i] - result.vertices[j];
@@ -359,7 +362,10 @@ fv_surface_mesh<double, uint64_t> DeformMeshesARAP(
             // Handle reflection (ensure det(R) = 1).
             if(R.determinant() < 0){
                 // Flip the sign of the column of V corresponding to the smallest singular value.
-                V.col(2) *= -1.0;
+                // For a 3x3 matrix, Eigen's JacobiSVD returns singular values in decreasing order,
+                // so the smallest is in column 2 (0-indexed).
+                constexpr int smallest_singular_value_col = 2;
+                V.col(smallest_singular_value_col) *= -1.0;
                 R = V * U.transpose();
             }
 

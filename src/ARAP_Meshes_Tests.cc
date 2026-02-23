@@ -318,6 +318,10 @@ TEST_CASE("DeformMeshesARAP with soft constraints"){
 
 TEST_CASE("DeformMeshesARAP energy decreases or stays same"){
 #ifdef DCMA_USE_EIGEN
+    // Tolerance for energy increase (1% allowed per iteration to account for numerical precision).
+    constexpr double ENERGY_TOLERANCE_RATIO = 1.01;
+    constexpr double ENERGY_EPSILON = 1e-6;
+
     auto mesh = make_cube_mesh();
     DeformMeshesARAPParams params;
     params.max_iterations = 20;
@@ -344,8 +348,8 @@ TEST_CASE("DeformMeshesARAP energy decreases or stays same"){
         // The energy in the latter half should be stable or decreasing.
         const size_t mid = params.energy_history.size() / 2;
         for(size_t i = mid + 1; i < params.energy_history.size(); ++i){
-            // Allow small numerical fluctuations (1% tolerance).
-            CHECK(params.energy_history[i] <= params.energy_history[i-1] * 1.01 + 1e-6);
+            // Allow small numerical fluctuations.
+            CHECK(params.energy_history[i] <= params.energy_history[i-1] * ENERGY_TOLERANCE_RATIO + ENERGY_EPSILON);
         }
     }
 #endif
