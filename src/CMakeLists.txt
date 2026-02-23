@@ -550,6 +550,16 @@ target_link_libraries (dicomautomaton_dispatcher PUBLIC
     m
     Threads::Threads
 )
+if(NOT MINGW)
+    # Export all symbols from the executable to the dynamic symbol table so that
+    # the bundled doctest implementation (and any other symbols in the executable)
+    # are accessible from dynamically loaded shared libraries at runtime. This is
+    # required for unit tests (invoked via -t) to function correctly within an
+    # AppImage on systems where Ygor and other libraries are not installed
+    # system-wide.
+    set_property(TARGET dicomautomaton_dispatcher
+        APPEND_STRING PROPERTY LINK_FLAGS " -Wl,--export-dynamic")
+endif()
 if("${DCMA_SYCL_BACKEND}" STREQUAL "AdaptiveCPP")
     add_sycl_to_target( TARGET dicomautomaton_dispatcher )
 endif()

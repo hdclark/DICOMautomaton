@@ -23,12 +23,12 @@
 #include "YgorMath.h"
 #include "YgorMisc.h"
 #include "YgorLog.h"
-#include "YgorString.h"
 
 #include "Explicator.h"
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../ARAP_Meshes.h"
 
 #include "DeformMeshesARAP.h"
@@ -89,24 +89,30 @@ OperationDoc OpArgDocDeformMeshesARAP(){
 
     out.args.emplace_back();
     out.args.back().name = "HardConstraints";
-    out.args.back().desc = "A forward-slash-separated list of hard vertex constraints. Each constraint is specified as:"
-                           " 'index:x,y,z' to constrain vertex by index, or 'proximity:rx,ry,rz:x,y,z' to constrain"
-                           " the vertex closest to reference position (rx,ry,rz) to target position (x,y,z)."
+    out.args.back().desc = "A semicolon-separated list of hard vertex constraints specified using function syntax."
+                           " Each constraint is either 'index(vertex_index, x, y, z)' to constrain a vertex by index,"
+                           " or 'proximity(rx, ry, rz, x, y, z)' to constrain the vertex closest to reference"
+                           " position (rx, ry, rz) to target position (x, y, z)."
                            " Hard constraints fix vertices to exact positions.";
     out.args.back().default_val = "";
     out.args.back().expected = true;
-    out.args.back().examples = { "0:1.0,2.0,3.0", "proximity:0,0,0:1,2,3", "0:1,2,3/5:4,5,6", "proximity:0,0,0:1,2,3/proximity:10,0,0:11,2,3" };
+    out.args.back().examples = { "index(0, 1.0, 2.0, 3.0)",
+                                 "proximity(0, 0, 0, 1, 2, 3)",
+                                 "index(0, 1, 2, 3) ; index(5, 4, 5, 6)",
+                                 "proximity(0, 0, 0, 1, 2, 3) ; proximity(10, 0, 0, 11, 2, 3)" };
 
     out.args.emplace_back();
     out.args.back().name = "SoftConstraints";
-    out.args.back().desc = "A forward-slash-separated list of soft vertex constraints. Each constraint is specified as:"
-                           " 'index:x,y,z:stiffness' to constrain vertex by index, or"
-                           " 'proximity:rx,ry,rz:x,y,z:stiffness' to constrain the vertex closest to reference"
-                           " position (rx,ry,rz) to target position (x,y,z) with the given stiffness."
+    out.args.back().desc = "A semicolon-separated list of soft vertex constraints specified using function syntax."
+                           " Each constraint is either 'index(vertex_index, x, y, z, stiffness)' to constrain a"
+                           " vertex by index, or 'proximity(rx, ry, rz, x, y, z, stiffness)' to constrain the"
+                           " vertex closest to reference position (rx, ry, rz) to target position (x, y, z)"
+                           " with the given stiffness."
                            " Higher stiffness values result in stronger attraction to the target position.";
     out.args.back().default_val = "";
     out.args.back().expected = true;
-    out.args.back().examples = { "4:1.0,2.0,3.0:5.0", "proximity:0,0,5:1,2,8:10.0" };
+    out.args.back().examples = { "index(4, 1.0, 2.0, 3.0, 5.0)",
+                                 "proximity(0, 0, 5, 1, 2, 8, 10.0)" };
 
     out.args.emplace_back();
     out.args.back().name = "MeshLabel";
@@ -139,19 +145,6 @@ bool DeformMeshesARAP(Drover &DICOM_data,
     const bool UseCotangentWeights = (UseCotangentWeightsStr == "true" || UseCotangentWeightsStr == "1" ||
                                       UseCotangentWeightsStr == "yes" || UseCotangentWeightsStr == "True");
 
-    // Helper to parse a vec3 from "x,y,z" format.
-    const auto parse_vec3 = [](const std::string &in) -> vec3<double> {
-        auto out = vec3<double>(0.0, 0.0, 0.0);
-        const auto xyz = SplitStringToVector(in, ',', 'd');
-        if(xyz.size() != 3UL){
-            throw std::invalid_argument("Unable to parse vec3 from '"_s + in + "'. Expected 'x,y,z' format.");
-        }
-        out.x = std::stod(xyz.at(0));
-        out.y = std::stod(xyz.at(1));
-        out.z = std::stod(xyz.at(2));
-        return out;
-    };
-
     // Helper to find the vertex index closest to a given position.
     const auto find_closest_vertex = [](const fv_surface_mesh<double, uint64_t> &mesh,
                                         const vec3<double> &pos) -> uint64_t {
@@ -170,6 +163,18 @@ bool DeformMeshesARAP(Drover &DICOM_data,
         return closest_idx;
     };
 
+    // Helper to extract a numeric value from a parsed function parameter.
+    const auto get_num = [](const function_parameter &fp, const std::string &desc) -> double {
+        if(!fp.number.has_value()){
+            throw std::invalid_argument("Expected a number for " + desc + " but got '" + fp.raw + "'");
+        }
+        return fp.number.value();
+    };
+
+    // Regex patterns for constraint function names.
+    const auto regex_index     = Compile_Regex("^in?d?e?x?$");
+    const auto regex_proximity = Compile_Regex("^pr?o?x?i?m?i?t?y?$");
+
     // Select meshes.
     auto SMs_all = All_SMs(DICOM_data);
     auto SMs = Whitelist(SMs_all, MeshSelectionStr);
@@ -187,71 +192,103 @@ bool DeformMeshesARAP(Drover &DICOM_data,
         params.use_cotangent_weights = UseCotangentWeights;
 
         // Parse hard constraints.
-        if(!HardConstraintsStr.empty()){
-            const auto constraints = SplitStringToVector(HardConstraintsStr, '/', 'd');
-            for(const auto &c : constraints){
-                if(c.empty()) continue;
-
-                if(c.substr(0, 10) == "proximity:"){
-                    // Format: proximity:rx,ry,rz:x,y,z
-                    const auto parts = SplitStringToVector(c.substr(10), ':', 'd');
-                    if(parts.size() != 2){
-                        throw std::invalid_argument("Invalid proximity hard constraint format: '"_s + c + "'."
-                                                    " Expected 'proximity:rx,ry,rz:x,y,z'.");
+        {
+            const auto pfs = parse_functions(HardConstraintsStr);
+            for(const auto &pf : pfs){
+                if(!pf.children.empty()){
+                    throw std::invalid_argument("Children functions are not accepted in hard constraints");
+                }
+                if(std::regex_match(pf.name, regex_proximity)){
+                    // Format: proximity(rx, ry, rz, x, y, z)
+                    if(pf.parameters.size() != 6){
+                        throw std::invalid_argument("Hard proximity constraint requires 6 parameters:"
+                                                    " proximity(rx, ry, rz, x, y, z)");
                     }
-                    const auto ref_pos = parse_vec3(parts[0]);
-                    const auto target_pos = parse_vec3(parts[1]);
+                    const vec3<double> ref_pos(
+                        get_num(pf.parameters.at(0), "rx"),
+                        get_num(pf.parameters.at(1), "ry"),
+                        get_num(pf.parameters.at(2), "rz"));
+                    const vec3<double> target_pos(
+                        get_num(pf.parameters.at(3), "x"),
+                        get_num(pf.parameters.at(4), "y"),
+                        get_num(pf.parameters.at(5), "z"));
                     const uint64_t vertex_idx = find_closest_vertex(input_mesh, ref_pos);
                     params.hard_constraints.emplace_back(vertex_idx, target_pos);
                     YLOGINFO("Hard constraint: vertex " << vertex_idx << " (closest to " << ref_pos << ") -> " << target_pos);
-                } else {
-                    // Format: index:x,y,z
-                    const auto parts = SplitStringToVector(c, ':', 'd');
-                    if(parts.size() != 2){
-                        throw std::invalid_argument("Invalid hard constraint format: '"_s + c + "'."
-                                                    " Expected 'index:x,y,z' or 'proximity:rx,ry,rz:x,y,z'.");
+                } else if(std::regex_match(pf.name, regex_index)){
+                    // Format: index(vertex_index, x, y, z)
+                    if(pf.parameters.size() != 4){
+                        throw std::invalid_argument("Hard index constraint requires 4 parameters:"
+                                                    " index(vertex_index, x, y, z)");
                     }
-                    const uint64_t vertex_idx = std::stoull(parts[0]);
-                    const auto target_pos = parse_vec3(parts[1]);
+                    const double raw_idx = get_num(pf.parameters.at(0), "vertex_index");
+                    if(raw_idx < 0.0 || raw_idx != std::floor(raw_idx)){
+                        throw std::invalid_argument("vertex_index must be a non-negative integer but got '"
+                                                    + pf.parameters.at(0).raw + "'");
+                    }
+                    const uint64_t vertex_idx = static_cast<uint64_t>(raw_idx);
+                    const vec3<double> target_pos(
+                        get_num(pf.parameters.at(1), "x"),
+                        get_num(pf.parameters.at(2), "y"),
+                        get_num(pf.parameters.at(3), "z"));
                     params.hard_constraints.emplace_back(vertex_idx, target_pos);
                     YLOGINFO("Hard constraint: vertex " << vertex_idx << " -> " << target_pos);
+                } else {
+                    throw std::invalid_argument("Unrecognized hard constraint function '" + pf.name + "'."
+                                                " Expected 'index' or 'proximity'.");
                 }
             }
         }
 
         // Parse soft constraints.
-        if(!SoftConstraintsStr.empty()){
-            const auto constraints = SplitStringToVector(SoftConstraintsStr, '/', 'd');
-            for(const auto &c : constraints){
-                if(c.empty()) continue;
-
-                if(c.substr(0, 10) == "proximity:"){
-                    // Format: proximity:rx,ry,rz:x,y,z:stiffness
-                    const auto parts = SplitStringToVector(c.substr(10), ':', 'd');
-                    if(parts.size() != 3){
-                        throw std::invalid_argument("Invalid proximity soft constraint format: '"_s + c + "'."
-                                                    " Expected 'proximity:rx,ry,rz:x,y,z:stiffness'.");
+        {
+            const auto pfs = parse_functions(SoftConstraintsStr);
+            for(const auto &pf : pfs){
+                if(!pf.children.empty()){
+                    throw std::invalid_argument("Children functions are not accepted in soft constraints");
+                }
+                if(std::regex_match(pf.name, regex_proximity)){
+                    // Format: proximity(rx, ry, rz, x, y, z, stiffness)
+                    if(pf.parameters.size() != 7){
+                        throw std::invalid_argument("Soft proximity constraint requires 7 parameters:"
+                                                    " proximity(rx, ry, rz, x, y, z, stiffness)");
                     }
-                    const auto ref_pos = parse_vec3(parts[0]);
-                    const auto target_pos = parse_vec3(parts[1]);
-                    const double stiffness = std::stod(parts[2]);
+                    const vec3<double> ref_pos(
+                        get_num(pf.parameters.at(0), "rx"),
+                        get_num(pf.parameters.at(1), "ry"),
+                        get_num(pf.parameters.at(2), "rz"));
+                    const vec3<double> target_pos(
+                        get_num(pf.parameters.at(3), "x"),
+                        get_num(pf.parameters.at(4), "y"),
+                        get_num(pf.parameters.at(5), "z"));
+                    const double stiffness = get_num(pf.parameters.at(6), "stiffness");
                     const uint64_t vertex_idx = find_closest_vertex(input_mesh, ref_pos);
                     params.soft_constraints.emplace_back(vertex_idx, target_pos, stiffness);
                     YLOGINFO("Soft constraint: vertex " << vertex_idx << " (closest to " << ref_pos
                              << ") -> " << target_pos << " with stiffness " << stiffness);
-                } else {
-                    // Format: index:x,y,z:stiffness
-                    const auto parts = SplitStringToVector(c, ':', 'd');
-                    if(parts.size() != 3){
-                        throw std::invalid_argument("Invalid soft constraint format: '"_s + c + "'."
-                                                    " Expected 'index:x,y,z:stiffness' or 'proximity:rx,ry,rz:x,y,z:stiffness'.");
+                } else if(std::regex_match(pf.name, regex_index)){
+                    // Format: index(vertex_index, x, y, z, stiffness)
+                    if(pf.parameters.size() != 5){
+                        throw std::invalid_argument("Soft index constraint requires 5 parameters:"
+                                                    " index(vertex_index, x, y, z, stiffness)");
                     }
-                    const uint64_t vertex_idx = std::stoull(parts[0]);
-                    const auto target_pos = parse_vec3(parts[1]);
-                    const double stiffness = std::stod(parts[2]);
+                    const double raw_idx = get_num(pf.parameters.at(0), "vertex_index");
+                    if(raw_idx < 0.0 || raw_idx != std::floor(raw_idx)){
+                        throw std::invalid_argument("vertex_index must be a non-negative integer but got '"
+                                                    + pf.parameters.at(0).raw + "'");
+                    }
+                    const uint64_t vertex_idx = static_cast<uint64_t>(raw_idx);
+                    const vec3<double> target_pos(
+                        get_num(pf.parameters.at(1), "x"),
+                        get_num(pf.parameters.at(2), "y"),
+                        get_num(pf.parameters.at(3), "z"));
+                    const double stiffness = get_num(pf.parameters.at(4), "stiffness");
                     params.soft_constraints.emplace_back(vertex_idx, target_pos, stiffness);
                     YLOGINFO("Soft constraint: vertex " << vertex_idx << " -> " << target_pos
                              << " with stiffness " << stiffness);
+                } else {
+                    throw std::invalid_argument("Unrecognized soft constraint function '" + pf.name + "'."
+                                                " Expected 'index' or 'proximity'.");
                 }
             }
         }
