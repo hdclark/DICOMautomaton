@@ -288,11 +288,14 @@ fv_surface_mesh<double, uint64_t> DeformMeshesARAP(
     // Validate stiffness values and compute weighted-average targets for multiple constraints.
     std::map<uint64_t, double> soft_constraint_stiffness;
     std::map<uint64_t, vec3<double>> soft_constraint_target;
-    for(const auto &c : params.soft_constraints){
+    for(size_t constraint_idx = 0; constraint_idx < params.soft_constraints.size(); ++constraint_idx){
+        const auto &c = params.soft_constraints[constraint_idx];
         if(c.vertex_index < N && vertex_to_row[c.vertex_index] >= 0){
             // Validate stiffness (must be non-negative to maintain SPD matrix).
             if(c.stiffness < 0.0){
-                params.error_message = "Soft constraint stiffness must be non-negative.";
+                params.error_message = "Soft constraint at index " + std::to_string(constraint_idx) +
+                                       " (vertex " + std::to_string(c.vertex_index) +
+                                       ") has negative stiffness (" + std::to_string(c.stiffness) + ").";
                 YLOGWARN(params.error_message);
                 return result;
             }
@@ -306,7 +309,9 @@ fv_surface_mesh<double, uint64_t> DeformMeshesARAP(
                 // Accumulate stiffness and maintain a stiffness-weighted average of targets.
                 const double prev_stiff = it->second;
                 const double new_total_stiff = prev_stiff + c.stiffness;
-                if(new_total_stiff > 0.0){
+                // Only compute weighted average if total stiffness is non-zero.
+                // (Zero stiffness constraints are effectively ignored in the solve.)
+                if(new_total_stiff > 1e-12){
                     const vec3<double> prev_target = soft_constraint_target[c.vertex_index];
                     soft_constraint_target[c.vertex_index] =
                         (prev_target * prev_stiff + c.target_position * c.stiffness) / new_total_stiff;
