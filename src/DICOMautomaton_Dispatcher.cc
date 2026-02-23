@@ -324,6 +324,11 @@ try{
       "Run unit tests and terminate.",
       [&](const std::string &) -> void {
         doctest::Context context;
+        context.setOption("no-intro", true); 
+        context.setOption("no-version", true); 
+        context.setOption("no-colors", true); 
+        //context.setOption("success", true); 
+        //context.setOption("duration", true); 
         auto r = context.run();
         std::exit(r);
         return;
