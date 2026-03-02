@@ -2,7 +2,7 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Language](https://img.shields.io/github/languages/top/hdclark/DICOMautomaton.svg)](https://gitlab.com/hdeanclark/DICOMautomaton)
-[![SLOC](https://img.shields.io/badge/LOC-110k-green.svg)](https://gitlab.com/hdeanclark/DICOMautomaton)
+[![SLOC](https://img.shields.io/badge/LOC-150k-green.svg)](https://gitlab.com/hdeanclark/DICOMautomaton)
 
 [![GitHub CI Actions Status](https://github.com/hdclark/DICOMautomaton/actions/workflows/main.yml/badge.svg)](https://github.com/hdclark/DICOMautomaton)
 [![GitLab CI Pipeline Status](https://gitlab.com/hdeanclark/DICOMautomaton/badges/master/pipeline.svg)](https://gitlab.com/hdeanclark/DICOMautomaton/-/commits/master)
