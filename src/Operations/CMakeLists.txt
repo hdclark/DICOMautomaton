@@ -218,6 +218,7 @@ add_library(Operations_objs OBJECT
     SupersampleImageGrid.cc
     TabulateImageMetadata.cc
     Terminal_Viewer.cc
+    TestConditions.cc
     ThresholdImages.cc
     ThresholdOtsu.cc
     Time_op.cc

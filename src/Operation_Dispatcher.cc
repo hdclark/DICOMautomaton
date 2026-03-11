@@ -239,6 +239,7 @@
 #include "Operations/SupersampleImageGrid.h"
 #include "Operations/TabulateImageMetadata.h"
 #include "Operations/Terminal_Viewer.h"
+#include "Operations/TestConditions.h"
 #include "Operations/ThresholdImages.h"
 #include "Operations/ThresholdOtsu.h"
 #include "Operations/Time_op.h"
@@ -529,6 +530,7 @@ known_ops_t Known_Operations(){
     out["SupersampleImageGrid"] = std::make_pair(OpArgDocSupersampleImageGrid, SupersampleImageGrid);
     out["TabulateImageMetadata"] = std::make_pair(OpArgDocTabulateImageMetadata, TabulateImageMetadata);
     out["Terminal_Viewer"] = std::make_pair(OpArgDocTerminal_Viewer, Terminal_Viewer);
+    out["TestConditions"] = std::make_pair(OpArgDocTestConditions, TestConditions);
     out["ThresholdImages"] = std::make_pair(OpArgDocThresholdImages, ThresholdImages);
     out["ThresholdOtsu"] = std::make_pair(OpArgDocThresholdOtsu, ThresholdOtsu);
     out["Time"] = std::make_pair(OpArgDocTime, Time);
