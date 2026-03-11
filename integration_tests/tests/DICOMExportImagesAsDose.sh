@@ -18,11 +18,8 @@ for paranoia_level in low medium high ; do
     "${DCMA_BIN}" \
       'test.dcm' \
       \
-      -o DroverDebug |
-      tee -a fullstdout |
-      grep -i "1 Image_Arrays loaded" | 
-      `# Ensure the output stream is not empty. ` \
-      grep .
+      -o TestConditions \
+        -p Conditions='image_array_count(1)'
 
     rm 'test.dcm'
 

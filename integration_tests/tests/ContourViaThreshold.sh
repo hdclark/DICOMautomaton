@@ -24,9 +24,6 @@ printf 'Test 1\n' |
  -o ContourViaThreshold:ROILabel='20%,inf marching squares':Lower='20%':Upper=inf:Method=marching-squares \
  -x ContourViaThreshold:ROILabel='20%,inf marching cubes':Lower='20%':Upper=inf:Method=marching-cubes \
  \
- -o DroverDebug | 
-  tee -a fullstdout |
-  grep -i "8 contour_collections loaded" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+ -o TestConditions \
+   -p Conditions='contour_collection_count(8)' 
 

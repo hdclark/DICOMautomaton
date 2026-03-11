@@ -21,9 +21,6 @@ set -o pipefail
   "test.stl" \
   "test_binary.stl" \
   \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "2 Surface_Meshes loaded" | 
-  `# Ensure the output stream is not empty. ` \
-  grep .
+  -o TestConditions \
+    -p Conditions='surface_mesh_count(2)'
 

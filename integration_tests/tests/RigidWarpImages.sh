@@ -19,12 +19,8 @@ printf 'Test 1\n' |
      -p ImageSelection=last \
      -p TransformSelection=last \
   -o MeldDose \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'pixel value range' |
-  grep '0,140' |
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='pixel_min(0, 0.5); pixel_max(140, 0.5)'
 
 
 # Test that multiple translational transforms will round-trip.
@@ -42,12 +38,8 @@ printf 'Test 2\n' |
      -p ImageSelection=last \
      -p TransformSelection=last \
   -o MeldDose \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'pixel value range' |
-  grep '0,140' |
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='pixel_min(0, 0.5); pixel_max(140, 0.5)'
 
 
 # Test that multiple mirror transforms can be combined to create a perfect complement of an image.
@@ -66,12 +58,8 @@ printf 'Test 3\n' |
      -p ImageSelection=last \
      -p TransformSelection=last \
   -o MeldDose \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'pixel value range' |
-  grep '70,70' |
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='pixel_min(70, 0.5); pixel_max(70, 0.5)'
 
 
 # Test that rotational transforms are accurate by flipping 180 deg so the inputs interlock and compensate each other.
@@ -90,12 +78,8 @@ printf 'Test 4\n' |
      -p ImageSelection=last \
      -p TransformSelection=last \
   -o MeldDose \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'pixel value range' |
-  grep '70,70' |
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='pixel_min(70, 0.5); pixel_max(70, 0.5)'
 
 
 # Test that rotational transforms are accurate by flipping 360 deg so the inputs sum as if no transform were performed.
@@ -114,12 +98,8 @@ printf 'Test 5\n' |
      -p ImageSelection=last \
      -p TransformSelection=last \
   -o MeldDose \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'pixel value range' |
-  grep '0,140' |
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='pixel_min(0, 0.5); pixel_max(140, 0.5)'
 
 printf 'Test 6\n' |
   tee -a fullstdout
@@ -133,12 +113,8 @@ printf 'Test 6\n' |
      -p ImageSelection=last \
      -p TransformSelection=last \
   -o MeldDose \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'pixel value range' |
-  grep '0,140' |
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='pixel_min(0, 0.5); pixel_max(140, 0.5)'
 
 
 # Test that scale transforms round-trip.
@@ -157,11 +133,7 @@ printf 'Test 7\n' |
      -p ImageSelection=last \
      -p TransformSelection=last \
   -o MeldDose \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'pixel value range' |
-  grep '0,140' |
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='pixel_min(0, 0.5); pixel_max(140, 0.5)'
 
 

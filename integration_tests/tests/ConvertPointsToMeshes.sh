@@ -11,11 +11,8 @@ printf 'Test 1: Basic invocation with default cube width\n' |
   -v \
   -o GenerateVirtualDataPointCloudV1 \
   -o ConvertPointsToMeshes \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'Surface_Mesh' |
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='surface_mesh_count(1)'
 
 printf 'Test 2: Invocation with custom cube width\n' |
   tee -a fullstdout
@@ -23,10 +20,7 @@ printf 'Test 2: Invocation with custom cube width\n' |
   -v \
   -o GenerateVirtualDataPointCloudV1 \
   -o ConvertPointsToMeshes:CubeWidth=2.0 \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'Surface_Mesh' |
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='surface_mesh_count(1)'
 
 printf 'All tests passed!\n'

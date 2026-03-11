@@ -10,10 +10,7 @@ printf 'Test 1: Basic invocation\n' |
 "${DCMA_BIN}" \
   -v \
   -o GenerateVirtualDataPointCloudV1 \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'Point_Cloud' |
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='point_cloud_count(1)'
 
 printf 'All tests passed!\n'

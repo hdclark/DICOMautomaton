@@ -12,12 +12,8 @@ printf 'Test 1\n' |
   -v \
   -o GenerateVirtualDataDoseStairsV1 \
   -o MeldDose \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'pixel value range' |
-  grep '0,70' |
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='pixel_min(0, 0.5); pixel_max(70, 0.5)'
 
 
 # Test that exactly-aligned inputs sum perfectly.
@@ -30,12 +26,8 @@ printf 'Test 2\n' |
   -o GenerateVirtualDataDoseStairsV1 \
   -o GenerateVirtualDataDoseStairsV1 \
   -o MeldDose \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'pixel value range' |
-  grep '0,140' |
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='pixel_min(0, 0.5); pixel_max(140, 0.5)'
 
 
 # Test that when inputs are slightly shifted they will still more-or-less sum the same as if they were exactly aligned.
@@ -53,11 +45,7 @@ printf 'Test 3\n' |
      -p ImageSelection=last \
      -p TransformSelection=last \
   -o MeldDose \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'pixel value range' |
-  grep '0,140' |
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='pixel_min(0, 0.5); pixel_max(140, 0.5)'
 
 

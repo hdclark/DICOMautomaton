@@ -16,10 +16,7 @@ printf 'Test 1\n' |
     -p Transforms='translate(0.0, 0.0, 1.0)' \
   -o DeleteWarps \
     -p TransformSelection='first' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "2 Transform3s loaded" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='transform3_count(2)' 
 
 

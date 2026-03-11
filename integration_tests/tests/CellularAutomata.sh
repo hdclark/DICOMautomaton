@@ -21,11 +21,9 @@ printf 'Test 1\n' |
     -p ROILabel=remaining \
     -p Lower=128 \
     -p Method=marching-squares \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "contour_collection .* has 314 contours" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p ROILabelRegex='remaining' \
+    -p Conditions='contour_count(314)'
 
 
 # Simulate in smaller batches.
@@ -46,9 +44,7 @@ printf 'Test 1\n' |
     -p ROILabel=remaining \
     -p Lower=128 \
     -p Method=marching-squares \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "contour_collection .* has 314 contours" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p ROILabelRegex='remaining' \
+    -p Conditions='contour_count(314)'
 
