@@ -132,24 +132,26 @@ bool TestConditions(Drover &DICOM_data,
         throw std::invalid_argument("No conditions specified");
     }
 
-    // Condition name regexes, using the same fuzzy-abbreviation pattern as the rest of the codebase.
-    const auto regex_ia_count    = Compile_Regex("^image_array_count$");
-    const auto regex_cc_count    = Compile_Regex("^contour_collection_count$");
-    const auto regex_pc_count    = Compile_Regex("^point_cloud_count$");
-    const auto regex_smesh_count = Compile_Regex("^surface_mesh_count$");
-    const auto regex_rtp_count   = Compile_Regex("^rtplan_count$");
-    const auto regex_lsamp_count = Compile_Regex("^line_sample_count$");
-    const auto regex_trans_count = Compile_Regex("^transform3_count$");
-    const auto regex_table_count = Compile_Regex("^table_count$");
-    const auto regex_img_count   = Compile_Regex("^image_count$");
-    const auto regex_cnt_count   = Compile_Regex("^contour_count$");
-    const auto regex_pix_min     = Compile_Regex("^pixel_min$");
-    const auto regex_pix_max     = Compile_Regex("^pixel_max$");
+    // Condition name regexes use a fuzzy-abbreviation pattern: only the first few letters of each
+    // word are required, and separators (underscores, dashes, spaces) are optional.
+    const auto regex_ia_count    = Compile_Regex("^imag?e?[ _-]?arr?a?y?[ _-]?cou?n?t?$");
+    const auto regex_cc_count    = Compile_Regex("^conto?u?r?[ _-]?colle?c?t?i?o?n?[ _-]?cou?n?t?$");
+    const auto regex_pc_count    = Compile_Regex("^poin?t?[ _-]?clo?u?d?[ _-]?cou?n?t?$");
+    const auto regex_smesh_count = Compile_Regex("^surf?a?c?e?[ _-]?mes?h?[ _-]?cou?n?t?$");
+    const auto regex_rtp_count   = Compile_Regex("^rtpl?a?n?[ _-]?cou?n?t?$");
+    const auto regex_lsamp_count = Compile_Regex("^lin?e?[ _-]?sam?p?l?e?[ _-]?cou?n?t?$");
+    const auto regex_trans_count = Compile_Regex("^tran?s?f?o?r?m?3?[ _-]?cou?n?t?$");
+    const auto regex_table_count = Compile_Regex("^tabl?e?[ _-]?cou?n?t?$");
+    const auto regex_img_count   = Compile_Regex("^imag?e?[ _-]?cou?n?t?$");
+    const auto regex_cnt_count   = Compile_Regex("^conto?u?r?[ _-]?cou?n?t?$");
+    const auto regex_pix_min     = Compile_Regex("^pixe?l?[ _-]?min$");
+    const auto regex_pix_max     = Compile_Regex("^pixe?l?[ _-]?max$");
 
     // Tolerance for floating-point pixel value comparisons.
     const double default_tolerance = 0.01;
 
-    for(const auto &pf : pfs){
+    for(size_t pf_idx = 0; pf_idx < pfs.size(); ++pf_idx){
+        const auto &pf = pfs[pf_idx];
         if(!pf.children.empty()){
             throw std::invalid_argument("Children functions are not accepted for condition '"
                                         + pf.name + "'");
@@ -309,31 +311,69 @@ bool TestConditions(Drover &DICOM_data,
             YLOGINFO("Condition passed: contour_count(" << expected << ")");
 
         // --- Pixel value conditions ---
+        //
+        // pixel_min and pixel_max are handled together in a single image scan when both appear
+        // consecutively, avoiding redundant passes over image data.
 
-        }else if(std::regex_match(pf.name, regex_pix_min)){
+        }else if( std::regex_match(pf.name, regex_pix_min)
+              ||  std::regex_match(pf.name, regex_pix_max) ){
+            const bool check_min = std::regex_match(pf.name, regex_pix_min);
+            const bool check_max = std::regex_match(pf.name, regex_pix_max);
+
             if(pf.parameters.size() < 1 || pf.parameters.size() > 2){
-                throw std::invalid_argument("pixel_min requires 1 or 2 arguments (value, optional tolerance)");
+                throw std::invalid_argument("pixel_min/pixel_max requires 1 or 2 arguments"
+                                            " (value, optional tolerance)");
             }
             const auto expected = std::stod(pf.parameters.at(0).raw);
             const auto tolerance = (pf.parameters.size() == 2) ? std::stod(pf.parameters.at(1).raw)
                                                                 : default_tolerance;
 
+            // Look ahead for a paired pixel_min/pixel_max so both can be resolved in one pass.
+            bool also_check_min = false;
+            bool also_check_max = false;
+            double also_expected = 0.0;
+            double also_tolerance = default_tolerance;
+            if(pf_idx + 1 < pfs.size()){
+                const auto &next_pf = pfs[pf_idx + 1];
+                if(next_pf.children.empty()
+                && next_pf.parameters.size() >= 1
+                && next_pf.parameters.size() <= 2){
+                    if(check_min && std::regex_match(next_pf.name, regex_pix_max)){
+                        also_check_max = true;
+                        also_expected = std::stod(next_pf.parameters.at(0).raw);
+                        also_tolerance = (next_pf.parameters.size() == 2)
+                                       ? std::stod(next_pf.parameters.at(1).raw)
+                                       : default_tolerance;
+                    }else if(check_max && std::regex_match(next_pf.name, regex_pix_min)){
+                        also_check_min = true;
+                        also_expected = std::stod(next_pf.parameters.at(0).raw);
+                        also_tolerance = (next_pf.parameters.size() == 2)
+                                       ? std::stod(next_pf.parameters.at(1).raw)
+                                       : default_tolerance;
+                    }
+                }
+            }
+
             auto IAs_all = All_IAs( DICOM_data );
             auto IAs = Whitelist( IAs_all, ImageSelectionStr );
             if(IAs.empty()){
-                throw std::invalid_argument("No image arrays selected for pixel_min condition");
+                throw std::invalid_argument("No image arrays selected for pixel value condition");
             }
 
             double actual_min = std::numeric_limits<double>::infinity();
+            double actual_max = -std::numeric_limits<double>::infinity();
+            bool pixels_examined = false;
             for(auto &iap_it : IAs){
                 if(*iap_it == nullptr) continue;
                 for(auto &img : (*iap_it)->imagecoll.images){
                     if(Channel < 0){
                         // All channels: use the built-in minmax for efficiency.
                         const auto mm = img.minmax();
-                        if(static_cast<double>(mm.first) < actual_min){
-                            actual_min = static_cast<double>(mm.first);
-                        }
+                        const auto mm_min = static_cast<double>(mm.first);
+                        const auto mm_max = static_cast<double>(mm.second);
+                        if(mm_min < actual_min) actual_min = mm_min;
+                        if(mm_max > actual_max) actual_max = mm_max;
+                        pixels_examined = true;
                     }else{
                         if(Channel >= img.channels){
                             throw std::invalid_argument("Channel " + std::to_string(Channel)
@@ -344,65 +384,57 @@ bool TestConditions(Drover &DICOM_data,
                             for(int64_t col = 0; col < img.columns; ++col){
                                 const auto val = static_cast<double>(img.value(row, col, Channel));
                                 if(val < actual_min) actual_min = val;
-                            }
-                        }
-                    }
-                }
-            }
-            if(std::abs(actual_min - expected) > tolerance){
-                throw std::runtime_error("Condition failed: pixel_min expected "
-                                         + std::to_string(expected) + " (tolerance "
-                                         + std::to_string(tolerance) + ") but found "
-                                         + std::to_string(actual_min));
-            }
-            YLOGINFO("Condition passed: pixel_min(" << expected << ") actual=" << actual_min);
-
-        }else if(std::regex_match(pf.name, regex_pix_max)){
-            if(pf.parameters.size() < 1 || pf.parameters.size() > 2){
-                throw std::invalid_argument("pixel_max requires 1 or 2 arguments (value, optional tolerance)");
-            }
-            const auto expected = std::stod(pf.parameters.at(0).raw);
-            const auto tolerance = (pf.parameters.size() == 2) ? std::stod(pf.parameters.at(1).raw)
-                                                                : default_tolerance;
-
-            auto IAs_all = All_IAs( DICOM_data );
-            auto IAs = Whitelist( IAs_all, ImageSelectionStr );
-            if(IAs.empty()){
-                throw std::invalid_argument("No image arrays selected for pixel_max condition");
-            }
-
-            double actual_max = -std::numeric_limits<double>::infinity();
-            for(auto &iap_it : IAs){
-                if(*iap_it == nullptr) continue;
-                for(auto &img : (*iap_it)->imagecoll.images){
-                    if(Channel < 0){
-                        // All channels: use the built-in minmax for efficiency.
-                        const auto mm = img.minmax();
-                        if(static_cast<double>(mm.second) > actual_max){
-                            actual_max = static_cast<double>(mm.second);
-                        }
-                    }else{
-                        if(Channel >= img.channels){
-                            throw std::invalid_argument("Channel " + std::to_string(Channel)
-                                                        + " exceeds image channel count "
-                                                        + std::to_string(img.channels));
-                        }
-                        for(int64_t row = 0; row < img.rows; ++row){
-                            for(int64_t col = 0; col < img.columns; ++col){
-                                const auto val = static_cast<double>(img.value(row, col, Channel));
                                 if(val > actual_max) actual_max = val;
+                                pixels_examined = true;
                             }
                         }
                     }
                 }
             }
-            if(std::abs(actual_max - expected) > tolerance){
-                throw std::runtime_error("Condition failed: pixel_max expected "
-                                         + std::to_string(expected) + " (tolerance "
-                                         + std::to_string(tolerance) + ") but found "
-                                         + std::to_string(actual_max));
+            if(!pixels_examined){
+                throw std::invalid_argument("No images with pixel data found for '"
+                                            + pf.name + "' condition");
             }
-            YLOGINFO("Condition passed: pixel_max(" << expected << ") actual=" << actual_max);
+
+            // Verify the primary condition.
+            if(check_min){
+                if(std::abs(actual_min - expected) > tolerance){
+                    throw std::runtime_error("Condition failed: pixel_min expected "
+                                             + std::to_string(expected) + " (tolerance "
+                                             + std::to_string(tolerance) + ") but found "
+                                             + std::to_string(actual_min));
+                }
+                YLOGINFO("Condition passed: pixel_min(" << expected << ") actual=" << actual_min);
+            }else{
+                if(std::abs(actual_max - expected) > tolerance){
+                    throw std::runtime_error("Condition failed: pixel_max expected "
+                                             + std::to_string(expected) + " (tolerance "
+                                             + std::to_string(tolerance) + ") but found "
+                                             + std::to_string(actual_max));
+                }
+                YLOGINFO("Condition passed: pixel_max(" << expected << ") actual=" << actual_max);
+            }
+
+            // Verify the paired condition and skip it in the outer loop.
+            if(also_check_max){
+                if(std::abs(actual_max - also_expected) > also_tolerance){
+                    throw std::runtime_error("Condition failed: pixel_max expected "
+                                             + std::to_string(also_expected) + " (tolerance "
+                                             + std::to_string(also_tolerance) + ") but found "
+                                             + std::to_string(actual_max));
+                }
+                YLOGINFO("Condition passed: pixel_max(" << also_expected << ") actual=" << actual_max);
+                ++pf_idx;
+            }else if(also_check_min){
+                if(std::abs(actual_min - also_expected) > also_tolerance){
+                    throw std::runtime_error("Condition failed: pixel_min expected "
+                                             + std::to_string(also_expected) + " (tolerance "
+                                             + std::to_string(also_tolerance) + ") but found "
+                                             + std::to_string(actual_min));
+                }
+                YLOGINFO("Condition passed: pixel_min(" << also_expected << ") actual=" << actual_min);
+                ++pf_idx;
+            }
 
         }else{
             throw std::invalid_argument("Unrecognized condition: '" + pf.name + "'");
