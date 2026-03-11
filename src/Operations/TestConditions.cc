@@ -146,6 +146,7 @@ bool TestConditions(Drover &DICOM_data,
     const auto regex_pix_min     = Compile_Regex("^pixel_min$");
     const auto regex_pix_max     = Compile_Regex("^pixel_max$");
 
+    // Tolerance for floating-point pixel value comparisons.
     const double default_tolerance = 0.01;
 
     for(const auto &pf : pfs){
@@ -328,14 +329,10 @@ bool TestConditions(Drover &DICOM_data,
                 if(*iap_it == nullptr) continue;
                 for(auto &img : (*iap_it)->imagecoll.images){
                     if(Channel < 0){
-                        // All channels.
-                        for(int64_t chan = 0; chan < img.channels; ++chan){
-                            for(int64_t row = 0; row < img.rows; ++row){
-                                for(int64_t col = 0; col < img.columns; ++col){
-                                    const auto val = static_cast<double>(img.value(row, col, chan));
-                                    if(val < actual_min) actual_min = val;
-                                }
-                            }
+                        // All channels: use the built-in minmax for efficiency.
+                        const auto mm = img.minmax();
+                        if(static_cast<double>(mm.first) < actual_min){
+                            actual_min = static_cast<double>(mm.first);
                         }
                     }else{
                         if(Channel >= img.channels){
@@ -379,14 +376,10 @@ bool TestConditions(Drover &DICOM_data,
                 if(*iap_it == nullptr) continue;
                 for(auto &img : (*iap_it)->imagecoll.images){
                     if(Channel < 0){
-                        // All channels.
-                        for(int64_t chan = 0; chan < img.channels; ++chan){
-                            for(int64_t row = 0; row < img.rows; ++row){
-                                for(int64_t col = 0; col < img.columns; ++col){
-                                    const auto val = static_cast<double>(img.value(row, col, chan));
-                                    if(val > actual_max) actual_max = val;
-                                }
-                            }
+                        // All channels: use the built-in minmax for efficiency.
+                        const auto mm = img.minmax();
+                        if(static_cast<double>(mm.second) > actual_max){
+                            actual_max = static_cast<double>(mm.second);
                         }
                     }else{
                         if(Channel >= img.channels){
