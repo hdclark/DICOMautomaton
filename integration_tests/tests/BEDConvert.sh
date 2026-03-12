@@ -21,7 +21,7 @@ printf 'Test 1\n' |
      -p TargetDosePerFraction='3E6' \
      -p Model='bed-lq-simple' \
   -o TestConditions \
-    -p Conditions='pixel_min(0, 0.5); pixel_max(116.667, 0.5)'
+    -p Conditions='pixel_minmax(0, 116.667, 0.5)'
 
 # Test that BED conversion is valid when irrelevant parameters use default values.
 #
@@ -38,7 +38,7 @@ printf 'Test 2\n' |
      -p PriorNumberOfFractions=35 \
      -p Model='bed-lq-simple' \
   -o TestConditions \
-    -p Conditions='pixel_min(0, 0.5); pixel_max(116.667, 0.5)'
+    -p Conditions='pixel_minmax(0, 116.667, 0.5)'
 
 
 # Test that BED conversion honours ROI selections. 
@@ -62,7 +62,7 @@ printf 'Test 3\n' |
      -p PriorNumberOfFractions=35 \
      -p Model='bed-lq-simple' \
   -o TestConditions \
-    -p Conditions='pixel_min(0, 0.5); pixel_max(116.667, 0.5)'
+    -p Conditions='pixel_minmax(0, 116.667, 0.5)'
 
 
 
@@ -83,7 +83,7 @@ printf 'Test 4\n' |
      -p TargetDosePerFraction=2.0 \
      -p Model='eqdx-lq-simple' \
   -o TestConditions \
-    -p Conditions='pixel_min(0, 0.5); pixel_max(70, 0.5)'
+    -p Conditions='pixel_minmax(0, 70, 0.5)'
 
 # Test that EQD2 conversion transforms 70/35 to 70 Gy with any alpha/beta.
 #
@@ -102,7 +102,7 @@ printf 'Test 5\n' |
      -p TargetDosePerFraction=2.0 \
      -p Model='eqdx-lq-simple' \
   -o TestConditions \
-    -p Conditions='pixel_min(0, 0.5); pixel_max(70, 0.5)'
+    -p Conditions='pixel_minmax(0, 70, 0.5)'
 
 printf 'Test 6\n' |
   tee -a fullstdout
@@ -122,7 +122,7 @@ printf 'Test 6\n' |
      -p TargetDosePerFraction=2.0 \
      -p Model='eqdx-lq-simple' \
   -o TestConditions \
-    -p Conditions='pixel_min(0, 0.5); pixel_max(70, 0.5)'
+    -p Conditions='pixel_minmax(0, 70, 0.5)'
 
 
 # Test that EQD2 conversion is valid with 3 Gy/f inputs.
@@ -142,7 +142,7 @@ printf 'Test 7\n' |
      -p TargetDosePerFraction=2.0 \
      -p Model='eqdx-lq-simple' \
   -o TestConditions \
-    -p Conditions='pixel_min(0, 0.5); pixel_max(75.833, 0.5)'
+    -p Conditions='pixel_minmax(0, 75.833, 0.5)'
 
 
 printf 'Test 8\n' |
@@ -163,7 +163,7 @@ printf 'Test 8\n' |
      -p TargetDosePerFraction=2.0 \
      -p Model='eqdx-lq-simple' \
   -o TestConditions \
-    -p Conditions='pixel_min(0, 0.5); pixel_max(84, 0.5)'
+    -p Conditions='pixel_minmax(0, 84, 0.5)'
 
 
 # Test that EQD5 conversion is valid with 3 Gy/f inputs.
@@ -183,7 +183,7 @@ printf 'Test 9\n' |
      -p TargetDosePerFraction=5.0 \
      -p Model='eqdx-lq-simple' \
   -o TestConditions \
-    -p Conditions='pixel_min(0, 0.5); pixel_max(60.667, 0.5)'
+    -p Conditions='pixel_minmax(0, 60.667, 0.5)'
 
 
 printf 'Test 10\n' |
@@ -204,6 +204,6 @@ printf 'Test 10\n' |
      -p TargetDosePerFraction=5.0 \
      -p Model='eqdx-lq-simple' \
   -o TestConditions \
-    -p Conditions='pixel_min(0, 0.5); pixel_max(57.273, 0.5)'
+    -p Conditions='pixel_minmax(0, 57.273, 0.5)'
 
 
