@@ -335,6 +335,9 @@ bool TestConditions(Drover &DICOM_data,
             }
             const auto tolerance = (pf.parameters.size() == 3) ? std::stod(pf.parameters.at(2).raw)
                                                                 : default_tolerance;
+            if(tolerance < 0.0){
+                throw std::invalid_argument("pixel_minmax tolerance must be non-negative");
+            }
 
             auto IAs_all = All_IAs( DICOM_data );
             auto IAs = Whitelist( IAs_all, ImageSelectionStr );
