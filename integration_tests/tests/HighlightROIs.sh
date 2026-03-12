@@ -23,11 +23,9 @@ printf 'Test 1\n' |
     -p Upper=200 \
     -p Method=marching-squares \
     -p ROILabel=roi \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "contour_collection 0 has 7 contours" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p ROILabelRegex='roi' \
+    -p Conditions='contour_count(7)'
 
 
 # Ensure we can convert from contour -> image -> contour without significant loss of detail.
@@ -61,11 +59,8 @@ printf 'Test 2\n' |
     -p Method=marching-squares \
   -o DeleteContours \
     -p ROILabelRegex='roi' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "contour_collection 0 has 7 contours" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='contour_count(7)'
 
 
 printf 'Test 3\n' |
@@ -98,11 +93,8 @@ printf 'Test 3\n' |
     -p Method=marching-squares \
   -o DeleteContours \
     -p ROILabelRegex='roi' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "contour_collection 0 has 7 contours" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='contour_count(7)'
 
 
 printf 'Test 4\n' |
@@ -136,10 +128,7 @@ printf 'Test 4\n' |
     -p Method=marching-squares \
   -o DeleteContours \
     -p ROILabelRegex='roi' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "contour_collection 0 has 6 contours" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='contour_count(6)'
 
 

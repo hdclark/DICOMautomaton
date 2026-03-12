@@ -20,12 +20,8 @@ printf 'Test 1\n' |
      -p PriorPrescriptionDose='5E6' \
      -p TargetDosePerFraction='3E6' \
      -p Model='bed-lq-simple' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'pixel value range' |
-  grep '0,116[.]' |
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='pixel_minmax(0, 116.667, 0.5)'
 
 # Test that BED conversion is valid when irrelevant parameters use default values.
 #
@@ -41,11 +37,8 @@ printf 'Test 2\n' |
      -p EarlyROILabelRegex='Body' \
      -p PriorNumberOfFractions=35 \
      -p Model='bed-lq-simple' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'pixel value range' |
-  grep '0,116[.]' |
-  grep .
+  -o TestConditions \
+    -p Conditions='pixel_minmax(0, 116.667, 0.5)'
 
 
 # Test that BED conversion honours ROI selections. 
@@ -68,11 +61,8 @@ printf 'Test 3\n' |
      -p EarlyROILabelRegex='small' \
      -p PriorNumberOfFractions=35 \
      -p Model='bed-lq-simple' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'pixel value range' |
-  grep '0,116[.]' |
-  grep .
+  -o TestConditions \
+    -p Conditions='pixel_minmax(0, 116.667, 0.5)'
 
 
 
@@ -92,11 +82,8 @@ printf 'Test 4\n' |
      -p PriorNumberOfFractions=35 \
      -p TargetDosePerFraction=2.0 \
      -p Model='eqdx-lq-simple' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'pixel value range' |
-  grep '0,70' |
-  grep .
+  -o TestConditions \
+    -p Conditions='pixel_minmax(0, 70, 0.5)'
 
 # Test that EQD2 conversion transforms 70/35 to 70 Gy with any alpha/beta.
 #
@@ -114,11 +101,8 @@ printf 'Test 5\n' |
      -p PriorNumberOfFractions=35 \
      -p TargetDosePerFraction=2.0 \
      -p Model='eqdx-lq-simple' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'pixel value range' |
-  grep '0,70' |
-  grep .
+  -o TestConditions \
+    -p Conditions='pixel_minmax(0, 70, 0.5)'
 
 printf 'Test 6\n' |
   tee -a fullstdout
@@ -137,11 +121,8 @@ printf 'Test 6\n' |
      -p PriorNumberOfFractions=35 \
      -p TargetDosePerFraction=2.0 \
      -p Model='eqdx-lq-simple' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'pixel value range' |
-  grep '0,70' |
-  grep .
+  -o TestConditions \
+    -p Conditions='pixel_minmax(0, 70, 0.5)'
 
 
 # Test that EQD2 conversion is valid with 3 Gy/f inputs.
@@ -160,11 +141,8 @@ printf 'Test 7\n' |
      -p PriorNumberOfFractions=23.333333333 \
      -p TargetDosePerFraction=2.0 \
      -p Model='eqdx-lq-simple' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'pixel value range' |
-  grep '0,75[.]8' |
-  grep .
+  -o TestConditions \
+    -p Conditions='pixel_minmax(0, 75.833, 0.5)'
 
 
 printf 'Test 8\n' |
@@ -184,11 +162,8 @@ printf 'Test 8\n' |
      -p PriorNumberOfFractions=23.333333333 \
      -p TargetDosePerFraction=2.0 \
      -p Model='eqdx-lq-simple' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'pixel value range' |
-  grep '0,84' |
-  grep .
+  -o TestConditions \
+    -p Conditions='pixel_minmax(0, 84, 0.5)'
 
 
 # Test that EQD5 conversion is valid with 3 Gy/f inputs.
@@ -207,11 +182,8 @@ printf 'Test 9\n' |
      -p PriorNumberOfFractions=23.333333333 \
      -p TargetDosePerFraction=5.0 \
      -p Model='eqdx-lq-simple' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'pixel value range' |
-  grep '0,60[.]6' |
-  grep .
+  -o TestConditions \
+    -p Conditions='pixel_minmax(0, 60.667, 0.5)'
 
 
 printf 'Test 10\n' |
@@ -231,10 +203,7 @@ printf 'Test 10\n' |
      -p PriorNumberOfFractions=23.333333333 \
      -p TargetDosePerFraction=5.0 \
      -p Model='eqdx-lq-simple' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'pixel value range' |
-  grep '0,57[.]2' |
-  grep .
+  -o TestConditions \
+    -p Conditions='pixel_minmax(0, 57.273, 0.5)'
 
 

@@ -27,11 +27,8 @@ printf 'Test 1\n' |
   -o PurgeContours \
     -p ROILabelRegex='A' \
     -p AreaBelow='inf' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "2 contour_collections loaded" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='contour_collection_count(2)'
 
 
 # Tests deleting many.
@@ -57,11 +54,8 @@ printf 'Test 2\n' |
   -o PurgeContours \
     -p ROILabelRegex='.*' \
     -p AreaBelow='inf' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "0 contour_collections loaded" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='contour_collection_count(0)'
 
 
 # Tests inverting the ROI selection criteria.
@@ -88,11 +82,8 @@ printf 'Test 3\n' |
     -p ROILabelRegex='C' \
     -p InvertSelection=true \
     -p AreaBelow='inf' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "1 contour_collections loaded" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='contour_collection_count(1)'
 
 
 # Tests inverting the purge criteria logic.
@@ -119,11 +110,8 @@ printf 'Test 4\n' |
     -p ROILabelRegex='B' \
     -p InvertLogic=true \
     -p AreaBelow='-inf' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "2 contour_collections loaded" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='contour_collection_count(2)'
 
 
 # Tests inverting both selection criteria and the purge criteria logic.
@@ -151,11 +139,8 @@ printf 'Test 4\n' |
     -p InvertLogic=true \
     -p InvertSelection=true \
     -p AreaBelow='-inf' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "1 contour_collections loaded" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='contour_collection_count(1)'
 
 
 # Tests the area criteria.
@@ -171,11 +156,8 @@ printf 'Test 5\n' |
   -o PurgeContours \
     -p ROILabelRegex='A' \
     -p AreaBelow='1.0' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "1 contour_collections loaded" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='contour_collection_count(1)'
 
 
 # Tests the area criteria.
@@ -191,11 +173,8 @@ printf 'Test 6\n' |
   -o PurgeContours \
     -p ROILabelRegex='A' \
     -p AreaBelow='1000000.0' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "0 contour_collections loaded" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='contour_collection_count(0)'
 
 
 
@@ -212,11 +191,8 @@ printf 'Test 7\n' |
   -o PurgeContours \
     -p ROILabelRegex='A' \
     -p PerimeterBelow='1.0' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "1 contour_collections loaded" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='contour_collection_count(1)'
 
 
 # Tests the perimeter criteria.
@@ -232,11 +208,8 @@ printf 'Test 8\n' |
   -o PurgeContours \
     -p ROILabelRegex='A' \
     -p PerimeterBelow='1000000.0' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "0 contour_collections loaded" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='contour_collection_count(0)'
 
 
 # Tests the vertexcount criteria.
@@ -252,11 +225,8 @@ printf 'Test 9\n' |
   -o PurgeContours \
     -p ROILabelRegex='A' \
     -p VertexCountBelow='10.0' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "1 contour_collections loaded" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='contour_collection_count(1)'
 
 
 # Tests the vertexcount criteria.
@@ -272,9 +242,6 @@ printf 'Test 10\n' |
   -o PurgeContours \
     -p ROILabelRegex='A' \
     -p VertexCountBelow='1000000.0' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "0 contour_collections loaded" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='contour_collection_count(0)'
 

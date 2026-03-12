@@ -11,11 +11,8 @@ printf 'Test 1: Sample 50%% of points from generated point cloud\n' |
   -v \
   -o GenerateVirtualDataPointCloudV1 \
   -o 'SamplePoints:Fraction=0.5:Seed=12345' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'Point_Cloud' |
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='point_cloud_count(1)'
 
 printf 'Test 2: Sample 10%% of points\n' |
   tee -a fullstdout
@@ -23,10 +20,7 @@ printf 'Test 2: Sample 10%% of points\n' |
   -v \
   -o GenerateVirtualDataPointCloudV1 \
   -o 'SamplePoints:Fraction=0.1:Seed=54321' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep 'Point_Cloud' |
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='point_cloud_count(1)'
 
 printf 'All tests passed!\n'

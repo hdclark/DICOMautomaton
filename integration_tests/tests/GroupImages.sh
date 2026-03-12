@@ -11,11 +11,8 @@ set -o pipefail
   "${TEST_FILES_ROOT}"/MR_fuzzy_noise.dcm \
   \
   -o GroupImages:KeysCommon='Modality' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "1 Image_Arrays loaded" | 
-  `# Ensure the output stream is not empty. ` \
-  grep .
+  -o TestConditions \
+    -p Conditions='image_array_count(1)'
 
 
 # Test that images can be exploded.
@@ -26,11 +23,8 @@ set -o pipefail
   "${TEST_FILES_ROOT}"/MR_fuzzy_noise.dcm \
   \
   -o GroupImages:KeysCommon='Filename' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "4 Image_Arrays loaded" | 
-  `# Ensure the output stream is not empty. ` \
-  grep .
+  -o TestConditions \
+    -p Conditions='image_array_count(4)'
 
 
 # Test that images can be combined and exploded without loss.
@@ -47,9 +41,6 @@ set -o pipefail
   -o GroupImages:KeysCommon='Modality' \
   -o PartitionImages:KeysCommon='Filename' \
   -o PartitionImages:KeysCommon='Modality' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "1 Image_Arrays loaded" | 
-  `# Ensure the output stream is not empty. ` \
-  grep .
+  -o TestConditions \
+    -p Conditions='image_array_count(1)'
 

@@ -26,11 +26,8 @@ printf 'Test 1\n' |
     -p ROILabel=C \
   -o DeleteContours \
     -p ROILabelRegex='A' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "2 contour_collections loaded" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='contour_collection_count(2)'
 
 
 # Tests deleting many.
@@ -55,11 +52,8 @@ printf 'Test 2\n' |
     -p ROILabel=C \
   -o DeleteContours \
     -p ROILabelRegex='.*' \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "0 contour_collections loaded" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='contour_collection_count(0)'
 
 
 # Tests deleting a single contour (one-at-a-time), but then using the contour storage afterward.
@@ -87,11 +81,8 @@ printf 'Test 3\n' |
       -o DeleteContours \
         -p ROILabelRegex='.*' \
   -\) \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "0 contour_collections loaded" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='contour_collection_count(0)'
 
 
 # Tests selectivity of the delete operation. Should not delete contours that are not selected.
@@ -119,10 +110,7 @@ printf 'Test 4\n' |
       -o DeleteContours \
         -p ROILabelRegex='A' \
   -\) \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "2 contour_collections loaded" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='contour_collection_count(2)' 
 
 

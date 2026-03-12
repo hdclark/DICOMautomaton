@@ -32,11 +32,8 @@ printf 'Test 1\n' |
     -p Upper=225 \
     -p SimplifyMergeAdjacent=true \
     -p ROILabel=D \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "4 contour_collections loaded" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='contour_collection_count(4)'
 
 
 # The following tests operation aliases and fuzzy matching for aliases.
@@ -59,11 +56,8 @@ printf 'Test 2\n' |
     -p Upper=125 \
     -p SimplifyMergeAdjacent=true \
     -p ROILabel=C \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "3 contour_collections loaded" | 
-  `# Note: ensures the output stream is not empty. ` \
-  grep . 
+  -o TestConditions \
+    -p Conditions='contour_collection_count(3)'
 
 
 # The following operation is not close in name to any legitimate operations.

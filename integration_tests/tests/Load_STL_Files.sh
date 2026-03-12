@@ -8,9 +8,6 @@ set -o pipefail
   "${TEST_FILES_ROOT}"/icosahedron_binary.stl \
   "${TEST_FILES_ROOT}"/icosahedron.stl \
   \
-  -o DroverDebug |
-  tee -a fullstdout |
-  grep -i "3 Surface_Meshes loaded" | 
-  `# Ensure the output stream is not empty. ` \
-  grep .
+  -o TestConditions \
+    -p Conditions='surface_mesh_count(3)'
 
