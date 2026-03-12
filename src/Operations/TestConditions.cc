@@ -383,21 +383,23 @@ bool TestConditions(Drover &DICOM_data,
 
             if(expected_min){
                 if(std::abs(actual_min - *expected_min) > tolerance){
-                    throw std::runtime_error("Condition failed: pixel_min expected "
+                    throw std::runtime_error("Condition failed: pixel_minmax (min bound) expected "
                                              + std::to_string(*expected_min) + " (tolerance "
                                              + std::to_string(tolerance) + ") but found "
                                              + std::to_string(actual_min));
                 }
-                YLOGINFO("Condition passed: pixel_min(" << *expected_min << ") actual=" << actual_min);
+                YLOGINFO("Condition passed: pixel_minmax (min bound, expected="
+                         << *expected_min << ") actual=" << actual_min);
             }
             if(expected_max){
                 if(std::abs(actual_max - *expected_max) > tolerance){
-                    throw std::runtime_error("Condition failed: pixel_max expected "
+                    throw std::runtime_error("Condition failed: pixel_minmax (max bound) expected "
                                              + std::to_string(*expected_max) + " (tolerance "
                                              + std::to_string(tolerance) + ") but found "
                                              + std::to_string(actual_max));
                 }
-                YLOGINFO("Condition passed: pixel_max(" << *expected_max << ") actual=" << actual_max);
+                YLOGINFO("Condition passed: pixel_minmax (max bound, expected="
+                         << *expected_max << ") actual=" << actual_max);
             }
 
         }else{
