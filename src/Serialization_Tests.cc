@@ -4,7 +4,6 @@
 // defined in rpc/Serialization.cc. These tests are separated into their own file because
 // Thrift_objs is linked into shared libraries which don't include doctest implementation.
 
-#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <limits>
@@ -24,20 +23,6 @@
 #include "Tables.h"
 
 #include "rpc/Serialization.h"
-
-
-// ============================================================================
-// Helper functions for unit tests
-// ============================================================================
-
-// Compare vec3<double> values, handling NaN.
-static bool vec3_equal(const vec3<double> &a, const vec3<double> &b){
-    auto eq = [](double x, double y) -> bool {
-        if(std::isnan(x) && std::isnan(y)) return true;
-        return x == y;
-    };
-    return eq(a.x, b.x) && eq(a.y, b.y) && eq(a.z, b.z);
-}
 
 
 // ============================================================================
