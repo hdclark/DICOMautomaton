@@ -11,6 +11,7 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -706,8 +707,8 @@ TEST_CASE( "Serialize/Deserialize Transform3 throws" ){
     // Transform3 serialization is intentionally not yet supported.
     Transform3 in;
     dcma::rpc::Transform3 rpc;
-    REQUIRE_THROWS( Serialize(in, rpc) );
-    REQUIRE_THROWS( Deserialize(rpc, in) );
+    REQUIRE_THROWS_AS( Serialize(in, rpc), std::runtime_error );
+    REQUIRE_THROWS_AS( Deserialize(rpc, in), std::runtime_error );
 }
 
 
