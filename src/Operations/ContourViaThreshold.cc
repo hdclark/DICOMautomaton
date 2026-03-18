@@ -495,7 +495,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
                         inclusion_threshold = width * 0.5;
                         exterior_value = inclusion_threshold + 1.0;
                         below_is_interior = true;
-                        mask.apply_to_pixels([resolved_chnls,midpoint](int64_t, int64_t, int64_t chnl, float &val) -> void {
+                        mask.apply_to_pixels([&resolved_chnls,midpoint](int64_t, int64_t, int64_t chnl, float &val) -> void {
                                 if(resolved_chnls.count(chnl) != 0){
                                     val = std::abs(val - midpoint);
                                 }
@@ -899,7 +899,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
                         inclusion_threshold = width * 0.5;
                         exterior_value = inclusion_threshold + 1.0;
                         below_is_interior = true;
-                        mask.apply_to_pixels([resolved_chnls,midpoint](int64_t, int64_t, int64_t chnl, float &val) -> void {
+                        mask.apply_to_pixels([&resolved_chnls,midpoint](int64_t, int64_t, int64_t chnl, float &val) -> void {
                                 if(resolved_chnls.count(chnl) != 0){
                                     val = std::abs(val - midpoint);
                                 }
