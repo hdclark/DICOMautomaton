@@ -10,6 +10,7 @@
 #include <random>
 #include <ostream>
 #include <stdexcept>
+#include <set>
 #include <cstdint>
 
 #include "../../Thread_Pool.h"
@@ -122,13 +123,15 @@ bool ComputeVolumetricNeighbourhoodSampler(planar_image_collection<float,double>
             std::vector<float> shtl;
             shtl.reserve(100); // An arbitrary guess.
 
-            auto f_bounded = [&, img_rows, img_cols, img_imgs, ref_img_refw](
+            const auto resolved_channels = ref_img_refw.get().resolve_channels(user_data_s->channels);
+
+            auto f_bounded = [&, img_rows, img_cols, img_imgs, ref_img_refw, resolved_channels](
                                  int64_t E_row, int64_t E_col, int64_t channel,
                                  std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                                  std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                  float &voxel_val) {
                 // No-op if this is the wrong channel.
-                if( (user_data_s->channel >= 0) && (channel != user_data_s->channel) ){
+                if( resolved_channels.count(channel) == 0 ){
                     return;
                 }
 

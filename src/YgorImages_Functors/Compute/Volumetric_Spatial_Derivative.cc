@@ -10,6 +10,7 @@
 #include <random>
 #include <ostream>
 #include <stdexcept>
+#include <set>
 #include <cstdint>
 
 #include "YgorImages.h"
@@ -102,8 +103,14 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
         img_adj_ptr = std::make_shared< pia_t >( std::move(l_img_adj) ); // Note: direct construction here won't work ATM.
     }
 
+    // Resolve the channels once using the first image as representative.
+    // Note: resolve_channels returns all valid channels for empty/negative input, so the
+    //       empty fallback to channel 0 is only reached if the image has no channels.
+    const auto resolved_channels = imagecoll.images.front().resolve_channels(user_data_s->channels);
+    const int64_t first_resolved_channel = resolved_channels.empty() ? 0 : *resolved_channels.begin();
+
     ComputeVolumetricNeighbourhoodSamplerUserData ud;
-    ud.channel = user_data_s->channel;
+    ud.channels = user_data_s->channels;
     ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
 
     if(user_data_s->order == VolumetricSpatialDerivativeEstimator::first){
@@ -179,9 +186,8 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
                         unit.y *= pxl_dy;
                         unit.z *= pxl_dz;
 
-                        const int64_t channel = (user_data_s->channel < 0) ? 0 : user_data_s->channel;
-                        const auto n_magn_m = img_adj_ptr->trilinearly_interpolate(pos - unit, channel);
-                        const auto n_magn_p = img_adj_ptr->trilinearly_interpolate(pos + unit, channel);
+                        const auto n_magn_m = img_adj_ptr->trilinearly_interpolate(pos - unit, first_resolved_channel);
+                        const auto n_magn_p = img_adj_ptr->trilinearly_interpolate(pos + unit, first_resolved_channel);
 
                         if( true
                         && std::isfinite(n_magn_m)
@@ -463,9 +469,8 @@ bool ComputeVolumetricSpatialDerivative(planar_image_collection<float,double> &i
                         unit.y *= pxl_dy;
                         unit.z *= pxl_dz;
 
-                        const int64_t channel = (user_data_s->channel < 0) ? 0 : user_data_s->channel;
-                        const auto n_magn_m = img_adj_ptr->trilinearly_interpolate(pos - unit, channel);
-                        const auto n_magn_p = img_adj_ptr->trilinearly_interpolate(pos + unit, channel);
+                        const auto n_magn_m = img_adj_ptr->trilinearly_interpolate(pos - unit, first_resolved_channel);
+                        const auto n_magn_p = img_adj_ptr->trilinearly_interpolate(pos + unit, first_resolved_channel);
 
                         if( true
                         && std::isfinite(n_magn_m)
