@@ -26,6 +26,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../Thread_Pool.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
@@ -103,10 +104,12 @@ OperationDoc OpArgDocThresholdOtsu(){
 
     out.args.emplace_back();
     out.args.back().name = "Channel";
-    out.args.back().desc = "The image channel to use. Zero-based.";
+    out.args.back().desc = "The image channel to use. Zero-based."
+                           " Negative values will cause all channels to be operated on."
+                           " Multiple comma-separated channels can also be specified (e.g., '0,2').";
     out.args.back().default_val = "0";
     out.args.back().expected = true;
-    out.args.back().examples = { "0", "1", "2" };
+    out.args.back().examples = { "0", "1", "2", "0,2" };
 
     out.args.emplace_back();
     out.args.back() = NCWhitelistOpArgDoc();
@@ -173,7 +176,7 @@ bool ThresholdOtsu(Drover &DICOM_data,
     const auto ReplacementLow = std::stod( OptArgs.getValueStr("ReplacementLow").value() );
     const auto ReplacementHigh = std::stod( OptArgs.getValueStr("ReplacementHigh").value() );
 
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
 
     const auto InclusivityStr = OptArgs.getValueStr("Inclusivity").value();
     const auto ContourOverlapStr = OptArgs.getValueStr("ContourOverlap").value();
@@ -218,6 +221,7 @@ bool ThresholdOtsu(Drover &DICOM_data,
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
         if((*iap_it)->imagecoll.images.empty()) continue;
+        const auto resolved_chnls = (*iap_it)->imagecoll.images.front().resolve_channels(Channels);
 
         std::vector<double> voxel_vals;
         std::mutex voxel_vals_access;
@@ -259,7 +263,7 @@ bool ThresholdOtsu(Drover &DICOM_data,
                                 std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                                 std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                 float &voxel_val ) -> void {
-                if( (Channel < 0) || (Channel == chan) ){
+                if(resolved_chnls.count(chan) != 0){
                     std::lock_guard<std::mutex> lock(voxel_vals_access);
                     voxel_vals.emplace_back(voxel_val);
                 }
@@ -337,7 +341,7 @@ bool ThresholdOtsu(Drover &DICOM_data,
                                 std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                                 std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                 float &voxel_val ) -> void {
-                if( (Channel < 0) || (Channel == chan) ){
+                if(resolved_chnls.count(chan) != 0){
                     voxel_val = (voxel_val < f_threshold) ? ReplacementLow
                                                           : ReplacementHigh;
                 }

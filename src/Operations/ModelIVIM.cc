@@ -429,7 +429,7 @@ bool ModelIVIM(Drover &DICOM_data,
 
         ComputeJointPixelSamplerUserData ud;
         ud.sampling_method = ComputeJointPixelSamplerUserData::SamplingMethod::LinearInterpolation;
-        ud.channel = Channel;
+        ud.channels = Channels;
         ud.inc_lower_threshold = TestImgLowerThreshold;
         ud.inc_upper_threshold = TestImgUpperThreshold;
         ud.inc_nan = TestIncludeNaN;

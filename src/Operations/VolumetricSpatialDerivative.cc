@@ -16,6 +16,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Compute/Volumetric_Spatial_Derivative.h"
 
@@ -61,12 +62,14 @@ OperationDoc OpArgDocVolumetricSpatialDerivative(){
     out.args.emplace_back();
     out.args.back().name = "Channel";
     out.args.back().desc = "The channel to operated on (zero-based)."
-                           " Negative values will cause all channels to be operated on.";
+                           " Negative values will cause all channels to be operated on."
+                           " Multiple comma-separated channels can also be specified (e.g., '0,2').";
     out.args.back().default_val = "-1";
     out.args.back().expected = true;
     out.args.back().examples = { "-1",
                                  "0",
-                                 "1" };
+                                 "1",
+                                 "0,2" };
 
 
     out.args.emplace_back();
@@ -111,7 +114,7 @@ bool VolumetricSpatialDerivative(Drover &DICOM_data,
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto ROISelection = OptArgs.getValueStr("ROISelection").value();
 
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
 
     const auto EstimatorStr = OptArgs.getValueStr("Estimator").value();
     const auto MethodStr = OptArgs.getValueStr("Method").value();
@@ -159,7 +162,7 @@ bool VolumetricSpatialDerivative(Drover &DICOM_data,
 
         // Planar derivatives.
         ComputeVolumetricSpatialDerivativeUserData ud;
-        ud.channel = Channel;
+        ud.channels = Channels;
         ud.order = VolumetricSpatialDerivativeEstimator::first;
         ud.method = VolumetricSpatialDerivativeMethod::row_aligned;
 
