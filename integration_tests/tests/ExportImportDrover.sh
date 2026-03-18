@@ -11,10 +11,14 @@ function skip_test {
     echo "ExportDrover is not available (Thrift not enabled). Skipping test..."
     exit 0
 }
+skip_check_file="$(mktemp)"
+trap 'rm -f "${skip_check_file}"' EXIT
 "${DCMA_BIN}" \
   -o GenerateVirtualDataDoseStairsV1 \
-  -o ExportDrover -p Filename='/dev/null' \
+  -o ExportDrover -p Filename="${skip_check_file}" \
   2>&1 || skip_test
+trap - EXIT
+rm -f "${skip_check_file}"
 
 
 # Test 1: Export and import image data, verifying image counts and pixel values.

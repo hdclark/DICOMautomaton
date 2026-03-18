@@ -75,12 +75,21 @@ TEST_CASE( "Serialize/Deserialize uint32_t" ){
 }
 
 TEST_CASE( "Serialize/Deserialize uint64_t" ){
-    for(uint64_t val : {uint64_t(0), uint64_t(1), uint64_t(12345)}){
+    SUBCASE( "values within int64_t range" ){
+        for(uint64_t val : {uint64_t(0), uint64_t(1), uint64_t(12345),
+                            static_cast<uint64_t>(std::numeric_limits<int64_t>::max())}){
+            int64_t rpc_val = 0;
+            Serialize(val, rpc_val);
+            uint64_t out_val = 0;
+            Deserialize(rpc_val, out_val);
+            REQUIRE( out_val == val );
+        }
+    }
+    SUBCASE( "values exceeding int64_t range throw" ){
         int64_t rpc_val = 0;
-        Serialize(val, rpc_val);
-        uint64_t out_val = 0;
-        Deserialize(rpc_val, out_val);
-        REQUIRE( out_val == val );
+        uint64_t too_large = static_cast<uint64_t>(std::numeric_limits<int64_t>::max()) + 1ULL;
+        REQUIRE_THROWS_AS( Serialize(too_large, rpc_val), std::runtime_error );
+        REQUIRE_THROWS_AS( Serialize(std::numeric_limits<uint64_t>::max(), rpc_val), std::runtime_error );
     }
 }
 
