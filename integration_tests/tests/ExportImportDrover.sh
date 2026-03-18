@@ -31,7 +31,7 @@ printf 'Test 1: Export and import image data\n' |
   -o ImportDrover \
     -p Filename='test_drover_images.ts_dcma' \
   -o TestConditions \
-    -p Conditions='image_array_count(1)'
+    -p Conditions='image_array_count(1); pixel_minmax(0,70,0.1)'
 
 
 # Test 2: Export and import point cloud data.
