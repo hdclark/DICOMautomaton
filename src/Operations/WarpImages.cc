@@ -387,6 +387,9 @@ bool WarpImages(Drover &DICOM_data,
                     rimg.metadata = l_meta;
                 }
 
+                if(edit_ia_ptr->imagecoll.images.empty()) continue;
+                const auto resolved_chnls = edit_ia_ptr->imagecoll.images.front().resolve_channels(Channels);
+
                 PartitionedImageVoxelVisitorMutatorUserData ud;
                 ud.mutation_opts.editstyle = Mutate_Voxels_Opts::EditStyle::InPlace;
                 ud.mutation_opts.aggregate = Mutate_Voxels_Opts::Aggregate::First;

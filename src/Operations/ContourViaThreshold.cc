@@ -27,6 +27,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../Thread_Pool.h"
 #include "../Metadata.h"
 #ifdef DCMA_USE_CGAL
@@ -110,10 +111,12 @@ OperationDoc OpArgDocContourViaThreshold(){
 
     out.args.emplace_back();
     out.args.back().name = "Channel";
-    out.args.back().desc = "The image channel to use. Zero-based.";
+    out.args.back().desc = "The image channel to use. Zero-based."
+                           " Specify a single channel (e.g., '0'), multiple comma-separated channels"
+                           " (e.g., '0,2'), or a negative value to operate on all available channels.";
     out.args.back().default_val = "0";
     out.args.back().expected = true;
-    out.args.back().examples = { "0", "1", "2" };
+    out.args.back().examples = { "0", "1", "2", "0,2" };
 
     
     out.args.emplace_back();
@@ -190,7 +193,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
     //-----------------------------------------------------------------------------------------------------------------
     const auto Lower = std::stod( LowerStr );
     const auto Upper = std::stod( UpperStr );
-    const auto Channel = std::stol( ChannelStr );
+    const auto Channels = parse_channel_set( ChannelStr );
 
     const auto regex_is_percent = Compile_Regex(".*[%].*");
     const auto Lower_is_Percent = std::regex_match(LowerStr, regex_is_percent);
@@ -220,6 +223,9 @@ bool ContourViaThreshold(Drover &DICOM_data,
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
+        if((*iap_it)->imagecoll.images.empty()) continue;
+        const auto resolved_chnls = (*iap_it)->imagecoll.images.front().resolve_channels(Channels);
+
         const int64_t img_count = (*iap_it)->imagecoll.images.size();
 
         std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
@@ -233,8 +239,8 @@ bool ContourViaThreshold(Drover &DICOM_data,
             if(Lower_is_Percent || Upper_is_Percent){
                 Stats::Running_MinMax<float> rmm;
                 for(const auto &animg : (*iap_it)->imagecoll.images){
-                    animg.apply_to_pixels([&rmm,Channel](int64_t, int64_t, int64_t chnl, float val) -> void {
-                         if(Channel == chnl) rmm.Digest(val);
+                    animg.apply_to_pixels([&rmm,&resolved_chnls](int64_t, int64_t, int64_t chnl, float val) -> void {
+                         if(resolved_chnls.count(chnl) != 0) rmm.Digest(val);
                          return;
                     });
                 }
@@ -247,8 +253,8 @@ bool ContourViaThreshold(Drover &DICOM_data,
                 std::vector<float> pixel_vals;
                 //pixel_vals.reserve(animg.rows * animg.columns * animg.channels * img_count);
                 for(const auto &animg : (*iap_it)->imagecoll.images){
-                    animg.apply_to_pixels([&pixel_vals,Channel](int64_t, int64_t, int64_t chnl, float val) -> void {
-                         if(Channel == chnl) pixel_vals.push_back(val);
+                    animg.apply_to_pixels([&pixel_vals,&resolved_chnls](int64_t, int64_t, int64_t chnl, float val) -> void {
+                         if(resolved_chnls.count(chnl) != 0) pixel_vals.push_back(val);
                          return;
                     });
                 }
@@ -270,8 +276,8 @@ bool ContourViaThreshold(Drover &DICOM_data,
 
         work_queue<std::function<void(void)>> wq;
         for(const auto &animg : (*iap_it)->imagecoll.images){
-            if( (animg.rows < 1) || (animg.columns < 1) || (Channel >= animg.channels) ){
-                throw std::runtime_error("Image or channel is empty -- cannot contour via thresholds.");
+            if( (animg.rows < 1) || (animg.columns < 1) ){
+                throw std::runtime_error("Image is empty -- cannot contour via thresholds.");
             }
 
             const auto animg_ptr = &(animg);
@@ -283,7 +289,7 @@ bool ContourViaThreshold(Drover &DICOM_data,
                             binary_regex,
                             marching_squares_regex,
                             marching_cubes_regex,
-                            Channel,
+                            resolved_chnls,
                             SimplifyMergeAdjacent,
                             ROILabel,
                             NormalizedROILabel,
@@ -363,7 +369,14 @@ bool ContourViaThreshold(Drover &DICOM_data,
                     // around the pixel's perimeter.
                     for(auto r = 0; r < R; ++r){
                         for(auto c = 0; c < C; ++c){
-                            if(pixel_oracle(animg_ptr->value(r, c, Channel))){
+                            bool included = false;
+                            for(const auto &ch : resolved_chnls){
+                                if(pixel_oracle(animg_ptr->value(r, c, ch))){
+                                    included = true;
+                                    break;
+                                }
+                            }
+                            if(included){
                                 const auto bot_l = vert_mapping(r,c,r_pos,c_neg);
                                 const auto bot_r = vert_mapping(r,c,r_pos,c_pos);
                                 const auto top_r = vert_mapping(r,c,r_neg,c_pos);
@@ -482,8 +495,8 @@ bool ContourViaThreshold(Drover &DICOM_data,
                         inclusion_threshold = width * 0.5;
                         exterior_value = inclusion_threshold + 1.0;
                         below_is_interior = true;
-                        mask.apply_to_pixels([Channel,midpoint](int64_t, int64_t, int64_t chnl, float &val) -> void {
-                                if(Channel == chnl){
+                        mask.apply_to_pixels([resolved_chnls,midpoint](int64_t, int64_t, int64_t chnl, float &val) -> void {
+                                if(resolved_chnls.count(chnl) != 0){
                                     val = std::abs(val - midpoint);
                                 }
                                 return;
@@ -559,17 +572,17 @@ bool ContourViaThreshold(Drover &DICOM_data,
                     };
 
                     // Override the normal voxel intensity and position getters to handle the 2 additional rows and columns.
-                    const auto get_value = [mask,R,C,exterior_value,Channel](int64_t r, int64_t c) -> float {
+                    const auto get_value = [mask,R,C,exterior_value,resolved_chnls](int64_t r, int64_t c) -> float {
                         float out;
                         if( (r == 0) || (r == (R+1))
                         ||  (c == 0) || (c == (C+1)) ){
                             out = exterior_value;
                         }else{
-                            out = mask.value(r-1, c-1, Channel);
+                            out = mask.value(r-1, c-1, *resolved_chnls.begin());
                         }
                         return out;
                     };
-                    const auto get_position = [&mask,R,C,exterior_value,Channel](int64_t r, int64_t c){
+                    const auto get_position = [&mask,R,C,exterior_value](int64_t r, int64_t c){
                         return (  mask.anchor
                                 + mask.offset
                                 + mask.row_unit*(mask.pxl_dx*static_cast<double>(c-1))
@@ -886,8 +899,8 @@ bool ContourViaThreshold(Drover &DICOM_data,
                         inclusion_threshold = width * 0.5;
                         exterior_value = inclusion_threshold + 1.0;
                         below_is_interior = true;
-                        mask.apply_to_pixels([Channel,midpoint](int64_t, int64_t, int64_t chnl, float &val) -> void {
-                                if(Channel == chnl){
+                        mask.apply_to_pixels([resolved_chnls,midpoint](int64_t, int64_t, int64_t chnl, float &val) -> void {
+                                if(resolved_chnls.count(chnl) != 0){
                                     val = std::abs(val - midpoint);
                                 }
                                 return;

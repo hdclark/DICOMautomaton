@@ -28,6 +28,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../Thread_Pool.h"
 
 #include "ConvertImageToMeshes.h"
@@ -94,10 +95,12 @@ OperationDoc OpArgDocConvertImageToMeshes(){
 
     out.args.emplace_back();
     out.args.back().name = "Channel";
-    out.args.back().desc = "The image channel to use. Zero-based.";
+    out.args.back().desc = "The image channel to use. Zero-based."
+                           " Specify a single channel (e.g., '0'), multiple comma-separated channels"
+                           " (e.g., '0,2'), or a negative value to operate on all available channels.";
     out.args.back().default_val = "0";
     out.args.back().expected = true;
-    out.args.back().examples = { "0", "1", "2" };
+    out.args.back().examples = { "0", "1", "2", "0,2" };
 
     
     out.args.emplace_back();
@@ -156,7 +159,7 @@ bool ConvertImageToMeshes(Drover &DICOM_data,
 
     const auto Lower = std::stod( LowerStr );
     const auto Upper = std::stod( UpperStr );
-    const auto Channel = std::stol( ChannelStr );
+    const auto Channels = parse_channel_set( ChannelStr );
 
     const auto regex_is_percent = Compile_Regex(".*[%].*");
     const auto Lower_is_Percent = std::regex_match(LowerStr, regex_is_percent);
@@ -174,6 +177,9 @@ bool ConvertImageToMeshes(Drover &DICOM_data,
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
+        if((*iap_it)->imagecoll.images.empty()) continue;
+        const auto resolved_chnls = (*iap_it)->imagecoll.images.front().resolve_channels(Channels);
+
         // The mesh will inheret image metadata.
         auto ia_metadata = (*iap_it)->imagecoll.get_common_metadata({});
 
@@ -188,8 +194,8 @@ bool ConvertImageToMeshes(Drover &DICOM_data,
                 if(Lower_is_Percent || Upper_is_Percent){
                     Stats::Running_MinMax<float> rmm;
                     for(const auto &animg : (*iap_it)->imagecoll.images){
-                        animg.apply_to_pixels([&rmm,Channel](int64_t, int64_t, int64_t chnl, float val) -> void {
-                             if(Channel == chnl) rmm.Digest(val);
+                        animg.apply_to_pixels([&rmm,&resolved_chnls](int64_t, int64_t, int64_t chnl, float val) -> void {
+                             if(resolved_chnls.count(chnl) != 0) rmm.Digest(val);
                              return;
                         });
                     }
@@ -202,8 +208,8 @@ bool ConvertImageToMeshes(Drover &DICOM_data,
                     std::vector<float> pixel_vals;
                     //pixel_vals.reserve(animg.rows * animg.columns * animg.channels * img_count);
                     for(const auto &animg : (*iap_it)->imagecoll.images){
-                        animg.apply_to_pixels([&pixel_vals,Channel](int64_t, int64_t, int64_t chnl, float val) -> void {
-                             if(Channel == chnl) pixel_vals.push_back(val);
+                        animg.apply_to_pixels([&pixel_vals,&resolved_chnls](int64_t, int64_t, int64_t chnl, float val) -> void {
+                             if(resolved_chnls.count(chnl) != 0) pixel_vals.push_back(val);
                              return;
                         });
                     }
@@ -227,8 +233,8 @@ bool ConvertImageToMeshes(Drover &DICOM_data,
 
             std::list<planar_image<float,double>> masks;
             for(auto &animg : (*iap_it)->imagecoll.images){
-                if( (animg.rows < 1) || (animg.columns < 1) || (Channel >= animg.channels) ){
-                    throw std::runtime_error("Image or channel is empty -- cannot generate surface mesh.");
+                if( (animg.rows < 1) || (animg.columns < 1) ){
+                    throw std::runtime_error("Image is empty -- cannot generate surface mesh.");
                 }
 
                 //Prepare a mask image for contouring.
@@ -240,13 +246,13 @@ bool ConvertImageToMeshes(Drover &DICOM_data,
                     exterior_value = 1.0;
                     const auto interior_value = -exterior_value;
                     masks.back().apply_to_pixels([pixel_oracle,
-                                                  Channel,
+                                                  resolved_chnls,
                                                   interior_value,
                                                   exterior_value](int64_t, 
                                                                   int64_t,
                                                                   int64_t chnl,
                                                                   float &val) -> void {
-                            if(Channel == chnl){
+                            if(resolved_chnls.count(chnl) != 0){
                                 val = (pixel_oracle(val) ? interior_value : exterior_value);
                             }
                             return;
@@ -262,8 +268,8 @@ bool ConvertImageToMeshes(Drover &DICOM_data,
                         inclusion_threshold = width * 0.5;
                         exterior_value = inclusion_threshold + 1.0;
                         below_is_interior = true;
-                        masks.back().apply_to_pixels([Channel,midpoint](int64_t, int64_t, int64_t chnl, float &val) -> void {
-                                if(Channel == chnl){
+                        masks.back().apply_to_pixels([resolved_chnls,midpoint](int64_t, int64_t, int64_t chnl, float &val) -> void {
+                                if(resolved_chnls.count(chnl) != 0){
                                     val = std::abs(val - midpoint);
                                 }
                                 return;
