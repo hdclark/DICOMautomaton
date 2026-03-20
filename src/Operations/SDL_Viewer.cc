@@ -1445,48 +1445,30 @@ bool SDL_Viewer(Drover &DICOM_data,
         "in vec3 v_pos;\n"
         "in vec3 v_norm;\n"
         "\n"
-        "uniform mat4 mvp_matrix;      // model-view-projection matrix.\n"
-        "uniform mat4 mv_matrix;       // model-view matrix.\n"
-        "uniform mat3 norm_matrix;     // rotation-only matrix.\n"
+        "uniform mat4 mvp_matrix;\n"
+        "uniform mat4 mv_matrix;\n"
+        "uniform mat3 norm_matrix;\n"
         "\n"
-        "uniform vec4 diffuse_colour;\n"
-        "uniform vec4 user_colour;\n"
-        "uniform vec3 light_position;\n"
-        "uniform bool use_lighting;\n"
-        "uniform bool use_smoothing;\n"
-        "\n"
-        "out vec4 interp_colour;\n"
-        "flat out vec4 flat_colour;\n"
+        "out vec3 frag_pos;\n"
+        "out vec3 frag_norm;\n"
+        "flat out vec3 flat_norm;\n"
         "\n"
         "void main(){\n"
         "    gl_Position = mvp_matrix * vec4(v_pos, 1.0);\n"
-        "\n"
-        "    if(use_lighting){\n"
-        "        vec3 l_norm = normalize(norm_matrix * v_norm);\n"
-        "\n"
-        "        vec4 l_pos4 = mv_matrix * vec4(v_pos, 1.0);\n"
-        "        vec3 l_pos3 = l_pos4.xyz / l_pos4.w;\n"
-        "\n"
-        "        vec3 l_light_pos = vec3(-1000.0, -1000.0, 250.0);\n"
-        "        vec3 light_dir = normalize( l_light_pos - l_pos3 );\n"
-        "\n"
-        "        float diffuse_intensity = max(0.0, 1.0 + 0.5*dot(l_norm, light_dir));\n"
-        "\n"
-        "        interp_colour.rgb = diffuse_intensity * diffuse_colour.rgb;\n"
-        "        //interp_colour.a = 1.0;\n"
-        "        interp_colour.a = user_colour.a;\n"
-        "    }else{\n"
-        "        interp_colour = user_colour;\n"
-        "    }\n"
-        "    flat_colour = interp_colour;\n"
+        "    vec4 p = mv_matrix * vec4(v_pos, 1.0);\n"
+        "    frag_pos = p.xyz / p.w;\n"
+        "    frag_norm = normalize(norm_matrix * v_norm);\n"
+        "    flat_norm = frag_norm;\n"
         "}\n" );
 
     std::array<char, 2048> frag_shader_src = string_to_array(
         "#version " + glsl_version + "\n"
         "\n"
-        "in vec4 interp_colour;\n"
-        "flat in vec4 flat_colour;\n"
+        "in vec3 frag_pos;\n"
+        "in vec3 frag_norm;\n"
+        "flat in vec3 flat_norm;\n"
         "\n"
+        "uniform vec4 diffuse_colour;\n"
         "uniform vec4 user_colour;\n"
         "uniform bool use_lighting;\n"
         "uniform bool use_smoothing;\n"
@@ -1494,8 +1476,21 @@ bool SDL_Viewer(Drover &DICOM_data,
         "out vec4 frag_colour;\n"
         "\n"
         "void main(){\n"
-        "    frag_colour = 0.65 * (use_smoothing ? interp_colour : flat_colour)\n"
-        "                + 0.35 * user_colour;\n"
+        "    if(use_lighting){\n"
+        "        vec3 N = normalize(use_smoothing ? frag_norm : flat_norm);\n"
+        "        vec3 L = normalize(vec3(1.0, 2.0, 3.0) - frag_pos);\n"
+        "        vec3 V = normalize(-frag_pos);\n"
+        "        vec3 H = normalize(L + V);\n"
+        "        float diff = max(dot(N, L), 0.0);\n"
+        "        float spec = 0.0;\n"
+        "        if(diff > 0.0) spec = pow(max(dot(N, H), 0.0), 32.0);\n"
+        "        vec3 c = 0.15 * user_colour.rgb\n"
+        "               + 0.65 * diff * diffuse_colour.rgb\n"
+        "               + 0.20 * spec * vec3(1.0);\n"
+        "        frag_colour = vec4(c, user_colour.a);\n"
+        "    }else{\n"
+        "        frag_colour = user_colour;\n"
+        "    }\n"
         "}\n" );
 
     std::array<char, 2048> shader_log; // Output from most recent compilation and linking.
@@ -8958,7 +8953,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                 //ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
                 ImGui::SetNextWindowPos(ImVec2(10, 20), ImGuiCond_FirstUseEver);
-                if(ImGui::Begin("Meshes", &view_toggles.view_meshes_enabled)){
+                if(ImGui::Begin("Meshes", &view_toggles.view_meshes_enabled, ImGuiWindowFlags_NoNavInputs)){
 
                     // Alter the common model transformation.
                     if(ImGui::IsWindowFocused()){
@@ -9030,8 +9025,60 @@ bool SDL_Viewer(Drover &DICOM_data,
                     clamp_h = 10.0;
                     ImGui::DragScalar("Zoom", ImGuiDataType_Double, &mesh_display_transform.zoom, drag_speed, &clamp_l, &clamp_h, "%.1f");
                     ImGui::DragScalar("Camera distort", ImGuiDataType_Double, &mesh_display_transform.cam_distort, drag_speed, &clamp_l, &clamp_h, "%.1f");
+
+                    // Standard orientation buttons.
+                    ImGui::Separator();
+                    ImGui::Text("Standard Views:");
+                    if(ImGui::Button("Front")){
+                        mesh_display_transform.rot_y = 0.0;
+                        mesh_display_transform.rot_p = 0.0;
+                        mesh_display_transform.rot_r = 0.0;
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Back")){
+                        mesh_display_transform.rot_y = 180.0;
+                        mesh_display_transform.rot_p = 0.0;
+                        mesh_display_transform.rot_r = 0.0;
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Left")){
+                        mesh_display_transform.rot_y = 90.0;
+                        mesh_display_transform.rot_p = 0.0;
+                        mesh_display_transform.rot_r = 0.0;
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Right")){
+                        mesh_display_transform.rot_y = -90.0;
+                        mesh_display_transform.rot_p = 0.0;
+                        mesh_display_transform.rot_r = 0.0;
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Top")){
+                        mesh_display_transform.rot_y = 0.0;
+                        mesh_display_transform.rot_p = 90.0;
+                        mesh_display_transform.rot_r = 0.0;
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Bottom")){
+                        mesh_display_transform.rot_y = 0.0;
+                        mesh_display_transform.rot_p = -90.0;
+                        mesh_display_transform.rot_r = 0.0;
+                    }
+
                     if(ImGui::Button("Reset")){
                         mesh_display_transform = mesh_display_transform_t();
+                    }
+
+                    // Navigation tooltip.
+                    ImGui::Separator();
+                    if(ImGui::CollapsingHeader("Controls")){
+                        ImGui::BulletText("Left-click drag (viewport): rotate (yaw/pitch)");
+                        ImGui::BulletText("Right-click drag (viewport): roll");
+                        ImGui::BulletText("Middle-click drag (viewport): pan");
+                        ImGui::BulletText("Scroll wheel (viewport): zoom");
+                        ImGui::BulletText("Arrow keys (window focused): translate X/Y");
+                        ImGui::BulletText("W/S (window focused): translate Z");
+                        ImGui::BulletText("Q/E (window focused): rotate around Z");
                     }
 
                     // Mesh metadata window.
@@ -9117,6 +9164,36 @@ bool SDL_Viewer(Drover &DICOM_data,
             mesh_display_transform.rot_y = std::fmod(mesh_display_transform.rot_y, 360.0);
             mesh_display_transform.rot_p = std::fmod(mesh_display_transform.rot_p, 360.0);
             mesh_display_transform.rot_r = std::fmod(mesh_display_transform.rot_r, 360.0);
+
+            // Mouse-based mesh navigation (only when ImGui does not want the mouse).
+            if( view_toggles.view_meshes_enabled
+            &&  !io.WantCaptureMouse ){
+                // Left-click drag: trackball rotation (yaw and pitch).
+                if(ImGui::IsMouseDragging(ImGuiMouseButton_Left)){
+                    const auto delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
+                    mesh_display_transform.rot_y += static_cast<double>(delta.x) * 0.3;
+                    mesh_display_transform.rot_p += static_cast<double>(delta.y) * 0.3;
+                    ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
+                }
+                // Middle-click drag: pan (translate model).
+                if(ImGui::IsMouseDragging(ImGuiMouseButton_Middle)){
+                    const auto delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Middle);
+                    mesh_display_transform.model.coeff(0,3) += static_cast<double>(delta.x) * 0.001;
+                    mesh_display_transform.model.coeff(1,3) -= static_cast<double>(delta.y) * 0.001;
+                    ImGui::ResetMouseDragDelta(ImGuiMouseButton_Middle);
+                }
+                // Right-click drag: roll.
+                if(ImGui::IsMouseDragging(ImGuiMouseButton_Right)){
+                    const auto delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right);
+                    mesh_display_transform.rot_r += static_cast<double>(delta.x) * 0.3;
+                    ImGui::ResetMouseDragDelta(ImGuiMouseButton_Right);
+                }
+                // Scroll wheel: zoom.
+                if(std::abs(io.MouseWheel) > 0.0f){
+                    mesh_display_transform.zoom += static_cast<double>(io.MouseWheel) * 0.1;
+                    mesh_display_transform.zoom = std::clamp(mesh_display_transform.zoom, 0.1, 100.0);
+                }
+            }
 
             // Locate uniform locations in the custom shader program.
             if(!custom_shader) throw std::logic_error("No available shader, cannot continue");
@@ -9282,7 +9359,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             // Final coordinate system transforms.
             const auto mv = camera * model;
             const auto mvp = proj * mv;
-            const auto norm = extract_normal_matrix(mvp);
+            const auto norm = extract_normal_matrix(mv);
 
             // Pass uniforms to custom shader program iff they are needed.
             const std::vector<float> mv_data( mv.cbegin(), mv.cend() );
