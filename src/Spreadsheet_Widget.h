@@ -47,7 +47,6 @@ class Spreadsheet_Widget {
         // Cell editing.
         std::optional<tables::cell_coord_t> editing_cell_;
         int64_t editing_first_frame_ = 0;
-        std::array<char, 2048> edit_buf_ = {};
         std::optional<std::string> edit_original_;  // value when editing began; nullopt if cell did not exist.
 
         // Characters pending injection (for first-keypress handling).
