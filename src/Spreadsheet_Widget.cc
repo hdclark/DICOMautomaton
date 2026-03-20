@@ -34,7 +34,7 @@ void Spreadsheet_Widget::reset(){
     editing_cell_ = {};
     editing_first_frame_ = 0;
     edit_buf_ = {};
-    edit_original_.clear();
+    edit_original_ = {};
     pending_chars_.clear();
     focus_cell_ = {};
     resize_to_default_ = true;
@@ -74,11 +74,11 @@ void Spreadsheet_Widget::commit_edit(tables::table2 &table){
     const auto new_val = table.value(cell.first, cell.second);
 
     // Record an undo entry only if the value actually changed.
-    if(new_val.value_or("") != edit_original_){
+    if(new_val != edit_original_){
         undo_action_t action;
         undo_entry_t entry;
         entry.cell = cell;
-        entry.old_value = edit_original_.empty() ? std::optional<std::string>{} : edit_original_;
+        entry.old_value = edit_original_;
         entry.new_value = new_val;
         action.entries.push_back(entry);
         record_undo(std::move(action));
@@ -171,6 +171,8 @@ void Spreadsheet_Widget::render(tables::table2 &table, const display_config_t &c
     std::string typed_text;
     {
         for(int i = 0; i < io.InputQueueCharacters.Size; ++i){
+            // Note: ImGui encodes chars as ImWchar. We accept printable ASCII and Latin-1 (up to 255).
+            // Code points beyond this range are replaced with '?'.
             const auto c_wchar = io.InputQueueCharacters[i];
             const char c = (' ' <= c_wchar && c_wchar <= 255) ? static_cast<char>(c_wchar) : '?';
             typed_text.push_back( c );
@@ -317,6 +319,9 @@ void Spreadsheet_Widget::render(tables::table2 &table, const display_config_t &c
             string_to_array(buf, v);
             const bool buf_holds_full_v = ((v.size() + 1U) < buf.size());
 
+            // This ID ensures the table can grow with cells retaining their ID's. With the
+            // display limits of 20,000 rows and 64 columns, the max value is
+            // 19,999 + 63 * 100,000 = 6,319,999, which fits safely in int32_t.
             int cell_ID = static_cast<int>((row - l_min_row) + (col - l_min_col) * 100'000);
             ImGui::PushID(cell_ID);
 
@@ -336,7 +341,7 @@ void Spreadsheet_Widget::render(tables::table2 &table, const display_config_t &c
                     ImVector<ImWchar> old_q;
                     old_q.swap(io.InputQueueCharacters);
                     for(const char c : pending_chars_){
-                        io.AddInputCharacter(static_cast<unsigned int>(c));
+                        io.AddInputCharacter(static_cast<unsigned int>(static_cast<unsigned char>(c)));
                     }
                     for(int i = 0; i < old_q.Size; ++i){
                         io.InputQueueCharacters.push_back(old_q[i]);
