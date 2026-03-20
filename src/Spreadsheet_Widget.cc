@@ -650,36 +650,40 @@ void Spreadsheet_Widget::render(tables::table2 &table, const display_config_t &c
               &&  pressing_v
               &&  active_cell_ ){
             char *c_txt = SDL_GetClipboardText();
-            const std::string txt(c_txt);
-            SDL_free(c_txt);
-            try{
-                tables::table2 t;
-                std::stringstream ss(txt);
-                t.read_csv( ss );
-                const auto mmr = t.min_max_row();
-                const auto mmc = t.min_max_col();
-                const auto [row_offset, col_offset] = active_cell_.value();
+            if(c_txt == nullptr){
+                YLOGWARN("Unable to read text from clipboard: " << SDL_GetError());
+            }else{
+                const std::string txt(c_txt);
+                SDL_free(c_txt);
+                try{
+                    tables::table2 t;
+                    std::stringstream ss(txt);
+                    t.read_csv( ss );
+                    const auto mmr = t.min_max_row();
+                    const auto mmc = t.min_max_col();
+                    const auto [row_offset, col_offset] = active_cell_.value();
 
-                undo_action_t action;
-                tables::visitor_func_t l_f = [&](int64_t r, int64_t col, std::string& val) -> tables::action {
-                    const auto dest_r = r - mmr.first + row_offset;
-                    const auto dest_c = col - mmc.first + col_offset;
+                    undo_action_t action;
+                    tables::visitor_func_t l_f = [&](int64_t r, int64_t col, std::string& val) -> tables::action {
+                        const auto dest_r = r - mmr.first + row_offset;
+                        const auto dest_c = col - mmc.first + col_offset;
 
-                    undo_entry_t entry;
-                    entry.cell = std::make_pair(dest_r, dest_c);
-                    entry.old_value = table.value(dest_r, dest_c);
-                    entry.new_value = val;
-                    action.entries.push_back(entry);
+                        undo_entry_t entry;
+                        entry.cell = std::make_pair(dest_r, dest_c);
+                        entry.old_value = table.value(dest_r, dest_c);
+                        entry.new_value = val;
+                        action.entries.push_back(entry);
 
-                    table.inject(dest_r, dest_c, val);
-                    return tables::action::automatic;
-                };
-                t.visit_block(mmr, mmc, l_f);
-                record_undo(std::move(action));
-                YLOGINFO("Pasted rectangular region from clipboard");
+                        table.inject(dest_r, dest_c, val);
+                        return tables::action::automatic;
+                    };
+                    t.visit_block(mmr, mmc, l_f);
+                    record_undo(std::move(action));
+                    YLOGINFO("Pasted rectangular region from clipboard");
 
-            }catch(const std::exception &e){
-                YLOGWARN("Unable to parse tabular data from clipboard: " << e.what());
+                }catch(const std::exception &e){
+                    YLOGWARN("Unable to parse tabular data from clipboard: " << e.what());
+                }
             }
 
         // Jump navigation over multiple cells, optionally adding to the selection.
