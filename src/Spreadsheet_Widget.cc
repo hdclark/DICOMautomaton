@@ -83,6 +83,7 @@ void Spreadsheet_Widget::commit_edit(tables::table2 &table){
 
     editing_cell_ = {};
     editing_first_frame_ = 0;
+    edit_original_ = {};
 }
 
 void Spreadsheet_Widget::record_undo(undo_action_t action){
@@ -375,6 +376,7 @@ void Spreadsheet_Widget::render(tables::table2 &table, const display_config_t &c
                 }else if( pressing_tab && pressing_shift ){
                     commit_edit(table);
                     const auto next = std::make_pair(row, col - 1L);
+                    edit_original_ = table.value(next.first, next.second);
                     editing_cell_ = next;
                     editing_first_frame_ = 2L;
                     active_cell_ = next;
@@ -384,6 +386,7 @@ void Spreadsheet_Widget::render(tables::table2 &table, const display_config_t &c
                 }else if( pressing_tab ){
                     commit_edit(table);
                     const auto next = std::make_pair(row, col + 1L);
+                    edit_original_ = table.value(next.first, next.second);
                     editing_cell_ = next;
                     editing_first_frame_ = 2L;
                     active_cell_ = next;
@@ -393,6 +396,7 @@ void Spreadsheet_Widget::render(tables::table2 &table, const display_config_t &c
                 }else if( pressing_enter && pressing_shift ){
                     commit_edit(table);
                     const auto next = std::make_pair(row - 1L, col);
+                    edit_original_ = table.value(next.first, next.second);
                     editing_cell_ = next;
                     editing_first_frame_ = 2L;
                     active_cell_ = next;
@@ -402,6 +406,7 @@ void Spreadsheet_Widget::render(tables::table2 &table, const display_config_t &c
                 }else if( pressing_enter ){
                     commit_edit(table);
                     const auto next = std::make_pair(row + 1L, col);
+                    edit_original_ = table.value(next.first, next.second);
                     editing_cell_ = next;
                     editing_first_frame_ = 2L;
                     active_cell_ = next;
@@ -655,14 +660,24 @@ void Spreadsheet_Widget::render(tables::table2 &table, const display_config_t &c
                     tables::visitor_func_t l_f = [&](int64_t r, int64_t col, std::string& val) -> tables::action {
                         const auto dest_r = r - mmr.first + row_offset;
                         const auto dest_c = col - mmc.first + col_offset;
+                        const auto old_value = table.value(dest_r, dest_c);
+                        const std::optional<std::string> new_value = val.empty()
+                                                                    ? std::nullopt
+                                                                    : std::optional<std::string>{val};
 
-                        undo_entry_t entry;
-                        entry.cell = std::make_pair(dest_r, dest_c);
-                        entry.old_value = table.value(dest_r, dest_c);
-                        entry.new_value = val;
-                        action.entries.push_back(entry);
+                        if(old_value != new_value){
+                            undo_entry_t entry;
+                            entry.cell = std::make_pair(dest_r, dest_c);
+                            entry.old_value = old_value;
+                            entry.new_value = new_value;
+                            action.entries.push_back(entry);
 
-                        table.inject(dest_r, dest_c, val);
+                            if(new_value){
+                                table.inject(dest_r, dest_c, val);
+                            }else{
+                                table.remove(dest_r, dest_c);
+                            }
+                        }
                         return tables::action::automatic;
                     };
                     t.visit_block(mmr, mmc, l_f);
@@ -787,4 +802,3 @@ void Spreadsheet_Widget::render(tables::table2 &table, const display_config_t &c
 
     ImGui::EndTable();
 }
-
