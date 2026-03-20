@@ -9176,14 +9176,15 @@ bool SDL_Viewer(Drover &DICOM_data,
             &&  !io.WantCaptureMouse ){
                 constexpr double kTrackballRotationDegreesPerPixel = 0.30;
                 constexpr double kTrackballRollDegreesPerPixel = 0.30;
-                constexpr double kPanScreenFractionPerPixel = 1.0;
+                constexpr double kPanMultiplier = 1.0;
                 constexpr double kZoomScalePerWheelNotch = 1.10;
                 constexpr double kMinZoom = 0.1;
                 constexpr double kMaxZoom = 100.0;
                 const auto nav_w = std::max<double>(static_cast<double>(io.DisplaySize.x), 1.0);
                 const auto nav_h = std::max<double>(static_cast<double>(io.DisplaySize.y), 1.0);
                 const auto nav_aspect = nav_w / nav_h;
-                const auto zoom = std::clamp(mesh_display_transform.zoom, kMinZoom, kMaxZoom);
+                mesh_display_transform.zoom = std::clamp(mesh_display_transform.zoom, kMinZoom, kMaxZoom);
+                const auto zoom = mesh_display_transform.zoom;
                 const auto world_width = (2.0 * nav_aspect) / zoom;
                 const auto world_height = 2.0 / zoom;
                 const auto world_dx_per_px = world_width / nav_w;
@@ -9199,8 +9200,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                 // Middle-click drag: pan (translate model).
                 if(ImGui::IsMouseDragging(ImGuiMouseButton_Middle)){
                     const auto delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Middle);
-                    mesh_display_transform.model.coeff(0,3) += static_cast<double>(delta.x) * world_dx_per_px * kPanScreenFractionPerPixel;
-                    mesh_display_transform.model.coeff(1,3) -= static_cast<double>(delta.y) * world_dy_per_px * kPanScreenFractionPerPixel;
+                    mesh_display_transform.model.coeff(0,3) += static_cast<double>(delta.x) * world_dx_per_px * kPanMultiplier;
+                    mesh_display_transform.model.coeff(1,3) -= static_cast<double>(delta.y) * world_dy_per_px * kPanMultiplier;
                     ImGui::ResetMouseDragDelta(ImGuiMouseButton_Middle);
                 }
                 // Right-click drag: roll.
