@@ -33,9 +33,7 @@ void Spreadsheet_Widget::reset(){
     selection_.clear();
     editing_cell_ = {};
     editing_first_frame_ = 0;
-    edit_buf_ = {};
     edit_original_ = {};
-    pending_chars_.clear();
     focus_cell_ = {};
     resize_to_default_ = true;
     resize_to_fit_ = false;
@@ -86,7 +84,6 @@ void Spreadsheet_Widget::commit_edit(tables::table2 &table){
 
     editing_cell_ = {};
     editing_first_frame_ = 0;
-    pending_chars_.clear();
 }
 
 void Spreadsheet_Widget::record_undo(undo_action_t action){
@@ -215,7 +212,6 @@ void Spreadsheet_Widget::render(tables::table2 &table, const display_config_t &c
         if(r < l_min_row || r > l_max_row || c < l_min_col || c > l_max_col){
             editing_cell_ = {};
             editing_first_frame_ = 0;
-            pending_chars_.clear();
         }
     }
     {
@@ -335,20 +331,26 @@ void Spreadsheet_Widget::render(tables::table2 &table, const display_config_t &c
             const bool is_editing = editing_cell_ ? (editing_cell_.value() == cell_rc) : false;
             bool key_changed = false;
 
-            if(is_editing){
-                // Inject pending characters from first-keypress capture.
-                if(!pending_chars_.empty()){
-                    ImVector<ImWchar> old_q;
-                    old_q.swap(io.InputQueueCharacters);
-                    for(const char c : pending_chars_){
-                        io.AddInputCharacter(static_cast<unsigned int>(static_cast<unsigned char>(c)));
-                    }
-                    for(int i = 0; i < old_q.Size; ++i){
-                        io.InputQueueCharacters.push_back(old_q[i]);
-                    }
-                    pending_chars_.clear();
-                }
+            // Pre-check: should we immediately start editing via keyboard typing?
+            // This must be decided BEFORE rendering either Selectable or InputText so that
+            // InputText can process the typed characters on this same frame (avoiding first-keypress loss).
+            const bool start_edit_keybd = !is_editing
+                                       && window_is_focused
+                                       && is_active
+                                       && !typed_text.empty()
+                                       && !pressing_ctrl;
+            if(start_edit_keybd){
+                edit_original_ = table.value(cell_rc.first, cell_rc.second);
+                v = "";
+                string_to_array(buf, v);
+                editing_cell_ = cell_rc;
+                editing_first_frame_ = 1L;
+                selection_.erase(cell_rc);
+                // Note: io.InputQueueCharacters still contains the typed chars.
+                // InputText will consume them directly on this frame.
+            }
 
+            if(is_editing || start_edit_keybd){
                 // Draw editable text.
                 if( 0L < editing_first_frame_ ){
                     ImGui::SetKeyboardFocusHere();
@@ -475,11 +477,6 @@ void Spreadsheet_Widget::render(tables::table2 &table, const display_config_t &c
                                              && ImGui::IsItemVisible()
                                              && ImGui::IsItemClicked()
                                              && is_double_clicked;
-                const bool enter_edit_keybd =   window_is_focused
-                                             && ImGui::IsItemVisible()
-                                             && is_active
-                                             && !typed_text.empty()
-                                             && !pressing_ctrl;
                 const bool enter_edit_enter =   window_is_focused
                                              && ImGui::IsItemVisible()
                                              && is_active
@@ -489,15 +486,7 @@ void Spreadsheet_Widget::render(tables::table2 &table, const display_config_t &c
 
                 if( enter_edit_mouse || enter_edit_enter ){
                     // Double-click or Enter: enter edit mode with existing content.
-                    edit_original_ = table.value(cell_rc.row, cell_rc.col);
-                    editing_cell_ = cell_rc;
-                    editing_first_frame_ = 1L;
-                    selection_.erase(cell_rc);
-                }else if( enter_edit_keybd ){
-                    // Keyboard typing: enter edit mode with fresh content.
-                    edit_original_ = table.value(cell_rc.row, cell_rc.col);
-                    v = "";   // Clear cell so InputText starts with empty buffer.
-                    pending_chars_ = typed_text;
+                    edit_original_ = table.value(cell_rc.first, cell_rc.second);
                     editing_cell_ = cell_rc;
                     editing_first_frame_ = 1L;
                     selection_.erase(cell_rc);
