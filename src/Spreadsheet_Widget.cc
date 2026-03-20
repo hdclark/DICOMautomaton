@@ -14,7 +14,6 @@
 #include <vector>
 
 #include "imgui20210904/imgui.h"
-#include "imgui20210904/imgui_internal.h"
 
 #include <SDL.h>
 
