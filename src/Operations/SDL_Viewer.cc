@@ -1473,20 +1473,26 @@ bool SDL_Viewer(Drover &DICOM_data,
         "uniform bool use_lighting;\n"
         "uniform bool use_smoothing;\n"
         "\n"
+        "const vec3 LIGHT_POSITION = vec3(1.0, 2.0, 3.0);\n"
+        "const float AMBIENT_WEIGHT = 0.15;\n"
+        "const float DIFFUSE_WEIGHT = 0.65;\n"
+        "const float SPECULAR_WEIGHT = 0.20;\n"
+        "const float SPECULAR_POWER = 32.0;\n"
+        "\n"
         "out vec4 frag_colour;\n"
         "\n"
         "void main(){\n"
         "    if(use_lighting){\n"
         "        vec3 N = normalize(use_smoothing ? frag_norm : flat_norm);\n"
-        "        vec3 L = normalize(vec3(1.0, 2.0, 3.0) - frag_pos);\n"
+        "        vec3 L = normalize(LIGHT_POSITION - frag_pos);\n"
         "        vec3 V = normalize(-frag_pos);\n"
         "        vec3 H = normalize(L + V);\n"
         "        float diff = max(dot(N, L), 0.0);\n"
         "        float spec = 0.0;\n"
-        "        if(diff > 0.0) spec = pow(max(dot(N, H), 0.0), 32.0);\n"
-        "        vec3 c = 0.15 * user_colour.rgb\n"
-        "               + 0.65 * diff * diffuse_colour.rgb\n"
-        "               + 0.20 * spec * vec3(1.0);\n"
+        "        if(diff > 0.0) spec = pow(max(dot(N, H), 0.0), SPECULAR_POWER);\n"
+        "        vec3 c = AMBIENT_WEIGHT * user_colour.rgb\n"
+        "               + DIFFUSE_WEIGHT * diff * diffuse_colour.rgb\n"
+        "               + SPECULAR_WEIGHT * spec * vec3(1.0);\n"
         "        frag_colour = vec4(c, user_colour.a);\n"
         "    }else{\n"
         "        frag_colour = user_colour;\n"
@@ -9168,30 +9174,46 @@ bool SDL_Viewer(Drover &DICOM_data,
             // Mouse-based mesh navigation (only when ImGui does not want the mouse).
             if( view_toggles.view_meshes_enabled
             &&  !io.WantCaptureMouse ){
+                constexpr double kTrackballRotationDegreesPerPixel = 0.30;
+                constexpr double kTrackballRollDegreesPerPixel = 0.30;
+                constexpr double kPanScreenFractionPerPixel = 1.0;
+                constexpr double kZoomScalePerWheelNotch = 1.10;
+                constexpr double kMinZoom = 0.1;
+                constexpr double kMaxZoom = 100.0;
+                const auto nav_w = std::max<double>(static_cast<double>(io.DisplaySize.x), 1.0);
+                const auto nav_h = std::max<double>(static_cast<double>(io.DisplaySize.y), 1.0);
+                const auto nav_aspect = nav_w / nav_h;
+                const auto zoom = std::clamp(mesh_display_transform.zoom, kMinZoom, kMaxZoom);
+                const auto world_width = (2.0 * nav_aspect) / zoom;
+                const auto world_height = 2.0 / zoom;
+                const auto world_dx_per_px = world_width / nav_w;
+                const auto world_dy_per_px = world_height / nav_h;
+
                 // Left-click drag: trackball rotation (yaw and pitch).
                 if(ImGui::IsMouseDragging(ImGuiMouseButton_Left)){
                     const auto delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
-                    mesh_display_transform.rot_y += static_cast<double>(delta.x) * 0.3;
-                    mesh_display_transform.rot_p += static_cast<double>(delta.y) * 0.3;
+                    mesh_display_transform.rot_y += static_cast<double>(delta.x) * kTrackballRotationDegreesPerPixel;
+                    mesh_display_transform.rot_p += static_cast<double>(delta.y) * kTrackballRotationDegreesPerPixel;
                     ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
                 }
                 // Middle-click drag: pan (translate model).
                 if(ImGui::IsMouseDragging(ImGuiMouseButton_Middle)){
                     const auto delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Middle);
-                    mesh_display_transform.model.coeff(0,3) += static_cast<double>(delta.x) * 0.001;
-                    mesh_display_transform.model.coeff(1,3) -= static_cast<double>(delta.y) * 0.001;
+                    mesh_display_transform.model.coeff(0,3) += static_cast<double>(delta.x) * world_dx_per_px * kPanScreenFractionPerPixel;
+                    mesh_display_transform.model.coeff(1,3) -= static_cast<double>(delta.y) * world_dy_per_px * kPanScreenFractionPerPixel;
                     ImGui::ResetMouseDragDelta(ImGuiMouseButton_Middle);
                 }
                 // Right-click drag: roll.
                 if(ImGui::IsMouseDragging(ImGuiMouseButton_Right)){
                     const auto delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right);
-                    mesh_display_transform.rot_r += static_cast<double>(delta.x) * 0.3;
+                    mesh_display_transform.rot_r += static_cast<double>(delta.x) * kTrackballRollDegreesPerPixel;
                     ImGui::ResetMouseDragDelta(ImGuiMouseButton_Right);
                 }
                 // Scroll wheel: zoom.
                 if(std::abs(io.MouseWheel) > 0.0f){
-                    mesh_display_transform.zoom += static_cast<double>(io.MouseWheel) * 0.1;
-                    mesh_display_transform.zoom = std::clamp(mesh_display_transform.zoom, 0.1, 100.0);
+                    const auto scale = std::pow(kZoomScalePerWheelNotch, static_cast<double>(io.MouseWheel));
+                    mesh_display_transform.zoom *= scale;
+                    mesh_display_transform.zoom = std::clamp(mesh_display_transform.zoom, kMinZoom, kMaxZoom);
                 }
             }
 
