@@ -489,13 +489,13 @@ void Spreadsheet_Widget::render(tables::table2 &table, const display_config_t &c
 
                 if( enter_edit_mouse || enter_edit_enter ){
                     // Double-click or Enter: enter edit mode with existing content.
-                    edit_original_ = v;
+                    edit_original_ = table.value(cell_rc.row, cell_rc.col);
                     editing_cell_ = cell_rc;
                     editing_first_frame_ = 1L;
                     selection_.erase(cell_rc);
                 }else if( enter_edit_keybd ){
                     // Keyboard typing: enter edit mode with fresh content.
-                    edit_original_ = v;
+                    edit_original_ = table.value(cell_rc.row, cell_rc.col);
                     v = "";   // Clear cell so InputText starts with empty buffer.
                     pending_chars_ = typed_text;
                     editing_cell_ = cell_rc;
