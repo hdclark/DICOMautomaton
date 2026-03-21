@@ -53,6 +53,7 @@ quaternion::from_two_unit_vectors(const vec3<double> &from, const vec3<double> &
 quaternion
 quaternion::from_euler_ypr(double yaw_rad, double pitch_rad, double roll_rad){
     const auto q_pitch = from_axis_angle(vec3<double>(1.0, 0.0, 0.0), pitch_rad);
+    // Roll uses a negated sign so quaternion<->Euler conversion matches existing SDL_Viewer roll direction.
     const auto q_roll = from_axis_angle(vec3<double>(0.0, 0.0, 1.0), -roll_rad);
     const auto q_yaw = from_axis_angle(vec3<double>(0.0, 1.0, 0.0), yaw_rad);
     return (q_yaw * q_roll * q_pitch).normalized();

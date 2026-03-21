@@ -9200,15 +9200,18 @@ bool SDL_Viewer(Drover &DICOM_data,
                 mesh_display_transform.rot_p = p_rot * kRadToDeg;
                 mesh_display_transform.rot_r = r_rot * kRadToDeg;
             };
+            constexpr double kPrecessionYawRate = 0.0100;
+            constexpr double kPrecessionPitchRate = -0.0029;
+            constexpr double kPrecessionRollRate = 0.0003;
 
             {
                 if(mesh_display_transform.precess){
                     const auto q_y = quaternion::from_axis_angle(kCameraYawAxis,
-                                                                 (0.0100 * mesh_display_transform.precess_rate) * kDegToRad);
+                                                                 (kPrecessionYawRate * mesh_display_transform.precess_rate) * kDegToRad);
                     const auto q_x = quaternion::from_axis_angle(kCameraPitchAxis,
-                                                                 (-0.0029 * mesh_display_transform.precess_rate) * kDegToRad);
+                                                                 (kPrecessionPitchRate * mesh_display_transform.precess_rate) * kDegToRad);
                     const auto q_z = quaternion::from_axis_angle(kCameraRollAxis,
-                                                                 (0.0003 * mesh_display_transform.precess_rate) * kDegToRad);
+                                                                 (kPrecessionRollRate * mesh_display_transform.precess_rate) * kDegToRad);
                     mesh_display_transform.orientation = (q_y * q_z * q_x * mesh_display_transform.orientation).normalized();
                 }
                 sync_euler_from_orientation();
@@ -9236,6 +9239,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 if(ImGui::IsMouseDragging(ImGuiMouseButton_Left)){
                     const auto delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
                     const auto to_trackball = [](double x_px, double y_px, double w_px, double h_px){
+                        // Map viewport pixel coordinates to normalized trackball coordinates in [-1, 1].
                         const auto normalized_x = std::clamp((2.0 * x_px - w_px) / w_px, -1.0, 1.0);
                         const auto normalized_y = std::clamp((h_px - 2.0 * y_px) / h_px, -1.0, 1.0);
                         const auto r2 = normalized_x*normalized_x + normalized_y*normalized_y;
