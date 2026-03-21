@@ -7884,7 +7884,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 if( current_val && !current_val.value().empty() ){
                                     maybe_push_undo(cell_selected.value());
                                     std::string new_val = current_val.value();
-                                    new_val.pop_back();
+                                    // Remove the last UTF-8 code point (which may span multiple bytes).
+                                    auto it = new_val.end();
+                                    --it;
+                                    while( it != new_val.begin()
+                                    &&     (static_cast<unsigned char>(*it) & 0xC0) == 0x80 ){
+                                        --it;
+                                    }
+                                    new_val.erase(it, new_val.end());
                                     if( new_val.empty() ){
                                         (*table_ptr_it)->table.remove(row, col);
                                     }else{
