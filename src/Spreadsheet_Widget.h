@@ -47,6 +47,7 @@ class Spreadsheet_Widget {
         std::optional<tables::cell_coord_t> editing_cell_;
         int64_t editing_first_frame_ = 0;
         std::optional<std::string> edit_original_;  // value when editing began; nullopt if cell did not exist.
+        bool needs_cursor_at_end_ = false;  // after keyboard-entry edit, position cursor at end on activation frame.
 
         // Scroll/focus request.
         std::optional<tables::cell_coord_t> focus_cell_;

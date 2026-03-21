@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "imgui20210904/imgui.h"
+#include "imgui20210904/imgui_internal.h"
 
 #include <SDL.h>
 
@@ -33,6 +34,7 @@ void Spreadsheet_Widget::reset(){
     editing_cell_ = {};
     editing_first_frame_ = 0;
     edit_original_ = {};
+    needs_cursor_at_end_ = false;
     focus_cell_ = {};
     resize_to_default_ = true;
     resize_to_fit_ = false;
@@ -333,7 +335,14 @@ void Spreadsheet_Widget::render(tables::table2 &table, const display_config_t &c
 
             // Pre-check: should we immediately start editing via keyboard typing?
             // This must be decided BEFORE rendering either Selectable or InputText so that
-            // InputText can process the typed characters on this same frame (avoiding first-keypress loss).
+            // the typed characters are preserved. Because SetKeyboardFocusHere() has a one-frame
+            // delay (focus is applied by UpdateTabFocus in the next NewFrame), InputText is NOT
+            // active on this frame and cannot consume InputQueueCharacters. The characters are
+            // then cleared by EndFrame(). To work around this, we pre-fill the buffer with the
+            // typed text and clear InputQueueCharacters ourselves. On the next frame, when
+            // InputText activates and does SelectAll (standard behavior for code-focus), we use
+            // imgui_internal.h to clear the selection and position the cursor at the end of the
+            // pre-filled text.
             const bool start_edit_keybd = !is_editing
                                        && window_is_focused
                                        && is_active
@@ -341,13 +350,16 @@ void Spreadsheet_Widget::render(tables::table2 &table, const display_config_t &c
                                        && !pressing_ctrl;
             if(start_edit_keybd){
                 edit_original_ = table.value(cell_rc.first, cell_rc.second);
-                v = "";
+                // Pre-fill buffer with the typed text so it survives the one-frame focus delay.
+                v = typed_text;
                 string_to_array(buf, v);
                 editing_cell_ = cell_rc;
                 editing_first_frame_ = 1L;
                 selection_.erase(cell_rc);
-                // Note: io.InputQueueCharacters still contains the typed chars.
-                // InputText will consume them directly on this frame.
+                needs_cursor_at_end_ = true;
+                // Clear InputQueueCharacters so they are not double-processed when InputText
+                // becomes active on the next frame.
+                io.InputQueueCharacters.resize(0);
             }
 
             if(is_editing || start_edit_keybd){
@@ -357,6 +369,24 @@ void Spreadsheet_Widget::render(tables::table2 &table, const display_config_t &c
                 }
                 ImGui::SetNextItemWidth( available_space.x );
                 key_changed = ImGui::InputText("##datum", buf.data(), buf.size() - 1);
+
+                // On the frame InputText is first activated after keyboard-edit entry,
+                // clear the SelectAll that ImGui applies on code-focus activation and
+                // position the cursor at the end of the pre-filled text. This ensures
+                // subsequent keystrokes append rather than replace.
+                if(needs_cursor_at_end_){
+                    if(ImGui::IsItemActivated()){
+                        ImGuiInputTextState* text_state = ImGui::GetInputTextState(ImGui::GetItemID());
+                        if(text_state){
+                            text_state->Stb.cursor = text_state->CurLenW;
+                            text_state->ClearSelection();
+                        }
+                        needs_cursor_at_end_ = false;
+                    }else if(!ImGui::IsItemActive()){
+                        // InputText lost focus before activation; clear stale flag.
+                        needs_cursor_at_end_ = false;
+                    }
+                }
 
                 // Check if still editing (focus + active). If not, stop editing in the next frame.
                 const bool still_editing = !ImGui::IsItemDeactivated();
