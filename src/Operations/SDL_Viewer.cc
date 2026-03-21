@@ -83,6 +83,7 @@
 #include "../Standard_Guides.h"
 #include "../Thread_Pool.h"
 #include "../String_Parsing.h"
+#include "../YgorMathQuaternions.h"
 #include "../Dialogs.h"
 #include "../Alignment_Rigid.h"
 #include "../Documentation.h"
@@ -1189,6 +1190,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         double rot_y = 0.0; // Yaw.
         double rot_p = 0.0; // Pitch.
         double rot_r = 0.0; // Roll.
+        quaternion orientation = quaternion::identity();
 
         double zoom = 1.0;
         double cam_distort = 0.0;
@@ -9022,9 +9024,22 @@ bool SDL_Viewer(Drover &DICOM_data,
                     drag_speed = 0.3f;
                     clamp_l = -360.0 * 10.0;
                     clamp_h =  360.0 * 10.0;
-                    ImGui::DragScalar("Yaw",   ImGuiDataType_Double, &mesh_display_transform.rot_y, drag_speed, &clamp_l, &clamp_h, "%.1f");
-                    ImGui::DragScalar("Pitch", ImGuiDataType_Double, &mesh_display_transform.rot_p, drag_speed, &clamp_l, &clamp_h, "%.1f");
-                    ImGui::DragScalar("Roll",  ImGuiDataType_Double, &mesh_display_transform.rot_r, drag_speed, &clamp_l, &clamp_h, "%.1f");
+                    const auto sync_orientation_from_euler = [&mesh_display_transform](){
+                        const auto pi = std::acos(-1.0);
+                        const auto y_rot = mesh_display_transform.rot_y * (2.0 * pi) / 360.0;
+                        const auto p_rot = mesh_display_transform.rot_p * (2.0 * pi) / 360.0;
+                        const auto r_rot = mesh_display_transform.rot_r * (2.0 * pi) / 360.0;
+                        mesh_display_transform.orientation = quaternion::from_euler_ypr(y_rot, p_rot, r_rot);
+                    };
+                    if(ImGui::DragScalar("Yaw", ImGuiDataType_Double, &mesh_display_transform.rot_y, drag_speed, &clamp_l, &clamp_h, "%.1f")){
+                        sync_orientation_from_euler();
+                    }
+                    if(ImGui::DragScalar("Pitch", ImGuiDataType_Double, &mesh_display_transform.rot_p, drag_speed, &clamp_l, &clamp_h, "%.1f")){
+                        sync_orientation_from_euler();
+                    }
+                    if(ImGui::DragScalar("Roll", ImGuiDataType_Double, &mesh_display_transform.rot_r, drag_speed, &clamp_l, &clamp_h, "%.1f")){
+                        sync_orientation_from_euler();
+                    }
 
                     drag_speed = 0.005f;
                     clamp_l = -10.0;
@@ -9039,36 +9054,42 @@ bool SDL_Viewer(Drover &DICOM_data,
                         mesh_display_transform.rot_y = 0.0;
                         mesh_display_transform.rot_p = 0.0;
                         mesh_display_transform.rot_r = 0.0;
+                        mesh_display_transform.orientation = quaternion::from_euler_ypr(0.0, 0.0, 0.0);
                     }
                     ImGui::SameLine();
                     if(ImGui::Button("Back")){
                         mesh_display_transform.rot_y = 180.0;
                         mesh_display_transform.rot_p = 0.0;
                         mesh_display_transform.rot_r = 0.0;
+                        mesh_display_transform.orientation = quaternion::from_euler_ypr(std::acos(-1.0), 0.0, 0.0);
                     }
                     ImGui::SameLine();
                     if(ImGui::Button("Left")){
                         mesh_display_transform.rot_y = 90.0;
                         mesh_display_transform.rot_p = 0.0;
                         mesh_display_transform.rot_r = 0.0;
+                        mesh_display_transform.orientation = quaternion::from_euler_ypr(0.5 * std::acos(-1.0), 0.0, 0.0);
                     }
                     ImGui::SameLine();
                     if(ImGui::Button("Right")){
                         mesh_display_transform.rot_y = -90.0;
                         mesh_display_transform.rot_p = 0.0;
                         mesh_display_transform.rot_r = 0.0;
+                        mesh_display_transform.orientation = quaternion::from_euler_ypr(-0.5 * std::acos(-1.0), 0.0, 0.0);
                     }
                     ImGui::SameLine();
                     if(ImGui::Button("Top")){
                         mesh_display_transform.rot_y = 0.0;
                         mesh_display_transform.rot_p = 90.0;
                         mesh_display_transform.rot_r = 0.0;
+                        mesh_display_transform.orientation = quaternion::from_euler_ypr(0.0, 0.5 * std::acos(-1.0), 0.0);
                     }
                     ImGui::SameLine();
                     if(ImGui::Button("Bottom")){
                         mesh_display_transform.rot_y = 0.0;
                         mesh_display_transform.rot_p = -90.0;
                         mesh_display_transform.rot_r = 0.0;
+                        mesh_display_transform.orientation = quaternion::from_euler_ypr(0.0, -0.5 * std::acos(-1.0), 0.0);
                     }
 
                     if(ImGui::Button("Reset")){
@@ -9078,7 +9099,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     // Navigation tooltip.
                     ImGui::Separator();
                     if(ImGui::CollapsingHeader("Controls")){
-                        ImGui::BulletText("Left-click drag (viewport): rotate (yaw/pitch)");
+                        ImGui::BulletText("Left-click drag (viewport): virtual trackball rotate");
                         ImGui::BulletText("Right-click drag (viewport): roll");
                         ImGui::BulletText("Middle-click drag (viewport): pan");
                         ImGui::BulletText("Scroll wheel (viewport): zoom");
@@ -9162,19 +9183,35 @@ bool SDL_Viewer(Drover &DICOM_data,
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             CHECK_FOR_GL_ERRORS();
 
-            if(mesh_display_transform.precess){
-                mesh_display_transform.rot_y += 0.0100 * mesh_display_transform.precess_rate;
-                mesh_display_transform.rot_p -= 0.0029 * mesh_display_transform.precess_rate;
-                mesh_display_transform.rot_r -= 0.0003 * mesh_display_transform.precess_rate;
+            const auto pi = std::acos(-1.0);
+            const auto kDegToRad = pi / 180.0;
+            const auto kRadToDeg = 180.0 / pi;
+            const auto sync_euler_from_orientation = [&mesh_display_transform, kRadToDeg](){
+                double y_rot = 0.0;
+                double p_rot = 0.0;
+                double r_rot = 0.0;
+                mesh_display_transform.orientation.to_euler_ypr(y_rot, p_rot, r_rot);
+                mesh_display_transform.rot_y = y_rot * kRadToDeg;
+                mesh_display_transform.rot_p = p_rot * kRadToDeg;
+                mesh_display_transform.rot_r = r_rot * kRadToDeg;
+            };
+
+            {
+                if(mesh_display_transform.precess){
+                    const auto q_y = quaternion::from_axis_angle(vec3<double>(0.0, 1.0, 0.0),
+                                                                 (0.0100 * mesh_display_transform.precess_rate) * kDegToRad);
+                    const auto q_x = quaternion::from_axis_angle(vec3<double>(1.0, 0.0, 0.0),
+                                                                 (-0.0029 * mesh_display_transform.precess_rate) * kDegToRad);
+                    const auto q_z = quaternion::from_axis_angle(vec3<double>(0.0, 0.0, 1.0),
+                                                                 (0.0003 * mesh_display_transform.precess_rate) * kDegToRad);
+                    mesh_display_transform.orientation = (q_y * q_z * q_x * mesh_display_transform.orientation).normalized();
+                }
+                sync_euler_from_orientation();
             }
-            mesh_display_transform.rot_y = std::fmod(mesh_display_transform.rot_y, 360.0);
-            mesh_display_transform.rot_p = std::fmod(mesh_display_transform.rot_p, 360.0);
-            mesh_display_transform.rot_r = std::fmod(mesh_display_transform.rot_r, 360.0);
 
             // Mouse-based mesh navigation (only when ImGui does not want the mouse).
             if( view_toggles.view_meshes_enabled
             &&  !io.WantCaptureMouse ){
-                constexpr double kTrackballRotationDegreesPerPixel = 0.30;
                 constexpr double kTrackballRollDegreesPerPixel = 0.30;
                 constexpr double kPanMultiplier = 1.0;
                 constexpr double kZoomScalePerWheelNotch = 1.10;
@@ -9193,8 +9230,26 @@ bool SDL_Viewer(Drover &DICOM_data,
                 // Left-click drag: trackball rotation (yaw and pitch).
                 if(ImGui::IsMouseDragging(ImGuiMouseButton_Left)){
                     const auto delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
-                    mesh_display_transform.rot_y += static_cast<double>(delta.x) * kTrackballRotationDegreesPerPixel;
-                    mesh_display_transform.rot_p += static_cast<double>(delta.y) * kTrackballRotationDegreesPerPixel;
+                    const auto to_trackball = [](double x_px, double y_px, double w_px, double h_px){
+                        const auto sx = std::clamp((2.0 * x_px - w_px) / w_px, -1.0, 1.0);
+                        const auto sy = std::clamp((h_px - 2.0 * y_px) / h_px, -1.0, 1.0);
+                        const auto r2 = sx*sx + sy*sy;
+                        if(r2 <= 1.0){
+                            return vec3<double>(sx, sy, std::sqrt(std::max(0.0, 1.0 - r2))).unit();
+                        }
+                        return vec3<double>(sx, sy, 0.0).unit();
+                    };
+                    const auto mpos = ImGui::GetMousePos();
+                    const auto curr = to_trackball(static_cast<double>(mpos.x),
+                                                   static_cast<double>(mpos.y),
+                                                   nav_w,
+                                                   nav_h);
+                    const auto prev = to_trackball(static_cast<double>(mpos.x - delta.x),
+                                                   static_cast<double>(mpos.y - delta.y),
+                                                   nav_w,
+                                                   nav_h);
+                    const auto q_drag = quaternion::from_two_unit_vectors(prev, curr);
+                    mesh_display_transform.orientation = (q_drag * mesh_display_transform.orientation).normalized();
                     ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
                 }
                 // Middle-click drag: pan (translate model).
@@ -9207,7 +9262,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                 // Right-click drag: roll.
                 if(ImGui::IsMouseDragging(ImGuiMouseButton_Right)){
                     const auto delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right);
-                    mesh_display_transform.rot_r += static_cast<double>(delta.x) * kTrackballRollDegreesPerPixel;
+                    const auto roll_rad = static_cast<double>(delta.x) * kTrackballRollDegreesPerPixel * kDegToRad;
+                    const auto roll_axis = mesh_display_transform.orientation.rotate(vec3<double>(0.0, 0.0, 1.0));
+                    const auto q_roll = quaternion::from_axis_angle(roll_axis, -roll_rad);
+                    mesh_display_transform.orientation = (q_roll * mesh_display_transform.orientation).normalized();
                     ImGui::ResetMouseDragDelta(ImGuiMouseButton_Right);
                 }
                 // Scroll wheel: zoom.
@@ -9216,6 +9274,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     mesh_display_transform.zoom *= scale;
                     mesh_display_transform.zoom = std::clamp(mesh_display_transform.zoom, kMinZoom, kMaxZoom);
                 }
+                sync_euler_from_orientation();
             }
 
             // Locate uniform locations in the custom shader program.
@@ -9352,26 +9411,8 @@ bool SDL_Viewer(Drover &DICOM_data,
             };
 
             // Rotate camera according as per user's settings / precession.
-            const auto pi = std::acos(-1.0);
-            const auto y_rot = 0.0 + mesh_display_transform.rot_y * (2.0 * pi) / 360.0; // Yaw.
-            const auto p_rot = 0.0 + mesh_display_transform.rot_p * (2.0 * pi) / 360.0; // Pitch.
-            const auto r_rot = 0.0 - mesh_display_transform.rot_r * (2.0 * pi) / 360.0; // Roll.
-
-            auto axis_1 = vec3<double>(0,0,1); // Represents camera position (looking inward, toward origin).
-            auto axis_2 = vec3<double>(1,0,0); // Represents camera view's leftward direction.
-            auto axis_3 = vec3<double>(0,1,0); // Represents camera views's upward direction.
-
-            axis_1 = axis_1.rotate_around_unit(axis_2, p_rot);
-            axis_3 = axis_3.rotate_around_unit(axis_2, p_rot);
-            axis_2 = axis_2.rotate_around_unit(axis_2, p_rot);
-
-            axis_3 = axis_3.rotate_around_unit(axis_1, r_rot);
-            axis_2 = axis_2.rotate_around_unit(axis_1, r_rot);
-            axis_1 = axis_1.rotate_around_unit(axis_1, r_rot);
-
-            axis_1 = axis_1.rotate_around_unit(axis_3, y_rot);
-            axis_2 = axis_2.rotate_around_unit(axis_3, y_rot);
-            axis_3 = axis_3.rotate_around_unit(axis_3, y_rot);
+            auto axis_1 = mesh_display_transform.orientation.rotate(vec3<double>(0,0,1)); // Camera position direction.
+            auto axis_3 = mesh_display_transform.orientation.rotate(vec3<double>(0,1,0)); // Camera up.
 
             const auto target_pos = vec3<double>(0.0, 0.0, 0.0);
             const auto up_unit = axis_3.unit();

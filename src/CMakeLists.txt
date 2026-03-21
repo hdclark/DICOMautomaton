@@ -211,6 +211,9 @@ set_target_properties(  Operation_Dispatcher_obj PROPERTIES POSITION_INDEPENDENT
 add_library(            Perlin_Noise_obj OBJECT Perlin_Noise.cc )
 set_target_properties(  Perlin_Noise_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            YgorMathQuaternions_obj OBJECT YgorMathQuaternions.cc )
+set_target_properties(  YgorMathQuaternions_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Documentation_obj OBJECT Documentation.cc )
 set_target_properties(  Documentation_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -504,6 +507,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Write_File_obj>
     $<TARGET_OBJECTS:Operation_Dispatcher_obj>
     $<TARGET_OBJECTS:Perlin_Noise_obj>
+    $<TARGET_OBJECTS:YgorMathQuaternions_obj>
     $<TARGET_OBJECTS:Documentation_obj>
     $<TARGET_OBJECTS:Font_DCMA_Minimal_obj>
 
@@ -621,6 +625,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Write_File_obj>
         $<TARGET_OBJECTS:Operation_Dispatcher_obj>
         $<TARGET_OBJECTS:Perlin_Noise_obj>
+        $<TARGET_OBJECTS:YgorMathQuaternions_obj>
         $<TARGET_OBJECTS:Documentation_obj>
         $<TARGET_OBJECTS:Font_DCMA_Minimal_obj>
 
