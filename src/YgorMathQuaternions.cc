@@ -33,6 +33,7 @@ quaternion::from_axis_angle(const vec3<double> &axis, double angle_rad){
 
 quaternion
 quaternion::from_two_unit_vectors(const vec3<double> &from, const vec3<double> &to){
+    const auto pi = std::acos(-1.0);
     auto from_u = from.unit();
     auto to_u = to.unit();
 
@@ -42,7 +43,7 @@ quaternion::from_two_unit_vectors(const vec3<double> &from, const vec3<double> &
         if(ortho.Dot(ortho) < 1.0E-18){
             ortho = vec3<double>(0.0, 1.0, 0.0).Cross(from_u);
         }
-        return from_axis_angle(ortho.unit(), std::acos(-1.0));
+        return from_axis_angle(ortho.unit(), pi);
     }
 
     const auto axis = from_u.Cross(to_u);
