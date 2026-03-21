@@ -7469,6 +7469,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                     }
                 }else{
                     ImGui::TextDisabled("No cell selected");
+                    // Add vertical space to match the height of the InputText widget,
+                    // preventing the table from jumping when a cell is selected/deselected.
+                    const float input_text_extra_height = ImGui::GetFrameHeight() - ImGui::GetTextLineHeight();
+                    ImGui::Dummy(ImVec2(0.0f, input_text_extra_height));
                 }
                 formula_bar_was_active = formula_bar_is_active;
                 ImGui::Separator();
@@ -7914,20 +7918,20 @@ bool SDL_Viewer(Drover &DICOM_data,
                         // Tab navigation (shift+tab moves left, tab moves right).
                         }else if( pressing_tab && pressing_shift && cell_selected ){
                             const auto [row, col] = cell_selected.value();
-                            navigate_to_cell(std::make_pair(row, col - 1L));
+                            navigate_to_cell(std::make_pair(row, std::clamp(col - 1L, l_min_col, l_max_col)));
 
                         }else if( pressing_tab && cell_selected ){
                             const auto [row, col] = cell_selected.value();
-                            navigate_to_cell(std::make_pair(row, col + 1L));
+                            navigate_to_cell(std::make_pair(row, std::clamp(col + 1L, l_min_col, l_max_col)));
 
                         // Enter navigation (shift+enter moves up, enter moves down).
                         }else if( pressing_enter && pressing_shift && cell_selected ){
                             const auto [row, col] = cell_selected.value();
-                            navigate_to_cell(std::make_pair(row - 1L, col));
+                            navigate_to_cell(std::make_pair(std::clamp(row - 1L, l_min_row, l_max_row), col));
 
                         }else if( pressing_enter && cell_selected ){
                             const auto [row, col] = cell_selected.value();
-                            navigate_to_cell(std::make_pair(row + 1L, col));
+                            navigate_to_cell(std::make_pair(std::clamp(row + 1L, l_min_row, l_max_row), col));
 
                         // Navigate the selected cell one cell over, optionally adding to the selection.
                         }else if( cell_selected
@@ -7937,11 +7941,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                             if( pressing_shift ){
                                 table_selection.insert(cell_selected.value());
                                 table_selection.insert(jump);
+                                cell_selected = jump;
+                                cell_text_highlighted = false;
+                                cell_edit_undo_pushed = false;
+                                set_focus_on_cell = cell_selected;
+                            }else{
+                                navigate_to_cell(jump);
                             }
-                            cell_selected = jump;
-                            cell_text_highlighted = false;
-                            cell_edit_undo_pushed = false;
-                            set_focus_on_cell = cell_selected;
                         }else if( cell_selected
                               &&  pressing_down ){
                             const auto [row, col] = cell_selected.value();
@@ -7949,11 +7955,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                             if( pressing_shift ){
                                 table_selection.insert(cell_selected.value());
                                 table_selection.insert(jump);
+                                cell_selected = jump;
+                                cell_text_highlighted = false;
+                                cell_edit_undo_pushed = false;
+                                set_focus_on_cell = cell_selected;
+                            }else{
+                                navigate_to_cell(jump);
                             }
-                            cell_selected = jump;
-                            cell_text_highlighted = false;
-                            cell_edit_undo_pushed = false;
-                            set_focus_on_cell = cell_selected;
                         }else if( cell_selected
                               &&  pressing_left ){
                             const auto [row, col] = cell_selected.value();
@@ -7961,11 +7969,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                             if( pressing_shift ){
                                 table_selection.insert(cell_selected.value());
                                 table_selection.insert(jump);
+                                cell_selected = jump;
+                                cell_text_highlighted = false;
+                                cell_edit_undo_pushed = false;
+                                set_focus_on_cell = cell_selected;
+                            }else{
+                                navigate_to_cell(jump);
                             }
-                            cell_selected = jump;
-                            cell_text_highlighted = false;
-                            cell_edit_undo_pushed = false;
-                            set_focus_on_cell = cell_selected;
                         }else if( cell_selected
                               &&  pressing_right ){
                             const auto [row, col] = cell_selected.value();
@@ -7973,11 +7983,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                             if( pressing_shift ){
                                 table_selection.insert(cell_selected.value());
                                 table_selection.insert(jump);
+                                cell_selected = jump;
+                                cell_text_highlighted = false;
+                                cell_edit_undo_pushed = false;
+                                set_focus_on_cell = cell_selected;
+                            }else{
+                                navigate_to_cell(jump);
                             }
-                            cell_selected = jump;
-                            cell_text_highlighted = false;
-                            cell_edit_undo_pushed = false;
-                            set_focus_on_cell = cell_selected;
 
                         // Typed text: append or replace cell contents.
                         }else if( !typed_text.empty()
