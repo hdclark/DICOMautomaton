@@ -7578,7 +7578,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                                    selectable_size);
 
                             if( clicked ){
-                                const bool was_already_selected = is_selected;
                                 cell_selected = cell_rc_coords;
 
                                 if( ImGui::IsMouseDoubleClicked(0) ){
