@@ -7448,7 +7448,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x );
                     const bool formula_bar_changed = ImGui::InputText("##formula_bar",
                                                                       formula_bar_buf.data(),
-                                                                      formula_bar_buf.size() - 1);
+                                                                      formula_bar_buf.size());
                     formula_bar_is_active = ImGui::IsItemActive();
 
                     // Detect activation transition: push undo when the formula bar first becomes active.
