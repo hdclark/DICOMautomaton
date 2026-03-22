@@ -7426,6 +7426,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                         cell_selected = {};
                         cell_text_highlighted = false;
                         cell_edit_undo_pushed = false;
+                        // Also clear any multi-cell selection to avoid acting on a stale region
+                        // when there is no active cell within the visible bounds.
+                        table_selection = {};
                     }
                 }
 
