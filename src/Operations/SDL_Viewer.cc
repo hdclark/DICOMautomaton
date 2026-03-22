@@ -1217,9 +1217,20 @@ bool SDL_Viewer(Drover &DICOM_data,
     using table_cell_bounds_t = std::pair<tables::cell_coord_t, tables::cell_coord_t>; // row_bounds, col_bounds
     std::set< tables::cell_coord_t > table_selection;
     std::optional< tables::cell_coord_t > cell_selected;
-    std::optional< tables::cell_coord_t > cell_being_edited;
-    int64_t cell_being_edited_first_frame = 0;
+    bool cell_text_highlighted = false;
     std::optional<tables::cell_coord_t> set_focus_on_cell;
+
+    struct cell_edit_action_t {
+        tables::cell_coord_t coord;
+        std::optional<std::string> old_value;
+    };
+    std::vector<cell_edit_action_t> cell_undo_stack;
+    std::vector<cell_edit_action_t> cell_redo_stack;
+    bool cell_edit_undo_pushed = false;
+
+    std::array<char, 2048> formula_bar_buf;
+    string_to_array(formula_bar_buf, "");
+    bool formula_bar_was_active = false;
 
     const auto get_table_selection_bounds = [](const std::set< tables::cell_coord_t >& table_selection) -> std::optional<table_cell_bounds_t> {
         std::optional<table_cell_bounds_t> out;
@@ -7257,10 +7268,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                                      &recompute_table_iters,
                                      &display_metadata_table,
                                      &table_selection,
-                                     &cell_being_edited,
-                                     &cell_being_edited_first_frame,
                                      &cell_selected,
+                                     &cell_text_highlighted,
                                      &set_focus_on_cell,
+                                     &cell_undo_stack,
+                                     &cell_redo_stack,
+                                     &cell_edit_undo_pushed,
+                                     &formula_bar_buf,
+                                     &formula_bar_was_active,
                                      &get_table_selection_bounds,
                                      &DICOM_data ]() -> void {
 
@@ -7273,7 +7288,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             // Display a selection and navigation window.
             ImGui::SetNextWindowSize(ImVec2(750, 500), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowPos(ImVec2(680, 140), ImGuiCond_FirstUseEver);
-            ImGui::Begin("Table Selection", &view_toggles.view_tables_enabled);
+            ImGui::Begin("Table Selection", &view_toggles.view_tables_enabled, ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs);
 
             // Measure user input.
             const bool window_is_focused = ImGui::IsWindowFocused( ImGuiFocusedFlags_RootAndChildWindows );
@@ -7287,13 +7302,15 @@ bool SDL_Viewer(Drover &DICOM_data,
             const bool pressing_c         = ImGui::IsKeyPressed(SDL_SCANCODE_C);
             const bool pressing_x         = ImGui::IsKeyPressed(SDL_SCANCODE_X);
             const bool pressing_v         = ImGui::IsKeyPressed(SDL_SCANCODE_V);
+            const bool pressing_z         = ImGui::IsKeyPressed(SDL_SCANCODE_Z);
+            const bool pressing_y         = ImGui::IsKeyPressed(SDL_SCANCODE_Y);
+            const bool pressing_escape    = ImGui::IsKeyPressed(SDL_SCANCODE_ESCAPE);
 
             const bool pressing_up        = ImGui::IsKeyPressed(SDL_SCANCODE_UP);
             const bool pressing_down      = ImGui::IsKeyPressed(SDL_SCANCODE_DOWN);
             const bool pressing_left      = ImGui::IsKeyPressed(SDL_SCANCODE_LEFT);
             const bool pressing_right     = ImGui::IsKeyPressed(SDL_SCANCODE_RIGHT);
 
-            //const bool typed_text         = (ImGui::GetIO().InputQueueCharacters.Size != 0);
             std::string typed_text;
             {
                 ImGuiIO& io = ImGui::GetIO();
@@ -7315,8 +7332,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                 table_display.table_num = DICOM_data.table_data.size() - 1;
 
                 table_selection.clear();
-                cell_being_edited = {};
-                cell_being_edited_first_frame = 0L;
+                cell_text_highlighted = false;
+                cell_edit_undo_pushed = false;
                 cell_selected = {};
                 resize_columns_to_default = true;
             }
@@ -7328,8 +7345,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                     table_display.table_num -= 1;
 
                     table_selection.clear();
-                    cell_being_edited = {};
-                    cell_being_edited_first_frame = 0L;
+                    cell_text_highlighted = false;
+                    cell_edit_undo_pushed = false;
                     cell_selected = {};
                     resize_columns_to_default = true;
                 }
@@ -7345,8 +7362,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                     table_display.table_num = new_table_num;
 
                     table_selection.clear();
-                    cell_being_edited = {};
-                    cell_being_edited_first_frame = 0L;
+                    cell_text_highlighted = false;
+                    cell_edit_undo_pushed = false;
                     cell_selected = {};
                     resize_columns_to_default = true;
                 }
@@ -7401,6 +7418,64 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::Separator();
                 }
 
+                // Validate cell_selected against current table bounds.
+                if( cell_selected ){
+                    const auto [sr, sc] = cell_selected.value();
+                    if( sr < l_min_row || sr > l_max_row || sc < l_min_col || sc > l_max_col ){
+                        cell_selected = {};
+                        cell_text_highlighted = false;
+                        cell_edit_undo_pushed = false;
+                    }
+                }
+
+                // Formula bar: an InputText widget at the top that mirrors the selected cell's text.
+                bool formula_bar_is_active = false;
+                if( cell_selected ){
+                    const auto [sel_row, sel_col] = cell_selected.value();
+
+                    // Sync cell value to formula bar when the bar is not being edited.
+                    if( !formula_bar_was_active ){
+                        const auto cell_val = (*table_ptr_it)->table.value(sel_row, sel_col);
+                        string_to_array(formula_bar_buf, cell_val.value_or(""));
+                    }
+
+                    ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x );
+                    const bool formula_bar_changed = ImGui::InputText("##formula_bar",
+                                                                      formula_bar_buf.data(),
+                                                                      formula_bar_buf.size());
+                    formula_bar_is_active = ImGui::IsItemActive();
+
+                    // Detect activation transition: push undo when the formula bar first becomes active.
+                    if( !formula_bar_was_active && formula_bar_is_active ){
+                        const auto cell_val = (*table_ptr_it)->table.value(sel_row, sel_col);
+                        cell_undo_stack.push_back({cell_selected.value(), cell_val});
+                        cell_redo_stack.clear();
+                        cell_edit_undo_pushed = true;
+                    }
+
+                    // When the formula bar content changes, sync to the cell.
+                    if( formula_bar_changed ){
+                        std::string new_val;
+                        array_to_string(new_val, formula_bar_buf);
+                        if( new_val.empty() ){
+                            (*table_ptr_it)->table.remove(sel_row, sel_col);
+                        }else{
+                            (*table_ptr_it)->table.inject(sel_row, sel_col, new_val);
+                        }
+                        cell_text_highlighted = false;
+                    }
+                }else{
+                    // Show a disabled formula bar when no cells are selected.
+                    ImGui::BeginDisabled( !cell_selected );
+                    std::array<char,1> l_buf = { '\0' };
+                    ImGui::SetNextItemWidth( ImGui::GetContentRegionAvail().x );
+                    ImGui::InputText("##formula_bar_disabled", l_buf.data(), l_buf.size());
+                    ImGui::EndDisabled();
+                }
+
+                formula_bar_was_active = formula_bar_is_active;
+                ImGui::Separator();
+
                 const float TEXT_BASE_WIDTH = ImGui::CalcTextSize("A").x;
                 const float TEXT_BASE_HEIGHT = ImGui::CalcTextSize("A").y;
                 if( (tbl_min_col < tbl_max_col)
@@ -7411,10 +7486,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                                      (l_max_col - l_min_col) + 1,
                                      ImGuiTableFlags_Borders
                                        | ImGuiTableFlags_NoSavedSettings
-                                       //| ImGuiWindowFlags_NoNavInputs
-                                       //| ImGuiWindowFlags_NoNav
-                                       //| ImGuiTableFlags_ScrollX
-                                       //| ImGuiTableFlags_ScrollY
                                        | ImGuiTableFlags_ScrollX
                                        | ImGuiTableFlags_ScrollY
                                        | ImGuiTableFlags_RowBg
@@ -7422,14 +7493,18 @@ bool SDL_Viewer(Drover &DICOM_data,
                                        | ImGuiTableFlags_BordersInnerV
                                        | ImGuiTableFlags_BordersOuterV
                                        | ImGuiTableFlags_SizingFixedFit
-                                       //| ImGuiTableFlags_SizingFixedSame
-                                       //| ImGuiTableFlags_PadOuterX
-                                       //| ImGuiTableFlags_NoHostExtendX
-                                       //| ImGuiTableFlags_NoHostExtendY
                                        | ImGuiTableFlags_Hideable
                                        | ImGuiTableFlags_Reorderable
                                        | ImGuiTableFlags_Resizable )){
-                                     //ImVec2(TEXT_BASE_WIDTH * 50, 100.0f) )){
+
+                    // Hide the default keyboard navigation and selection highlights.
+                    // We draw our own highlights manually to have full control.
+                    const ImVec4 hidden_colour(1.0f, 1.0f, 1.0f, 0.0f);
+                    int overridden_style_colours = 0;
+                    ImGui::PushStyleColor(ImGuiCol_Header, hidden_colour);          ++overridden_style_colours;
+                    ImGui::PushStyleColor(ImGuiCol_NavHighlight, hidden_colour);    ++overridden_style_colours;
+                    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, hidden_colour);   ++overridden_style_colours;
+                    ImGui::PushStyleColor(ImGuiCol_HeaderActive, hidden_colour);    ++overridden_style_colours;
 
                     // Number the columns.
                     const float default_col_width = 70.0f;
@@ -7462,6 +7537,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                             if( (l_min_col <= col) && (col <= l_max_col)
                             &&  (l_min_row <= row) && (row <= l_max_row) ){
                                 const auto truncated_v = v.substr(std::size_t{0}, std::min<size_t>(v.size(), buf.size()));
+
                                 // Leave a bit of extra space, which makes it easier to locate the cursor when editing.
                                 const auto w = ImGui::CalcTextSize(v.c_str()).x + TEXT_BASE_WIDTH * 2.0f;
                                 col_width[col] = std::max<float>(col_width[col], min_col_width);
@@ -7476,27 +7552,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                         }
                     }
 
-                    // Eliminate the gap between cells to eliminate dead zones in the grid where the mouse cannot click.
-                    // (Some elements like ImGui::Selectable() account for this gap, but ImGui::InvisibleButton()
-                    // currently does not.)
+                    // Used to eliminate the gap between cells to eliminate dead zones in the grid where the mouse cannot click.
                     const auto cell_padding = ImGui::GetStyle().CellPadding;
-                    const auto frame_padding = ImGui::GetStyle().FramePadding;
 
-                    // Hide the default keyboard navigation.
-                    // Ideally we would be able to disable it, but the functionality is not exposed to the public API.
-                    const ImVec4 hidden_colour(1.0f, 1.0f, 1.0f, 0.0f);
-                    ImGui::PushStyleColor(ImGuiCol_NavHighlight, hidden_colour);
-                    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, hidden_colour);
-                    ImGui::PushStyleColor(ImGuiCol_HeaderActive, hidden_colour);
-
-                    // Visit each cell and render the contents as an InputText widget.
+                    // Visit each cell and render the contents as a Selectable widget (static text).
                     tables::visitor_func_t f = [&](int64_t row, int64_t col, std::string& v) -> tables::action {
                         if( (l_min_col <= col) && (col <= l_max_col)
                         &&  (l_min_row <= row) && (row <= l_max_row) ){
-                        //&&  ImGui::TableNextColumn() ){
                             ImGui::TableNextColumn();
-                            string_to_array(buf, v);
-                            const bool buf_holds_full_v = ((v.size() + 1U) < buf.size());
 
                             // This ID ensures the table can grow with cells retaining their ID's. It splits an int32_t into two
                             // ranges, allowing rows to span [0,100'000] and columns to span [0,max_int32_t/100'000] =
@@ -7504,152 +7567,65 @@ bool SDL_Viewer(Drover &DICOM_data,
                             int cell_ID = (row - l_min_row) + (col - l_min_col) * 100'000;
                             ImGui::PushID(cell_ID);
 
-                            const auto available_space = ImGui::GetContentRegionAvail();
-                            std::optional<ImVec2> cell_actual_pos_min;
-                            std::optional<ImVec2> cell_actual_pos_max;
-
                             const auto cell_rc_coords = std::make_pair(row, col);
                             const bool is_selected = cell_selected && (cell_selected.value() == cell_rc_coords);
                             const bool is_group_selected = (table_selection.count( cell_rc_coords ) != 0UL);
-                            const bool is_being_edited = cell_being_edited ? (cell_being_edited.value() == cell_rc_coords) : false;
-                            bool key_changed = false;
-                            if(is_being_edited){
-                                // Draw editable text.
-                                if( 0L < cell_being_edited_first_frame ){
-                                    ImGui::SetKeyboardFocusHere();
-                                }
-                                ImGui::SetNextItemWidth( available_space.x );
-                                key_changed = ImGui::InputText("##datum", buf.data(), buf.size() - 1);
 
-                                // Check if still editing (focus + active). If not, stop editing in the next frame.
-                                const bool still_editing = !ImGui::IsItemDeactivated();
+                            // Draw as a Selectable (static text, no nested InputText).
+                            const ImVec2 selectable_size( 0.0f, TEXT_BASE_HEIGHT + cell_padding.y);
+                            const bool clicked = ImGui::Selectable(v.c_str(),
+                                                                   false,
+                                                                   ImGuiSelectableFlags_AllowDoubleClick,
+                                                                   selectable_size);
 
-                                if( is_selected
-                                &&  ImGui::IsItemVisible() ){
-                                    cell_actual_pos_min = ImGui::GetItemRectMin();
-                                    cell_actual_pos_max = ImGui::GetItemRectMax();
-                                }
+                            if( clicked ){
+                                cell_selected = cell_rc_coords;
 
-                                if(false){
-                                }else if( 0L < cell_being_edited_first_frame ){
-                                    // Debounce, needed because these keypresses can cycle to the next cell.
-                                    //
-                                    // This is integer rather than Boolean because after tabbing between cells imgui
-                                    // needs to move to and render the next cell. The flag indicates the newly focused
-                                    // cell has just been opened for editing, but keyboard focus may have already been
-                                    // stolen this frame. So we need to skip a frame.
-                                    --cell_being_edited_first_frame;
+                                if( ImGui::IsMouseDoubleClicked(0) ){
+                                    // Double-click: highlight (select-all) the cell's text.
+                                    cell_text_highlighted = true;
+                                    cell_edit_undo_pushed = false;
+                                    table_selection.clear();
+                                    table_selection.insert(cell_rc_coords);
 
-                                }else if( pressing_tab && pressing_shift ){
-                                    cell_being_edited = std::make_pair(row, col - 1L);
-                                    cell_being_edited_first_frame += 2L;
-                                    cell_selected = cell_being_edited;
-                                    table_selection.erase(cell_rc_coords);
-
-                                }else if( pressing_tab ){
-                                    cell_being_edited = std::make_pair(row, col + 1L);
-                                    cell_being_edited_first_frame += 2L;
-                                    cell_selected = cell_being_edited;
-                                    table_selection.erase(cell_rc_coords);
-
-                                }else if( pressing_enter && pressing_shift ){
-                                    cell_being_edited = std::make_pair(row - 1L, col);
-                                    cell_being_edited_first_frame += 2L;
-                                    cell_selected = cell_being_edited;
-                                    table_selection.erase(cell_rc_coords);
-
-                                }else if( pressing_enter ){
-                                    cell_being_edited = std::make_pair(row + 1L, col);
-                                    cell_being_edited_first_frame += 2L;
-                                    cell_selected = cell_being_edited;
-                                    table_selection.erase(cell_rc_coords);
-
-                                }else if(!still_editing){
-                                    cell_being_edited = {};
-
-                                }
-
-                            }else{
-                                // Draw selectable text.
-                                const ImGuiSelectableFlags selectable_flags = ImGuiSelectableFlags_None;
-                                //const auto col_width = ImGui::TableGetColumnWidth(col - l_min_col);
-                                const ImVec2 selectable_size( 0.0f, TEXT_BASE_HEIGHT + cell_padding.y);
-                                
-                                if(ImGui::Selectable(buf.data(), is_selected, selectable_flags, selectable_size)){
-                                    cell_selected = cell_rc_coords;
-
-                                    if(false){
-                                    }else if(pressing_shift){
-                                        // Rectangular selection.
-                                        table_selection.insert(cell_rc_coords);
-                                        const auto [row_bounds, col_bounds] = get_table_selection_bounds(table_selection).value();
-                                        for(int64_t r = row_bounds.first; r <= row_bounds.second; ++r){
-                                            for(int64_t c = col_bounds.first; c <= col_bounds.second; ++c){
-                                                table_selection.insert( std::make_pair(r, c) );
-                                            }
+                                }else if( pressing_shift ){
+                                    // Rectangular selection.
+                                    cell_text_highlighted = false;
+                                    cell_edit_undo_pushed = false;
+                                    table_selection.insert(cell_rc_coords);
+                                    const auto [row_bounds, col_bounds] = get_table_selection_bounds(table_selection).value();
+                                    for(int64_t r = row_bounds.first; r <= row_bounds.second; ++r){
+                                        for(int64_t c = col_bounds.first; c <= col_bounds.second; ++c){
+                                            table_selection.insert( std::make_pair(r, c) );
                                         }
+                                    }
 
-                                    }else if( pressing_ctrl ){
-                                        // Toggle selection for one cell.
-                                        if(is_group_selected){
-                                            table_selection.erase(cell_rc_coords);
-                                        }else{
-                                            table_selection.insert(cell_rc_coords);
-                                        }
-
+                                }else if( pressing_ctrl ){
+                                    // Toggle selection for one cell.
+                                    cell_text_highlighted = false;
+                                    cell_edit_undo_pushed = false;
+                                    if(is_group_selected){
+                                        table_selection.erase(cell_rc_coords);
                                     }else{
-                                        // Exclusive selection of one cell.
-                                        table_selection.clear();
                                         table_selection.insert(cell_rc_coords);
                                     }
-                                }
 
-                                // Move navigation focus to the highlighted cell iff directed.
-                                if( set_focus_on_cell
-                                &&  (set_focus_on_cell.value() == cell_rc_coords) ){
-                                    ImGui::SetScrollHereX();
-                                    ImGui::SetScrollHereY();
+                                }else{
+                                    // Exclusive selection of one cell.
+                                    cell_text_highlighted = false;
+                                    cell_edit_undo_pushed = false;
+                                    table_selection.clear();
+                                    table_selection.insert(cell_rc_coords);
+                                }
+                            }
 
-                                    set_focus_on_cell = {};
-                                }
+                            // Move navigation focus to the highlighted cell iff directed.
+                            if( set_focus_on_cell
+                            &&  (set_focus_on_cell.value() == cell_rc_coords) ){
+                                ImGui::SetScrollHereX();
+                                ImGui::SetScrollHereY();
 
-                                // Set bounding box coordinates for the cell.
-                                if( is_selected
-                                &&  ImGui::IsItemVisible() ){
-                                    cell_actual_pos_min = ImGui::GetItemRectMin();
-                                    ImVec2 rect_max = ImGui::GetItemRectMax();
-                                    //cell_actual_pos_max = ImVec2(rect_max.x, rect_max.y + frame_padding.y);
-                                    cell_actual_pos_max = ImVec2(rect_max.x, rect_max.y);
-                                }
-
-                                // Check if text is hovered, active, and the mouse was double-clicked.
-                                // If so, next frame we will draw it in an editable (non-selectable) box instead.
-                                bool is_double_clicked = false;
-                                for(int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++){
-                                    if(ImGui::IsMouseDoubleClicked(i)){
-                                        is_double_clicked = true;
-                                    }
-                                }
-                                const bool is_now_editing_mouse =   ImGui::IsItemActive()
-                                                                 && ImGui::IsItemHovered()
-                                                                 && ImGui::IsItemVisible()
-                                                                 && ImGui::IsItemClicked()
-                                                                 && is_double_clicked;
-                                const bool is_now_editing_keybd =   window_is_focused
-                                                                 && ImGui::IsItemVisible()
-                                                                 && is_selected
-                                                                 && ( !typed_text.empty()
-                                                                      || pressing_enter );
-                                if( is_now_editing_mouse
-                                ||  is_now_editing_keybd ){
-                                    cell_being_edited = cell_rc_coords;
-                                    ++cell_being_edited_first_frame;
-                                    table_selection.erase(cell_rc_coords);
-                                }
-                                //if(is_now_editing_keybd){
-                                //    // Prime the cell with the typed character.
-                                //    v = typed_text;
-                                //}
+                                set_focus_on_cell = {};
                             }
 
                             // Colourize if keywords are present.
@@ -7662,32 +7638,33 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 }
                             }
 
-                            // Colourize if selected.
+                            // Colourize if group-selected.
                             if(is_group_selected){
                                 ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::GetColorU32(table_display.selected_colour));
                             }
+
+                            // Draw yellow border around the selected cell and optional highlight background.
                             if( is_selected
-                            &&  cell_actual_pos_min
-                            &&  cell_actual_pos_max ){
+                            &&  ImGui::IsItemVisible() ){
+                                const auto cell_pos_min = ImGui::GetItemRectMin();
+                                const auto cell_pos_max = ImGui::GetItemRectMax();
                                 auto drawlist = ImGui::GetWindowDrawList();
-                                drawlist->AddRect(cell_actual_pos_min.value(),
-                                                  cell_actual_pos_max.value(),
-                                                  IM_COL32(255, 255, 0, 255));
+                                drawlist->AddRect(cell_pos_min, cell_pos_max, IM_COL32(255, 255, 0, 255));
+
+                                // If the cell text is highlighted (selected-all), draw a highlight overlay.
+                                if( cell_text_highlighted && !v.empty() ){
+                                    drawlist->AddRectFilled(cell_pos_min, cell_pos_max,
+                                                           IM_COL32(0, 120, 215, 80));
+                                }
                             }
 
                             ImGui::PopID();
-
-                            if( key_changed 
-                            &&  buf_holds_full_v ) array_to_string(v, buf);
                         }
                         return tables::action::automatic; // Retain only non-empty cells.
                     };
                     (*table_ptr_it)->table.visit_standard_block(f);
 
-                    ImGui::PopStyleColor(); // ImGuiCol_NavHighlight
-                    ImGui::PopStyleColor(); // ImGuiCol_HeaderHovered
-                    ImGui::PopStyleColor(); // ImGuiCol_HeaderActive
-
+                    ImGui::PopStyleColor(overridden_style_colours);
 
                     // Helper function for jump navigation.
                     const auto insert_cells_between = [&](const tables::cell_coord_t &A,
@@ -7706,18 +7683,66 @@ bool SDL_Viewer(Drover &DICOM_data,
                         return;
                     };
 
-                    // Check for keyboard actions.
-                    if(  window_is_focused ){
-                        // Delete the selection.
-                        if(false){
-                        }else if( (pressing_delete || pressing_backspace )
-                              &&  !table_selection.empty() ){
-                            for(const auto& c : table_selection){
-                                 const auto [row, col] = c;
-                                 (*table_ptr_it)->table.remove(row, col);
-                            }
+                    // Helper lambda to push an undo entry for a cell if not already pushed this editing session.
+                    const auto maybe_push_undo = [&](const tables::cell_coord_t &coord) -> void {
+                        if( !cell_edit_undo_pushed ){
+                            const auto val = (*table_ptr_it)->table.value(coord.first, coord.second);
+                            cell_undo_stack.push_back({coord, val});
+                            cell_redo_stack.clear();
+                            cell_edit_undo_pushed = true;
+                        }
+                    };
 
-                        // Copy the selection.
+                    // Helper lambda to navigate to a new cell, resetting editing state.
+                    const auto navigate_to_cell = [&](const tables::cell_coord_t &dest) -> void {
+                        cell_selected = dest;
+                        cell_text_highlighted = false;
+                        cell_edit_undo_pushed = false;
+                        table_selection.clear();
+                        table_selection.insert(dest);
+                        set_focus_on_cell = dest;
+                    };
+
+                    // Check for keyboard actions (only when the window is focused and the formula bar is not active).
+                    if( window_is_focused && !formula_bar_is_active ){
+
+                        // Undo (ctrl+z).
+                        if( pressing_ctrl
+                        &&  pressing_z
+                        &&  !cell_undo_stack.empty() ){
+                            const auto action = cell_undo_stack.back();
+                            cell_undo_stack.pop_back();
+                            const auto current_val = (*table_ptr_it)->table.value(action.coord.first, action.coord.second);
+                            cell_redo_stack.push_back({action.coord, current_val});
+                            if( action.old_value ){
+                                (*table_ptr_it)->table.inject(action.coord.first, action.coord.second, action.old_value.value());
+                            }else{
+                                (*table_ptr_it)->table.remove(action.coord.first, action.coord.second);
+                            }
+                            cell_selected = action.coord;
+                            cell_text_highlighted = false;
+                            cell_edit_undo_pushed = false;
+                            set_focus_on_cell = action.coord;
+
+                        // Redo (ctrl+y).
+                        }else if( pressing_ctrl
+                              &&  pressing_y
+                              &&  !cell_redo_stack.empty() ){
+                            const auto action = cell_redo_stack.back();
+                            cell_redo_stack.pop_back();
+                            const auto current_val = (*table_ptr_it)->table.value(action.coord.first, action.coord.second);
+                            cell_undo_stack.push_back({action.coord, current_val});
+                            if( action.old_value ){
+                                (*table_ptr_it)->table.inject(action.coord.first, action.coord.second, action.old_value.value());
+                            }else{
+                                (*table_ptr_it)->table.remove(action.coord.first, action.coord.second);
+                            }
+                            cell_selected = action.coord;
+                            cell_text_highlighted = false;
+                            cell_edit_undo_pushed = false;
+                            set_focus_on_cell = action.coord;
+
+                        // Copy the selection (ctrl+c).
                         }else if( pressing_ctrl
                               &&  pressing_c
                               &&  !table_selection.empty() ){
@@ -7728,7 +7753,26 @@ bool SDL_Viewer(Drover &DICOM_data,
                             ImGui::SetClipboardText(selection_csv.c_str());
                             YLOGINFO("Copied rectangular selection to clipboard");
 
-                        // Paste the selection.
+                        // Cut the selection (ctrl+x).
+                        }else if( pressing_ctrl
+                              &&  pressing_x
+                              &&  !table_selection.empty() ){
+                            const auto [row_bounds, col_bounds] = get_table_selection_bounds(table_selection).value();
+                            std::ostringstream os;
+                            (*table_ptr_it)->table.write_csv(os, '\t', row_bounds, col_bounds);
+                            const auto selection_csv = os.str();
+                            ImGui::SetClipboardText(selection_csv.c_str());
+                            for(const auto& c : table_selection){
+                                const auto [row, col] = c;
+                                const auto val = (*table_ptr_it)->table.value(row, col);
+                                cell_undo_stack.push_back({c, val});
+                                (*table_ptr_it)->table.remove(row, col);
+                            }
+                            cell_redo_stack.clear();
+                            cell_edit_undo_pushed = false;
+                            YLOGINFO("Cut rectangular selection to clipboard");
+
+                        // Paste the selection (ctrl+v).
                         }else if( pressing_ctrl
                               &&  pressing_v
                               &&  cell_selected ){
@@ -7743,19 +7787,25 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 const auto mmc = t.min_max_col();
                                 const auto [row_offset, col_offset] = cell_selected.value();
                                 tables::visitor_func_t l_f = [&](int64_t row, int64_t col, std::string& v) -> tables::action {
-                                    (*table_ptr_it)->table.inject(row - mmr.first + row_offset,
-                                                                  col - mmc.first + col_offset, v);
+                                    const auto dest_row = row - mmr.first + row_offset;
+                                    const auto dest_col = col - mmc.first + col_offset;
+                                    const auto dest_coord = std::make_pair(dest_row, dest_col);
+                                    const auto old_val = (*table_ptr_it)->table.value(dest_row, dest_col);
+                                    cell_undo_stack.push_back({dest_coord, old_val});
+                                    (*table_ptr_it)->table.inject(dest_row, dest_col, v);
                                     return tables::action::automatic;
                                 };
                                 //Visit all cells, so we overwrite even if the pasted cell is empty.
                                 t.visit_block(mmr, mmc, l_f);
-                                YLOGINFO("Pasted rectangular region to clipboard");
+                                cell_redo_stack.clear();
+                                cell_edit_undo_pushed = false;
+                                YLOGINFO("Pasted rectangular region from clipboard");
 
                             }catch(const std::exception &e){
                                 YLOGWARN("Unable to parse tabular data from clipboard: " << e.what());
                             }
 
-                        // Jump navigation over multiple cells, optionally adding to the selection.
+                        // Jump navigation over multiple cells (ctrl+arrow), optionally adding to the selection.
                         }else if( pressing_ctrl
                               &&  cell_selected
                               &&  pressing_up ){
@@ -7763,6 +7813,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                             const auto jump = (*table_ptr_it)->table.jump_navigate(cell_selected.value(), inc);
                             if( pressing_shift ) insert_cells_between(cell_selected.value(), jump);
                             cell_selected = jump;
+                            cell_text_highlighted = false;
+                            cell_edit_undo_pushed = false;
                             set_focus_on_cell = cell_selected;
                         }else if( pressing_ctrl
                               &&  cell_selected
@@ -7771,6 +7823,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                             const auto jump = (*table_ptr_it)->table.jump_navigate(cell_selected.value(), inc);
                             if( pressing_shift ) insert_cells_between(cell_selected.value(), jump);
                             cell_selected = jump;
+                            cell_text_highlighted = false;
+                            cell_edit_undo_pushed = false;
                             set_focus_on_cell = cell_selected;
                         }else if( pressing_ctrl
                               &&  cell_selected
@@ -7779,6 +7833,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                             const auto jump = (*table_ptr_it)->table.jump_navigate(cell_selected.value(), inc);
                             if( pressing_shift ) insert_cells_between(cell_selected.value(), jump);
                             cell_selected = jump;
+                            cell_text_highlighted = false;
+                            cell_edit_undo_pushed = false;
                             set_focus_on_cell = cell_selected;
                         }else if( pressing_ctrl
                               &&  cell_selected
@@ -7787,7 +7843,91 @@ bool SDL_Viewer(Drover &DICOM_data,
                             const auto jump = (*table_ptr_it)->table.jump_navigate(cell_selected.value(), inc);
                             if( pressing_shift ) insert_cells_between(cell_selected.value(), jump);
                             cell_selected = jump;
+                            cell_text_highlighted = false;
+                            cell_edit_undo_pushed = false;
                             set_focus_on_cell = cell_selected;
+
+                        // Delete/backspace: delete the multi-cell selection contents.
+                        }else if( (pressing_delete || pressing_backspace)
+                              &&  table_selection.size() > 1UL ){
+                            for(const auto& c : table_selection){
+                                const auto [row, col] = c;
+                                const auto val = (*table_ptr_it)->table.value(row, col);
+                                cell_undo_stack.push_back({c, val});
+                                (*table_ptr_it)->table.remove(row, col);
+                            }
+                            cell_redo_stack.clear();
+                            cell_edit_undo_pushed = false;
+                            cell_text_highlighted = false;
+
+                        // Delete: clear the single selected cell.
+                        }else if( pressing_delete
+                              &&  cell_selected
+                              &&  table_selection.size() <= 1UL ){
+                            const auto [row, col] = cell_selected.value();
+                            maybe_push_undo(cell_selected.value());
+                            (*table_ptr_it)->table.remove(row, col);
+                            cell_text_highlighted = false;
+
+                        // Backspace: edit text in the single selected cell.
+                        }else if( pressing_backspace
+                              &&  cell_selected
+                              &&  table_selection.size() <= 1UL ){
+                            const auto [row, col] = cell_selected.value();
+                            if( cell_text_highlighted ){
+                                // Clear the entire cell when text is highlighted.
+                                maybe_push_undo(cell_selected.value());
+                                (*table_ptr_it)->table.remove(row, col);
+                                cell_text_highlighted = false;
+                            }else{
+                                const auto current_val = (*table_ptr_it)->table.value(row, col);
+                                if( current_val && !current_val.value().empty() ){
+                                    maybe_push_undo(cell_selected.value());
+                                    std::string new_val = current_val.value();
+                                    // Remove the last UTF-8 code point (which may span multiple bytes).
+                                    auto it = new_val.end();
+                                    --it;
+                                    while( it != new_val.begin()
+                                    &&     (static_cast<unsigned char>(*it) & 0xC0) == 0x80 ){
+                                        --it;
+                                    }
+                                    new_val.erase(it, new_val.end());
+                                    if( new_val.empty() ){
+                                        (*table_ptr_it)->table.remove(row, col);
+                                    }else{
+                                        (*table_ptr_it)->table.inject(row, col, new_val);
+                                    }
+                                }
+                            }
+
+                        // Escape: deselect.
+                        }else if( pressing_escape ){
+                            if( cell_text_highlighted ){
+                                cell_text_highlighted = false;
+                            }else{
+                                cell_selected = {};
+                                cell_text_highlighted = false;
+                                cell_edit_undo_pushed = false;
+                                table_selection.clear();
+                            }
+
+                        // Tab navigation (shift+tab moves left, tab moves right).
+                        }else if( pressing_tab && pressing_shift && cell_selected ){
+                            const auto [row, col] = cell_selected.value();
+                            navigate_to_cell(std::make_pair(row, std::clamp(col - 1L, l_min_col, l_max_col)));
+
+                        }else if( pressing_tab && cell_selected ){
+                            const auto [row, col] = cell_selected.value();
+                            navigate_to_cell(std::make_pair(row, std::clamp(col + 1L, l_min_col, l_max_col)));
+
+                        // Enter navigation (shift+enter moves up, enter moves down).
+                        }else if( pressing_enter && pressing_shift && cell_selected ){
+                            const auto [row, col] = cell_selected.value();
+                            navigate_to_cell(std::make_pair(std::clamp(row - 1L, l_min_row, l_max_row), col));
+
+                        }else if( pressing_enter && cell_selected ){
+                            const auto [row, col] = cell_selected.value();
+                            navigate_to_cell(std::make_pair(std::clamp(row + 1L, l_min_row, l_max_row), col));
 
                         // Navigate the selected cell one cell over, optionally adding to the selection.
                         }else if( cell_selected
@@ -7797,9 +7937,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                             if( pressing_shift ){
                                 table_selection.insert(cell_selected.value());
                                 table_selection.insert(jump);
+                                cell_selected = jump;
+                                cell_text_highlighted = false;
+                                cell_edit_undo_pushed = false;
+                                set_focus_on_cell = cell_selected;
+                            }else{
+                                navigate_to_cell(jump);
                             }
-                            cell_selected = jump;
-                            set_focus_on_cell = cell_selected;
                         }else if( cell_selected
                               &&  pressing_down ){
                             const auto [row, col] = cell_selected.value();
@@ -7807,9 +7951,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                             if( pressing_shift ){
                                 table_selection.insert(cell_selected.value());
                                 table_selection.insert(jump);
+                                cell_selected = jump;
+                                cell_text_highlighted = false;
+                                cell_edit_undo_pushed = false;
+                                set_focus_on_cell = cell_selected;
+                            }else{
+                                navigate_to_cell(jump);
                             }
-                            cell_selected = jump;
-                            set_focus_on_cell = cell_selected;
                         }else if( cell_selected
                               &&  pressing_left ){
                             const auto [row, col] = cell_selected.value();
@@ -7817,9 +7965,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                             if( pressing_shift ){
                                 table_selection.insert(cell_selected.value());
                                 table_selection.insert(jump);
+                                cell_selected = jump;
+                                cell_text_highlighted = false;
+                                cell_edit_undo_pushed = false;
+                                set_focus_on_cell = cell_selected;
+                            }else{
+                                navigate_to_cell(jump);
                             }
-                            cell_selected = jump;
-                            set_focus_on_cell = cell_selected;
                         }else if( cell_selected
                               &&  pressing_right ){
                             const auto [row, col] = cell_selected.value();
@@ -7827,14 +7979,49 @@ bool SDL_Viewer(Drover &DICOM_data,
                             if( pressing_shift ){
                                 table_selection.insert(cell_selected.value());
                                 table_selection.insert(jump);
+                                cell_selected = jump;
+                                cell_text_highlighted = false;
+                                cell_edit_undo_pushed = false;
+                                set_focus_on_cell = cell_selected;
+                            }else{
+                                navigate_to_cell(jump);
                             }
-                            cell_selected = jump;
-                            set_focus_on_cell = cell_selected;
+
+                        // Typed text: append or replace cell contents.
+                        }else if( !typed_text.empty()
+                              &&  !pressing_ctrl
+                              &&  cell_selected ){
+                            // Sanitize typed_text before injecting/appending it into the table.
+                            // Only keep printable ASCII characters to avoid introducing invalid UTF-8
+                            // or unexpected placeholders originating from unsupported codepoints.
+                            std::string sanitized_typed_text;
+                            sanitized_typed_text.reserve(typed_text.size());
+                            for( unsigned char ch : typed_text ){
+                                if( ch >= ' ' && ch < 0x7F ){
+                                    sanitized_typed_text.push_back(static_cast<char>(ch));
+                                }
+                            }
+                            if( sanitized_typed_text.empty() ){
+                                // Nothing usable to insert; leave the cell unchanged.
+                            }else{
+                                const auto [row, col] = cell_selected.value();
+                                maybe_push_undo(cell_selected.value());
+                                if( cell_text_highlighted ){
+                                    // Replace the cell contents when text is highlighted.
+                                    (*table_ptr_it)->table.inject(row, col, sanitized_typed_text);
+                                    cell_text_highlighted = false;
+                                }else{
+                                    // Append to the cell contents.
+                                    const auto current_val = (*table_ptr_it)->table.value(row, col);
+                                    const std::string new_val = current_val.value_or("") + sanitized_typed_text;
+                                    (*table_ptr_it)->table.inject(row, col, new_val);
+                                }
+                            }
 
                         }
                     }
 
-                    ImGui::EndTable();
+                    ImGui::EndTable(); // Only call EndTable if BeginTable returned true.
                 }
 
                 // Display metadata.
@@ -7846,9 +8033,9 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                     ImGui::End();
                 }
-
-                ImGui::End();
             }
+
+            ImGui::End();
             return;
         };
         try{
