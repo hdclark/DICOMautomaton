@@ -209,6 +209,7 @@ add_library(Operations_objs OBJECT
     SimplifySurfaceMeshes.cc
     SimulateRadiograph.cc
     Sleep.cc
+    SolveLinearProgram.cc
     SpatialBlur.cc
     SpatialDerivative.cc
     SpatialSharpen.cc

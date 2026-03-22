@@ -1,0 +1,70 @@
+#!/usr/bin/env -S dicomautomaton_dispatcher -v
+
+# This script demonstrates how to use the SolveLinearProgram operation.
+# It solves a simple linear programming problem to maximize a cost function.
+#
+# Example problem:
+#   Maximize: 3*x1 + 2*x2
+#   Subject to:
+#     x1 + x2 <= 4   (resource constraint 1)
+#     x1 <= 2        (resource constraint 2)
+#     x2 <= 3        (resource constraint 3)
+#     x1, x2 >= 0    (non-negativity)
+#
+# The optimal solution is: x1 = 2, x2 = 2, with objective value = 10.
+
+# Step 1.
+#
+# Solve a simple two-variable linear program.
+# The objective function coefficients are separated by semicolons.
+# The constraint matrix rows are separated by pipes (|).
+# The constraint bounds are separated by semicolons.
+SolveLinearProgram(
+    Objective = '3.0;2.0',
+    Constraints = '1.0;1.0|1.0;0.0|0.0;1.0',
+    Bounds = '4.0;2.0;3.0',
+    TableLabel = 'simple_lp_solution'
+){};
+
+# Step 2.
+#
+# Export the results table to a CSV file.
+# The table contains the optimization status, number of iterations,
+# optimal objective value, and the optimal values for each variable.
+ExportTables(
+    Filename = 'lp_result.csv'
+){};
+
+
+# Example 2: A classic "diet problem" variant
+#
+# Maximize total food units (x1 + x2) subject to:
+#   2*x1 + x2 <= 20  (nutrient A constraint)
+#   x1 + 3*x2 <= 30  (nutrient B constraint)
+#   x1, x2 >= 0
+#
+# Optimal solution: x1 = 6, x2 = 8, objective = 14
+SolveLinearProgram(
+    Objective = '1.0;1.0',
+    Constraints = '2.0;1.0|1.0;3.0',
+    Bounds = '20.0;30.0',
+    TableLabel = 'diet_problem_solution'
+){};
+
+
+# Example 3: Three-variable optimization
+#
+# Maximize: 2*x1 + 3*x2 + 4*x3
+# Subject to:
+#   x1 + x2 + x3 <= 100   (total capacity)
+#   2*x1 + x2 <= 80       (machine 1 time)
+#   x2 + 2*x3 <= 60       (machine 2 time)
+#   x1, x2, x3 >= 0
+SolveLinearProgram(
+    Objective = '2.0;3.0;4.0',
+    Constraints = '1.0;1.0;1.0|2.0;1.0;0.0|0.0;1.0;2.0',
+    Bounds = '100.0;80.0;60.0',
+    TableLabel = 'production_optimization'
+){};
+
+
