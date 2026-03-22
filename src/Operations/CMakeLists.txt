@@ -207,6 +207,7 @@ add_library(Operations_objs OBJECT
     SelectSlicesIntersectingROI.cc
     SimplifyContours.cc
     SimplifySurfaceMeshes.cc
+    SimulateDose.cc
     SimulateRadiograph.cc
     Sleep.cc
     SpatialBlur.cc
