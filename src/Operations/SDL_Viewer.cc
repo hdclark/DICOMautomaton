@@ -1494,6 +1494,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         "void main(){\n"
         "    if(use_lighting){\n"
         "        vec3 N = normalize(use_smoothing ? frag_norm : flat_norm);\n"
+        "        N = faceforward(N, vec3(0.0, 0.0, -1.0), N);\n"
         "        vec3 L = normalize(LIGHT_POSITION - frag_pos);\n"
         "        vec3 V = normalize(-frag_pos);\n"
         "        vec3 H = normalize(L + V);\n"
