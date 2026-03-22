@@ -7994,17 +7994,31 @@ bool SDL_Viewer(Drover &DICOM_data,
                         }else if( !typed_text.empty()
                               &&  !pressing_ctrl
                               &&  cell_selected ){
-                            const auto [row, col] = cell_selected.value();
-                            maybe_push_undo(cell_selected.value());
-                            if( cell_text_highlighted ){
-                                // Replace the cell contents when text is highlighted.
-                                (*table_ptr_it)->table.inject(row, col, typed_text);
-                                cell_text_highlighted = false;
+                            // Sanitize typed_text before injecting/appending it into the table.
+                            // Only keep printable ASCII characters to avoid introducing invalid UTF-8
+                            // or unexpected placeholders originating from unsupported codepoints.
+                            std::string sanitized_typed_text;
+                            sanitized_typed_text.reserve(typed_text.size());
+                            for( unsigned char ch : typed_text ){
+                                if( ch >= ' ' && ch < 0x7F ){
+                                    sanitized_typed_text.push_back(static_cast<char>(ch));
+                                }
+                            }
+                            if( sanitized_typed_text.empty() ){
+                                // Nothing usable to insert; leave the cell unchanged.
                             }else{
-                                // Append to the cell contents.
-                                const auto current_val = (*table_ptr_it)->table.value(row, col);
-                                const std::string new_val = current_val.value_or("") + typed_text;
-                                (*table_ptr_it)->table.inject(row, col, new_val);
+                                const auto [row, col] = cell_selected.value();
+                                maybe_push_undo(cell_selected.value());
+                                if( cell_text_highlighted ){
+                                    // Replace the cell contents when text is highlighted.
+                                    (*table_ptr_it)->table.inject(row, col, sanitized_typed_text);
+                                    cell_text_highlighted = false;
+                                }else{
+                                    // Append to the cell contents.
+                                    const auto current_val = (*table_ptr_it)->table.value(row, col);
+                                    const std::string new_val = current_val.value_or("") + sanitized_typed_text;
+                                    (*table_ptr_it)->table.inject(row, col, new_val);
+                                }
                             }
 
                         }
