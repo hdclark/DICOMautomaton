@@ -23,4 +23,13 @@ printf 'Test 2: Invocation with custom cube width\n' |
   -o TestConditions \
     -p Conditions='surface_mesh_count(1)'
 
+printf 'Test 3: Ygor convex hull method\n' |
+  tee -a fullstdout
+"${DCMA_BIN}" \
+  -v \
+  -o GenerateVirtualDataPointCloudV1 \
+  -o ConvertPointsToMeshes:Method=ygor-convexhull \
+  -o TestConditions \
+    -p Conditions='surface_mesh_count(1)'
+
 printf 'All tests passed!\n'
