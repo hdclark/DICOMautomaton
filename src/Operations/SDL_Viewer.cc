@@ -91,6 +91,7 @@
 #include "../Triple_Three.h"
 #include "../STB_Shim.h"
 #include "../Surface_Meshes.h"
+#include "../GLSL_Shaders.h"
 
 #include "../Challenges/Clicker.h"
 #include "../Challenges/Encompass.h"
@@ -1031,6 +1032,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
         bool adjust_window_level_enabled = false;
         bool adjust_colour_map_enabled = false;
+        bool adjust_shader_preset_enabled = false;
 
         bool view_shader_editor_enabled = false;
 
@@ -1452,66 +1454,14 @@ bool SDL_Viewer(Drover &DICOM_data,
 
     // ------------------------------------------ Shaders -------------------------------------------------
 
+    const auto shader_presets = get_glsl_shader_presets();
+    int selected_shader_preset = 0;
+
     std::array<char, 2048> vert_shader_src = string_to_array(
-        "#version " + glsl_version + "\n"
-        "\n"
-        "in vec3 v_pos;\n"
-        "in vec3 v_norm;\n"
-        "\n"
-        "uniform mat4 mvp_matrix;\n"
-        "uniform mat4 mv_matrix;\n"
-        "uniform mat3 norm_matrix;\n"
-        "\n"
-        "out vec3 frag_pos;\n"
-        "out vec3 frag_norm;\n"
-        "flat out vec3 flat_norm;\n"
-        "\n"
-        "void main(){\n"
-        "    gl_Position = mvp_matrix * vec4(v_pos, 1.0);\n"
-        "    vec4 p = mv_matrix * vec4(v_pos, 1.0);\n"
-        "    frag_pos = p.xyz / p.w;\n"
-        "    frag_norm = normalize(norm_matrix * v_norm);\n"
-        "    flat_norm = frag_norm;\n"
-        "}\n" );
+        "#version " + glsl_version + "\n" + shader_presets.at(0).vertex_shader );
 
     std::array<char, 2048> frag_shader_src = string_to_array(
-        "#version " + glsl_version + "\n"
-        "\n"
-        "in vec3 frag_pos;\n"
-        "in vec3 frag_norm;\n"
-        "flat in vec3 flat_norm;\n"
-        "\n"
-        "uniform vec4 diffuse_colour;\n"
-        "uniform vec4 user_colour;\n"
-        "uniform bool use_lighting;\n"
-        "uniform bool use_smoothing;\n"
-        "\n"
-        "const vec3 LIGHT_POSITION = vec3(1.0, 2.0, 3.0);\n"
-        "const float AMBIENT_WEIGHT = 0.15;\n"
-        "const float DIFFUSE_WEIGHT = 0.65;\n"
-        "const float SPECULAR_WEIGHT = 0.20;\n"
-        "const float SPECULAR_POWER = 32.0;\n"
-        "\n"
-        "out vec4 frag_colour;\n"
-        "\n"
-        "void main(){\n"
-        "    if(use_lighting){\n"
-        "        vec3 N = normalize(use_smoothing ? frag_norm : flat_norm);\n"
-        "        N = faceforward(N, vec3(0.0, 0.0, -1.0), N);\n"
-        "        vec3 L = normalize(LIGHT_POSITION - frag_pos);\n"
-        "        vec3 V = normalize(-frag_pos);\n"
-        "        vec3 H = normalize(L + V);\n"
-        "        float diff = max(dot(N, L), 0.0);\n"
-        "        float spec = 0.0;\n"
-        "        if(diff > 0.0) spec = pow(max(dot(N, H), 0.0), SPECULAR_POWER);\n"
-        "        vec3 c = AMBIENT_WEIGHT * user_colour.rgb\n"
-        "               + DIFFUSE_WEIGHT * diff * diffuse_colour.rgb\n"
-        "               + SPECULAR_WEIGHT * spec * vec3(1.0);\n"
-        "        frag_colour = vec4(c, user_colour.a);\n"
-        "    }else{\n"
-        "        frag_colour = user_colour;\n"
-        "    }\n"
-        "}\n" );
+        "#version " + glsl_version + "\n" + shader_presets.at(0).fragment_shader );
 
     std::array<char, 2048> shader_log; // Output from most recent compilation and linking.
 
@@ -3911,6 +3861,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::Separator();
                     ImGui::MenuItem("Image Window and Level", nullptr, &view_toggles.adjust_window_level_enabled);
                     ImGui::MenuItem("Image Colour Map", nullptr, &view_toggles.adjust_colour_map_enabled);
+                    ImGui::MenuItem("Shader Preset", nullptr, &view_toggles.adjust_shader_preset_enabled);
                     ImGui::EndMenu();
                 }
 
@@ -4828,7 +4779,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                                             &custom_shader,
                                             &vert_shader_src,
                                             &frag_shader_src,
-                                            &shader_log ]() -> void {
+                                            &shader_log,
+                                            &shader_presets,
+                                            &selected_shader_preset,
+                                            &glsl_version ]() -> void {
             if( !view_toggles.view_shader_editor_enabled ) return;
 
             ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
@@ -4848,6 +4802,27 @@ bool SDL_Viewer(Drover &DICOM_data,
                     };
                 }
 
+                // Shader preset selector.
+                ImGui::Separator();
+                const int N_presets = static_cast<int>(shader_presets.size());
+                if(ImGui::BeginCombo("Preset", shader_presets.at(selected_shader_preset).name.c_str())){
+                    for(int i = 0; i < N_presets; ++i){
+                        const bool is_selected = (selected_shader_preset == i);
+                        if(ImGui::Selectable(shader_presets.at(i).name.c_str(), is_selected)){
+                            selected_shader_preset = i;
+                        }
+                        if(is_selected) ImGui::SetItemDefaultFocus();
+                    }
+                    ImGui::EndCombo();
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Load Preset")){
+                    const auto &p = shader_presets.at(selected_shader_preset);
+                    vert_shader_src = string_to_array("#version " + glsl_version + "\n" + p.vertex_shader);
+                    frag_shader_src = string_to_array("#version " + glsl_version + "\n" + p.fragment_shader);
+                    shader_log = string_to_array("Loaded preset: " + p.name);
+                }
+                ImGui::Separator();
 
                 ImGui::Text("Vertex shader");
                 ImVec2 edit_box_extent = ImGui::GetContentRegionAvail();
@@ -6956,6 +6931,49 @@ bool SDL_Viewer(Drover &DICOM_data,
             adjust_colour_map();
         }catch(const std::exception &e){
             YLOGWARN("Exception in adjust_colour_map(): '" << e.what() << "'");
+            throw;
+        }
+
+        // Display the shader preset selection dialog.
+        const auto adjust_shader_preset = [&view_toggles,
+                                            &custom_shader,
+                                            &vert_shader_src,
+                                            &frag_shader_src,
+                                            &shader_log,
+                                            &shader_presets,
+                                            &glsl_version ]() -> void {
+            if( !view_toggles.adjust_shader_preset_enabled ) return;
+
+            ImGui::SetNextWindowPos(ImVec2(680, 240), ImGuiCond_FirstUseEver);
+            ImGui::Begin("Shader Preset", &view_toggles.adjust_shader_preset_enabled, ImGuiWindowFlags_AlwaysAutoResize);
+
+            for(size_t i = 0; i < shader_presets.size(); ++i){
+                if( ImGui::Button(shader_presets[i].name.c_str(), ImVec2(250, 0)) ){
+                    vert_shader_src = string_to_array("#version " + glsl_version + "\n" + shader_presets[i].vertex_shader);
+                    frag_shader_src = string_to_array("#version " + glsl_version + "\n" + shader_presets[i].fragment_shader);
+                    try{
+                        auto l_custom_shader = compile_shader_program(vert_shader_src,
+                                                                       frag_shader_src,
+                                                                       shader_log);
+                        custom_shader = std::move(l_custom_shader);
+                        YLOGINFO("Applied shader preset: '" << shader_presets[i].name << "'");
+                        shader_log = string_to_array("Applied preset: " + shader_presets[i].name);
+                    }catch(const std::exception &e){
+                        YLOGWARN("Shader preset compilation failed: '" << e.what() << "'");
+                    }
+                }
+                if(ImGui::IsItemHovered()){
+                    ImGui::SetTooltip("%s", shader_presets[i].description.c_str());
+                }
+            }
+
+            ImGui::End();
+            return;
+        };
+        try{
+            adjust_shader_preset();
+        }catch(const std::exception &e){
+            YLOGWARN("Exception in adjust_shader_preset(): '" << e.what() << "'");
             throw;
         }
 
