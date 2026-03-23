@@ -55,6 +55,7 @@
 #include "YgorImagesIO.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMathChebyshev.h" //Needed for cheby_approx class.
+#include "YgorMathQuaternions.h"
 #include "YgorMathPlottingGnuplot.h" //Needed for YgorMathPlottingGnuplot::*.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorLog.h"
@@ -1189,6 +1190,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         double rot_y = 0.0; // Yaw.
         double rot_p = 0.0; // Pitch.
         double rot_r = 0.0; // Roll.
+        quaternion orientation = quaternion::identity();
 
         double zoom = 1.0;
         double cam_distort = 0.0;
@@ -1456,57 +1458,59 @@ bool SDL_Viewer(Drover &DICOM_data,
         "in vec3 v_pos;\n"
         "in vec3 v_norm;\n"
         "\n"
-        "uniform mat4 mvp_matrix;      // model-view-projection matrix.\n"
-        "uniform mat4 mv_matrix;       // model-view matrix.\n"
-        "uniform mat3 norm_matrix;     // rotation-only matrix.\n"
+        "uniform mat4 mvp_matrix;\n"
+        "uniform mat4 mv_matrix;\n"
+        "uniform mat3 norm_matrix;\n"
         "\n"
-        "uniform vec4 diffuse_colour;\n"
-        "uniform vec4 user_colour;\n"
-        "uniform vec3 light_position;\n"
-        "uniform bool use_lighting;\n"
-        "uniform bool use_smoothing;\n"
-        "\n"
-        "out vec4 interp_colour;\n"
-        "flat out vec4 flat_colour;\n"
+        "out vec3 frag_pos;\n"
+        "out vec3 frag_norm;\n"
+        "flat out vec3 flat_norm;\n"
         "\n"
         "void main(){\n"
         "    gl_Position = mvp_matrix * vec4(v_pos, 1.0);\n"
-        "\n"
-        "    if(use_lighting){\n"
-        "        vec3 l_norm = normalize(norm_matrix * v_norm);\n"
-        "\n"
-        "        vec4 l_pos4 = mv_matrix * vec4(v_pos, 1.0);\n"
-        "        vec3 l_pos3 = l_pos4.xyz / l_pos4.w;\n"
-        "\n"
-        "        vec3 l_light_pos = vec3(-1000.0, -1000.0, 250.0);\n"
-        "        vec3 light_dir = normalize( l_light_pos - l_pos3 );\n"
-        "\n"
-        "        float diffuse_intensity = max(0.0, 1.0 + 0.5*dot(l_norm, light_dir));\n"
-        "\n"
-        "        interp_colour.rgb = diffuse_intensity * diffuse_colour.rgb;\n"
-        "        //interp_colour.a = 1.0;\n"
-        "        interp_colour.a = user_colour.a;\n"
-        "    }else{\n"
-        "        interp_colour = user_colour;\n"
-        "    }\n"
-        "    flat_colour = interp_colour;\n"
+        "    vec4 p = mv_matrix * vec4(v_pos, 1.0);\n"
+        "    frag_pos = p.xyz / p.w;\n"
+        "    frag_norm = normalize(norm_matrix * v_norm);\n"
+        "    flat_norm = frag_norm;\n"
         "}\n" );
 
     std::array<char, 2048> frag_shader_src = string_to_array(
         "#version " + glsl_version + "\n"
         "\n"
-        "in vec4 interp_colour;\n"
-        "flat in vec4 flat_colour;\n"
+        "in vec3 frag_pos;\n"
+        "in vec3 frag_norm;\n"
+        "flat in vec3 flat_norm;\n"
         "\n"
+        "uniform vec4 diffuse_colour;\n"
         "uniform vec4 user_colour;\n"
         "uniform bool use_lighting;\n"
         "uniform bool use_smoothing;\n"
         "\n"
+        "const vec3 LIGHT_POSITION = vec3(1.0, 2.0, 3.0);\n"
+        "const float AMBIENT_WEIGHT = 0.15;\n"
+        "const float DIFFUSE_WEIGHT = 0.65;\n"
+        "const float SPECULAR_WEIGHT = 0.20;\n"
+        "const float SPECULAR_POWER = 32.0;\n"
+        "\n"
         "out vec4 frag_colour;\n"
         "\n"
         "void main(){\n"
-        "    frag_colour = 0.65 * (use_smoothing ? interp_colour : flat_colour)\n"
-        "                + 0.35 * user_colour;\n"
+        "    if(use_lighting){\n"
+        "        vec3 N = normalize(use_smoothing ? frag_norm : flat_norm);\n"
+        "        N = faceforward(N, vec3(0.0, 0.0, -1.0), N);\n"
+        "        vec3 L = normalize(LIGHT_POSITION - frag_pos);\n"
+        "        vec3 V = normalize(-frag_pos);\n"
+        "        vec3 H = normalize(L + V);\n"
+        "        float diff = max(dot(N, L), 0.0);\n"
+        "        float spec = 0.0;\n"
+        "        if(diff > 0.0) spec = pow(max(dot(N, H), 0.0), SPECULAR_POWER);\n"
+        "        vec3 c = AMBIENT_WEIGHT * user_colour.rgb\n"
+        "               + DIFFUSE_WEIGHT * diff * diffuse_colour.rgb\n"
+        "               + SPECULAR_WEIGHT * spec * vec3(1.0);\n"
+        "        frag_colour = vec4(c, user_colour.a);\n"
+        "    }else{\n"
+        "        frag_colour = user_colour;\n"
+        "    }\n"
         "}\n" );
 
     std::array<char, 2048> shader_log; // Output from most recent compilation and linking.
@@ -9112,6 +9116,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                           &custom_shader,
                                           &frame_count ]() -> void {
 
+            const auto pi = std::acos(-1.0);
+
             std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
             if(!drover_lock) return;
             if( !view_toggles.view_meshes_enabled
@@ -9145,7 +9151,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                 //ImGui::SetNextWindowSize(ImVec2(650, 650), ImGuiCond_FirstUseEver);
                 ImGui::SetNextWindowPos(ImVec2(10, 20), ImGuiCond_FirstUseEver);
-                if(ImGui::Begin("Meshes", &view_toggles.view_meshes_enabled)){
+                if(ImGui::Begin("Meshes", &view_toggles.view_meshes_enabled, ImGuiWindowFlags_NoNavInputs)){
 
                     // Alter the common model transformation.
                     if(ImGui::IsWindowFocused()){
@@ -9208,17 +9214,89 @@ bool SDL_Viewer(Drover &DICOM_data,
                     drag_speed = 0.3f;
                     clamp_l = -360.0 * 10.0;
                     clamp_h =  360.0 * 10.0;
-                    ImGui::DragScalar("Yaw",   ImGuiDataType_Double, &mesh_display_transform.rot_y, drag_speed, &clamp_l, &clamp_h, "%.1f");
-                    ImGui::DragScalar("Pitch", ImGuiDataType_Double, &mesh_display_transform.rot_p, drag_speed, &clamp_l, &clamp_h, "%.1f");
-                    ImGui::DragScalar("Roll",  ImGuiDataType_Double, &mesh_display_transform.rot_r, drag_speed, &clamp_l, &clamp_h, "%.1f");
+                    const auto sync_orientation_from_euler = [&mesh_display_transform](){
+                        const auto pi = std::acos(-1.0);
+                        const auto deg_to_rad = pi / 180.0;
+                        const auto y_rot = mesh_display_transform.rot_y * deg_to_rad;
+                        const auto p_rot = mesh_display_transform.rot_p * deg_to_rad;
+                        const auto r_rot = mesh_display_transform.rot_r * deg_to_rad;
+                        mesh_display_transform.orientation = quaternion::from_euler_ypr(y_rot, p_rot, r_rot);
+                    };
+                    if(ImGui::DragScalar("Yaw", ImGuiDataType_Double, &mesh_display_transform.rot_y, drag_speed, &clamp_l, &clamp_h, "%.1f")){
+                        sync_orientation_from_euler();
+                    }
+                    if(ImGui::DragScalar("Pitch", ImGuiDataType_Double, &mesh_display_transform.rot_p, drag_speed, &clamp_l, &clamp_h, "%.1f")){
+                        sync_orientation_from_euler();
+                    }
+                    if(ImGui::DragScalar("Roll", ImGuiDataType_Double, &mesh_display_transform.rot_r, drag_speed, &clamp_l, &clamp_h, "%.1f")){
+                        sync_orientation_from_euler();
+                    }
 
                     drag_speed = 0.005f;
                     clamp_l = -10.0;
                     clamp_h = 10.0;
                     ImGui::DragScalar("Zoom", ImGuiDataType_Double, &mesh_display_transform.zoom, drag_speed, &clamp_l, &clamp_h, "%.1f");
                     ImGui::DragScalar("Camera distort", ImGuiDataType_Double, &mesh_display_transform.cam_distort, drag_speed, &clamp_l, &clamp_h, "%.1f");
+
+                    // Standard orientation buttons.
+                    ImGui::Separator();
+                    ImGui::Text("Standard Views:");
+                    if(ImGui::Button("Front")){
+                        mesh_display_transform.rot_y = 0.0;
+                        mesh_display_transform.rot_p = 0.0;
+                        mesh_display_transform.rot_r = 0.0;
+                        mesh_display_transform.orientation = quaternion::from_euler_ypr(0.0, 0.0, 0.0);
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Back")){
+                        mesh_display_transform.rot_y = 180.0;
+                        mesh_display_transform.rot_p = 0.0;
+                        mesh_display_transform.rot_r = 0.0;
+                        mesh_display_transform.orientation = quaternion::from_euler_ypr(pi, 0.0, 0.0);
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Left")){
+                        mesh_display_transform.rot_y = 90.0;
+                        mesh_display_transform.rot_p = 0.0;
+                        mesh_display_transform.rot_r = 0.0;
+                        mesh_display_transform.orientation = quaternion::from_euler_ypr(0.5 * pi, 0.0, 0.0);
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Right")){
+                        mesh_display_transform.rot_y = -90.0;
+                        mesh_display_transform.rot_p = 0.0;
+                        mesh_display_transform.rot_r = 0.0;
+                        mesh_display_transform.orientation = quaternion::from_euler_ypr(-0.5 * pi, 0.0, 0.0);
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Top")){
+                        mesh_display_transform.rot_y = 0.0;
+                        mesh_display_transform.rot_p = 90.0;
+                        mesh_display_transform.rot_r = 0.0;
+                        mesh_display_transform.orientation = quaternion::from_euler_ypr(0.0, 0.5 * pi, 0.0);
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Bottom")){
+                        mesh_display_transform.rot_y = 0.0;
+                        mesh_display_transform.rot_p = -90.0;
+                        mesh_display_transform.rot_r = 0.0;
+                        mesh_display_transform.orientation = quaternion::from_euler_ypr(0.0, -0.5 * pi, 0.0);
+                    }
+
                     if(ImGui::Button("Reset")){
                         mesh_display_transform = mesh_display_transform_t();
+                    }
+
+                    // Navigation tooltip.
+                    ImGui::Separator();
+                    if(ImGui::CollapsingHeader("Controls")){
+                        ImGui::BulletText("Left-click drag (viewport): virtual trackball rotate");
+                        ImGui::BulletText("Right-click drag (viewport): roll");
+                        ImGui::BulletText("Middle-click drag (viewport): pan");
+                        ImGui::BulletText("Scroll wheel (viewport): zoom");
+                        ImGui::BulletText("Arrow keys (window focused): translate X/Y");
+                        ImGui::BulletText("W/S (window focused): translate Z");
+                        ImGui::BulletText("Q/E (window focused): rotate around Z");
                     }
 
                     // Mesh metadata window.
@@ -9296,14 +9374,109 @@ bool SDL_Viewer(Drover &DICOM_data,
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
             CHECK_FOR_GL_ERRORS();
 
-            if(mesh_display_transform.precess){
-                mesh_display_transform.rot_y += 0.0100 * mesh_display_transform.precess_rate;
-                mesh_display_transform.rot_p -= 0.0029 * mesh_display_transform.precess_rate;
-                mesh_display_transform.rot_r -= 0.0003 * mesh_display_transform.precess_rate;
+            const auto pi = std::acos(-1.0);
+            const auto kDegToRad = pi / 180.0;
+            const auto kCameraForward = vec3<double>(0.0, 0.0, 1.0);
+            const auto kCameraUp = vec3<double>(0.0, 1.0, 0.0);
+            const auto kCameraPitchAxis = vec3<double>(1.0, 0.0, 0.0);
+            const auto kCameraYawAxis = vec3<double>(0.0, 1.0, 0.0);
+            const auto kCameraRollAxis = vec3<double>(0.0, 0.0, 1.0);
+
+            const auto sync_euler_from_orientation = [&mesh_display_transform](){
+                const auto pi = std::acos(-1.0);
+                const auto rad_to_deg = 180.0 / pi;
+                double y_rot = 0.0;
+                double p_rot = 0.0;
+                double r_rot = 0.0;
+                mesh_display_transform.orientation.to_euler_ypr(y_rot, p_rot, r_rot);
+                mesh_display_transform.rot_y = y_rot * rad_to_deg;
+                mesh_display_transform.rot_p = p_rot * rad_to_deg;
+                mesh_display_transform.rot_r = r_rot * rad_to_deg;
+            };
+            constexpr double kPrecessionYawRate = 0.0100;
+            constexpr double kPrecessionPitchRate = -0.0029;
+            constexpr double kPrecessionRollRate = 0.0003;
+
+            {
+                if(mesh_display_transform.precess){
+                    const auto q_y = quaternion::from_axis_angle(kCameraYawAxis,
+                                                                 (kPrecessionYawRate * mesh_display_transform.precess_rate) * kDegToRad);
+                    const auto q_x = quaternion::from_axis_angle(kCameraPitchAxis,
+                                                                 (kPrecessionPitchRate * mesh_display_transform.precess_rate) * kDegToRad);
+                    const auto q_z = quaternion::from_axis_angle(kCameraRollAxis,
+                                                                 (kPrecessionRollRate * mesh_display_transform.precess_rate) * kDegToRad);
+                    mesh_display_transform.orientation = (q_y * q_z * q_x * mesh_display_transform.orientation).normalized();
+                }
+                sync_euler_from_orientation();
             }
-            mesh_display_transform.rot_y = std::fmod(mesh_display_transform.rot_y, 360.0);
-            mesh_display_transform.rot_p = std::fmod(mesh_display_transform.rot_p, 360.0);
-            mesh_display_transform.rot_r = std::fmod(mesh_display_transform.rot_r, 360.0);
+
+            // Mouse-based mesh navigation (only when ImGui does not want the mouse).
+            if( view_toggles.view_meshes_enabled
+            &&  !io.WantCaptureMouse ){
+                constexpr double kTrackballRollDegreesPerPixel = 0.30;
+                constexpr double kPanMultiplier = 1.0;
+                constexpr double kZoomScalePerWheelNotch = 1.10;
+                constexpr double kMinZoom = 0.1;
+                constexpr double kMaxZoom = 100.0;
+                const auto nav_w = std::max<double>(static_cast<double>(io.DisplaySize.x), 1.0);
+                const auto nav_h = std::max<double>(static_cast<double>(io.DisplaySize.y), 1.0);
+                const auto nav_aspect = nav_w / nav_h;
+                mesh_display_transform.zoom = std::clamp(mesh_display_transform.zoom, kMinZoom, kMaxZoom);
+                const auto zoom = mesh_display_transform.zoom;
+                const auto world_width = (2.0 * nav_aspect) / zoom;
+                const auto world_height = 2.0 / zoom;
+                const auto world_dx_per_px = world_width / nav_w;
+                const auto world_dy_per_px = world_height / nav_h;
+
+                // Left-click drag: trackball rotation (yaw and pitch).
+                if(ImGui::IsMouseDragging(ImGuiMouseButton_Left)){
+                    const auto delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
+                    const auto to_trackball = [](double x_px, double y_px, double w_px, double h_px){
+                        // Map viewport pixel coordinates to normalized trackball coordinates in [-1, 1].
+                        const auto normalized_x = std::clamp((2.0 * x_px - w_px) / w_px, -1.0, 1.0);
+                        const auto normalized_y = std::clamp((h_px - 2.0 * y_px) / h_px, -1.0, 1.0);
+                        const auto r2 = normalized_x*normalized_x + normalized_y*normalized_y;
+                        if(r2 <= 1.0){
+                            return vec3<double>(normalized_x, normalized_y, std::sqrt(std::max(0.0, 1.0 - r2))).unit();
+                        }
+                        return vec3<double>(normalized_x, normalized_y, 0.0).unit();
+                    };
+                    const auto mpos = ImGui::GetMousePos();
+                    const auto curr = to_trackball(static_cast<double>(mpos.x),
+                                                   static_cast<double>(mpos.y),
+                                                   nav_w,
+                                                   nav_h);
+                    const auto prev = to_trackball(static_cast<double>(mpos.x - delta.x),
+                                                   static_cast<double>(mpos.y - delta.y),
+                                                   nav_w,
+                                                   nav_h);
+                    const auto q_drag = quaternion::from_two_unit_vectors(prev, curr);
+                    mesh_display_transform.orientation = (mesh_display_transform.orientation * q_drag).normalized();
+                    ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
+                }
+                // Middle-click drag: pan (translate model).
+                if(ImGui::IsMouseDragging(ImGuiMouseButton_Middle)){
+                    const auto delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Middle);
+                    mesh_display_transform.model.coeff(0,3) += static_cast<double>(delta.x) * world_dx_per_px * kPanMultiplier;
+                    mesh_display_transform.model.coeff(1,3) -= static_cast<double>(delta.y) * world_dy_per_px * kPanMultiplier;
+                    ImGui::ResetMouseDragDelta(ImGuiMouseButton_Middle);
+                }
+                // Right-click drag: roll.
+                if(ImGui::IsMouseDragging(ImGuiMouseButton_Right)){
+                    const auto delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right);
+                    const auto roll_rad = static_cast<double>(delta.x) * kTrackballRollDegreesPerPixel * kDegToRad;
+                    const auto q_roll = quaternion::from_axis_angle(kCameraForward, -roll_rad);
+                    mesh_display_transform.orientation = (mesh_display_transform.orientation * q_roll).normalized();
+                    ImGui::ResetMouseDragDelta(ImGuiMouseButton_Right);
+                }
+                // Scroll wheel: zoom.
+                if(std::abs(io.MouseWheel) > 0.0f){
+                    const auto scale = std::pow(kZoomScalePerWheelNotch, static_cast<double>(io.MouseWheel));
+                    mesh_display_transform.zoom *= scale;
+                    mesh_display_transform.zoom = std::clamp(mesh_display_transform.zoom, kMinZoom, kMaxZoom);
+                }
+                sync_euler_from_orientation();
+            }
 
             // Locate uniform locations in the custom shader program.
             if(!custom_shader) throw std::logic_error("No available shader, cannot continue");
@@ -9439,26 +9612,8 @@ bool SDL_Viewer(Drover &DICOM_data,
             };
 
             // Rotate camera according as per user's settings / precession.
-            const auto pi = std::acos(-1.0);
-            const auto y_rot = 0.0 + mesh_display_transform.rot_y * (2.0 * pi) / 360.0; // Yaw.
-            const auto p_rot = 0.0 + mesh_display_transform.rot_p * (2.0 * pi) / 360.0; // Pitch.
-            const auto r_rot = 0.0 - mesh_display_transform.rot_r * (2.0 * pi) / 360.0; // Roll.
-
-            auto axis_1 = vec3<double>(0,0,1); // Represents camera position (looking inward, toward origin).
-            auto axis_2 = vec3<double>(1,0,0); // Represents camera view's leftward direction.
-            auto axis_3 = vec3<double>(0,1,0); // Represents camera views's upward direction.
-
-            axis_1 = axis_1.rotate_around_unit(axis_2, p_rot);
-            axis_3 = axis_3.rotate_around_unit(axis_2, p_rot);
-            axis_2 = axis_2.rotate_around_unit(axis_2, p_rot);
-
-            axis_3 = axis_3.rotate_around_unit(axis_1, r_rot);
-            axis_2 = axis_2.rotate_around_unit(axis_1, r_rot);
-            axis_1 = axis_1.rotate_around_unit(axis_1, r_rot);
-
-            axis_1 = axis_1.rotate_around_unit(axis_3, y_rot);
-            axis_2 = axis_2.rotate_around_unit(axis_3, y_rot);
-            axis_3 = axis_3.rotate_around_unit(axis_3, y_rot);
+            auto axis_1 = mesh_display_transform.orientation.rotate(kCameraForward); // Camera position direction.
+            auto axis_3 = mesh_display_transform.orientation.rotate(kCameraUp); // Camera up.
 
             const auto target_pos = vec3<double>(0.0, 0.0, 0.0);
             const auto up_unit = axis_3.unit();
@@ -9469,7 +9624,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             // Final coordinate system transforms.
             const auto mv = camera * model;
             const auto mvp = proj * mv;
-            const auto norm = extract_normal_matrix(mvp);
+            const auto norm = extract_normal_matrix(mv);
 
             // Pass uniforms to custom shader program iff they are needed.
             const std::vector<float> mv_data( mv.cbegin(), mv.cend() );
