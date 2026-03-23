@@ -173,7 +173,7 @@ out vec4 frag_colour;
 
 void main(){
     if(use_lighting){
-        vec3 N = normalize(use_smoothing ? frag_norm : flat_norm);
+        vec3 N = normalize(frag_norm);
         N = faceforward(N, vec3(0.0, 0.0, -1.0), N);
         vec3 dNdx = dFdx(N);
         vec3 dNdy = dFdy(N);
