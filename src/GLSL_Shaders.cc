@@ -298,8 +298,9 @@ void main(){
         vec3 L = normalize(LIGHT_POSITION - frag_pos);
         float diff = max(dot(N, L), 0.0);
         vec3 shaded = 0.15 * user_colour.rgb + 0.65 * diff * diffuse_colour.rgb;
-        vec3 dNx = dFdx(flat_norm);
-        vec3 dNy = dFdy(flat_norm);
+        // Use derivatives of smoothly interpolated normals for robust edge detection.
+        vec3 dNx = dFdx(frag_norm);
+        vec3 dNy = dFdy(frag_norm);
         float edge = length(dNx) + length(dNy);
         float wire = smoothstep(0.0, 0.3, edge);
         vec3 c = mix(shaded, vec3(0.0, 1.0, 0.0), wire);
