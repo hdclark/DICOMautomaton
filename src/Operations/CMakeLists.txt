@@ -240,6 +240,12 @@ add_library(Operations_objs OBJECT
     While.cc
     WidenTable.cc
 
+    MakeMeshesConvex.cc
+    OrientMeshes.cc
+    PatchMeshHoles.cc
+    RemeshSurfaceMeshes.cc
+    SubdivideSurfaceMeshes.cc
+
     $<$<BOOL:${WITH_SFML}>:PresentationImage.cc>
     $<$<BOOL:${WITH_SFML}>:SFML_Viewer.cc>
     $<$<BOOL:${WITH_SDL}>:SDL_Viewer.cc>
@@ -264,9 +270,7 @@ add_library(Operations_objs OBJECT
     $<$<BOOL:${WITH_CGAL}>:ExtractRadiomicFeatures.cc>
     $<$<BOOL:${WITH_CGAL}>:MakeMeshesManifold.cc>
     $<$<BOOL:${WITH_CGAL}>:MinkowskiSum3D.cc>
-    $<$<BOOL:${WITH_CGAL}>:RemeshSurfaceMeshes.cc>
     $<$<BOOL:${WITH_CGAL}>:SeamContours.cc>
-    $<$<BOOL:${WITH_CGAL}>:SubdivideSurfaceMeshes.cc>
 
     $<$<BOOL:${WITH_THRIFT}>:ExportDrover.cc>
     $<$<BOOL:${WITH_THRIFT}>:ImportDrover.cc>

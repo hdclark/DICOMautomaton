@@ -261,6 +261,12 @@
 #include "Operations/While.h"
 #include "Operations/WidenTable.h"
 
+#include "Operations/MakeMeshesConvex.h"
+#include "Operations/OrientMeshes.h"
+#include "Operations/PatchMeshHoles.h"
+#include "Operations/RemeshSurfaceMeshes.h"
+#include "Operations/SubdivideSurfaceMeshes.h"
+
 #ifdef DCMA_USE_SDL
     #include "Operations/SDL_Viewer.h"
 #endif // DCMA_USE_SDL
@@ -295,9 +301,7 @@
     #include "Operations/ExtractRadiomicFeatures.h"
     #include "Operations/MakeMeshesManifold.h"
     #include "Operations/MinkowskiSum3D.h"
-    #include "Operations/RemeshSurfaceMeshes.h"
     #include "Operations/SeamContours.h"
-    #include "Operations/SubdivideSurfaceMeshes.h"
 #endif // DCMA_USE_CGAL
 
 #ifdef DCMA_USE_THRIFT
@@ -466,6 +470,7 @@ known_ops_t Known_Operations(){
     out["LoadFilesInteractively"] = std::make_pair(OpArgDocLoadFilesInteractively, LoadFilesInteractively);
     out["LogScale"] = std::make_pair(OpArgDocLogScale, LogScale);
     out["MapTableToParameters"] = std::make_pair(OpArgDocMapTableToParameters, MapTableToParameters);
+    out["MakeMeshesConvex"] = std::make_pair(OpArgDocMakeMeshesConvex, MakeMeshesConvex);
     out["MaskParameters"] = std::make_pair(OpArgDocMaskParameters, MaskParameters);
     out["MaskVerbosity"] = std::make_pair(OpArgDocMaskVerbosity, MaskVerbosity);
     out["MaxMinPixels"] = std::make_pair(OpArgDocMaxMinPixels, MaxMinPixels);
@@ -488,7 +493,9 @@ known_ops_t Known_Operations(){
     out["NotifyUser"] = std::make_pair(OpArgDocNotifyUser, NotifyUser);
     out["OptimizeStaticBeams"] = std::make_pair(OpArgDocOptimizeStaticBeams, OptimizeStaticBeams);
     out["OrderImages"] = std::make_pair(OpArgDocOrderImages, OrderImages);
+    out["OrientMeshes"] = std::make_pair(OpArgDocOrientMeshes, OrientMeshes);
     out["PartitionContours"] = std::make_pair(OpArgDocPartitionContours, PartitionContours);
+    out["PatchMeshHoles"] = std::make_pair(OpArgDocPatchMeshHoles, PatchMeshHoles);
     out["PerlinImages"] = std::make_pair(OpArgDocPerlinImages, PerlinImages);
     out["PerturbPixels"] = std::make_pair(OpArgDocPerturbPixels, PerturbPixels);
     out["PerturbPoints"] = std::make_pair(OpArgDocPerturbPoints, PerturbPoints);
@@ -506,6 +513,7 @@ known_ops_t Known_Operations(){
     out["QueryUserInteractively"] = std::make_pair(OpArgDocQueryUserInteractively, QueryUserInteractively);
     out["RankPixels"] = std::make_pair(OpArgDocRankPixels, RankPixels);
     out["ReduceNeighbourhood"] = std::make_pair(OpArgDocReduceNeighbourhood, ReduceNeighbourhood);
+    out["RemeshSurfaceMeshes"] = std::make_pair(OpArgDocRemeshSurfaceMeshes, RemeshSurfaceMeshes);
     out["Repeat"] = std::make_pair(OpArgDocRepeat, Repeat);
     out["ReportROIData"] = std::make_pair(OpArgDocReportROIData, ReportROIData);
     out["ResampleImages"] = std::make_pair(OpArgDocResampleImages, ResampleImages);
@@ -527,6 +535,7 @@ known_ops_t Known_Operations(){
     out["Subsegment_ComputeDose_VanLuijk"] = std::make_pair(OpArgDocSubsegment_ComputeDose_VanLuijk, Subsegment_ComputeDose_VanLuijk);
     out["SubsegmentContours"] = std::make_pair(OpArgDocSubsegmentContours, SubsegmentContours);
     out["SubtractImages"] = std::make_pair(OpArgDocSubtractImages, SubtractImages);
+    out["SubdivideSurfaceMeshes"] = std::make_pair(OpArgDocSubdivideSurfaceMeshes, SubdivideSurfaceMeshes);
     out["SupersampleImageGrid"] = std::make_pair(OpArgDocSupersampleImageGrid, SupersampleImageGrid);
     out["TabulateImageMetadata"] = std::make_pair(OpArgDocTabulateImageMetadata, TabulateImageMetadata);
     out["Terminal_Viewer"] = std::make_pair(OpArgDocTerminal_Viewer, Terminal_Viewer);
@@ -586,9 +595,7 @@ known_ops_t Known_Operations(){
     out["ExtractRadiomicFeatures"] = std::make_pair(OpArgDocExtractRadiomicFeatures, ExtractRadiomicFeatures);
     out["MakeMeshesManifold"] = std::make_pair(OpArgDocMakeMeshesManifold, MakeMeshesManifold);
     out["MinkowskiSum3D"] = std::make_pair(OpArgDocMinkowskiSum3D, MinkowskiSum3D);
-    out["RemeshSurfaceMeshes"] = std::make_pair(OpArgDocRemeshSurfaceMeshes, RemeshSurfaceMeshes);
     out["SeamContours"] = std::make_pair(OpArgDocSeamContours, SeamContours);
-    out["SubdivideSurfaceMeshes"] = std::make_pair(OpArgDocSubdivideSurfaceMeshes, SubdivideSurfaceMeshes);
 #endif // DCMA_USE_CGAL
 
 #ifdef DCMA_USE_THRIFT

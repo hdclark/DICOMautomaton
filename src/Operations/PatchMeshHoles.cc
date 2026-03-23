@@ -1,4 +1,4 @@
-//SubdivideSurfaceMeshes.cc - A part of DICOMautomaton 2019, 2026. Written by hal clark.
+//PatchMeshHoles.cc - A part of DICOMautomaton 2026. Written by hal clark.
 
 #include <algorithm>
 #include <optional>
@@ -16,65 +16,64 @@
 #include <vector>
 #include <cstdint>
 
-#include "../Structs.h"
-#include "../Regex_Selectors.h"
-#include "../Thread_Pool.h"
-#include "SubdivideSurfaceMeshes.h"
 #include "Explicator.h"       //Needed for Explicator class.
+
 #include "YgorImages.h"
 #include "YgorMath.h"         //Needed for vec3 class.
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
-#include "YgorMeshesRefinement.h"
+#include "YgorMeshesHoles.h"
+
+#include "../Structs.h"
+#include "../Regex_Selectors.h"
+#include "../Thread_Pool.h"
+
+#include "PatchMeshHoles.h"
 
 
-OperationDoc OpArgDocSubdivideSurfaceMeshes(){
+OperationDoc OpArgDocPatchMeshHoles(){
     OperationDoc out;
-    out.name = "SubdivideSurfaceMeshes";
+    out.name = "PatchMeshHoles";
 
     out.tags.emplace_back("category: mesh processing");
 
     out.desc = 
-        "This operation subdivides existing surface meshes according to"
-        " the specified criteria, replacing the original meshes with subdivided copies."
-        " Loop subdivision is used, which increases the face count by a factor of 4"
-        " per iteration.";
+        "This operation detects boundary edges (holes) in surface meshes and attempts to"
+        " fill them by triangulating each closed boundary chain."
+        " This is useful for repairing meshes with missing faces or open boundaries.";
         
     out.notes.emplace_back(
         "Selected surface meshes should represent polyhedra."
+    );
+    out.notes.emplace_back(
+        "Only closed boundary chains with at least 3 vertices are filled."
+        " Open chains are left unmodified."
+    );
+    out.notes.emplace_back(
+        "Face orientations are made consistent after hole filling."
     );
 
     out.args.emplace_back();
     out.args.back() = SMWhitelistOpArgDoc();
     out.args.back().name = "MeshSelection";
     out.args.back().default_val = "last";
- 
-
-    out.args.emplace_back();
-    out.args.back().name = "Iterations";
-    out.args.back().desc = "The number of times subdivision should be performed.";
-    out.args.back().default_val = "2";
-    out.args.back().expected = true;
-    out.args.back().examples = { "1", "2", "5" };
 
     return out;
 }
 
 
 
-bool SubdivideSurfaceMeshes(Drover &DICOM_data,
-                              const OperationArgPkg& OptArgs,
-                              std::map<std::string, std::string>& /*InvocationMetadata*/,
-                              const std::string& /*FilenameLex*/){
+bool PatchMeshHoles(Drover &DICOM_data,
+                      const OperationArgPkg& OptArgs,
+                      std::map<std::string, std::string>& /*InvocationMetadata*/,
+                      const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto MeshSelectionStr = OptArgs.getValueStr("MeshSelection").value();
-    const auto MeshIterations = std::stol( OptArgs.getValueStr("Iterations").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
-
 
     auto SMs_all = All_SMs( DICOM_data );
     auto SMs = Whitelist( SMs_all, MeshSelectionStr );
@@ -83,12 +82,21 @@ bool SubdivideSurfaceMeshes(Drover &DICOM_data,
     const auto sm_count = SMs.size();
     for(auto & smp_it : SMs){
 
-        const auto orig_metadata = (*smp_it)->meshes.metadata;
+        // Detect boundary chains (holes) in the mesh.
+        auto holes = FindBoundaryChains( (*smp_it)->meshes );
 
-        // Subdivide using Ygor's Loop subdivision algorithm.
-        loop_subdivide( (*smp_it)->meshes, MeshIterations );
+        const auto N_holes = holes.chains.size();
+        YLOGINFO("Found " << N_holes << " boundary chain(s) in mesh");
 
-        (*smp_it)->meshes.metadata = orig_metadata;
+        if(N_holes != 0){
+            // Fill the detected holes by triangulating each closed boundary chain.
+            if(!FillBoundaryChainsByZippering( (*smp_it)->meshes, holes )){
+                YLOGWARN("Hole filling encountered issues (e.g., non-manifold edges)");
+            }
+
+            // Ensure consistent face orientation after hole filling.
+            EnsureConsistentFaceOrientation( (*smp_it)->meshes );
+        }
 
         ++completed;
         YLOGINFO("Completed " << completed << " of " << sm_count

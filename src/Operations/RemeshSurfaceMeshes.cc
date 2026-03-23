@@ -1,9 +1,4 @@
-//RemeshSurfaceMeshes.cc - A part of DICOMautomaton 2019. Written by hal clark.
-
-#ifdef DCMA_USE_CGAL
-#else
-    #error "Attempted to compile without CGAL support, which is required."
-#endif
+//RemeshSurfaceMeshes.cc - A part of DICOMautomaton 2019, 2026. Written by hal clark.
 
 #include <algorithm>
 #include <optional>
@@ -32,9 +27,7 @@
 #include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
-#include "YgorMathIOOFF.h"
-
-#include "../Surface_Meshes.h"
+#include "YgorMeshesRemeshing.h"
 
 
 OperationDoc OpArgDocRemeshSurfaceMeshes(){
@@ -45,7 +38,9 @@ OperationDoc OpArgDocRemeshSurfaceMeshes(){
 
     out.desc = 
         "This operation re-meshes existing surface meshes according to the specified criteria, replacing the"
-        " original meshes with remeshed copies.";
+        " original meshes with remeshed copies."
+        " Remeshing improves mesh quality by targeting a uniform edge length using an iterative"
+        " split-collapse-flip-relax algorithm (Botsch and Kobbelt, 2004).";
         
     out.notes.emplace_back(
         "Selected surface meshes should represent polyhedra."
@@ -85,7 +80,7 @@ bool RemeshSurfaceMeshes(Drover &DICOM_data,
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto MeshSelectionStr = OptArgs.getValueStr("MeshSelection").value();
     const auto MeshIterations = std::stol( OptArgs.getValueStr("Iterations").value() );
-    const auto MeshTargetEdgeLength = std::stol( OptArgs.getValueStr("TargetEdgeLength").value() );
+    const auto MeshTargetEdgeLength = std::stod( OptArgs.getValueStr("TargetEdgeLength").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
 
@@ -99,28 +94,10 @@ bool RemeshSurfaceMeshes(Drover &DICOM_data,
 
         const auto orig_metadata = (*smp_it)->meshes.metadata;
 
-        // Convert to a CGAL mesh.
-        std::stringstream ss_i;
-        if(!WriteFVSMeshToOFF( (*smp_it)->meshes, ss_i )){
-            throw std::runtime_error("Unable to write mesh in OFF format. Cannot continue.");
-        }
-
-        dcma_surface_meshes::Polyhedron surface_mesh;
-        if(!( ss_i >> surface_mesh )){
-            throw std::runtime_error("Mesh could not be treated as a polyhedron. (Is it manifold?)");
-        }
-
-        // Remesh.
-        polyhedron_processing::Remesh(surface_mesh, MeshTargetEdgeLength, MeshIterations);
-
-        // Convert back from CGAL mesh.
-        std::stringstream ss_o;
-        if(!( ss_o << surface_mesh )){
-            throw std::runtime_error("Remeshed mesh could not be treated as a polyhedron. (Is it manifold?)");
-        }
-
-        if(!ReadFVSMeshFromOFF( (*smp_it)->meshes, ss_o )){
-            throw std::runtime_error("Unable to read mesh in OFF format. Cannot continue.");
+        // Remesh using Ygor's iterative remeshing algorithm.
+        mesh_remesher<double, uint64_t> remesher( (*smp_it)->meshes, MeshTargetEdgeLength );
+        for(int64_t i = 0; i < MeshIterations; ++i){
+            remesher.remesh_iteration();
         }
 
         (*smp_it)->meshes.metadata = orig_metadata;

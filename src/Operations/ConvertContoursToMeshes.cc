@@ -19,6 +19,7 @@
 #include "YgorMathIOOBJ.h"
 #include "YgorMisc.h"         //Needed for FUNCINFO, FUNCWARN, FUNCERR macros.
 #include "YgorLog.h"
+#include "YgorMeshesConvexHull.h"
 
 #include "Explicator.h"
 
@@ -40,7 +41,7 @@ OperationDoc OpArgDocConvertContoursToMeshes(){
     out.tags.emplace_back("category: mesh processing");
 
     out.desc = 
-        "This routine creates a mesh from contours. There are four supported methods:"
+        "This routine creates a mesh from contours. There are five supported methods:"
         "\n\n"
         " - 'direct', which stitches"
         " together contours (polygons) by finding a correspondence between adjacent contours"
@@ -49,7 +50,11 @@ OperationDoc OpArgDocConvertContoursToMeshes(){
         " - 'marching', which uses contours to first generate an image mask and"
         " then uses Marching Cubes to extract a mesh;"
         "\n\n"
-        " - 'convex-hull', which builds the convex hull around the provided contours; and"
+        " - 'convex-hull', which builds the convex hull around the provided contours"
+        " using the legacy Convex_Hull_3 template;"
+        "\n\n"
+        " - 'ygor-convex-hull', which builds the convex hull around the provided contours"
+        " using Ygor's incremental ConvexHull class; and"
         "\n\n"
         " - 'contours', which converts the contours into thin triangle strips."
         "\n\n"
@@ -64,8 +69,8 @@ OperationDoc OpArgDocConvertContoursToMeshes(){
         "The 'marching' method is robust, but slow since it requires conversion to an intermediate bitmask."
         " There is also a loss of spatial resolution due to use of bitmasks."
         "\n\n"
-        "The 'convex-hull' method is reasonably accurate, but scales poorly."
-        " It will also provide a zero-volume (i.e., non-manifold) surface if only a single contour is present."
+        "The 'convex-hull' and 'ygor-convex-hull' methods are reasonably accurate."
+        " They will provide a zero-volume (i.e., non-manifold) surface if only a single contour is present."
         "\n\n"
         "The 'contours' method will not produce a manifold surface mesh, but will symmetrically extrude each"
         " contour to make a thin strip. This method is best suited for display purposes."
@@ -140,17 +145,20 @@ OperationDoc OpArgDocConvertContoursToMeshes(){
     
     out.args.emplace_back();
     out.args.back().name = "Method";
-    out.args.back().desc = "There are currently three supported methods:"
+    out.args.back().desc = "There are currently five supported methods:"
                            " 'direct' -- a simplistic but fast contour stitching method;"
                            " 'marching' -- a method that first converts contours to a binary bitmask and then"
-                           " uses Marching Cubes to extract meshes; and 'convex-hull' -- a robust routine that"
-                           " only works for convex contours."
+                           " uses Marching Cubes to extract meshes;"
+                           " 'convex-hull' -- the legacy convex hull routine;"
+                           " 'ygor-convex-hull' -- a robust incremental convex hull routine; and"
+                           " 'contours' -- thin triangle strip extrusion."
                            " See operation description and notes for more details.";
     out.args.back().default_val = "direct";
     out.args.back().expected = true;
     out.args.back().examples = { "direct",
                                  "marching",
                                  "convex-hull",
+                                 "ygor-convex-hull",
                                  "contours" };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
@@ -179,6 +187,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
     const auto direct_regex = Compile_Regex("^di?r?e?c?t?$");
     const auto marching_regex = Compile_Regex("^ma?r?c?h?i?n?g?$");
     const auto convex_regex = Compile_Regex("^conve?x?[-_]?h?u?l?l?$");
+    const auto ygor_convex_regex = Compile_Regex("^yg?o?r?[-_]?conve?x?[-_]?h?u?l?l?$");
     const auto contours_regex = Compile_Regex("^conto?u?r?s?$");
 
     auto cc_all = All_CCs( DICOM_data );
@@ -618,6 +627,24 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
         // Prune unneeded vertices.
         amesh.remove_disconnected_vertices();
         //amesh.recreate_involved_face_index();
+
+    }else if(std::regex_match(MethodStr, ygor_convex_regex)){
+        // Gather all available vertices.
+        std::vector<vec3<double>> all_verts;
+        for(const auto &cc_refw : cc_ROIs){
+            for(const auto &c : cc_refw.get().contours){
+                for(const auto &p : c.points){
+                    all_verts.emplace_back(p);
+                }
+            }
+        }
+
+        YLOGINFO("Generating Ygor convex hull from " << all_verts.size() << " vertices");
+
+        // Compute the convex hull using Ygor's ConvexHull class.
+        ConvexHull<double> ch;
+        ch.add_vertices(all_verts);
+        amesh = ch.get_mesh();
 
     }else if(std::regex_match(MethodStr, contours_regex)){
         const auto orientation_normal = Average_Contour_Normals(cc_ROIs);
