@@ -251,6 +251,9 @@ if(WITH_SDL)
                                    implot20210904/implot_items.cpp
                                    implot20210904/implot_demo.cpp )
     set_target_properties( IMGui_objs PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+    add_library(            GLSL_Shaders_obj OBJECT GLSL_Shaders.cc )
+    set_target_properties(  GLSL_Shaders_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 endif()
 
 
@@ -472,6 +475,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:CSG_SDF_obj>
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:Challenges_objs>>
+    $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:GLSL_Shaders_obj>>
     $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
     $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:MRI_IVIM_obj>>
     $<TARGET_OBJECTS:File_Loader_obj>
@@ -589,6 +593,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:CSG_SDF_obj>
         $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
         $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:Challenges_objs>>
+        $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:GLSL_Shaders_obj>>
         $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
         $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:MRI_IVIM_obj>>
         $<TARGET_OBJECTS:File_Loader_obj>
