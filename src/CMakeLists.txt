@@ -478,7 +478,8 @@ add_executable (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:GLSL_Shaders_obj>>
     $<$<BOOL:${WITH_POSTGRES}>:$<TARGET_OBJECTS:PACS_Loader_obj>>
     $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:MRI_IVIM_obj>>
-    $<TARGET_OBJECTS:File_Loader_obj>    $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
+    $<TARGET_OBJECTS:File_Loader_obj>
+    $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
     $<TARGET_OBJECTS:DICOM_File_Loader_obj>
     $<TARGET_OBJECTS:Lexicon_Loader_obj>
     $<TARGET_OBJECTS:FITS_File_Loader_obj>
