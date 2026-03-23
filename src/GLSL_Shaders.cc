@@ -257,13 +257,9 @@ uniform bool use_smoothing;
 out vec4 frag_colour;
 
 void main(){
-    if(use_lighting){
-        vec3 N = normalize(use_smoothing ? frag_norm : flat_norm);
-        vec3 c = N * 0.5 + 0.5;
-        frag_colour = vec4(c, user_colour.a);
-    }else{
-        frag_colour = user_colour;
-    }
+    vec3 N = normalize(use_smoothing ? frag_norm : flat_norm);
+    vec3 c = N * 0.5 + 0.5;
+    frag_colour = vec4(c, user_colour.a);
 }
 )"
     });
