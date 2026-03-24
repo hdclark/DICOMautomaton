@@ -100,6 +100,9 @@ bool RemeshSurfaceMeshes(Drover &DICOM_data,
             remesher.remesh_iteration();
         }
 
+        // The remesher changes mesh topology (vertices/faces), so any cached
+        // per-vertex/per-face adjacency such as `involved_faces` must be rebuilt.
+        (*smp_it)->meshes.rebuild_involved_faces();
         (*smp_it)->meshes.metadata = orig_metadata;
 
         ++completed;
