@@ -277,11 +277,20 @@ bool ConvertPointsToMeshes(Drover &DICOM_data,
         // Compute the convex hull using Ygor's ConvexHull class.
         ConvexHull<double> ch;
         ch.add_vertices(all_verts);
-        DICOM_data.smesh_data.back()->meshes = ch.get_mesh();
+
+        // Retrieve the hull mesh, but preserve any existing metadata/state on the target mesh
+        // by only updating its core geometry (vertices and faces).
+        auto hull_mesh = ch.get_mesh();
+        auto & target_mesh = DICOM_data.smesh_data.back()->meshes;
+        target_mesh.vertices = std::move(hull_mesh.vertices);
+        target_mesh.faces    = std::move(hull_mesh.faces);
+
+        // Rebuild adjacency/index metadata to keep behavior consistent with the other methods.
+        target_mesh.recreate_involved_face_index();
 
         YLOGINFO("Created Ygor convex hull with "
-                 << DICOM_data.smesh_data.back()->meshes.vertices.size() << " vertices and "
-                 << DICOM_data.smesh_data.back()->meshes.faces.size() << " faces");
+                 << target_mesh.vertices.size() << " vertices and "
+                 << target_mesh.faces.size() << " faces");
 
     }else{
         throw std::invalid_argument("Unrecognized method '" + MethodStr + "'. Cannot continue.");
