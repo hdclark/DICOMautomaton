@@ -181,6 +181,8 @@ bool SimplifySurfaceMeshes(Drover &DICOM_data,
                 remesher.remesh_iteration();
             }
 
+            // Topology has changed; rebuild involved-face adjacency index.
+            (*smp_it)->meshes.rebuild_involved_faces();
             (*smp_it)->meshes.metadata = orig_metadata;
 
         }else{
