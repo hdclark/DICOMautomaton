@@ -95,6 +95,7 @@
 #include "Operations/DeleteTables.h"
 #include "Operations/DeleteWarps.h"
 #include "Operations/DetectShapes3D.h"
+#include "Operations/DitherImages.h"
 #include "Operations/DrawGeometry.h"
 #include "Operations/DroverDebug.h"
 #include "Operations/DumpAllOrderedImageMetadataToFile.h"
@@ -243,6 +244,8 @@
 #include "Operations/ThresholdImages.h"
 #include "Operations/ThresholdOtsu.h"
 #include "Operations/Time_op.h"
+#include "Operations/TrainConditionalForest.h"
+#include "Operations/TrainStochasticForest.h"
 #include "Operations/Transaction.h"
 #include "Operations/TrimROIDose.h"
 #include "Operations/True.h"
@@ -386,6 +389,7 @@ known_ops_t Known_Operations(){
     out["DeleteTables"] = std::make_pair(OpArgDocDeleteTables, DeleteTables);
     out["DeleteWarps"] = std::make_pair(OpArgDocDeleteWarps, DeleteWarps);
     out["DetectShapes3D"] = std::make_pair(OpArgDocDetectShapes3D, DetectShapes3D);
+    out["DitherImages"] = std::make_pair(OpArgDocDitherImages, DitherImages);
     out["DICOMExportContours"] = std::make_pair(OpArgDocDICOMExportContours, DICOMExportContours);
     out["DICOMExportImagesAsCT"] = std::make_pair(OpArgDocDICOMExportImagesAsCT, DICOMExportImagesAsCT);
     out["DICOMExportImagesAsMR"] = std::make_pair(OpArgDocDICOMExportImagesAsMR, DICOMExportImagesAsMR);
@@ -543,6 +547,8 @@ known_ops_t Known_Operations(){
     out["ThresholdImages"] = std::make_pair(OpArgDocThresholdImages, ThresholdImages);
     out["ThresholdOtsu"] = std::make_pair(OpArgDocThresholdOtsu, ThresholdOtsu);
     out["Time"] = std::make_pair(OpArgDocTime, Time);
+    out["TrainConditionalForest"] = std::make_pair(OpArgDocTrainConditionalForest, TrainConditionalForest);
+    out["TrainStochasticForest"] = std::make_pair(OpArgDocTrainStochasticForest, TrainStochasticForest);
     out["Transaction"] = std::make_pair(OpArgDocTransaction, Transaction);
     out["TrimROIDose"] = std::make_pair(OpArgDocTrimROIDose, TrimROIDose);
     out["True"] = std::make_pair(OpArgDocTrue, True);
