@@ -24,6 +24,7 @@
 #include "YgorLog.h"
 #include "YgorStats.h"        //Needed for Stats:: namespace.
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
+#include "YgorMeshesConvexHull.h"
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
@@ -41,9 +42,10 @@ OperationDoc OpArgDocConvertPointsToMeshes(){
     out.tags.emplace_back("category: mesh processing");
 
     out.desc = 
-        "This operation converts point clouds to a surface mesh. There are two supported methods:"
+        "This operation converts point clouds to a surface mesh. There are three supported methods:"
         " 'expand' -- represents each point as a small axis-aligned cube centered at the point location;"
-        " 'convexhull' -- computes the convex hull of all points in the selected point clouds.";
+        " 'convexhull' -- computes the convex hull of all points using the legacy Convex_Hull_3 template;"
+        " 'ygor-convexhull' -- computes the convex hull of all points using Ygor's incremental ConvexHull class.";
         
     out.notes.emplace_back(
         "Point clouds are unaltered. Existing surface meshes are ignored and unaltered."
@@ -53,8 +55,8 @@ OperationDoc OpArgDocConvertPointsToMeshes(){
         " combined into a single Surface_Mesh object. Meshes may overlap with one another."
     );
     out.notes.emplace_back(
-        "The 'convexhull' method creates a single manifold surface mesh that encloses all points."
-        " This method only works for point sets with non-zero volume and will produce a convex shape."
+        "The 'convexhull' and 'ygor-convexhull' methods create a single manifold surface mesh that encloses all points."
+        " These methods only work for point sets with non-zero volume and will produce a convex shape."
     );
 
 
@@ -66,16 +68,20 @@ OperationDoc OpArgDocConvertPointsToMeshes(){
 
     out.args.emplace_back();
     out.args.back().name = "Method";
-    out.args.back().desc = "There are currently two supported methods:"
+    out.args.back().desc = "There are currently three supported methods:"
                            "\n\n"
                            "Method 'expand' replaces each point with an axis-aligned cube."
                            " This method is most useful for visualizing a point cloud."
                            "\n\n"
-                           "Method 'convexhull' computes the convex hull of all selected points."
+                           "Method 'convexhull' computes the convex hull of all selected points"
+                           " using the legacy Convex_Hull_3 template."
+                           "\n\n"
+                           "Method 'ygor-convexhull' computes the convex hull of all selected points"
+                           " using Ygor's incremental ConvexHull class."
                            " This is useful for creating a minimal bounding surface.";
     out.args.back().default_val = "expand";
     out.args.back().expected = true;
-    out.args.back().examples = { "expand", "convexhull" };
+    out.args.back().examples = { "expand", "convexhull", "ygor-convexhull" };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
 
@@ -108,6 +114,7 @@ bool ConvertPointsToMeshes(Drover &DICOM_data,
 
     const auto expand_regex = Compile_Regex("^ex?p?a?n?d?$");
     const auto convexhull_regex = Compile_Regex("^co?n?v?e?x?[-_]?hu?l?l?$");
+    const auto ygor_convexhull_regex = Compile_Regex("^yg?o?r?[-_]?co?n?v?e?x?[-_]?hu?l?l?$");
 
     auto PCs_all = All_PCs( DICOM_data );
     auto PCs = Whitelist( PCs_all, PointSelectionStr );
@@ -254,6 +261,36 @@ bool ConvertPointsToMeshes(Drover &DICOM_data,
         YLOGINFO("Created convex hull with "
                  << DICOM_data.smesh_data.back()->meshes.vertices.size() << " vertices and "
                  << DICOM_data.smesh_data.back()->meshes.faces.size() << " faces");
+
+    // -------------------------- Ygor convex hull method --------------------------
+    }else if(std::regex_match(MethodStr, ygor_convexhull_regex)){
+        // Gather all vertices from all selected point clouds.
+        std::vector<vec3<double>> all_verts;
+        for(auto & pcp_it : PCs){
+            for(const auto &p : (*pcp_it)->pset.points){
+                all_verts.emplace_back(p);
+            }
+        }
+
+        YLOGINFO("Generating Ygor convex hull from " << all_verts.size() << " vertices");
+
+        // Compute the convex hull using Ygor's ConvexHull class.
+        ConvexHull<double> ch;
+        ch.add_vertices(all_verts);
+
+        // Retrieve the hull mesh, but preserve any existing metadata/state on the target mesh
+        // by only updating its core geometry (vertices and faces).
+        auto hull_mesh = ch.get_mesh();
+        auto & target_mesh = DICOM_data.smesh_data.back()->meshes;
+        target_mesh.vertices = std::move(hull_mesh.vertices);
+        target_mesh.faces    = std::move(hull_mesh.faces);
+
+        // Rebuild adjacency/index metadata to keep behavior consistent with the other methods.
+        target_mesh.recreate_involved_face_index();
+
+        YLOGINFO("Created Ygor convex hull with "
+                 << target_mesh.vertices.size() << " vertices and "
+                 << target_mesh.faces.size() << " faces");
 
     }else{
         throw std::invalid_argument("Unrecognized method '" + MethodStr + "'. Cannot continue.");
