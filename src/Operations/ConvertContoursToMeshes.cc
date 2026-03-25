@@ -41,7 +41,7 @@ OperationDoc OpArgDocConvertContoursToMeshes(){
     out.tags.emplace_back("category: mesh processing");
 
     out.desc = 
-        "This routine creates a mesh from contours. There are five supported methods:"
+        "This routine creates a mesh from contours. There are six supported methods:"
         "\n\n"
         " - 'direct', which stitches"
         " together contours (polygons) by finding a correspondence between adjacent contours"
@@ -54,7 +54,10 @@ OperationDoc OpArgDocConvertContoursToMeshes(){
         " using the legacy Convex_Hull_3 template;"
         "\n\n"
         " - 'ygor-convex-hull', which builds the convex hull around the provided contours"
-        " using Ygor's incremental ConvexHull class; and"
+        " using Ygor's incremental IncrementalConvexHull class;"
+        "\n\n"
+        " - 'ygor-divide-and-conquer-convex-hull', which builds the convex hull around the"
+        " provided contours using Ygor's DivideAndConquerConvexHull class; and"
         "\n\n"
         " - 'contours', which converts the contours into thin triangle strips."
         "\n\n"
@@ -69,7 +72,7 @@ OperationDoc OpArgDocConvertContoursToMeshes(){
         "The 'marching' method is robust, but slow since it requires conversion to an intermediate bitmask."
         " There is also a loss of spatial resolution due to use of bitmasks."
         "\n\n"
-        "The 'convex-hull' and 'ygor-convex-hull' methods are reasonably accurate."
+        "The 'convex-hull', 'ygor-convex-hull', and 'ygor-divide-and-conquer-convex-hull' methods are reasonably accurate."
         " They will provide a zero-volume (i.e., non-manifold) surface if only a single contour is present."
         "\n\n"
         "The 'contours' method will not produce a manifold surface mesh, but will symmetrically extrude each"
@@ -145,12 +148,13 @@ OperationDoc OpArgDocConvertContoursToMeshes(){
     
     out.args.emplace_back();
     out.args.back().name = "Method";
-    out.args.back().desc = "There are currently five supported methods:"
+    out.args.back().desc = "There are currently six supported methods:"
                            " 'direct' -- a simplistic but fast contour stitching method;"
                            " 'marching' -- a method that first converts contours to a binary bitmask and then"
                            " uses Marching Cubes to extract meshes;"
                            " 'convex-hull' -- the legacy convex hull routine;"
-                           " 'ygor-convex-hull' -- a robust incremental convex hull routine; and"
+                           " 'ygor-convex-hull' -- a robust incremental convex hull routine;"
+                           " 'ygor-divide-and-conquer-convex-hull' -- a divide-and-conquer convex hull routine; and"
                            " 'contours' -- thin triangle strip extrusion."
                            " See operation description and notes for more details.";
     out.args.back().default_val = "direct";
@@ -159,6 +163,7 @@ OperationDoc OpArgDocConvertContoursToMeshes(){
                                  "marching",
                                  "convex-hull",
                                  "ygor-convex-hull",
+                                 "ygor-divide-and-conquer-convex-hull",
                                  "contours" };
     out.args.back().samples = OpArgSamples::Exhaustive;
 
@@ -188,6 +193,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
     const auto marching_regex = Compile_Regex("^ma?r?c?h?i?n?g?$");
     const auto convex_regex = Compile_Regex("^conve?x?[-_]?h?u?l?l?$");
     const auto ygor_convex_regex = Compile_Regex("^yg?o?r?[-_]?conve?x?[-_]?h?u?l?l?$");
+    const auto ygor_dnc_convex_regex = Compile_Regex("^yg?o?r?[-_]?di?v?i?d?e?[-_]?a?n?d?[-_]?c?o?n?q?u?e?r?[-_]?conve?x?[-_]?h?u?l?l?$");
     const auto contours_regex = Compile_Regex("^conto?u?r?s?$");
 
     auto cc_all = All_CCs( DICOM_data );
@@ -639,10 +645,28 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
             }
         }
 
-        YLOGINFO("Generating Ygor convex hull from " << all_verts.size() << " vertices");
+        YLOGINFO("Generating Ygor incremental convex hull from " << all_verts.size() << " vertices");
 
-        // Compute the convex hull using Ygor's ConvexHull class.
-        ConvexHull<double> ch;
+        // Compute the convex hull using Ygor's IncrementalConvexHull class.
+        IncrementalConvexHull<double> ch;
+        ch.add_vertices(all_verts);
+        amesh = ch.get_mesh();
+
+    }else if(std::regex_match(MethodStr, ygor_dnc_convex_regex)){
+        // Gather all available vertices.
+        std::vector<vec3<double>> all_verts;
+        for(const auto &cc_refw : cc_ROIs){
+            for(const auto &c : cc_refw.get().contours){
+                for(const auto &p : c.points){
+                    all_verts.emplace_back(p);
+                }
+            }
+        }
+
+        YLOGINFO("Generating Ygor divide-and-conquer convex hull from " << all_verts.size() << " vertices");
+
+        // Compute the convex hull using Ygor's DivideAndConquerConvexHull class.
+        DivideAndConquerConvexHull<double> ch;
         ch.add_vertices(all_verts);
         amesh = ch.get_mesh();
 

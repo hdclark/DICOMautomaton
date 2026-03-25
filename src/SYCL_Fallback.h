@@ -22,7 +22,7 @@
 #include <mutex>
 #include <thread>
 
-#include "Thread_Pool.h"
+#include "YgorThreadPool.h"
 
 namespace sycl {
 
