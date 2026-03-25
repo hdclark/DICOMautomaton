@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <string>    
 #include <cstdint>
+#include <set>
 
 #include <boost/geometry.hpp>
 #include <boost/geometry/index/rtree.hpp>
@@ -22,6 +23,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Processing/Partitioned_Image_Voxel_Visitor_Mutator.h"
 
@@ -76,10 +78,12 @@ OperationDoc OpArgDocHighlightROIs(){
 
     out.args.emplace_back();
     out.args.back().name = "Channel";
-    out.args.back().desc = "The image channel to use. Zero-based. Use '-1' to operate on all available channels.";
+    out.args.back().desc = "The image channel to use. Zero-based."
+                           " Specify a single channel (e.g., '0'), multiple comma-separated channels"
+                           " (e.g., '0,2'), or a negative value to operate on all available channels.";
     out.args.back().default_val = "-1";
     out.args.back().expected = true;
-    out.args.back().examples = { "-1", "0", "1", "2" };
+    out.args.back().examples = { "-1", "0", "1", "2", "0,2" };
 
     out.args.emplace_back();
     out.args.back() = IAWhitelistOpArgDoc();
@@ -195,7 +199,7 @@ bool HighlightROIs(Drover &DICOM_data,
                      const std::string& /*FilenameLex*/){
 
     //---------------------------------------------- User Parameters --------------------------------------------------
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
     const auto InclusivityStr = OptArgs.getValueStr("Inclusivity").value();
     const auto ContourOverlapStr = OptArgs.getValueStr("ContourOverlap").value();
@@ -505,6 +509,9 @@ bool HighlightROIs(Drover &DICOM_data,
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
+        if((*iap_it)->imagecoll.images.empty()) continue;
+        const auto resolved_chnls = (*iap_it)->imagecoll.images.front().resolve_channels(Channels);
+
         PartitionedImageVoxelVisitorMutatorUserData ud;
 
         ud.mutation_opts.editstyle = Mutate_Voxels_Opts::EditStyle::InPlace;
@@ -543,7 +550,7 @@ bool HighlightROIs(Drover &DICOM_data,
                                    std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                                    std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                    float &voxel_val) {
-                    if( (Channel < 0) || (Channel == chan) ){
+                    if(resolved_chnls.count(chan) != 0){
                         voxel_val = InteriorVal;
                     }
                 };
@@ -553,7 +560,7 @@ bool HighlightROIs(Drover &DICOM_data,
                                      std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                                      std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
                                      float &voxel_val) {
-                    if( (Channel < 0) || (Channel == chan) ){
+                    if(resolved_chnls.count(chan) != 0){
                         voxel_val = ExteriorVal;
                     }
                 };

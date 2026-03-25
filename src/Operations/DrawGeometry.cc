@@ -26,6 +26,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../Thread_Pool.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
@@ -68,10 +69,12 @@ OperationDoc OpArgDocDrawGeometry(){
 
     out.args.emplace_back();
     out.args.back().name = "Channel";
-    out.args.back().desc = "The image channel to use. Zero-based.";
+    out.args.back().desc = "The image channel to use. Zero-based."
+                           " Specify a single channel (e.g., '0'), multiple comma-separated channels"
+                           " (e.g., '0,2'), or a negative value to operate on all available channels.";
     out.args.back().default_val = "0";
     out.args.back().expected = true;
-    out.args.back().examples = { "0", "1", "2" };
+    out.args.back().examples = { "0", "1", "2", "0,2" };
 
     out.args.emplace_back();
     out.args.back() = NCWhitelistOpArgDoc();
@@ -156,7 +159,7 @@ bool DrawGeometry(Drover &DICOM_data,
     const auto ImageSelectionStr = OptArgs.getValueStr("ImageSelection").value();
 
     const auto VoxelValue = std::stod( OptArgs.getValueStr("VoxelValue").value() );
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
     const auto OverwriteStr = OptArgs.getValueStr("Overwrite").value();
 
     const auto InclusivityStr = OptArgs.getValueStr("Inclusivity").value();
@@ -286,6 +289,7 @@ bool DrawGeometry(Drover &DICOM_data,
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
         if((*iap_it)->imagecoll.images.empty()) continue;
+        const auto resolved_chnls = (*iap_it)->imagecoll.images.front().resolve_channels(Channels);
 
         // Used to determine image characteristics.
         std::reference_wrapper<planar_image<float,double>> img_refw = std::ref(*(std::begin((*iap_it)->imagecoll.images)));
@@ -454,7 +458,7 @@ bool DrawGeometry(Drover &DICOM_data,
                                std::reference_wrapper<planar_image<float,double>> img_refw,
                                std::reference_wrapper<planar_image<float,double>>,
                                float &voxel_val ) -> void {
-                if( (Channel < 0) || (Channel == chan) ){
+                if(resolved_chnls.count(chan) != 0){
                     const auto pos = img_refw.get().position(row,col);
 
                     for(const auto &l : grid_lines){
@@ -478,7 +482,7 @@ bool DrawGeometry(Drover &DICOM_data,
                                std::reference_wrapper<planar_image<float,double>> img_refw,
                                std::reference_wrapper<planar_image<float,double>>,
                                float &voxel_val ) -> void {
-                if( (Channel < 0) || (Channel == chan) ){
+                if(resolved_chnls.count(chan) != 0){
                     const auto pos = img_refw.get().position(row,col);
 
                     for(const auto &l : wcube_lines){
@@ -501,7 +505,7 @@ bool DrawGeometry(Drover &DICOM_data,
                                std::reference_wrapper<planar_image<float,double>> img_refw,
                                std::reference_wrapper<planar_image<float,double>>,
                                float &voxel_val ) -> void {
-                if( (Channel < 0) || (Channel == chan) ){
+                if(resolved_chnls.count(chan) != 0){
                     const auto pos = img_refw.get().position(row,col);
 
                     const auto dist = pos.distance(ssph_centre);
