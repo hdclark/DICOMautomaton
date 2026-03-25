@@ -312,7 +312,7 @@ bool ConvertPointsToMeshes(Drover &DICOM_data,
 
         // Compute the convex hull using Ygor's DivideAndConquerConvexHull class.
         DivideAndConquerConvexHull<double> ch;
-        ch.add_vertices(all_verts);
+        ch.compute(all_verts);
 
         // Retrieve the hull mesh, but preserve any existing metadata/state on the target mesh
         // by only updating its core geometry (vertices and faces).

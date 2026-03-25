@@ -105,7 +105,7 @@ bool MakeMeshesConvex(Drover &DICOM_data,
         }else if(std::regex_match(MethodStr, divide_and_conquer_regex)){
             // Compute the convex hull using Ygor's DivideAndConquerConvexHull class.
             DivideAndConquerConvexHull<double> ch;
-            ch.add_vertices( (*smp_it)->meshes.vertices );
+            ch.compute( (*smp_it)->meshes.vertices );
             (*smp_it)->meshes = ch.get_mesh();
 
         }else{
