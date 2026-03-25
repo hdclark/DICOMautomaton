@@ -124,8 +124,8 @@ bool DitherImages(Drover &DICOM_data,
         for(auto &animg : (*iap_it)->imagecoll.images){
             Floyd_Steinberg_Dither(animg, chnls, low, high, threshold);
             UpdateImageWindowCentreWidth( std::ref(animg) );
+            UpdateImageDescription( std::ref(animg), "Dithered" );
         }
-        UpdateImageDescription( std::ref( (*iap_it)->imagecoll.images.front() ), "Dithered" );
     }
 
     return true;
