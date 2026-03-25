@@ -1,5 +1,5 @@
 
-#include "Thread_Pool.h"
+#include "YgorThreadPool.h"
 
 #include <functional>
 #include <mutex>

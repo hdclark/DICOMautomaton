@@ -56,6 +56,18 @@ OperationDoc OpArgDocMakeMeshesConvex(){
     out.args.back().name = "MeshSelection";
     out.args.back().default_val = "last";
 
+    out.args.emplace_back();
+    out.args.back().name = "Method";
+    out.args.back().desc = "The convex hull algorithm to use."
+                           " 'incremental' uses an incremental insertion algorithm that is well-suited for"
+                           " point sets that are gradually built up."
+                           " 'divide-and-conquer' uses a divide-and-conquer algorithm that can be faster"
+                           " for large, static point sets.";
+    out.args.back().default_val = "incremental";
+    out.args.back().expected = true;
+    out.args.back().examples = { "incremental", "divide-and-conquer" };
+    out.args.back().samples = OpArgSamples::Exhaustive;
+
     return out;
 }
 
@@ -68,8 +80,11 @@ bool MakeMeshesConvex(Drover &DICOM_data,
 
     //---------------------------------------------- User Parameters --------------------------------------------------
     const auto MeshSelectionStr = OptArgs.getValueStr("MeshSelection").value();
+    const auto MethodStr = OptArgs.getValueStr("Method").value();
 
     //-----------------------------------------------------------------------------------------------------------------
+    const auto incremental_regex = Compile_Regex("^in?c?r?e?m?e?n?t?a?l?$");
+    const auto divide_and_conquer_regex = Compile_Regex("^di?v?i?d?e?[-_]?a?n?d?[-_]?c?o?n?q?u?e?r?$");
 
     auto SMs_all = All_SMs( DICOM_data );
     auto SMs = Whitelist( SMs_all, MeshSelectionStr );
@@ -80,10 +95,22 @@ bool MakeMeshesConvex(Drover &DICOM_data,
 
         const auto orig_metadata = (*smp_it)->meshes.metadata;
 
-        // Compute the convex hull using Ygor's ConvexHull class.
-        ConvexHull<double> ch;
-        ch.add_vertices( (*smp_it)->meshes.vertices );
-        (*smp_it)->meshes = ch.get_mesh();
+        if(false){
+        }else if(std::regex_match(MethodStr, incremental_regex)){
+            // Compute the convex hull using Ygor's IncrementalConvexHull class.
+            IncrementalConvexHull<double> ch;
+            ch.add_vertices( (*smp_it)->meshes.vertices );
+            (*smp_it)->meshes = ch.get_mesh();
+
+        }else if(std::regex_match(MethodStr, divide_and_conquer_regex)){
+            // Compute the convex hull using Ygor's DivideAndConquerConvexHull class.
+            DivideAndConquerConvexHull<double> ch;
+            ch.add_vertices( (*smp_it)->meshes.vertices );
+            (*smp_it)->meshes = ch.get_mesh();
+
+        }else{
+            throw std::invalid_argument("Unrecognized method '" + MethodStr + "'. Cannot continue.");
+        }
 
         (*smp_it)->meshes.metadata = orig_metadata;
 
