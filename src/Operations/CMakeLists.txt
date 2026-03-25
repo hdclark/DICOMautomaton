@@ -74,6 +74,7 @@ add_library(Operations_objs OBJECT
     DeleteTables.cc
     DeleteWarps.cc
     DetectShapes3D.cc
+    DitherImages.cc
     DrawGeometry.cc
     DroverDebug.cc
     DumpAllOrderedImageMetadataToFile.cc
@@ -222,6 +223,8 @@ add_library(Operations_objs OBJECT
     ThresholdImages.cc
     ThresholdOtsu.cc
     Time_op.cc
+    TrainConditionalForest.cc
+    TrainStochasticForest.cc
     Transaction.cc
     TrimROIDose.cc
     True.cc
