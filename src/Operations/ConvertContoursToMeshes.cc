@@ -667,7 +667,7 @@ bool ConvertContoursToMeshes(Drover &DICOM_data,
 
         // Compute the convex hull using Ygor's DivideAndConquerConvexHull class.
         DivideAndConquerConvexHull<double> ch;
-        ch.add_vertices(all_verts);
+        ch.compute(all_verts);
         amesh = ch.get_mesh();
 
     }else if(std::regex_match(MethodStr, contours_regex)){
