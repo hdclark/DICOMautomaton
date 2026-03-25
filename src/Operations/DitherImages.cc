@@ -14,6 +14,7 @@
 #include <string>
 #include <cstdint>
 #include <cmath>
+#include <limits>
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"

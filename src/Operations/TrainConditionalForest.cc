@@ -33,7 +33,7 @@ OperationDoc OpArgDocTrainConditionalForest(){
 
     out.desc = 
         "This operation trains a conditional random forest regression model using Strobl et al.'s"
-        " conditional inference framework. Training data is drawn from the selected table(s)."
+        " conditional inference framework. Training data is drawn from the selected table."
         " The table should contain numerical data arranged so that one column is the dependent variable (output)"
         " and the remaining columns are independent variables (features)."
         " The first row is assumed to be a header row."
@@ -196,8 +196,11 @@ bool TrainConditionalForest(Drover &DICOM_data,
     if(STs.empty()){
         throw std::invalid_argument("No tables selected. Cannot train model.");
     }
+    if(STs.size() != 1){
+        throw std::invalid_argument("Multiple tables selected. Exactly one table must be selected.");
+    }
 
-    // Extract numerical data from the first selected table.
+    // Extract numerical data from the selected table.
     auto & table = (*STs.front())->table;
     const auto row_bounds = table.min_max_row();
     const auto col_bounds = table.min_max_col();
@@ -220,7 +223,7 @@ bool TrainConditionalForest(Drover &DICOM_data,
     }
 
     // Determine the dependent column.
-    const int64_t dep_col = (DependentColumnIndex < 0) ? col_max : (col_min + DependentColumnIndex);
+    const int64_t dep_col = (DependentColumnIndex < 0) ? col_max : DependentColumnIndex;
     if(dep_col < col_min || dep_col > col_max){
         throw std::invalid_argument("Dependent column index is out of range.");
     }
