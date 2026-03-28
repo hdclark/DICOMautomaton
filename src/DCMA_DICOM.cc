@@ -1323,8 +1323,20 @@ DCMA_DICOM::Node read_data_element(std::istream &is,
 
     // Handle undefined length for non-SQ (encapsulated pixel data).
     if(length == 0xFFFFFFFF){
-        read_encapsulated_data(is, node);
-        return node;
+        const bool is_pixel_data_tag =
+            (node.key.group == static_cast<uint16_t>(0x7FE0u) &&
+             node.key.tag   == static_cast<uint16_t>(0x0010u));
+        const bool vr_allows_encapsulation =
+            (vr == "OB" || vr == "OW" || vr == "UN");
+
+        if(is_pixel_data_tag && vr_allows_encapsulation){
+            read_encapsulated_data(is, node);
+            return node;
+        }
+
+        throw std::runtime_error(
+            "Unsupported undefined-length non-sequence DICOM element: "
+            "only PixelData (7FE0,0010) with VR OB/OW/UN may be encapsulated.");
     }
 
     // Read raw value bytes.
