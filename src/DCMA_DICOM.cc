@@ -880,8 +880,8 @@ DICOMDictionary read_dictionary(std::istream &is){
         if(line.front() == '#') continue;
 
         // Expected format: "GGGG,EEEE VR Keyword"
-        // At minimum: "GGGG,EEEE VR"
-        if(line.size() < 12) continue; // "GGGG,EEEE VR" is 12 chars.
+        // At minimum: "GGGG,EEEE VR" which is 12 characters.
+        if(line.size() < 12) continue;
 
         uint16_t group = 0;
         uint16_t element = 0;
@@ -900,8 +900,9 @@ DICOMDictionary read_dictionary(std::istream &is){
         if(line.size() > 13){
             keyword = line.substr(13);
             // Trim leading/trailing whitespace.
-            while(!keyword.empty() && std::isspace(static_cast<unsigned char>(keyword.front()))) keyword.erase(keyword.begin());
-            while(!keyword.empty() && std::isspace(static_cast<unsigned char>(keyword.back()))) keyword.pop_back();
+            const auto first = keyword.find_first_not_of(" \t\r\n");
+            const auto last  = keyword.find_last_not_of(" \t\r\n");
+            keyword = (first == std::string::npos) ? "" : keyword.substr(first, last - first + 1);
         }
 
         dict[{group, element}] = {vr, keyword};
@@ -1126,8 +1127,11 @@ DCMA_DICOM::Node read_item_contents(std::istream &is,
             uint16_t e = read_uint16_le(is);
 
             if(g == 0xFFFE && e == 0xE00D){
-                // Item delimiter.
-                [[maybe_unused]] uint32_t delim_len = read_uint32_le(is); // Should be 0.
+                // Item delimiter. Length field should be zero per DICOM standard.
+                uint32_t delim_len = read_uint32_le(is);
+                if(delim_len != 0){
+                    YLOGWARN("Item delimiter length is non-zero (" << delim_len << "), expected 0");
+                }
                 break;
             }
             // Seek back and read as data element.
@@ -1257,7 +1261,8 @@ DCMA_DICOM::Node read_data_element(std::istream &is,
         vr = std::string(vr_buf, 2);
 
         if(vr_has_extended_length(vr)){
-            // 2 bytes reserved + 4 byte length.
+            // 2 bytes reserved (DICOM standard specifies 0x0000, but not validated for
+            // compatibility with non-conformant files) + 4 byte length.
             [[maybe_unused]] uint16_t reserved = read_uint16_le(is);
             length = read_uint32_le(is);
         }else{

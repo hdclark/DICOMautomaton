@@ -116,27 +116,27 @@ TEST_CASE("DCMA_DICOM read_dictionary handles comments and blank lines"){
 static DCMA_DICOM::Node create_minimal_dicom_tree(DCMA_DICOM::Encoding enc){
     DCMA_DICOM::Node root;
 
-    // Meta information group.
-    root.emplace_child_node({{0x0002, 0x0001}, "OB", std::string("\x00\x01", 2)});
+    // Meta information group (group 0x0002, always explicit VR little-endian).
+    root.emplace_child_node({{0x0002, 0x0001}, "OB", std::string("\x00\x01", 2)}); // FileMetaInformationVersion: major=0, minor=1.
 
     std::string ts_uid = (enc == DCMA_DICOM::Encoding::ILE)
-                         ? "1.2.840.10008.1.2"
-                         : "1.2.840.10008.1.2.1";
-    root.emplace_child_node({{0x0002, 0x0002}, "UI", "1.2.840.10008.5.1.4.1.1.2"});
-    root.emplace_child_node({{0x0002, 0x0003}, "UI", "1.2.3.4.5.6.7.8.9"});
-    root.emplace_child_node({{0x0002, 0x0010}, "UI", ts_uid});
-    root.emplace_child_node({{0x0002, 0x0012}, "UI", "1.2.3.4.5"});
-    root.emplace_child_node({{0x0002, 0x0013}, "SH", "DCMA_TEST"});
+                         ? "1.2.840.10008.1.2"     // Implicit VR Little Endian.
+                         : "1.2.840.10008.1.2.1";  // Explicit VR Little Endian.
+    root.emplace_child_node({{0x0002, 0x0002}, "UI", "1.2.840.10008.5.1.4.1.1.2"}); // MediaStorageSOPClassUID: CT Image Storage.
+    root.emplace_child_node({{0x0002, 0x0003}, "UI", "1.2.3.4.5.6.7.8.9"});         // MediaStorageSOPInstanceUID.
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", ts_uid});                       // TransferSyntaxUID.
+    root.emplace_child_node({{0x0002, 0x0012}, "UI", "1.2.3.4.5"});                  // ImplementationClassUID.
+    root.emplace_child_node({{0x0002, 0x0013}, "SH", "DCMA_TEST"});                  // ImplementationVersionName.
 
-    // Data elements.
-    root.emplace_child_node({{0x0008, 0x0060}, "CS", "CT"});
-    root.emplace_child_node({{0x0008, 0x0016}, "UI", "1.2.840.10008.5.1.4.1.1.2"});
-    root.emplace_child_node({{0x0008, 0x0018}, "UI", "1.2.3.4.5.6.7.8.9"});
-    root.emplace_child_node({{0x0010, 0x0010}, "PN", "DOE^JOHN"});
-    root.emplace_child_node({{0x0010, 0x0020}, "LO", "12345"});
-    root.emplace_child_node({{0x0020, 0x0013}, "IS", "1"});
-    root.emplace_child_node({{0x0028, 0x0010}, "US", "2"});
-    root.emplace_child_node({{0x0028, 0x0011}, "US", "3"});
+    // Data elements (encoded per the transfer syntax above).
+    root.emplace_child_node({{0x0008, 0x0060}, "CS", "CT"});                          // Modality.
+    root.emplace_child_node({{0x0008, 0x0016}, "UI", "1.2.840.10008.5.1.4.1.1.2"});  // SOPClassUID.
+    root.emplace_child_node({{0x0008, 0x0018}, "UI", "1.2.3.4.5.6.7.8.9"});          // SOPInstanceUID.
+    root.emplace_child_node({{0x0010, 0x0010}, "PN", "DOE^JOHN"});                    // PatientName.
+    root.emplace_child_node({{0x0010, 0x0020}, "LO", "12345"});                       // PatientID.
+    root.emplace_child_node({{0x0020, 0x0013}, "IS", "1"});                            // InstanceNumber.
+    root.emplace_child_node({{0x0028, 0x0010}, "US", "2"});                            // Rows.
+    root.emplace_child_node({{0x0028, 0x0011}, "US", "3"});                            // Columns.
 
     return root;
 }
@@ -309,14 +309,14 @@ TEST_CASE("DCMA_DICOM validate on a well-formed tree succeeds"){
 TEST_CASE("DCMA_DICOM round-trip with sequences"){
     DCMA_DICOM::Node root;
 
-    // Meta information.
-    root.emplace_child_node({{0x0002, 0x0001}, "OB", std::string("\x00\x01", 2)});
-    root.emplace_child_node({{0x0002, 0x0002}, "UI", "1.2.840.10008.5.1.4.1.1.2"});
-    root.emplace_child_node({{0x0002, 0x0003}, "UI", "1.2.3.4.5.6.7.8.9"});
-    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.1"});
-    root.emplace_child_node({{0x0002, 0x0012}, "UI", "1.2.3.4.5"});
+    // Meta information (group 0x0002, always explicit VR little-endian).
+    root.emplace_child_node({{0x0002, 0x0001}, "OB", std::string("\x00\x01", 2)}); // FileMetaInformationVersion.
+    root.emplace_child_node({{0x0002, 0x0002}, "UI", "1.2.840.10008.5.1.4.1.1.2"}); // MediaStorageSOPClassUID.
+    root.emplace_child_node({{0x0002, 0x0003}, "UI", "1.2.3.4.5.6.7.8.9"});         // MediaStorageSOPInstanceUID.
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.1"});        // TransferSyntaxUID (ELE).
+    root.emplace_child_node({{0x0002, 0x0012}, "UI", "1.2.3.4.5"});                  // ImplementationClassUID.
 
-    // A simple sequence.
+    // A simple sequence: StructureSetROISequence with two items.
     auto *seq = root.emplace_child_node({{0x3006, 0x0020}, "SQ", ""});
     {
         DCMA_DICOM::Node item;
