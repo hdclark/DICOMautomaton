@@ -1444,7 +1444,7 @@ bool Node::replace(uint16_t group, uint16_t tag, Node replacement){
             *it = std::move(replacement);
             return true;
         }
-        if(it->replace(group, tag, std::move(replacement))){
+        if(it->replace(group, tag, replacement)){
             return true;
         }
     }
