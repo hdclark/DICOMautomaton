@@ -1087,10 +1087,18 @@ std::string decode_binary_value(const std::string &raw, const std::string &vr){
         return ss.str();
     }else if(vr == "AT"){
         if(raw.size() < 4) return raw;
-        uint16_t g = 0, e = 0;
-        std::memcpy(&g, raw.data(), 2);
-        std::memcpy(&e, raw.data() + 2, 2);
-        return std::to_string(g) + "\\" + std::to_string(e);
+        std::string result;
+        for(size_t i = 0; i + 3 < raw.size(); i += 4){
+            uint16_t g = 0;
+            uint16_t e = 0;
+            std::memcpy(&g, raw.data() + i, 2);
+            std::memcpy(&e, raw.data() + i + 2, 2);
+            if(!result.empty()) result += "\\";
+            result += std::to_string(g);
+            result += "\\";
+            result += std::to_string(e);
+        }
+        return result;
     }
 
     // OB, OW, OF, OD, UN, and any other binary VRs: leave raw.
