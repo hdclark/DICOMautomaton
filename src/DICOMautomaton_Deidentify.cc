@@ -143,7 +143,7 @@ int main(int argc, char **argv){
             params.series_description = std::string(argv[++i]);
         }else if(arg == "-m" && (i + 1) < argc){
             uid_map_file = argv[++i];
-        }else if(arg.front() == '-'){
+        }else if(!arg.empty() && arg.front() == '-'){
             std::cerr << "Unknown option: " << arg << std::endl;
             print_usage(argv[0]);
             return 1;
@@ -238,11 +238,17 @@ int main(int argc, char **argv){
             // Apply de-identification.
             DCMA_DICOM::deidentify(root, params, uid_map);
 
-            // Generate a unique output filename.
+            // Generate a unique output filename that does not collide with existing files.
             // Use a sequential counter with .dcm extension for de-identified filenames.
-            std::ostringstream fname_ss;
-            fname_ss << "anon_" << std::setfill('0') << std::setw(6) << file_count << ".dcm";
-            const fs::path output_path = fs::path(output_dir) / fname_ss.str();
+            fs::path output_path;
+            std::string fname_str;
+            for(int64_t attempt = file_count; ; ++attempt){
+                std::ostringstream fname_ss;
+                fname_ss << "anon_" << std::setfill('0') << std::setw(6) << attempt << ".dcm";
+                fname_str = fname_ss.str();
+                output_path = fs::path(output_dir) / fname_str;
+                if(!fs::exists(output_path)) break;
+            }
 
             // Write the de-identified DICOM file.
             std::ofstream ofs(output_path, std::ios::binary);
@@ -257,7 +263,7 @@ int main(int argc, char **argv){
 
             ++success_count;
             YLOGINFO("  [" << file_count << "/" << input_files.size() << "] "
-                     << input_path.filename() << " -> " << fname_ss.str());
+                     << input_path.filename() << " -> " << fname_str);
 
         }catch(const std::exception &e){
             YLOGWARN("Error processing '" << input_path << "': " << e.what());

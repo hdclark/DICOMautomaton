@@ -1567,14 +1567,14 @@ bool Node::validate(Encoding enc) const {
 // Generate a random DICOM UID. The result has the form "1.2.840.66.1.<random digits and dots>"
 // and is exactly 'len' characters long.
 static std::string generate_random_uid(int64_t len = 60){
-    const std::string alphanum(".0123456789");
-    std::default_random_engine gen;
+    const std::string alphanum("0123456789."); // Digits and UID separator.
+    const auto timeseed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    std::default_random_engine gen(static_cast<unsigned int>(timeseed));
     try{
         std::random_device rd;
         gen.seed(rd());
     }catch(const std::exception &){
-        const auto timeseed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-        gen.seed(static_cast<unsigned int>(timeseed));
+        // Fall back to time-based seed already applied above.
     }
     std::uniform_int_distribution<int> dist(0, static_cast<int>(alphanum.length()) - 1);
     std::string out = "1.2.840.66.1.";
@@ -1639,8 +1639,12 @@ void deidentify(Node &root,
     // Get today's date and time strings in DICOM format.
     const auto now = std::chrono::system_clock::now();
     const auto now_t = std::chrono::system_clock::to_time_t(now);
-    struct tm now_tm;
+    struct tm now_tm = {};
+#if defined(_WIN32)
+    gmtime_s(&now_tm, &now_t);
+#else
     gmtime_r(&now_t, &now_tm);
+#endif
 
     char date_buf[16];
     std::strftime(date_buf, sizeof(date_buf), "%Y%m%d", &now_tm);
