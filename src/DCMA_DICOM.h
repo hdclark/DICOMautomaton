@@ -59,9 +59,10 @@ DICOMDictionary read_dictionary(std::istream &is);
 // Write a dictionary to a text stream in the same format accepted by read_dictionary.
 void write_dictionary(std::ostream &os, const DICOMDictionary &dict);
 
-// Look up a VR from layered dictionaries. The built-in default dictionary is always
-// consulted first. Additional dictionaries in 'dicts' are searched in order, with
-// later entries taking precedence. Returns an empty string if the tag is unknown.
+// Look up a VR from layered dictionaries. Additional dictionaries in 'dicts' are
+// searched in reverse order, so entries in later dictionaries take precedence over
+// earlier ones and over the built-in default dictionary, which is consulted last
+// as a fallback. Returns an empty string if the tag is unknown.
 std::string lookup_VR(uint16_t group, uint16_t element,
                       const std::vector<const DICOMDictionary*> &dicts = {});
 
