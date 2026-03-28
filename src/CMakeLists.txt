@@ -45,6 +45,9 @@ set_target_properties(  Partition_Drover_obj PROPERTIES POSITION_INDEPENDENT_COD
 add_library(            DCMA_DICOM_obj OBJECT DCMA_DICOM.cc)
 set_target_properties(  DCMA_DICOM_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            DCMA_DICOM_Tests_obj OBJECT DCMA_DICOM_Tests.cc )
+set_target_properties(  DCMA_DICOM_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            BED_Conversion_obj OBJECT BED_Conversion.cc )
 set_target_properties(  BED_Conversion_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -461,6 +464,7 @@ add_executable (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:ARAP_Meshes_obj>>
     $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:ARAP_Meshes_Tests_obj>>
     $<$<BOOL:${WITH_SYCL_FALLBACK}>:$<TARGET_OBJECTS:SYCL_Fallback_Tests_obj>>
+    $<TARGET_OBJECTS:DCMA_DICOM_Tests_obj>
     $<TARGET_OBJECTS:Colour_Maps_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Common_Plotting_obj>
@@ -579,6 +583,7 @@ if(WITH_WT)
         $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:ARAP_Meshes_obj>>
         $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:ARAP_Meshes_Tests_obj>>
         $<$<BOOL:${WITH_SYCL_FALLBACK}>:$<TARGET_OBJECTS:SYCL_Fallback_Tests_obj>>
+        $<TARGET_OBJECTS:DCMA_DICOM_Tests_obj>
         $<TARGET_OBJECTS:Colour_Maps_obj>
         $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
         $<TARGET_OBJECTS:Common_Plotting_obj>
