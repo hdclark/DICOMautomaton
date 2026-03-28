@@ -378,3 +378,285 @@ TEST_CASE("DCMA_DICOM round-trip with sequences"){
     auto roi_names = read_root.find_all(0x3006, 0x0026);
     CHECK(roi_names.size() == 2);
 }
+
+
+// ============================================================================
+// Remove / remove_all tests
+// ============================================================================
+
+TEST_CASE("DCMA_DICOM remove erases a single tag"){
+    auto root = create_minimal_dicom_tree(DCMA_DICOM::Encoding::ELE);
+    CHECK(root.find(0x0010, 0x0010) != nullptr);  // PatientName exists.
+    CHECK(root.remove(0x0010, 0x0010));
+    CHECK(root.find(0x0010, 0x0010) == nullptr);   // PatientName gone.
+}
+
+TEST_CASE("DCMA_DICOM remove returns false for missing tags"){
+    auto root = create_minimal_dicom_tree(DCMA_DICOM::Encoding::ELE);
+    CHECK_FALSE(root.remove(0x9999, 0x9999));
+}
+
+TEST_CASE("DCMA_DICOM remove_all erases all matching tags"){
+    DCMA_DICOM::Node root;
+    root.emplace_child_node({{0x0002, 0x0001}, "OB", std::string("\x00\x01", 2)});
+    root.emplace_child_node({{0x0002, 0x0002}, "UI", "1.2.840.10008.5.1.4.1.1.2"});
+    root.emplace_child_node({{0x0002, 0x0003}, "UI", "1.2.3.4.5.6.7.8.9"});
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.1"});
+    root.emplace_child_node({{0x0002, 0x0012}, "UI", "1.2.3.4.5"});
+
+    // Add a sequence with nested Referenced SOP Instance UIDs.
+    auto *seq = root.emplace_child_node({{0x3006, 0x0020}, "SQ", ""});
+    {
+        DCMA_DICOM::Node item;
+        item.key = {0x3006, 0x0020};
+        item.VR = "MULTI";
+        item.emplace_child_node({{0x0008, 0x1155}, "UI", "1.2.3.1"});
+        seq->emplace_child_node(std::move(item));
+    }
+    {
+        DCMA_DICOM::Node item;
+        item.key = {0x3006, 0x0020};
+        item.VR = "MULTI";
+        item.emplace_child_node({{0x0008, 0x1155}, "UI", "1.2.3.2"});
+        seq->emplace_child_node(std::move(item));
+    }
+
+    CHECK(root.find_all(0x0008, 0x1155).size() == 2);
+    auto removed = root.remove_all(0x0008, 0x1155);
+    CHECK(removed == 2);
+    CHECK(root.find_all(0x0008, 0x1155).size() == 0);
+}
+
+
+// ============================================================================
+// De-identification tests
+// ============================================================================
+
+static DCMA_DICOM::Node create_dicom_for_deident(){
+    DCMA_DICOM::Node root;
+
+    // Meta information group.
+    root.emplace_child_node({{0x0002, 0x0001}, "OB", std::string("\x00\x01", 2)});
+    root.emplace_child_node({{0x0002, 0x0002}, "UI", "1.2.840.10008.5.1.4.1.1.2"});
+    root.emplace_child_node({{0x0002, 0x0003}, "UI", "1.2.3.4.5.6.7.8.9"});          // MediaStorageSOPInstanceUID.
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.1"});
+    root.emplace_child_node({{0x0002, 0x0012}, "UI", "1.2.3.4.5"});
+
+    // Patient info (PHI).
+    root.emplace_child_node({{0x0010, 0x0010}, "PN", "DOE^JOHN"});         // PatientName.
+    root.emplace_child_node({{0x0010, 0x0020}, "LO", "12345"});             // PatientID.
+    root.emplace_child_node({{0x0010, 0x0030}, "DA", "19800101"});          // PatientBirthDate.
+    root.emplace_child_node({{0x0010, 0x0040}, "CS", "M"});                 // PatientSex.
+    root.emplace_child_node({{0x0010, 0x1010}, "AS", "044Y"});              // PatientAge (should be erased).
+    root.emplace_child_node({{0x0010, 0x1040}, "LO", "123 Main St"});       // PatientAddress (should be erased).
+
+    // Study/series info.
+    root.emplace_child_node({{0x0008, 0x0016}, "UI", "1.2.840.10008.5.1.4.1.1.2"}); // SOPClassUID.
+    root.emplace_child_node({{0x0008, 0x0018}, "UI", "1.2.3.4.5.6.7.8.9"});          // SOPInstanceUID.
+    root.emplace_child_node({{0x0008, 0x0020}, "DA", "20200101"});                     // StudyDate.
+    root.emplace_child_node({{0x0008, 0x0060}, "CS", "CT"});                           // Modality.
+    root.emplace_child_node({{0x0008, 0x0080}, "LO", "General Hospital"});             // InstitutionName.
+    root.emplace_child_node({{0x0008, 0x0090}, "PN", "SMITH^DR"});                     // ReferringPhysicianName.
+    root.emplace_child_node({{0x0008, 0x1030}, "LO", "Brain Study"});                  // StudyDescription.
+    root.emplace_child_node({{0x0008, 0x103E}, "LO", "Axial T1"});                     // SeriesDescription.
+
+    // UIDs.
+    root.emplace_child_node({{0x0020, 0x000D}, "UI", "1.2.3.4.5.6.100"});  // StudyInstanceUID.
+    root.emplace_child_node({{0x0020, 0x000E}, "UI", "1.2.3.4.5.6.200"});  // SeriesInstanceUID.
+    root.emplace_child_node({{0x0020, 0x0052}, "UI", "1.2.3.4.5.6.300"});  // FrameOfReferenceUID.
+    root.emplace_child_node({{0x0020, 0x0013}, "IS", "1"});                  // InstanceNumber.
+
+    return root;
+}
+
+TEST_CASE("DCMA_DICOM deidentify erases PHI tags"){
+    auto root = create_dicom_for_deident();
+
+    DCMA_DICOM::DeidentifyParams params;
+    params.patient_id = "ANON001";
+    params.patient_name = "Anonymous";
+
+    DCMA_DICOM::uid_mapping_t uid_map;
+    DCMA_DICOM::deidentify(root, params, uid_map);
+
+    // PHI tags should be erased.
+    CHECK(root.find(0x0010, 0x1010) == nullptr);  // PatientAge.
+    CHECK(root.find(0x0010, 0x1040) == nullptr);  // PatientAddress.
+}
+
+TEST_CASE("DCMA_DICOM deidentify replaces patient info"){
+    auto root = create_dicom_for_deident();
+
+    DCMA_DICOM::DeidentifyParams params;
+    params.patient_id = "ANON001";
+    params.patient_name = "Anonymous";
+
+    DCMA_DICOM::uid_mapping_t uid_map;
+    DCMA_DICOM::deidentify(root, params, uid_map);
+
+    const auto *pid = root.find(0x0010, 0x0020);
+    REQUIRE(pid != nullptr);
+    CHECK(pid->val == "ANON001");
+
+    const auto *pname = root.find(0x0010, 0x0010);
+    REQUIRE(pname != nullptr);
+    CHECK(pname->val == "Anonymous");
+}
+
+TEST_CASE("DCMA_DICOM deidentify anonymizes institution and physician"){
+    auto root = create_dicom_for_deident();
+
+    DCMA_DICOM::DeidentifyParams params;
+    params.patient_id = "ANON001";
+    params.patient_name = "Anonymous";
+
+    DCMA_DICOM::uid_mapping_t uid_map;
+    DCMA_DICOM::deidentify(root, params, uid_map);
+
+    const auto *inst = root.find(0x0008, 0x0080);
+    REQUIRE(inst != nullptr);
+    CHECK(inst->val == "Anonymous");
+
+    const auto *ref = root.find(0x0008, 0x0090);
+    REQUIRE(ref != nullptr);
+    CHECK(ref->val == "Anonymous");
+}
+
+TEST_CASE("DCMA_DICOM deidentify clears patient sex"){
+    auto root = create_dicom_for_deident();
+
+    DCMA_DICOM::DeidentifyParams params;
+    params.patient_id = "ANON001";
+    params.patient_name = "Anonymous";
+
+    DCMA_DICOM::uid_mapping_t uid_map;
+    DCMA_DICOM::deidentify(root, params, uid_map);
+
+    const auto *sex = root.find(0x0010, 0x0040);
+    REQUIRE(sex != nullptr);
+    CHECK(sex->val == "");
+}
+
+TEST_CASE("DCMA_DICOM deidentify remaps UIDs consistently"){
+    auto root = create_dicom_for_deident();
+
+    DCMA_DICOM::DeidentifyParams params;
+    params.patient_id = "ANON001";
+    params.patient_name = "Anonymous";
+
+    DCMA_DICOM::uid_mapping_t uid_map;
+    DCMA_DICOM::deidentify(root, params, uid_map);
+
+    // The UIDs should have been remapped.
+    const auto *study_uid = root.find(0x0020, 0x000D);
+    REQUIRE(study_uid != nullptr);
+    CHECK(study_uid->val != "1.2.3.4.5.6.100");
+
+    const auto *series_uid = root.find(0x0020, 0x000E);
+    REQUIRE(series_uid != nullptr);
+    CHECK(series_uid->val != "1.2.3.4.5.6.200");
+
+    // The mapping should be recorded.
+    CHECK(uid_map.count("1.2.3.4.5.6.100") == 1);
+    CHECK(uid_map.count("1.2.3.4.5.6.200") == 1);
+
+    // SOPInstanceUID is shared between 0008,0018 and 0002,0003 -- both should map the same way.
+    CHECK(uid_map.count("1.2.3.4.5.6.7.8.9") == 1);
+    const auto *sop_uid = root.find(0x0008, 0x0018);
+    REQUIRE(sop_uid != nullptr);
+    const auto *media_uid = root.find(0x0002, 0x0003);
+    REQUIRE(media_uid != nullptr);
+    CHECK(sop_uid->val == media_uid->val);
+}
+
+TEST_CASE("DCMA_DICOM deidentify uid_map is reused across invocations"){
+    auto root1 = create_dicom_for_deident();
+    auto root2 = create_dicom_for_deident();
+
+    DCMA_DICOM::DeidentifyParams params;
+    params.patient_id = "ANON001";
+    params.patient_name = "Anonymous";
+
+    DCMA_DICOM::uid_mapping_t uid_map;
+
+    DCMA_DICOM::deidentify(root1, params, uid_map);
+    const auto *study_uid1 = root1.find(0x0020, 0x000D);
+    REQUIRE(study_uid1 != nullptr);
+
+    // Second invocation with the same uid_map should produce the same mapped UID.
+    DCMA_DICOM::deidentify(root2, params, uid_map);
+    const auto *study_uid2 = root2.find(0x0020, 0x000D);
+    REQUIRE(study_uid2 != nullptr);
+
+    CHECK(study_uid1->val == study_uid2->val);
+}
+
+TEST_CASE("DCMA_DICOM deidentify handles optional study/series descriptions"){
+    auto root = create_dicom_for_deident();
+
+    DCMA_DICOM::DeidentifyParams params;
+    params.patient_id = "ANON001";
+    params.patient_name = "Anonymous";
+    params.study_description = "New Study Desc";
+    params.series_description = "New Series Desc";
+
+    DCMA_DICOM::uid_mapping_t uid_map;
+    DCMA_DICOM::deidentify(root, params, uid_map);
+
+    const auto *study_desc = root.find(0x0008, 0x1030);
+    REQUIRE(study_desc != nullptr);
+    CHECK(study_desc->val == "New Study Desc");
+
+    const auto *series_desc = root.find(0x0008, 0x103E);
+    REQUIRE(series_desc != nullptr);
+    CHECK(series_desc->val == "New Series Desc");
+}
+
+TEST_CASE("DCMA_DICOM deidentify erases descriptions when not provided"){
+    auto root = create_dicom_for_deident();
+
+    DCMA_DICOM::DeidentifyParams params;
+    params.patient_id = "ANON001";
+    params.patient_name = "Anonymous";
+    // study_description and series_description are not set -- tags should be erased.
+
+    DCMA_DICOM::uid_mapping_t uid_map;
+    DCMA_DICOM::deidentify(root, params, uid_map);
+
+    // Study and series descriptions should be completely removed.
+    CHECK(root.find(0x0008, 0x1030) == nullptr);
+    CHECK(root.find(0x0008, 0x103E) == nullptr);
+}
+
+TEST_CASE("DCMA_DICOM deidentify preserves modality"){
+    auto root = create_dicom_for_deident();
+
+    DCMA_DICOM::DeidentifyParams params;
+    params.patient_id = "ANON001";
+    params.patient_name = "Anonymous";
+
+    DCMA_DICOM::uid_mapping_t uid_map;
+    DCMA_DICOM::deidentify(root, params, uid_map);
+
+    // Modality should not be modified.
+    const auto *modality = root.find(0x0008, 0x0060);
+    REQUIRE(modality != nullptr);
+    CHECK(modality->val == "CT");
+}
+
+TEST_CASE("DCMA_DICOM deidentify optional study_id replaces tag"){
+    auto root = create_dicom_for_deident();
+    root.emplace_child_node({{0x0020, 0x0010}, "SH", "ORIG_STUDY"});  // StudyID.
+
+    DCMA_DICOM::DeidentifyParams params;
+    params.patient_id = "ANON001";
+    params.patient_name = "Anonymous";
+    params.study_id = "NEW_STUDY_ID";
+
+    DCMA_DICOM::uid_mapping_t uid_map;
+    DCMA_DICOM::deidentify(root, params, uid_map);
+
+    const auto *study_id = root.find(0x0020, 0x0010);
+    REQUIRE(study_id != nullptr);
+    CHECK(study_id->val == "NEW_STUDY_ID");
+}
