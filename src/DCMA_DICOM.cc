@@ -1061,17 +1061,29 @@ std::string decode_binary_value(const std::string &raw, const std::string &vr){
         return result;
     }else if(vr == "FL"){
         if(raw.size() < 4) return raw;
-        float v = 0.0f;
-        std::memcpy(&v, raw.data(), 4);
         std::ostringstream ss;
-        ss << std::setprecision(std::numeric_limits<float>::max_digits10) << v;
+        ss << std::setprecision(std::numeric_limits<float>::max_digits10);
+        bool first = true;
+        for(size_t i = 0; i + 3 < raw.size(); i += 4){
+            float v = 0.0f;
+            std::memcpy(&v, raw.data() + i, 4);
+            if(!first) ss << "\\";
+            ss << v;
+            first = false;
+        }
         return ss.str();
     }else if(vr == "FD"){
         if(raw.size() < 8) return raw;
-        double v = 0.0;
-        std::memcpy(&v, raw.data(), 8);
         std::ostringstream ss;
-        ss << std::setprecision(std::numeric_limits<double>::max_digits10) << v;
+        ss << std::setprecision(std::numeric_limits<double>::max_digits10);
+        bool first = true;
+        for(size_t i = 0; i + 7 < raw.size(); i += 8){
+            double v = 0.0;
+            std::memcpy(&v, raw.data() + i, 8);
+            if(!first) ss << "\\";
+            ss << v;
+            first = false;
+        }
         return ss.str();
     }else if(vr == "AT"){
         if(raw.size() < 4) return raw;
