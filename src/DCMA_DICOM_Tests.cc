@@ -108,6 +108,29 @@ TEST_CASE("DCMA_DICOM read_dictionary handles comments and blank lines"){
     CHECK(dict.size() == 2);
 }
 
+TEST_CASE("DCMA_DICOM write_dictionary does not corrupt stream state"){
+    DCMA_DICOM::DICOMDictionary dict;
+    dict[{0x0008, 0x0060}] = {"CS", "Modality"};
+
+    std::ostringstream ss;
+
+    // Write a decimal number before calling write_dictionary.
+    ss << std::dec << 42 << "\n";
+
+    DCMA_DICOM::write_dictionary(ss, dict);
+
+    // Record position immediately after write_dictionary returns.
+    const auto pos_after_dict = ss.tellp();
+
+    // Write a decimal number after. If write_dictionary corrupted the
+    // stream state (e.g., left hex mode active), this would produce "ff"
+    // instead of "255".
+    ss << 255;
+
+    const std::string appended = ss.str().substr(static_cast<size_t>(pos_after_dict));
+    CHECK(appended == "255");
+}
+
 
 // ============================================================================
 // Round-trip tests (write then read)

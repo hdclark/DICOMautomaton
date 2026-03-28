@@ -912,6 +912,11 @@ DICOMDictionary read_dictionary(std::istream &is){
 
 
 void write_dictionary(std::ostream &os, const DICOMDictionary &dict){
+    // Save and restore stream formatting state so subsequent writes to the same
+    // stream are not affected by the hex/uppercase/fill settings used here.
+    const auto prev_flags = os.flags();
+    const auto prev_fill  = os.fill();
+
     os << "# DICOM Dictionary\n";
     os << "# Format: GGGG,EEEE VR Keyword\n";
     for(const auto &[key, entry] : dict){
@@ -924,6 +929,9 @@ void write_dictionary(std::ostream &os, const DICOMDictionary &dict){
         }
         os << "\n";
     }
+
+    os.flags(prev_flags);
+    os.fill(prev_fill);
 }
 
 
@@ -1391,7 +1399,7 @@ void Node::read_DICOM(std::istream &is,
     }
 
     // Parse the meta information group (0x0002). Always uses Explicit VR Little Endian encoding.
-    while(is.good() && is.peek() != EOF){
+    while(is.good() && (is.peek() != std::char_traits<char>::eof())){
         auto pos = is.tellg();
         uint16_t g = read_uint16_le(is);
         uint16_t e = read_uint16_le(is);
@@ -1426,7 +1434,7 @@ void Node::read_DICOM(std::istream &is,
     }
 
     // Parse remaining data elements using the determined encoding.
-    while(is.good() && is.peek() != EOF){
+    while(is.good() && (is.peek() != std::char_traits<char>::eof())){
         auto node = read_data_element(is, data_enc, dicts, mutable_dict);
         this->children.push_back(std::move(node));
     }
