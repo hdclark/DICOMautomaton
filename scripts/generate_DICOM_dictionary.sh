@@ -130,6 +130,10 @@ fi
         gsub(/ +or +.*/, "", vr)
         gsub(/\/.*/, "", vr)
 
+        # Validate VR: must be exactly 2 uppercase alphabetic characters.
+        # Entries like FFFE,E000 (Item) have "See Note N" as VR and must be skipped.
+        if (vr !~ /^[A-Z]{2}$/) { in_row = 0; next }
+
         # Remove any remaining parentheses or brackets from keyword.
         gsub(/[()]/, "", keyword)
 
