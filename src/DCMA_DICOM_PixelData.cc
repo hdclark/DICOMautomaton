@@ -282,12 +282,9 @@ unpack_native_samples(const std::string &raw,
     }else if(ba == 16){
         for(uint64_t i = 0; i < total_samples; ++i){
             const uint64_t offset = i * 2u;
-            if(offset + 1u >= static_cast<uint64_t>(raw.size()) + 1u){
-                // Equivalent check: offset + 2 > raw.size().
-                if(offset + 2u > raw.size()){
-                    YLOGWARN("Pixel data buffer underflow at sample " << i);
-                    break;
-                }
+            if(offset + 2u > raw.size()){
+                YLOGWARN("Pixel data buffer underflow at sample " << i);
+                break;
             }
             uint16_t v = 0;
             std::memcpy(&v, raw.data() + offset, 2);
