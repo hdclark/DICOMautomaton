@@ -95,6 +95,150 @@ TEST_CASE("DCMA_DICOM dictionary read/write round-trip"){
     }
 }
 
+TEST_CASE("DCMA_DICOM default dictionary entries have VM populated"){
+    const auto &dict = DCMA_DICOM::get_default_dictionary();
+    for(const auto &[key, entry] : dict){
+        CHECK_MESSAGE(!entry.VM.empty(),
+                      "Tag (" << std::hex << key.first << "," << key.second
+                              << ") is missing VM");
+    }
+}
+
+TEST_CASE("DCMA_DICOM default dictionary VM values for well-known tags"){
+    const auto &dict = DCMA_DICOM::get_default_dictionary();
+
+    // TransferSyntaxUID has VM=1.
+    auto it = dict.find({0x0002, 0x0010});
+    REQUIRE(it != dict.end());
+    CHECK(it->second.VM == "1");
+
+    // ImageType has VM=2-n.
+    it = dict.find({0x0008, 0x0008});
+    REQUIRE(it != dict.end());
+    CHECK(it->second.VM == "2-n");
+
+    // PixelSpacing has VM=2.
+    it = dict.find({0x0028, 0x0030});
+    REQUIRE(it != dict.end());
+    CHECK(it->second.VM == "2");
+
+    // ImageOrientationPatient has VM=6.
+    it = dict.find({0x0020, 0x0037});
+    REQUIRE(it != dict.end());
+    CHECK(it->second.VM == "6");
+
+    // ContourData has VM=3-3n.
+    it = dict.find({0x3006, 0x0050});
+    REQUIRE(it != dict.end());
+    CHECK(it->second.VM == "3-3n");
+}
+
+TEST_CASE("DCMA_DICOM default dictionary retired tag"){
+    const auto &dict = DCMA_DICOM::get_default_dictionary();
+
+    // AttachedContours is retired.
+    auto it = dict.find({0x3006, 0x0049});
+    REQUIRE(it != dict.end());
+    CHECK(it->second.retired == true);
+    CHECK(it->second.VR == "IS");
+
+    // Modality is not retired.
+    it = dict.find({0x0008, 0x0060});
+    REQUIRE(it != dict.end());
+    CHECK(it->second.retired == false);
+}
+
+TEST_CASE("DCMA_DICOM lookup_VM finds tags in default dictionary"){
+    CHECK(DCMA_DICOM::lookup_VM(0x0008, 0x0060) == "1");
+    CHECK(DCMA_DICOM::lookup_VM(0x0020, 0x0032) == "3");
+    CHECK(DCMA_DICOM::lookup_VM(0x0028, 0x0030) == "2");
+}
+
+TEST_CASE("DCMA_DICOM lookup_VM returns 1 for group length tags"){
+    CHECK(DCMA_DICOM::lookup_VM(0x0008, 0x0000) == "1");
+}
+
+TEST_CASE("DCMA_DICOM lookup_VM returns empty for unknown tags"){
+    CHECK(DCMA_DICOM::lookup_VM(0x9999, 0x9999) == "");
+}
+
+TEST_CASE("DCMA_DICOM lookup_keyword finds tags in default dictionary"){
+    CHECK(DCMA_DICOM::lookup_keyword(0x0008, 0x0060) == "Modality");
+    CHECK(DCMA_DICOM::lookup_keyword(0x0010, 0x0010) == "PatientName");
+}
+
+TEST_CASE("DCMA_DICOM lookup_keyword returns empty for unknown tags"){
+    CHECK(DCMA_DICOM::lookup_keyword(0x9999, 0x9999) == "");
+}
+
+TEST_CASE("DCMA_DICOM dictionary round-trip with VM and retired"){
+    DCMA_DICOM::DICOMDictionary original;
+    original[{0x0008, 0x0060}] = {"CS", "Modality", "1", false};
+    original[{0x0020, 0x0032}] = {"DS", "ImagePositionPatient", "3", false};
+    original[{0x3006, 0x0049}] = {"IS", "AttachedContours", "1-n", true};
+
+    std::stringstream ss;
+    DCMA_DICOM::write_dictionary(ss, original);
+
+    auto reloaded = DCMA_DICOM::read_dictionary(ss);
+    REQUIRE(reloaded.size() == original.size());
+
+    for(const auto &[key, entry] : original){
+        auto it = reloaded.find(key);
+        REQUIRE(it != reloaded.end());
+        CHECK(it->second.VR == entry.VR);
+        CHECK(it->second.keyword == entry.keyword);
+        CHECK(it->second.VM == entry.VM);
+        CHECK(it->second.retired == entry.retired);
+    }
+}
+
+TEST_CASE("DCMA_DICOM read_dictionary parses legacy format without VM"){
+    // Legacy format: "GGGG,EEEE VR Keyword"
+    std::string input =
+        "0008,0060 CS Modality\n"
+        "0010,0010 PN PatientName\n";
+    std::istringstream ss(input);
+    auto dict = DCMA_DICOM::read_dictionary(ss);
+    REQUIRE(dict.size() == 2);
+
+    auto it = dict.find({0x0008, 0x0060});
+    REQUIRE(it != dict.end());
+    CHECK(it->second.VR == "CS");
+    CHECK(it->second.keyword == "Modality");
+    CHECK(it->second.VM == "");
+    CHECK(it->second.retired == false);
+}
+
+TEST_CASE("DCMA_DICOM read_dictionary parses new format with VM and RETIRED"){
+    std::string input =
+        "0008,0060 CS 1 Modality\n"
+        "3006,0049 IS 1-n AttachedContours RETIRED\n"
+        "0020,0037 DS 6 ImageOrientationPatient\n";
+    std::istringstream ss(input);
+    auto dict = DCMA_DICOM::read_dictionary(ss);
+    REQUIRE(dict.size() == 3);
+
+    auto it = dict.find({0x0008, 0x0060});
+    REQUIRE(it != dict.end());
+    CHECK(it->second.VR == "CS");
+    CHECK(it->second.VM == "1");
+    CHECK(it->second.keyword == "Modality");
+    CHECK(it->second.retired == false);
+
+    it = dict.find({0x3006, 0x0049});
+    REQUIRE(it != dict.end());
+    CHECK(it->second.VR == "IS");
+    CHECK(it->second.VM == "1-n");
+    CHECK(it->second.keyword == "AttachedContours");
+    CHECK(it->second.retired == true);
+
+    it = dict.find({0x0020, 0x0037});
+    REQUIRE(it != dict.end());
+    CHECK(it->second.VM == "6");
+    CHECK(it->second.retired == false);
+}
+
 TEST_CASE("DCMA_DICOM read_dictionary handles comments and blank lines"){
     std::string input =
         "# This is a comment\n"
