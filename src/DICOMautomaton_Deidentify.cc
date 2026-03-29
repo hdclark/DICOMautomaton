@@ -21,39 +21,13 @@
 #include <map>
 #include <filesystem>
 
+#include "YgorArguments.h"
 #include "YgorMisc.h"
 #include "YgorLog.h"
 
 #include "DCMA_DICOM.h"
 
 namespace fs = std::filesystem;
-
-static void print_usage(const char *argv0){
-    std::cerr << argv0 << " -- a DICOM de-identification tool.\n"
-        "\n"
-        "Usage:\n"
-        "  " << argv0 << " [options] -o <output_dir> <input_files_or_dirs...>\n"
-        "\n"
-        "Required:\n"
-        "  -o <dir>    Output directory for de-identified files.\n"
-        "  -p <id>     New patient ID.\n"
-        "  -n <name>   New patient name.\n"
-        "\n"
-        "Optional:\n"
-        "  -s <id>     New study ID (if omitted, tag is left unchanged).\n"
-        "  -t <desc>   New study description (if omitted, tag is erased).\n"
-        "  -e <desc>   New series description (if omitted, tag is erased).\n"
-        "  -m <file>   UID mapping file (loaded and saved for cross-invocation consistency).\n"
-        "  -h          Print this help message and exit.\n"
-        "\n"
-        "Input arguments can be individual files or directories (non-recursive).\n"
-        "\n"
-        "Example:\n"
-        "  " << argv0 << " -p 'ANON001' -n 'Anonymous' -o /tmp/output /tmp/input/\n"
-        "  " << argv0 << " -p 'ANON001' -n 'Anonymous' -m /tmp/uid_map.txt \\\n"
-        "     -o /tmp/output file1.dcm file2.dcm\n"
-        "\n";
-}
 
 // Load a UID mapping from a text file. Format: one mapping per line as "old_uid new_uid".
 static DCMA_DICOM::uid_mapping_t load_uid_mapping(const std::string &path){
@@ -109,76 +83,113 @@ static std::vector<fs::path> collect_input_files(const std::vector<std::string> 
 
 
 int main(int argc, char **argv){
-    if(argc < 2){
-        print_usage(argv[0]);
-        return 1;
-    }
-
     std::string output_dir;
     std::string patient_id;
     std::string patient_name;
+    std::string study_id;
     std::string uid_map_file;
     DCMA_DICOM::DeidentifyParams params;
 
     std::vector<std::string> inputs;
 
-    // Parse arguments.
-    int i = 1;
-    while(i < argc){
-        const std::string arg(argv[i]);
-        if(arg == "-h"){
-            print_usage(argv[0]);
-            return 0;
-        }else if(arg == "-o" && (i + 1) < argc){
-            output_dir = argv[++i];
-        }else if(arg == "-p" && (i + 1) < argc){
-            patient_id = argv[++i];
-        }else if(arg == "-n" && (i + 1) < argc){
-            patient_name = argv[++i];
-        }else if(arg == "-s" && (i + 1) < argc){
-            params.study_id = std::string(argv[++i]);
-        }else if(arg == "-t" && (i + 1) < argc){
-            params.study_description = std::string(argv[++i]);
-        }else if(arg == "-e" && (i + 1) < argc){
-            params.series_description = std::string(argv[++i]);
-        }else if(arg == "-m" && (i + 1) < argc){
-            uid_map_file = argv[++i];
-        }else if(!arg.empty() && arg.front() == '-'){
-            std::cerr << "Unknown option: " << arg << std::endl;
-            print_usage(argv[0]);
-            return 1;
-        }else{
-            inputs.emplace_back(arg);
-        }
-        ++i;
-    }
+    class ArgumentHandler arger;
+    arger.examples = { { "-p 'ANON001' -n 'Anonymous' -s 'STUDY01' -o /tmp/output /tmp/input/",
+                         "De-identify all files in /tmp/input/ and write to /tmp/output/." },
+                       { "-p 'ANON001' -n 'Anonymous' -s 'STUDY01' -m /tmp/uid_map.txt"
+                         " -o /tmp/output file1.dcm file2.dcm",
+                         "De-identify specific files, persisting UID mappings for cross-invocation consistency." }
+                     };
+    arger.description = "A DICOM de-identification tool following DICOM Supplement 142.";
+
+    arger.default_callback = [](int, const std::string &optarg) -> void {
+        YLOGERR("Unrecognized option with argument: '" << optarg << "'");
+    };
+    arger.optionless_callback = [&](const std::string &optarg) -> void {
+        inputs.emplace_back(optarg);
+    };
+
+    arger.push_back( ygor_arg_handlr_t(0, 'o', "output-dir", true, "/tmp/output",
+      "Output directory for de-identified files.",
+      [&](const std::string &optarg) -> void {
+        output_dir = optarg;
+      })
+    );
+
+    arger.push_back( ygor_arg_handlr_t(1, 'p', "patient-id", true, "ANON001",
+      "New patient ID (required).",
+      [&](const std::string &optarg) -> void {
+        patient_id = optarg;
+      })
+    );
+
+    arger.push_back( ygor_arg_handlr_t(2, 'n', "patient-name", true, "Anonymous",
+      "New patient name (required).",
+      [&](const std::string &optarg) -> void {
+        patient_name = optarg;
+      })
+    );
+
+    arger.push_back( ygor_arg_handlr_t(3, 's', "study-id", true, "STUDY01",
+      "New study ID (required).",
+      [&](const std::string &optarg) -> void {
+        study_id = optarg;
+      })
+    );
+
+    arger.push_back( ygor_arg_handlr_t(4, 't', "study-description", true, "De-identified Study",
+      "New study description (if omitted, tag is erased).",
+      [&](const std::string &optarg) -> void {
+        params.study_description = optarg;
+      })
+    );
+
+    arger.push_back( ygor_arg_handlr_t(5, 'e', "series-description", true, "De-identified Series",
+      "New series description (if omitted, tag is erased).",
+      [&](const std::string &optarg) -> void {
+        params.series_description = optarg;
+      })
+    );
+
+    arger.push_back( ygor_arg_handlr_t(6, 'm', "uid-map", true, "/tmp/uid_map.txt",
+      "UID mapping file (loaded and saved for cross-invocation consistency).",
+      [&](const std::string &optarg) -> void {
+        uid_map_file = optarg;
+      })
+    );
+
+    arger.Launch(argc, argv);
 
     // Validate required parameters.
     if(patient_id.empty()){
-        std::cerr << "Error: Patient ID (-p) is required." << std::endl;
+        YLOGERR("Patient ID (-p) is required");
         return 1;
     }
     if(patient_name.empty()){
-        std::cerr << "Error: Patient name (-n) is required." << std::endl;
+        YLOGERR("Patient name (-n) is required");
+        return 1;
+    }
+    if(study_id.empty()){
+        YLOGERR("Study ID (-s) is required");
         return 1;
     }
     if(output_dir.empty()){
-        std::cerr << "Error: Output directory (-o) is required." << std::endl;
+        YLOGERR("Output directory (-o) is required");
         return 1;
     }
     if(inputs.empty()){
-        std::cerr << "Error: No input files or directories specified." << std::endl;
+        YLOGERR("No input files or directories specified");
         return 1;
     }
 
     params.patient_id = patient_id;
     params.patient_name = patient_name;
+    params.study_id = study_id;
 
     // Create the output directory if it does not exist.
     try{
         fs::create_directories(output_dir);
     }catch(const std::exception &e){
-        std::cerr << "Error creating output directory: " << e.what() << std::endl;
+        YLOGERR("Error creating output directory: " << e.what());
         return 1;
     }
 
@@ -192,7 +203,7 @@ int main(int argc, char **argv){
     // Collect all input files.
     const auto input_files = collect_input_files(inputs);
     if(input_files.empty()){
-        std::cerr << "Error: No input files found." << std::endl;
+        YLOGERR("No input files found");
         return 1;
     }
 
@@ -227,7 +238,7 @@ int main(int argc, char **argv){
             const auto *ts_node = root.find(0x0002, 0x0010);
             if(ts_node != nullptr){
                 std::string ts_uid = ts_node->val;
-                while(!ts_uid.empty() && ts_uid.back() == '\0') ts_uid.pop_back();
+                while(!ts_uid.empty() && (ts_uid.back() == '\0' || ts_uid.back() == ' ')) ts_uid.pop_back();
                 if(ts_uid == "1.2.840.10008.1.2"){
                     enc = DCMA_DICOM::Encoding::ILE; // Implicit VR Little Endian.
                 }else{

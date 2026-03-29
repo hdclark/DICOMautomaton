@@ -134,7 +134,10 @@ struct Node {
     std::string value_str() const;
 
     // Validate the tree structure as DICOM-conformant. Returns true if the tree is valid.
-    bool validate(Encoding enc = Encoding::ELE) const;
+    // If dictionaries are provided, each tag's VR is compared against the dictionary VR
+    // and a warning is emitted when they differ.
+    bool validate(Encoding enc = Encoding::ELE,
+                  const std::vector<const DICOMDictionary*> &dicts = {}) const;
 
 };
 
@@ -155,10 +158,10 @@ struct DeidentifyParams {
     // Required parameters.
     std::string patient_id;    // New patient ID to assign.
     std::string patient_name;  // New patient name to assign.
+    std::string study_id;      // New study ID to assign.
 
     // Optional parameters -- if provided (non-empty), override the tag in the output;
     // if not provided, the tag is erased.
-    std::optional<std::string> study_id;
     std::optional<std::string> study_description;
     std::optional<std::string> series_description;
 };

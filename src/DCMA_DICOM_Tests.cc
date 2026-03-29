@@ -475,6 +475,7 @@ TEST_CASE("DCMA_DICOM deidentify erases PHI tags"){
     DCMA_DICOM::DeidentifyParams params;
     params.patient_id = "ANON001";
     params.patient_name = "Anonymous";
+    params.study_id = "STUDY01";
 
     DCMA_DICOM::uid_mapping_t uid_map;
     DCMA_DICOM::deidentify(root, params, uid_map);
@@ -490,6 +491,7 @@ TEST_CASE("DCMA_DICOM deidentify replaces patient info"){
     DCMA_DICOM::DeidentifyParams params;
     params.patient_id = "ANON001";
     params.patient_name = "Anonymous";
+    params.study_id = "STUDY01";
 
     DCMA_DICOM::uid_mapping_t uid_map;
     DCMA_DICOM::deidentify(root, params, uid_map);
@@ -509,6 +511,7 @@ TEST_CASE("DCMA_DICOM deidentify anonymizes institution and physician"){
     DCMA_DICOM::DeidentifyParams params;
     params.patient_id = "ANON001";
     params.patient_name = "Anonymous";
+    params.study_id = "STUDY01";
 
     DCMA_DICOM::uid_mapping_t uid_map;
     DCMA_DICOM::deidentify(root, params, uid_map);
@@ -528,6 +531,7 @@ TEST_CASE("DCMA_DICOM deidentify clears patient sex"){
     DCMA_DICOM::DeidentifyParams params;
     params.patient_id = "ANON001";
     params.patient_name = "Anonymous";
+    params.study_id = "STUDY01";
 
     DCMA_DICOM::uid_mapping_t uid_map;
     DCMA_DICOM::deidentify(root, params, uid_map);
@@ -543,6 +547,7 @@ TEST_CASE("DCMA_DICOM deidentify remaps UIDs consistently"){
     DCMA_DICOM::DeidentifyParams params;
     params.patient_id = "ANON001";
     params.patient_name = "Anonymous";
+    params.study_id = "STUDY01";
 
     DCMA_DICOM::uid_mapping_t uid_map;
     DCMA_DICOM::deidentify(root, params, uid_map);
@@ -576,6 +581,7 @@ TEST_CASE("DCMA_DICOM deidentify uid_map is reused across invocations"){
     DCMA_DICOM::DeidentifyParams params;
     params.patient_id = "ANON001";
     params.patient_name = "Anonymous";
+    params.study_id = "STUDY01";
 
     DCMA_DICOM::uid_mapping_t uid_map;
 
@@ -597,6 +603,7 @@ TEST_CASE("DCMA_DICOM deidentify handles optional study/series descriptions"){
     DCMA_DICOM::DeidentifyParams params;
     params.patient_id = "ANON001";
     params.patient_name = "Anonymous";
+    params.study_id = "STUDY01";
     params.study_description = "New Study Desc";
     params.series_description = "New Series Desc";
 
@@ -618,6 +625,7 @@ TEST_CASE("DCMA_DICOM deidentify erases descriptions when not provided"){
     DCMA_DICOM::DeidentifyParams params;
     params.patient_id = "ANON001";
     params.patient_name = "Anonymous";
+    params.study_id = "STUDY01";
     // study_description and series_description are not set -- tags should be erased.
 
     DCMA_DICOM::uid_mapping_t uid_map;
@@ -634,6 +642,7 @@ TEST_CASE("DCMA_DICOM deidentify preserves modality"){
     DCMA_DICOM::DeidentifyParams params;
     params.patient_id = "ANON001";
     params.patient_name = "Anonymous";
+    params.study_id = "STUDY01";
 
     DCMA_DICOM::uid_mapping_t uid_map;
     DCMA_DICOM::deidentify(root, params, uid_map);
@@ -644,7 +653,7 @@ TEST_CASE("DCMA_DICOM deidentify preserves modality"){
     CHECK(modality->val == "CT");
 }
 
-TEST_CASE("DCMA_DICOM deidentify optional study_id replaces tag"){
+TEST_CASE("DCMA_DICOM deidentify replaces StudyID with required value"){
     auto root = create_dicom_for_deident();
     root.emplace_child_node({{0x0020, 0x0010}, "SH", "ORIG_STUDY"});  // StudyID.
 
@@ -659,4 +668,37 @@ TEST_CASE("DCMA_DICOM deidentify optional study_id replaces tag"){
     const auto *study_id = root.find(0x0020, 0x0010);
     REQUIRE(study_id != nullptr);
     CHECK(study_id->val == "NEW_STUDY_ID");
+}
+
+TEST_CASE("DCMA_DICOM deidentify inserts StudyID even when absent"){
+    auto root = create_dicom_for_deident();
+    // No StudyID tag present initially.
+    CHECK(root.find(0x0020, 0x0010) == nullptr);
+
+    DCMA_DICOM::DeidentifyParams params;
+    params.patient_id = "ANON001";
+    params.patient_name = "Anonymous";
+    params.study_id = "INSERTED_ID";
+
+    DCMA_DICOM::uid_mapping_t uid_map;
+    DCMA_DICOM::deidentify(root, params, uid_map);
+
+    const auto *study_id = root.find(0x0020, 0x0010);
+    REQUIRE(study_id != nullptr);
+    CHECK(study_id->val == "INSERTED_ID");
+}
+
+TEST_CASE("DCMA_DICOM validate warns on VR mismatch with dictionary"){
+    DCMA_DICOM::Node root;
+    root.emplace_child_node({{0x0002, 0x0001}, "OB", std::string("\x00\x01", 2)});
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.1"});
+    // Modality has dictionary VR of "CS" -- use "LO" to trigger a mismatch warning.
+    root.emplace_child_node({{0x0008, 0x0060}, "LO", "CT"});
+
+    const auto &default_dict = DCMA_DICOM::get_default_dictionary();
+    std::vector<const DCMA_DICOM::DICOMDictionary*> dicts = { &default_dict };
+
+    // Validate should still succeed (it's a warning, not an error),
+    // but should emit a warning about the VR mismatch.
+    CHECK(root.validate(DCMA_DICOM::Encoding::ELE, dicts));
 }

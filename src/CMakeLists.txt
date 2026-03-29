@@ -805,6 +805,7 @@ target_link_libraries(dicomautomaton_dump
 add_executable(dicomautomaton_deidentify
     DICOMautomaton_Deidentify.cc
     $<TARGET_OBJECTS:DCMA_DICOM_obj>
+    $<TARGET_OBJECTS:Metadata_obj>
 )
 target_link_libraries(dicomautomaton_deidentify
     ygor
