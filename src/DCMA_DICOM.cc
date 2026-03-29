@@ -1555,24 +1555,27 @@ std::string Node::value_str() const {
 
 bool Node::validate(Encoding enc,
                     const std::vector<const DICOMDictionary*> &dicts) const {
-    // Check each tag's VR against the dictionary VR and warn about mismatches.
-    std::function<void(const Node &)> check_vrs = [&](const Node &n) -> void {
-        if(!n.VR.empty() && n.VR != "SQ" && n.VR != "MULTI"){
-            const auto dict_vr = lookup_VR(n.key.group, n.key.tag, dicts);
-            if(!dict_vr.empty() && dict_vr != n.VR){
-                YLOGWARN("Tag (" << std::hex << std::setfill('0')
-                         << std::setw(4) << n.key.group << ","
-                         << std::setw(4) << n.key.tag << std::dec
-                         << ") has VR '" << n.VR
-                         << "' but dictionary specifies '" << dict_vr << "'");
+    // Check each tag's VR against the dictionary VR and warn about mismatches,
+    // but only if at least one dictionary has been explicitly provided.
+    if(!dicts.empty()){
+        std::function<void(const Node &)> check_vrs = [&](const Node &n) -> void {
+            if(!n.VR.empty() && n.VR != "SQ" && n.VR != "MULTI"){
+                const auto dict_vr = lookup_VR(n.key.group, n.key.tag, dicts);
+                if(!dict_vr.empty() && dict_vr != n.VR){
+                    YLOGWARN("Tag (" << std::hex << std::setfill('0')
+                             << std::setw(4) << n.key.group << ","
+                             << std::setw(4) << n.key.tag << std::dec
+                             << ") has VR '" << n.VR
+                             << "' but dictionary specifies '" << dict_vr << "'");
+                }
             }
-        }
-        for(const auto &child : n.children){
+            for(const auto &child : n.children){
+                check_vrs(child);
+            }
+        };
+        for(const auto &child : this->children){
             check_vrs(child);
         }
-    };
-    for(const auto &child : this->children){
-        check_vrs(child);
     }
 
     // Validate by attempting to emit the tree and checking for exceptions.
