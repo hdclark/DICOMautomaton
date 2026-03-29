@@ -210,6 +210,19 @@ std::optional<PixelDataDesc> get_pixel_data_desc(const Node &root){
         YLOGWARN("HighBit (" << desc.high_bit << ") is not consistent with BitsAllocated (" << desc.bits_allocated << ")");
         return std::nullopt;
     }
+    if(desc.bits_stored == 0){
+        YLOGWARN("BitsStored is zero; at least 1 bit must be stored");
+        return std::nullopt;
+    }
+    {
+        const auto hb_plus1 = static_cast<unsigned int>(desc.high_bit) + 1u;
+        const auto bs_u     = static_cast<unsigned int>(desc.bits_stored);
+        if(hb_plus1 < bs_u){
+            YLOGWARN("HighBit (" << desc.high_bit << ") is not consistent with BitsStored (" << desc.bits_stored
+                     << "): HighBit + 1 is less than BitsStored");
+            return std::nullopt;
+        }
+    }
     if(desc.rows == 0 || desc.columns == 0){
         YLOGWARN("Rows or Columns is zero");
         return std::nullopt;
