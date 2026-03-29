@@ -809,6 +809,7 @@ add_executable(dicomautomaton_deidentify
 )
 target_link_libraries(dicomautomaton_deidentify
     ygor
+    "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
     m
     Threads::Threads
 )
