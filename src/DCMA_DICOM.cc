@@ -11,6 +11,7 @@
 #include <sstream>
 #include <list>
 #include <map>
+#include <array>
 #include <vector>
 #include <tuple>
 #include <functional>
@@ -24,7 +25,9 @@
 #include "YgorMisc.h"
 #include "YgorLog.h"
 #include "YgorString.h"
+#include "YgorTime.h"
 
+#include "Metadata.h"
 #include "DCMA_DICOM.h"
 
 namespace DCMA_DICOM {
@@ -1496,6 +1499,33 @@ bool Node::replace(uint16_t group, uint16_t tag, Node replacement){
     return false;
 }
 
+bool Node::remove(uint16_t group, uint16_t tag){
+    for(auto it = this->children.begin(); it != this->children.end(); ++it){
+        if(it->key.group == group && it->key.tag == tag){
+            this->children.erase(it);
+            return true;
+        }
+        if(it->remove(group, tag)){
+            return true;
+        }
+    }
+    return false;
+}
+
+int64_t Node::remove_all(uint16_t group, uint16_t tag){
+    int64_t count = 0;
+    for(auto it = this->children.begin(); it != this->children.end(); ){
+        if(it->key.group == group && it->key.tag == tag){
+            it = this->children.erase(it);
+            ++count;
+        }else{
+            count += it->remove_all(group, tag);
+            ++it;
+        }
+    }
+    return count;
+}
+
 
 std::string Node::value_str() const {
     if(vr_is_text(this->VR)){
@@ -1523,7 +1553,31 @@ std::string Node::value_str() const {
 }
 
 
-bool Node::validate(Encoding enc) const {
+bool Node::validate(Encoding enc,
+                    const std::vector<const DICOMDictionary*> &dicts) const {
+    // Check each tag's VR against the dictionary VR and warn about mismatches,
+    // but only if at least one dictionary has been explicitly provided.
+    if(!dicts.empty()){
+        std::function<void(const Node &)> check_vrs = [&](const Node &n) -> void {
+            if(!n.VR.empty() && n.VR != "SQ" && n.VR != "MULTI"){
+                const auto dict_vr = lookup_VR(n.key.group, n.key.tag, dicts);
+                if(!dict_vr.empty() && dict_vr != n.VR){
+                    YLOGWARN("Tag (" << std::hex << std::setfill('0')
+                             << std::setw(4) << n.key.group << ","
+                             << std::setw(4) << n.key.tag << std::dec
+                             << ") has VR '" << n.VR
+                             << "' but dictionary specifies '" << dict_vr << "'");
+                }
+            }
+            for(const auto &child : n.children){
+                check_vrs(child);
+            }
+        };
+        for(const auto &child : this->children){
+            check_vrs(child);
+        }
+    }
+
     // Validate by attempting to emit the tree and checking for exceptions.
     try{
         std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
@@ -1535,5 +1589,426 @@ bool Node::validate(Encoding enc) const {
 }
 
 
-} // namespace DCMA_DICOM
+// Helper: strip trailing null and space padding from a DICOM value string.
+static std::string strip_trailing_padding(const std::string &s){
+    std::string out = s;
+    while(!out.empty() && (out.back() == '\0' || out.back() == ' ')) out.pop_back();
+    return out;
+}
 
+// Helper: look up or create a UID mapping. If the original UID is already in the map,
+// return the mapped value; otherwise generate a new UID, store it, and return it.
+static std::string map_uid(const std::string &original, uid_mapping_t &uid_map){
+    const auto key = strip_trailing_padding(original);
+
+    if(key.empty()) return key;
+
+    auto it = uid_map.find(key);
+    if(it != uid_map.end()){
+        return it->second;
+    }
+    auto new_uid = Generate_Random_UID(60);
+    uid_map[key] = new_uid;
+    return new_uid;
+}
+
+// Helper: set the value of all nodes matching (group, tag) anywhere in the tree.
+// The existing VR of each node is preserved. If no matching node exists, no action is taken.
+static void set_tag_value_all(Node &root, uint16_t group, uint16_t tag,
+                              const std::string &new_val){
+    auto nodes = root.find_all(group, tag);
+    for(auto *n : nodes){
+        n->val = new_val;
+    }
+}
+
+// Helper: remap all UID-valued nodes matching (group, tag) using the uid mapping.
+static void remap_uid_tag(Node &root, uint16_t group, uint16_t tag, uid_mapping_t &uid_map){
+    auto nodes = root.find_all(group, tag);
+    for(auto *n : nodes){
+        const auto old_val = strip_trailing_padding(n->val);
+        if(!old_val.empty()){
+            n->val = map_uid(old_val, uid_map);
+        }
+    }
+}
+
+// Tags to erase per DICOM Supplement 142 (may contain PHI).
+static constexpr std::pair<uint16_t, uint16_t> tags_to_erase[] = {
+    {0x0000, 0x1000}, // Affected SOP Instance UID
+    {0x0008, 0x0024}, // Overlay Date
+    {0x0008, 0x0025}, // Curve Date
+    {0x0008, 0x0034}, // Overlay Time
+    {0x0008, 0x0035}, // Curve Time
+    {0x0008, 0x0081}, // Institution Address
+    {0x0008, 0x0092}, // Referring Physician's Address
+    {0x0008, 0x0094}, // Referring Physician's Telephone Numbers
+    {0x0008, 0x0096}, // Referring Physician's Identification Sequence
+    {0x0008, 0x0201}, // Timezone Offset From UTC
+    {0x0008, 0x1040}, // Institutional Department Name
+    {0x0008, 0x1048}, // Physician(s) of Record
+    {0x0008, 0x1049}, // Physician(s) of Record Identification Sequence
+    {0x0008, 0x1050}, // Performing Physicians' Name
+    {0x0008, 0x1052}, // Performing Physician Identification Sequence
+    {0x0008, 0x1060}, // Name of Physician(s) Reading Study
+    {0x0008, 0x1062}, // Physician(s) Reading Study Identification Sequence
+    {0x0008, 0x1072}, // Operators' Identification Sequence
+    {0x0008, 0x0082}, // Institution Code Sequence
+    {0x0008, 0x1080}, // Admitting Diagnoses Description
+    {0x0008, 0x1084}, // Admitting Diagnoses Code Sequence
+    {0x0008, 0x1110}, // Referenced Study Sequence
+    {0x0008, 0x1111}, // Referenced Performed Procedure Step Sequence
+    {0x0008, 0x1120}, // Referenced Patient Sequence
+    {0x0008, 0x1140}, // Referenced Image Sequence
+    {0x0008, 0x2111}, // Derivation Description
+    {0x0008, 0x2112}, // Source Image Sequence
+    {0x0008, 0x1032}, // Procedure Code Sequence
+    {0x0008, 0x4000}, // Identifying Comments
+
+    {0x0010, 0x0021}, // Issuer of Patient ID
+    {0x0010, 0x0032}, // Patient's Birth Time
+    {0x0010, 0x0050}, // Patient's Insurance Plan Code Sequence
+    {0x0010, 0x0101}, // Patient's Primary Language Code Sequence
+    {0x0010, 0x0102}, // Patient's Primary Language Modifier Code Sequence
+    {0x0010, 0x1000}, // Other Patient IDs
+    {0x0010, 0x1001}, // Other Patient Names
+    {0x0010, 0x1002}, // Other Patient IDs Sequence
+    {0x0010, 0x1005}, // Patient's Birth Name
+    {0x0010, 0x1010}, // Patient's Age
+    {0x0010, 0x1020}, // Patient's Size
+    {0x0010, 0x1030}, // Patient's Weight
+    {0x0010, 0x1040}, // Patient Address
+    {0x0010, 0x1050}, // Insurance Plan Identification
+    {0x0010, 0x1060}, // Patient's Mother's Birth Name
+    {0x0010, 0x1080}, // Military Rank
+    {0x0010, 0x1081}, // Branch of Service
+    {0x0010, 0x1090}, // Medical Record Locator
+    {0x0010, 0x2000}, // Medical Alerts
+    {0x0010, 0x2110}, // Allergies
+    {0x0010, 0x2150}, // Country of Residence
+    {0x0010, 0x2152}, // Region of Residence
+    {0x0010, 0x2154}, // Patient's Telephone Numbers
+    {0x0010, 0x2160}, // Ethnic Group
+    {0x0010, 0x2180}, // Occupation
+    {0x0010, 0x21A0}, // Smoking Status
+    {0x0010, 0x21B0}, // Additional Patient's History
+    {0x0010, 0x21C0}, // Pregnancy Status
+    {0x0010, 0x21D0}, // Last Menstrual Date
+    {0x0010, 0x21F0}, // Patient's Religious Preference
+    {0x0010, 0x2297}, // Responsible Person
+    {0x0010, 0x2299}, // Responsible Organization
+    {0x0010, 0x4000}, // Patient Comments
+
+    {0x0012, 0x0062}, // Patient Identity Removed
+    {0x0012, 0x0063}, // Deidentification Method
+
+    {0x0018, 0x1004}, // Plate ID
+    {0x0018, 0x1005}, // Generator ID
+    {0x0018, 0x1007}, // Cassette ID
+    {0x0018, 0x1008}, // Gantry ID
+    {0x0018, 0x4000}, // Acquisition Comments
+    {0x0018, 0x9424}, // Acquisition Protocol Description
+    {0x0018, 0xA003}, // Contribution Description
+
+    {0x0020, 0x3401}, // Modifying Device ID
+    {0x0020, 0x3404}, // Modifying Device Manufacturer
+    {0x0020, 0x3406}, // Modified Image Description
+    {0x0020, 0x4000}, // Image Comments
+    {0x0020, 0x9158}, // Frame Comments
+
+    {0x0028, 0x4000}, // Image Presentation Comments
+
+    {0x0032, 0x0012}, // Study ID Issuer
+    {0x0032, 0x1020}, // Scheduled Study Location
+    {0x0032, 0x1021}, // Scheduled Study Location AE Title
+    {0x0032, 0x1030}, // Reason for Study
+    {0x0032, 0x1032}, // Requesting Physician
+    {0x0032, 0x1033}, // Requesting Service
+    {0x0032, 0x1070}, // Requested Contrast Agent
+    {0x0032, 0x4000}, // Study Comments
+
+    {0x0038, 0x0004}, // Referenced Patient Alias Sequence
+    {0x0038, 0x0010}, // Admission ID
+    {0x0038, 0x0011}, // Issuer of Admission ID
+    {0x0038, 0x001E}, // Scheduled Patient Institution Residence
+    {0x0038, 0x0020}, // Admitting Date
+    {0x0038, 0x0021}, // Admitting Time
+    {0x0038, 0x0040}, // Discharge Diagnosis Description
+    {0x0038, 0x0050}, // Special Needs
+    {0x0038, 0x0060}, // Service Episode ID
+    {0x0038, 0x0061}, // Issuer of Service Episode ID
+    {0x0038, 0x0062}, // Service Episode Description
+    {0x0038, 0x0300}, // Current Patient Location
+    {0x0038, 0x0400}, // Patient's Institution Residence
+    {0x0038, 0x0500}, // Patient State
+    {0x0038, 0x4000}, // Visit Comments
+
+    {0x0040, 0x0001}, // Scheduled Station AE Title
+    {0x0040, 0x0002}, // Scheduled Procedure Step Start Date
+    {0x0040, 0x0003}, // Scheduled Procedure Step Start Time
+    {0x0040, 0x0004}, // Scheduled Procedure Step End Date
+    {0x0040, 0x0005}, // Scheduled Procedure Step End Time
+    {0x0040, 0x0006}, // Scheduled Performing Physician Name
+    {0x0040, 0x0007}, // Scheduled Procedure Step Description
+    {0x0040, 0x000B}, // Scheduled Performing Physician Identification Sequence
+    {0x0040, 0x0010}, // Scheduled Station Name
+    {0x0040, 0x0011}, // Scheduled Procedure Step Location
+    {0x0040, 0x0012}, // Pre-Medication
+    {0x0040, 0x0241}, // Performed Station AE Title
+    {0x0040, 0x0242}, // Performed Station Name
+    {0x0040, 0x0243}, // Performed Location
+    {0x0040, 0x0250}, // Performed Procedure Step End Date
+    {0x0040, 0x0251}, // Performed Procedure Step End Time
+    {0x0040, 0x0275}, // Request Attributes Sequence
+    {0x0040, 0x0280}, // Comments on the Performed Procedure Step
+    {0x0040, 0x0555}, // Acquisition Context Sequence
+    {0x0040, 0x1001}, // Requested Procedure ID
+    {0x0040, 0x1004}, // Patient Transport Arrangements
+    {0x0040, 0x1005}, // Requested Procedure Location
+    {0x0040, 0x1010}, // Names of Intended Recipient of Results
+    {0x0040, 0x1011}, // Intended Recipients of Results Identification Sequence
+    {0x0040, 0x1101}, // Person Identification Code Sequence
+    {0x0040, 0x1102}, // Person Address
+    {0x0040, 0x1103}, // Person Telephone Numbers
+    {0x0040, 0x1400}, // Requested Procedure Comments
+    {0x0040, 0x2001}, // Reason for the Imaging Service Request
+    {0x0040, 0x2008}, // Order Entered By
+    {0x0040, 0x2009}, // Order Enterer Location
+    {0x0040, 0x2010}, // Order Callback Phone Number
+    {0x0040, 0x2400}, // Imaging Service Request Comments
+    {0x0040, 0x3001}, // Confidentiality Constraint on Patient Data Description
+    {0x0040, 0x4025}, // Scheduled Station Name Code Sequence
+    {0x0040, 0x4027}, // Scheduled Station Geographic Location Code Sequence
+    {0x0040, 0x4028}, // Performed Station Name Code Sequence
+    {0x0040, 0x4030}, // Performed Station Geographic Location Code Sequence
+    {0x0040, 0x4034}, // Scheduled Human Performers Sequence
+    {0x0040, 0x4035}, // Actual Human Performers Sequence
+    {0x0040, 0x4036}, // Human Performers Organization
+    {0x0040, 0x4037}, // Human Performers Name
+    {0x0040, 0xA027}, // Verifying Organization
+    {0x0040, 0xA073}, // Verifying Observer Sequence
+    {0x0040, 0xA078}, // Author Observer Sequence
+    {0x0040, 0xA07A}, // Participant Sequence
+    {0x0040, 0xA07C}, // Custodial Organization Sequence
+    {0x0040, 0xA088}, // Verifying Observer Identification Code Sequence
+    {0x0040, 0xA730}, // Content Sequence
+
+    {0x0070, 0x0001}, // Graphic Annotation Sequence
+    {0x0070, 0x0086}, // Content Creator's Identification Code Sequence
+
+    {0x0088, 0x0200}, // Icon Image Sequence
+    {0x0088, 0x0904}, // Topic Title
+    {0x0088, 0x0906}, // Topic Subject
+    {0x0088, 0x0910}, // Topic Author
+    {0x0088, 0x0912}, // Topic Keywords
+
+    {0x0400, 0x0100}, // Digital Signature UID
+    {0x0400, 0x0402}, // Referenced Digital Signature Sequence
+    {0x0400, 0x0403}, // Referenced SOP Instance MAC Sequence
+    {0x0400, 0x0404}, // MAC
+    {0x0400, 0x0500}, // Encrypted Attributes Sequence
+    {0x0400, 0x0550}, // Modified Attributes Sequence
+    {0x0400, 0x0561}, // Original Attributes Sequence
+
+    {0x2030, 0x0020}, // Text String
+
+    {0x4000, 0x0010}, // Arbitrary
+    {0x4000, 0x4000}, // Text Comments
+
+    {0x4008, 0x0042}, // Results ID Issuer
+    {0x4008, 0x0102}, // Interpretation Recorder
+    {0x4008, 0x010A}, // Interpretation Transcriber
+    {0x4008, 0x010B}, // Interpretation Text
+    {0x4008, 0x010C}, // Interpretation Author
+    {0x4008, 0x0111}, // Interpretation Approver Sequence
+    {0x4008, 0x0114}, // Physician Approving Interpretation
+    {0x4008, 0x0115}, // Interpretation Diagnosis Description
+    {0x4008, 0x0118}, // Results Distribution List Sequence
+    {0x4008, 0x0119}, // Distribution Name
+    {0x4008, 0x011A}, // Distribution Address
+    {0x4008, 0x0202}, // Interpretation ID Issuer
+    {0x4008, 0x0300}, // Impressions
+    {0x4008, 0x4000}, // Results Comments
+
+    {0xFFFA, 0xFFFA}, // Digital Signatures Sequence
+    {0xFFFC, 0xFFFC}, // Data Set Trailing Padding
+};
+
+// UID tags to remap during de-identification.
+static constexpr std::pair<uint16_t, uint16_t> uid_tags_to_remap[] = {
+    {0x0002, 0x0003}, // Media Storage SOP Instance UID
+    {0x0008, 0x0014}, // Instance Creator UID
+    {0x0008, 0x0018}, // SOP Instance UID
+    {0x0008, 0x0058}, // Failed SOP Instance UID List
+    {0x0008, 0x010D}, // Context Group Extension Creator UID
+    {0x0008, 0x1155}, // Referenced SOP Instance UID
+    {0x0008, 0x1195}, // Transaction UID
+    {0x0008, 0x3010}, // Irradiation Event UID
+    {0x0008, 0x9123}, // Creator Version UID
+    {0x0000, 0x1001}, // Requested SOP Instance UID
+    {0x0004, 0x1511}, // Referenced SOP Instance UID in File
+    {0x0018, 0x1002}, // Device UID
+    {0x0020, 0x000D}, // Study Instance UID
+    {0x0020, 0x000E}, // Series Instance UID
+    {0x0020, 0x0052}, // Frame of Reference UID
+    {0x0020, 0x0200}, // Synchronization Frame of Reference UID
+    {0x0020, 0x9161}, // Concatenation UID
+    {0x0020, 0x9164}, // Dimension Organization UID
+    {0x0028, 0x1199}, // Palette Color Lookup Table UID
+    {0x0028, 0x1214}, // Large Palette Color Lookup Table UID
+    {0x003A, 0x0310}, // Multiplex Group UID
+    {0x0040, 0x4023}, // Referenced General Purpose Sched. Procedure Step Transaction UID
+    {0x0040, 0xA124}, // UID
+    {0x0040, 0xDB0C}, // Template Extension Organization UID
+    {0x0040, 0xDB0D}, // Template Extension Creator UID
+    {0x0070, 0x031A}, // Fiducial UID
+    {0x0088, 0x0140}, // Storage Media File-set UID
+    {0x3006, 0x0024}, // Referenced Frame of Reference UID
+    {0x3006, 0x00C2}, // Related Frame of Reference UID
+    {0x300A, 0x0013}, // Dose Reference UID
+};
+
+
+void deidentify(Node &root,
+                const DeidentifyParams &params,
+                uid_mapping_t &uid_map){
+
+    // Get today's date and time strings in DICOM format using Ygor's time_mark.
+    // Dump_as_postgres_string() returns "YYYY-MM-DD HH:MM:SS" (19 characters).
+    const auto datetime_str = time_mark().Dump_as_postgres_string();
+    // Convert to DICOM date format: YYYYMMDD
+    std::string todays_date = "19700101";
+    if(datetime_str.size() >= 10 && datetime_str[4] == '-' && datetime_str[7] == '-'){
+        todays_date = datetime_str.substr(0, 4) + datetime_str.substr(5, 2) + datetime_str.substr(8, 2);
+    }
+    // Convert to DICOM time format: HHMMSS
+    std::string todays_time = "000000";
+    if(datetime_str.size() >= 19 && datetime_str[13] == ':' && datetime_str[16] == ':'){
+        todays_time = datetime_str.substr(11, 2) + datetime_str.substr(14, 2) + datetime_str.substr(17, 2);
+    }
+    const std::string todays_datetime = todays_date + todays_time;
+
+    // -----------------------------------------------------------------------
+    // Step 1: Erase tags per DICOM Supplement 142.
+    //
+    // These tags may contain PHI and are removed entirely.
+    // -----------------------------------------------------------------------
+    for(const auto &t : tags_to_erase){
+        root.remove_all(t.first, t.second);
+    }
+
+    // Also erase overlay data and overlay comments (groups 0x6000-0x60FF).
+    for(uint16_t g = 0x6000; g <= 0x60FF; ++g){
+        root.remove_all(g, 0x3000); // Overlay Data
+        root.remove_all(g, 0x4000); // Overlay Comments
+    }
+
+    // Always erase study description, series description, and study ID.
+    // If the caller provides replacements, they will be added back below.
+    root.remove_all(0x0008, 0x1030); // Study Description
+    root.remove_all(0x0008, 0x103E); // Series Description
+    root.remove_all(0x0020, 0x0010); // Study ID
+
+    // -----------------------------------------------------------------------
+    // Step 2: Modify tags -- replace with de-identified values.
+    //
+    // These tags are replaced with anonymized/generic values if present.
+    // The existing VR from the parsed file is preserved.
+    // -----------------------------------------------------------------------
+
+    // Dates and times.
+    set_tag_value_all(root, 0x0008, 0x0020, todays_date);   // Study Date
+    set_tag_value_all(root, 0x0008, 0x0021, todays_date);   // Series Date
+    set_tag_value_all(root, 0x0008, 0x0022, todays_date);   // Acquisition Date
+    set_tag_value_all(root, 0x0008, 0x0023, todays_date);   // Content Date
+    set_tag_value_all(root, 0x0008, 0x0030, todays_time);   // Study Time
+    set_tag_value_all(root, 0x0008, 0x0031, todays_time);   // Series Time
+    set_tag_value_all(root, 0x0008, 0x0032, todays_time);   // Acquisition Time
+    set_tag_value_all(root, 0x0008, 0x0033, todays_time);   // Content Time
+    set_tag_value_all(root, 0x0008, 0x002A, todays_datetime); // Acquisition DateTime
+    set_tag_value_all(root, 0x0008, 0x0012, todays_date);   // Instance Creation Date
+    set_tag_value_all(root, 0x0008, 0x0013, todays_time);   // Instance Creation Time
+
+    set_tag_value_all(root, 0x0010, 0x0030, todays_date);   // Patient's Birth Date
+
+    set_tag_value_all(root, 0x0040, 0x0244, todays_date);   // Performed Procedure Step Start Date
+    set_tag_value_all(root, 0x0040, 0x0245, todays_time);   // Performed Procedure Step Start Time
+
+    set_tag_value_all(root, 0x300A, 0x0006, todays_date);   // RT Plan Date
+    set_tag_value_all(root, 0x300A, 0x0007, todays_time);   // RT Plan Time
+
+    // Anonymous replacement values for names, institutions, devices, etc.
+    const std::string anon = "Anonymous";
+
+    set_tag_value_all(root, 0x0008, 0x0070, anon);   // Manufacturer
+    set_tag_value_all(root, 0x0008, 0x0080, anon);   // Institution Name
+    set_tag_value_all(root, 0x0008, 0x0090, anon);   // Referring Physician's Name
+    set_tag_value_all(root, 0x0008, 0x1010, anon);   // Station Name
+    set_tag_value_all(root, 0x0008, 0x1070, anon);   // Operators' Name
+    set_tag_value_all(root, 0x0008, 0x1090, anon);   // Manufacturer Model Name
+    set_tag_value_all(root, 0x0018, 0x0010, anon);   // Contrast/Bolus Agent
+    set_tag_value_all(root, 0x0018, 0x1000, anon);   // Device Serial Number
+    set_tag_value_all(root, 0x0018, 0x1020, anon);   // Software Versions
+    set_tag_value_all(root, 0x0018, 0x1030, anon);   // Protocol Name
+    set_tag_value_all(root, 0x0018, 0x1400, anon);   // Acquisition Device Processing Description
+    set_tag_value_all(root, 0x0018, 0x700A, anon);   // Detector ID
+    set_tag_value_all(root, 0x0032, 0x1060, anon);   // Requested Procedure Description
+    set_tag_value_all(root, 0x0040, 0x0253, anon);   // Performed Procedure Step ID
+    set_tag_value_all(root, 0x0040, 0x0254, anon);   // Performed Procedure Step Description
+    set_tag_value_all(root, 0x0040, 0xA075, anon);   // Verifying Observer Name
+    set_tag_value_all(root, 0x0040, 0xA123, anon);   // Person Name
+    set_tag_value_all(root, 0x0070, 0x0084, anon);   // Content Creator's Name
+    set_tag_value_all(root, 0x0010, 0x2203, anon);   // Patient's Sex Neutered
+    set_tag_value_all(root, 0x300E, 0x0008, anon);   // Reviewer Name
+
+    // RT-specific anonymization.
+    set_tag_value_all(root, 0x3002, 0x0004, anon);   // RT Image Description
+    set_tag_value_all(root, 0x3002, 0x0020, anon);   // Radiation Machine Name
+    set_tag_value_all(root, 0x300A, 0x00B2, anon);   // Treatment Machine Name
+    set_tag_value_all(root, 0x300A, 0x0002, anon);   // RT Plan Label
+    set_tag_value_all(root, 0x300A, 0x0003, anon);   // RT Plan Name
+    set_tag_value_all(root, 0x300A, 0x0016, anon);   // Dose Reference Description
+
+    // Clear these tags (set to empty string).
+    set_tag_value_all(root, 0x0010, 0x0040, "");  // Patient's Sex
+    set_tag_value_all(root, 0x0008, 0x0050, "");  // Accession Number
+    set_tag_value_all(root, 0x0040, 0x2016, "");  // Placer Order Number
+    set_tag_value_all(root, 0x0040, 0x2017, "");  // Filler Order Number
+
+    // -----------------------------------------------------------------------
+    // Step 3: Set patient/study/series identification.
+    // -----------------------------------------------------------------------
+    set_tag_value_all(root, 0x0010, 0x0020, params.patient_id);    // Patient ID
+    set_tag_value_all(root, 0x0010, 0x0010, params.patient_name);  // Patient's Name
+    // Ensure Patient ID and Patient's Name tags exist exactly once at the root.
+    // First remove any existing root-level instances of these tags, then insert
+    // a single anonymized value for each.
+    root.remove_all(0x0010, 0x0020);
+    root.emplace_child_node({{0x0010, 0x0020}, "LO", params.patient_id});    // Patient ID
+    root.remove_all(0x0010, 0x0010);
+    root.emplace_child_node({{0x0010, 0x0010}, "PN", params.patient_name});  // Patient's Name
+
+    // Study ID is required and always inserted.
+    root.emplace_child_node({{0x0020, 0x0010}, "SH", params.study_id});  // Study ID
+
+    if(params.study_description.has_value()){
+        root.emplace_child_node({{0x0008, 0x1030}, "LO", params.study_description.value()});  // Study Description
+    }
+    if(params.series_description.has_value()){
+        root.emplace_child_node({{0x0008, 0x103E}, "LO", params.series_description.value()});  // Series Description
+    }
+
+    // -----------------------------------------------------------------------
+    // Step 4: Remap UIDs consistently.
+    //
+    // Each UID encountered in these tags is replaced with a mapped UID.
+    // If the same original UID appears again (in this file or future files),
+    // the same replacement UID is used.
+    // -----------------------------------------------------------------------
+    for(const auto &t : uid_tags_to_remap){
+        remap_uid_tag(root, t.first, t.second, uid_map);
+    }
+}
+
+
+} // namespace DCMA_DICOM

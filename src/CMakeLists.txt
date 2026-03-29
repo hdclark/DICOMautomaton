@@ -801,6 +801,18 @@ target_link_libraries(dicomautomaton_dump
     m
 )
 
+# Executable.
+add_executable(dicomautomaton_deidentify
+    DICOMautomaton_Deidentify.cc
+    $<TARGET_OBJECTS:DCMA_DICOM_obj>
+    $<TARGET_OBJECTS:Metadata_obj>
+)
+target_link_libraries(dicomautomaton_deidentify
+    ygor
+    m
+    Threads::Threads
+)
+
 # Installation info.
 # Note: The EXPORT keyword adds targets to the DICOMautomatonTargets export set,
 # which is written to disk by the install(EXPORT ...) call in the top-level
@@ -809,6 +821,7 @@ target_link_libraries(dicomautomaton_dump
 install(TARGETS dicomautomaton_dispatcher
                 dicomautomaton_bsarchive_convert
                 dicomautomaton_dump
+                dicomautomaton_deidentify
                 imebrashim
                 dialogshim
                 commonimgshim

@@ -10,6 +10,7 @@
 #include <map>
 #include <vector>
 #include <utility>
+#include <optional>
 
 namespace DCMA_DICOM {
 
@@ -118,6 +119,14 @@ struct Node {
     // Returns true if a replacement was made.
     bool replace(uint16_t group, uint16_t tag, Node replacement);
 
+    // Remove the first descendant node matching (group, tag).
+    // Returns true if a node was removed.
+    bool remove(uint16_t group, uint16_t tag);
+
+    // Remove all descendant nodes matching (group, tag).
+    // Returns the number of nodes removed.
+    int64_t remove_all(uint16_t group, uint16_t tag);
+
     // Get a human-readable string representation of the value, decoding binary VRs as needed.
     // For text VRs this returns the value directly; for binary numeric VRs (US, SS, UL, SL,
     // FL, FD, AT) it decodes to a string; for binary blob VRs (OB, OW, OF, OD, UN) it returns
@@ -125,7 +134,10 @@ struct Node {
     std::string value_str() const;
 
     // Validate the tree structure as DICOM-conformant. Returns true if the tree is valid.
-    bool validate(Encoding enc = Encoding::ELE) const;
+    // If dictionaries are provided, each tag's VR is compared against the dictionary VR
+    // and a warning is emitted when they differ.
+    bool validate(Encoding enc = Encoding::ELE,
+                  const std::vector<const DICOMDictionary*> &dicts = {}) const;
 
 };
 
@@ -133,6 +145,41 @@ struct Node {
 bool validate_VR_conformance( const std::string &VR,
                               const std::string &val,
                               DCMA_DICOM::Encoding enc = DCMA_DICOM::Encoding::ELE );
+
+//////////////
+// DICOM Clinical Trial De-Identification (based on DICOM Supplement 142).
+//
+// This function performs de-identification of a parsed DICOM Node tree, erasing or
+// replacing tags that may contain protected health information (PHI). UID tags are
+// consistently remapped using a caller-provided mapping that is updated in-place,
+// ensuring cross-file UID consistency.
+
+struct DeidentifyParams {
+    // Required parameters.
+    std::string patient_id;    // New patient ID to assign.
+    std::string patient_name;  // New patient name to assign.
+    std::string study_id;      // New study ID to assign.
+
+    // Optional parameters -- if provided (non-empty), override the tag in the output;
+    // if not provided, the tag is erased.
+    std::optional<std::string> study_description;
+    std::optional<std::string> series_description;
+};
+
+using uid_mapping_t = std::map<std::string, std::string>;
+
+// De-identify a DICOM Node tree according to DICOM Supplement 142.
+//
+// 'root' is the parsed DICOM tree (modified in-place).
+// 'params' specifies the replacement patient info and optional overrides.
+// 'uid_map' is a UID mapping (old UID -> new UID) that is consulted and updated.
+//   - If an existing UID is found in uid_map, the mapped value is reused.
+//   - If an existing UID is not in uid_map, a new UID is generated and stored.
+//   - The updated uid_map should be passed to subsequent invocations to ensure
+//     UID consistency across files.
+void deidentify(Node &root,
+                const DeidentifyParams &params,
+                uid_mapping_t &uid_map);
 
 
 } // namespace DCMA_DICOM
