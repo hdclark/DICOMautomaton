@@ -45,10 +45,11 @@ TransferSyntaxType classify_transfer_syntax(const std::string &ts_uid){
     }
 
     // Deflated Explicit VR Little Endian.
-    // The Data Set is deflated, but once inflated the pixel data is native.
+    // The Data Set is deflated on disk, but once inflated the pixel data is native/uncompressed.
+    // For pixel data decoding we therefore classify it as NativeUncompressed.
     // See DICOM PS3.5 2026b, Section A.5.
     if(ts == "1.2.840.10008.1.2.1.99"){
-        return TransferSyntaxType::EncapsulatedDeflated;
+        return TransferSyntaxType::NativeUncompressed;
     }
 
     // RLE Lossless. See DICOM PS3.5 2026b, Annex G.
