@@ -1586,12 +1586,17 @@ bool Node::validate(Encoding enc,
 }
 
 
+// Helper: strip trailing null and space padding from a DICOM value string.
+static std::string strip_trailing_padding(const std::string &s){
+    std::string out = s;
+    while(!out.empty() && (out.back() == '\0' || out.back() == ' ')) out.pop_back();
+    return out;
+}
+
 // Helper: look up or create a UID mapping. If the original UID is already in the map,
 // return the mapped value; otherwise generate a new UID, store it, and return it.
 static std::string map_uid(const std::string &original, uid_mapping_t &uid_map){
-    // Strip trailing null and space padding from UID values.
-    std::string key = original;
-    while(!key.empty() && (key.back() == '\0' || key.back() == ' ')) key.pop_back();
+    const auto key = strip_trailing_padding(original);
 
     if(key.empty()) return key;
 
@@ -1618,8 +1623,7 @@ static void set_tag_value_all(Node &root, uint16_t group, uint16_t tag,
 static void remap_uid_tag(Node &root, uint16_t group, uint16_t tag, uid_mapping_t &uid_map){
     auto nodes = root.find_all(group, tag);
     for(auto *n : nodes){
-        std::string old_val = n->val;
-        while(!old_val.empty() && (old_val.back() == '\0' || old_val.back() == ' ')) old_val.pop_back();
+        const auto old_val = strip_trailing_padding(n->val);
         if(!old_val.empty()){
             n->val = map_uid(old_val, uid_map);
         }
@@ -1867,15 +1871,16 @@ void deidentify(Node &root,
                 uid_mapping_t &uid_map){
 
     // Get today's date and time strings in DICOM format using Ygor's time_mark.
-    const auto datetime_str = time_mark().Dump_as_postgres_string(); // "YYYY-MM-DD HH:MM:SS"
+    // Dump_as_postgres_string() returns "YYYY-MM-DD HH:MM:SS" (19 characters).
+    const auto datetime_str = time_mark().Dump_as_postgres_string();
     // Convert to DICOM date format: YYYYMMDD
-    std::string todays_date;
-    if(datetime_str.size() >= 10){
+    std::string todays_date = "19700101";
+    if(datetime_str.size() >= 10 && datetime_str[4] == '-' && datetime_str[7] == '-'){
         todays_date = datetime_str.substr(0, 4) + datetime_str.substr(5, 2) + datetime_str.substr(8, 2);
     }
     // Convert to DICOM time format: HHMMSS
-    std::string todays_time;
-    if(datetime_str.size() >= 19){
+    std::string todays_time = "000000";
+    if(datetime_str.size() >= 19 && datetime_str[13] == ':' && datetime_str[16] == ':'){
         todays_time = datetime_str.substr(11, 2) + datetime_str.substr(14, 2) + datetime_str.substr(17, 2);
     }
     const std::string todays_datetime = todays_date + todays_time;

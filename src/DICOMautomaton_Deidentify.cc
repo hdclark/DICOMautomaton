@@ -237,6 +237,7 @@ int main(int argc, char **argv){
             DCMA_DICOM::Encoding enc = DCMA_DICOM::Encoding::ELE; // Default.
             const auto *ts_node = root.find(0x0002, 0x0010);
             if(ts_node != nullptr){
+                // Strip trailing NUL and space padding from the UID value.
                 std::string ts_uid = ts_node->val;
                 while(!ts_uid.empty() && (ts_uid.back() == '\0' || ts_uid.back() == ' ')) ts_uid.pop_back();
                 if(ts_uid == "1.2.840.10008.1.2"){
