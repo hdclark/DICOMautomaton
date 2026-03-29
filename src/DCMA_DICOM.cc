@@ -1977,9 +1977,12 @@ void deidentify(Node &root,
     // -----------------------------------------------------------------------
     set_tag_value_all(root, 0x0010, 0x0020, params.patient_id);    // Patient ID
     set_tag_value_all(root, 0x0010, 0x0010, params.patient_name);  // Patient's Name
-    // Ensure Patient ID and Patient's Name tags exist at the root, even if they
-    // were previously absent (set_tag_value_all is a no-op when tags are missing).
+    // Ensure Patient ID and Patient's Name tags exist exactly once at the root.
+    // First remove any existing root-level instances of these tags, then insert
+    // a single anonymized value for each.
+    root.remove_all({0x0010, 0x0020});
     root.emplace_child_node({{0x0010, 0x0020}, "LO", params.patient_id});    // Patient ID
+    root.remove_all({0x0010, 0x0010});
     root.emplace_child_node({{0x0010, 0x0010}, "PN", params.patient_name});  // Patient's Name
 
     // Study ID is required and always inserted.
