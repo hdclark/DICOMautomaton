@@ -136,14 +136,14 @@ int main(int argc, char **argv){
       })
     );
 
-    arger.push_back( ygor_arg_handlr_t(4, 't', "study-description", true, "De-identified Study",
+    arger.push_back( ygor_arg_handlr_t(4, 't', "study-description", true, "<optional>",
       "New study description (if omitted, tag is erased).",
       [&](const std::string &optarg) -> void {
         params.study_description = optarg;
       })
     );
 
-    arger.push_back( ygor_arg_handlr_t(5, 'e', "series-description", true, "De-identified Series",
+    arger.push_back( ygor_arg_handlr_t(5, 'e', "series-description", true, "<optional>",
       "New series description (if omitted, tag is erased).",
       [&](const std::string &optarg) -> void {
         params.series_description = optarg;

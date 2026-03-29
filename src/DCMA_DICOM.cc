@@ -1983,9 +1983,9 @@ void deidentify(Node &root,
     // Ensure Patient ID and Patient's Name tags exist exactly once at the root.
     // First remove any existing root-level instances of these tags, then insert
     // a single anonymized value for each.
-    root.remove_all({0x0010, 0x0020});
+    root.remove_all(0x0010, 0x0020);
     root.emplace_child_node({{0x0010, 0x0020}, "LO", params.patient_id});    // Patient ID
-    root.remove_all({0x0010, 0x0010});
+    root.remove_all(0x0010, 0x0010);
     root.emplace_child_node({{0x0010, 0x0010}, "PN", params.patient_name});  // Patient's Name
 
     // Study ID is required and always inserted.
@@ -2012,4 +2012,3 @@ void deidentify(Node &root,
 
 
 } // namespace DCMA_DICOM
-
