@@ -22,6 +22,7 @@
 #include <cctype>
 #include <chrono>
 #include <random>
+#include <ctime>
 
 #include "YgorMisc.h"
 #include "YgorLog.h"
