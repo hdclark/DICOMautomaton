@@ -51,10 +51,10 @@ fi
     # indicator (blank or "RET").
     #
     # Strategy:
-    # 1. Collapse each <tr>...</tr> block onto a single line.
-    # 2. Extract <td> contents.
-    # 3. Strip XML tags from each cell.
-    # 4. Parse the resulting fields.
+    # 1. Stream the XML line-by-line, tracking when we are inside a <tr> element.
+    # 2. While in a row, detect <td> elements and accumulate their text, stripping XML tags.
+    # 3. When the </tr> closing tag is seen, parse the accumulated cell text into fields.
+    # 4. Emit one dictionary line per completed row.
 
     # Use awk to process the XML. We track <tr> blocks and <td> elements
     # within them, accumulating stripped text for each cell. When we close a
