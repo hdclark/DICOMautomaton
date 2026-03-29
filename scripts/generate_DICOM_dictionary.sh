@@ -122,9 +122,13 @@ fi
         # Skip entries with empty VR or VM (e.g., header rows, separators).
         if (vr == "" || vm == "") { in_row = 0; next }
 
-        # Remove internal whitespace from VR/VM (e.g., "OB or OW" -> "OB/OW").
-        gsub(/ +or +/, "/", vr)
+        # Remove internal whitespace from VR/VM.
         gsub(/ /, "", vm)
+
+        # For multi-valued VR (e.g., "OB or OW", "US or SS"), take the first VR.
+        # The DICOM dictionary maps each tag to a single 2-character VR.
+        gsub(/ +or +.*/, "", vr)
+        gsub(/\/.*/, "", vr)
 
         # Remove any remaining parentheses or brackets from keyword.
         gsub(/[()]/, "", keyword)
@@ -174,6 +178,6 @@ fi
 
 # Report a summary to stderr.
 if [ "${OUTPUT}" != "/dev/stdout" ]; then
-    count=$(grep -c -v '^#' "${OUTPUT}" | grep -c -v '^$' || true)
+    count=$(grep -v '^#' "${OUTPUT}" | grep -c -v '^$' || true)
     echo "Wrote ${count} dictionary entries to ${OUTPUT}" >&2
 fi

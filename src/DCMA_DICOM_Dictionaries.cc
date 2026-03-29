@@ -361,7 +361,7 @@ std::string lookup_VM(uint16_t group, uint16_t element,
 
     const auto &def = get_default_dictionary();
     auto entry = def.find({group, element});
-    if(entry != def.end()) return entry->second.VM;
+    if(entry != def.end() && !entry->second.VM.empty()) return entry->second.VM;
 
     // Special case: group length tags always have VM "1".
     if(element == 0x0000) return "1";
@@ -380,7 +380,7 @@ std::string lookup_keyword(uint16_t group, uint16_t element,
 
     const auto &def = get_default_dictionary();
     auto entry = def.find({group, element});
-    if(entry != def.end()) return entry->second.keyword;
+    if(entry != def.end() && !entry->second.keyword.empty()) return entry->second.keyword;
 
     return "";
 }
