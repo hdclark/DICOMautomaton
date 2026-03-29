@@ -42,6 +42,9 @@ set_target_properties(  GIS_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 add_library(            Partition_Drover_obj OBJECT Partition_Drover.cc)
 set_target_properties(  Partition_Drover_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            DCMA_DICOM_Dictionaries_obj OBJECT DCMA_DICOM_Dictionaries.cc)
+set_target_properties(  DCMA_DICOM_Dictionaries_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            DCMA_DICOM_obj OBJECT DCMA_DICOM.cc)
 set_target_properties(  DCMA_DICOM_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -268,6 +271,7 @@ add_library (imebrashim
     $<TARGET_OBJECTS:Alignment_Rigid_obj>
     $<TARGET_OBJECTS:Alignment_Field_obj>
     $<TARGET_OBJECTS:Alignment_Demons_obj>
+    $<TARGET_OBJECTS:DCMA_DICOM_Dictionaries_obj>
     $<TARGET_OBJECTS:DCMA_DICOM_obj>
     imebra20121219/library/imebra/src/dataHandlerStringUT.cpp
     imebra20121219/library/imebra/src/data.cpp
@@ -804,6 +808,7 @@ target_link_libraries(dicomautomaton_dump
 # Executable.
 add_executable(dicomautomaton_deidentify
     DICOMautomaton_Deidentify.cc
+    $<TARGET_OBJECTS:DCMA_DICOM_Dictionaries_obj>
     $<TARGET_OBJECTS:DCMA_DICOM_obj>
     $<TARGET_OBJECTS:Metadata_obj>
 )
