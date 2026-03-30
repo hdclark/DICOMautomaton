@@ -27,8 +27,8 @@ macro(_dcma_find_or_fetch pkg_name git_url git_tag)
             string(TOLOWER "${pkg_name}" _dcma_fc_lower)
             if(NOT ${_dcma_fc_lower}_POPULATED)
                 FetchContent_Populate(${pkg_name})
-                add_subdirectory(${${_dcma_fc_lower}_SOURCE_DIR}
-                                 ${${_dcma_fc_lower}_BINARY_DIR})
+                add_subdirectory("${${_dcma_fc_lower}_SOURCE_DIR}"
+                                 "${${_dcma_fc_lower}_BINARY_DIR}")
             endif()
             unset(_dcma_fc_lower)
         else()
