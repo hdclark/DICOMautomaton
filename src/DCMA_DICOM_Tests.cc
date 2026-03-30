@@ -5,6 +5,7 @@
 // DCMA_DICOM_obj is linked into shared libraries which don't include doctest implementation.
 
 #include <cstdint>
+#include <cstring>
 #include <sstream>
 #include <string>
 #include <list>
@@ -14,6 +15,7 @@
 #include "doctest20251212/doctest.h"
 
 #include "DCMA_DICOM.h"
+#include "DCMA_DICOM_PixelData.h"
 
 
 // ============================================================================
@@ -845,4 +847,346 @@ TEST_CASE("DCMA_DICOM validate warns on VR mismatch with dictionary"){
     // Validate should still succeed (it's a warning, not an error),
     // but should emit a warning about the VR mismatch.
     CHECK(root.validate(DCMA_DICOM::Encoding::ELE, dicts));
+}
+
+
+// ============================================================================
+// Transfer syntax classification tests
+// ============================================================================
+
+TEST_CASE("DCMA_DICOM classify_transfer_syntax for native syntaxes"){
+    CHECK(DCMA_DICOM::classify_transfer_syntax("1.2.840.10008.1.2")
+          == DCMA_DICOM::TransferSyntaxType::NativeUncompressed);
+    CHECK(DCMA_DICOM::classify_transfer_syntax("1.2.840.10008.1.2.1")
+          == DCMA_DICOM::TransferSyntaxType::NativeUncompressed);
+    CHECK(DCMA_DICOM::classify_transfer_syntax("1.2.840.10008.1.2.2")
+          == DCMA_DICOM::TransferSyntaxType::NativeUncompressed);
+}
+
+TEST_CASE("DCMA_DICOM classify_transfer_syntax for encapsulated syntaxes"){
+    CHECK(DCMA_DICOM::classify_transfer_syntax("1.2.840.10008.1.2.4.50")
+          == DCMA_DICOM::TransferSyntaxType::EncapsulatedJPEG);
+    CHECK(DCMA_DICOM::classify_transfer_syntax("1.2.840.10008.1.2.4.70")
+          == DCMA_DICOM::TransferSyntaxType::EncapsulatedJPEG);
+    CHECK(DCMA_DICOM::classify_transfer_syntax("1.2.840.10008.1.2.4.90")
+          == DCMA_DICOM::TransferSyntaxType::EncapsulatedJPEG2000);
+    CHECK(DCMA_DICOM::classify_transfer_syntax("1.2.840.10008.1.2.5")
+          == DCMA_DICOM::TransferSyntaxType::EncapsulatedRLE);
+    CHECK(DCMA_DICOM::classify_transfer_syntax("1.2.840.10008.1.2.4.80")
+          == DCMA_DICOM::TransferSyntaxType::EncapsulatedJPEGLS);
+    CHECK(DCMA_DICOM::classify_transfer_syntax("1.2.840.10008.1.2.4.201")
+          == DCMA_DICOM::TransferSyntaxType::EncapsulatedHTJ2K);
+}
+
+TEST_CASE("DCMA_DICOM classify_transfer_syntax strips trailing padding"){
+    // UID padded with a null byte (as in some DICOM files).
+    CHECK(DCMA_DICOM::classify_transfer_syntax(std::string("1.2.840.10008.1.2.1\0", 20))
+          == DCMA_DICOM::TransferSyntaxType::NativeUncompressed);
+}
+
+TEST_CASE("DCMA_DICOM classify_transfer_syntax returns Unknown for unrecognized UID"){
+    CHECK(DCMA_DICOM::classify_transfer_syntax("1.2.3.4.5.6.7.8.9")
+          == DCMA_DICOM::TransferSyntaxType::Unknown);
+}
+
+TEST_CASE("DCMA_DICOM is_native_transfer_syntax and is_encapsulated_transfer_syntax"){
+    CHECK(DCMA_DICOM::is_native_transfer_syntax(DCMA_DICOM::TransferSyntaxType::NativeUncompressed));
+    CHECK_FALSE(DCMA_DICOM::is_native_transfer_syntax(DCMA_DICOM::TransferSyntaxType::EncapsulatedJPEG));
+    CHECK(DCMA_DICOM::is_encapsulated_transfer_syntax(DCMA_DICOM::TransferSyntaxType::EncapsulatedJPEG));
+    CHECK(DCMA_DICOM::is_encapsulated_transfer_syntax(DCMA_DICOM::TransferSyntaxType::EncapsulatedRLE));
+    CHECK_FALSE(DCMA_DICOM::is_encapsulated_transfer_syntax(DCMA_DICOM::TransferSyntaxType::NativeUncompressed));
+}
+
+
+// ============================================================================
+// Pixel data descriptor tests
+// ============================================================================
+
+static DCMA_DICOM::Node create_image_dicom(uint16_t rows, uint16_t cols,
+                                            uint16_t bits_alloc, uint16_t bits_stored,
+                                            uint16_t high_bit, uint16_t pixel_rep,
+                                            const std::string &photometric,
+                                            const std::string &pixel_data_val,
+                                            uint16_t samples_per_pixel = 1,
+                                            uint16_t planar_config = 0){
+    DCMA_DICOM::Node root;
+
+    // Meta information group (always ELE).
+    root.emplace_child_node({{0x0002, 0x0001}, "OB", std::string("\x00\x01", 2)});
+    root.emplace_child_node({{0x0002, 0x0002}, "UI", "1.2.840.10008.5.1.4.1.1.2"});
+    root.emplace_child_node({{0x0002, 0x0003}, "UI", "1.2.3.4.5.6.7.8.9"});
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.1"});     // ELE (native).
+    root.emplace_child_node({{0x0002, 0x0012}, "UI", "1.2.3.4.5"});
+
+    // Image Pixel module tags.
+    root.emplace_child_node({{0x0028, 0x0002}, "US", std::to_string(samples_per_pixel)});
+    root.emplace_child_node({{0x0028, 0x0004}, "CS", photometric});
+    root.emplace_child_node({{0x0028, 0x0006}, "US", std::to_string(planar_config)});
+    root.emplace_child_node({{0x0028, 0x0010}, "US", std::to_string(rows)});
+    root.emplace_child_node({{0x0028, 0x0011}, "US", std::to_string(cols)});
+    root.emplace_child_node({{0x0028, 0x0100}, "US", std::to_string(bits_alloc)});
+    root.emplace_child_node({{0x0028, 0x0101}, "US", std::to_string(bits_stored)});
+    root.emplace_child_node({{0x0028, 0x0102}, "US", std::to_string(high_bit)});
+    root.emplace_child_node({{0x0028, 0x0103}, "US", std::to_string(pixel_rep)});
+
+    // Pixel Data (7FE0,0010).
+    root.emplace_child_node({{0x7FE0, 0x0010}, "OW", pixel_data_val});
+
+    return root;
+}
+
+
+TEST_CASE("DCMA_DICOM get_pixel_data_desc populates fields correctly"){
+    // 2x3 image, 16 bits allocated, 12 bits stored, high bit 11, unsigned, MONOCHROME2.
+    std::string dummy_data(2 * 3 * 2, '\0'); // 2 rows x 3 cols x 2 bytes/pixel.
+    auto root = create_image_dicom(2, 3, 16, 12, 11, 0, "MONOCHROME2", dummy_data);
+
+    auto desc = DCMA_DICOM::get_pixel_data_desc(root);
+    REQUIRE(desc.has_value());
+    CHECK(desc->rows == 2);
+    CHECK(desc->columns == 3);
+    CHECK(desc->bits_allocated == 16);
+    CHECK(desc->bits_stored == 12);
+    CHECK(desc->high_bit == 11);
+    CHECK(desc->pixel_representation == 0);
+    CHECK(desc->photometric_interpretation == "MONOCHROME2");
+    CHECK(desc->samples_per_pixel == 1);
+    CHECK(desc->transfer_syntax == DCMA_DICOM::TransferSyntaxType::NativeUncompressed);
+}
+
+TEST_CASE("DCMA_DICOM get_pixel_data_desc returns nullopt for missing tags"){
+    DCMA_DICOM::Node root;
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.1"});
+    // No image pixel tags.
+    auto desc = DCMA_DICOM::get_pixel_data_desc(root);
+    CHECK_FALSE(desc.has_value());
+}
+
+TEST_CASE("DCMA_DICOM get_pixel_data_desc rejects BitsStored > BitsAllocated"){
+    std::string dummy(4, '\0');
+    auto root = create_image_dicom(1, 1, 8, 16, 7, 0, "MONOCHROME2", dummy);
+    auto desc = DCMA_DICOM::get_pixel_data_desc(root);
+    CHECK_FALSE(desc.has_value());
+}
+
+
+// ============================================================================
+// Native pixel data extraction tests
+// ============================================================================
+
+TEST_CASE("DCMA_DICOM extract_native_pixel_data 16-bit unsigned"){
+    // 2x2 image, 16-bit unsigned, MONOCHROME2.
+    // Pixel values: 100, 200, 300, 400.
+    std::string raw(8, '\0');
+    uint16_t vals[] = { 100, 200, 300, 400 };
+    std::memcpy(&raw[0], vals, 8);
+
+    auto root = create_image_dicom(2, 2, 16, 16, 15, 0, "MONOCHROME2", raw);
+    auto epd = DCMA_DICOM::extract_native_pixel_data(root);
+    REQUIRE(epd.has_value());
+    REQUIRE(epd->samples.size() == 4);
+    CHECK(epd->samples[0] == 100.0);
+    CHECK(epd->samples[1] == 200.0);
+    CHECK(epd->samples[2] == 300.0);
+    CHECK(epd->samples[3] == 400.0);
+}
+
+TEST_CASE("DCMA_DICOM extract_native_pixel_data 16-bit signed"){
+    // 1x2 image, 16-bit signed, MONOCHROME2.
+    // Pixel values: -100, 32000.
+    std::string raw(4, '\0');
+    int16_t vals[] = { -100, 32000 };
+    std::memcpy(&raw[0], vals, 4);
+
+    auto root = create_image_dicom(1, 2, 16, 16, 15, 1, "MONOCHROME2", raw);
+    auto epd = DCMA_DICOM::extract_native_pixel_data(root);
+    REQUIRE(epd.has_value());
+    REQUIRE(epd->samples.size() == 2);
+    CHECK(epd->samples[0] == -100.0);
+    CHECK(epd->samples[1] == 32000.0);
+}
+
+TEST_CASE("DCMA_DICOM extract_native_pixel_data 8-bit unsigned"){
+    // 2x2 image, 8-bit unsigned, MONOCHROME2.
+    std::string raw = { '\x00', '\x7F', '\x80', '\xFF' };
+
+    auto root = create_image_dicom(2, 2, 8, 8, 7, 0, "MONOCHROME2", raw);
+    auto epd = DCMA_DICOM::extract_native_pixel_data(root);
+    REQUIRE(epd.has_value());
+    REQUIRE(epd->samples.size() == 4);
+    CHECK(epd->samples[0] == 0.0);
+    CHECK(epd->samples[1] == 127.0);
+    CHECK(epd->samples[2] == 128.0);
+    CHECK(epd->samples[3] == 255.0);
+}
+
+TEST_CASE("DCMA_DICOM extract_native_pixel_data 12-bit stored in 16-bit"){
+    // 1x1 image, 16 bits allocated, 12 bits stored, high bit 11, unsigned.
+    // Value = 0x0ABC (2748). Bottom 12 bits used, high bit at position 11.
+    std::string raw(2, '\0');
+    uint16_t val = 0x0ABC;
+    std::memcpy(&raw[0], &val, 2);
+
+    auto root = create_image_dicom(1, 1, 16, 12, 11, 0, "MONOCHROME2", raw);
+    auto epd = DCMA_DICOM::extract_native_pixel_data(root);
+    REQUIRE(epd.has_value());
+    REQUIRE(epd->samples.size() == 1);
+    CHECK(epd->samples[0] == 2748.0);
+}
+
+TEST_CASE("DCMA_DICOM extract_native_pixel_data 32-bit unsigned"){
+    // 1x2 image, 32-bit unsigned.
+    std::string raw(8, '\0');
+    uint32_t vals[] = { 0, 1000000 };
+    std::memcpy(&raw[0], vals, 8);
+
+    auto root = create_image_dicom(1, 2, 32, 32, 31, 0, "MONOCHROME2", raw);
+    auto epd = DCMA_DICOM::extract_native_pixel_data(root);
+    REQUIRE(epd.has_value());
+    REQUIRE(epd->samples.size() == 2);
+    CHECK(epd->samples[0] == 0.0);
+    CHECK(epd->samples[1] == 1000000.0);
+}
+
+TEST_CASE("DCMA_DICOM extract_native_pixel_data RGB interleaved"){
+    // 1x2 RGB image, 8-bit, interleaved (planar config 0).
+    // Pixel 0: R=10, G=20, B=30.  Pixel 1: R=40, G=50, B=60.
+    std::string raw = { '\x0A', '\x14', '\x1E', '\x28', '\x32', '\x3C' };
+
+    auto root = create_image_dicom(1, 2, 8, 8, 7, 0, "RGB", raw, 3, 0);
+    auto epd = DCMA_DICOM::extract_native_pixel_data(root);
+    REQUIRE(epd.has_value());
+    REQUIRE(epd->samples.size() == 6);
+    CHECK(epd->samples[0] == 10.0);
+    CHECK(epd->samples[1] == 20.0);
+    CHECK(epd->samples[2] == 30.0);
+    CHECK(epd->samples[3] == 40.0);
+    CHECK(epd->samples[4] == 50.0);
+    CHECK(epd->samples[5] == 60.0);
+}
+
+TEST_CASE("DCMA_DICOM extract_native_pixel_data returns nullopt for missing pixel data"){
+    DCMA_DICOM::Node root;
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.1"});
+    root.emplace_child_node({{0x0028, 0x0010}, "US", "2"});
+    root.emplace_child_node({{0x0028, 0x0011}, "US", "2"});
+    root.emplace_child_node({{0x0028, 0x0100}, "US", "16"});
+    root.emplace_child_node({{0x0028, 0x0101}, "US", "16"});
+    root.emplace_child_node({{0x0028, 0x0102}, "US", "15"});
+    // No pixel data tag.
+    auto epd = DCMA_DICOM::extract_native_pixel_data(root);
+    CHECK_FALSE(epd.has_value());
+}
+
+TEST_CASE("DCMA_DICOM extract_native_pixel_data Float Pixel Data (7FE0,0008)"){
+    // 1x2 image with Float Pixel Data.
+    float vals[] = { 1.5f, -2.5f };
+    std::string raw(8, '\0');
+    std::memcpy(&raw[0], vals, 8);
+
+    DCMA_DICOM::Node root;
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.1"});
+    root.emplace_child_node({{0x0028, 0x0002}, "US", "1"});
+    root.emplace_child_node({{0x0028, 0x0004}, "CS", "MONOCHROME2"});
+    root.emplace_child_node({{0x0028, 0x0010}, "US", "1"});
+    root.emplace_child_node({{0x0028, 0x0011}, "US", "2"});
+    root.emplace_child_node({{0x0028, 0x0100}, "US", "32"});
+    root.emplace_child_node({{0x0028, 0x0101}, "US", "32"});
+    root.emplace_child_node({{0x0028, 0x0102}, "US", "31"});
+    root.emplace_child_node({{0x0028, 0x0103}, "US", "0"});
+    root.emplace_child_node({{0x7FE0, 0x0008}, "OF", raw});  // Float Pixel Data.
+
+    auto epd = DCMA_DICOM::extract_native_pixel_data(root);
+    REQUIRE(epd.has_value());
+    REQUIRE(epd->samples.size() == 2);
+    CHECK(epd->samples[0] == doctest::Approx(1.5));
+    CHECK(epd->samples[1] == doctest::Approx(-2.5));
+}
+
+TEST_CASE("DCMA_DICOM extract_native_pixel_data Double Float Pixel Data (7FE0,0009)"){
+    // 1x2 image with Double Float Pixel Data.
+    double vals[] = { 3.14159265358979, -1.0e10 };
+    std::string raw(16, '\0');
+    std::memcpy(&raw[0], vals, 16);
+
+    DCMA_DICOM::Node root;
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.1"});
+    root.emplace_child_node({{0x0028, 0x0002}, "US", "1"});
+    root.emplace_child_node({{0x0028, 0x0004}, "CS", "MONOCHROME2"});
+    root.emplace_child_node({{0x0028, 0x0010}, "US", "1"});
+    root.emplace_child_node({{0x0028, 0x0011}, "US", "2"});
+    root.emplace_child_node({{0x0028, 0x0100}, "US", "64"});
+    root.emplace_child_node({{0x0028, 0x0101}, "US", "64"});
+    root.emplace_child_node({{0x0028, 0x0102}, "US", "63"});
+    root.emplace_child_node({{0x0028, 0x0103}, "US", "0"});
+    root.emplace_child_node({{0x7FE0, 0x0009}, "OD", raw});  // Double Float Pixel Data.
+
+    auto epd = DCMA_DICOM::extract_native_pixel_data(root);
+    REQUIRE(epd.has_value());
+    REQUIRE(epd->samples.size() == 2);
+    CHECK(epd->samples[0] == doctest::Approx(3.14159265358979));
+    CHECK(epd->samples[1] == doctest::Approx(-1.0e10));
+}
+
+
+// ============================================================================
+// Overlay data extraction tests
+// ============================================================================
+
+TEST_CASE("DCMA_DICOM extract_overlay_data basic overlay"){
+    DCMA_DICOM::Node root;
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.1"});
+
+    // Overlay plane in group 0x6000: 2x4 = 8 pixels → 1 byte.
+    // Bitmap: 0b10101010 → pixels 0,2,4,6 off; pixels 1,3,5,7 on.
+    root.emplace_child_node({{0x6000, 0x0010}, "US", "2"});        // Rows.
+    root.emplace_child_node({{0x6000, 0x0011}, "US", "4"});        // Columns.
+    root.emplace_child_node({{0x6000, 0x0040}, "CS", "G"});        // Type.
+    root.emplace_child_node({{0x6000, 0x0050}, "SS", "1\\1"});     // Origin.
+    root.emplace_child_node({{0x6000, 0x0100}, "US", "1"});        // BitsAllocated.
+    root.emplace_child_node({{0x6000, 0x3000}, "OW", std::string("\xAA", 1)}); // Overlay Data.
+
+    auto overlays = DCMA_DICOM::extract_overlay_data(root);
+    REQUIRE(overlays.size() == 1);
+    CHECK(overlays[0].first.group == 0x6000);
+    CHECK(overlays[0].first.rows == 2);
+    CHECK(overlays[0].first.columns == 4);
+    CHECK(overlays[0].first.type == "G");
+    REQUIRE(overlays[0].second.size() == 8);
+    // 0xAA = 10101010 → LSB first: bit0=0, bit1=1, bit2=0, bit3=1, bit4=0, bit5=1, bit6=0, bit7=1.
+    CHECK(overlays[0].second[0] == 0);
+    CHECK(overlays[0].second[1] == 1);
+    CHECK(overlays[0].second[2] == 0);
+    CHECK(overlays[0].second[3] == 1);
+    CHECK(overlays[0].second[4] == 0);
+    CHECK(overlays[0].second[5] == 1);
+    CHECK(overlays[0].second[6] == 0);
+    CHECK(overlays[0].second[7] == 1);
+}
+
+TEST_CASE("DCMA_DICOM extract_overlay_data returns empty for no overlays"){
+    DCMA_DICOM::Node root;
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.1"});
+    auto overlays = DCMA_DICOM::extract_overlay_data(root);
+    CHECK(overlays.empty());
+}
+
+
+// ============================================================================
+// Encapsulated pixel data stub test
+// ============================================================================
+
+TEST_CASE("DCMA_DICOM extract_encapsulated_pixel_data returns nullopt (stub)"){
+    // Create a tree with a JPEG transfer syntax.
+    DCMA_DICOM::Node root;
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.4.50"});
+    root.emplace_child_node({{0x0028, 0x0010}, "US", "2"});
+    root.emplace_child_node({{0x0028, 0x0011}, "US", "2"});
+    root.emplace_child_node({{0x0028, 0x0100}, "US", "8"});
+    root.emplace_child_node({{0x0028, 0x0101}, "US", "8"});
+    root.emplace_child_node({{0x0028, 0x0102}, "US", "7"});
+    root.emplace_child_node({{0x7FE0, 0x0010}, "OB", std::string(100, '\0')});
+
+    auto epd = DCMA_DICOM::extract_encapsulated_pixel_data(root);
+    CHECK_FALSE(epd.has_value());
 }

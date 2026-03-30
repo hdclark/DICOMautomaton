@@ -48,6 +48,9 @@ set_target_properties(  DCMA_DICOM_Dictionaries_obj PROPERTIES POSITION_INDEPEND
 add_library(            DCMA_DICOM_obj OBJECT DCMA_DICOM.cc)
 set_target_properties(  DCMA_DICOM_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            DCMA_DICOM_PixelData_obj OBJECT DCMA_DICOM_PixelData.cc)
+set_target_properties(  DCMA_DICOM_PixelData_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            DCMA_DICOM_Tests_obj OBJECT DCMA_DICOM_Tests.cc )
 set_target_properties(  DCMA_DICOM_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -273,6 +276,7 @@ add_library (imebrashim
     $<TARGET_OBJECTS:Alignment_Demons_obj>
     $<TARGET_OBJECTS:DCMA_DICOM_Dictionaries_obj>
     $<TARGET_OBJECTS:DCMA_DICOM_obj>
+    $<TARGET_OBJECTS:DCMA_DICOM_PixelData_obj>
     imebra20121219/library/imebra/src/dataHandlerStringUT.cpp
     imebra20121219/library/imebra/src/data.cpp
     imebra20121219/library/imebra/src/colorTransformsFactory.cpp
@@ -810,6 +814,7 @@ add_executable(dicomautomaton_deidentify
     DICOMautomaton_Deidentify.cc
     $<TARGET_OBJECTS:DCMA_DICOM_Dictionaries_obj>
     $<TARGET_OBJECTS:DCMA_DICOM_obj>
+    $<TARGET_OBJECTS:DCMA_DICOM_PixelData_obj>
     $<TARGET_OBJECTS:Metadata_obj>
 )
 target_link_libraries(dicomautomaton_deidentify
