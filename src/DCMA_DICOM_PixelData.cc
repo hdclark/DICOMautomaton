@@ -450,7 +450,11 @@ std::optional<ExtractedPixelData> extract_native_pixel_data(const Node &root){
     }else{
         // General Pixel Data (7FE0,0010): unpack according to Bits Allocated / Bits Stored / High Bit.
         epd.samples = unpack_native_samples(raw, desc, total_samples);
-        if(epd.samples.empty()) return std::nullopt;
+        if(epd.samples.size() != total_samples){
+            YLOGWARN("Unpacked native Pixel Data sample count mismatch: expected "
+                     << total_samples << ", got " << epd.samples.size());
+            return std::nullopt;
+        }
     }
 
     return epd;
