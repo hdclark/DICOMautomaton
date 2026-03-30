@@ -175,8 +175,9 @@ static std::optional<double> read_DS(const Node &root, uint16_t group, uint16_t 
     auto s = read_text(root, group, tag);
     if(s.empty()) return std::nullopt;
 
-    // DS may have leading/trailing whitespace.
+    // DS may have leading/trailing whitespace per DICOM PS3.5, VR definition.
     while(!s.empty() && s.front() == ' ') s.erase(s.begin());
+    while(!s.empty() && s.back() == ' ') s.pop_back();
     if(s.empty()) return std::nullopt;
 
     try{
@@ -307,9 +308,10 @@ void apply_voi_lut(planar_image<float,double> &img, const VOILUTParams &params,
     // The formula maps [c - (w-1)/2, c + (w-1)/2] to [out_min, out_max].
     const double c = params.window_center;
     const double w = params.window_width;
+    const double c_adj = c - 0.5;
     const double half_wm1 = (w - 1.0) / 2.0;
-    const double low  = c - 0.5 - half_wm1;
-    const double high = c - 0.5 + half_wm1;
+    const double low  = c_adj - half_wm1;
+    const double high = c_adj + half_wm1;
     const double range = out_max - out_min;
     const double wm1 = w - 1.0;
     const double inv_wm1 = (wm1 != 0.0) ? (1.0 / wm1) : 0.0;
@@ -325,7 +327,7 @@ void apply_voi_lut(planar_image<float,double> &img, const VOILUTParams &params,
                 }else if(x > high){
                     y = out_max;
                 }else{
-                    y = ((x - (c - 0.5)) * inv_wm1 + 0.5) * range + out_min;
+                    y = ((x - c_adj) * inv_wm1 + 0.5) * range + out_min;
                 }
                 v = static_cast<float>(y);
             }
@@ -438,11 +440,10 @@ bool convert_photometric_to_rgb(planar_image<float,double> &img,
 
         for(int64_t row = 0; row < img.rows; ++row){
             for(int64_t col = 0; col < img.columns; ++col){
-                const auto idx_f = static_cast<size_t>(std::clamp(
+                const size_t idx = static_cast<size_t>(std::clamp(
                     static_cast<double>(img.value(row, col, 0)),
                     0.0,
                     static_cast<double>(lut_size - 1u)));
-                const size_t idx = std::min(idx_f, lut_size - 1u);
 
                 double r = static_cast<double>(red_lut[idx]);
                 double g = static_cast<double>(green_lut[idx]);

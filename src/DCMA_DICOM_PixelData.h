@@ -19,10 +19,8 @@
 #include <string>
 #include <vector>
 #include <optional>
-
 #include "YgorImages.h"
 #include "YgorMath.h"
-
 #include "DCMA_DICOM.h"
 
 namespace DCMA_DICOM {

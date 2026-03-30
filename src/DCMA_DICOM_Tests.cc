@@ -1141,7 +1141,9 @@ TEST_CASE("DCMA_DICOM extract_native_pixel_data Double Float Pixel Data (7FE0,00
     REQUIRE(pics.has_value());
     REQUIRE(pics->images.size() == 1);
     const auto &img = pics->images.front();
-    // Note: double → float may lose precision, so we use a generous epsilon.
+    // Note: double → float truncates from 64-bit to 32-bit IEEE 754, losing
+    // significant digits for large values. pi fits in float; -1e10 has ~7 digits
+    // of float precision vs ~16 in double, so a relative epsilon of 1e-3 is needed.
     CHECK(img.value(0, 0, 0) == doctest::Approx(3.14159265f).epsilon(1e-5));
     CHECK(img.value(0, 1, 0) == doctest::Approx(-1.0e10f).epsilon(1e-3));
 }
