@@ -294,11 +294,21 @@ void apply_modality_lut(planar_image<float,double> &img, const ModalityLUTParams
 std::optional<VOILUTParams> get_voi_lut_params(const Node &root){
     auto wc = read_DS(root, 0x0028, 0x1050);
     auto ww = read_DS(root, 0x0028, 0x1051);
-    if(!wc && !ww) return std::nullopt;
+
+    // In DICOM, Window Center and Window Width form a paired parameter set.
+    // Only return parameters if BOTH are present and the width is valid.
+    if(!wc || !ww){
+        return std::nullopt;
+    }
+
+    // Guard against non-positive window widths, which would lead to invalid windowing.
+    if(*ww <= 0.0){
+        return std::nullopt;
+    }
 
     VOILUTParams p;
-    p.window_center = wc.value_or(0.0);
-    p.window_width  = ww.value_or(1.0);
+    p.window_center = *wc;
+    p.window_width  = *ww;
     return p;
 }
 
