@@ -895,6 +895,13 @@ TEST_CASE("DCMA_DICOM is_native_transfer_syntax and is_encapsulated_transfer_syn
     CHECK(DCMA_DICOM::is_encapsulated_transfer_syntax(DCMA_DICOM::TransferSyntaxType::EncapsulatedJPEG));
     CHECK(DCMA_DICOM::is_encapsulated_transfer_syntax(DCMA_DICOM::TransferSyntaxType::EncapsulatedRLE));
     CHECK_FALSE(DCMA_DICOM::is_encapsulated_transfer_syntax(DCMA_DICOM::TransferSyntaxType::NativeUncompressed));
+
+    // EncapsulatedDeflated is classified as encapsulated (transport-level), but treated as
+    // native for pixel data decoding (pixel data is native once inflated).
+    CHECK(DCMA_DICOM::classify_transfer_syntax("1.2.840.10008.1.2.1.99")
+          == DCMA_DICOM::TransferSyntaxType::EncapsulatedDeflated);
+    CHECK(DCMA_DICOM::is_native_transfer_syntax(DCMA_DICOM::TransferSyntaxType::EncapsulatedDeflated));
+    CHECK(DCMA_DICOM::is_encapsulated_transfer_syntax(DCMA_DICOM::TransferSyntaxType::EncapsulatedDeflated));
 }
 
 

@@ -46,10 +46,11 @@ TransferSyntaxType classify_transfer_syntax(const std::string &ts_uid){
 
     // Deflated Explicit VR Little Endian.
     // The Data Set is deflated on disk, but once inflated the pixel data is native/uncompressed.
-    // For pixel data decoding we therefore classify it as NativeUncompressed.
+    // Classified as EncapsulatedDeflated to distinguish it from truly native transfer syntaxes,
+    // but for pixel data decoding purposes it is treated as native-after-inflate.
     // See DICOM PS3.5 2026b, Section A.5.
     if(ts == "1.2.840.10008.1.2.1.99"){
-        return TransferSyntaxType::NativeUncompressed;
+        return TransferSyntaxType::EncapsulatedDeflated;
     }
 
     // RLE Lossless. See DICOM PS3.5 2026b, Annex G.
@@ -96,7 +97,11 @@ TransferSyntaxType classify_transfer_syntax(const std::string &ts_uid){
 }
 
 bool is_native_transfer_syntax(TransferSyntaxType tst){
-    return (tst == TransferSyntaxType::NativeUncompressed);
+    // EncapsulatedDeflated is treated as native for pixel data decoding because the
+    // deflation applies to the Data Set transport, not to the pixel data encoding itself.
+    // Once the Data Set is inflated, pixel data is native/uncompressed.
+    return (tst == TransferSyntaxType::NativeUncompressed)
+        || (tst == TransferSyntaxType::EncapsulatedDeflated);
 }
 
 bool is_encapsulated_transfer_syntax(TransferSyntaxType tst){
@@ -126,7 +131,17 @@ static std::optional<uint16_t> read_US(const Node &root, uint16_t group, uint16_
     if(n == nullptr) return std::nullopt;
 
     try{
-        const auto v = std::stoul(n->val);
+        // Strip trailing whitespace/null padding before parsing.
+        std::string trimmed = n->val;
+        while(!trimmed.empty() && (trimmed.back() == '\0' || trimmed.back() == ' ')) trimmed.pop_back();
+        if(trimmed.empty()) return std::nullopt;
+
+        // Reject multi-valued fields (containing '\\').
+        if(trimmed.find('\\') != std::string::npos) return std::nullopt;
+
+        size_t idx = 0;
+        const auto v = std::stoul(trimmed, &idx);
+        if(idx != trimmed.size()) return std::nullopt; // Trailing non-numeric characters.
         return static_cast<uint16_t>(v);
     }catch(const std::exception &){
         return std::nullopt;
@@ -139,7 +154,17 @@ static std::optional<uint32_t> read_IS_as_uint32(const Node &root, uint16_t grou
     if(n == nullptr) return std::nullopt;
 
     try{
-        const auto v = std::stoul(n->val);
+        // Strip trailing whitespace/null padding before parsing.
+        std::string trimmed = n->val;
+        while(!trimmed.empty() && (trimmed.back() == '\0' || trimmed.back() == ' ')) trimmed.pop_back();
+        if(trimmed.empty()) return std::nullopt;
+
+        // Reject multi-valued fields (containing '\\').
+        if(trimmed.find('\\') != std::string::npos) return std::nullopt;
+
+        size_t idx = 0;
+        const auto v = std::stoul(trimmed, &idx);
+        if(idx != trimmed.size()) return std::nullopt; // Trailing non-numeric characters.
         return static_cast<uint32_t>(v);
     }catch(const std::exception &){
         return std::nullopt;

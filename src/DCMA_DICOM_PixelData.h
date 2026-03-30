@@ -34,7 +34,7 @@ enum class TransferSyntaxType {
     EncapsulatedJPEG2000, // JPEG 2000 lossless or lossy (ISO/IEC 15444-1).
     EncapsulatedJPEGLS,   // JPEG-LS lossless or near-lossless (ISO/IEC 14495-1).
     EncapsulatedRLE,      // RLE Lossless (DICOM PS3.5, Annex G).
-    EncapsulatedDeflated, // Deflated (zlib) transfer syntax.
+    EncapsulatedDeflated, // Deflated (zlib) transfer syntax. Pixel data is native once inflated.
     EncapsulatedHTJ2K,    // High-Throughput JPEG 2000 (ISO/IEC 15444-15).
     EncapsulatedJPEGXL,   // JPEG XL (ISO/IEC 18181).
     Unknown               // Transfer syntax not recognized or not yet classified.
@@ -45,6 +45,8 @@ enum class TransferSyntaxType {
 TransferSyntaxType classify_transfer_syntax(const std::string &ts_uid);
 
 // Return true if the transfer syntax type uses native (uncompressed) pixel encoding.
+// EncapsulatedDeflated is also treated as native because deflation applies to Data Set
+// transport, not to the pixel data encoding (pixel data is native once inflated).
 bool is_native_transfer_syntax(TransferSyntaxType tst);
 
 // Return true if the transfer syntax type uses encapsulated (compressed) pixel encoding.
