@@ -45,19 +45,19 @@ fi
     echo "# Format: GGGG,EEEE VR VM Keyword [RETIRED]"
     echo "#"
 
-    # The Part 6 XML (DocBook format) contains tables with <row> elements.
+    # The Part 6 XML (DocBook format) contains tables with <tr> elements.
     # Each data element row in the registry tables (Chapters 6, 7, 8) has
-    # entries for: Tag, Name, Keyword, VR, VM, and an optional retirement
+    # cells (<td>) for: Tag, Name, Keyword, VR, VM, and an optional retirement
     # indicator (blank or "RET").
     #
     # Strategy:
-    # 1. Collapse each <row>...</row> block onto a single line.
-    # 2. Extract <entry> contents.
-    # 3. Strip XML tags from each entry.
-    # 4. Parse the resulting fields.
+    # 1. Stream the XML line-by-line, tracking when we are inside a <tr> element.
+    # 2. While in a row, detect <td> elements and accumulate their text, stripping XML tags.
+    # 3. When the </tr> closing tag is seen, parse the accumulated cell text into fields.
+    # 4. Emit one dictionary line per completed row.
 
-    # Use awk to process the XML. We track <row> blocks and <entry> elements
-    # within them, accumulating stripped text for each entry. When we close a
+    # Use awk to process the XML. We track <tr> blocks and <td> elements
+    # within them, accumulating stripped text for each cell. When we close a
     # row, we validate and emit a dictionary line.
     awk '
     BEGIN {
@@ -65,8 +65,8 @@ fi
         entry_count = 0
     }
 
-    # Detect the start of a new <row ...> element.
-    /<row/ {
+    # Detect the start of a new <tr ...> element.
+    /<tr[ >]/ {
         in_row = 1
         entry_count = 0
         delete entry_text
@@ -74,8 +74,8 @@ fi
         next
     }
 
-    # Detect the end of a </row> element.
-    /<\/row>/ {
+    # Detect the end of a </tr> element.
+    /<\/tr>/ {
         if (!in_row) next
 
         # We expect at least 5 fields: Tag, Name, Keyword, VR, VM.
@@ -130,6 +130,10 @@ fi
         gsub(/ +or +.*/, "", vr)
         gsub(/\/.*/, "", vr)
 
+        # Validate VR: must be exactly 2 uppercase alphabetic characters.
+        # Entries like FFFE,E000 (Item) have "See Note N" as VR and must be skipped.
+        if (vr !~ /^[A-Z]{2}$/) { in_row = 0; next }
+
         # Remove any remaining parentheses or brackets from keyword.
         gsub(/[()]/, "", keyword)
 
@@ -144,16 +148,16 @@ fi
         next
     }
 
-    # Inside a <row>, track <entry> elements.
+    # Inside a <tr>, track <td> elements.
     in_row {
-        # Detect start of a new <entry ...> element.
-        if ($0 ~ /<entry/) {
+        # Detect start of a new <td ...> element.
+        if ($0 ~ /<td/) {
             entry_count++
             in_entry = 1
             entry_text[entry_count] = ""
         }
 
-        # Accumulate text for the current entry, stripping XML tags.
+        # Accumulate text for the current cell, stripping XML tags.
         if (in_entry) {
             line = $0
             gsub(/<[^>]*>/, "", line)
@@ -167,8 +171,8 @@ fi
             }
         }
 
-        # Detect end of an </entry> element.
-        if ($0 ~ /<\/entry>/) {
+        # Detect end of a </td> element.
+        if ($0 ~ /<\/td>/) {
             in_entry = 0
         }
     }
