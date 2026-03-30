@@ -647,18 +647,47 @@ uint64_t Node::emit_DICOM(std::ostream &os,
     // Name types.
     }else if( this->VR == "AE" ){ //Application entity.
         // DICOM PS3.5 Section 6.2: AE - Application Entity.
-        // Character repertoire: Default, excluding backslash (5CH) and all control characters.
-        // Maximum length: 16 bytes. Leading/trailing spaces are non-significant.
+        // Character repertoire: Default, excluding all control characters.
+        // Maximum length: 16 bytes per value. Leading/trailing spaces are non-significant.
         // A value consisting solely of spaces shall not be used.
         if(!lenient){
-            if(16ULL < this->val.length()){
-                throw std::runtime_error("Application entity is too long at tag " + get_tag_and_val_str() + ". Cannot continue.");
-            }
-            if(this->val.find('\\') != std::string::npos){
-                throw std::invalid_argument("Backslash found in AE at tag " + get_tag_and_val_str() + ". Cannot continue.");
-            }
-            if(has_control_char(this->val)){
-                throw std::invalid_argument("Control character found in AE at tag " + get_tag_and_val_str() + ". Cannot continue.");
+            // AE can be multi-valued; values are separated by backslash (VM delimiter).
+            std::size_t start = 0;
+            while(start <= this->val.size()){
+                const std::size_t end = this->val.find('\\', start);
+                const std::string token = (end == std::string::npos)
+                                           ? this->val.substr(start)
+                                           : this->val.substr(start, end - start);
+
+                // Empty tokens or tokens consisting solely of spaces are not permitted.
+                bool has_non_space = false;
+                for(char c : token){
+                    if(c != ' '){
+                        has_non_space = true;
+                        break;
+                    }
+                }
+                if(!token.empty() && !has_non_space){
+                    throw std::invalid_argument("Application entity value consists solely of spaces at tag " + get_tag_and_val_str() + ". Cannot continue.");
+                }
+                if(token.empty()){
+                    throw std::invalid_argument("Empty application entity value at tag " + get_tag_and_val_str() + ". Cannot continue.");
+                }
+
+                // Enforce 16-byte maximum per AE value.
+                if(16ULL < token.size()){
+                    throw std::runtime_error("Application entity value is too long (>" + std::to_string(16ULL) + " bytes) at tag " + get_tag_and_val_str() + ". Cannot continue.");
+                }
+
+                // Control characters are forbidden.
+                if(has_control_char(token)){
+                    throw std::invalid_argument("Control character found in AE value at tag " + get_tag_and_val_str() + ". Cannot continue.");
+                }
+
+                if(end == std::string::npos){
+                    break;
+                }
+                start = end + 1;
             }
         }
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
