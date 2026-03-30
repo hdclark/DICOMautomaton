@@ -32,6 +32,41 @@
 
 namespace DCMA_DICOM {
 
+// IEEE 754:1985 compliance checks for DICOM floating-point VRs (FL, FD, OF, OD).
+static_assert(std::numeric_limits<float>::is_iec559 && sizeof(float) == 4,
+              "DICOM requires IEEE 754:1985 32-bit single-precision floats.");
+static_assert(std::numeric_limits<double>::is_iec559 && sizeof(double) == 8,
+              "DICOM requires IEEE 754:1985 64-bit double-precision floats.");
+
+// Format a tag (group, element) as a hex string like "(0028,1052)" for diagnostic messages.
+static std::string tag_diag(uint16_t group, uint16_t tag){
+    std::ostringstream ss;
+    ss << "(" << std::hex << std::setfill('0')
+       << std::setw(4) << group << ","
+       << std::setw(4) << tag << ")";
+    return ss.str();
+}
+
+// Describe a character for diagnostic purposes. Printable chars are quoted; others shown as hex.
+static std::string char_diag(char c){
+    if(std::isprint(static_cast<unsigned char>(c))){
+        return std::string("'") + c + "'";
+    }
+    std::ostringstream ss;
+    ss << "0x" << std::hex << std::setfill('0')
+       << std::setw(2) << static_cast<unsigned>(static_cast<unsigned char>(c));
+    return ss.str();
+}
+
+// Find the first character in 'val' not in 'allowed' and describe it for diagnostics.
+static std::string first_invalid_char_diag(const std::string &val, const std::string &allowed){
+    auto pos = val.find_first_not_of(allowed);
+    if(pos != std::string::npos){
+        return char_diag(val[pos]);
+    }
+    return "(unknown)";
+}
+
 struct Node;
 
 Node::Node() = default;
@@ -180,7 +215,8 @@ uint64_t
 emit_DICOM_tag(std::ostream &os,
                Encoding enc,
                const Node &node,   // Does not use the node's val member, to allow pre-processing.
-               const std::string& val){
+               const std::string& val,
+               bool lenient = false){
 
     uint64_t written_length = 0;
 
@@ -201,7 +237,7 @@ emit_DICOM_tag(std::ostream &os,
 
             for(const auto &n : node.children){
                 std::ostringstream child_ss(std::ios_base::ate | std::ios_base::binary);
-                const uint64_t child_length = n.emit_DICOM(child_ss, enc, false);
+                const uint64_t child_length = n.emit_DICOM(child_ss, enc, false, lenient);
                 const auto child_length_32 = static_cast<uint32_t>(child_length);
 
                 seq_length += write_to_stream(seq_ss, static_cast<uint16_t>(0xFFFE), 2, enc); // group.
@@ -247,7 +283,7 @@ emit_DICOM_tag(std::ostream &os,
 
             for(const auto &n : node.children){
                 std::ostringstream child_ss(std::ios_base::ate | std::ios_base::binary);
-                const uint64_t child_length = n.emit_DICOM(child_ss, enc, false);
+                const uint64_t child_length = n.emit_DICOM(child_ss, enc, false, lenient);
                 const auto child_length_32 = static_cast<uint32_t>(child_length);
 
                 // Emit a tag containing the length of the child.
@@ -306,13 +342,22 @@ emit_DICOM_tag(std::ostream &os,
 // This routine will recursively write a DICOM file from this node and all of its children.
 uint64_t Node::emit_DICOM(std::ostream &os,
                           Encoding enc,
-                          bool is_root_node) const {
+                          bool is_root_node,
+                          bool lenient) const {
+
+    YLOGDEBUG("emit_DICOM: tag " << tag_diag(this->key.group, this->key.tag)
+              << " VR='" << this->VR << "'"
+              << " is_root=" << is_root_node
+              << " lenient=" << lenient);
 
     // Used to search for forbidden characters.
     const std::string upper_case("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
     const std::string lower_case("abcdefghijklmnopqrstuvwxyz");
     const std::string number_digits("0123456789");
     const std::string multiplicity(R"***(\)***"); // Value multiplicity separator.
+
+    // Convenience string identifying this tag for diagnostic messages.
+    const auto this_tag = tag_diag(this->key.group, this->key.tag);
 
     uint64_t cumulative_length = 0;
 
@@ -338,7 +383,7 @@ uint64_t Node::emit_DICOM(std::ostream &os,
             Encoding child_enc = (child_it->key.group <= 0x0002) ? Encoding::ELE : enc;
                 
             // Emit this node into the temp buffer.
-            group_length += child_it->emit_DICOM(child_ss, child_enc, false);
+            group_length += child_it->emit_DICOM(child_ss, child_enc, false, lenient);
 
             // Evaluate whether the following node will be from a different group.
             // If so, emit the group length tag and all children in the buffer.
@@ -350,7 +395,7 @@ uint64_t Node::emit_DICOM(std::ostream &os,
                 if( (child_it->key.group <= 0x0002)
                 &&  (child_enc == Encoding::ELE) ){  // TODO: Should I bother with this after group 0x0002? It is deprecated...
                     Node group_length_node({child_it->key.group, 0x0000}, "UL", std::to_string(group_length));
-                    cumulative_length += group_length_node.emit_DICOM(os, child_enc, false);
+                    cumulative_length += group_length_node.emit_DICOM(os, child_enc, false, lenient);
                 }
 
                 // Emit all the children from the buffer.
@@ -375,67 +420,107 @@ uint64_t Node::emit_DICOM(std::ostream &os,
 
         // Process children nodes serially, without any boilerplate or markers between children.
         for(const auto & c : this->children){
-            cumulative_length += c.emit_DICOM(os, enc, false);
+            cumulative_length += c.emit_DICOM(os, enc, false, lenient);
         }
 
     // Text types.
     }else if( this->VR == "CS" ){ //Code strings.
-        // Value multiplicity embiggens the maximum permissable length, but each individual element should be <= 16 chars.
-        auto tokens = SplitStringToVector(this->val,'\\','d');
-        for(const auto &token : tokens){
-            if(16ULL < token.length()) throw std::invalid_argument("Code string is too long. Cannot continue.");
-        }
+        if(!lenient){
+            // Value multiplicity embiggens the maximum permissable length, but each individual element should be <= 16 chars.
+            auto tokens = SplitStringToVector(this->val,'\\','d');
+            for(const auto &token : tokens){
+                if(16ULL < token.length()){
+                    throw std::invalid_argument("Code string is too long at tag " + this_tag + ". Cannot continue.");
+                }
+            }
 
-        if(this->val.find_first_not_of(upper_case + number_digits + multiplicity + "_ ") != std::string::npos){
-            throw std::invalid_argument("Invalid character found in code string. Cannot continue.");
+            const auto allowed_cs = upper_case + number_digits + multiplicity + "_ ";
+            if(this->val.find_first_not_of(allowed_cs) != std::string::npos){
+                throw std::invalid_argument("Invalid character " + first_invalid_char_diag(this->val, allowed_cs)
+                                            + " found in code string at tag " + this_tag + ". Cannot continue.");
+            }
         }
-        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
+        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
     }else if( this->VR == "SH" ){ //Short string.
-        if(16ULL < this->val.length()) throw std::runtime_error("Short string is too long. Consider using a longer VR. Cannot continue.");
-        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
+        if(!lenient){
+            if(16ULL < this->val.length()){
+                throw std::runtime_error("Short string is too long at tag " + this_tag + ". Consider using a longer VR. Cannot continue.");
+            }
+        }
+        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
     }else if( this->VR == "LO" ){ //Long strings.
-        if(64ULL < this->val.length()) throw std::runtime_error("Long string is too long. Consider using a longer VR. Cannot continue.");
-        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
+        if(!lenient){
+            if(64ULL < this->val.length()){
+                throw std::runtime_error("Long string is too long at tag " + this_tag + ". Consider using a longer VR. Cannot continue.");
+            }
+        }
+        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
     }else if( this->VR == "ST" ){ //Short text.
-        if(1024ULL < this->val.length()) throw std::runtime_error("Short text is too long. Consider using a longer VR. Cannot continue.");
-        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
+        if(!lenient){
+            if(1024ULL < this->val.length()){
+                throw std::runtime_error("Short text is too long at tag " + this_tag + ". Consider using a longer VR. Cannot continue.");
+            }
+        }
+        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
     }else if( this->VR == "LT" ){ //Long text.
-        if(10240ULL < this->val.length()) throw std::runtime_error("Long text is too long. Consider using a longer VR. Cannot continue.");
-        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
+        if(!lenient){
+            if(10240ULL < this->val.length()){
+                throw std::runtime_error("Long text is too long at tag " + this_tag + ". Consider using a longer VR. Cannot continue.");
+            }
+        }
+        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
     }else if( this->VR == "UT" ){ //Unlimited text.
-        if(4'294'967'294ULL < this->val.length()) throw std::runtime_error("Unlimited text is too long. Cannot continue.");
-        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
+        if(!lenient){
+            if(4'294'967'294ULL < this->val.length()){
+                throw std::runtime_error("Unlimited text is too long at tag " + this_tag + ". Cannot continue.");
+            }
+        }
+        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
 
     // Name types.
     }else if( this->VR == "AE" ){ //Application entity.
-        if(16ULL < this->val.length()) throw std::runtime_error("Application entity is too long. Cannot continue.");
-        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
-
-    }else if( this->VR == "PN" ){ //Person name.
-        if(64ULL < this->val.length()) throw std::runtime_error("Person name is too long. Cannot continue.");
-        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
-
-    }else if( this->VR == "UI" ){ //Unique Identifier (UID).
-        if(64ULL < this->val.length()) throw std::runtime_error("UID is too long. Cannot continue.");
-        // Does value multiplicity embiggen the maximum permissable length? TODO
-        if(this->val.find_first_not_of(number_digits + multiplicity + ".") != std::string::npos){
-            throw std::invalid_argument("Invalid character found in UID. Cannot continue.");
-        }
-
-        // Ensure there are no leading insignificant zeros.
-        auto tokens = SplitStringToVector(this->val,'.','d');
-        for(const auto &token : tokens){
-            if( (1 < token.size()) && (token.at(0) == '0') ){
-                throw std::invalid_argument("UID contains an insignificant leading zero. Refusing to continue.");
+        if(!lenient){
+            if(16ULL < this->val.length()){
+                throw std::runtime_error("Application entity is too long at tag " + this_tag + ". Cannot continue.");
             }
         }
-        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
+        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
+
+    }else if( this->VR == "PN" ){ //Person name.
+        if(!lenient){
+            if(64ULL < this->val.length()){
+                throw std::runtime_error("Person name is too long at tag " + this_tag + ". Cannot continue.");
+            }
+        }
+        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
+
+    }else if( this->VR == "UI" ){ //Unique Identifier (UID).
+        if(!lenient){
+            if(64ULL < this->val.length()){
+                throw std::runtime_error("UID is too long at tag " + this_tag + ". Cannot continue.");
+            }
+            // Does value multiplicity embiggen the maximum permissable length? TODO
+            const auto allowed_ui = number_digits + multiplicity + ".";
+            if(this->val.find_first_not_of(allowed_ui) != std::string::npos){
+                throw std::invalid_argument("Invalid character " + first_invalid_char_diag(this->val, allowed_ui)
+                                            + " found in UID at tag " + this_tag + ". Cannot continue.");
+            }
+
+            // Ensure there are no leading insignificant zeros.
+            auto tokens = SplitStringToVector(this->val,'.','d');
+            for(const auto &token : tokens){
+                if( (1 < token.size()) && (token.at(0) == '0') ){
+                    throw std::invalid_argument("UID contains an insignificant leading zero at tag " + this_tag + ". Refusing to continue.");
+                }
+            }
+        }
+        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
 
     //Date and Time.
@@ -447,11 +532,16 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         avec.resize(1);
         digits_only = Lineate_Vector(avec, "");
 
-        if(8ULL < digits_only.length()) throw std::runtime_error("Date is too long. Cannot continue.");
-        if(digits_only.find_first_not_of(number_digits) != std::string::npos){
-            throw std::invalid_argument("Invalid character found in date. Cannot continue.");
+        if(!lenient){
+            if(8ULL < digits_only.length()){
+                throw std::runtime_error("Date is too long at tag " + this_tag + ". Cannot continue.");
+            }
+            if(digits_only.find_first_not_of(number_digits) != std::string::npos){
+                throw std::invalid_argument("Invalid character " + first_invalid_char_diag(digits_only, number_digits)
+                                            + " found in date at tag " + this_tag + ". Cannot continue.");
+            }
         }
-        cumulative_length += emit_DICOM_tag(os, enc, *this, digits_only);
+        cumulative_length += emit_DICOM_tag(os, enc, *this, digits_only, lenient);
 
     }else if( this->VR == "TM" ){  //Time.
         //Strip away colons. Also strip away everything after the leading non-numeric char.
@@ -461,11 +551,17 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         avec.resize(1);
         digits_only = Lineate_Vector(avec, "");
 
-        if(16ULL < digits_only.length()) throw std::runtime_error("Time is too long. Cannot continue.");
-        if(digits_only.find_first_not_of(number_digits + ".") != std::string::npos){
-            throw std::invalid_argument("Invalid character found in time. Cannot continue.");
+        if(!lenient){
+            if(16ULL < digits_only.length()){
+                throw std::runtime_error("Time is too long at tag " + this_tag + ". Cannot continue.");
+            }
+            const auto allowed_tm = number_digits + ".";
+            if(digits_only.find_first_not_of(allowed_tm) != std::string::npos){
+                throw std::invalid_argument("Invalid character " + first_invalid_char_diag(digits_only, allowed_tm)
+                                            + " found in time at tag " + this_tag + ". Cannot continue.");
+            }
         }
-        cumulative_length += emit_DICOM_tag(os, enc, *this, digits_only);
+        cumulative_length += emit_DICOM_tag(os, enc, *this, digits_only, lenient);
 
     }else if( this->VR == "DT" ){  //Date Time.
         //Strip away colons. Also strip away everything after the leading non-numeric char.
@@ -475,182 +571,211 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         avec.resize(1);
         digits_only = Lineate_Vector(avec, "");
 
-        if(26ULL < digits_only.length()) throw std::runtime_error("Date-time is too long. Cannot continue.");
-        if(digits_only.find_first_not_of(number_digits + "+-.") != std::string::npos){
-            throw std::invalid_argument("Invalid character found in date-time. Cannot continue.");
+        if(!lenient){
+            if(26ULL < digits_only.length()){
+                throw std::runtime_error("Date-time is too long at tag " + this_tag + ". Cannot continue.");
+            }
+            const auto allowed_dt = number_digits + "+-.";
+            if(digits_only.find_first_not_of(allowed_dt) != std::string::npos){
+                throw std::invalid_argument("Invalid character " + first_invalid_char_diag(digits_only, allowed_dt)
+                                            + " found in date-time at tag " + this_tag + ". Cannot continue.");
+            }
         }
-        cumulative_length += emit_DICOM_tag(os, enc, *this, digits_only);
+        cumulative_length += emit_DICOM_tag(os, enc, *this, digits_only, lenient);
 
     }else if( this->VR == "AS" ){ //Age string.
-        if(4ULL < this->val.length()) throw std::runtime_error("Age string is too long. Cannot continue.");
-        if(this->val.find_first_not_of(number_digits + "DWMY") != std::string::npos){
-            throw std::invalid_argument("Invalid character found in age string. Cannot continue.");
+        if(!lenient){
+            if(4ULL < this->val.length()){
+                throw std::runtime_error("Age string is too long at tag " + this_tag + ". Cannot continue.");
+            }
+            const auto allowed_as = number_digits + "DWMY";
+            if(this->val.find_first_not_of(allowed_as) != std::string::npos){
+                throw std::invalid_argument("Invalid character " + first_invalid_char_diag(this->val, allowed_as)
+                                            + " found in age string at tag " + this_tag + ". Cannot continue.");
+            }
+            if(this->val.find_first_of("DWMY") == std::string::npos){
+                throw std::invalid_argument("Age string is missing one of 'DWMY' characters at tag " + this_tag + ". Cannot continue.");
+            }
         }
-        if(this->val.find_first_of("DWMY") == std::string::npos){
-            throw std::invalid_argument("Age string is missing one of 'DWMY' characters. Cannot continue.");
-        }
-        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
+        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
 
     //Binary types.
     }else if( this->VR == "OB" ){ //'Other' binary string: a string of bytes that doesn't fit any other VR.
-        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
+        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
     }else if( this->VR == "OW" ){ //'Other word string': a string of 16bit values.
         // Note: Assuming here that the list is represented as a string of unsigned integers (e.g., '123\234\0\25').
         std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
         auto tokens = SplitStringToVector(this->val, '\\', 'd');
-        if(tokens.empty()) throw std::runtime_error("No values found for encoding OW tag. Cannot continue.");
+        if(tokens.empty()){
+            throw std::runtime_error("No values found for encoding OW tag at " + this_tag + ". Cannot continue.");
+        }
         for(auto &token_val : tokens){
             const auto val_u = static_cast<uint16_t>(std::stoul(token_val));
             write_to_stream(ss, val_u, 2, enc);
         }
-        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str());
+        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
 
 
     //Numeric types that are written as a string of characters.
     }else if( this->VR == "IS" ){ //Integer string.
-        // I'm not sure if what the upper limit is for this VR type. Assuming 65534 for consistency with DS. TODO.
-        if( ( (enc == Encoding::ELE) && (65'534ULL < this->val.length()) )
-        ||  ( (enc == Encoding::ILE) && (4'294'967'295ULL < this->val.length()) ) ){
-            throw std::invalid_argument("Integer string is too long. Cannot continue.");
-        }
+        if(!lenient){
+            // I'm not sure if what the upper limit is for this VR type. Assuming 65534 for consistency with DS. TODO.
+            if( ( (enc == Encoding::ELE) && (65'534ULL < this->val.length()) )
+            ||  ( (enc == Encoding::ILE) && (4'294'967'295ULL < this->val.length()) ) ){
+                throw std::invalid_argument("Integer string is too long at tag " + this_tag + ". Cannot continue.");
+            }
 
-        auto tokens = SplitStringToVector(this->val,'\\','d');
-        for(const auto &token : tokens){
-            // Maximum length per decimal number: 16 bytes.
-            if(12ULL < token.length()) throw std::invalid_argument("Integer string element is too long. Cannot continue.");
+            auto tokens = SplitStringToVector(this->val,'\\','d');
+            for(const auto &token : tokens){
+                // Maximum length per decimal number: 16 bytes.
+                if(12ULL < token.length()){
+                    throw std::invalid_argument("Integer string element is too long at tag " + this_tag + ". Cannot continue.");
+                }
 
-            // Ensure that, if an element is present it parses as a number.
-            try{
-                if(!token.empty()) [[maybe_unused]] auto r = std::stoll(token);
-            }catch(const std::exception &e){
-                throw std::runtime_error("Unable to convert '"_s + token + "' to IS. Cannot continue.");
+                // Ensure that, if an element is present it parses as a number.
+                try{
+                    if(!token.empty()) [[maybe_unused]] auto r = std::stoll(token);
+                }catch(const std::exception &){
+                    throw std::runtime_error("Unable to convert '"_s + token + "' to IS at tag " + this_tag + ". Cannot continue.");
+                }
+            }
+
+            const auto allowed_is = number_digits + multiplicity + "+-";
+            if(this->val.find_first_not_of(allowed_is) != std::string::npos){
+                throw std::invalid_argument("Invalid character " + first_invalid_char_diag(this->val, allowed_is)
+                                            + " found in integer string at tag " + this_tag + ". Cannot continue.");
             }
         }
-
-        if(this->val.find_first_not_of(number_digits + multiplicity + "+-") != std::string::npos){
-            throw std::invalid_argument("Invalid character found in integer string. Cannot continue.");
-        }
-        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
+        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
     }else if( this->VR == "DS" ){ //Decimal string.
-        // Maximum length for entire string (when multiple values are encoded and each is <= 16 bytes): 65534 bytes
-        if( ( (enc == Encoding::ELE) && (65'534ULL < this->val.length()) )
-        ||  ( (enc == Encoding::ILE) && (4'294'967'295ULL < this->val.length()) ) ){
-            throw std::invalid_argument("Decimal string is too long. Cannot continue.");
-        }
+        if(!lenient){
+            // Maximum length for entire string (when multiple values are encoded and each is <= 16 bytes): 65534 bytes
+            if( ( (enc == Encoding::ELE) && (65'534ULL < this->val.length()) )
+            ||  ( (enc == Encoding::ILE) && (4'294'967'295ULL < this->val.length()) ) ){
+                throw std::invalid_argument("Decimal string is too long at tag " + this_tag + ". Cannot continue.");
+            }
 
-        auto tokens = SplitStringToVector(this->val,'\\','d');
-        for(const auto &token : tokens){
-            // Maximum length per decimal number: 16 bytes.
-            if(16ULL < token.length()) throw std::invalid_argument("Decimal string element is too long. Cannot continue.");
+            auto tokens = SplitStringToVector(this->val,'\\','d');
+            for(const auto &token : tokens){
+                // Maximum length per decimal number: 16 bytes.
+                if(16ULL < token.length()){
+                    throw std::invalid_argument("Decimal string element is too long at tag " + this_tag + ". Cannot continue.");
+                }
 
-            // Ensure that if an element is present it parses as a number.
-            try{
-                if(!token.empty()) [[maybe_unused]] auto r = std::stod(token);
-            }catch(const std::exception &e){
-                throw std::runtime_error("Unable to convert '"_s + token + "' to DS. Cannot continue.");
+                // Ensure that if an element is present it parses as a number.
+                try{
+                    if(!token.empty()) [[maybe_unused]] auto r = std::stod(token);
+                }catch(const std::exception &){
+                    throw std::runtime_error("Unable to convert '"_s + token + "' to DS at tag " + this_tag + ". Cannot continue.");
+                }
+            }
+
+            const auto allowed_ds = number_digits + multiplicity + "+-eE.";
+            if(this->val.find_first_not_of(allowed_ds) != std::string::npos){
+                throw std::invalid_argument("Invalid character " + first_invalid_char_diag(this->val, allowed_ds)
+                                            + " found in decimal string at tag " + this_tag + ". Cannot continue.");
             }
         }
-
-        if(this->val.find_first_not_of(number_digits + multiplicity + "+-eE.") != std::string::npos){
-            throw std::invalid_argument("Invalid character found in decimal string. Cannot continue.");
-        }
-        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
+        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
 
     //Numeric types that must be binary encoded.
-    }else if( this->VR == "FL" ){ //Floating-point.
+    // Note: IEEE 754:1985 compliance for float and double is verified via static_assert at the top of this file.
+    }else if( this->VR == "FL" ){ //Floating-point (IEEE 754:1985 32-bit).
+        YLOGDEBUG("emit_DICOM: encoding FL at tag " << this_tag << " val='" << this->val << "'");
         std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
         const float val_f = std::stof(this->val);
         write_to_stream(ss, val_f, 4, enc);
-        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str());
-        // TODO: Ensure IEEE 754:1985 32-bit format.
+        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
 
-    }else if( this->VR == "FD" ){ //Floating-point double.
+    }else if( this->VR == "FD" ){ //Floating-point double (IEEE 754:1985 64-bit).
+        YLOGDEBUG("emit_DICOM: encoding FD at tag " << this_tag << " val='" << this->val << "'");
         std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
         const double val_d = std::stod(this->val);
         write_to_stream(ss, val_d, 8, enc);
-        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str());
-        // TODO: Ensure IEEE 754:1985 64-bit format.
+        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
 
-    }else if( this->VR == "OF" ){ //"Other" floating-point.
+    }else if( this->VR == "OF" ){ //"Other" floating-point (IEEE 754:1985 32-bit).
         //The value payload may contain multiple floats separated by some partitioning character.
         // For example, '1.23\2.34\0.00\25E25\-1.23'.
+        YLOGDEBUG("emit_DICOM: encoding OF at tag " << this_tag);
         std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
         auto tokens = SplitStringToVector(this->val, '\\', 'd');
         for(auto &token_val : tokens){
             const float val_f = std::stof(token_val);
             write_to_stream(ss, val_f, 4, enc);
         }
-        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str());
-        // TODO: Ensure IEEE 754:1985 32-bit format.
+        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
 
-    }else if( this->VR == "OD" ){ //"Other" floating-point double.
-        //The value payload may contain multiple floats separated by some partitioning character.
+    }else if( this->VR == "OD" ){ //"Other" floating-point double (IEEE 754:1985 64-bit).
+        //The value payload may contain multiple doubles separated by some partitioning character.
         // For example, '1.23\2.34\0.00\25E25\-1.23'.
+        YLOGDEBUG("emit_DICOM: encoding OD at tag " << this_tag);
         std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
         auto tokens = SplitStringToVector(this->val, '\\', 'd');
         for(auto &token_val : tokens){
-            const float val_f = std::stod(token_val);
-            write_to_stream(ss, val_f, 8, enc);
+            const double val_d = std::stod(token_val);
+            write_to_stream(ss, val_d, 8, enc);
         }
-        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str());
-        // TODO: Ensure IEEE 754:1985 64-bit format.
+        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
 
     }else if( this->VR == "SS" ){ //Signed short (16bit).
         std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
         const int16_t val_i = std::stoi(this->val);
         write_to_stream(ss, val_i, 2, enc);
-        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str());
+        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
 
     }else if( this->VR == "US" ){ //Unsigned short (16bit).
         std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
         const auto val_u = static_cast<uint16_t>(std::stoul(this->val));
         write_to_stream(ss, val_u, 2, enc);
-        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str());
+        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
 
     }else if( this->VR == "SL" ){ //Signed long (32bit).
         std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
         const int32_t val_l = std::stol(this->val);
         write_to_stream(ss, val_l, 4, enc);
-        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str());
+        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
 
     }else if( this->VR == "UL" ){ //Unsigned long (32bit).
         std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
         const uint32_t val_ul = std::stoul(this->val);
         write_to_stream(ss, val_ul, 4, enc);
-        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str());
+        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
 
     }else if( this->VR == "AT" ){ //Attribute tag (2x unsigned shorts representing a DICOM data tag).
         // Assuming the value payload contains exactly two unsigned integers, e.g., '123\234'.
         std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
         auto tokens = SplitStringToVector(this->val, '\\', 'd');
-        if(tokens.size() != 2ULL) throw std::runtime_error("Invalid number of integers for AT type tag; exactly 2 are needed.");
+        if(tokens.size() != 2ULL){
+            throw std::runtime_error("Invalid number of integers for AT type tag at " + this_tag + "; exactly 2 are needed.");
+        }
         for(auto &token_val : tokens){
             const auto val_u = static_cast<uint16_t>(std::stoul(token_val));
             write_to_stream(ss, val_u, 2, enc);
         }
-        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str());
+        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
 
 
     //Other types.
     }else if( this->VR == "UN" ){ //Unknown. Often needed for handling private DICOM tags.
-        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
+        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
     }else if( this->VR == "SQ" ){ //Sequence.
         // Verify the node does not have any data associated with it. If it does, it probably indicates a logic
         // error since only children nodes should contain data.
         if(!this->val.empty()){
-            throw std::logic_error("Nodes with 'SQ' VR can not have any data associated with them. (Is it intentional?)");
+            throw std::logic_error("Nodes with 'SQ' VR can not have any data associated with them at tag " + this_tag + ". (Is it intentional?)");
         }
 
         // Recursive calls happen in the following routine.
-        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val);
+        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
     }else{
-        throw std::runtime_error("Unknown VR type. Cannot write to tag.");
+        throw std::runtime_error("Unknown VR type '" + this->VR + "' at tag " + this_tag + ". Cannot write to tag.");
     }
 
     return cumulative_length;
@@ -663,6 +788,10 @@ bool validate_VR_conformance(const std::string &VR,
     // In many cases validation can only be done when actually writing the DICOM.
     // To avoid duplicating the validation checks during emission, we simulate writing a DICOM file with the given
     // content. This results in a slow runtime, but avoids tricky code duplication.
+    //
+    // Note: lenient mode is intentionally *not* used here -- the purpose of this function is to check strict
+    // conformance.
+    YLOGDEBUG("validate_VR_conformance: VR='" << VR << "' val_length=" << val.size());
     Node root_node;
     root_node.emplace_child_node({{0x9999, 0x9999}, VR, val});
 
@@ -1272,6 +1401,9 @@ std::string Node::value_str() const {
 
 bool Node::validate(Encoding enc,
                     const std::vector<const DICOMDictionary*> &dicts) const {
+    YLOGDEBUG("validate: checking tree conformance with encoding "
+              << (enc == Encoding::ELE ? "ELE" : (enc == Encoding::ILE ? "ILE" : "Other")));
+
     // Check each tag's VR against the dictionary VR and warn about mismatches,
     // but only if at least one dictionary has been explicitly provided.
     if(!dicts.empty()){
@@ -1279,10 +1411,8 @@ bool Node::validate(Encoding enc,
             if(!n.VR.empty() && n.VR != "SQ" && n.VR != "MULTI"){
                 const auto dict_vr = lookup_VR(n.key.group, n.key.tag, dicts);
                 if(!dict_vr.empty() && dict_vr != n.VR){
-                    YLOGWARN("Tag (" << std::hex << std::setfill('0')
-                             << std::setw(4) << n.key.group << ","
-                             << std::setw(4) << n.key.tag << std::dec
-                             << ") has VR '" << n.VR
+                    YLOGWARN("Tag " << tag_diag(n.key.group, n.key.tag)
+                             << " has VR '" << n.VR
                              << "' but dictionary specifies '" << dict_vr << "'");
                 }
             }
@@ -1296,11 +1426,13 @@ bool Node::validate(Encoding enc,
     }
 
     // Validate by attempting to emit the tree and checking for exceptions.
+    // Note: lenient mode is intentionally *not* used -- the purpose of validation is to check strict conformance.
     try{
         std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
         this->emit_DICOM(ss, enc);
         return ss.good();
-    }catch(const std::exception &){
+    }catch(const std::exception &e){
+        YLOGDEBUG("validate: emission failed: " << e.what());
         return false;
     }
 }
@@ -1590,6 +1722,10 @@ void deidentify(Node &root,
                 const DeidentifyParams &params,
                 uid_mapping_t &uid_map){
 
+    YLOGDEBUG("deidentify: starting de-identification with patient_id='" << params.patient_id
+              << "' patient_name='" << params.patient_name
+              << "' study_id='" << params.study_id << "'");
+
     // Get today's date and time strings in DICOM format using Ygor's time_mark.
     // Dump_as_postgres_string() returns "YYYY-MM-DD HH:MM:SS" (19 characters).
     const auto datetime_str = time_mark().Dump_as_postgres_string();
@@ -1610,6 +1746,7 @@ void deidentify(Node &root,
     //
     // These tags may contain PHI and are removed entirely.
     // -----------------------------------------------------------------------
+    YLOGDEBUG("deidentify: step 1 -- erasing PHI tags");
     for(const auto &t : tags_to_erase){
         root.remove_all(t.first, t.second);
     }
@@ -1632,6 +1769,7 @@ void deidentify(Node &root,
     // These tags are replaced with anonymized/generic values if present.
     // The existing VR from the parsed file is preserved.
     // -----------------------------------------------------------------------
+    YLOGDEBUG("deidentify: step 2 -- replacing tags with de-identified values");
 
     // Dates and times.
     set_tag_value_all(root, 0x0008, 0x0020, todays_date);   // Study Date
@@ -1695,6 +1833,7 @@ void deidentify(Node &root,
     // -----------------------------------------------------------------------
     // Step 3: Set patient/study/series identification.
     // -----------------------------------------------------------------------
+    YLOGDEBUG("deidentify: step 3 -- setting patient/study/series identification");
     set_tag_value_all(root, 0x0010, 0x0020, params.patient_id);    // Patient ID
     set_tag_value_all(root, 0x0010, 0x0010, params.patient_name);  // Patient's Name
     // Ensure Patient ID and Patient's Name tags exist exactly once at the root.
@@ -1722,6 +1861,7 @@ void deidentify(Node &root,
     // If the same original UID appears again (in this file or future files),
     // the same replacement UID is used.
     // -----------------------------------------------------------------------
+    YLOGDEBUG("deidentify: step 4 -- remapping UIDs");
     for(const auto &t : uid_tags_to_remap){
         remap_uid_tag(root, t.first, t.second, uid_map);
     }

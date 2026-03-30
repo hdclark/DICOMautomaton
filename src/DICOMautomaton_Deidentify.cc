@@ -88,6 +88,7 @@ int main(int argc, char **argv){
     std::string patient_name;
     std::string study_id;
     std::string uid_map_file;
+    bool lenient = false;
     DCMA_DICOM::DeidentifyParams params;
 
     std::vector<std::string> inputs;
@@ -157,6 +158,14 @@ int main(int argc, char **argv){
       })
     );
 
+    arger.push_back( ygor_arg_handlr_t(4, 'l', "lenient", false, "",
+      "Enable lenient mode: skip VR validation checks during DICOM emission."
+      " Useful for passing through non-conformant files that nevertheless need to be de-identified.",
+      [&](const std::string &) -> void {
+        lenient = true;
+      })
+    );
+
     arger.Launch(argc, argv);
 
     // Validate required parameters.
@@ -207,7 +216,8 @@ int main(int argc, char **argv){
         return 1;
     }
 
-    YLOGINFO("Processing " << input_files.size() << " input file(s)");
+    YLOGINFO("Processing " << input_files.size() << " input file(s)"
+             << (lenient ? " (lenient mode)" : ""));
 
     const auto &default_dict = DCMA_DICOM::get_default_dictionary();
     std::vector<const DCMA_DICOM::DICOMDictionary*> dicts = { &default_dict };
@@ -222,6 +232,7 @@ int main(int argc, char **argv){
 
         try{
             // Read the DICOM file.
+            YLOGDEBUG("Reading DICOM file '" << input_path << "'");
             std::ifstream ifs(input_path, std::ios::binary);
             if(!ifs.good()){
                 YLOGWARN("Unable to read file '" << input_path << "', skipping");
@@ -246,9 +257,18 @@ int main(int argc, char **argv){
                     enc = DCMA_DICOM::Encoding::ELE; // Explicit VR Little Endian (and variants).
                 }
             }
+            YLOGDEBUG("Detected encoding: " << (enc == DCMA_DICOM::Encoding::ELE ? "ELE" : "ILE"));
 
             // Apply de-identification.
+            YLOGDEBUG("Applying de-identification to '" << input_path << "'");
             DCMA_DICOM::deidentify(root, params, uid_map);
+
+            // Test emission: emit to a placeholder stream first to confirm no errors occur.
+            // This avoids writing partially de-identified files to disk.
+            YLOGDEBUG("Test-emitting de-identified tree for '" << input_path << "'");
+            std::ostringstream test_ss(std::ios_base::ate | std::ios_base::binary);
+            root.emit_DICOM(test_ss, enc, true, lenient);
+            const auto emitted_data = test_ss.str();
 
             // Generate a unique output filename that does not collide with existing files.
             // Use a sequential counter with .dcm extension for de-identified filenames.
@@ -262,24 +282,34 @@ int main(int argc, char **argv){
                 if(!fs::exists(output_path)) break;
             }
 
-            // Write the de-identified DICOM file.
+            // Write the tested de-identified DICOM data to disk.
             std::ofstream ofs(output_path, std::ios::binary);
             if(!ofs.good()){
-                YLOGWARN("Unable to write file '" << output_path << "', skipping");
+                YLOGERR("Unable to write file '" << output_path << "'");
                 ++fail_count;
-                continue;
+                break;
             }
 
-            root.emit_DICOM(ofs, enc);
+            ofs.write(emitted_data.data(), static_cast<std::streamsize>(emitted_data.size()));
             ofs.close();
+
+            if(!ofs.good()){
+                // Writing failed -- remove the partially-written file.
+                YLOGERR("Write error for file '" << output_path << "'. Removing partial output.");
+                std::error_code ec;
+                fs::remove(output_path, ec);
+                ++fail_count;
+                break;
+            }
 
             ++success_count;
             YLOGINFO("  [" << file_count << "/" << input_files.size() << "] "
                      << input_path.filename() << " -> " << fname_str);
 
         }catch(const std::exception &e){
-            YLOGWARN("Error processing '" << input_path << "': " << e.what());
+            YLOGERR("Error processing '" << input_path << "': " << e.what());
             ++fail_count;
+            break;
         }
     }
 
