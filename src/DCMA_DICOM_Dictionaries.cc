@@ -29,6 +29,12 @@ const DICOMDictionary& get_default_dictionary(){
     //
     // Each entry is verified against the published DICOM standard (PS3.6).
     // VR, VM, keyword, and retirement status are all recorded.
+    //
+    // NOTE: You can generate this structure directly from the DICOM standard Dockbook xml 'part06.xml' file via:
+    //    ./scripts/generate_DICOM_dictionary.sh /tmp/part06.xml /tmp/out.dict
+    //    ./scripts/convert_dict_to_cpp.sh /tmp/out.dict /tmp/out.cc
+    // However it will be 5000+ lines long and will severely hamper compilation performance.
+    //
     static const DICOMDictionary dict = {
         // File Meta Information (group 0x0002).
         {{0x0002, 0x0000}, {"UL", "FileMetaInformationGroupLength", "1", false}},
@@ -340,9 +346,11 @@ std::string lookup_VR(uint16_t group, uint16_t element,
     }
 
     // Consult the built-in default dictionary.
-    const auto &def = get_default_dictionary();
-    auto entry = def.find({group, element});
-    if(entry != def.end()) return entry->second.VR;
+    {
+        const auto &def = get_default_dictionary();
+        auto entry = def.find({group, element});
+        if(entry != def.end()) return entry->second.VR;
+    }
 
     // Special case: group length tags always have VR "UL".
     if(element == 0x0000) return "UL";
@@ -359,9 +367,11 @@ std::string lookup_VM(uint16_t group, uint16_t element,
         if(entry != (*it)->end() && !entry->second.VM.empty()) return entry->second.VM;
     }
 
-    const auto &def = get_default_dictionary();
-    auto entry = def.find({group, element});
-    if(entry != def.end() && !entry->second.VM.empty()) return entry->second.VM;
+    {
+        const auto &def = get_default_dictionary();
+        auto entry = def.find({group, element});
+        if(entry != def.end() && !entry->second.VM.empty()) return entry->second.VM;
+    }
 
     // Special case: group length tags always have VM "1".
     if(element == 0x0000) return "1";
@@ -378,9 +388,11 @@ std::string lookup_keyword(uint16_t group, uint16_t element,
         if(entry != (*it)->end() && !entry->second.keyword.empty()) return entry->second.keyword;
     }
 
-    const auto &def = get_default_dictionary();
-    auto entry = def.find({group, element});
-    if(entry != def.end() && !entry->second.keyword.empty()) return entry->second.keyword;
+    {
+        const auto &def = get_default_dictionary();
+        auto entry = def.find({group, element});
+        if(entry != def.end() && !entry->second.keyword.empty()) return entry->second.keyword;
+    }
 
     return "";
 }
