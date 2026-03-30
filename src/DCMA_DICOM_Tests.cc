@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <cstring>
+#include <cmath>
 #include <sstream>
 #include <string>
 #include <list>
@@ -13,6 +14,9 @@
 #include <map>
 
 #include "doctest20251212/doctest.h"
+
+#include "YgorImages.h"
+#include "YgorMath.h"
 
 #include "DCMA_DICOM.h"
 #include "DCMA_DICOM_PixelData.h"
@@ -982,13 +986,17 @@ TEST_CASE("DCMA_DICOM extract_native_pixel_data 16-bit unsigned"){
     std::memcpy(&raw[0], vals, 8);
 
     auto root = create_image_dicom(2, 2, 16, 16, 15, 0, "MONOCHROME2", raw);
-    auto epd = DCMA_DICOM::extract_native_pixel_data(root);
-    REQUIRE(epd.has_value());
-    REQUIRE(epd->samples.size() == 4);
-    CHECK(epd->samples[0] == 100.0);
-    CHECK(epd->samples[1] == 200.0);
-    CHECK(epd->samples[2] == 300.0);
-    CHECK(epd->samples[3] == 400.0);
+    auto pics = DCMA_DICOM::extract_native_pixel_data(root);
+    REQUIRE(pics.has_value());
+    REQUIRE(pics->images.size() == 1);
+    const auto &img = pics->images.front();
+    CHECK(img.rows == 2);
+    CHECK(img.columns == 2);
+    CHECK(img.channels == 1);
+    CHECK(img.value(0, 0, 0) == doctest::Approx(100.0f));
+    CHECK(img.value(0, 1, 0) == doctest::Approx(200.0f));
+    CHECK(img.value(1, 0, 0) == doctest::Approx(300.0f));
+    CHECK(img.value(1, 1, 0) == doctest::Approx(400.0f));
 }
 
 TEST_CASE("DCMA_DICOM extract_native_pixel_data 16-bit signed"){
@@ -999,11 +1007,12 @@ TEST_CASE("DCMA_DICOM extract_native_pixel_data 16-bit signed"){
     std::memcpy(&raw[0], vals, 4);
 
     auto root = create_image_dicom(1, 2, 16, 16, 15, 1, "MONOCHROME2", raw);
-    auto epd = DCMA_DICOM::extract_native_pixel_data(root);
-    REQUIRE(epd.has_value());
-    REQUIRE(epd->samples.size() == 2);
-    CHECK(epd->samples[0] == -100.0);
-    CHECK(epd->samples[1] == 32000.0);
+    auto pics = DCMA_DICOM::extract_native_pixel_data(root);
+    REQUIRE(pics.has_value());
+    REQUIRE(pics->images.size() == 1);
+    const auto &img = pics->images.front();
+    CHECK(img.value(0, 0, 0) == doctest::Approx(-100.0f));
+    CHECK(img.value(0, 1, 0) == doctest::Approx(32000.0f));
 }
 
 TEST_CASE("DCMA_DICOM extract_native_pixel_data 8-bit unsigned"){
@@ -1011,13 +1020,14 @@ TEST_CASE("DCMA_DICOM extract_native_pixel_data 8-bit unsigned"){
     std::string raw = { '\x00', '\x7F', '\x80', '\xFF' };
 
     auto root = create_image_dicom(2, 2, 8, 8, 7, 0, "MONOCHROME2", raw);
-    auto epd = DCMA_DICOM::extract_native_pixel_data(root);
-    REQUIRE(epd.has_value());
-    REQUIRE(epd->samples.size() == 4);
-    CHECK(epd->samples[0] == 0.0);
-    CHECK(epd->samples[1] == 127.0);
-    CHECK(epd->samples[2] == 128.0);
-    CHECK(epd->samples[3] == 255.0);
+    auto pics = DCMA_DICOM::extract_native_pixel_data(root);
+    REQUIRE(pics.has_value());
+    REQUIRE(pics->images.size() == 1);
+    const auto &img = pics->images.front();
+    CHECK(img.value(0, 0, 0) == doctest::Approx(0.0f));
+    CHECK(img.value(0, 1, 0) == doctest::Approx(127.0f));
+    CHECK(img.value(1, 0, 0) == doctest::Approx(128.0f));
+    CHECK(img.value(1, 1, 0) == doctest::Approx(255.0f));
 }
 
 TEST_CASE("DCMA_DICOM extract_native_pixel_data 12-bit stored in 16-bit"){
@@ -1028,10 +1038,10 @@ TEST_CASE("DCMA_DICOM extract_native_pixel_data 12-bit stored in 16-bit"){
     std::memcpy(&raw[0], &val, 2);
 
     auto root = create_image_dicom(1, 1, 16, 12, 11, 0, "MONOCHROME2", raw);
-    auto epd = DCMA_DICOM::extract_native_pixel_data(root);
-    REQUIRE(epd.has_value());
-    REQUIRE(epd->samples.size() == 1);
-    CHECK(epd->samples[0] == 2748.0);
+    auto pics = DCMA_DICOM::extract_native_pixel_data(root);
+    REQUIRE(pics.has_value());
+    REQUIRE(pics->images.size() == 1);
+    CHECK(pics->images.front().value(0, 0, 0) == doctest::Approx(2748.0f));
 }
 
 TEST_CASE("DCMA_DICOM extract_native_pixel_data 32-bit unsigned"){
@@ -1041,11 +1051,12 @@ TEST_CASE("DCMA_DICOM extract_native_pixel_data 32-bit unsigned"){
     std::memcpy(&raw[0], vals, 8);
 
     auto root = create_image_dicom(1, 2, 32, 32, 31, 0, "MONOCHROME2", raw);
-    auto epd = DCMA_DICOM::extract_native_pixel_data(root);
-    REQUIRE(epd.has_value());
-    REQUIRE(epd->samples.size() == 2);
-    CHECK(epd->samples[0] == 0.0);
-    CHECK(epd->samples[1] == 1000000.0);
+    auto pics = DCMA_DICOM::extract_native_pixel_data(root);
+    REQUIRE(pics.has_value());
+    REQUIRE(pics->images.size() == 1);
+    const auto &img = pics->images.front();
+    CHECK(img.value(0, 0, 0) == doctest::Approx(0.0f));
+    CHECK(img.value(0, 1, 0) == doctest::Approx(1000000.0f));
 }
 
 TEST_CASE("DCMA_DICOM extract_native_pixel_data RGB interleaved"){
@@ -1054,15 +1065,19 @@ TEST_CASE("DCMA_DICOM extract_native_pixel_data RGB interleaved"){
     std::string raw = { '\x0A', '\x14', '\x1E', '\x28', '\x32', '\x3C' };
 
     auto root = create_image_dicom(1, 2, 8, 8, 7, 0, "RGB", raw, 3, 0);
-    auto epd = DCMA_DICOM::extract_native_pixel_data(root);
-    REQUIRE(epd.has_value());
-    REQUIRE(epd->samples.size() == 6);
-    CHECK(epd->samples[0] == 10.0);
-    CHECK(epd->samples[1] == 20.0);
-    CHECK(epd->samples[2] == 30.0);
-    CHECK(epd->samples[3] == 40.0);
-    CHECK(epd->samples[4] == 50.0);
-    CHECK(epd->samples[5] == 60.0);
+    auto pics = DCMA_DICOM::extract_native_pixel_data(root);
+    REQUIRE(pics.has_value());
+    REQUIRE(pics->images.size() == 1);
+    const auto &img = pics->images.front();
+    CHECK(img.rows == 1);
+    CHECK(img.columns == 2);
+    CHECK(img.channels == 3);
+    CHECK(img.value(0, 0, 0) == doctest::Approx(10.0f));
+    CHECK(img.value(0, 0, 1) == doctest::Approx(20.0f));
+    CHECK(img.value(0, 0, 2) == doctest::Approx(30.0f));
+    CHECK(img.value(0, 1, 0) == doctest::Approx(40.0f));
+    CHECK(img.value(0, 1, 1) == doctest::Approx(50.0f));
+    CHECK(img.value(0, 1, 2) == doctest::Approx(60.0f));
 }
 
 TEST_CASE("DCMA_DICOM extract_native_pixel_data returns nullopt for missing pixel data"){
@@ -1074,8 +1089,8 @@ TEST_CASE("DCMA_DICOM extract_native_pixel_data returns nullopt for missing pixe
     root.emplace_child_node({{0x0028, 0x0101}, "US", "16"});
     root.emplace_child_node({{0x0028, 0x0102}, "US", "15"});
     // No pixel data tag.
-    auto epd = DCMA_DICOM::extract_native_pixel_data(root);
-    CHECK_FALSE(epd.has_value());
+    auto pics = DCMA_DICOM::extract_native_pixel_data(root);
+    CHECK_FALSE(pics.has_value());
 }
 
 TEST_CASE("DCMA_DICOM extract_native_pixel_data Float Pixel Data (7FE0,0008)"){
@@ -1096,11 +1111,12 @@ TEST_CASE("DCMA_DICOM extract_native_pixel_data Float Pixel Data (7FE0,0008)"){
     root.emplace_child_node({{0x0028, 0x0103}, "US", "0"});
     root.emplace_child_node({{0x7FE0, 0x0008}, "OF", raw});  // Float Pixel Data.
 
-    auto epd = DCMA_DICOM::extract_native_pixel_data(root);
-    REQUIRE(epd.has_value());
-    REQUIRE(epd->samples.size() == 2);
-    CHECK(epd->samples[0] == doctest::Approx(1.5));
-    CHECK(epd->samples[1] == doctest::Approx(-2.5));
+    auto pics = DCMA_DICOM::extract_native_pixel_data(root);
+    REQUIRE(pics.has_value());
+    REQUIRE(pics->images.size() == 1);
+    const auto &img = pics->images.front();
+    CHECK(img.value(0, 0, 0) == doctest::Approx(1.5f));
+    CHECK(img.value(0, 1, 0) == doctest::Approx(-2.5f));
 }
 
 TEST_CASE("DCMA_DICOM extract_native_pixel_data Double Float Pixel Data (7FE0,0009)"){
@@ -1121,11 +1137,13 @@ TEST_CASE("DCMA_DICOM extract_native_pixel_data Double Float Pixel Data (7FE0,00
     root.emplace_child_node({{0x0028, 0x0103}, "US", "0"});
     root.emplace_child_node({{0x7FE0, 0x0009}, "OD", raw});  // Double Float Pixel Data.
 
-    auto epd = DCMA_DICOM::extract_native_pixel_data(root);
-    REQUIRE(epd.has_value());
-    REQUIRE(epd->samples.size() == 2);
-    CHECK(epd->samples[0] == doctest::Approx(3.14159265358979));
-    CHECK(epd->samples[1] == doctest::Approx(-1.0e10));
+    auto pics = DCMA_DICOM::extract_native_pixel_data(root);
+    REQUIRE(pics.has_value());
+    REQUIRE(pics->images.size() == 1);
+    const auto &img = pics->images.front();
+    // Note: double → float may lose precision, so we use a generous epsilon.
+    CHECK(img.value(0, 0, 0) == doctest::Approx(3.14159265f).epsilon(1e-5));
+    CHECK(img.value(0, 1, 0) == doctest::Approx(-1.0e10f).epsilon(1e-3));
 }
 
 
@@ -1173,13 +1191,80 @@ TEST_CASE("DCMA_DICOM extract_overlay_data returns empty for no overlays"){
 
 
 // ============================================================================
-// Encapsulated pixel data stub test
+// Encapsulated pixel data test (JPEG baseline 8-bit)
 // ============================================================================
 
-TEST_CASE("DCMA_DICOM extract_encapsulated_pixel_data returns nullopt (stub)"){
-    // Create a tree with a JPEG transfer syntax.
+TEST_CASE("DCMA_DICOM extract_encapsulated_pixel_data JPEG baseline grayscale"){
+    // A pre-generated 2x2 grayscale JPEG (quality 100) with pixel values [10, 80, 160, 240].
+    // Generated using Pillow: Image.new('L', (2,2)); putpixel values; save JPEG q=100.
+    static const uint8_t jpeg_data[] = {
+        0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46, 0x00, 0x01,
+        0x01, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0xff, 0xdb, 0x00, 0x43,
+        0x00, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+        0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+        0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+        0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+        0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+        0x01, 0x01, 0x01, 0x01, 0x01, 0xff, 0xc0, 0x00, 0x0b, 0x08, 0x00, 0x02,
+        0x00, 0x02, 0x01, 0x01, 0x11, 0x00, 0xff, 0xc4, 0x00, 0x1f, 0x00, 0x00,
+        0x01, 0x05, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+        0x09, 0x0a, 0x0b, 0xff, 0xc4, 0x00, 0xb5, 0x10, 0x00, 0x02, 0x01, 0x03,
+        0x03, 0x02, 0x04, 0x03, 0x05, 0x05, 0x04, 0x04, 0x00, 0x00, 0x01, 0x7d,
+        0x01, 0x02, 0x03, 0x00, 0x04, 0x11, 0x05, 0x12, 0x21, 0x31, 0x41, 0x06,
+        0x13, 0x51, 0x61, 0x07, 0x22, 0x71, 0x14, 0x32, 0x81, 0x91, 0xa1, 0x08,
+        0x23, 0x42, 0xb1, 0xc1, 0x15, 0x52, 0xd1, 0xf0, 0x24, 0x33, 0x62, 0x72,
+        0x82, 0x09, 0x0a, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x25, 0x26, 0x27, 0x28,
+        0x29, 0x2a, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x3a, 0x43, 0x44, 0x45,
+        0x46, 0x47, 0x48, 0x49, 0x4a, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58, 0x59,
+        0x5a, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69, 0x6a, 0x73, 0x74, 0x75,
+        0x76, 0x77, 0x78, 0x79, 0x7a, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88, 0x89,
+        0x8a, 0x92, 0x93, 0x94, 0x95, 0x96, 0x97, 0x98, 0x99, 0x9a, 0xa2, 0xa3,
+        0xa4, 0xa5, 0xa6, 0xa7, 0xa8, 0xa9, 0xaa, 0xb2, 0xb3, 0xb4, 0xb5, 0xb6,
+        0xb7, 0xb8, 0xb9, 0xba, 0xc2, 0xc3, 0xc4, 0xc5, 0xc6, 0xc7, 0xc8, 0xc9,
+        0xca, 0xd2, 0xd3, 0xd4, 0xd5, 0xd6, 0xd7, 0xd8, 0xd9, 0xda, 0xe1, 0xe2,
+        0xe3, 0xe4, 0xe5, 0xe6, 0xe7, 0xe8, 0xe9, 0xea, 0xf1, 0xf2, 0xf3, 0xf4,
+        0xf5, 0xf6, 0xf7, 0xf8, 0xf9, 0xfa, 0xff, 0xda, 0x00, 0x08, 0x01, 0x01,
+        0x00, 0x00, 0x3f, 0x00, 0xfe, 0xa4, 0x7e, 0x09, 0x7e, 0xc4, 0x7f, 0xb1,
+        0x83, 0x7c, 0x18, 0xf8, 0x44, 0xcd, 0xfb, 0x22, 0x7e, 0xcc, 0x0c, 0xcd,
+        0xf0, 0xc3, 0xc0, 0x2c, 0xcc, 0xdf, 0x00, 0xbe, 0x14, 0x96, 0x66, 0x3e,
+        0x14, 0xd2, 0x49, 0x66, 0x27, 0xc2, 0x64, 0x92, 0x49, 0x24, 0x92, 0x72,
+        0x4f, 0x26, 0xbf, 0xff, 0xd9
+    };
+
+    std::string jpeg_str(reinterpret_cast<const char*>(jpeg_data), sizeof(jpeg_data));
+
     DCMA_DICOM::Node root;
-    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.4.50"});
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.4.50"});  // JPEG Baseline.
+    root.emplace_child_node({{0x0028, 0x0002}, "US", "1"});
+    root.emplace_child_node({{0x0028, 0x0004}, "CS", "MONOCHROME2"});
+    root.emplace_child_node({{0x0028, 0x0010}, "US", "2"});
+    root.emplace_child_node({{0x0028, 0x0011}, "US", "2"});
+    root.emplace_child_node({{0x0028, 0x0100}, "US", "8"});
+    root.emplace_child_node({{0x0028, 0x0101}, "US", "8"});
+    root.emplace_child_node({{0x0028, 0x0102}, "US", "7"});
+    root.emplace_child_node({{0x0028, 0x0103}, "US", "0"});
+    root.emplace_child_node({{0x7FE0, 0x0010}, "OB", jpeg_str});
+
+    auto pics = DCMA_DICOM::extract_encapsulated_pixel_data(root);
+    REQUIRE(pics.has_value());
+    REQUIRE(pics->images.size() == 1);
+    const auto &img = pics->images.front();
+    CHECK(img.rows == 2);
+    CHECK(img.columns == 2);
+    CHECK(img.channels == 1);
+
+    // JPEG is lossy; check pixel values are approximately correct.
+    CHECK(img.value(0, 0, 0) == doctest::Approx(10.0f).epsilon(0.1));
+    CHECK(img.value(0, 1, 0) == doctest::Approx(80.0f).epsilon(0.1));
+    CHECK(img.value(1, 0, 0) == doctest::Approx(160.0f).epsilon(0.1));
+    CHECK(img.value(1, 1, 0) == doctest::Approx(240.0f).epsilon(0.1));
+}
+
+TEST_CASE("DCMA_DICOM extract_encapsulated_pixel_data returns nullopt for unsupported TS"){
+    // JPEG 2000 is not supported.
+    DCMA_DICOM::Node root;
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.4.90"});
     root.emplace_child_node({{0x0028, 0x0010}, "US", "2"});
     root.emplace_child_node({{0x0028, 0x0011}, "US", "2"});
     root.emplace_child_node({{0x0028, 0x0100}, "US", "8"});
@@ -1187,6 +1272,217 @@ TEST_CASE("DCMA_DICOM extract_encapsulated_pixel_data returns nullopt (stub)"){
     root.emplace_child_node({{0x0028, 0x0102}, "US", "7"});
     root.emplace_child_node({{0x7FE0, 0x0010}, "OB", std::string(100, '\0')});
 
-    auto epd = DCMA_DICOM::extract_encapsulated_pixel_data(root);
-    CHECK_FALSE(epd.has_value());
+    auto pics = DCMA_DICOM::extract_encapsulated_pixel_data(root);
+    CHECK_FALSE(pics.has_value());
+}
+
+TEST_CASE("DCMA_DICOM extract_encapsulated_pixel_data returns nullopt for JPEG lossless"){
+    DCMA_DICOM::Node root;
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.4.70"});
+    root.emplace_child_node({{0x0028, 0x0010}, "US", "2"});
+    root.emplace_child_node({{0x0028, 0x0011}, "US", "2"});
+    root.emplace_child_node({{0x0028, 0x0100}, "US", "8"});
+    root.emplace_child_node({{0x0028, 0x0101}, "US", "8"});
+    root.emplace_child_node({{0x0028, 0x0102}, "US", "7"});
+    root.emplace_child_node({{0x7FE0, 0x0010}, "OB", std::string(100, '\0')});
+
+    auto pics = DCMA_DICOM::extract_encapsulated_pixel_data(root);
+    CHECK_FALSE(pics.has_value());
+}
+
+
+// ============================================================================
+// Pixel transformation pipeline tests
+// ============================================================================
+
+TEST_CASE("DCMA_DICOM get_modality_lut_params reads RescaleSlope and RescaleIntercept"){
+    DCMA_DICOM::Node root;
+    root.emplace_child_node({{0x0028, 0x1053}, "DS", "2.5"});
+    root.emplace_child_node({{0x0028, 0x1052}, "DS", "-1024"});
+
+    auto params = DCMA_DICOM::get_modality_lut_params(root);
+    REQUIRE(params.has_value());
+    CHECK(params->rescale_slope == doctest::Approx(2.5));
+    CHECK(params->rescale_intercept == doctest::Approx(-1024.0));
+}
+
+TEST_CASE("DCMA_DICOM get_modality_lut_params returns nullopt when absent"){
+    DCMA_DICOM::Node root;
+    auto params = DCMA_DICOM::get_modality_lut_params(root);
+    CHECK_FALSE(params.has_value());
+}
+
+TEST_CASE("DCMA_DICOM apply_modality_lut transforms pixel values"){
+    // 1x2 image with stored values 100.0 and 200.0.
+    // Slope = 2.0, Intercept = -50.
+    // Expected: 2*100 - 50 = 150, 2*200 - 50 = 350.
+    planar_image<float,double> img;
+    img.init_buffer(1, 2, 1);
+    img.init_spatial(1.0, 1.0, 1.0, vec3<double>(0,0,0), vec3<double>(0,0,0));
+    img.init_orientation(vec3<double>(1,0,0), vec3<double>(0,1,0));
+    img.reference(0, 0, 0) = 100.0f;
+    img.reference(0, 1, 0) = 200.0f;
+
+    DCMA_DICOM::ModalityLUTParams p;
+    p.rescale_slope = 2.0;
+    p.rescale_intercept = -50.0;
+    DCMA_DICOM::apply_modality_lut(img, p);
+
+    CHECK(img.value(0, 0, 0) == doctest::Approx(150.0f));
+    CHECK(img.value(0, 1, 0) == doctest::Approx(350.0f));
+}
+
+TEST_CASE("DCMA_DICOM get_voi_lut_params reads WindowCenter and WindowWidth"){
+    DCMA_DICOM::Node root;
+    root.emplace_child_node({{0x0028, 0x1050}, "DS", "40"});
+    root.emplace_child_node({{0x0028, 0x1051}, "DS", "400"});
+
+    auto params = DCMA_DICOM::get_voi_lut_params(root);
+    REQUIRE(params.has_value());
+    CHECK(params->window_center == doctest::Approx(40.0));
+    CHECK(params->window_width == doctest::Approx(400.0));
+}
+
+TEST_CASE("DCMA_DICOM get_voi_lut_params returns nullopt when absent"){
+    DCMA_DICOM::Node root;
+    auto params = DCMA_DICOM::get_voi_lut_params(root);
+    CHECK_FALSE(params.has_value());
+}
+
+TEST_CASE("DCMA_DICOM apply_voi_lut clamps and maps pixel values"){
+    // Window center = 128, width = 256. Maps [0, 255] → [0, 255].
+    // Value below window → 0. Value above → 255. Value in range → proportional.
+    planar_image<float,double> img;
+    img.init_buffer(1, 3, 1);
+    img.init_spatial(1.0, 1.0, 1.0, vec3<double>(0,0,0), vec3<double>(0,0,0));
+    img.init_orientation(vec3<double>(1,0,0), vec3<double>(0,1,0));
+    img.reference(0, 0, 0) = -100.0f;  // Below window → 0.
+    img.reference(0, 1, 0) = 128.0f;   // At center → ~127.5.
+    img.reference(0, 2, 0) = 500.0f;   // Above window → 255.
+
+    DCMA_DICOM::VOILUTParams p;
+    p.window_center = 128.0;
+    p.window_width = 256.0;
+    DCMA_DICOM::apply_voi_lut(img, p, 0.0, 255.0);
+
+    CHECK(img.value(0, 0, 0) == doctest::Approx(0.0f));
+    CHECK(img.value(0, 1, 0) == doctest::Approx(127.5f).epsilon(0.02));
+    CHECK(img.value(0, 2, 0) == doctest::Approx(255.0f));
+}
+
+TEST_CASE("DCMA_DICOM get_presentation_lut_shape defaults to Identity"){
+    DCMA_DICOM::Node root;
+    auto shape = DCMA_DICOM::get_presentation_lut_shape(root);
+    CHECK(shape == DCMA_DICOM::PresentationLUTShape::Identity);
+}
+
+TEST_CASE("DCMA_DICOM get_presentation_lut_shape reads INVERSE"){
+    DCMA_DICOM::Node root;
+    root.emplace_child_node({{0x2050, 0x0020}, "CS", "INVERSE"});
+    auto shape = DCMA_DICOM::get_presentation_lut_shape(root);
+    CHECK(shape == DCMA_DICOM::PresentationLUTShape::Inverse);
+}
+
+TEST_CASE("DCMA_DICOM apply_presentation_lut with Inverse"){
+    planar_image<float,double> img;
+    img.init_buffer(1, 2, 1);
+    img.init_spatial(1.0, 1.0, 1.0, vec3<double>(0,0,0), vec3<double>(0,0,0));
+    img.init_orientation(vec3<double>(1,0,0), vec3<double>(0,1,0));
+    img.reference(0, 0, 0) = 50.0f;
+    img.reference(0, 1, 0) = 200.0f;
+
+    DCMA_DICOM::apply_presentation_lut(img, DCMA_DICOM::PresentationLUTShape::Inverse, 255.0);
+
+    CHECK(img.value(0, 0, 0) == doctest::Approx(205.0f));
+    CHECK(img.value(0, 1, 0) == doctest::Approx(55.0f));
+}
+
+TEST_CASE("DCMA_DICOM apply_presentation_lut with Identity is no-op"){
+    planar_image<float,double> img;
+    img.init_buffer(1, 1, 1);
+    img.init_spatial(1.0, 1.0, 1.0, vec3<double>(0,0,0), vec3<double>(0,0,0));
+    img.init_orientation(vec3<double>(1,0,0), vec3<double>(0,1,0));
+    img.reference(0, 0, 0) = 42.0f;
+
+    DCMA_DICOM::apply_presentation_lut(img, DCMA_DICOM::PresentationLUTShape::Identity, 255.0);
+
+    CHECK(img.value(0, 0, 0) == doctest::Approx(42.0f));
+}
+
+TEST_CASE("DCMA_DICOM convert_photometric_to_rgb YBR_FULL"){
+    // Y=128, Cb=128, Cr=128 → R≈128, G≈128, B≈128 (neutral gray).
+    planar_image<float,double> img;
+    img.init_buffer(1, 1, 3);
+    img.init_spatial(1.0, 1.0, 1.0, vec3<double>(0,0,0), vec3<double>(0,0,0));
+    img.init_orientation(vec3<double>(1,0,0), vec3<double>(0,1,0));
+    img.reference(0, 0, 0) = 128.0f;  // Y
+    img.reference(0, 0, 1) = 128.0f;  // Cb
+    img.reference(0, 0, 2) = 128.0f;  // Cr
+
+    bool ok = DCMA_DICOM::convert_photometric_to_rgb(img, "YBR_FULL");
+    CHECK(ok);
+    CHECK(img.value(0, 0, 0) == doctest::Approx(128.0f).epsilon(0.01));
+    CHECK(img.value(0, 0, 1) == doctest::Approx(128.0f).epsilon(0.01));
+    CHECK(img.value(0, 0, 2) == doctest::Approx(128.0f).epsilon(0.01));
+}
+
+TEST_CASE("DCMA_DICOM convert_photometric_to_rgb returns true for RGB (no-op)"){
+    planar_image<float,double> img;
+    img.init_buffer(1, 1, 3);
+    img.init_spatial(1.0, 1.0, 1.0, vec3<double>(0,0,0), vec3<double>(0,0,0));
+    img.init_orientation(vec3<double>(1,0,0), vec3<double>(0,1,0));
+    img.reference(0, 0, 0) = 10.0f;
+    img.reference(0, 0, 1) = 20.0f;
+    img.reference(0, 0, 2) = 30.0f;
+
+    bool ok = DCMA_DICOM::convert_photometric_to_rgb(img, "RGB");
+    CHECK(ok);
+    CHECK(img.value(0, 0, 0) == doctest::Approx(10.0f));
+    CHECK(img.value(0, 0, 1) == doctest::Approx(20.0f));
+    CHECK(img.value(0, 0, 2) == doctest::Approx(30.0f));
+}
+
+TEST_CASE("DCMA_DICOM composable pipeline: modality LUT + VOI LUT + presentation LUT"){
+    // Simulate a CT image pipeline:
+    // Stored value = 1000 (unsigned 16-bit).
+    // Modality LUT: slope=1, intercept=-1024 → HU = -24.
+    // VOI LUT: center=40, width=400 → maps [-160, 240] → [0, 255].
+    // HU=-24: ((−24 − (40 − 0.5)) / (400 − 1) + 0.5) × 255 ≈ 86.67.
+    // Presentation LUT: IDENTITY → no change.
+    std::string raw(2, '\0');
+    uint16_t stored_val = 1000;
+    std::memcpy(&raw[0], &stored_val, 2);
+
+    auto root = create_image_dicom(1, 1, 16, 16, 15, 0, "MONOCHROME2", raw);
+    root.emplace_child_node({{0x0028, 0x1053}, "DS", "1"});
+    root.emplace_child_node({{0x0028, 0x1052}, "DS", "-1024"});
+    root.emplace_child_node({{0x0028, 0x1050}, "DS", "40"});
+    root.emplace_child_node({{0x0028, 0x1051}, "DS", "400"});
+
+    auto pics = DCMA_DICOM::extract_native_pixel_data(root);
+    REQUIRE(pics.has_value());
+    REQUIRE(pics->images.size() == 1);
+    auto &img = pics->images.front();
+    CHECK(img.value(0, 0, 0) == doctest::Approx(1000.0f));
+
+    // Apply modality LUT.
+    auto mlut = DCMA_DICOM::get_modality_lut_params(root);
+    REQUIRE(mlut.has_value());
+    DCMA_DICOM::apply_modality_lut(img, *mlut);
+    CHECK(img.value(0, 0, 0) == doctest::Approx(-24.0f));
+
+    // Apply VOI LUT.
+    auto vlut = DCMA_DICOM::get_voi_lut_params(root);
+    REQUIRE(vlut.has_value());
+    DCMA_DICOM::apply_voi_lut(img, *vlut, 0.0, 255.0);
+
+    // Expected: ((-24 - (40 - 0.5)) / (400 - 1) + 0.5) * 255 ≈ 86.67.
+    const double expected = ((-24.0 - 39.5) / 399.0 + 0.5) * 255.0;
+    CHECK(img.value(0, 0, 0) == doctest::Approx(static_cast<float>(expected)).epsilon(0.1));
+
+    // Apply presentation LUT (identity → no change).
+    auto plut_shape = DCMA_DICOM::get_presentation_lut_shape(root);
+    CHECK(plut_shape == DCMA_DICOM::PresentationLUTShape::Identity);
+    DCMA_DICOM::apply_presentation_lut(img, plut_shape, 255.0);
+    CHECK(img.value(0, 0, 0) == doctest::Approx(static_cast<float>(expected)).epsilon(0.1));
 }
