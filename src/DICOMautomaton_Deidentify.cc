@@ -154,16 +154,32 @@ static std::string lookup_tag_value_by_keyword(const DCMA_DICOM::Node &root,
 }
 
 // Sanitize a string for use as a filename component: replace non-alphanumeric, non-dot,
-// non-hyphen, non-underscore characters with underscores.
+// non-hyphen, non-underscore characters with underscores. Collapse consecutive dots and
+// prevent leading dots/hyphens to mitigate path traversal risks.
 static std::string sanitize_for_filename(const std::string &s){
     std::string out;
     out.reserve(s.size());
     for(const char c : s){
-        if(std::isalnum(static_cast<unsigned char>(c)) || c == '.' || c == '-' || c == '_'){
+        if(std::isalnum(static_cast<unsigned char>(c)) || c == '-' || c == '_'){
             out += c;
+        }else if(c == '.'){
+            // Avoid consecutive dots (e.g., "..") and leading dots.
+            if(!out.empty() && out.back() != '.'){
+                out += c;
+            }else{
+                out += '_';
+            }
         }else{
             out += '_';
         }
+    }
+    // Remove leading dots or hyphens.
+    while(!out.empty() && (out.front() == '.' || out.front() == '-')){
+        out.erase(out.begin());
+    }
+    // Remove trailing dots.
+    while(!out.empty() && out.back() == '.'){
+        out.pop_back();
     }
     return out;
 }
@@ -425,17 +441,17 @@ int main(int argc, char **argv){
             }
 
             // Generate the output filename from the pattern, expanding ${Tag} variables
-            // and X-placeholders.
+            // and X-placeholders. Use atomic copy to avoid TOCTOU races: try
+            // copy_options::skip_existing and increment the counter on collision.
             fs::path output_path;
-            for(int64_t attempt = file_count; ; ++attempt){
+            bool copied = false;
+            for(int64_t attempt = file_count; !copied; ++attempt){
                 const auto fname_str = expand_filename_pattern(filename_pattern, root, dicts, attempt);
                 output_path = fs::path(output_dir) / fname_str;
-                if(!fs::exists(output_path)) break;
+                // skip_existing returns false (without error) if the file already exists,
+                // avoiding a TOCTOU race between existence check and copy.
+                copied = fs::copy_file(tmp_path, output_path, fs::copy_options::skip_existing);
             }
-
-            // Copy the successfully-emitted temp file to the final output location.
-            YLOGDEBUG("Copying temp file to '" << output_path << "'");
-            fs::copy_file(tmp_path, output_path, fs::copy_options::overwrite_existing);
 
             // Remove the temp file.
             std::error_code ec;

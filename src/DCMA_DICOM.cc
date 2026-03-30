@@ -697,7 +697,8 @@ uint64_t Node::emit_DICOM(std::ostream &os,
                 const float val_f = std::stof(this->val);
                 write_to_stream(ss, val_f, 4, enc);
                 cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
-            }catch(const std::exception &){
+            }catch(const std::exception &e){
+                YLOGDEBUG("emit_DICOM: lenient fallback to raw bytes for FL at " << this_tag << ": " << e.what());
                 cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
             }
         }else{
@@ -715,7 +716,8 @@ uint64_t Node::emit_DICOM(std::ostream &os,
                 const double val_d = std::stod(this->val);
                 write_to_stream(ss, val_d, 8, enc);
                 cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
-            }catch(const std::exception &){
+            }catch(const std::exception &e){
+                YLOGDEBUG("emit_DICOM: lenient fallback to raw bytes for FD at " << this_tag << ": " << e.what());
                 cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
             }
         }else{
@@ -766,7 +768,8 @@ uint64_t Node::emit_DICOM(std::ostream &os,
                 const int16_t val_i = std::stoi(this->val);
                 write_to_stream(ss, val_i, 2, enc);
                 cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
-            }catch(const std::exception &){
+            }catch(const std::exception &e){
+                YLOGDEBUG("emit_DICOM: lenient fallback to raw bytes for SS at " << this_tag << ": " << e.what());
                 cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
             }
         }else{
@@ -783,7 +786,8 @@ uint64_t Node::emit_DICOM(std::ostream &os,
                 const auto val_u = static_cast<uint16_t>(std::stoul(this->val));
                 write_to_stream(ss, val_u, 2, enc);
                 cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
-            }catch(const std::exception &){
+            }catch(const std::exception &e){
+                YLOGDEBUG("emit_DICOM: lenient fallback to raw bytes for US at " << this_tag << ": " << e.what());
                 cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
             }
         }else{
@@ -800,7 +804,8 @@ uint64_t Node::emit_DICOM(std::ostream &os,
                 const int32_t val_l = std::stol(this->val);
                 write_to_stream(ss, val_l, 4, enc);
                 cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
-            }catch(const std::exception &){
+            }catch(const std::exception &e){
+                YLOGDEBUG("emit_DICOM: lenient fallback to raw bytes for SL at " << this_tag << ": " << e.what());
                 cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
             }
         }else{
@@ -817,7 +822,8 @@ uint64_t Node::emit_DICOM(std::ostream &os,
                 const uint32_t val_ul = std::stoul(this->val);
                 write_to_stream(ss, val_ul, 4, enc);
                 cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
-            }catch(const std::exception &){
+            }catch(const std::exception &e){
+                YLOGDEBUG("emit_DICOM: lenient fallback to raw bytes for UL at " << this_tag << ": " << e.what());
                 cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
             }
         }else{
@@ -841,7 +847,8 @@ uint64_t Node::emit_DICOM(std::ostream &os,
                     write_to_stream(ss, val_u, 2, enc);
                 }
                 cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
-            }catch(const std::exception &){
+            }catch(const std::exception &e){
+                YLOGDEBUG("emit_DICOM: lenient fallback to raw bytes for AT at " << this_tag << ": " << e.what());
                 cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
             }
         }else{
