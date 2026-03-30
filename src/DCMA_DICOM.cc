@@ -540,17 +540,27 @@ uint64_t Node::emit_DICOM(std::ostream &os,
 
     }else if( this->VR == "LO" ){ //Long strings.
         // DICOM PS3.5 Section 6.2: LO - Long String.
-        // Character repertoire: Default, excluding backslash (5CH) and all control characters except ESC.
-        // Maximum length: 64 characters.
+        // Character repertoire: Default, excluding backslash (5CH) and all control characters except ESC, per value.
+        // Maximum length: 64 characters per value. LO is multi-valued, using backslash as the VM delimiter.
         if(!lenient){
-            if(64ULL < this->val.length()){
-                throw std::runtime_error("Long string is too long at tag " + get_tag_and_val_str() + ". Consider using a longer VR. Cannot continue.");
-            }
-            if(this->val.find('\\') != std::string::npos){
-                throw std::invalid_argument("Backslash (value multiplicity delimiter) found in LO at tag " + get_tag_and_val_str() + ". Cannot continue.");
-            }
-            if(has_control_char_except_esc(this->val)){
-                throw std::invalid_argument("Forbidden control character found in LO at tag " + get_tag_and_val_str() + ". Cannot continue.");
+            // Validate each value component separately, treating backslash as the VM delimiter.
+            std::size_t start = 0;
+            while(true){
+                const std::size_t pos = this->val.find('\\', start);
+                const std::size_t end = (pos == std::string::npos) ? this->val.size() : pos;
+                const std::string value_component = this->val.substr(start, end - start);
+
+                if(64ULL < value_component.length()){
+                    throw std::runtime_error("Long string value is too long at tag " + get_tag_and_val_str() + ". Each LO value must be <= 64 characters. Cannot continue.");
+                }
+                if(has_control_char_except_esc(value_component)){
+                    throw std::invalid_argument("Forbidden control character found in LO at tag " + get_tag_and_val_str() + ". Cannot continue.");
+                }
+
+                if(pos == std::string::npos){
+                    break;
+                }
+                start = pos + 1;
             }
         }
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
