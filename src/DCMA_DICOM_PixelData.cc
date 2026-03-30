@@ -372,12 +372,22 @@ void apply_presentation_lut(planar_image<float,double> &img, PresentationLUTShap
 bool convert_photometric_to_rgb(planar_image<float,double> &img,
                                 const std::string &from_photometric,
                                 const Node *root){
-    // YBR_FULL or YBR_FULL_422 → RGB.
+    // YBR_FULL → RGB.
     // DICOM PS3.3, C.7.6.3.1.2:
     //   R = Y + 1.402 * (Cr - 128)
     //   G = Y - 0.344136 * (Cb - 128) - 0.714136 * (Cr - 128)
     //   B = Y + 1.772 * (Cb - 128)
-    if(from_photometric == "YBR_FULL" || from_photometric == "YBR_FULL_422"){
+    if(from_photometric == "YBR_FULL_422"){
+        // YBR_FULL_422 is 4:2:2 chroma-subsampled and requires unpacking/upsampling
+        // before applying the per-pixel YCbCr→RGB transform. This routine operates on
+        // full 3-samples-per-pixel data only, so we report that we cannot do the
+        // conversion directly to avoid producing incorrect colors.
+        YLOGWARN("convert_photometric_to_rgb: YBR_FULL_422 is not supported without prior "
+                 "4:2:2 expansion to full-resolution YBR data.");
+        return false;
+    }
+
+    if(from_photometric == "YBR_FULL"){
         if(img.channels != 3) return false;
 
         for(int64_t row = 0; row < img.rows; ++row){
