@@ -416,25 +416,93 @@ bool convert_photometric_to_rgb(planar_image<float,double> &img,
         if(root == nullptr) return false;
         if(img.channels != 1) return false;
 
-        // Read LUT data for each colour channel. The raw value of the data tag contains
-        // packed uint16_t LUT entries (one per 2 bytes, little-endian).
-        auto read_lut_data = [&](uint16_t data_tag) -> std::vector<uint16_t> {
-            const auto *n = root->find(0x0028, data_tag);
-            if(n == nullptr) return {};
-            const auto &raw = n->val;
-            const size_t count = raw.size() / 2u;
-            std::vector<uint16_t> lut(count);
-            for(size_t i = 0; i < count; ++i){
-                uint16_t v = 0;
-                std::memcpy(&v, raw.data() + i * 2u, 2);
-                lut[i] = v;
+        // Read LUT data for each colour channel, applying the corresponding LUT Descriptor.
+        // The descriptor tags (0028,1101/1102/1103) provide:
+        //   - number of entries (US[0]), where 0 means 65536
+        //   - first mapped input value (US[1])
+        //   - bits per entry (US[2])
+        // The data tags (0028,1201/1202/1203) contain packed uint16_t entries (OW, little-endian).
+        //
+        // This routine constructs a 65,536-entry LUT that directly maps every possible
+        // 16-bit pixel value to a 16-bit output, fully incorporating the descriptor semantics.
+        auto read_lut_data = [&](uint16_t desc_tag, uint16_t data_tag) -> std::vector<uint16_t> {
+            // Read descriptor.
+            const auto *n_desc = root->find(0x0028, desc_tag);
+            uint32_t num_entries = 0;
+            uint32_t first_mapped = 0;
+            uint16_t bits_per_entry = 16;
+            if(n_desc != nullptr){
+                const auto &raw_desc = n_desc->val;
+                if(raw_desc.size() >= 6u){
+                    uint16_t d0 = 0, d1 = 0, d2 = 0;
+                    std::memcpy(&d0, raw_desc.data() + 0u, 2u);
+                    std::memcpy(&d1, raw_desc.data() + 2u, 2u);
+                    std::memcpy(&d2, raw_desc.data() + 4u, 2u);
+                    num_entries = (d0 == 0u) ? 65536u : static_cast<uint32_t>(d0);
+                    first_mapped = static_cast<uint32_t>(d1);
+                    bits_per_entry = d2;
+                }
             }
+            if(num_entries == 0u){
+                // Fallback if descriptor missing or malformed.
+                num_entries = 65536u;
+            }
+
+            // Read raw LUT data entries.
+            const auto *n_data = root->find(0x0028, data_tag);
+            if(n_data == nullptr) return {};
+            const auto &raw = n_data->val;
+            const size_t entry_count = raw.size() / 2u;
+            if(entry_count == 0u) return {};
+
+            std::vector<uint16_t> entries(entry_count);
+            for(size_t i = 0; i < entry_count; ++i){
+                uint16_t v = 0;
+                std::memcpy(&v, raw.data() + i * 2u, 2u);
+                entries[i] = v;
+            }
+
+            // Helper to scale a raw entry according to bits_per_entry to full 16-bit range.
+            auto scale_entry = [&](uint16_t raw_v) -> uint16_t {
+                if(bits_per_entry == 0u || bits_per_entry > 16u || bits_per_entry == 16u){
+                    return raw_v;
+                }
+                const uint16_t used_bits = bits_per_entry;
+                // Take the most significant 'used_bits' from the 16-bit stored value.
+                uint16_t v = static_cast<uint16_t>(raw_v >> (16u - used_bits));
+                const uint32_t max_in = (1u << used_bits) - 1u;
+                if(max_in == 0u) return 0u;
+                const uint32_t scaled = (static_cast<uint32_t>(v) * 65535u) / max_in;
+                return static_cast<uint16_t>(scaled);
+            };
+
+            // Build a 65,536-entry LUT covering the full 16-bit input domain.
+            std::vector<uint16_t> lut(65536u);
+            const uint32_t effective_entries = static_cast<uint32_t>(entry_count);
+            const uint32_t max_index = (effective_entries > 0u) ? (effective_entries - 1u) : 0u;
+            const uint32_t end_mapped = first_mapped + num_entries;
+
+            for(uint32_t i = 0; i < 65536u; ++i){
+                uint32_t src_index;
+                if(i < first_mapped){
+                    src_index = 0u;
+                }else if(i >= end_mapped){
+                    src_index = max_index;
+                }else{
+                    src_index = i - first_mapped;
+                    if(src_index > max_index){
+                        src_index = max_index;
+                    }
+                }
+                lut[i] = scale_entry(entries[src_index]);
+            }
+
             return lut;
         };
 
-        auto red_lut   = read_lut_data(0x1201);
-        auto green_lut = read_lut_data(0x1202);
-        auto blue_lut  = read_lut_data(0x1203);
+        auto red_lut   = read_lut_data(0x1101, 0x1201);
+        auto green_lut = read_lut_data(0x1102, 0x1202);
+        auto blue_lut  = read_lut_data(0x1103, 0x1203);
 
         if(red_lut.empty() || green_lut.empty() || blue_lut.empty()) return false;
 
