@@ -605,17 +605,22 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
     }else if( this->VR == "OW" ){ //'Other word string': a string of 16bit values.
-        // Note: Assuming here that the list is represented as a string of unsigned integers (e.g., '123\234\0\25').
-        std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
-        auto tokens = SplitStringToVector(this->val, '\\', 'd');
-        if(tokens.empty()){
-            throw std::runtime_error("No values found for encoding OW tag at " + this_tag + ". Cannot continue.");
+        if(lenient){
+            // Lenient: emit raw bytes directly, skipping token parsing.
+            cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
+        }else{
+            // Note: Assuming here that the list is represented as a string of unsigned integers (e.g., '123\234\0\25').
+            std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+            auto tokens = SplitStringToVector(this->val, '\\', 'd');
+            if(tokens.empty()){
+                throw std::runtime_error("No values found for encoding OW tag at " + this_tag + ". Cannot continue.");
+            }
+            for(auto &token_val : tokens){
+                const auto val_u = static_cast<uint16_t>(std::stoul(token_val));
+                write_to_stream(ss, val_u, 2, enc);
+            }
+            cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
         }
-        for(auto &token_val : tokens){
-            const auto val_u = static_cast<uint16_t>(std::stoul(token_val));
-            write_to_stream(ss, val_u, 2, enc);
-        }
-        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
 
 
     //Numeric types that are written as a string of characters.
@@ -686,78 +691,172 @@ uint64_t Node::emit_DICOM(std::ostream &os,
     // Note: IEEE 754:1985 compliance for float and double is verified via static_assert at the top of this file.
     }else if( this->VR == "FL" ){ //Floating-point (IEEE 754:1985 32-bit).
         YLOGDEBUG("emit_DICOM: encoding FL at tag " << this_tag << " val='" << this->val << "'");
-        std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
-        const float val_f = std::stof(this->val);
-        write_to_stream(ss, val_f, 4, enc);
-        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+        if(lenient){
+            try{
+                std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+                const float val_f = std::stof(this->val);
+                write_to_stream(ss, val_f, 4, enc);
+                cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+            }catch(const std::exception &){
+                cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
+            }
+        }else{
+            std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+            const float val_f = std::stof(this->val);
+            write_to_stream(ss, val_f, 4, enc);
+            cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+        }
 
     }else if( this->VR == "FD" ){ //Floating-point double (IEEE 754:1985 64-bit).
         YLOGDEBUG("emit_DICOM: encoding FD at tag " << this_tag << " val='" << this->val << "'");
-        std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
-        const double val_d = std::stod(this->val);
-        write_to_stream(ss, val_d, 8, enc);
-        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+        if(lenient){
+            try{
+                std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+                const double val_d = std::stod(this->val);
+                write_to_stream(ss, val_d, 8, enc);
+                cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+            }catch(const std::exception &){
+                cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
+            }
+        }else{
+            std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+            const double val_d = std::stod(this->val);
+            write_to_stream(ss, val_d, 8, enc);
+            cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+        }
 
     }else if( this->VR == "OF" ){ //"Other" floating-point (IEEE 754:1985 32-bit).
         //The value payload may contain multiple floats separated by some partitioning character.
         // For example, '1.23\2.34\0.00\25E25\-1.23'.
         YLOGDEBUG("emit_DICOM: encoding OF at tag " << this_tag);
-        std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
-        auto tokens = SplitStringToVector(this->val, '\\', 'd');
-        for(auto &token_val : tokens){
-            const float val_f = std::stof(token_val);
-            write_to_stream(ss, val_f, 4, enc);
+        if(lenient){
+            // Lenient: emit raw bytes directly, skipping token parsing.
+            cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
+        }else{
+            std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+            auto tokens = SplitStringToVector(this->val, '\\', 'd');
+            for(auto &token_val : tokens){
+                const float val_f = std::stof(token_val);
+                write_to_stream(ss, val_f, 4, enc);
+            }
+            cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
         }
-        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
 
     }else if( this->VR == "OD" ){ //"Other" floating-point double (IEEE 754:1985 64-bit).
         //The value payload may contain multiple doubles separated by some partitioning character.
         // For example, '1.23\2.34\0.00\25E25\-1.23'.
         YLOGDEBUG("emit_DICOM: encoding OD at tag " << this_tag);
-        std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
-        auto tokens = SplitStringToVector(this->val, '\\', 'd');
-        for(auto &token_val : tokens){
-            const double val_d = std::stod(token_val);
-            write_to_stream(ss, val_d, 8, enc);
+        if(lenient){
+            // Lenient: emit raw bytes directly, skipping token parsing.
+            cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
+        }else{
+            std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+            auto tokens = SplitStringToVector(this->val, '\\', 'd');
+            for(auto &token_val : tokens){
+                const double val_d = std::stod(token_val);
+                write_to_stream(ss, val_d, 8, enc);
+            }
+            cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
         }
-        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
 
     }else if( this->VR == "SS" ){ //Signed short (16bit).
-        std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
-        const int16_t val_i = std::stoi(this->val);
-        write_to_stream(ss, val_i, 2, enc);
-        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+        if(lenient){
+            try{
+                std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+                const int16_t val_i = std::stoi(this->val);
+                write_to_stream(ss, val_i, 2, enc);
+                cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+            }catch(const std::exception &){
+                cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
+            }
+        }else{
+            std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+            const int16_t val_i = std::stoi(this->val);
+            write_to_stream(ss, val_i, 2, enc);
+            cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+        }
 
     }else if( this->VR == "US" ){ //Unsigned short (16bit).
-        std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
-        const auto val_u = static_cast<uint16_t>(std::stoul(this->val));
-        write_to_stream(ss, val_u, 2, enc);
-        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+        if(lenient){
+            try{
+                std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+                const auto val_u = static_cast<uint16_t>(std::stoul(this->val));
+                write_to_stream(ss, val_u, 2, enc);
+                cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+            }catch(const std::exception &){
+                cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
+            }
+        }else{
+            std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+            const auto val_u = static_cast<uint16_t>(std::stoul(this->val));
+            write_to_stream(ss, val_u, 2, enc);
+            cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+        }
 
     }else if( this->VR == "SL" ){ //Signed long (32bit).
-        std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
-        const int32_t val_l = std::stol(this->val);
-        write_to_stream(ss, val_l, 4, enc);
-        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+        if(lenient){
+            try{
+                std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+                const int32_t val_l = std::stol(this->val);
+                write_to_stream(ss, val_l, 4, enc);
+                cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+            }catch(const std::exception &){
+                cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
+            }
+        }else{
+            std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+            const int32_t val_l = std::stol(this->val);
+            write_to_stream(ss, val_l, 4, enc);
+            cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+        }
 
     }else if( this->VR == "UL" ){ //Unsigned long (32bit).
-        std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
-        const uint32_t val_ul = std::stoul(this->val);
-        write_to_stream(ss, val_ul, 4, enc);
-        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+        if(lenient){
+            try{
+                std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+                const uint32_t val_ul = std::stoul(this->val);
+                write_to_stream(ss, val_ul, 4, enc);
+                cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+            }catch(const std::exception &){
+                cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
+            }
+        }else{
+            std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+            const uint32_t val_ul = std::stoul(this->val);
+            write_to_stream(ss, val_ul, 4, enc);
+            cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+        }
 
     }else if( this->VR == "AT" ){ //Attribute tag (2x unsigned shorts representing a DICOM data tag).
-        // Assuming the value payload contains exactly two unsigned integers, e.g., '123\234'.
-        std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
-        auto tokens = SplitStringToVector(this->val, '\\', 'd');
-        if(tokens.size() != 2ULL){
-            throw std::runtime_error("Invalid number of integers for AT type tag at " + this_tag + "; exactly 2 are needed.");
+        if(lenient){
+            // Lenient: attempt conversion, fall back to raw bytes.
+            try{
+                std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+                auto tokens = SplitStringToVector(this->val, '\\', 'd');
+                if(tokens.size() != 2ULL){
+                    throw std::runtime_error("AT token count mismatch");
+                }
+                for(auto &token_val : tokens){
+                    const auto val_u = static_cast<uint16_t>(std::stoul(token_val));
+                    write_to_stream(ss, val_u, 2, enc);
+                }
+                cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+            }catch(const std::exception &){
+                cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
+            }
+        }else{
+            // Assuming the value payload contains exactly two unsigned integers, e.g., '123\234'.
+            std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+            auto tokens = SplitStringToVector(this->val, '\\', 'd');
+            if(tokens.size() != 2ULL){
+                throw std::runtime_error("Invalid number of integers for AT type tag at " + this_tag + "; exactly 2 are needed.");
+            }
+            for(auto &token_val : tokens){
+                const auto val_u = static_cast<uint16_t>(std::stoul(token_val));
+                write_to_stream(ss, val_u, 2, enc);
+            }
+            cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
         }
-        for(auto &token_val : tokens){
-            const auto val_u = static_cast<uint16_t>(std::stoul(token_val));
-            write_to_stream(ss, val_u, 2, enc);
-        }
-        cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
 
 
     //Other types.

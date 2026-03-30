@@ -20,6 +20,7 @@
 #include <vector>
 #include <map>
 #include <filesystem>
+#include <random>
 
 #include "YgorArguments.h"
 #include "YgorMisc.h"
@@ -81,6 +82,134 @@ static std::vector<fs::path> collect_input_files(const std::vector<std::string> 
     return files;
 }
 
+// Get a temporary directory, respecting TMPDIR/TMP/TEMP environment variables.
+static fs::path get_temp_dir(){
+    for(const char *var : {"TMPDIR", "TMP", "TEMP"}){
+        const char *val = std::getenv(var);
+        if(val != nullptr && val[0] != '\0'){
+            std::error_code ec;
+            if(fs::is_directory(val, ec)) return fs::path(val);
+        }
+    }
+    return fs::temp_directory_path();
+}
+
+// Create a unique temporary file in the given directory. Returns the path.
+// Thread-safe: uses a random suffix to avoid collisions.
+static fs::path create_temp_file(const fs::path &dir){
+    static thread_local std::mt19937_64 rng(std::random_device{}());
+    std::uniform_int_distribution<uint64_t> dist;
+
+    for(int attempt = 0; attempt < 1000; ++attempt){
+        std::ostringstream ss;
+        ss << "dcma_deid_" << std::hex << dist(rng) << ".tmp";
+        fs::path p = dir / ss.str();
+        // Attempt to create the file exclusively.
+        std::ofstream ofs(p, std::ios::binary | std::ios::trunc);
+        if(ofs.good()){
+            ofs.close();
+            return p;
+        }
+    }
+    throw std::runtime_error("Failed to create temporary file in '" + dir.string() + "'");
+}
+
+// Strip trailing null and space padding from a DICOM string value.
+static std::string strip_padding(const std::string &s){
+    std::string out = s;
+    while(!out.empty() && (out.back() == '\0' || out.back() == ' ')) out.pop_back();
+    return out;
+}
+
+// Look up a DICOM tag value by keyword (e.g., "Modality", "StudyID") from a parsed tree.
+// Returns the stripped value, or an empty string if not found.
+static std::string lookup_tag_value_by_keyword(const DCMA_DICOM::Node &root,
+                                                const std::string &keyword,
+                                                const std::vector<const DCMA_DICOM::DICOMDictionary*> &dicts){
+    // Search the dictionary for the keyword to find its (group, element).
+    const auto &default_dict = DCMA_DICOM::get_default_dictionary();
+    for(const auto &[key, entry] : default_dict){
+        if(entry.keyword == keyword){
+            const auto *node = root.find(key.first, key.second);
+            if(node != nullptr){
+                return strip_padding(node->val);
+            }
+            return "";
+        }
+    }
+    // Also search any additional dictionaries.
+    for(const auto *dict : dicts){
+        if(dict == nullptr) continue;
+        for(const auto &[key, entry] : *dict){
+            if(entry.keyword == keyword){
+                const auto *node = root.find(key.first, key.second);
+                if(node != nullptr){
+                    return strip_padding(node->val);
+                }
+                return "";
+            }
+        }
+    }
+    return "";
+}
+
+// Sanitize a string for use as a filename component: replace non-alphanumeric, non-dot,
+// non-hyphen, non-underscore characters with underscores.
+static std::string sanitize_for_filename(const std::string &s){
+    std::string out;
+    out.reserve(s.size());
+    for(const char c : s){
+        if(std::isalnum(static_cast<unsigned char>(c)) || c == '.' || c == '-' || c == '_'){
+            out += c;
+        }else{
+            out += '_';
+        }
+    }
+    return out;
+}
+
+// Expand a filename pattern using GNU mkstemp-like syntax:
+//   ${VarName}  -- expanded to the value of the named DICOM tag (by keyword), sanitized
+//   XXXXXXXX    -- replaced by the counter value, zero-padded to the number of X's
+//
+// Example: "${Modality}_${StudyID}-anon_XXXXXXXX.dcm"
+// The counter is used for the X-placeholder expansion. The suffix (e.g., ".dcm") is preserved.
+static std::string expand_filename_pattern(const std::string &pattern,
+                                           const DCMA_DICOM::Node &root,
+                                           const std::vector<const DCMA_DICOM::DICOMDictionary*> &dicts,
+                                           int64_t counter){
+    std::string result;
+    result.reserve(pattern.size());
+    size_t i = 0;
+    while(i < pattern.size()){
+        // Expand ${VarName} references.
+        if(pattern[i] == '$' && (i + 1) < pattern.size() && pattern[i + 1] == '{'){
+            const auto end = pattern.find('}', i + 2);
+            if(end != std::string::npos){
+                const std::string var_name = pattern.substr(i + 2, end - (i + 2));
+                std::string value = lookup_tag_value_by_keyword(root, var_name, dicts);
+                if(value.empty()) value = "Unknown";
+                result += sanitize_for_filename(value);
+                i = end + 1;
+                continue;
+            }
+        }
+        // Expand consecutive X placeholders.
+        if(pattern[i] == 'X'){
+            size_t x_start = i;
+            while(i < pattern.size() && pattern[i] == 'X') ++i;
+            const auto x_count = static_cast<int>(i - x_start);
+            std::ostringstream ss;
+            ss << std::setfill('0') << std::setw(x_count) << counter;
+            result += ss.str();
+            continue;
+        }
+        result += pattern[i];
+        ++i;
+    }
+    return result;
+}
+
 
 int main(int argc, char **argv){
     std::string output_dir;
@@ -88,6 +217,7 @@ int main(int argc, char **argv){
     std::string patient_name;
     std::string study_id;
     std::string uid_map_file;
+    std::string filename_pattern = "${Modality}_XXXXXXXX.dcm";
     bool lenient = false;
     DCMA_DICOM::DeidentifyParams params;
 
@@ -166,6 +296,15 @@ int main(int argc, char **argv){
       })
     );
 
+    arger.push_back( ygor_arg_handlr_t(5, 'f', "filename-pattern", true, "${Modality}_XXXXXXXX.dcm",
+      "Output filename pattern. ${VarName} is expanded to DICOM tag values by keyword"
+      " (e.g., ${Modality}, ${StudyID}). Consecutive X's are replaced with a zero-padded"
+      " counter. Default: '${Modality}_XXXXXXXX.dcm'.",
+      [&](const std::string &optarg) -> void {
+        filename_pattern = optarg;
+      })
+    );
+
     arger.Launch(argc, argv);
 
     // Validate required parameters.
@@ -223,6 +362,10 @@ int main(int argc, char **argv){
     std::vector<const DCMA_DICOM::DICOMDictionary*> dicts = { &default_dict };
     DCMA_DICOM::DICOMDictionary mutable_dict;
 
+    // Determine the temporary directory for safe emission.
+    const auto tmpdir = get_temp_dir();
+    YLOGDEBUG("Using temporary directory '" << tmpdir << "'");
+
     int64_t file_count = 0;
     int64_t success_count = 0;
     int64_t fail_count = 0;
@@ -230,6 +373,7 @@ int main(int argc, char **argv){
     for(const auto &input_path : input_files){
         ++file_count;
 
+        fs::path tmp_path;  // Track temp file for cleanup on failure.
         try{
             // Read the DICOM file.
             YLOGDEBUG("Reading DICOM file '" << input_path << "'");
@@ -263,51 +407,54 @@ int main(int argc, char **argv){
             YLOGDEBUG("Applying de-identification to '" << input_path << "'");
             DCMA_DICOM::deidentify(root, params, uid_map);
 
-            // Test emission: emit to a placeholder stream first to confirm no errors occur.
-            // This avoids writing partially de-identified files to disk.
-            YLOGDEBUG("Test-emitting de-identified tree for '" << input_path << "'");
-            std::ostringstream test_ss(std::ios_base::ate | std::ios_base::binary);
-            root.emit_DICOM(test_ss, enc, true, lenient);
-            const auto emitted_data = test_ss.str();
+            // Emit to a temporary file first. This avoids writing partially de-identified
+            // files to the output directory, and avoids doubling peak memory usage for large
+            // files (e.g., those with large Pixel Data).
+            tmp_path = create_temp_file(tmpdir);
+            YLOGDEBUG("Emitting de-identified DICOM to temp file '" << tmp_path << "'");
+            {
+                std::ofstream tmp_ofs(tmp_path, std::ios::binary);
+                if(!tmp_ofs.good()){
+                    throw std::runtime_error("Unable to open temporary file '"_s + tmp_path.string() + "' for writing.");
+                }
+                root.emit_DICOM(tmp_ofs, enc, true, lenient);
+                tmp_ofs.close();
+                if(!tmp_ofs.good()){
+                    throw std::runtime_error("Write error to temporary file '"_s + tmp_path.string() + "'.");
+                }
+            }
 
-            // Generate a unique output filename that does not collide with existing files.
-            // Use a sequential counter with .dcm extension for de-identified filenames.
+            // Generate the output filename from the pattern, expanding ${Tag} variables
+            // and X-placeholders.
             fs::path output_path;
-            std::string fname_str;
             for(int64_t attempt = file_count; ; ++attempt){
-                std::ostringstream fname_ss;
-                fname_ss << "anon_" << std::setfill('0') << std::setw(6) << attempt << ".dcm";
-                fname_str = fname_ss.str();
+                const auto fname_str = expand_filename_pattern(filename_pattern, root, dicts, attempt);
                 output_path = fs::path(output_dir) / fname_str;
                 if(!fs::exists(output_path)) break;
             }
 
-            // Write the tested de-identified DICOM data to disk.
-            std::ofstream ofs(output_path, std::ios::binary);
-            if(!ofs.good()){
-                YLOGERR("Unable to write file '" << output_path << "'");
-                ++fail_count;
-                break;
-            }
+            // Copy the successfully-emitted temp file to the final output location.
+            YLOGDEBUG("Copying temp file to '" << output_path << "'");
+            fs::copy_file(tmp_path, output_path, fs::copy_options::overwrite_existing);
 
-            ofs.write(emitted_data.data(), static_cast<std::streamsize>(emitted_data.size()));
-            ofs.close();
-
-            if(!ofs.good()){
-                // Writing failed -- remove the partially-written file.
-                YLOGERR("Write error for file '" << output_path << "'. Removing partial output.");
-                std::error_code ec;
-                fs::remove(output_path, ec);
-                ++fail_count;
-                break;
-            }
+            // Remove the temp file.
+            std::error_code ec;
+            fs::remove(tmp_path, ec);
+            tmp_path.clear();
 
             ++success_count;
             YLOGINFO("  [" << file_count << "/" << input_files.size() << "] "
-                     << input_path.filename() << " -> " << fname_str);
+                     << input_path.filename() << " -> " << output_path.filename());
 
         }catch(const std::exception &e){
             YLOGERR("Error processing '" << input_path << "': " << e.what());
+
+            // Clean up temp file if it exists.
+            if(!tmp_path.empty()){
+                std::error_code ec;
+                fs::remove(tmp_path, ec);
+            }
+
             ++fail_count;
             break;
         }

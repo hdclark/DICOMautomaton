@@ -66,9 +66,12 @@ struct Node {
                         Encoding enc = Encoding::Other,
                         bool is_root_node = true,
                         bool lenient = false) const; // Write a DICOM file.
-                                                     // If 'lenient' is true, VR validation
-                                                     // checks are skipped (useful for passing
-                                                     // through non-conformant files).
+                                                     // If 'lenient' is true, DICOM VR conformance
+                                                     // checks and value parsing/conversion are
+                                                     // relaxed: text VR validation is skipped, and
+                                                     // binary numeric VR encoding falls back to raw
+                                                     // byte emission on conversion failure. Only
+                                                     // memory-safety checks are retained.
 
     // Read a DICOM file from the provided stream, populating this node as the root.
     // Optional dictionaries are used for implicit-VR tag lookup (see lookup_VR).
