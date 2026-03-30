@@ -923,13 +923,40 @@ std::optional<planar_image_collection<float,double>> extract_encapsulated_pixel_
     }
 
     // The raw value may contain a Basic Offset Table prepended to the JPEG bitstream
-    // (see read_encapsulated_data in DCMA_DICOM.cc). Scan for the JPEG SOI marker.
-    const auto soi_pos = find_jpeg_soi(raw);
-    if(soi_pos == std::string::npos){
+    // (see read_encapsulated_data in DCMA_DICOM.cc). Prefer to skip the BOT by using
+    // its item length, and only scan for the JPEG SOI marker in the subsequent data.
+    std::size_t search_offset = 0U;
+    if(raw.size() >= 8U){
+        const auto *data = reinterpret_cast<const unsigned char*>(raw.data());
+        // Check for an Item tag (FFFE,E000) marking the Basic Offset Table.
+        if(data[0] == 0xFE && data[1] == 0xFF && data[2] == 0x00 && data[3] == 0xE0){
+            const std::uint32_t bot_len =
+                static_cast<std::uint32_t>(data[4]) |
+                (static_cast<std::uint32_t>(data[5]) << 8) |
+                (static_cast<std::uint32_t>(data[6]) << 16) |
+                (static_cast<std::uint32_t>(data[7]) << 24);
+            const std::size_t bot_item_end = 8U + static_cast<std::size_t>(bot_len);
+            // Only adjust the search offset if the computed end lies within the buffer.
+            if(bot_item_end < raw.size()){
+                search_offset = bot_item_end;
+            }
+        }
+    }
+
+    std::string jpeg_search_region;
+    if(search_offset == 0U){
+        jpeg_search_region.assign(raw.begin(), raw.end());
+    } else {
+        jpeg_search_region.assign(raw.begin() + static_cast<std::ptrdiff_t>(search_offset), raw.end());
+    }
+
+    const auto sub_soi_pos = find_jpeg_soi(jpeg_search_region);
+    if(sub_soi_pos == std::string::npos){
         YLOGWARN("No JPEG SOI marker (0xFF 0xD8) found in encapsulated pixel data");
         return std::nullopt;
     }
 
+    const auto soi_pos = search_offset + sub_soi_pos;
     const auto *jpeg_data = reinterpret_cast<const dcma_stb_px::stbi_uc*>(raw.data() + soi_pos);
     const int jpeg_len = static_cast<int>(raw.size() - soi_pos);
 
