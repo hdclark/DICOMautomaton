@@ -1256,11 +1256,11 @@ TEST_CASE("DCMA_DICOM extract_encapsulated_pixel_data JPEG baseline grayscale"){
     CHECK(img.columns == 2);
     CHECK(img.channels == 1);
 
-    // JPEG is lossy; check pixel values are approximately correct.
-    CHECK(img.value(0, 0, 0) == doctest::Approx(10.0f).epsilon(0.1));
-    CHECK(img.value(0, 1, 0) == doctest::Approx(80.0f).epsilon(0.1));
-    CHECK(img.value(1, 0, 0) == doctest::Approx(160.0f).epsilon(0.1));
-    CHECK(img.value(1, 1, 0) == doctest::Approx(240.0f).epsilon(0.1));
+    // JPEG is lossy; check pixel values are approximately correct, within 1 intensity unit.
+    CHECK(img.value(0, 0, 0) == doctest::Approx(10.0f).margin(1.0f));
+    CHECK(img.value(0, 1, 0) == doctest::Approx(80.0f).margin(1.0f));
+    CHECK(img.value(1, 0, 0) == doctest::Approx(160.0f).margin(1.0f));
+    CHECK(img.value(1, 1, 0) == doctest::Approx(240.0f).margin(1.0f));
 }
 
 TEST_CASE("DCMA_DICOM extract_encapsulated_pixel_data returns nullopt for unsupported TS"){
