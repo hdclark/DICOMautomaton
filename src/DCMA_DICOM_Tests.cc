@@ -1519,22 +1519,34 @@ TEST_CASE("DCMA_DICOM validate_VR_conformance rejects invalid CS characters"){
 
 TEST_CASE("DCMA_DICOM validate_VR_conformance rejects invalid AE characters"){
     CHECK(DCMA_DICOM::validate_VR_conformance("AE", "VALID_AE", DCMA_DICOM::Encoding::ELE));
-    // Backslash forbidden in AE.
-    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("AE", "ABC\\DEF", DCMA_DICOM::Encoding::ELE));
+    // Backslash is the VM delimiter for multi-valued AE, so it is permitted.
+    CHECK(DCMA_DICOM::validate_VR_conformance("AE", "AE1\\AE2", DCMA_DICOM::Encoding::ELE));
     // Control character forbidden in AE (adjacent string literals prevent \x01C being parsed as one escape).
     CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("AE", std::string("AB\x01""CD"), DCMA_DICOM::Encoding::ELE));
+    // Control character in second multi-valued token is also rejected.
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("AE", std::string("VALID\\AB\x01""CD"), DCMA_DICOM::Encoding::ELE));
 }
 
 TEST_CASE("DCMA_DICOM validate_VR_conformance rejects too-long AE"){
     CHECK(DCMA_DICOM::validate_VR_conformance("AE", "1234567890123456", DCMA_DICOM::Encoding::ELE));
     CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("AE", "12345678901234567", DCMA_DICOM::Encoding::ELE));
+    // Second token of multi-valued AE that is too long is rejected.
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("AE", "VALID\\12345678901234567", DCMA_DICOM::Encoding::ELE));
 }
 
-TEST_CASE("DCMA_DICOM validate_VR_conformance rejects backslash in SH and LO"){
+TEST_CASE("DCMA_DICOM validate_VR_conformance allows backslash in SH and LO as VM delimiter"){
     CHECK(DCMA_DICOM::validate_VR_conformance("SH", "VALID", DCMA_DICOM::Encoding::ELE));
-    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("SH", "AB\\CD", DCMA_DICOM::Encoding::ELE));
+    // Backslash is the VM delimiter for multi-valued SH; each token <= 16 chars is valid.
+    CHECK(DCMA_DICOM::validate_VR_conformance("SH", "AB\\CD", DCMA_DICOM::Encoding::ELE));
+    // A token > 16 chars in a multi-valued SH is rejected.
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("SH", "AB\\ABCDEFGHIJKLMNOPQ", DCMA_DICOM::Encoding::ELE));
+
     CHECK(DCMA_DICOM::validate_VR_conformance("LO", "A valid long string", DCMA_DICOM::Encoding::ELE));
-    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("LO", "AB\\CD", DCMA_DICOM::Encoding::ELE));
+    // Backslash is the VM delimiter for multi-valued LO; each token <= 64 chars is valid.
+    CHECK(DCMA_DICOM::validate_VR_conformance("LO", "First\\Second", DCMA_DICOM::Encoding::ELE));
+    // A token > 64 chars in a multi-valued LO is rejected.
+    std::string long_lo_token(65, 'X');
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("LO", "Short\\" + long_lo_token, DCMA_DICOM::Encoding::ELE));
 }
 
 TEST_CASE("DCMA_DICOM validate_VR_conformance rejects control chars in SH/LO except ESC"){
@@ -1543,6 +1555,8 @@ TEST_CASE("DCMA_DICOM validate_VR_conformance rejects control chars in SH/LO exc
     // Other control chars forbidden.
     CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("SH", std::string("AB\x01""CD"), DCMA_DICOM::Encoding::ELE));
     CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("LO", std::string("AB\x01""CD"), DCMA_DICOM::Encoding::ELE));
+    // Control char in second multi-valued token is also rejected.
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("SH", std::string("OK\\AB\x01""CD"), DCMA_DICOM::Encoding::ELE));
 }
 
 TEST_CASE("DCMA_DICOM validate_VR_conformance allows text control chars in ST/LT/UT"){
