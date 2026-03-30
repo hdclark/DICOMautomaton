@@ -1,12 +1,17 @@
 // DCMA_DICOM_PixelData.h - A part of DICOMautomaton 2026. Written by hal clark.
 //
 // This file contains routines for extracting and interpreting pixel data from a parsed DICOM
-// Node tree. It supports native (uncompressed) pixel data and provides stubs for encapsulated
-// (compressed) formats.
+// Node tree. It supports native (uncompressed) pixel data and encapsulated 8-bit baseline
+// JPEG pixel data. It also provides a composable pixel transformation pipeline for the DICOM
+// grayscale and colour image transformation model.
+//
+// Extracted pixel data is stored directly in planar_image / planar_image_collection objects
+// (from the Ygor library) to avoid intermediate marshalling.
 //
 // References:
-//   - DICOM PS3.5 2026b, Section 8:   Encoding of Pixel, Overlay and Waveform Data.
-//   - DICOM PS3.5 2026b, Section 8.2: Native or Encapsulated Format Encoding.
+//   - DICOM PS3.4 2026b, Section N.2:  Softcopy Presentation State Display Pipeline.
+//   - DICOM PS3.5 2026b, Section 8:    Encoding of Pixel, Overlay and Waveform Data.
+//   - DICOM PS3.5 2026b, Section 8.2:  Native or Encapsulated Format Encoding.
 
 #pragma once
 
@@ -14,7 +19,8 @@
 #include <string>
 #include <vector>
 #include <optional>
-
+#include "YgorImages.h"
+#include "YgorMath.h"
 #include "DCMA_DICOM.h"
 
 namespace DCMA_DICOM {
@@ -91,25 +97,96 @@ std::optional<PixelDataDesc> get_pixel_data_desc(const Node &root);
 
 
 // ============================================================================
-// Extracted pixel data.
+// Pixel transformation pipeline stages (composable).
 // ============================================================================
+//
+// These functions implement individual stages of the DICOM pixel transformation pipeline
+// as described in DICOM PS3.4, Section N.2 (Softcopy Presentation State Display Pipeline).
+// Each stage is an independent, composable function that operates on a planar_image in-place.
+//
+// The grayscale pipeline is:
+//   Stored Pixel Values → Modality LUT → [Mask] → VOI LUT → Presentation LUT → P-Values
+//
+// Colour-space conversion is handled separately and is applicable to colour images (e.g.,
+// YBR_FULL → RGB).
+//
+// Each get_*() function reads parameters from the DICOM tree. Each apply_*() function
+// applies the transformation to a planar_image in-place. Callers compose the pipeline
+// by applying only the stages that are applicable for a given use case.
 
-// Raw pixel data extracted from a DICOM file, with per-sample values promoted to a uniform
-// type for convenience. This is a lightweight container; no colour-space conversion or
-// windowing is performed.
-struct ExtractedPixelData {
-    // Pixel sample values stored contiguously. For multi-frame images, frames are stored
-    // sequentially. For multi-sample (e.g., RGB) pixels, the sample ordering follows the
-    // planar configuration:
-    //   planar_configuration == 0 → interleaved: R0 G0 B0 R1 G1 B1 ...
-    //   planar_configuration == 1 → planar:      R0 R1 ... G0 G1 ... B0 B1 ...
-    //
-    // The total number of elements is: number_of_frames * rows * columns * samples_per_pixel.
-    std::vector<double> samples;
 
-    // The descriptor used during extraction (for reference).
-    PixelDataDesc desc;
+// --- Modality LUT (linear rescale) ---
+//
+// Applies: output = rescale_slope * stored_value + rescale_intercept.
+// See DICOM PS3.3, C.11.1 (Modality LUT Module) and C.7.6.16.2.9.
+struct ModalityLUTParams {
+    double rescale_slope     = 1.0;   // (0028,1053) Rescale Slope.
+    double rescale_intercept = 0.0;   // (0028,1052) Rescale Intercept.
 };
+
+// Extract Modality LUT parameters from a DICOM tree.
+// Returns std::nullopt if neither Rescale Slope/Intercept is present.
+std::optional<ModalityLUTParams> get_modality_lut_params(const Node &root);
+
+// Apply the Modality LUT (linear rescale) to all pixel values in the image in-place.
+void apply_modality_lut(planar_image<float,double> &img, const ModalityLUTParams &params);
+
+
+// --- VOI LUT / Windowing ---
+//
+// Linear windowing using Window Center (0028,1050) and Window Width (0028,1051).
+// See DICOM PS3.3, C.11.2 (VOI LUT Module) and C.11.2.1.2.
+struct VOILUTParams {
+    double window_center = 0.0;   // (0028,1050) Window Center.
+    double window_width  = 1.0;   // (0028,1051) Window Width.
+};
+
+// Extract the first Window Center / Window Width pair from the DICOM tree.
+// Returns std::nullopt if either tag is absent or if the Window Width is non-positive.
+std::optional<VOILUTParams> get_voi_lut_params(const Node &root);
+
+// Apply VOI LUT (linear windowing) to all pixel values in the image in-place.
+// Output values are mapped to [out_min, out_max].
+// See DICOM PS3.3, C.11.2.1.2 for the linear exact mapping formula.
+void apply_voi_lut(planar_image<float,double> &img, const VOILUTParams &params,
+                   double out_min = 0.0, double out_max = 255.0);
+
+
+// --- Presentation LUT ---
+//
+// See DICOM PS3.3, C.11.6 (Softcopy Presentation LUT Module).
+enum class PresentationLUTShape {
+    Identity,   // No change (DICOM "IDENTITY").
+    Inverse     // Invert (DICOM "INVERSE").
+};
+
+// Get the Presentation LUT shape from the DICOM tree (tag 2050,0020).
+// Returns Identity if not specified.
+PresentationLUTShape get_presentation_lut_shape(const Node &root);
+
+// Apply the Presentation LUT to all pixel values in the image in-place.
+// For Inverse: output = max_output_val - input.
+void apply_presentation_lut(planar_image<float,double> &img, PresentationLUTShape shape,
+                            double max_output_val = 255.0);
+
+
+// --- Colour-space conversion ---
+//
+// Convert pixel data from one photometric interpretation to another.
+//
+// Supported conversions:
+//   YBR_FULL      → RGB   (3-channel images; DICOM PS3.3 C.7.6.3.1.2)
+//   PALETTE COLOR → RGB   (1-channel → 3-channel; requires root Node for LUT data)
+//
+// Note: YBR_FULL_422 is 4:2:2 chroma-subsampled and requires prior expansion to
+// full-resolution 3-sample-per-pixel YBR data before conversion. This routine does
+// not perform that expansion and will return false for YBR_FULL_422.
+//
+// Returns true on success, false if the conversion is not supported.
+// When root is non-null it is used to read Palette Color LUT Descriptors and Data.
+bool convert_photometric_to_rgb(planar_image<float,double> &img,
+                                const std::string &from_photometric,
+                                const Node *root = nullptr);
 
 
 // ============================================================================
@@ -122,6 +199,13 @@ struct ExtractedPixelData {
 // reads its raw byte payload, and unpacks samples according to the Image Pixel module
 // attributes (Bits Allocated, Bits Stored, High Bit, Pixel Representation, etc.).
 //
+// The result is returned directly as a planar_image_collection. Each frame produces one
+// planar_image with rows, columns, and channels matching the DICOM descriptor. Planar-
+// configured (planar_configuration == 1) data is rearranged to interleaved order.
+//
+// No pixel transformations (Modality LUT, VOI LUT, etc.) are applied; the caller may
+// compose them as needed.
+//
 // Returns std::nullopt if the tree does not contain the expected pixel data or if the
 // parameters are inconsistent (e.g., compressed transfer syntax with native pixel data).
 //
@@ -132,7 +216,7 @@ struct ExtractedPixelData {
 // References:
 //   - DICOM PS3.5 2026b, Section 8.1.1: Pixel Data Encoding of Related Data Elements.
 //   - DICOM PS3.5 2026b, Section 8.2.1: Native Format Encoding.
-std::optional<ExtractedPixelData> extract_native_pixel_data(const Node &root);
+std::optional<planar_image_collection<float,double>> extract_native_pixel_data(const Node &root);
 
 
 // ============================================================================
@@ -165,14 +249,37 @@ extract_overlay_data(const Node &root);
 
 
 // ============================================================================
-// Encapsulated (compressed) pixel data extraction -- stubs.
+// Encapsulated (compressed) pixel data extraction.
 // ============================================================================
 
 // Extract encapsulated (compressed) pixel data from a parsed DICOM Node tree.
 //
-// *** THIS IS A STUB. It is not yet implemented. ***
+// Currently supports:
+//   - JPEG Baseline (Transfer Syntax UID 1.2.840.10008.1.2.4.50): 8-bit lossy JPEG
+//     decoded using the bundled stb_image.h library. Only 8-bit baseline (sequential DCT,
+//     Huffman-coded) JPEG is supported; 12-bit, lossless, and arithmetic-coded JPEG are
+//     not supported and will cause this function to return std::nullopt.
 //
-// When implemented, this function will:
+// Unsupported transfer syntaxes (JPEG Extended 12-bit, JPEG Lossless, JPEG 2000, JPEG-LS,
+// RLE, HTJ2K, JPEG XL) return std::nullopt. These may be added in the future.
+//
+// The result is returned directly as a planar_image_collection. For single-frame images,
+// one planar_image is produced. Multi-frame encapsulated images are not yet supported.
+//
+// No pixel transformations (Modality LUT, VOI LUT, etc.) are applied; the caller may
+// compose them as needed. The JPEG decoder produces RGB or grayscale output; no further
+// colour-space conversion from YBR to RGB is needed for decoded JPEG data.
+//
+// Returns std::nullopt if the transfer syntax is unsupported or decoding fails.
+//
+// References:
+//   - DICOM PS3.5 2026b, Annex A.4: Transfer Syntaxes For Encapsulation of Encoded Pixel Data.
+//   - ISO/IEC 10918-1 (JPEG baseline and extended).
+//
+// --------------------------------------------------------------------------------------
+// TODO: here is a description of how other encapsulated pixel data and multi-frame data
+// *should* be handled by this method:
+//
 //   1. Locate the Pixel Data tag (7FE0,0010) whose raw value contains the concatenated
 //      encapsulated fragments (as assembled by read_encapsulated_data() during parsing).
 //   2. Parse the Basic Offset Table (first fragment, per DICOM PS3.5, Table A.4-1) to
@@ -247,9 +354,9 @@ extract_overlay_data(const Node &root);
 //         - Reference: ISO/IEC 18181 (JPEG XL).
 //
 //   4. Populate the ExtractedPixelData output from the decoded frame samples.
+// --------------------------------------------------------------------------------------
 //
-// Returns std::nullopt unconditionally in this stub implementation.
-std::optional<ExtractedPixelData> extract_encapsulated_pixel_data(const Node &root);
+std::optional<planar_image_collection<float,double>> extract_encapsulated_pixel_data(const Node &root);
 
 
 } // namespace DCMA_DICOM
