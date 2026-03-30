@@ -521,17 +521,19 @@ uint64_t Node::emit_DICOM(std::ostream &os,
 
     }else if( this->VR == "SH" ){ //Short string.
         // DICOM PS3.5 Section 6.2: SH - Short String.
-        // Character repertoire: Default, excluding backslash (5CH) and all control characters except ESC.
-        // Maximum length: 16 characters.
+        // Character repertoire: Default, excluding backslash (5CH) within each value and all control characters except ESC.
+        // Maximum length: 16 characters per value.
         if(!lenient){
-            if(16ULL < this->val.length()){
-                throw std::runtime_error("Short string is too long at tag " + get_tag_and_val_str() + ". Consider using a longer VR. Cannot continue.");
-            }
-            if(this->val.find('\\') != std::string::npos){
-                throw std::invalid_argument("Backslash (value multiplicity delimiter) found in SH at tag " + get_tag_and_val_str() + ". Cannot continue.");
-            }
-            if(has_control_char_except_esc(this->val)){
-                throw std::invalid_argument("Forbidden control character found in SH at tag " + get_tag_and_val_str() + ". Cannot continue.");
+            // Value multiplicity embiggens the maximum permissible length, but each individual element should be <= 16 chars
+            // and must not contain forbidden control characters (except ESC).
+            auto tokens = SplitStringToVector(this->val,'\\','d');
+            for(const auto &token : tokens){
+                if(16ULL < token.length()){
+                    throw std::runtime_error("Short string is too long at tag " + get_tag_and_val_str() + ". Consider using a longer VR. Cannot continue.");
+                }
+                if(has_control_char_except_esc(token)){
+                    throw std::invalid_argument("Forbidden control character found in SH at tag " + get_tag_and_val_str() + ". Cannot continue.");
+                }
             }
         }
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
