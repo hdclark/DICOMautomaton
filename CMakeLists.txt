@@ -38,7 +38,7 @@ option(BUILD_SHARED_LIBS "Build shared-object/dynamicly-loaded binaries."       
 # When ON, attempt to download missing dependencies via CMake FetchContent
 # before raising a fatal error. Useful for environments without system packages
 # but NOT recommended when integrating with OS/third-party package managers.
-option(WITH_FETCHCONTENT_FALLBACK "Download missing dependencies if not found." OFF)
+option(WITH_FETCHCONTENT_FALLBACK "Download missing dependencies if not found." ON)
 
 
 ####################################################################################
@@ -99,6 +99,10 @@ include(FetchContent)
 ####################################################################################
 #                                  Dependencies 
 ####################################################################################
+
+# Author's upstream support libraries: Ygor, YgorClustering, Explicator.
+# Uses find_package() with optional FetchContent fallback (cmake 3.12+).
+include(cmake/UpstreamAuthorDeps.cmake)
 
 find_package(Threads REQUIRED)
 
