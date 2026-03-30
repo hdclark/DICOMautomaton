@@ -20,9 +20,9 @@ macro(_dcma_find_or_fetch pkg_name git_url git_tag)
                 GIT_REPOSITORY ${git_url}
                 GIT_TAG        ${git_tag}
             )
-            # Use FetchContent_Populate (available in CMake 3.11+) instead of
-            # FetchContent_MakeAvailable (requires 3.14+) to stay compatible
-            # with CMake 3.12.
+            # FetchContent_Populate is used instead of FetchContent_MakeAvailable
+            # because this project targets CMake 3.12 as its minimum version
+            # and MakeAvailable was introduced in CMake 3.14.
             FetchContent_GetProperties(${pkg_name})
             string(TOLOWER "${pkg_name}" _dcma_fc_lower)
             if(NOT ${_dcma_fc_lower}_POPULATED)
