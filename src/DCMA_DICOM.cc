@@ -74,7 +74,9 @@ static std::string first_invalid_char_diag(const std::string &val, const std::st
 }
 
 // DICOM PS3.5 Section 6.2: Check if string contains any control characters (0x00-0x1F, 0x7F).
-// Used for VR AE which excludes all control characters from its character repertoire.
+// Used for text VR validation (e.g., AE) where all control characters are forbidden.
+// Note: NULL (0x00) is included -- while it is used as a padding character for UI/OB,
+// it is not valid within text VR values themselves.
 static bool has_control_char(const std::string &val){
     for(const auto c : val){
         const auto uc = static_cast<unsigned char>(c);
@@ -730,7 +732,8 @@ uint64_t Node::emit_DICOM(std::ostream &os,
     }else if( this->VR == "TM" ){  //Time.
         // DICOM PS3.5 Section 6.2: TM - Time.
         // Character repertoire: "0"-"9", ".", and SPACE (trailing padding only).
-        // Format: HHMMSS.FFFFFF. Maximum length: 14 bytes.
+        // Format: HHMMSS.FFFFFF (2+2+2+1+6 = 13 chars, plus optional trailing space = 14).
+        // Maximum length: 14 bytes.
         //
         // Note: legacy ACR-NEMA format (HH:MM:SS.frac) is stripped during pre-processing below.
         std::string digits_only(val);
@@ -1277,8 +1280,12 @@ std::string strip_text_padding(const std::string &val, const std::string &vr){
 }
 
 // Decode a binary numeric value to a human-readable string, matching the format expected by the emitter.
-// For simple binary numeric VRs (US, SS, UL, SL, FL, FD, AT), this produces a string representation.
-// For multi-valued binary VRs (OW, OF, OD, OB, UN), the raw bytes are left unchanged.
+// For simple binary numeric VRs (US, SS, UL, SL, FL, FD, AT, SV, UV), this produces a string representation.
+// For multi-valued binary VRs (OW, OF, OD, OL, OV, OB, UN), the raw bytes are left unchanged.
+//
+// Note: memcpy is used to interpret raw bytes in native byte order. This is correct because:
+// (1) the machine is verified to be little-endian (see verify_little_endian()), and
+// (2) big-endian transfer syntax is explicitly rejected by the reader.
 std::string decode_binary_value(const std::string &raw, const std::string &vr){
     if(vr == "US"){
         if(raw.size() < 2) return raw;

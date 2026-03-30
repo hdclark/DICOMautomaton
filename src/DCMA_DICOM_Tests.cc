@@ -1521,7 +1521,7 @@ TEST_CASE("DCMA_DICOM validate_VR_conformance rejects invalid AE characters"){
     CHECK(DCMA_DICOM::validate_VR_conformance("AE", "VALID_AE", DCMA_DICOM::Encoding::ELE));
     // Backslash forbidden in AE.
     CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("AE", "ABC\\DEF", DCMA_DICOM::Encoding::ELE));
-    // Control character forbidden in AE.
+    // Control character forbidden in AE (adjacent string literals prevent \x01C being parsed as one escape).
     CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("AE", std::string("AB\x01""CD"), DCMA_DICOM::Encoding::ELE));
 }
 
