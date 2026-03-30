@@ -102,10 +102,19 @@ struct Node {
     // Returns the number of nodes removed.
     int64_t remove_all(uint16_t group, uint16_t tag);
 
+    // Remove dynamically-calculated 'structural' DICOM tags from the tree that would
+    // be automatically re-added during emission by emit_DICOM(). This includes GroupLength
+    // tags (gggg,0000) which are deprecated per DICOM PS3.5 Section 7.2 and are recomputed
+    // during emission for groups that require them (e.g., the File Meta Information group).
+    // Call this method before emit_DICOM() when the tree may contain stale or duplicate
+    // structural tags (e.g., after reading and de-identifying a file).
+    // Returns the number of nodes removed.
+    int64_t remove_structural_tags();
+
     // Get a human-readable string representation of the value, decoding binary VRs as needed.
     // For text VRs this returns the value directly; for binary numeric VRs (US, SS, UL, SL,
-    // FL, FD, AT) it decodes to a string; for binary blob VRs (OB, OW, OF, OD, UN) it returns
-    // a hex summary or the raw byte count.
+    // FL, FD, AT, SV, UV) it decodes to a string; for binary blob VRs (OB, OW, OF, OD, OL,
+    // OV, UN) it returns a hex summary or the raw byte count.
     std::string value_str() const;
 
     // Validate the tree structure as DICOM-conformant. Returns true if the tree is valid.
