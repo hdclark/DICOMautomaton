@@ -351,8 +351,8 @@ target_include_directories(imebrashim SYSTEM PUBLIC
 )
 target_compile_options(imebrashim PUBLIC -w) # Inhibit imebra-related warnings.
 target_link_libraries(imebrashim
-    explicator 
-    ygor 
+    Explicator::explicator
+    Ygor::ygor
     Boost::serialization
     Boost::iostreams
     Boost::thread
@@ -540,8 +540,8 @@ target_link_libraries (dicomautomaton_dispatcher PUBLIC
     $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt>
     $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization>
     $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_freeformoptimization>
-    explicator 
-    ygor 
+    Explicator::explicator
+    Ygor::ygor
     $<$<BOOL:${WITH_CGAL}>:CGAL::CGAL>
     $<$<BOOL:${WITH_CGAL}>:CGAL::CGAL_Core>
     "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
@@ -658,8 +658,8 @@ if(WITH_WT)
         $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_levenbergmarquardt>
         $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_reduced3param_chebyshev_freeformoptimization>
         $<$<BOOL:${WITH_GNU_GSL}>:kineticmodel_1c2i_5param_chebyshev_freeformoptimization>
-        explicator 
-        ygor 
+        Explicator::explicator
+        Ygor::ygor
         $<$<BOOL:${WITH_CGAL}>:CGAL::CGAL>
         $<$<BOOL:${WITH_CGAL}>:CGAL::CGAL_Core>
         "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
@@ -706,8 +706,8 @@ add_executable(dicomautomaton_bsarchive_convert
     $<TARGET_OBJECTS:Boost_Serialization_File_Loader_obj>
 )
 target_link_libraries(dicomautomaton_bsarchive_convert
-    explicator 
-    ygor 
+    Explicator::explicator
+    Ygor::ygor
     "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
     "$<$<BOOL:${WITH_NLOPT}>:${NLOPT_LIBRARIES}>"
     Boost::serialization
@@ -736,8 +736,8 @@ if(WITH_POSTGRES)
     )
     target_link_libraries(pacs_ingress
         imebrashim
-        explicator 
-        ygor 
+        Explicator::explicator
+        Ygor::ygor
         "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
         "${POSTGRES_LIBRARIES}"
         m
@@ -758,8 +758,8 @@ if(WITH_POSTGRES)
     )
     target_link_libraries(pacs_duplicate_cleaner
         imebrashim
-        explicator 
-        ygor 
+        Explicator::explicator
+        Ygor::ygor
         "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
         "${POSTGRES_LIBRARIES}"
         m
@@ -780,8 +780,8 @@ if(WITH_POSTGRES)
     )
     target_link_libraries(pacs_refresh
         imebrashim
-        explicator 
-        ygor 
+        Explicator::explicator
+        Ygor::ygor
         "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
         "${POSTGRES_LIBRARIES}"
         m
@@ -804,7 +804,7 @@ add_executable(dicomautomaton_dump
 )
 target_link_libraries(dicomautomaton_dump
     imebrashim
-    ygor 
+    Ygor::ygor
     "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
     m
 )
@@ -818,7 +818,7 @@ add_executable(dicomautomaton_deidentify
     $<TARGET_OBJECTS:Metadata_obj>
 )
 target_link_libraries(dicomautomaton_deidentify
-    ygor
+    Ygor::ygor
     "$<$<BOOL:${WITH_GNU_GSL}>:${GNU_GSL_LIBRARIES}>"
     m
     Threads::Threads

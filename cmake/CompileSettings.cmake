@@ -335,6 +335,16 @@ target_include_directories(dcma_compile_settings INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
+# Upstream author libraries (Ygor, YgorClustering, Explicator) provide
+# CMake config-file targets.  Linking them here propagates their
+# INTERFACE_INCLUDE_DIRECTORIES to every translation unit in the project
+# (including OBJECT libraries that include their headers).  This mirrors
+# the Eigen3 pattern immediately below.
+target_link_libraries(dcma_compile_settings INTERFACE
+    Ygor::ygor
+    YgorClustering::ygorclustering
+    Explicator::explicator
+)
 if(WITH_EIGEN)
     if(TARGET Eigen3::Eigen)
         target_link_libraries(dcma_compile_settings INTERFACE Eigen3::Eigen)

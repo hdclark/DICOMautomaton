@@ -100,6 +100,10 @@ include(FetchContent)
 #                                  Dependencies 
 ####################################################################################
 
+# Author's upstream support libraries: Ygor, YgorClustering, Explicator.
+# Uses find_package() with optional FetchContent fallback (cmake 3.12+).
+include(cmake/UpstreamAuthorDeps.cmake)
+
 find_package(Threads REQUIRED)
 
 # Enable verbose Boost find_package output only for Debug builds.
