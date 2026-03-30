@@ -1503,3 +1503,264 @@ TEST_CASE("DCMA_DICOM composable pipeline: modality LUT + VOI LUT + presentation
     DCMA_DICOM::apply_presentation_lut(img, plut_shape, 255.0);
     CHECK(img.value(0, 0, 0) == doctest::Approx(static_cast<float>(expected)).epsilon(0.1));
 }
+
+
+// ============================================================================
+// VR validation tests (strict mode)
+// ============================================================================
+
+TEST_CASE("DCMA_DICOM validate_VR_conformance rejects invalid CS characters"){
+    // CS allows uppercase, digits, space, underscore only.
+    CHECK(DCMA_DICOM::validate_VR_conformance("CS", "CT", DCMA_DICOM::Encoding::ELE));
+    CHECK(DCMA_DICOM::validate_VR_conformance("CS", "ORIGINAL_PRIMARY", DCMA_DICOM::Encoding::ELE));
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("CS", "lowercase", DCMA_DICOM::Encoding::ELE));
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("CS", "ABC!DEF", DCMA_DICOM::Encoding::ELE));
+}
+
+TEST_CASE("DCMA_DICOM validate_VR_conformance rejects invalid AE characters"){
+    CHECK(DCMA_DICOM::validate_VR_conformance("AE", "VALID_AE", DCMA_DICOM::Encoding::ELE));
+    // Backslash forbidden in AE.
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("AE", "ABC\\DEF", DCMA_DICOM::Encoding::ELE));
+    // Control character forbidden in AE.
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("AE", std::string("AB\x01""CD"), DCMA_DICOM::Encoding::ELE));
+}
+
+TEST_CASE("DCMA_DICOM validate_VR_conformance rejects too-long AE"){
+    CHECK(DCMA_DICOM::validate_VR_conformance("AE", "1234567890123456", DCMA_DICOM::Encoding::ELE));
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("AE", "12345678901234567", DCMA_DICOM::Encoding::ELE));
+}
+
+TEST_CASE("DCMA_DICOM validate_VR_conformance rejects backslash in SH and LO"){
+    CHECK(DCMA_DICOM::validate_VR_conformance("SH", "VALID", DCMA_DICOM::Encoding::ELE));
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("SH", "AB\\CD", DCMA_DICOM::Encoding::ELE));
+    CHECK(DCMA_DICOM::validate_VR_conformance("LO", "A valid long string", DCMA_DICOM::Encoding::ELE));
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("LO", "AB\\CD", DCMA_DICOM::Encoding::ELE));
+}
+
+TEST_CASE("DCMA_DICOM validate_VR_conformance rejects control chars in SH/LO except ESC"){
+    // ESC (0x1B) is allowed for ISO 2022 escape sequences.
+    CHECK(DCMA_DICOM::validate_VR_conformance("SH", std::string("AB\x1B""CD"), DCMA_DICOM::Encoding::ELE));
+    // Other control chars forbidden.
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("SH", std::string("AB\x01""CD"), DCMA_DICOM::Encoding::ELE));
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("LO", std::string("AB\x01""CD"), DCMA_DICOM::Encoding::ELE));
+}
+
+TEST_CASE("DCMA_DICOM validate_VR_conformance allows text control chars in ST/LT/UT"){
+    // TAB (0x09), LF (0x0A), FF (0x0C), CR (0x0D), ESC (0x1B) are allowed.
+    CHECK(DCMA_DICOM::validate_VR_conformance("ST", "Line1\nLine2", DCMA_DICOM::Encoding::ELE));
+    CHECK(DCMA_DICOM::validate_VR_conformance("LT", "Col1\tCol2\r\n", DCMA_DICOM::Encoding::ELE));
+    CHECK(DCMA_DICOM::validate_VR_conformance("UT", std::string("text\x0C""more"), DCMA_DICOM::Encoding::ELE));
+    // Other control chars forbidden.
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("ST", std::string("AB\x01""CD"), DCMA_DICOM::Encoding::ELE));
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("LT", std::string("AB\x02""CD"), DCMA_DICOM::Encoding::ELE));
+}
+
+TEST_CASE("DCMA_DICOM validate_VR_conformance rejects too-long PN component groups"){
+    // Each component group (separated by '=') must be <= 64 chars.
+    std::string ok_pn = "DOE^JOHN";
+    CHECK(DCMA_DICOM::validate_VR_conformance("PN", ok_pn, DCMA_DICOM::Encoding::ELE));
+
+    std::string long_group(65, 'A');
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("PN", long_group, DCMA_DICOM::Encoding::ELE));
+
+    // Multiple component groups: each <= 64.
+    std::string multi_group = std::string(60, 'A') + "=" + std::string(60, 'B') + "=" + std::string(60, 'C');
+    CHECK(DCMA_DICOM::validate_VR_conformance("PN", multi_group, DCMA_DICOM::Encoding::ELE));
+
+    // Too many component groups (>3).
+    std::string four_groups = "A=B=C=D";
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("PN", four_groups, DCMA_DICOM::Encoding::ELE));
+}
+
+TEST_CASE("DCMA_DICOM validate_VR_conformance checks UI per-value length"){
+    // Single UID <= 64 bytes.
+    CHECK(DCMA_DICOM::validate_VR_conformance("UI", "1.2.3.4.5.6", DCMA_DICOM::Encoding::ELE));
+    // Multi-valued UIDs: each <= 64 bytes.
+    std::string multi_uid = "1.2.3.4\\5.6.7.8";
+    CHECK(DCMA_DICOM::validate_VR_conformance("UI", multi_uid, DCMA_DICOM::Encoding::ELE));
+
+    // Single UID > 64 bytes.
+    std::string long_uid(65, '1');
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("UI", long_uid, DCMA_DICOM::Encoding::ELE));
+}
+
+TEST_CASE("DCMA_DICOM validate_VR_conformance validates UC"){
+    CHECK(DCMA_DICOM::validate_VR_conformance("UC", "Some unlimited characters string", DCMA_DICOM::Encoding::ELE));
+    // Control chars (except ESC) are forbidden.
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("UC", std::string("AB\x01""CD"), DCMA_DICOM::Encoding::ELE));
+    // ESC is allowed.
+    CHECK(DCMA_DICOM::validate_VR_conformance("UC", std::string("AB\x1B""CD"), DCMA_DICOM::Encoding::ELE));
+}
+
+TEST_CASE("DCMA_DICOM validate_VR_conformance validates UR"){
+    CHECK(DCMA_DICOM::validate_VR_conformance("UR", "https://example.com/path", DCMA_DICOM::Encoding::ELE));
+    // No leading spaces.
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("UR", " https://example.com", DCMA_DICOM::Encoding::ELE));
+    // No backslash.
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("UR", "https://example.com\\path", DCMA_DICOM::Encoding::ELE));
+}
+
+TEST_CASE("DCMA_DICOM validate_VR_conformance validates OL alignment"){
+    // OL requires 4-byte alignment.
+    std::string four_bytes(4, '\x00');
+    CHECK(DCMA_DICOM::validate_VR_conformance("OL", four_bytes, DCMA_DICOM::Encoding::ELE));
+    std::string three_bytes(3, '\x00');
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("OL", three_bytes, DCMA_DICOM::Encoding::ELE));
+}
+
+TEST_CASE("DCMA_DICOM validate_VR_conformance validates OV alignment"){
+    // OV requires 8-byte alignment.
+    std::string eight_bytes(8, '\x00');
+    CHECK(DCMA_DICOM::validate_VR_conformance("OV", eight_bytes, DCMA_DICOM::Encoding::ELE));
+    std::string seven_bytes(7, '\x00');
+    CHECK_FALSE(DCMA_DICOM::validate_VR_conformance("OV", seven_bytes, DCMA_DICOM::Encoding::ELE));
+}
+
+TEST_CASE("DCMA_DICOM validate_VR_conformance validates OB max length"){
+    // OB should accept data within limits.
+    std::string small_ob(100, '\xAB');
+    CHECK(DCMA_DICOM::validate_VR_conformance("OB", small_ob, DCMA_DICOM::Encoding::ELE));
+}
+
+TEST_CASE("DCMA_DICOM SV round-trip"){
+    DCMA_DICOM::Node root;
+    root.emplace_child_node({{0x0002, 0x0001}, "OB", std::string("\x00\x01", 2)});
+    root.emplace_child_node({{0x0002, 0x0002}, "UI", "1.2.840.10008.5.1.4.1.1.2"});
+    root.emplace_child_node({{0x0002, 0x0003}, "UI", "1.2.3.4.5.6.7.8.9"});
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.1"});
+    root.emplace_child_node({{0x0002, 0x0012}, "UI", "1.2.3.4.5"});
+    root.emplace_child_node({{0x9999, 0x0001}, "SV", "-1234567890123"});
+
+    std::stringstream ss;
+    root.emit_DICOM(ss, DCMA_DICOM::Encoding::ELE);
+    REQUIRE(ss.good());
+
+    DCMA_DICOM::DICOMDictionary custom;
+    custom[{0x9999, 0x0001}] = {"SV", "TestSV"};
+    std::vector<const DCMA_DICOM::DICOMDictionary*> dicts = {&custom};
+
+    DCMA_DICOM::Node read_root;
+    ss.seekg(0);
+    read_root.read_DICOM(ss, dicts);
+
+    const auto *sv = read_root.find(0x9999, 0x0001);
+    REQUIRE(sv != nullptr);
+    CHECK(sv->VR == "SV");
+    CHECK(sv->val == "-1234567890123");
+}
+
+TEST_CASE("DCMA_DICOM UV round-trip"){
+    DCMA_DICOM::Node root;
+    root.emplace_child_node({{0x0002, 0x0001}, "OB", std::string("\x00\x01", 2)});
+    root.emplace_child_node({{0x0002, 0x0002}, "UI", "1.2.840.10008.5.1.4.1.1.2"});
+    root.emplace_child_node({{0x0002, 0x0003}, "UI", "1.2.3.4.5.6.7.8.9"});
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.1"});
+    root.emplace_child_node({{0x0002, 0x0012}, "UI", "1.2.3.4.5"});
+    root.emplace_child_node({{0x9999, 0x0002}, "UV", "9876543210"});
+
+    std::stringstream ss;
+    root.emit_DICOM(ss, DCMA_DICOM::Encoding::ELE);
+    REQUIRE(ss.good());
+
+    DCMA_DICOM::DICOMDictionary custom;
+    custom[{0x9999, 0x0002}] = {"UV", "TestUV"};
+    std::vector<const DCMA_DICOM::DICOMDictionary*> dicts = {&custom};
+
+    DCMA_DICOM::Node read_root;
+    ss.seekg(0);
+    read_root.read_DICOM(ss, dicts);
+
+    const auto *uv = read_root.find(0x9999, 0x0002);
+    REQUIRE(uv != nullptr);
+    CHECK(uv->VR == "UV");
+    CHECK(uv->val == "9876543210");
+}
+
+
+// ============================================================================
+// remove_structural_tags tests
+// ============================================================================
+
+TEST_CASE("DCMA_DICOM remove_structural_tags removes GroupLength tags"){
+    DCMA_DICOM::Node root;
+    root.emplace_child_node({{0x0002, 0x0000}, "UL", "100"});  // GroupLength (should be removed).
+    root.emplace_child_node({{0x0002, 0x0001}, "OB", std::string("\x00\x01", 2)});
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.1"});
+    root.emplace_child_node({{0x0008, 0x0000}, "UL", "200"});  // GroupLength (should be removed).
+    root.emplace_child_node({{0x0008, 0x0060}, "CS", "CT"});
+
+    auto removed = root.remove_structural_tags();
+    CHECK(removed == 2);
+
+    // GroupLength tags should be gone.
+    CHECK(root.find(0x0002, 0x0000) == nullptr);
+    CHECK(root.find(0x0008, 0x0000) == nullptr);
+
+    // Other tags should remain.
+    CHECK(root.find(0x0002, 0x0001) != nullptr);
+    CHECK(root.find(0x0008, 0x0060) != nullptr);
+}
+
+TEST_CASE("DCMA_DICOM remove_structural_tags on tree without GroupLength returns zero"){
+    auto root = create_minimal_dicom_tree(DCMA_DICOM::Encoding::ELE);
+    auto removed = root.remove_structural_tags();
+    CHECK(removed == 0);
+}
+
+TEST_CASE("DCMA_DICOM remove_structural_tags removes nested GroupLength"){
+    DCMA_DICOM::Node root;
+    root.emplace_child_node({{0x0002, 0x0001}, "OB", std::string("\x00\x01", 2)});
+    root.emplace_child_node({{0x0002, 0x0002}, "UI", "1.2.840.10008.5.1.4.1.1.2"});
+    root.emplace_child_node({{0x0002, 0x0003}, "UI", "1.2.3.4.5.6.7.8.9"});
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.1"});
+    root.emplace_child_node({{0x0002, 0x0012}, "UI", "1.2.3.4.5"});
+
+    auto *seq = root.emplace_child_node({{0x3006, 0x0020}, "SQ", ""});
+    {
+        DCMA_DICOM::Node item;
+        item.key = {0x3006, 0x0020};
+        item.VR = "MULTI";
+        item.emplace_child_node({{0x3006, 0x0000}, "UL", "50"});  // Nested GroupLength.
+        item.emplace_child_node({{0x3006, 0x0022}, "IS", "1"});
+        seq->emplace_child_node(std::move(item));
+    }
+
+    auto removed = root.remove_structural_tags();
+    CHECK(removed == 1);  // The nested GroupLength.
+    CHECK(root.find(0x3006, 0x0000) == nullptr);
+    CHECK(root.find(0x3006, 0x0022) != nullptr);
+}
+
+TEST_CASE("DCMA_DICOM round-trip with remove_structural_tags eliminates duplicates"){
+    // Create a tree that has a manually-added GroupLength tag.
+    DCMA_DICOM::Node root;
+    root.emplace_child_node({{0x0002, 0x0000}, "UL", "999"});  // Stale GroupLength.
+    root.emplace_child_node({{0x0002, 0x0001}, "OB", std::string("\x00\x01", 2)});
+    root.emplace_child_node({{0x0002, 0x0002}, "UI", "1.2.840.10008.5.1.4.1.1.2"});
+    root.emplace_child_node({{0x0002, 0x0003}, "UI", "1.2.3.4.5.6.7.8.9"});
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.1"});
+    root.emplace_child_node({{0x0002, 0x0012}, "UI", "1.2.3.4.5"});
+    root.emplace_child_node({{0x0008, 0x0060}, "CS", "CT"});
+
+    // Remove stale structural tags.
+    auto removed = root.remove_structural_tags();
+    CHECK(removed == 1);
+
+    // Emit and re-read. The emitter will generate correct GroupLength.
+    std::stringstream ss;
+    root.emit_DICOM(ss, DCMA_DICOM::Encoding::ELE);
+    REQUIRE(ss.good());
+
+    DCMA_DICOM::Node read_root;
+    ss.seekg(0);
+    read_root.read_DICOM(ss);
+
+    // Should have exactly one GroupLength for group 0x0002 (auto-generated by emitter).
+    auto gl_nodes = read_root.find_all(0x0002, 0x0000);
+    CHECK(gl_nodes.size() == 1);
+
+    // The modality tag should still be present.
+    const auto *modality = read_root.find(0x0008, 0x0060);
+    REQUIRE(modality != nullptr);
+    CHECK(modality->val == "CT");
+}
