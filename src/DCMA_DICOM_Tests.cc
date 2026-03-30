@@ -1256,11 +1256,11 @@ TEST_CASE("DCMA_DICOM extract_encapsulated_pixel_data JPEG baseline grayscale"){
     CHECK(img.columns == 2);
     CHECK(img.channels == 1);
 
-    // JPEG is lossy; check pixel values are approximately correct, within 1 intensity unit.
-    CHECK(img.value(0, 0, 0) == doctest::Approx(10.0f).margin(1.0f));
-    CHECK(img.value(0, 1, 0) == doctest::Approx(80.0f).margin(1.0f));
-    CHECK(img.value(1, 0, 0) == doctest::Approx(160.0f).margin(1.0f));
-    CHECK(img.value(1, 1, 0) == doctest::Approx(240.0f).margin(1.0f));
+    // JPEG is lossy; check pixel values are within 1 intensity unit of the expected value.
+    CHECK(std::abs(img.value(0, 0, 0) - 10.0f) <= 1.0f);
+    CHECK(std::abs(img.value(0, 1, 0) - 80.0f) <= 1.0f);
+    CHECK(std::abs(img.value(1, 0, 0) - 160.0f) <= 1.0f);
+    CHECK(std::abs(img.value(1, 1, 0) - 240.0f) <= 1.0f);
 }
 
 TEST_CASE("DCMA_DICOM extract_encapsulated_pixel_data returns nullopt for unsupported TS"){
@@ -1281,6 +1281,21 @@ TEST_CASE("DCMA_DICOM extract_encapsulated_pixel_data returns nullopt for unsupp
 TEST_CASE("DCMA_DICOM extract_encapsulated_pixel_data returns nullopt for JPEG lossless"){
     DCMA_DICOM::Node root;
     root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.4.70"});
+    root.emplace_child_node({{0x0028, 0x0010}, "US", "2"});
+    root.emplace_child_node({{0x0028, 0x0011}, "US", "2"});
+    root.emplace_child_node({{0x0028, 0x0100}, "US", "8"});
+    root.emplace_child_node({{0x0028, 0x0101}, "US", "8"});
+    root.emplace_child_node({{0x0028, 0x0102}, "US", "7"});
+    root.emplace_child_node({{0x7FE0, 0x0010}, "OB", std::string(100, '\0')});
+
+    auto pics = DCMA_DICOM::extract_encapsulated_pixel_data(root);
+    CHECK_FALSE(pics.has_value());
+}
+
+TEST_CASE("DCMA_DICOM extract_encapsulated_pixel_data returns nullopt for JPEG Extended"){
+    // JPEG Extended (Process 2 & 4) TS 1.2.840.10008.1.2.4.51 is not baseline.
+    DCMA_DICOM::Node root;
+    root.emplace_child_node({{0x0002, 0x0010}, "UI", "1.2.840.10008.1.2.4.51"});
     root.emplace_child_node({{0x0028, 0x0010}, "US", "2"});
     root.emplace_child_node({{0x0028, 0x0011}, "US", "2"});
     root.emplace_child_node({{0x0028, 0x0100}, "US", "8"});

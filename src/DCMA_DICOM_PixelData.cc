@@ -13,6 +13,8 @@
 #include <cstdint>
 #include <cstring>
 #include <cmath>
+#include <climits>
+#include <limits>
 #include <string>
 #include <vector>
 #include <optional>
@@ -314,6 +316,12 @@ std::optional<VOILUTParams> get_voi_lut_params(const Node &root){
 
 void apply_voi_lut(planar_image<float,double> &img, const VOILUTParams &params,
                    double out_min, double out_max){
+    // Guard against non-positive window widths, which produce nonsensical bounds.
+    if(params.window_width <= 0.0){
+        YLOGWARN("apply_voi_lut: window_width is non-positive (" << params.window_width << "); skipping");
+        return;
+    }
+
     // Linear exact windowing per DICOM PS3.3, C.11.2.1.2.
     // The formula maps [c - (w-1)/2, c + (w-1)/2] to [out_min, out_max].
     const double c = params.window_center;
@@ -967,22 +975,19 @@ std::optional<planar_image_collection<float,double>> extract_encapsulated_pixel_
     }
     const auto &desc = *desc_opt;
 
-    // Currently only JPEG baseline 8-bit is supported.
-    if(desc.transfer_syntax != TransferSyntaxType::EncapsulatedJPEG){
-        YLOGWARN("Encapsulated pixel data extraction is not yet implemented for transfer syntax type "
-                 << static_cast<int>(desc.transfer_syntax));
-        return std::nullopt;
-    }
-
-    // Verify 8-bit baseline requirements for stb_image.
-    // stb_image only supports 8-bit baseline JPEG (sequential DCT, Huffman-coded).
-    // JPEG Extended (TS 1.2.840.10008.1.2.4.51) can use 12-bit samples.
-    // JPEG Lossless (TS 1.2.840.10008.1.2.4.57, .70) is not DCT-based.
+    // Only JPEG Baseline (Process 1) is supported via the bundled stb_image library.
+    // stb_image supports 8-bit baseline JPEG only (sequential DCT, Huffman-coded).
+    // Reject all other transfer syntaxes, including JPEG Extended (12-bit) and JPEG Lossless.
     const auto ts_str = read_text(root, 0x0002, 0x0010);
     const auto ts_stripped = strip_ts_padding(ts_str);
-    if(ts_stripped == "1.2.840.10008.1.2.4.57"
-    || ts_stripped == "1.2.840.10008.1.2.4.70"){
-        YLOGWARN("JPEG Lossless is not supported by the bundled JPEG decoder (stb_image)");
+    if(ts_stripped != "1.2.840.10008.1.2.4.50"){
+        if(desc.transfer_syntax == TransferSyntaxType::EncapsulatedJPEG){
+            YLOGWARN("Only JPEG Baseline (1.2.840.10008.1.2.4.50) is supported by the bundled JPEG "
+                     "decoder (stb_image); got Transfer Syntax UID '" << ts_stripped << "'");
+        }else{
+            YLOGWARN("Encapsulated pixel data extraction is not yet implemented for transfer syntax type "
+                     << static_cast<int>(desc.transfer_syntax));
+        }
         return std::nullopt;
     }
     if(desc.bits_allocated != 8 || desc.bits_stored != 8){
@@ -1045,8 +1050,13 @@ std::optional<planar_image_collection<float,double>> extract_encapsulated_pixel_
     }
 
     const auto soi_pos = search_offset + sub_soi_pos;
+    const auto remaining = raw.size() - soi_pos;
+    if(remaining > static_cast<size_t>(std::numeric_limits<int>::max())){
+        YLOGWARN("Encapsulated JPEG data exceeds INT_MAX (" << remaining << " bytes); cannot decode");
+        return std::nullopt;
+    }
     const auto *jpeg_data = reinterpret_cast<const dcma_stb_px::stbi_uc*>(raw.data() + soi_pos);
-    const int jpeg_len = static_cast<int>(raw.size() - soi_pos);
+    const int jpeg_len = static_cast<int>(remaining);
 
     int width = 0;
     int height = 0;

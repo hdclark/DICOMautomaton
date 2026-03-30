@@ -142,7 +142,7 @@ struct VOILUTParams {
 };
 
 // Extract the first Window Center / Window Width pair from the DICOM tree.
-// Returns std::nullopt if neither is present.
+// Returns std::nullopt if either tag is absent or if the Window Width is non-positive.
 std::optional<VOILUTParams> get_voi_lut_params(const Node &root);
 
 // Apply VOI LUT (linear windowing) to all pixel values in the image in-place.
@@ -176,8 +176,11 @@ void apply_presentation_lut(planar_image<float,double> &img, PresentationLUTShap
 //
 // Supported conversions:
 //   YBR_FULL      → RGB   (3-channel images; DICOM PS3.3 C.7.6.3.1.2)
-//   YBR_FULL_422  → RGB   (3-channel images; treats stored samples as full YCbCr)
 //   PALETTE COLOR → RGB   (1-channel → 3-channel; requires root Node for LUT data)
+//
+// Note: YBR_FULL_422 is 4:2:2 chroma-subsampled and requires prior expansion to
+// full-resolution 3-sample-per-pixel YBR data before conversion. This routine does
+// not perform that expansion and will return false for YBR_FULL_422.
 //
 // Returns true on success, false if the conversion is not supported.
 // When root is non-null it is used to read Palette Color LUT Descriptors and Data.
