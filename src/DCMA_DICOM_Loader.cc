@@ -795,13 +795,30 @@ std::unique_ptr<Image_Array> Load_Image_Array_from_node(const Node &root, const 
 
     // Determine if modality LUT should be applied. Look for real-world mapping first.
     std::function<float(float)> real_world_mapping;
-    auto rw_lut_intercept = l_coalesce_as_double(
-        { { {0x0040, 0x9096, 0}, {0x0040, 0x9224, 0} },
-          { {0x5200, 0x9230, 0}, {0x0028, 0x9145, 0}, {0x0028, 0x1052, 0} } });
-    auto rw_lut_slope = l_coalesce_as_double(
-        { { {0x0040, 0x9096, 0}, {0x0040, 0x9225, 0} },
-          { {0x5200, 0x9230, 0}, {0x0028, 0x9145, 0}, {0x0028, 0x1053, 0} } });
 
+    // Build candidate paths for real-world mapping intercept/slope.
+    // Always prefer global RealWorldValueMappingSequence (0040,9096).
+    std::vector<std::vector<path_node>> rw_intercept_paths = {
+        { {0x0040, 0x9096, 0}, {0x0040, 0x9224, 0} }
+    };
+    std::vector<std::vector<path_node>> rw_slope_paths = {
+        { {0x0040, 0x9096, 0}, {0x0040, 0x9225, 0} }
+    };
+
+    // Only fall back to a per-frame mapping when there is exactly one frame. For
+    // multi-frame images, the mapping can vary per frame, so using item 0 for all
+    // frames would be unsafe.
+    if(pixel_images.size() == 1){
+        rw_intercept_paths.push_back(
+            { {0x5200, 0x9230, 0}, {0x0028, 0x9145, 0}, {0x0028, 0x1052, 0} }
+        );
+        rw_slope_paths.push_back(
+            { {0x5200, 0x9230, 0}, {0x0028, 0x9145, 0}, {0x0028, 0x1053, 0} }
+        );
+    }
+
+    auto rw_lut_intercept = l_coalesce_as_double(rw_intercept_paths);
+    auto rw_lut_slope     = l_coalesce_as_double(rw_slope_paths);
     if(rw_lut_intercept && rw_lut_slope){
         auto m = rw_lut_slope.value();
         auto b = rw_lut_intercept.value();
