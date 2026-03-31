@@ -51,6 +51,9 @@ set_target_properties(  DCMA_DICOM_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE
 add_library(            DCMA_DICOM_PixelData_obj OBJECT DCMA_DICOM_PixelData.cc)
 set_target_properties(  DCMA_DICOM_PixelData_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            DCMA_DICOM_Loader_obj OBJECT DCMA_DICOM_Loader.cc)
+set_target_properties(  DCMA_DICOM_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            DCMA_DICOM_Tests_obj OBJECT DCMA_DICOM_Tests.cc )
 set_target_properties(  DCMA_DICOM_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
