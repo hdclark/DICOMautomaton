@@ -756,7 +756,6 @@ std::unique_ptr<Contour_Data> get_Contour_Data_from_node(const Node &root, const
 // ============================================================================
 
 std::unique_ptr<Image_Array> Load_Image_Array_from_node(const Node &root, const std::string &filename){
-    const auto inf = std::numeric_limits<double>::infinity();
     auto out = std::make_unique<Image_Array>();
 
     const auto tlm = get_metadata_top_level_tags_from_node(root, filename);
