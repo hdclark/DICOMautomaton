@@ -633,16 +633,14 @@ std::unique_ptr<Contour_Data> get_Contour_Data_from_node(const Node &root, const
 
     // ROIContourSequence (3006,0039).
     const auto roi_contour_items = get_seq_items(root, 0x3006, 0x0039);
+    int64_t Last_ROI_Numb = 0;
     for(const auto *roi_item : roi_contour_items){
-        int64_t Last_ROI_Numb = 0;
         // ContourSequence (3006,0040).
         const auto contour_items = get_seq_items(*roi_item, 0x3006, 0x0040);
 
         auto ROI_number_opt = read_first_long(*roi_item, 0x3006, 0x0084); // ReferencedROINumber
-        int64_t ROI_number = ROI_number_opt.value_or(0);
-        if(ROI_number == 0){
-            ROI_number = Last_ROI_Numb;
-        }else{
+        int64_t ROI_number = ROI_number_opt.value_or(Last_ROI_Numb);
+        if(ROI_number != 0){
             Last_ROI_Numb = ROI_number;
         }
 
