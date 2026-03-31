@@ -1243,18 +1243,25 @@ std::unique_ptr<Transform3> Load_Transform_from_node(const Node &root, const std
     // RegistrationSequence (0070,0308).
     uint32_t ri = 0;
     for(const auto *reg_item : get_seq_items(root, 0x0070, 0x0308)){
-        const std::string prfx = "RegistrationSequence"s + std::to_string(ri) + "/"s;
-        insert_seq_item_tag_value(out->metadata, *reg_item, 0x0020, 0x0052, prfx + "FrameOfReferenceUID");
+        const std::string reg_prfx = "RegistrationSequence"s + std::to_string(ri) + "/"s;
+        // Registration-level metadata.
+        insert_seq_item_tag_value(out->metadata, *reg_item, 0x0020, 0x0052, reg_prfx + "FrameOfReferenceUID");
 
         // MatrixRegistrationSequence (0070,0309).
+        uint32_t mi = 0;
         for(const auto *mreg_item : get_seq_items(*reg_item, 0x0070, 0x0309)){
+            const std::string mreg_prfx = reg_prfx + "MatrixRegistrationSequence"s + std::to_string(mi) + "/"s;
             // MatrixSequence (0070,030A).
+            uint32_t mj = 0;
             for(const auto *mat_item : get_seq_items(*mreg_item, 0x0070, 0x030a)){
-                insert_seq_item_tag_value(out->metadata, *mat_item, 0x0070, 0x030c, prfx + "FrameOfReferenceTransformationMatrixType");
+                const std::string mat_prfx = mreg_prfx + "MatrixSequence"s + std::to_string(mj) + "/"s;
+                insert_seq_item_tag_value(out->metadata, *mat_item, 0x0070, 0x030c, mat_prfx + "FrameOfReferenceTransformationMatrixType");
                 const auto mat_vec = convert_to_vector_double(extract_tag_as_strings(*mat_item, 0x3006, 0x00c6));
                 if(mat_vec.size() != 16) continue;
                 out->transform = extract_affine_transform(mat_vec);
+                ++mj;
             }
+            ++mi;
         }
         ++ri;
     }
