@@ -480,7 +480,12 @@ std::unique_ptr<Image_Array> load_dose_images(const Node &root){
     }
 
     // Dose Grid Scaling (3004,000E).
-    const auto grid_scale = read_DS(root, 0x3004, 0x000E).value_or(1.0);
+    const auto grid_scale_opt = read_DS(root, 0x3004, 0x000E);
+    if(!grid_scale_opt){
+        YLOGWARN("RTDOSE missing or invalid DoseGridScaling (3004,000E); assuming 1.0. "
+                 "Absolute dose values may be incorrect.");
+    }
+    const auto grid_scale = grid_scale_opt.value_or(1.0);
 
     // Determine if Modality LUT (rescale slope/intercept) should be applied.
     auto lut = get_modality_lut_params(root);
