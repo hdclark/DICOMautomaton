@@ -115,6 +115,7 @@ static metadata_map_t extract_common_metadata(const Node &root){
     insert_tag(meta, root, 0x0008, 0x0012, "InstanceCreationDate");
     insert_tag(meta, root, 0x0008, 0x0013, "InstanceCreationTime");
     insert_tag(meta, root, 0x0008, 0x0014, "InstanceCreatorUID");
+    insert_tag(meta, root, 0x0008, 0x0114, "CodingSchemeExternalUID");
     insert_tag(meta, root, 0x0020, 0x0013, "InstanceNumber");
 
     // Patient Module (PS3.3 C.7.1.1).
