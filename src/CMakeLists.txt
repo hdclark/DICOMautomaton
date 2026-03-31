@@ -51,8 +51,14 @@ set_target_properties(  DCMA_DICOM_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE
 add_library(            DCMA_DICOM_PixelData_obj OBJECT DCMA_DICOM_PixelData.cc)
 set_target_properties(  DCMA_DICOM_PixelData_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            DCMA_DICOM_Loader_obj OBJECT DCMA_DICOM_Loader.cc)
+set_target_properties(  DCMA_DICOM_Loader_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            DCMA_DICOM_Tests_obj OBJECT DCMA_DICOM_Tests.cc )
 set_target_properties(  DCMA_DICOM_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+add_library(            DCMA_DICOM_Loader_Tests_obj OBJECT DCMA_DICOM_Loader_Tests.cc )
+set_target_properties(  DCMA_DICOM_Loader_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
 add_library(            BED_Conversion_obj OBJECT BED_Conversion.cc )
 set_target_properties(  BED_Conversion_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -277,6 +283,7 @@ add_library (imebrashim
     $<TARGET_OBJECTS:DCMA_DICOM_Dictionaries_obj>
     $<TARGET_OBJECTS:DCMA_DICOM_obj>
     $<TARGET_OBJECTS:DCMA_DICOM_PixelData_obj>
+    $<TARGET_OBJECTS:DCMA_DICOM_Loader_obj>
     imebra20121219/library/imebra/src/dataHandlerStringUT.cpp
     imebra20121219/library/imebra/src/data.cpp
     imebra20121219/library/imebra/src/colorTransformsFactory.cpp
@@ -473,6 +480,7 @@ add_executable (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:ARAP_Meshes_Tests_obj>>
     $<$<BOOL:${WITH_SYCL_FALLBACK}>:$<TARGET_OBJECTS:SYCL_Fallback_Tests_obj>>
     $<TARGET_OBJECTS:DCMA_DICOM_Tests_obj>
+    $<TARGET_OBJECTS:DCMA_DICOM_Loader_Tests_obj>
     $<TARGET_OBJECTS:Colour_Maps_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Common_Plotting_obj>
@@ -592,6 +600,7 @@ if(WITH_WT)
         $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:ARAP_Meshes_Tests_obj>>
         $<$<BOOL:${WITH_SYCL_FALLBACK}>:$<TARGET_OBJECTS:SYCL_Fallback_Tests_obj>>
         $<TARGET_OBJECTS:DCMA_DICOM_Tests_obj>
+        $<TARGET_OBJECTS:DCMA_DICOM_Loader_Tests_obj>
         $<TARGET_OBJECTS:Colour_Maps_obj>
         $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
         $<TARGET_OBJECTS:Common_Plotting_obj>
