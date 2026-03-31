@@ -791,49 +791,39 @@ std::unique_ptr<Image_Array> Load_Image_Array_from_node(const Node &root, const 
     auto &pixel_images = pixel_data_opt.value();
 
     // Determine if modality LUT should be applied. Look for real-world mapping first.
-    std::function<float(float)> real_world_mapping;
+    //
+    // The global (shared) real-world mapping applies to all frames. For multi-frame
+    // enhanced objects, per-frame mappings are evaluated inside the frame loop below.
+    std::function<float(float)> global_real_world_mapping;
 
     // Build candidate paths for real-world mapping intercept/slope.
     // Always prefer global RealWorldValueMappingSequence (0040,9096).
-    std::vector<std::vector<path_node>> rw_intercept_paths = {
+    auto rw_lut_intercept = l_coalesce_as_double({
         { {0x0040, 0x9096, 0}, {0x0040, 0x9224, 0} }
-    };
-    std::vector<std::vector<path_node>> rw_slope_paths = {
+    });
+    auto rw_lut_slope = l_coalesce_as_double({
         { {0x0040, 0x9096, 0}, {0x0040, 0x9225, 0} }
-    };
-
-    // Only fall back to a per-frame mapping when there is exactly one frame. For
-    // multi-frame images, the mapping can vary per frame, so using item 0 for all
-    // frames would be unsafe.
-    if(pixel_images.size() == 1){
-        rw_intercept_paths.push_back(
-            { {0x5200, 0x9230, 0}, {0x0028, 0x9145, 0}, {0x0028, 0x1052, 0} }
-        );
-        rw_slope_paths.push_back(
-            { {0x5200, 0x9230, 0}, {0x0028, 0x9145, 0}, {0x0028, 0x1053, 0} }
-        );
-    }
-
-    auto rw_lut_intercept = l_coalesce_as_double(rw_intercept_paths);
-    auto rw_lut_slope     = l_coalesce_as_double(rw_slope_paths);
+    });
     if(rw_lut_intercept && rw_lut_slope){
         auto m = rw_lut_slope.value();
         auto b = rw_lut_intercept.value();
-        real_world_mapping = [m, b](float x) -> float { return b + m*x; };
+        global_real_world_mapping = [m, b](float x) -> float { return b + m*x; };
     }
 
-    // Fall back to standard RescaleSlope/Intercept if no real-world mapping.
-    auto lut_intercept = read_first_double(root, 0x0028, 0x1052);
-    auto lut_slope     = read_first_double(root, 0x0028, 0x1053);
-    if(!real_world_mapping && lut_intercept && lut_slope){
-        auto m = lut_slope.value();
-        auto b = lut_intercept.value();
-        real_world_mapping = [m, b](float x) -> float { return b + m*x; };
+    // Fall back to standard RescaleSlope/Intercept if no global real-world mapping.
+    if(!global_real_world_mapping){
+        auto lut_intercept = read_first_double(root, 0x0028, 0x1052);
+        auto lut_slope     = read_first_double(root, 0x0028, 0x1053);
+        if(lut_intercept && lut_slope){
+            auto m = lut_slope.value();
+            auto b = lut_intercept.value();
+            global_real_world_mapping = [m, b](float x) -> float { return b + m*x; };
+        }
     }
 
-    // If we found a real-world or modality LUT, we apply it ourselves.
+    // If we found a global real-world or modality LUT, we apply it ourselves.
     // If not, apply the DCMA_DICOM modality LUT pipeline.
-    if(!real_world_mapping){
+    if(!global_real_world_mapping){
         auto mlut = get_modality_lut_params(root);
         if(mlut){
             for(auto &img : pixel_images.images){
@@ -843,9 +833,10 @@ std::unique_ptr<Image_Array> Load_Image_Array_from_node(const Node &root, const 
     }
 
     // Build image array from pixel data.
-    int64_t frame_idx = 0;
+    uint32_t frame_idx = 0;
     for(auto &pimg : pixel_images.images){
-        if(frame_idx >= frame_count) break;
+        if(static_cast<int64_t>(frame_idx) >= frame_count) break;
+        const uint32_t f = frame_idx; // Current frame index for per-frame functional groups.
         auto l_meta = tlm;
         out->imagecoll.images.emplace_back();
 
@@ -854,25 +845,54 @@ std::unique_ptr<Image_Array> Load_Image_Array_from_node(const Node &root, const 
         const auto img_chnls  = static_cast<int64_t>(pimg.channels);
 
         // Position.
+        // Consider: top-level tags, RTIMAGE tags, and per-frame PerFrameFunctionalGroupsSequence.
         auto image_pos_x_opt = l_coalesce_as_double(
-            { { {0x0020, 0x0032, 0} }, { {0x3002, 0x0012, 0} } });
+            { { {0x0020, 0x0032, 0} },   // ImagePositionPatient
+              { {0x3002, 0x0012, 0} },   // RTImagePosition
+              { {0x5200, 0x9230, f},     // PerFrameFunctionalGroupsSequence
+                {0x0020, 0x9113, 0},     //   PlanePositionSequence
+                {0x0020, 0x0032, 0} },   //     ImagePositionPatient
+            });
         auto image_pos_y_opt = l_coalesce_as_double(
-            { { {0x0020, 0x0032, 1} }, { {0x3002, 0x0012, 1} } });
+            { { {0x0020, 0x0032, 1} },   // ImagePositionPatient
+              { {0x3002, 0x0012, 1} },   // RTImagePosition
+              { {0x5200, 0x9230, f},     // PerFrameFunctionalGroupsSequence
+                {0x0020, 0x9113, 0},     //   PlanePositionSequence
+                {0x0020, 0x0032, 1} },   //     ImagePositionPatient
+            });
         auto image_pos_z_opt = l_coalesce_as_double(
-            { { {0x0020, 0x0032, 2} }, { {0x3002, 0x000d, 2} } });
+            { { {0x0020, 0x0032, 2} },   // ImagePositionPatient
+              { {0x3002, 0x000d, 2} },   // XRayImageReceptorTranslation
+              { {0x5200, 0x9230, f},     // PerFrameFunctionalGroupsSequence
+                {0x0020, 0x9113, 0},     //   PlanePositionSequence
+                {0x0020, 0x0032, 2} },   //     ImagePositionPatient
+            });
+
+        const auto grid_frame_offset_vec = l_coalesce_as_vector_double(
+            { { {0x3004, 0x000C, 0} } }); // GridFrameOffsetVector
+        if(!grid_frame_offset_vec.empty()){
+            throw std::runtime_error("Encountered unexpected GridFrameOffsetVector. Refusing to continue");
+        }
 
         if(!image_pos_x_opt || !image_pos_y_opt || !image_pos_z_opt){
             const auto xyz = l_coalesce_metadata_as_vector_double({"CSAImage/ImagePositionPatient"});
             if(xyz.size() == 3UL){
+                YLOGINFO("Using non-standard CSAImage/ImagePositionPatient");
                 image_pos_x_opt = xyz.at(0);
                 image_pos_y_opt = xyz.at(1);
                 image_pos_z_opt = xyz.at(2);
             }
         }
         if(!image_pos_z_opt && (modality == "RTIMAGE")){
-            const auto RTImageSID = read_first_double(root, 0x3002, 0x0026).value_or(1000.0);
-            const auto RadMchnSAD = read_first_double(root, 0x3002, 0x0022).value_or(1000.0);
+            const auto RTImageSID = l_coalesce_as_double({ { {0x3002, 0x0026, 0} } }).value_or(1000.0);
+            const auto RadMchnSAD = l_coalesce_as_double({ { {0x3002, 0x0022, 0} } }).value_or(1000.0);
             image_pos_z_opt = (RadMchnSAD - RTImageSID);
+        }
+        if(!image_pos_x_opt || !image_pos_y_opt || !image_pos_z_opt){
+            YLOGINFO("Unable to find ImagePositionPatient, using defaults");
+            image_pos_x_opt = {};
+            image_pos_y_opt = {};
+            image_pos_z_opt = {};
         }
         const vec3<double> image_pos(image_pos_x_opt.value_or(0.0),
                                      image_pos_y_opt.value_or(0.0),
@@ -882,35 +902,89 @@ std::unique_ptr<Image_Array> Load_Image_Array_from_node(const Node &root, const 
 
         const auto image_anchor = vec3<double>(0.0, 0.0, 0.0);
 
-        // Orientation.
-        const auto orien_vec = read_all_doubles(root, 0x0020, 0x0037);
-        vec3<double> image_orien_r(1.0, 0.0, 0.0);
-        vec3<double> image_orien_c(0.0, 1.0, 0.0);
-        if(orien_vec.size() == 6UL){
-            image_orien_r = vec3<double>(orien_vec[0], orien_vec[1], orien_vec[2]).unit();
-            image_orien_c = vec3<double>(orien_vec[3], orien_vec[4], orien_vec[5]).unit();
+        // Orientation vectors.
+        // Consider: top-level tags, RTIMAGE tags, and per-frame PerFrameFunctionalGroupsSequence.
+        std::optional<vec3<double>> image_orien_r_opt;
+        std::optional<vec3<double>> image_orien_c_opt;
+        const auto image_orien_vec = l_coalesce_as_vector_double(
+            { { {0x0020, 0x0037, 0} },   // ImageOrientationPatient
+              { {0x3002, 0x0010, 0} },   // RTImageOrientation
+              { {0x5200, 0x9230, f},     // PerFrameFunctionalGroupsSequence
+                {0x0020, 0x9116, 0},     //   PlaneOrientationSequence
+                {0x0020, 0x0037, 0} },   //     ImageOrientationPatient
+            });
+        if(image_orien_vec.size() == 6UL){
+            image_orien_r_opt = vec3<double>(image_orien_vec.at(0),
+                                             image_orien_vec.at(1),
+                                             image_orien_vec.at(2)).unit();
+            image_orien_c_opt = vec3<double>(image_orien_vec.at(3),
+                                             image_orien_vec.at(4),
+                                             image_orien_vec.at(5)).unit();
         }
+        if(!image_orien_r_opt || !image_orien_c_opt){
+            const auto o = l_coalesce_metadata_as_vector_double({"CSAImage/ImageOrientationPatient"});
+            if(o.size() == 6UL){
+                YLOGINFO("Using non-standard CSAImage/ImageOrientationPatient");
+                image_orien_r_opt = vec3<double>(o.at(0), o.at(1), o.at(2));
+                image_orien_c_opt = vec3<double>(o.at(3), o.at(4), o.at(5));
+            }
+        }
+        if(!image_orien_r_opt || !image_orien_c_opt){
+            YLOGINFO("Unable to find ImageOrientationPatient, using defaults");
+            image_orien_r_opt = {};
+            image_orien_c_opt = {};
+        }
+        const auto image_orien_r = image_orien_r_opt.value_or(vec3<double>(1.0, 0.0, 0.0)).unit();
+        const auto image_orien_c = image_orien_c_opt.value_or(vec3<double>(0.0, 1.0, 0.0)).unit();
         insert_if_new(l_meta, "ImageOrientationPatient",
                       std::to_string(image_orien_r.x) + '\\' + std::to_string(image_orien_r.y) + '\\' + std::to_string(image_orien_r.z) + '\\'
                     + std::to_string(image_orien_c.x) + '\\' + std::to_string(image_orien_c.y) + '\\' + std::to_string(image_orien_c.z));
 
         // Pixel spacing.
-        const auto pxl_spacing = read_all_doubles(root, 0x0028, 0x0030);
-        double image_pxldy = 1.0, image_pxldx = 1.0;
-        if(pxl_spacing.size() == 2UL){
-            image_pxldy = pxl_spacing[0];
-            image_pxldx = pxl_spacing[1];
-        }else{
-            const auto alt_spacing = read_all_doubles(root, 0x3002, 0x0011); // ImagePlanePixelSpacing
-            if(alt_spacing.size() == 2UL){
-                image_pxldy = alt_spacing[0];
-                image_pxldx = alt_spacing[1];
+        // Consider: top-level tags, RTIMAGE tags, and per-frame PerFrameFunctionalGroupsSequence.
+        std::optional<double> image_pxldy_opt;
+        std::optional<double> image_pxldx_opt;
+        const auto image_pxl_extent = l_coalesce_as_vector_double(
+            { { {0x0028, 0x0030, 0} },   // PixelSpacing
+              { {0x3002, 0x0011, 0} },   // ImagePlanePixelSpacing
+              { {0x5200, 0x9230, f},     // PerFrameFunctionalGroupsSequence
+                {0x0028, 0x9110, 0},     //   PixelMeasuresSequence
+                {0x0028, 0x0030, 0} },   //     PixelSpacing
+            });
+        if(image_pxl_extent.size() == 2UL){
+            image_pxldy_opt = image_pxl_extent.at(0);
+            image_pxldx_opt = image_pxl_extent.at(1);
+        }
+        if(!image_pxldy_opt || !image_pxldx_opt){
+            const auto o = l_coalesce_metadata_as_vector_double({"CSAImage/PixelSpacing"});
+            if(o.size() == 2UL){
+                YLOGINFO("Using non-standard CSAImage/PixelSpacing");
+                image_pxldy_opt = o.at(0);
+                image_pxldx_opt = o.at(1);
             }
         }
+        if(!image_pxldy_opt || !image_pxldx_opt){
+            YLOGINFO("Unable to find voxel extent, using defaults");
+        }
+        const auto image_pxldy = image_pxldy_opt.value_or(1.0);
+        const auto image_pxldx = image_pxldx_opt.value_or(1.0);
         insert_if_new(l_meta, "PixelSpacing", std::to_string(image_pxldy) + '\\' + std::to_string(image_pxldx));
 
         // Thickness.
-        const auto image_thickness = read_first_double(root, 0x0018, 0x0050).value_or(1.0);
+        // Consider: top-level tags and per-frame PerFrameFunctionalGroupsSequence.
+        auto image_thickness_opt = l_coalesce_as_double(
+            { { {0x0018, 0x0050, 0} },   // SliceThickness
+              { {0x5200, 0x9230, f},     // PerFrameFunctionalGroupsSequence
+                {0x0028, 0x9110, 0},     //   PixelMeasuresSequence
+                {0x0018, 0x0050, 0} },   //     SliceThickness
+            });
+        if(!image_thickness_opt){
+            image_thickness_opt = l_coalesce_metadata_as_double({"CSAImage/SliceThickness"});
+        }
+        if(!image_thickness_opt){
+            YLOGINFO("Unable to find image thickness, using default");
+        }
+        const auto image_thickness = image_thickness_opt.value_or(1.0);
         insert_if_new(l_meta, "SliceThickness", std::to_string(image_thickness));
 
         // Populate image.
@@ -918,6 +992,23 @@ std::unique_ptr<Image_Array> Load_Image_Array_from_node(const Node &root, const 
         out->imagecoll.images.back().init_orientation(image_orien_r, image_orien_c);
         out->imagecoll.images.back().init_buffer(image_rows, image_cols, img_chnls);
         out->imagecoll.images.back().init_spatial(image_pxldx, image_pxldy, image_thickness, image_anchor, image_pos);
+
+        // Determine per-frame real-world mapping. Use the global mapping if available,
+        // otherwise try the per-frame PerFrameFunctionalGroupsSequence.
+        std::function<float(float)> real_world_mapping = global_real_world_mapping;
+        if(!real_world_mapping){
+            auto pf_intercept = l_coalesce_as_double({
+                { {0x5200, 0x9230, f}, {0x0028, 0x9145, 0}, {0x0028, 0x1052, 0} }
+            });
+            auto pf_slope = l_coalesce_as_double({
+                { {0x5200, 0x9230, f}, {0x0028, 0x9145, 0}, {0x0028, 0x1053, 0} }
+            });
+            if(pf_intercept && pf_slope){
+                auto m = pf_slope.value();
+                auto b = pf_intercept.value();
+                real_world_mapping = [m, b](float x) -> float { return b + m*x; };
+            }
+        }
 
         // Copy pixel data, applying real-world mapping if present.
         for(int64_t row = 0; row < image_rows; ++row){
