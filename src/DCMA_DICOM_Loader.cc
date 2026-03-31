@@ -165,12 +165,33 @@ convert_to_vector_double(const std::vector<std::string> &in){
 // Return the list of item-delimiter child nodes from a sequence tag.
 // SQ nodes store their items as children: each child is an (FFFE,E000) item delimiter
 // whose own children are the data tags for that item.
+// Note: uses recursive find() to locate the SQ tag.
 static std::list<const Node*> get_seq_items(const Node &root, uint16_t group, uint16_t tag){
     std::list<const Node*> out;
     const auto *sq = root.find(group, tag);
     if(sq == nullptr) return out;
     for(const auto &child : sq->children){
         // Items are (FFFE,E000).
+        if(child.key.group == 0xFFFE && child.key.tag == 0xE000){
+            out.push_back(&child);
+        }
+    }
+    return out;
+}
+
+// Like get_seq_items but searches only direct children of the node (shallow).
+// Used by extract_seq_path_tag to avoid accidentally matching deeply nested SQ tags.
+static std::list<const Node*> get_seq_items_shallow(const Node &root, uint16_t group, uint16_t tag){
+    std::list<const Node*> out;
+    const Node *sq = nullptr;
+    for(const auto &child : root.children){
+        if(child.key.group == group && child.key.tag == tag){
+            sq = &child;
+            break;
+        }
+    }
+    if(sq == nullptr) return out;
+    for(const auto &child : sq->children){
         if(child.key.group == 0xFFFE && child.key.tag == 0xE000){
             out.push_back(&child);
         }
@@ -207,11 +228,24 @@ static void insert_seq_item_tag_value(metadata_map_t &out, const Node &item_node
 }
 
 // Extract tag as string vector from a node (for compatibility with Imebra converters).
+// Note: uses recursive find(), so will find tags nested in sequences.
 static std::vector<std::string> extract_tag_as_strings(const Node &src, uint16_t group, uint16_t tag){
     const auto *n = src.find(group, tag);
     if(n == nullptr) return {};
     auto raw = read_text_from_val(n->val);
     return split_vm(raw);
+}
+
+// Extract tag as string vector from DIRECT children only (not recursive).
+// Used by extract_seq_path_tag leaf case to avoid accidental deep matches.
+static std::vector<std::string> extract_tag_as_strings_shallow(const Node &src, uint16_t group, uint16_t tag){
+    for(const auto &child : src.children){
+        if(child.key.group == group && child.key.tag == tag){
+            auto raw = read_text_from_val(child.val);
+            return split_vm(raw);
+        }
+    }
+    return {};
 }
 
 // Insert a single-level sequence tag into metadata.
@@ -264,19 +298,22 @@ struct path_node {
 };
 
 // Extract tag value following a sequence path from a node.
+// Uses shallow (children-only) search at each level to avoid accidental deep matches
+// when the same tag exists both at the top level and nested inside sequences.
 static std::vector<std::string>
 extract_seq_path_tag(const Node &root, const std::vector<path_node> &path){
     if(path.empty()) return {};
     if(path.size() == 1){
-        // Leaf: directly read the tag. The element field selects which VM component to start from.
-        auto vals = extract_tag_as_strings(root, path[0].group, path[0].tag);
+        // Leaf: directly read the tag from children only.
+        // The element field selects which VM component to start from.
+        auto vals = extract_tag_as_strings_shallow(root, path[0].group, path[0].tag);
         if(path[0].element < vals.size()){
             return std::vector<std::string>(vals.begin() + path[0].element, vals.end());
         }
         return {};
     }
-    // Navigate into a sequence.
-    const auto items = get_seq_items(root, path[0].group, path[0].tag);
+    // Navigate into a sequence (found in direct children only).
+    const auto items = get_seq_items_shallow(root, path[0].group, path[0].tag);
     if(items.empty()) return {};
     uint32_t idx = path[0].element;
     if(idx >= items.size()) return {};
@@ -897,8 +934,9 @@ std::unique_ptr<Image_Array> Load_Image_Array_from_node(const Node &root, const 
         const vec3<double> image_pos(image_pos_x_opt.value_or(0.0),
                                      image_pos_y_opt.value_or(0.0),
                                      image_pos_z_opt.value_or(0.0));
-        insert_if_new(l_meta, "ImagePositionPatient",
-                      std::to_string(image_pos.x) + '\\' + std::to_string(image_pos.y) + '\\' + std::to_string(image_pos.z));
+        // Always overwrite: per-frame values should take precedence over inherited metadata.
+        l_meta["ImagePositionPatient"] =
+            std::to_string(image_pos.x) + '\\' + std::to_string(image_pos.y) + '\\' + std::to_string(image_pos.z);
 
         const auto image_anchor = vec3<double>(0.0, 0.0, 0.0);
 
@@ -936,9 +974,9 @@ std::unique_ptr<Image_Array> Load_Image_Array_from_node(const Node &root, const 
         }
         const auto image_orien_r = image_orien_r_opt.value_or(vec3<double>(1.0, 0.0, 0.0)).unit();
         const auto image_orien_c = image_orien_c_opt.value_or(vec3<double>(0.0, 1.0, 0.0)).unit();
-        insert_if_new(l_meta, "ImageOrientationPatient",
+        l_meta["ImageOrientationPatient"] =
                       std::to_string(image_orien_r.x) + '\\' + std::to_string(image_orien_r.y) + '\\' + std::to_string(image_orien_r.z) + '\\'
-                    + std::to_string(image_orien_c.x) + '\\' + std::to_string(image_orien_c.y) + '\\' + std::to_string(image_orien_c.z));
+                    + std::to_string(image_orien_c.x) + '\\' + std::to_string(image_orien_c.y) + '\\' + std::to_string(image_orien_c.z);
 
         // Pixel spacing.
         // Consider: top-level tags, RTIMAGE tags, and per-frame PerFrameFunctionalGroupsSequence.
@@ -968,7 +1006,7 @@ std::unique_ptr<Image_Array> Load_Image_Array_from_node(const Node &root, const 
         }
         const auto image_pxldy = image_pxldy_opt.value_or(1.0);
         const auto image_pxldx = image_pxldx_opt.value_or(1.0);
-        insert_if_new(l_meta, "PixelSpacing", std::to_string(image_pxldy) + '\\' + std::to_string(image_pxldx));
+        l_meta["PixelSpacing"] = std::to_string(image_pxldy) + '\\' + std::to_string(image_pxldx);
 
         // Thickness.
         // Consider: top-level tags and per-frame PerFrameFunctionalGroupsSequence.
@@ -985,7 +1023,7 @@ std::unique_ptr<Image_Array> Load_Image_Array_from_node(const Node &root, const 
             YLOGINFO("Unable to find image thickness, using default");
         }
         const auto image_thickness = image_thickness_opt.value_or(1.0);
-        insert_if_new(l_meta, "SliceThickness", std::to_string(image_thickness));
+        l_meta["SliceThickness"] = std::to_string(image_thickness);
 
         // Populate image.
         out->imagecoll.images.back().metadata = l_meta;
@@ -1313,7 +1351,7 @@ std::unique_ptr<RTPlan> Load_RTPlan_from_node(const Node &root, const std::strin
     }
     for(auto &ds : out->dynamic_states) ds.normalize_states();
 
-    return std::move(out);
+    return out;
 }
 
 
@@ -1416,7 +1454,7 @@ std::unique_ptr<Transform3> Load_Transform_from_node(const Node &root, const std
         }
     }
 
-    return std::move(out);
+    return out;
 }
 
 
