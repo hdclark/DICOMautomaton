@@ -250,7 +250,7 @@ static Node parse_dicom_file(const std::filesystem::path &filename){
     Node root;
     std::ifstream fi(filename, std::ios::binary);
     if(!fi) throw std::runtime_error("Unable to open file '"s + filename.string() + "'");
-    const auto dict = get_default_dictionary();
+    const auto &dict = get_default_dictionary();
     root.read_DICOM(fi, {&dict});
     return root;
 }
