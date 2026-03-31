@@ -165,7 +165,8 @@ convert_to_vector_double(const std::vector<std::string> &in){
 // Return the list of item-delimiter child nodes from a sequence tag.
 // SQ nodes store their items as children: each child is an (FFFE,E000) item delimiter
 // whose own children are the data tags for that item.
-// Note: uses recursive find() to locate the SQ tag.
+// Note: uses recursive find() to locate the SQ tag anywhere in the tree, including
+// nested sequences. Use get_seq_items_shallow() to search only direct children.
 static std::list<const Node*> get_seq_items(const Node &root, uint16_t group, uint16_t tag){
     std::list<const Node*> out;
     const auto *sq = root.find(group, tag);
@@ -873,7 +874,8 @@ std::unique_ptr<Image_Array> Load_Image_Array_from_node(const Node &root, const 
     uint32_t frame_idx = 0;
     for(auto &pimg : pixel_images.images){
         if(static_cast<int64_t>(frame_idx) >= frame_count) break;
-        const uint32_t f = frame_idx; // Current frame index for per-frame functional groups.
+        // Use a const copy of frame_idx for use in per-frame functional group path specs.
+        const uint32_t f = frame_idx;
         auto l_meta = tlm;
         out->imagecoll.images.emplace_back();
 
@@ -908,13 +910,14 @@ std::unique_ptr<Image_Array> Load_Image_Array_from_node(const Node &root, const 
         const auto grid_frame_offset_vec = l_coalesce_as_vector_double(
             { { {0x3004, 0x000C, 0} } }); // GridFrameOffsetVector
         if(!grid_frame_offset_vec.empty()){
-            throw std::runtime_error("Encountered unexpected GridFrameOffsetVector. Refusing to continue");
+            throw std::runtime_error("Encountered GridFrameOffsetVector in image data."
+                                     " This suggests the file is an RTDOSE; use Load_Dose_Array_from_node instead.");
         }
 
         if(!image_pos_x_opt || !image_pos_y_opt || !image_pos_z_opt){
             const auto xyz = l_coalesce_metadata_as_vector_double({"CSAImage/ImagePositionPatient"});
             if(xyz.size() == 3UL){
-                YLOGINFO("Using non-standard CSAImage/ImagePositionPatient");
+                YLOGINFO("Using vendor-specific CSAImage/ImagePositionPatient (Siemens private tag)");
                 image_pos_x_opt = xyz.at(0);
                 image_pos_y_opt = xyz.at(1);
                 image_pos_z_opt = xyz.at(2);
@@ -962,7 +965,7 @@ std::unique_ptr<Image_Array> Load_Image_Array_from_node(const Node &root, const 
         if(!image_orien_r_opt || !image_orien_c_opt){
             const auto o = l_coalesce_metadata_as_vector_double({"CSAImage/ImageOrientationPatient"});
             if(o.size() == 6UL){
-                YLOGINFO("Using non-standard CSAImage/ImageOrientationPatient");
+                YLOGINFO("Using vendor-specific CSAImage/ImageOrientationPatient (Siemens private tag)");
                 image_orien_r_opt = vec3<double>(o.at(0), o.at(1), o.at(2));
                 image_orien_c_opt = vec3<double>(o.at(3), o.at(4), o.at(5));
             }
@@ -996,7 +999,7 @@ std::unique_ptr<Image_Array> Load_Image_Array_from_node(const Node &root, const 
         if(!image_pxldy_opt || !image_pxldx_opt){
             const auto o = l_coalesce_metadata_as_vector_double({"CSAImage/PixelSpacing"});
             if(o.size() == 2UL){
-                YLOGINFO("Using non-standard CSAImage/PixelSpacing");
+                YLOGINFO("Using vendor-specific CSAImage/PixelSpacing (Siemens private tag)");
                 image_pxldy_opt = o.at(0);
                 image_pxldx_opt = o.at(1);
             }
