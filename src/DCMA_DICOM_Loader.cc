@@ -11,6 +11,7 @@
 //   - DICOM PS3.3 2026b, Section A.18.3: RT Dose IOD Module Table.
 
 #include <cstdint>
+#include <stdexcept>
 #include <string>
 #include <vector>
 #include <memory>
@@ -368,12 +369,85 @@ static SpatialParams extract_spatial_params(const Node &root){
 
 
 // ============================================================================
+// Per-frame spatial parameter extraction for Enhanced Multi-Frame IODs.
+// ============================================================================
+//
+// Enhanced CT (A.38) and Enhanced MR (A.36) store per-frame geometry in the
+// Per-Frame Functional Groups Sequence (5200,9230) and common parameters in
+// the Shared Functional Groups Sequence (5200,9229). Within each item the
+// relevant nested sequences are:
+//
+//   - Plane Position Sequence (0020,9113) → ImagePositionPatient (0020,0032)
+//   - Plane Orientation Sequence (0020,9116) → ImageOrientationPatient (0020,0037)
+//   - Pixel Measures Sequence (0028,9110) → PixelSpacing (0028,0030),
+//                                           SliceThickness (0018,0050)
+//
+// See DICOM PS3.3 C.7.6.16 and C.7.6.17 for details.
+
+// Extract spatial parameters from a Functional Groups item, falling back to the
+// supplied defaults for any tag that is absent.
+static SpatialParams extract_spatial_params_from_item(const Node &item,
+                                                      const SpatialParams &defaults){
+    SpatialParams sp = defaults;
+
+    // ImagePositionPatient (0020,0032) — from Plane Position Sequence.
+    const auto pos = read_DS_multi(item, 0x0020, 0x0032);
+    if(pos.size() == 3){
+        sp.position = vec3<double>(pos[0], pos[1], pos[2]);
+    }
+
+    // ImageOrientationPatient (0020,0037) — from Plane Orientation Sequence.
+    const auto orien = read_DS_multi(item, 0x0020, 0x0037);
+    if(orien.size() == 6){
+        sp.row_unit = vec3<double>(orien[0], orien[1], orien[2]).unit();
+        sp.col_unit = vec3<double>(orien[3], orien[4], orien[5]).unit();
+    }
+
+    // PixelSpacing (0028,0030) — from Pixel Measures Sequence.
+    const auto pxl_spacing = read_DS_multi(item, 0x0028, 0x0030);
+    if(pxl_spacing.size() == 2){
+        sp.pxl_dy = pxl_spacing[0];
+        sp.pxl_dx = pxl_spacing[1];
+    }
+
+    // SliceThickness (0018,0050) — from Pixel Measures Sequence.
+    const auto thickness = read_DS(item, 0x0018, 0x0050);
+    if(thickness){
+        sp.pxl_dz = *thickness;
+    }
+
+    return sp;
+}
+
+
+// ============================================================================
 // Common CT/MR image loading.
 // ============================================================================
 //
 // CT and MR images share the same spatial parameter extraction and pixel data
 // pipeline; only the modality-specific metadata and (potentially) the pixel
 // transformation differ. This helper contains the shared logic.
+
+// Set spatial metadata on an image, using the provided SpatialParams.
+static void set_spatial_metadata(planar_image<float,double> &img,
+                                 const SpatialParams &sp){
+    img.metadata["ImagePositionPatient"] =
+        std::to_string(sp.position.x) + "\\"
+      + std::to_string(sp.position.y) + "\\"
+      + std::to_string(sp.position.z);
+    insert_if_new(img.metadata, "ImageOrientationPatient",
+                  std::to_string(sp.row_unit.x) + "\\"
+                + std::to_string(sp.row_unit.y) + "\\"
+                + std::to_string(sp.row_unit.z) + "\\"
+                + std::to_string(sp.col_unit.x) + "\\"
+                + std::to_string(sp.col_unit.y) + "\\"
+                + std::to_string(sp.col_unit.z));
+    insert_if_new(img.metadata, "PixelSpacing",
+                  std::to_string(sp.pxl_dy) + "\\"
+                + std::to_string(sp.pxl_dx));
+    insert_if_new(img.metadata, "SliceThickness",
+                  std::to_string(sp.pxl_dz));
+}
 
 static std::unique_ptr<Image_Array>
 load_images_common(const Node &root, const metadata_map_t &meta){
@@ -387,43 +461,54 @@ load_images_common(const Node &root, const metadata_map_t &meta){
     }
     out->imagecoll = std::move(*pic_opt);
 
-    // Extract spatial parameters.
-    const auto sp = extract_spatial_params(root);
+    // Extract top-level spatial parameters (used for single-frame or as fallback).
+    const auto default_sp = extract_spatial_params(root);
     const auto anchor = vec3<double>(0.0, 0.0, 0.0);
+
+    // For multi-frame images, attempt to extract per-frame spatial parameters from
+    // Enhanced Multi-Frame Functional Groups (DICOM PS3.3 C.7.6.16, C.7.6.17).
+    std::vector<SpatialParams> per_frame_sp;
+    const auto num_frames = out->imagecoll.images.size();
+
+    if(num_frames > 1){
+        const auto *pfg_seq = root.find(0x5200, 0x9230); // Per-Frame Functional Groups.
+        const auto *sfg_seq = root.find(0x5200, 0x9229); // Shared Functional Groups.
+
+        // Extract shared spatial parameters if available, otherwise use top-level.
+        SpatialParams shared_sp = default_sp;
+        if(sfg_seq != nullptr && !sfg_seq->children.empty()){
+            shared_sp = extract_spatial_params_from_item(sfg_seq->children.front(), default_sp);
+        }
+
+        if(pfg_seq != nullptr && pfg_seq->children.size() == num_frames){
+            per_frame_sp.reserve(num_frames);
+            for(const auto &frame_item : pfg_seq->children){
+                per_frame_sp.push_back(extract_spatial_params_from_item(frame_item, shared_sp));
+            }
+        }
+    }
 
     // Determine if Modality LUT (rescale slope/intercept) should be applied.
     auto lut = get_modality_lut_params(root);
 
     // Set spatial parameters and metadata on each image.
+    size_t frame_idx = 0;
     for(auto &img : out->imagecoll.images){
+        const auto &sp = (!per_frame_sp.empty()) ? per_frame_sp[frame_idx] : default_sp;
+
         img.init_orientation(sp.row_unit, sp.col_unit);
         img.init_spatial(sp.pxl_dx, sp.pxl_dy, sp.pxl_dz, anchor, sp.position);
 
         img.metadata = meta;
-
-        // Ensure spatial metadata is present and consistent with the parsed values.
-        insert_if_new(img.metadata, "ImagePositionPatient",
-                      std::to_string(sp.position.x) + "\\"
-                    + std::to_string(sp.position.y) + "\\"
-                    + std::to_string(sp.position.z));
-        insert_if_new(img.metadata, "ImageOrientationPatient",
-                      std::to_string(sp.row_unit.x) + "\\"
-                    + std::to_string(sp.row_unit.y) + "\\"
-                    + std::to_string(sp.row_unit.z) + "\\"
-                    + std::to_string(sp.col_unit.x) + "\\"
-                    + std::to_string(sp.col_unit.y) + "\\"
-                    + std::to_string(sp.col_unit.z));
-        insert_if_new(img.metadata, "PixelSpacing",
-                      std::to_string(sp.pxl_dy) + "\\"
-                    + std::to_string(sp.pxl_dx));
-        insert_if_new(img.metadata, "SliceThickness",
-                      std::to_string(sp.pxl_dz));
+        set_spatial_metadata(img, sp);
 
         // Apply the Modality LUT (Rescale Slope / Intercept) to transform stored
         // values to output units (e.g., Hounsfield Units for CT).
         if(lut){
             apply_modality_lut(img, *lut);
         }
+
+        ++frame_idx;
     }
 
     return out;
@@ -471,6 +556,16 @@ std::unique_ptr<Image_Array> load_dose_images(const Node &root){
     // See DICOM PS3.3, C.7.6.6 and C.8.8.3.
     const auto gfov = read_DS_multi(root, 0x3004, 0x000C);
 
+    // Validate that the GridFrameOffsetVector size matches the number of extracted frames.
+    const auto num_frames = out->imagecoll.images.size();
+    if(!gfov.empty() && gfov.size() != num_frames){
+        throw std::runtime_error("GridFrameOffsetVector size ("
+                                 + std::to_string(gfov.size())
+                                 + ") does not match number of frames ("
+                                 + std::to_string(num_frames)
+                                 + ")");
+    }
+
     // Determine image thickness from the Grid Frame Offset Vector if available.
     // The offset vector provides z-positions relative to the first frame; the frame
     // separation is the difference between consecutive entries.
@@ -496,31 +591,19 @@ std::unique_ptr<Image_Array> load_dose_images(const Node &root){
         const double gfov_offset = (frame < gfov.size()) ? gfov[frame] : 0.0;
         const auto img_offset = sp.position + stack_unit * gfov_offset;
 
+        SpatialParams frame_sp = sp;
+        frame_sp.position = img_offset;
+        frame_sp.pxl_dz = image_thickness;
+
         img.init_orientation(sp.row_unit, sp.col_unit);
         img.init_spatial(sp.pxl_dx, sp.pxl_dy, image_thickness, anchor, img_offset);
 
         img.metadata = meta;
+        set_spatial_metadata(img, frame_sp);
 
         // Per-frame metadata.
         img.metadata["GridFrameOffset"] = std::to_string(gfov_offset);
         img.metadata["Frame"] = std::to_string(frame);
-        img.metadata["ImagePositionPatient"] =
-            std::to_string(img_offset.x) + "\\"
-          + std::to_string(img_offset.y) + "\\"
-          + std::to_string(img_offset.z);
-
-        insert_if_new(img.metadata, "ImageOrientationPatient",
-                      std::to_string(sp.row_unit.x) + "\\"
-                    + std::to_string(sp.row_unit.y) + "\\"
-                    + std::to_string(sp.row_unit.z) + "\\"
-                    + std::to_string(sp.col_unit.x) + "\\"
-                    + std::to_string(sp.col_unit.y) + "\\"
-                    + std::to_string(sp.col_unit.z));
-        insert_if_new(img.metadata, "PixelSpacing",
-                      std::to_string(sp.pxl_dy) + "\\"
-                    + std::to_string(sp.pxl_dx));
-        insert_if_new(img.metadata, "SliceThickness",
-                      std::to_string(image_thickness));
 
         // Apply the Modality LUT if present.
         if(lut){
