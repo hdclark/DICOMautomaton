@@ -73,6 +73,44 @@ static std::string first_invalid_char_diag(const std::string &val, const std::st
     return "(unknown)";
 }
 
+// DICOM PS3.5 Section 6.2: Check if string contains any control characters (0x00-0x1F, 0x7F).
+// Used for text VR validation (e.g., AE) where all control characters are forbidden.
+// Note: NULL (0x00) is included -- while it is used as a padding character for UI/OB,
+// it is not valid within text VR values themselves.
+static bool has_control_char(const std::string &val){
+    for(const auto c : val){
+        const auto uc = static_cast<unsigned char>(c);
+        if(uc <= 0x1F || uc == 0x7F) return true;
+    }
+    return false;
+}
+
+// DICOM PS3.5 Section 6.2: Check for control characters excluding ESC (0x1B).
+// Used for VRs SH, LO, PN, UC which allow ESC for ISO/IEC 2022 escape sequences.
+static bool has_control_char_except_esc(const std::string &val){
+    for(const auto c : val){
+        const auto uc = static_cast<unsigned char>(c);
+        if((uc <= 0x1F || uc == 0x7F) && uc != 0x1B) return true;
+    }
+    return false;
+}
+
+// DICOM PS3.5 Section 6.2: Check for control characters excluding TAB, LF, FF, CR, ESC.
+// Used for VRs ST, LT, UT which allow text formatting control characters.
+static bool has_control_char_except_text(const std::string &val){
+    for(const auto c : val){
+        const auto uc = static_cast<unsigned char>(c);
+        if((uc <= 0x1F || uc == 0x7F)
+           && uc != 0x09   // TAB
+           && uc != 0x0A   // LF
+           && uc != 0x0C   // FF
+           && uc != 0x0D   // CR
+           && uc != 0x1B)  // ESC
+            return true;
+    }
+    return false;
+}
+
 struct Node;
 
 Node::Node() = default;
@@ -262,8 +300,14 @@ emit_DICOM_tag(std::ostream &os,
             const auto length    = static_cast<uint32_t>(val.length());
             const auto add_space = static_cast<uint32_t>(length % 2);
             const uint32_t full_length = (length + add_space);
-            const auto space_char = (node.VR == "UI") ? static_cast<unsigned char>('\0')
-                                                      : static_cast<unsigned char>(' ');
+            // DICOM PS3.5 Section 6.2: UI and binary/byte-stream VRs are padded with
+            // NULL (0x00); all other (text) VRs are padded with SPACE (0x20).
+            const bool is_null_padded = (node.VR == "UI" || node.VR == "OB" || node.VR == "OW"
+                                      || node.VR == "OF" || node.VR == "OD" || node.VR == "OL"
+                                      || node.VR == "OV" || node.VR == "UN" || node.VR == "SV"
+                                      || node.VR == "UV");
+            const auto space_char = is_null_padded ? static_cast<unsigned char>('\0')
+                                                   : static_cast<unsigned char>(' ');
 
             written_length += write_to_stream(os, full_length, 4, enc);
             written_length += write_to_stream(os, val, length, enc);
@@ -304,17 +348,29 @@ emit_DICOM_tag(std::ostream &os,
             written_length += write_to_stream(os, seq_length_32, 4, enc);
             written_length += write_to_stream(os, seq_ss.str(), seq_length, enc);
 
-        // Some tags have reserved space.
+        // DICOM PS3.5 Section 7.1.2, Table 7.1-1: VRs not listed in Table 7.1-2 use
+        // 2 reserved bytes (set to 0000H) followed by a 32-bit unsigned length field.
+        // This includes: OB, OD, OF, OL, OV, OW, SV, UC, UN, UR, UT, UV.
         }else if( (node.VR == "OB")
-              ||  (node.VR == "OW")
+              ||  (node.VR == "OD")
               ||  (node.VR == "OF")
+              ||  (node.VR == "OL")
+              ||  (node.VR == "OV")
+              ||  (node.VR == "OW")
+              ||  (node.VR == "SV")
+              ||  (node.VR == "UC")
+              ||  (node.VR == "UN")
+              ||  (node.VR == "UR")
               ||  (node.VR == "UT")
-              ||  (node.VR == "UN") ){
+              ||  (node.VR == "UV") ){
             const auto length    = static_cast<uint32_t>(val.length());
             const auto add_space = static_cast<uint32_t>(length % 2);
             const uint32_t full_length = (length + add_space);
             const uint16_t zero_16 = 0;
-            const uint8_t space_char = 0;
+            // DICOM PS3.5 Section 6.2: Text VRs (UC, UR, UT) are padded with SPACE (0x20);
+            // binary/byte-stream VRs (OB, OD, OF, OL, OV, OW, SV, UN, UV) with NULL (0x00).
+            const auto space_char = static_cast<uint8_t>(
+                (node.VR == "UC" || node.VR == "UR" || node.VR == "UT") ? 0x20 : 0x00);
 
             written_length += write_to_stream(os, node.VR, 2, enc);
             written_length += write_to_stream(os, zero_16, 2, enc); // "Reserved" space.
@@ -443,6 +499,9 @@ uint64_t Node::emit_DICOM(std::ostream &os,
 
     // Text types.
     }else if( this->VR == "CS" ){ //Code strings.
+        // DICOM PS3.5 Section 6.2: CS - Code String.
+        // Character repertoire: Uppercase letters, "0"-"9", SPACE, underscore "_".
+        // Maximum length: 16 bytes per value.
         if(!lenient){
             // Value multiplicity embiggens the maximum permissable length, but each individual element should be <= 16 chars.
             auto tokens = SplitStringToVector(this->val,'\\','d');
@@ -461,41 +520,125 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
     }else if( this->VR == "SH" ){ //Short string.
+        // DICOM PS3.5 Section 6.2: SH - Short String.
+        // Character repertoire: Default, excluding backslash (5CH) within each value and all control characters except ESC.
+        // Maximum length: 16 characters per value.
         if(!lenient){
-            if(16ULL < this->val.length()){
-                throw std::runtime_error("Short string is too long at tag " + get_tag_and_val_str() + ". Consider using a longer VR. Cannot continue.");
+            // Value multiplicity embiggens the maximum permissible length, but each individual element should be <= 16 chars
+            // and must not contain forbidden control characters (except ESC).
+            auto tokens = SplitStringToVector(this->val,'\\','d');
+            for(const auto &token : tokens){
+                if(16ULL < token.length()){
+                    throw std::runtime_error("Short string is too long at tag " + get_tag_and_val_str() + ". Consider using a longer VR. Cannot continue.");
+                }
+                if(has_control_char_except_esc(token)){
+                    throw std::invalid_argument("Forbidden control character found in SH at tag " + get_tag_and_val_str() + ". Cannot continue.");
+                }
             }
         }
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
     }else if( this->VR == "LO" ){ //Long strings.
+        // DICOM PS3.5 Section 6.2: LO - Long String.
+        // Character repertoire: Default, excluding backslash (5CH) and all control characters except ESC, per value.
+        // Maximum length: 64 characters per value. LO is multi-valued, using backslash as the VM delimiter.
         if(!lenient){
-            if(64ULL < this->val.length()){
-                throw std::runtime_error("Long string is too long at tag " + get_tag_and_val_str() + ". Consider using a longer VR. Cannot continue.");
+            // Validate each value component separately, treating backslash as the VM delimiter.
+            std::size_t start = 0;
+            while(true){
+                const std::size_t pos = this->val.find('\\', start);
+                const std::size_t end = (pos == std::string::npos) ? this->val.size() : pos;
+                const std::string value_component = this->val.substr(start, end - start);
+
+                if(64ULL < value_component.length()){
+                    throw std::runtime_error("Long string value is too long at tag " + get_tag_and_val_str() + ". Each LO value must be <= 64 characters. Cannot continue.");
+                }
+                if(has_control_char_except_esc(value_component)){
+                    throw std::invalid_argument("Forbidden control character found in LO at tag " + get_tag_and_val_str() + ". Cannot continue.");
+                }
+
+                if(pos == std::string::npos){
+                    break;
+                }
+                start = pos + 1;
             }
         }
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
     }else if( this->VR == "ST" ){ //Short text.
+        // DICOM PS3.5 Section 6.2: ST - Short Text.
+        // Character repertoire: Default, excluding control characters except TAB, LF, FF, CR, ESC.
+        // Maximum length: 1024 characters. Not multi-valued (backslash allowed).
         if(!lenient){
             if(1024ULL < this->val.length()){
                 throw std::runtime_error("Short text is too long at tag " + get_tag_str() + ". Consider using a longer VR. Cannot continue.");
+            }
+            if(has_control_char_except_text(this->val)){
+                throw std::invalid_argument("Forbidden control character found in ST at tag " + get_tag_str() + ". Cannot continue.");
             }
         }
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
     }else if( this->VR == "LT" ){ //Long text.
+        // DICOM PS3.5 Section 6.2: LT - Long Text.
+        // Character repertoire: Default, excluding control characters except TAB, LF, FF, CR, ESC.
+        // Maximum length: 10240 characters. Not multi-valued (backslash allowed).
         if(!lenient){
             if(10240ULL < this->val.length()){
                 throw std::runtime_error("Long text is too long at tag " + get_tag_str() + ". Consider using a longer VR. Cannot continue.");
+            }
+            if(has_control_char_except_text(this->val)){
+                throw std::invalid_argument("Forbidden control character found in LT at tag " + get_tag_str() + ". Cannot continue.");
             }
         }
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
     }else if( this->VR == "UT" ){ //Unlimited text.
+        // DICOM PS3.5 Section 6.2: UT - Unlimited Text.
+        // Character repertoire: Default, excluding control characters except TAB, LF, FF, CR, ESC.
+        // Maximum length: 2^32-2 bytes. Not multi-valued (backslash allowed).
         if(!lenient){
             if(4'294'967'294ULL < this->val.length()){
                 throw std::runtime_error("Unlimited text is too long at tag " + get_tag_str() + ". Cannot continue.");
+            }
+            if(has_control_char_except_text(this->val)){
+                throw std::invalid_argument("Forbidden control character found in UT at tag " + get_tag_str() + ". Cannot continue.");
+            }
+        }
+        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
+
+    }else if( this->VR == "UC" ){ //Unlimited characters.
+        // DICOM PS3.5 Section 6.2: UC - Unlimited Characters.
+        // Character repertoire: Default, excluding backslash (5CH) and all control characters except ESC.
+        // Maximum length: 2^32-2 bytes.
+        if(!lenient){
+            if(4'294'967'294ULL < this->val.length()){
+                throw std::runtime_error("Unlimited characters is too long at tag " + get_tag_str() + ". Cannot continue.");
+            }
+            if(has_control_char_except_esc(this->val)){
+                throw std::invalid_argument("Forbidden control character found in UC at tag " + get_tag_str() + ". Cannot continue.");
+            }
+            // Note: backslash is the value multiplicity delimiter -- individual values are
+            // separated by the caller, so the presence of a backslash is not itself forbidden
+            // here (it is part of the encoding for multi-valued UC).
+        }
+        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
+
+    }else if( this->VR == "UR" ){ //Universal Resource Identifier or Locator (URI/URL).
+        // DICOM PS3.5 Section 6.2: UR - URI/URL.
+        // Character repertoire: Subset of Default required for URIs per RFC 3986 Section 2,
+        //   plus trailing SPACE for padding. Leading spaces are not allowed.
+        //   Not multi-valued (backslash is disallowed per RFC 3986).
+        // Maximum length: 2^32-2 bytes.
+        if(!lenient){
+            if(4'294'967'294ULL < this->val.length()){
+                throw std::runtime_error("URI is too long at tag " + get_tag_str() + ". Cannot continue.");
+            }
+            if(!this->val.empty() && this->val.front() == ' '){
+                throw std::invalid_argument("Leading space found in UR at tag " + get_tag_str() + ". Cannot continue.");
+            }
+            if(this->val.find('\\') != std::string::npos){
+                throw std::invalid_argument("Backslash found in UR at tag " + get_tag_str() + ". Not permitted per RFC 3986. Cannot continue.");
             }
         }
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
@@ -503,27 +646,89 @@ uint64_t Node::emit_DICOM(std::ostream &os,
 
     // Name types.
     }else if( this->VR == "AE" ){ //Application entity.
+        // DICOM PS3.5 Section 6.2: AE - Application Entity.
+        // Character repertoire: Default, excluding all control characters.
+        // Maximum length: 16 bytes per value. Leading/trailing spaces are non-significant.
+        // A value consisting solely of spaces shall not be used.
         if(!lenient){
-            if(16ULL < this->val.length()){
-                throw std::runtime_error("Application entity is too long at tag " + get_tag_and_val_str() + ". Cannot continue.");
+            // AE can be multi-valued; values are separated by backslash (VM delimiter).
+            std::size_t start = 0;
+            while(start <= this->val.size()){
+                const std::size_t end = this->val.find('\\', start);
+                const std::string token = (end == std::string::npos)
+                                           ? this->val.substr(start)
+                                           : this->val.substr(start, end - start);
+
+                // Empty tokens or tokens consisting solely of spaces are not permitted.
+                bool has_non_space = false;
+                for(char c : token){
+                    if(c != ' '){
+                        has_non_space = true;
+                        break;
+                    }
+                }
+                if(!token.empty() && !has_non_space){
+                    throw std::invalid_argument("Application entity value consists solely of spaces at tag " + get_tag_and_val_str() + ". Cannot continue.");
+                }
+                if(token.empty()){
+                    throw std::invalid_argument("Empty application entity value at tag " + get_tag_and_val_str() + ". Cannot continue.");
+                }
+
+                // Enforce 16-byte maximum per AE value.
+                if(16ULL < token.size()){
+                    throw std::runtime_error("Application entity value is too long (>" + std::to_string(16ULL) + " bytes) at tag " + get_tag_and_val_str() + ". Cannot continue.");
+                }
+
+                // Control characters are forbidden.
+                if(has_control_char(token)){
+                    throw std::invalid_argument("Control character found in AE value at tag " + get_tag_and_val_str() + ". Cannot continue.");
+                }
+
+                if(end == std::string::npos){
+                    break;
+                }
+                start = end + 1;
             }
         }
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
     }else if( this->VR == "PN" ){ //Person name.
+        // DICOM PS3.5 Section 6.2: PN - Person Name.
+        // Character repertoire: Default, excluding backslash (5CH) and all control characters except ESC.
+        // Maximum length: 64 characters per component group (up to 3 groups delimited by '=').
+        // Components within a group are delimited by '^' (up to 5 components).
         if(!lenient){
-            if(64ULL < this->val.length()){
-                throw std::runtime_error("Person name is too long at tag " + get_tag_str() + ". Cannot continue.");
+            // Check per-value and per-component-group limits.
+            auto values = SplitStringToVector(this->val, '\\', 'd');
+            for(const auto &pn_val : values){
+                auto groups = SplitStringToVector(pn_val, '=', 'd');
+                if(3ULL < groups.size()){
+                    throw std::invalid_argument("Person name has more than 3 component groups at tag " + get_tag_str() + ". Cannot continue.");
+                }
+                for(const auto &group : groups){
+                    if(64ULL < group.length()){
+                        throw std::runtime_error("Person name component group exceeds 64 characters at tag " + get_tag_str() + ". Cannot continue.");
+                    }
+                }
+            }
+            if(has_control_char_except_esc(this->val)){
+                throw std::invalid_argument("Forbidden control character found in PN at tag " + get_tag_str() + ". Cannot continue.");
             }
         }
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
     }else if( this->VR == "UI" ){ //Unique Identifier (UID).
+        // DICOM PS3.5 Section 6.2: UI - Unique Identifier.
+        // Character repertoire: "0"-"9" and "." of Default Character Repertoire.
+        // Maximum length: 64 bytes per UID value. Padded with trailing NULL (0x00).
         if(!lenient){
-            if(64ULL < this->val.length()){
-                throw std::runtime_error("UID is too long at tag " + get_tag_and_val_str() + ". Cannot continue.");
+            // Value multiplicity: each UID component separated by backslash is limited to 64 bytes.
+            auto uid_values = SplitStringToVector(this->val, '\\', 'd');
+            for(const auto &uid_val : uid_values){
+                if(64ULL < uid_val.length()){
+                    throw std::runtime_error("UID is too long at tag " + get_tag_and_val_str() + ". Cannot continue.");
+                }
             }
-            // Does value multiplicity embiggen the maximum permissable length? TODO
             const auto allowed_ui = number_digits + multiplicity + ".";
             if(this->val.find_first_not_of(allowed_ui) != std::string::npos){
                 throw std::invalid_argument("Invalid character " + first_invalid_char_diag(this->val, allowed_ui)
@@ -543,7 +748,11 @@ uint64_t Node::emit_DICOM(std::ostream &os,
 
     //Date and Time.
     }else if( this->VR == "DA" ){  //Date.
-        //Strip away colons. Also strip away everything after the leading non-numeric char.
+        // DICOM PS3.5 Section 6.2: DA - Date.
+        // Character repertoire: "0"-"9". Format: YYYYMMDD.
+        // Maximum length: 8 bytes fixed.
+        //
+        // Note: legacy ACR-NEMA format (YYYY.MM.DD) is stripped during pre-processing below.
         std::string digits_only(val);
         digits_only = PurgeCharsFromString(digits_only,":-");
         auto avec = SplitStringToVector(digits_only,'.','d');
@@ -562,7 +771,12 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         cumulative_length += emit_DICOM_tag(os, enc, *this, digits_only, lenient);
 
     }else if( this->VR == "TM" ){  //Time.
-        //Strip away colons. Also strip away everything after the leading non-numeric char.
+        // DICOM PS3.5 Section 6.2: TM - Time.
+        // Character repertoire: "0"-"9", ".", and SPACE (trailing padding only).
+        // Format: HHMMSS.FFFFFF (2+2+2+1+6 = 13 chars, plus optional trailing space = 14).
+        // Maximum length: 14 bytes.
+        //
+        // Note: legacy ACR-NEMA format (HH:MM:SS.frac) is stripped during pre-processing below.
         std::string digits_only(val);
         digits_only = PurgeCharsFromString(digits_only,":-");
         auto avec = SplitStringToVector(digits_only,'.','d');
@@ -570,10 +784,10 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         digits_only = Lineate_Vector(avec, "");
 
         if(!lenient){
-            if(16ULL < digits_only.length()){
+            if(14ULL < digits_only.length()){
                 throw std::runtime_error("Time is too long at tag " + get_tag_and_val_str() + ". Cannot continue.");
             }
-            const auto allowed_tm = number_digits + ".";
+            const auto allowed_tm = number_digits + ". ";
             if(digits_only.find_first_not_of(allowed_tm) != std::string::npos){
                 throw std::invalid_argument("Invalid character " + first_invalid_char_diag(digits_only, allowed_tm)
                                             + " found in time at tag " + get_tag_and_val_str() + ". Cannot continue.");
@@ -582,7 +796,11 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         cumulative_length += emit_DICOM_tag(os, enc, *this, digits_only, lenient);
 
     }else if( this->VR == "DT" ){  //Date Time.
-        //Strip away colons. Also strip away everything after the leading non-numeric char.
+        // DICOM PS3.5 Section 6.2: DT - Date Time.
+        // Character repertoire: "0"-"9", "+", "-", ".", and SPACE (trailing padding only).
+        // Format: YYYYMMDDHHMMSS.FFFFFF&ZZXX. Maximum length: 26 bytes.
+        //
+        // Note: legacy format normalization is performed during pre-processing below.
         std::string digits_only(val);
         digits_only = PurgeCharsFromString(digits_only,":-");
         auto avec = SplitStringToVector(digits_only,'.','d');
@@ -593,7 +811,7 @@ uint64_t Node::emit_DICOM(std::ostream &os,
             if(26ULL < digits_only.length()){
                 throw std::runtime_error("Date-time is too long at tag " + get_tag_and_val_str() + ". Cannot continue.");
             }
-            const auto allowed_dt = number_digits + "+-.";
+            const auto allowed_dt = number_digits + "+-. ";
             if(digits_only.find_first_not_of(allowed_dt) != std::string::npos){
                 throw std::invalid_argument("Invalid character " + first_invalid_char_diag(digits_only, allowed_dt)
                                             + " found in date-time at tag " + get_tag_and_val_str() + ". Cannot continue.");
@@ -602,6 +820,9 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         cumulative_length += emit_DICOM_tag(os, enc, *this, digits_only, lenient);
 
     }else if( this->VR == "AS" ){ //Age string.
+        // DICOM PS3.5 Section 6.2: AS - Age String.
+        // Character repertoire: "0"-"9", "D", "W", "M", "Y".
+        // Length: 4 bytes fixed. Format: nnnD, nnnW, nnnM, or nnnY.
         if(!lenient){
             if(4ULL < this->val.length()){
                 throw std::runtime_error("Age string is too long at tag " + get_tag_and_val_str() + ". Cannot continue.");
@@ -611,7 +832,7 @@ uint64_t Node::emit_DICOM(std::ostream &os,
                 throw std::invalid_argument("Invalid character " + first_invalid_char_diag(this->val, allowed_as)
                                             + " found in age string at tag " + get_tag_and_val_str() + ". Cannot continue.");
             }
-            if(this->val.find_first_of("DWMY") == std::string::npos){
+            if(!this->val.empty() && this->val.find_first_of("DWMY") == std::string::npos){
                 throw std::invalid_argument("Age string is missing one of 'DWMY' characters at tag " + get_tag_and_val_str() + ". Cannot continue.");
             }
         }
@@ -620,9 +841,20 @@ uint64_t Node::emit_DICOM(std::ostream &os,
 
     //Binary types.
     }else if( this->VR == "OB" ){ //'Other' binary string: a string of bytes that doesn't fit any other VR.
+        // DICOM PS3.5 Section 6.2: OB - Other Byte.
+        // An octet-stream. Insensitive to byte ordering.
+        // Maximum length: 2^32-2 bytes. Padded with trailing NULL (0x00) to even length.
+        if(!lenient){
+            if( 4'294'967'294ULL < this->val.length() ){ // 2^32 - 2
+                throw std::invalid_argument("Other byte string is too long at tag " + get_tag_str() + ". Cannot continue.");
+            }
+        }
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
     }else if( this->VR == "OW" ){ //'Other word string': a string of 16bit values.
+        // DICOM PS3.5 Section 6.2: OW - Other Word.
+        // A stream of 16-bit words. Requires byte swapping per byte ordering.
+        // Maximum length: 2^32-2 bytes. Must be a multiple of 2 bytes.
         if(!lenient){
             if( 4'294'967'294ULL < this->val.length() ){ // 2^32 - 2
                 throw std::invalid_argument("Other word string is too long at tag " + get_tag_str() + ". Cannot continue.");
@@ -634,11 +866,42 @@ uint64_t Node::emit_DICOM(std::ostream &os,
 
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
+    }else if( this->VR == "OL" ){ //'Other long': a stream of 32-bit words.
+        // DICOM PS3.5 Section 6.2: OL - Other Long.
+        // A stream of 32-bit words. Requires byte swapping per byte ordering.
+        // Maximum length: 2^32-4 bytes. Must be a multiple of 4 bytes.
+        if(!lenient){
+            if( 4'294'967'292ULL < this->val.length() ){ // 2^32 - 4
+                throw std::invalid_argument("Other long is too long at tag " + get_tag_str() + ". Cannot continue.");
+            }
+            if( (this->val.length() % 4) != 0 ){
+                throw std::invalid_argument("Other long does not contain an integral number of 32-bit words at tag " + get_tag_str() + ". Cannot continue.");
+            }
+        }
+        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
+
+    }else if( this->VR == "OV" ){ //'Other 64-bit very long': a stream of 64-bit words.
+        // DICOM PS3.5 Section 6.2: OV - Other 64-bit Very Long.
+        // A stream of 64-bit words. Requires byte swapping per byte ordering.
+        // Maximum length: 2^32-8 bytes. Must be a multiple of 8 bytes.
+        if(!lenient){
+            if( 4'294'967'288ULL < this->val.length() ){ // 2^32 - 8
+                throw std::invalid_argument("Other 64-bit very long is too long at tag " + get_tag_str() + ". Cannot continue.");
+            }
+            if( (this->val.length() % 8) != 0 ){
+                throw std::invalid_argument("Other 64-bit very long does not contain an integral number of 64-bit words at tag " + get_tag_str() + ". Cannot continue.");
+            }
+        }
+        cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
+
 
     //Numeric types that are written as a string of characters.
     }else if( this->VR == "IS" ){ //Integer string.
+        // DICOM PS3.5 Section 6.2: IS - Integer String.
+        // Character repertoire: "0"-"9", "+", "-", and SPACE (leading/trailing padding only).
+        // Maximum length: 12 bytes per value. Range: -2^31 to 2^31-1.
         if(!lenient){
-            // I'm not sure if what the upper limit is for this VR type. Assuming 65534 for consistency with DS. TODO.
+            // Overall string length limit based on encoding (IS uses short VR in ELE: 16-bit length field).
             if( ( (enc == Encoding::ELE) && (65'534ULL < this->val.length()) )
             ||  ( (enc == Encoding::ILE) && (4'294'967'295ULL < this->val.length()) ) ){
                 throw std::invalid_argument("Integer string is too long at tag " + get_tag_and_val_str() + ". Cannot continue.");
@@ -646,7 +909,7 @@ uint64_t Node::emit_DICOM(std::ostream &os,
 
             auto tokens = SplitStringToVector(this->val,'\\','d');
             for(const auto &token : tokens){
-                // Maximum length per decimal number: 16 bytes.
+                // Maximum length per value: 12 bytes.
                 if(12ULL < token.length()){
                     throw std::invalid_argument("Integer string element is too long at tag " + get_tag_and_val_str() + ". Cannot continue.");
                 }
@@ -659,7 +922,7 @@ uint64_t Node::emit_DICOM(std::ostream &os,
                 }
             }
 
-            const auto allowed_is = number_digits + multiplicity + "+-" + " "; // TODO: preceeding or trailing spaces ONLY.
+            const auto allowed_is = number_digits + multiplicity + "+-" + " ";
             if(this->val.find_first_not_of(allowed_is) != std::string::npos){
                 throw std::invalid_argument("Invalid character " + first_invalid_char_diag(this->val, allowed_is)
                                             + " found in integer string at tag " + get_tag_and_val_str() + ". Cannot continue.");
@@ -668,8 +931,11 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
     }else if( this->VR == "DS" ){ //Decimal string.
+        // DICOM PS3.5 Section 6.2: DS - Decimal String.
+        // Character repertoire: "0"-"9", "+", "-", "E", "e", ".", and SPACE.
+        // Maximum length: 16 bytes per value.
         if(!lenient){
-            // Maximum length for entire string (when multiple values are encoded and each is <= 16 bytes): 65534 bytes
+            // Overall string length limit based on encoding (DS uses short VR in ELE: 16-bit length field).
             if( ( (enc == Encoding::ELE) && (65'534ULL < this->val.length()) )
             ||  ( (enc == Encoding::ILE) && (4'294'967'295ULL < this->val.length()) ) ){
                 throw std::invalid_argument("Decimal string is too long at tag " + get_tag_and_val_str() + ". Cannot continue.");
@@ -690,7 +956,7 @@ uint64_t Node::emit_DICOM(std::ostream &os,
                 }
             }
 
-            const auto allowed_ds = number_digits + multiplicity + "+-eE." + " "; // TODO: preceeding or trailing spaces ONLY.
+            const auto allowed_ds = number_digits + multiplicity + "+-eE." + " ";
             if(this->val.find_first_not_of(allowed_ds) != std::string::npos){
                 throw std::invalid_argument("Invalid character " + first_invalid_char_diag(this->val, allowed_ds)
                                             + " found in decimal string at tag " + get_tag_and_val_str() + ". Cannot continue.");
@@ -702,6 +968,8 @@ uint64_t Node::emit_DICOM(std::ostream &os,
     //Numeric types that must be binary encoded.
     // Note: IEEE 754:1985 compliance for float and double is verified via static_assert at the top of this file.
     }else if( this->VR == "FL" ){ //Floating-point (IEEE 754:1985 32-bit).
+        // DICOM PS3.5 Section 6.2: FL - Floating Point Single.
+        // IEEE 754 binary32. Length: 4 bytes fixed.
         YLOGDEBUG("emit_DICOM: encoding FL at tag " << get_tag_and_val_str() << " val='" << this->val << "'");
         if(lenient){
             try{
@@ -721,6 +989,8 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         }
 
     }else if( this->VR == "FD" ){ //Floating-point double (IEEE 754:1985 64-bit).
+        // DICOM PS3.5 Section 6.2: FD - Floating Point Double.
+        // IEEE 754 binary64. Length: 8 bytes fixed.
         YLOGDEBUG("emit_DICOM: encoding FD at tag " << get_tag_and_val_str() << " val='" << this->val << "'");
         if(lenient){
             try{
@@ -740,6 +1010,8 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         }
 
     }else if( this->VR == "OF" ){ //"Other" floating-point (IEEE 754:1985 32-bit).
+        // DICOM PS3.5 Section 6.2: OF - Other Float.
+        // A stream of IEEE 754 binary32 values. Maximum length: 2^32-4 bytes.
         //The value payload may contain multiple floats separated by some partitioning character.
         // For example, '1.23\2.34\0.00\25E25\-1.23'.
         YLOGDEBUG("emit_DICOM: encoding OF at tag " << get_tag_and_val_str());
@@ -757,6 +1029,8 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         }
 
     }else if( this->VR == "OD" ){ //"Other" floating-point double (IEEE 754:1985 64-bit).
+        // DICOM PS3.5 Section 6.2: OD - Other Double.
+        // A stream of IEEE 754 binary64 values. Maximum length: 2^32-8 bytes.
         //The value payload may contain multiple doubles separated by some partitioning character.
         // For example, '1.23\2.34\0.00\25E25\-1.23'.
         YLOGDEBUG("emit_DICOM: encoding OD at tag " << get_tag_and_val_str());
@@ -774,6 +1048,8 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         }
 
     }else if( this->VR == "SS" ){ //Signed short (16bit).
+        // DICOM PS3.5 Section 6.2: SS - Signed Short.
+        // Signed binary integer 16 bits. Length: 2 bytes fixed. Range: -2^15 to 2^15-1.
         if(lenient){
             try{
                 std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
@@ -792,6 +1068,8 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         }
 
     }else if( this->VR == "US" ){ //Unsigned short (16bit).
+        // DICOM PS3.5 Section 6.2: US - Unsigned Short.
+        // Unsigned binary integer 16 bits. Length: 2 bytes fixed. Range: 0 to 2^16-1.
         if(lenient){
             try{
                 std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
@@ -810,6 +1088,8 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         }
 
     }else if( this->VR == "SL" ){ //Signed long (32bit).
+        // DICOM PS3.5 Section 6.2: SL - Signed Long.
+        // Signed binary integer 32 bits. Length: 4 bytes fixed. Range: -2^31 to 2^31-1.
         if(lenient){
             try{
                 std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
@@ -828,6 +1108,8 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         }
 
     }else if( this->VR == "UL" ){ //Unsigned long (32bit).
+        // DICOM PS3.5 Section 6.2: UL - Unsigned Long.
+        // Unsigned binary integer 32 bits. Length: 4 bytes fixed. Range: 0 to 2^32-1.
         if(lenient){
             try{
                 std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
@@ -846,6 +1128,8 @@ uint64_t Node::emit_DICOM(std::ostream &os,
         }
 
     }else if( this->VR == "AT" ){ //Attribute tag (2x unsigned shorts representing a DICOM data tag).
+        // DICOM PS3.5 Section 6.2: AT - Attribute Tag.
+        // Ordered pair of 16-bit unsigned integers. Length: 4 bytes fixed.
         if(lenient){
             // Lenient: attempt conversion, fall back to raw bytes.
             try{
@@ -877,12 +1161,56 @@ uint64_t Node::emit_DICOM(std::ostream &os,
             cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
         }
 
+    }else if( this->VR == "SV" ){ //Signed 64-bit very long.
+        // DICOM PS3.5 Section 6.2: SV - Signed 64-bit Very Long.
+        // Signed binary integer 64 bits. Length: 8 bytes fixed. Range: -2^63 to 2^63-1.
+        if(lenient){
+            try{
+                std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+                const int64_t val_sv = std::stoll(this->val);
+                write_to_stream(ss, val_sv, 8, enc);
+                cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+            }catch(const std::exception &e){
+                YLOGDEBUG("emit_DICOM: lenient fallback to raw bytes for SV at " << get_tag_and_val_str() << ": " << e.what());
+                cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
+            }
+        }else{
+            std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+            const int64_t val_sv = std::stoll(this->val);
+            write_to_stream(ss, val_sv, 8, enc);
+            cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+        }
+
+    }else if( this->VR == "UV" ){ //Unsigned 64-bit very long.
+        // DICOM PS3.5 Section 6.2: UV - Unsigned 64-bit Very Long.
+        // Unsigned binary integer 64 bits. Length: 8 bytes fixed. Range: 0 to 2^64-1.
+        if(lenient){
+            try{
+                std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+                const uint64_t val_uv = std::stoull(this->val);
+                write_to_stream(ss, val_uv, 8, enc);
+                cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+            }catch(const std::exception &e){
+                YLOGDEBUG("emit_DICOM: lenient fallback to raw bytes for UV at " << get_tag_and_val_str() << ": " << e.what());
+                cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
+            }
+        }else{
+            std::ostringstream ss(std::ios_base::ate | std::ios_base::binary);
+            const uint64_t val_uv = std::stoull(this->val);
+            write_to_stream(ss, val_uv, 8, enc);
+            cumulative_length += emit_DICOM_tag(os, enc, *this, ss.str(), lenient);
+        }
+
 
     //Other types.
     }else if( this->VR == "UN" ){ //Unknown. Often needed for handling private DICOM tags.
+        // DICOM PS3.5 Section 6.2: UN - Unknown.
+        // An octet-stream where the encoding of the contents is unknown.
         cumulative_length += emit_DICOM_tag(os, enc, *this, this->val, lenient);
 
     }else if( this->VR == "SQ" ){ //Sequence.
+        // DICOM PS3.5 Section 6.2, Section 7.5: SQ - Sequence of Items.
+        // Value is a Sequence of zero or more Items. Not data-bearing itself.
         // Verify the node does not have any data associated with it. If it does, it probably indicates a logic
         // error since only children nodes should contain data.
         if(!this->val.empty()){
@@ -963,11 +1291,13 @@ std::string read_bytes(std::istream &is, uint32_t count){
 }
 
 
-// Returns true if the VR uses a 4-byte length field with 2 reserved bytes in explicit encoding.
+// DICOM PS3.5 Section 7.1.2: Returns true if the VR uses a 4-byte length field with
+// 2 reserved bytes in explicit encoding (i.e., VRs not in Table 7.1-2).
 bool vr_has_extended_length(const std::string &vr){
     return (vr == "OB") || (vr == "OD") || (vr == "OF") || (vr == "OL")
-        || (vr == "OW") || (vr == "SQ") || (vr == "UC") || (vr == "UN")
-        || (vr == "UR") || (vr == "UT");
+        || (vr == "OV") || (vr == "OW") || (vr == "SQ") || (vr == "SV")
+        || (vr == "UC") || (vr == "UN") || (vr == "UR") || (vr == "UT")
+        || (vr == "UV");
 }
 
 // Returns true if the VR represents a text-based encoding (value is human-readable text).
@@ -991,8 +1321,12 @@ std::string strip_text_padding(const std::string &val, const std::string &vr){
 }
 
 // Decode a binary numeric value to a human-readable string, matching the format expected by the emitter.
-// For simple binary numeric VRs (US, SS, UL, SL, FL, FD, AT), this produces a string representation.
-// For multi-valued binary VRs (OW, OF, OD, OB, UN), the raw bytes are left unchanged.
+// For simple binary numeric VRs (US, SS, UL, SL, FL, FD, AT, SV, UV), this produces a string representation.
+// For multi-valued binary VRs (OW, OF, OD, OL, OV, OB, UN), the raw bytes are left unchanged.
+//
+// Note: memcpy is used to interpret raw bytes in native byte order. This is correct because:
+// (1) the machine is verified to be little-endian (see verify_little_endian()), and
+// (2) big-endian transfer syntax is explicitly rejected by the reader.
 std::string decode_binary_value(const std::string &raw, const std::string &vr){
     if(vr == "US"){
         if(raw.size() < 2) return raw;
@@ -1074,9 +1408,29 @@ std::string decode_binary_value(const std::string &raw, const std::string &vr){
             result += std::to_string(e);
         }
         return result;
+    }else if(vr == "SV"){
+        if(raw.size() < 8) return raw;
+        std::string result;
+        for(size_t i = 0; i + 7 < raw.size(); i += 8){
+            int64_t v = 0;
+            std::memcpy(&v, raw.data() + i, 8);
+            if(!result.empty()) result += "\\";
+            result += std::to_string(v);
+        }
+        return result;
+    }else if(vr == "UV"){
+        if(raw.size() < 8) return raw;
+        std::string result;
+        for(size_t i = 0; i + 7 < raw.size(); i += 8){
+            uint64_t v = 0;
+            std::memcpy(&v, raw.data() + i, 8);
+            if(!result.empty()) result += "\\";
+            result += std::to_string(v);
+        }
+        return result;
     }
 
-    // OB, OW, OF, OD, UN, and any other binary VRs: leave raw.
+    // OB, OW, OF, OD, OL, OV, UN, and any other binary VRs: leave raw.
     return raw;
 }
 
@@ -1321,10 +1675,11 @@ DCMA_DICOM::Node read_data_element(std::istream &is,
     if(vr_is_text(vr)){
         node.val = strip_text_padding(raw, vr);
     }else if(vr == "US" || vr == "SS" || vr == "UL" || vr == "SL"
-          || vr == "FL" || vr == "FD" || vr == "AT"){
+          || vr == "FL" || vr == "FD" || vr == "AT"
+          || vr == "SV" || vr == "UV"){
         node.val = decode_binary_value(raw, vr);
     }else{
-        // OB, OW, OF, OD, UN, and others: store raw bytes.
+        // OB, OW, OF, OD, OL, OV, UN, and others: store raw bytes.
         node.val = std::move(raw);
     }
 
@@ -1491,17 +1846,41 @@ int64_t Node::remove_all(uint16_t group, uint16_t tag){
 }
 
 
+int64_t Node::remove_structural_tags(){
+    // Remove GroupLength tags (gggg,0000) which are deprecated per DICOM PS3.5 Section 7.2
+    // and are dynamically recomputed by emit_DICOM() for groups that require them (e.g.,
+    // the File Meta Information group 0x0002). Retaining stale GroupLength tags from a
+    // previously-read file would result in duplicate and/or out-of-date entries in the output.
+    //
+    // Note: Sequence-related structural tags (FFFE,E000 / FFFE,E00D / FFFE,E0DD) are not
+    // stored as regular children in the tree -- they are handled implicitly by the SQ emission
+    // logic -- so they do not need to be removed here.
+    int64_t count = 0;
+    for(auto it = this->children.begin(); it != this->children.end(); ){
+        if(it->key.tag == 0x0000){
+            it = this->children.erase(it);
+            ++count;
+        }else{
+            count += it->remove_structural_tags();
+            ++it;
+        }
+    }
+    return count;
+}
+
+
 std::string Node::value_str() const {
     if(vr_is_text(this->VR)){
         return this->val;
     }else if(this->VR == "US" || this->VR == "SS" || this->VR == "UL" || this->VR == "SL"
-          || this->VR == "FL" || this->VR == "FD" || this->VR == "AT"){
+          || this->VR == "FL" || this->VR == "FD" || this->VR == "AT"
+          || this->VR == "SV" || this->VR == "UV"){
         // Already decoded to string representation during reading.
         return this->val;
     }else if(this->VR == "SQ"){
         return "(sequence with "_s + std::to_string(this->children.size()) + " items)";
     }else{
-        // Binary blob VRs (OB, OW, OF, OD, UN): return a summary.
+        // Binary blob VRs (OB, OW, OF, OD, OL, OV, UN): return a summary.
         if(this->val.size() <= 64){
             // Short enough to show as hex.
             std::ostringstream ss;

@@ -423,6 +423,9 @@ int main(int argc, char **argv){
             YLOGDEBUG("Applying de-identification to '" << input_path << "'");
             DCMA_DICOM::deidentify(root, params, uid_map);
 
+            // Removal dynamically-generated tags.
+            root.remove_structural_tags();
+
             // Emit to a temporary file first. This avoids writing partially de-identified
             // files to the output directory, and avoids doubling peak memory usage for large
             // files (e.g., those with large Pixel Data).
