@@ -468,6 +468,7 @@ std::unique_ptr<Contour_Data> extract_contour_data(const Node &root){
     // This is used downstream for interpolation and other processing.
     // -------------------------------------------------------------------------
     double min_spacing = 1.0E30;
+    bool min_spacing_found = false;
     for(auto &cc : output->ccs){
         if(cc.contours.size() < 2) continue;
 
@@ -482,8 +483,13 @@ std::unique_ptr<Contour_Data> extract_contour_data(const Node &root){
 
             if((spacing < min_spacing) && (spacing > 1.0E-3)){
                 min_spacing = spacing;
+                min_spacing_found = true;
             }
         }
+    }
+
+    if(!min_spacing_found){
+        min_spacing = 1.0;
     }
 
     // Attach minimum separation to all contours.
@@ -498,4 +504,3 @@ std::unique_ptr<Contour_Data> extract_contour_data(const Node &root){
 
 
 } // namespace DCMA_DICOM
-

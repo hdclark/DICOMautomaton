@@ -73,6 +73,16 @@ static const Node* find_child_shallow(const Node &item, uint16_t group, uint16_t
     return nullptr;
 }
 
+// Find a top-level child node with the given group/tag (non-recursive).
+static const Node* find_top_level_tag(const Node &root, uint16_t group, uint16_t tag){
+    for(const auto &child : root.children){
+        if(child.key.group == group && child.key.tag == tag){
+            return &child;
+        }
+    }
+    return nullptr;
+}
+
 // Read a DS (Decimal String) VR value and parse as a single double.
 static std::optional<double> read_DS(const std::string &val){
     std::string s = strip_padding(val);
@@ -253,7 +263,7 @@ std::unique_ptr<Transform3> extract_transform(const Node &root){
     // DICOM PS3.3 2026b, C.20.2: Spatial Registration Module.
     // Used for rigid/affine matrix-based registrations.
     // -------------------------------------------------------------------------
-    const auto *reg_seq = root.find(0x0070, 0x0308);
+    const auto *reg_seq = find_top_level_tag(root, 0x0070, 0x0308);
     if(reg_seq != nullptr){
         int i = 0;
         for(const auto &reg_item : reg_seq->children){
@@ -317,7 +327,7 @@ std::unique_ptr<Transform3> extract_transform(const Node &root){
     // DICOM PS3.3 2026b, C.20.3: Deformable Spatial Registration Module.
     // Used for grid-based deformable registrations.
     // -------------------------------------------------------------------------
-    const auto *def_reg_seq = root.find(0x0064, 0x0002);
+    const auto *def_reg_seq = find_top_level_tag(root, 0x0064, 0x0002);
     if(def_reg_seq != nullptr){
         int i = 0;
         for(const auto &def_item : def_reg_seq->children){
@@ -505,4 +515,3 @@ std::unique_ptr<Transform3> extract_transform(const Node &root){
 
 
 } // namespace DCMA_DICOM
-

@@ -289,9 +289,6 @@ add_library (imebrashim
     $<TARGET_OBJECTS:DCMA_DICOM_Dictionaries_obj>
     $<TARGET_OBJECTS:DCMA_DICOM_obj>
     $<TARGET_OBJECTS:DCMA_DICOM_PixelData_obj>
-    $<TARGET_OBJECTS:DCMA_DICOM_Contours_obj>
-    $<TARGET_OBJECTS:DCMA_DICOM_RTPLAN_obj>
-    $<TARGET_OBJECTS:DCMA_DICOM_Transform_obj>
     imebra20121219/library/imebra/src/dataHandlerStringUT.cpp
     imebra20121219/library/imebra/src/data.cpp
     imebra20121219/library/imebra/src/colorTransformsFactory.cpp
@@ -364,6 +361,7 @@ target_include_directories(imebrashim SYSTEM PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/imebra20121219/library/imebra/include/>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
+
 target_compile_options(imebrashim PUBLIC -w) # Inhibit imebra-related warnings.
 target_link_libraries(imebrashim
     Explicator::explicator
@@ -489,6 +487,9 @@ add_executable (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_SYCL_FALLBACK}>:$<TARGET_OBJECTS:SYCL_Fallback_Tests_obj>>
     $<TARGET_OBJECTS:DCMA_DICOM_Tests_obj>
     $<TARGET_OBJECTS:DCMA_DICOM_Loader_Tests_obj>
+    $<TARGET_OBJECTS:DCMA_DICOM_Contours_obj>
+    $<TARGET_OBJECTS:DCMA_DICOM_RTPLAN_obj>
+    $<TARGET_OBJECTS:DCMA_DICOM_Transform_obj>
     $<TARGET_OBJECTS:Colour_Maps_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Common_Plotting_obj>
@@ -609,6 +610,9 @@ if(WITH_WT)
         $<$<BOOL:${WITH_SYCL_FALLBACK}>:$<TARGET_OBJECTS:SYCL_Fallback_Tests_obj>>
         $<TARGET_OBJECTS:DCMA_DICOM_Tests_obj>
         $<TARGET_OBJECTS:DCMA_DICOM_Loader_Tests_obj>
+        $<TARGET_OBJECTS:DCMA_DICOM_Contours_obj>
+        $<TARGET_OBJECTS:DCMA_DICOM_RTPLAN_obj>
+        $<TARGET_OBJECTS:DCMA_DICOM_Transform_obj>
         $<TARGET_OBJECTS:Colour_Maps_obj>
         $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
         $<TARGET_OBJECTS:Common_Plotting_obj>
@@ -887,4 +891,3 @@ if(WITH_GNU_GSL)
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
 endif()
-
