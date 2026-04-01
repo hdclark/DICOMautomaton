@@ -46,7 +46,15 @@ namespace DCMA_DICOM {
 // Returns nullptr if:
 //   - The node tree does not contain required RT Plan tags.
 //   - The modality is not "RTPLAN".
-//   - Critical data (beam number, control points) is missing or malformed.
+//
+// Throws std::runtime_error if:
+//   - Critical beam or control point data (e.g., beam number, BeamName,
+//     weights, or required ControlPointSequence fields) is missing,
+//     malformed, or internally inconsistent.
+//
+// Callers should be prepared to both check for a nullptr return (for
+// non-RTPLAN or obviously missing RT Plan context) and catch
+// std::runtime_error for malformed or contradictory RT Plan content.
 //
 // DICOM References:
 //   - RT General Plan Module: DICOM PS3.3 2026b, C.8.8.9.
