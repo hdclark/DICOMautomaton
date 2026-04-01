@@ -47,10 +47,15 @@ namespace DCMA_DICOM {
 // affine_transform<double>. For deformable registrations, the displacement field
 // is stored as a deformation_field.
 //
-// Returns nullptr if:
-//   - The node tree does not contain required registration tags.
-//   - The modality is not "REG".
-//   - The transformation cannot be parsed or validated.
+// Return value semantics:
+//   - Returns nullptr if:
+//       - The node tree does not correspond to a Spatial Registration object or
+//         does not contain the required registration modules/tags.
+//       - The Modality (0008,0060) is not "REG".
+//   - For "REG" objects where no valid rigid/affine or deformable transform can be
+//     parsed or validated, a non-null std::unique_ptr<Transform3> is returned with
+//     the internal transform left unset (e.g., holding std::monostate). Callers
+//     must check for this "no transform" state on the returned Transform3.
 //
 // DICOM References:
 //   - Spatial Registration Module: DICOM PS3.3 2026b, C.20.2.
