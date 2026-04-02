@@ -35,8 +35,6 @@
 #include "gen-cpp/DCMA_types.h"
 #include "gen-cpp/Receiver.h"
 
-#include "Serialization.h"
-
 // Helper functions.
 void Serialize( const bool &in, bool &out );
 void Deserialize( const bool &in, bool &out );
@@ -67,9 +65,6 @@ void Deserialize( const dcma::rpc::metadata_t &in, metadata_map_t &out );
 
 void Serialize( const vec3<double> &in, dcma::rpc::vec3_double &out ); 
 void Deserialize( const dcma::rpc::vec3_double &in, vec3<double> &out ); 
-
-void Serialize( const contour_of_points<double> &in, dcma::rpc::contour_of_points_double &out );
-void Deserialize( const dcma::rpc::contour_of_points_double &in, contour_of_points<double> &out );
 
 void Serialize( const contour_of_points<double> &in, dcma::rpc::contour_of_points_double &out );
 void Deserialize( const dcma::rpc::contour_of_points_double &in, contour_of_points<double> &out );
