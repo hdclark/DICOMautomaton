@@ -10,6 +10,7 @@
 #include <random>
 #include <ostream>
 #include <stdexcept>
+#include <set>
 #include <cstdint>
 
 #include "YgorImages.h"
@@ -67,7 +68,7 @@ bool ComputeVolumetricCorrelationDetector(planar_image_collection<float,double> 
     const auto pxl_dz = imagecoll.images.front().pxl_dz;
 
     ComputeVolumetricNeighbourhoodSamplerUserData ud;
-    ud.channel = user_data_s->channel;
+    ud.channels = user_data_s->channels;
     ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
 
 

@@ -206,6 +206,7 @@ OperationDoc OpArgDocModelIVIM(){
     out.args.emplace_back();
     out.args.back().name = "Channel";
     out.args.back().desc = "The channel to compare (zero-based)."
+                           " Comma-separated values (e.g., '0,2') are supported."
                            " Setting to -1 will compare each channel separately."
                            " Note that both test images and reference images must share this specifier.";
     out.args.back().default_val = "0";
@@ -213,7 +214,8 @@ OperationDoc OpArgDocModelIVIM(){
     out.args.back().examples = { "-1",
                                  "0",
                                  "1",
-                                 "2" };
+                                 "2",
+                                 "0,2" };
 
     out.args.emplace_back();
     out.args.back().name = "TestImgLowerThreshold";
@@ -300,7 +302,7 @@ bool ModelIVIM(Drover &DICOM_data,
     const auto ROISelection = OptArgs.getValueStr("ROISelection").value();
 
     const auto ModelStr = OptArgs.getValueStr("Model").value();
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
     const auto TestImgLowerThreshold = std::stod( OptArgs.getValueStr("TestImgLowerThreshold").value() );
     const auto TestImgUpperThreshold = std::stod( OptArgs.getValueStr("TestImgUpperThreshold").value() );
     const auto TestIncludeNaNStr = OptArgs.getValueStr("TestIncludeNaN").value();
@@ -427,7 +429,7 @@ bool ModelIVIM(Drover &DICOM_data,
 
         ComputeJointPixelSamplerUserData ud;
         ud.sampling_method = ComputeJointPixelSamplerUserData::SamplingMethod::LinearInterpolation;
-        ud.channel = Channel;
+        ud.channels = Channels;
         ud.inc_lower_threshold = TestImgLowerThreshold;
         ud.inc_upper_threshold = TestImgUpperThreshold;
         ud.inc_nan = TestIncludeNaN;

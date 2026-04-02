@@ -12,6 +12,7 @@
 #include <numeric>        //Needed for std::inner_product().
 #include <string>    
 #include <cstdint>
+#include <set>
 
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
@@ -19,6 +20,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
@@ -86,12 +88,14 @@ OperationDoc OpArgDocConvolveImages(){
     out.args.emplace_back();
     out.args.back().name = "Channel";
     out.args.back().desc = "The channel to operate on (zero-based)."
-                           " Negative values will cause all channels to be operated on.";
+                           " Specify a single channel (e.g., '0'), multiple comma-separated channels"
+                           " (e.g., '0,2'), or a negative value to operate on all available channels.";
     out.args.back().default_val = "0";
     out.args.back().expected = true;
     out.args.back().examples = { "-1",
                                  "0",
-                                 "1" };
+                                 "1",
+                                 "0,2" };
 
 
     out.args.emplace_back();
@@ -135,7 +139,7 @@ bool ConvolveImages(Drover &DICOM_data,
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto ROISelection = OptArgs.getValueStr("ROISelection").value();
 
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
     const auto OperationStr = OptArgs.getValueStr("Operation").value();
 
     //-----------------------------------------------------------------------------------------------------------------
@@ -188,7 +192,7 @@ bool ConvolveImages(Drover &DICOM_data,
         for(auto & iap_it : IAs){
 
             ComputeVolumetricNeighbourhoodSamplerUserData ud;
-            ud.channel = Channel;
+            ud.channels = Channels;
             ud.description = "Image Convolved";
             ud.maximum_distance = std::numeric_limits<double>::quiet_NaN();
             ud.neighbourhood = ComputeVolumetricNeighbourhoodSamplerUserData::Neighbourhood::Selection;
@@ -211,6 +215,9 @@ bool ConvolveImages(Drover &DICOM_data,
             const auto d_c = k_columns / 2;
             const auto d_i = k_imgs / 2;
 
+            const auto resolved_k_chnls = first_img_refw.get().resolve_channels(Channels);
+            const auto k_channel = resolved_k_chnls.empty() ? static_cast<int64_t>(0) : *resolved_k_chnls.begin();
+
             for(int64_t r = 0; r < k_rows; ++r){
                 for(int64_t c = 0; c < k_columns; ++c){
                     for(int64_t i = 0; i < k_imgs; ++i){
@@ -221,7 +228,7 @@ bool ConvolveImages(Drover &DICOM_data,
 
                         const auto i_num = i + first_img_num;
                         const auto l_img_refw = img_adj.index_to_image(i_num);
-                        const auto val = l_img_refw.get().value(r, c, Channel);
+                        const auto val = l_img_refw.get().value(r, c, k_channel);
                         k_values.emplace_back( static_cast<float>(val) );
                     }
                 }

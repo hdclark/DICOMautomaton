@@ -11,6 +11,7 @@
 #include <stdexcept>
 #include <string>    
 #include <cstdint>
+#include <set>
 
 #include "YgorImages.h"
 #include "YgorString.h"       //Needed for GetFirstRegex(...)
@@ -18,6 +19,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
@@ -66,12 +68,14 @@ OperationDoc OpArgDocCellularAutomata(){
     out.args.emplace_back();
     out.args.back().name = "Channel";
     out.args.back().desc = "The channel to operated on (zero-based)."
-                           " Negative values will cause all channels to be operated on.";
+                           " Specify a single channel (e.g., '0'), multiple comma-separated channels"
+                           " (e.g., '0,2'), or a negative value to operate on all available channels.";
     out.args.back().default_val = "0";
     out.args.back().expected = true;
     out.args.back().examples = { "-1",
                                  "0",
-                                 "1" };
+                                 "1",
+                                 "0,2" };
 
     out.args.emplace_back();
     out.args.back().name = "Method";
@@ -133,7 +137,7 @@ bool CellularAutomata(Drover &DICOM_data,
     const auto ROISelection = OptArgs.getValueStr("ROISelection").value();
 
     const auto MethodStr = OptArgs.getValueStr("Method").value();
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
 
     const auto Iterations = std::stol( OptArgs.getValueStr("Iterations").value() );
 
@@ -170,7 +174,7 @@ bool CellularAutomata(Drover &DICOM_data,
         if( (*iap_it)->imagecoll.images.empty() ) continue;
 
         ComputeVolumetricNeighbourhoodSamplerUserData ud;
-        ud.channel = Channel;
+        ud.channels = Channels;
         ud.maximum_distance = std::numeric_limits<double>::quiet_NaN();
 
         if( std::regex_match(MethodStr, regex_conway) ){

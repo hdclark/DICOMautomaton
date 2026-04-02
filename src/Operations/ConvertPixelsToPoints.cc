@@ -26,6 +26,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../Thread_Pool.h"
 #include "ConvertPixelsToPoints.h"
 
@@ -83,10 +84,12 @@ OperationDoc OpArgDocConvertPixelsToPoints(){
 
     out.args.emplace_back();
     out.args.back().name = "Channel";
-    out.args.back().desc = "The image channel to use. Zero-based.";
+    out.args.back().desc = "The image channel to use. Zero-based."
+                           " Specify a single channel (e.g., '0'), multiple comma-separated channels"
+                           " (e.g., '0,2'), or a negative value to operate on all available channels.";
     out.args.back().default_val = "0";
     out.args.back().expected = true;
-    out.args.back().examples = { "0", "1", "2" };
+    out.args.back().examples = { "0", "1", "2", "0,2" };
 
     
     out.args.emplace_back();
@@ -116,7 +119,7 @@ bool ConvertPixelsToPoints(Drover &DICOM_data,
     //-----------------------------------------------------------------------------------------------------------------
     const auto Lower = std::stod( LowerStr );
     const auto Upper = std::stod( UpperStr );
-    const auto Channel = std::stol( ChannelStr );
+    const auto Channels = parse_channel_set( ChannelStr );
 
     const auto regex_is_percent = Compile_Regex(".*[%].*");
     const auto Lower_is_Percent = std::regex_match(LowerStr, regex_is_percent);
@@ -136,13 +139,16 @@ bool ConvertPixelsToPoints(Drover &DICOM_data,
     auto IAs_all = All_IAs( DICOM_data );
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
+        if((*iap_it)->imagecoll.images.empty()) continue;
+        const auto resolved_chnls = (*iap_it)->imagecoll.images.front().resolve_channels(Channels);
+
         std::mutex saver_printer; // Who gets to save generated contours, print to the console, and iterate the counter.
         int64_t completed = 0;
         const int64_t img_count = (*iap_it)->imagecoll.images.size();
 
         work_queue<std::function<void(void)>> wq;
         for(const auto &img : (*iap_it)->imagecoll.images){
-            if( (img.rows < 1) || (img.columns < 1) || (Channel >= img.channels) ){
+            if( (img.rows < 1) || (img.columns < 1) ){
                 continue;
             }
 
@@ -157,8 +163,8 @@ bool ConvertPixelsToPoints(Drover &DICOM_data,
                     //Percentage-based.
                     if(Lower_is_Percent || Upper_is_Percent){
                         Stats::Running_MinMax<float> rmm;
-                        img_refw.get().apply_to_pixels([&rmm,Channel](int64_t, int64_t, int64_t chnl, float val) -> void {
-                             if(Channel == chnl) rmm.Digest(val);
+                        img_refw.get().apply_to_pixels([&rmm,&resolved_chnls](int64_t, int64_t, int64_t chnl, float val) -> void {
+                             if(resolved_chnls.count(chnl) != 0) rmm.Digest(val);
                              return;
                         });
                         if(Lower_is_Percent) cl = (rmm.Current_Min() + (rmm.Current_Max() - rmm.Current_Min()) * Lower / 100.0);
@@ -169,8 +175,8 @@ bool ConvertPixelsToPoints(Drover &DICOM_data,
                     if(Lower_is_Ptile || Upper_is_Ptile){
                         std::vector<float> pixel_vals;
                         pixel_vals.reserve(img_refw.get().rows * img_refw.get().columns * img_refw.get().channels);
-                        img_refw.get().apply_to_pixels([&pixel_vals,Channel](int64_t, int64_t, int64_t chnl, float val) -> void {
-                             if(Channel == chnl) pixel_vals.push_back(val);
+                        img_refw.get().apply_to_pixels([&pixel_vals,&resolved_chnls](int64_t, int64_t, int64_t chnl, float val) -> void {
+                             if(resolved_chnls.count(chnl) != 0) pixel_vals.push_back(val);
                              return;
                         });
                         if(Lower_is_Ptile) cl = Stats::Percentile(pixel_vals, Lower / 100.0);
@@ -185,8 +191,8 @@ bool ConvertPixelsToPoints(Drover &DICOM_data,
                 };
 
                 //Perform the conversion.
-                img_refw.get().apply_to_pixels([&,Channel](int64_t row, int64_t col, int64_t chnl, float val) -> void {
-                    if((chnl == Channel) && pixel_oracle(val)){
+                img_refw.get().apply_to_pixels([&](int64_t row, int64_t col, int64_t chnl, float val) -> void {
+                    if((resolved_chnls.count(chnl) != 0) && pixel_oracle(val)){
                         const auto pos = img_refw.get().position(row, col);
                          
                         std::lock_guard<std::mutex> lock(point_pusher);

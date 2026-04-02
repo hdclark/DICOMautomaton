@@ -40,6 +40,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../YgorImages_Functors/ConvenienceRoutines.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
 #include "../YgorImages_Functors/Compute/Volumetric_Neighbourhood_Sampler.h"
@@ -115,12 +116,14 @@ OperationDoc OpArgDocVoxelRANSAC(){
     out.args.emplace_back();
     out.args.back().name = "Channel";
     out.args.back().desc = "The channel to operated on (zero-based)."
-                           " Negative values will cause all channels to be operated on.";
+                           " Negative values will cause all channels to be operated on."
+                           " Multiple comma-separated channels can also be specified (e.g., '0,2').";
     out.args.back().default_val = "0";
     out.args.back().expected = true;
     out.args.back().examples = { "-1",
                                  "0",
-                                 "1" };
+                                 "1",
+                                 "0,2" };
 
     out.args.emplace_back();
     out.args.back().name = "Lower";
@@ -177,7 +180,7 @@ bool VoxelRANSAC(Drover &DICOM_data,
     const auto InclusivityStr = OptArgs.getValueStr("Inclusivity").value();
     const auto ContourOverlapStr = OptArgs.getValueStr("ContourOverlap").value();
 
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
 
     const auto Lower = std::stod( OptArgs.getValueStr("Lower").value());
     const auto Upper = std::stod( OptArgs.getValueStr("Upper").value());
@@ -213,6 +216,9 @@ bool VoxelRANSAC(Drover &DICOM_data,
 
         // --------------------------------
         // Prepare to gather the voxel positions.
+        if((*iap_it)->imagecoll.images.empty()) continue;
+        const auto resolved_chnls = (*iap_it)->imagecoll.images.front().resolve_channels(Channels);
+
         std::mutex p_locker;
         std::vector<vec3<double>> p;
 
@@ -247,7 +253,7 @@ bool VoxelRANSAC(Drover &DICOM_data,
                            std::reference_wrapper<planar_image<float,double>> img_refw,
                            std::reference_wrapper<planar_image<float,double>>,
                            float &voxel_val) {
-            if( (Channel < 0) || (Channel == chan) ){
+            if(resolved_chnls.count(chan) != 0){
                 if(isininc(Lower, voxel_val, Upper)){
                     const auto pos = img_refw.get().position(row,col);
 

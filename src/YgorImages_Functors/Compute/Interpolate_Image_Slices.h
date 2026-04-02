@@ -4,6 +4,7 @@
 #include <any>
 #include <functional>
 #include <list>
+#include <set>
 #include <string>
 #include <cstdint>
 
@@ -23,10 +24,10 @@ struct ComputeInterpolateImageSlicesUserData {
 
 
     // -----------------------------
-    // The channel to consider. 
+    // The channels to consider. 
     //
     // Note: Channel numbers in the images that will be edited and reference images must match.
-    int64_t channel = 0;
+    std::set<int64_t> channels = {0};
 
 
     // -----------------------------
