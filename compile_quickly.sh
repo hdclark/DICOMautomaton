@@ -110,17 +110,24 @@ fi
 
 # Copy the repository to the build location to eliminate possibility of destroying the repo.
 mkdir -p "${BUILDROOT}"
+BUILDROOT_SENTINEL="${BUILDROOT}/.dcma_compile_quickly_buildroot"
 if [ -d "${BUILDROOT}"/.git ] ; then
     printf 'Build root directory contains a .git subdirectory. Refusing to overwrite it.\n' 1>&2
     exit 1
 fi
 if [[ "${CLEANBUILD}" =~ ^y.* ]] ; then
+    if [ ! -f "${BUILDROOT_SENTINEL}" ] ; then
+        printf 'Build root is missing sentinel file "%s". Refusing clean build because recursive permission/ownership changes would be unsafe. Run once without -c to initialize this build root, or choose a dedicated build directory.\n' "${BUILDROOT_SENTINEL}" 1>&2
+        exit 1
+    fi
     $SUDO find "${BUILDROOT}/" -type f -exec chmod 644 '{}' \+
     $SUDO find "${BUILDROOT}/" -type d -exec chmod 755 '{}' \+
     $SUDO find "${BUILDROOT}/" -exec chown "$( id -n -u ):$( id -n -g )" '{}' \+
     rsync -rptv --delete --no-links --exclude="$(realpath --relative-to=. "$BUILDROOT")" --cvs-exclude ./ "${BUILDROOT}/"
+    touch "${BUILDROOT_SENTINEL}"
 else
     rsync -rptv          --no-links --exclude="$(realpath --relative-to=. "$BUILDROOT")" --cvs-exclude ./ "${BUILDROOT}/"
+    touch "${BUILDROOT_SENTINEL}"
 fi
 cd "${BUILDROOT}"
 
