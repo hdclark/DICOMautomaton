@@ -36,6 +36,12 @@ rsync -avp --files-from=<(dpkg-query -L ygor ygorclustering explicator dicomauto
 #pacman -Ql ygor ygorclustering explicator dicomautomaton | cut -d" " -f 2- | while read a ; do [ -f "$a" ] && echo "${a#/}" ; done
 rsync -avp --files-from=<(pacman -Ql ygor ygorclustering explicator dicomautomaton | cut -d" " -f 2- | while read a ; do [ -f "$a" ] && echo "${a#/}" ; done) / ./AppDir/
 
+# Fallback for direct installations (e.g., via 'make install') where package managers do not track the files.
+if [ ! -f ./AppDir/usr/bin/dicomautomaton_dispatcher ] ; then
+    mkdir -pv ./AppDir/usr/bin ./AppDir/usr/lib ./AppDir/usr/share
+    cp -a "$(which dicomautomaton_dispatcher)" ./AppDir/usr/bin/
+fi
+
 # Sometimes the AppImage script fails to modify the rpath of some binaries. Attempt to do this ourselves.
 patchelf --set-rpath '$ORIGIN/../lib' ./AppDir/usr/bin/*
 

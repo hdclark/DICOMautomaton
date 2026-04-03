@@ -5,7 +5,6 @@ name: Quick Build
 on:
   push:
   pull_request:
-    types: [opened, reopened]
   workflow_dispatch:
 
 jobs:
@@ -34,76 +33,7 @@ jobs:
              ./compile_quickly.sh -u
       - name: create_appimage
         run: |
-             export short_sha="$(git rev-parse --short HEAD || printf 'unknown')"
-             ARCH="$(uname -m)"
-             # Prepare AppDir from installed files.
-             mkdir -pv AppDir/usr/bin AppDir/usr/lib AppDir/usr/share
-             rsync -avp /usr/bin/dicomautomaton_dispatcher AppDir/usr/bin/
-             rsync -avp /usr/lib/libDICOM*.so*  AppDir/usr/lib/ || true
-             rsync -avp /usr/lib/libDCMA*.so*   AppDir/usr/lib/ || true
-             rsync -avp /usr/lib/libstructs*.so* AppDir/usr/lib/ || true
-             rsync -avp /usr/lib/liboperations*.so* AppDir/usr/lib/ || true
-             rsync -avp /usr/lib/libfunction*.so* AppDir/usr/lib/ || true
-             rsync -avp /usr/lib/libboost_*.so* AppDir/usr/lib/ || true
-             rsync -avp /usr/lib/libygor*.so*  AppDir/usr/lib/ || true
-             rsync -avp /usr/lib/libexplicator*.so* AppDir/usr/lib/ || true
-             rsync -avp /usr/lib/libygorclustering*.so* AppDir/usr/lib/ || true
-             find /usr/lib/ -maxdepth 1 -name 'libDICOM*.so*' -o -name 'libDCMA*.so*' \
-               -o -name 'libstructs*.so*' -o -name 'liboperations*.so*' \
-               -o -name 'libfunction*.so*' \
-               -o -name 'libygor*.so*' -o -name 'libexplicator*.so*' \
-               -o -name 'libygorclustering*.so*' | sort || true
-             # Also include arch-specific library directories.
-             rsync -avp /usr/lib/"${ARCH}-linux-gnu"/libDICOM*.so*  AppDir/usr/lib/ || true
-             rsync -avp /usr/lib/"${ARCH}-linux-gnu"/libDCMA*.so*   AppDir/usr/lib/ || true
-             rsync -avp /usr/lib/"${ARCH}-linux-gnu"/libstructs*.so* AppDir/usr/lib/ || true
-             rsync -avp /usr/lib/"${ARCH}-linux-gnu"/liboperations*.so* AppDir/usr/lib/ || true
-             rsync -avp /usr/lib/"${ARCH}-linux-gnu"/libfunction*.so* AppDir/usr/lib/ || true
-             rsync -avp /usr/lib/"${ARCH}-linux-gnu"/libygor*.so*  AppDir/usr/lib/ || true
-             rsync -avp /usr/lib/"${ARCH}-linux-gnu"/libexplicator*.so* AppDir/usr/lib/ || true
-             rsync -avp /usr/lib/"${ARCH}-linux-gnu"/libygorclustering*.so* AppDir/usr/lib/ || true
-             if [ -d /usr/share/explicator/ ] ; then
-                 rsync -avp /usr/share/explicator/ AppDir/usr/share/explicator/
-             fi
-             # Patch rpath.
-             patchelf --set-rpath '$ORIGIN/../lib' ./AppDir/usr/bin/* || true
-             # Create desktop entry.
-             printf \
-             "[Desktop Entry]
-             Type=Application
-             Version=1.0
-             Name=DICOMautomaton
-             Comment=Tools for working with medical physics data
-             Path=/usr/bin
-             Exec=dicomautomaton_dispatcher
-             Icon=DCMA_cycle_opti
-             Terminal=true
-             Categories=Science;
-             " > dcma.desktop
-             # Awful workaround (step 1 of 2) for glibc v 2.36 changing format of ldd output.
-             ldd_path="$(which ldd)"
-             printf 'Wrapping system ldd...\n'
-             mv "${ldd_path}" "${ldd_path}_orig"
-             printf '#!/usr/bin/env bash\nldd_orig "$@" | grep -v linux-vdso | grep -v ld-linux\n' > "${ldd_path}"
-             chmod 777 "${ldd_path}"
-             # Strip binaries.
-             find AppDir/usr/bin/ -type f -exec strip '{}' \; || true
-             find AppDir/usr/lib/ -type f -exec strip '{}' \; || true
-             # Fetch linuxdeploy.
-             wget "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-${ARCH}.AppImage"
-             chmod 777 ./linuxdeploy-${ARCH}.AppImage
-             ./linuxdeploy-${ARCH}.AppImage --appimage-extract # Unpack because FUSE cannot be used in Docker.
-             NO_STRIP=true \
-             ./squashfs-root/AppRun \
-               --appdir ./AppDir \
-               --output appimage \
-               --executable ./AppDir/usr/bin/dicomautomaton_dispatcher \
-               --icon-file ./artifacts/logos/DCMA_cycle_opti.svg \
-               --desktop-file ./dcma.desktop
-             rm -rf ./squashfs-root/ ./linuxdeploy-${ARCH}.AppImage
-             # Restore ldd.
-             mv "${ldd_path}_orig" "${ldd_path}"
-             # Rename and checksum.
+             ./scripts/extract_system_appimage.sh
              rm -rf ci_artifacts
              mkdir -pv ci_artifacts
              cp DICOMautomaton*AppImage DICOMautomaton-latest-x86_64-quick.AppImage
