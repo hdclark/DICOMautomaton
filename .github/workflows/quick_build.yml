@@ -1,0 +1,119 @@
+# This is a definition file for GitHub CI.
+
+name: Quick Build
+
+on:
+  push:
+  pull_request:
+    types: [opened, reopened]
+  workflow_dispatch:
+
+jobs:
+  quick_build_ubuntu_x86_64:
+    runs-on: ubuntu-latest
+    container:
+      image: ubuntu:latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v1
+      - name: install_dependencies
+        run: |
+             export DEBIAN_FRONTEND="noninteractive"
+             apt-get update --yes
+             apt-get install --yes --no-install-recommends \
+               git cmake make g++ rsync \
+               libz-dev \
+               libboost-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev libboost-thread-dev libboost-serialization-dev \
+               libasio-dev \
+               libmpfr-dev \
+               patchelf file wget ca-certificates
+             git config --global --add safe.directory '*' || true
+      - name: build
+        run: |
+             ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
+             ./compile_quickly.sh -u
+      - name: create_appimage
+        run: |
+             export short_sha="$(git rev-parse --short HEAD || printf 'unknown')"
+             ARCH="$(uname -m)"
+             # Prepare AppDir from installed files.
+             mkdir -pv AppDir/usr/bin AppDir/usr/lib AppDir/usr/share
+             rsync -avp /usr/bin/dicomautomaton_dispatcher AppDir/usr/bin/
+             rsync -avp /usr/lib/libDICOM*.so*  AppDir/usr/lib/ || true
+             rsync -avp /usr/lib/libDCMA*.so*   AppDir/usr/lib/ || true
+             rsync -avp /usr/lib/libstructs*.so* AppDir/usr/lib/ || true
+             rsync -avp /usr/lib/liboperations*.so* AppDir/usr/lib/ || true
+             rsync -avp /usr/lib/libfunction*.so* AppDir/usr/lib/ || true
+             rsync -avp /usr/lib/libboost_*.so* AppDir/usr/lib/ || true
+             rsync -avp /usr/lib/libygor*.so*  AppDir/usr/lib/ || true
+             rsync -avp /usr/lib/libexplicator*.so* AppDir/usr/lib/ || true
+             rsync -avp /usr/lib/libygorclustering*.so* AppDir/usr/lib/ || true
+             find /usr/lib/ -maxdepth 1 -name 'libDICOM*.so*' -o -name 'libDCMA*.so*' \
+               -o -name 'libstructs*.so*' -o -name 'liboperations*.so*' \
+               -o -name 'libfunction*.so*' \
+               -o -name 'libygor*.so*' -o -name 'libexplicator*.so*' \
+               -o -name 'libygorclustering*.so*' | sort || true
+             # Also include arch-specific library directories.
+             rsync -avp /usr/lib/"${ARCH}-linux-gnu"/libDICOM*.so*  AppDir/usr/lib/ || true
+             rsync -avp /usr/lib/"${ARCH}-linux-gnu"/libDCMA*.so*   AppDir/usr/lib/ || true
+             rsync -avp /usr/lib/"${ARCH}-linux-gnu"/libstructs*.so* AppDir/usr/lib/ || true
+             rsync -avp /usr/lib/"${ARCH}-linux-gnu"/liboperations*.so* AppDir/usr/lib/ || true
+             rsync -avp /usr/lib/"${ARCH}-linux-gnu"/libfunction*.so* AppDir/usr/lib/ || true
+             rsync -avp /usr/lib/"${ARCH}-linux-gnu"/libygor*.so*  AppDir/usr/lib/ || true
+             rsync -avp /usr/lib/"${ARCH}-linux-gnu"/libexplicator*.so* AppDir/usr/lib/ || true
+             rsync -avp /usr/lib/"${ARCH}-linux-gnu"/libygorclustering*.so* AppDir/usr/lib/ || true
+             if [ -d /usr/share/explicator/ ] ; then
+                 rsync -avp /usr/share/explicator/ AppDir/usr/share/explicator/
+             fi
+             # Patch rpath.
+             patchelf --set-rpath '$ORIGIN/../lib' ./AppDir/usr/bin/* || true
+             # Create desktop entry.
+             printf \
+             "[Desktop Entry]
+             Type=Application
+             Version=1.0
+             Name=DICOMautomaton
+             Comment=Tools for working with medical physics data
+             Path=/usr/bin
+             Exec=dicomautomaton_dispatcher
+             Icon=DCMA_cycle_opti
+             Terminal=true
+             Categories=Science;
+             " > dcma.desktop
+             # Awful workaround (step 1 of 2) for glibc v 2.36 changing format of ldd output.
+             ldd_path="$(which ldd)"
+             printf 'Wrapping system ldd...\n'
+             mv "${ldd_path}" "${ldd_path}_orig"
+             printf '#!/usr/bin/env bash\nldd_orig "$@" | grep -v linux-vdso | grep -v ld-linux\n' > "${ldd_path}"
+             chmod 777 "${ldd_path}"
+             # Strip binaries.
+             find AppDir/usr/bin/ -type f -exec strip '{}' \; || true
+             find AppDir/usr/lib/ -type f -exec strip '{}' \; || true
+             # Fetch linuxdeploy.
+             wget "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-${ARCH}.AppImage"
+             chmod 777 ./linuxdeploy-${ARCH}.AppImage
+             ./linuxdeploy-${ARCH}.AppImage --appimage-extract # Unpack because FUSE cannot be used in Docker.
+             NO_STRIP=true \
+             ./squashfs-root/AppRun \
+               --appdir ./AppDir \
+               --output appimage \
+               --executable ./AppDir/usr/bin/dicomautomaton_dispatcher \
+               --icon-file ./artifacts/logos/DCMA_cycle_opti.svg \
+               --desktop-file ./dcma.desktop
+             rm -rf ./squashfs-root/ ./linuxdeploy-${ARCH}.AppImage
+             # Restore ldd.
+             mv "${ldd_path}_orig" "${ldd_path}"
+             # Rename and checksum.
+             rm -rf ci_artifacts
+             mkdir -pv ci_artifacts
+             cp DICOMautomaton*AppImage DICOMautomaton-latest-x86_64-quick.AppImage
+             mv DICOMautomaton*AppImage ci_artifacts/
+             find ci_artifacts/ -iname '*AppImage' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
+      - name: deploy_to_github
+        uses: actions/upload-artifact@v4
+        with:
+          name: "DICOMautomaton-quick-x86_64-AppImage"
+          if-no-files-found: error
+          path: |
+                ci_artifacts/DICOMautomaton-latest-x86_64-quick.AppImage
+                ci_artifacts/DICOMautomaton-latest-x86_64-quick.AppImage.sha256sum
