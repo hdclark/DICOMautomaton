@@ -36,8 +36,15 @@ jobs:
              ./scripts/extract_system_appimage.sh
              rm -rf ci_artifacts
              mkdir -pv ci_artifacts
-             cp DICOMautomaton*AppImage DICOMautomaton-latest-x86_64-quick.AppImage
-             mv DICOMautomaton*AppImage ci_artifacts/
+             shopt -s nullglob
+             appimages=(DICOMautomaton*AppImage)
+             if [ "${#appimages[@]}" -ne 1 ]; then
+                  printf 'Expected exactly one AppImage, found %s\n' "${#appimages[@]}" >&2
+                  printf '%s\n' "${appimages[@]}" >&2
+                  exit 1
+             fi
+             appimage="${appimages[0]}"
+             mv -- "${appimage}" ci_artifacts/DICOMautomaton-latest-x86_64-quick.AppImage
              find ci_artifacts/ -iname '*AppImage' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
       - name: deploy_to_github
         uses: actions/upload-artifact@v4
