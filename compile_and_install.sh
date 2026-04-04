@@ -10,6 +10,18 @@ shopt -s nocasematch
 # Existing build artifacts can either be retained, causing a faster partial re-build, or purged, causing a complete,
 # clean re-build.
 #
+# Minimal mode (-m):
+#   When -m is specified, the build disables all optional external dependencies and uses CMake FetchContent to
+#   automatically pull the author's upstream support libraries (Ygor, YgorClustering, Explicator) from GitHub. This
+#   results in the fastest possible build with the fewest external dependencies. Only cmake, g++, Boost, zlib, asio,
+#   and mpfr are required.
+#
+#   The minimal mode uses a custom 'Quick' CMake build type with -O0 -DNDEBUG to reduce compilation time. Standard
+#   CMake build type names (Debug, Release, etc.) cannot be used because CompileSettings.cmake unconditionally
+#   overrides their flags via set().
+#
+#   The minimal mode always uses the generic (direct-install) code path, bypassing distribution-specific packaging.
+#
 # Currently supported distributions: Arch Linux, Debian, and generic (i.e., direct-installation without package manager
 # support).
 
@@ -28,9 +40,11 @@ CLEANBUILD="no" # purge existing (cached) build artifacts before building.
 INSTALLPREFIX="/usr"
 INSTALLVIASUDO="yes" # whether to use sudo during installation.
 
+MINIMAL="no" # minimal mode: disable optional deps, use FetchContent for author deps.
+
 # Argument parsing:
 OPTIND=1 # Reset in case getopts has been used previously in the shell.
-while getopts "b:d:i:unch" opt; do
+while getopts "b:d:i:uncmh" opt; do
     case "$opt" in
     b)  BUILDROOT=$(realpath "$OPTARG")
         printf 'Proceeding with user-specified build root "%s".\n' "${BUILDROOT}"
@@ -49,6 +63,9 @@ while getopts "b:d:i:unch" opt; do
         ;;
     c)  CLEANBUILD="yes"
         printf 'Purging cached build artifacts for clean build.\n'
+        ;;
+    m)  MINIMAL="yes"
+        printf 'Minimal mode: disabling optional dependencies, using FetchContent for author deps.\n'
         ;;
     h|*)
         printf 'This script attempts to build and optionally install DICOMautomaton'
@@ -79,6 +96,13 @@ while getopts "b:d:i:unch" opt; do
         printf "\n"
         printf " -c       : Clean-build; purge any existing build artifacts before building.\n"
         printf "          : Default: '%s'\n" "${CLEANBUILD}"
+        printf "\n"
+        printf " -m       : Minimal mode; disable all optional dependencies and use FetchContent to\n"
+        printf "          : automatically fetch the author's upstream support libraries (Ygor,\n"
+        printf "          : YgorClustering, Explicator). This results in the fastest possible build\n"
+        printf "          : with the fewest external dependencies. Only requires: cmake, g++, Boost,\n"
+        printf "          : zlib, asio, and mpfr. Uses the generic (direct-install) code path.\n"
+        printf "          : Default: '%s'\n" "${MINIMAL}"
         printf "\n"
         exit 0
         ;;
@@ -151,7 +175,44 @@ fi
 cd "${BUILDROOT}"
 
 # Perform the build (+ optional install) for each distribution type.
-if [[ "${DISTRIBUTION}" =~ .*mxe.* ]] ; then
+if [[ "${MINIMAL}" =~ ^y.* ]] ; then
+    printf 'Building with minimal dependencies for fastest compilation...\n'
+
+    mkdir -p build
+    cd build
+    cmake \
+      -DDCMA_VERSION="${DCMA_VERSION}" \
+      -DCMAKE_INSTALL_PREFIX="${INSTALLPREFIX}" \
+      -DCMAKE_INSTALL_SYSCONFDIR="/etc" \
+      -DCMAKE_BUILD_TYPE=Quick \
+      -DCMAKE_CXX_FLAGS="-O0 -DNDEBUG" \
+      -DMEMORY_CONSTRAINED_BUILD=OFF \
+      -DWITH_ASAN=OFF \
+      -DWITH_TSAN=OFF \
+      -DWITH_MSAN=OFF \
+      -DWITH_EIGEN=OFF \
+      -DWITH_CGAL=OFF \
+      -DWITH_NLOPT=OFF \
+      -DWITH_SFML=OFF \
+      -DWITH_SDL=OFF \
+      -DWITH_WT=OFF \
+      -DWITH_GNU_GSL=OFF \
+      -DWITH_POSTGRES=OFF \
+      -DWITH_JANSSON=OFF \
+      -DWITH_THRIFT=OFF \
+      -DWITH_EXT_SYCL=OFF \
+      -DWITH_FETCHCONTENT_FALLBACK=ON \
+      ../
+    JOBS=$(nproc)
+    JOBS=$(( JOBS < 8 ? JOBS : 8 )) # Limit to reduce memory use.
+    make -j "$JOBS" VERBOSE=1
+
+    if [[ "${ALSOINSTALL}" =~ ^y.* ]] ; then
+        printf 'Warning! Bypassing system package management and installing directly!\n'
+        $SUDO make install
+    fi
+
+elif [[ "${DISTRIBUTION}" =~ .*mxe.* ]] ; then
     printf 'Compiling with MXE...\n'
     # NOTE: This build is assumed to be inside a Docker image or VM since MXE is used for cross-compilation.
     #       Building outside of Docker or a VM is not supported to reduce likelihood of overwriting data.

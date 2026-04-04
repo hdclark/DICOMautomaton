@@ -30,7 +30,7 @@ jobs:
       - name: build
         run: |
              ( ( while true ; do sleep 225 ; printf '\n\n' ; df -h ; printf '\n\n' ; free || true ; printf '\n\n' ; done ) &)
-             ./compile_quickly.sh -u
+             ./compile_and_install.sh -m -u
       - name: create_appimage
         run: |
              ./scripts/extract_system_appimage.sh
