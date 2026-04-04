@@ -38,8 +38,49 @@ rsync -avp --files-from=<(pacman -Ql ygor ygorclustering explicator dicomautomat
 
 # Fallback for direct installations (e.g., via 'make install') where package managers do not track the files.
 if [ ! -f ./AppDir/usr/bin/dicomautomaton_dispatcher ] ; then
-    mkdir -pv ./AppDir/usr/bin ./AppDir/usr/lib ./AppDir/usr/share
-    cp -a "$(which dicomautomaton_dispatcher)" ./AppDir/usr/bin/
+    dispatcher_path="$(command -v dicomautomaton_dispatcher)"
+    install_prefix="$(cd "$(dirname "${dispatcher_path}")/.." && pwd -P)"
+    install_manifest_path="$(find "${REPOROOT}" -path '*/install_manifest.txt' -print | head -n 1 || true)"
+
+    mkdir -pv ./AppDir/usr/bin ./AppDir/usr/lib ./AppDir/usr/lib64 ./AppDir/usr/share
+
+    if [ -n "${install_manifest_path}" ] && [ -f "${install_manifest_path}" ] ; then
+        while IFS= read -r installed_path ; do
+            [ -f "${installed_path}" ] || continue
+            rel_path="${installed_path#"${install_prefix}/"}"
+            [ "${rel_path}" != "${installed_path}" ] || continue
+            mkdir -pv "./AppDir/usr/$(dirname "${rel_path}")"
+            cp -a "${installed_path}" "./AppDir/usr/${rel_path}"
+        done < "${install_manifest_path}"
+    else
+        shopt -s nullglob
+        for installed_path in \
+            "${install_prefix}/bin/dicomautomaton_dispatcher" \
+            "${install_prefix}/bin/imebrashim" \
+            "${install_prefix}/bin/dialogshim" \
+            "${install_prefix}/bin/commonimgshim" \
+            "${install_prefix}/lib/"libdicomautomaton* \
+            "${install_prefix}/lib/"libygor* \
+            "${install_prefix}/lib/"libexplicator* \
+            "${install_prefix}/lib64/"libdicomautomaton* \
+            "${install_prefix}/lib64/"libygor* \
+            "${install_prefix}/lib64/"libexplicator* ; do
+            [ -e "${installed_path}" ] || continue
+            rel_path="${installed_path#"${install_prefix}/"}"
+            mkdir -pv "./AppDir/usr/$(dirname "${rel_path}")"
+            cp -a "${installed_path}" "./AppDir/usr/${rel_path}"
+        done
+
+        for installed_dir in \
+            "${install_prefix}/share/dicomautomaton" \
+            "${install_prefix}/share/bash-completion" ; do
+            [ -d "${installed_dir}" ] || continue
+            rel_path="${installed_dir#"${install_prefix}/"}"
+            mkdir -pv "./AppDir/usr/$(dirname "${rel_path}")"
+            cp -a "${installed_dir}" "./AppDir/usr/${rel_path}"
+        done
+        shopt -u nullglob
+    fi
 fi
 
 # Sometimes the AppImage script fails to modify the rpath of some binaries. Attempt to do this ourselves.
