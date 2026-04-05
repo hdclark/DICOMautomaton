@@ -163,31 +163,32 @@ get_alpine_development_optional() {
 }
 
 get_alpine_ygor_deps_required() {
-    printf "gsl-static "
-    printf "gsl-dev "
-    printf "eigen-dev "
     printf '\n'
 }
 
 get_alpine_ygor_deps_optional() {
+    printf "gsl-static "
+    printf "gsl-dev "
+    printf "eigen-dev "
     printf '\n'
 }
 
 get_alpine_dcma_deps_required() {
-    printf "gsl-static "
-    printf "gsl-dev "
-    printf "eigen-dev "
     printf "openssl-libs-static "
     printf "zlib-static "
     printf "zlib-dev "
-    printf "sfml-dev "
-    printf "sdl2-dev "
-    printf "glew-dev "
-    printf "jansson-dev "
     printf '\n'
 }
 
 get_alpine_dcma_deps_optional() {
+    printf "gsl-static "
+    printf "gsl-dev "
+    printf "eigen-dev "
+    printf "sfml-dev "
+    printf "sdl2-dev "
+    printf "glew-dev "
+    printf "jansson-dev "
+
     # Headless/graphical components.
     printf "libx11-dev "
     printf "libx11-static "
@@ -257,28 +258,27 @@ get_arch_development_optional() {
 }
 
 get_arch_ygor_deps_required() {
-    printf "gsl "
-    printf "eigen "
     printf "boost-libs "
     printf '\n'
 }
 
 get_arch_ygor_deps_optional() {
+    printf "gsl "
+    printf "eigen "
     printf '\n'
 }
 
 get_arch_dcma_deps_required() {
-    printf "gsl "
-    printf "eigen "
     printf "boost-libs "
     printf "gcc-libs "
-    printf "gnu-free-fonts "
     printf "zlib "
     printf '\n'
 }
 
 get_arch_dcma_deps_optional() {
     # Optional buildtime components.
+    printf "gsl "
+    printf "eigen "
     printf "jansson "
     printf "libpqxx "
     printf "postgresql "
@@ -300,6 +300,7 @@ get_arch_dcma_deps_optional() {
     printf "xf86-video-dummy "
 
     # Runtime components.
+    printf "gnu-free-fonts "
     printf "bash-completion "
     printf "zenity "
     printf "libnotify "
@@ -381,19 +382,18 @@ get_arch_sycl_development_optional() {
 }
 
 get_arch_sycl_ygor_deps_required() {
-    printf "gsl "
-    printf "eigen "
     printf "boost-libs "
     printf '\n'
 }
 
 get_arch_sycl_ygor_deps_optional() {
+    printf "gsl "
+    printf "eigen "
     printf '\n'
 }
 
 get_arch_sycl_dcma_deps_required() {
     printf "gcc-libs "
-    printf "gnu-free-fonts "
     printf "zlib "
     printf '\n'
 }
@@ -421,6 +421,7 @@ get_arch_sycl_dcma_deps_optional() {
     printf "xf86-video-dummy "
 
     # Runtime components.
+    printf "gnu-free-fonts "
     printf "bash-completion "
     printf "libnotify "
     printf "dunst "
@@ -492,31 +493,31 @@ get_debian_buster_development_optional() {
 
 get_debian_buster_ygor_deps_required() {
     printf "libboost-dev "
+    printf '\n'
+}
+
+get_debian_buster_ygor_deps_optional() {
     printf "libgsl-dev "
     printf "libeigen3-dev "
     printf '\n'
 }
 
-get_debian_buster_ygor_deps_optional() {
-    printf '\n'
-}
-
 get_debian_buster_dcma_deps_required() {
-    printf "libeigen3-dev "
     printf "libboost-dev "
     printf "libboost-filesystem-dev "
     printf "libboost-iostreams-dev "
     printf "libboost-program-options-dev "
     printf "libboost-thread-dev "
+    printf "libboost-serialization-dev "
     printf "libz-dev "
     printf "libasio-dev "
-    printf "fonts-freefont-ttf "
-    printf "fonts-cmu "
     printf '\n'
 }
 
 get_debian_buster_dcma_deps_optional() {
     # Optional buildtime components.
+    printf "libmpfr-dev "
+    printf "libeigen3-dev "
     printf "libsfml-dev "
     printf "libsdl2-dev "
     printf "libglew-dev "
@@ -540,6 +541,8 @@ get_debian_buster_dcma_deps_optional() {
     printf "x11-apps "
 
     # Runtime components.
+    printf "fonts-freefont-ttf "
+    printf "fonts-cmu "
     printf "libnotify-dev "
     printf "dunst "
     printf "bash-completion "
@@ -608,31 +611,31 @@ get_debian_bookworm_development_optional() {
 
 get_debian_bookworm_ygor_deps_required() {
     printf "libboost-dev "
+    printf '\n'
+}
+
+get_debian_bookworm_ygor_deps_optional() {
     printf "libgsl-dev "
     printf "libeigen3-dev "
     printf '\n'
 }
 
-get_debian_bookworm_ygor_deps_optional() {
-    printf '\n'
-}
-
 get_debian_bookworm_dcma_deps_required() {
-    printf "libeigen3-dev "
     printf "libboost-dev "
     printf "libboost-filesystem-dev "
     printf "libboost-iostreams-dev "
     printf "libboost-program-options-dev "
     printf "libboost-thread-dev "
+    printf "libboost-serialization-dev "
     printf "libz-dev "
     printf "libasio-dev "
-    printf "fonts-freefont-ttf "
-    printf "fonts-cmu "
     printf '\n'
 }
 
 get_debian_bookworm_dcma_deps_optional() {
     # Optional buildtime components.
+    printf "libmpfr-dev "
+    printf "libeigen3-dev "
     printf "libsfml-dev "
     printf "libsdl2-dev "
     printf "libglew-dev "
@@ -655,6 +658,8 @@ get_debian_bookworm_dcma_deps_optional() {
     printf "x11-apps "
 
     # Runtime components.
+    printf "fonts-freefont-ttf "
+    printf "fonts-cmu "
     printf "libnotify-dev "
     printf "dunst "
     printf "bash-completion "
@@ -723,31 +728,31 @@ get_debian_bullseye_development_optional() {
 
 get_debian_bullseye_ygor_deps_required() {
     printf "libboost-dev "
+    printf '\n'
+}
+
+get_debian_bullseye_ygor_deps_optional() {
     printf "libgsl-dev "
     printf "libeigen3-dev "
     printf '\n'
 }
 
-get_debian_bullseye_ygor_deps_optional() {
-    printf '\n'
-}
-
 get_debian_bullseye_dcma_deps_required() {
-    printf "libeigen3-dev "
     printf "libboost-dev "
     printf "libboost-filesystem-dev "
     printf "libboost-iostreams-dev "
     printf "libboost-program-options-dev "
     printf "libboost-thread-dev "
+    printf "libboost-serialization-dev "
     printf "libz-dev "
     printf "libasio-dev "
-    printf "fonts-freefont-ttf "
-    printf "fonts-cmu "
     printf '\n'
 }
 
 get_debian_bullseye_dcma_deps_optional() {
     # Optional buildtime components.
+    printf "libmpfr-dev "
+    printf "libeigen3-dev "
     printf "libsfml-dev "
     printf "libsdl2-dev "
     printf "libglew-dev "
@@ -771,6 +776,8 @@ get_debian_bullseye_dcma_deps_optional() {
     printf "x11-apps "
 
     # Runtime components.
+    printf "fonts-freefont-ttf "
+    printf "fonts-cmu "
     printf "libnotify-dev "
     printf "dunst "
     printf "bash-completion "
@@ -839,31 +846,31 @@ get_debian_stretch_development_optional() {
 
 get_debian_stretch_ygor_deps_required() {
     printf "libboost-dev "
+    printf '\n'
+}
+
+get_debian_stretch_ygor_deps_optional() {
     printf "libgsl-dev "
     printf "libeigen3-dev "
     printf '\n'
 }
 
-get_debian_stretch_ygor_deps_optional() {
-    printf '\n'
-}
-
 get_debian_stretch_dcma_deps_required() {
-    printf "libeigen3-dev "
     printf "libboost-dev "
     printf "libboost-filesystem-dev "
     printf "libboost-iostreams-dev "
     printf "libboost-program-options-dev "
     printf "libboost-thread-dev "
+    printf "libboost-serialization-dev "
     printf "libz-dev "
     printf "libasio-dev "
-    printf "fonts-freefont-ttf "
-    printf "fonts-cmu "
     printf '\n'
 }
 
 get_debian_stretch_dcma_deps_optional() {
     # Optional buildtime components.
+    printf "libmpfr-dev "
+    printf "libeigen3-dev "
     printf "libsfml-dev "
     printf "libsdl2-dev "
     printf "libglew-dev "
@@ -887,6 +894,8 @@ get_debian_stretch_dcma_deps_optional() {
     printf "x11-apps "
 
     # Runtime components.
+    printf "fonts-freefont-ttf "
+    printf "fonts-cmu "
     printf "libnotify "
     printf "dunst "
     printf "bash-completion "
@@ -1005,13 +1014,13 @@ get_macos_development_optional() {
 }
 
 get_macos_ygor_deps_required() {
-    printf "gsl "
-    printf "eigen "
     printf "boost "
     printf '\n'
 }
 
 get_macos_ygor_deps_optional() {
+    printf "gsl "
+    printf "eigen "
     printf '\n'
 }
 
@@ -1174,31 +1183,31 @@ get_ubuntu_development_optional() {
 
 get_ubuntu_ygor_deps_required() {
     printf "libboost-dev "
+    printf '\n'
+}
+
+get_ubuntu_ygor_deps_optional() {
     printf "libgsl-dev "
     printf "libeigen3-dev "
     printf '\n'
 }
 
-get_ubuntu_ygor_deps_optional() {
-    printf '\n'
-}
-
 get_ubuntu_dcma_deps_required() {
-    printf "libeigen3-dev "
     printf "libboost-dev "
     printf "libboost-filesystem-dev "
     printf "libboost-iostreams-dev "
     printf "libboost-program-options-dev "
     printf "libboost-thread-dev "
+    printf "libboost-serialization-dev "
     printf "libz-dev "
     printf "libasio-dev "
-    printf "fonts-freefont-ttf "
-    printf "fonts-cmu "
     printf '\n'
 }
 
 get_ubuntu_dcma_deps_optional() {
     # Optional buildtime components.
+    printf "libmpfr-dev "
+    printf "libeigen3-dev "
     printf "libsfml-dev "
     printf "libsdl2-dev "
     printf "libglew-dev "
@@ -1225,6 +1234,8 @@ get_ubuntu_dcma_deps_optional() {
     printf "libopengl0 "
 
     # Runtime components.
+    printf "fonts-freefont-ttf "
+    printf "fonts-cmu "
     printf "libnotify-dev "
     printf "dunst "
     printf "bash-completion "
@@ -1291,26 +1302,25 @@ get_void_development_optional() {
 
 get_void_ygor_deps_required() {
     printf "boost-devel "
+    printf '\n'
+}
+
+get_void_ygor_deps_optional() {
     printf "gsl-devel "
     printf "eigen "
     printf '\n'
 }
 
-get_void_ygor_deps_optional() {
-    printf '\n'
-}
-
 get_void_dcma_deps_required() {
-    printf "eigen "
     printf "boost-devel "
     printf "zlib-devel "
     printf "asio "
-    printf "freefont-ttf "
     printf '\n'
 }
 
 get_void_dcma_deps_optional() {
     # Optional buildtime components.
+    printf "eigen "
     printf "SFML-devel "
     printf "SDL2-devel "
     printf "glew-devel "
@@ -1330,6 +1340,7 @@ get_void_dcma_deps_optional() {
     printf "xorg-apps "
 
     # Runtime components.
+    printf "freefont-ttf "
     printf "libnotify "
     printf "dunst "
     printf "bash-completion "
