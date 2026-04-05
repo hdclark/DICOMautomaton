@@ -511,12 +511,12 @@ get_debian_buster_dcma_deps_required() {
     printf "libboost-serialization-dev "
     printf "libz-dev "
     printf "libasio-dev "
-    printf "libmpfr-dev "
     printf '\n'
 }
 
 get_debian_buster_dcma_deps_optional() {
     # Optional buildtime components.
+    printf "libmpfr-dev "
     printf "libeigen3-dev "
     printf "libsfml-dev "
     printf "libsdl2-dev "
@@ -629,12 +629,12 @@ get_debian_bookworm_dcma_deps_required() {
     printf "libboost-serialization-dev "
     printf "libz-dev "
     printf "libasio-dev "
-    printf "libmpfr-dev "
     printf '\n'
 }
 
 get_debian_bookworm_dcma_deps_optional() {
     # Optional buildtime components.
+    printf "libmpfr-dev "
     printf "libeigen3-dev "
     printf "libsfml-dev "
     printf "libsdl2-dev "
@@ -746,12 +746,12 @@ get_debian_bullseye_dcma_deps_required() {
     printf "libboost-serialization-dev "
     printf "libz-dev "
     printf "libasio-dev "
-    printf "libmpfr-dev "
     printf '\n'
 }
 
 get_debian_bullseye_dcma_deps_optional() {
     # Optional buildtime components.
+    printf "libmpfr-dev "
     printf "libeigen3-dev "
     printf "libsfml-dev "
     printf "libsdl2-dev "
@@ -864,12 +864,12 @@ get_debian_stretch_dcma_deps_required() {
     printf "libboost-serialization-dev "
     printf "libz-dev "
     printf "libasio-dev "
-    printf "libmpfr-dev "
     printf '\n'
 }
 
 get_debian_stretch_dcma_deps_optional() {
     # Optional buildtime components.
+    printf "libmpfr-dev "
     printf "libeigen3-dev "
     printf "libsfml-dev "
     printf "libsdl2-dev "
@@ -1201,12 +1201,12 @@ get_ubuntu_dcma_deps_required() {
     printf "libboost-serialization-dev "
     printf "libz-dev "
     printf "libasio-dev "
-    printf "libmpfr-dev "
     printf '\n'
 }
 
 get_ubuntu_dcma_deps_optional() {
     # Optional buildtime components.
+    printf "libmpfr-dev "
     printf "libeigen3-dev "
     printf "libsfml-dev "
     printf "libsdl2-dev "

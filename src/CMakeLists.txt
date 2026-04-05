@@ -361,8 +361,8 @@ target_link_libraries(imebrashim
     "$<$<BOOL:${MINGW}>:wsock32>"
     z
     "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
-    mpfr
-    gmp
+    "$<$<BOOL:${MPFR_LIBRARY}>:${MPFR_LIBRARY}>"
+    "$<$<BOOL:${GMP_LIBRARY}>:${GMP_LIBRARY}>"
     m
     Threads::Threads
 )
@@ -381,8 +381,8 @@ target_link_libraries(dialogshim
     "$<$<BOOL:${MINGW}>:comctl32>"
     "$<$<BOOL:${MINGW}>:uuid>"
     "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
-    mpfr
-    gmp
+    "$<$<BOOL:${MPFR_LIBRARY}>:${MPFR_LIBRARY}>"
+    "$<$<BOOL:${GMP_LIBRARY}>:${GMP_LIBRARY}>"
     m
     Threads::Threads
 )
@@ -394,8 +394,8 @@ add_library(commonimgshim
 set_target_properties(commonimgshim PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 target_link_libraries(commonimgshim
     "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
-    mpfr
-    gmp
+    "$<$<BOOL:${MPFR_LIBRARY}>:${MPFR_LIBRARY}>"
+    "$<$<BOOL:${GMP_LIBRARY}>:${GMP_LIBRARY}>"
     m
     Threads::Threads
 )
@@ -561,8 +561,8 @@ target_link_libraries (dicomautomaton_dispatcher PUBLIC
     "$<$<BOOL:${MINGW}>:wsock32>"
     z
     "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
-    mpfr
-    gmp
+    "$<$<BOOL:${MPFR_LIBRARY}>:${MPFR_LIBRARY}>"
+    "$<$<BOOL:${GMP_LIBRARY}>:${GMP_LIBRARY}>"
     m
     Threads::Threads
 )
@@ -681,8 +681,8 @@ if(WITH_WT)
         "$<$<BOOL:${MINGW}>:wsock32>"
         z
         "$<$<BOOL:${BUILD_SHARED_LIBS}>:${CMAKE_DL_LIBS}>"
-        mpfr
-        gmp
+        "$<$<BOOL:${MPFR_LIBRARY}>:${MPFR_LIBRARY}>"
+        "$<$<BOOL:${GMP_LIBRARY}>:${GMP_LIBRARY}>"
         m
         Threads::Threads
     )

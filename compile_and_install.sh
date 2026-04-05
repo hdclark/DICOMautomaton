@@ -13,8 +13,8 @@ shopt -s nocasematch
 # Minimal mode (-m):
 #   When -m is specified, the build disables all optional external dependencies and uses CMake FetchContent to
 #   automatically pull the author's upstream support libraries (Ygor, YgorClustering, Explicator) from GitHub. This
-#   results in the fastest possible build with the fewest external dependencies. Only cmake, g++, Boost, zlib, asio,
-#   and mpfr are required.
+#   results in the fastest possible build with the fewest external dependencies. Only cmake, g++, Boost, zlib, and
+#   asio are required.
 #
 #   The minimal mode uses a custom 'Quick' CMake build type with -O0 -DNDEBUG to reduce compilation time. Standard
 #   CMake build type names (Debug, Release, etc.) cannot be used because CompileSettings.cmake unconditionally
@@ -101,7 +101,7 @@ while getopts "b:d:i:uncmh" opt; do
         printf "          : automatically fetch the author's upstream support libraries (Ygor,\n"
         printf "          : YgorClustering, Explicator). This results in the fastest possible build\n"
         printf "          : with the fewest external dependencies. Only requires: cmake, g++, Boost,\n"
-        printf "          : zlib, asio, and mpfr. Uses the generic (direct-install) code path.\n"
+        printf "          : zlib, and asio. Uses the generic (direct-install) code path.\n"
         printf "          : Default: '%s'\n" "${MINIMAL}"
         printf "\n"
         exit 0

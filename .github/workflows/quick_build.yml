@@ -24,7 +24,6 @@ jobs:
                libz-dev \
                libboost-dev libboost-filesystem-dev libboost-iostreams-dev libboost-program-options-dev libboost-thread-dev libboost-serialization-dev \
                libasio-dev \
-               libmpfr-dev \
                patchelf file wget ca-certificates
              git config --global --add safe.directory '*' || true
       - name: build
@@ -36,14 +35,11 @@ jobs:
              ./scripts/extract_system_appimage.sh
              rm -rf ci_artifacts
              mkdir -pv ci_artifacts
-             shopt -s nullglob
-             appimages=(DICOMautomaton*AppImage)
-             if [ "${#appimages[@]}" -ne 1 ]; then
-                  printf 'Expected exactly one AppImage, found %s\n' "${#appimages[@]}" >&2
-                  printf '%s\n' "${appimages[@]}" >&2
+             appimage="$(find . -maxdepth 1 -name 'DICOMautomaton*AppImage' -print -quit)"
+             if [ -z "${appimage}" ] ; then
+                  printf 'Expected an AppImage but none was found.\n' >&2
                   exit 1
              fi
-             appimage="${appimages[0]}"
              mv -- "${appimage}" ci_artifacts/DICOMautomaton-latest-x86_64-quick.AppImage
              find ci_artifacts/ -iname '*AppImage' -print -execdir bash -c 'sha256sum "$@" > "$@".sha256sum' bash '{}' \;
       - name: deploy_to_github
