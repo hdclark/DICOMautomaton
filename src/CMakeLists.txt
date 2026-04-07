@@ -51,8 +51,20 @@ set_target_properties(  DCMA_DICOM_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE
 add_library(            DCMA_DICOM_PixelData_obj OBJECT DCMA_DICOM_PixelData.cc)
 set_target_properties(  DCMA_DICOM_PixelData_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            DCMA_DICOM_Contours_obj OBJECT DCMA_DICOM_Contours.cc)
+set_target_properties(  DCMA_DICOM_Contours_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+add_library(            DCMA_DICOM_RTPLAN_obj OBJECT DCMA_DICOM_RTPLAN.cc)
+set_target_properties(  DCMA_DICOM_RTPLAN_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+add_library(            DCMA_DICOM_Transform_obj OBJECT DCMA_DICOM_Transform.cc)
+set_target_properties(  DCMA_DICOM_Transform_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            DCMA_DICOM_Tests_obj OBJECT DCMA_DICOM_Tests.cc )
 set_target_properties(  DCMA_DICOM_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+add_library(            DCMA_DICOM_Loader_Tests_obj OBJECT DCMA_DICOM_Loader_Tests.cc )
+set_target_properties(  DCMA_DICOM_Loader_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
 add_library(            BED_Conversion_obj OBJECT BED_Conversion.cc )
 set_target_properties(  BED_Conversion_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
@@ -349,6 +361,7 @@ target_include_directories(imebrashim SYSTEM PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/imebra20121219/library/imebra/include/>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
+
 target_compile_options(imebrashim PUBLIC -w) # Inhibit imebra-related warnings.
 target_link_libraries(imebrashim
     Explicator::explicator
@@ -473,6 +486,10 @@ add_executable (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:ARAP_Meshes_Tests_obj>>
     $<$<BOOL:${WITH_SYCL_FALLBACK}>:$<TARGET_OBJECTS:SYCL_Fallback_Tests_obj>>
     $<TARGET_OBJECTS:DCMA_DICOM_Tests_obj>
+    $<TARGET_OBJECTS:DCMA_DICOM_Loader_Tests_obj>
+    $<TARGET_OBJECTS:DCMA_DICOM_Contours_obj>
+    $<TARGET_OBJECTS:DCMA_DICOM_RTPLAN_obj>
+    $<TARGET_OBJECTS:DCMA_DICOM_Transform_obj>
     $<TARGET_OBJECTS:Colour_Maps_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Common_Plotting_obj>
@@ -592,6 +609,10 @@ if(WITH_WT)
         $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:ARAP_Meshes_Tests_obj>>
         $<$<BOOL:${WITH_SYCL_FALLBACK}>:$<TARGET_OBJECTS:SYCL_Fallback_Tests_obj>>
         $<TARGET_OBJECTS:DCMA_DICOM_Tests_obj>
+        $<TARGET_OBJECTS:DCMA_DICOM_Loader_Tests_obj>
+        $<TARGET_OBJECTS:DCMA_DICOM_Contours_obj>
+        $<TARGET_OBJECTS:DCMA_DICOM_RTPLAN_obj>
+        $<TARGET_OBJECTS:DCMA_DICOM_Transform_obj>
         $<TARGET_OBJECTS:Colour_Maps_obj>
         $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
         $<TARGET_OBJECTS:Common_Plotting_obj>
@@ -870,4 +891,3 @@ if(WITH_GNU_GSL)
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
 endif()
-
