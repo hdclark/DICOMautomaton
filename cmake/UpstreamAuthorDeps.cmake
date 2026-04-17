@@ -28,6 +28,7 @@ macro(_dcma_find_or_fetch pkg_name git_url git_tag)
                 ${pkg_name}
                 GIT_REPOSITORY ${git_url}
                 GIT_TAG        ${git_tag}
+                GIT_SHALLOW    true
             )
 
             # FetchContent_Populate is used instead of FetchContent_MakeAvailable
@@ -36,7 +37,12 @@ macro(_dcma_find_or_fetch pkg_name git_url git_tag)
             FetchContent_GetProperties(${pkg_name})
             string(TOLOWER "${pkg_name}" _dcma_fc_lower)
             if(NOT ${_dcma_fc_lower}_POPULATED)
-                cmake_policy(SET CMP0169 OLD) # Permit use of FetchContent_Populate()
+                if(POLICY CMP0169)
+                    cmake_policy(SET CMP0169 OLD) # Permit use of FetchContent_Populate()
+                else()
+                    # TODO: use FetchContent_MakeAvailable() instead of FetchContent_Populate().
+                    # For now we will plow ahead and assume it has not yet been removed.
+                endif()
                 FetchContent_Populate(${pkg_name})
                 message(STATUS "Fetched ${pkg_name}")
                 add_subdirectory("${${_dcma_fc_lower}_SOURCE_DIR}"

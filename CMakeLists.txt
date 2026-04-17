@@ -122,6 +122,9 @@ if(NOT Boost_FOUND)
                                 OPTIONAL_COMPONENTS system)
 endif()
 
+find_library(MPFR_LIBRARY mpfr)
+find_library(GMP_LIBRARY gmp)
+
 if(WITH_EIGEN)
     find_package(Eigen3 CONFIG QUIET)
     if(NOT Eigen3_FOUND)
