@@ -203,6 +203,9 @@ contains_gpx_gps_coords(dcma::xml::node &root){
         disable_recursive_search);
 
     // Inject top-level metadata if nothing more specific has been found yet.
+    if(!name_opt){
+        name_opt = "unknown";
+    }
     if(name_opt){
         for(auto &cc : contours_out){
             for(auto &c : cc.contours){
