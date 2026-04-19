@@ -21,6 +21,9 @@ add_custom_command(
 add_subdirectory(Operations)
 if(WITH_THRIFT)
     add_subdirectory(rpc)
+
+    add_library(            Serialization_Tests_obj OBJECT Serialization_Tests.cc )
+    set_target_properties(  Serialization_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 endif()
 if(WITH_SDL)
     add_subdirectory(Challenges)
@@ -528,6 +531,7 @@ add_executable (dicomautomaton_dispatcher
 
     $<TARGET_OBJECTS:Operations_objs>
     $<$<BOOL:${WITH_THRIFT}>:$<TARGET_OBJECTS:Thrift_objs>>
+    $<$<BOOL:${WITH_THRIFT}>:$<TARGET_OBJECTS:Serialization_Tests_obj>>
     $<TARGET_OBJECTS:DCMA_Version_obj>
     $<TARGET_OBJECTS:Doctest_impl_obj>
     $<$<BOOL:${MINGW}>:$<TARGET_OBJECTS:WindowsIcon_obj>>
@@ -647,6 +651,7 @@ if(WITH_WT)
 
         $<TARGET_OBJECTS:Operations_objs>
         $<$<BOOL:${WITH_THRIFT}>:$<TARGET_OBJECTS:Thrift_objs>>
+        $<$<BOOL:${WITH_THRIFT}>:$<TARGET_OBJECTS:Serialization_Tests_obj>>
         $<TARGET_OBJECTS:DCMA_Version_obj>
         $<TARGET_OBJECTS:Doctest_impl_obj>
     )
