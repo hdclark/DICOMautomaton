@@ -10,6 +10,7 @@
 #include <random>
 #include <ostream>
 #include <stdexcept>
+#include <set>
 #include <cstdint>
 
 #include "YgorClustering.hpp"
@@ -74,7 +75,7 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
         return false;
     }
 
-    const auto ud_channel = user_data_s->channel;
+    const auto ud_channels = user_data_s->channels;
 
     const auto inaccessible_val = std::numeric_limits<double>::quiet_NaN();
 
@@ -114,8 +115,9 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
 
     }else if(user_data_s->discrepancy_type == ComputeCompareImagesUserData::DiscrepancyType::PinnedToMax){
         Stats::Running_MinMax<float> rmm;
-        auto find_max = [&rmm,ud_channel](int64_t, int64_t, int64_t chnl, float val) -> void {
-            if(chnl == ud_channel){
+        const auto pinned_resolved_channels = imagecoll.images.front().resolve_channels(ud_channels);
+        auto find_max = [&rmm,pinned_resolved_channels](int64_t, int64_t, int64_t chnl, float val) -> void {
+            if(pinned_resolved_channels.count(chnl) != 0){
                 rmm.Digest(val);
             }
             return;
@@ -171,6 +173,9 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
             if(overlapping_img_refws.empty()) YLOGWARN("No wholly overlapping reference images found, using slower per-voxel sampling");
 
 
+            const auto resolved_channels = img_refw.get().resolve_channels(ud_channels);
+
+
             auto f_bounded = [&,img_refw](int64_t E_row, int64_t E_col, int64_t channel,
                                           std::reference_wrapper<planar_image<float,double>> /*img_refw*/,
                                           std::reference_wrapper<planar_image<float,double>> /*mask_img_refw*/,
@@ -178,7 +183,7 @@ bool ComputeCompareImages(planar_image_collection<float,double> &imagecoll,
                 if( !isininc( user_data_s->inc_lower_threshold, voxel_val, user_data_s->inc_upper_threshold) ){
                     return; // No-op if outside of the thresholds.
                 }
-                if( channel != ud_channel){
+                if( resolved_channels.count(channel) == 0 ){
                     return; // No-op if this is the wrong channel.
                 }
 

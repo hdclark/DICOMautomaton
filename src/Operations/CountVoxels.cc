@@ -29,6 +29,7 @@
 
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
+#include "../String_Parsing.h"
 #include "../Thread_Pool.h"
 #include "../Write_File.h"
 #include "../YgorImages_Functors/Grouping/Misc_Functors.h"
@@ -131,10 +132,12 @@ OperationDoc OpArgDocCountVoxels(){
 
     out.args.emplace_back();
     out.args.back().name = "Channel";
-    out.args.back().desc = "The image channel to use. Zero-based.";
+    out.args.back().desc = "The image channel to use. Zero-based."
+                           " Specify a single channel (e.g., '0'), multiple comma-separated channels"
+                           " (e.g., '0,2'), or a negative value to operate on all available channels.";
     out.args.back().default_val = "0";
     out.args.back().expected = true;
-    out.args.back().examples = { "0", "1", "2" };
+    out.args.back().examples = { "0", "1", "2", "0,2" };
 
 
     out.args.emplace_back();
@@ -184,7 +187,7 @@ bool CountVoxels(Drover &DICOM_data,
     //-----------------------------------------------------------------------------------------------------------------
     const auto Lower = std::stod( LowerStr );
     const auto Upper = std::stod( UpperStr );
-    const auto Channel = std::stol( ChannelStr );
+    const auto Channels = parse_channel_set( ChannelStr );
 
     const auto regex_is_percent = Compile_Regex(".*[%].*");
     const auto Lower_is_Percent = std::regex_match(LowerStr, regex_is_percent);
@@ -221,6 +224,7 @@ bool CountVoxels(Drover &DICOM_data,
     auto IAs = Whitelist( IAs_all, ImageSelectionStr );
     for(auto & iap_it : IAs){
         if((*iap_it)->imagecoll.images.empty()) continue;
+        const auto resolved_chnls = (*iap_it)->imagecoll.images.front().resolve_channels(Channels);
 
         //Determine the bounds in terms of pixel-value thresholds.
         auto cl = Lower; // Will be replaced if percentages/percentiles requested.
@@ -230,8 +234,8 @@ bool CountVoxels(Drover &DICOM_data,
             if(Lower_is_Percent || Upper_is_Percent){
                 Stats::Running_MinMax<float> rmm;
                 for(const auto &animg : (*iap_it)->imagecoll.images){
-                    animg.apply_to_pixels([&rmm,Channel](int64_t, int64_t, int64_t chnl, float val) -> void {
-                         if((Channel < 0) || (Channel == chnl)) rmm.Digest(val);
+                    animg.apply_to_pixels([&rmm,&resolved_chnls](int64_t, int64_t, int64_t chnl, float val) -> void {
+                         if(resolved_chnls.count(chnl) != 0) rmm.Digest(val);
                          return;
                     });
                 }
@@ -244,8 +248,8 @@ bool CountVoxels(Drover &DICOM_data,
                 std::vector<float> pixel_vals;
                 //pixel_vals.reserve(animg.rows * animg.columns * animg.channels * img_count);
                 for(const auto &animg : (*iap_it)->imagecoll.images){
-                    animg.apply_to_pixels([&pixel_vals,Channel](int64_t, int64_t, int64_t chnl, float val) -> void {
-                         if((Channel < 0) || (Channel == chnl)) pixel_vals.push_back(val);
+                    animg.apply_to_pixels([&pixel_vals,&resolved_chnls](int64_t, int64_t, int64_t chnl, float val) -> void {
+                         if(resolved_chnls.count(chnl) != 0) pixel_vals.push_back(val);
                          return;
                     });
                 }
@@ -302,7 +306,7 @@ bool CountVoxels(Drover &DICOM_data,
                            std::reference_wrapper<planar_image<float,double>>,
                            std::reference_wrapper<planar_image<float,double>>,
                            float &val) {
-            if( (Channel < 0) || (Channel == chan) ){
+            if(resolved_chnls.count(chan) != 0){
                 std::lock_guard<std::mutex> lock(locker);
                 if(!std::isfinite(val)){
                     ++count_nan;

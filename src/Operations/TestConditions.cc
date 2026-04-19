@@ -12,6 +12,7 @@
 #include <vector>
 #include <cmath>
 #include <cstdint>
+#include <set>
 #include <limits>
 
 #include "YgorImages.h"
@@ -101,10 +102,11 @@ OperationDoc OpArgDocTestConditions(){
     out.args.emplace_back();
     out.args.back().name = "Channel";
     out.args.back().desc = "The channel to consider for pixel value conditions."
-                           " If negative, all channels are considered.";
+                           " If negative, all channels are considered."
+                           " Multiple comma-separated channels can also be specified (e.g., '0,2').";
     out.args.back().default_val = "-1";
     out.args.back().expected = true;
-    out.args.back().examples = { "-1", "0", "1", "2" };
+    out.args.back().examples = { "-1", "0", "1", "2", "0,2" };
 
     return out;
 }
@@ -121,7 +123,7 @@ bool TestConditions(Drover &DICOM_data,
     const auto ROILabelRegex = OptArgs.getValueStr("ROILabelRegex").value();
     const auto NormalizedROILabelRegex = OptArgs.getValueStr("NormalizedROILabelRegex").value();
     const auto ROISelection = OptArgs.getValueStr("ROISelection").value();
-    const auto Channel = std::stol( OptArgs.getValueStr("Channel").value() );
+    const auto Channels = parse_channel_set( OptArgs.getValueStr("Channel").value() );
 
     //-----------------------------------------------------------------------------------------------------------------
 
@@ -335,7 +337,8 @@ bool TestConditions(Drover &DICOM_data,
             for(auto &iap_it : IAs){
                 if(*iap_it == nullptr) continue;
                 for(auto &img : (*iap_it)->imagecoll.images){
-                    if(Channel < 0){
+                    const auto resolved_chnls = img.resolve_channels(Channels);
+                    if(resolved_chnls.size() == static_cast<size_t>(img.channels)){
                         // All channels: use the built-in minmax for efficiency.
                         const auto mm = img.minmax();
                         const auto mm_min = static_cast<double>(mm.first);
@@ -344,17 +347,14 @@ bool TestConditions(Drover &DICOM_data,
                         if(mm_max > actual_max) actual_max = mm_max;
                         pixels_examined = true;
                     }else{
-                        if(Channel >= img.channels){
-                            throw std::invalid_argument("Channel " + std::to_string(Channel)
-                                                        + " exceeds image channel count "
-                                                        + std::to_string(img.channels));
-                        }
                         for(int64_t row = 0; row < img.rows; ++row){
                             for(int64_t col = 0; col < img.columns; ++col){
-                                const auto val = static_cast<double>(img.value(row, col, Channel));
-                                if(val < actual_min) actual_min = val;
-                                if(val > actual_max) actual_max = val;
-                                pixels_examined = true;
+                                for(const auto &chan : resolved_chnls){
+                                    const auto val = static_cast<double>(img.value(row, col, chan));
+                                    if(val < actual_min) actual_min = val;
+                                    if(val > actual_max) actual_max = val;
+                                    pixels_examined = true;
+                                }
                             }
                         }
                     }

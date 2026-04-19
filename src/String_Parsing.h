@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <set>
 #include <vector>
 #include <string>
 #include <optional>
@@ -66,6 +67,11 @@ retain_only_numeric_parameters(std::vector<parsed_function>);
 // Parser for number lists.
 std::vector<double> parse_numbers(const std::string &split_chars,
                                   const std::string &in);
+
+// Parser for comma-separated channel specifications.
+// Accepts strings like "-1", "0", "0,2,3", or "1, 3".
+// Returns a set of channel indices (which may include negatives for 'all channels' semantics).
+std::set<int64_t> parse_channel_set(const std::string &in);
 
 // Wide string narrowing.
 std::string convert_wstring_to_string(const std::wstring &);
