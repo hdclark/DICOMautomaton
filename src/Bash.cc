@@ -24,6 +24,8 @@
 
 namespace {
 
+constexpr size_t max_loop_iterations = 10000U;
+
 std::string trim_copy(const std::string &in){
     auto begin = std::find_if_not(in.begin(), in.end(), [](unsigned char c){ return std::isspace(c); });
     auto end = std::find_if_not(in.rbegin(), in.rend(), [](unsigned char c){ return std::isspace(c); }).base();
@@ -602,7 +604,7 @@ std::pair<Bash::CommandResult, size_t> Bash::run_while_command(const std::vector
     size_t guard = 0;
     while(execute && !exit_requested_){
         ++guard;
-        if(guard > 10000U){
+        if(guard > max_loop_iterations){
             return {make_error("Loop iteration guard exceeded"), done_pos + 1};
         }
 
@@ -1042,7 +1044,7 @@ Bash::CommandResult Bash::builtin_echo(const std::vector<std::string> &args,
     }
     if(omit_newline && (start >= args.size())) return {0, {}};
     std::vector<std::string> out;
-    out.emplace_back(join_strings(std::vector<std::string>(args.begin() + static_cast<long>(start), args.end()), " "));
+    out.emplace_back(join_strings(std::vector<std::string>(std::next(args.begin(), static_cast<std::ptrdiff_t>(start)), args.end()), " "));
     return {0, out};
 }
 
