@@ -8,10 +8,11 @@
 #include <memory>
 #include <regex>
 #include <stdexcept>
+#include <sstream>
 #include <string>    
-#include <cstdlib>  //Needed for popen, pclose.
 
 
+#include "../Bash.h"
 #include "../Structs.h"
 #include "../Regex_Selectors.h"
 #include "ExecuteShell.h"
@@ -23,7 +24,7 @@ OperationDoc OpArgDocExecuteShell(){
     out.tags.emplace_back("category: meta");
 
     out.desc = 
-        "This operation executes the given command in a system shell.";
+        "This operation executes the given command in DICOMautomaton's internal portable bash-like shell.";
 
     out.args.emplace_back();
     out.args.back().name = "Command";
@@ -77,26 +78,16 @@ bool ExecuteShell(Drover &DICOM_data,
 
     //-----------------------------------------------------------------------------------------------------------------
 
-    std::string out;
-    auto pipe = popen(CommandStr.c_str(), "r");
-    if(pipe == nullptr){
-        throw std::runtime_error("Unable to create pipe");
-    }
+    Bash bash;
+    const auto bash_result = bash.process(CommandStr);
 
-    ssize_t nbytes;
-    std::array<char, 5000> buff;
-    buff.fill('\0');
-
-#ifdef EAGAIN
-    while( ((nbytes = read(fileno(pipe), buff.data(), buff.size()-1)) != -1)  || (errno == EAGAIN) ){
-#else
-    while( ((nbytes = read(fileno(pipe), buff.data(), buff.size()-1)) != -1) ){
-#endif
-        //Check if we have reached the end of the file (ie. "data has run out.")
-        if( nbytes == 0 ) break;
-        out += std::string(buff.data(), nbytes);
+    std::ostringstream stdout_ss;
+    for(size_t i = 0; i < bash_result.output.size(); ++i){
+        stdout_ss << bash_result.output[i];
+        if((i + 1) < bash_result.output.size()) stdout_ss << '\n';
     }
-    const int res = pclose(pipe);
+    const auto out = stdout_ss.str();
+    const int res = bash_result.return_code;
 
     if(ResultOpt) InvocationMetadata[ResultOpt.value()] = out;
     if(ReturnOpt) InvocationMetadata[ReturnOpt.value()] = Xtostring<int>(res);
@@ -104,4 +95,3 @@ bool ExecuteShell(Drover &DICOM_data,
     const bool op_ret = (res == EXIT_SUCCESS);
     return op_ret;
 }
-
