@@ -24,7 +24,8 @@ OperationDoc OpArgDocExecuteShell(){
     out.tags.emplace_back("category: meta");
 
     out.desc = 
-        "This operation executes the given command in DICOMautomaton's internal portable bash-like shell.";
+        "This operation executes the given command in DICOMautomaton's internal portable bash-like shell."
+        " It is intended for portable scripting and built-in utilities rather than invoking arbitrary external executables.";
 
     out.args.emplace_back();
     out.args.back().name = "Command";

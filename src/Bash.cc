@@ -1040,9 +1040,9 @@ Bash::CommandResult Bash::builtin_echo(const std::vector<std::string> &args,
         omit_newline = true;
         start = 1;
     }
+    if(omit_newline && (start >= args.size())) return {0, {}};
     std::vector<std::string> out;
     out.emplace_back(join_strings(std::vector<std::string>(args.begin() + static_cast<long>(start), args.end()), " "));
-    if(omit_newline) out.front() = out.front();
     return {0, out};
 }
 
