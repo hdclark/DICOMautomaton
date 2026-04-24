@@ -3,6 +3,7 @@
 #include <any>
 #include <optional>
 #include <functional>
+#include <fstream>
 #include <iterator>
 #include <list>
 #include <map>
@@ -28,22 +29,9 @@
     #error "Attempted to compile serialization operation without Apache Thrift, which is required"
 #endif //DCMA_USE_THRIFT
 
-#include <thrift/transport/TSimpleFileTransport.h>
-//#include <thrift/transport/TBufferTransports.h>
-//#include <thrift/transport/TZlibTransport.h>
-//#include <thrift/protocol/TBinaryProtocol.h>
-//#include <thrift/protocol/TCompactProtocol.h>
-#include <thrift/protocol/TJSONProtocol.h>
-//#include <thrift/protocol/TDebugProtocol.h>
-
-#include "../rpc/gen-cpp/Receiver.h"
 #include "../rpc/Serialization.h"
 
 #include "ExportDrover.h"
-
-using namespace ::apache::thrift;
-using namespace ::apache::thrift::protocol;
-using namespace ::apache::thrift::transport;
 
 
 OperationDoc OpArgDocExportDrover(){
@@ -82,25 +70,20 @@ bool ExportDrover(Drover &DICOM_data,
     const auto Filename = OptArgs.getValueStr("Filename").value();
     //-----------------------------------------------------------------------------------------------------------------
 
-    const bool permit_read  = true;
-    const bool permit_write = true;
-    auto transport = std::make_shared<TSimpleFileTransport>(Filename.c_str(), permit_read, permit_write);
-    //transport = std::make_shared<TZlibTransport>(transport);
-
-    //auto protocol = std::make_shared<TBinaryProtocol>(transport);
-    //auto protocol = std::make_shared<TCompactProtocol>(transport);
-    auto protocol = std::make_shared<TJSONProtocol>(transport);
-    //auto protocol = std::make_shared<TDebugProtocol>(transport);
-    ::dcma::rpc::ReceiverClient client(protocol);
-
     try{
-        ::dcma::rpc::Drover d;
-        Serialize(DICOM_data, d);
+        std::string serialized;
+        if(!Serialize_Drover_To_Thrift_JSON(DICOM_data, serialized)){
+            throw std::runtime_error("Unable to serialize Drover");
+        }
 
-        transport->open();
-        d.write(protocol.get());
-        transport->flush();
-        transport->close();
+        std::ofstream ofs(Filename, std::ios::out | std::ios::binary | std::ios::trunc);
+        if(!ofs){
+            throw std::runtime_error("Unable to open file");
+        }
+        ofs.write(serialized.data(), static_cast<std::streamsize>(serialized.size()));
+        if(!ofs){
+            throw std::runtime_error("Unable to write file");
+        }
 
         YLOGINFO("Serialized Drover object to '" << Filename << "'");
 

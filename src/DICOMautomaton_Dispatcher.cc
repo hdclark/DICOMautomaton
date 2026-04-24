@@ -5,6 +5,7 @@
 
 #include <exception>
 #include <functional>
+#include <fstream>
 #include <iostream>
 #include <list>
 #include <map>
@@ -17,12 +18,23 @@
 //#include <cfenv>              //Needed for std::feclearexcept(FE_ALL_EXCEPT).
 
 #include <filesystem>
+#include <cstdio>
 #include <cstdlib>            //Needed for exit() calls.
 #include <cstdint>
+#include <random>
 #include <utility>            //Needed for std::pair.
 #include <csignal>
 
 #include "doctest20251212/doctest.h"
+
+#include "DCMA_Definitions.h"
+
+#if defined(DCMA_HAS_UNISTD) && DCMA_HAS_UNISTD
+    #include <unistd.h>
+#endif
+#if __has_include(<sys/stat.h>)
+    #include <sys/stat.h>
+#endif
 
 #include "YgorArguments.h"    //Needed for ArgumentHandler class.
 #include "YgorFilesDirs.h"    //Needed for Does_File_Exist_And_Can_Be_Read(...), etc..
@@ -40,14 +52,91 @@
 #include "Operation_Dispatcher.h"
 #include "DCMA_Version.h"
 
+#ifdef DCMA_USE_THRIFT
+    #include "rpc/Serialization.h"
+#endif
+
 //extern const std::string DCMA_VERSION_STR;
 
+namespace {
+
+bool stream_is_redirected(FILE *stream){
+#if defined(DCMA_HAS_CSTDIO_FILENO) && DCMA_HAS_CSTDIO_FILENO \
+ && defined(DCMA_HAS_UNISTD) && DCMA_HAS_UNISTD
+    const auto fd = fileno(stream);
+    return (0 <= fd) && !::isatty(fd);
+#else
+    (void)stream;
+    return false;
+#endif
+}
+
+bool stream_is_pipe_like(FILE *stream){
+#if defined(DCMA_HAS_CSTDIO_FILENO) && DCMA_HAS_CSTDIO_FILENO \
+ && __has_include(<sys/stat.h>)
+    const auto fd = fileno(stream);
+    if(fd < 0) return false;
+
+    struct stat fd_stat;
+    if(fstat(fd, &fd_stat) != 0) return false;
+
+    return S_ISFIFO(fd_stat.st_mode)
+#if defined(S_ISSOCK)
+        || S_ISSOCK(fd_stat.st_mode)
+#endif
+        ;
+#else
+    (void)stream;
+    return false;
+#endif
+}
+
+std::filesystem::path make_temporary_stdin_path(){
+    std::random_device rd;
+    std::mt19937_64 rng(rd());
+
+    for(int64_t i = 0; i < 32; ++i){
+        const auto token = std::to_string( std::chrono::steady_clock::now().time_since_epoch().count() )
+                         + "_" + std::to_string(rng());
+        const auto p = std::filesystem::temp_directory_path() / ("dcma_stdin_" + token);
+        if(!std::filesystem::exists(p)) return p;
+    }
+
+    throw std::runtime_error("Unable to allocate a temporary file for piped stdin");
+}
+
+void copy_stdin_to_file(const std::filesystem::path &p){
+    std::ofstream ofs(p, std::ios::out | std::ios::binary | std::ios::trunc);
+    if(!ofs){
+        throw std::runtime_error("Unable to open temporary file for piped stdin");
+    }
+
+    ofs << std::cin.rdbuf();
+    if(!ofs){
+        throw std::runtime_error("Unable to cache piped stdin");
+    }
+}
+
+void remove_file_if_present(const std::filesystem::path &p) noexcept{
+    try{
+        if(!p.empty()) std::filesystem::remove(p);
+    }catch(const std::exception &){
+    }
+}
+
+} // namespace
+
 int main(int argc, char* argv[]){
+
+const bool stdin_is_pipe = stream_is_pipe_like(stdin);
+const bool stdout_is_redirected = stream_is_redirected(stdout);
 
     // Ignore SIGPIPE signal, which can cause termination when connected to a socket.
 #if !defined(_WIN32) && !defined(_WIN64)
     std::signal(SIGPIPE, SIG_IGN);
 #endif
+
+std::filesystem::path piped_stdin_file;
 
 try{
     //This is the main entry-point into various routines. All major options are set here, via command line arguments.
@@ -64,6 +153,10 @@ try{
 
     //The main storage place and manager class for loaded image sets, contours, dose matrices, etc..
     Drover DICOM_data;
+
+    if(stdout_is_redirected){
+        ygor::g_logger.set_terminal_min_level(ygor::log_level::err);
+    }
 
     //Lexicon filename, for the Explicator class. This is used in select cases for string translation.
     std::string FilenameLex;
@@ -392,6 +485,12 @@ try{
         StandaloneFilesDirsReachable.emplace_back(auri);
     }
 
+    if(stdin_is_pipe){
+        piped_stdin_file = make_temporary_stdin_path();
+        copy_stdin_to_file(piped_stdin_file);
+        StandaloneFilesDirsReachable.emplace_back(piped_stdin_file);
+    }
+
     //Try find a lexicon file if none were provided.
     if(FilenameLex.empty()){
         FilenameLex = Locate_Lexicon_File();
@@ -435,6 +534,8 @@ try{
         // Could the order of each operation on the command line be imbued / sidecar'd to sort out precendence?? TODO
         Operations.splice(std::begin(Operations), l_Operations);
     }
+    remove_file_if_present(piped_stdin_file);
+    piped_stdin_file.clear();
 
     //============================================= Dispatch to Analyses =============================================
 
@@ -464,7 +565,23 @@ try{
         throw std::runtime_error("Analysis failed. Cannot continue");
     }
 
+#ifdef DCMA_USE_THRIFT
+    if(stdout_is_redirected){
+        std::string serialized;
+        if(!Serialize_Drover_To_Thrift_JSON(DICOM_data, serialized)){
+            throw std::runtime_error("Unable to serialize Drover to stdout");
+        }
+
+        std::cout.write(serialized.data(), static_cast<std::streamsize>(serialized.size()));
+        std::cout.flush();
+        if(!std::cout){
+            throw std::runtime_error("Unable to write Drover to stdout");
+        }
+    }
+#endif // DCMA_USE_THRIFT
+
 }catch(const std::exception &e){
+    remove_file_if_present(piped_stdin_file);
 #if defined(__MINGW64__) || defined(__MINGW32__)
     // Add a delay on Windows so we can inspect debug info.
     // Note: this will be replaced when logging is improved.

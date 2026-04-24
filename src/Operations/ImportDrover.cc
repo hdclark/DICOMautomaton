@@ -3,6 +3,7 @@
 #include <any>
 #include <optional>
 #include <functional>
+#include <fstream>
 #include <iterator>
 #include <list>
 #include <map>
@@ -28,22 +29,9 @@
     #error "Attempted to compile serialization operation without Apache Thrift, which is required"
 #endif //DCMA_USE_THRIFT
 
-#include <thrift/transport/TSimpleFileTransport.h>
-//#include <thrift/transport/TBufferTransports.h>
-//#include <thrift/transport/TZlibTransport.h>
-//#include <thrift/protocol/TBinaryProtocol.h>
-//#include <thrift/protocol/TCompactProtocol.h>
-#include <thrift/protocol/TJSONProtocol.h>
-//#include <thrift/protocol/TDebugProtocol.h>
-
-#include "../rpc/gen-cpp/Receiver.h"
 #include "../rpc/Serialization.h"
 
 #include "ImportDrover.h"
-
-using namespace ::apache::thrift;
-using namespace ::apache::thrift::protocol;
-using namespace ::apache::thrift::transport;
 
 
 OperationDoc OpArgDocImportDrover(){
@@ -82,26 +70,19 @@ bool ImportDrover(Drover &DICOM_data,
     const auto Filename = OptArgs.getValueStr("Filename").value();
     //-----------------------------------------------------------------------------------------------------------------
 
-    const bool permit_read  = true;
-    const bool permit_write = false;
-    auto transport = std::make_shared<TSimpleFileTransport>(Filename.c_str(), permit_read, permit_write);
-    //transport = std::make_shared<TZlibTransport>(transport);
-
-    //auto protocol = std::make_shared<TBinaryProtocol>(transport);
-    //auto protocol = std::make_shared<TCompactProtocol>(transport);
-    auto protocol = std::make_shared<TJSONProtocol>(transport);
-    //auto protocol = std::make_shared<TDebugProtocol>(transport);
-    ::dcma::rpc::ReceiverClient client(protocol);
-
     try{
-        ::dcma::rpc::Drover d;
+        std::ifstream ifs(Filename, std::ios::in | std::ios::binary);
+        if(!ifs){
+            throw std::runtime_error("Unable to open file");
+        }
 
-        transport->open();
-        d.read(protocol.get());
-        transport->close();
+        const auto serialized = std::string( std::istreambuf_iterator<char>(ifs),
+                                             std::istreambuf_iterator<char>() );
 
         Drover l_DICOM_data;
-        Deserialize(d, l_DICOM_data);
+        if(!Deserialize_Drover_From_Thrift_JSON(serialized, l_DICOM_data)){
+            throw std::runtime_error("Unable to parse Apache Thrift serialization");
+        }
         DICOM_data.Consume(l_DICOM_data);
         YLOGINFO("Deserialized Drover object from '" << Filename << "'");
 

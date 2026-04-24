@@ -2,7 +2,9 @@
 
 #include <exception>
 //#include <functional>
+#include <fstream>
 #include <iostream>
+#include <iterator>
 #include <list>
 #include <map>
 //#include <memory>
@@ -43,6 +45,10 @@
 #include "Script_Loader.h"
 #include "Contour_Collection_File_Loader.h"
 #include "Common_Image_File_Loader.h"
+
+#ifdef DCMA_USE_THRIFT
+    #include "rpc/Serialization.h"
+#endif
 
 enum class file_magic {
     unknown,
@@ -133,6 +139,43 @@ struct file_loader_t {
     loader_func_t f;
 };
 
+#ifdef DCMA_USE_THRIFT
+static
+bool
+Load_From_Thrift_Serialization_Files( Drover &DICOM_data,
+                                      std::list<std::filesystem::path> &Filenames ){
+
+    if(Filenames.empty()) return true;
+
+    std::list<std::filesystem::path> Filenames_Copy(Filenames);
+    Filenames.clear();
+    for(const auto &fn : Filenames_Copy){
+        std::ifstream ifs(fn.string(), std::ios::in | std::ios::binary);
+        if(!ifs){
+            Filenames.emplace_back(fn);
+            continue;
+        }
+
+        const auto serialized = std::string( std::istreambuf_iterator<char>(ifs),
+                                             std::istreambuf_iterator<char>() );
+        if(serialized.empty()){
+            Filenames.emplace_back(fn);
+            continue;
+        }
+
+        Drover A;
+        if(Deserialize_Drover_From_Thrift_JSON(serialized, A)){
+            DICOM_data.Consume(A);
+            continue;
+        }
+
+        Filenames.emplace_back(fn);
+    }
+
+    return true;
+}
+#endif // DCMA_USE_THRIFT
+
 // This routine loads files. In order for it to return true, all files need to be successfully read.
 // If a file cannot be read, all others are tried before returning false.
 bool
@@ -169,6 +212,18 @@ Load_Files( Drover &DICOM_data,
             }
             return true;
         }});
+
+#ifdef DCMA_USE_THRIFT
+        //Standalone file loading: Apache Thrift Drover serializations.
+        loaders.emplace_back(file_loader_t{{".ts_dcma"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
+            if(!p.empty()
+            && !Load_From_Thrift_Serialization_Files( DICOM_data, p )){
+                YLOGWARN("Failed to load Apache Thrift Drover serialization");
+                return false;
+            }
+            return true;
+        }});
+#endif // DCMA_USE_THRIFT
 
         //Standalone file loading: DICOM files.
         loaders.emplace_back(file_loader_t{{".dcm"}, ++priority, [&](std::list<std::filesystem::path> &p) -> bool {
@@ -524,6 +579,7 @@ Load_Files( Drover &DICOM_data,
              || icase_str_eq(ext, ".xim")
              || icase_str_eq(ext, ".tar")
              || icase_str_eq(ext, ".tgz")
+             || icase_str_eq(ext, ".ts_dcma")
              || icase_str_eq(ext, ".gz")
              || icase_str_eq(ext, ".tar.gz")
              || icase_str_eq(ext, ".3ddose")
@@ -574,4 +630,3 @@ Load_Files( Drover &DICOM_data,
 
     return (Paths.empty() && !contained_unresolvable);
 }
-
