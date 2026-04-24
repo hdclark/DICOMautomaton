@@ -192,7 +192,7 @@ parse_boundary_contours(const std::string &boundary_spec){
     const auto regex_boundary = Compile_Regex("bo?u?n?d?a?r?y?|co?n?t?o?u?r?|po?l?y?g?o?n?|pa?t?h?");
 
     std::vector<named_boundary_contour> out;
-    int64_t unnamed_boundary_number = 0;
+    int64_t unnamed_boundary_count = 0;
     for(const auto &func : parsed){
         if(!std::regex_match(func.name, regex_boundary)){
             throw std::invalid_argument("BoundaryContours contains an unsupported boundary function");
@@ -205,7 +205,7 @@ parse_boundary_contours(const std::string &boundary_spec){
             boundary_name = func.parameters.front().raw;
             first_numeric = 1;
         }else{
-            boundary_name = "Boundary " + std::to_string(++unnamed_boundary_number);
+            boundary_name = "Unnamed Boundary " + std::to_string(++unnamed_boundary_count);
         }
 
         const auto remaining = func.parameters.size() - first_numeric;

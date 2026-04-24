@@ -35,20 +35,26 @@ TEST_CASE( "custom GPX boundary specifications are parsed" ){
 
     REQUIRE( boundaries.size() == 2 );
     CHECK( boundaries.at(0).name == "Test Area" );
-    CHECK( boundaries.at(1).name == "Boundary 1" );
+    CHECK( boundaries.at(1).name == "Unnamed Boundary 1" );
     CHECK( boundaries.at(0).contour.closed );
     CHECK( boundaries.at(1).contour.closed );
 }
 
 TEST_CASE( "open GPX contours split on debounced boundary crossings" ){
+    static constexpr double boundary_left = 1.0;
+    static constexpr double boundary_right = 3.0;
+    static constexpr double boundary_bottom = -1.0;
+    static constexpr double boundary_top = 1.0;
+    static constexpr double debounce_distance = 4.0;
+
     dcma::gpx::named_boundary_contour boundary;
     boundary.name = "Trailhead";
     boundary.contour.closed = true;
     boundary.contour.points = {
-        vec3<double>(1.0, -1.0, 0.0),
-        vec3<double>(3.0, -1.0, 0.0),
-        vec3<double>(3.0,  1.0, 0.0),
-        vec3<double>(1.0,  1.0, 0.0),
+        vec3<double>(boundary_left,  boundary_bottom, 0.0),
+        vec3<double>(boundary_right, boundary_bottom, 0.0),
+        vec3<double>(boundary_right, boundary_top,    0.0),
+        vec3<double>(boundary_left,  boundary_top,    0.0),
     };
 
     contour_of_points<double> track;
@@ -64,7 +70,7 @@ TEST_CASE( "open GPX contours split on debounced boundary crossings" ){
         vec3<double>(4.0, 0.0, 0.0),
     };
 
-    const auto segments = dcma::gpx::split_open_contour_on_boundary_crossings(track, { boundary }, 4.0);
+    const auto segments = dcma::gpx::split_open_contour_on_boundary_crossings(track, { boundary }, debounce_distance);
 
     REQUIRE( segments.size() == 4 );
     CHECK( segments.at(0).contour.points.size() == 2 );
