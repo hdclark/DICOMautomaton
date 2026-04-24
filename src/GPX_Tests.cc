@@ -66,11 +66,13 @@ TEST_CASE( "open GPX contours split on debounced boundary crossings" ){
 
     const auto segments = dcma::gpx::split_open_contour_on_boundary_crossings(track, { boundary }, 4.0);
 
-    REQUIRE( segments.size() == 3 );
+    REQUIRE( segments.size() == 4 );
     CHECK( segments.at(0).contour.points.size() == 2 );
-    CHECK( segments.at(1).contour.points.size() == 6 );
+    CHECK( segments.at(1).contour.points.size() == 5 );
     CHECK( segments.at(2).contour.points.size() == 2 );
+    CHECK( segments.at(3).contour.points.size() == 2 );
     CHECK( segments.at(0).location_name == "Trailhead" );
     CHECK( segments.at(1).location_name == "Trailhead" );
-    CHECK( segments.at(2).location_name == "Trailhead transit" );
+    CHECK( segments.at(2).location_name == "Trailhead" );
+    CHECK( segments.at(3).location_name == "Trailhead transit" );
 }
