@@ -125,12 +125,14 @@ Current behavior:
 - deserializes `Drover`, invocation metadata, filename lex state, and the script text,
 - parses the script with `Load_DCMA_Script`,
 - executes it through `Operation_Dispatcher`,
-- serializes the resulting state back to the client.
+- returns a response with the required `success` flag, but does not currently expose the updated `Drover`, invocation metadata, or filename lex state back to the client in a reliably serialized way.
 
 Implications:
 
 - this is the only current path that can actually invoke DICOMautomaton functionality remotely,
 - the remote execution scope is the dispatcher itself, not a purpose-built RPC API,
+- although execution occurs server-side, clients should currently treat `ExecuteScript` as effectively returning only success/failure rather than a fully materialized post-execution state,
+- the gap between the schema and the current response population should be treated as an implementation limitation (or bug) if round-tripping state is desired,
 - once a custom client can provide arbitrary script text, the remote surface becomes “any operation the server build exposes”.
 
 ### Scope of `RPCReceive` and `RPCSend`
