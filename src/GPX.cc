@@ -35,12 +35,12 @@ std::string
 canonicalize_boundary_spec(std::string in){
     in.erase( std::remove_if(std::begin(in), std::end(in),
                              [](unsigned char c){
-                                 return !std::isalnum(static_cast<unsigned char>(c));
+                                 return !std::isalnum(c);
                              }),
               std::end(in) );
     std::transform(std::begin(in), std::end(in), std::begin(in),
                    [](unsigned char c){
-                       return static_cast<char>(std::tolower(c));
+                       return std::tolower(c);
                    } );
     return in;
 }
