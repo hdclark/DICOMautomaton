@@ -734,8 +734,6 @@ void Serialize( const Drover &in, dcma::rpc::Drover &out ){
     }
 
     if(in.Has_Tran3_Data()){
-        throw std::runtime_error("Transform data is not yet supported. Refusing to continue");
-
         std::vector<dcma::rpc::Transform3> shtl;
         for(const auto& ptr : in.trans_data){
             shtl.emplace_back();
