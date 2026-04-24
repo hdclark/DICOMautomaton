@@ -23,6 +23,7 @@ namespace {
 
 using named_boundary_contour_t = dcma::gpx::named_boundary_contour;
 using split_open_contour_segment_t = dcma::gpx::split_open_contour_segment;
+static const std::string unnamed_boundary_prefix = "Unnamed Boundary ";
 
 plane<double>
 boundary_plane(){
@@ -204,7 +205,7 @@ parse_boundary_contours(const std::string &boundary_spec){
             boundary_name = func.parameters.front().raw;
             first_numeric = 1;
         }else{
-            boundary_name = "Unnamed Boundary " + std::to_string(++unnamed_boundary_count);
+            boundary_name = unnamed_boundary_prefix + std::to_string(++unnamed_boundary_count);
         }
 
         const auto remaining = func.parameters.size() - first_numeric;
