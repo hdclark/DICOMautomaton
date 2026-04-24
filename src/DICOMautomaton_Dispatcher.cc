@@ -569,13 +569,20 @@ try{
     if(stdout_is_redirected){
         std::string serialized;
         if(!Serialize_Drover_To_Thrift_JSON(DICOM_data, serialized)){
-            throw std::runtime_error("Unable to serialize Drover to stdout");
+            if(DICOM_data.Has_Tran3_Data()){
+                std::cerr << "Warning: skipping automatic stdout serialization because Apache Thrift Transform3 support is unavailable"
+                          << std::endl;
+            }else{
+                throw std::runtime_error("Unable to serialize Drover to stdout");
+            }
         }
 
-        std::cout.write(serialized.data(), static_cast<std::streamsize>(serialized.size()));
-        std::cout.flush();
-        if(!std::cout){
-            throw std::runtime_error("Unable to write Drover to stdout");
+        if(!serialized.empty()){
+            std::cout.write(serialized.data(), static_cast<std::streamsize>(serialized.size()));
+            std::cout.flush();
+            if(!std::cout){
+                throw std::runtime_error("Unable to write Drover to stdout");
+            }
         }
     }
 #endif // DCMA_USE_THRIFT
