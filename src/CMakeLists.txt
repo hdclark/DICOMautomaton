@@ -39,6 +39,12 @@ set_target_properties(  Tables_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 add_library(            GIS_obj OBJECT GIS.cc)
 set_target_properties(  GIS_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            GPX_obj OBJECT GPX.cc)
+set_target_properties(  GPX_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+add_library(            GPX_Tests_obj OBJECT GPX_Tests.cc)
+set_target_properties(  GPX_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Partition_Drover_obj OBJECT Partition_Drover.cc)
 set_target_properties(  Partition_Drover_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -473,6 +479,7 @@ add_executable (dicomautomaton_dispatcher
     $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:ARAP_Meshes_Tests_obj>>
     $<$<BOOL:${WITH_SYCL_FALLBACK}>:$<TARGET_OBJECTS:SYCL_Fallback_Tests_obj>>
     $<TARGET_OBJECTS:DCMA_DICOM_Tests_obj>
+    $<TARGET_OBJECTS:GPX_Tests_obj>
     $<TARGET_OBJECTS:Colour_Maps_obj>
     $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
     $<TARGET_OBJECTS:Common_Plotting_obj>
@@ -485,6 +492,7 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:String_Parsing_obj>
     $<TARGET_OBJECTS:Metadata_obj>
     $<TARGET_OBJECTS:CSG_SDF_obj>
+    $<TARGET_OBJECTS:GPX_obj>
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:Challenges_objs>>
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:GLSL_Shaders_obj>>
@@ -592,6 +600,7 @@ if(WITH_WT)
         $<$<BOOL:${WITH_EIGEN}>:$<TARGET_OBJECTS:ARAP_Meshes_Tests_obj>>
         $<$<BOOL:${WITH_SYCL_FALLBACK}>:$<TARGET_OBJECTS:SYCL_Fallback_Tests_obj>>
         $<TARGET_OBJECTS:DCMA_DICOM_Tests_obj>
+        $<TARGET_OBJECTS:GPX_Tests_obj>
         $<TARGET_OBJECTS:Colour_Maps_obj>
         $<TARGET_OBJECTS:Common_Boost_Serialization_obj>
         $<TARGET_OBJECTS:Common_Plotting_obj>
@@ -604,6 +613,7 @@ if(WITH_WT)
         $<TARGET_OBJECTS:String_Parsing_obj>
         $<TARGET_OBJECTS:Metadata_obj>
         $<TARGET_OBJECTS:CSG_SDF_obj>
+        $<TARGET_OBJECTS:GPX_obj>
         $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
         $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:Challenges_objs>>
         $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:GLSL_Shaders_obj>>
@@ -870,4 +880,3 @@ if(WITH_GNU_GSL)
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
 endif()
-
