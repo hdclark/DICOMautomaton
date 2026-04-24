@@ -79,8 +79,9 @@ The current in-repo flow is:
 4. serialize a `Drover`, invocation metadata, and filename lexicon state,
 5. send them to `ExecuteScript`,
 6. run a hard-coded `noop();` remotely,
-7. deserialize the returned state.
+7. deserialize an `ExecuteScriptResponse`, which currently does **not** carry the updated optional payload fields on the wire.
 
+More specifically, the `RPCReceive` handler currently assigns `_return.drover`, `_return.invocation_metadata`, and `_return.filename_lex` but does not mark those optional fields as present via the generated `__isset` flags or `__set_*` helpers. As a result, Thrift omits them from the serialized response. `RPCSend` therefore deserializes default-valued fields rather than the remotely updated state, which can also clobber the caller's local state on an otherwise successful round trip.
 So, although the Thrift service can in principle run arbitrary scripts, the shipped `RPCSend` operation currently behaves like a connectivity and round-trip test more than a general-purpose remote execution client.
 
 ## What the Thrift methods currently do
