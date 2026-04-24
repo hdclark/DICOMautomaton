@@ -143,7 +143,9 @@ bool SplitGPX(Drover &DICOM_data,
 
             auto &new_contour = new_cc.contours.back();
             const auto output_label_root = base_roi_name + " - " + segment.location_name;
-            const auto output_label = output_label_root + " - " + std::to_string(++name_counts[output_label_root]);
+            auto &name_count = name_counts[output_label_root];
+            ++name_count;
+            const auto output_label = output_label_root + " - " + std::to_string(name_count);
 
             new_contour.metadata["ROIName"] = output_label;
             new_contour.metadata["NormalizedROIName"] = X(output_label);

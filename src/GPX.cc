@@ -34,7 +34,7 @@ std::string
 canonicalize_boundary_spec(std::string in){
     in.erase( std::remove_if(std::begin(in), std::end(in),
                              [](unsigned char c){
-                                 return !std::isalnum(c);
+                                 return !std::isalnum(static_cast<unsigned char>(c));
                              }),
               std::end(in) );
     std::transform(std::begin(in), std::end(in), std::begin(in),
@@ -104,8 +104,7 @@ classify_segment_location(const contour_of_points<double> &segment,
     }
 
     const auto best_count_it = std::max_element(std::begin(inside_counts), std::end(inside_counts));
-    if( (best_count_it != std::end(inside_counts))
-    &&  ( (2 * (*best_count_it)) > static_cast<int64_t>(segment.points.size()) ) ){
+    if( (2 * (*best_count_it)) > static_cast<int64_t>(segment.points.size()) ){
         const auto idx = static_cast<size_t>(std::distance(std::begin(inside_counts), best_count_it));
         return boundaries.at(idx).name;
     }
@@ -271,8 +270,7 @@ split_open_contour_on_boundary_crossings(const contour_of_points<double> &track,
         }
 
         const auto current_membership = point_boundary_membership(curr, boundaries);
-        const auto boundary_crossed = std::mismatch(std::begin(previous_membership), std::end(previous_membership),
-                                                    std::begin(current_membership)).first != std::end(previous_membership);
+        const auto boundary_crossed = (previous_membership != current_membership);
 
         if(boundary_crossed && split_is_armed){
             if(2 <= current_segment.points.size()){
