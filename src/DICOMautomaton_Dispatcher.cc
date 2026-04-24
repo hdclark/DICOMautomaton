@@ -92,10 +92,11 @@ bool stream_is_pipe_like(FILE *stream){
 }
 
 std::filesystem::path make_temporary_stdin_path(){
+    constexpr int64_t max_attempts = 32;
     std::random_device rd;
     std::mt19937_64 rng(rd());
 
-    for(int64_t i = 0; i < 32; ++i){
+    for(int64_t i = 0; i < max_attempts; ++i){
         const auto token = std::to_string( std::chrono::steady_clock::now().time_since_epoch().count() )
                          + "_" + std::to_string(rng());
         const auto p = std::filesystem::temp_directory_path() / ("dcma_stdin_" + token);
