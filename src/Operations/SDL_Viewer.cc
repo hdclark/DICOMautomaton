@@ -1557,10 +1557,7 @@ bool SDL_Viewer(Drover &DICOM_data,
         }
 
         Sketch& current(){
-            if(versions.empty()){
-                versions.emplace_back();
-                current_version = 0U;
-            }
+            if(versions.empty()) throw std::logic_error("Sketch history is empty");
             current_version = std::min<std::size_t>(current_version, versions.size() - 1U);
             return versions.at(current_version);
         }
@@ -5992,14 +5989,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
 
                 if(ImGui::BeginPopupModal("Save Sketch", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
-                    ImGui::Text("Sketch save support is not implemented yet.");
+                    ImGui::Text("Sketch save is currently a placeholder.\nA persistent on-disk sketch format will be added later.");
                     if(ImGui::Button("OK")){
                         ImGui::CloseCurrentPopup();
                     }
                     ImGui::EndPopup();
                 }
                 if(ImGui::BeginPopupModal("Open Sketch", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
-                    ImGui::Text("Sketch load support is not implemented yet.");
+                    ImGui::Text("Sketch load is currently a placeholder.\nPersistent sketch import support will be added later.");
                     if(ImGui::Button("OK")){
                         ImGui::CloseCurrentPopup();
                     }
@@ -9299,31 +9296,34 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     if(sketch_pending_primitive.points.size() == sketch_pending_primitive.required_points()){
                                         auto &editable_sketch = create_sketch_snapshot(disp_img_it);
                                         std::size_t primitive_idx = 0U;
-                                        if(false){
-                                        }else if(sketch_pending_primitive.kind.value() == Sketch::primitive_kind_t::vertex){
-                                            primitive_idx = editable_sketch.add_vertex_primitive(sketch_pending_primitive.points.at(0),
-                                                                                                 sketch_pending_primitive.tag);
-                                        }else if(sketch_pending_primitive.kind.value() == Sketch::primitive_kind_t::line){
-                                            primitive_idx = editable_sketch.add_line(sketch_pending_primitive.points.at(0),
-                                                                                     sketch_pending_primitive.points.at(1),
-                                                                                     sketch_pending_primitive.tag);
-                                        }else if(sketch_pending_primitive.kind.value() == Sketch::primitive_kind_t::circle){
-                                            primitive_idx = editable_sketch.add_circle(sketch_pending_primitive.points.at(0),
-                                                                                       sketch_pending_primitive.points.at(1),
-                                                                                       sketch_pending_primitive.tag);
-                                        }else if(sketch_pending_primitive.kind.value() == Sketch::primitive_kind_t::arc){
-                                            primitive_idx = editable_sketch.add_arc(sketch_pending_primitive.points.at(0),
-                                                                                    sketch_pending_primitive.points.at(1),
-                                                                                    sketch_pending_primitive.points.at(2),
-                                                                                    sketch_pending_primitive.tag);
-                                        }else if(sketch_pending_primitive.kind.value() == Sketch::primitive_kind_t::bezier){
-                                            primitive_idx = editable_sketch.add_bezier({ sketch_pending_primitive.points.at(0),
+                                        switch(sketch_pending_primitive.kind.value()){
+                                            case Sketch::primitive_kind_t::vertex:
+                                                primitive_idx = editable_sketch.add_vertex_primitive(sketch_pending_primitive.points.at(0),
+                                                                                                     sketch_pending_primitive.tag);
+                                                break;
+                                            case Sketch::primitive_kind_t::line:
+                                                primitive_idx = editable_sketch.add_line(sketch_pending_primitive.points.at(0),
                                                                                          sketch_pending_primitive.points.at(1),
-                                                                                         sketch_pending_primitive.points.at(2),
-                                                                                         sketch_pending_primitive.points.at(3) },
-                                                                                       sketch_pending_primitive.tag);
-                                        }else{
-                                            throw std::logic_error("Unhandled sketch primitive type");
+                                                                                         sketch_pending_primitive.tag);
+                                                break;
+                                            case Sketch::primitive_kind_t::circle:
+                                                primitive_idx = editable_sketch.add_circle(sketch_pending_primitive.points.at(0),
+                                                                                           sketch_pending_primitive.points.at(1),
+                                                                                           sketch_pending_primitive.tag);
+                                                break;
+                                            case Sketch::primitive_kind_t::arc:
+                                                primitive_idx = editable_sketch.add_arc(sketch_pending_primitive.points.at(0),
+                                                                                        sketch_pending_primitive.points.at(1),
+                                                                                        sketch_pending_primitive.points.at(2),
+                                                                                        sketch_pending_primitive.tag);
+                                                break;
+                                            case Sketch::primitive_kind_t::bezier:
+                                                primitive_idx = editable_sketch.add_bezier({ sketch_pending_primitive.points.at(0),
+                                                                                             sketch_pending_primitive.points.at(1),
+                                                                                             sketch_pending_primitive.points.at(2),
+                                                                                             sketch_pending_primitive.points.at(3) },
+                                                                                           sketch_pending_primitive.tag);
+                                                break;
                                         }
                                         slot.selection = { primitive_idx };
                                         sketch_last_unresolved_constraints = {};
