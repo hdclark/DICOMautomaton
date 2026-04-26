@@ -25,15 +25,6 @@ Sketch::projection_t cubic_bezier_point(const Sketch::projection_t &p0,
              (b0 * p0.v) + (b1 * p1.v) + (b2 * p2.v) + (b3 * p3.v) };
 }
 
-template <class T>
-static void clamp_index_in_place(T &idx, std::size_t count){
-    if(count == 0U){
-        idx = 0U;
-    }else{
-        idx = static_cast<T>(std::min<std::size_t>(static_cast<std::size_t>(idx), count - 1U));
-    }
-}
-
 static void remap_primitive_vertices(Sketch::primitive_t &primitive,
                                      Sketch::vertex_index_t removed_vertex){
     if(auto *vertex_primitive = dynamic_cast<Sketch::vertex_primitive_t*>(&primitive); vertex_primitive != nullptr){
@@ -659,6 +650,7 @@ Sketch::primitives_inside_box(const vec3<double> &a, const vec3<double> &b) cons
 
     for(std::size_t i = 0U; i < primitives_.size(); ++i){
         const auto bounds = primitive_bounds(i);
+        if(!bounds.is_valid()) continue;
         if(selection.contains(bounds)){
             out.push_back(i);
         }

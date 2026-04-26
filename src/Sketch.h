@@ -54,6 +54,7 @@ public:
     };
 
     struct bounding_box_t {
+        // Invalid-until-populated sentinel bounds. Call is_valid() before use when needed.
         projection_t min = {  std::numeric_limits<double>::infinity(),  std::numeric_limits<double>::infinity() };
         projection_t max = { -std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity() };
 

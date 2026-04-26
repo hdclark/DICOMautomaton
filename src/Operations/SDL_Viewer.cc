@@ -6196,6 +6196,11 @@ bool SDL_Viewer(Drover &DICOM_data,
                     }
 
                     if(ImGui::BeginChild("##sketch_debug_state", ImVec2(950.0f, 520.0f), true)){
+                        const auto clamp_debug_index = [](int idx, std::size_t count) -> std::size_t {
+                            if(count == 0U) return 0U;
+                            return static_cast<std::size_t>(std::clamp(idx, 0, static_cast<int>(count - 1U)));
+                        };
+
                         ImGui::SeparatorText("Vertices");
                         for(std::size_t vertex_idx = 0U; vertex_idx < slot.history.current().vertex_count(); ++vertex_idx){
                             const auto v = slot.history.current().vertex(vertex_idx);
@@ -6238,10 +6243,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                             if(primitive == nullptr) continue;
 
                             const auto vertex_count = slot.history.current().vertex_count();
-                            const auto clamp_vertex_idx = [vertex_count](int idx) -> std::size_t {
-                                if(vertex_count == 0U) return 0U;
-                                return static_cast<std::size_t>(std::clamp(idx, 0, static_cast<int>(vertex_count - 1U)));
-                            };
 
                             ImGui::PushID(static_cast<int>(primitive_idx));
                             ImGui::Text("Primitive %zu (%s)", primitive_idx, kind_to_string(primitive->kind()));
@@ -6276,7 +6277,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 if(primitive_changed){
                                     edit_current_sketch([&](Sketch &editable_sketch){
                                         if(auto *editable_primitive = dynamic_cast<Sketch::vertex_primitive_t*>(editable_sketch.primitive(primitive_idx)); editable_primitive != nullptr){
-                                            editable_primitive->vertex = clamp_vertex_idx(vertex_ref);
+                                            editable_primitive->vertex = clamp_debug_index(vertex_ref, vertex_count);
                                             editable_sketch.refresh_geometry();
                                         }
                                     });
@@ -6294,8 +6295,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 if(primitive_changed){
                                     edit_current_sketch([&](Sketch &editable_sketch){
                                         if(auto *editable_primitive = dynamic_cast<Sketch::line_primitive_t*>(editable_sketch.primitive(primitive_idx)); editable_primitive != nullptr){
-                                            editable_primitive->vertices[0] = clamp_vertex_idx(v0);
-                                            editable_primitive->vertices[1] = clamp_vertex_idx(v1);
+                                            editable_primitive->vertices[0] = clamp_debug_index(v0, vertex_count);
+                                            editable_primitive->vertices[1] = clamp_debug_index(v1, vertex_count);
                                             editable_sketch.refresh_geometry();
                                         }
                                     });
@@ -6317,8 +6318,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 if(primitive_changed){
                                     edit_current_sketch([&](Sketch &editable_sketch){
                                         if(auto *editable_primitive = dynamic_cast<Sketch::circle_primitive_t*>(editable_sketch.primitive(primitive_idx)); editable_primitive != nullptr){
-                                            editable_primitive->center = clamp_vertex_idx(center_idx);
-                                            editable_primitive->radius_point = clamp_vertex_idx(radius_idx);
+                                            editable_primitive->center = clamp_debug_index(center_idx, vertex_count);
+                                            editable_primitive->radius_point = clamp_debug_index(radius_idx, vertex_count);
                                             const auto centre = editable_sketch.vertex(editable_primitive->center);
                                             auto dir = editable_sketch.vertex(editable_primitive->radius_point) - centre;
                                             if(dir.sq_length() <= std::numeric_limits<double>::epsilon()){
@@ -6357,9 +6358,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 if(primitive_changed){
                                     edit_current_sketch([&](Sketch &editable_sketch){
                                         if(auto *editable_primitive = dynamic_cast<Sketch::arc_primitive_t*>(editable_sketch.primitive(primitive_idx)); editable_primitive != nullptr){
-                                            editable_primitive->center = clamp_vertex_idx(center_idx);
-                                            editable_primitive->start = clamp_vertex_idx(start_idx);
-                                            editable_primitive->stop = clamp_vertex_idx(stop_idx);
+                                            editable_primitive->center = clamp_debug_index(center_idx, vertex_count);
+                                            editable_primitive->start = clamp_debug_index(start_idx, vertex_count);
+                                            editable_primitive->stop = clamp_debug_index(stop_idx, vertex_count);
                                             const auto centre = editable_sketch.vertex(editable_primitive->center);
                                             const auto r = std::max(radius, 0.0);
                                             const auto &plane = editable_sketch.plane();
@@ -6392,10 +6393,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 if(primitive_changed){
                                     edit_current_sketch([&](Sketch &editable_sketch){
                                         if(auto *editable_primitive = dynamic_cast<Sketch::bezier_primitive_t*>(editable_sketch.primitive(primitive_idx)); editable_primitive != nullptr){
-                                            editable_primitive->control_vertices[0] = clamp_vertex_idx(v0);
-                                            editable_primitive->control_vertices[1] = clamp_vertex_idx(v1);
-                                            editable_primitive->control_vertices[2] = clamp_vertex_idx(v2);
-                                            editable_primitive->control_vertices[3] = clamp_vertex_idx(v3);
+                                            editable_primitive->control_vertices[0] = clamp_debug_index(v0, vertex_count);
+                                            editable_primitive->control_vertices[1] = clamp_debug_index(v1, vertex_count);
+                                            editable_primitive->control_vertices[2] = clamp_debug_index(v2, vertex_count);
+                                            editable_primitive->control_vertices[3] = clamp_debug_index(v3, vertex_count);
                                             editable_sketch.refresh_geometry();
                                         }
                                     });
@@ -6412,10 +6413,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                             if(constraint == nullptr) continue;
 
                             const auto primitive_count = slot.history.current().primitive_count();
-                            const auto clamp_primitive_idx = [primitive_count](int idx) -> std::size_t {
-                                if(primitive_count == 0U) return 0U;
-                                return static_cast<std::size_t>(std::clamp(idx, 0, static_cast<int>(primitive_count - 1U)));
-                            };
 
                             ImGui::PushID(static_cast<int>(constraint_idx));
                             ImGui::Text("Constraint %zu (%s)", constraint_idx, slot.history.current().describe_constraint(constraint_idx).c_str());
@@ -6447,7 +6444,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 if(changed){
                                     edit_current_sketch([&](Sketch &editable_sketch){
                                         if(auto *editable_constraint = dynamic_cast<Sketch::horizontal_constraint_t*>(editable_sketch.constraint(constraint_idx)); editable_constraint != nullptr){
-                                            editable_constraint->line = clamp_primitive_idx(line_idx);
+                                            editable_constraint->line = clamp_debug_index(line_idx, primitive_count);
                                         }
                                     });
                                     ImGui::PopID();
@@ -6460,7 +6457,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 if(changed){
                                     edit_current_sketch([&](Sketch &editable_sketch){
                                         if(auto *editable_constraint = dynamic_cast<Sketch::vertical_constraint_t*>(editable_sketch.constraint(constraint_idx)); editable_constraint != nullptr){
-                                            editable_constraint->line = clamp_primitive_idx(line_idx);
+                                            editable_constraint->line = clamp_debug_index(line_idx, primitive_count);
                                         }
                                     });
                                     ImGui::PopID();
@@ -6477,7 +6474,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 if(changed){
                                     edit_current_sketch([&](Sketch &editable_sketch){
                                         if(auto *editable_constraint = dynamic_cast<Sketch::distance_constraint_t*>(editable_sketch.constraint(constraint_idx)); editable_constraint != nullptr){
-                                            editable_constraint->line = clamp_primitive_idx(line_idx);
+                                            editable_constraint->line = clamp_debug_index(line_idx, primitive_count);
                                             editable_constraint->target_distance = target_distance;
                                         }
                                     });
@@ -6495,8 +6492,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 if(changed){
                                     edit_current_sketch([&](Sketch &editable_sketch){
                                         if(auto *editable_constraint = dynamic_cast<Sketch::parallel_constraint_t*>(editable_sketch.constraint(constraint_idx)); editable_constraint != nullptr){
-                                            editable_constraint->line_a = clamp_primitive_idx(line_a);
-                                            editable_constraint->line_b = clamp_primitive_idx(line_b);
+                                            editable_constraint->line_a = clamp_debug_index(line_a, primitive_count);
+                                            editable_constraint->line_b = clamp_debug_index(line_b, primitive_count);
                                         }
                                     });
                                     ImGui::PopID();
@@ -6513,8 +6510,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 if(changed){
                                     edit_current_sketch([&](Sketch &editable_sketch){
                                         if(auto *editable_constraint = dynamic_cast<Sketch::tangent_constraint_t*>(editable_sketch.constraint(constraint_idx)); editable_constraint != nullptr){
-                                            editable_constraint->primitive_a = clamp_primitive_idx(primitive_a);
-                                            editable_constraint->primitive_b = clamp_primitive_idx(primitive_b);
+                                            editable_constraint->primitive_a = clamp_debug_index(primitive_a, primitive_count);
+                                            editable_constraint->primitive_b = clamp_debug_index(primitive_b, primitive_count);
                                         }
                                     });
                                     ImGui::PopID();
