@@ -101,6 +101,12 @@ set_target_properties(  Regex_Selectors_obj PROPERTIES POSITION_INDEPENDENT_CODE
 add_library(            String_Parsing_obj OBJECT String_Parsing.cc )
 set_target_properties(  String_Parsing_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
+add_library(            Sketch_obj OBJECT Sketch.cc )
+set_target_properties(  Sketch_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
+add_library(            Sketch_Tests_obj OBJECT Sketch_Tests.cc )
+set_target_properties(  Sketch_Tests_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
+
 add_library(            Metadata_obj OBJECT Metadata.cc )
 set_target_properties(  Metadata_obj PROPERTIES POSITION_INDEPENDENT_CODE TRUE )
 
@@ -483,6 +489,8 @@ add_executable (dicomautomaton_dispatcher
     $<TARGET_OBJECTS:Simple_Meshing_obj>
     $<TARGET_OBJECTS:Regex_Selectors_obj>
     $<TARGET_OBJECTS:String_Parsing_obj>
+    $<TARGET_OBJECTS:Sketch_obj>
+    $<TARGET_OBJECTS:Sketch_Tests_obj>
     $<TARGET_OBJECTS:Metadata_obj>
     $<TARGET_OBJECTS:CSG_SDF_obj>
     $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
@@ -602,6 +610,8 @@ if(WITH_WT)
         $<TARGET_OBJECTS:Simple_Meshing_obj>
         $<TARGET_OBJECTS:Regex_Selectors_obj>
         $<TARGET_OBJECTS:String_Parsing_obj>
+        $<TARGET_OBJECTS:Sketch_obj>
+        $<TARGET_OBJECTS:Sketch_Tests_obj>
         $<TARGET_OBJECTS:Metadata_obj>
         $<TARGET_OBJECTS:CSG_SDF_obj>
         $<$<BOOL:${WITH_SDL}>:$<TARGET_OBJECTS:IMGui_objs>>
@@ -870,4 +880,3 @@ if(WITH_GNU_GSL)
             RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
 endif()
-
