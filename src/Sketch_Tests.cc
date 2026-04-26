@@ -16,6 +16,14 @@ static Sketch::plane_frame_t default_xy_plane(){
     return out;
 }
 
+static Sketch::plane_frame_t default_xz_plane(){
+    Sketch::plane_frame_t out;
+    out.origin = vec3<double>(0.0, 0.0, 0.0);
+    out.row_unit = vec3<double>(1.0, 0.0, 0.0);
+    out.col_unit = vec3<double>(0.0, 0.0, 1.0);
+    return out;
+}
+
 }
 
 TEST_CASE("Sketch stores indexed primitives"){
@@ -107,4 +115,40 @@ TEST_CASE("Sketch snapshots preserve state"){
     REQUIRE( snapshot.vertex_count() == sketch.vertex_count() );
     REQUIRE( snapshot.vertex(0U).x == doctest::Approx(0.0) );
     REQUIRE( sketch.vertex(0U).x == doctest::Approx(5.0) );
+}
+
+TEST_CASE("Sketch set_plane refreshes derived arc geometry"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+    const auto arc_idx = sketch.add_arc(vec3<double>(0.0, 0.0, 0.0),
+                                        vec3<double>(1.0, 0.0, 0.0),
+                                        vec3<double>(0.0, 0.0, 1.0),
+                                        Sketch::geometry_tag_t::normal);
+
+    sketch.set_plane(default_xz_plane());
+
+    const auto samples = sketch.sample_primitive(arc_idx, 8U);
+    REQUIRE( !samples.empty() );
+    REQUIRE( samples.front().x == doctest::Approx(1.0).epsilon(1E-6) );
+    REQUIRE( samples.front().z == doctest::Approx(0.0).epsilon(1E-6) );
+    REQUIRE( samples.back().x == doctest::Approx(0.0).epsilon(1E-6) );
+    REQUIRE( samples.back().z == doctest::Approx(1.0).epsilon(1E-6) );
+}
+
+TEST_CASE("Sketch deleting a vertex removes dependent primitives and constraints"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+    const auto line_idx = sketch.add_line(vec3<double>(0.0, 0.0, 0.0),
+                                          vec3<double>(2.0, 0.0, 0.0),
+                                          Sketch::geometry_tag_t::normal);
+    sketch.add_horizontal_constraint(line_idx);
+
+    REQUIRE( sketch.vertex_count() == 2U );
+    REQUIRE( sketch.primitive_count() == 1U );
+    REQUIRE( sketch.constraint_count() == 1U );
+
+    REQUIRE( sketch.delete_vertex(0U) );
+    REQUIRE( sketch.vertex_count() == 1U );
+    REQUIRE( sketch.primitive_count() == 0U );
+    REQUIRE( sketch.constraint_count() == 0U );
 }

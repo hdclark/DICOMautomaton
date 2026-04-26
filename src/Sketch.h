@@ -54,9 +54,10 @@ public:
     };
 
     struct bounding_box_t {
-        projection_t min;
-        projection_t max;
+        projection_t min = {  std::numeric_limits<double>::infinity(),  std::numeric_limits<double>::infinity() };
+        projection_t max = { -std::numeric_limits<double>::infinity(), -std::numeric_limits<double>::infinity() };
 
+        bool is_valid() const;
         bool contains(const projection_t &p) const;
         bool contains(const bounding_box_t &b) const;
     };
@@ -195,8 +196,11 @@ public:
     std::size_t primitive_count() const;
     std::size_t constraint_count() const;
 
+    vec3<double>& vertex(vertex_index_t idx);
     const vec3<double>& vertex(vertex_index_t idx) const;
+    primitive_t* primitive(primitive_index_t idx);
     const primitive_t* primitive(primitive_index_t idx) const;
+    constraint_t* constraint(constraint_index_t idx);
     const constraint_t* constraint(constraint_index_t idx) const;
 
     bounding_box_t primitive_bounds(primitive_index_t idx) const;
@@ -212,6 +216,14 @@ public:
 
     void set_vertex(vertex_index_t idx, const vec3<double> &point);
     void translate_vertices(const std::set<vertex_index_t> &indices, const vec3<double> &delta);
+    void refresh_geometry();
+
+    bool delete_vertex(vertex_index_t idx);
+    bool delete_primitive(primitive_index_t idx);
+    bool delete_constraint(constraint_index_t idx);
+    void clear_vertices();
+    void clear_primitives();
+    void clear_constraints();
 
     constraint_index_t add_horizontal_constraint(primitive_index_t line_idx);
     constraint_index_t add_vertical_constraint(primitive_index_t line_idx);

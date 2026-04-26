@@ -5923,8 +5923,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                 if( sketch_drag_state.selection_box_active
                 &&  sketch_drag_state.anchor
                 &&  sketch_drag_state.last_pos ){
-                    const auto ul = image_mouse_pos.DICOM_to_pixels(sketch_drag_state.anchor.value());
-                    const auto lr = image_mouse_pos.DICOM_to_pixels(sketch_drag_state.last_pos.value());
+                    const auto p0 = image_mouse_pos.DICOM_to_pixels(sketch_drag_state.anchor.value());
+                    const auto p1 = image_mouse_pos.DICOM_to_pixels(sketch_drag_state.last_pos.value());
+                    const ImVec2 ul(std::min(p0.x, p1.x), std::min(p0.y, p1.y));
+                    const ImVec2 lr(std::max(p0.x, p1.x), std::max(p0.y, p1.y));
                     imgs_window_draw_list->AddRect(ul, lr, ImColor(1.0f, 1.0f, 0.2f, 1.0f));
                 }
             }else if(!view_toggles.view_vector_sketching_enabled){
@@ -6138,6 +6140,396 @@ bool SDL_Viewer(Drover &DICOM_data,
                     }else{
                         sketch_last_unresolved_constraints = 0U;
                     }
+                }
+
+                ImGui::Separator();
+                if(ImGui::Button("Debugging")){
+                    ImGui::OpenPopup("Sketch Debugging");
+                }
+                if(ImGui::BeginPopupModal("Sketch Debugging", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+                    const auto to_tag_index = [](Sketch::geometry_tag_t tag) -> int {
+                        return (tag == Sketch::geometry_tag_t::support) ? 1 : 0;
+                    };
+                    const auto to_tag_value = [](int tag_idx) -> Sketch::geometry_tag_t {
+                        return (tag_idx == 1) ? Sketch::geometry_tag_t::support : Sketch::geometry_tag_t::normal;
+                    };
+                    const auto kind_to_string = [](Sketch::primitive_kind_t kind) -> const char* {
+                        switch(kind){
+                            case Sketch::primitive_kind_t::vertex: return "vertex";
+                            case Sketch::primitive_kind_t::line:   return "line";
+                            case Sketch::primitive_kind_t::circle: return "circle";
+                            case Sketch::primitive_kind_t::arc:    return "arc";
+                            case Sketch::primitive_kind_t::bezier: return "bezier";
+                        }
+                        return "unknown";
+                    };
+                    const auto edit_current_sketch = [&](auto &&fn) -> void {
+                        auto &editable_sketch = create_sketch_snapshot(disp_img_it);
+                        fn(editable_sketch);
+                        slot.selection.clear();
+                        clear_sketch_interaction_state();
+                    };
+
+                    ImGui::Text("Editable sketch state");
+                    if(ImGui::Button("Delete all vertices")){
+                        edit_current_sketch([](Sketch &editable_sketch){
+                            editable_sketch.clear_vertices();
+                        });
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Delete all primitives")){
+                        edit_current_sketch([](Sketch &editable_sketch){
+                            editable_sketch.clear_primitives();
+                        });
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Delete all constraints")){
+                        edit_current_sketch([](Sketch &editable_sketch){
+                            editable_sketch.clear_constraints();
+                        });
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Reset Sketch")){
+                        edit_current_sketch([](Sketch &editable_sketch){
+                            editable_sketch.clear();
+                        });
+                    }
+
+                    if(ImGui::BeginChild("##sketch_debug_state", ImVec2(950.0f, 520.0f), true)){
+                        ImGui::SeparatorText("Vertices");
+                        for(std::size_t vertex_idx = 0U; vertex_idx < slot.history.current().vertex_count(); ++vertex_idx){
+                            const auto v = slot.history.current().vertex(vertex_idx);
+                            ImGui::PushID(static_cast<int>(vertex_idx));
+                            ImGui::Text("Vertex %zu", vertex_idx);
+                            ImGui::SameLine();
+                            double x = v.x;
+                            double y = v.y;
+                            double z = v.z;
+                            bool changed = false;
+                            ImGui::SetNextItemWidth(100.0f);
+                            changed = ImGui::InputDouble("x", &x) || changed;
+                            ImGui::SameLine();
+                            ImGui::SetNextItemWidth(100.0f);
+                            changed = ImGui::InputDouble("y", &y) || changed;
+                            ImGui::SameLine();
+                            ImGui::SetNextItemWidth(100.0f);
+                            changed = ImGui::InputDouble("z", &z) || changed;
+                            ImGui::SameLine();
+                            const bool delete_vertex_clicked = ImGui::Button("Delete");
+                            ImGui::PopID();
+
+                            if(changed){
+                                edit_current_sketch([&](Sketch &editable_sketch){
+                                    editable_sketch.set_vertex(vertex_idx, vec3<double>(x, y, z));
+                                });
+                                break;
+                            }
+                            if(delete_vertex_clicked){
+                                edit_current_sketch([&](Sketch &editable_sketch){
+                                    editable_sketch.delete_vertex(vertex_idx);
+                                });
+                                break;
+                            }
+                        }
+
+                        ImGui::SeparatorText("Primitives");
+                        for(std::size_t primitive_idx = 0U; primitive_idx < slot.history.current().primitive_count(); ++primitive_idx){
+                            const auto *primitive = slot.history.current().primitive(primitive_idx);
+                            if(primitive == nullptr) continue;
+
+                            const auto vertex_count = slot.history.current().vertex_count();
+                            const auto clamp_vertex_idx = [vertex_count](int idx) -> std::size_t {
+                                if(vertex_count == 0U) return 0U;
+                                return static_cast<std::size_t>(std::clamp(idx, 0, static_cast<int>(vertex_count - 1U)));
+                            };
+
+                            ImGui::PushID(static_cast<int>(primitive_idx));
+                            ImGui::Text("Primitive %zu (%s)", primitive_idx, kind_to_string(primitive->kind()));
+                            int tag_idx = to_tag_index(primitive->tag);
+                            ImGui::SetNextItemWidth(140.0f);
+                            const bool tag_changed = ImGui::Combo("Tag", &tag_idx, "normal\0support\0");
+                            ImGui::SameLine();
+                            const bool delete_primitive_clicked = ImGui::Button("Delete");
+
+                            if(tag_changed){
+                                edit_current_sketch([&](Sketch &editable_sketch){
+                                    if(auto *editable_primitive = editable_sketch.primitive(primitive_idx); editable_primitive != nullptr){
+                                        editable_primitive->tag = to_tag_value(tag_idx);
+                                    }
+                                });
+                                ImGui::PopID();
+                                break;
+                            }
+                            if(delete_primitive_clicked){
+                                edit_current_sketch([&](Sketch &editable_sketch){
+                                    editable_sketch.delete_primitive(primitive_idx);
+                                });
+                                ImGui::PopID();
+                                break;
+                            }
+
+                            bool primitive_changed = false;
+                            if(const auto *vertex_primitive = dynamic_cast<const Sketch::vertex_primitive_t*>(primitive); vertex_primitive != nullptr){
+                                int vertex_ref = static_cast<int>(vertex_primitive->vertex);
+                                ImGui::SetNextItemWidth(120.0f);
+                                primitive_changed = ImGui::InputInt("Vertex Index", &vertex_ref);
+                                if(primitive_changed){
+                                    edit_current_sketch([&](Sketch &editable_sketch){
+                                        if(auto *editable_primitive = dynamic_cast<Sketch::vertex_primitive_t*>(editable_sketch.primitive(primitive_idx)); editable_primitive != nullptr){
+                                            editable_primitive->vertex = clamp_vertex_idx(vertex_ref);
+                                            editable_sketch.refresh_geometry();
+                                        }
+                                    });
+                                    ImGui::PopID();
+                                    break;
+                                }
+                            }else if(const auto *line = dynamic_cast<const Sketch::line_primitive_t*>(primitive); line != nullptr){
+                                int v0 = static_cast<int>(line->vertices[0]);
+                                int v1 = static_cast<int>(line->vertices[1]);
+                                ImGui::SetNextItemWidth(120.0f);
+                                primitive_changed = ImGui::InputInt("Start Vertex", &v0);
+                                ImGui::SameLine();
+                                ImGui::SetNextItemWidth(120.0f);
+                                primitive_changed = ImGui::InputInt("Stop Vertex", &v1) || primitive_changed;
+                                if(primitive_changed){
+                                    edit_current_sketch([&](Sketch &editable_sketch){
+                                        if(auto *editable_primitive = dynamic_cast<Sketch::line_primitive_t*>(editable_sketch.primitive(primitive_idx)); editable_primitive != nullptr){
+                                            editable_primitive->vertices[0] = clamp_vertex_idx(v0);
+                                            editable_primitive->vertices[1] = clamp_vertex_idx(v1);
+                                            editable_sketch.refresh_geometry();
+                                        }
+                                    });
+                                    ImGui::PopID();
+                                    break;
+                                }
+                            }else if(const auto *circle = dynamic_cast<const Sketch::circle_primitive_t*>(primitive); circle != nullptr){
+                                int center_idx = static_cast<int>(circle->center);
+                                int radius_idx = static_cast<int>(circle->radius_point);
+                                double radius = circle->radius;
+                                ImGui::SetNextItemWidth(110.0f);
+                                primitive_changed = ImGui::InputInt("Center Vertex", &center_idx);
+                                ImGui::SameLine();
+                                ImGui::SetNextItemWidth(110.0f);
+                                primitive_changed = ImGui::InputInt("Radius Vertex", &radius_idx) || primitive_changed;
+                                ImGui::SameLine();
+                                ImGui::SetNextItemWidth(110.0f);
+                                primitive_changed = ImGui::InputDouble("Radius", &radius) || primitive_changed;
+                                if(primitive_changed){
+                                    edit_current_sketch([&](Sketch &editable_sketch){
+                                        if(auto *editable_primitive = dynamic_cast<Sketch::circle_primitive_t*>(editable_sketch.primitive(primitive_idx)); editable_primitive != nullptr){
+                                            editable_primitive->center = clamp_vertex_idx(center_idx);
+                                            editable_primitive->radius_point = clamp_vertex_idx(radius_idx);
+                                            const auto centre = editable_sketch.vertex(editable_primitive->center);
+                                            auto dir = editable_sketch.vertex(editable_primitive->radius_point) - centre;
+                                            if(dir.sq_length() <= std::numeric_limits<double>::epsilon()){
+                                                dir = editable_sketch.plane().row_unit;
+                                            }
+                                            editable_sketch.vertex(editable_primitive->radius_point) = centre + dir.unit() * std::max(radius, 0.0);
+                                            editable_sketch.refresh_geometry();
+                                        }
+                                    });
+                                    ImGui::PopID();
+                                    break;
+                                }
+                            }else if(const auto *arc = dynamic_cast<const Sketch::arc_primitive_t*>(primitive); arc != nullptr){
+                                int center_idx = static_cast<int>(arc->center);
+                                int start_idx = static_cast<int>(arc->start);
+                                int stop_idx = static_cast<int>(arc->stop);
+                                double radius = arc->radius;
+                                double start_angle = arc->start_angle;
+                                double stop_angle = arc->stop_angle;
+                                ImGui::SetNextItemWidth(95.0f);
+                                primitive_changed = ImGui::InputInt("Center", &center_idx);
+                                ImGui::SameLine();
+                                ImGui::SetNextItemWidth(95.0f);
+                                primitive_changed = ImGui::InputInt("Start", &start_idx) || primitive_changed;
+                                ImGui::SameLine();
+                                ImGui::SetNextItemWidth(95.0f);
+                                primitive_changed = ImGui::InputInt("Stop", &stop_idx) || primitive_changed;
+                                ImGui::SetNextItemWidth(100.0f);
+                                primitive_changed = ImGui::InputDouble("Radius", &radius) || primitive_changed;
+                                ImGui::SameLine();
+                                ImGui::SetNextItemWidth(100.0f);
+                                primitive_changed = ImGui::InputDouble("Start Angle", &start_angle) || primitive_changed;
+                                ImGui::SameLine();
+                                ImGui::SetNextItemWidth(100.0f);
+                                primitive_changed = ImGui::InputDouble("Stop Angle", &stop_angle) || primitive_changed;
+                                if(primitive_changed){
+                                    edit_current_sketch([&](Sketch &editable_sketch){
+                                        if(auto *editable_primitive = dynamic_cast<Sketch::arc_primitive_t*>(editable_sketch.primitive(primitive_idx)); editable_primitive != nullptr){
+                                            editable_primitive->center = clamp_vertex_idx(center_idx);
+                                            editable_primitive->start = clamp_vertex_idx(start_idx);
+                                            editable_primitive->stop = clamp_vertex_idx(stop_idx);
+                                            const auto centre = editable_sketch.vertex(editable_primitive->center);
+                                            const auto r = std::max(radius, 0.0);
+                                            const auto &plane = editable_sketch.plane();
+                                            editable_sketch.vertex(editable_primitive->start) = centre + plane.row_unit * (std::cos(start_angle) * r)
+                                                                                                      + plane.col_unit * (std::sin(start_angle) * r);
+                                            editable_sketch.vertex(editable_primitive->stop) = centre + plane.row_unit * (std::cos(stop_angle) * r)
+                                                                                                     + plane.col_unit * (std::sin(stop_angle) * r);
+                                            editable_sketch.refresh_geometry();
+                                        }
+                                    });
+                                    ImGui::PopID();
+                                    break;
+                                }
+                            }else if(const auto *bezier = dynamic_cast<const Sketch::bezier_primitive_t*>(primitive); bezier != nullptr){
+                                int v0 = static_cast<int>(bezier->control_vertices[0]);
+                                int v1 = static_cast<int>(bezier->control_vertices[1]);
+                                int v2 = static_cast<int>(bezier->control_vertices[2]);
+                                int v3 = static_cast<int>(bezier->control_vertices[3]);
+                                ImGui::SetNextItemWidth(90.0f);
+                                primitive_changed = ImGui::InputInt("P0", &v0);
+                                ImGui::SameLine();
+                                ImGui::SetNextItemWidth(90.0f);
+                                primitive_changed = ImGui::InputInt("P1", &v1) || primitive_changed;
+                                ImGui::SameLine();
+                                ImGui::SetNextItemWidth(90.0f);
+                                primitive_changed = ImGui::InputInt("P2", &v2) || primitive_changed;
+                                ImGui::SameLine();
+                                ImGui::SetNextItemWidth(90.0f);
+                                primitive_changed = ImGui::InputInt("P3", &v3) || primitive_changed;
+                                if(primitive_changed){
+                                    edit_current_sketch([&](Sketch &editable_sketch){
+                                        if(auto *editable_primitive = dynamic_cast<Sketch::bezier_primitive_t*>(editable_sketch.primitive(primitive_idx)); editable_primitive != nullptr){
+                                            editable_primitive->control_vertices[0] = clamp_vertex_idx(v0);
+                                            editable_primitive->control_vertices[1] = clamp_vertex_idx(v1);
+                                            editable_primitive->control_vertices[2] = clamp_vertex_idx(v2);
+                                            editable_primitive->control_vertices[3] = clamp_vertex_idx(v3);
+                                            editable_sketch.refresh_geometry();
+                                        }
+                                    });
+                                    ImGui::PopID();
+                                    break;
+                                }
+                            }
+                            ImGui::PopID();
+                        }
+
+                        ImGui::SeparatorText("Constraints");
+                        for(std::size_t constraint_idx = 0U; constraint_idx < slot.history.current().constraint_count(); ++constraint_idx){
+                            const auto *constraint = slot.history.current().constraint(constraint_idx);
+                            if(constraint == nullptr) continue;
+
+                            const auto primitive_count = slot.history.current().primitive_count();
+                            const auto clamp_primitive_idx = [primitive_count](int idx) -> std::size_t {
+                                if(primitive_count == 0U) return 0U;
+                                return static_cast<std::size_t>(std::clamp(idx, 0, static_cast<int>(primitive_count - 1U)));
+                            };
+
+                            ImGui::PushID(static_cast<int>(constraint_idx));
+                            ImGui::Text("Constraint %zu (%s)", constraint_idx, slot.history.current().describe_constraint(constraint_idx).c_str());
+                            bool enabled = constraint->enabled;
+                            bool changed = ImGui::Checkbox("Enabled", &enabled);
+                            ImGui::SameLine();
+                            const bool delete_constraint_clicked = ImGui::Button("Delete");
+                            if(changed){
+                                edit_current_sketch([&](Sketch &editable_sketch){
+                                    if(auto *editable_constraint = editable_sketch.constraint(constraint_idx); editable_constraint != nullptr){
+                                        editable_constraint->enabled = enabled;
+                                    }
+                                });
+                                ImGui::PopID();
+                                break;
+                            }
+                            if(delete_constraint_clicked){
+                                edit_current_sketch([&](Sketch &editable_sketch){
+                                    editable_sketch.delete_constraint(constraint_idx);
+                                });
+                                ImGui::PopID();
+                                break;
+                            }
+
+                            if(const auto *horizontal = dynamic_cast<const Sketch::horizontal_constraint_t*>(constraint); horizontal != nullptr){
+                                int line_idx = static_cast<int>(horizontal->line);
+                                ImGui::SetNextItemWidth(110.0f);
+                                changed = ImGui::InputInt("Line", &line_idx);
+                                if(changed){
+                                    edit_current_sketch([&](Sketch &editable_sketch){
+                                        if(auto *editable_constraint = dynamic_cast<Sketch::horizontal_constraint_t*>(editable_sketch.constraint(constraint_idx)); editable_constraint != nullptr){
+                                            editable_constraint->line = clamp_primitive_idx(line_idx);
+                                        }
+                                    });
+                                    ImGui::PopID();
+                                    break;
+                                }
+                            }else if(const auto *vertical = dynamic_cast<const Sketch::vertical_constraint_t*>(constraint); vertical != nullptr){
+                                int line_idx = static_cast<int>(vertical->line);
+                                ImGui::SetNextItemWidth(110.0f);
+                                changed = ImGui::InputInt("Line", &line_idx);
+                                if(changed){
+                                    edit_current_sketch([&](Sketch &editable_sketch){
+                                        if(auto *editable_constraint = dynamic_cast<Sketch::vertical_constraint_t*>(editable_sketch.constraint(constraint_idx)); editable_constraint != nullptr){
+                                            editable_constraint->line = clamp_primitive_idx(line_idx);
+                                        }
+                                    });
+                                    ImGui::PopID();
+                                    break;
+                                }
+                            }else if(const auto *distance = dynamic_cast<const Sketch::distance_constraint_t*>(constraint); distance != nullptr){
+                                int line_idx = static_cast<int>(distance->line);
+                                double target_distance = distance->target_distance;
+                                ImGui::SetNextItemWidth(110.0f);
+                                changed = ImGui::InputInt("Line", &line_idx);
+                                ImGui::SameLine();
+                                ImGui::SetNextItemWidth(120.0f);
+                                changed = ImGui::InputDouble("Target Distance", &target_distance) || changed;
+                                if(changed){
+                                    edit_current_sketch([&](Sketch &editable_sketch){
+                                        if(auto *editable_constraint = dynamic_cast<Sketch::distance_constraint_t*>(editable_sketch.constraint(constraint_idx)); editable_constraint != nullptr){
+                                            editable_constraint->line = clamp_primitive_idx(line_idx);
+                                            editable_constraint->target_distance = target_distance;
+                                        }
+                                    });
+                                    ImGui::PopID();
+                                    break;
+                                }
+                            }else if(const auto *parallel = dynamic_cast<const Sketch::parallel_constraint_t*>(constraint); parallel != nullptr){
+                                int line_a = static_cast<int>(parallel->line_a);
+                                int line_b = static_cast<int>(parallel->line_b);
+                                ImGui::SetNextItemWidth(110.0f);
+                                changed = ImGui::InputInt("Line A", &line_a);
+                                ImGui::SameLine();
+                                ImGui::SetNextItemWidth(110.0f);
+                                changed = ImGui::InputInt("Line B", &line_b) || changed;
+                                if(changed){
+                                    edit_current_sketch([&](Sketch &editable_sketch){
+                                        if(auto *editable_constraint = dynamic_cast<Sketch::parallel_constraint_t*>(editable_sketch.constraint(constraint_idx)); editable_constraint != nullptr){
+                                            editable_constraint->line_a = clamp_primitive_idx(line_a);
+                                            editable_constraint->line_b = clamp_primitive_idx(line_b);
+                                        }
+                                    });
+                                    ImGui::PopID();
+                                    break;
+                                }
+                            }else if(const auto *tangent = dynamic_cast<const Sketch::tangent_constraint_t*>(constraint); tangent != nullptr){
+                                int primitive_a = static_cast<int>(tangent->primitive_a);
+                                int primitive_b = static_cast<int>(tangent->primitive_b);
+                                ImGui::SetNextItemWidth(110.0f);
+                                changed = ImGui::InputInt("Primitive A", &primitive_a);
+                                ImGui::SameLine();
+                                ImGui::SetNextItemWidth(110.0f);
+                                changed = ImGui::InputInt("Primitive B", &primitive_b) || changed;
+                                if(changed){
+                                    edit_current_sketch([&](Sketch &editable_sketch){
+                                        if(auto *editable_constraint = dynamic_cast<Sketch::tangent_constraint_t*>(editable_sketch.constraint(constraint_idx)); editable_constraint != nullptr){
+                                            editable_constraint->primitive_a = clamp_primitive_idx(primitive_a);
+                                            editable_constraint->primitive_b = clamp_primitive_idx(primitive_b);
+                                        }
+                                    });
+                                    ImGui::PopID();
+                                    break;
+                                }
+                            }
+                            ImGui::PopID();
+                        }
+                    }
+                    ImGui::EndChild();
+
+                    if(ImGui::Button("Close")){
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::EndPopup();
                 }
                 ImGui::End();
             }
@@ -9081,11 +9473,21 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                &need_to_reload_opengl_texture,
                                                &launch_contour_preprocessor,
                                                &reset_contouring_state,
-                                               &advance_to_image,
+                                                &advance_to_image,
 
-                                               &frame_count,
+                                                &frame_count,
 
-                                               &img_features ]() -> void {
+                                                &img_features,
+
+                                                &current_sketch_slot,
+                                                &clear_sketch_interaction_state,
+                                                &create_sketch_snapshot,
+                                                &ensure_sketch_plane,
+                                                &sketch_is_compatible_with_image,
+                                                &sketch_selection_tolerance,
+                                                &sketch_pending_primitive,
+                                                &sketch_drag_state,
+                                                &sketch_last_unresolved_constraints ]() -> void {
 
             std::unique_lock<std::shared_timed_mutex> drover_lock(drover_mutex, mutex_dt);
             if( !drover_lock

@@ -25,6 +25,54 @@ Sketch::projection_t cubic_bezier_point(const Sketch::projection_t &p0,
              (b0 * p0.v) + (b1 * p1.v) + (b2 * p2.v) + (b3 * p3.v) };
 }
 
+template <class T>
+static void clamp_index_in_place(T &idx, std::size_t count){
+    if(count == 0U){
+        idx = 0U;
+    }else{
+        idx = static_cast<T>(std::min<std::size_t>(static_cast<std::size_t>(idx), count - 1U));
+    }
+}
+
+static void remap_primitive_vertices(Sketch::primitive_t &primitive,
+                                     Sketch::vertex_index_t removed_vertex){
+    if(auto *vertex_primitive = dynamic_cast<Sketch::vertex_primitive_t*>(&primitive); vertex_primitive != nullptr){
+        if(removed_vertex < vertex_primitive->vertex) --vertex_primitive->vertex;
+    }else if(auto *line = dynamic_cast<Sketch::line_primitive_t*>(&primitive); line != nullptr){
+        for(auto &idx : line->vertices){
+            if(removed_vertex < idx) --idx;
+        }
+    }else if(auto *circle = dynamic_cast<Sketch::circle_primitive_t*>(&primitive); circle != nullptr){
+        if(removed_vertex < circle->center) --circle->center;
+        if(removed_vertex < circle->radius_point) --circle->radius_point;
+    }else if(auto *arc = dynamic_cast<Sketch::arc_primitive_t*>(&primitive); arc != nullptr){
+        if(removed_vertex < arc->center) --arc->center;
+        if(removed_vertex < arc->start) --arc->start;
+        if(removed_vertex < arc->stop) --arc->stop;
+    }else if(auto *bezier = dynamic_cast<Sketch::bezier_primitive_t*>(&primitive); bezier != nullptr){
+        for(auto &idx : bezier->control_vertices){
+            if(removed_vertex < idx) --idx;
+        }
+    }
+}
+
+static void remap_constraint_primitives(Sketch::constraint_t &constraint,
+                                        const std::vector<std::optional<Sketch::primitive_index_t>> &primitive_remap){
+    if(auto *horizontal = dynamic_cast<Sketch::horizontal_constraint_t*>(&constraint); horizontal != nullptr){
+        horizontal->line = primitive_remap.at(horizontal->line).value();
+    }else if(auto *vertical = dynamic_cast<Sketch::vertical_constraint_t*>(&constraint); vertical != nullptr){
+        vertical->line = primitive_remap.at(vertical->line).value();
+    }else if(auto *distance = dynamic_cast<Sketch::distance_constraint_t*>(&constraint); distance != nullptr){
+        distance->line = primitive_remap.at(distance->line).value();
+    }else if(auto *parallel = dynamic_cast<Sketch::parallel_constraint_t*>(&constraint); parallel != nullptr){
+        parallel->line_a = primitive_remap.at(parallel->line_a).value();
+        parallel->line_b = primitive_remap.at(parallel->line_b).value();
+    }else if(auto *tangent = dynamic_cast<Sketch::tangent_constraint_t*>(&constraint); tangent != nullptr){
+        tangent->primitive_a = primitive_remap.at(tangent->primitive_a).value();
+        tangent->primitive_b = primitive_remap.at(tangent->primitive_b).value();
+    }
+}
+
 }
 
 vec3<double>
@@ -33,13 +81,22 @@ Sketch::plane_frame_t::normal() const{
 }
 
 bool
+Sketch::bounding_box_t::is_valid() const{
+    return std::isfinite(min.u) && std::isfinite(min.v)
+        && std::isfinite(max.u) && std::isfinite(max.v)
+        && (min.u <= max.u) && (min.v <= max.v);
+}
+
+bool
 Sketch::bounding_box_t::contains(const projection_t &p) const{
+    if(!is_valid()) return false;
     return (min.u <= p.u) && (p.u <= max.u)
         && (min.v <= p.v) && (p.v <= max.v);
 }
 
 bool
 Sketch::bounding_box_t::contains(const bounding_box_t &b) const{
+    if(!is_valid() || !b.is_valid()) return false;
     return contains(b.min) && contains(b.max);
 }
 
@@ -247,6 +304,7 @@ Sketch::set_plane(const plane_frame_t &frame){
     plane_.row_unit = plane_.row_unit.unit();
     plane_.col_unit = plane_.col_unit.unit();
     has_plane_ = true;
+    refresh_all_derived_geometry();
 }
 
 const Sketch::plane_frame_t&
@@ -350,15 +408,31 @@ Sketch::constraint_count() const{
     return constraints_.size();
 }
 
+vec3<double>&
+Sketch::vertex(vertex_index_t idx){
+    if(!vertex_index_valid(idx)) throw std::out_of_range("Sketch vertex index is out of range");
+    return vertices_.at(idx);
+}
+
 const vec3<double>&
 Sketch::vertex(vertex_index_t idx) const{
     if(!vertex_index_valid(idx)) throw std::out_of_range("Sketch vertex index is out of range");
     return vertices_.at(idx);
 }
 
+Sketch::primitive_t*
+Sketch::primitive(primitive_index_t idx){
+    return primitive_index_valid(idx) ? primitives_.at(idx).get() : nullptr;
+}
+
 const Sketch::primitive_t*
 Sketch::primitive(primitive_index_t idx) const{
     return primitive_index_valid(idx) ? primitives_.at(idx).get() : nullptr;
+}
+
+Sketch::constraint_t*
+Sketch::constraint(constraint_index_t idx){
+    return (idx < constraints_.size()) ? constraints_.at(idx).get() : nullptr;
 }
 
 const Sketch::constraint_t*
@@ -584,7 +658,8 @@ Sketch::primitives_inside_box(const vec3<double> &a, const vec3<double> &b) cons
     selection.max.v = std::max(pa.v, pb.v);
 
     for(std::size_t i = 0U; i < primitives_.size(); ++i){
-        if(selection.contains(primitive_bounds(i))){
+        const auto bounds = primitive_bounds(i);
+        if(selection.contains(bounds)){
             out.push_back(i);
         }
     }
@@ -617,6 +692,123 @@ Sketch::translate_vertices(const std::set<vertex_index_t> &indices, const vec3<d
         }
     }
     refresh_all_derived_geometry();
+}
+
+void
+Sketch::refresh_geometry(){
+    refresh_all_derived_geometry();
+}
+
+void
+Sketch::clear_vertices(){
+    vertices_.clear();
+    primitives_.clear();
+    constraints_.clear();
+}
+
+void
+Sketch::clear_primitives(){
+    primitives_.clear();
+    constraints_.clear();
+}
+
+void
+Sketch::clear_constraints(){
+    constraints_.clear();
+}
+
+bool
+Sketch::delete_constraint(constraint_index_t idx){
+    if(!(idx < constraints_.size())) return false;
+    constraints_.erase(std::next(std::begin(constraints_), static_cast<std::ptrdiff_t>(idx)));
+    return true;
+}
+
+bool
+Sketch::delete_primitive(primitive_index_t idx){
+    if(!primitive_index_valid(idx)) return false;
+
+    primitives_.erase(std::next(std::begin(primitives_), static_cast<std::ptrdiff_t>(idx)));
+
+    std::vector<std::optional<primitive_index_t>> primitive_remap(primitives_.size() + 1U);
+    for(std::size_t old_idx = 0U, new_idx = 0U; old_idx < primitive_remap.size(); ++old_idx){
+        if(old_idx == idx){
+            primitive_remap[old_idx] = {};
+        }else{
+            primitive_remap[old_idx] = new_idx++;
+        }
+    }
+
+    std::vector<std::unique_ptr<constraint_t>> new_constraints;
+    new_constraints.reserve(constraints_.size());
+    for(auto &constraint_ptr : constraints_){
+        if(!constraint_ptr) continue;
+        bool keep_constraint = true;
+        for(const auto referenced_idx : constraint_ptr->referenced_primitives()){
+            if( (primitive_remap.size() <= referenced_idx)
+            ||  !primitive_remap[referenced_idx] ){
+                keep_constraint = false;
+                break;
+            }
+        }
+        if(!keep_constraint) continue;
+        remap_constraint_primitives(*constraint_ptr, primitive_remap);
+        new_constraints.push_back(std::move(constraint_ptr));
+    }
+    constraints_ = std::move(new_constraints);
+    refresh_all_derived_geometry();
+    return true;
+}
+
+bool
+Sketch::delete_vertex(vertex_index_t idx){
+    if(!vertex_index_valid(idx)) return false;
+
+    vertices_.erase(std::next(std::begin(vertices_), static_cast<std::ptrdiff_t>(idx)));
+
+    std::vector<std::optional<primitive_index_t>> primitive_remap(primitives_.size());
+    std::vector<std::unique_ptr<primitive_t>> new_primitives;
+    new_primitives.reserve(primitives_.size());
+
+    for(std::size_t old_idx = 0U; old_idx < primitives_.size(); ++old_idx){
+        auto &primitive_ptr = primitives_.at(old_idx);
+        if(!primitive_ptr){
+            primitive_remap[old_idx] = {};
+            continue;
+        }
+
+        const auto refs = primitive_ptr->referenced_vertices();
+        if(std::find(std::begin(refs), std::end(refs), idx) != std::end(refs)){
+            primitive_remap[old_idx] = {};
+            continue;
+        }
+
+        remap_primitive_vertices(*primitive_ptr, idx);
+        primitive_remap[old_idx] = new_primitives.size();
+        new_primitives.push_back(std::move(primitive_ptr));
+    }
+    primitives_ = std::move(new_primitives);
+
+    std::vector<std::unique_ptr<constraint_t>> new_constraints;
+    new_constraints.reserve(constraints_.size());
+    for(auto &constraint_ptr : constraints_){
+        if(!constraint_ptr) continue;
+        bool keep_constraint = true;
+        for(const auto referenced_idx : constraint_ptr->referenced_primitives()){
+            if( (primitive_remap.size() <= referenced_idx)
+            ||  !primitive_remap[referenced_idx] ){
+                keep_constraint = false;
+                break;
+            }
+        }
+        if(!keep_constraint) continue;
+        remap_constraint_primitives(*constraint_ptr, primitive_remap);
+        new_constraints.push_back(std::move(constraint_ptr));
+    }
+    constraints_ = std::move(new_constraints);
+
+    refresh_all_derived_geometry();
+    return true;
 }
 
 Sketch::constraint_index_t
@@ -677,6 +869,7 @@ Sketch::solve_constraints(std::size_t max_iterations){
     std::size_t unresolved = 0U;
     for(std::size_t iter = 0U; iter < std::max<std::size_t>(max_iterations, 1U); ++iter){
         unresolved = 0U;
+        bool updated_vertices = false;
         for(const auto &constraint_ptr : constraints_){
             if((constraint_ptr == nullptr) || !constraint_ptr->enabled){
                 continue;
@@ -691,7 +884,8 @@ Sketch::solve_constraints(std::size_t max_iterations){
                 auto a = project(vertex(line->vertices[0]));
                 auto b = project(vertex(line->vertices[1]));
                 b.v = a.v;
-                set_vertex(line->vertices[1], lift(b));
+                vertices_.at(line->vertices[1]) = lift(b);
+                updated_vertices = true;
 
             }else if(const auto *vertical = dynamic_cast<const vertical_constraint_t*>(constraint_ptr.get()); vertical != nullptr){
                 const auto *line = dynamic_cast<const line_primitive_t*>(primitive(vertical->line));
@@ -702,7 +896,8 @@ Sketch::solve_constraints(std::size_t max_iterations){
                 auto a = project(vertex(line->vertices[0]));
                 auto b = project(vertex(line->vertices[1]));
                 b.u = a.u;
-                set_vertex(line->vertices[1], lift(b));
+                vertices_.at(line->vertices[1]) = lift(b);
+                updated_vertices = true;
 
             }else if(const auto *distance = dynamic_cast<const distance_constraint_t*>(constraint_ptr.get()); distance != nullptr){
                 const auto *line = dynamic_cast<const line_primitive_t*>(primitive(distance->line));
@@ -724,7 +919,8 @@ Sketch::solve_constraints(std::size_t max_iterations){
                 }
                 b.u = a.u + du * distance->target_distance;
                 b.v = a.v + dv * distance->target_distance;
-                set_vertex(line->vertices[1], lift(b));
+                vertices_.at(line->vertices[1]) = lift(b);
+                updated_vertices = true;
 
             }else if(const auto *parallel = dynamic_cast<const parallel_constraint_t*>(constraint_ptr.get()); parallel != nullptr){
                 const auto *line_a = dynamic_cast<const line_primitive_t*>(primitive(parallel->line_a));
@@ -749,14 +945,17 @@ Sketch::solve_constraints(std::size_t max_iterations){
                 dir_v /= dir_len;
                 b1.u = b0.u + dir_u * len_b;
                 b1.v = b0.v + dir_v * len_b;
-                set_vertex(line_b->vertices[1], lift(b1));
+                vertices_.at(line_b->vertices[1]) = lift(b1);
+                updated_vertices = true;
 
             }else{
                 ++unresolved;
             }
         }
+        if(updated_vertices){
+            refresh_all_derived_geometry();
+        }
     }
-    refresh_all_derived_geometry();
     return unresolved;
 }
 
