@@ -1566,7 +1566,9 @@ bool SDL_Viewer(Drover &DICOM_data,
         }
 
         const Sketch& current() const{
-            return const_cast<sketch_history_t*>(this)->current();
+            if(versions.empty()) throw std::logic_error("Sketch history is empty");
+            const auto clamped_version = std::min<std::size_t>(current_version, versions.size() - 1U);
+            return versions.at(clamped_version);
         }
 
         void snapshot(){
@@ -1599,12 +1601,8 @@ bool SDL_Viewer(Drover &DICOM_data,
         void trim(std::size_t max_versions){
             if(max_versions < 1U) max_versions = 1U;
             while(versions.size() > max_versions){
-                if(current_version == 0U){
-                    versions.erase(std::begin(versions));
-                }else{
-                    versions.erase(std::begin(versions));
-                    --current_version;
-                }
+                versions.erase(std::begin(versions));
+                if(current_version != 0U) --current_version;
             }
         }
     };
@@ -1818,6 +1816,13 @@ bool SDL_Viewer(Drover &DICOM_data,
             YLOGWARN("Current sketch belongs to a different image plane; use another sketch slot or reset the sketch");
         }
         return sketch;
+    };
+
+    const auto sketch_selection_tolerance = [](const image_mouse_pos_s &mouse_pos,
+                                               double pxl_dx,
+                                               double pxl_dy) -> double {
+        return std::max<double>( std::max<double>(pxl_dx, pxl_dy) * 2.0,
+                                 6.0 / std::max<double>(mouse_pos.pixel_scale, 1.0E-3f) );
     };
 
     // Resets the contouring image to match the display image characteristics.
@@ -5853,8 +5858,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                 if( image_mouse_pos.mouse_hovering_image
                 &&  sketch_compatible ){
-                    const auto tol = std::max<double>( std::max<double>(disp_img_it->pxl_dx, disp_img_it->pxl_dy) * 2.0,
-                                                       6.0 / std::max<double>(image_mouse_pos.pixel_scale, 1.0E-3f) );
+                    const auto tol = sketch_selection_tolerance(image_mouse_pos, disp_img_it->pxl_dx, disp_img_it->pxl_dy);
                     sketch_hovered_primitive = sketch.nearest_primitive(image_mouse_pos.dicom_pos, tol);
                 }else if(!sketch_drag_state.selection_box_active){
                     sketch_hovered_primitive = {};
@@ -9282,8 +9286,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                         auto &slot = current_sketch_slot();
                         auto &sketch = slot.history.current();
                         const auto mouse_pos = image_mouse_pos_opt.value().dicom_pos;
-                        const auto tol = std::max<double>( std::max<double>(disp_img_it->pxl_dx, disp_img_it->pxl_dy) * 2.0,
-                                                           6.0 / std::max<double>(image_mouse_pos_opt.value().pixel_scale, 1.0E-3f) );
+                        const auto tol = sketch_selection_tolerance(image_mouse_pos_opt.value(),
+                                                                    disp_img_it->pxl_dx,
+                                                                    disp_img_it->pxl_dy);
 
                         if(0.0f == io.MouseDownDuration[0]){
                             if(sketch_pending_primitive.active()){

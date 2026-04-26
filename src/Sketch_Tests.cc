@@ -8,7 +8,7 @@
 
 namespace {
 
-static Sketch::plane_frame_t unit_plane(){
+static Sketch::plane_frame_t default_xy_plane(){
     Sketch::plane_frame_t out;
     out.origin = vec3<double>(0.0, 0.0, 0.0);
     out.row_unit = vec3<double>(1.0, 0.0, 0.0);
@@ -20,7 +20,7 @@ static Sketch::plane_frame_t unit_plane(){
 
 TEST_CASE("Sketch stores indexed primitives"){
     Sketch sketch;
-    sketch.set_plane(unit_plane());
+    sketch.set_plane(default_xy_plane());
 
     const auto vertex_idx = sketch.add_vertex_primitive(vec3<double>(1.0, 2.0, 0.0), Sketch::geometry_tag_t::normal);
     const auto line_idx = sketch.add_line(vec3<double>(0.0, 0.0, 0.0),
@@ -40,7 +40,7 @@ TEST_CASE("Sketch stores indexed primitives"){
 
 TEST_CASE("Sketch selection helpers find primitives and boxed items"){
     Sketch sketch;
-    sketch.set_plane(unit_plane());
+    sketch.set_plane(default_xy_plane());
 
     const auto line_idx = sketch.add_line(vec3<double>(0.0, 0.0, 0.0),
                                           vec3<double>(4.0, 0.0, 0.0),
@@ -61,7 +61,7 @@ TEST_CASE("Sketch selection helpers find primitives and boxed items"){
 
 TEST_CASE("Sketch constraints resolve simple geometry"){
     Sketch sketch;
-    sketch.set_plane(unit_plane());
+    sketch.set_plane(default_xy_plane());
 
     const auto horizontal_idx = sketch.add_line(vec3<double>(0.0, 0.0, 0.0),
                                                 vec3<double>(3.0, 2.0, 0.0),
@@ -94,7 +94,7 @@ TEST_CASE("Sketch constraints resolve simple geometry"){
 
 TEST_CASE("Sketch snapshots preserve state"){
     Sketch sketch;
-    sketch.set_plane(unit_plane());
+    sketch.set_plane(default_xy_plane());
     sketch.add_bezier({ vec3<double>(0.0, 0.0, 0.0),
                         vec3<double>(1.0, 2.0, 0.0),
                         vec3<double>(2.0, 2.0, 0.0),

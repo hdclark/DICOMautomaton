@@ -9,6 +9,7 @@
 namespace {
 
 static constexpr double sketch_pi = 3.14159265358979323846;
+static constexpr double sketch_two_pi = 2.0 * sketch_pi;
 
 Sketch::projection_t cubic_bezier_point(const Sketch::projection_t &p0,
                                         const Sketch::projection_t &p1,
@@ -367,9 +368,8 @@ Sketch::constraint(constraint_index_t idx) const{
 
 double
 Sketch::normalize_angle(double x){
-    const double two_pi = 2.0 * sketch_pi;
-    while(x < 0.0) x += two_pi;
-    while(two_pi <= x) x -= two_pi;
+    while(x < 0.0) x += sketch_two_pi;
+    while(sketch_two_pi <= x) x -= sketch_two_pi;
     return x;
 }
 
@@ -451,7 +451,7 @@ Sketch::sample_primitive(primitive_index_t idx, std::size_t segments) const{
         const auto N = std::max<std::size_t>(segments, 16U);
         out.reserve(N + 1U);
         for(std::size_t i = 0U; i <= N; ++i){
-            const double theta = (2.0 * sketch_pi * static_cast<double>(i)) / static_cast<double>(N);
+            const double theta = (sketch_two_pi * static_cast<double>(i)) / static_cast<double>(N);
             out.push_back(centre + plane().row_unit * (std::cos(theta) * circle->radius)
                                  + plane().col_unit * (std::sin(theta) * circle->radius));
         }
@@ -464,7 +464,7 @@ Sketch::sample_primitive(primitive_index_t idx, std::size_t segments) const{
         out.reserve(N + 1U);
         double start = arc->start_angle;
         double stop = arc->stop_angle;
-        if(stop < start) stop += 2.0 * sketch_pi;
+        if(stop < start) stop += sketch_two_pi;
         for(std::size_t i = 0U; i <= N; ++i){
             const double theta = start + (stop - start) * (static_cast<double>(i) / static_cast<double>(N));
             out.push_back(centre + plane().row_unit * (std::cos(theta) * arc->radius)
