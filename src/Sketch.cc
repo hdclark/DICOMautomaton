@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <fstream>
 #include <limits>
 #include <sstream>
 #include <stdexcept>
@@ -46,6 +47,28 @@ static void remap_primitive_vertices(Sketch::primitive_t &primitive,
     }
 }
 
+static void remap_primitive_vertices(Sketch::primitive_t &primitive,
+                                     const std::vector<std::optional<Sketch::vertex_index_t>> &vertex_remap){
+    const auto remap_vertex = [&vertex_remap](Sketch::vertex_index_t &idx) -> void {
+        idx = vertex_remap.at(idx).value();
+    };
+
+    if(auto *vertex_primitive = dynamic_cast<Sketch::vertex_primitive_t*>(&primitive); vertex_primitive != nullptr){
+        remap_vertex(vertex_primitive->vertex);
+    }else if(auto *line = dynamic_cast<Sketch::line_primitive_t*>(&primitive); line != nullptr){
+        for(auto &idx : line->vertices) remap_vertex(idx);
+    }else if(auto *circle = dynamic_cast<Sketch::circle_primitive_t*>(&primitive); circle != nullptr){
+        remap_vertex(circle->center);
+        remap_vertex(circle->radius_point);
+    }else if(auto *arc = dynamic_cast<Sketch::arc_primitive_t*>(&primitive); arc != nullptr){
+        remap_vertex(arc->center);
+        remap_vertex(arc->start);
+        remap_vertex(arc->stop);
+    }else if(auto *bezier = dynamic_cast<Sketch::bezier_primitive_t*>(&primitive); bezier != nullptr){
+        for(auto &idx : bezier->control_vertices) remap_vertex(idx);
+    }
+}
+
 static void remap_constraint_primitives(Sketch::constraint_t &constraint,
                                         const std::vector<std::optional<Sketch::primitive_index_t>> &primitive_remap){
     if(auto *horizontal = dynamic_cast<Sketch::horizontal_constraint_t*>(&constraint); horizontal != nullptr){
@@ -61,6 +84,42 @@ static void remap_constraint_primitives(Sketch::constraint_t &constraint,
         tangent->primitive_a = primitive_remap.at(tangent->primitive_a).value();
         tangent->primitive_b = primitive_remap.at(tangent->primitive_b).value();
     }
+}
+
+static vec3<double> point_on_circle(const Sketch::plane_frame_t &plane,
+                                    const vec3<double> &centre,
+                                    double radius,
+                                    double angle){
+    return centre + plane.row_unit * (std::cos(angle) * radius)
+                  + plane.col_unit * (std::sin(angle) * radius);
+}
+
+static void store_error(std::string *error_message,
+                        const std::string &message){
+    if(error_message != nullptr) *error_message = message;
+}
+
+static std::string geometry_tag_to_string(Sketch::geometry_tag_t tag){
+    switch(tag){
+        case Sketch::geometry_tag_t::normal:
+            return "normal";
+        case Sketch::geometry_tag_t::support:
+            return "support";
+    }
+    return "normal";
+}
+
+static bool parse_geometry_tag(const std::string &token,
+                               Sketch::geometry_tag_t &tag){
+    if(token == "normal"){
+        tag = Sketch::geometry_tag_t::normal;
+        return true;
+    }
+    if(token == "support"){
+        tag = Sketch::geometry_tag_t::support;
+        return true;
+    }
+    return false;
 }
 
 }
@@ -468,6 +527,7 @@ Sketch::refresh_primitive_geometry(primitive_index_t idx){
             circle->radius = vertex(circle->center).distance(vertex(circle->radius_point));
         }
     }else if(auto *arc = dynamic_cast<arc_primitive_t*>(base); arc != nullptr){
+        if(!has_plane_) return;
         if( vertex_index_valid(arc->center)
         &&  vertex_index_valid(arc->start)
         &&  vertex_index_valid(arc->stop) ){
@@ -475,9 +535,26 @@ Sketch::refresh_primitive_geometry(primitive_index_t idx){
             const auto start_p = project(vertex(arc->start));
             const auto stop_p = project(vertex(arc->stop));
             const auto centre_p = project(centre);
-            arc->radius = centre.distance(vertex(arc->start));
-            arc->start_angle = normalize_angle(std::atan2(start_p.v - centre_p.v, start_p.u - centre_p.u));
-            arc->stop_angle = normalize_angle(std::atan2(stop_p.v - centre_p.v, stop_p.u - centre_p.u));
+            const auto start_du = start_p.u - centre_p.u;
+            const auto start_dv = start_p.v - centre_p.v;
+            const auto stop_du = stop_p.u - centre_p.u;
+            const auto stop_dv = stop_p.v - centre_p.v;
+            const auto start_radius = std::hypot(start_du, start_dv);
+            const auto stop_radius = std::hypot(stop_du, stop_dv);
+            const auto fallback_radius = std::max(start_radius, stop_radius);
+
+            arc->radius = fallback_radius;
+            arc->start_angle = normalize_angle((start_radius <= std::numeric_limits<double>::epsilon())
+                                               ? 0.0
+                                               : std::atan2(start_dv, start_du));
+            arc->stop_angle = normalize_angle((stop_radius <= std::numeric_limits<double>::epsilon())
+                                              ? arc->start_angle
+                                              : std::atan2(stop_dv, stop_du));
+
+            if(arc->radius > std::numeric_limits<double>::epsilon()){
+                vertices_.at(arc->start) = point_on_circle(plane(), centre, arc->radius, arc->start_angle);
+                vertices_.at(arc->stop) = point_on_circle(plane(), centre, arc->radius, arc->stop_angle);
+            }
         }
     }
 }
@@ -693,6 +770,23 @@ Sketch::refresh_geometry(){
     refresh_all_derived_geometry();
 }
 
+Sketch::dof_summary_t
+Sketch::summarize_degrees_of_freedom() const{
+    dof_summary_t out;
+    out.total = vertices_.size() * 2U;
+    for(const auto &constraint_ptr : constraints_){
+        if((constraint_ptr != nullptr) && constraint_ptr->enabled){
+            ++out.enabled_constraints;
+        }else{
+            ++out.disabled_constraints;
+        }
+    }
+    out.constrained = out.enabled_constraints;
+    out.remaining = (out.constrained < out.total) ? (out.total - out.constrained) : 0U;
+    out.overconstrained = (out.total < out.constrained) ? (out.constrained - out.total) : 0U;
+    return out;
+}
+
 void
 Sketch::clear_vertices(){
     vertices_.clear();
@@ -803,6 +897,43 @@ Sketch::delete_vertex(vertex_index_t idx){
 
     refresh_all_derived_geometry();
     return true;
+}
+
+std::size_t
+Sketch::delete_unreferenced_vertices(){
+    std::vector<bool> referenced(vertices_.size(), false);
+    std::size_t referenced_count = 0U;
+    for(const auto &primitive_ptr : primitives_){
+        if(!primitive_ptr) continue;
+        for(const auto vertex_idx : primitive_ptr->referenced_vertices()){
+            if(vertex_idx < referenced.size() && !referenced[vertex_idx]){
+                referenced[vertex_idx] = true;
+                ++referenced_count;
+            }
+        }
+    }
+
+    if(referenced_count == vertices_.size()) return 0U;
+
+    std::vector<std::optional<vertex_index_t>> vertex_remap(vertices_.size());
+    std::vector<vec3<double>> new_vertices;
+    new_vertices.reserve(referenced_count);
+    for(std::size_t old_idx = 0U; old_idx < vertices_.size(); ++old_idx){
+        if(!referenced[old_idx]) continue;
+        vertex_remap[old_idx] = new_vertices.size();
+        new_vertices.push_back(vertices_.at(old_idx));
+    }
+
+    for(auto &primitive_ptr : primitives_){
+        if(primitive_ptr != nullptr){
+            remap_primitive_vertices(*primitive_ptr, vertex_remap);
+        }
+    }
+
+    const auto removed = vertices_.size() - new_vertices.size();
+    vertices_ = std::move(new_vertices);
+    refresh_all_derived_geometry();
+    return removed;
 }
 
 Sketch::constraint_index_t
@@ -977,4 +1108,229 @@ Sketch::describe_constraint(constraint_index_t idx) const{
             break;
     }
     return ss.str();
+}
+
+bool
+Sketch::save_to_file(const std::filesystem::path &path,
+                     std::string *error_message) const{
+    std::ofstream file(path);
+    if(!file){
+        store_error(error_message, "Unable to open sketch file for writing");
+        return false;
+    }
+
+    file << "DCMA_SKETCH 1\n";
+    file << "plane " << (has_plane_ ? 1 : 0) << '\n';
+    if(has_plane_){
+        file << "origin " << plane_.origin.x << ' ' << plane_.origin.y << ' ' << plane_.origin.z << '\n';
+        file << "row " << plane_.row_unit.x << ' ' << plane_.row_unit.y << ' ' << plane_.row_unit.z << '\n';
+        file << "col " << plane_.col_unit.x << ' ' << plane_.col_unit.y << ' ' << plane_.col_unit.z << '\n';
+    }
+
+    file << "vertices " << vertices_.size() << '\n';
+    for(const auto &vertex : vertices_){
+        file << vertex.x << ' ' << vertex.y << ' ' << vertex.z << '\n';
+    }
+
+    file << "primitives " << primitives_.size() << '\n';
+    for(const auto &primitive_ptr : primitives_){
+        if(const auto *vertex_primitive = dynamic_cast<const vertex_primitive_t*>(primitive_ptr.get()); vertex_primitive != nullptr){
+            file << "vertex " << geometry_tag_to_string(vertex_primitive->tag) << ' ' << vertex_primitive->vertex << '\n';
+        }else if(const auto *line = dynamic_cast<const line_primitive_t*>(primitive_ptr.get()); line != nullptr){
+            file << "line " << geometry_tag_to_string(line->tag) << ' ' << line->vertices[0] << ' ' << line->vertices[1] << '\n';
+        }else if(const auto *circle = dynamic_cast<const circle_primitive_t*>(primitive_ptr.get()); circle != nullptr){
+            file << "circle " << geometry_tag_to_string(circle->tag) << ' ' << circle->center << ' ' << circle->radius_point << '\n';
+        }else if(const auto *arc = dynamic_cast<const arc_primitive_t*>(primitive_ptr.get()); arc != nullptr){
+            file << "arc " << geometry_tag_to_string(arc->tag) << ' ' << arc->center << ' ' << arc->start << ' ' << arc->stop << '\n';
+        }else if(const auto *bezier = dynamic_cast<const bezier_primitive_t*>(primitive_ptr.get()); bezier != nullptr){
+            file << "bezier " << geometry_tag_to_string(bezier->tag)
+                 << ' ' << bezier->control_vertices[0]
+                 << ' ' << bezier->control_vertices[1]
+                 << ' ' << bezier->control_vertices[2]
+                 << ' ' << bezier->control_vertices[3] << '\n';
+        }else{
+            store_error(error_message, "Encountered unsupported sketch primitive while saving");
+            return false;
+        }
+    }
+
+    file << "constraints " << constraints_.size() << '\n';
+    for(const auto &constraint_ptr : constraints_){
+        if(const auto *horizontal = dynamic_cast<const horizontal_constraint_t*>(constraint_ptr.get()); horizontal != nullptr){
+            file << "horizontal " << (horizontal->enabled ? 1 : 0) << ' ' << horizontal->line << '\n';
+        }else if(const auto *vertical = dynamic_cast<const vertical_constraint_t*>(constraint_ptr.get()); vertical != nullptr){
+            file << "vertical " << (vertical->enabled ? 1 : 0) << ' ' << vertical->line << '\n';
+        }else if(const auto *distance = dynamic_cast<const distance_constraint_t*>(constraint_ptr.get()); distance != nullptr){
+            file << "distance " << (distance->enabled ? 1 : 0) << ' ' << distance->line << ' ' << distance->target_distance << '\n';
+        }else if(const auto *parallel = dynamic_cast<const parallel_constraint_t*>(constraint_ptr.get()); parallel != nullptr){
+            file << "parallel " << (parallel->enabled ? 1 : 0) << ' ' << parallel->line_a << ' ' << parallel->line_b << '\n';
+        }else if(const auto *tangent = dynamic_cast<const tangent_constraint_t*>(constraint_ptr.get()); tangent != nullptr){
+            file << "tangent " << (tangent->enabled ? 1 : 0) << ' ' << tangent->primitive_a << ' ' << tangent->primitive_b << '\n';
+        }else{
+            store_error(error_message, "Encountered unsupported sketch constraint while saving");
+            return false;
+        }
+    }
+
+    if(!file){
+        store_error(error_message, "Failed while writing sketch file");
+        return false;
+    }
+    return true;
+}
+
+bool
+Sketch::load_from_file(const std::filesystem::path &path,
+                       Sketch &out,
+                       std::string *error_message){
+    std::ifstream file(path);
+    if(!file){
+        store_error(error_message, "Unable to open sketch file for reading");
+        return false;
+    }
+
+    auto fail = [&error_message](const std::string &message) -> bool {
+        store_error(error_message, message);
+        return false;
+    };
+
+    std::string header;
+    int version = 0;
+    if(!(file >> header >> version) || (header != "DCMA_SKETCH") || (version != 1)){
+        return fail("Unrecognized sketch file header");
+    }
+
+    Sketch loaded;
+
+    std::string token;
+    int has_plane = 0;
+    if(!(file >> token >> has_plane) || (token != "plane")){
+        return fail("Missing sketch plane header");
+    }
+    if(has_plane != 0){
+        plane_frame_t plane;
+        if(!(file >> token >> plane.origin.x >> plane.origin.y >> plane.origin.z) || (token != "origin")){
+            return fail("Unable to read sketch plane origin");
+        }
+        if(!(file >> token >> plane.row_unit.x >> plane.row_unit.y >> plane.row_unit.z) || (token != "row")){
+            return fail("Unable to read sketch plane row axis");
+        }
+        if(!(file >> token >> plane.col_unit.x >> plane.col_unit.y >> plane.col_unit.z) || (token != "col")){
+            return fail("Unable to read sketch plane column axis");
+        }
+        loaded.set_plane(plane);
+    }
+
+    std::size_t vertex_count = 0U;
+    if(!(file >> token >> vertex_count) || (token != "vertices")){
+        return fail("Missing sketch vertex section");
+    }
+    loaded.vertices_.reserve(vertex_count);
+    for(std::size_t i = 0U; i < vertex_count; ++i){
+        vec3<double> vertex;
+        if(!(file >> vertex.x >> vertex.y >> vertex.z)){
+            return fail("Unable to read sketch vertex");
+        }
+        loaded.vertices_.push_back(vertex);
+    }
+
+    std::size_t primitive_count = 0U;
+    if(!(file >> token >> primitive_count) || (token != "primitives")){
+        return fail("Missing sketch primitive section");
+    }
+    loaded.primitives_.reserve(primitive_count);
+    for(std::size_t i = 0U; i < primitive_count; ++i){
+        std::string kind_token;
+        std::string tag_token;
+        geometry_tag_t tag = geometry_tag_t::normal;
+        if(!(file >> kind_token >> tag_token) || !parse_geometry_tag(tag_token, tag)){
+            return fail("Unable to read sketch primitive header");
+        }
+
+        std::unique_ptr<primitive_t> primitive;
+        if(kind_token == "vertex"){
+            auto out_primitive = std::make_unique<vertex_primitive_t>();
+            if(!(file >> out_primitive->vertex)) return fail("Unable to read vertex primitive");
+            primitive = std::move(out_primitive);
+        }else if(kind_token == "line"){
+            auto out_primitive = std::make_unique<line_primitive_t>();
+            if(!(file >> out_primitive->vertices[0] >> out_primitive->vertices[1])) return fail("Unable to read line primitive");
+            primitive = std::move(out_primitive);
+        }else if(kind_token == "circle"){
+            auto out_primitive = std::make_unique<circle_primitive_t>();
+            if(!(file >> out_primitive->center >> out_primitive->radius_point)) return fail("Unable to read circle primitive");
+            primitive = std::move(out_primitive);
+        }else if(kind_token == "arc"){
+            auto out_primitive = std::make_unique<arc_primitive_t>();
+            if(!(file >> out_primitive->center >> out_primitive->start >> out_primitive->stop)) return fail("Unable to read arc primitive");
+            primitive = std::move(out_primitive);
+        }else if(kind_token == "bezier"){
+            auto out_primitive = std::make_unique<bezier_primitive_t>();
+            if(!(file >> out_primitive->control_vertices[0]
+                      >> out_primitive->control_vertices[1]
+                      >> out_primitive->control_vertices[2]
+                      >> out_primitive->control_vertices[3])) return fail("Unable to read bezier primitive");
+            primitive = std::move(out_primitive);
+        }else{
+            return fail("Unrecognized sketch primitive type");
+        }
+
+        primitive->tag = tag;
+        for(const auto vertex_idx : primitive->referenced_vertices()){
+            if(vertex_count <= vertex_idx){
+                return fail("Sketch primitive references an invalid vertex");
+            }
+        }
+        loaded.primitives_.push_back(std::move(primitive));
+    }
+
+    std::size_t constraint_count = 0U;
+    if(!(file >> token >> constraint_count) || (token != "constraints")){
+        return fail("Missing sketch constraint section");
+    }
+    loaded.constraints_.reserve(constraint_count);
+    for(std::size_t i = 0U; i < constraint_count; ++i){
+        std::string kind_token;
+        int enabled = 1;
+        if(!(file >> kind_token >> enabled)){
+            return fail("Unable to read sketch constraint header");
+        }
+
+        std::unique_ptr<constraint_t> constraint;
+        if(kind_token == "horizontal"){
+            auto out_constraint = std::make_unique<horizontal_constraint_t>();
+            if(!(file >> out_constraint->line)) return fail("Unable to read horizontal constraint");
+            constraint = std::move(out_constraint);
+        }else if(kind_token == "vertical"){
+            auto out_constraint = std::make_unique<vertical_constraint_t>();
+            if(!(file >> out_constraint->line)) return fail("Unable to read vertical constraint");
+            constraint = std::move(out_constraint);
+        }else if(kind_token == "distance"){
+            auto out_constraint = std::make_unique<distance_constraint_t>();
+            if(!(file >> out_constraint->line >> out_constraint->target_distance)) return fail("Unable to read distance constraint");
+            constraint = std::move(out_constraint);
+        }else if(kind_token == "parallel"){
+            auto out_constraint = std::make_unique<parallel_constraint_t>();
+            if(!(file >> out_constraint->line_a >> out_constraint->line_b)) return fail("Unable to read parallel constraint");
+            constraint = std::move(out_constraint);
+        }else if(kind_token == "tangent"){
+            auto out_constraint = std::make_unique<tangent_constraint_t>();
+            if(!(file >> out_constraint->primitive_a >> out_constraint->primitive_b)) return fail("Unable to read tangent constraint");
+            constraint = std::move(out_constraint);
+        }else{
+            return fail("Unrecognized sketch constraint type");
+        }
+
+        constraint->enabled = (enabled != 0);
+        for(const auto primitive_idx : constraint->referenced_primitives()){
+            if(primitive_count <= primitive_idx){
+                return fail("Sketch constraint references an invalid primitive");
+            }
+        }
+        loaded.constraints_.push_back(std::move(constraint));
+    }
+
+    loaded.refresh_all_derived_geometry();
+    out = std::move(loaded);
+    return true;
 }

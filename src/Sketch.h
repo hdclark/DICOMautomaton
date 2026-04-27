@@ -5,6 +5,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <limits>
 #include <memory>
 #include <optional>
@@ -63,6 +64,15 @@ public:
         bool is_valid() const;
         bool contains(const projection_t &p) const;
         bool contains(const bounding_box_t &b) const;
+    };
+
+    struct dof_summary_t {
+        std::size_t total = 0U;
+        std::size_t constrained = 0U;
+        std::size_t remaining = 0U;
+        std::size_t overconstrained = 0U;
+        std::size_t enabled_constraints = 0U;
+        std::size_t disabled_constraints = 0U;
     };
 
     struct primitive_t {
@@ -220,10 +230,12 @@ public:
     void set_vertex(vertex_index_t idx, const vec3<double> &point);
     void translate_vertices(const std::set<vertex_index_t> &indices, const vec3<double> &delta);
     void refresh_geometry();
+    dof_summary_t summarize_degrees_of_freedom() const;
 
     bool delete_vertex(vertex_index_t idx);
     bool delete_primitive(primitive_index_t idx);
     bool delete_constraint(constraint_index_t idx);
+    std::size_t delete_unreferenced_vertices();
     void clear_vertices();
     void clear_primitives();
     void clear_constraints();
@@ -236,6 +248,8 @@ public:
 
     std::size_t solve_constraints(std::size_t max_iterations = 2U);
     std::string describe_constraint(constraint_index_t idx) const;
+    bool save_to_file(const std::filesystem::path &path, std::string *error_message = nullptr) const;
+    static bool load_from_file(const std::filesystem::path &path, Sketch &out, std::string *error_message = nullptr);
 
 private:
     std::vector<vec3<double>> vertices_;

@@ -1674,6 +1674,11 @@ bool SDL_Viewer(Drover &DICOM_data,
     sketch_drag_state_t sketch_drag_state;
     std::optional<std::size_t> sketch_hovered_primitive;
     std::optional<std::size_t> sketch_last_unresolved_constraints = 0U;
+    bool sketch_show_indices = false;
+    bool view_sketch_editor_enabled = false;
+    std::array<char, 4096> sketch_save_path = {};
+    std::array<char, 4096> sketch_load_path = {};
+    std::string sketch_file_status;
 
     // Polyominoes state.
     opengl_texture_handle_t polyomino_texture;
@@ -1768,6 +1773,11 @@ bool SDL_Viewer(Drover &DICOM_data,
         sketch_hovered_primitive = {};
     };
 
+    const auto reset_sketch_slot = [&](sketch_slot_t &slot) -> void {
+        slot.history.reset();
+        slot.selection.clear();
+    };
+
     const auto current_sketch = [&]() -> Sketch& {
         return current_sketch_slot().history.current();
     };
@@ -1814,6 +1824,12 @@ bool SDL_Viewer(Drover &DICOM_data,
             YLOGWARN("Current sketch belongs to a different image plane; use another sketch slot or reset the sketch");
         }
         return sketch;
+    };
+
+    const auto sketch_tag_colour = [](Sketch::geometry_tag_t tag) -> ImColor {
+        return (tag == Sketch::geometry_tag_t::support)
+             ? ImColor(1.00f, 0.92f, 0.25f, 1.00f)
+             : ImColor(0.60f, 0.95f, 1.00f, 1.00f);
     };
 
     const auto sketch_selection_tolerance = [](const image_mouse_pos_s &mouse_pos,
@@ -5878,15 +5894,21 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
 
                 if(sketch_compatible){
+                    std::vector<std::optional<vec3<double>>> primitive_label_positions;
+                    std::vector<std::optional<Sketch::geometry_tag_t>> vertex_label_tags;
+                    if(sketch_show_indices){
+                        primitive_label_positions.resize(sketch.primitive_count());
+                        vertex_label_tags.resize(sketch.vertex_count());
+                    }
+
                     for(std::size_t i = 0U; i < sketch.primitive_count(); ++i){
                         const auto *primitive = sketch.primitive(i);
                         if(primitive == nullptr) continue;
 
                         const bool is_selected = (slot.selection.count(i) != 0U);
                         const bool is_hovered = sketch_hovered_primitive && (sketch_hovered_primitive.value() == i);
-                        auto colour = (primitive->tag == Sketch::geometry_tag_t::normal)
-                                    ? ImColor(0.10f, 0.85f, 1.00f, 1.00f)
-                                    : ImColor(1.00f, 0.70f, 0.20f, 1.00f);
+                        const auto base_colour = sketch_tag_colour(primitive->tag);
+                        auto colour = base_colour;
                         if(is_selected){
                             colour = ImColor(0.10f, 1.00f, 0.35f, 1.00f);
                         }else if(is_hovered){
@@ -5913,13 +5935,25 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 imgs_window_draw_list->AddCircle(p, 5.0f, colour, 0, 1.5f);
                             }
                         }
+
+                        if(sketch_show_indices){
+                            if(!samples.empty()){
+                                primitive_label_positions.at(i) = samples.at(samples.size() / 2U);
+                            }
+                            for(const auto vertex_idx : primitive->referenced_vertices()){
+                                if(vertex_idx < vertex_label_tags.size()){
+                                    auto &tag_slot = vertex_label_tags.at(vertex_idx);
+                                    if(!tag_slot || (tag_slot.value() == Sketch::geometry_tag_t::support && primitive->tag == Sketch::geometry_tag_t::normal)){
+                                        tag_slot = primitive->tag;
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     if( sketch_pending_primitive.active()
                     &&  !sketch_pending_primitive.points.empty() ){
-                        auto preview_colour = (sketch_pending_primitive.tag == Sketch::geometry_tag_t::normal)
-                                            ? ImColor(0.60f, 0.95f, 1.00f, 1.00f)
-                                            : ImColor(1.00f, 0.85f, 0.40f, 1.00f);
+                        auto preview_colour = sketch_tag_colour(sketch_pending_primitive.tag);
                         std::vector<vec3<double>> preview_points = sketch_pending_primitive.points;
                         if(image_mouse_pos.mouse_hovering_image){
                             preview_points.push_back(image_mouse_pos.dicom_pos);
@@ -5932,6 +5966,68 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                            image_mouse_pos.DICOM_to_pixels(preview_points[j]),
                                                            preview_colour,
                                                            1.5f);
+                        }
+                    }
+
+                    if(sketch_show_indices){
+                        const auto draw_sketch_label = [&](const vec3<double> &point,
+                                                           const ImColor &colour,
+                                                           const std::string &text,
+                                                           const ImVec2 &offset) -> void {
+                            const auto pixel_pos = image_mouse_pos.DICOM_to_pixels(point);
+                            const auto text_extent = ImGui::CalcTextSize(text.c_str());
+                            const ImVec2 origin(pixel_pos.x + offset.x - text_extent.x * 0.5f,
+                                                pixel_pos.y + offset.y - text_extent.y * 0.5f);
+                            imgs_window_draw_list->AddText(ImVec2(origin.x + 1.0f, origin.y + 1.0f),
+                                                           ImColor(0.0f, 0.0f, 0.0f, 0.85f),
+                                                           text.c_str());
+                            imgs_window_draw_list->AddText(origin, colour, text.c_str());
+                        };
+
+                        for(std::size_t vertex_idx = 0U; vertex_idx < vertex_label_tags.size(); ++vertex_idx){
+                            if(!vertex_label_tags.at(vertex_idx)) continue;
+                            draw_sketch_label(sketch.vertex(vertex_idx),
+                                              sketch_tag_colour(vertex_label_tags.at(vertex_idx).value()),
+                                              std::to_string(vertex_idx),
+                                              ImVec2(10.0f, -10.0f));
+                        }
+
+                        for(std::size_t primitive_idx = 0U; primitive_idx < primitive_label_positions.size(); ++primitive_idx){
+                            const auto *primitive = sketch.primitive(primitive_idx);
+                            if((primitive == nullptr) || !primitive_label_positions.at(primitive_idx)) continue;
+                            draw_sketch_label(primitive_label_positions.at(primitive_idx).value(),
+                                              sketch_tag_colour(primitive->tag),
+                                              std::to_string(primitive_idx),
+                                              ImVec2(0.0f, -12.0f));
+                        }
+
+                        for(std::size_t constraint_idx = 0U; constraint_idx < sketch.constraint_count(); ++constraint_idx){
+                            const auto *constraint = sketch.constraint(constraint_idx);
+                            if(constraint == nullptr) continue;
+
+                            vec3<double> centre(0.0, 0.0, 0.0);
+                            std::size_t count = 0U;
+                            auto label_tag = Sketch::geometry_tag_t::support;
+                            for(const auto primitive_idx : constraint->referenced_primitives()){
+                                if(primitive_label_positions.size() <= primitive_idx) continue;
+                                const auto *primitive = sketch.primitive(primitive_idx);
+                                if((primitive == nullptr) || !primitive_label_positions.at(primitive_idx)) continue;
+                                centre += primitive_label_positions.at(primitive_idx).value();
+                                ++count;
+                                if(primitive->tag == Sketch::geometry_tag_t::normal){
+                                    label_tag = Sketch::geometry_tag_t::normal;
+                                }
+                            }
+                            if(count == 0U) continue;
+                            centre /= static_cast<double>(count);
+                            auto colour = sketch_tag_colour(label_tag);
+                            if(!constraint->enabled){
+                                colour.Value.w = 0.55f;
+                            }
+                            draw_sketch_label(centre,
+                                              colour,
+                                              std::to_string(constraint_idx),
+                                              ImVec2(0.0f, 12.0f));
                         }
                     }
                 }
@@ -5956,11 +6052,33 @@ bool SDL_Viewer(Drover &DICOM_data,
                 ImGui::Text("Planar vector sketching mode.");
 
                 int new_sketch_slot_num = sketch_slot_num;
-                if(ImGui::SliderInt("Sketch", &new_sketch_slot_num, 0, 15)){
+                const int max_sketch_slot_num = std::max<int>(static_cast<int>(sketch_slots.size()) - 1, 0);
+                if(ImGui::SliderInt("Sketch", &new_sketch_slot_num, 0, max_sketch_slot_num)){
                     sketch_slot_num = new_sketch_slot_num;
                     ensure_sketch_slots(static_cast<std::size_t>(std::max(sketch_slot_num, 0)));
                     clear_sketch_interaction_state();
                     current_sketch_slot().selection.clear();
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("New Sketch")){
+                    sketch_slots.emplace_back();
+                    sketch_slot_num = static_cast<int>(sketch_slots.size() - 1U);
+                    clear_sketch_interaction_state();
+                    current_sketch_slot().selection.clear();
+                    sketch_last_unresolved_constraints = 0U;
+                    sketch_file_status.clear();
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Delete Current Sketch")){
+                    if(sketch_slots.size() <= 1U){
+                        reset_sketch_slot(current_sketch_slot());
+                    }else{
+                        sketch_slots.erase(std::next(std::begin(sketch_slots), static_cast<std::ptrdiff_t>(std::max(sketch_slot_num, 0))));
+                        sketch_slot_num = std::clamp(sketch_slot_num, 0, static_cast<int>(sketch_slots.size() - 1U));
+                    }
+                    clear_sketch_interaction_state();
+                    current_sketch_slot().selection.clear();
+                    sketch_last_unresolved_constraints = 0U;
                 }
 
                 auto &slot = current_sketch_slot();
@@ -6007,22 +6125,83 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
 
                 if(ImGui::BeginPopupModal("Save Sketch", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
-                    ImGui::Text("Sketch save is currently a placeholder.\nA persistent on-disk sketch format will be added later.");
-                    if(ImGui::Button("OK")){
+                    const auto buffer_to_string = [](const auto &buffer) -> std::string {
+                        return std::string(std::begin(buffer),
+                                           std::find(std::begin(buffer), std::end(buffer), '\0'));
+                    };
+
+                    ImGui::Text("Save sketch as...");
+                    ImGui::SetNextItemWidth(650.0f);
+                    ImGui::InputText("##save_sketch_path", sketch_save_path.data(), sketch_save_path.size() - 1U);
+                    if(ImGui::Button("Save")){
+                        auto filepath = std::filesystem::path(buffer_to_string(sketch_save_path));
+                        if(filepath.empty()){
+                            sketch_file_status = "Sketch save path is empty";
+                        }else{
+                            if(filepath.extension().empty()){
+                                filepath.replace_extension(".dcmasketch");
+                            }
+                            std::string error_message;
+                            if(sketch.save_to_file(filepath, &error_message)){
+                                sketch_file_status = "Saved sketch to '" + filepath.string() + "'";
+                                ImGui::CloseCurrentPopup();
+                            }else{
+                                sketch_file_status = error_message;
+                            }
+                        }
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Cancel")){
                         ImGui::CloseCurrentPopup();
                     }
                     ImGui::EndPopup();
                 }
                 if(ImGui::BeginPopupModal("Open Sketch", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
-                    ImGui::Text("Sketch load is currently a placeholder.\nPersistent sketch import support will be added later.");
-                    if(ImGui::Button("OK")){
+                    const auto buffer_to_string = [](const auto &buffer) -> std::string {
+                        return std::string(std::begin(buffer),
+                                           std::find(std::begin(buffer), std::end(buffer), '\0'));
+                    };
+
+                    ImGui::Text("Open sketch from...");
+                    ImGui::SetNextItemWidth(650.0f);
+                    ImGui::InputText("##load_sketch_path", sketch_load_path.data(), sketch_load_path.size() - 1U);
+                    if(ImGui::Button("Open")){
+                        const auto filepath = std::filesystem::path(buffer_to_string(sketch_load_path));
+                        if(filepath.empty()){
+                            sketch_file_status = "Sketch load path is empty";
+                        }else{
+                            Sketch loaded_sketch;
+                            std::string error_message;
+                            if(Sketch::load_from_file(filepath, loaded_sketch, &error_message)){
+                                reset_sketch_slot(slot);
+                                slot.history.current() = loaded_sketch;
+                                slot.selection.clear();
+                                clear_sketch_interaction_state();
+                                sketch_last_unresolved_constraints = 0U;
+                                sketch_file_status = "Loaded sketch from '" + filepath.string() + "'";
+                                ImGui::CloseCurrentPopup();
+                            }else{
+                                sketch_file_status = error_message;
+                            }
+                        }
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Cancel")){
                         ImGui::CloseCurrentPopup();
                     }
                     ImGui::EndPopup();
                 }
 
+                const auto sketch_dof = sketch.summarize_degrees_of_freedom();
                 ImGui::Text("History: %zu / %zu", slot.history.current_version + 1U, slot.history.versions.size());
                 ImGui::Text("Geometry: %zu  Constraints: %zu", sketch.primitive_count(), sketch.constraint_count());
+                ImGui::Text("DOF: %zu / %zu remaining", sketch_dof.remaining, sketch_dof.total);
+                if(sketch_dof.overconstrained != 0U){
+                    ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f),
+                                       "Overconstrained by %zu", sketch_dof.overconstrained);
+                }else if(sketch_dof.remaining == 0U){
+                    ImGui::TextColored(ImVec4(0.3f, 1.0f, 0.4f, 1.0f), "Sketch is fully constrained");
+                }
                 ImGui::Text("Selected: %zu", slot.selection.size());
                 if(sketch_pending_primitive.active()){
                     const auto remaining_points = sketch_pending_primitive.required_points() - sketch_pending_primitive.points.size();
@@ -6037,6 +6216,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
                 if(sketch_last_unresolved_constraints){
                     ImGui::Text("Last solve unresolved: %zu", sketch_last_unresolved_constraints.value());
+                }
+                ImGui::Checkbox("Show sketch numbers", &sketch_show_indices);
+                if(!sketch_file_status.empty()){
+                    ImGui::TextWrapped("%s", sketch_file_status.c_str());
                 }
 
                 const auto activate_sketch_primitive = [&](Sketch::primitive_kind_t kind,
@@ -6148,8 +6331,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         editable_sketch.add_tangent_constraint(primitive_a, primitive_b);
                     }
                 }
-                ImGui::SameLine();
-                if(ImGui::Button("Resolve")){
+                if(ImGui::Button("Compute Constraints")){
                     if(sketch.constraint_count() != 0U){
                         auto &editable_sketch = create_sketch_snapshot(disp_img_it);
                         sketch_last_unresolved_constraints = editable_sketch.solve_constraints();
@@ -6159,10 +6341,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
 
                 ImGui::Separator();
-                if(ImGui::Button("Debugging")){
-                    ImGui::OpenPopup("Sketch Debugging");
+                if(ImGui::Button("Inspect Sketch")){
+                    view_sketch_editor_enabled = true;
                 }
-                if(ImGui::BeginPopupModal("Sketch Debugging", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
+                if(view_sketch_editor_enabled){
+                    ImGui::SetNextWindowSize(ImVec2(980.0f, 620.0f), ImGuiCond_FirstUseEver);
+                    ImGui::SetNextWindowPos(ImVec2(720.0f, 120.0f), ImGuiCond_FirstUseEver);
+                    ImGui::Begin("Sketch Editor", &view_sketch_editor_enabled, ImGuiWindowFlags_AlwaysAutoResize);
                     const auto to_tag_index = [](Sketch::geometry_tag_t tag) -> int {
                         return (tag == Sketch::geometry_tag_t::support) ? 1 : 0;
                     };
@@ -6202,6 +6387,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if(ImGui::Button("Delete all constraints")){
                         edit_current_sketch([](Sketch &editable_sketch){
                             editable_sketch.clear_constraints();
+                        });
+                    }
+                    ImGui::SameLine();
+                    if(ImGui::Button("Delete all un-referenced vertices")){
+                        edit_current_sketch([&](Sketch &editable_sketch){
+                            const auto removed = editable_sketch.delete_unreferenced_vertices();
+                            sketch_file_status = "Deleted " + std::to_string(removed) + " unreferenced " + ((removed == 1U) ? "vertex" : "vertices");
                         });
                     }
                     ImGui::SameLine();
@@ -6541,11 +6733,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         }
                     }
                     ImGui::EndChild();
-
-                    if(ImGui::Button("Close")){
-                        ImGui::CloseCurrentPopup();
-                    }
-                    ImGui::EndPopup();
+                    ImGui::End();
                 }
                 ImGui::End();
             }
