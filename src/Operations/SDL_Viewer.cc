@@ -6178,13 +6178,18 @@ bool SDL_Viewer(Drover &DICOM_data,
                             Sketch loaded_sketch;
                             std::string error_message;
                             if(Sketch::load_from_file(filepath, loaded_sketch, &error_message)){
-                                reset_sketch_slot(slot);
-                                slot.history.current() = loaded_sketch;
-                                slot.selection.clear();
-                                clear_sketch_interaction_state();
-                                sketch_last_unresolved_constraints = 0U;
-                                sketch_file_status = "Loaded sketch from '" + filepath.string() + "'";
-                                ImGui::CloseCurrentPopup();
+                                if(!loaded_sketch.has_plane()){
+                                    sketch_file_status = "Unable to load sketch from '" + filepath.string()
+                                                       + "': sketch has no embedded plane";
+                                }else{
+                                    reset_sketch_slot(slot);
+                                    slot.history.current() = loaded_sketch;
+                                    slot.selection.clear();
+                                    clear_sketch_interaction_state();
+                                    sketch_last_unresolved_constraints = 0U;
+                                    sketch_file_status = "Loaded sketch from '" + filepath.string() + "'";
+                                    ImGui::CloseCurrentPopup();
+                                }
                             }else{
                                 sketch_file_status = error_message;
                             }
