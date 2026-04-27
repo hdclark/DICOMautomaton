@@ -532,6 +532,12 @@ Sketch::refresh_primitive_geometry(primitive_index_t idx){
         &&  vertex_index_valid(arc->start)
         &&  vertex_index_valid(arc->stop) ){
             const auto centre = vertex(arc->center);
+            const auto start_point = vertex(arc->start);
+            const auto stop_point = vertex(arc->stop);
+            const auto plane_normal = plane().normal();
+            const auto on_plane_tolerance = 1.0E-6;
+            const auto start_on_plane = (std::abs((start_point - plane().origin).Dot(plane_normal)) <= on_plane_tolerance);
+            const auto stop_on_plane = (std::abs((stop_point - plane().origin).Dot(plane_normal)) <= on_plane_tolerance);
             const auto start_p = project(vertex(arc->start));
             const auto stop_p = project(vertex(arc->stop));
             const auto centre_p = project(centre);
@@ -541,9 +547,8 @@ Sketch::refresh_primitive_geometry(primitive_index_t idx){
             const auto stop_dv = stop_p.v - centre_p.v;
             const auto start_radius = std::hypot(start_du, start_dv);
             const auto stop_radius = std::hypot(stop_du, stop_dv);
-            const auto fallback_radius = std::max(start_radius, stop_radius);
 
-            arc->radius = fallback_radius;
+            arc->radius = (start_radius <= std::numeric_limits<double>::epsilon()) ? stop_radius : start_radius;
             arc->start_angle = normalize_angle((start_radius <= std::numeric_limits<double>::epsilon())
                                                ? 0.0
                                                : std::atan2(start_dv, start_du));
@@ -552,8 +557,12 @@ Sketch::refresh_primitive_geometry(primitive_index_t idx){
                                               : std::atan2(stop_dv, stop_du));
 
             if(arc->radius > std::numeric_limits<double>::epsilon()){
-                vertices_.at(arc->start) = point_on_circle(plane(), centre, arc->radius, arc->start_angle);
-                vertices_.at(arc->stop) = point_on_circle(plane(), centre, arc->radius, arc->stop_angle);
+                if(start_on_plane){
+                    vertices_.at(arc->start) = point_on_circle(plane(), centre, arc->radius, arc->start_angle);
+                }
+                if(stop_on_plane){
+                    vertices_.at(arc->stop) = point_on_circle(plane(), centre, arc->radius, arc->stop_angle);
+                }
             }
         }
     }
