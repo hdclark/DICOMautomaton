@@ -6081,7 +6081,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                     if(sketch_slots.size() <= 1U){
                         reset_sketch_slot(current_sketch_slot());
                     }else{
-                        sketch_slots.erase(std::next(std::begin(sketch_slots), static_cast<std::ptrdiff_t>(std::max(sketch_slot_num, 0))));
+                        const auto current_slot_it = std::next(std::begin(sketch_slots),
+                                                               static_cast<std::ptrdiff_t>(std::max(sketch_slot_num, 0)));
+                        sketch_slots.erase(current_slot_it);
                         sketch_slot_num = std::clamp(sketch_slot_num, 0, static_cast<int>(sketch_slots.size() - 1U));
                     }
                     clear_sketch_interaction_state();
@@ -6132,12 +6134,12 @@ bool SDL_Viewer(Drover &DICOM_data,
                     clear_sketch_interaction_state();
                 }
 
-                if(ImGui::BeginPopupModal("Save Sketch", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
-                    const auto buffer_to_string = [](const auto &buffer) -> std::string {
-                        return std::string(std::begin(buffer),
-                                           std::find(std::begin(buffer), std::end(buffer), '\0'));
-                    };
+                const auto buffer_to_string = [](const auto &buffer) -> std::string {
+                    return std::string(std::begin(buffer),
+                                       std::find(std::begin(buffer), std::end(buffer), '\0'));
+                };
 
+                if(ImGui::BeginPopupModal("Save Sketch", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
                     ImGui::Text("Save sketch as...");
                     ImGui::SetNextItemWidth(650.0f);
                     ImGui::InputText("##save_sketch_path", sketch_save_path.data(), sketch_save_path.size() - 1U);
@@ -6165,11 +6167,6 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ImGui::EndPopup();
                 }
                 if(ImGui::BeginPopupModal("Open Sketch", NULL, ImGuiWindowFlags_AlwaysAutoResize)){
-                    const auto buffer_to_string = [](const auto &buffer) -> std::string {
-                        return std::string(std::begin(buffer),
-                                           std::find(std::begin(buffer), std::end(buffer), '\0'));
-                    };
-
                     ImGui::Text("Open sketch from...");
                     ImGui::SetNextItemWidth(650.0f);
                     ImGui::InputText("##load_sketch_path", sketch_load_path.data(), sketch_load_path.size() - 1U);

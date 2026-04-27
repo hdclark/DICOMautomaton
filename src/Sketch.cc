@@ -547,7 +547,16 @@ Sketch::refresh_primitive_geometry(primitive_index_t idx){
             const auto stop_dv = stop_p.v - centre_p.v;
             const auto start_radius = std::hypot(start_du, start_dv);
             const auto stop_radius = std::hypot(stop_du, stop_dv);
+            if( (start_radius <= std::numeric_limits<double>::epsilon())
+            &&  (stop_radius <= std::numeric_limits<double>::epsilon()) ){
+                arc->radius = 0.0;
+                arc->start_angle = 0.0;
+                arc->stop_angle = 0.0;
+                return;
+            }
 
+            // The start vertex defines the canonical arc radius during interactive editing; the stop vertex contributes
+            // the terminal angle unless the start point collapses onto the centre.
             arc->radius = (start_radius <= std::numeric_limits<double>::epsilon()) ? stop_radius : start_radius;
             arc->start_angle = normalize_angle((start_radius <= std::numeric_limits<double>::epsilon())
                                                ? 0.0
@@ -557,6 +566,8 @@ Sketch::refresh_primitive_geometry(primitive_index_t idx){
                                               : std::atan2(stop_dv, stop_du));
 
             if(arc->radius > std::numeric_limits<double>::epsilon()){
+                // Arc endpoints are constrained to the shared radius so that editing the stored vertices keeps the
+                // rendered arc and draggable endpoints synchronized.
                 if(start_on_plane){
                     vertices_.at(arc->start) = point_on_circle(plane(), centre, arc->radius, arc->start_angle);
                 }
@@ -784,7 +795,8 @@ Sketch::summarize_degrees_of_freedom() const{
     dof_summary_t out;
     out.total = vertices_.size() * 2U;
     for(const auto &constraint_ptr : constraints_){
-        if((constraint_ptr != nullptr) && constraint_ptr->enabled){
+        if(constraint_ptr == nullptr) continue;
+        if(constraint_ptr->enabled){
             ++out.enabled_constraints;
         }else{
             ++out.disabled_constraints;

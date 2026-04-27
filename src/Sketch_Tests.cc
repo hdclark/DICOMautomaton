@@ -3,6 +3,7 @@
 #include "doctest20251212/doctest.h"
 
 #include <array>
+#include <chrono>
 #include <filesystem>
 #include <set>
 #include <vector>
@@ -230,7 +231,8 @@ TEST_CASE("Sketch files round-trip through disk serialization"){
                                           Sketch::geometry_tag_t::support);
     sketch.add_distance_constraint(line_idx, 2.0);
 
-    const auto path = std::filesystem::temp_directory_path() / "dcma_sketch_roundtrip_test.dcmasketch";
+    const auto unique_suffix = std::to_string(std::chrono::high_resolution_clock::now().time_since_epoch().count());
+    const auto path = std::filesystem::temp_directory_path() / ("dcma_sketch_roundtrip_test_" + unique_suffix + ".dcmasketch");
     std::string error_message;
     REQUIRE( sketch.save_to_file(path, &error_message) );
 
