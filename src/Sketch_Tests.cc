@@ -160,6 +160,35 @@ TEST_CASE("Sketch arcs keep endpoints on the circle"){
     REQUIRE( samples.back().distance(sketch.vertex(arc->stop)) <= 1.0E-6 );
 }
 
+TEST_CASE("Sketch refresh updates cached geometry after shared arc endpoint snapping"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+
+    const auto circle_idx = sketch.add_circle(vec3<double>(0.0, 0.0, 0.0),
+                                              vec3<double>(1.0, 0.0, 0.0),
+                                              Sketch::geometry_tag_t::normal);
+    const auto arc_idx = sketch.add_arc(vec3<double>(0.0, 0.0, 0.0),
+                                        vec3<double>(1.0, 0.0, 0.0),
+                                        vec3<double>(0.0, 1.0, 0.0),
+                                        Sketch::geometry_tag_t::normal);
+
+    auto *circle = dynamic_cast<Sketch::circle_primitive_t*>(sketch.primitive(circle_idx));
+    auto *arc = dynamic_cast<Sketch::arc_primitive_t*>(sketch.primitive(arc_idx));
+    REQUIRE( circle != nullptr );
+    REQUIRE( arc != nullptr );
+
+    circle->center = arc->center;
+    circle->radius_point = arc->stop;
+    sketch.refresh_geometry();
+
+    sketch.set_vertex(arc->stop, vec3<double>(3.0, 4.0, 0.0));
+
+    const auto *updated_circle = dynamic_cast<const Sketch::circle_primitive_t*>(sketch.primitive(circle_idx));
+    REQUIRE( updated_circle != nullptr );
+    REQUIRE( updated_circle->radius == doctest::Approx(1.0).epsilon(1E-6) );
+    REQUIRE( sketch.vertex(arc->stop).distance(sketch.vertex(arc->center)) == doctest::Approx(1.0).epsilon(1E-6) );
+}
+
 TEST_CASE("Sketch deleting a vertex removes dependent primitives and constraints"){
     Sketch sketch;
     sketch.set_plane(default_xy_plane());
@@ -226,8 +255,8 @@ TEST_CASE("Sketch can delete unreferenced vertices without corrupting indices"){
 TEST_CASE("Sketch files round-trip through disk serialization"){
     Sketch sketch;
     sketch.set_plane(default_xy_plane());
-    const auto line_idx = sketch.add_line(vec3<double>(0.0, 0.0, 0.0),
-                                          vec3<double>(2.0, 0.0, 0.0),
+    const auto line_idx = sketch.add_line(vec3<double>(0.123456789012345, 0.0, 0.0),
+                                          vec3<double>(2.123456789012345, 0.0, 0.0),
                                           Sketch::geometry_tag_t::support);
     sketch.add_distance_constraint(line_idx, 2.0);
 
@@ -245,7 +274,8 @@ TEST_CASE("Sketch files round-trip through disk serialization"){
     const auto *loaded_line = dynamic_cast<const Sketch::line_primitive_t*>(loaded.primitive(0U));
     REQUIRE( loaded_line != nullptr );
     REQUIRE( loaded_line->tag == Sketch::geometry_tag_t::support );
-    REQUIRE( loaded.vertex(loaded_line->vertices[1]).x == doctest::Approx(2.0).epsilon(1E-6) );
+    REQUIRE( loaded.vertex(loaded_line->vertices[0]).x == doctest::Approx(0.123456789012345).epsilon(1E-15) );
+    REQUIRE( loaded.vertex(loaded_line->vertices[1]).x == doctest::Approx(2.123456789012345).epsilon(1E-15) );
 
     std::filesystem::remove(path);
 }

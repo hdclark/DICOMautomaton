@@ -265,7 +265,7 @@ private:
     primitive_index_t append_primitive(std::unique_ptr<primitive_t> primitive);
     constraint_index_t append_constraint(std::unique_ptr<constraint_t> constraint);
     void refresh_all_derived_geometry();
-    void refresh_primitive_geometry(primitive_index_t idx);
+    bool refresh_primitive_geometry(primitive_index_t idx);
     bool primitive_index_valid(primitive_index_t idx) const;
     bool vertex_index_valid(vertex_index_t idx) const;
 };

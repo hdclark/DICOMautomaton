@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <fstream>
+#include <iomanip>
 #include <limits>
 #include <sstream>
 #include <stdexcept>
@@ -518,16 +519,17 @@ Sketch::squared_distance_to_segment(const projection_t &p,
     return (du * du) + (dv * dv);
 }
 
-void
+bool
 Sketch::refresh_primitive_geometry(primitive_index_t idx){
-    if(!primitive_index_valid(idx)) return;
+    if(!primitive_index_valid(idx)) return false;
+    bool snapped_vertex = false;
     auto *base = primitives_.at(idx).get();
     if(auto *circle = dynamic_cast<circle_primitive_t*>(base); circle != nullptr){
         if(vertex_index_valid(circle->center) && vertex_index_valid(circle->radius_point)){
             circle->radius = vertex(circle->center).distance(vertex(circle->radius_point));
         }
     }else if(auto *arc = dynamic_cast<arc_primitive_t*>(base); arc != nullptr){
-        if(!has_plane_) return;
+        if(!has_plane_) return false;
         if( vertex_index_valid(arc->center)
         &&  vertex_index_valid(arc->start)
         &&  vertex_index_valid(arc->stop) ){
@@ -552,7 +554,7 @@ Sketch::refresh_primitive_geometry(primitive_index_t idx){
                 arc->radius = 0.0;
                 arc->start_angle = 0.0;
                 arc->stop_angle = 0.0;
-                return;
+                return false;
             }
 
             // The start vertex defines the canonical arc radius during interactive editing; the stop vertex contributes
@@ -569,20 +571,34 @@ Sketch::refresh_primitive_geometry(primitive_index_t idx){
                 // Arc endpoints are constrained to the shared radius so that editing the stored vertices keeps the
                 // rendered arc and draggable endpoints synchronized.
                 if(start_on_plane){
-                    vertices_.at(arc->start) = point_on_circle(plane(), centre, arc->radius, arc->start_angle);
+                    const auto snapped_start = point_on_circle(plane(), centre, arc->radius, arc->start_angle);
+                    if(vertices_.at(arc->start).distance(snapped_start) > on_plane_tolerance){
+                        vertices_.at(arc->start) = snapped_start;
+                        snapped_vertex = true;
+                    }
                 }
                 if(stop_on_plane){
-                    vertices_.at(arc->stop) = point_on_circle(plane(), centre, arc->radius, arc->stop_angle);
+                    const auto snapped_stop = point_on_circle(plane(), centre, arc->radius, arc->stop_angle);
+                    if(vertices_.at(arc->stop).distance(snapped_stop) > on_plane_tolerance){
+                        vertices_.at(arc->stop) = snapped_stop;
+                        snapped_vertex = true;
+                    }
                 }
             }
         }
     }
+    return snapped_vertex;
 }
 
 void
 Sketch::refresh_all_derived_geometry(){
-    for(std::size_t i = 0U; i < primitives_.size(); ++i){
-        refresh_primitive_geometry(i);
+    const auto max_passes = std::max<std::size_t>(primitives_.size(), 1U);
+    for(std::size_t pass = 0U; pass < max_passes; ++pass){
+        bool any_snapped_vertices = false;
+        for(std::size_t i = 0U; i < primitives_.size(); ++i){
+            any_snapped_vertices = refresh_primitive_geometry(i) || any_snapped_vertices;
+        }
+        if(!any_snapped_vertices) break;
     }
 }
 
@@ -1139,6 +1155,7 @@ Sketch::save_to_file(const std::filesystem::path &path,
         store_error(error_message, "Unable to open sketch file for writing");
         return false;
     }
+    file << std::setprecision(std::numeric_limits<double>::max_digits10);
 
     file << "DCMA_SKETCH 1\n";
     file << "plane " << (has_plane_ ? 1 : 0) << '\n';
