@@ -1744,7 +1744,6 @@ bool SDL_Viewer(Drover &DICOM_data,
     bool sketch_show_vertex_numbers = false;
     bool sketch_show_primitive_numbers = false;
     bool sketch_show_constraint_numbers = false;
-    bool sketch_show_indices = false;
     bool sketch_solve_on_edit = true;
     double sketch_snap_distance = 5.0;
     bool view_sketch_editor_enabled = false;
