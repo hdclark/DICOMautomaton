@@ -71,6 +71,31 @@ TEST_CASE("Sketch selection helpers find primitives and boxed items"){
     REQUIRE( boxed.front() == line_idx );
 }
 
+TEST_CASE("Sketch selection helpers tolerate missing plane initialization"){
+    Sketch sketch;
+    sketch.add_vertex_primitive(vec3<double>(1.0, 2.0, 3.0), Sketch::geometry_tag_t::normal);
+    sketch.add_line(vec3<double>(0.0, 0.0, 0.0),
+                    vec3<double>(4.0, 0.0, 0.0),
+                    Sketch::geometry_tag_t::support);
+    sketch.add_circle(vec3<double>(8.0, 8.0, 0.0),
+                      vec3<double>(9.0, 8.0, 0.0),
+                      Sketch::geometry_tag_t::support);
+    sketch.add_bezier({ vec3<double>(0.0, 0.0, 0.0),
+                        vec3<double>(1.0, 2.0, 0.0),
+                        vec3<double>(2.0, 2.0, 0.0),
+                        vec3<double>(3.0, 0.0, 0.0) },
+                      Sketch::geometry_tag_t::normal);
+
+    REQUIRE_FALSE( sketch.has_plane() );
+    REQUIRE_FALSE( sketch.nearest_primitive(vec3<double>(1.0, 0.0, 0.0), 1.0).has_value() );
+    REQUIRE_FALSE( sketch.nearest_vertex(vec3<double>(1.0, 0.0, 0.0), 1.0).has_value() );
+    REQUIRE_FALSE( sketch.nearest_primitive_vertex(vec3<double>(1.0, 0.0, 0.0), 1.0).has_value() );
+    REQUIRE( sketch.primitives_inside_box(vec3<double>(-1.0, -1.0, 0.0),
+                                          vec3<double>(5.0, 5.0, 0.0)).empty() );
+    REQUIRE( sketch.sample_primitive(2U, 16U).empty() );
+    REQUIRE_FALSE( sketch.primitive_bounds(2U).is_valid() );
+}
+
 TEST_CASE("Sketch constraints resolve simple geometry"){
     Sketch sketch;
     sketch.set_plane(default_xy_plane());

@@ -868,6 +868,12 @@ Sketch::sample_primitive(primitive_index_t idx, std::size_t segments) const{
     const auto pi = std::acos(-1.0);
     const auto *base = primitives_.at(idx).get();
     if(base == nullptr) return {};
+    if( !has_plane_
+    &&  (dynamic_cast<const circle_primitive_t*>(base) != nullptr
+       || dynamic_cast<const arc_primitive_t*>(base) != nullptr
+       || dynamic_cast<const bezier_primitive_t*>(base) != nullptr) ){
+        return {};
+    }
 
     if(const auto *vertex_prim = dynamic_cast<const vertex_primitive_t*>(base); vertex_prim != nullptr){
         return { vertex(vertex_prim->vertex) };
@@ -922,6 +928,7 @@ Sketch::sample_primitive(primitive_index_t idx, std::size_t segments) const{
 Sketch::bounding_box_t
 Sketch::primitive_bounds(primitive_index_t idx) const{
     bounding_box_t box;
+    if(!has_plane_) return box;
     const auto samples = sample_primitive(idx, 48U);
     if(samples.empty()) return box;
 
@@ -940,7 +947,7 @@ Sketch::primitive_bounds(primitive_index_t idx) const{
 
 std::optional<Sketch::primitive_index_t>
 Sketch::nearest_primitive(const vec3<double> &point, double tolerance) const{
-    if(primitives_.empty()) return {};
+    if(primitives_.empty() || !has_plane_) return {};
 
     const auto p = project(point);
     const double tol_sq = tolerance * tolerance;
@@ -978,6 +985,7 @@ std::optional<Sketch::vertex_index_t>
 Sketch::nearest_vertex(const vec3<double> &point,
                        double tolerance,
                        const std::set<primitive_index_t> &primitive_mask) const{
+    if(!has_plane_) return {};
     std::set<vertex_index_t> candidate_vertices;
     if(primitive_mask.empty()){
         for(std::size_t i = 0U; i < vertices_.size(); ++i) candidate_vertices.insert(i);
@@ -1006,6 +1014,7 @@ std::optional<std::pair<Sketch::primitive_index_t, Sketch::vertex_index_t>>
 Sketch::nearest_primitive_vertex(const vec3<double> &point,
                                  double tolerance,
                                  const std::set<primitive_index_t> &primitive_mask) const{
+    if(!has_plane_) return {};
     const auto p = project(point);
     const double tol_sq = tolerance * tolerance;
     std::optional<std::pair<primitive_index_t, vertex_index_t>> best;
@@ -1035,6 +1044,7 @@ Sketch::nearest_primitive_vertex(const vec3<double> &point,
 std::vector<Sketch::primitive_index_t>
 Sketch::primitives_inside_box(const vec3<double> &a, const vec3<double> &b) const{
     std::vector<primitive_index_t> out;
+    if(!has_plane_) return out;
     auto pa = project(a);
     auto pb = project(b);
     bounding_box_t selection;
