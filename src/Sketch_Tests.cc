@@ -157,10 +157,10 @@ TEST_CASE("Sketch tangent constraints solve line-circle tangency"){
     const auto centre = sketch.vertex(circle->center);
     const auto p0 = sketch.vertex(line->vertices[0]);
     const auto p1 = sketch.vertex(line->vertices[1]);
-    const auto numerator = std::abs(((centre.x - p0.x) * (p1.y - p0.y)) - ((centre.y - p0.y) * (p1.x - p0.x)));
+    const auto cross_product_mag = std::abs(((centre.x - p0.x) * (p1.y - p0.y)) - ((centre.y - p0.y) * (p1.x - p0.x)));
     const auto denominator = std::hypot(p1.x - p0.x, p1.y - p0.y);
     REQUIRE( denominator > 1.0E-9 );
-    REQUIRE( doctest::Approx(numerator / denominator).epsilon(1E-4) == 1.0 );
+    REQUIRE( doctest::Approx(cross_product_mag / denominator).epsilon(1E-4) == 1.0 );
 }
 
 TEST_CASE("Sketch sticky constraints stabilize underconstrained solutions"){

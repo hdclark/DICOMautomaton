@@ -24,6 +24,10 @@
 
 namespace {
 
+constexpr double solver_min_epsilon = 1.0E-9;
+constexpr double jacobian_sparsity_threshold = 1.0E-12;
+constexpr std::size_t max_refinement_passes = 8U;
+
 Sketch::projection_t cubic_bezier_point(const Sketch::projection_t &p0,
                                         const Sketch::projection_t &p1,
                                         const Sketch::projection_t &p2,
@@ -316,7 +320,11 @@ static double signed_distance_to_line(const Sketch::projection_t &point,
     const auto dv = line_b.v - line_a.v;
     const auto denom = std::hypot(du, dv);
     if(denom <= std::numeric_limits<double>::epsilon()){
-        return std::hypot(point.u - line_a.u, point.v - line_a.v);
+        const auto offset_u = point.u - line_a.u;
+        const auto offset_v = point.v - line_a.v;
+        const auto magnitude = std::hypot(offset_u, offset_v);
+        const auto sign_basis = (std::abs(offset_v) >= std::abs(offset_u)) ? offset_v : offset_u;
+        return std::copysign(magnitude, (sign_basis == 0.0) ? 1.0 : sign_basis);
     }
     return ((point.u - line_a.u) * dv - (point.v - line_a.v) * du) / denom;
 }
@@ -593,7 +601,7 @@ struct sketch_solver_context_t {
         out.dense = Eigen::MatrixXd::Zero(static_cast<Eigen::Index>(base_residuals.size()),
                                           static_cast<Eigen::Index>(state.size()));
         std::vector<Eigen::Triplet<double>> triplets;
-        const auto step = std::max(options.finite_difference_step, 1.0E-9);
+        const auto step = std::max(options.finite_difference_step, solver_min_epsilon);
 
         for(std::size_t col = 0U; col < state.size(); ++col){
             auto plus = state;
@@ -604,7 +612,7 @@ struct sketch_solver_context_t {
             const auto residuals_minus = residual_vector(minus, nullptr, nullptr);
             for(std::size_t row = 0U; row < base_residuals.size(); ++row){
                 const auto derivative = (residuals_plus.at(row) - residuals_minus.at(row)) / (2.0 * step);
-                if(std::abs(derivative) > 1.0E-12){
+                if(std::abs(derivative) > jacobian_sparsity_threshold){
                     out.dense(static_cast<Eigen::Index>(row), static_cast<Eigen::Index>(col)) = derivative;
                     triplets.emplace_back(static_cast<Eigen::Index>(row),
                                           static_cast<Eigen::Index>(col),
@@ -2022,8 +2030,8 @@ Sketch::solve_constraints(const solve_options_t &options){
         optimizer.max_time = std::chrono::duration_cast<std::chrono::steady_clock::duration>(
             std::chrono::duration<double>(options.max_time_seconds));
     }
-    optimizer.fd_step = std::max(options.finite_difference_step, 1.0E-9);
-    optimizer.initial_lambda = std::max(options.initial_lambda, 1.0E-9);
+    optimizer.fd_step = std::max(options.finite_difference_step, solver_min_epsilon);
+    optimizer.initial_lambda = std::max(options.initial_lambda, solver_min_epsilon);
     optimizer.lambda_increase_factor = std::max(options.lambda_increase_factor, 1.000001);
     optimizer.lambda_decrease_factor = std::clamp(options.lambda_decrease_factor, 1.0E-6, 0.999999);
     optimizer.f = [&context](const std::vector<double> &state) -> double {
@@ -2081,7 +2089,8 @@ Sketch::solve_constraints(const solve_options_t &options){
         }
     }
 
-    const auto refinement_passes = std::min<std::size_t>(std::max<std::size_t>(options.max_iterations, 1U), 8U);
+    const auto refinement_passes = std::min<std::size_t>(std::max<std::size_t>(options.max_iterations, 1U),
+                                                         max_refinement_passes);
     for(std::size_t iter = 0U; iter < refinement_passes; ++iter){
         for(const auto vertex_idx : refinement_anchor_vertices){
             if(vertex_idx < context.initial_vertices.size()){
@@ -2227,7 +2236,7 @@ Sketch::solve_constraints(const solve_options_t &options){
     last_solve_report_.enabled_constraints = final_enabled_constraints;
     last_solve_report_.residual_count = final_residuals.size();
 
-    const auto tolerance = std::max(options.residual_tolerance, 1.0E-9);
+    const auto tolerance = std::max(options.residual_tolerance, solver_min_epsilon);
     for(const auto &block : final_blocks){
         if(block.sticky) continue;
         double block_norm_sq = 0.0;
