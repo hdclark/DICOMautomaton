@@ -1632,7 +1632,7 @@ bool SDL_Viewer(Drover &DICOM_data,
             if(!kind) return 0U;
             switch(kind.value()){
                 case Sketch::primitive_kind_t::vertex: return 1U;
-                case Sketch::primitive_kind_t::line:   return polyline ? 2U : 2U;
+                case Sketch::primitive_kind_t::line:   return 2U;
                 case Sketch::primitive_kind_t::circle: return 2U;
                 case Sketch::primitive_kind_t::arc:    return 3U;
                 case Sketch::primitive_kind_t::bezier: return 4U;
@@ -6081,6 +6081,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                             imgs_window_draw_list->AddText(origin, colour, text.c_str());
                         };
 
+                        // Keep vertex labels a single dedicated colour so they remain visually distinct from primitive
+                        // and constraint labels regardless of the parent primitive tag.
                         const auto vertex_label_colour = ImColor(1.00f, 0.78f, 0.18f, 1.00f);
                         const auto primitive_label_colour = ImColor(0.25f, 1.00f, 0.40f, 1.00f);
                         const auto constraint_label_colour = ImColor(0.98f, 0.42f, 1.00f, 1.00f);
@@ -10167,6 +10169,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                     primitive_idx = editable_sketch.add_line(start_vertex.first,
                                                                                              stop_vertex.first,
                                                                                              sketch_pending_primitive.tag);
+                                                    // Snapping the new endpoint onto an existing vertex terminates
+                                                    // polyline creation so the last segment closes onto that vertex.
                                                     stop_polyline = sketch_pending_primitive.polyline && stop_vertex.second;
                                                 }
                                                 break;

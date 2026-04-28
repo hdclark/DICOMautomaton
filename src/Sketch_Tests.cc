@@ -290,6 +290,12 @@ TEST_CASE("Sketch can insert and collapse vertices"){
     REQUIRE( sketch.primitive_count() == 2U );
     const auto remaining_refs = sketch.primitives_referencing_vertex(0U);
     REQUIRE( remaining_refs.size() == 2U );
+    for(const auto primitive_idx : remaining_refs){
+        const auto *line = dynamic_cast<const Sketch::line_primitive_t*>(sketch.primitive(primitive_idx));
+        REQUIRE( line != nullptr );
+        REQUIRE( (line->vertices[0] == 0U || line->vertices[1] == 0U) );
+    }
+    REQUIRE( sketch.vertex_count() == 3U );
 }
 
 TEST_CASE("Sketch solves perpendicular and overlap constraints"){
