@@ -1609,6 +1609,42 @@ bool SDL_Viewer(Drover &DICOM_data,
         sketch_history_t history;
         std::set<std::size_t> selection;
         std::set<Sketch::vertex_index_t> vertex_selection;
+        std::vector<Sketch::vertex_index_t> vertex_selection_order;
+
+        void clear_vertex_selection(){
+            vertex_selection.clear();
+            vertex_selection_order.clear();
+        }
+
+        void select_vertex(Sketch::vertex_index_t vertex_idx){
+            vertex_selection.insert(vertex_idx);
+            vertex_selection_order.erase(std::remove(std::begin(vertex_selection_order),
+                                                     std::end(vertex_selection_order),
+                                                     vertex_idx),
+                                         std::end(vertex_selection_order));
+            vertex_selection_order.push_back(vertex_idx);
+        }
+
+        void set_single_vertex_selection(Sketch::vertex_index_t vertex_idx){
+            vertex_selection = { vertex_idx };
+            vertex_selection_order = { vertex_idx };
+        }
+
+        std::vector<Sketch::vertex_index_t> ordered_selected_vertices() const{
+            std::vector<Sketch::vertex_index_t> out;
+            out.reserve(vertex_selection.size());
+            for(const auto vertex_idx : vertex_selection_order){
+                if(vertex_selection.count(vertex_idx) != 0U){
+                    out.push_back(vertex_idx);
+                }
+            }
+            for(const auto vertex_idx : vertex_selection){
+                if(std::find(std::begin(out), std::end(out), vertex_idx) == std::end(out)){
+                    out.push_back(vertex_idx);
+                }
+            }
+            return out;
+        }
     };
 
     struct pending_sketch_primitive_t {
@@ -1789,7 +1825,7 @@ bool SDL_Viewer(Drover &DICOM_data,
     const auto reset_sketch_slot = [&](sketch_slot_t &slot) -> void {
         slot.history.reset();
         slot.selection.clear();
-        slot.vertex_selection.clear();
+        slot.clear_vertex_selection();
     };
 
     const auto current_sketch = [&]() -> Sketch& {
@@ -5964,10 +6000,11 @@ bool SDL_Viewer(Drover &DICOM_data,
                         const auto *primitive = sketch.primitive(i);
                         if(primitive == nullptr) continue;
 
-                        const bool primitive_is_fully_constrained = std::all_of(primitive->vertex_tags().begin(),
-                                                                                primitive->vertex_tags().end(),
-                                                                                [&](const auto &vertex_tag){
-                                                                                    return fully_constrained_vertices.find(vertex_tag) != fully_constrained_vertices.end();
+                        const auto primitive_vertices = primitive->referenced_vertices();
+                        const bool primitive_is_fully_constrained = std::all_of(primitive_vertices.begin(),
+                                                                                primitive_vertices.end(),
+                                                                                [&](const auto vertex_idx){
+                                                                                    return fully_constrained_vertices.find(vertex_idx) != fully_constrained_vertices.end();
                                                                                 });
                         if(primitive_is_fully_constrained){
                             fully_constrained_primitives.insert(i);
@@ -6191,7 +6228,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     ensure_sketch_slots(static_cast<std::size_t>(std::max(sketch_slot_num, 0)));
                     clear_sketch_interaction_state();
                     current_sketch_slot().selection.clear();
-                    current_sketch_slot().vertex_selection.clear();
+                    current_sketch_slot().clear_vertex_selection();
                 }
                 ImGui::SameLine();
                 if(ImGui::Button("New Sketch")){
@@ -6199,7 +6236,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     sketch_slot_num = static_cast<int>(sketch_slots.size() - 1U);
                     clear_sketch_interaction_state();
                     current_sketch_slot().selection.clear();
-                    current_sketch_slot().vertex_selection.clear();
+                    current_sketch_slot().clear_vertex_selection();
                     sketch_last_unresolved_constraints = 0U;
                     sketch_file_status.clear();
                 }
@@ -6215,7 +6252,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     }
                     clear_sketch_interaction_state();
                     current_sketch_slot().selection.clear();
-                    current_sketch_slot().vertex_selection.clear();
+                    current_sketch_slot().clear_vertex_selection();
                     sketch_last_unresolved_constraints = 0U;
                 }
 
@@ -6239,7 +6276,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                     slot.history.snapshot();
                     slot.history.current().clear();
                     slot.selection.clear();
-                    slot.vertex_selection.clear();
+                    slot.clear_vertex_selection();
                     sketch_last_unresolved_constraints = 0U;
                     clear_sketch_interaction_state();
                 }
@@ -6255,13 +6292,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                 if(clicked_undo_sketch){
                     slot.history.undo();
                     slot.selection.clear();
-                    slot.vertex_selection.clear();
+                    slot.clear_vertex_selection();
                     clear_sketch_interaction_state();
                 }
                 if(clicked_redo_sketch){
                     slot.history.redo();
                     slot.selection.clear();
-                    slot.vertex_selection.clear();
+                    slot.clear_vertex_selection();
                     clear_sketch_interaction_state();
                 }
 
@@ -6316,7 +6353,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     reset_sketch_slot(slot);
                                     slot.history.current() = loaded_sketch;
                                     slot.selection.clear();
-                                    slot.vertex_selection.clear();
+                                    slot.clear_vertex_selection();
                                     clear_sketch_interaction_state();
                                     sketch_last_unresolved_constraints = 0U;
                                     sketch_file_status = "Loaded sketch from '" + filepath.string() + "'";
@@ -6437,7 +6474,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
                 if(ImGui::Button("Clear Selection")){
                     slot.selection.clear();
-                    slot.vertex_selection.clear();
+                    slot.clear_vertex_selection();
                 }
                 ImGui::SameLine();
                 if(ImGui::Button("Insert Vertex Mode")){
@@ -6457,8 +6494,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         selected_lines.push_back(primitive_idx);
                     }
                 }
-                const std::vector<Sketch::vertex_index_t> selected_vertices(std::begin(slot.vertex_selection),
-                                                                            std::end(slot.vertex_selection));
+                const auto selected_vertices = slot.ordered_selected_vertices();
 
                 ImGui::Separator();
                 ImGui::Text("Add Constraints");
@@ -6532,10 +6568,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
                 if(ImGui::Button("Overlap")){
                     if(slot.vertex_selection.size() == 2U){
-                        auto it = std::begin(slot.vertex_selection);
-                        const auto vertex_a = *it;
-                        ++it;
-                        const auto vertex_b = *it;
+                        const auto vertex_a = selected_vertices.front();
+                        const auto vertex_b = selected_vertices.back();
                         auto &editable_sketch = create_sketch_snapshot(disp_img_it);
                         editable_sketch.add_overlap_constraint(vertex_a, vertex_b);
                     }
@@ -6577,7 +6611,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                         auto &editable_sketch = create_sketch_snapshot(disp_img_it);
                         fn(editable_sketch);
                         slot.selection.clear();
-                        slot.vertex_selection.clear();
+                        slot.clear_vertex_selection();
                         clear_sketch_interaction_state();
                     };
 
@@ -10170,7 +10204,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                                                                sketch_drag_state.last_pos.value());
                             if(!io.KeyCtrl){
                                 slot.selection.clear();
-                                slot.vertex_selection.clear();
+                                slot.clear_vertex_selection();
                             }
                             slot.selection.insert(std::begin(selected), std::end(selected));
                         }
@@ -10185,7 +10219,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                             slot.history.redo();
                         }
                         slot.selection.clear();
-                        slot.vertex_selection.clear();
+                        slot.clear_vertex_selection();
                         clear_sketch_interaction_state();
 
                     }else if( view_toggles.view_vector_sketching_enabled
@@ -10197,7 +10231,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                             sketch_drag_state.clear();
                         }else{
                             slot.selection.clear();
-                            slot.vertex_selection.clear();
+                            slot.clear_vertex_selection();
                             clear_sketch_interaction_state();
                         }
 
@@ -10295,7 +10329,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                 break;
                                         }
                                         slot.selection = { primitive_idx };
-                                        slot.vertex_selection.clear();
+                                        slot.clear_vertex_selection();
                                         sketch_last_unresolved_constraints = {};
                                         if(sketch_pending_primitive.polyline && !stop_polyline){
                                             sketch_pending_primitive.points = { sketch_pending_primitive.points.back() };
@@ -10309,8 +10343,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     auto &editable_sketch = create_sketch_snapshot(disp_img_it);
                                     if(const auto inserted_vertex = editable_sketch.insert_vertex(sketch_hovered_primitive.value(), mouse_pos); inserted_vertex){
                                         slot.selection.clear();
-                                        slot.vertex_selection.clear();
-                                        slot.vertex_selection.insert(inserted_vertex.value());
+                                        slot.clear_vertex_selection();
+                                        slot.set_single_vertex_selection(inserted_vertex.value());
                                         sketch_tool_mode = sketch_tool_mode_t::select;
                                     }
                                 }
@@ -10319,15 +10353,14 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     if(!io.KeyCtrl && slot.vertex_selection.empty()){
                                         slot.selection.clear();
                                     }
-                                    slot.vertex_selection.insert(sketch_hovered_vertex.value());
+                                    slot.select_vertex(sketch_hovered_vertex.value());
                                     if(slot.vertex_selection.size() == 2U){
-                                        auto it = std::begin(slot.vertex_selection);
-                                        const auto keep_vertex = *it;
-                                        ++it;
-                                        const auto remove_vertex = *it;
+                                        const auto ordered_vertices = slot.ordered_selected_vertices();
+                                        const auto keep_vertex = ordered_vertices.front();
+                                        const auto remove_vertex = ordered_vertices.back();
                                         auto &editable_sketch = create_sketch_snapshot(disp_img_it);
                                         editable_sketch.collapse_vertices(keep_vertex, remove_vertex);
-                                        slot.vertex_selection = { keep_vertex };
+                                        slot.set_single_vertex_selection(keep_vertex);
                                         sketch_tool_mode = sketch_tool_mode_t::select;
                                     }
                                 }
@@ -10343,10 +10376,10 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 if(hit_vertex){
                                     if(!io.KeyCtrl){
                                         slot.selection.clear();
-                                        slot.vertex_selection.clear();
+                                        slot.clear_vertex_selection();
                                     }
                                     slot.selection.insert(hit_vertex->first);
-                                    slot.vertex_selection.insert(hit_vertex->second);
+                                    slot.select_vertex(hit_vertex->second);
                                     sketch_drag_state.selection_move_active = true;
                                     sketch_drag_state.selection_box_active = false;
                                     sketch_drag_state.snapshot_created = false;
@@ -10356,7 +10389,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 }else if(hit){
                                     if(!io.KeyCtrl){
                                         slot.selection.clear();
-                                        slot.vertex_selection.clear();
+                                        slot.clear_vertex_selection();
                                     }
                                     slot.selection.insert(hit.value());
                                     sketch_drag_state.selection_move_active = true;
@@ -10368,7 +10401,7 @@ bool SDL_Viewer(Drover &DICOM_data,
                                 }else{
                                     if(!io.KeyCtrl){
                                         slot.selection.clear();
-                                        slot.vertex_selection.clear();
+                                        slot.clear_vertex_selection();
                                     }
                                     sketch_drag_state.selection_box_active = true;
                                     sketch_drag_state.selection_move_active = false;

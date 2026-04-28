@@ -798,14 +798,14 @@ Sketch::refresh_primitive_geometry(primitive_index_t idx){
             if(arc->radius > std::numeric_limits<double>::epsilon()){
                 // Arc endpoints are constrained to the shared radius so that editing the stored vertices keeps the
                 // rendered arc and draggable endpoints synchronized.
-                if(start_on_plane){
+                if(start_on_plane && !vertex_is_pinned(arc->start)){
                     const auto snapped_start = point_on_circle(plane(), centre, arc->radius, arc->start_angle);
                     if(vertices_.at(arc->start).distance(snapped_start) > on_plane_tolerance){
                         vertices_.at(arc->start) = snapped_start;
                         snapped_vertex = true;
                     }
                 }
-                if(stop_on_plane){
+                if(stop_on_plane && !vertex_is_pinned(arc->stop)){
                     const auto snapped_stop = point_on_circle(plane(), centre, arc->radius, arc->stop_angle);
                     if(vertices_.at(arc->stop).distance(snapped_stop) > on_plane_tolerance){
                         vertices_.at(arc->stop) = snapped_stop;
@@ -834,13 +834,13 @@ void
 Sketch::refresh_all_derived_geometry(){
     const auto max_passes = std::max<std::size_t>(primitives_.size(), 1U);
     for(std::size_t pass = 0U; pass < max_passes; ++pass){
+        enforce_pinned_vertices();
         bool any_snapped_vertices = false;
         for(std::size_t i = 0U; i < primitives_.size(); ++i){
             any_snapped_vertices = refresh_primitive_geometry(i) || any_snapped_vertices;
         }
         if(!any_snapped_vertices) break;
     }
-    enforce_pinned_vertices();
 }
 
 bool
@@ -851,6 +851,17 @@ Sketch::primitive_index_valid(primitive_index_t idx) const{
 bool
 Sketch::vertex_index_valid(vertex_index_t idx) const{
     return idx < vertices_.size();
+}
+
+bool
+Sketch::vertex_is_pinned(vertex_index_t idx) const{
+    for(const auto &constraint_ptr : constraints_){
+        if((constraint_ptr == nullptr) || !constraint_ptr->enabled) continue;
+        if(const auto *pin = dynamic_cast<const pin_constraint_t*>(constraint_ptr.get()); pin != nullptr){
+            if(pin->vertex == idx) return true;
+        }
+    }
+    return false;
 }
 
 std::vector<vec3<double>>

@@ -207,6 +207,26 @@ TEST_CASE("Sketch deleting a vertex removes dependent primitives and constraints
     REQUIRE( sketch.constraint_count() == 0U );
 }
 
+TEST_CASE("Sketch deleting a vertex remaps surviving overlap constraints"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+    sketch.add_line(vec3<double>(0.0, 0.0, 0.0),
+                    vec3<double>(2.0, 0.0, 0.0),
+                    Sketch::geometry_tag_t::normal);
+    const auto overlap_a = sketch.append_vertex(vec3<double>(5.0, 0.0, 0.0));
+    const auto overlap_b = sketch.append_vertex(vec3<double>(6.0, 1.0, 0.0));
+    sketch.add_overlap_constraint(overlap_a, overlap_b);
+
+    REQUIRE( sketch.delete_vertex(0U) );
+    REQUIRE( sketch.vertex_count() == 3U );
+    REQUIRE( sketch.constraint_count() == 1U );
+
+    const auto *overlap = dynamic_cast<const Sketch::overlap_constraint_t*>(sketch.constraint(0U));
+    REQUIRE( overlap != nullptr );
+    REQUIRE( overlap->vertex_a == 1U );
+    REQUIRE( overlap->vertex_b == 2U );
+}
+
 TEST_CASE("Sketch tracks nominal degrees of freedom"){
     Sketch sketch;
     sketch.set_plane(default_xy_plane());
@@ -399,6 +419,24 @@ TEST_CASE("Sketch solves pin and mirror constraints and tracks fully constrained
     const auto constrained_primitives = sketch.fully_constrained_primitives();
     REQUIRE( constrained_primitives.count(mirror_line) == 1U );
     REQUIRE( constrained_primitives.count(mirrored_segment) == 1U );
+}
+
+TEST_CASE("Sketch pin constraints are enforced before derived geometry is refreshed"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+    const auto circle_idx = sketch.add_circle(vec3<double>(0.0, 0.0, 0.0),
+                                              vec3<double>(2.0, 0.0, 0.0),
+                                              Sketch::geometry_tag_t::normal);
+    const auto *circle = dynamic_cast<const Sketch::circle_primitive_t*>(sketch.primitive(circle_idx));
+    REQUIRE( circle != nullptr );
+
+    sketch.add_pin_constraint(circle->radius_point);
+    sketch.translate_vertices(std::set<Sketch::vertex_index_t>{ circle->radius_point }, vec3<double>(3.0, 0.0, 0.0));
+
+    const auto *updated_circle = dynamic_cast<const Sketch::circle_primitive_t*>(sketch.primitive(circle_idx));
+    REQUIRE( updated_circle != nullptr );
+    REQUIRE( sketch.vertex(circle->radius_point).x == doctest::Approx(2.0).epsilon(1E-6) );
+    REQUIRE( updated_circle->radius == doctest::Approx(2.0).epsilon(1E-6) );
 }
 
 TEST_CASE("Sketch files round-trip through disk serialization"){

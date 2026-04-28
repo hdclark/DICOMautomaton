@@ -332,4 +332,5 @@ private:
     bool refresh_primitive_geometry(primitive_index_t idx);
     bool primitive_index_valid(primitive_index_t idx) const;
     bool vertex_index_valid(vertex_index_t idx) const;
+    bool vertex_is_pinned(vertex_index_t idx) const;
 };
