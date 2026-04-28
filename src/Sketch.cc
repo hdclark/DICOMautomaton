@@ -1056,13 +1056,6 @@ Sketch::delete_primitive(primitive_index_t idx){
     for(auto &constraint_ptr : constraints_){
         if(!constraint_ptr) continue;
         bool keep_constraint = true;
-        for(const auto referenced_vertex : constraint_ptr->referenced_vertices()){
-            if(referenced_vertex == idx){
-                keep_constraint = false;
-                break;
-            }
-        }
-        if(!keep_constraint) continue;
         for(const auto referenced_idx : constraint_ptr->referenced_primitives()){
             if( (primitive_remap.size() <= referenced_idx)
             ||  !primitive_remap[referenced_idx] ){
