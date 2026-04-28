@@ -5959,7 +5959,20 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                 if(sketch_compatible){
                     const auto fully_constrained_vertices = sketch.fully_constrained_vertices();
-                    const auto fully_constrained_primitives = sketch.fully_constrained_primitives();
+                    auto fully_constrained_primitives = decltype(sketch.fully_constrained_primitives()){};
+                    for(std::size_t i = 0U; i < sketch.primitive_count(); ++i){
+                        const auto *primitive = sketch.primitive(i);
+                        if(primitive == nullptr) continue;
+
+                        const bool primitive_is_fully_constrained = std::all_of(primitive->vertex_tags().begin(),
+                                                                                primitive->vertex_tags().end(),
+                                                                                [&](const auto &vertex_tag){
+                                                                                    return fully_constrained_vertices.find(vertex_tag) != fully_constrained_vertices.end();
+                                                                                });
+                        if(primitive_is_fully_constrained){
+                            fully_constrained_primitives.insert(i);
+                        }
+                    }
                     const auto constrained_colour = ImColor(0.30f, 1.00f, 0.65f, 1.00f);
                     std::vector<std::optional<vec3<double>>> primitive_label_positions;
                     std::vector<std::optional<Sketch::geometry_tag_t>> vertex_label_tags;
