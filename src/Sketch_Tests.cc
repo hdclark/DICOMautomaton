@@ -504,3 +504,49 @@ TEST_CASE("Sketch files round-trip through disk serialization"){
 
     std::filesystem::remove(path);
 }
+
+TEST_CASE("Sketch parallel constraints preserve reversed line orientation"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+
+    const auto line_a = sketch.add_line(vec3<double>(0.0, 0.0, 0.0),
+                                        vec3<double>(4.0, 0.0, 0.0),
+                                        Sketch::geometry_tag_t::normal);
+    const auto line_b = sketch.add_line(vec3<double>(2.0, 2.0, 0.0),
+                                        vec3<double>(-1.0, 1.0, 0.0),
+                                        Sketch::geometry_tag_t::normal);
+
+    sketch.add_parallel_constraint(line_a, line_b);
+
+    REQUIRE( sketch.solve_constraints() == 0U );
+
+    const auto *parallel_line = dynamic_cast<const Sketch::line_primitive_t*>(sketch.primitive(line_b));
+    REQUIRE( parallel_line != nullptr );
+    const auto b0 = sketch.vertex(parallel_line->vertices[0]);
+    const auto b1 = sketch.vertex(parallel_line->vertices[1]);
+    REQUIRE( b1.x < b0.x );
+    REQUIRE( b1.y == doctest::Approx(b0.y).epsilon(1E-6) );
+}
+
+TEST_CASE("Sketch perpendicular constraints preserve reversed line orientation"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+
+    const auto line_a = sketch.add_line(vec3<double>(0.0, 0.0, 0.0),
+                                        vec3<double>(4.0, 0.0, 0.0),
+                                        Sketch::geometry_tag_t::normal);
+    const auto line_b = sketch.add_line(vec3<double>(2.0, 2.0, 0.0),
+                                        vec3<double>(2.5, -1.0, 0.0),
+                                        Sketch::geometry_tag_t::normal);
+
+    sketch.add_perpendicular_constraint(line_a, line_b);
+
+    REQUIRE( sketch.solve_constraints() == 0U );
+
+    const auto *perpendicular_line = dynamic_cast<const Sketch::line_primitive_t*>(sketch.primitive(line_b));
+    REQUIRE( perpendicular_line != nullptr );
+    const auto b0 = sketch.vertex(perpendicular_line->vertices[0]);
+    const auto b1 = sketch.vertex(perpendicular_line->vertices[1]);
+    REQUIRE( b1.y < b0.y );
+    REQUIRE( b1.x == doctest::Approx(b0.x).epsilon(1E-6) );
+}

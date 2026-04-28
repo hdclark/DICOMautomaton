@@ -185,6 +185,17 @@ static Sketch::projection_t reflect_across_line(const Sketch::projection_t &poin
     return { 2.0 * closest.u - point.u, 2.0 * closest.v - point.v };
 }
 
+static std::pair<double, double> orient_unit_direction(double ref_u,
+                                                       double ref_v,
+                                                       double candidate_u,
+                                                       double candidate_v){
+    if(((ref_u * candidate_u) + (ref_v * candidate_v)) < 0.0){
+        candidate_u = -candidate_u;
+        candidate_v = -candidate_v;
+    }
+    return std::make_pair(candidate_u, candidate_v);
+}
+
 static double nearest_cubic_bezier_parameter(const Sketch::projection_t &query,
                                              const Sketch::projection_t &p0,
                                              const Sketch::projection_t &p1,
@@ -1667,6 +1678,10 @@ Sketch::solve_constraints(std::size_t max_iterations){
                 }
                 dir_u /= dir_len;
                 dir_v /= dir_len;
+                std::tie(dir_u, dir_v) = orient_unit_direction(b1.u - b0.u,
+                                                               b1.v - b0.v,
+                                                               dir_u,
+                                                               dir_v);
                 b1.u = b0.u + dir_u * len_b;
                 b1.v = b0.v + dir_v * len_b;
                 vertices_.at(line_b->vertices[1]) = lift(b1);
@@ -1695,8 +1710,12 @@ Sketch::solve_constraints(std::size_t max_iterations){
                 dir_v /= dir_len;
                 const auto perp_u = -dir_v;
                 const auto perp_v = dir_u;
-                b1.u = b0.u + perp_u * len_b;
-                b1.v = b0.v + perp_v * len_b;
+                auto [oriented_perp_u, oriented_perp_v] = orient_unit_direction(b1.u - b0.u,
+                                                                                b1.v - b0.v,
+                                                                                perp_u,
+                                                                                perp_v);
+                b1.u = b0.u + oriented_perp_u * len_b;
+                b1.v = b0.v + oriented_perp_v * len_b;
                 vertices_.at(line_b->vertices[1]) = lift(b1);
                 updated_vertices = true;
 
