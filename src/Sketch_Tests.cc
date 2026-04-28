@@ -225,6 +225,10 @@ TEST_CASE("Sketch deleting a vertex remaps surviving overlap constraints"){
     REQUIRE( overlap != nullptr );
     REQUIRE( overlap->vertex_a == 1U );
     REQUIRE( overlap->vertex_b == 2U );
+    REQUIRE( sketch.vertex(overlap->vertex_a).x == doctest::Approx(5.0).epsilon(1E-6) );
+    REQUIRE( sketch.vertex(overlap->vertex_a).y == doctest::Approx(0.0).epsilon(1E-6) );
+    REQUIRE( sketch.vertex(overlap->vertex_b).x == doctest::Approx(6.0).epsilon(1E-6) );
+    REQUIRE( sketch.vertex(overlap->vertex_b).y == doctest::Approx(1.0).epsilon(1E-6) );
 }
 
 TEST_CASE("Sketch tracks nominal degrees of freedom"){

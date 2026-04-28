@@ -28,6 +28,7 @@
 #include <sstream>
 #include <tuple>
 #include <type_traits>
+#include <unordered_set>
 #include <utility>            //Needed for std::pair.
 #include <vector>
 #include <chrono>
@@ -1633,13 +1634,15 @@ bool SDL_Viewer(Drover &DICOM_data,
         std::vector<Sketch::vertex_index_t> ordered_selected_vertices() const{
             std::vector<Sketch::vertex_index_t> out;
             out.reserve(vertex_selection.size());
+            std::unordered_set<Sketch::vertex_index_t> seen;
+            seen.reserve(vertex_selection.size());
             for(const auto vertex_idx : vertex_selection_order){
-                if(vertex_selection.count(vertex_idx) != 0U){
+                if((vertex_selection.count(vertex_idx) != 0U) && seen.insert(vertex_idx).second){
                     out.push_back(vertex_idx);
                 }
             }
             for(const auto vertex_idx : vertex_selection){
-                if(std::find(std::begin(out), std::end(out), vertex_idx) == std::end(out)){
+                if(seen.insert(vertex_idx).second){
                     out.push_back(vertex_idx);
                 }
             }
