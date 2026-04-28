@@ -868,11 +868,15 @@ Sketch::sample_primitive(primitive_index_t idx, std::size_t segments) const{
     const auto pi = std::acos(-1.0);
     const auto *base = primitives_.at(idx).get();
     if(base == nullptr) return {};
-    if( !has_plane_
-    &&  (dynamic_cast<const circle_primitive_t*>(base) != nullptr
-       || dynamic_cast<const arc_primitive_t*>(base) != nullptr
-       || dynamic_cast<const bezier_primitive_t*>(base) != nullptr) ){
-        return {};
+    if(!has_plane_){
+        switch(base->kind()){
+            case primitive_kind_t::circle:
+            case primitive_kind_t::arc:
+            case primitive_kind_t::bezier:
+                return {};
+            default:
+                break;
+        }
     }
 
     if(const auto *vertex_prim = dynamic_cast<const vertex_primitive_t*>(base); vertex_prim != nullptr){
