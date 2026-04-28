@@ -337,7 +337,7 @@ public:
     constraint_index_t add_mirror_constraint(primitive_index_t line_idx, vertex_index_t vertex_a, vertex_index_t vertex_b);
     constraint_index_t add_overlap_constraint(vertex_index_t vertex_a, vertex_index_t vertex_b);
 
-    std::size_t solve_constraints(std::size_t max_iterations = 2U);
+    std::size_t solve_constraints(std::size_t max_iterations = 64U);
     std::size_t solve_constraints(const solve_options_t &options);
     const solve_report_t& last_solve_report() const;
     std::string describe_constraint(constraint_index_t idx) const;

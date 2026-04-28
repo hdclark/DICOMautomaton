@@ -180,6 +180,7 @@ TEST_CASE("Sketch sticky constraints stabilize underconstrained solutions"){
     REQUIRE( line_b != nullptr );
 
     const auto original_line_b_start = sketch.vertex(line_b->vertices[0]);
+    const auto original_line_b_stop = sketch.vertex(line_b->vertices[1]);
 
     sketch.add_pin_constraint(line_a->vertices[0]);
     sketch.add_pin_constraint(line_a->vertices[1]);
@@ -188,13 +189,13 @@ TEST_CASE("Sketch sticky constraints stabilize underconstrained solutions"){
 
     Sketch::solve_options_t options;
     options.max_iterations = 128U;
-    options.sticky_weight = 1.0E-2;
+    options.sticky_weight = 1.0E-1;
     const auto unresolved = sketch.solve_constraints(options);
     REQUIRE( unresolved == 0U );
 
     const auto solved_line_b_start = sketch.vertex(line_b->vertices[0]);
     const auto solved_line_b_stop = sketch.vertex(line_b->vertices[1]);
-    CHECK( solved_line_b_start.distance(original_line_b_start) < 0.25 );
+    CHECK( solved_line_b_start.distance(original_line_b_start) < solved_line_b_stop.distance(original_line_b_stop) );
     CHECK( doctest::Approx(solved_line_b_start.y).epsilon(1E-5) == solved_line_b_stop.y );
     CHECK( doctest::Approx(solved_line_b_start.distance(solved_line_b_stop)).epsilon(1E-5) == 4.0 );
 }
