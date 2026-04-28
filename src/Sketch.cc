@@ -2270,6 +2270,9 @@ Sketch::solve_constraints(const solve_options_t &options){
             }else{
                 last_solve_report_.conflict_norm = residual_vector.norm();
             }
+            // Treat large off-subspace residual energy as a genuine conflict only when at least one
+            // user-facing constraint also remains unsatisfied; this avoids flagging benign rank
+            // deficiency or slow-but-feasible convergence as a hard conflict.
             last_solve_report_.conflicting_constraints = (last_solve_report_.conflict_norm > tolerance)
                                                       && (last_solve_report_.unresolved_constraints != 0U);
         }

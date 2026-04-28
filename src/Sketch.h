@@ -80,6 +80,7 @@ public:
     };
 
     struct solve_options_t {
+        // LM generally needs more iterations than the legacy projection-only placeholder solver.
         std::size_t max_iterations = 128U;
         double absolute_tolerance = 0.0;
         double relative_tolerance = 0.0;
