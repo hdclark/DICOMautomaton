@@ -71,7 +71,7 @@ TEST_CASE("Sketch selection helpers find primitives and boxed items"){
     REQUIRE( boxed.front() == line_idx );
 }
 
-TEST_CASE("Sketch selection helpers tolerate missing plane initialization"){
+TEST_CASE("Sketch selection helpers handle uninitialized plane gracefully"){
     Sketch sketch;
     sketch.add_vertex_primitive(vec3<double>(1.0, 2.0, 3.0), Sketch::geometry_tag_t::normal);
     sketch.add_line(vec3<double>(0.0, 0.0, 0.0),

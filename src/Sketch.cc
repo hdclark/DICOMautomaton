@@ -869,6 +869,8 @@ Sketch::sample_primitive(primitive_index_t idx, std::size_t segments) const{
     const auto *base = primitives_.at(idx).get();
     if(base == nullptr) return {};
     if(!has_plane_){
+        // Curved planar primitives cache or derive their geometry in plane coordinates, while vertices and lines can be
+        // sampled directly from stored world-space points.
         switch(base->kind()){
             case primitive_kind_t::circle:
             case primitive_kind_t::arc:
