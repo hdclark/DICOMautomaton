@@ -84,6 +84,8 @@ static void remap_constraint_primitives(Sketch::constraint_t &constraint,
     }else if(auto *perpendicular = dynamic_cast<Sketch::perpendicular_constraint_t*>(&constraint); perpendicular != nullptr){
         perpendicular->line_a = primitive_remap.at(perpendicular->line_a).value();
         perpendicular->line_b = primitive_remap.at(perpendicular->line_b).value();
+    }else if(auto *mirror = dynamic_cast<Sketch::mirror_constraint_t*>(&constraint); mirror != nullptr){
+        mirror->line = primitive_remap.at(mirror->line).value();
     }else if(auto *tangent = dynamic_cast<Sketch::tangent_constraint_t*>(&constraint); tangent != nullptr){
         tangent->primitive_a = primitive_remap.at(tangent->primitive_a).value();
         tangent->primitive_b = primitive_remap.at(tangent->primitive_b).value();
@@ -92,7 +94,12 @@ static void remap_constraint_primitives(Sketch::constraint_t &constraint,
 
 static void remap_constraint_vertices(Sketch::constraint_t &constraint,
                                       Sketch::vertex_index_t removed_vertex){
-    if(auto *overlap = dynamic_cast<Sketch::overlap_constraint_t*>(&constraint); overlap != nullptr){
+    if(auto *pin = dynamic_cast<Sketch::pin_constraint_t*>(&constraint); pin != nullptr){
+        if(removed_vertex < pin->vertex) --pin->vertex;
+    }else if(auto *mirror = dynamic_cast<Sketch::mirror_constraint_t*>(&constraint); mirror != nullptr){
+        if(removed_vertex < mirror->vertex_a) --mirror->vertex_a;
+        if(removed_vertex < mirror->vertex_b) --mirror->vertex_b;
+    }else if(auto *overlap = dynamic_cast<Sketch::overlap_constraint_t*>(&constraint); overlap != nullptr){
         if(removed_vertex < overlap->vertex_a) --overlap->vertex_a;
         if(removed_vertex < overlap->vertex_b) --overlap->vertex_b;
     }
@@ -100,7 +107,12 @@ static void remap_constraint_vertices(Sketch::constraint_t &constraint,
 
 static void remap_constraint_vertices(Sketch::constraint_t &constraint,
                                       const std::vector<std::optional<Sketch::vertex_index_t>> &vertex_remap){
-    if(auto *overlap = dynamic_cast<Sketch::overlap_constraint_t*>(&constraint); overlap != nullptr){
+    if(auto *pin = dynamic_cast<Sketch::pin_constraint_t*>(&constraint); pin != nullptr){
+        pin->vertex = vertex_remap.at(pin->vertex).value();
+    }else if(auto *mirror = dynamic_cast<Sketch::mirror_constraint_t*>(&constraint); mirror != nullptr){
+        mirror->vertex_a = vertex_remap.at(mirror->vertex_a).value();
+        mirror->vertex_b = vertex_remap.at(mirror->vertex_b).value();
+    }else if(auto *overlap = dynamic_cast<Sketch::overlap_constraint_t*>(&constraint); overlap != nullptr){
         overlap->vertex_a = vertex_remap.at(overlap->vertex_a).value();
         overlap->vertex_b = vertex_remap.at(overlap->vertex_b).value();
     }
@@ -156,6 +168,23 @@ static Sketch::projection_t lerp(const Sketch::projection_t &a,
              a.v + (b.v - a.v) * t };
 }
 
+static Sketch::projection_t reflect_across_line(const Sketch::projection_t &point,
+                                                const Sketch::projection_t &line_a,
+                                                const Sketch::projection_t &line_b){
+    const auto ab_u = line_b.u - line_a.u;
+    const auto ab_v = line_b.v - line_a.v;
+    const auto denom = (ab_u * ab_u) + (ab_v * ab_v);
+    if(denom <= std::numeric_limits<double>::epsilon()){
+        return point;
+    }
+
+    const auto ap_u = point.u - line_a.u;
+    const auto ap_v = point.v - line_a.v;
+    const auto t = ((ap_u * ab_u) + (ap_v * ab_v)) / denom;
+    const Sketch::projection_t closest = { line_a.u + t * ab_u, line_a.v + t * ab_v };
+    return { 2.0 * closest.u - point.u, 2.0 * closest.v - point.v };
+}
+
 static double nearest_cubic_bezier_parameter(const Sketch::projection_t &query,
                                              const Sketch::projection_t &p0,
                                              const Sketch::projection_t &p1,
@@ -174,6 +203,23 @@ static double nearest_cubic_bezier_parameter(const Sketch::projection_t &query,
         }
     }
     return best_t;
+}
+
+static std::size_t constraint_dof_contribution(const Sketch::constraint_t &constraint){
+    switch(constraint.kind()){
+        case Sketch::constraint_kind_t::horizontal:
+        case Sketch::constraint_kind_t::vertical:
+        case Sketch::constraint_kind_t::distance:
+        case Sketch::constraint_kind_t::parallel:
+        case Sketch::constraint_kind_t::perpendicular:
+        case Sketch::constraint_kind_t::tangent:
+            return 1U;
+        case Sketch::constraint_kind_t::pin:
+        case Sketch::constraint_kind_t::mirror:
+        case Sketch::constraint_kind_t::overlap:
+            return 2U;
+    }
+    return 0U;
 }
 
 }
@@ -359,6 +405,26 @@ Sketch::perpendicular_constraint_t::referenced_primitives() const{
 }
 
 std::unique_ptr<Sketch::constraint_t>
+Sketch::pin_constraint_t::clone() const{
+    return std::make_unique<pin_constraint_t>(*this);
+}
+
+Sketch::constraint_kind_t
+Sketch::pin_constraint_t::kind() const{
+    return constraint_kind_t::pin;
+}
+
+std::vector<Sketch::primitive_index_t>
+Sketch::pin_constraint_t::referenced_primitives() const{
+    return {};
+}
+
+std::vector<Sketch::vertex_index_t>
+Sketch::pin_constraint_t::referenced_vertices() const{
+    return { vertex };
+}
+
+std::unique_ptr<Sketch::constraint_t>
 Sketch::tangent_constraint_t::clone() const{
     return std::make_unique<tangent_constraint_t>(*this);
 }
@@ -371,6 +437,26 @@ Sketch::tangent_constraint_t::kind() const{
 std::vector<Sketch::primitive_index_t>
 Sketch::tangent_constraint_t::referenced_primitives() const{
     return { primitive_a, primitive_b };
+}
+
+std::unique_ptr<Sketch::constraint_t>
+Sketch::mirror_constraint_t::clone() const{
+    return std::make_unique<mirror_constraint_t>(*this);
+}
+
+Sketch::constraint_kind_t
+Sketch::mirror_constraint_t::kind() const{
+    return constraint_kind_t::mirror;
+}
+
+std::vector<Sketch::primitive_index_t>
+Sketch::mirror_constraint_t::referenced_primitives() const{
+    return { line };
+}
+
+std::vector<Sketch::vertex_index_t>
+Sketch::mirror_constraint_t::referenced_vertices() const{
+    return { vertex_a, vertex_b };
 }
 
 std::unique_ptr<Sketch::constraint_t>
@@ -733,6 +819,18 @@ Sketch::refresh_primitive_geometry(primitive_index_t idx){
 }
 
 void
+Sketch::enforce_pinned_vertices(){
+    for(const auto &constraint_ptr : constraints_){
+        if((constraint_ptr == nullptr) || !constraint_ptr->enabled) continue;
+        if(const auto *pin = dynamic_cast<const pin_constraint_t*>(constraint_ptr.get()); pin != nullptr){
+            if(vertex_index_valid(pin->vertex)){
+                vertices_.at(pin->vertex) = pin->pinned_position;
+            }
+        }
+    }
+}
+
+void
 Sketch::refresh_all_derived_geometry(){
     const auto max_passes = std::max<std::size_t>(primitives_.size(), 1U);
     for(std::size_t pass = 0U; pass < max_passes; ++pass){
@@ -742,6 +840,7 @@ Sketch::refresh_all_derived_geometry(){
         }
         if(!any_snapped_vertices) break;
     }
+    enforce_pinned_vertices();
 }
 
 bool
@@ -1001,14 +1100,74 @@ Sketch::summarize_degrees_of_freedom() const{
         if(constraint_ptr == nullptr) continue;
         if(constraint_ptr->enabled){
             ++out.enabled_constraints;
+            out.constrained += constraint_dof_contribution(*constraint_ptr);
         }else{
             ++out.disabled_constraints;
         }
     }
-    out.constrained = out.enabled_constraints;
     out.remaining = (out.constrained < out.total) ? (out.total - out.constrained) : 0U;
     out.overconstrained = (out.total < out.constrained) ? (out.constrained - out.total) : 0U;
     return out;
+}
+
+std::set<Sketch::vertex_index_t>
+Sketch::fully_constrained_vertices() const{
+    std::set<vertex_index_t> constrained_vertices;
+
+    for(const auto &constraint_ptr : constraints_){
+        if((constraint_ptr == nullptr) || !constraint_ptr->enabled) continue;
+        if(const auto *pin = dynamic_cast<const pin_constraint_t*>(constraint_ptr.get()); pin != nullptr){
+            constrained_vertices.insert(pin->vertex);
+        }
+    }
+
+    bool changed = true;
+    while(changed){
+        changed = false;
+        for(const auto &constraint_ptr : constraints_){
+            if((constraint_ptr == nullptr) || !constraint_ptr->enabled) continue;
+
+            if(const auto *overlap = dynamic_cast<const overlap_constraint_t*>(constraint_ptr.get()); overlap != nullptr){
+                const auto has_a = (constrained_vertices.count(overlap->vertex_a) != 0U);
+                const auto has_b = (constrained_vertices.count(overlap->vertex_b) != 0U);
+                if(has_a || has_b){
+                    changed = constrained_vertices.insert(overlap->vertex_a).second || changed;
+                    changed = constrained_vertices.insert(overlap->vertex_b).second || changed;
+                }
+            }else if(const auto *mirror = dynamic_cast<const mirror_constraint_t*>(constraint_ptr.get()); mirror != nullptr){
+                const auto *line = dynamic_cast<const line_primitive_t*>(primitive(mirror->line));
+                if(line == nullptr) continue;
+                const bool line_fixed = (constrained_vertices.count(line->vertices[0]) != 0U)
+                                     && (constrained_vertices.count(line->vertices[1]) != 0U);
+                if(!line_fixed) continue;
+                if(constrained_vertices.count(mirror->vertex_a) != 0U){
+                    changed = constrained_vertices.insert(mirror->vertex_b).second || changed;
+                }
+                if(constrained_vertices.count(mirror->vertex_b) != 0U){
+                    changed = constrained_vertices.insert(mirror->vertex_a).second || changed;
+                }
+            }
+        }
+    }
+
+    return constrained_vertices;
+}
+
+std::set<Sketch::primitive_index_t>
+Sketch::fully_constrained_primitives() const{
+    const auto constrained_vertices = fully_constrained_vertices();
+    std::set<primitive_index_t> constrained_primitives;
+    for(std::size_t primitive_idx = 0U; primitive_idx < primitives_.size(); ++primitive_idx){
+        const auto *primitive_ptr = primitives_.at(primitive_idx).get();
+        if(primitive_ptr == nullptr) continue;
+        const auto refs = primitive_ptr->referenced_vertices();
+        if(!refs.empty() && std::all_of(std::begin(refs), std::end(refs), [&](const auto vertex_idx){
+            return constrained_vertices.count(vertex_idx) != 0U;
+        })){
+            constrained_primitives.insert(primitive_idx);
+        }
+    }
+    return constrained_primitives;
 }
 
 void
@@ -1065,7 +1224,6 @@ Sketch::delete_primitive(primitive_index_t idx){
         }
         if(!keep_constraint) continue;
         remap_constraint_primitives(*constraint_ptr, primitive_remap);
-        remap_constraint_vertices(*constraint_ptr, idx);
         new_constraints.push_back(std::move(constraint_ptr));
     }
     constraints_ = std::move(new_constraints);
@@ -1107,6 +1265,13 @@ Sketch::delete_vertex(vertex_index_t idx){
     for(auto &constraint_ptr : constraints_){
         if(!constraint_ptr) continue;
         bool keep_constraint = true;
+        for(const auto referenced_vertex : constraint_ptr->referenced_vertices()){
+            if(referenced_vertex == idx){
+                keep_constraint = false;
+                break;
+            }
+        }
+        if(!keep_constraint) continue;
         for(const auto referenced_idx : constraint_ptr->referenced_primitives()){
             if( (primitive_remap.size() <= referenced_idx)
             ||  !primitive_remap[referenced_idx] ){
@@ -1116,6 +1281,7 @@ Sketch::delete_vertex(vertex_index_t idx){
         }
         if(!keep_constraint) continue;
         remap_constraint_primitives(*constraint_ptr, primitive_remap);
+        remap_constraint_vertices(*constraint_ptr, idx);
         new_constraints.push_back(std::move(constraint_ptr));
     }
     constraints_ = std::move(new_constraints);
@@ -1229,6 +1395,26 @@ Sketch::add_perpendicular_constraint(primitive_index_t line_a, primitive_index_t
 }
 
 Sketch::constraint_index_t
+Sketch::add_pin_constraint(vertex_index_t vertex_idx){
+    if(!vertex_index_valid(vertex_idx)){
+        throw std::out_of_range("Sketch vertex index is out of range");
+    }
+    for(std::size_t constraint_idx = 0U; constraint_idx < constraints_.size(); ++constraint_idx){
+        if(auto *pin = dynamic_cast<pin_constraint_t*>(constraints_.at(constraint_idx).get()); pin != nullptr){
+            if(pin->vertex == vertex_idx){
+                pin->enabled = true;
+                pin->pinned_position = vertex(vertex_idx);
+                return constraint_idx;
+            }
+        }
+    }
+    auto constraint = std::make_unique<pin_constraint_t>();
+    constraint->vertex = vertex_idx;
+    constraint->pinned_position = vertex(vertex_idx);
+    return append_constraint(std::move(constraint));
+}
+
+Sketch::constraint_index_t
 Sketch::add_tangent_constraint(primitive_index_t primitive_a, primitive_index_t primitive_b){
     if(!primitive_index_valid(primitive_a) || !primitive_index_valid(primitive_b)){
         throw std::out_of_range("Sketch primitive index is out of range");
@@ -1236,6 +1422,21 @@ Sketch::add_tangent_constraint(primitive_index_t primitive_a, primitive_index_t 
     auto constraint = std::make_unique<tangent_constraint_t>();
     constraint->primitive_a = primitive_a;
     constraint->primitive_b = primitive_b;
+    return append_constraint(std::move(constraint));
+}
+
+Sketch::constraint_index_t
+Sketch::add_mirror_constraint(primitive_index_t line_idx, vertex_index_t vertex_a, vertex_index_t vertex_b){
+    if(!primitive_index_valid(line_idx)){
+        throw std::out_of_range("Sketch primitive index is out of range");
+    }
+    if(!vertex_index_valid(vertex_a) || !vertex_index_valid(vertex_b)){
+        throw std::out_of_range("Sketch vertex index is out of range");
+    }
+    auto constraint = std::make_unique<mirror_constraint_t>();
+    constraint->line = line_idx;
+    constraint->vertex_a = vertex_a;
+    constraint->vertex_b = vertex_b;
     return append_constraint(std::move(constraint));
 }
 
@@ -1347,7 +1548,12 @@ Sketch::collapse_vertices(vertex_index_t keep_idx, vertex_index_t remove_idx){
     }
 
     for(auto &constraint_ptr : constraints_){
-        if(auto *overlap = dynamic_cast<overlap_constraint_t*>(constraint_ptr.get()); overlap != nullptr){
+        if(auto *pin = dynamic_cast<pin_constraint_t*>(constraint_ptr.get()); pin != nullptr){
+            if(pin->vertex == remove_idx) pin->vertex = keep_idx;
+        }else if(auto *mirror = dynamic_cast<mirror_constraint_t*>(constraint_ptr.get()); mirror != nullptr){
+            if(mirror->vertex_a == remove_idx) mirror->vertex_a = keep_idx;
+            if(mirror->vertex_b == remove_idx) mirror->vertex_b = keep_idx;
+        }else if(auto *overlap = dynamic_cast<overlap_constraint_t*>(constraint_ptr.get()); overlap != nullptr){
             if(overlap->vertex_a == remove_idx) overlap->vertex_a = keep_idx;
             if(overlap->vertex_b == remove_idx) overlap->vertex_b = keep_idx;
         }
@@ -1469,6 +1675,25 @@ Sketch::solve_constraints(std::size_t max_iterations){
                 vertices_.at(line_b->vertices[1]) = lift(b1);
                 updated_vertices = true;
 
+            }else if(dynamic_cast<const pin_constraint_t*>(constraint_ptr.get()) != nullptr){
+                // Pin constraints are enforced after all dependent constraints have been evaluated for the iteration.
+
+            }else if(const auto *mirror = dynamic_cast<const mirror_constraint_t*>(constraint_ptr.get()); mirror != nullptr){
+                const auto *line = dynamic_cast<const line_primitive_t*>(primitive(mirror->line));
+                if((line == nullptr) || !vertex_index_valid(mirror->vertex_a) || !vertex_index_valid(mirror->vertex_b)){
+                    ++unresolved;
+                    continue;
+                }
+                const auto a = project(vertex(line->vertices[0]));
+                const auto b = project(vertex(line->vertices[1]));
+                if(squared_distance_between(a, b) <= std::numeric_limits<double>::epsilon()){
+                    ++unresolved;
+                    continue;
+                }
+                const auto reflected = reflect_across_line(project(vertex(mirror->vertex_a)), a, b);
+                vertices_.at(mirror->vertex_b) = lift(reflected);
+                updated_vertices = true;
+
             }else if(const auto *overlap = dynamic_cast<const overlap_constraint_t*>(constraint_ptr.get()); overlap != nullptr){
                 if(!vertex_index_valid(overlap->vertex_a) || !vertex_index_valid(overlap->vertex_b)){
                     ++unresolved;
@@ -1479,6 +1704,17 @@ Sketch::solve_constraints(std::size_t max_iterations){
 
             }else{
                 ++unresolved;
+            }
+        }
+        for(const auto &constraint_ptr : constraints_){
+            if((constraint_ptr == nullptr) || !constraint_ptr->enabled) continue;
+            if(const auto *pin = dynamic_cast<const pin_constraint_t*>(constraint_ptr.get()); pin != nullptr){
+                if(!vertex_index_valid(pin->vertex)){
+                    ++unresolved;
+                    continue;
+                }
+                vertices_.at(pin->vertex) = pin->pinned_position;
+                updated_vertices = true;
             }
         }
         if(updated_vertices){
@@ -1510,8 +1746,14 @@ Sketch::describe_constraint(constraint_index_t idx) const{
         case constraint_kind_t::perpendicular:
             ss << "perpendicular";
             break;
+        case constraint_kind_t::pin:
+            ss << "pin";
+            break;
         case constraint_kind_t::tangent:
             ss << "tangent";
+            break;
+        case constraint_kind_t::mirror:
+            ss << "mirror";
             break;
         case constraint_kind_t::overlap:
             ss << "overlap";
@@ -1577,8 +1819,15 @@ Sketch::save_to_file(const std::filesystem::path &path,
             file << "parallel " << (parallel->enabled ? 1 : 0) << ' ' << parallel->line_a << ' ' << parallel->line_b << '\n';
         }else if(const auto *perpendicular = dynamic_cast<const perpendicular_constraint_t*>(constraint_ptr.get()); perpendicular != nullptr){
             file << "perpendicular " << (perpendicular->enabled ? 1 : 0) << ' ' << perpendicular->line_a << ' ' << perpendicular->line_b << '\n';
+        }else if(const auto *pin = dynamic_cast<const pin_constraint_t*>(constraint_ptr.get()); pin != nullptr){
+            file << "pin " << (pin->enabled ? 1 : 0) << ' ' << pin->vertex
+                 << ' ' << pin->pinned_position.x
+                 << ' ' << pin->pinned_position.y
+                 << ' ' << pin->pinned_position.z << '\n';
         }else if(const auto *tangent = dynamic_cast<const tangent_constraint_t*>(constraint_ptr.get()); tangent != nullptr){
             file << "tangent " << (tangent->enabled ? 1 : 0) << ' ' << tangent->primitive_a << ' ' << tangent->primitive_b << '\n';
+        }else if(const auto *mirror = dynamic_cast<const mirror_constraint_t*>(constraint_ptr.get()); mirror != nullptr){
+            file << "mirror " << (mirror->enabled ? 1 : 0) << ' ' << mirror->line << ' ' << mirror->vertex_a << ' ' << mirror->vertex_b << '\n';
         }else if(const auto *overlap = dynamic_cast<const overlap_constraint_t*>(constraint_ptr.get()); overlap != nullptr){
             file << "overlap " << (overlap->enabled ? 1 : 0) << ' ' << overlap->vertex_a << ' ' << overlap->vertex_b << '\n';
         }else{
@@ -1732,9 +1981,20 @@ Sketch::load_from_file(const std::filesystem::path &path,
             auto out_constraint = std::make_unique<perpendicular_constraint_t>();
             if(!(file >> out_constraint->line_a >> out_constraint->line_b)) return fail("Unable to read perpendicular constraint");
             constraint = std::move(out_constraint);
+        }else if(kind_token == "pin"){
+            auto out_constraint = std::make_unique<pin_constraint_t>();
+            if(!(file >> out_constraint->vertex
+                      >> out_constraint->pinned_position.x
+                      >> out_constraint->pinned_position.y
+                      >> out_constraint->pinned_position.z)) return fail("Unable to read pin constraint");
+            constraint = std::move(out_constraint);
         }else if(kind_token == "tangent"){
             auto out_constraint = std::make_unique<tangent_constraint_t>();
             if(!(file >> out_constraint->primitive_a >> out_constraint->primitive_b)) return fail("Unable to read tangent constraint");
+            constraint = std::move(out_constraint);
+        }else if(kind_token == "mirror"){
+            auto out_constraint = std::make_unique<mirror_constraint_t>();
+            if(!(file >> out_constraint->line >> out_constraint->vertex_a >> out_constraint->vertex_b)) return fail("Unable to read mirror constraint");
             constraint = std::move(out_constraint);
         }else if(kind_token == "overlap"){
             auto out_constraint = std::make_unique<overlap_constraint_t>();

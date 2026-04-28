@@ -1875,7 +1875,9 @@ bool SDL_Viewer(Drover &DICOM_data,
             case Sketch::constraint_kind_t::distance: return "d";
             case Sketch::constraint_kind_t::parallel: return "||";
             case Sketch::constraint_kind_t::perpendicular: return "_|_";
+            case Sketch::constraint_kind_t::pin: return "P";
             case Sketch::constraint_kind_t::tangent: return "~";
+            case Sketch::constraint_kind_t::mirror: return "M";
             case Sketch::constraint_kind_t::overlap: return "o";
         }
         return "?";
@@ -5956,6 +5958,9 @@ bool SDL_Viewer(Drover &DICOM_data,
                 }
 
                 if(sketch_compatible){
+                    const auto fully_constrained_vertices = sketch.fully_constrained_vertices();
+                    const auto fully_constrained_primitives = sketch.fully_constrained_primitives();
+                    const auto constrained_colour = ImColor(0.30f, 1.00f, 0.65f, 1.00f);
                     std::vector<std::optional<vec3<double>>> primitive_label_positions;
                     std::vector<std::optional<Sketch::geometry_tag_t>> vertex_label_tags;
                     if(sketch_show_indices){
@@ -5969,6 +5974,7 @@ bool SDL_Viewer(Drover &DICOM_data,
 
                         const bool is_selected = (slot.selection.count(i) != 0U);
                         const bool is_hovered = sketch_hovered_primitive && (sketch_hovered_primitive.value() == i);
+                        const bool is_fully_constrained = (fully_constrained_primitives.count(i) != 0U);
                         const auto referenced_vertices = primitive->referenced_vertices();
                         const auto base_colour = sketch_tag_colour(primitive->tag);
                         auto colour = base_colour;
@@ -5976,6 +5982,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                             colour = ImColor(0.10f, 1.00f, 0.35f, 1.00f);
                         }else if(is_hovered){
                             colour = ImColor(1.00f, 1.00f, 0.20f, 1.00f);
+                        }else if(is_fully_constrained){
+                            colour = constrained_colour;
                         }
 
                         const float thickness = is_selected ? 3.0f : (is_hovered ? 2.5f : 1.5f);
@@ -5996,16 +6004,24 @@ bool SDL_Viewer(Drover &DICOM_data,
                                                                      [&](const auto vertex_idx){
                                                                          return slot.vertex_selection.count(vertex_idx) != 0U;
                                                                      });
-                        if(is_selected || is_hovered || has_selected_vertex){
+                        const bool has_constrained_vertex = std::any_of(std::begin(referenced_vertices),
+                                                                        std::end(referenced_vertices),
+                                                                        [&](const auto vertex_idx){
+                                                                            return fully_constrained_vertices.count(vertex_idx) != 0U;
+                                                                        });
+                        if(is_selected || is_hovered || has_selected_vertex || has_constrained_vertex){
                             for(const auto vertex_idx : referenced_vertices){
                                 const auto p = image_mouse_pos.DICOM_to_pixels(sketch.vertex(vertex_idx));
                                 const bool vertex_selected = (slot.vertex_selection.count(vertex_idx) != 0U);
                                 const bool vertex_hovered = sketch_hovered_vertex && (sketch_hovered_vertex.value() == vertex_idx);
+                                const bool vertex_constrained = (fully_constrained_vertices.count(vertex_idx) != 0U);
                                 const auto vertex_fill = vertex_selected ? ImColor(1.00f, 0.35f, 0.95f, 1.00f)
                                                                          : (vertex_hovered ? ImColor(1.00f, 1.00f, 0.25f, 1.00f)
-                                                                                           : ImColor(1.0f, 1.0f, 1.0f, 0.95f));
+                                                                                           : (vertex_constrained ? constrained_colour
+                                                                                                                 : ImColor(1.0f, 1.0f, 1.0f, 0.95f)));
                                 const auto vertex_outline = vertex_selected ? ImColor(1.00f, 0.10f, 0.80f, 1.00f)
-                                                                            : colour;
+                                                                            : (vertex_constrained ? constrained_colour
+                                                                                                  : colour);
                                 imgs_window_draw_list->AddCircleFilled(p, vertex_selected ? 4.5f : 4.0f, vertex_fill);
                                 imgs_window_draw_list->AddCircle(p, vertex_selected ? 6.0f : 5.0f, vertex_outline, 0, vertex_selected ? 2.0f : 1.5f);
                             }
@@ -6428,6 +6444,8 @@ bool SDL_Viewer(Drover &DICOM_data,
                         selected_lines.push_back(primitive_idx);
                     }
                 }
+                const std::vector<Sketch::vertex_index_t> selected_vertices(std::begin(slot.vertex_selection),
+                                                                            std::end(slot.vertex_selection));
 
                 ImGui::Separator();
                 ImGui::Text("Add Constraints");
@@ -6471,6 +6489,17 @@ bool SDL_Viewer(Drover &DICOM_data,
                     }
                 }
                 ImGui::SameLine();
+                if(ImGui::Button("Pin")){
+                    if(!slot.selection.empty() || !slot.vertex_selection.empty()){
+                        auto &editable_sketch = create_sketch_snapshot(disp_img_it);
+                        auto vertices_to_pin = editable_sketch.collect_vertices(slot.selection);
+                        vertices_to_pin.insert(std::begin(slot.vertex_selection), std::end(slot.vertex_selection));
+                        for(const auto vertex_idx : vertices_to_pin){
+                            editable_sketch.add_pin_constraint(vertex_idx);
+                        }
+                    }
+                }
+                ImGui::SameLine();
                 if(ImGui::Button("Tangent")){
                     if(slot.selection.size() == 2U){
                         auto it = std::begin(slot.selection);
@@ -6479,6 +6508,13 @@ bool SDL_Viewer(Drover &DICOM_data,
                         const auto primitive_b = *it;
                         auto &editable_sketch = create_sketch_snapshot(disp_img_it);
                         editable_sketch.add_tangent_constraint(primitive_a, primitive_b);
+                    }
+                }
+                ImGui::SameLine();
+                if(ImGui::Button("Mirror")){
+                    if((selected_lines.size() == 1U) && (selected_vertices.size() == 2U)){
+                        auto &editable_sketch = create_sketch_snapshot(disp_img_it);
+                        editable_sketch.add_mirror_constraint(selected_lines[0], selected_vertices[0], selected_vertices[1]);
                     }
                 }
                 if(ImGui::Button("Overlap")){
@@ -6890,6 +6926,32 @@ bool SDL_Viewer(Drover &DICOM_data,
                                     ImGui::PopID();
                                     break;
                                 }
+                            }else if(const auto *pin = dynamic_cast<const Sketch::pin_constraint_t*>(constraint); pin != nullptr){
+                                int vertex_idx = static_cast<int>(pin->vertex);
+                                double x = pin->pinned_position.x;
+                                double y = pin->pinned_position.y;
+                                double z = pin->pinned_position.z;
+                                ImGui::SetNextItemWidth(100.0f);
+                                changed = ImGui::InputInt("Vertex", &vertex_idx);
+                                ImGui::SameLine();
+                                ImGui::SetNextItemWidth(100.0f);
+                                changed = ImGui::InputDouble("Pin X", &x) || changed;
+                                ImGui::SameLine();
+                                ImGui::SetNextItemWidth(100.0f);
+                                changed = ImGui::InputDouble("Pin Y", &y) || changed;
+                                ImGui::SameLine();
+                                ImGui::SetNextItemWidth(100.0f);
+                                changed = ImGui::InputDouble("Pin Z", &z) || changed;
+                                if(changed){
+                                    edit_current_sketch([&](Sketch &editable_sketch){
+                                        if(auto *editable_constraint = dynamic_cast<Sketch::pin_constraint_t*>(editable_sketch.constraint(constraint_idx)); editable_constraint != nullptr){
+                                            editable_constraint->vertex = clamp_debug_index(vertex_idx, vertex_count);
+                                            editable_constraint->pinned_position = vec3<double>(x, y, z);
+                                        }
+                                    });
+                                    ImGui::PopID();
+                                    break;
+                                }
                             }else if(const auto *tangent = dynamic_cast<const Sketch::tangent_constraint_t*>(constraint); tangent != nullptr){
                                 int primitive_a = static_cast<int>(tangent->primitive_a);
                                 int primitive_b = static_cast<int>(tangent->primitive_b);
@@ -6903,6 +6965,29 @@ bool SDL_Viewer(Drover &DICOM_data,
                                         if(auto *editable_constraint = dynamic_cast<Sketch::tangent_constraint_t*>(editable_sketch.constraint(constraint_idx)); editable_constraint != nullptr){
                                             editable_constraint->primitive_a = clamp_debug_index(primitive_a, primitive_count);
                                             editable_constraint->primitive_b = clamp_debug_index(primitive_b, primitive_count);
+                                        }
+                                    });
+                                    ImGui::PopID();
+                                    break;
+                                }
+                            }else if(const auto *mirror = dynamic_cast<const Sketch::mirror_constraint_t*>(constraint); mirror != nullptr){
+                                int line_idx = static_cast<int>(mirror->line);
+                                int vertex_a = static_cast<int>(mirror->vertex_a);
+                                int vertex_b = static_cast<int>(mirror->vertex_b);
+                                ImGui::SetNextItemWidth(100.0f);
+                                changed = ImGui::InputInt("Line", &line_idx);
+                                ImGui::SameLine();
+                                ImGui::SetNextItemWidth(100.0f);
+                                changed = ImGui::InputInt("Vertex A", &vertex_a) || changed;
+                                ImGui::SameLine();
+                                ImGui::SetNextItemWidth(100.0f);
+                                changed = ImGui::InputInt("Vertex B", &vertex_b) || changed;
+                                if(changed){
+                                    edit_current_sketch([&](Sketch &editable_sketch){
+                                        if(auto *editable_constraint = dynamic_cast<Sketch::mirror_constraint_t*>(editable_sketch.constraint(constraint_idx)); editable_constraint != nullptr){
+                                            editable_constraint->line = clamp_debug_index(line_idx, primitive_count);
+                                            editable_constraint->vertex_a = clamp_debug_index(vertex_a, vertex_count);
+                                            editable_constraint->vertex_b = clamp_debug_index(vertex_b, vertex_count);
                                         }
                                     });
                                     ImGui::PopID();

@@ -347,6 +347,60 @@ TEST_CASE("Sketch can delete primitives and constraints directly"){
     REQUIRE( sketch.constraint_count() == 0U );
 }
 
+TEST_CASE("Sketch primitive deletion preserves vertex-only constraints"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+    const auto line_a = sketch.add_line(vec3<double>(0.0, 0.0, 0.0),
+                                        vec3<double>(1.0, 0.0, 0.0),
+                                        Sketch::geometry_tag_t::normal);
+    const auto line_b = sketch.add_line(vec3<double>(0.0, 1.0, 0.0),
+                                        vec3<double>(1.0, 1.0, 0.0),
+                                        Sketch::geometry_tag_t::normal);
+    const auto vertex_a = sketch.append_vertex(vec3<double>(5.0, 0.0, 0.0));
+    const auto vertex_b = sketch.append_vertex(vec3<double>(6.0, 0.0, 0.0));
+    sketch.add_overlap_constraint(vertex_a, vertex_b);
+
+    REQUIRE( sketch.delete_primitive(line_a) );
+    REQUIRE( sketch.primitive_count() == 1U );
+    REQUIRE( sketch.constraint_count() == 1U );
+    REQUIRE( sketch.describe_constraint(0U) == "overlap" );
+    const auto *remaining_line = dynamic_cast<const Sketch::line_primitive_t*>(sketch.primitive(0U));
+    REQUIRE( remaining_line != nullptr );
+    REQUIRE( remaining_line->vertices[0] == 2U );
+    REQUIRE( remaining_line->vertices[1] == 3U );
+}
+
+TEST_CASE("Sketch solves pin and mirror constraints and tracks fully constrained geometry"){
+    Sketch sketch;
+    sketch.set_plane(default_xy_plane());
+    const auto mirror_line = sketch.add_line(vec3<double>(0.0, -2.0, 0.0),
+                                             vec3<double>(0.0, 2.0, 0.0),
+                                             Sketch::geometry_tag_t::support);
+    const auto source_vertex = sketch.append_vertex(vec3<double>(2.0, 1.0, 0.0));
+    const auto mirrored_vertex = sketch.append_vertex(vec3<double>(-5.0, 8.0, 0.0));
+    const auto mirrored_segment = sketch.add_line(source_vertex,
+                                                  mirrored_vertex,
+                                                  Sketch::geometry_tag_t::normal);
+    const auto *mirror_line_primitive = dynamic_cast<const Sketch::line_primitive_t*>(sketch.primitive(mirror_line));
+    REQUIRE( mirror_line_primitive != nullptr );
+
+    sketch.add_pin_constraint(mirror_line_primitive->vertices[0]);
+    sketch.add_pin_constraint(mirror_line_primitive->vertices[1]);
+    sketch.add_pin_constraint(source_vertex);
+    sketch.add_mirror_constraint(mirror_line, source_vertex, mirrored_vertex);
+
+    REQUIRE( sketch.solve_constraints() == 0U );
+    REQUIRE( sketch.vertex(mirrored_vertex).x == doctest::Approx(-2.0).epsilon(1E-6) );
+    REQUIRE( sketch.vertex(mirrored_vertex).y == doctest::Approx(1.0).epsilon(1E-6) );
+
+    const auto constrained_vertices = sketch.fully_constrained_vertices();
+    REQUIRE( constrained_vertices.count(source_vertex) == 1U );
+    REQUIRE( constrained_vertices.count(mirrored_vertex) == 1U );
+    const auto constrained_primitives = sketch.fully_constrained_primitives();
+    REQUIRE( constrained_primitives.count(mirror_line) == 1U );
+    REQUIRE( constrained_primitives.count(mirrored_segment) == 1U );
+}
+
 TEST_CASE("Sketch files round-trip through disk serialization"){
     Sketch sketch;
     sketch.set_plane(default_xy_plane());
@@ -354,8 +408,12 @@ TEST_CASE("Sketch files round-trip through disk serialization"){
                                           vec3<double>(2.123456789012345, 0.0, 0.0),
                                           Sketch::geometry_tag_t::support);
     sketch.add_distance_constraint(line_idx, 2.0);
-    sketch.add_overlap_constraint(sketch.append_vertex(vec3<double>(3.0, 0.0, 0.0)),
-                                  sketch.append_vertex(vec3<double>(3.0, 1.0, 0.0)));
+    const auto pin_vertex = sketch.append_vertex(vec3<double>(3.0, 0.0, 0.0));
+    const auto overlap_vertex = sketch.append_vertex(vec3<double>(3.0, 1.0, 0.0));
+    const auto mirror_vertex = sketch.append_vertex(vec3<double>(4.0, 0.5, 0.0));
+    sketch.add_pin_constraint(pin_vertex);
+    sketch.add_overlap_constraint(pin_vertex, overlap_vertex);
+    sketch.add_mirror_constraint(line_idx, pin_vertex, mirror_vertex);
 
     const auto unique_suffix = std::to_string(std::chrono::high_resolution_clock::now().time_since_epoch().count());
     const auto path = std::filesystem::temp_directory_path() / ("dcma_sketch_roundtrip_test_" + unique_suffix + ".dcmasketch");
@@ -373,7 +431,9 @@ TEST_CASE("Sketch files round-trip through disk serialization"){
     REQUIRE( loaded_line->tag == Sketch::geometry_tag_t::support );
     REQUIRE( loaded.vertex(loaded_line->vertices[0]).x == doctest::Approx(0.123456789012345).epsilon(1E-15) );
     REQUIRE( loaded.vertex(loaded_line->vertices[1]).x == doctest::Approx(2.123456789012345).epsilon(1E-15) );
-    REQUIRE( loaded.describe_constraint(1U) == "overlap" );
+    REQUIRE( loaded.describe_constraint(1U) == "pin" );
+    REQUIRE( loaded.describe_constraint(2U) == "overlap" );
+    REQUIRE( loaded.describe_constraint(3U) == "mirror" );
 
     std::filesystem::remove(path);
 }

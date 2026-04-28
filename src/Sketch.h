@@ -41,7 +41,9 @@ public:
         distance,
         parallel,
         perpendicular,
+        pin,
         tangent,
+        mirror,
         overlap,
     };
 
@@ -186,6 +188,16 @@ public:
         std::vector<primitive_index_t> referenced_primitives() const override;
     };
 
+    struct pin_constraint_t : public constraint_t {
+        vertex_index_t vertex = 0U;
+        vec3<double> pinned_position;
+
+        std::unique_ptr<constraint_t> clone() const override;
+        constraint_kind_t kind() const override;
+        std::vector<primitive_index_t> referenced_primitives() const override;
+        std::vector<vertex_index_t> referenced_vertices() const override;
+    };
+
     struct tangent_constraint_t : public constraint_t {
         primitive_index_t primitive_a = 0U;
         primitive_index_t primitive_b = 0U;
@@ -193,6 +205,17 @@ public:
         std::unique_ptr<constraint_t> clone() const override;
         constraint_kind_t kind() const override;
         std::vector<primitive_index_t> referenced_primitives() const override;
+    };
+
+    struct mirror_constraint_t : public constraint_t {
+        primitive_index_t line = 0U;
+        vertex_index_t vertex_a = 0U;
+        vertex_index_t vertex_b = 0U;
+
+        std::unique_ptr<constraint_t> clone() const override;
+        constraint_kind_t kind() const override;
+        std::vector<primitive_index_t> referenced_primitives() const override;
+        std::vector<vertex_index_t> referenced_vertices() const override;
     };
 
     struct overlap_constraint_t : public constraint_t {
@@ -263,6 +286,8 @@ public:
     void translate_vertices(const std::set<vertex_index_t> &indices, const vec3<double> &delta);
     void refresh_geometry();
     dof_summary_t summarize_degrees_of_freedom() const;
+    std::set<vertex_index_t> fully_constrained_vertices() const;
+    std::set<primitive_index_t> fully_constrained_primitives() const;
 
     bool delete_vertex(vertex_index_t idx);
     bool delete_primitive(primitive_index_t idx);
@@ -279,7 +304,9 @@ public:
     constraint_index_t add_distance_constraint(primitive_index_t line_idx, double target_distance = std::numeric_limits<double>::quiet_NaN());
     constraint_index_t add_parallel_constraint(primitive_index_t line_a, primitive_index_t line_b);
     constraint_index_t add_perpendicular_constraint(primitive_index_t line_a, primitive_index_t line_b);
+    constraint_index_t add_pin_constraint(vertex_index_t vertex_idx);
     constraint_index_t add_tangent_constraint(primitive_index_t primitive_a, primitive_index_t primitive_b);
+    constraint_index_t add_mirror_constraint(primitive_index_t line_idx, vertex_index_t vertex_a, vertex_index_t vertex_b);
     constraint_index_t add_overlap_constraint(vertex_index_t vertex_a, vertex_index_t vertex_b);
 
     std::size_t solve_constraints(std::size_t max_iterations = 2U);
@@ -300,6 +327,7 @@ private:
     void copy_from(const Sketch &in);
     primitive_index_t append_primitive(std::unique_ptr<primitive_t> primitive);
     constraint_index_t append_constraint(std::unique_ptr<constraint_t> constraint);
+    void enforce_pinned_vertices();
     void refresh_all_derived_geometry();
     bool refresh_primitive_geometry(primitive_index_t idx);
     bool primitive_index_valid(primitive_index_t idx) const;
